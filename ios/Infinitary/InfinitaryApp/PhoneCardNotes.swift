@@ -52,12 +52,18 @@ enum PhoneCardNotes {
     }
 }
 
-/// The Mac's annotation popover: what is picked, a comment that may stay empty, Cancel and Queue. Return in the comment
+/// The Mac's annotation popover, drawn by the captain's direction B (INF-3746): a raised panel inside the card, under
+/// the part it notes and as wide as the reply box, so nothing floats past the card; on an iPhone on its side it takes the
+/// card's foot instead. It holds what is picked, a comment that may stay empty, Cancel and Queue. Return in the comment
 /// queues it, Command-Return queues it and sends every queued note, and Escape closes it while the comment is empty.
-struct PhoneNotePopover: View {
+struct PhoneNoteEditor: View {
     @Binding var pick: PhoneNotePick?
+    /// The card's own focus for the comment, which counts as a card text box under the keyboard rules (INF-3468).
+    var focused: FocusState<Bool>.Binding
+    /// On an iPhone on its side the editor shares the card's short foot with the keyboard, so it drops its title and sets
+    /// a short excerpt, the comment and its buttons on one row.
+    var compact = false
     let onQueue: (_ send: Bool) -> Void
-    @FocusState private var focused: Bool
     @State private var hint = false
 
     var body: some View {
@@ -71,52 +77,97 @@ struct PhoneNotePopover: View {
             hint = false
             pick?.comment = String(words.prefix(PhoneLimits.reply))
         })
+        let shape = RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous)
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            Text("\(PhoneCardWords.annotate) \(pick?.note["kind"].text ?? "")").font(PhoneFont.headline)
-                .accessibilityAddTraits(.isHeader)
-            Text(pick?.note["excerpt"].text ?? "").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).lineLimit(3)
-                .padding(.leading, PhoneTheme.space2)
-                .overlay(alignment: .leading) { Rectangle().fill(PhoneTheme.line).frame(width: 2) }
-                .accessibilityIdentifier("note-excerpt")
-            TextField(PhoneCardWords.notePlaceholder, text: comment, axis: .vertical).lineLimit(1...4)
-                .padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
-                .phoneInput()
-                .focused($focused)
-                .accessibilityLabel(PhoneCardWords.noteCommentLabel)
-                .accessibilityIdentifier("note-comment")
+            if !compact {
+                Text("\(PhoneCardWords.annotate) \(pick?.note["kind"].text ?? "")").font(PhoneFont.headline)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            if compact {
+                HStack(spacing: PhoneTheme.space2) { excerpt.frame(maxWidth: 160, alignment: .leading); field(comment); buttons }
+            } else {
+                excerpt
+                field(comment)
+            }
             if hint {
                 Text(PhoneCardWords.noteDiscardHint).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     .accessibilityIdentifier("note-hint")
             }
-            HStack(spacing: PhoneTheme.space2) {
-                Spacer(minLength: 0)
-                Button(PhoneCardWords.noteCancel) { pick = nil }
-                    .buttonStyle(PhoneChoiceStyle(.secondary)).accessibilityIdentifier("note-cancel")
-                Button(PhoneCardWords.queueNote) { onQueue(false) }
-                    .buttonStyle(PhoneChoiceStyle(.primary)).accessibilityIdentifier("note-queue")
-                // Command-Return from a keyboard queues the note and sends the reply, as the Mac's does.
-                Button("") { onQueue(true) }.keyboardShortcut(.return, modifiers: .command)
-                    .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true)
+            if !compact {
+                HStack(spacing: PhoneTheme.space2) { Spacer(minLength: 0); buttons }
             }
         }
-        .padding(PhoneTheme.space4)
-        .frame(idealWidth: 320, maxWidth: 360)
-        .presentationCompactAdaptation(.popover)
-        // A comment is not lost to a stray tap outside: Cancel discards it, as the hint says.
-        .interactiveDismissDisabled(!(pick?.comment.isEmpty ?? true))
+        .padding(compact ? PhoneTheme.space2 : PhoneTheme.space3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // The lift's shadow belongs to the panel's own shape: on the whole stack SwiftUI would cast it from the field and
+        // the buttons inside too.
+        .background { shape.fill(PhoneTheme.raised).shadow(color: .black.opacity(0.35), radius: 12, y: 8) }
+        .overlay { shape.strokeBorder(PhoneTheme.lineStrong) }
         .onKeyPress(.escape) {
             if pick?.comment.isEmpty ?? true { pick = nil } else { hint = true }
             return .handled
         }
-        .onAppear { focused = true }
+        .onAppear { focused.wrappedValue = true }
         // A containing element, so its parts keep their own names.
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("note-popover")
+        .accessibilityIdentifier("note-editor")
+    }
+
+    private var excerpt: some View {
+        Text(pick?.note["excerpt"].text ?? "").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+            .lineLimit(compact ? 1 : 2)
+            .padding(.leading, PhoneTheme.space2)
+            .overlay(alignment: .leading) { Rectangle().fill(PhoneTheme.line).frame(width: 2) }
+            .accessibilityIdentifier("note-excerpt")
+    }
+
+    // The app's plain field: the control radius of the buttons beside it, with its words 12 points in.
+    private func field(_ comment: Binding<String>) -> some View {
+        TextField(PhoneCardWords.notePlaceholder, text: comment, axis: .vertical).lineLimit(compact ? 1...1 : 1...4)
+            .textFieldStyle(.phone)
+            .focused(focused)
+            .accessibilityLabel(PhoneCardWords.noteCommentLabel)
+            .accessibilityIdentifier("note-comment")
+    }
+
+    @ViewBuilder private var buttons: some View {
+        Button(PhoneCardWords.noteCancel) { pick = nil }
+            .buttonStyle(PhoneChoiceStyle(.secondary)).accessibilityIdentifier("note-cancel")
+        Button(PhoneCardWords.queueNote) { onQueue(false) }
+            .buttonStyle(PhoneChoiceStyle(.primary)).accessibilityIdentifier("note-queue")
+        // Command-Return from a keyboard queues the note and sends the reply, as the Mac's does.
+        Button("") { onQueue(true) }.keyboardShortcut(.return, modifiers: .command)
+            .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true)
     }
 }
 
-/// The notes waiting for the reply, above the card's field: how many, then each with what it points at, its comment,
-/// Edit and Remove. The field's send takes them all.
+/// INF-3746: one row draws a note, queued or sent: a bar, one line naming what it points at, then the comment. Only the
+/// bar's color differs, the accent for a note waiting for the reply.
+struct PhoneNoteRow<Head: View, Below: View>: View {
+    let note: PhoneJSON
+    let queued: Bool
+    /// The lines the comment takes at most; nil shows it whole, as a sent note in its thread does.
+    let commentLines: Int?
+    @ViewBuilder let label: (Text) -> Head
+    @ViewBuilder let below: () -> Below
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            label(Text(PhoneCardNotes.label(note)).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary))
+            Text(note["comment"].text.flatMap { $0.isEmpty ? nil : $0 } ?? PhoneCardWords.emptyNote)
+                .font(PhoneFont.caption).foregroundStyle(PhoneTheme.text).lineLimit(commentLines).textSelection(.enabled)
+            below()
+        }
+        .padding(.leading, PhoneTheme.space3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 1).fill(queued ? PhoneTheme.accent : PhoneTheme.lineStrong).frame(width: 2)
+        }
+    }
+}
+
+/// The notes waiting for the reply, above the card's field: how many, then each with what it points at on one line,
+/// its comment on at most two, and Edit and Remove. The field's send takes them all.
 struct PhoneQueuedNotes: View {
     let notes: [PhoneJSON]
     let disabled: Bool
@@ -130,24 +181,20 @@ struct PhoneQueuedNotes: View {
             Text(PhoneCardWords.queuedNotes(notes.count)).font(PhoneFont.mono).foregroundStyle(PhoneTheme.accent)
                 .accessibilityIdentifier("queued-notes-count")
             ForEach(Array(notes.enumerated()), id: \.offset) { _, note in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(PhoneCardNotes.label(note)).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).lineLimit(2)
-                    Text(note["comment"].text.flatMap { $0.isEmpty ? nil : $0 } ?? PhoneCardWords.emptyNote)
-                        .font(PhoneFont.caption).foregroundStyle(PhoneTheme.text).lineLimit(3)
+                PhoneNoteRow(note: note, queued: true, commentLines: 2) { $0.lineLimit(1) } below: {
                     if let failure = failures[Self.id(note)] {
                         Text(failure).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("queued-note-status")
                     }
-                    HStack(spacing: PhoneTheme.space3) {
-                        Text(PhoneCardWords.notSent).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                    HStack(spacing: PhoneTheme.space4) {
                         Spacer(minLength: 0)
-                        Button(PhoneCardWords.noteEdit) { onEdit(note) }.font(PhoneFont.caption)
-                            .frame(minHeight: 32).accessibilityIdentifier("queued-note-edit")
-                        Button(PhoneCardWords.noteRemove) { onRemove(note) }.font(PhoneFont.caption)
-                            .frame(minHeight: 32).accessibilityIdentifier("queued-note-remove")
-                    }.disabled(disabled)
+                        Button(PhoneCardWords.noteEdit) { onEdit(note) }
+                            .frame(minHeight: 32).contentShape(Rectangle()).accessibilityIdentifier("queued-note-edit")
+                        Button(PhoneCardWords.noteRemove) { onRemove(note) }
+                            .frame(minHeight: 32).contentShape(Rectangle()).accessibilityIdentifier("queued-note-remove")
+                    }
+                    .font(PhoneFont.caption).foregroundStyle(PhoneTheme.accent).buttonStyle(.plain)
+                    .disabled(disabled).opacity(disabled ? 0.5 : 1)
                 }
-                .padding(.leading, PhoneTheme.space2)
-                .overlay(alignment: .leading) { Rectangle().fill(PhoneTheme.accent).frame(width: 2) }
                 .accessibilityElement(children: .contain).accessibilityIdentifier("queued-note")
             }
         }
@@ -159,8 +206,8 @@ struct PhoneQueuedNotes: View {
     }
 }
 
-/// A sent reply's notes in its thread: each names what it points at, a press lights it in the card, and a part the card
-/// no longer has, or a body that cannot show it, says so.
+/// A sent reply's notes in its thread, in the queued notes' row: each names what it points at, a press lights it in the
+/// card, and a part the card no longer has, or a body that cannot show it, says so.
 struct PhoneThreadNotes: View {
     let notes: [PhoneJSON]
     let onReveal: ((PhoneJSON) async -> CardWebHost.NoteReveal)?
@@ -169,17 +216,16 @@ struct PhoneThreadNotes: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             ForEach(Array(notes.enumerated()), id: \.offset) { index, note in
-                VStack(alignment: .leading, spacing: 2) {
+                PhoneNoteRow(note: note, queued: false, commentLines: nil) { label in
                     Button {
                         guard let onReveal else { return }
                         Task { results[index] = await onReveal(note) }
                     } label: {
-                        Text(PhoneCardNotes.label(note)).font(PhoneFont.caption).foregroundStyle(PhoneTheme.accent)
-                            .multilineTextAlignment(.leading).frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
-                            .contentShape(Rectangle())
+                        label.lineLimit(1).multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain).disabled(onReveal == nil).accessibilityIdentifier("thread-note")
-                    Text(note["comment"].text.flatMap { $0.isEmpty ? nil : $0 } ?? PhoneCardWords.emptyNote).textSelection(.enabled)
+                } below: {
                     switch results[index] {
                     case .missing:
                         Text(PhoneCardWords.staleNote).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning)
@@ -190,8 +236,6 @@ struct PhoneThreadNotes: View {
                     default: EmptyView()
                     }
                 }
-                .padding(.leading, PhoneTheme.space2)
-                .overlay(alignment: .leading) { Rectangle().fill(PhoneTheme.line).frame(width: 2) }
             }
         }
     }

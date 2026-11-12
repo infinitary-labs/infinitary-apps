@@ -215,13 +215,20 @@ import XCTest
         let bar = app.navigationBars.firstMatch
         let barFoot = bar.exists ? bar.frame.maxY : app.windows.firstMatch.frame.minY
         var problems: [String] = []
+        // INF-3746: a note's comment is a card text box too, under the same keyboard rules as the card's reply.
+        let inCard = ["card-reply", "note-comment"].contains(field.identifier)
         if f.maxY > keyTop + 0.5 { problems.append(String(format: "its foot is %.0f pt behind the keyboard", f.maxY - keyTop)) }
         if f.minY < barFoot - 0.5 { problems.append(String(format: "its top is %.0f pt above the bar's foot", barFoot - f.minY)) }
-        if field.identifier == "card-reply" {
+        if inCard {
             // A reply inside the scroller of a card whose whole frame scrolls is clipped at the scroller's foot.
             let scroll = app.scrollViews["card-scroll"].firstMatch
             if scroll.exists, !any("card-frame").exists, !any("card-back").exists, f.maxY > scroll.frame.maxY + 0.5 {
                 problems.append(String(format: "its foot is %.0f pt past the card's lower edge", f.maxY - scroll.frame.maxY))
+            }
+            // A note's comment under its part sits inside the scroller of a pinned card too, which clips it at its foot; in
+            // the foot of a card on an iPhone on its side it starts below that scroller.
+            if field.identifier == "note-comment", scroll.exists, f.minY < scroll.frame.maxY - 0.5, f.maxY > scroll.frame.maxY + 0.5 {
+                problems.append(String(format: "its foot is %.0f pt past the card's scroller", f.maxY - scroll.frame.maxY))
             }
             for cover in [composer, any("card-pager")] where cover.exists && cover.frame.intersects(f) {
                 problems.append("\(cover.identifier) covers it at \(cover.frame)")
@@ -231,10 +238,10 @@ import XCTest
         // On an iPhone or an iPad, upright or on its side, while a card's reply holds the keyboard the message box steps
         // aside, undrawn and under its own name, and the pager leaves; while the message box holds it, it stays in view.
         let aside = any("phone-composer-aside").exists
-        if field.identifier == "card-reply" {
+        if inCard {
             if !aside { problems.append("the message box stayed in view") }
             if any("card-pager").exists { problems.append("the pager stayed in view") }
-            cardReplyRoom(f, keyTop: keyTop, into: &problems)
+            if field.identifier == "card-reply" { cardReplyRoom(f, keyTop: keyTop, into: &problems) }
         } else if aside {
             problems.append("the message box stepped aside")
         }

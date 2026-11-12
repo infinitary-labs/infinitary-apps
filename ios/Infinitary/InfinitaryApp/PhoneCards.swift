@@ -502,8 +502,17 @@ private struct PhoneCardPane: View {
     @State private var cameraOpen = false
     /// INF-3296's phone piece: Point at is on, so a tap on a part of the body picks it.
     @State private var pointAt = false
-    /// The part or words being noted, which the popover over the body shows.
+    /// The part or words being noted, which the note editor under it shows (INF-3746, the captain's direction B).
     @State private var pick: PhoneNotePick?
+    /// The note editor's comment holds the focus, which counts as the card's own text box (INF-3468).
+    @FocusState private var noteFocus: Bool
+    /// The note editor's height, and where it sits in the pane while it takes the pinned foot of a card on an iPhone on
+    /// its side.
+    @State private var noteEditorHeight: CGFloat = 0
+    @State private var noteFootFrame: CGRect?
+    /// Counts the moments the card's scroller brings the open note editor back into view: it opening or growing, its
+    /// comment taking the focus, and the keyboard shortening the scroller.
+    @State private var noteGrew = 0
     /// A queued note whose Edit could not show its part, and why.
     @State private var noteFailures: [String: String] = [:]
     /// Where a note revealed from the thread sits in the body, which the card's scroller brings into view.
@@ -623,7 +632,7 @@ private struct PhoneCardPane: View {
     /// INF-1524: the reply field sits in the pinned foot, and moving the foot in or out of the scroller makes a new field,
     /// so the keyboard its focus raises, which shortens the stage, never reshapes the frame; the shape settles once it closes.
     private func shapeFrame() {
-        guard paneHeight > 0, replyFocus == nil else { return }
+        guard paneHeight > 0, replyFocus == nil, pick == nil else { return }
         let pins = paneHeight - headHeight - footHeight >= headHeight + footHeight
         guard pins != pinsFrame, shapedAt != paneHeight else { return }
         shapedAt = paneHeight
@@ -664,13 +673,15 @@ private struct PhoneCardPane: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { paneHeight = $0 }
         .onChange(of: [paneHeight, headHeight, footHeight]) { shapeFrame() }
         .onChange(of: replyFocus == nil) { _, unfocused in if unfocused { shapeFrame() } }
+        .onChange(of: pick == nil) { _, closed in if closed { shapeFrame() } }
         // Only the shown card speaks for the reply's focus; one that slides aside lets its field go.
         // INF-3427: a text box in the body that holds the keyboard counts as the card's own field here too.
-        .onChange(of: shown && (replyFocus != nil || host.typing), initial: shown) { was, focused in
+        // INF-3746: the note editor's comment counts too, so the pager and the message box step aside for it.
+        .onChange(of: shown && (replyFocus != nil || noteFocus || host.typing), initial: shown) { was, focused in
             if shown || was { messageContext.replyFocused = focused }
         }
         .onChange(of: shown) { _, shown in connectHost(); if !shown { replyFocus = nil; pointAt = false; pick = nil } }
-        .onDisappear { if shown && (replyFocus != nil || host.typing) { messageContext.replyFocused = false } }
+        .onDisappear { if shown && (replyFocus != nil || noteFocus || host.typing) { messageContext.replyFocused = false } }
         // INF-3460: a body the row kept loaded beside the shown card has drawn already, so a card opened from the count's
         // menu shows drawn and its first drawing never comes to mark it read.
         .onAppear { connectHost(); readThread(); if let facts = host.facts { showFacts(facts) }; markSeen() }
@@ -715,6 +726,9 @@ private struct PhoneCardPane: View {
     private static let replyRest = "card-reply-rest"
     private static let contentEnd = "card-content-end"
     private static let noteReveal = "card-note-reveal"
+    /// INF-3746: the part an open note points at, and the note editor with the margin under it.
+    private static let notePart = "card-note-part"
+    private static let noteRest = "card-note-rest"
     private static let contentSpace = "card-content"
     /// INF-3468, the captain's pick: a typing reply comes to rest with the card's choices showing under it where the
     /// field, the choices and the card's foot fit in the room; otherwise with the margin under it.
@@ -733,8 +747,10 @@ private struct PhoneCardPane: View {
     /// the keyboard leaves. It rises as far as shows the card's foot, the choices under the field, but never so far that
     /// the field's top leaves the pane, and always far enough that the field's foot, where the caret types, stays in it.
     /// The head the rise hides comes back as the keyboard closes.
+    /// INF-3746: the note editor in the foot of a card on an iPhone on its side rises the same way while its comment types.
     private var lift: CGFloat {
-        guard replyFocus == .face, pinsFrame, paneHeight > 0, let field = faceReplyFrame else { return 0 }
+        let typing = replyFocus == .face ? faceReplyFrame : noteFocus && pick != nil && noteInFoot ? noteFootFrame : nil
+        guard pinsFrame, paneHeight > 0, let field = typing else { return 0 }
         let overflow = surfaceHeight - paneHeight
         guard overflow > 0 else { return 0 }
         // INF-3468: where the choices do not show, the field keeps the margin above the card's foot.
@@ -742,6 +758,25 @@ private struct PhoneCardPane: View {
     }
 
     private func followCaret() { if replyFocus == .face { replyGrew += 1 } }
+
+    /// INF-3746, the captain: "pay attention to keeping the focused text input in viewport not scrolled away".
+    private func followNote() { if pick != nil && shown { noteGrew += 1 } }
+
+    /// The captain's direction B falls back to the card's foot on an iPhone on its side, where the keyboard leaves no
+    /// room for a panel under the part.
+    private var noteInFoot: Bool { phoneOnItsSide(verticalSize) }
+
+    /// The one note editor, under the part or in the foot, with the place the card's scroller keeps in view.
+    private var noteEditor: some View {
+        PhoneNoteEditor(pick: $pick, focused: $noteFocus, compact: noteInFoot, onQueue: queueNote)
+            .background(alignment: .top) {
+                Color.clear.frame(height: noteEditorHeight + PhoneTyping.margin).allowsHitTesting(false).id(Self.noteRest)
+            }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in noteEditorHeight = height; followNote() }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.paneSpace)) } action: { frame in
+                if pinsFrame { noteFootFrame = frame }
+            }
+    }
 
     /// A card's scroller closes the keyboard as a person starts to scroll it, never as the scroller follows the caret.
     private func scrolled(_ phase: ScrollPhase) {
@@ -814,9 +849,16 @@ private struct PhoneCardPane: View {
                 .onScrollGeometryChange(for: [CGFloat].self) { geometry in
                     [geometry.containerSize.height, geometry.contentInsets.top]
                 } action: { _, frame in
-                    scrollFrame = frame[0]; scrollRoom = frame[0] - frame[1]; followCaret()
+                    scrollFrame = frame[0]; scrollRoom = frame[0] - frame[1]; followCaret(); followNote()
                 }
                 .onChange(of: replyFocus) { followCaret() }
+                .onChange(of: noteFocus) { followNote() }
+                // INF-3746: an open note shows its part, then its editor, whose comment always wins the room: a scroll of
+                // the least distance to each, so a part taller than the room keeps its last lines above the editor.
+                .onChange(of: noteGrew) {
+                    scroller.scrollTo(Self.notePart, anchor: nil)
+                    scroller.scrollTo(Self.noteRest, anchor: nil)
+                }
                 // INF-3468: the field comes to rest with the choices under it, or with the margin under it.
                 .onChange(of: revealedNote?.seq) {
                     withAnimation(reduceMotion ? nil : PhoneTheme.surfaceMove) { scroller.scrollTo(Self.noteReveal, anchor: .center) }
@@ -1033,18 +1075,25 @@ private struct PhoneCardPane: View {
                     connectHost(); retry += 1
                 }.buttonStyle(PhoneChoiceStyle(.secondary)).disabled(host.changing).accessibilityIdentifier("retry-card")
             } else {
-                CardWebView(host: host).frame(height: host.height).id(retry)
-                    // INF-3296's phone piece: where a note revealed from the thread sits, for the scroller to bring in.
-                    .overlay(alignment: .top) {
-                        if let revealedNote {
-                            Color.clear.frame(height: max(1, revealedNote.height)).id(Self.noteReveal)
-                                .padding(.top, revealedNote.top).allowsHitTesting(false).accessibilityHidden(true)
+                ZStack(alignment: .top) {
+                    CardWebView(host: host).frame(height: host.height).id(retry)
+                        // INF-3296's phone piece: where a note revealed from the thread sits, for the scroller to bring in.
+                        .overlay(alignment: .top) {
+                            if let revealedNote {
+                                Color.clear.frame(height: max(1, revealedNote.height)).id(Self.noteReveal)
+                                    .padding(.top, revealedNote.top).allowsHitTesting(false).accessibilityHidden(true)
+                            }
+                            if let pick {
+                                Color.clear.frame(height: max(1, pick.box.height)).id(Self.notePart)
+                                    .padding(.top, pick.box.minY).allowsHitTesting(false).accessibilityHidden(true)
+                            }
                         }
+                    // INF-3746, the captain's direction B: the note editor under the lit part, inside the card at the reply
+                    // box's width, over the lines below it; the body runs on under it when the part is near its end.
+                    if let pick, shown, !noteInFoot {
+                        noteEditor.padding(.top, pick.box.maxY + PhoneTheme.space2)
                     }
-                    .popover(isPresented: Binding(get: { pick != nil && shown }, set: { if !$0 { pick = nil } }),
-                             attachmentAnchor: .rect(.rect(pick?.box ?? .zero)), arrowEdge: .top) {
-                        PhoneNotePopover(pick: $pick, onQueue: queueNote)
-                    }
+                }
             }
             if let notice = host.notice { Text(notice).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-notice") }
             if card.value["attachment"] != .null {
@@ -1098,7 +1147,10 @@ private struct PhoneCardPane: View {
             if let line { Text(line).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
             // INF-2565: a pane built again while its back shows starts turned, and its latest line gives way as the field does.
             if !messages.isEmpty { latestLine.modifier(PhoneFaceOnly(angle: turnAngle)) }
-            if takesReply {
+            // INF-3746: while a note is open the reply and the choices step aside for it; on an iPhone on its side the
+            // editor takes their place in the foot.
+            if pick != nil && shown && noteInFoot { noteEditor.modifier(PhoneFaceOnly(angle: turnAngle)) }
+            if takesReply && pick == nil {
                 replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle))
                     // INF-3468: the field and the margin under it, the place a typing field in a scrolling card rests.
                     .background(alignment: .top) {
@@ -1116,7 +1168,7 @@ private struct PhoneCardPane: View {
                 Text("\(PhoneCardWords.sentWithChoice) \(words)").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     .accessibilityIdentifier("past-sent-words")
             }
-            choiceRow.modifier(PhoneFaceOnly(angle: turnAngle))
+            if pick == nil { choiceRow.modifier(PhoneFaceOnly(angle: turnAngle)) }
         }
         .padding(.horizontal, PhoneTheme.space4).padding(.top, PhoneTheme.space2).padding(.bottom, PhoneTheme.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1196,12 +1248,16 @@ private struct PhoneCardPane: View {
                         pointAt.toggle()
                         if pointAt { replyFocus = nil; dismissPhoneKeyboard() }
                     } label: {
-                        Label(PhoneCardWords.pointAt, systemImage: "cursorarrow").labelStyle(.iconOnly)
+                        // INF-3746: the Mac's outline pointer, lit in a 32-point circle that sits inside the field's
+                        // rounded end, in a 44-point touch area.
+                        PhoneSymbol.pointer.image.resizable().frame(width: 18, height: 18)
                             .foregroundStyle(pointAt ? PhoneTheme.accent : PhoneTheme.secondary)
+                            .frame(width: 32, height: 32)
+                            .background { if pointAt { Circle().fill(PhoneTheme.accentDim) } }
                             .frame(minWidth: 44, minHeight: 44)
-                            .background { if pointAt { RoundedRectangle(cornerRadius: PhoneTheme.controlRadius).fill(PhoneTheme.accentDim) } }
                             .contentShape(Rectangle())
                     }
+                    .accessibilityLabel(PhoneCardWords.pointAt)
                     .accessibilityAddTraits(pointAt ? .isSelected : [])
                     .accessibilityIdentifier("point-at")
                     .disabled(host.changing || !host.drawn)
@@ -1219,13 +1275,16 @@ private struct PhoneCardPane: View {
                     .padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
                     .focused($replyFocus, equals: side).accessibilityIdentifier("card-reply")
                     .onAppear { if pendingFocus == side { replyFocus = side; pendingFocus = nil } }
+                // INF-3746: the message box's own 32-point send circle, in a 44-point touch area.
                 Button(action: sendReply) {
-                    Label("Send reply", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly).imageScale(.large)
-                        .foregroundStyle(canSendReply ? PhoneTheme.accent : PhoneTheme.muted)
+                    Image(systemName: "arrow.up").font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(PhoneTheme.onAccent)
+                        .frame(width: 32, height: 32)
+                        .background(canSendReply ? PhoneTheme.accent : PhoneTheme.muted, in: Circle())
                         .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
-                }.accessibilityIdentifier("send-reply")
+                }.accessibilityLabel("Send reply").accessibilityIdentifier("send-reply")
                     .disabled(!canSendReply)
-                    .hidesKeyboardBefore(replyFocus == side && messageContext.keyboardUp)
+                    .hidesKeyboardBefore(replyFocus == side && messageContext.keyboardUp, diameter: 32)
             }.phoneInput()
                 // INF-589 item 11: the line under the composer says why; the reply row only dims.
                 .opacity(session.canChange ? 1 : 0.5)
@@ -1426,7 +1485,7 @@ private struct PhoneCardPane: View {
         host.annotates = takesNotes && shown
         host.onAnnotate = { note, box in
             guard takesNotes, shown, !host.changing else { syncNotes(); return }
-            // A comment being written keeps its popover; the frame's pick goes back to it.
+            // A comment being written keeps its editor; the frame's pick goes back to it.
             if let pick, !pick.comment.isEmpty { syncNotes(); return }
             if showsBack { turnOver(back: false) }
             replyFocus = nil
@@ -1446,16 +1505,18 @@ private struct PhoneCardPane: View {
         guard takesNotes else { if host.drawn { host.annotate(mode: false, queued: [], current: nil) }; return }
         host.annotate(mode: pointAt && pick == nil && shown, queued: notes, current: pick?.note)
     }
-    /// The popover's Queue: the note joins the queue, or takes its own place there again; with Command-Return the reply
-    /// goes too, with every queued note.
+    /// The editor's Queue: the note joins the queue, or takes its own place there again; with Command-Return the reply
+    /// goes too, with every queued note. A text note leaves no selection behind in the body (INF-3746).
     private func queueNote(send: Bool) {
         guard let picked = pick, !host.changing else { return }
-        notes = PhoneCardNotes.queuing(picked.written, in: notes)
+        let queue = PhoneCardNotes.queuing(picked.written, in: notes)
+        notes = queue
         noteFailures[PhoneQueuedNotes.id(picked.note)] = nil
         pick = nil
+        if picked.note["span"] != .null { host.annotate(mode: pointAt && shown, queued: queue, current: nil, clearsSelection: true) }
         if send { sendReply() }
     }
-    /// A queued note's Edit: the body shows its part again and its popover opens over it, with its comment.
+    /// A queued note's Edit: the body shows its part again and its editor opens under it, with its comment.
     private func editNote(_ note: PhoneJSON) {
         Task {
             let result = await revealNote(note)

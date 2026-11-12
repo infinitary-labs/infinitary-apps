@@ -35,7 +35,6 @@ enum PhoneCardWords {
     static let noteCancel = "Cancel"
     static let noteEdit = "Edit"
     static let noteRemove = "Remove"
-    static let notSent = "Not sent"
     static let notePlaceholder = "Add a comment, or queue as-is"
     static let noteDiscardHint = "Cancel discards your comment. Queue keeps it."
     static let staleNote = "This part is no longer in the card"

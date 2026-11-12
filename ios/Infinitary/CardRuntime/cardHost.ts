@@ -33,7 +33,8 @@ type Input = {
  * INF-3296's phone piece: what the native chrome holds about the card's notes. The frame hears only targets and
  * offsets, never a comment (docs/card-threads.md, "Pointing at a card").
  */
-type Annotation = { mode: boolean; queued: unknown[]; current?: unknown };
+/** `clear` drops the words selected in the body, as a text note just queued from them leaves no selection behind. */
+type Annotation = { mode: boolean; queued: unknown[]; current?: unknown; clear?: boolean };
 /** Where a revealed note sits in the body, or why it cannot show. */
 type Revealed = { top: number; height: number } | "missing" | "unavailable";
 /** The phone's own stamp, which the bridge's reveal asks for, as the Mac's revision navigation writes its offer. */
@@ -206,7 +207,8 @@ window.phoneCard = {
     const target = (note: CardNote) => noteTarget(notes!.parts, note, notes!.toRendered);
     const lit = current?.success ? target(current.data) : undefined;
     send({ type: "annotation", document: documentID, mode: state.mode === true,
-      queued: notes.queued.flatMap((note) => { const t = target(note); return t ? [t] : []; }), ...(lit ? { current: lit } : {}) });
+      queued: notes.queued.flatMap((note) => { const t = target(note); return t ? [t] : []; }), ...(lit ? { current: lit } : {}),
+      ...(state.clear === true ? { focus: true } : {}) });
   },
   annotateSelection() {
     if (!documentID) return;

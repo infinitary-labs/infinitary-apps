@@ -238,9 +238,11 @@ import SwiftUI
 
     /// INF-3296: how the card's notes stand, for the frame to light: Point at, the queued notes and the one being
     /// written. The notes go whole to the card's own page, which hands the frame their targets and never a comment.
-    func annotate(mode: Bool, queued: [PhoneJSON], current: PhoneJSON?) {
+    /// `clearsSelection` drops the words selected in the body, as a text note just queued leaves (INF-3746).
+    func annotate(mode: Bool, queued: [PhoneJSON], current: PhoneJSON?, clearsSelection: Bool = false) {
         guard drawn, failure == nil, let view else { return }
         var state: [String: PhoneJSON] = ["mode": .bool(mode), "queued": .array(queued)]
+        if clearsSelection { state["clear"] = .bool(true) }
         if let current { state["current"] = current }
         guard let argument = try? PhoneJSON.object(state).foundation else { return }
         view.callAsyncJavaScript("window.phoneCard.annotate(state)", arguments: ["state": argument], in: nil, in: .page, completionHandler: nil)
@@ -250,7 +252,7 @@ import SwiftUI
         guard annotates, drawn else { return }
         view?.evaluateJavaScript("window.phoneCard?.annotateSelection()", completionHandler: nil)
     }
-    /// The body view's width, which a note's popover spans when it opens over a whole part.
+    /// The body view's width, which a queued note's part spans when its Edit opens the editor under it.
     var width: CGFloat { view?.bounds.width ?? 1 }
     enum NoteReveal: Equatable { case revealed(top: CGFloat, height: CGFloat), missing, unavailable }
     /// Lights a note's part or words in the body and says where they sit, in the body view's points.

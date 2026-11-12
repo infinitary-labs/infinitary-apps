@@ -264,7 +264,6 @@ enum PhoneCardWords {
     static let noteCancel = ${text(notes.NOTE_CANCEL)}
     static let noteEdit = ${text(notes.NOTE_EDIT)}
     static let noteRemove = ${text(notes.NOTE_REMOVE)}
-    static let notSent = ${text(notes.NOT_SENT)}
     static let notePlaceholder = ${text(notes.NOTE_PLACEHOLDER)}
     static let noteDiscardHint = ${text(notes.NOTE_DISCARD_HINT)}
     static let staleNote = ${text(notes.STALE_NOTE)}

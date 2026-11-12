@@ -1939,4 +1939,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-PFRsLBy/sozYZY3eZdMVzvqzSDWgEfFebkAjM3QUs/E=";
+export const FRAME_BRIDGE_SHA256 = "sha256-eLZ8baImHdEN3VZ7OpYBWVgbgEd5kND24CRmuNbu5UA=";

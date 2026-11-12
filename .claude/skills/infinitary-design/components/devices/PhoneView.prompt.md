@@ -10,8 +10,10 @@ The paste, Settings and computer sheets sit on the panel color with a hairline a
 The phone's button is the Mac's row: rounded rectangles at the control radius, each its own width, drawn 37 points tall inside a 44-point touch area, at the trailing edge with the default last and filled with the accent, a danger choice in a red outline and the rest in a hairline outline; no button fills the width.
 Where a choice is a way in or a thing to pick rather than a decision, it is a row in a list instead.
 A plain field, such as the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
-A card's reply row is shaped like the message capsule: one shape with the send arrow inside at its right edge, dimmed until there is text, on the field's fill and hairline.
+A card's reply row is shaped like the message capsule: one shape with the message box's 32-point send circle inside at its right edge, muted until there is text, on the field's fill and hairline.
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
+Every lit mark inside it, such as Point at while it is on, is a 32-point circle, so nothing sticks out of its rounded ends.
+A note being written is a raised panel inside the card at the reply row's width, at the card radius on the raised fill with the strong hairline, its comment a plain field beside buttons of the same control radius; queued and sent notes share one row, a 2-point bar, what the note points at on one line, then its comment, the bar in the accent only while the note waits to be sent.
 The app follows the device's appearance unless this device's own Theme in Settings says Dark or Light; its read-only Reply sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md`, without extending that treatment to ordinary cards or their threads.
 One soft tap of haptic feedback confirms that the computer accepted something: a message, a card's answer or reply, a task's start, continue, interrupt or steer, and the computer coming back after it was out of reach.
 Nothing else taps, not a page turn, an arrival or the ordinary reconnection when the app opens.

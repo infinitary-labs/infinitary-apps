@@ -99,7 +99,10 @@ export const FRAME_ANNOTATION_SCRIPT = `
       event.preventDefault(); event.stopImmediatePropagation(); annotation.mode = false; annotation.current = null; paintAnnotations(); post({type:'point-exit',document:documentId});
     }
   }, true);
+  // A lit part is a rounded tint reaching 4 px past its words on every side, inside the body's 4 px inset (the
+  // card's own padding, here given to its top and foot too), so no edge cuts it and lighting moves no text; a queued
+  // part's 2 px bar sits in that inset, left of its words. The Mac and the phone draw both alike (INF-3746).
   var annotationStyle = document.createElement('style');
-  annotationStyle.textContent = '[data-inf-point-lit]{background:var(--accent-dim)!important;box-shadow:var(--focus-ring-inset)}[data-inf-point-queued]{box-shadow:inset 2px 0 var(--accent)}::highlight(inf-point),::highlight(inf-point-reveal){background:var(--accent-dim);text-decoration:underline;text-decoration-color:var(--accent)}::highlight(inf-point-queued){text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px}';
+  annotationStyle.textContent = 'body:has([data-inf-target]){padding-block:var(--space-1)}[data-inf-point-lit]{background:var(--accent-dim)!important;border-radius:var(--radius-xs);box-shadow:0 0 0 3px var(--accent-dim),0 0 0 4px var(--line-2)}[data-inf-point-queued]{position:relative}[data-inf-point-queued]::before{content:"";position:absolute;left:calc(-1 * var(--space-1));top:2px;bottom:2px;width:2px;border-radius:2px;background:var(--accent);pointer-events:none}img[data-inf-point-queued]{box-shadow:-4px 0 0 -2px var(--accent)}::highlight(inf-point),::highlight(inf-point-reveal){background:var(--accent-dim);text-decoration:underline;text-decoration-color:var(--accent)}::highlight(inf-point-queued){text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px}';
   document.head.appendChild(annotationStyle);
 `;

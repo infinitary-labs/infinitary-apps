@@ -3,6 +3,7 @@ import type { HomeLinkOptions, HomeLinkState } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { customApiConnectInputSchema } from "@shared/customApi";
+import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import { afterEach, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { ViewBackend } from "./viewBackend";
@@ -164,4 +165,104 @@ it("hands a streamed reply piece and a computers' reading the home sent live to 
     ["inf:event", piece],
     ["inf:computers:resources", reading],
   ]);
+});
+
+/**
+ * A view of another Mac whose saved look - light at 125%, with its panels switch on - answers only
+ * when the test says so. Closing the view refuses that answer, as closing the connection refuses
+ * every request still waiting.
+ */
+function viewWithHeldLook() {
+  const sent: ShellPreferences[] = [];
+  let hear: HomeLinkOptions["onPush"] = () => {};
+  let answerLook = () => {};
+  let refuseLook = (_error: Error) => {};
+  const looked = new Promise<void>((resolve, reject) => {
+    answerLook = resolve;
+    refuseLook = reject;
+  });
+  const saved: ShellPreferences = {
+    ...DEFAULT_SHELL_PREFERENCES,
+    appearance: { ...DEFAULT_SHELL_PREFERENCES.appearance, theme: "light", size: 125 },
+  };
+  const view = new ViewBackend({
+    joined: new JoinedHome(scratchDir("view-look-")),
+    record: {
+      version: 1,
+      grant: {
+        at: "127.0.0.1:1",
+        homeKey: "unused",
+        deviceId: "view",
+        kind: "view",
+        key: "unused",
+        cert: "unused",
+      },
+      name: null,
+      joinedAt: 1,
+    },
+    broadcast: (channel, payload) => {
+      if (channel === "inf:shell:preferences") sent.push(payload as ShellPreferences);
+    },
+    notifications: { supported: () => false, focused: () => true, show: () => {} },
+    onThisMac: () => {},
+    onRemoved: () => {},
+    // No update action is used here.
+    updates: {} as UpdateChecker,
+    link: (options) => {
+      hear = options.onPush;
+      return {
+        start: () => {},
+        state: () => ({
+          contact: "in-reach",
+          access: "full",
+          homeVersion: null,
+          homeChanges: CONTRACT_CHANGES.names,
+          name: null,
+          takesWork: null,
+          onHomeMac: null,
+          heardAt: null,
+          removed: false,
+        }),
+        invoke: (async (channel: string) => {
+          if (channel !== "inf:shell:preferences") throw new Error(`Unasked ${channel}`);
+          await looked;
+          return saved;
+        }) as never,
+        leave: async () => true,
+        close: () => refuseLook(new Error("The connection went mid-request.")),
+      };
+    },
+  });
+  views.push(view);
+  return {
+    view,
+    sent,
+    saved,
+    answerLook,
+    /** The other Mac's panels switch, pushed as it changes there. */
+    hearPanels: () => hear("inf:shell:preferences", saved, false),
+  };
+}
+
+// docs/view.md, "The switch and the layout": this Mac takes the other Mac's saved look once, and a
+// panels switch pushed before that look answers waits for it, so the window is never drawn in the
+// catalog's look first. The ordering the merge queue's batch hit, held here so it runs every time.
+it("tells a panels switch heard before the other Mac's look answers only after that look", async () => {
+  const { sent, saved, answerLook, hearPanels } = viewWithHeldLook();
+  hearPanels();
+  expect(sent).toEqual([]);
+  answerLook();
+  await vi.waitFor(() => expect(sent.at(-1)?.panels.enabled).toBe(true));
+  expect(sent.map((value) => value.appearance)).toEqual(sent.map(() => saved.appearance));
+});
+
+// The review of that fix: a switch still waiting when this view is closed - leaving the other Mac,
+// or removed from it - would tell the windows the catalog's look as the look's answer is refused.
+it("tells no waiting panels switch once the view is closed", async () => {
+  const { view, sent, hearPanels } = viewWithHeldLook();
+  hearPanels();
+  view.dispose();
+  // The refusal's work all runs before the next turn of the event loop.
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(sent).toEqual([]);
 });

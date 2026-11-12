@@ -524,10 +524,23 @@ export class ViewBackend {
     }
   }
 
+  /**
+   * A switch heard before this Mac has a look of its own waits for the
+   * seed: told at once, it would paint the window in the catalog's look
+   * before the other Mac's saved one arrives. Each waits on the same seed,
+   * so they are told in the order heard; none is told once this view is
+   * gone, when closing refuses the seed.
+   */
   private heardPanels(payload: unknown): void {
     if (!listsChange(this.link.state().homeChanges, PANELS_IN_EVERY_WINDOW)) return;
     const heard = shellPreferencesSchema.safeParse(payload);
-    if (heard.success) this.look.heardPanels(heard.data.panels);
+    if (!heard.success) return;
+    const { panels } = heard.data;
+    if (this.look.seeded()) this.look.heardPanels(panels);
+    else
+      void this.seedLook().then(() => {
+        if (!this.disposed) this.look.heardPanels(panels);
+      });
   }
 
   /** Takes the other Mac's look once, when this Mac has none of its own yet. */

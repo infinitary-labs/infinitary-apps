@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "view-look-waits-for-seed",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A Mac showing another Mac's work no longer flashes the default look",
+      "body": "When one Mac shows the work of another, it takes the other Mac's theme and text size. If the other Mac's Settings arrived before its look, the window could be drawn in the default look first. It now waits for the other Mac's look before following its Settings.",
+      "noPicture": "The fixed flash lasts a moment while the window joins, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

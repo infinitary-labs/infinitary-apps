@@ -168,6 +168,7 @@ The first mate keeps each panel, builds it and holds its data; a window asks for
   Every window says what it did with each panel (`inf:plugins:personal:mounts`); the first mate keeps only its own computer's window's word, since that is the window a crewmate's capture photographs.
 - **The switch and the layout.**
   The panels switch in Settings is the first mate's, set at its own computer's window; a view reads it from `inf:shell:preferences` at each welcome and follows it when it changes, and takes nothing else of that look (`ViewLook.heardPanels`).
+  A switch heard before this Mac has a look of its own waits for the other Mac's saved look, so the window is never drawn in the default look first (`ViewBackend.heardPanels`).
   How the panels sit is each computer's own layout, except in the window opened beside a command, which follows the first mate's whole look.
 - **A gap.**
   A window that missed the first mate's pushes, because the first mate was out of reach or restarted, reads its panels again with everything else (`startPersonalPlugins`, `src/renderer/src/personal/personalPlugins.ts`).

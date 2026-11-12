@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { expect } from "@playwright/test";
-import { requireConventional } from "../../src/core/workspace/conventional";
+import { requireNamed } from "../../src/core/workspace/naming";
+import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 
 /**
  * A workspace's save points as a journey reads them (docs/testing.md, the
@@ -9,7 +10,7 @@ import { requireConventional } from "../../src/core/workspace/conventional";
  * writes is composed and tested where it is written (`panelInstructions.test.ts`,
  * `liveWorkspace.test.ts`, `personalExtensions.test.ts`), so a journey asks
  * only that the newest is one the host's own naming guard accepts
- * (`requireConventional`, whose rule `conventional.test.ts` owns).
+ * (`requireNamed` under the bundled naming runbook, whose rule `naming.test.ts` owns).
  */
 
 const git = (dir: string, ...args: string[]) =>
@@ -45,7 +46,7 @@ export function workspaceClean(dir: string): boolean {
 export async function oneNewSavePoint(dir: string, before: number): Promise<SavePoint> {
   await expect.poll(() => savePointCount(dir), { timeout: 30_000 }).toBe(before + 1);
   const saved = newestSavePoint(dir);
-  expect(() => requireConventional(saved.subject)).not.toThrow();
+  expect(() => requireNamed(saved.subject, "commit", BUNDLED_NAMING)).not.toThrow();
   expect(workspaceClean(dir)).toBe(true);
   return saved;
 }

@@ -53,7 +53,7 @@ import { restoreKeptCopy } from "../pi/cardImages";
 import type { StagedChangePresentation } from "../pi/changePresentation";
 import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
-import { requireConventional } from "../workspace/conventional";
+import { requireNamed } from "../workspace/naming";
 
 export type PresentationLedger = Pick<TaskService, "get"> & {
   delivery: Pick<
@@ -122,6 +122,7 @@ export class ChangePresentations {
 
   constructor(
     private readonly options: {
+      /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
       namingRule?: () => NamingRule | null;
       validationEvidence?: (taskId: string, evidence: ValidationEvidence[]) => ValidationEvidence[];
       /** Changed unpublished merge words suspend their queue approval before prepare returns. */
@@ -175,7 +176,7 @@ export class ChangePresentations {
             );
           const revision = (prior?.revision ?? 0) + 1;
           if (staged.version === 2)
-            requireConventional(staged.title, "story title", this.options.namingRule?.());
+            requireNamed(staged.title, "story title", this.options.namingRule?.() ?? null);
           const story = changePresentationSchema.parse({
             ...staged,
             taskId,
@@ -586,7 +587,7 @@ export class ChangePresentations {
   }
 
   /**
-   * INF-717: a version-2 story's conventional title is its change's title too. Answers the title
+   * INF-717: a version-2 story's title is its change's title too. Answers the title
    * to send with the story when the change still carries the one the app left there, or none when
    * it already reads the story's; a person's rename sends nothing and is said.
    */
@@ -784,7 +785,13 @@ export class ChangePresentations {
         : around
           ? around.above + around.below
           : "";
-    return { ...change, squashMessage: presentationCommitMessage({ ...story, projectText }) };
+    return {
+      ...change,
+      squashMessage: presentationCommitMessage(
+        { ...story, projectText },
+        this.options.namingRule?.() ?? null,
+      ),
+    };
   }
 
   private async reconcile(

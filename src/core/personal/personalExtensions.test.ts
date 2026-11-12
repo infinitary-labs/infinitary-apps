@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { MIN_BACKGROUND_INTERVAL_MS, type PersonalSnapshot } from "@shared/personal/manifest";
 import type { PanelMountState } from "@shared/personal/mounts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { CoreEventSink } from "../events";
 import { PanelRuntimes } from "../panels/panelRuntimes";
@@ -65,7 +66,9 @@ async function harness(watch: { silenceMs?: number } = {}) {
     mkdirSync(join(workspaceDir, path, ".."), { recursive: true });
     writeFileSync(join(workspaceDir, path), content);
   };
-  return { workspaceDir, cacheRoot, store, tasks, pushes, emit, write, runtimes, db };
+  // The app names its workspace commits by its active naming runbook; this is the bundled one, on by default.
+  const namingRule = () => BUNDLED_NAMING;
+  return { workspaceDir, cacheRoot, store, tasks, pushes, emit, write, runtimes, db, namingRule };
 }
 
 const PANEL =

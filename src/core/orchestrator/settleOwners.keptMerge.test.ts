@@ -48,6 +48,7 @@ import {
   repair,
   repairTurn,
 } from "../../../tests/helpers/crewHarnessGit";
+import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   type Forge,
@@ -444,7 +445,7 @@ describe("CrewSupervisor", () => {
         h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
         expect(h.forge.squashes).toEqual(["The meter keeps every reading across a restart."]);
-        expect(presentationCommitMessage(revised)).toBe(h.forge.squashes[0]);
+        expect(presentationCommitMessage(revised, BUNDLED_NAMING)).toBe(h.forge.squashes[0]);
         await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.closedReason).toBe("merged"));
         expect(
           h.tasks

@@ -23,7 +23,7 @@ import {
   QUEUE_WAITING_WORDS,
 } from "../forge";
 import type { QueueApprovalRemoval, TaskRecord } from "../storage/taskRecords";
-import { DEFAULT_NAMING_RULE, requireConventional } from "../workspace/conventional";
+import { requireNamed } from "../workspace/naming";
 import type { ChangeChecks } from "./changeChecks";
 import {
   type ChangeContext,
@@ -387,7 +387,7 @@ export class ChangeMerge {
           )
         : (repo?.path ?? record?.repoDir ?? "");
       if (hasChangeRequests(forge.kind))
-        requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
+        requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
       const fresh = this.options.tasks.get(taskId) ?? record;
       if (fresh) {
         await carryPassedReview({
@@ -801,10 +801,10 @@ export class ChangeMerge {
       const repo =
         targetRepo ?? (record?.repoId ? this.options.repos.get(record.repoId) : undefined);
       const owned = queueMerges(repo ?? undefined);
-      const naming = this.options.namingRule ? this.options.namingRule() : DEFAULT_NAMING_RULE;
+      const naming = this.options.namingRule?.() ?? null;
       // Evaluate the captured active rule here, not in a public queue packet or a copied grammar.
       if (owned && change.number !== undefined)
-        requireConventional(change.title ?? "", "pull request title", naming);
+        requireNamed(change.title ?? "", "pull request title", naming);
       const removeIfInterrupted = async (): Promise<PrOutcome | undefined> => {
         const guidance = held?.();
         const interrupted = guidance ?? look();

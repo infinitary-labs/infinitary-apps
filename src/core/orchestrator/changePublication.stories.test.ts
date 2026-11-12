@@ -9,6 +9,7 @@ import type { HostedPresentationDestination } from "@shared/presentationDestinat
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
+import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import {
   type CheckedOut,
   FakeForge,
@@ -671,7 +672,7 @@ describe("shared story delivery boundaries", () => {
     expect(outcome.ok).toBe(true);
     expect(at.update).toHaveBeenCalledTimes(1);
     expect(putIn).toHaveBeenCalledWith(
-      { ...at.forge.change, squashMessage: presentationCommitMessage(at.story) },
+      { ...at.forge.change, squashMessage: presentationCommitMessage(at.story, BUNDLED_NAMING) },
       repaired,
     );
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
@@ -747,7 +748,7 @@ describe("shared story delivery boundaries", () => {
     expect(at.update).toHaveBeenCalledTimes(1);
     // INF-169 R2 / INF-228 F2: the current description and its plain squash summary travel together.
     expect(putIn).toHaveBeenCalledWith(
-      { ...at.forge.change, squashMessage: presentationCommitMessage(at.story) },
+      { ...at.forge.change, squashMessage: presentationCommitMessage(at.story, BUNDLED_NAMING) },
       repaired,
     );
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
@@ -789,7 +790,9 @@ describe("shared story delivery boundaries", () => {
       ?.revisions.at(-1) as ChangePresentation;
     expect(newest.after).toEqual(["A different account of the work."]);
     expect(putIn).toHaveBeenCalledTimes(2);
-    expect(putIn.mock.calls[1]?.[0].squashMessage).toBe(presentationCommitMessage(newest));
+    expect(putIn.mock.calls[1]?.[0].squashMessage).toBe(
+      presentationCommitMessage(newest, BUNDLED_NAMING),
+    );
     expect(
       at.tasks
         .timeline("ab12cd34")
@@ -886,7 +889,7 @@ describe("shared story delivery boundaries", () => {
     expect(at.update).toHaveBeenCalledTimes(1);
     expect(putIn).toHaveBeenCalledTimes(1);
     expect(putIn.mock.calls[0]?.[0]).toMatchObject({
-      squashMessage: presentationCommitMessage(at.story),
+      squashMessage: presentationCommitMessage(at.story, BUNDLED_NAMING),
     });
     expect(putIn.mock.calls[0]?.[1]).toBe(repaired);
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
@@ -949,7 +952,7 @@ describe("shared story delivery boundaries", () => {
     const merged = await at.service.merges.merge("ab12cd34");
     expect(merged.ok).toBe(true);
     expect(putIn.mock.calls[0]?.[0]).toMatchObject({
-      squashMessage: presentationCommitMessage(at.story),
+      squashMessage: presentationCommitMessage(at.story, BUNDLED_NAMING),
     });
   });
 

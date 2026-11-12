@@ -20,6 +20,7 @@ import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING, GIF_DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import { MAP_DATA } from "../../../tests/helpers/architectureMap";
+import { bundledRunbooks } from "../../../tests/helpers/crewHarness";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -36,7 +37,6 @@ import {
 } from "../forge";
 import { presentationMarkdownText } from "../forge/presentation";
 import { stageChangePresentation } from "../pi/changePresentation";
-import { Runbooks } from "../runbooks/runbooks";
 import { CardStore } from "../storage/cardStore";
 import { openDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
@@ -174,11 +174,8 @@ async function arrange(
   };
   const staged = await stageChangePresentation(draft, { taskId: TASK, worktree, dir: media });
   const readHead = vi.fn(async () => head);
-  // The map part the app ships, read as the app reads it.
-  const runbooks = new Runbooks(resolve("resources/runbooks"), {
-    getRunbookStates: () => ({}),
-    setRunbookStates: () => {},
-  });
+  // The map part and naming rule the app ships, read as the app reads them.
+  const runbooks = bundledRunbooks();
   const create = () =>
     new ChangePresentations({
       tasks,
@@ -186,6 +183,7 @@ async function arrange(
       head: readHead,
       onPrepared,
       mapPart: () => runbooks.mapPart(),
+      namingRule: () => runbooks.naming(),
     });
   let service = create();
   return {
@@ -557,7 +555,7 @@ describe("saved change publication", () => {
       ...change,
       squashMessage: at.draft.whatChanged.join("\n\n"),
     });
-    // INF-228 F2: a person's conventional footer outside our region reaches the squash too.
+    // INF-228 F2: a person's footer outside our region that the naming runbook names reaches the squash too.
     const footer =
       "BREAKING CHANGE: update the work computer.\nOlder computers cannot prepare this story.";
     await expect(

@@ -66,7 +66,8 @@ describe("Common workflows replaces the workspace's second guide", () => {
     );
   it("seeds the workspace once while serving guidance from the runbook, not a second skill", async () => {
     const dir = fresh();
-    await seedPersonalWorkspace({ dir, skillsSourceDir: process.cwd() });
+    const namingRule = () => books().naming();
+    await seedPersonalWorkspace({ dir, skillsSourceDir: process.cwd(), namingRule });
     expect(existsSync(join(dir, SEQUENCES_SKILL_RELATIVE_PATH))).toBe(false);
     const served = books().firstmate().text;
     expect(served).toContain("one place the change touches, no rule, state transition");
@@ -100,6 +101,7 @@ describe("Common workflows replaces the workspace's second guide", () => {
     const result = await seedPersonalWorkspace({
       dir,
       skillsSourceDir: process.cwd(),
+      namingRule: () => books().naming(),
       log: (message) => logs.push(message),
     });
     expect(result.healed).toContain(join(".claude", "skills", "sequences"));

@@ -6,6 +6,7 @@ import { presentationCommitMessage } from "../../src/core/forge/presentation";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
 import { MERGE_NOT_NOW_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
@@ -298,7 +299,7 @@ test("each pull request keeps its own saved story, and a kept approval republish
           sha: repaired,
           method: "squash",
           title: STORIED_STORY_TITLE,
-          message: presentationCommitMessage(STORIED_STORY),
+          message: presentationCommitMessage(STORIED_STORY, BUNDLED_NAMING),
         },
       ]);
     expect(descriptionWrites(secondNumber)).toBe(1);

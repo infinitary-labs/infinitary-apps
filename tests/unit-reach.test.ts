@@ -89,10 +89,10 @@ describe("local direct unit reach", () => {
     expect(
       directUnitReach(
         ["resources/runbooks/naming/runbook.json"],
-        ["src/core/workspace/conventional.test.ts", ...readers],
+        ["src/core/workspace/naming.test.ts", ...readers],
         root,
       ),
-    ).toEqual(["src/core/workspace/conventional.test.ts"]);
+    ).toEqual(["src/core/workspace/naming.test.ts"]);
   });
 
   // INF-2925's audit, the captain's fix-1: "Widen the pull request's unit

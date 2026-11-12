@@ -11,6 +11,7 @@ import {
   FIRSTMATE_TAP,
   publicTagFor,
 } from "../src/core/update/updateChannels";
+import { BUNDLED_NAMING } from "./helpers/namingRunbook";
 import {
   loadYamlFile,
   read,
@@ -384,10 +385,13 @@ describe("resolving a release", () => {
     expect(resolve(clone, { CANDIDATE: breaking }).outputs.version).toBe("0.2.0-alpha.7");
     // INF-228 F2: the actual squash-summary owner keeps the release reader's footer reachable.
     const footer = commit(
-      `fix: x\n\n${presentationCommitMessage({
-        whatChanged: ["Move saved data to the new folder."],
-        projectText: "BREAKING CHANGE: saved data moves",
-      })}`,
+      `fix: x\n\n${presentationCommitMessage(
+        {
+          whatChanged: ["Move saved data to the new folder."],
+          projectText: "BREAKING CHANGE: saved data moves",
+        },
+        BUNDLED_NAMING,
+      )}`,
       { "src.txt": "8" },
     );
     git(clone, "tag", "v0.2.0", breaking);

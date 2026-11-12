@@ -22,7 +22,7 @@ import {
   isTransientForgeFailure,
   QUEUE_STATUS,
 } from "../forge";
-import { requireConventional } from "../workspace/conventional";
+import { requireNamed } from "../workspace/naming";
 import type { ChangeChecks } from "./changeChecks";
 import {
   type ChangeContext,
@@ -657,7 +657,7 @@ export class MergeReviews {
       body: "",
     };
     try {
-      requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
+      requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
       const storied = await this.merges.withPublishedStory(taskId, forge, change);
       if ("held" in storied) return { ok: false, stop: "guidance", text: storied.held };
       change = storied.change;
@@ -938,7 +938,7 @@ export class MergeReviews {
     let dispatched = false;
     try {
       if (hasChangeRequests(forge.kind))
-        requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
+        requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
       // The task's own pull request merges with its description, as the
       // finishing merge sends it.
       if (change.branch === this.options.tasks.get(taskId)?.branch) {

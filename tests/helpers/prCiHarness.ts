@@ -24,7 +24,9 @@ import type { AppDatabase } from "../../src/core/storage/db";
 import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
+import type { NamingRule } from "../../src/shared/runbooks";
 import { freshDatabase } from "./database";
+import { BUNDLED_NAMING } from "./namingRunbook";
 import { scratchDir } from "./scratchDirs";
 import { seedDelivery } from "./taskDelivery";
 
@@ -203,12 +205,13 @@ export function setup(
     tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
-    namingRule?: () => import("../../src/shared/runbooks").NamingRule | null;
     bringBranchHome?: (taskId: string) => Promise<string | undefined>;
     /** The branch a placed task's working copy has checked out there, wired as the app wires it. */
     checkedOut?: CheckedOut;
     /** One forge per project, by its origin, where a test names more than one project. */
     forgeFor?: (repo: { origin?: string | null } | undefined) => FakeForge;
+    /** The active naming runbook's rule, as the app reads it; the bundled one, on by default, unless a test names another. */
+    namingRule?: () => NamingRule | null;
   } = {},
 ): PrCiHarness {
   const db = freshDatabase();
@@ -217,7 +220,9 @@ export function setup(
   const repos = new RepoRegistry(db, join(paths, "fleet"));
   const forge = options.forge ?? new FakeForge();
   const readHead = vi.fn(async () => forge.change?.headSha ?? "");
+  const namingRule = options.namingRule ?? (() => BUNDLED_NAMING);
   const presentations: ChangePresentations = new ChangePresentations({
+    namingRule,
     tasks,
     mediaDir: () => paths,
     head: readHead,
@@ -226,6 +231,7 @@ export function setup(
       : {}),
   });
   const service: ChangeDelivery = createChangeDelivery({
+    namingRule,
     tasks,
     repos,
     forgeFor: options.forgeFor ?? (() => forge),
@@ -233,7 +239,6 @@ export function setup(
     ...(options.checkedOut ? { checkedOut: options.checkedOut } : {}),
     ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
     ...(options.realRange ? {} : { validateRange: async () => {} }),
-    ...(options.namingRule ? { namingRule: options.namingRule } : {}),
     ...(options.now ? { now: options.now } : {}),
     ...(options.onNote ? { onNote: options.onNote } : {}),
     ...(options.steer ? { steer: options.steer } : {}),

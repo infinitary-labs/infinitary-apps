@@ -49,6 +49,26 @@ A runbook may also name a `parts` folder for HTML parts and pictures.
 Use only plain Markdown, text, JSON, HTML, CSS and picture files, with no symbolic links, executable source or paths outside the runbook.
 Do not install a panel just because a runbook carries parts.
 
+## Name commits and pull requests
+
+How commits and pull requests are named comes only from a runbook; the app holds no rule of its own.
+To change it, copy the built-in Commit and PR naming runbook and edit the copy's `naming` object and guidance together:
+
+```json
+"naming": {
+  "pattern": "^\\[[A-Z]+\\] \\S.+$",
+  "message": "Start with the area in capitals and brackets, such as \"[DOCS] Explain the export\".",
+  "compose": "[APP] {summary}",
+  "footer": "^Refs: [^\\r\\n]+"
+}
+```
+
+`pattern` is the regular expression every commit subject and pull request title must match, and `message` is what an author is told when one does not.
+`compose` names each commit the app writes itself, with `{summary}` standing for its plain summary; it must itself match `pattern`.
+`footer` is the regular expression for the lines of a pull request's own text that its squash commit message carries.
+`compose` and `footer` are optional: without them the app's commits carry their plain summary and no footer is carried.
+The first runbook that is on and declares `naming` decides; with none on, no name is checked.
+
 ## Check what reaches the crew
 
 Parse the manifest, check its declared files and folders exist inside the runbook, and read the final guidance and skill back.

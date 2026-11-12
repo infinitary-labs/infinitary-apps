@@ -24,6 +24,7 @@ import {
   startGitLabStub,
 } from "./e2e/gitlabStub";
 import { expectBytesEqual } from "./helpers/expectBytes";
+import { BUNDLED_NAMING } from "./helpers/namingRunbook";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
@@ -61,9 +62,10 @@ async function forgeOver(host: string, heads: Record<string, string>) {
     GITLAB_STUB_PROJECT.slice(0, GITLAB_STUB_PROJECT.lastIndexOf("/")),
     GITLAB_STUB_PROJECT.slice(GITLAB_STUB_PROJECT.lastIndexOf("/") + 1),
   ];
+  // The app's forge reads its active naming runbook's rule; this is the bundled one, on by default.
   const forge = new GitLabForge(
     { kind: "gitlab", host, owner, name, dir: "/r" },
-    { token: async () => GITLAB_STUB_KEY, apiBaseUrl: stub.url },
+    { token: async () => GITLAB_STUB_KEY, apiBaseUrl: stub.url, namingRule: () => BUNDLED_NAMING },
   );
   return { gitlab: stub, forge };
 }
@@ -205,7 +207,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
       expect(gitlab.merges()).toHaveLength(1);
     });
 
-    it("refuses an unconventional title before asking GitLab to merge", async () => {
+    it("refuses a title the naming runbook refuses before asking GitLab to merge", async () => {
       const { gitlab, forge } = await forgeOver(host, { [BRANCH]: sha("meter head") });
       const change = await forge.openChange({ branch: BRANCH, title: "Meter fix", body: BODY });
       await expect(forge.putIn(change, change.headSha)).rejects.toThrow(/Meter fix/);
@@ -773,7 +775,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
           iid: 1,
           sha: HEAD,
           squash: true,
-          message: `feat: carry the evidence\n\n${presentationCommitMessage({ whatChanged: at.draft.whatChanged, projectText: "Closes #24" })}`,
+          message: `feat: carry the evidence\n\n${presentationCommitMessage({ whatChanged: at.draft.whatChanged, projectText: "Closes #24" }, BUNDLED_NAMING)}`,
         },
       ]);
     } finally {

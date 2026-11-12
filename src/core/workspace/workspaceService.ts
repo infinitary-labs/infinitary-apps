@@ -14,7 +14,6 @@ import type { NamingRule } from "../../shared/runbooks";
 import { hostEnv } from "../hostEnv";
 import type { AppPaths } from "../paths";
 import { atUtilityQos } from "../utilityQos";
-import { requireConventionalRange } from "./conventional";
 import { forgeAuthRequired } from "./forgeAuth";
 import {
   APP_GIT_IDENTITY,
@@ -25,6 +24,7 @@ import {
   releaseTaskRemote,
   taskRemoteName,
 } from "./git";
+import { composedName, requireNamedRange } from "./naming";
 import { WorktreePool, type WorktreePoolOptions } from "./worktreePool";
 
 const execFileAsync = promisify(execFile);
@@ -94,6 +94,7 @@ export type WorkspacePaths = Pick<
 >;
 
 export type WorkspaceServiceOptions = {
+  /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
   namingRule?: () => NamingRule | null;
   /** The pnpm executable; tests point it at a stub. */
   pnpm?: string;
@@ -250,6 +251,11 @@ export class WorkspaceService {
       options.pool === false
         ? null
         : new WorktreePool(paths.worktreePoolDir, (dir) => this.discardDir(dir), options.pool);
+  }
+
+  /** The active naming runbook's rule, which names and checks every commit here. */
+  private naming(): NamingRule | null {
+    return this.options.namingRule?.() ?? null;
   }
 
   /**
@@ -462,7 +468,7 @@ export class WorkspaceService {
       "# Infinitary workspace\n\nThe app-managed default workspace. Tasks not tied to a registered repo run here, one git worktree per task.\n",
     );
     await git(dir, ["add", "-A"]);
-    await git(dir, ["commit", "-m", "chore: initialize default workspace"]);
+    await git(dir, ["commit", "-m", composedName("initialize default workspace", this.naming())]);
     return dir;
   }
 
@@ -870,7 +876,7 @@ export class WorkspaceService {
     const { repoDir, branch } = workspace;
     const head = await git(repoDir, ["rev-parse", `${branch}^{commit}`]);
     const base = await git(repoDir, ["merge-base", "HEAD", head]);
-    await requireConventionalRange(repoDir, base, head, this.options.namingRule?.());
+    await requireNamedRange(repoDir, base, head, this.naming());
     const dirty = await git(repoDir, ["status", "--porcelain"]);
     if (dirty) {
       throw new Error("The repository has uncommitted changes; commit or stash them first.");
@@ -894,7 +900,8 @@ export class WorkspaceService {
     }
     check();
     try {
-      await git(repoDir, ["merge", "--no-ff", "-m", "chore: integrate task work", head]);
+      const name = composedName("integrate task work", this.naming());
+      await git(repoDir, ["merge", "--no-ff", "-m", name, head]);
       return { mode: "merge" };
     } catch (caught) {
       await git(repoDir, ["merge", "--abort"]).catch(() => {});
@@ -1071,7 +1078,7 @@ export class WorkspaceService {
       tree,
       ...parents,
       "-m",
-      `chore: keep work of task ${taskId}${branch ? ` (${branch})` : ""}`,
+      composedName(`keep work of task ${taskId}${branch ? ` (${branch})` : ""}`, this.naming()),
       "-m",
       `Saved when the task closed and its working copy was removed: ${held}.`,
     ]);

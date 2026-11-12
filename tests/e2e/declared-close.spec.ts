@@ -8,6 +8,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
 import { MERGE_CLOSES_WORDS } from "../../src/shared/cards";
 import { MERGE_WORDS, PULL_REQUEST_WORDS } from "../../src/shared/vocabulary";
+import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -464,7 +465,7 @@ test("the first mate's merge card on a published story merges at the published v
           sha: head,
           method: "squash",
           title: STORY_MERGE_TITLE,
-          message: presentationCommitMessage(STORY_MERGE_STORY),
+          message: presentationCommitMessage(STORY_MERGE_STORY, BUNDLED_NAMING),
         },
       ]);
     await expect

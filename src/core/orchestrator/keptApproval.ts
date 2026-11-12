@@ -154,9 +154,10 @@ export class KeptApproval {
       (story) => story.revision === ledger.published?.revision,
     );
     if (!latest || !published || latest.head !== head || published.head !== head) return;
+    const naming = this.host.namingRule?.() ?? null;
     if (
       latest.title === published.title &&
-      presentationCommitMessage(latest) === presentationCommitMessage(published)
+      presentationCommitMessage(latest, naming) === presentationCommitMessage(published, naming)
     )
       return;
     const top = record.delivery?.mergeAuthorization;

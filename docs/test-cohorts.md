@@ -133,7 +133,8 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/mergeReviews.test.ts` | a real `git init` per project, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `tests/gitlabMergeReview.test.ts` | a real `git init` for the task's project, at the run's own priority, and the GitLab stand-in on a local port | 5 s default (Mac fastest of five 0.45 s) |
 | `src/core/orchestrator/settleService.test.ts` | real git for a pure update and an edited line, at the run's own priority | 15 s |
-| `src/core/workspace/conventional.test.ts` | real git for incoming commit range, at the run's own priority | 5 s default |
+| `src/core/workspace/naming.test.ts` | real git for incoming commit range, at the run's own priority | 5 s default |
+| `tests/naming-replacement.test.ts` | real git: a project's, the default workspace's and the personal workspace's commits, and a task branch's, at the run's own priority | 5 s default |
 | `src/core/workspace/workspaceService.test.ts` | real git, at the run's own priority | 15 s |
 | `src/core/folderMove/copy.test.ts` | the system's copier on a scratch data folder, on a Mac whose disks are numbered as on another startup | 5 s default (Mac slowest per-case minimum 0.007 s) |
 | `src/core/folderMove/move.test.ts` | real git, the system's copier, SQLite, a vite build and the Electron binary: the one-time move of a scratch data folder | 10 s (Mac slowest per-case minimum 0.588 s) |

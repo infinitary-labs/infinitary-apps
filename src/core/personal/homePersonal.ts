@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { knownPanels } from "@shared/panelArrangement";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
+import type { NamingRule } from "@shared/runbooks";
 import type { CoreEventSink } from "../events";
 import type { HostCapabilities } from "../host";
 import type { IntegrationsService, PanelAsks } from "../integrations";
@@ -58,6 +59,8 @@ export async function startHomePersonal(options: {
   /** The installed plugins' and panels' saved data. */
   store: PersonalStore;
   repos: Pick<RepoRegistry, "ensurePersonal" | "personal">;
+  /** The active naming runbook's rule, which names every commit the host makes in the workspace. */
+  namingRule: () => NamingRule | null;
   knowledge: Pick<KnowledgeService, "directions">;
   /** The tree the Firstmate reads itself from, which seeds the workspace's skills. */
   skillsSourceDir: string;
@@ -87,6 +90,7 @@ export async function startHomePersonal(options: {
   // there once, before the seeder or any agent touches the workspace.
   await carryPanelInstructions({
     workspaceDir: paths.personalWorkspaceDir,
+    namingRule: options.namingRule,
     scope: repos.ensurePersonal(paths.personalWorkspaceDir).id,
     knowledge: options.knowledge,
     log,
@@ -96,6 +100,7 @@ export async function startHomePersonal(options: {
   let tellPanelUpdate: (wake: TypedWake) => void = () => {};
   const personal = await PersonalExtensions.start({
     workspaceDir: paths.personalWorkspaceDir,
+    namingRule: options.namingRule,
     // The app's own design skill and the authoring skills are seeded from
     // the same tree the Firstmate reads itself from (Step 3).
     skillsSourceDir: options.skillsSourceDir,

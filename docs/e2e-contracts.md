@@ -11,7 +11,7 @@ A stand-in for something outside the app (GitHub, a provider, the first mate's m
 A real guard that grows stronger then meets the same valid input it meets in use.
 
 - **A happy path satisfies the real input contract.**
-  Heads exist in the task branch's own git history, a pull request carries the title and body it was opened with, a provider object is complete, and a save point is conventional.
+  Heads exist in the task branch's own git history, a pull request carries the title and body it was opened with, a provider object is complete, and a save point follows the naming runbook.
   The GitHub stand-in and the save-point helpers below keep that for forge and personal work.
 - **A stand-in is tested through its real producer and consumer.**
   `tests/githubStub.test.ts` drives the stand-in through the app's own forge.
@@ -97,7 +97,7 @@ This guard catches accidental observer writes directly, rather than waiting for 
 - Await the actual no-inner-overflow invariant across the resize chain.
   Do not wait on an arbitrary height threshold.
 
-## Conventional save points in forge and personal fixtures
+## Named save points in forge and personal fixtures
 
 The GitHub stand-in (`tests/e2e/githubStub.ts`) is a coherent external system, checked through the app's own forge by `tests/githubStub.test.ts`.
 A change carries the title and body it was opened with (`open_change`) or served with (`servePull` names both); the stand-in never makes one up.
@@ -106,8 +106,8 @@ A merge is GitHub's squash at the head the app asks for, recorded with its title
 The mergeability read by number initially says clean, as GitHub's can lag; after a 405, reads of that head report the known conflict until it is resolved, so an idle boundary during a background repair does not request the same refused merge again.
 `headSha` and `setHead` name heads only for a change whose checks are read and that is never put in.
 A wrong or missing title, a head this Mac lacks, a head that moved, or failing checks is a named refusal case (`settle-effects.spec.ts`), never an accidentally malformed happy path.
-Personal workspace reports remain unmodified in the task record, while untyped reports get a `chore:` subject in git history.
-A journey asserts what the save point promises (`tests/e2e/savePoints.ts`): exactly one new save point, named so the host's own guard (`requireConventional`) accepts it, touching the intended files and carrying the report, with nothing left unsaved.
+Personal workspace reports remain unmodified in the task record, while a report the naming runbook would refuse gets the runbook's `compose` form in git history (`chore:` under the built-in).
+A journey asserts what the save point promises (`tests/e2e/savePoints.ts`): exactly one new save point, named so the host's own guard (`requireNamed`, under the bundled naming runbook a journey's app runs with) accepts it, touching the intended files and carrying the report, with nothing left unsaved.
 The exact subject belongs to the unit tests that compose it (`panelInstructions.test.ts`, `liveWorkspace.test.ts`, `personalExtensions.test.ts`), never to a journey.
 
 ## Scripted first mate turns

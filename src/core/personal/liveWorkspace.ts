@@ -1,10 +1,11 @@
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 import { PERSONAL_ID_PATTERN } from "@shared/personal/manifest";
+import type { NamingRule } from "@shared/runbooks";
 import { cutText } from "@shared/textCut";
 import type { PanelSourceFile } from "../plugins/pluginLint";
-import { requireConventional } from "../workspace/conventional";
 import { APP_GIT_IDENTITY, git } from "../workspace/git";
+import { namedSubject } from "../workspace/naming";
 import { PERSONAL_ENTRY_FILES } from "./compiler";
 
 /**
@@ -271,16 +272,19 @@ export type WorkspaceCommit = {
   paths: string[];
 };
 
+/** The width of the subject line git shows, which a long report's subject is cut to. */
+const SUBJECT_WIDTH = 72;
+
 /**
  * Stages everything and commits under the app's identity when the index
- * differs from HEAD. A typed first sentence stays the subject; an untyped
- * report gets a chore prefix. The rest rides as the body, so the report
- * stays whole in the history.
+ * differs from HEAD. The report's first sentence is the subject, kept when
+ * the active naming runbook accepts it and otherwise put in the runbook's
+ * form. The rest rides as the body, so the report stays whole in the history.
  */
 export async function commitWorkspace(
   workspaceDir: string,
   message: string,
-  options: { only?: string[] } = {},
+  options: { only?: string[]; namingRule?: NamingRule | null } = {},
 ): Promise<WorkspaceCommit> {
   const paths = options.only && options.only.length > 0 ? options.only : undefined;
   await git(workspaceDir, ["add", "-A", "--", ...(paths ?? ["."])]);
@@ -291,17 +295,12 @@ export async function commitWorkspace(
     .filter(Boolean);
   if (changed.length === 0) return { committed: false, paths: [] };
   const { subject, body } = splitMessage(message);
-  const typedSubject = /^((feat|fix|chore|test|refactor|docs|perf)(\([a-z0-9./-]+\))?!?: )/.test(
-    subject,
-  )
-    ? subject
-    : `chore: ${cutText(subject, 65)}`;
-  requireConventional(typedSubject);
+  const named = namedSubject(subject, options.namingRule ?? null, SUBJECT_WIDTH);
   await git(workspaceDir, [
     ...APP_GIT_IDENTITY,
     "commit",
     "-m",
-    typedSubject,
+    named,
     ...(body ? ["-m", body] : []),
     ...(paths ? ["--only", "--", ...paths] : []),
   ]);
@@ -318,8 +317,9 @@ export function splitMessage(message: string): { subject: string; body: string }
   const text = message.replace(/\r\n/g, "\n").trim();
   const firstLine = text.split("\n")[0] ?? "";
   const sentence = firstLine.match(/^(.+?[.!?])(?:\s|$)/)?.[1] ?? firstLine;
-  const truncated = sentence.length > 72;
-  const subject = (truncated ? `${cutText(sentence, 69).trimEnd()}...` : sentence).trim();
+  const truncated = sentence.length > SUBJECT_WIDTH;
+  const cut = SUBJECT_WIDTH - "...".length;
+  const subject = (truncated ? `${cutText(sentence, cut).trimEnd()}...` : sentence).trim();
   const rest = truncated ? text : text.slice(text.indexOf(sentence) + sentence.length).trim();
   return { subject: subject || "Update the personal workspace", body: rest };
 }

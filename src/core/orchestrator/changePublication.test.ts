@@ -641,7 +641,7 @@ describe("the change delivery and the sign-in where the project lives", () => {
     forge.change = { ...(forge.change as ForgeChange), title: "Plain renamed title" };
     const result = await service.merges.merge("ab12cd34");
     expect(result.ok).toBe(false);
-    expect(result.text).toContain("conventional name");
+    expect(result.text).toContain("does not follow the naming runbook");
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
   });
 
@@ -652,7 +652,7 @@ describe("the change delivery and the sign-in where the project lives", () => {
     await insertDirectPrTask(tasks, repos);
     expect(
       await service.publication.open("ab12cd34", { title: "Fix it", body: "## Intent" }),
-    ).toContain("conventional name");
+    ).toContain("does not follow the naming runbook");
     expect(forge.calls).not.toContain("openChange fm/task-ab12cd34 Fix it");
   });
 

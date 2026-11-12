@@ -25,8 +25,8 @@ import {
 import { currentChange } from "../storage/changeProjection";
 import type { TaskRecord } from "../storage/taskRecords";
 import { earlyPublication } from "../tasks/liveValidation";
-import { requireConventional, requireConventionalRange } from "../workspace/conventional";
 import { git, gitFailure } from "../workspace/git";
+import { requireNamed, requireNamedRange } from "../workspace/naming";
 import { checkedOutRefFor } from "../workspace/workspaceService";
 import type { ChangeChecks } from "./changeChecks";
 import {
@@ -285,7 +285,7 @@ export class ChangePublication {
       ((await this.presentationBranch(taskId).catch(() => undefined)) ?? located.branch);
     const own = branch === record.branch;
     try {
-      requireConventional(input.title, "pull request title", this.options.namingRule?.());
+      requireNamed(input.title, "pull request title", this.options.namingRule?.() ?? null);
       if (own) await this.context.branchHome(record);
       // Where this Mac's git reads the branch: by its name, or another
       // branch from the computer that runs the task at the task's own ref
@@ -300,10 +300,10 @@ export class ChangePublication {
       );
       const existing = await forge.changeFor(branch);
       if (existing && hasChangeRequests(forge.kind))
-        requireConventional(
+        requireNamed(
           changeTitle(forge.kind, existing) ?? "",
           "existing pull request title",
-          this.options.namingRule?.(),
+          this.options.namingRule?.() ?? null,
         );
       const current = this.options.tasks.get(taskId);
       const policy =
@@ -566,16 +566,16 @@ export class ChangePublication {
       return "A change in another project carries no saved story: pass body as its description, without presentation, around or recovery.";
     if (!existsSync(repo.path)) return `${repo.name}'s folder is gone; cannot open a change there.`;
     try {
-      requireConventional(input.title, "pull request title", this.options.namingRule?.());
+      requireNamed(input.title, "pull request title", this.options.namingRule?.() ?? null);
       await this.validateElsewhere(record.id, repo.path, branch, forge);
       const existing = await forge.changeFor(branch);
       let change: ForgeChange;
       let described = "";
       if (existing) {
-        requireConventional(
+        requireNamed(
           changeTitle(forge.kind, existing) ?? "",
           "existing pull request title",
-          this.options.namingRule?.(),
+          this.options.namingRule?.() ?? null,
         );
         ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
       } else {
@@ -639,7 +639,7 @@ export class ChangePublication {
       );
     }
     const base = await git(dir, ["merge-base", head, `refs/remotes/origin/${name}`]);
-    await requireConventionalRange(dir, base, head, this.options.namingRule?.());
+    await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);
   }
 
   /** What open_change says when the host or the checks refused the change, in either project. */

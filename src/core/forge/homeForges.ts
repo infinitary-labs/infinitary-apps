@@ -79,7 +79,7 @@ export function startHomeForges(options: {
   host: Pick<HostCapabilities, "app">;
   paths: Pick<AppPaths, "forgesDir">;
   repos: RepoRegistry;
-  /** The project's naming rule, read at each request (the runbooks). */
+  /** The active naming runbook's rule, read at each request; null when none is on. */
   namingRule: () => NamingRule | null;
   /** The sign-ins' view, pushed to the window on each change. */
   push: (view: ReturnType<ForgeSignIns["view"]>) => void;

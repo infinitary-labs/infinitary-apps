@@ -75,7 +75,7 @@ Customizing a built-in still starts through the copy action below, which leaves 
 
 Ask the first mate to copy a built-in runbook, with a new name and unused id.
 The asked `runbook-copy` catalog action copies its whole folder into `runbooks/<copyId>/` in the personal workspace and returns that editable path in the runbook list.
-The copy's manifest keeps its sections, selectors, skills, parts and naming convention, gives it its own identity, and names the built-in in `replaces`.
+The copy's manifest keeps its sections, selectors, skills, parts and naming rule, gives it its own identity, and names the built-in in `replaces`.
 The copy starts off, so copying alone changes no served guidance.
 Existing ids and folders are never overwritten, and a linked personal runbooks root is refused.
 
@@ -142,8 +142,10 @@ Its crew section, served to code tasks in a project, has a crewmate in a mapped 
 Its `advanced-architecture` skill holds the map file format with a worked example, how to map, state machines, how to work out a comparison from git, how to draw both on a card with the map part, `parts/map.html`, whose data block is the only thing a crewmate fills, and how to put the change view in a change's story; `parts/map.schema.json` is the map file format.
 `parts/map-page.html` is the same part in a page with the app's colors, which a crewmate fills the same way, opens in its task's browser and photographs; a bare part outside a card has no colors.
 The map part and its page are generated: `node scripts/generate-runbook-parts.ts` minifies the part's readable sources in `src/core/runbooks/parts/` into both, with the design tokens in the page, and `pnpm check` refuses drift, so a change is made in the sources, never in the generated files.
-Commit and PR naming supplies guidance and the data convention read by the existing commit-range, story-title and forge title checks.
-Turning naming off drops that check's convention, but a project's own instructions and release tooling are unchanged.
+Commit and PR naming supplies guidance and the one naming rule the app holds (`naming` in its manifest, read by `Runbooks.naming()` from the first runbook that is on and declares one).
+The rule's `pattern` and `message` are what the commit-range, story-title and forge title checks test and say; its `compose` names each commit the app writes itself, `{summary}` standing for that commit's plain summary; its `footer` picks the lines of a pull request's own text that its squash commit message carries.
+The app keeps no naming convention of its own (`src/core/workspace/naming.ts`): with the built-in off and a copy or another runbook on, every name follows that runbook's rule, and with no naming runbook on nothing is checked and the app's own commits carry their plain summary.
+A project's own instructions and release tooling are unchanged either way.
 
 Runbook guidance may decide author choices on the cards it describes, such as voice, length, layout, opening and button names.
 The fixed card shape, merge authorization, consent, delivery and care facts remain core.

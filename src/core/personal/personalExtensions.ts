@@ -38,6 +38,7 @@ import {
   unservableGrants,
 } from "@shared/plugins/manifest";
 import { panelCardsProblem, withoutPanelCards } from "@shared/plugins/panelCards";
+import type { NamingRule } from "@shared/runbooks";
 import {
   isPublishedView,
   SQL_VIEWS,
@@ -60,6 +61,7 @@ import { checkPluginTree } from "../plugins/pluginInstaller";
 import { formatPanelLint, lintPanelSources, type PanelLintFinding } from "../plugins/pluginLint";
 import type { TaskRecord } from "../storage/taskRecords";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "../workspace/git";
+import { composedName } from "../workspace/naming";
 import {
   type CompiledModule,
   compilePersonalModule,
@@ -162,6 +164,8 @@ export type PersonalTasksSource = {
 
 export type PersonalExtensionsOptions = {
   workspaceDir: string;
+  /** The active naming runbook's rule, which names every commit the host makes; absent or null, none is on. */
+  namingRule?: () => NamingRule | null;
   /** Where the app-owned workspace skills are copied from (Step 3). */
   skillsSourceDir?: string;
   cacheRoot: string;
@@ -462,6 +466,7 @@ export class PersonalExtensions {
           ...(this.options.skillsSourceDir !== undefined
             ? { skillsSourceDir: this.options.skillsSourceDir }
             : {}),
+          ...(this.options.namingRule ? { namingRule: this.options.namingRule } : {}),
           log: this.log,
         }),
       );
@@ -584,7 +589,9 @@ export class PersonalExtensions {
       for (const id of touched) {
         findings.push(...(await this.lintFindings(id)));
       }
-      const commit = await commitWorkspace(this.options.workspaceDir, message);
+      const commit = await commitWorkspace(this.options.workspaceDir, message, {
+        namingRule: this.options.namingRule?.() ?? null,
+      });
       return { touched, findings, commit };
     });
     // The last commit holds the working files now, placed or newer: the
@@ -1111,7 +1118,7 @@ export class PersonalExtensions {
           "commit",
           "-q",
           "-m",
-          `chore: remove ${id} on the captain's word`,
+          composedName(`remove ${id} on the captain's word`, this.options.namingRule?.() ?? null),
           "--only",
           "--",
           id,

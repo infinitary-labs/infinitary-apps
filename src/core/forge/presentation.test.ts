@@ -5,6 +5,7 @@ import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { DomUtils, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
+import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { readCommitEnvelope } from "../queue/shipped/message.mjs";
 import {
   PresentationAroundError,
@@ -151,7 +152,7 @@ describe("the layout GitHub can actually display", () => {
         readCommitEnvelope(rendered, selected.head, "An actual pull request title"),
       ).toThrow("approved naming policy");
       // Literal queue words still come from the saved story, not its flattened display.
-      expect(presentationCommitMessage(selected)).toBe(
+      expect(presentationCommitMessage(selected, BUNDLED_NAMING)).toBe(
         `${selected.whatChanged.join("\n\n")}\n\n${selected.projectText}`,
       );
     }
@@ -168,12 +169,12 @@ describe("the layout GitHub can actually display", () => {
     const body = presentationMarkdown(selected, urls, "passed");
     expect(body).toContain("<!-- infinitary-story:");
     expect(body).toContain("### Risk");
-    const message = presentationCommitMessage(selected);
+    const message = presentationCommitMessage(selected, BUNDLED_NAMING);
     expect(message).toBe(
       "Keep upload_receipts on restart, with paths like work/tasks.\n\nStack recordings; keep picture pairs.\n\nBREAKING CHANGE: update the work computer.\nOlder computers cannot prepare this story.",
     );
     expect(message).not.toMatch(/<!--|<table|user-attachments|\\|Dimension|Other project text/);
-    expect(presentationCommitMessage({ ...selected, projectText: "" })).toBe(
+    expect(presentationCommitMessage({ ...selected, projectText: "" }, BUNDLED_NAMING)).toBe(
       selected.whatChanged.join("\n\n"),
     );
   });

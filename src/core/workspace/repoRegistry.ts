@@ -39,6 +39,7 @@ import {
   runsHereOnly,
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
+import type { NamingRule } from "@shared/runbooks";
 import { z } from "zod";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import { CostLimitStore } from "../storage/costLimitStore";
@@ -47,6 +48,7 @@ import { ensureRepoProject, ProjectStore } from "../storage/projectStore";
 import type { SettingsStore } from "../storage/settingsStore";
 import { prepared } from "../storage/statements";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "./git";
+import { composedName } from "./naming";
 
 /**
  * The managed-repo registry (decision D-8, fleet-root revision): local git
@@ -81,6 +83,8 @@ export type RepoRegistryOptions = {
    * own server").
    */
   knownHosts?: () => readonly KnownForgeHost[];
+  /** The active naming runbook's rule, which names a new project's first commit; absent or null, none is on. */
+  namingRule?: () => NamingRule | null;
 };
 
 export type { RepoSetupResult, RepoSetupSpec } from "@shared/repos";
@@ -1003,7 +1007,7 @@ export class RepoRegistry {
         "--only",
         "--allow-empty",
         "-m",
-        "chore: initialize fleet project",
+        composedName("initialize fleet project", this.options.namingRule?.() ?? null),
       ]);
       return true;
     }

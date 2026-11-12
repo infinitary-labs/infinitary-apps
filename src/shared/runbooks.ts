@@ -17,7 +17,24 @@ export type RunbookFacts = {
   backend: string;
   project?: string;
 };
-export const namingRuleSchema = z.strictObject({ pattern: z.string(), message: z.string() });
+/**
+ * A naming runbook's data (docs/runbooks.md, "Built-ins"): the app holds no
+ * naming convention of its own, so every name it checks or composes reads
+ * the active runbook's.
+ */
+export const namingRuleSchema = z.strictObject({
+  /** A commit subject or a pull request title must match it. */
+  pattern: z.string(),
+  /** What a refused name's author is told to do instead. */
+  message: z.string(),
+  /** The name of a commit the app writes itself; `{summary}` stands for its plain summary. */
+  compose: z
+    .string()
+    .regex(/\{summary\}/)
+    .optional(),
+  /** Each footer of a pull request's own text that its squash commit message carries. */
+  footer: z.string().optional(),
+});
 export type NamingRule = z.infer<typeof namingRuleSchema>;
 /** One crew section: a text file, served when the task's facts match its selector. */
 export const runbookSectionSchema = z.strictObject({

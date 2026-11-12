@@ -401,6 +401,7 @@ export class CrewSupervisor {
       disposed: () => this.disposed,
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
     });
+    const runbooks = options.runbooks;
     this.settling = createSettleOwners({
       now: this.now,
       tasks: options.tasks,
@@ -427,6 +428,7 @@ export class CrewSupervisor {
       ...(options.removeQueuedApproval
         ? { removeQueuedApproval: options.removeQueuedApproval }
         : {}),
+      ...(runbooks ? { namingRule: () => runbooks.naming() } : {}),
       ...(options.validateLocalStory ? { validateLocalStory: options.validateLocalStory } : {}),
       ...(options.mergeReview ? { mergeReview: options.mergeReview } : {}),
       mergeContinued: (taskId, review, outcome, named) => {

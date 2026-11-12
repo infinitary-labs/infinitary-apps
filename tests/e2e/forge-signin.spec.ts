@@ -31,6 +31,7 @@ import {
   sendWriteWords,
 } from "../../src/shared/vocabulary";
 import { NEVER_SENT_AGAIN } from "../../src/shared/writeAsk";
+import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
   API_WRITE_GUARD_MARKER,
@@ -673,7 +674,7 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
       sha: sentUp,
       method: "squash",
       title: MOCK_GITHUB_CHANGE.title,
-      message: presentationCommitMessage(MOCK_GITHUB_STORY),
+      message: presentationCommitMessage(MOCK_GITHUB_STORY, BUNDLED_NAMING),
     },
   ]);
   await expect
@@ -1174,7 +1175,7 @@ test("the first change goes in and its continuation starts from the landed proje
       sha: landedHead,
       method: "squash",
       title: MOCK_CONTINUE_CHANGE.title,
-      message: presentationCommitMessage(MOCK_CONTINUE_STORY),
+      message: presentationCommitMessage(MOCK_CONTINUE_STORY, BUNDLED_NAMING),
     },
   ]);
 });
@@ -1490,7 +1491,7 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
       method: "squash",
       title: MOCK_GITHUB_CHANGE.title,
       // INF-1965: Enterprise squashes the saved story's summary, like public GitHub.
-      message: presentationCommitMessage(MOCK_GITHUB_STORY),
+      message: presentationCommitMessage(MOCK_GITHUB_STORY, BUNDLED_NAMING),
     },
   ]);
   expect(github.requests()).toContain("PUT /api/v3/repos/octo/meterlab/pulls/100/merge");

@@ -279,8 +279,8 @@ A GitLab project's direct-pr task delivers the way a GitHub one does: the crewma
   - no matching pipeline yields an empty list, not an expected check inferred from earlier heads or project history; A read GitLab refuses or answers unreadably fails the reading; it is never taken as no checks.
 - **Its readiness** (`pull`) reads `detailed_merge_status`: `mergeable` is clean; `conflict` (or `has_conflicts`) is a conflict; `need_rebase` is behind; a draft is a draft; an approval, a discussion, a required pipeline or another rule is blocked; GitLab still checking, or a status the app does not know, is computing.
   A server older than `detailed_merge_status` answers `merge_status`.
-- **Its merge** (`putIn`) checks the merge request's title is conventional, then asks `PUT /merge_requests/<N>/merge` with `sha` (GitLab refuses 409 when the merge request moved on), `squash: true` and the squash commit message `<title>`, a blank line and the description.
-  A saved story ("Saved change stories" below) gives its plain summary and breaking-change footer in the description's place.
+- **Its merge** (`putIn`) checks the merge request's title against the active naming runbook, then asks `PUT /merge_requests/<N>/merge` with `sha` (GitLab refuses 409 when the merge request moved on), `squash: true` and the squash commit message `<title>`, a blank line and the description.
+  A saved story ("Saved change stories" below) gives its plain summary and the footers the naming runbook names in the description's place.
   A 200 is not a merge on its own: an answer that does not read merged is read back once; a merge request GitLab has locked while it merges is a transient answer the merge path reads back again, and anything else but merged is refused with GitLab's `merge_error`.
   A locked merge request reads open and computing, never closed.
   GitLab's 405, 409 and 422 are `refused`; the kept approval reads the merge request's own readiness for the cause, and the feed recognises 422 "Branch cannot be merged" as a conflict.
@@ -788,7 +788,7 @@ Only that GitHub job has code and pull-request write permissions; batch checks a
 The queue sends one `repository_dispatch` with type `infinitary-after-merge` after its confirmed merges, with the default branch's pre-merge source in `client_payload.base`, then starts the next batch separately.
 A later refusal still signals the earlier confirmed merges; one refused merge cannot hold the other passed changes.
 Setup and update plans wire the project's after-merge workflows to this event, adapting push-only conditions and changed-path logic while preserving ordinary pushes.
-The squash keeps the title and the story's What changed plus its breaking footer, or the description when there is no story.
+The squash keeps the title and the story's What changed plus the footers the active naming runbook names, or the description when there is no story.
 On every change, including same-project requests, only the trusted approval record supplies squash words, title and naming result.
 Descriptions and review stories never supply merge authority or carry a queue approval envelope.
 The contributor's description stays unchanged.
@@ -1108,9 +1108,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 ### Names on changes and save points
 
-The app checks new save-point subjects against the conventional form `type(scope): summary` or `type: summary` before opening and putting in a change.
-The scope is optional and open-ended; supported types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs`, and `perf`.
-A breaking change uses `!` and the `BREAKING CHANGE` footer in its description.
+The app checks new save-point subjects and change titles against the active naming runbook's rule before opening and putting in a change (`docs/runbooks.md`, Commit and PR naming); it holds no form of its own.
+The built-in Commit and PR naming runbook asks for `type(scope): summary` or `type: summary`: the scope is optional and open-ended, the types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs` and `perf`, and a breaking change uses `!` and the `BREAKING CHANGE` footer in its description.
+A runbook that replaces it decides all of this instead, and with no naming runbook on no name is checked.
 An existing change's current title on GitHub or GitLab is checked again when it is put in; GitHub receives an explicit squash request with that title and description, and GitLab a squash whose commit message is the title, a blank line and the description.
 The app does not rewrite older commits; incoming commits are checked relative to the common base.
 For a change it opens or puts in, that base is measured from the fetched `origin/<default>` when it exists, so a local default branch this Mac has not pulled never makes merged commits look like the branch's own.
@@ -1130,7 +1130,7 @@ The saved story is a soft hold (`story`): when the captain's recorded override p
 The same override passes the story at the merge, ordinary or past the branch rules, at the version it covers (INF-1365): the merge goes without a current published story, while its checks, review, approval, version and the host's rules still hold.
 It marks no story published, uploads, refreshes and rewrites nothing, and is read after the merge's last wait, so an override taken back before the send holds the merge.
 A merge card that names a story revision still needs its destination's current readiness: a hosted description published and read back, a pushed plain branch confirmed, or local committed work checked.
-New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
+New stories use version 2: the same title on the card and pull request, named by the naming runbook, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
 Aim for 150 open words on the card and 250 on the pull request.
 The zod schema carries the captain’s selected item counts and refuses past them; the author owns sentence length and word targets, with no invented per-sentence character refusal.
 The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, when `layout` adjacent applies, what a view's `map` is ("A map view" below), and who reads the story and what `publishable` declares, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
@@ -1158,7 +1158,7 @@ Version-1 stories retain the author's optional adjacent grouping within each sta
 The author judges relevance, safe publication and continued applicability; the host checks the typed relationships and byte identity, never natural-language intent.
 Meaningful drawn figures need inspected raster exports; arbitrary card HTML, interactive controls, host chrome and private threads are not exported.
 Public project-template text and issue references are supplied as `projectText` outside the generated region on the first publication; after it, `around` changes those words (below).
-A saved story's squash commit message is its plain `whatChanged` summary, followed by any conventional `BREAKING CHANGE:` (or `BREAKING-CHANGE:`) footer and continuation lines in the current surrounding project text.
+A saved story's squash commit message is its plain `whatChanged` summary, followed by each footer the naming runbook's `footer` pattern finds in the current surrounding project text; the built-in's finds a `BREAKING CHANGE:` (or `BREAKING-CHANGE:`) footer and its continuation lines.
 That text begins as `projectText`; the merge preserves a footer the person later adds outside the verified story region too.
 Both ordinary and rules-skipping merges use that summary, never the rendered story's markers, escapes, tables, evidence URLs or risk chart; legacy descriptions keep their existing delivery.
 A merge the override passes squashes under the description's own words around this task's story region instead, any footer included, since the story may describe an older version.
@@ -1257,7 +1257,7 @@ Neither GitHub nor GitLab supplies an atomic conditional description write, so t
 The read after a write compares only the generated region, the one text the app owns, so words a person adds around it, or template lines the host removes, do not make a confirmed write uncertain.
 An ambiguous PR write is reconciled by branch, PR number when known, and exact generated region before any further write; a later push does not prevent confirming the earlier write.
 
-A replacement keeps a version-2 story's conventional title as the change's title too, the one its squash merge uses (INF-717).
+A replacement keeps a version-2 story's title as the change's title too, the one its squash merge uses (INF-717).
 When the change still carries the title the app last left there, the story's new title goes in the same conditional write as the description, and on GitLab a draft keeps its `Draft: ` marker before it; the answer names the new title.
 When a person renamed the change, nothing is sent, checked before any upload and again just before the write, and the answer quotes the change's title, the story's and the one the app last left.
 The crewmate then prepares the story with that title, or asks the captain on a card before setting the title alone with `github_write` and publishing again.

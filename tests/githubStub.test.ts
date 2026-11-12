@@ -16,6 +16,7 @@ import { TaskService } from "../src/core/tasks/taskService";
 import { DEMO_POSTER, DEMO_RECORDING } from "./e2e/demoFixtures";
 import { type GitHubStub, STUB_USER_CODE, startGitHubStub } from "./e2e/githubStub";
 import { expectBytesEqual } from "./helpers/expectBytes";
+import { BUNDLED_NAMING } from "./helpers/namingRunbook";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
@@ -49,7 +50,11 @@ async function forgeOver(heads: Record<string, string>) {
   });
   const forge = new GitHubForge(
     { kind: "github", host: "github.com", owner: "octo", name: "meterlab", dir: "/r" },
-    { token: async () => "gho_e2e_sign_in", apiBaseUrl: stub.url },
+    {
+      token: async () => "gho_e2e_sign_in",
+      apiBaseUrl: stub.url,
+      namingRule: () => BUNDLED_NAMING,
+    },
   );
   return { github: stub, forge };
 }
@@ -362,7 +367,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
       expect(change?.title).toBe("Crewmate's work");
 
       await expect(forge.putIn(change as NonNullable<typeof change>, sha("first"))).rejects.toThrow(
-        /conventional name/,
+        /does not follow the naming runbook/,
       );
       expect(mergeRequests(github)).toEqual([]);
     });

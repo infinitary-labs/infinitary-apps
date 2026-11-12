@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFile, rm, rmdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import type { NamingRule } from "@shared/runbooks";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "../workspace/git";
+import { composedName } from "../workspace/naming";
 import { WORKSPACE_SKILLS_DIR } from "./workspaceSkills";
 
 /**
@@ -62,6 +64,8 @@ export async function carryPanelInstructions(options: {
   /** The personal workspace's project id, the directions' scope. */
   scope: string;
   knowledge: Pick<KnowledgeService, "directions">;
+  /** The active naming runbook's rule, which names the commit the host makes; absent or null, none is on. */
+  namingRule?: () => NamingRule | null;
   log?: (message: string) => void;
 }): Promise<PanelInstructionsCarry> {
   const path = join(options.workspaceDir, OLD_PANEL_INSTRUCTIONS_PATH);
@@ -96,11 +100,18 @@ export async function carryPanelInstructions(options: {
     options.log?.(`panel instructions stay in ${OLD_PANEL_INSTRUCTIONS_PATH}: ${reason}`);
     return { state: "left", reason };
   }
-  const committed = await removeOldFile(options.workspaceDir, path);
+  const committed = await removeOldFile(
+    options.workspaceDir,
+    path,
+    composedName(
+      "carry the captain's panel instructions to standing directions",
+      options.namingRule?.() ?? null,
+    ),
+  );
   return { state: "carried", added, kept, committed };
 }
 
-async function removeOldFile(workspaceDir: string, path: string): Promise<boolean> {
+async function removeOldFile(workspaceDir: string, path: string, name: string): Promise<boolean> {
   let committed = false;
   if (await isGitRepo(workspaceDir)) {
     try {
@@ -111,7 +122,7 @@ async function removeOldFile(workspaceDir: string, path: string): Promise<boolea
         "commit",
         "-q",
         "-m",
-        "chore: carry the captain's panel instructions to standing directions",
+        name,
         "--only",
         "--",
         OLD_PANEL_INSTRUCTIONS_PATH,

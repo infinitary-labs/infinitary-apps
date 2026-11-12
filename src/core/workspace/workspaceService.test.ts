@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { captureLoginPath, resetLoginPathForTests } from "../hostEnv";
 import { writeLoginShellStub } from "../loginShellStub";
@@ -28,10 +29,11 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
+// The app names and checks commits by its active naming runbook; this is the bundled one, on by default.
 function emptyService() {
   const userData = scratchDir("infinitary-ws-");
   const paths = appPathsFor(userData);
-  return { paths, workspace: new WorkspaceService(paths) };
+  return { paths, workspace: new WorkspaceService(paths, { namingRule: () => BUNDLED_NAMING }) };
 }
 
 // Only preparation is shared: no test ever opens this repository for writes.
@@ -1117,7 +1119,9 @@ describe("landTaskWork (Q5, forge-agnostic local landing)", () => {
     const task = await workspace.createTaskWorktree("plain123");
     await git(task.cwd, ["commit", "--allow-empty", "-m", "Plain save point"]);
     const before = await git(task.repoDir, ["rev-parse", "HEAD"]);
-    await expect(workspace.landTaskWork(task)).rejects.toThrow(/conventional name/);
+    await expect(workspace.landTaskWork(task)).rejects.toThrow(
+      /does not follow the naming runbook/,
+    );
     expect(await git(task.repoDir, ["rev-parse", "HEAD"])).toBe(before);
   });
 

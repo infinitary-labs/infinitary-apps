@@ -2,7 +2,7 @@ import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { QueueCredential } from "@shared/repos";
-import { requireConventional } from "../../../workspace/conventional";
+import { requireNamed } from "../../../workspace/naming";
 import type { ForgeApi } from "../../api";
 import {
   checkTimes,
@@ -428,10 +428,10 @@ export class GitLabForge implements Forge {
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
     this.requireMaintainer();
     const iid = numbered(change, this.place);
-    const title = requireConventional(
+    const title = requireNamed(
       change.title ?? "",
       "pull request title",
-      this.options.namingRule?.(),
+      this.options.namingRule?.() ?? null,
     );
     // A saved story squashes under its plain summary, never its rendered evidence (INF-228 F2).
     const body = (change.squashMessage ?? change.body)?.trim() ?? "";

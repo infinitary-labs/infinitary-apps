@@ -4,6 +4,7 @@ import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh"
 import type { MergeReview } from "@shared/mergeReview";
 import type { RepoDelivery } from "@shared/repos";
 import type { Deliverable } from "@shared/routingPolicy";
+import type { NamingRule } from "@shared/runbooks";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import type { ForgePull } from "../forge";
 import type { EmittedCardInput } from "../session/tools";
@@ -188,6 +189,8 @@ export type SettleServiceHost = {
     change?: string,
   ) => void;
   removeQueuedApproval?: (taskId: string, removal: QueueApprovalRemoval) => Promise<void>;
+  /** The active naming runbook's rule, which names the footers a story's squash carries. */
+  namingRule?: () => NamingRule | null;
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
   /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;

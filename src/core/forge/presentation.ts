@@ -6,7 +6,8 @@ import type {
 } from "@shared/changePresentation";
 import { hostedPresentation, presentationFormat } from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
-import { commitMessage } from "../queue/shipped/message.mjs";
+import type { NamingRule } from "@shared/runbooks";
+import { carriedFooters } from "../workspace/naming";
 import type { AttachmentMediaType } from "./attachments";
 import {
   presentationMarkdownText as markdown,
@@ -205,11 +206,16 @@ export function presentationCardBody(story: ChangePresentation, mapPart?: string
     : tieredPresentationCardBody(story, mapPart);
 }
 
-/** INF-228 F2: a squash carries the author's summary, not the evidence presentation. */
+/**
+ * INF-228 F2: a squash carries the author's summary, not the evidence
+ * presentation, and the footers the active naming runbook names in the
+ * project text around the story, such as a breaking-change note, whole.
+ */
 export function presentationCommitMessage(
   story: Pick<ChangePresentation, "whatChanged" | "projectText">,
+  naming: NamingRule | null,
 ): string {
-  return commitMessage(story);
+  return [...story.whatChanged, ...carriedFooters(story.projectText, naming)].join("\n\n");
 }
 
 /** The exact same story; CardService keeps the risk chart, requirements and merge controls. */

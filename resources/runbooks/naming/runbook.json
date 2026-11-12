@@ -8,6 +8,8 @@
   },
   "naming": {
     "pattern": "^(feat|fix|chore|test|refactor|docs|perf)(?:\\([a-z0-9][a-z0-9./-]*\\))?!?: \\S.+$",
-    "message": "Use a name such as \"fix(crew): correct naming\" or \"feat: add a feature\". Choose the accurate type (feat, fix, chore, test, refactor, docs, perf); do not call a fix a feature just to make a release."
+    "message": "Use a name such as \"fix(crew): correct naming\" or \"feat: add a feature\". Choose the accurate type (feat, fix, chore, test, refactor, docs, perf); do not call a fix a feature just to make a release.",
+    "compose": "chore: {summary}",
+    "footer": "^BREAKING[ -]CHANGE:[^\\r\\n]*(?:\\r?\\n[^\\r\\n]+)*"
   }
 }

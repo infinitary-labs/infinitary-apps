@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { BUNDLED_NAMING } from "../../../../../tests/helpers/namingRunbook";
 import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
 import { GITHUB_QUEUE_PART, shippedFiles } from "../../../queue/shipped";
 import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
@@ -77,7 +78,7 @@ async function stub(routes: Record<string, Route>) {
   const base = `http://127.0.0.1:${port}`;
   const forge = new GitHubForge(
     { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/r" },
-    { token: async () => "gho_test", apiBaseUrl: base },
+    { token: async () => "gho_test", apiBaseUrl: base, namingRule: () => BUNDLED_NAMING },
   );
   return { seen, forge, base };
 }
@@ -1102,10 +1103,13 @@ describe("GitHubForge", () => {
         json: { status: "merged", details: { sha: PULL.head.sha } },
       }),
     });
-    const squashMessage = presentationCommitMessage({
-      whatChanged: ["Keep upload_receipts on restart."],
-      projectText: "BREAKING CHANGE: update the work computer.",
-    });
+    const squashMessage = presentationCommitMessage(
+      {
+        whatChanged: ["Keep upload_receipts on restart."],
+        projectText: "BREAKING CHANGE: update the work computer.",
+      },
+      BUNDLED_NAMING,
+    );
     const change = {
       number: PULL.number,
       url: PULL.html_url,
@@ -1208,7 +1212,7 @@ describe("GitHubForge", () => {
     };
     await forge.putIn(change, "feedbeef");
     await expect(forge.putIn({ ...change, title: "Plain change" }, "feedbeef")).rejects.toThrow(
-      /conventional name/,
+      /does not follow the naming runbook/,
     );
     await forge.close(change);
     expect(seen.map((request) => [request.method, request.url, request.body])).toEqual([

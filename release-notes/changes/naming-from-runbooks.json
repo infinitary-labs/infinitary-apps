@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "naming-from-runbooks",
+      "kind": "fix",
+      "title": "Your own naming runbook decides how commits and pull requests are named",
+      "body": "When you turn off the built-in Commit and PR naming runbook and turn on your own, every commit and pull request title is checked against your rules, and the commits Infinitary makes itself are named your way. With no naming runbook on, no name is checked.",
+      "area": "crewmates",
+      "noPicture": "Names in a project's history and its pull requests follow the active runbook; no screen in the app changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

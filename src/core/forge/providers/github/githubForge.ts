@@ -13,7 +13,7 @@ import {
   revocationEnvelope,
 } from "../../../queue/shipped/message.mjs";
 import { PAUSE_LABEL, REMOVED, readPauseMarker } from "../../../queue/shipped/rules.mjs";
-import { requireConventional } from "../../../workspace/conventional";
+import { requireNamed } from "../../../workspace/naming";
 import {
   type ApiProject,
   type ApiRoute,
@@ -132,6 +132,7 @@ export function githubGraphqlUrl(apiBase: string): string {
 }
 
 export type GitHubForgeOptions = {
+  /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
   namingRule?: () => NamingRule | null;
   /** The person's GitHub sign-in, read at call time; undefined = not signed in. */
   token: () => Promise<string | undefined>;
@@ -727,10 +728,10 @@ export class GitHubForge implements Forge {
       {
         sha: headSha,
         merge_method: "squash",
-        commit_title: requireConventional(
+        commit_title: requireNamed(
           change.title ?? "",
           "pull request title",
-          this.options.namingRule?.(),
+          this.options.namingRule?.() ?? null,
         ),
         commit_message: change.squashMessage ?? change.body ?? "",
       },
@@ -884,10 +885,10 @@ export class GitHubForge implements Forge {
         merge_method: "squash",
         merge_action: "direct_merge",
         bypass_rules: true,
-        commit_title: requireConventional(
+        commit_title: requireNamed(
           change.title ?? "",
           "pull request title",
-          this.options.namingRule?.(),
+          this.options.namingRule?.() ?? null,
         ),
         commit_message: change.squashMessage ?? change.body ?? "",
       },

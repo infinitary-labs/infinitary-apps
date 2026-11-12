@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   changedExtensionIds,
@@ -143,9 +144,11 @@ describe("liveWorkspace", () => {
     expect(await commitWorkspace(dir, "nothing changed")).toEqual({ committed: false, paths: [] });
     mkdirSync(join(dir, "clock"));
     writeFileSync(join(dir, "clock", "panel.tsx"), "export default () => null;");
+    // The app names the commit by its active naming runbook; this is the bundled one, on by default.
     const commit = await commitWorkspace(
       dir,
       "Tokyo clock panel added. It shows the time in Tokyo, and nothing else.",
+      { namingRule: BUNDLED_NAMING },
     );
     expect(commit.committed).toBe(true);
     expect(commit.sha).toMatch(/^[0-9a-f]{40}$/);
@@ -178,7 +181,9 @@ describe("liveWorkspace", () => {
     try {
       for (let round = 1; round <= 10; round++) {
         writeFileSync(join(dir, "clock", "panel.tsx"), `export default () => ${round};`);
-        expect(await commitWorkspace(dir, `Round ${round}.`)).toMatchObject({ committed: true });
+        expect(
+          await commitWorkspace(dir, `Round ${round}.`, { namingRule: BUNDLED_NAMING }),
+        ).toMatchObject({ committed: true });
       }
     } finally {
       reading = false;

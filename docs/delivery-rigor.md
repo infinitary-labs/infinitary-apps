@@ -91,7 +91,7 @@ The section then has the crewmate report under the evidence contract below.
 Every new branch-based change and its merge card use one saved story, including plain Git and local-only delivery; legacy PRs retain the five-heading PR description.
 Public GitHub and GitLab upload selected, inspected, publishable media; other description hosts publish text while keeping media on the merge card and local paths out of the description.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
-Both surfaces use the same conventional title; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
+Both surfaces use the same title, named by the naming runbook; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
 Each changed view pairs its Before and After pictures; recordings stack, new views carry the New tag, and empty sections disappear.
 Version-1 stories keep their existing drawing; the report, legacy descriptions and free-form completion outline stay unchanged.
 The crewmate is told that once, on `emit_card`'s `presentation` field (`tests/crewmate-fixed-context.test.ts`).

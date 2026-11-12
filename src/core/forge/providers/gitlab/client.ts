@@ -38,6 +38,7 @@ export function gitlabApiBaseFor(
 }
 
 export type GitLabOptions = {
+  /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
   namingRule?: () => NamingRule | null;
   token: () => Promise<string | undefined>;
   apiBaseUrl: string;

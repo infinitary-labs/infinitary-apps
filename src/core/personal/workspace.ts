@@ -1,6 +1,8 @@
 import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import type { NamingRule } from "@shared/runbooks";
 import { APP_GIT_IDENTITY, git } from "../workspace/git";
+import { composedName } from "../workspace/naming";
 import { PERSONAL_AGENTS_MD } from "./seed/agentsMd";
 import { INFINITARY_ENV_DTS } from "./seed/infinitaryEnv.generated";
 import { PERSONAL_TSCONFIG_JSON } from "./seed/tsconfigJson";
@@ -58,6 +60,8 @@ export type SeedOptions = {
    * test that only cares about the managed files) seeds no skills.
    */
   skillsSourceDir?: string;
+  /** The active naming runbook's rule, which names the commit the host makes; absent or null, none is on. */
+  namingRule?: () => NamingRule | null;
   log?: (message: string) => void;
 };
 
@@ -117,11 +121,14 @@ export async function seedPersonalWorkspace(options: SeedOptions): Promise<SeedR
         ...APP_GIT_IDENTITY,
         "commit",
         "-m",
-        created
-          ? "chore: seed the personal workspace"
-          : healed.length > 0 || retired.length > 0
-            ? "chore: refresh managed files"
-            : "chore: seed the sequences skill",
+        composedName(
+          created
+            ? "seed the personal workspace"
+            : healed.length > 0 || retired.length > 0
+              ? "refresh managed files"
+              : "seed the sequences skill",
+          options.namingRule?.() ?? null,
+        ),
         "--only",
         "--",
         ...written,

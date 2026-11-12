@@ -237,18 +237,16 @@ export async function createServices(
     databasePath: join(paths.userData, "firstmate.db"),
     log: (message) => console.warn(`[infinitary] sql: ${message}`),
   });
-  // The hosts on the person's own server the app knows (a GitHub Enterprise
-  // host), read from the sign-in service built below.
+  // The person's own-server hosts the app knows (GitHub Enterprise), read from the sign-ins below.
   let knownForgeHosts: () => KnownForgeHost[] = () => [];
+  const knownHosts = () => knownForgeHosts();
   const runbookSource = resolveSelfSourceDir({
     isPackaged: host.app.packaged,
     resourcesPath: host.app.resourcesDir,
     appPath: host.app.appDir,
   });
-  const workspace = new WorkspaceService(paths, {
-    namingRule: () => runbooks.naming(),
-    knownHosts: () => knownForgeHosts(),
-  });
+  const namingRule = () => runbooks.naming();
+  const workspace = new WorkspaceService(paths, { namingRule, knownHosts });
   const settings = new SettingsStore(db, desktopConventions(host.app.platform).dictationKey);
   const pluginRecords = new PluginRecords(db);
   const runbooks = new Runbooks(
@@ -264,14 +262,15 @@ export async function createServices(
   const repos = new RepoRegistry(db, paths.fleetDir, {
     settings,
     appDataDir: paths.userData,
-    knownHosts: () => knownForgeHosts(),
+    knownHosts,
+    namingRule,
   });
   // The app's own sign-ins and forges where projects live (docs/forge.md).
   const forges = startHomeForges({
     host,
     paths,
     repos,
-    namingRule: () => runbooks.naming(),
+    namingRule,
     push: (view) => emit("inf:forges", view),
   });
   const forgeSignIns = forges.signIns;
@@ -779,7 +778,7 @@ export async function createServices(
       supervisor.settling.approvals.storyPrepared(taskId, head, branch),
     validationEvidence: (taskId, evidence) =>
       readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
-    namingRule: () => runbooks.naming(),
+    namingRule,
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
     head: (taskId) => changeDelivery.publication.presentationHead(taskId),
@@ -788,7 +787,7 @@ export async function createServices(
   });
   const prepareContribution = (taskId: string) => projectContributions.prepareTask(taskId, tasks);
   const changeDelivery: ChangeDelivery = createChangeDelivery({
-    namingRule: () => runbooks.naming(),
+    namingRule,
     tasks,
     repos,
     presentations,
@@ -863,6 +862,7 @@ export async function createServices(
     db,
     store: personalStore,
     repos,
+    namingRule,
     knowledge,
     skillsSourceDir: selfSourceDir,
     enabled: personalPanelsEnabled,

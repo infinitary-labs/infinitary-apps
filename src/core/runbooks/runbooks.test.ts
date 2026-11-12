@@ -22,7 +22,7 @@ import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
-import { requireConventional } from "../workspace/conventional";
+import { requireNamed } from "../workspace/naming";
 import { BUILTIN_RUNBOOK_ORDER, Runbooks, stageRunbookSkills } from "./runbooks";
 
 const root = join(__dirname, "../../../resources/runbooks");
@@ -408,14 +408,14 @@ describe("runbooks over existing prompt and skill doors", () => {
   });
   it("serves naming to agents and the host from the same enabled manifest", () => {
     const { books } = fixture();
-    expect(requireConventional("feat(runbooks): add guidance", "title", books.naming())).toContain(
+    expect(requireNamed("feat(runbooks): add guidance", "title", books.naming())).toContain(
       "guidance",
     );
-    expect(() => requireConventional("a plain title", "title", books.naming())).toThrow(
-      "conventional name",
+    expect(() => requireNamed("a plain title", "title", books.naming())).toThrow(
+      "does not follow the naming runbook",
     );
     books.set("naming", false);
-    expect(requireConventional("a plain title", "title", books.naming())).toBe("a plain title");
+    expect(requireNamed("a plain title", "title", books.naming())).toBe("a plain title");
     expect(books.crew(code).text).not.toContain("Name every commit subject");
     expect(books.firstmate().text).not.toContain("Name every commit subject");
   });

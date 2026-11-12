@@ -12,6 +12,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { checkSnapshotState, currentCheckSummary } from "../../src/shared/checkSnapshot";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
+import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import { API_WRITE_GUARD_MARKER, mergeWriteCases, savedWriteAsks } from "./apiWriteCases";
@@ -269,7 +270,7 @@ for (const host of HOSTS) {
           iid: 1,
           sha: sentUp,
           squash: true,
-          message: `${MOCK_GITHUB_CHANGE.title}\n\n${presentationCommitMessage(MOCK_GITHUB_STORY)}`,
+          message: `${MOCK_GITHUB_CHANGE.title}\n\n${presentationCommitMessage(MOCK_GITHUB_STORY, BUNDLED_NAMING)}`,
         },
       ]);
       await expect

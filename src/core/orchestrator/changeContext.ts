@@ -9,8 +9,8 @@ import type { NamingRule } from "../../shared/runbooks";
 import { type Forge, type ForgeChange, ForgeError, type ForgePull, type ForgeRepo } from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
-import { requireConventionalRange } from "../workspace/conventional";
 import { git } from "../workspace/git";
+import { requireNamedRange } from "../workspace/naming";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { ChangePresentations } from "./changePresentations";
 import type { LineageFacts, LineageQuestion } from "./mergeAuthorization";
@@ -26,6 +26,7 @@ import type { TypedWake, WakeFacts } from "./wakes";
  * send-once effects remain host-owned.
  */
 export type ChangeDeliveryOptions = {
+  /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
   namingRule?: () => NamingRule | null;
   prepareContribution?: (taskId: string) => Promise<string | undefined>;
   tasks: TaskService;
@@ -262,7 +263,7 @@ export class ChangeContext {
       ? fetched
       : name;
     const base = await git(dir, ["merge-base", head, target]);
-    await requireConventionalRange(dir, base, head, this.options.namingRule?.());
+    await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);
     return dir;
   }
 }

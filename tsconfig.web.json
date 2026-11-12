@@ -41,6 +41,7 @@
     "src/panels/**/*.tsx",
     "src/shared/**/*.ts",
     "tests/fixtures/cardAnnotations.ts",
+    "tests/fixtures/oversized-card/**/*.ts",
     "tests/fixtures/personal/**/*.ts",
     "tests/fixtures/personal/**/*.tsx",
     "tests/fixtures/personal-skills/**/*.ts",

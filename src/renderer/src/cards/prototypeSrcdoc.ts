@@ -3,7 +3,11 @@ import { cardTypefaceNames } from "@shared/cardPictures";
 import { REVISION_TARGETS_MAX } from "@shared/cards";
 import { isSafeCardHref, splitCardBodyUrls } from "@shared/linkify";
 import { SRCDOC_FRAME_CSP } from "@shared/plugins/containment";
-import { buildFrameDocument, type FrameTheme } from "@shared/plugins/frameDocument";
+import {
+  buildFrameDocument,
+  FRAME_TEMPLATE_MAX_BYTES,
+  type FrameTheme,
+} from "@shared/plugins/frameDocument";
 import { frameStylesheet } from "../plugins/frames/frameStylesheet";
 
 /**
@@ -36,6 +40,23 @@ export const PROTOTYPE_FRAME_CSP = SRCDOC_FRAME_CSP;
  */
 export function cardBodyMounts(body: string): boolean {
   return /<script[\s>/]/i.test(body) || cardTypefaceNames(body).length > 0;
+}
+
+/**
+ * Which vehicle draws a body (INF-3887): `srcdoc` for a body that does not
+ * mount; `mount` for one that does; `words` for one that would mount but
+ * whose served markup is over the limit the host's mount takes
+ * (`FRAME_TEMPLATE_MAX_BYTES`). That body rides srcdoc instead, which has no
+ * limit and whose policy runs none of its scripts: its words, tables,
+ * pictures and still drawings open, under one line saying its drawings are
+ * off. `marks` are the change bars the served markup carries.
+ */
+export function cardBodyVehicle(
+  body: string,
+  marks: readonly number[] = [],
+): "srcdoc" | "mount" | "words" {
+  if (!cardBodyMounts(body)) return "srcdoc";
+  return cardBodyMarkup(body, marks).html.length > FRAME_TEMPLATE_MAX_BYTES ? "words" : "mount";
 }
 
 /**

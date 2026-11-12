@@ -29,6 +29,18 @@ import { PANEL_NAME_PATTERN, panelCardIdSchema } from "./panelCards";
 /** The most template markup, script, or stylesheet a mount may carry. */
 export const FRAME_TEMPLATE_MAX_BYTES = 524_288;
 
+/** The longest title a mount names its frame by (`frameMountRequestSchema`). */
+export const FRAME_TITLE_MAX = 120;
+
+/**
+ * The title as a mount may carry it: a longer one is shortened, ending in an
+ * ellipsis, so a card with a long title still opens (INF-3887).
+ */
+export function frameTitle(title: string): string {
+  if (title.length <= FRAME_TITLE_MAX) return title;
+  return `${title.slice(0, FRAME_TITLE_MAX - 1).replace(/[\uD800-\uDBFF]$/, "")}…`;
+}
+
 /** A closing tag inside embedded text would end the element early. */
 function withoutClosingTag(tag: string) {
   const closing = new RegExp(`</${tag}`, "i");
@@ -59,7 +71,7 @@ export type FrameTheme = z.infer<typeof frameThemeSchema>;
 /** What the renderer hands the host to serve a mount. */
 const frameMountBaseSchema = z.strictObject({
   /** Names the frame in the host's chrome and in its document title. */
-  title: z.string().min(1).max(120),
+  title: z.string().min(1).max(FRAME_TITLE_MAX),
   theme: frameThemeSchema,
   /** The design system's frame stylesheet: tokens, fonts, base rules. */
   style: z

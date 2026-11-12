@@ -4393,11 +4393,21 @@ export function cardBodyStopped(): string {
 export function cardBodyFailed(): string {
   switch (currentLanguage()) {
     case "en-XA":
-      return `[Ţĥîš çáŕð çöûļð ñöţ ƀé öþéñéð. ~~~~~~~~~~]`;
+      return `[Ţöö ɱáñý çáŕðš ŵîţĥ ðŕáŵîñĝš áŕé öþéñ ţö ðŕáŵ ţĥîš öñé. ~~~~~~~~~~~~~~~~~~~]`;
     case "ar-XB":
-      return `\u202eThis card could not be opened.\u202c`;
+      return `\u202eToo many cards with drawings are open to draw this one.\u202c`;
   }
-  return `This card could not be opened.`;
+  return `Too many cards with drawings are open to draw this one.`;
+}
+
+export function cardBodyDrawingsOff(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð îš ţöö ļáŕĝé ţö ŕûñ îţš ðŕáŵîñĝš, šö ţĥéý áŕé öƒƒ. Îţš ŵöŕðš áñð þîçţûŕéš áŕé ƀéļöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card is too large to run its drawings, so they are off. Its words and pictures are below.\u202c`;
+  }
+  return `This card is too large to run its drawings, so they are off. Its words and pictures are below.`;
 }
 
 export function cardBodyFrameTitle(input: { title: string }): string {
@@ -8113,6 +8123,7 @@ export const MESSAGES = {
   cardAskedPicture,
   cardBodyStopped,
   cardBodyFailed,
+  cardBodyDrawingsOff,
   cardBodyFrameTitle,
   cardBodyRetry,
   cardBrowserWord,
@@ -8843,6 +8854,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   cardAskedPicture: [],
   cardBodyStopped: [],
   cardBodyFailed: [],
+  cardBodyDrawingsOff: [],
   cardBodyFrameTitle: ["title"],
   cardBodyRetry: [],
   cardBrowserWord: [],

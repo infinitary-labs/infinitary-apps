@@ -6,7 +6,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { wordSaidBody } from "@shared/i18n/said";
 import type { FrameAnswers, FramePicture } from "@shared/plugins/bridge";
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
-import type { FrameMount, FrameTheme } from "@shared/plugins/frameDocument";
+import { type FrameMount, type FrameTheme, frameTitle } from "@shared/plugins/frameDocument";
 import { appBodyOf } from "@shared/welcome";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { available } from "../app/focusRecovery";
@@ -35,8 +35,9 @@ import {
   CHANGE_GUTTER_PX,
   cardBodyHtml,
   cardBodyMarkup,
-  cardBodyMounts,
+  cardBodyVehicle,
   cardStylesheet,
+  escapeHtml,
   INSET_SPACER,
 } from "./prototypeSrcdoc";
 import { type RevealBody, revealInCard, useRevisionNavigation } from "./RevisionNavigation";
@@ -272,7 +273,6 @@ export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
         },
       }
     : input;
-  const mounted = cardBodyMounts(given.body);
   // The task keys it writes link to their tasks (FI3-594), in either
   // vehicle - every key but the card's own task's (FI3-1271).
   const links = useTaskLinks(given.body, given.ownTaskId);
@@ -283,15 +283,23 @@ export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
   // The chrome's box rides its own spacer at the start of the body, so the
   // body's first lines flow around it and its later headings clear it
   // (`CARD_INSET_STYLE`); a change bar's offset moves past the spacer.
-  const props: SrcdocProps = chrome
-    ? {
-        ...given,
-        body: `${INSET_SPACER}${given.body}`,
-        ...(given.marks ? { marks: given.marks.map((mark) => mark + INSET_SPACER.length) } : {}),
-        frameInset: measured ?? chrome.until,
-        revisionStart: (start) => (given.revisionStart?.(start) ?? start) + INSET_SPACER.length,
-      }
-    : given;
+  const chromed = (body: BodyProps): SrcdocProps =>
+    chrome
+      ? {
+          ...body,
+          body: `${INSET_SPACER}${body.body}`,
+          ...(body.marks ? { marks: body.marks.map((mark) => mark + INSET_SPACER.length) } : {}),
+          frameInset: measured ?? chrome.until,
+          revisionStart: (start) => (body.revisionStart?.(start) ?? start) + INSET_SPACER.length,
+        }
+      : body;
+  const whole = chromed(given);
+  const wholeMarks = whole.marks?.join(",") ?? "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: wholeMarks stands for marks, a new array on every push
+  const vehicle = useMemo(() => cardBodyVehicle(whole.body, whole.marks), [whole.body, wholeMarks]);
+  // A body too large for its mount opens with its words, under one line
+  // saying its drawings are off (INF-3887); nothing to retry.
+  const props = vehicle === "words" ? chromed(leadBody(given, drawingsOffLine())) : whole;
   const marksKey = props.marks?.join(",") ?? "";
   // A body with change bars borrows a gutter from the card's padding for
   // them, and its frame moves its text right by as much: on screen the text
@@ -313,7 +321,7 @@ export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
         ...(marked ? { marginInlineStart: -CHANGE_GUTTER_PX } : {}),
       }}
     >
-      {mounted ? (
+      {vehicle === "mount" ? (
         <ScriptedCardBody {...props} links={links} knowledge={knowledge} />
       ) : (
         <SrcdocCardBody {...props} links={links} knowledge={knowledge} />
@@ -346,6 +354,12 @@ function useWordedBody(
     ...(saved.marks ? { marks: saved.marks.map(worded.at) } : {}),
     revisionStart: (start) => worded.at(saved.revisionStart?.(start) ?? start),
   };
+}
+
+/** The line over a body whose drawings are off, as markup in the body's own frame. */
+function drawingsOffLine(): string {
+  // i18n-exempt: not shown (markup); its words are the catalog's
+  return `<p data-inf-drawings-off="" style="margin-top:0;color:var(--fg-3);font-size:var(--text-sm)">${escapeHtml(CARD_BODY_WORDS.drawingsOff)}</p>`;
 }
 
 function leadBody(input: Omit<BodyProps, "inset" | "lead">, lead: string): BodyProps {
@@ -798,7 +812,8 @@ function ScriptedCardBody(props: SrcdocProps) {
     void window.infinitary.plugins
       .mountFrame({
         kind: "card",
-        title,
+        // A longer title is shortened to what the mount takes (INF-3887).
+        title: frameTitle(title),
         theme,
         style: cardStylesheet(),
         // The markup the agent wrote, unchanged. The host finds its inline
@@ -815,7 +830,9 @@ function ScriptedCardBody(props: SrcdocProps) {
         }
       })
       .catch(() => {
-        // The host refused the mount (its card cap); Retry asks again.
+        // The host refused the mount: too many cards with drawings are open
+        // (its card cap). A body over the size limit never asks (`cardBodyVehicle`),
+        // so Retry, once one closes, asks again.
         if (current) failed("failed");
       });
     return () => {

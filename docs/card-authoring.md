@@ -491,7 +491,10 @@ A script is for behavior - drawing a `<canvas>`, toggling a view, wiring a contr
 - A script that moves a figure sits inside that `<figure>`, one per figure in its own scope (`document.currentScript.closest("figure")` finds it), and the card stays prose; a script anywhere else makes the card a preview (The preview is the decision, above).
   It moves on the captain's press or drag, one pass, never on arrival and never in a loop, and reads `--dur-med` or `--dur-slow`, which the frame zeroes under reduced motion, so every move is then a cut; a duration written into the script is not zeroed (Figures, below).
 - A script that never yields (a tight loop, an animation that blocks) is stopped after a few seconds: the body shows "This card stopped responding." with a Retry, and the rest of the app is unaffected.
+- When too many cards with scripts are already open, the body says so and offers a Retry, which works once one of them closes.
 - Body size, script included, is capped at 64KB.
+  A body the app builds from a saved story can still be larger than the window's mount takes (`FRAME_TEMPLATE_MAX_BYTES`): it then opens with its words, tables, pictures and still drawings, its scripts off, under one line saying its drawings are off, with no Retry (`cardBodyVehicle`).
+- A card title longer than a mount takes (`FRAME_TITLE_MAX`) is shortened with an ellipsis for the served page; the card's own heading keeps the whole title.
 
 Mechanism and the security review: `docs/live-prototype-security.md`, "Agent scripts in card bodies".
 

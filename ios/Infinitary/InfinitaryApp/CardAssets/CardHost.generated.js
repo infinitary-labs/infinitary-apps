@@ -11251,6 +11251,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   ]);
   const BUILTIN_FRAME_PANELS = ["activity", "automation", "knowledge", "now"];
   const FRAME_TEMPLATE_MAX_BYTES = 524288;
+  const FRAME_TITLE_MAX = 120;
   function withoutClosingTag(tag) {
     const closing = new RegExp(`</${tag}`, "i");
     return (text) => !closing.test(text);
@@ -11267,7 +11268,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const frameThemeSchema = _enum(["dark", "light"]);
   const frameMountBaseSchema = strictObject({
     /** Names the frame in the host's chrome and in its document title. */
-    title: string().min(1).max(120),
+    title: string().min(1).max(FRAME_TITLE_MAX),
     theme: frameThemeSchema,
     /** The design system's frame stylesheet: tokens, fonts, base rules. */
     style: string().max(FRAME_TEMPLATE_MAX_BYTES).refine(withoutClosingTag("style"), "a </style> tag")

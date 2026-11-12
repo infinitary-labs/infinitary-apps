@@ -490,7 +490,8 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FRAME_STORE_KEY_MAX: physical("refused as a malformed request (bad_request); the bound is unnamed"),
   },
   "src/shared/plugins/frameDocument.ts": {
-    FRAME_TEMPLATE_MAX_BYTES: physical("mount refused at the IPC schema; card bodies stop at 64 KB first"),
+    FRAME_TEMPLATE_MAX_BYTES: physical("a card body over it opens words only, its scripts off; others refused"),
+    FRAME_TITLE_MAX: physical("a longer card title is shortened with an ellipsis before the mount"),
   },
   "src/shared/plugins/manifest.ts": {
     STORAGE_KV_MAX_BYTES: physical("the manifest is refused with the issue; ask for less storage"),

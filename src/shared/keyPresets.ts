@@ -11,16 +11,17 @@ import type { KeySystem } from "./platform";
 
 /**
  * Keyboard presets (docs/keyboard.md, "Presets"; INF-3547's accepted plan,
- * piece 4): each is a whole table of keys, so a person coming from Vim,
- * Emacs or VS Code finds the moves they already know. Legacy is the
- * catalog's own keys, as every version before presets had them; the others
- * are the catalog's keys with the commands a preset changes replaced here.
+ * piece 4, and tmux, piece 6): each is a whole table of keys, so a person
+ * coming from Vim, Emacs, VS Code or tmux finds the moves they already
+ * know. Legacy is the catalog's own keys, as every version before presets
+ * had them; the others are the catalog's keys with the commands a preset
+ * changes replaced here.
  * Pure data, written as a Mac writes keys; each system reads them through
  * `systemKeys`, as it reads the catalog.
  */
 
 /** The presets, in the order the Preset row lists them. */
-export const PRESET_IDS = ["vim", "emacs", "vscode", "legacy"] as const;
+export const PRESET_IDS = ["vim", "emacs", "vscode", "tmux", "legacy"] as const;
 export type PresetId = (typeof PRESET_IDS)[number];
 
 /** The preset a profile that never ran an older version starts on. */
@@ -31,6 +32,7 @@ export const PRESET_LABELS: Readonly<Record<PresetId, string>> = {
   vim: "Vim",
   emacs: "Emacs",
   vscode: "VS Code",
+  tmux: "Tmux",
   legacy: "Legacy",
 };
 
@@ -240,10 +242,47 @@ const EMACS_CTRL: PresetTable = {
   "size.reset": [linX(lin("0")), lin("0")],
 };
 
-/** A preset's own table for a Ctrl system, written as that system presses keys, where the Mac's cannot be read there. */
-const CTRL_TABLES: Partial<Readonly<Record<PresetId, PresetTable>>> = { emacs: EMACS_CTRL };
+/** The presets written as a table of their own; tmux is Vim's table plus its prefix layer. */
+type TabledPreset = Exclude<PresetId, "tmux">;
 
-const TABLES: Readonly<Record<PresetId, PresetTable>> = {
+/** A preset's own table for a Ctrl system, written as that system presses keys, where the Mac's cannot be read there. */
+const CTRL_TABLES: Partial<Readonly<Record<TabledPreset, PresetTable>>> = { emacs: EMACS_CTRL };
+
+/**
+ * tmux's prefix, as tmux has it: ⌃B, then the second key of the prefix
+ * layer. A person changes it in one place (`SavedKeymap.prefix`), and every
+ * key of the layer moves with it.
+ */
+export const TMUX_PREFIX: KeyChord = { key: "b", ctrl: true };
+
+/**
+ * tmux: Vim's keys for moving inside content, as tmux borrows them, and
+ * tmux's prefix layer, which works anywhere, mid-sentence too, as it does
+ * in a terminal. A session is a project, a window is a card and a pane is a
+ * part of the window: the prefix, then : searches commands, ? opens the
+ * keys, s the project focus, w or f finds a task, n and p the next and the
+ * previous card, o the next part and an arrow the part that way, z
+ * maximizes a card, d puts it aside (tmux's detach) and [ goes to the
+ * card's body (tmux's copy mode). Each entry is the layer's second key.
+ */
+const TMUX_LAYER: Partial<Readonly<Record<AnyCommandId, readonly KeyChord[]>>> = {
+  "commands.search": [{ key: ":" }],
+  "settings.keyboard": [{ key: "?" }],
+  "project-focus.open": [{ key: "s" }],
+  "panel:now/find": [{ key: "w" }, { key: "f" }],
+  "cards.next": [{ key: "n" }],
+  "cards.previous": [{ key: "p" }],
+  "regions.next": [{ key: "o" }],
+  "regions.left": [{ key: "ArrowLeft" }],
+  "regions.down": [{ key: "ArrowDown" }],
+  "regions.up": [{ key: "ArrowUp" }],
+  "regions.right": [{ key: "ArrowRight" }],
+  "cards.maximize": [{ key: "z" }],
+  "cards.minimize": [{ key: "d" }],
+  "focus.card-body": [{ key: "[" }],
+};
+
+const TABLES: Readonly<Record<TabledPreset, PresetTable>> = {
   legacy: {},
   vim: VIM,
   emacs: EMACS,
@@ -256,24 +295,82 @@ export function presetChanges(
   id: AnyCommandId,
   system: KeySystem = "mac",
 ): boolean {
+  if (preset === "tmux") return presetChanges("vim", id, system) || Object.hasOwn(TMUX_LAYER, id);
   return Object.hasOwn(tableOn(preset, system), id);
 }
 
 /** A preset's table on a system: its own Ctrl table there, if it has one. */
-function tableOn(preset: PresetId, system: KeySystem): PresetTable {
+function tableOn(preset: TabledPreset, system: KeySystem): PresetTable {
   return (system === "ctrl" ? CTRL_TABLES[preset] : undefined) ?? TABLES[preset];
+}
+
+/** Whether two chords are one press: the same key, a letter in either case, and the same modifiers. */
+export function sameChord(a: KeyChord, b: KeyChord): boolean {
+  const key = (chord: KeyChord) =>
+    /^[a-z]$/i.test(chord.key) ? chord.key.toLowerCase() : chord.key;
+  return (
+    key(a) === key(b) &&
+    (a.meta === true) === (b.meta === true) &&
+    (a.ctrl === true) === (b.ctrl === true) &&
+    (a.alt === true) === (b.alt === true) &&
+    (a.shift === true) === (b.shift === true)
+  );
+}
+
+/** The two keys of the prefix layer: the prefix, then this second key, anywhere. */
+export function prefixed(prefix: KeyChord, second: KeyChord): KeyBinding {
+  const { key, meta, ctrl, alt, shift } = prefix;
+  return {
+    key,
+    ...(meta ? { meta: true } : {}),
+    ...(ctrl ? { ctrl: true } : {}),
+    ...(alt ? { alt: true } : {}),
+    ...(shift ? { shift: true } : {}),
+    second,
+  };
+}
+
+/** Whether two bindings are the same press, or the same pair of presses. */
+function sameKeys(a: KeyBinding, b: KeyBinding): boolean {
+  return (
+    sameChord(a, b) &&
+    (a.second === undefined || b.second === undefined
+      ? a.second === b.second
+      : sameChord(a.second, b.second))
+  );
+}
+
+/**
+ * A command's tmux keys on a system: Vim's, less any that the prefix takes
+ * (⌃B pages up in Vim, so with tmux's own prefix it does not), with the
+ * prefix layer's listed after Vim's own and before the catalog's keys Vim
+ * keeps (a panel's suggested key Vim keeps is not split out), so a hint names a key of tmux's own (the captain's pick "Show each
+ * preset's own keys first"). The prefix is pressed as it is, on every system.
+ */
+function tmuxKeys(id: AnyCommandId, system: KeySystem, prefix: KeyChord): readonly KeyBinding[] {
+  const vim = presetKeys("vim", id, system).filter((binding) => !sameChord(binding, prefix));
+  const legacy = isCatalogCommand(id) ? systemKeys(KEYBOARD_COMMANDS[id].keys, system) : [];
+  const isKept = (binding: KeyBinding) => legacy.some((old) => sameKeys(old, binding));
+  return [
+    ...vim.filter((binding) => !isKept(binding)),
+    ...(TMUX_LAYER[id] ?? []).map((second) => prefixed(prefix, second)),
+    ...vim.filter(isKept),
+  ];
 }
 
 /**
  * A command's own keys in a preset on a system: the preset's, or the
- * catalog's where it changes nothing. A panel's command the preset leaves
+ * catalog's where it changes nothing. `prefix` is tmux's, which a person
+ * may change (`SavedKeymap.prefix`). A panel's command the preset leaves
  * alone has none here; its panel's suggested key stands (`resolveBindings`).
  */
 export function presetKeys(
   preset: PresetId,
   id: AnyCommandId,
   system: KeySystem = "mac",
+  prefix: KeyChord = TMUX_PREFIX,
 ): readonly KeyBinding[] {
+  if (preset === "tmux") return tmuxKeys(id, system, prefix);
   const native = system === "ctrl" ? CTRL_TABLES[preset] : undefined;
   if (native) {
     const own = native[id];

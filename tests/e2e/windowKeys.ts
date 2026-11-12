@@ -186,7 +186,7 @@ export async function pickKeyPreset(page: Page, preset: PresetId): Promise<void>
  * Settings → Keyboard (docs/keyboard.md): a command's row by its
  * id (`data-keyboard-command`), its keys, and its recorder's verdict, never
  * by their words; the Preset row's pills by the preset's name, as the row
- * names it (`PRESET_LABELS`).
+ * names it (`PRESET_LABELS`); tmux's Prefix row by its hooks.
  */
 export function keyboardSettings(page: Page): {
   section: Locator;
@@ -198,6 +198,10 @@ export function keyboardSettings(page: Page): {
   resetAll: Locator;
   presets: Locator;
   preset: (preset: PresetId) => Locator;
+  prefix: Locator;
+  prefixRecord: Locator;
+  prefixReset: Locator;
+  prefixVerdict: Locator;
 } {
   const section = page.locator("[data-keyboard-settings]");
   const row = (command: string) => section.locator(`[data-keyboard-command="${command}"]`);
@@ -210,6 +214,14 @@ export function keyboardSettings(page: Page): {
     verdict: (command) => row(command).locator("[data-keyboard-verdict]"),
     resetAll: section.locator("[data-keyboard-reset-all]"),
     presets: section.locator('[data-setting="keyboard-preset"]').getByRole("radio"),
+    prefix: section.locator("[data-keyboard-prefix]"),
+    prefixRecord: section
+      .locator('[data-setting="keyboard-prefix"]')
+      .getByRole("button", { name: /^Record a key for / }),
+    prefixReset: section
+      .locator('[data-setting="keyboard-prefix"]')
+      .getByRole("button", { name: /^Reset / }),
+    prefixVerdict: section.locator("[data-keyboard-prefix-recorder] [data-keyboard-verdict]"),
     preset: (preset) =>
       section
         .locator('[data-setting="keyboard-preset"]')
@@ -252,6 +264,13 @@ export async function chooseKeyPlace(
 export async function startRecording(page: Page, command: string): Promise<void> {
   await untilWindowCommands(page);
   await keyboardSettings(page).record(command).click();
+  await expect(windowKeysMark(page)).toHaveAttribute("data-window-keys", "recording");
+}
+
+/** Starts recording tmux's prefix from its row's Record button, pressed by Enter. */
+export async function startPrefixRecording(page: Page): Promise<void> {
+  await untilWindowCommands(page);
+  await pressKey(keyboardSettings(page).prefixRecord, "Enter");
   await expect(windowKeysMark(page)).toHaveAttribute("data-window-keys", "recording");
 }
 

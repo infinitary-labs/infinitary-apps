@@ -8,15 +8,19 @@ import {
   commandEntry,
   isCatalogCommand,
   type KeyBinding,
+  type KeyChord,
   keysOf,
   type PanelCommand,
 } from "@shared/keyboard";
 import {
   bindingWarning,
+  chordOfPress,
   isChanged,
   type KeymapSnapshot,
   keymapRefusal,
   legacyOffered,
+  prefixOf,
+  prefixProblem,
   type SavedKeymap,
   SCOPE_WORDS,
   sameBinding,
@@ -24,9 +28,16 @@ import {
   withAllCatalogKeys,
   withCatalogKeys,
   withKeys,
+  withPrefix,
   withPreset,
 } from "@shared/keymap";
-import { PRESET_LABELS, type PresetId, presetsOffered } from "@shared/keyPresets";
+import {
+  PRESET_LABELS,
+  type PresetId,
+  presetsOffered,
+  sameChord,
+  TMUX_PREFIX,
+} from "@shared/keyPresets";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commandMatches, commandOffered } from "../app/commandRows";
@@ -48,8 +59,9 @@ import { ROW_GAP, SectionLabel, SettingError, SettingRow } from "./settingRows";
  * Settings → Keyboard (docs/keyboard.md, "Changing keys"; design
  * skill `components/core/KeyboardSettings.prompt.md`): every command with
  * where it works, its keys and whether a person changed them, and on each
- * row Record, Remove and Reset; the Preset row above the search, and Reset
- * all keys beside it, which returns to the chosen preset's keys. The keys
+ * row Record, Remove and Reset; the Preset row above the search, with
+ * tmux's Prefix row under it while tmux is chosen, and Reset all keys
+ * beside the search, which returns to the chosen preset's keys. The keys
  * shown are the window's installed ones, so this list, the hints, command
  * search and the app menu never disagree.
  */
@@ -57,6 +69,9 @@ import { ROW_GAP, SectionLabel, SettingError, SettingRow } from "./settingRows";
 /** The row being recorded, and the keys pressed so far. */
 /** `typed`: the character the last recorded press types, which an ⌥ key stops typing. */
 type Recording = { id: AnyCommandId; keys: KeyBinding | null; typed?: string };
+
+/** tmux's prefix being recorded (docs/keyboard.md, "Presets"), and the key pressed so far. */
+type PrefixRecording = { chord: KeyChord | null };
 
 /** A command's words, the catalog's or its panel's. */
 function labelOf(id: AnyCommandId, panels: readonly PanelCommand[]): string {
@@ -102,13 +117,23 @@ export function KeyboardTab() {
     recordingNow.current = next;
     setRecordingState(next);
   };
-  const [error, setError] = useState<{ at: AnyCommandId | "all"; text: string } | null>(null);
+  const [prefixRecording, setPrefixRecordingState] = useState<PrefixRecording | null>(null);
+  const prefixRecordingNow = useRef<PrefixRecording | null>(null);
+  const setPrefixRecording = (next: PrefixRecording | null) => {
+    prefixRecordingNow.current = next;
+    setPrefixRecordingState(next);
+  };
+  const [error, setError] = useState<{
+    at: AnyCommandId | "all" | "prefix";
+    text: string;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [resetArmed, setResetArmed] = useState(false);
-  const recordingId = recording?.id ?? null;
+  const recordingId = recording?.id ?? (prefixRecording ? "prefix" : null);
+  const anyRecording = recording !== null || prefixRecording !== null;
 
   /** Saves a change whole; a refusal stays beside the row it came from. */
-  const write = (next: SavedKeymap, at: AnyCommandId | "all") => {
+  const write = (next: SavedKeymap, at: AnyCommandId | "all" | "prefix") => {
     const refusal = keymapRefusal(next, snapshot.saved, snapshot.panels, thisDesktop().keys);
     if (refusal) {
       setError({ at, text: refusal });
@@ -121,6 +146,7 @@ export function KeyboardTab() {
       .then((installed) => {
         setInstalledKeymap(installed);
         setRecording(null);
+        setPrefixRecording(null);
       })
       .catch((caught: unknown) => {
         setError({
@@ -131,8 +157,8 @@ export function KeyboardTab() {
       .finally(() => setSaving(false));
   };
 
-  const latest = useRef({ snapshot, write, setRecording });
-  latest.current = { snapshot, write, setRecording };
+  const latest = useRef({ snapshot, write, setRecording, setPrefixRecording });
+  latest.current = { snapshot, write, setRecording, setPrefixRecording };
 
   // While a row records, the window's keys pass to it alone (docs/keyboard.md),
   // marked on the document once the main process has started or stopped.
@@ -146,7 +172,10 @@ export function KeyboardTab() {
         if (current) markWindowKeys("recording");
       })
       .catch(() => {});
-    const stop = () => latest.current.setRecording(null);
+    const stop = () => {
+      latest.current.setRecording(null);
+      latest.current.setPrefixRecording(null);
+    };
     window.addEventListener("blur", stop);
     return () => {
       current = false;
@@ -163,8 +192,22 @@ export function KeyboardTab() {
     () =>
       window.infinitary.keyboard.onRecorded((key) => {
         const { snapshot: installed, write: save, setRecording: record } = latest.current;
+        const prefixNow = prefixRecordingNow.current;
+        if (prefixNow) {
+          const action = recorderKey(key);
+          const { setPrefixRecording: recordPrefix } = latest.current;
+          if (action.kind === "cancel") recordPrefix(null);
+          else if (action.kind === "press")
+            recordPrefix({
+              chord: chordOfPress({ ...action.key, composing: false, repeat: false }),
+            });
+          else if (prefixNow.chord && prefixProblem(prefixNow.chord, thisDesktop().keys) === null)
+            save(withPrefix(installed.saved, prefixNow.chord), "prefix");
+          return;
+        }
         const now = recordingNow.current;
         if (!now) return;
+        const prefix = prefixOf(installed.saved);
         const action = recorderKey(key);
         if (action.kind === "cancel") record(null);
         else if (action.kind === "press")
@@ -176,6 +219,7 @@ export function KeyboardTab() {
               action.key,
               installed.panels,
               thisDesktop().keys,
+              prefix,
             ),
             ...(action.key.key.length === 1 ? { typed: action.key.key } : {}),
           });
@@ -188,6 +232,7 @@ export function KeyboardTab() {
             action.mode,
             installed.panels,
             thisDesktop().keys,
+            prefix,
           );
           if (next) save(next, now.id);
           else if (
@@ -197,6 +242,7 @@ export function KeyboardTab() {
               installed.bindings,
               installed.panels,
               thisDesktop().keys,
+              prefix,
             ).kind === "own"
           )
             record(null);
@@ -208,7 +254,10 @@ export function KeyboardTab() {
   const { panels } = snapshot;
   // The catalog's commands, then each panel's under its own (docs/keyboard.md).
   const ids = allCommandIds(panels);
-  const changed = ids.some((id) => isChanged(snapshot.saved, id));
+  const prefix = prefixOf(snapshot.saved);
+  const changed =
+    ids.some((id) => isChanged(snapshot.saved, id)) ||
+    (prefix !== undefined && !sameChord(prefix, TMUX_PREFIX));
   const shown = ids.filter(
     (id) =>
       (!isCatalogCommand(id) || commandOffered(id, sections)) &&
@@ -230,7 +279,7 @@ export function KeyboardTab() {
               htmlName="keyboard-preset"
               value={snapshot.saved.preset}
               // Not while saving: a disabled pill drops the focus an arrow just moved.
-              disabled={recording !== null}
+              disabled={anyRecording}
               options={presetsOffered(legacyOffered(snapshot.saved), snapshot.saved.preset).map(
                 (value) => ({ value, label: PRESET_LABELS[value] }),
               )}
@@ -242,6 +291,27 @@ export function KeyboardTab() {
           }
         />
       </div>
+      {prefix && (
+        <div style={{ marginBottom: ROW_GAP }}>
+          <PrefixRow
+            prefix={prefix}
+            recording={prefixRecording}
+            busy={saving}
+            error={error?.at === "prefix" ? error.text : null}
+            onRecord={() => {
+              setError(null);
+              setRecording(null);
+              setPrefixRecording({ chord: null });
+            }}
+            onCancel={() => setPrefixRecording(null)}
+            onSave={() => {
+              if (prefixRecording?.chord)
+                write(withPrefix(snapshot.saved, prefixRecording.chord), "prefix");
+            }}
+            onReset={() => write(withPrefix(snapshot.saved, TMUX_PREFIX), "prefix")}
+          />
+        </div>
+      )}
       <div
         style={{
           display: "flex",
@@ -264,7 +334,7 @@ export function KeyboardTab() {
           variant={resetArmed ? "danger" : "ghost"}
           size="sm"
           data-keyboard-reset-all=""
-          disabled={(!changed && !resetArmed) || saving || recording !== null}
+          disabled={(!changed && !resetArmed) || saving || anyRecording}
           onClick={() => {
             if (!resetArmed) {
               setResetArmed(true);
@@ -297,9 +367,11 @@ export function KeyboardTab() {
             snapshot={snapshot}
             recording={recording?.id === id ? recording : null}
             busy={saving}
+            prefix={prefix}
             error={error?.at === id ? error.text : null}
             onRecord={() => {
               setError(null);
+              setPrefixRecording(null);
               setRecording({ id, keys: null });
             }}
             onCancel={() => setRecording(null)}
@@ -312,6 +384,7 @@ export function KeyboardTab() {
                 mode,
                 panels,
                 thisDesktop().keys,
+                prefix,
               );
               if (next) write(next, id);
             }}
@@ -395,6 +468,7 @@ function CommandRow({
   snapshot,
   recording,
   busy,
+  prefix,
   error,
   onRecord,
   onCancel,
@@ -408,6 +482,7 @@ function CommandRow({
   snapshot: KeymapSnapshot;
   recording: Recording | null;
   busy: boolean;
+  prefix: KeyChord | undefined;
   error: string | null;
   onRecord: () => void;
   onCancel: () => void;
@@ -486,6 +561,7 @@ function CommandRow({
           typed={recording.typed}
           bindings={snapshot.bindings}
           panels={snapshot.panels}
+          prefix={prefix}
           busy={busy}
           onSave={onSave}
           onCancel={onCancel}
@@ -581,6 +657,7 @@ function Recorder({
   typed,
   bindings,
   panels,
+  prefix,
   busy,
   onSave,
   onCancel,
@@ -590,12 +667,13 @@ function Recorder({
   typed?: string;
   bindings: Bindings;
   panels: readonly PanelCommand[];
+  prefix: KeyChord | undefined;
   busy: boolean;
   onSave: (mode: "replace" | "add") => void;
   onCancel: () => void;
 }) {
   const system = thisDesktop().keys;
-  const verdict = recorderVerdict(id, keys, bindings, panels, system);
+  const verdict = recorderVerdict(id, keys, bindings, panels, system, prefix);
   const words =
     verdict.kind === "empty"
       ? "Press the keys you want."
@@ -613,7 +691,9 @@ function Recorder({
     "Enter saves",
     `${system === "mac" ? "⇧Enter" : "Shift+Enter"} adds it beside the other keys`,
     "Esc cancels",
-    ...(takesSecondKey(id, keys, panels, system) ? ["Another key now makes it two keys"] : []),
+    ...(takesSecondKey(id, keys, panels, system, prefix)
+      ? ["Another key now makes it two keys"]
+      : []),
   ].join(" · ");
   return (
     <fieldset
@@ -682,5 +762,124 @@ function Recorder({
         </Button>
       </div>
     </fieldset>
+  );
+}
+
+/**
+ * tmux's Prefix row (docs/keyboard.md, "Presets"): the one key every key of
+ * tmux's prefix layer starts with, recorded in this one place; Reset puts
+ * ⌃B back. A recorded prefix shows why it cannot be one before it is saved.
+ */
+function PrefixRow({
+  prefix,
+  recording,
+  busy,
+  error,
+  onRecord,
+  onCancel,
+  onSave,
+  onReset,
+}: {
+  prefix: KeyChord;
+  recording: PrefixRecording | null;
+  busy: boolean;
+  error: string | null;
+  onRecord: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  onReset: () => void;
+}) {
+  const system = thisDesktop().keys;
+  const changed = !sameChord(prefix, TMUX_PREFIX);
+  const problem = recording?.chord ? prefixProblem(recording.chord, system) : null;
+  const canSave = recording?.chord != null && problem === null;
+  return (
+    <SettingRow
+      id="keyboard-prefix"
+      title={m.settingsKeyboardPrefix()}
+      description={m.settingsKeyboardPrefixDescription({ key: chordLabel(prefix, system) })}
+      control={
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <span data-keyboard-prefix={chordLabel(prefix, system)}>
+            <KeyCap>{chordLabel(prefix, system)}</KeyCap>
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={m.settingsKeyboardPrefixRecordLabel()}
+            aria-pressed={recording !== null}
+            disabled={busy}
+            onClick={recording ? onCancel : onRecord}
+          >
+            {m.settingsKeyboardPrefixRecord()}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={m.settingsKeyboardPrefixResetLabel()}
+            disabled={busy || !changed}
+            onClick={onReset}
+          >
+            {m.settingsKeyboardPrefixReset()}
+          </Button>
+        </div>
+      }
+      error={error}
+      detail={
+        recording && (
+          <fieldset
+            data-keyboard-prefix-recorder=""
+            aria-label={m.settingsKeyboardPrefixRecording()}
+            style={{
+              margin: "var(--space-2) 0 0",
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-2)",
+              padding: "var(--space-3)",
+              background: "var(--bg-2)",
+              border: "1px solid var(--accent)",
+              borderRadius: "var(--radius-m)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", minHeight: 28 }}>
+              {recording.chord ? (
+                <KeyCap>{chordLabel(recording.chord, system)}</KeyCap>
+              ) : (
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
+                  {m.settingsKeyboardPrefixRecordingWait()}
+                </span>
+              )}
+            </div>
+            <div
+              data-keyboard-verdict={recording.chord ? (problem ? "refused" : "free") : "empty"}
+              aria-live="polite"
+              style={{ fontSize: "var(--text-sm)", color: problem ? "var(--warn)" : "var(--fg-2)" }}
+            >
+              {!recording.chord
+                ? m.settingsKeyboardPrefixPress()
+                : (problem ?? m.settingsKeyboardPrefixFree())}
+            </div>
+            <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
+              {m.settingsKeyboardPrefixKeys()}
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <Button
+                size="sm"
+                disabled={!canSave || busy}
+                pending={busy}
+                pendingLabel={m.settingsKeyboardPrefixSaving()}
+                onClick={onSave}
+              >
+                {m.settingsKeyboardPrefixSave()}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onCancel}>
+                {m.settingsKeyboardPrefixCancel()}
+              </Button>
+            </div>
+          </fieldset>
+        )
+      }
+    />
   );
 }

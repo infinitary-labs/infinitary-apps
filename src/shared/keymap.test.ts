@@ -24,6 +24,8 @@ import {
   keymapRefusal,
   keymapSnapshot,
   legacyOffered,
+  prefixOf,
+  prefixProblem,
   presetKeymap,
   readSavedKeymap,
   resolveBindings,
@@ -34,6 +36,7 @@ import {
   withCatalogKeys,
   withKeyMoved,
   withKeys,
+  withPrefix,
   withPreset,
 } from "./keymap";
 
@@ -641,5 +644,87 @@ describe("presets", () => {
   it("offers Legacy only to a profile that had it", () => {
     expect(legacyOffered(presetKeymap("vim"))).toBe(false);
     expect(legacyOffered(withPreset(presetKeymap("vim"), "emacs"))).toBe(false);
+  });
+});
+
+/**
+ * INF-3547's accepted plan, piece 6: tmux's prefix layer works anywhere,
+ * taking over the Mac's own ⌃B while typing as tmux does in a terminal,
+ * and its prefix is one "a person changes in one place".
+ */
+describe("tmux's prefix", () => {
+  const ctrlA = { key: "a", ctrl: true };
+  const tmux = presetKeymap("tmux");
+
+  it("installs ⌃B, then a key, anywhere, though ⌃B moves back a character in a text field", () => {
+    expect(prefixOf(tmux)).toEqual({ key: "b", ctrl: true });
+    expect(prefixOf(presetKeymap("vim"))).toBeUndefined();
+    const bindings = resolveBindings(tmux);
+    expect(bindings["cards.next"]).toContainEqual({ key: "b", ctrl: true, second: { key: "n" } });
+    expect(bindings["commands.search"]).toContainEqual({
+      key: "b",
+      ctrl: true,
+      second: { key: ":" },
+    });
+    // The allowance is the prefix's alone: on Vim, ⌃B then a key stays refused.
+    const pair = { key: "b", ctrl: true, second: { key: "x" } };
+    expect(bindingProblem(pair, "cards.next")).toMatch(/moves back a character/);
+    expect(bindingProblem(pair, "cards.next", [], "mac", prefixOf(tmux))).toBeNull();
+    // A single ⌃B anywhere is still the text field's.
+    expect(
+      bindingProblem({ key: "b", ctrl: true }, "cards.next", [], "mac", prefixOf(tmux)),
+    ).toMatch(/moves back a character/);
+  });
+
+  it("moves every prefix key, a person's own included, when the prefix changes", () => {
+    const own = withKeys(tmux, "settings.open", [{ key: "b", ctrl: true, second: { key: "," } }]);
+    const moved = withPrefix(own, ctrlA);
+    expect(moved.prefix).toEqual(ctrlA);
+    expect(moved.keys["settings.open"]).toEqual([{ key: "a", ctrl: true, second: { key: "," } }]);
+    expect(keymapRefusal(moved, own)).toBeNull();
+    const bindings = resolveBindings(moved);
+    expect(bindings["cards.next"]).toContainEqual({ ...ctrlA, second: { key: "n" } });
+    expect(bindings["cards.next"]).not.toContainEqual({
+      key: "b",
+      ctrl: true,
+      second: { key: "n" },
+    });
+    expect(bindings["settings.open"]).toEqual([{ ...ctrlA, second: { key: "," } }]);
+    // ⌃B is Vim's page up again.
+    expect(bindings["move.page-up"]).toContainEqual({ key: "b", ctrl: true, when: "not-typing" });
+    // Back to ⌃B saves no prefix at all.
+    expect(withPrefix(moved, { key: "b", ctrl: true }).prefix).toBeUndefined();
+  });
+
+  it("keeps the prefix through another preset, and Reset all keys puts ⌃B back on tmux", () => {
+    const moved = withPrefix(tmux, ctrlA);
+    const vim = withPreset(moved, "vim");
+    expect(vim.prefix).toEqual(ctrlA);
+    expect(withAllCatalogKeys(vim).prefix).toEqual(ctrlA);
+    expect(prefixOf(withPreset(vim, "tmux"))).toEqual(ctrlA);
+    expect(withAllCatalogKeys(moved).prefix).toBeUndefined();
+    expect(readSavedKeymap(JSON.parse(JSON.stringify(moved))).saved).toEqual(moved);
+  });
+
+  it("refuses a prefix that typing presses, the system keeps, or that answers a card", () => {
+    expect(prefixProblem({ key: "b", ctrl: true })).toBeNull();
+    expect(prefixProblem(ctrlA)).toBeNull();
+    expect(prefixProblem({ key: "a" })).toMatch(/holds ⌘ or ⌃/);
+    expect(prefixProblem({ key: "a", alt: true })).toMatch(/holds ⌘ or ⌃/);
+    expect(prefixProblem({ key: "q", meta: true })).toMatch(/quits Infinitary/);
+    expect(prefixProblem({ key: "1", meta: true })).toMatch(/answers a card/);
+    expect(prefixProblem({ key: "b", ctrl: true }, "ctrl")).toBeNull();
+    expect(prefixProblem({ key: "c", ctrl: true }, "ctrl")).toMatch(/copies/);
+    // Cut and paste while typing on a Ctrl system, which a prefix would take (INF-3833's review).
+    expect(prefixProblem({ key: "x", ctrl: true }, "ctrl")).toMatch(/cuts/);
+    expect(prefixProblem({ key: "v", ctrl: true }, "ctrl")).toMatch(/pastes/);
+    expect(prefixProblem(ctrlA, "ctrl")).toMatch(/selects all/);
+    expect(keymapRefusal({ ...tmux, prefix: { key: "q", meta: true } }, tmux)).toMatch(/^Prefix: /);
+  });
+
+  it("refuses a prefix whose keys another command's own key would take", () => {
+    // ⌘J is a person's key for Go to the main message, so it cannot start the layer.
+    const own = withKeys(tmux, "focus.main-message", [{ key: "j", meta: true }]);
+    expect(keymapRefusal(withPrefix(own, { key: "j", meta: true }), own)).not.toBeNull();
   });
 });

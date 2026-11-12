@@ -7334,6 +7334,158 @@ export function settingsKeyboardPresetDescription(): string {
   return `A whole set of keys to start from. Each keeps the keys you change in it.`;
 }
 
+export function settingsKeyboardPrefix(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéƒîẋ ~~]`;
+    case "ar-XB":
+      return `\u202ePrefix\u202c`;
+  }
+  return `Prefix`;
+}
+
+export function settingsKeyboardPrefixDescription(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ķéý éṽéŕý Ţɱûẋ ķéý šţáŕţš ŵîţĥ, šûçĥ áš ${key} ţĥéñ Ñ ƒöŕ ţĥé ñéẋţ çáŕð. Îţ ŵöŕķš áñýŵĥéŕé, ŵĥîļé ţýþîñĝ ţöö. Çĥáñĝîñĝ îţ ĥéŕé ɱöṽéš éṽéŕý ķéý ţĥáţ šţáŕţš ŵîţĥ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe key every Tmux key starts with, such as \u202c${key}\u202e then N for the next card. It works anywhere, while typing too. Changing it here moves every key that starts with it.\u202c`;
+  }
+  return `The key every Tmux key starts with, such as ${key} then N for the next card. It works anywhere, while typing too. Changing it here moves every key that starts with it.`;
+}
+
+export function settingsKeyboardPrefixRecordLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéçöŕð á ķéý ƒöŕ ţĥé þŕéƒîẋ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecord a key for the prefix\u202c`;
+  }
+  return `Record a key for the prefix`;
+}
+
+export function settingsKeyboardPrefixRecord(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéçöŕð ~~]`;
+    case "ar-XB":
+      return `\u202eRecord\u202c`;
+  }
+  return `Record`;
+}
+
+export function settingsKeyboardPrefixResetLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšéţ ţĥé þŕéƒîẋ ţö îţš öŵñ ķéý ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset the prefix to its own key\u202c`;
+  }
+  return `Reset the prefix to its own key`;
+}
+
+export function settingsKeyboardPrefixReset(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšéţ ~~]`;
+    case "ar-XB":
+      return `\u202eReset\u202c`;
+  }
+  return `Reset`;
+}
+
+export function settingsKeyboardPrefixRecording(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéçöŕðîñĝ á ķéý ƒöŕ ţĥé þŕéƒîẋ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecording a key for the prefix\u202c`;
+  }
+  return `Recording a key for the prefix`;
+}
+
+export function settingsKeyboardPrefixRecordingWait(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéçöŕðîñĝ… ~~~~]`;
+    case "ar-XB":
+      return `\u202eRecording…\u202c`;
+  }
+  return `Recording…`;
+}
+
+export function settingsKeyboardPrefixPress(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéšš ţĥé ķéý ýöû ŵáñţ ţö šţáŕţ éṽéŕý Ţɱûẋ ķéý. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress the key you want to start every Tmux key.\u202c`;
+  }
+  return `Press the key you want to start every Tmux key.`;
+}
+
+export function settingsKeyboardPrefixFree(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éṽéŕý Ţɱûẋ ķéý ŵîļļ šţáŕţ ŵîţĥ îţ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEvery Tmux key will start with it.\u202c`;
+  }
+  return `Every Tmux key will start with it.`;
+}
+
+export function settingsKeyboardPrefixKeys(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éñţéŕ šáṽéš · Éšç çáñçéļš ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter saves · Esc cancels\u202c`;
+  }
+  return `Enter saves · Esc cancels`;
+}
+
+export function settingsKeyboardPrefixSave(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eSave\u202c`;
+  }
+  return `Save`;
+}
+
+export function settingsKeyboardPrefixSaving(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽîñĝ... ~~~]`;
+    case "ar-XB":
+      return `\u202eSaving...\u202c`;
+  }
+  return `Saving...`;
+}
+
+export function settingsKeyboardPrefixCancel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsKeyboardPrefixAlone(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${key} îš ţĥé þŕéƒîẋ; þŕéšš ţĥé ķéý ţĥáţ ƒöļļöŵš îţ ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${key}\u202e is the prefix; press the key that follows it\u202c`;
+  }
+  return `${key} is the prefix; press the key that follows it`;
+}
+
 export function settingsModelsReset(): string {
   switch (currentLanguage()) {
     case "en-XA":
@@ -8063,6 +8215,21 @@ export const MESSAGES = {
   commandCancelWords,
   settingsKeyboardPreset,
   settingsKeyboardPresetDescription,
+  settingsKeyboardPrefix,
+  settingsKeyboardPrefixDescription,
+  settingsKeyboardPrefixRecordLabel,
+  settingsKeyboardPrefixRecord,
+  settingsKeyboardPrefixResetLabel,
+  settingsKeyboardPrefixReset,
+  settingsKeyboardPrefixRecording,
+  settingsKeyboardPrefixRecordingWait,
+  settingsKeyboardPrefixPress,
+  settingsKeyboardPrefixFree,
+  settingsKeyboardPrefixKeys,
+  settingsKeyboardPrefixSave,
+  settingsKeyboardPrefixSaving,
+  settingsKeyboardPrefixCancel,
+  settingsKeyboardPrefixAlone,
   settingsModelsReset,
   settingsModelsResetConfirm,
   settingsModelsResetCancel,
@@ -8761,6 +8928,21 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   commandCancelWords: [],
   settingsKeyboardPreset: [],
   settingsKeyboardPresetDescription: [],
+  settingsKeyboardPrefix: [],
+  settingsKeyboardPrefixDescription: ["key"],
+  settingsKeyboardPrefixRecordLabel: [],
+  settingsKeyboardPrefixRecord: [],
+  settingsKeyboardPrefixResetLabel: [],
+  settingsKeyboardPrefixReset: [],
+  settingsKeyboardPrefixRecording: [],
+  settingsKeyboardPrefixRecordingWait: [],
+  settingsKeyboardPrefixPress: [],
+  settingsKeyboardPrefixFree: [],
+  settingsKeyboardPrefixKeys: [],
+  settingsKeyboardPrefixSave: [],
+  settingsKeyboardPrefixSaving: [],
+  settingsKeyboardPrefixCancel: [],
+  settingsKeyboardPrefixAlone: ["key"],
   settingsModelsReset: [],
   settingsModelsResetConfirm: [],
   settingsModelsResetCancel: [],

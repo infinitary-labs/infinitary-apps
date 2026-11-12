@@ -1,8 +1,14 @@
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { keyboardPresets, MIGRATIONS } from "../../src/core/storage/migrations";
-import { bindingLabel, type CommandId, type KeyBinding } from "../../src/shared/keyboard";
-import { type PresetId, presetKeys } from "../../src/shared/keyPresets";
+import {
+  type AnyCommandId,
+  bindingLabel,
+  chordLabel,
+  type KeyBinding,
+  type KeyChord,
+} from "../../src/shared/keyboard";
+import { type PresetId, presetKeys, TMUX_PREFIX } from "../../src/shared/keyPresets";
 import { scratchDir } from "../helpers/scratchDirs";
 import { THIS_DESKTOP } from "./desktop";
 import { launchApp } from "./launch";
@@ -16,6 +22,7 @@ import {
   pressKey,
   pressWindowKey,
   runFromSearch,
+  startPrefixRecording,
   startRecording,
 } from "./windowKeys";
 
@@ -23,7 +30,8 @@ import {
  * Keyboard presets (docs/keyboard.md, "Presets"; INF-3547's accepted plan,
  * piece 4: "Each preset keeps its own changes, and Reset all keys returns
  * to the chosen preset", "Each preset has its own e2e journey driven by its
- * keys"). One journey per preset in the real app: the Preset row picked by
+ * keys"; piece 6: tmux, whose prefix "the person changes in one place", "has
+ * its own end-to-end journey"). One journey per preset in the real app: the Preset row picked by
  * the arrows, the preset's keys shown on its rows, a key of a person's own
  * kept through another preset and back, Reset all keys returning to the
  * preset's, and the preset's own keys pressed through the window's input
@@ -41,8 +49,18 @@ function labels(bindings: readonly KeyBinding[]): string[] {
   return bindings.map((binding) => bindingLabel(binding, THIS_DESKTOP.keys));
 }
 
+/** A prefix as this computer draws it. */
+function prefixShown(chord: KeyChord): string {
+  return chordLabel(chord, THIS_DESKTOP.keys);
+}
+
+/** A preset's keys for a command on this computer, with tmux's prefix as given. */
+function keysHere(preset: PresetId, id: AnyCommandId, prefix?: KeyChord): readonly KeyBinding[] {
+  return presetKeys(preset, id, THIS_DESKTOP.keys, prefix);
+}
+
 /** Expects a command's row to show exactly these keys. */
-async function showsKeys(page: Page, id: CommandId, bindings: readonly KeyBinding[]) {
+async function showsKeys(page: Page, id: AnyCommandId, bindings: readonly KeyBinding[]) {
   await expect(keyboardSettings(page).row(id).locator("[data-keyboard-key]")).toHaveCount(
     bindings.length,
   );
@@ -54,7 +72,7 @@ async function showsKeys(page: Page, id: CommandId, bindings: readonly KeyBindin
 }
 
 /** Expects a command's row to show a preset's own keys for it, unchanged. */
-async function showsPresetKeys(page: Page, preset: PresetId, id: CommandId) {
+async function showsPresetKeys(page: Page, preset: PresetId, id: AnyCommandId) {
   await expect(keyboardSettings(page).row(id)).not.toHaveAttribute("data-keyboard-changed");
   await showsKeys(page, id, presetKeys(preset, id, THIS_DESKTOP.keys));
 }
@@ -235,6 +253,89 @@ test("VS Code: picked in the Preset row, and driven by ⇧⌘P and ⌘K ⌘S", a
       await pressWindowKey(app, "s", ["meta"]);
       await expect(keyboard.section).toBeVisible();
       await expect(keyboard.preset("vscode")).toBeChecked();
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
+test("tmux: picked in the Preset row, driven by ⌃B mid-sentence, and its prefix changed in one place", async () => {
+  const launched = await launchApp({ withMockProvider: true });
+  const { app, page } = launched;
+  const keyboard = keyboardSettings(page);
+  const search = commandSearch(page);
+  const prompt = promptInput(page);
+  const hint = page.locator("[data-next-keys]");
+  // The prefix a person moves tmux's to: ⌃G, free on every system (Linux
+  // keeps Ctrl+A, screen's prefix, for select all; `prefixProblem`).
+  const moved: KeyChord = { key: "g", ctrl: true };
+  try {
+    await test.step("the Preset row picks tmux, showing its prefix and Vim's keys beside its own", async () => {
+      await runFromSearch(app, page, "settings.keyboard");
+      await expect(keyboard.prefix).toHaveCount(0);
+      await pickPreset(page, "tmux");
+      await expect(keyboard.prefix).toHaveAttribute(
+        "data-keyboard-prefix",
+        prefixShown(TMUX_PREFIX),
+      );
+      await showsPresetKeys(page, "tmux", "cards.next");
+      // What the prefix takes: Vim's ⌃B page up on a Mac, and on a Ctrl
+      // system Open task board's Ctrl+B (Vim's ⌘B there).
+      await showsPresetKeys(page, "tmux", "move.page-up");
+      await showsPresetKeys(page, "tmux", "panel:now/board");
+      await showsPresetKeys(page, "tmux", "move.down");
+    });
+
+    await test.step("tmux keeps its own changes, and Reset all keys returns to it", async () => {
+      await keepsItsChanges(app, page, "tmux", "vim");
+    });
+
+    await test.step("⌃B is the prefix mid-sentence: then : searches commands, and the sentence stays as typed", async () => {
+      await runFromSearch(app, page, "focus.main-message");
+      await prompt.fill("half a sent");
+      await expect(prompt).toBeFocused();
+      await pressWindowKey(app, "b", ["control"]);
+      await expect(hint).toBeVisible();
+      await expect(search.dialog).toHaveCount(0);
+      await pressWindowKey(app, ":");
+      await expect(search.dialog).toBeVisible();
+      await expect(hint).toHaveCount(0);
+      await pressWindowKey(app, "Escape");
+      await expect(search.dialog).toHaveCount(0);
+      await expect(prompt).toHaveValue("half a sent");
+      await focusOn(prompt);
+      await pressWindowKey(app, "b", ["control"]);
+      await pressWindowKey(app, "?");
+      await expect(keyboard.section).toBeVisible();
+      await expect(keyboard.preset("tmux")).toBeChecked();
+    });
+
+    await test.step("the Prefix row moves every tmux key to another prefix, and Reset puts ⌃B back", async () => {
+      await startPrefixRecording(page);
+      await pressWindowKey(app, "q");
+      await expect(keyboard.prefixVerdict).toHaveAttribute("data-keyboard-verdict", "refused");
+      await pressWindowKey(app, "g", ["control"]);
+      await expect(keyboard.prefixVerdict).toHaveAttribute("data-keyboard-verdict", "free");
+      await endRecording(app, page, "Enter");
+      await expect(keyboard.prefix).toHaveAttribute("data-keyboard-prefix", prefixShown(moved));
+      await showsKeys(page, "cards.next", keysHere("tmux", "cards.next", moved));
+      await showsKeys(page, "move.page-up", keysHere("tmux", "move.page-up", moved));
+      await showsKeys(page, "panel:now/board", keysHere("tmux", "panel:now/board", moved));
+
+      await runFromSearch(app, page, "focus.main-message");
+      await pressWindowKey(app, "g", ["control"]);
+      await pressWindowKey(app, ":");
+      await expect(search.dialog).toBeVisible();
+      await pressWindowKey(app, "Escape");
+      await expect(search.dialog).toHaveCount(0);
+
+      await runFromSearch(app, page, "settings.keyboard");
+      await pressKey(keyboard.prefixReset, "Enter");
+      await expect(keyboard.prefix).toHaveAttribute(
+        "data-keyboard-prefix",
+        prefixShown(TMUX_PREFIX),
+      );
+      await showsPresetKeys(page, "tmux", "cards.next");
     });
   } finally {
     await launched.close();

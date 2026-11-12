@@ -1,6 +1,8 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { RecordedKey } from "@shared/ipc";
 import { bindingLabel, DEFAULT_BINDINGS } from "@shared/keyboard";
-import { DEFAULT_SAVED_KEYMAP } from "@shared/keymap";
+import { DEFAULT_SAVED_KEYMAP, presetKeymap, resolveBindings } from "@shared/keymap";
+import { TMUX_PREFIX } from "@shared/keyPresets";
 import { describe, expect, it } from "vitest";
 import {
   keysAfterPress,
@@ -165,5 +167,46 @@ describe("Keyboard settings' recorder", () => {
         "add",
       ),
     ).toBeNull();
+  });
+});
+
+// INF-3547's accepted plan, piece 6: tmux's keys all start with its prefix, ⌃B.
+describe("recording on tmux", () => {
+  const tmux = presetKeymap("tmux");
+  const bindings = resolveBindings(tmux);
+
+  it("takes a key after the prefix, and says the prefix alone is not a key", () => {
+    const first = keysAfterPress(
+      "settings.open",
+      null,
+      key("b", { ctrl: true }),
+      [],
+      "mac",
+      TMUX_PREFIX,
+    );
+    expect(first).toEqual({ key: "b", ctrl: true });
+    expect(takesSecondKey("settings.open", first, [], "mac", TMUX_PREFIX)).toBe(true);
+    expect(recorderVerdict("settings.open", first, bindings, [], "mac", TMUX_PREFIX)).toEqual({
+      kind: "refused",
+      reason: m.settingsKeyboardPrefixAlone({ key: "⌃B" }),
+    });
+    const both = keysAfterPress("settings.open", first, key(","), [], "mac", TMUX_PREFIX);
+    expect(bindingLabel(both)).toBe("⌃B ,");
+    expect(recorderVerdict("settings.open", both, bindings, [], "mac", TMUX_PREFIX).kind).toBe(
+      "free",
+    );
+    const saved = savedAfterRecording(
+      tmux,
+      bindings,
+      "settings.open",
+      both,
+      "replace",
+      [],
+      "mac",
+      TMUX_PREFIX,
+    );
+    expect(saved?.keys["settings.open"]).toEqual([{ key: "b", ctrl: true, second: { key: "," } }]);
+    // Without a prefix, as on Vim, ⌃B is the text field's and takes no second key.
+    expect(takesSecondKey("settings.open", first)).toBe(false);
   });
 });

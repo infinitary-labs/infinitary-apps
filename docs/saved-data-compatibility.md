@@ -247,6 +247,9 @@ A `version: 1` map, in the `keyboard` settings row or a view's look, reads as Le
 A profile updated from a version before presets gets an empty `version: 1` row from the last migration in `src/core/storage/migrations.ts` when it has none, so it stays on Legacy; a new profile's fresh database skips it and starts on Vim, and a view's look saved before presets reads as Legacy too.
 An older build reads a `version: 2` map as keys it could not read, as with the not-typing field above: the catalog's keys stand in, reading alone changes nothing, and a change or Reset all keys there saves over every preset's changes.
 
+Since the tmux preset the `version: 2` map may name `tmux` as its preset and carry an optional `prefix` chord, tmux's prefix once a person changed it; the version stays at 2, and a map without them reads as before.
+A build with presets but without tmux reads a map that holds either the same way as above: as keys it could not read, unchanged until a change there saves over it.
+
 ## Self-reported merge-card risk
 
 Risk assessments keep only the crewmate's seven declared levels and reasons.

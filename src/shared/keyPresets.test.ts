@@ -14,8 +14,8 @@ import {
   type PanelCommand,
   panelCommandId,
 } from "./keyboard";
-import { bindingProblem, presetKeymap, resolveBindings, sameBinding } from "./keymap";
-import { PRESET_IDS, presetKeys, presetsOffered } from "./keyPresets";
+import { bindingProblem, prefixOf, presetKeymap, resolveBindings, sameBinding } from "./keymap";
+import { PRESET_IDS, presetKeys, presetsOffered, TMUX_PREFIX } from "./keyPresets";
 import type { KeySystem } from "./platform";
 import { parseSuggestedKey } from "./plugins/panelCards";
 
@@ -70,7 +70,10 @@ describe("each preset", () => {
             ).toBe(true);
             // The catalog's own keys are Legacy's, kept as they always were.
             if (!catalogHas(id, binding, system))
-              expect(bindingProblem(binding, id, panels, system), `${id}`).toBeNull();
+              expect(
+                bindingProblem(binding, id, panels, system, prefixOf(presetKeymap(preset))),
+                `${id}`,
+              ).toBeNull();
           }
         }
       });
@@ -113,7 +116,44 @@ describe("each preset", () => {
   });
 
   it("offers Legacy only where the profile had it", () => {
-    expect(presetsOffered(false)).toEqual(["vim", "emacs", "vscode"]);
-    expect(presetsOffered(true)).toEqual(["vim", "emacs", "vscode", "legacy"]);
+    expect(presetsOffered(false)).toEqual(["vim", "emacs", "vscode", "tmux"]);
+    expect(presetsOffered(true)).toEqual(["vim", "emacs", "vscode", "tmux", "legacy"]);
+  });
+});
+
+/**
+ * INF-3547's accepted plan, piece 6: "a tmux preset of Vim's plain keys plus
+ * a Ctrl+B prefix layer that works anywhere", where "Ctrl+B stops being page
+ * up because it is the prefix".
+ */
+describe("tmux", () => {
+  const ctrlB = TMUX_PREFIX;
+  for (const system of SYSTEMS)
+    it(`on ${system}, keeps Vim's plain keys and adds ⌃B, then a key, anywhere`, () => {
+      expect(presetKeys("tmux", "move.down", system)).toEqual(
+        presetKeys("vim", "move.down", system),
+      );
+      expect(presetKeys("tmux", "cards.next", system)).toContainEqual({
+        ...ctrlB,
+        second: { key: "n" },
+      });
+      expect(presetKeys("tmux", "regions.left", system)).toContainEqual({
+        ...ctrlB,
+        second: { key: "ArrowLeft" },
+      });
+      expect(presetKeys("tmux", "move.page-up", system)).not.toContainEqual(
+        expect.objectContaining({ key: "b", ctrl: true }),
+      );
+    });
+
+  it("gives ⌃B back to Vim's page up once the prefix is another key", () => {
+    const ctrlA = { key: "a", ctrl: true };
+    expect(presetKeys("tmux", "move.page-up", "mac", ctrlA)).toEqual(
+      presetKeys("vim", "move.page-up", "mac"),
+    );
+    expect(presetKeys("tmux", "cards.next", "mac", ctrlA)).toContainEqual({
+      ...ctrlA,
+      second: { key: "n" },
+    });
   });
 });

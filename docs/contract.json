@@ -52000,6 +52000,7 @@
                   "vim",
                   "emacs",
                   "vscode",
+                  "tmux",
                   "legacy"
                 ]
               },
@@ -52142,6 +52143,31 @@
                     }
                   }
                 }
+              },
+              "prefix": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "meta": {
+                    "type": "boolean"
+                  },
+                  "ctrl": {
+                    "type": "boolean"
+                  },
+                  "alt": {
+                    "type": "boolean"
+                  },
+                  "shift": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "key"
+                ]
               }
             },
             "required": [
@@ -52180,6 +52206,7 @@
                   "vim",
                   "emacs",
                   "vscode",
+                  "tmux",
                   "legacy"
                 ]
               },
@@ -52326,6 +52353,32 @@
                     }
                   }
                 }
+              },
+              "prefix": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "meta": {
+                    "type": "boolean"
+                  },
+                  "ctrl": {
+                    "type": "boolean"
+                  },
+                  "alt": {
+                    "type": "boolean"
+                  },
+                  "shift": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "key"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [

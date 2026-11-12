@@ -1,9 +1,12 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { RecordedKey } from "@shared/ipc";
 import {
   type AnyCommandId,
   type Bindings,
+  chordLabel,
   commandEntry,
   type KeyBinding,
+  type KeyChord,
   keysOf,
   type PanelCommand,
 } from "@shared/keyboard";
@@ -17,6 +20,7 @@ import {
   sameBinding,
   withKeyMoved,
 } from "@shared/keymap";
+import { sameChord } from "@shared/keyPresets";
 import type { KeySystem } from "@shared/platform";
 
 /**
@@ -46,7 +50,8 @@ export function recorderKey(key: RecordedKey): RecorderKey {
  * ⌃ (Ctrl on a Ctrl system), or a plain key that works when not typing,
  * takes a second key and becomes a two-key shortcut; anything else starts
  * over with the new key. A key held with ⌘, ⌃ or ⌥, or an F key, works
- * anywhere; any other works only when not typing.
+ * anywhere; any other works only when not typing. `prefix` is the prefix
+ * in use (`prefixOf`), which always takes a second key.
  */
 export function keysAfterPress(
   id: AnyCommandId,
@@ -54,13 +59,14 @@ export function keysAfterPress(
   key: RecordedKey,
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
+  prefix?: KeyChord,
 ): KeyBinding {
   const chord = chordOfPress({ ...key, composing: false, repeat: false });
   const binding: KeyBinding =
     !chord.meta && !chord.ctrl && !chord.alt && !/^F([1-9]|1[0-9]|2[0-4])$/.test(chord.key)
       ? { ...chord, when: "not-typing" }
       : chord;
-  return current && takesSecondKey(id, current, panels, system)
+  return current && takesSecondKey(id, current, panels, system, prefix)
     ? { ...current, second: chord }
     : binding;
 }
@@ -71,13 +77,24 @@ export function takesSecondKey(
   keys: KeyBinding | null,
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
+  prefix?: KeyChord,
 ): boolean {
   return (
     keys !== null &&
     keys.second === undefined &&
     commandEntry(id, panels)?.scope === "window" &&
     (keys.meta === true || keys.ctrl === true || keys.when === "not-typing") &&
-    bindingProblem(keys, id, panels, system) === null
+    (isPrefixAlone(keys, prefix) || bindingProblem(keys, id, panels, system) === null)
+  );
+}
+
+/** Whether the keys are the prefix in use and nothing after it yet. */
+function isPrefixAlone(keys: KeyBinding, prefix: KeyChord | undefined): boolean {
+  return (
+    prefix !== undefined &&
+    keys.second === undefined &&
+    keys.when !== "not-typing" &&
+    sameChord(keys, prefix)
   );
 }
 
@@ -95,14 +112,20 @@ export function recorderVerdict(
   bindings: Bindings,
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
+  prefix?: KeyChord,
 ): RecorderVerdict {
   if (!keys) return { kind: "empty" };
-  const problem = bindingProblem(keys, id, panels, system);
+  if (isPrefixAlone(keys, prefix) && commandEntry(id, panels)?.scope === "window")
+    return {
+      kind: "refused",
+      reason: m.settingsKeyboardPrefixAlone({ key: chordLabel(keys, system) }),
+    };
+  const problem = bindingProblem(keys, id, panels, system, prefix);
   if (problem) return { kind: "refused", reason: problem };
   if (keysOf(bindings, id).some((own) => sameBinding(own, keys))) return { kind: "own" };
   const clashes = clashesWith(bindings, id, keys, panels);
-  const prefix = clashes.find((clash) => clash.kind === "prefix");
-  if (prefix) return { kind: "refused", reason: clashWords(id, prefix, panels, system) };
+  const starts = clashes.find((clash) => clash.kind === "prefix");
+  if (starts) return { kind: "refused", reason: clashWords(id, starts, panels, system) };
   if (clashes.length === 0) return { kind: "free" };
   const words = clashes
     .map((clash) => {
@@ -125,8 +148,9 @@ export function savedAfterRecording(
   mode: "replace" | "add",
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
+  prefix?: KeyChord,
 ): SavedKeymap | null {
-  const verdict = recorderVerdict(id, keys, bindings, panels, system);
+  const verdict = recorderVerdict(id, keys, bindings, panels, system, prefix);
   if (!keys || verdict.kind === "empty" || verdict.kind === "refused") return null;
   if (verdict.kind === "own" && mode === "add") return null;
   return withKeyMoved(saved, bindings, id, keys, mode, panels, system);

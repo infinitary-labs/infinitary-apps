@@ -5,9 +5,13 @@ Open Keyboard settings in command search, and Keyboard Settings… in the app me
 **The head.**
 The `SectionLabel` "Keyboard" at the tab's top.
 Under it the Preset row, a `SettingRow` "Preset" with "A whole set of keys to start from.
-Each keeps the keys you change in it." and `GroupedPills` at its end: Vim, Emacs and VS Code, then Legacy only for a profile updated from a version before presets.
+Each keeps the keys you change in it." and `GroupedPills` at its end: Vim, Emacs, VS Code and Tmux, then Legacy only for a profile updated from a version before presets.
 The pills take Tab once and the arrows between them, and are disabled while a row records or saves.
 Picking one installs its keys at once; the keys a person changed in each preset come back when it is picked again.
+While Tmux is chosen, the Prefix row follows: a `SettingRow` "Prefix" with "The key every Tmux key starts with, such as ⌃B then N for the next card.
+It works anywhere, while typing too.
+Changing it here moves every key that starts with it." and at its end the prefix as one `KeyCap`, a secondary `Button` sm "Record" and a ghost `Button` sm "Reset" (disabled while the prefix is ⌃B), named "Record a key for the prefix" and "Reset the prefix to its own key" for assistive technology.
+Record opens a recorder under the row's words, drawn as a row's recorder is: the key pressed so far, then "Press the key you want to start every Tmux key.", "Every Tmux key will start with it." at `--fg-2`, or why it cannot be the prefix at `--warn` ("A prefix holds ⌘ or ⌃, so typing never presses it"); "Enter saves · Esc cancels"; a primary "Save" and a ghost "Cancel".
 Under it one line: an `Input` "Search keys" taking the room, and at its end a ghost `Button` sm "Reset all keys", disabled while nothing is changed in the chosen preset, which puts every key back to that preset's.
 A first click arms it as a danger `Button` reading "Confirm reset"; the second resets, and leaving it disarms it.
 When saved keys could not be read, one line at `--text-sm` / `--warn` says so above the list.

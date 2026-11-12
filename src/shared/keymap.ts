@@ -31,6 +31,8 @@ import {
   type PresetId,
   presetChanges,
   presetKeys,
+  sameChord,
+  TMUX_PREFIX,
 } from "./keyPresets";
 import type { KeySystem } from "./platform";
 
@@ -75,12 +77,16 @@ const savedKeymapV1Schema = z.strictObject({ version: z.literal(1), keys: change
  * (`kept`, by preset), so picking that preset again brings them back. An id
  * this version does not know is kept as it was saved and runs nothing
  * (`unknownCommands`); so is a preset it does not know in `kept`.
+ * `prefix` is tmux's prefix when a person changed it from ⌃B: one key that
+ * every key of tmux's prefix layer starts with, kept whichever preset is
+ * chosen.
  */
 export const savedKeymapSchema = z.strictObject({
   version: z.literal(2),
   preset: z.enum(PRESET_IDS),
   keys: changedKeysSchema,
   kept: z.record(z.string().min(1).max(32), changedKeysSchema),
+  prefix: chordSchema.optional(),
 });
 export type SavedKeymap = z.infer<typeof savedKeymapSchema>;
 
@@ -163,7 +169,72 @@ export function legacyOffered(saved: SavedKeymap): boolean {
 export function withPreset(saved: SavedKeymap, preset: PresetId): SavedKeymap {
   if (saved.preset === preset) return saved;
   const { [preset]: back, ...others } = { ...saved.kept, [saved.preset]: saved.keys };
-  return { version: 2, preset, keys: back ?? {}, kept: others };
+  return {
+    version: 2,
+    preset,
+    keys: back ?? {},
+    kept: others,
+    ...(saved.prefix ? { prefix: saved.prefix } : {}),
+  };
+}
+
+/**
+ * The prefix in use: tmux's, as a person set it or ⌃B, or none on a preset
+ * without a prefix layer.
+ */
+export function prefixOf(saved: SavedKeymap): KeyChord | undefined {
+  return saved.preset === "tmux" ? (saved.prefix ?? TMUX_PREFIX) : undefined;
+}
+
+/**
+ * tmux's prefix changed in its one place: every key of the prefix layer
+ * moves with it, and so does every two-key shortcut a person recorded in
+ * tmux that started with the old prefix.
+ */
+export function withPrefix(saved: SavedKeymap, prefix: KeyChord): SavedKeymap {
+  const old = saved.prefix ?? TMUX_PREFIX;
+  const chord = plainChord(prefix);
+  const moved = (changes: SavedKeymap["keys"]): SavedKeymap["keys"] =>
+    Object.fromEntries(
+      Object.entries(changes).map(([id, bindings]) => [
+        id,
+        bindings.map((binding) =>
+          binding.second && binding.when !== "not-typing" && sameChord(binding, old)
+            ? { ...chord, second: binding.second }
+            : binding,
+        ),
+      ]),
+    );
+  const { prefix: _old, ...rest } = saved;
+  return {
+    ...rest,
+    ...(sameChord(chord, TMUX_PREFIX) ? {} : { prefix: chord }),
+    ...(saved.preset === "tmux"
+      ? { keys: moved(saved.keys) }
+      : saved.kept.tmux
+        ? { kept: { ...saved.kept, tmux: moved(saved.kept.tmux) } }
+        : {}),
+  };
+}
+
+/**
+ * Why a chord cannot be tmux's prefix, in the words Keyboard settings
+ * shows, or null. It starts two keys anywhere, so it holds ⌘ or ⌃ (Ctrl on
+ * a Ctrl system); it may be a text field's own Control key, which it then
+ * takes over while typing as tmux does in a terminal, but no other key
+ * the system or the app keeps, and never a key that answers a card.
+ */
+export function prefixProblem(prefix: KeyChord, system: KeySystem = "mac"): string | null {
+  if (!holdsCommandOrControl(prefix, system))
+    return `A prefix holds ${COMMAND_KEY_WORDS[system]}, so typing never presses it`;
+  const problem = keyProblem(prefix, system, false, false, undefined, true);
+  if (problem) return problem;
+  const answer = COMMAND_IDS.find(
+    (id) =>
+      KEYBOARD_COMMANDS[id].risk === "close" &&
+      catalogKeys(id, system).some((key) => chordsOverlap(key, prefix)),
+  );
+  return answer ? `${chordLabel(prefix, system)} answers a card, and keeps that job` : null;
 }
 
 /** Whether a saved value is only a preset picked: its changes are the ones kept for that preset. */
@@ -284,14 +355,14 @@ function entryOf(id: AnyCommandId, panels: readonly PanelCommand[], system: KeyS
  * the preset leaves alone, the key its panel suggests.
  */
 function ownKeys(
-  preset: PresetId,
+  saved: SavedKeymap,
   id: AnyCommandId,
   panels: readonly PanelCommand[],
   system: KeySystem,
 ): readonly KeyBinding[] {
-  return isPanelCommandId(id) && !presetChanges(preset, id, system)
+  return isPanelCommandId(id) && !presetChanges(saved.preset, id, system)
     ? entryOf(id, panels, system).keys
-    : presetKeys(preset, id, system);
+    : presetKeys(saved.preset, id, system, prefixOf(saved));
 }
 
 // --- Which keys a command may take ---------------------------------------
@@ -469,6 +540,7 @@ function keyProblem(
   notTyping = false,
   second = false,
   id?: AnyCommandId,
+  prefix = false,
 ): string | null {
   // Tab with Control never moves between controls, so it may be a shortcut.
   const controlTab = chord.key === "Tab" && chord.ctrl === true;
@@ -484,8 +556,13 @@ function keyProblem(
       : "That key can't be a shortcut";
   if (system !== "mac" && chord.meta) return `${chordLabel(chord, system)} belongs to your desktop`;
   if (isTextMove(chord, id, system)) return null;
+  // A prefix works while typing too, so it may take over only a Mac text field's
+  // movement keys, as tmux's ⌃B does in a terminal; a Ctrl system's text-field
+  // keys are cut and paste, which no prefix takes (INF-3547's plan, piece 6).
+  const prefixFree = prefix && system === "mac";
   const platform = reservedKeys(system).find(
-    (entry) => chordsOverlap(entry.chord, chord) && !(entry.field && (notTyping || second)),
+    (entry) =>
+      chordsOverlap(entry.chord, chord) && !(entry.field && (notTyping || second || prefixFree)),
   );
   return platform ? `${chordLabel(chord, system)} ${platform.job}` : null;
 }
@@ -519,19 +596,35 @@ const ANYWHERE_KEY_WORDS: Readonly<Record<KeySystem, string>> = {
  * the first holds ⌘ or ⌃ or works only when not typing, and the second may
  * be an arrow.
  * A risky key's non-blocking reminder belongs to `bindingWarning`.
+ * `prefix` is the prefix in use (`prefixOf`): a two-key shortcut that
+ * starts with it may start with a text field's own Control key, which the
+ * prefix takes over while typing, as tmux's ⌃B does in a terminal.
  */
 export function bindingProblem(
   binding: KeyBinding,
   id: AnyCommandId,
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
+  prefix?: KeyChord,
 ): string | null {
   const entry = commandEntry(id, panels, system);
   if (binding.when === "not-typing" && entry?.scope !== "window")
     return "Only a window command can work when not typing";
   if (binding.when === "not-typing" && binding.key === " ")
     return "Space scrolls and presses controls, and keeps that job";
-  const first = keyProblem(binding, system, binding.when === "not-typing", false, id);
+  const startsWithPrefix =
+    prefix !== undefined &&
+    binding.second !== undefined &&
+    binding.when !== "not-typing" &&
+    sameChord(binding, prefix);
+  const first = keyProblem(
+    binding,
+    system,
+    binding.when === "not-typing",
+    false,
+    id,
+    startsWithPrefix,
+  );
   if (first) return first;
   if (
     binding.when !== "not-typing" &&
@@ -700,6 +793,7 @@ export function resolveBindings(
 ): Bindings {
   const taken: Taken[] = [];
   const resolved: Partial<Record<AnyCommandId, KeyBinding[]>> = {};
+  const prefix = prefixOf(saved);
   const place = (
     id: AnyCommandId,
     keys: readonly KeyBinding[],
@@ -712,7 +806,7 @@ export function resolveBindings(
       if (
         check &&
         !grandfathered.some((old) => sameBinding(old, binding)) &&
-        bindingProblem(binding, id, panels, system) !== null
+        bindingProblem(binding, id, panels, system, prefix) !== null
       )
         continue;
       if (kept.some((other) => bindingsClash(other, binding) === "same")) continue;
@@ -732,10 +826,10 @@ export function resolveBindings(
   // person's (docs/keyboard.md, "Presets").
   for (const id of COMMAND_IDS)
     if (!isChanged(saved, id))
-      place(id, presetKeys(saved.preset, id, system), true, catalogKeys(id, system));
+      place(id, presetKeys(saved.preset, id, system, prefix), true, catalogKeys(id, system));
   for (const command of panels)
     if (!isChanged(saved, command.id) && presetChanges(saved.preset, command.id, system))
-      place(command.id, presetKeys(saved.preset, command.id, system), true);
+      place(command.id, presetKeys(saved.preset, command.id, system, prefix), true);
   // A suggestion is checked like a person's own key: a panel names it as text,
   // as a Mac writes it.
   for (const command of panels)
@@ -751,7 +845,7 @@ function droppedCatalogKeys(
   system: KeySystem,
 ): { id: CommandId; binding: KeyBinding }[] {
   return COMMAND_IDS.filter((id) => !isChanged(saved, id)).flatMap((id) =>
-    presetKeys(saved.preset, id, system)
+    presetKeys(saved.preset, id, system, prefixOf(saved))
       .filter((binding) => !bindings[id].some((kept) => sameBinding(kept, binding)))
       .map((binding) => ({ id, binding })),
   );
@@ -773,13 +867,17 @@ export function keymapRefusal(
 ): string | null {
   // Picking a preset brings back what was kept for it as it was saved.
   if (onlyPicksPreset(next, current)) return null;
+  if (next.prefix) {
+    const problem = prefixProblem(next.prefix, system);
+    if (problem) return `Prefix: ${problem}`;
+  }
   const bindings = resolveBindings(next, panels, system);
   for (const id of allCommandIds(panels)) {
     const own = next.keys[id];
     if (!own) continue;
     const label = entryOf(id, panels).label;
     for (const [index, binding] of own.entries()) {
-      const problem = bindingProblem(binding, id, panels, system);
+      const problem = bindingProblem(binding, id, panels, system, prefixOf(next));
       if (problem) return `${label}: ${problem}`;
       if (own.slice(0, index).some((earlier) => bindingsClash(earlier, binding) === "same"))
         return `${label} lists ${bindingLabel(binding, system)} twice`;
@@ -841,7 +939,7 @@ export function withKeys(
   system: KeySystem = "mac",
 ): SavedKeymap {
   const { [id]: _previous, ...rest } = saved.keys;
-  return sameKeys(keys, ownKeys(saved.preset, id, panels, system))
+  return sameKeys(keys, ownKeys(saved, id, panels, system))
     ? { ...saved, keys: rest }
     : { ...saved, keys: { ...rest, [id]: keys.map(plainBinding) } };
 }
@@ -853,15 +951,19 @@ export function withCatalogKeys(saved: SavedKeymap, id: AnyCommandId): SavedKeym
 }
 
 /**
- * Every command back to its own keys; the ones this window does not know -
- * another version's, a panel's that is not here - stay as saved.
+ * Every command back to its own keys, and tmux's prefix back to ⌃B; the
+ * ones this window does not know - another version's, a panel's that is
+ * not here - stay as saved.
  */
 export function withAllCatalogKeys(
   saved: SavedKeymap,
   panels: readonly PanelCommand[] = [],
 ): SavedKeymap {
+  // On tmux its prefix goes back to ⌃B with the rest.
+  const { prefix, ...rest } = saved;
   return {
-    ...saved,
+    ...rest,
+    ...(prefix && saved.preset !== "tmux" ? { prefix } : {}),
     keys: Object.fromEntries(Object.entries(saved.keys).filter(([id]) => !isKnown(id, panels))),
   };
 }
@@ -901,18 +1003,22 @@ export function withKeyMoved(
   return withKeys(next, id, keys, panels, system);
 }
 
-/** A binding with only its own fields, as it is saved. */
-function plainBinding(binding: KeyBinding): KeyBinding {
-  const plain = (chord: KeyChord): KeyChord => ({
+/** A chord with only its own fields, as it is saved. */
+function plainChord(chord: KeyChord): KeyChord {
+  return {
     key: chord.key,
     ...(chord.meta ? { meta: true } : {}),
     ...(chord.ctrl ? { ctrl: true } : {}),
     ...(chord.alt ? { alt: true } : {}),
     ...(chord.shift ? { shift: true } : {}),
-  });
+  };
+}
+
+/** A binding with only its own fields, as it is saved. */
+function plainBinding(binding: KeyBinding): KeyBinding {
   return {
-    ...plain(binding),
-    ...(binding.second ? { second: plain(binding.second) } : {}),
+    ...plainChord(binding),
+    ...(binding.second ? { second: plainChord(binding.second) } : {}),
     ...(binding.when ? { when: binding.when } : {}),
   };
 }

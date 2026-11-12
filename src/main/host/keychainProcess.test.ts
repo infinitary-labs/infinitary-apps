@@ -1,7 +1,11 @@
 import { EventEmitter } from "node:events";
 import { KEYCHAIN_READ_INCOMPLETE_CODE } from "@shared/quota";
 import { afterEach, expect, it, vi } from "vitest";
-import { createProcessKeychain, type KeychainProcess } from "./keychainProcess";
+import {
+  createProcessKeychain,
+  createProcessKeychainFile,
+  type KeychainProcess,
+} from "./keychainProcess";
 import { answerKeychainRequest } from "./keychainProcessRuntime";
 
 const query = { service: "Claude Code-credentials", account: "kun" };
@@ -160,5 +164,65 @@ it("the child rejects malformed or unapproved unlock requests without invoking n
     expect(await answerKeychainRequest(reader, request)).toMatchObject({ kind: "failed" });
   }
   expect(reader.unlockKeychain).not.toHaveBeenCalled();
+  expect(reader.findGenericPassword).not.toHaveBeenCalled();
+});
+
+// Intent: INF-3869's second review of INF-1659 - the Mac's Secrets Unlock
+// opens the custody's own keychain file by its path, never whichever store an
+// item search finds, and only an explicitly interactive child may unlock it.
+it("unlocks a keychain file by its path only in an interactive child of its own", async () => {
+  const keychainPath = "/scratch/login.keychain-db";
+  const children: (EventEmitter & KeychainProcess)[] = [];
+  const sent: unknown[] = [];
+  const fork = vi.fn((_path: string, args: string[]) => {
+    const child = Object.assign(new EventEmitter(), { kill: vi.fn() });
+    children.push(child);
+    sent.push(JSON.parse(args[0] ?? ""));
+    return child;
+  });
+  const options = { helperPath: "/scratch/keychain.js", fork, readTimeoutMs: 100 };
+  const answer = (index: number, message: unknown) => {
+    children[index]?.emit("message", message);
+    children[index]?.emit("exit", 0);
+  };
+  // A process that may not interact never starts an unlock child.
+  expect(await createProcessKeychainFile(options).unlock(keychainPath)).toMatchObject({
+    kind: "failed",
+    code: -25308,
+  });
+  expect(fork).not.toHaveBeenCalled();
+  const file = createProcessKeychainFile({ ...options, allowInteraction: true });
+  const status = file.status(keychainPath);
+  answer(0, { kind: "status", state: "locked" });
+  expect(await status).toBe("locked");
+  const unlock = file.unlock(keychainPath);
+  answer(1, { kind: "unlocked" });
+  expect(await unlock).toEqual({ kind: "unlocked" });
+  // Two children: the silent status read never touches the unlock's process.
+  expect(sent).toEqual([
+    { operation: "status", keychainPath },
+    { operation: "unlock-store", keychainPath, interactive: true },
+  ]);
+
+  // The child unlocks only a request marked interactive, and only that path.
+  const reader = { findGenericPassword: vi.fn(), readGenericPassword: vi.fn() };
+  const unlockStore = vi.fn(async () => ({ kind: "unlocked" as const }));
+  for (const request of [
+    { operation: "unlock-store", keychainPath },
+    { operation: "unlock-store", keychainPath, interactive: false },
+  ])
+    expect(
+      await answerKeychainRequest(reader, JSON.stringify(request), undefined, unlockStore),
+    ).toMatchObject({ kind: "failed", code: -25308 });
+  expect(unlockStore).not.toHaveBeenCalled();
+  expect(
+    await answerKeychainRequest(
+      reader,
+      JSON.stringify({ operation: "unlock-store", keychainPath, interactive: true }),
+      undefined,
+      unlockStore,
+    ),
+  ).toEqual({ kind: "unlocked" });
+  expect(unlockStore).toHaveBeenCalledWith(keychainPath);
   expect(reader.findGenericPassword).not.toHaveBeenCalled();
 });

@@ -132,9 +132,9 @@ export type RecoveryRestore =
  * The protected Secrets backend (docs/secrets.md): native root custody, a
  * sealed vault, protected rules, an exact recipient, a durable journal and
  * trusted approvals behind `SecretRequests`. It refuses whenever any of them is
- * unavailable - there is no plaintext, environment or unprotected fallback - and
- * nothing in production constructs it yet: production refusal stays until the
- * protection is proven on macOS and Linux and the settings land.
+ * unavailable - there is no plaintext, environment or unprotected fallback. The
+ * app builds it on macOS and Linux from the host's native custody
+ * (src/main/host/nativeSecrets.ts); without that capability every use refuses.
  */
 export class ProtectedSecrets implements SecretsBackend {
   private readonly described = new Map<string, UseDescription>();

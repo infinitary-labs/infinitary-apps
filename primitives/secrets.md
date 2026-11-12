@@ -2,7 +2,7 @@
 
 Secrets is the common contract for credential custody and approved uses, not a command that returns a value.
 The implementation is a protected owner with native custody and fresh system authentication on macOS and Linux, behind a request coordinator and an optional command-runtime seam.
-Production does not construct the owner yet: no production task receives this command and no existing credential consumer has migrated.
+The app builds the owner on the person's own data folder on macOS and Linux, so local tasks receive this command; no existing credential consumer has migrated yet.
 
 ## Intended use
 
@@ -59,9 +59,9 @@ Saved reusable permission binds protected code, operation, delivery and destinat
 Existing explicit service permissions retain only their original purpose and recipient; an agent cannot impersonate an app service using context labels.
 The captain selected unchanged lock behavior: approval cards wait for the captain to return, without a new global pause rule.
 Custody unavailability must still be reported honestly, never bypassed by approval.
-The first protected rollout waits for both macOS and Linux.
+The first protected rollout covers both macOS and Linux.
 Linux's Secret Service does not require app-specific access control; the GNOME Keyring backend used by the proof lets another same-user program read the root while unlocked ([`../docs/secrets.md`](../docs/secrets.md), "Native custody").
-Accepting that boundary does not itself enable production composition.
+The app composes Linux custody with that boundary.
 
 ## Compositions
 
@@ -80,7 +80,7 @@ An unknown external effect is not retried; reconciliation or provider idempotenc
 Cleanup failure is unknown, not a claim of secure erasure.
 Removing a local record, ending future access and revoking a provider credential are distinct outcomes.
 Pending and transient permissions must not survive restart, while explicitly saved rules may authorize new operations, never replay an interrupted effect.
-Settings and secure entry use an optional host capability; production enablement and consumer migration remain separate from that disabled composition.
+Settings and secure entry use the host capability the app supplies on macOS and Linux; each consumer migration remains separate work.
 Encrypted recovery needs a separately held recovery key; platform/non-exportable keys use their owner's recovery or enrollment.
 The private archive, native file choices, history-preserving restore coordinator and Settings recovery controls share the protected owner ([`../docs/secrets.md`](../docs/secrets.md), "Recovery boundary").
 Restore requires fresh native confirmation, drains pending work without starting an effect, refuses running uses or uncollected results, and syncs a fresh sealed home before one native activation.

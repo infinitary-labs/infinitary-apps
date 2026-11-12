@@ -9,7 +9,7 @@ import {
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { bootUnit, wantedBy } from "./background";
+import { bootPlist, bootUnit, wantedBy } from "./background";
 import {
   loginAgentFile,
   type RunAgentContext,
@@ -117,6 +117,32 @@ describe("the command the window starts, on a Mac", () => {
     setRunAgentAtLogin(context, false);
     expect(runAgentAtLogin(context)).toBe(false);
     expect(existsSync(sessionAgentFile(context))).toBe(true);
+  });
+
+  // start-at-boot writes this same agent on a Mac (docs/run.md, "Starting at boot"): the window
+  // starting it again keeps the settings file and log the person gave it, as a Linux unit does.
+  it("writes start-at-boot's agent again for this program, keeping its settings file and log", async () => {
+    const { context } = mac();
+    const file = loginAgentFile(context);
+    const settings = "/Users/kai/run & co.json";
+    const log = "/Users/kai/Library/Logs/run <1>.log";
+    const moved = {
+      executable: "/Users/kai/Old Infinitary.app/Contents/MacOS/Infinitary",
+      args: [],
+    };
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, bootPlist({ label: LABEL, launcher: moved, settings, log, env: {} }));
+    expect(await startRunAgent(context)).toBe("running");
+    const current = bootPlist({
+      label: LABEL,
+      launcher: context.launcher,
+      settings,
+      log,
+      env: context.env,
+    });
+    expect(readFileSync(file, "utf8")).toBe(current);
+    setRunAgentAtLogin(context, false);
+    expect(readFileSync(sessionAgentFile(context), "utf8")).toBe(current);
   });
 
   it("says when it could not start, and with no login session that it waits for one", async () => {

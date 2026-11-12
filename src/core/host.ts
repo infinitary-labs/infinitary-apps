@@ -489,7 +489,10 @@ export type HostCapabilities = {
    * returns `absent`.
    */
   readonly keychain: HostKeychain;
-  /** Native Secrets capabilities, absent until the platform's protected rollout is enabled. */
+  /**
+   * Native Secrets capabilities: the app supplies them on macOS and Linux for the
+   * person's own data folder (src/main/host/nativeSecrets.ts); absent elsewhere.
+   */
   readonly secrets?: {
     custody: SecretCustody;
     authentication?: FreshAuthentication;

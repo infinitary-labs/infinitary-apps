@@ -11,7 +11,9 @@ import { z } from "zod";
 export type KeychainLockState = "locked" | "unlocked" | "absent" | "unknown";
 export type KeychainRequest =
   | { operation: "find" | "read" | "unlock"; query: HostKeychainQuery }
-  | { operation: "status"; keychainPath: string };
+  | { operation: "status"; keychainPath: string }
+  /** Unlock one keychain file by its path, with macOS's own dialog, instead of the store an item search finds. */
+  | { operation: "unlock-store"; keychainPath: string; interactive?: boolean };
 
 export const keychainRequestSchema = z.discriminatedUnion("operation", [
   z.object({
@@ -23,6 +25,11 @@ export const keychainRequestSchema = z.discriminatedUnion("operation", [
     }),
   }),
   z.object({ operation: z.literal("status"), keychainPath: z.string() }),
+  z.object({
+    operation: z.literal("unlock-store"),
+    keychainPath: z.string(),
+    interactive: z.boolean().optional(),
+  }),
 ]);
 
 const answerSchema = z.discriminatedUnion("kind", [
@@ -100,18 +107,20 @@ export function createKeychainRequester(options: KeychainProcessOptions) {
       input.operation !== "status" &&
       input.operation !== "find" &&
       options.allowInteraction === true &&
-      input.query.interactive === true;
+      (input.operation === "unlock-store" ? input.interactive : input.query.interactive) === true;
     const message: KeychainRequest =
       input.operation === "status"
         ? input
-        : {
-            operation: input.operation,
-            query: {
-              service: input.query.service,
-              ...(input.query.account !== undefined ? { account: input.query.account } : {}),
-              interactive,
-            },
-          };
+        : input.operation === "unlock-store"
+          ? { operation: "unlock-store", keychainPath: input.keychainPath, interactive }
+          : {
+              operation: input.operation,
+              query: {
+                service: input.query.service,
+                ...(input.query.account !== undefined ? { account: input.query.account } : {}),
+                interactive,
+              },
+            };
     const key = JSON.stringify(message);
     const running = inFlight.get(key);
     if (running) return running;
@@ -190,5 +199,33 @@ export function createProcessKeychain(options: KeychainProcessOptions): HostKeyc
           },
         }
       : {}),
+  };
+}
+
+/** One keychain file, by its path: its lock read silently, and an explicit unlock with macOS's own dialog. */
+export type KeychainFile = {
+  status(keychainPath: string): Promise<KeychainLockState>;
+  unlock(keychainPath: string): Promise<HostKeychainUnlockOutcome>;
+};
+
+/**
+ * Each call is its own fresh child, so the silent status read never latches
+ * the unlock's process (docs/architecture.md, "The latch").
+ */
+export function createProcessKeychainFile(options: KeychainProcessOptions): KeychainFile {
+  const request = createKeychainRequester(options);
+  return {
+    status: async (keychainPath) => {
+      const answer = await request({ operation: "status", keychainPath });
+      return answer.kind === "status" ? answer.state : "unknown";
+    },
+    unlock: async (keychainPath) => {
+      if (options.allowInteraction !== true)
+        return { kind: "failed", code: -25308, message: "User interaction is not allowed." };
+      const answer = await request({ operation: "unlock-store", keychainPath, interactive: true });
+      return answer.kind === "unlocked" || answer.kind === "failed"
+        ? answer
+        : { kind: "failed", message: "The saved-password store could not be unlocked." };
+    },
   };
 }

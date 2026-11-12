@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "mac-run-starts-on-your-folder",
+      "kind": "fix",
+      "area": "devices",
+      "title": "On a Mac, infinitary run starts again",
+      "body": "On a Mac, infinitary run, and the start at boot that uses it, waited forever without starting when it ran on your own data. It now starts, and infinitary status shows whether your Keychain was unlocked a moment after it starts.",
+      "noPicture": "The command's own lines appear in a terminal, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "mac-start-at-boot-in-your-session",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "On a Mac, start at boot needs no administrator and can use Secrets",
+      "body": "On a Mac, infinitary start-at-boot now starts Infinitary with no window whenever you log in, in your own session, where it can use your Keychain and Settings → Secrets. To start it whenever the Mac starts, turn on automatic log in for your user, which macOS offers only with FileVault off. It stops when you log out, and nothing runs at the login window. Start at login in Settings → General shows this same start. No administrator step is needed; a Mac set up by an earlier version gets the one line an administrator runs to take the old start away, since that run cannot use the Keychain.",
+      "noPicture": "The command's own lines appear in a terminal, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

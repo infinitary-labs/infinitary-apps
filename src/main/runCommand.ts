@@ -132,21 +132,33 @@ export type RunEnd = Pick<RunStop, "reason" | "exitCode" | "lines">;
  * holds the folder's single-instance lock; the window opened beside it reads
  * this to say so. The process keeps its last stop separately, then takes
  * the live marker away as it ends. A failed second start owns neither file.
+ *
+ * An environment still being read is added to the note once it arrives,
+ * unless the run has ended: a Mac's Keychain is read by a utility process,
+ * which waits for the app to be ready, and the app is ready only once the
+ * start that writes this note has returned (./index.ts).
  */
 export function markRunning(
   dataDir: string,
   pid: number,
   now: Date,
-  environment?: RunEnvironment,
+  environment?: RunEnvironment | Promise<RunEnvironment>,
 ): (end?: RunEnd) => void {
   const path = join(dataDir, RUN_MARKER);
-  const marker: RunMarker = {
-    pid,
-    startedAt: now.toISOString(),
-    ...(environment && { environment }),
-  };
-  writeRunRecord(path, marker);
+  let marker: RunMarker = { pid, startedAt: now.toISOString() };
   let ended = false;
+  if (environment instanceof Promise)
+    void environment.then(
+      (observed) => {
+        if (ended) return;
+        marker = { ...marker, environment: observed };
+        writeRunRecord(path, marker);
+      },
+      // No reading is recorded rather than a guessed one.
+      () => {},
+    );
+  else if (environment) marker = { ...marker, environment };
+  writeRunRecord(path, marker);
   return (end = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] }) => {
     if (ended) return;
     ended = true;

@@ -54,7 +54,8 @@ import {
   forgetAutostart,
   startAtLoginFor,
 } from "./host/electronHost";
-import { readElectronKeychainStatus } from "./host/electronKeychain";
+import { createElectronKeychainFile, readElectronKeychainStatus } from "./host/electronKeychain";
+import { nativeSecrets } from "./host/nativeSecrets";
 import { broadcast, registerIpc } from "./ipc";
 import { followWindowCommands, moveCommands, shellCommands } from "./keyboard";
 import { deferCoreDisposal } from "./lifecycle";
@@ -76,7 +77,7 @@ import {
   stopRunningCommand,
   windowProfileDir,
 } from "./runCommand";
-import { readKeychainLock, runEnvironment } from "./runEnvironment";
+import { type RunEnvironment, readKeychainLock, runEnvironment } from "./runEnvironment";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
@@ -381,8 +382,10 @@ export async function startApp(
   // it"; the captain's answer on INF-1352's plan, starter=login-agent): with
   // none running, it sets `<app> run` up with this account's service manager
   // and opens beside it. Never where that run would not open the folder or
-  // would control another computer, beside a boot entry, which starts the
-  // run itself, or once the person chose Start it here.
+  // would control another computer, beside an earlier version's system job
+  // (`mac-daemon`), which starts the run itself, or once the person chose
+  // Start it here. A Mac's login agent `start-at-boot` writes is the window's
+  // own, so the window starts the run with it as it does on Linux.
   const joinedHere = new JoinedHome(join(dataDir, "joined"));
   const starter =
     windowless ||
@@ -453,24 +456,31 @@ export async function startApp(
       stopRun();
     };
     if (windowless) {
-      // Scratch data is not a sandbox for the Mac's Keychain. Never query it in an isolated launch.
-      const keychain =
-        isolatedUserDataDir || userDataChoice.kind === "switch"
-          ? "unknown"
-          : await readKeychainLock(async (path) => {
-              await app.whenReady();
-              return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
-            });
-      const finish = markRunning(
-        app.getPath("userData"),
-        process.pid,
-        new Date(),
+      const observed = (keychain: RunEnvironment["keychain"]) =>
         runEnvironment({
           platform: hostPlatform(),
           env: process.env,
           ownDisplay,
           keychain: () => keychain,
-        }),
+        });
+      // Scratch data is not a sandbox for the Mac's Keychain. Never query it in an isolated launch.
+      // The Keychain's reading needs a utility process, so the app ready; the
+      // app is ready only once this start has returned to ./index.ts, so the
+      // note is written now and takes the reading when it arrives, never
+      // waited for here. Elsewhere there is no Keychain to read, and the
+      // reading goes in at once, so a run that ends right away keeps it.
+      const finish = markRunning(
+        app.getPath("userData"),
+        process.pid,
+        new Date(),
+        isolatedUserDataDir || userDataChoice.kind === "switch"
+          ? observed("unknown")
+          : hostPlatform() !== "darwin"
+            ? observed("not-applicable")
+            : readKeychainLock(async (path) => {
+                await app.whenReady();
+                return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
+              }).then(observed),
       );
       leaveRun = (end) => {
         try {
@@ -623,6 +633,15 @@ export async function startApp(
       // out/main), which the shell serves its own frames and the first mate
       // answers a phone (docs/view.md, "Panels on the phone").
       const frameLib = { dir: join(mainDir, "../frame-lib"), pins: frameLibPins };
+      const secrets =
+        capabilities.secrets ??
+        nativeSecrets({
+          platform: hostPlatform(),
+          choice: userDataChoice,
+          // Unlock's own child processes: only a fresh one may still show
+          // macOS's unlock dialog (./host/nativeSecrets.ts).
+          keychainFile: createElectronKeychainFile(join(mainDir, "keychainProcessMain.js")),
+        });
       const host = createElectronHost({
         // Beside a command's first mate, that first mate ends first, with its
         // crew's work saved, before this window's update replaces the copy.
@@ -632,7 +651,10 @@ export async function startApp(
         },
         // A run has no window to reopen: it ends for its starter to start the new copy.
         ...(windowless ? { relaunch: endUpdated } : {}),
-        ...(capabilities.secrets ? { secrets: capabilities.secrets } : {}),
+        // Protected Secrets: the caller's own capability (a check's disposable
+        // one), else this platform's native custody on the person's own data
+        // folder only (./host/nativeSecrets.ts, docs/secrets.md).
+        ...(secrets ? { secrets } : {}),
         isolatedUserDataDir,
         ...(userDataChoice.kind === "flavor"
           ? { autostartName: basename(userDataChoice.dir) }

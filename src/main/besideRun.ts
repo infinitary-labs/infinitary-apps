@@ -21,9 +21,10 @@ export type JoinedRun = { pid: number; startedAt: string };
 
 /**
  * The start entry the app wrote that is in place now, by the system that
- * reads it; null for none. A Mac's agent is the one the window sets up
- * (`mac-agent`, docs/run.md, "The window starts it"); on Linux the window's
- * and `start-at-boot`'s are one unit.
+ * reads it; null for none. A Mac's login agent (`mac-agent`) and a Linux unit
+ * are each one entry for the window's Start at login and `start-at-boot`
+ * (docs/run.md, "The window starts it"); `mac-daemon` is only an earlier
+ * version's system job.
  */
 export type StartEntry = "linux-unit" | "mac-daemon" | "mac-agent" | null;
 

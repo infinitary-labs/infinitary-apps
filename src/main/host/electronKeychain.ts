@@ -3,9 +3,10 @@ import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
 import { utilityProcess } from "electron";
 import {
-  createKeychainRequester,
   createProcessKeychain,
+  createProcessKeychainFile,
   type ForkKeychainProcess,
+  type KeychainFile,
 } from "./keychainProcess";
 
 const fork: ForkKeychainProcess = (modulePath, args) =>
@@ -21,12 +22,13 @@ export function createElectronKeychain(helperPath: string, allowInteraction = fa
 }
 
 /** Windowless startup's lock-bit probe uses the same silent child boundary. */
-export async function readElectronKeychainStatus(helperPath: string, keychainPath: string) {
-  const answer = await createKeychainRequester({ helperPath, fork })({
-    operation: "status",
-    keychainPath,
-  });
-  return answer.kind === "status" ? answer.state : "unknown";
+export function readElectronKeychainStatus(helperPath: string, keychainPath: string) {
+  return createProcessKeychainFile({ helperPath, fork }).status(keychainPath);
+}
+
+/** One keychain file by its path, for the Mac's Secrets Unlock: a silent status child, then an unlock child. */
+export function createElectronKeychainFile(helperPath: string): KeychainFile {
+  return createProcessKeychainFile({ helperPath, allowInteraction: true, fork });
 }
 
 /** Isolated launches cannot reach the person's saved-password reader, whatever USER says. */

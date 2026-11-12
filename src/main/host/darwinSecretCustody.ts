@@ -85,8 +85,9 @@ export function createDarwinSecretCustody(
 
 /**
  * The Security.framework binding. `keychainPath` aims every call at one
- * keychain file - the scratch probe's - instead of the person's default
- * search list. Undefined off macOS, or where the framework cannot load.
+ * keychain file - the account's own login keychain in the app, a scratch one
+ * in a probe - instead of the default search list and default keychain.
+ * Undefined off macOS, or where the framework cannot load.
  */
 export function loadDarwinCustodyApi(keychainPath?: string): DarwinCustodyApi | undefined {
   if (hostPlatform() !== "darwin") return undefined;
@@ -134,7 +135,7 @@ function bindKeychain(keychainPath?: string): DarwinCustodyApi {
   const setInteraction = security.func("SecKeychainSetUserInteractionAllowed", "int32", ["uint8"]);
   const cfRelease = coreFoundation.func("CFRelease", "void", ["void *"]);
 
-  // null is the default search list; the probe names its scratch file.
+  // null is the default search list; the app and the probe name a file.
   let keychain: unknown = null;
   if (keychainPath !== undefined) {
     const open = security.func("SecKeychainOpen", "int32", ["const char *", koffi.out(voidPtrPtr)]);

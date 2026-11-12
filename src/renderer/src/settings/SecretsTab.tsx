@@ -23,6 +23,7 @@ import {
 } from "react";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input } from "../design";
+import { thisDesktop } from "../design/core/desktop";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
 import "./secrets.css";
 
@@ -149,7 +150,7 @@ export function SecretsTab() {
           <h2 data-secrets-heading="" tabIndex={-1}>
             {SECRETS_WORDS.title}
           </h2>
-          {view && !notEnabled && <p>{SECRETS_WORDS.count(all.length)}</p>}
+          {view && !notEnabled && <p>{SECRETS_WORDS.count(all.length, thisDesktop().mac)}</p>}
         </div>
         {problem && <Badge tone="warn">{problem}</Badge>}
       </header>

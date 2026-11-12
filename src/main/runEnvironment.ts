@@ -38,10 +38,10 @@ export function runEnvironment(options: {
 
 /**
  * This account's own login Keychain, by its path under the home folder its
- * user record names. A run started at boot by a system job asks macOS for the
- * default Keychain and gets the Mac's System Keychain, unlocked, while the
- * account's own stays locked (INF-1416's check on a disposable Mac), so the
- * run reads the account's own by its path instead.
+ * user record names. A run outside the logged-in session, such as a system
+ * job, asks macOS for the default Keychain and gets the Mac's System
+ * Keychain, unlocked, while the account's own stays locked (INF-1416's check
+ * on a disposable Mac), so the run reads the account's own by its path instead.
  */
 export function accountKeychainPath(homeDir: string = userInfo().homedir): string {
   return join(homeDir, "Library", "Keychains", "login.keychain-db");

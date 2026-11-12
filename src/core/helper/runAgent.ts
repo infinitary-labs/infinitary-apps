@@ -23,10 +23,11 @@ import { linuxStartup } from "./linuxStartup";
  * account's own service manager, as a computer that runs work sets up
  * `<app> work run` (./background.ts), and the window opens beside it:
  *
- * - **launchd** on a Mac: an agent in this user's session. Its file is in
- *   `~/Library/LaunchAgents` while Start at login is on, so every login
- *   starts it; otherwise in the data folder, which launchd never reads by
- *   itself, so it runs until this session ends.
+ * - **launchd** on a Mac: an agent in this user's session, the same one
+ *   `start-at-boot` writes. Its file is in `~/Library/LaunchAgents` while
+ *   Start at login is on, so every login starts it; otherwise in the data
+ *   folder, which launchd never reads by itself, so it runs until this
+ *   session ends.
  * - **systemd** on Linux: the same user service `start-at-boot` writes,
  *   started now, and wanted by the user's login while Start at login is on.
  *
@@ -76,7 +77,34 @@ export function runAgentInPlace(context: RunAgentContext): boolean {
     : existsSync(unitFile(context));
 }
 
-function writeMacAgent(context: RunAgentContext, file: string): void {
+/** One `<string>` of a plist as `bootPlist` escapes it, read back. */
+function plistText(text: string): string {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
+}
+
+/**
+ * What a Mac's agent file keeps when it is written again: the `--settings`
+ * file and the log `start-at-boot` gave the same agent, if it wrote this one
+ * (`bootPlist`), as a Linux unit keeps its settings file (`ensureUnit`).
+ */
+function macAgentKept(file: string): { settings?: string; log?: string } {
+  if (!existsSync(file)) return {};
+  const text = readFileSync(file, "utf8");
+  const settings = /<string>--settings<\/string>\s*<string>([^<]*)<\/string>/.exec(text)?.[1];
+  const log = /<key>StandardOutPath<\/key>\s*<string>([^<]*)<\/string>/.exec(text)?.[1];
+  return {
+    ...(settings === undefined ? {} : { settings: plistText(settings) }),
+    ...(log === undefined ? {} : { log: plistText(log) }),
+  };
+}
+
+/** Writes a Mac's agent at `file`, keeping what the agent at `from` kept (`macAgentKept`). */
+function writeMacAgent(context: RunAgentContext, file: string, from = file): void {
+  const kept = macAgentKept(from);
   mkdirSync(dirname(file), { recursive: true });
   writePrivate(
     file,
@@ -84,7 +112,8 @@ function writeMacAgent(context: RunAgentContext, file: string): void {
     bootPlist({
       label: context.label,
       launcher: context.launcher,
-      log: join(context.dataDir, RUN_AGENT_LOG),
+      settings: kept.settings,
+      log: kept.log ?? join(context.dataDir, RUN_AGENT_LOG),
       env: context.env,
     }),
   );
@@ -118,7 +147,8 @@ function ensureUnit(context: RunAgentContext): void {
  * manager took it, `at-login` with no login session to give it to, and
  * `failed`, `unavailable` or `unknown` when it cannot start here, where the
  * window runs its first mate itself instead. A Mac's file is written anew
- * where it is, so it starts the program this window is.
+ * where it is, so it starts the program this window is, keeping the
+ * settings file and log `start-at-boot` gave it.
  */
 export async function startRunAgent(context: RunAgentContext): Promise<InBackgroundNow> {
   if ("launchctl" in context) {
@@ -153,7 +183,7 @@ export function setRunAgentAtLogin(context: RunAgentContext, enabled: boolean): 
     const [to, from] = enabled
       ? [loginAgentFile(context), sessionAgentFile(context)]
       : [sessionAgentFile(context), loginAgentFile(context)];
-    writeMacAgent(context, to);
+    writeMacAgent(context, to, existsSync(from) ? from : to);
     rmSync(from, { force: true });
     return;
   }

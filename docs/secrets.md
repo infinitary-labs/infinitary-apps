@@ -3,7 +3,8 @@
 The [Secrets primitive](../primitives/secrets.md) defines shared credential custody and exact-operation authority.
 The code provides the protected owner, `ProtectedSecrets` in [`../src/core/secrets/protected.ts`](../src/core/secrets/protected.ts), behind the request coordinator and the optional AXI command seam.
 It also provides native custody and fresh system authentication for macOS and Linux in `src/main/host/`.
-Settings → Secrets and its trusted controller are composed in the app, but the normal entry supplies no Secrets host capability, so production constructs no protected owner and grants no task command.
+The app supplies that custody and confirmation as its Secrets host capability on the person's own data folder on macOS and Linux ("In the app"), so the core builds the protected owner, Settings → Secrets and the task command.
+A run on an isolated or chosen data folder, and every other platform, gets no capability and offers no Secrets.
 The explicit host seam lets disposable checks exercise the real controller, trusted cards, secure entry and sealed files without opening a native credential store.
 No existing consumer is migrated or protected by this screen.
 The existing integration bridge remains in use and is not described as protected by this foundation.
@@ -28,7 +29,7 @@ The disposable adapters under `tests/helpers/` are fixtures, not a fallback for 
 
 `infinitary-secrets-axi` is shipped through the shared launcher and isolated command process.
 It runs only where the host explicitly supplies a Secrets capability; the supervisor then grants its closed facade to local tasks, and the catalog alone to a task on another computer.
-The normal entry supplies none, and another computer receives no use grant before its own owner is enrolled.
+The app supplies one on macOS and Linux ("In the app"), an isolated run supplies none, and another computer receives no use grant before its own owner is enrolled.
 Discovery is global: every task's command lists the same secrets the captain added, whatever its project or computer, and the task's name selects nothing.
 Bare invocation and `list` return that metadata and current receipts; `show <reference>` describes one entry.
 A listed secret carries its environment label when it has one, as context beside its name, never as a filter.
@@ -66,7 +67,8 @@ A recovered home carries its root, authority head and directory identifier toget
 Each app flavor uses its own custody name, so a development run never reads the release root.
 Every adapter reports what the platform answered (`value`, `absent`, `locked` or `unavailable`) and never falls back to a file, an environment variable or another store.
 
-On macOS, [`../src/main/host/darwinSecretCustody.ts`](../src/main/host/darwinSecretCustody.ts) keeps each slot as a generic password item in the default keychain, through Security.framework in the app's own process.
+On macOS, [`../src/main/host/darwinSecretCustody.ts`](../src/main/host/darwinSecretCustody.ts) keeps each slot as a generic password item in one keychain file it opens by its path, through Security.framework in the app's own process.
+The app aims it at the account's own login keychain, and a check at a scratch keychain file it made.
 An item the app creates trusts only the program that created it, so another program asking for it meets the Keychain's own dialog.
 That is the operating system's program identity, not a promise that a reusable development runtime distinguishes every script it can load.
 Production custody proof must use the packaged, integrity-checked app with its code-loading and debugging fuses, not infer that boundary from a scratch runtime's successful Keychain calls.
@@ -87,11 +89,33 @@ With the root and the sealed files, such a program can read every value and bypa
 Other providers differ: KeePassXC's Secret Service integration offers selected-group exposure and optional access-confirmation dialogs, but this adapter does not establish a portable app-bound custody guarantee from them.
 Linux custody therefore protects the sealed files and mediates requests through Infinitary, without promising to stop an unrestricted same-user program that directly reaches an unlocked GNOME Keyring.
 A stronger boundary needs a separately proven custody design; a sandboxed app's per-application Secret portal alone does not isolate Infinitary's unrestricted crew shells.
-Production composition remains disabled; accepting this storage boundary does not itself enable it.
+The app composes Linux custody with this boundary ("In the app").
 
 The root opens once per owner start and is read again at every use, so a locked or replaced root stops a use that was already approved.
 Only the trusted controller's first Add creates a root, and only where nothing was ever sealed.
 A missing root beside sealed records is `lost`, never silently replaced.
+
+### In the app
+
+[`../src/main/host/nativeSecrets.ts`](../src/main/host/nativeSecrets.ts) composes the capability the app hands its core (`startApp`, `src/main/app.ts`).
+Only a run on the person's own data folder gets it: a run on an isolated folder (`INFINITARY_USER_DATA_DIR`) or a folder Chromium was given (`--user-data-dir`) gets none, so no check opens a native store unless it injects its own capability.
+The custody name is one per flavor (`SECRETS_CUSTODY_NAMES`): `Infinitary Secrets` for the release and `Infinitary Secrets (development)` for every development run.
+Renaming one loses every secret that flavor kept, because its sealed files then sit beside no root.
+On macOS the app composes the Keychain custody on the account's own login keychain, LocalAuthentication and an Unlock gesture in two parts.
+First a silent Keychain process reads that file's lock, and when it is locked, or its lock cannot be read, a fresh one unlocks that same file by its path with macOS's own dialog: the app's own process touched the store silently first, so it can never show that dialog itself ([architecture](architecture.md), "The latch").
+Unlock never searches for the store holding an item, so it opens the file custody uses even when another keychain holds an item of the same name.
+Then one read of each slot in the app's own process, with the Keychain's dialog allowed, lets the person trust the app with an item again, a dialog the latch does not cover; that read waits on the app's main thread until the person answers.
+The Keychain trusts the app that created an item by its signature, so a release signed by another team reads the items as locked until that gesture.
+The login keychain's lock is kept per session, so the store is unlocked only for a run in the account's logged-in session, where the log in unlocked it.
+`start-at-boot` starts the run there, as a login agent, at boot too once the Mac logs the account in automatically ([run](run.md), "Starting at boot").
+Where an installed Mac app's window starts that same run through that agent and opens beside it ([run](run.md), "The window starts it"), Secrets, their confirmations and the Unlock dialog come from the run, in the logged-in session; where the window runs its first mate itself, as when the command cannot start or after Start it here, they come from the window's own process.
+A run outside that session, such as one typed over a remote connection or a system job an earlier version set up, reads Secrets as locked, never lost, even after the account logs in at the Mac.
+Unlock cannot help it: the window opened beside it asks the run's own process, which cannot show either dialog ([run](run.md), "The window opened beside it").
+On Linux it composes the Secret Service custody, polkit and the custody's own unlock.
+Where the platform's native store cannot load (no Security framework, or no libsecret), the app supplies no capability rather than a tab that cannot open.
+The custody opens the login keychain by its path under the home folder the account's user record names, never the default keychain, because a run outside the logged-in session, such as a system job, can get the Mac's System Keychain as its default.
+That path ignores `HOME`, so a check that injects this composition reaches the account's real login keychain even under a throwaway home folder; only the data-folder rule above keeps end-to-end launches off it, and a check names a scratch keychain file instead.
+A data folder removed while its flavor's custody items remain opens as `tampered`, the same reading as a rolled-back rules record, and offers only a restore from recovery files.
 
 ## The vault
 
@@ -305,34 +329,30 @@ It never holds a value, an environment or a full request body.
 It stays until the captain deletes it, and the owner reports its storage use and exports it; deleting it refuses while a use is running.
 It is local evidence, not an immutable audit log.
 
-## Before production
+## Not yet proven
 
-These remain before any production use:
+These remain unproven in the app:
 
-- Live proof of Settings → Secrets with trusted secure entry, the secret rows, saved decisions, phone approvals, history with export and storage use, and End access.
-- Composing both platforms' native adapters for production and checking the installed Linux policy through polkit itself.
-- Fresh human confirmation and the platform's custody shown working in the app on both platforms.
-- Explicit production-enablement approval, separate from acceptance of the Linux same-user limit above.
+- Saved decisions, phone approvals, history export and storage use, and End access against native custody, beyond the journeys' disposable custody.
 - An Allow from a real iPhone or iPad, whose Secure Enclave key and Face ID, Touch ID or passcode only a device has.
-- The recovery key and each consumer migration below.
+- Each consumer migration in the register below.
 
-No real keychain or signing access occurs without the captain's separate consent.
+No real keychain or signing access occurs in a check without the captain's separate consent.
 
 ## Saved product settings
 
 Rollout is staged: finish each migrated owner together with all readers and tests before the next cutover.
 Existing lock behavior stays unchanged; an approval request becomes a card waiting for the captain to return.
-The first protected rollout waits for macOS and Linux together.
+The first protected rollout covers macOS and Linux together.
 History stays until the captain deletes it, with export and a clear storage-use display, never an arbitrary record-count cutoff.
 History records metadata, not values or full request bodies, and is not immutable audit evidence.
 Shell support includes exact one-off commands/scripts and reusable reviewed scripts, never implicit evaluation of an arbitrary command string.
 New secret policy is Ask; Never overrides Ask, then Allow, with all required secrets evaluated conjunctively.
 Fresh human authentication, 300-second request expiry and one-use program approval remain required.
 The optional 600-second/20-use permission applies only to supported brokered reads through the protected owner, not unrestricted commands or renewal.
-Settings → Secrets exposes searchable metadata with each secret's last use, saved decisions, phone approvals, history and recovery, trusted Add/Replace, End access and export/storage display through the disabled-by-default host seam.
+Settings → Secrets exposes searchable metadata with each secret's last use, saved decisions, phone approvals, history and recovery, trusted Add/Replace, End access and export/storage display through the host seam, which the app fills on macOS and Linux.
 Without that capability, Settings offers no Secrets tab and command search no Open Secrets: nothing a person can open and not use.
 The window asks `inf:secrets:shown` once, which answers from the host seam without opening storage.
-Native recovery must be proved alongside custody before production enablement.
 No reveal, partial-value display, clipboard export or agent-authored secret-entry form is planned.
 
 ## Consumer register

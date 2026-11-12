@@ -17,8 +17,8 @@ Do not build a per-feature or per-surface client, token file, host list, poller 
 Do not use it for a project's own delivery - pushing a branch, opening a pull request, reading its checks or merging: that is the forge, described in [Projects and working copies](projects-and-working-copies.md).
 GitHub's integration rows reach the same sign-in, but pull requests, checks and merges stay the forge's and the project's.
 Do not use it to drive a website in a page: that is a [Task browser](task-browsers.md).
-Do not treat it as a secret manager: the [Secrets primitive](secrets.md) defines the common custody/access boundary, but its current foundation has no production backend.
-Integration keys still use the temporary bridge below until INF-785 moves its writer and every reader into the protected owner, once the app constructs it (INF-1109).
+Do not treat it as a secret manager: the [Secrets primitive](secrets.md) defines the common custody/access boundary, and the app builds its protected owner on macOS and Linux.
+Integration keys still use the temporary bridge below until INF-785 moves its writer and every reader into the protected owner.
 
 ## Owner and entry points
 

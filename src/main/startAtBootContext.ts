@@ -23,7 +23,7 @@ import { packagedFlavor, readPackageJsonAt } from "./userDataDir";
 
 /**
  * What `start-at-boot` and `help` read of this app and this user (./startAtBoot.ts).
- * A development run may stand in its own systemctl and loginctl, so a test
+ * A development run may stand in its own systemctl, loginctl and launchctl, so a test
  * never sets up a real service, and the service it writes carries the
  * settings that chose its data folder; an installed app reads neither.
  */
@@ -66,15 +66,17 @@ export async function answerBootCommand(
   }
   const words = bootAsked(asked.boot ?? []);
   if (!words) return { code: 2, out: "", error: `${BOOT_WORDS.usage.join("\n")}\n` };
-  const program = (name: "SYSTEMCTL" | "LOGINCTL", command: string) => {
+  const program = (name: "SYSTEMCTL" | "LOGINCTL" | "LAUNCHCTL", command: string) => {
     const path = app.isPackaged ? undefined : settingFrom(env, name)?.trim();
     const found = path || findOnPath(command, hostEnv());
     return found ? systemSystemctl(found) : null;
   };
   const flavor = app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev";
+  const platform = hostPlatform();
   return runStartAtBoot(words, {
-    platform: hostPlatform(),
+    platform,
     user: userInfo().username,
+    uid: userInfo().uid,
     homeDir: homedir(),
     unitsDir: userUnitsDir(env, homedir()),
     daemonsDir: MAC_DAEMONS_DIR,
@@ -85,6 +87,7 @@ export async function answerBootCommand(
     cwd: process.cwd(),
     systemctl: program("SYSTEMCTL", "systemctl"),
     loginctl: program("LOGINCTL", "loginctl"),
+    launchctl: platform === "darwin" ? program("LAUNCHCTL", "launchctl") : null,
   });
 }
 
@@ -105,6 +108,7 @@ export function ownStartEntry(): StartEntry {
     platform,
     unitsDir: userUnitsDir(process.env, homedir()),
     daemonsDir: MAC_DAEMONS_DIR,
+    homeDir: homedir(),
     label: runLabelOf(flavor),
   });
 }

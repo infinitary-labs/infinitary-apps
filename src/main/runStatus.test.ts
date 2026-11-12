@@ -80,6 +80,47 @@ describe("the status command", () => {
     expect(readFileSync(join(dir, RUN_MARKER), "utf8")).toBe(before);
   });
 
+  it("notes a run as running before a Mac's Keychain reading arrives, and adds the reading once it does", async () => {
+    // A defect found by INF-1659's check on a disposable Mac: the run waited
+    // for that reading, which waits for the app to be ready, which waits for
+    // the run's start to return, so a run on the account's own folder never started.
+    const dir = scratchDir("run-status-pending-");
+    symlinkSync(`${hostname()}-${process.pid}`, join(dir, "SingletonLock"));
+    let arrive: (keychain: "unlocked") => void = () => {};
+    const reading = new Promise<"unlocked">((resolve) => {
+      arrive = resolve;
+    }).then((keychain) =>
+      runEnvironment({ platform: "darwin", env: {}, ownDisplay: false, keychain: () => keychain }),
+    );
+    const end = markRunning(dir, process.pid, started, reading);
+    expect(readRunStatus(dir)).toMatchObject({ running: true, environment: null });
+    arrive("unlocked");
+    await reading;
+    expect(readRunStatus(dir)).toMatchObject({
+      running: true,
+      environment: { keychain: "unlocked" },
+    });
+    expect(statusText(readRunStatus(dir))).toContain(STATUS_WORDS.keychain.unlocked);
+    end();
+    expect(readRunStatus(dir).lastStop).toMatchObject({ environment: { keychain: "unlocked" } });
+  });
+
+  it("writes no note for a Keychain reading that arrives after the run ended", async () => {
+    const dir = scratchDir("run-status-late-");
+    let arrive: () => void = () => {};
+    const reading = new Promise<void>((resolve) => {
+      arrive = resolve;
+    }).then(() =>
+      runEnvironment({ platform: "darwin", env: {}, ownDisplay: false, keychain: () => "locked" }),
+    );
+    const end = markRunning(dir, process.pid, started, reading);
+    end({ reason: "start-failed", exitCode: 1, lines: ["It could not start."] });
+    arrive();
+    await reading;
+    expect(() => statSync(join(dir, RUN_MARKER))).toThrow();
+    expect(readRunStatus(dir).lastStop).toMatchObject({ reason: "start-failed" });
+  });
+
   it("keeps the reason and exit code when the live marker is removed", () => {
     const { dir, end } = fixture();
     end({ reason: "updated", exitCode: RUN_UPDATED_EXIT, lines: [...RUN_WORDS.updated] });

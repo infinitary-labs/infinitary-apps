@@ -62,7 +62,8 @@ export type EndedUseReceipt = UseReceipt & {
  * A protected backend snapshots code, dependencies, configuration and inputs and
  * binds all recipient/destination/delivery facts before returning this handle.
  * A hash of an agent-provided script or label is NOT such a backend.
- * No production backend is installed yet. Tests supply disposable adapters only.
+ * `ProtectedSecrets` is that backend, which the app builds on macOS and Linux;
+ * tests supply disposable adapters.
  */
 export type PreparedUse = {
   /** Canonical digest of the backend-checked complete operation, including secret versions and policy. */

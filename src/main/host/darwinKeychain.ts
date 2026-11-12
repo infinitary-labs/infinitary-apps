@@ -154,8 +154,7 @@ export function createDarwinKeychain(
       return { kind: "failed", message: "The store holding the item could not be located." };
     }
     try {
-      const status = await runUnlock(presence.keychainPath);
-      return status === SEC_SUCCESS ? { kind: "unlocked" } : failed(status);
+      return mapUnlock(await runUnlock(presence.keychainPath));
     } catch (caught) {
       return { kind: "failed", message: caught instanceof Error ? caught.message : String(caught) };
     }
@@ -219,6 +218,11 @@ export function mapRead(result: { status: number; value?: string }): HostKeychai
   }
   if (result.status === SEC_ITEM_NOT_FOUND) return { kind: "absent" };
   return failed(result.status);
+}
+
+/** What a native unlock's status means to the host. */
+export function mapUnlock(status: number): HostKeychainUnlockOutcome {
+  return status === SEC_SUCCESS ? { kind: "unlocked" } : failed(status);
 }
 
 function failed(code: number): { kind: "failed"; code: number; message: string } {

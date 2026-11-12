@@ -10,6 +10,7 @@ Everything rarer sits in quiet rows under the list.
 ## The first line
 
 The first line counts the secrets kept on this computer and says the crew uses them but never sees them.
+On Linux, where any program the person runs can read the unlocked secret store, it says instead that the crew uses them only with the person's approval and that such a program can reach them.
 A badge appears only when something is wrong (storage locked, unavailable or needing recovery), beside a notice that says what to do; a working store says nothing about itself.
 Nothing calls an unavailable value protected.
 A request waiting for an answer is one line naming its secrets, with Review request, which opens the host's exact-use card.

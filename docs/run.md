@@ -33,6 +33,8 @@ The main entry (`src/main/index.ts`) reads the words before anything of the app 
 
 Once its core runs, it says "Infinitary is running here with no window, started by a command." on its output; the notes the app's parts leave go to the same output, each starting with `[`.
 While it holds the folder it keeps `run.json` there, with its process number, start time and an environment reading, and takes it away as it ends.
+On a Mac the environment's Keychain reading needs the app ready, and the app is ready only once the run's start has returned, so `run.json` is written first and takes the reading when it arrives, a moment later; until then `status` says no environment reading was recorded, and a reading that arrives after the run ended is not written (INF-1659's check on a disposable Mac found a run that waited for it never started).
+On Linux, and on an isolated or switched data folder, the reading is written with the note at once, so a run that ends right away, as with a settings file it cannot use, keeps it in its last stop.
 Before removing the marker it writes `run-last-stop.json` with the reason, lines, exit code and stop time; both files are private to the account and replaced atomically.
 A refused second start owns neither file, so it cannot replace the running command's reading.
 
@@ -94,7 +96,7 @@ The environment is explicitly a snapshot **when the command started**, not a liv
 - `display`: `own` when Linux starts Xvfb, `session` when the session names a display, `none` when Linux has neither, or `unknown` on macOS.
   A named display alone proves no drawing; INF-1416's check on a disposable Mac saw the hidden pages draw at boot with nobody logged in.
 - `keychain`: on a Mac, the `locked`, `unlocked`, `absent` or `unknown` state of the account's own login Keychain, opened by its path under the home its user record names (`~/Library/Keychains/login.keychain-db`, `accountKeychainPath`), read silently through Security.framework's metadata-only `SecKeychainGetStatus` in a disposable utility process, never an item or a password.
-  It never asks for the default Keychain: started at boot by a system job, that is the Mac's own unlocked System Keychain while the account's stays locked (INF-1416's check on a disposable Mac).
+  It never asks for the default Keychain: for a run outside the logged-in session, such as a system job, that is the Mac's own unlocked System Keychain while the account's stays locked (INF-1416's check on a disposable Mac).
   An unlocked Keychain promises no sign-in, and a lock changed after start does not change this dated reading.
   Isolated launches never touch the person's Keychain and record unknown; other systems record `not-applicable`, which makes no claim about Linux's separate keyring.
 - `voice`: `unavailable`, since a run does not prepare voice.
@@ -160,15 +162,16 @@ The window asks this account's own service manager, as a computer that runs work
   Its file is `run-agent.plist` in the data folder, which launchd never reads by itself, so the agent lasts until the person logs out.
 - **On Linux** it starts the same user service `<app> start-at-boot` writes, writing it first where none is ("Starting at boot" below).
 
-Each start writes the Mac agent's file anew, so it starts the program this window is.
+Each start writes the Mac agent's file anew, so it starts the program this window is, keeping the settings file and log a `start-at-boot` agent names (`macAgentKept`).
 On Linux each start writes the service again wherever it differs from the one this window would write, such as a moved program or another data folder's settings, keeping the settings file a `start-at-boot` service names.
 The window then opens beside the command as below, and waits with no notice for it to welcome the window, for as long as it would wait for a start entry; an earlier command's stop on record is not this one's.
 Where the command cannot start - no service manager, no login session to give it to, or the service manager refused it - the window lets the agent go and runs its first mate itself, as it always did.
-It starts no command for a data folder named with Chromium's `--user-data-dir` switch, for an installed app whose home is pinned away from the account's own (macOS's `CFFIXED_USER_HOME`, or a `HOME` naming another folder), since its agent carries no settings and the service manager starts the run with the account's own home, so that run would open another data folder, while a move of the folder is due, for a folder the app refuses, for an app that joined another computer, beside a Mac's boot entry in `/Library/LaunchDaemons`, which starts the run itself, or after the person chose Start it here on a command that could not start.
+It starts no command for a data folder named with Chromium's `--user-data-dir` switch, for an installed app whose home is pinned away from the account's own (macOS's `CFFIXED_USER_HOME`, or a `HOME` naming another folder), since its agent carries no settings and the service manager starts the run with the account's own home, so that run would open another data folder, while a move of the folder is due, for a folder the app refuses, for an app that joined another computer, beside a system job an earlier version had an administrator put in a Mac's `/Library/LaunchDaemons`, which starts the run itself, or after the person chose Start it here on a command that could not start.
 A development run, `pnpm dev` and every journey among them, starts one only with `INFINITARY_WINDOW_STARTS_RUN=1`, so it keeps the window's own first mate and runs the code it was started from; a journey that sets it also names a stand-in service manager.
 An installed app reads neither, and never starts one for an isolated data folder.
 
 **Start at login** starts the command, not the window: while the window stands beside a command it can start, the switch moves the Mac agent's file into `~/Library/LaunchAgents`, which launchd reads at every login, and back, or gives the Linux service the link its user's login reads (`setRunAgentAtLogin`).
+On a Mac the file in `~/Library/LaunchAgents` is the agent `start-at-boot` writes too, so the switch reads it as on, and turning the switch off moves that agent into the data folder, as the Linux service is one for both.
 A login item the window had before moves to the command the first time the window starts beside it, and the window's own is turned off.
 
 **Joining another computer** from beside the command: the command's first mate is this computer's own, so joining stops it and lets the agent go, its files and the Linux service with it, and the window becomes a view of the other computer (`Shell.join`, `src/main/shell.ts`).
@@ -237,7 +240,7 @@ While the first mate is out of reach the window reads the command's own records 
 - **How it ended.**
   The command records why it stopped only on a clean stop, so a stop record that names another command than the one the window joined, by its process and start time, means the joined one left none: it crashed (`runEnd`, `src/main/besideRun.ts`).
 - **Waiting for the start entry.**
-  Where the start entry the app wrote is in place - the user's systemd service on Linux, the entry in `/Library/LaunchDaemons` or the agent the window loaded on a Mac (`startEntryInPlace`, `src/main/startAtBoot.ts`) - and it starts the command again after that end, the notice says the window waits for it and offers only Quit (`entryRestarts`: after a crash or a failed exit such as an update's 75, never after a clean stop, and on Linux never after 78).
+  Where the start entry the app wrote is in place - the user's systemd service on Linux, the agent the window loaded or `start-at-boot` wrote on a Mac, or a system job an administrator put in place there for an earlier version (`startEntryInPlace`, `src/main/startAtBoot.ts`) - and it starts the command again after that end, the notice says the window waits for it and offers only Quit (`entryRestarts`: after a crash or a failed exit such as an update's 75, never after a clean stop, and on Linux never after 78).
   The wait is the entry's own ten seconds plus the ten seconds a window allows a command to welcome it, counted from the command's own record of its stop, or from when the window first saw it gone where it left none; after it the notice offers Start it here (`entryWaitMs`).
   A start entry a person wrote by hand is not recognised, so the notice offers Start it here at once.
 - **Start it here.**
@@ -259,7 +262,7 @@ While the first mate is out of reach the window reads the command's own records 
 
 ## Starting at boot
 
-`<app> start-at-boot` sets the usual start at boot up for this account: it writes what the account may and prints the one line an administrator runs (INF-1228's approved plan, piece 7, the captain's answer boot=both; piece 5 of INF-1352's plan).
+`<app> start-at-boot` sets the usual start at boot up for this account: on Linux it writes what the account may and prints the one line an administrator runs (INF-1228's approved plan, piece 7, the captain's answer boot=both; piece 5 of INF-1352's plan), and on a Mac it needs no administrator (INF-1659).
 On Linux it writes this user's own systemd service, `<bundle id>.run.service` (`.dev.run` for a development run, `runLabelOf`, `src/shared/codeNames.ts`) in `~/.config/systemd/user` (or `$XDG_CONFIG_HOME`), and the link in `default.target.wants` that `systemctl --user enable` makes, so the user's systemd starts `<app> run` at their login (`bootUnit`, `src/core/helper/background.ts`).
 To start it at boot with nobody logged in, the user must linger: it asks `loginctl enable-linger --no-ask-password <user>`, which systemd allows some accounts, and otherwise prints "To start it whenever this computer starts, before anyone logs in, an administrator runs this once:" and `sudo loginctl enable-linger <user>`, the line the Linux join prints (`afterLogout`, `docs/devices.md`).
 The service starts the run again ten seconds after a failure, so an update's exit 75 runs the new version, but not after a clean stop (0) or a settings file to fix (78, `RestartPreventExitStatus`); what the run says goes to the user's journal (`journalctl --user -u <label>.service`), which the command names.
@@ -269,17 +272,25 @@ It starts the service now, unless another Infinitary holds the data folder (the 
 With no systemd for this user it says so and exits 1; any other word prints the usage and exits 2.
 `src/main/startAtBoot.ts` owns the command and its words.
 
-On a Mac, which has no linger, a job starts before anyone logs in only from the system's own `/Library/LaunchDaemons`, which an administrator writes (INF-1362, built after INF-1416's check on a disposable Mac showed the run starts, draws its hidden pages and stops cleanly there with nobody logged in).
-So it writes the account's own entry, `~/Library/LaunchDaemons/<label>.plist` (a folder launchd never reads itself), and prints "To turn it on, an administrator runs this once:" and the line that copies it into place, owned by root: `sudo install -o root -g wheel -m 644 <entry> /Library/LaunchDaemons/<label>.plist` (`bootPlist`, `src/core/helper/background.ts`).
-At the next boot launchd starts `<app> run` as this user (`UserName`), with `HOME` set to their home so the run opens their own data folder, and at the priority of an app the person started, as the home's own work runs (INF-247).
+On a Mac it writes a login agent in the account's own `~/Library/LaunchAgents`, `<label>.plist`, which launchd starts in the account's logged-in session whenever it logs in (`bootPlist`, `src/core/helper/background.ts`; the captain's choice on INF-1659).
+It is the agent the window's Start at login keeps there, under the same label and file ("The window starts it" above), so the window's own agent in the data folder goes and only one starts the run.
+To start it whenever the Mac starts, the person turns on automatic log in for the account, in System Settings > Users & Groups, which the command says.
+Automatic log in is offered only with FileVault off; with FileVault on, the password typed when the Mac starts logs the account in, and that starts the agent too.
+A run in that session sees the login keychain the log in unlocked, so Secrets work there ([secrets](secrets.md), "In the app").
+A system job started before anyone logs in never does: the keychain's lock is kept per session, and logging in later unlocks only the logged-in session's (INF-1659's check on a disposable Mac).
+So the agent loads only in the logged-in session (`LimitLoadToSessionType` `Aqua`), never a remote connection's, and the run stops when the account logs out; a Mac waiting at its login window runs nothing, and the command says both.
+It runs at the priority of an app the person started, as the home's own work runs (INF-247).
 It starts the run again after a failure, so an update's exit 75 runs the new version, but not after a clean stop (0); launchd cannot spare one exit code, so a settings file to fix (78) is started again every ten seconds, launchd's own wait, and is said in the log each time.
-What the run says goes to `~/Library/Logs/<label>.log`, which launchd opens as this user and the command names.
-It starts nothing now: the copy an administrator puts in place starts at the next boot, and an entry already in place keeps the copy launchd read at boot until the next one.
+What the run says goes to `~/Library/Logs/<label>.log`, which the command names.
+When the account is logged in it starts the agent now (`launchctl bootstrap gui/<uid>`), unless another Infinitary holds the data folder, as on Linux; a run of the agent itself starts again with the new file.
+Otherwise it says the agent starts the next time the account logs in.
+An earlier version wrote a system job for an administrator to copy into `/Library/LaunchDaemons` (INF-1362).
+The command takes that version's own copy in `~/Library/LaunchDaemons` away; one still in place starts first at boot and holds the data folder, so the command prints the line that takes it away, `sudo launchctl bootout system/<label> 2>/dev/null; sudo rm -f /Library/LaunchDaemons/<label>.plist`.
 `--settings <file>` and its refusal are as on Linux.
-`--off` takes the account's entry away; once an administrator has put one in place, it prints the line that stops the run and takes it away, `sudo launchctl bootout system/<label> 2>/dev/null; sudo rm -f /Library/LaunchDaemons/<label>.plist`.
-With FileVault on, a Mac starts nothing until someone unlocks its disk at boot.
+`--off` takes the agent away and stops its run; while an earlier version's system job is in place, it prints that same line.
+An earlier `help run` showed how to save a login agent by hand as `~/Library/LaunchAgents/infinitary.run.plist`; it starts the same run, so while that file is there the command says so, setting up and with `--off`, and leaves the file alone.
 
-`<app> help` lists the commands, and `<app> help run` prints the run's usage and the ways to start it the app does not set up itself, each with this app's own path: by hand in a terminal, `start-at-boot`, and a Mac login agent's file for `~/Library/LaunchAgents` (INF-1228's plan: "infinitary help run prints examples for other setups").
+`<app> help` lists the commands, and `<app> help run` prints the run's usage and the ways to start it, each with this app's own path: by hand in a terminal, and `start-at-boot` (INF-1228's plan: "infinitary help run prints examples for other setups").
 
 ## Not yet
 
@@ -298,7 +309,7 @@ A command killed over an earlier stop's record is told as stopped without saying
 Its last journey changes the theme at the first mate from a second client of the local door, which the window draws, and changes it back in the window, which the first mate keeps.
 `tests/e2e/window-starts-run.spec.ts` opens the window with no command running against a stand-in service manager that runs the job it is given (`tests/e2e/serviceManagerStandIn.ts`): the window starts the command and shows its card, Settings -> General offers Stop and moves Start at login to the command, Quit leaves the command running and the window opened again joins it, Stop ends it with nothing starting it again, Start it here starts a new one, and a replaced program ends it for the service manager to start the new one.
 Its second test starts a crewmate whose step stays open, quits the window and opens it again: the step is still open, the task is still running on the same command, and the window's browser profile folder is its own, held by a different process from the command's.
-`src/core/helper/runAgent.test.ts` holds the agent's file and the Linux service against stand-ins: where each lives, Start at login moving it, a refused start, and letting it go.
+`src/core/helper/runAgent.test.ts` holds the agent's file and the Linux service against stand-ins: where each lives, Start at login moving it, a refused start, letting it go, and keeping the settings file and log of the agent `start-at-boot` wrote.
 `tests/e2e/latency.check.spec.ts` prints, on a perf run on a Mac, memory across both programs and the time a request, an answer, a key and a fast-typing burst take to reach the screen, against the window running its first mate itself (`docs/testing.md`, "The latency check").
 `tests/e2e/panels-every-window.spec.ts` holds the panels in that window and in one on another computer: a panel drawn from the first mate's built files, an action answered there, and a panel built again while the window is open.
 `src/main/runCommand.test.ts` holds the words after `run`, the window's reading of `run.json` and the lock, Stop's signal, and the program's identity.
@@ -308,12 +319,12 @@ Its second test starts a crewmate whose step stays open, quits the window and op
 `src/core/update/updateHold.test.ts` holds the save a window's update waits for: a running turn, Update later, a window that leaves mid-save, and the replaced program.
 `src/main/runSettings.test.ts` holds the settings file's reading and each reason it refuses one; `src/core/hostEnv.test.ts` holds the search path a child gets from it with no shell asked, and `src/core/claude/claudeCli.test.ts` the locator's login-shell rung it skips.
 `tests/e2e/status-command.spec.ts` starts the built commands in the same isolated environment and reads status before, during and after a run, a second start, a signal, an update, a forced end and a saved-data refusal, plus invalid arguments and a corrupt record.
-`src/main/runStatus.test.ts` owns the pure output contract, private retained stop, legacy marker compatibility, unknown readings and the platform capability mapping.
+`src/main/runStatus.test.ts` owns the pure output contract, private retained stop, legacy marker compatibility, unknown readings, a Keychain reading that arrives after the note or after the run ended, and the platform capability mapping.
 `tests/e2e/link-command.spec.ts` starts the built commands in the same isolated environment: with nothing running `link` says so and makes no data, a word it does not take exits 2, and beside a run a computer's link joins once, a phone's printed code holds its printed link and joins, and `--json` answers a new link; once the run stops it says so again.
 `src/main/linkCommand.test.ts` holds the words after `link`, the readings with no answering door, the printed code read back module by module, and the output; `src/core/devices/phoneDoor.test.ts` holds the door's answer and refusals.
 `tests/e2e/run-control.spec.ts` starts the built app as `<app> run` with the mock provider and Google's stand-in, joins a second app at its first launch with the link `link --json` prints, and from it opens Intelligence with a card's Open settings button, Usage, Automation and Integrations by command, saves a projects folder typed as its path there after a missing one is refused, and signs in to Google, whose page that app's browser opens; once the run stops its own data holds both.
 Its second test, against a first mate with its window, also opens that computer's Knowledge from the second app and adds a stand-in computer to it from that app's Devices, then removes it.
-`src/main/startAtBoot.test.ts` holds `start-at-boot` against a stand-in systemd and logind: the service it writes, linger allowed, refused or already on, an Infinitary already open, a settings file, `--off`, no systemd, and `help run`; and on a Mac the entry it writes, read back as launchd reads it, the administrator's line, quoted where a home has a space, a settings file and `--off` before and after an administrator put the entry in place.
+`src/main/startAtBoot.test.ts` holds `start-at-boot` against a stand-in systemd and logind: the service it writes, linger allowed, refused or already on, an Infinitary already open, a settings file, `--off`, no systemd, and `help run`; and on a Mac against a stand-in launchd: the login agent it writes, read back as launchd reads it, started now in a logged-in session or left for the next log in, an Infinitary already open, the window's own agent it takes the place of, a login agent saved by hand, an earlier version's system job and the administrator's line that takes it away, quoted where its folder has a space, a settings file and `--off` with and without that system job.
 `src/main/runStatus.test.ts` holds the account path a run hands to its host and the status it returns without guessing.
 `src/main/host/claudeKeychainAccess.integration.test.ts` checks real unlocked, locked and missing disposable stores through the child process; `keychainProcess.integration.test.ts` proves a blocked status call leaves its parent responsive.
 `src/core/connection/connection.test.ts`, `src/shared/ipc.test.ts`, `src/core/devices/homeLink.test.ts`, `src/main/shell.test.ts` and `src/core/core.connection.test.ts` hold what such a view may ask and is refused, the welcome's field, a replayed page left unopened, and the page the real core sends instead of opening it; `src/renderer/src/devices/viewWords.test.tsx`, `src/renderer/src/settings/SettingsScreen.test.tsx` and `src/renderer/src/app/commandRefusals.test.ts` hold the sections, words and commands.

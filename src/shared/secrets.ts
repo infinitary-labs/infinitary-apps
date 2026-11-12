@@ -316,10 +316,20 @@ export const SECRETS_AREAS = [
 
 export const SECRETS_WORDS = {
   title: "Secrets",
-  count: (count: number) =>
-    count === 0
-      ? "Add a secret your crew needs. Your crew uses it but never sees it."
-      : `${count} ${count === 1 ? "secret" : "secrets"} kept on this computer. Your crew uses ${count === 1 ? "it" : "them"} but never sees ${count === 1 ? "it" : "them"}.`,
+  /**
+   * On Linux any program the person runs can read the unlocked secret store
+   * (docs/secrets.md, "Native custody"), so only a Mac promises the crew never
+   * sees a value.
+   */
+  count: (count: number, mac: boolean) => {
+    const it = count === 1 || count === 0 ? "it" : "them";
+    const promise = mac
+      ? `Your crew uses ${it} but never sees ${it}.`
+      : `Your crew uses ${it} only with your approval, but any program you run can reach ${it} while your system's secret store is unlocked.`;
+    return count === 0
+      ? `Add a secret your crew needs. ${promise}`
+      : `${count} ${count === 1 ? "secret" : "secrets"} kept on this computer. ${promise}`;
+  },
   disabled: "Protected storage is not enabled in this build.",
   unavailable: "Secrets could not open its protected storage. No access was granted.",
   stale: "This secret changed. Read its current version before replacing it.",

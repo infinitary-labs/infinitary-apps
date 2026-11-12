@@ -18,6 +18,7 @@ import {
   type BootContext,
   bootAsked,
   helpWords,
+  macHandAgentFile,
   runStartAtBoot,
   startAtBootCommand,
 } from "./startAtBoot";
@@ -25,7 +26,8 @@ import {
 /**
  * `infinitary start-at-boot` (docs/run.md, "Starting at boot"): INF-1228's
  * answer boot=both, "start-at-boot writes what the account may and prints
- * the one administrator line", carried unchanged as piece 5 of INF-1352's plan.
+ * the one administrator line", carried unchanged as piece 5 of INF-1352's
+ * plan; on a Mac, the captain's choice on INF-1659 below.
  */
 
 const LABEL = "com.getinfinitary.infinitary.run";
@@ -62,6 +64,7 @@ function context(
   const value: BootContext = {
     platform: "linux",
     user: "fm",
+    uid: 501,
     homeDir: join(root, "home"),
     unitsDir: join(root, "config", "systemd", "user"),
     daemonsDir: join(root, "Library", "LaunchDaemons"),
@@ -72,6 +75,7 @@ function context(
     cwd: root,
     systemctl: fake.systemctl,
     loginctl: fake.loginctl,
+    launchctl: null,
     alive: () => true,
     ...more,
   };
@@ -221,79 +225,188 @@ describe("starting at boot on Linux", () => {
   });
 });
 
+/** launchd as it answers this user: logged in or not, the agent loaded or not, and whether it starts it. */
+function launchd(options: { session: boolean; loaded?: boolean; starts?: boolean }) {
+  const calls: string[] = [];
+  const launchctl: Launchctl = async (args) => {
+    calls.push(`launchctl ${args.join(" ")}`);
+    const [verb, target] = args;
+    if (verb === "print")
+      return { ok: target === "gui/501" ? options.session : Boolean(options.loaded), output: "" };
+    if (verb === "bootstrap") return { ok: options.starts ?? true, output: "" };
+    return { ok: true, output: "" };
+  };
+  return { calls, launchctl };
+}
+
 describe("starting at boot on a Mac", () => {
-  // INF-1362, built after INF-1416's check on a disposable Mac: "start-at-boot
-  // writes what the account may and prints the one administrator line".
+  // The captain's choice on INF-1659 (aqua-run-now): a login agent in the
+  // person's own session with automatic log in, never a system job, so the
+  // run started at boot sees the login keychain unlocked and can use Secrets.
   const MAC = { executable: "/Applications/Infinitary.app/Contents/MacOS/Infinitary", args: [] };
 
-  function mac(more: Partial<BootContext> = {}) {
-    const made = context("on", { platform: "darwin", launcher: MAC, ...more });
+  function mac(
+    more: Partial<BootContext> = {},
+    answers: Parameters<typeof launchd>[0] = { session: true },
+  ) {
+    const fake = launchd(answers);
+    const made = context("on", {
+      platform: "darwin",
+      launcher: MAC,
+      launchctl: fake.launchctl,
+      ...more,
+    });
     const name = `${LABEL}.plist`;
     return {
       ...made,
+      launchd: fake.calls,
+      agent: join(made.context.homeDir, "Library", "LaunchAgents", name),
       prepared: join(made.context.homeDir, "Library", "LaunchDaemons", name),
       placed: join(made.context.daemonsDir, name),
       log: join(made.context.homeDir, "Library", "Logs", `${LABEL}.log`),
     };
   }
 
-  it("writes the account's boot entry and prints the one line that puts it in place", async () => {
-    const { calls, context: c, prepared, placed, log } = mac();
+  it("writes a login agent in the account's own session, asks for automatic log in and starts it now", async () => {
+    const { calls, launchd: asked, context: c, agent, placed, log } = mac();
     const result = await runStartAtBoot({ off: false }, c);
 
     expect(result.code).toBe(0);
-    const out = lines(result.out);
-    const line = `sudo install -o root -g wheel -m 644 ${prepared} ${placed}`;
-    expect(out).toEqual([...BOOT_WORDS.macSet("fm", line), BOOT_WORDS.macLog(log)]);
-    // No systemd or logind on a Mac, and nothing an administrator's own folder holds yet.
+    expect(lines(result.out)).toEqual([
+      ...BOOT_WORDS.macSet("fm"),
+      BOOT_WORDS.startedNow,
+      BOOT_WORDS.macLog(log),
+    ]);
+    // No systemd, logind or administrator: launchd starts it in this user's session.
     expect(calls).toEqual([]);
+    expect(asked).toEqual([
+      "launchctl print gui/501",
+      `launchctl bootout gui/501/${LABEL}`,
+      `launchctl bootstrap gui/501 ${agent}`,
+    ]);
     expect(existsSync(placed)).toBe(false);
 
-    const entry = parsePlist(readFileSync(prepared, "utf8"));
-    expect(entry).toMatchObject({
+    const entry = parsePlist(readFileSync(agent, "utf8"));
+    expect(entry).toEqual({
       Label: LABEL,
-      UserName: "fm",
       ProgramArguments: [MAC.executable, "run"],
+      // Only the logged-in session, where its log in unlocked the keychain.
+      LimitLoadToSessionType: "Aqua",
       RunAtLoad: true,
       // An update's 75 starts the new version; a clean stop does not start it again.
       KeepAlive: { SuccessfulExit: false },
+      ProcessType: "Interactive",
       StandardOutPath: log,
       StandardErrorPath: log,
-      EnvironmentVariables: { HOME: c.homeDir },
     });
-    expect(statSync(prepared).mode & 0o777).toBe(0o600);
-    // launchd opens the log as this user, in a folder of theirs that is there.
+    expect(statSync(agent).mode & 0o777).toBe(0o600);
     expect(existsSync(dirname(log))).toBe(true);
   });
 
-  // The reviewer's finding on INF-1352's piece 7: an agent the window left for Start at login
-  // would start a second run at every login beside the boot entry's.
-  it("lets the window's own agent go with the boot entry in place of it", async () => {
-    const { context: c } = mac();
+  // The reviewer's finding on INF-1352's piece 7: an agent the window left would start a second
+  // run beside the boot entry's. On a Mac the boot entry is the window's login agent itself.
+  it("takes the window's own agent's place with one login agent", async () => {
+    const { context: c, log } = mac();
     const agents = [loginAgentFile(c), sessionAgentFile(c)];
     for (const agent of agents) {
       mkdirSync(dirname(agent), { recursive: true });
       writeFileSync(agent, "the window's agent\n");
     }
     expect((await runStartAtBoot({ off: false }, c)).code).toBe(0);
-    expect(agents.filter((agent) => existsSync(agent))).toEqual([]);
+    expect(agents.filter((agent) => existsSync(agent))).toEqual([loginAgentFile(c)]);
+    expect(readFileSync(loginAgentFile(c), "utf8")).toContain(`<string>${log}</string>`);
   });
 
-  it("quotes a home with a space or a quote in the administrator's line", async () => {
-    const root = scratchDir("start-at-boot-space-");
-    const { context: c } = mac({ homeDir: join(root, "Kun's home") });
+  it("says it starts at the next log in when nobody is logged in, or launchd does not start it", async () => {
+    const away = mac({}, { session: false });
+    const out = lines((await runStartAtBoot({ off: false }, away.context)).out);
+    expect(out).toEqual([
+      ...BOOT_WORDS.macSet("fm"),
+      BOOT_WORDS.macNextLogIn("fm"),
+      BOOT_WORDS.macLog(away.log),
+    ]);
+    expect(away.launchd).toEqual(["launchctl print gui/501"]);
+    expect(existsSync(away.agent)).toBe(true);
+
+    const refused = mac({}, { session: true, starts: false });
+    const words = lines((await runStartAtBoot({ off: false }, refused.context)).out);
+    expect(words).toContain(BOOT_WORDS.macNextLogIn("fm"));
+    expect(words).not.toContain(BOOT_WORDS.startedNow);
+  });
+
+  it("leaves an Infinitary open here alone, and starts its own run again with the new file", async () => {
+    const open = mac();
+    mkdirSync(open.context.dataDir, { recursive: true });
+    symlinkSync("host-777", join(open.context.dataDir, "SingletonLock"));
+    const beside = await runStartAtBoot({ off: false }, open.context);
+    expect(lines(beside.out)).toEqual(expect.arrayContaining([...BOOT_WORDS.openNow]));
+    expect(open.launchd.some((call) => call.startsWith("launchctl bootstrap"))).toBe(false);
+
+    // The agent's own run holds the folder: launchd reads the new file and starts it again.
+    const own = mac({}, { session: true, loaded: true });
+    mkdirSync(own.context.dataDir, { recursive: true });
+    symlinkSync("host-777", join(own.context.dataDir, "SingletonLock"));
+    const again = await runStartAtBoot({ off: false }, own.context);
+    expect(lines(again.out)).toContain(BOOT_WORDS.startedNow);
+    expect(own.launchd).toContain(`launchctl bootstrap gui/501 ${own.agent}`);
+  });
+
+  it("takes an earlier version's system job away: its own copy goes, and one in place gets the administrator's line", async () => {
+    const { context: c, prepared, placed } = mac();
+    mkdirSync(dirname(prepared), { recursive: true });
+    writeFileSync(prepared, "an earlier version's entry");
+    mkdirSync(c.daemonsDir, { recursive: true });
+    writeFileSync(placed, "an earlier version's entry");
+
     const out = lines((await runStartAtBoot({ off: false }, c)).out);
-    const prepared = join(root, "Kun'\\''s home", "Library", "LaunchDaemons", `${LABEL}.plist`);
-    expect(out[2]).toBe(
-      `sudo install -o root -g wheel -m 644 '${prepared}' ${join(c.daemonsDir, `${LABEL}.plist`)}`,
+    expect(out).toEqual(
+      expect.arrayContaining([
+        ...BOOT_WORDS.macEarlier(
+          `sudo launchctl bootout system/${LABEL} 2>/dev/null; sudo rm -f ${placed}`,
+        ),
+      ]),
+    );
+    expect(existsSync(prepared)).toBe(false);
+    // The administrator's folder is theirs to change.
+    expect(existsSync(placed)).toBe(true);
+  });
+
+  it("says when a login agent saved by hand from an earlier help run also starts it, and leaves that file alone", async () => {
+    // The captain's answer on the review (help-run-duplicate-agent=c): help
+    // run no longer shows that file, and start-at-boot says when it is there.
+    const { context: c } = mac();
+    const hand = macHandAgentFile(c.homeDir);
+    mkdirSync(dirname(hand), { recursive: true });
+    writeFileSync(hand, "a login agent the person saved");
+
+    expect(lines((await runStartAtBoot({ off: false }, c)).out)).toContain(
+      BOOT_WORDS.macHandAgent(hand),
+    );
+    expect(lines((await runStartAtBoot({ off: true }, c)).out)).toEqual([
+      ...BOOT_WORDS.off("fm"),
+      BOOT_WORDS.macHandAgentOff(hand),
+    ]);
+    expect(existsSync(hand)).toBe(true);
+  });
+
+  it("quotes a folder with a space or a quote in the administrator's line", async () => {
+    const root = scratchDir("start-at-boot-space-");
+    const daemonsDir = join(root, "Kun's daemons");
+    const { context: c } = mac({ daemonsDir });
+    mkdirSync(daemonsDir, { recursive: true });
+    writeFileSync(join(daemonsDir, `${LABEL}.plist`), "an earlier version's entry");
+    const out = lines((await runStartAtBoot({ off: false }, c)).out);
+    const placed = join(root, "Kun'\\''s daemons", `${LABEL}.plist`);
+    expect(out).toContain(
+      `sudo launchctl bootout system/${LABEL} 2>/dev/null; sudo rm -f '${placed}'`,
     );
   });
 
   it("names the settings file by its full path, and refuses one to fix before writing anything", async () => {
-    const { root, context: c, prepared } = mac();
+    const { root, context: c, agent } = mac();
     writeFileSync(join(root, "settings.json"), '{ "path": ["/usr/bin", "/bin"] }');
     await runStartAtBoot({ off: false, settings: "settings.json" }, c);
-    expect(parsePlist(readFileSync(prepared, "utf8")).ProgramArguments).toEqual([
+    expect(parsePlist(readFileSync(agent, "utf8")).ProgramArguments).toEqual([
       MAC.executable,
       "run",
       "--settings",
@@ -305,33 +418,39 @@ describe("starting at boot on a Mac", () => {
     const refused = await runStartAtBoot({ off: false, settings: "bad.json" }, fresh.context);
     expect(refused.code).toBe(RUN_SETTINGS_EXIT);
     expect(lines(refused.error)[0]).toMatch(/^Infinitary could not use the settings file /);
-    expect(existsSync(fresh.prepared)).toBe(false);
+    expect(existsSync(fresh.agent)).toBe(false);
+    expect(fresh.launchd).toEqual([]);
   });
 
-  it("carries a development run's stand-ins beside its home", async () => {
-    const { context: c, prepared } = mac({ env: { INFINITARY_USER_DATA_DIR: "/tmp/fm data" } });
+  it("carries a development run's stand-ins", async () => {
+    const { context: c, agent } = mac({ env: { INFINITARY_USER_DATA_DIR: "/tmp/fm data" } });
     await runStartAtBoot({ off: false }, c);
-    expect(parsePlist(readFileSync(prepared, "utf8")).EnvironmentVariables).toEqual({
-      HOME: c.homeDir,
+    expect(parsePlist(readFileSync(agent, "utf8")).EnvironmentVariables).toEqual({
       INFINITARY_USER_DATA_DIR: "/tmp/fm data",
     });
   });
 
-  it("undoes it with --off: the account's entry itself, and the placed one by an administrator's line", async () => {
-    const { context: c, prepared, placed } = mac();
+  it("undoes it with --off: the agent and its run, and an earlier system job by an administrator's line", async () => {
+    const { launchd: asked, context: c, agent, prepared, placed } = mac();
     await runStartAtBoot({ off: false }, c);
     const off = await runStartAtBoot({ off: true }, c);
     expect(off.code).toBe(0);
     expect(lines(off.out)).toEqual([...BOOT_WORDS.off("fm")]);
-    expect(existsSync(prepared)).toBe(false);
+    expect(existsSync(agent)).toBe(false);
+    expect(asked.at(-1)).toBe(`launchctl bootout gui/501/${LABEL}`);
+    // With no agent in place, a run under the same label, as the window's own
+    // agent in the data folder starts, keeps running.
+    const before = asked.length;
     expect(lines((await runStartAtBoot({ off: true }, c)).out)).toEqual([
       ...BOOT_WORDS.wasOff("fm"),
     ]);
+    expect(asked.slice(before)).toEqual([]);
 
-    // Placed by an administrator, it takes one to stop it and take it away.
-    await runStartAtBoot({ off: false }, c);
+    // An earlier version's own copy goes too; one an administrator put in place takes one to remove.
+    mkdirSync(dirname(prepared), { recursive: true });
+    writeFileSync(prepared, "an earlier version's entry");
     mkdirSync(c.daemonsDir, { recursive: true });
-    writeFileSync(placed, readFileSync(prepared));
+    writeFileSync(placed, "an earlier version's entry");
     const placedOff = await runStartAtBoot({ off: true }, c);
     expect(lines(placedOff.out)).toEqual([
       ...BOOT_WORDS.macOff(
@@ -363,17 +482,11 @@ describe("the words of the command", () => {
     expect(help.lines.slice(0, RUN_WORDS.usage.length)).toEqual([...RUN_WORDS.usage]);
     expect(help.lines).toContain(`    ${mac.executable} run`);
     expect(help.lines).toContain(`    ${mac.executable} start-at-boot`);
-    expect(help.lines.join("\n")).toContain(
-      `<array><string>${mac.executable}</string><string>run</string></array>`,
-    );
 
     // A run from a checkout starts Electron with its folder: each its own word, quoted where it has a space.
     const checkout = { executable: "/repo x/Electron", args: ["/repo x"] };
     const words = helpWords(["run"], checkout).lines;
     expect(words).toContain("    '/repo x/Electron' '/repo x' run");
-    expect(words.join("\n")).toContain(
-      "<array><string>/repo x/Electron</string><string>/repo x</string><string>run</string></array>",
-    );
     expect(helpWords([], mac).code).toBe(0);
     expect(helpWords(["nope"], mac).code).toBe(2);
   });

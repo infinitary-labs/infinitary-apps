@@ -320,20 +320,22 @@ export function bootUnit(options: {
 }
 
 /**
- * A Mac's boot entry for `infinitary start-at-boot` (docs/run.md, "Starting
- * at boot"): a system job an administrator copies into `/Library/LaunchDaemons`,
- * which launchd starts at boot as `user` (`UserName`), with nobody logged in,
- * since macOS has no linger. A failure starts it again, an update's exit 75
- * among them, so the new version runs; a clean stop (exit 0) does not. It
- * runs at the priority of an app the person started, as the home's own work
- * does (INF-247). What it says goes to `log`, which launchd opens as `user`.
- * With no `user` it is an agent in the session of the user who loads it, as
- * the window loads the run it starts (`startRunAgent`, ./runAgent.ts).
+ * A Mac's start entry for `infinitary start-at-boot` (docs/run.md, "Starting
+ * at boot"): a login agent in this user's own `~/Library/LaunchAgents`, which
+ * launchd starts in their logged-in session, at boot too once the Mac logs
+ * them in automatically. A run there sees the login keychain unlocked by that
+ * log in; a system job started before anyone logs in never does, since macOS
+ * keeps the keychain's lock per session (the captain's choice on INF-1659).
+ * `LimitLoadToSessionType` keeps it to the logged-in session, never a remote
+ * connection's. A failure starts it again, an update's exit 75 among them, so
+ * the new version runs; a clean stop (exit 0) does not. It runs at the
+ * priority of an app the person started, as the home's own work does
+ * (INF-247). What it says goes to `log`. The window's own agent for the run
+ * it starts is this one too, in the same file while Start at login is on
+ * (`startRunAgent`, ./runAgent.ts).
  */
 export function bootPlist(options: {
   label: string;
-  user?: string;
-  homeDir?: string;
   launcher: Launcher;
   settings?: string;
   log: string;
@@ -345,11 +347,7 @@ export function bootPlist(options: {
     "run",
     ...(options.settings ? ["--settings", options.settings] : []),
   ];
-  // Named, so the run finds its data folder in this account's home whatever a system job is given.
-  const env = Object.entries({
-    ...(options.homeDir ? { HOME: options.homeDir } : {}),
-    ...options.env,
-  });
+  const env = Object.entries(options.env);
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
@@ -357,11 +355,12 @@ export function bootPlist(options: {
     "<dict>",
     "\t<key>Label</key>",
     `\t<string>${xml(options.label)}</string>`,
-    ...(options.user ? ["\t<key>UserName</key>", `\t<string>${xml(options.user)}</string>`] : []),
     "\t<key>ProgramArguments</key>",
     "\t<array>",
     ...words.map((word) => `\t\t<string>${xml(word)}</string>`),
     "\t</array>",
+    "\t<key>LimitLoadToSessionType</key>",
+    "\t<string>Aqua</string>",
     "\t<key>RunAtLoad</key>",
     "\t<true/>",
     "\t<key>KeepAlive</key>",

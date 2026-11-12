@@ -770,13 +770,20 @@ describe("a task that runs on a computer that runs work", () => {
   // working while the home is still behind its events ends nothing yet, so
   // the twenty-minute alert goes as before.
   it("raises the quiet alert at twenty minutes when the computer's answer ends nothing here (INF-2332)", async () => {
-    const heldCall = gate();
-    const claude = await scriptedClaudeWorld({ beforeToolRecord: () => heldCall.held });
+    const claude = await scriptedClaudeWorld();
     stops.push(scriptedClaudeCleanup);
     const at = await world(undefined, { claude });
     const home = at.home();
     const taskId = "t-answer-ends-nothing";
     claude.answer({ text: "The background check started." });
+    // The turn ends there, but its last events never reach the home: every
+    // events request waits once the crewmate's note_progress reaches the home.
+    // That computer sends a tool's call only after the home has every event
+    // written before it (`SessionHost.call`), so the hold catches only what
+    // the turn wrote after its call. A hold that started when the home first
+    // heard the tool start also caught any earlier event still on its way,
+    // such as the transcript's observation of the first prompt; the call
+    // waited on it, and the turn never ended there.
     const events = gate();
     let holding = false;
     const answer = home.placed.answer.bind(home.placed);
@@ -785,7 +792,8 @@ describe("a task that runs on a computer that runs work", () => {
       channel,
       request,
     ) => {
-      if (holding && channel === "inf:work:events") await events.held;
+      if (channel === "inf:work:progress") holding = true;
+      else if (holding && channel === "inf:work:events") await events.held;
       return answer(device, channel, request);
     }) as typeof home.placed.answer);
     try {
@@ -799,19 +807,15 @@ describe("a task that runs on a computer that runs work", () => {
       claude.continueTurn();
       await expect
         .poll(() =>
-          home.events.some((event) => event.type === "tool_start" && event.taskId === taskId),
-        )
-        .toBe(true);
-      // The turn ends there, but its last events have not reached the home.
-      holding = true;
-      heldCall.open();
-      await expect
-        .poll(() =>
           new PlacedTasks(at.dataDir)
             .outbox(taskId, 0)
             .some(({ event }) => event.type === "continuation_ended"),
         )
         .toBe(true);
+      // The home heard the tool start, and nothing of how the turn ended.
+      expect(
+        home.events.some((event) => event.type === "tool_start" && event.taskId === taskId),
+      ).toBe(true);
       expect(home.tasks.get(taskId)?.activity).toBe("running");
       const wakes = home.wakes.length;
       const asked = vi.spyOn(home.devices, "ask");
@@ -837,7 +841,6 @@ describe("a task that runs on a computer that runs work", () => {
       events.open();
       held.mockRestore();
       claude.endClient();
-      heldCall.open();
     }
   });
 

@@ -3,7 +3,7 @@ import { prRuns } from "../scripts/pr-paths.ts";
 
 // INF-2915's plan, the captain's direction B with the light profile: a pull
 // request version that touches only tests, docs, release notes or the phone
-// app skips the build and the critical path, and the browser tests run only
+// app skips the build and the critical path, and every browser test runs only
 // when it touches the renderer or its browser tests. Each list is a real
 // change on main, read with git diff --name-only --no-renames.
 describe("what a pull request version's build check runs", () => {

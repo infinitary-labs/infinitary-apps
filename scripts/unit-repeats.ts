@@ -5,6 +5,7 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changedPaths, PROBE_FILES } from "./affected-probes.ts";
 import { MAC_UNIT_FILES } from "./mac-unit-tests.ts";
+import { prRuns } from "./pr-paths.ts";
 import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
 
 /**
@@ -53,19 +54,29 @@ export function selectLocalUnits(changed: readonly string[], root = ROOT): Local
  * its break merged (INF-2478). It runs each edited Vitest file once there too,
  * beside its three local rounds: PRs #1398, #1455 and #1420 edited tests that
  * passed on the crewmate's Mac and first failed on Linux in the merge batch
- * (INF-3690's gap 3, the captain's "Yes: start it now"). Three kinds stay with
- * another run, listed apart with where each runs: an unedited Mac-listed
- * reader with the crewmate's local round, a probe with main's full check,
- * since it can fail with no code change (docs/test-cohorts.md, "Probes"), and
- * a browser file with the browser step.
+ * (INF-3690's gap 3, the captain's "Yes: start it now"). A browser file
+ * runs here too, in the browser project, when the browser step skips: a
+ * change to src/shared/cards.ts alone reached twelve browser tests and ran
+ * none (INF-2999). Naming the browser project costs a round with no browser
+ * file nothing, and the step before installs the Chromium it draws in.
+ * Three kinds stay with another run, listed apart with where each runs: an
+ * unedited Mac-listed reader with the crewmate's local round, a probe with
+ * main's full check, since it can fail with no code change
+ * (docs/test-cohorts.md, "Probes"), and a browser file with the browser step
+ * when the change touches the renderer or its browser tests, since that step
+ * then runs every browser file.
  */
-export const REACH_PROJECTS = ["pure", "unit", "unit-isolated", "integration"];
+export const REACH_PROJECTS = ["pure", "unit", "unit-isolated", "integration", "browser"];
 
 export type LinuxReach = { run: string[]; elsewhere: { file: string; where: string }[] };
 
 export function selectLinuxReach(changed: readonly string[], root = ROOT): LinuxReach {
   const mac = new Set<string>(MAC_UNIT_FILES);
   const probes = new Set<string>(PROBE_FILES);
+  // The paths step's own verdict on the same change (scripts/pr-paths.ts).
+  // This list leaves out a rename's old path, which that step reads too, so
+  // at worst a browser file runs in both steps, and never in neither.
+  const browserStep = prRuns(changed).browser;
   const reach: LinuxReach = { run: [], elsewhere: [] };
   const edited = new Set(selectRepeats(changed, (file) => existsSync(join(root, file))).repeat);
   const readers = directUnitReach(changed, unitFiles(root), root);
@@ -77,10 +88,10 @@ export function selectLinuxReach(changed: readonly string[], root = ROOT): Linux
       reach.elsewhere.push({ file, where: "needs a Mac: the crewmate's local round" });
     else if (probes.has(file))
       reach.elsewhere.push({ file, where: "a probe: main's full check runs every probe" });
-    else if (file.startsWith("tests/browser/"))
+    else if (file.startsWith("tests/browser/") && browserStep)
       reach.elsewhere.push({
         file,
-        where: "a browser test: the browser step, when the renderer or its browser tests change",
+        where: "a browser test: the browser step runs every browser test for this change",
       });
     else reach.run.push(file);
   }

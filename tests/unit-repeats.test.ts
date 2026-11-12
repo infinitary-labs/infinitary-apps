@@ -209,27 +209,40 @@ describe("the pull request's direct-reader round", () => {
   });
 
   // A probe can fail with no code change, so main's full check runs every one
-  // (docs/test-cohorts.md, "Probes"); the browser step runs the browser tests.
-  // The paths are joined so this file does not read them itself.
-  it("lists a probe reader and a browser reader apart, with where each runs", () => {
-    const { run, elsewhere } = selectLinuxReach([
-      ["scripts", "release-notes.ts"].join("/"),
-      ["src", "shared", "cards.ts"].join("/"),
-    ]);
+  // (docs/test-cohorts.md, "Probes"). The paths are joined so this file does
+  // not read them itself.
+  it("lists a probe reader apart, with where it runs", () => {
+    const { run, elsewhere } = selectLinuxReach([["scripts", "release-notes.ts"].join("/")]);
     expect(elsewhere).toContainEqual({
       file: "tests/release-notes.test.ts",
       where: "a probe: main's full check runs every probe",
     });
-    const browser = elsewhere.filter(({ file }) => file.startsWith("tests/browser/"));
-    expect(browser.length).toBeGreaterThan(0);
-    for (const { where } of browser)
-      expect(where).toBe(
-        "a browser test: the browser step, when the renderer or its browser tests change",
-      );
-    for (const file of run) {
-      expect(file.startsWith("tests/browser/")).toBe(false);
-      expect(file).not.toBe("tests/release-notes.test.ts");
-    }
+    expect(run).not.toContain("tests/release-notes.test.ts");
+  });
+
+  // INF-2999: two changes on main edited src/shared/cards.ts and no renderer
+  // file, so the browser step skipped and the browser tests that import it,
+  // such as card-threads, ran nowhere on the pull request.
+  const cards = ["src", "shared", "cards.ts"].join("/");
+  const cardThreads = ["tests", "browser", "card-threads.test.tsx"].join("/");
+
+  it("runs the browser readers of a changed shared file when the renderer is untouched", () => {
+    const { run, elsewhere } = selectLinuxReach([cards]);
+    expect(run).toContain(cardThreads);
+    expect(elsewhere.filter(({ file }) => file.startsWith("tests/browser/"))).toEqual([]);
+  });
+
+  // The renderer path of a real change (scripts/pr-paths.ts's test): the
+  // browser step then runs every browser file, so none runs twice.
+  it("lists the browser readers apart when the browser step runs every browser test", () => {
+    const renderer = ["src", "renderer", "src", "accounts", "signInFlight.ts"].join("/");
+    const { run, elsewhere } = selectLinuxReach([cards, renderer]);
+    expect(run.filter((file) => file.startsWith("tests/browser/"))).toEqual([]);
+    expect(run).toContain("src/shared/cards.test.ts");
+    expect(elsewhere).toContainEqual({
+      file: cardThreads,
+      where: "a browser test: the browser step runs every browser test for this change",
+    });
   });
 
   // INF-3690's gap 3 (the captain's "Yes: start it now"): PRs #1398, #1455 and
@@ -264,7 +277,7 @@ describe("the pull request's direct-reader round", () => {
         { file: probe, where: "a probe: main's full check runs every probe" },
         {
           file: browser,
-          where: "a browser test: the browser step, when the renderer or its browser tests change",
+          where: "a browser test: the browser step runs every browser test for this change",
         },
       ]),
     );
@@ -282,7 +295,7 @@ describe("the pull request's direct-reader round", () => {
     });
   });
 
-  it("runs once in the in-memory and integration cohorts, with no retry and a report of what ran", () => {
+  it("runs once in the in-memory, integration and browser cohorts, with no retry and a report of what ran", () => {
     const args = reachArgs(["src/shared/actions.test.ts"], "report.json");
     expect(args).not.toContain("--passWithNoTests");
     expect(args.slice(args.indexOf("--retry"), args.indexOf("--retry") + 2)).toEqual([
@@ -294,6 +307,7 @@ describe("the pull request's direct-reader round", () => {
       "unit",
       "unit-isolated",
       "integration",
+      "browser",
     ]);
     expect(args).toContain("--reporter=json");
     expect(args).toContain("--outputFile.json=report.json");
@@ -326,7 +340,7 @@ describe("the pull request's direct-reader round", () => {
     const report = vi.fn();
     expect(runLinuxReach(files, run, report, root)).toBe(1);
     expect(report).toHaveBeenCalledExactlyOnceWith([
-      "These selected test files did not run in pure, unit, unit-isolated, integration:",
+      "These selected test files did not run in pure, unit, unit-isolated, integration, browser:",
       "- `tests/release-workflows-pr-checks.test.ts`",
     ]);
   });
@@ -335,7 +349,7 @@ describe("the pull request's direct-reader round", () => {
     const report = vi.fn();
     expect(runLinuxReach(["src/shared/actions.test.ts"], () => 0, report, root)).toBe(1);
     expect(report).toHaveBeenCalledExactlyOnceWith([
-      "These selected test files did not run in pure, unit, unit-isolated, integration:",
+      "These selected test files did not run in pure, unit, unit-isolated, integration, browser:",
       "- `src/shared/actions.test.ts`",
     ]);
   });

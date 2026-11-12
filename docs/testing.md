@@ -146,7 +146,7 @@ A journey helper that takes a Playwright page, such as the layout invariant or t
 A frame program served as text, such as Observe's, draws in a same-origin frame the test builds from the program and the design tokens (`tests/browser/observe-frame.test.ts`).
 The project's Chromium runs with Web Share on, as the window's does, and draws scrollbars as the window does: over the content on a Mac by default, beside it on Linux, and beside it wherever a page styles them.
 Install it once with `pnpm exec playwright install --only-shell chromium`, then run `pnpm exec vitest run --project browser`.
-A pull request version that touches the renderer or its browser tests runs the whole browser project in `ci.yml`'s `typecheck-lint-build` check, about three minutes with its Chromium install; any other version skips it ("What a pull request runs").
+A pull request version that touches the renderer or its browser tests runs the whole browser project in `ci.yml`'s `typecheck-lint-build` check, about three minutes with its Chromium install; any other version runs only the browser files that import or read a changed file, in the same check's reader step ("Notes", "What a pull request runs").
 `verify.yml`'s browser test group, a job of every swept batch's check and of main's, runs every browser file, and `ci.yml`'s requested `unit-tests` sweep runs them beside the in-memory cohorts; all three install Chromium through `.github/actions/browser-chromium`.
 A journey that only draws the window and reads it moves here, and its original is deleted as its twin lands, so the swept batch checks the window through its twin.
 A journey stays when it needs what the browser layer cannot give the page: main or the core at work, a frame served over the app's own scheme, whose body a page cannot load, or a change of display density, which Chromium tells only a top-level page and the test page is a frame.
@@ -271,10 +271,10 @@ A run that fails or stalls under load is diagnosed from its own logs and fixed i
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - The PR's Linux `typecheck-lint-build` check owns typecheck, lint/adherence and build; do not duplicate it as a complete local pre-push gate.
-  It also runs, once, each edited Vitest file and the unedited unit and integration tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit`, `unit-isolated` and `integration` cohorts (INF-2441, INF-2478, INF-3690's gap 3).
+  It also runs, once, each edited Vitest file and the unedited unit, integration and browser tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit`, `unit-isolated`, `integration` and `browser` cohorts (INF-2441, INF-2478, INF-2999, INF-3690's gap 3).
   An edited Mac-listed file runs there too, since Linux runs its portable cases in the merge batch and main's full check.
-  It lists apart, with the run that owns each, an unedited Mac-listed reader (the crewmate's local round), a probe (main's full check, `docs/test-cohorts.md` "Probes") and a browser test (the browser step).
-  It installs Chromium first, for the browser step and for an integration file that starts it, such as `tests/run-temp-root.test.ts`.
+  It lists apart, with the run that owns each, an unedited Mac-listed reader (the crewmate's local round), a probe (main's full check, `docs/test-cohorts.md` "Probes") and, when the change touches the renderer or its browser tests, a browser test (the browser step, which then runs every browser file).
+  It installs Chromium first, for the browser tests this step and the browser step run, and for an integration file that starts it, such as `tests/run-temp-root.test.ts`.
   It reads Vitest's JSON report afterwards and fails when a file it selected did not run, so a file none of those cohorts takes cannot pass unseen.
   Required focused proof may run before or alongside the PR and must finish for its current version before merge.
   A selected local `renderer` or `application` spec needs `--no-deps`, since its teardown otherwise runs the whole `desktop` lane.
@@ -792,7 +792,7 @@ Its steps keep what caught problems on pull requests and leave the rest to the s
 Every version runs the release notes check, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes").
 Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit's base parent and decides two things.
 The build and the critical path run unless every changed path is a test (under `tests/`, or a `.test` or `.spec` file), docs (`docs/`, `primitives/` or any Markdown file), a release note or the phone app (`ios/`).
-The browser tests run only when a path is under `src/renderer/` or `tests/browser/`, or is a browser test helper (`tests/helpers/browser*`).
+Every browser test runs only when a path is under `src/renderer/` or `tests/browser/`, or is a browser test helper (`tests/helpers/browser*`); otherwise the reader step runs the browser tests that import or read a changed file, such as those reading `src/shared/cards.ts` ("Notes").
 An empty change or an unreadable diff runs everything.
 No pull request runs the Linux startup fixtures, the node-headers proof or the adherence lint: none caught a problem on a pull request, the swept batch or main's full check runs all three, and `pnpm check:changed` runs the adherence lint before each push.
 `tests/pr-paths.test.ts` holds the two decisions to real changes on main, and `tests/release-workflows-pr-checks.test.ts` holds the check's steps to them.

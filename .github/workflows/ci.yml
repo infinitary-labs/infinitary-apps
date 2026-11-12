@@ -2,9 +2,9 @@ name: ci
 
 # Pull requests run one Linux job (INF-2915's plan, the captain's direction
 # B): the release notes, typecheck, the lint, the edited unit and integration
-# tests and those that read a changed file, the build and the one critical-path journey
-# (INF-2507), and the browser tests when a version touches the renderer or
-# its browser tests.
+# tests and the unit, integration and browser tests that read a changed file,
+# the build and the one critical-path journey (INF-2507), and every browser
+# test when a version touches the renderer or its browser tests.
 # A version whose every path is a test, docs, a release note or the phone app
 # skips the build and the critical path (scripts/pr-paths.ts). The swept
 # batch runs everything before a change reaches main (docs/testing.md, "What
@@ -88,8 +88,8 @@ jobs:
         run: node scripts/release-notes.ts change --base "$CHANGE_BASE"
       # What this version runs beyond its code checks (INF-2915's plan):
       # build=false when every changed path is a test, docs, a release note
-      # or the phone app; browser=true when one is the renderer or its
-      # browser tests. Plain Node, no install.
+      # or the phone app; browser=true, every browser test, when one is the
+      # renderer or its browser tests. Plain Node, no install.
       - name: Changed paths
         id: paths
         if: ${{ github.event_name != 'workflow_dispatch' }}
@@ -107,27 +107,30 @@ jobs:
       # push in pnpm check:changed, never on a pull request or a pushed branch.
       - run: pnpm lint:adherence
         if: ${{ github.event_name == 'workflow_dispatch' }}
-      # Chromium, about 15 seconds, for the browser step and for an
-      # integration file the next step runs that starts it, such as
-      # tests/run-temp-root.test.ts (the integration groups install it too).
+      # Chromium, about 15 seconds, for the browser step, for a browser test
+      # the next step runs and for an integration file it runs that starts
+      # one, such as tests/run-temp-root.test.ts (the integration groups
+      # install it too).
       - uses: ./.github/actions/browser-chromium
         if: ${{ github.event_name != 'workflow_dispatch' }}
-      # Each edited test file, and the unedited unit and integration tests
-      # that import or read each changed file, run once here
+      # Each edited test file, and the unedited unit, integration and
+      # browser tests that import or read each changed file, run once here
       # (scripts/unit-reach.ts directUnitReach), so a break the crewmate's
       # Mac rounds did not see fails the pull request, not the merge batch or
-      # main's full check (INF-2478; INF-3690's gap 3 for edited files, whose
-      # three rounds stay local). A probe, a browser file or an unedited
-      # Mac-listed reader is listed with the run that owns it, and a selected
-      # file that did not run fails it.
-      - name: Unit and integration tests that read a changed file
+      # main's full check (INF-2478, INF-2999; INF-3690's gap 3 for edited
+      # files, whose three rounds stay local). A probe, an unedited
+      # Mac-listed reader, or a browser file when the browser step runs every
+      # one, is listed with the run that owns it, and a selected file that
+      # did not run fails it.
+      - name: Unit, integration and browser tests that read a changed file
         if: ${{ github.event_name != 'workflow_dispatch' }}
         run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --run
         timeout-minutes: 30
       # The browser layer (docs/testing.md, "The browser layer"): every
       # browser file, about three minutes, when the version touches the
-      # renderer or its browser tests. A requested sweep runs them in
-      # unit-tests, and the swept batch on every approved change.
+      # renderer or its browser tests; otherwise the step before runs the
+      # browser files that read a changed file. A requested sweep runs them
+      # in unit-tests, and the swept batch on every approved change.
       - name: Browser tests
         if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.browser == 'true' }}
         run: pnpm test --project browser

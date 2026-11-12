@@ -81,7 +81,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(base).toBeDefined();
     // INF-2441 (captain's choice: "Run the tests that read each changed file
     // inside the pull request's build check"): the pull request's round of
-    // the unit and integration tests that read a changed file (docs/testing.md).
+    // the unit, integration and browser tests that read a changed file
+    // (docs/testing.md).
     const reach = gate.find((step) =>
       step.run?.startsWith("node scripts/unit-repeats.ts --reach "),
     );
@@ -200,8 +201,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   // INF-2915's plan, the captain's direction B with the light profile: the
   // paths step's two verdicts decide what the pull request's gate runs past
-  // its code checks and the unit and integration tests that read a changed
-  // file, which every version runs.
+  // its code checks and the unit, integration and browser tests that read a
+  // changed file, which every version runs.
   it.each([
     [{ build: true, browser: true }, ["build", "browser", "critical path"]],
     [{ build: true, browser: false }, ["build", "critical path"]],

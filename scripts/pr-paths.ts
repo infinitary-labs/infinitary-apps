@@ -6,10 +6,11 @@ import { fileURLToPath } from "node:url";
  * What a pull request version's build check runs beyond its code checks
  * (INF-2915's plan, the captain's direction B with the light profile): the
  * build and the critical path run unless every changed path is a test, docs,
- * a release note or the phone app, and the browser tests run only when a
- * path is the renderer or its browser tests. The swept batch runs all three
- * on every approved change before it reaches main (docs/testing.md, "What a
- * pull request runs").
+ * a release note or the phone app, and every browser test runs only when a
+ * path is the renderer or its browser tests; otherwise the reader step runs
+ * the browser tests that read a changed file (scripts/unit-repeats.ts
+ * --reach, INF-2999). The swept batch runs all three on every approved change
+ * before it reaches main (docs/testing.md, "What a pull request runs").
  *
  *   node scripts/pr-paths.ts --base <ref>   (ci.yml's typecheck-lint-build job)
  *
@@ -79,8 +80,8 @@ function main(): void {
     );
     console.log(
       browser
-        ? "The change touches the renderer or its browser tests; the browser tests run."
-        : "The change touches neither the renderer nor its browser tests; the browser tests skip.",
+        ? "The change touches the renderer or its browser tests; the browser step runs every browser test."
+        : "The change touches neither the renderer nor its browser tests; the browser step skips, and the reader step runs each browser test that reads a changed file.",
     );
   }
   if (process.env.GITHUB_OUTPUT)

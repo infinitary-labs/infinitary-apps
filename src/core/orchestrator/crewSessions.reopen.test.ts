@@ -1059,66 +1059,56 @@ describe("CrewSupervisor", () => {
   // The captain's choice on INF-3791's review: a recorded conversation the
   // backend could not reopen starts a new one visibly - noted on the record,
   // with the brief and the restart notice - never silently. A Claude client
-  // with no transcript for the id, and an Antigravity program that cannot
-  // reopen it, each open under another id.
-  const OLD_CLAUDE = "0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
-  const NEW_CLAUDE = "7d1e2f30-4a5b-4c6d-8e9f-a0b1c2d3e4f5";
-  it.each([
-    {
-      backend: "antigravity",
-      from: "antigravity:conv-old",
-      old: "conv-old",
-      now: "conv-new",
-      token: "antigravity:conv-new",
-    },
-    { backend: "claude", from: OLD_CLAUDE, old: OLD_CLAUDE, now: NEW_CLAUDE, token: NEW_CLAUDE },
-  ] as const)(
-    "says so and carries the brief when a $backend session opens a new conversation instead of the recorded one",
-    async ({ backend, from, old, now, token }) => {
-      const crewmate = fakeCrewmate({ sessionId: now, resume: { backend, sessionId: now } });
-      const { supervisor, tasks, sessionSpecs } = setup(crewmate, {
-        alsoServes: [backend],
-        bind: async (accountId) => ({ backend, accountId: accountId ?? "" }),
-      });
-      seedTask(tasks, {
-        id: "t-lost",
-        title: "Old task",
-        prompt: "old work",
-        repoId: null,
-        repoDir: "/tmp/repo",
-        worktreeDir: "/tmp/wt",
-        branch: "fm/task-t-lost",
-        sessionFile: from,
-        accountId: "acct_signed_in",
-        status: "idle",
-        createdAt: Date.now(),
-      });
-      tasks.recordBrief("t-lost", ["Goal: count the rivets."]);
+  // with no transcript for the id opens under another id.
+  it("says so and carries the brief when a Claude session opens a new conversation instead of the recorded one", async () => {
+    const from = "0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
+    const now = "7d1e2f30-4a5b-4c6d-8e9f-a0b1c2d3e4f5";
+    const crewmate = fakeCrewmate({
+      sessionId: now,
+      resume: { backend: "claude", sessionId: now },
+    });
+    const { supervisor, tasks, sessionSpecs } = setup(crewmate, {
+      alsoServes: ["claude"],
+      bind: async (accountId) => ({ backend: "claude", accountId: accountId ?? "" }),
+    });
+    seedTask(tasks, {
+      id: "t-lost",
+      title: "Old task",
+      prompt: "old work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-lost",
+      sessionFile: from,
+      accountId: "acct_signed_in",
+      status: "idle",
+      createdAt: Date.now(),
+    });
+    tasks.recordBrief("t-lost", ["Goal: count the rivets."]);
 
-      await supervisor.steer.steerCrewmate("t-lost", "carry on");
-      await tick();
-      // It asked for the recorded conversation, and the backend opened another.
-      expect(
-        sessionSpecs[0]?.shape.turns === "rolling" && sessionSpecs[0].shape.record.resume,
-      ).toEqual({ backend, sessionId: old });
-      expect(
-        tasks
-          .timeline("t-lost")
-          .filter((event) => event.kind === "note")
-          .map((event) => event.text),
-      ).toContain("its earlier conversation could not be reopened, so it starts a fresh one");
-      expect(tasks.get("t-lost")?.sessionFile).toBe(token);
-      expect(crewmate.promptCalls[0]).toContain(
-        crewmateRestartText({
-          restart: { from, changed: "unopenable" },
-          taskKey: tasks.get("t-lost")?.key ?? "",
-          brief: "Goal: count the rivets.",
-        }).split("\n\n")[0] ?? "",
-      );
-      expect(crewmate.promptCalls[0]).toContain("Goal: count the rivets.");
-      expect(crewmate.promptCalls[0]).toMatch(/carry on$/);
-    },
-  );
+    await supervisor.steer.steerCrewmate("t-lost", "carry on");
+    await tick();
+    // It asked for the recorded conversation, and the backend opened another.
+    expect(
+      sessionSpecs[0]?.shape.turns === "rolling" && sessionSpecs[0].shape.record.resume,
+    ).toEqual({ backend: "claude", sessionId: from });
+    expect(
+      tasks
+        .timeline("t-lost")
+        .filter((event) => event.kind === "note")
+        .map((event) => event.text),
+    ).toContain("its earlier conversation could not be reopened, so it starts a fresh one");
+    expect(tasks.get("t-lost")?.sessionFile).toBe(now);
+    expect(crewmate.promptCalls[0]).toContain(
+      crewmateRestartText({
+        restart: { from, changed: "unopenable" },
+        taskKey: tasks.get("t-lost")?.key ?? "",
+        brief: "Goal: count the rivets.",
+      }).split("\n\n")[0] ?? "",
+    );
+    expect(crewmate.promptCalls[0]).toContain("Goal: count the rivets.");
+    expect(crewmate.promptCalls[0]).toMatch(/carry on$/);
+  });
 
   it("carries a crewmate whose conversation renewed under changed instructions into its new one", async () => {
     // The earlier conversation's saved transcript, which the crewmate is pointed at.

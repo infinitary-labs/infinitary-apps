@@ -109,12 +109,6 @@
       "group": "Models and accounts"
     },
     {
-      "name": "antigravity",
-      "path": "src/core/antigravity",
-      "about": "Crewmates through the installed Antigravity program",
-      "group": "Models and accounts"
-    },
-    {
       "name": "accounts",
       "path": "src/core/accounts",
       "about": "Whether each sign-in is healthy",
@@ -334,10 +328,6 @@
     {
       "name": "Claude client",
       "about": "The Claude Code the person installed"
-    },
-    {
-      "name": "Antigravity program",
-      "about": "The Antigravity the person installed"
     },
     {
       "name": "git",
@@ -1588,66 +1578,6 @@
       "from": "privacy",
       "to": "the system",
       "why": "reads macOS's privacy log"
-    },
-    {
-      "from": "antigravity",
-      "to": "session",
-      "why": "opens crewmate sessions to the one session contract"
-    },
-    {
-      "from": "antigravity",
-      "to": "storage",
-      "why": "keeps Antigravity records in the Pi dialect"
-    },
-    {
-      "from": "antigravity",
-      "to": "runbooks",
-      "why": "stages runbook skills"
-    },
-    {
-      "from": "antigravity",
-      "to": "shared",
-      "why": "reads failure classes and reasoning levels"
-    },
-    {
-      "from": "antigravity",
-      "to": "Antigravity program",
-      "why": "runs crewmate conversations and serves them the app's tools"
-    },
-    {
-      "from": "antigravity",
-      "to": "accounts",
-      "why": "signs in as an account backend"
-    },
-    {
-      "from": "antigravity",
-      "to": "pi",
-      "why": "keeps the one login in the account vault"
-    },
-    {
-      "from": "antigravity",
-      "to": "quota",
-      "why": "keeps allowance readings"
-    },
-    {
-      "from": "antigravity",
-      "to": "models",
-      "why": "refreshes the models the program offers"
-    },
-    {
-      "from": "models",
-      "to": "antigravity",
-      "why": "serves the models the program offers"
-    },
-    {
-      "from": "quota",
-      "to": "antigravity",
-      "why": "names the Gemini models in the allowance catalog"
-    },
-    {
-      "from": "routing",
-      "to": "antigravity",
-      "why": "reads the thinking levels the program offers"
     }
   ],
   "machines": [

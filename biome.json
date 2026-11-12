@@ -319,8 +319,6 @@
         "!src/core/claude/claudeToolNames.integration.test.ts",
         "!src/core/claude/claudeSession.contract.integration.test.ts",
         "!src/core/claude/claudeRollingSession.integration.test.ts",
-        "!src/core/antigravity/antigravityAccount.integration.test.ts",
-        "!src/core/antigravity/antigravitySession.integration.test.ts",
         "!src/core/claude/claudeSession.integration.test.ts",
         "!src/core/claude/interruptWedge.integration.test.ts",
         "!src/core/claude/claudeClientExit.integration.test.ts",

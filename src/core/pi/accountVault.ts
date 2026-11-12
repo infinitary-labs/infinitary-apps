@@ -3,7 +3,6 @@ import { chmodSync, mkdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } 
 import { join } from "node:path";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { AccountView, CredentialKind } from "@shared/accounts";
-import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import {
   CUT_OFF_CLASSES,
   type CutOff,
@@ -155,17 +154,6 @@ type Registry = {
 
 export type { AccountBinding, AccountStatus };
 
-/**
- * The providers whose accounts stand on the one login their vendor's
- * program keeps for the whole user, by the name their words use: Claude
- * Code's, and the installed Antigravity's (docs/antigravity-client.md). Each
- * has one account at most, and one sign-in running at a time.
- */
-const MACHINE_LOGINS: Readonly<Record<string, { name: string; aSignIn: string }>> = {
-  [CLAUDE_PROVIDER_ID]: { name: "Claude", aSignIn: "A Claude sign-in" },
-  [ANTIGRAVITY_PROVIDER_ID]: { name: "Antigravity", aSignIn: "An Antigravity sign-in" },
-};
-
 export type AccountVaultOptions = {
   /** The Pi backend, named because in-process Pi has extra reach (runtimes). */
   pi?: PiAccountBackend;
@@ -225,8 +213,8 @@ export class AccountVault {
   private readonly loginListeners = new Set<(accountId: string) => void>();
   /** A failed sign-in's second sweep, once its backend's own work settles. */
   private readonly sweeping = new Set<Promise<void>>();
-  /** The machine-login providers whose sign-in is running now (`MACHINE_LOGINS`). */
-  private readonly loginsInFlight = new Set<string>();
+  /** A Claude sign-in that has passed the account check and not settled. */
+  private claudeLoginInFlight = false;
 
   private constructor(
     private readonly paths: Pick<AppPaths, "accountsDir">,
@@ -347,14 +335,19 @@ export class AccountVault {
         : githubEnterpriseHost(options.enterpriseHost);
     if (options.enterpriseHost !== undefined && !enterpriseHost)
       throw new Error(CODE_STEP_WORDS.badEnterprise);
-    const machine = MACHINE_LOGINS[providerId];
-    if (machine && this.list(providerId).length > 0) {
-      throw new Error(`${machine.name} uses the login already on ${HERE.this}.`);
+    if (providerId === CLAUDE_PROVIDER_ID && this.list(providerId).length > 0) {
+      throw new Error(`Claude uses the login already on ${HERE.this}.`);
     }
     // Set before any await, so a second click cannot start another login
     // while this one still holds the client. The button's own busy flag
     // lives in the mounted tab and does not survive leaving it.
-    if (machine) this.claimLogin(providerId, machine.aSignIn);
+    const claude = providerId === CLAUDE_PROVIDER_ID;
+    if (claude) {
+      if (this.claudeLoginInFlight) {
+        throw new Error(`A Claude sign-in is already in progress on ${HERE.this}.`);
+      }
+      this.claudeLoginInFlight = true;
+    }
     let backend: AccountBackend | undefined;
     let id: string | undefined;
     try {
@@ -403,16 +396,8 @@ export class AccountVault {
       }
       throw caught;
     } finally {
-      if (machine) this.loginsInFlight.delete(providerId);
+      if (claude) this.claudeLoginInFlight = false;
     }
-  }
-
-  /** Holds a machine-login provider's one sign-in, or refuses a second while it runs. */
-  private claimLogin(providerId: string, aSignIn: string): void {
-    if (this.loginsInFlight.has(providerId)) {
-      throw new Error(`${aSignIn} is already in progress on ${HERE.this}.`);
-    }
-    this.loginsInFlight.add(providerId);
   }
 
   /**
@@ -546,8 +531,13 @@ export class AccountVault {
     const type = account.kind === "api_key" ? "api_key" : "oauth";
     // Sign in runs the vendor's own login over the one it holds, so a
     // second press while the first is open would start a second login.
-    const machine = MACHINE_LOGINS[account.providerId];
-    if (machine) this.claimLogin(account.providerId, machine.aSignIn);
+    const claude = account.providerId === CLAUDE_PROVIDER_ID;
+    if (claude) {
+      if (this.claudeLoginInFlight) {
+        throw new Error(`A Claude sign-in is already in progress on ${HERE.this}.`);
+      }
+      this.claudeLoginInFlight = true;
+    }
     let release: (() => void) | undefined;
     try {
       // The seat is released once the fresh read is in, so its next turn
@@ -567,7 +557,7 @@ export class AccountVault {
       await this.status(accountId, { refresh: true });
     } finally {
       release?.();
-      if (machine) this.loginsInFlight.delete(account.providerId);
+      if (claude) this.claudeLoginInFlight = false;
     }
   }
 

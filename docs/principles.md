@@ -22,8 +22,7 @@ Settings writes the same `repos` row `app_change project-settings` writes (`inf:
 
 ## Standing product principle (captain, 2026-09-24)
 
-Supported subscriptions are only those that run through Pi; Claude and Antigravity are the two exceptions.
-The captain granted the Antigravity exception on 2026-11-11 (INF-3776): it runs on the person's installed Antigravity program, on the sign-in that program holds (`docs/antigravity-client.md`).
+Supported subscriptions are only those that run through Pi; Claude is the sole exception.
 
 ## Principles (captain, 2026-09-23)
 

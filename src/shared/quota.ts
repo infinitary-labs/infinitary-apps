@@ -290,7 +290,6 @@ export const QUOTA_TO_PI_PROVIDER: Readonly<Record<string, string>> = {
   claude: "anthropic-claude",
   kimi: "kimi-coding",
   copilot: "github-copilot",
-  antigravity: "google-antigravity",
 };
 
 /**

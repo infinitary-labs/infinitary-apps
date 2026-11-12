@@ -1,7 +1,5 @@
-import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import { backendForProvider, CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { servedProviderOf } from "@shared/quota";
-import { antigravityReasoningCapabilities } from "../antigravity/antigravityModels";
 import { claudeReasoningCapabilities } from "../claude/reasoning";
 import type { DeviceSignIns } from "../devices/deviceSignIns";
 import type { ServedModels } from "../models/servedModels";
@@ -121,7 +119,6 @@ export function startHomeRouting(options: {
     },
     reasoningCapabilities: (ref) => {
       if (ref.provider === CLAUDE_PROVIDER_ID) return claudeReasoningCapabilities(ref.id);
-      if (ref.provider === ANTIGRAVITY_PROVIDER_ID) return antigravityReasoningCapabilities();
       for (const runtime of [...vault.piModelRuntimes(), auth.modelRuntime]) {
         const capabilities = piReasoningCapabilities(runtime.getModel(ref.provider, ref.id));
         if (capabilities) return capabilities;

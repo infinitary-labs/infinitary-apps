@@ -26,7 +26,7 @@ import {
 } from "../prompts/cardContract";
 import { FLEET_WORK } from "../prompts/fleetWork";
 import { PUBLIC_WRITING } from "../prompts/publicWriting";
-import { CLAUDE_SEAT_TOOL_PREFIX, CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
+import { CLAUDE_SEAT_TOOL_PREFIX } from "../storage/sessionReader";
 import { CREWMATE_TOOLS } from "./crewmateTaskTools";
 import { createCrewTools, SHAPE_GROUP_DESCRIPTION } from "./crewTools";
 import {
@@ -1840,7 +1840,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
   it("carries no backend's mechanics in the core; each placement appends its own note", () => {
     const core = buildCrewmateSystemPrompt();
     expect(core).not.toContain("3 seconds");
-    for (const backend of ["pi", "claude", "antigravity"] as const) {
+    for (const backend of ["pi", "claude"] as const) {
       const note = crewmateBackendNote(backend);
       expect(buildCrewmateSystemPrompt(backend)).toBe(`${core}\n\n${note}`);
     }
@@ -1869,20 +1869,6 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     for (const name of listed ?? []) expect(served).toContain(name);
     expect(note).toContain(`call it as ${CLAUDE_SEAT_TOOL_PREFIX}<name>`);
     expect(crewmateBackendNote("pi")).not.toContain(CLAUDE_SEAT_TOOL_PREFIX);
-  });
-
-  // INF-3776's approved plan: an Antigravity crewmate reaches the app's tools
-  // through the app's tool server, and its program prefixes their names its
-  // own way, so the note names each tool by its served name and the server.
-  it("names the app's tools to an Antigravity crewmate by their served names, and asks it to wait for no approval", () => {
-    const served = new Set(CREWMATE_TOOLS.map((tool) => tool.name));
-    const note = crewmateBackendNote("antigravity");
-    const listed = note.match(/Your outputs are the app's tools - (.*?) - /)?.[1]?.split(", ");
-    expect(listed?.length).toBeGreaterThan(0);
-    for (const name of listed ?? []) expect(served).toContain(name);
-    expect(note).toContain(`the app's tool server named ${CLAUDE_SEAT_TOOL_SERVER}`);
-    expect(note).toContain("never sleep waiting on the checks on your pull request");
-    expect(note).toContain("wait for no approval");
   });
 });
 

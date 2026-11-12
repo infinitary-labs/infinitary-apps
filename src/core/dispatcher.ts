@@ -901,9 +901,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // on a spent allowance reads its way back.
     "inf:quota:refresh": async () => (await services.firstmate.recheckAllowance()) ?? null,
 
-    // Opening Subscriptions reads the allowances only a press reads.
-    "inf:quota:opened": async () =>
-      (await services.allowanceOpened?.()) ?? services.quota.latest() ?? null,
+    // An older window opening Subscriptions; nothing is read only on that
+    // press any more, so it answers the snapshot (allowance-opened.md).
+    "inf:quota:opened": () => services.quota.latest() ?? null,
 
     "inf:quota:models": () => services.quota.latestModels() ?? null,
 

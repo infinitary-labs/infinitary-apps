@@ -27,10 +27,9 @@ import {
   type TaskView,
 } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
+import type { AccountBackend } from "./accounts/accountBackend";
 import { CredentialHealthService } from "./accounts/credentialHealthService";
 import { buildProviderViews } from "./accounts/providerViews";
-import { AntigravityHome } from "./antigravity/antigravityHome";
-import { createAntigravitySessionFactory } from "./antigravity/session";
 import { initAttachmentsDir } from "./attachments";
 import { recoverAtBoot } from "./bootRecovery";
 import { openTaskChannel, startTaskBrowsers } from "./browser/homeTaskBrowsers";
@@ -204,7 +203,6 @@ export async function createServices(
   // and the first health read never wait on it.
   void loginPath.then(() => primeClaudeExecutable());
   const claudeBackend = new ClaudeAuthBackend({ keychain: host.keychain });
-  const antigravity = new AntigravityHome();
   // A sign-in or sign-out first holds the Firstmate's seat off the account
   // it rewrites (W1 S9); late-bound because the agent is built below.
   let holdSeat: ((accountId: string) => Promise<() => void>) | undefined;
@@ -216,8 +214,7 @@ export async function createServices(
   // the record exists below.
   const { vault, served } = createAccountStore(paths, {
     pi: piBackend,
-    backends: [claudeBackend, antigravity.backend],
-    antigravityOffers: antigravity.offers,
+    backends: [claudeBackend],
     holdSeat: async (accountId) => (await holdSeat?.(accountId)) ?? (() => {}),
     packaged: host.app.packaged,
     claudeConfigDir: () => defaultClaudeConfigDir(),
@@ -616,14 +613,6 @@ export async function createServices(
         log: (line) => console.warn(`[claude-session] ${line}`),
         accessSettings: async () => accessFlagSettings(await readClaudeAccess()),
         costReportingAllowed: () => claudeCostReportingAllowed(),
-      }),
-    ),
-    // Crewmates on the person's installed Antigravity (docs/antigravity-client.md).
-    antigravity: bounds.factory(
-      createAntigravitySessionFactory({
-        clientVersion: host.app.version,
-        log: (line) => console.warn(`[antigravity-session] ${line}`),
-        onOffered: antigravity.offered(served),
       }),
     ),
   };
@@ -1519,8 +1508,7 @@ export async function createServices(
       ),
     modelRuntime: auth.modelRuntime,
     flagship,
-    recheckAllowance: () =>
-      antigravity.press(vault, homeQuota.pushed).then(() => quota.refresh("demand")),
+    recheckAllowance: () => quota.refresh("demand"),
     // Each backend's seat (W1): the seat preset, opened by the one factory
     // per backend.
     seats: sessionFactories,
@@ -1859,7 +1847,7 @@ export async function createServices(
     providerViews: () =>
       buildProviderViews({
         piProviders: () => auth.providers(),
-        backends: new Map([claudeBackend, antigravity.backend].map((b) => [b.id, b] as const)),
+        backends: new Map<string, AccountBackend>([[claudeBackend.id, claudeBackend]]),
         accounts: () =>
           vault.list().map((account) => ({
             providerId: account.providerId,
@@ -1954,7 +1942,6 @@ export async function createServices(
     broadcastEvent,
     activityRun: eventSeam.activityRun,
     quota,
-    allowanceOpened: () => antigravity.opened(vault, homeQuota.pushed, quota),
     settings,
     runbooks,
     preferences,

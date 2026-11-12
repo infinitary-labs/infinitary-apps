@@ -320,14 +320,9 @@ export class QuestionTurns {
     }
   }
 
-  /**
-   * Whether the model's backend has a factory to answer on. Antigravity's
-   * runs crewmates only, so it never answers a question
-   * (docs/antigravity-client.md).
-   */
+  /** Whether the model's backend has a factory to answer on. */
   private answers(model: { provider: string }): boolean {
-    const backend = backendForProvider(model.provider);
-    return backend !== "antigravity" && this.options.sessions[backend] !== undefined;
+    return this.options.sessions[backendForProvider(model.provider)] !== undefined;
   }
 
   /**

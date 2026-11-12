@@ -23,7 +23,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AuthAside,
   AuthMethodChoice,
-  asksFirst,
   CodeExpired,
   connectMethods,
   ProviderChips,
@@ -912,15 +911,6 @@ export function SubscriptionsTab() {
   useEffect(() => {
     refresh();
     void window.infinitary.quota.snapshot().then(setSnapshot);
-    // Opening the tab is the press that reads an allowance read only on a
-    // press (Antigravity's usage report, docs/antigravity-client.md); an
-    // older home has no such request, and the tab keeps its snapshot.
-    void Promise.resolve()
-      .then(() => window.infinitary.quota.opened())
-      .then((next) => {
-        if (next) setSnapshot(next);
-      })
-      .catch(() => {});
     void routingSave.refresh();
     void personalSave.refresh();
     // Status dots poll while the tab is open.
@@ -968,7 +958,7 @@ export function SubscriptionsTab() {
   const addAccount = (provider: ProviderView) => {
     const methods = connectMethods(provider);
     setSignInEnded(null);
-    if (asksFirst(provider)) {
+    if (methods.length > 1) {
       setMethodChoice(provider);
       return;
     }

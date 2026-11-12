@@ -429,3 +429,11 @@ Nothing writes `placements` or `panelOrder` after that, and neither is removed: 
 A move made in a newer build is therefore not seen by an older one, which draws the panels as they last stood before the arrangement.
 A reset of the panels from Settings → Panels clears both, so an older build then draws every panel where it asks to be.
 No database migration or saved-data format revision is needed; the settings table takes a new key as it is.
+
+## Antigravity accounts an alpha connected
+
+An alpha connected a Google AI plan through the installed Antigravity program; the app no longer offers it.
+Its account's registry row, under the provider id `google-antigravity`, and its empty store folder stay on disk, and every live read skips them (`RETIRED_PROVIDER_IDS`, `src/shared/providers.ts`), as with Cursor.
+No row, chip, model, allowance or routing candidate comes from it, and the program's own sign-in is left as it was.
+A task that ran on it is refused a resume with the words that it ran on a subscription Infinitary no longer offers, and its waiting guidance stays on its record (`CrewSessions.retiredProviderOf`).
+Its pushed allowance readings stay in `pushed_quota`, and nothing reads them.

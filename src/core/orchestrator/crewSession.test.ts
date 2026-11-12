@@ -19,13 +19,7 @@ import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
 import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { LOCAL_MACHINE_ID } from "../session/session";
-import {
-  crewmateContractStamp,
-  crewmateRestartText,
-  crewmateResume,
-  crewmateResumeToken,
-  crewmateSessionSpec,
-} from "./crewSession";
+import { crewmateContractStamp, crewmateRestartText, crewmateSessionSpec } from "./crewSession";
 
 it.each(["pi", "claude"] as const)(
   "a %s session carries the editable body folder to its instructions and tools",
@@ -252,25 +246,4 @@ it("tells a crewmate in a new conversation why, where its record is, and its bri
     taskKey: "FI3-7",
   });
   expect(unopenable).toContain("could not be reopened");
-});
-
-// INF-3776's approved plan: an Antigravity crewmate reopens its own
-// conversation after a restart, and a record another backend wrote - a
-// Claude conversation's id is also a bare id - never reopens as one.
-it("keeps an Antigravity conversation's resume token apart from a Claude one's", () => {
-  const claudeId = "0f8fad5b-d9cb-469f-a165-70867728950e";
-  const token = crewmateResumeToken({ backend: "antigravity", sessionId: claudeId });
-  expect(token).toBeDefined();
-  expect(crewmateResume(token, "antigravity")).toEqual({
-    backend: "antigravity",
-    sessionId: claudeId,
-  });
-  expect(crewmateResume(token, "claude")).toBeUndefined();
-  expect(crewmateResume(claudeId, "antigravity")).toBeUndefined();
-  expect(
-    crewmateResume(crewmateResumeToken({ backend: "claude", sessionId: claudeId }), "claude"),
-  ).toEqual({
-    backend: "claude",
-    sessionId: claudeId,
-  });
 });

@@ -1,6 +1,5 @@
 import type { AccountView } from "@shared/accounts";
-import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
-import type { AuthNotice, AuthPromptView, ProviderView, SignInWarning } from "@shared/providers";
+import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import {
   API_KEY_LABEL,
   CLAUDE_PROVIDER_ID,
@@ -126,9 +125,6 @@ function ProviderChip({
   );
 }
 
-/** The providers whose program keeps one login for the whole computer (`MACHINE_LOGINS`). */
-const ONE_LOGIN_PROVIDERS = new Set([CLAUDE_PROVIDER_ID, ANTIGRAVITY_PROVIDER_ID]);
-
 export type ProviderGroups = { firstmate: ProviderView[]; crew: ProviderView[] };
 
 /** The two groups, in catalog order: Firstmate-capable first, crew only after. */
@@ -217,17 +213,15 @@ export function ProviderChips({
         </ConnectedAccount>
       );
     }
-    // Claude and Antigravity each run on the one login their program keeps
-    // on the computer, so a second account of either cannot be added.
-    const loginTaken = ONE_LOGIN_PROVIDERS.has(provider.id) && account !== undefined;
+    const claudeTaken = provider.id === CLAUDE_PROVIDER_ID && account !== undefined;
     const note =
       unavailable && provider.id === CLAUDE_PROVIDER_ID && place === "there"
         ? CLAUDE_CHIP_INSTALL_THERE_NOTE
         : unavailable?.note;
-    const name = loginTaken
+    const name = claudeTaken
       ? place === "there"
-        ? `${provider.name} uses the login there`
-        : `${provider.name} uses the login on ${home.this}`
+        ? "Claude uses the login there"
+        : `Claude uses the login on ${home.this}`
       : account
         ? `Add another ${provider.name} account`
         : `Connect ${provider.name}`;
@@ -237,7 +231,7 @@ export function ProviderChips({
     const reason =
       provider.authTypes.length === 0
         ? (unavailable?.detail ?? name)
-        : loginTaken
+        : claudeTaken
           ? name
           : undefined;
     return (
@@ -323,17 +317,6 @@ export function connectMethods(
 }
 
 /**
- * Whether pressing a provider's chip opens a step before its sign-in: a
- * choice between two ways in, or the words a provider's terms need said
- * first (Antigravity, INF-3776). Otherwise its one way in starts at once.
- */
-export function asksFirst(provider: Pick<ProviderView, "id" | "authTypes">): boolean {
-  return (
-    connectMethods(provider).length > 1 || catalogEntry(provider.id)?.signInWarning !== undefined
-  );
-}
-
-/**
  * How a sign-in that did not finish ended: the person's own Cancel, which
  * says nothing; a code that ran out, past the moment the provider's own
  * answer gave (`expiresAt`); or a failure whose words the caller shows.
@@ -365,16 +348,7 @@ export function AuthMethodChoice({
   onCancel: () => void;
   framed?: boolean;
 }) {
-  const warning = catalogEntry(provider.id)?.signInWarning;
-  const methods = connectMethods(provider);
-  const body = warning ? (
-    <SignInWarningStep
-      providerId={provider.id}
-      warning={warning}
-      onGo={() => onPick(methods[0] ?? "oauth")}
-      onCancel={onCancel}
-    />
-  ) : (
+  const body = (
     <div
       className="fm-connect-aside"
       data-connect-method={provider.id}
@@ -402,66 +376,6 @@ export function AuthMethodChoice({
     </div>
   ) : (
     body
-  );
-}
-
-/**
- * What a provider's terms need said before its sign-in starts (design skill
- * `components/core/ConnectChips`): the title, the sentences, the links that
- * open in the browser, then the button that starts the sign-in beside Not
- * now. Nothing runs until the person presses the first.
- */
-function SignInWarningStep({
-  providerId,
-  warning,
-  onGo,
-  onCancel,
-}: {
-  providerId: string;
-  warning: SignInWarning;
-  onGo: () => void;
-  onCancel: () => void;
-}) {
-  const titleId = useId();
-  return (
-    <section
-      className="fm-connect-aside fm-sign-in-warning"
-      data-connect-method={providerId}
-      data-sign-in-warning={providerId}
-      aria-labelledby={titleId}
-    >
-      <div id={titleId} className="fm-sign-in-warning-title">
-        {warning.title}
-      </div>
-      {warning.sentences.map((sentence) => (
-        <p key={sentence} className="fm-sign-in-warning-line">
-          {sentence}
-        </p>
-      ))}
-      <div className="fm-sign-in-warning-links">
-        {warning.links.map((link) => (
-          <a
-            key={link.url}
-            href={link.url}
-            className="fm-sign-in-warning-link"
-            onClick={(event) => {
-              event.preventDefault();
-              void window.infinitary.app.openExternal(link.url).catch(() => {});
-            }}
-          >
-            {link.label}
-          </a>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button variant="primary" size="sm" onClick={onGo}>
-          {warning.go}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          {warning.notNow}
-        </Button>
-      </div>
-    </section>
   );
 }
 

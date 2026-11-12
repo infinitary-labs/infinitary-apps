@@ -39,10 +39,9 @@ import { allowanceSpentWords, type SeatBinding, type SeatPause, signedOutSentenc
 /**
  * The backends that seat the Firstmate, each with the vault binding its
  * seat stands on. A backend absent here has no seat factory, so none of its
- * accounts is eligible whatever the catalog says. Antigravity has none yet
- * (docs/antigravity-client.md).
+ * accounts is eligible whatever the catalog says.
  */
-export const SEAT_BINDINGS: Readonly<Partial<Record<BackendId, string>>> = {
+export const SEAT_BINDINGS: Readonly<Record<BackendId, string>> = {
   pi: "pi-runtime",
   claude: "default-login",
 };

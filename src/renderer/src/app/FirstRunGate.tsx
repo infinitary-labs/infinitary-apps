@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AuthAside,
   AuthMethodChoice,
-  asksFirst,
   CodeExpired,
   connectMethods,
   ProviderChips,
@@ -121,7 +120,7 @@ export function FirstRunGate() {
   const [methodChoice, setMethodChoice] = useState<ProviderView | null>(null);
   const connect = (provider: ProviderView) => {
     const methods = connectMethods(provider);
-    if (asksFirst(provider)) {
+    if (methods.length > 1) {
       setMethodChoice(provider);
       setError(null);
       return;

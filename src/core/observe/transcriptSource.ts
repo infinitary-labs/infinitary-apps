@@ -1,9 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import type { TranscriptDialect } from "@shared/observe";
 import type { BackendId } from "@shared/providers";
 import { locateClaudeTranscript } from "../claude/claudeTranscript";
-import { recordNameOf } from "../session/session";
 import { sessionDialectAt } from "../storage/sessionReader";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -19,12 +17,8 @@ import type { TaskRecord } from "../storage/taskRecords";
  * turn's tail the copy has not caught up with yet.
  */
 export type CrewmateTranscriptSource = {
-  /**
-   * The dialect of the task's record: its backend's, Pi for an Antigravity
-   * crewmate, whose record the app writes in the Pi dialect; null when its
-   * account is gone.
-   */
-  backend: TranscriptDialect | null;
+  /** The backend that ran the task; null when its account is gone. */
+  backend: BackendId | null;
   /** A file the matching parser can read, or null when none exists (yet). */
   path: string | null;
 };
@@ -61,15 +55,6 @@ export function createCrewmateTranscriptResolver(deps: {
     const backend = deps.backendOf(task.accountId);
     if (!backend) return { backend: null, path: null };
     if (backend === "pi") return { backend, path: task.sessionFile };
-    // The app writes an Antigravity conversation's record itself, in the Pi
-    // dialect, under the task's record folder (docs/antigravity-client.md).
-    if (backend === "antigravity") {
-      if (!task.sessionFile) return { backend: "pi", path: null };
-      return {
-        backend: "pi",
-        path: appCopyOf(deps.recordDirOf(task.id), recordNameOf(task.sessionFile)),
-      };
-    }
     if (backend !== "claude" || !task.sessionFile) return { backend, path: null };
     const copy = appCopyOf(deps.recordDirOf(task.id), task.sessionFile);
     const client = clientFileOf(task, task.accountId, task.sessionFile);
@@ -104,10 +89,8 @@ function sizeOf(path: string): number {
 /** This Mac's copy of a record a computer that runs work holds, once it has one. */
 function placedCopyOf(dir: string, token: string | null): string | null {
   if (!token) return null;
-  // A Pi token is that computer's file; a Claude or Antigravity token names the copy by its id.
-  const path = token.endsWith(".jsonl")
-    ? join(dir, basename(token))
-    : appCopyOf(dir, recordNameOf(token));
+  // A Pi token is that computer's file; a Claude token is the session id its copy is named by.
+  const path = token.endsWith(".jsonl") ? join(dir, basename(token)) : appCopyOf(dir, token);
   return path && existsSync(path) ? path : null;
 }
 

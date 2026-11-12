@@ -111,8 +111,6 @@ test("quota refresh and purge commit in place, refuse duplicate clicks, and show
   };
   const bridge = fakeBridge(freshHome());
   bridge.answer("inf:quota:snapshot", snapshot);
-  // Opening Subscriptions asks the home for any allowance read only on a press; it has none new.
-  bridge.answer("inf:quota:opened", snapshot);
   const refreshRequest = hold(bridge, "inf:quota:refresh", snapshot);
   await openSize();
   await openWindow(bridge);

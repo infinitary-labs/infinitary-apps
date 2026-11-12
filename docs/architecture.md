@@ -255,9 +255,8 @@ A Pi-served session - the seat, a crewmate or a question - is a Pi `AgentSession
   Since the account broker (§16) there is one store *per account* under `userData/accounts/`, each with its own `ModelRuntime`; the base `userData/auth/` runtime serves custom providers (models.json) and account-less sessions.
 - **Provider set (current offering)**: **Codex, xAI, Kimi Code and GitHub Copilot** are Pi subscriptions; **Claude** is the one subscription on its own client, and serves the first mate as well as crew (rev-9); **OpenRouter** connects either by signing in with a browser or with an API key (labeled "API key", the same words as every other API-key sign-in).
   Browser sign-in opens `openrouter.ai/auth`, exchanges the returned authorization with `POST openrouter.ai/api/v1/auth/keys`, and listens on a local loopback callback while sign-in is underway.
-  The standing rule (captain, 2026-09-24, widened 2026-11-11): supported subscriptions are only those that run through Pi; Claude and Antigravity are the two exceptions.
-  Antigravity runs crewmates on the person's installed program, with no sign-in or catalog entry of its own yet (`docs/antigravity-client.md`).
-  Cursor was removed; a stored account for it is skipped on load (`isRetiredProvider`) and its files stay on disk.
+  The standing rule (captain, 2026-09-24): supported subscriptions are only those that run through Pi; Claude is the sole exception.
+  Cursor was removed, and so was Antigravity, which an alpha offered for crewmates on a Google AI plan; a stored account for either is skipped on load (`isRetiredProvider`) and its files stay on disk.
   Kimi Code and GitHub Copilot were removed with it and came back through Pi on 2026-10-19 (INF-560): an account stored under `kimi-coding` or `github-copilot` before then loads again, and once its sign-in has lapsed its row says sign in again.
   Pi's Copilot sign-in presents itself to GitHub as VS Code's Copilot Chat (its client id and editor headers are fixed inside Pi's provider); the captain chose to proceed through Pi, and the code step says GitHub will ask to approve a GitHub Copilot app (INF-842 dropped the chip's "connects through Pi" note).
   Stored Anthropic auth must not crash the app; the bare `anthropic` Pi provider is not listed.

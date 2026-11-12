@@ -80,11 +80,6 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Claude's usage service is asked at most once per account every five minutes (`CLAUDE_ASK_INTERVAL_MS`), and ten minutes after a 429 whatever its retry-after says.
   Refreshes between asks resolve the store first and serve the last answer only for the same login; a person's Retry always asks.
 
-## Allowances read only on a press
-
-Antigravity's allowance has no sensor: the program's own usage report is read only when the person opens Settings → Intelligence (`inf:quota:opened`, which reads only such allowances) or presses Recheck allowance (`demand`), and never while the account is signed out (`AntigravityAllowance`, `docs/antigravity-client.md` "The allowance").
-Its Gemini weekly limit is kept as a `seven_day` pushed reading and drawn like Claude's pushed windows (`pushedProviderViews`), marked stale with its age; an account with no reading shows no meter, since unknown is never zero.
-
 ## Typed cut-offs
 
 Before a Claude value read, the child checks that the store is unlocked and reads that one item's access rules (`SecKeychainItemCopyAccess`, `src/main/host/darwinKeychain.ts`).

@@ -25,7 +25,7 @@ import { PUBLIC_WRITING } from "../prompts/publicWriting";
 import { RIGOR_SAFETY } from "../prompts/validationResources";
 import { deliveryGuide, namingGuide, testingGuide } from "../runbooks/fallback.generated";
 import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
-import { CLAUDE_SEAT_TOOL_PREFIX, CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
+import { CLAUDE_SEAT_TOOL_PREFIX } from "../storage/sessionReader";
 
 export { RIGOR_SAFETY } from "../prompts/validationResources";
 
@@ -52,17 +52,8 @@ const CLAUDE_TOOL_NAMES = {
   rule: `Wherever these instructions name an app tool by a short name, call it as ${CLAUDE_SEAT_TOOL_PREFIX}<name>.`,
 };
 
-/** The app's output tools as an Antigravity crewmate reads them, by their own names. */
-const ANTIGRAVITY_TOOL_NAMES = [
-  "report",
-  "emit_card",
-  "note_progress",
-  "file_followup",
-  "tasks",
-].join(", ");
-
 /** The backends a crewmate runs on; each placement renders its own note. */
-export type CrewmateBackend = "pi" | "claude" | "antigravity";
+export type CrewmateBackend = "pi" | "claude";
 
 /**
  * What differs per backend, said once by the placement that owns it
@@ -76,8 +67,6 @@ export function crewmateBackendNote(backend: CrewmateBackend): string {
       return "Your bash never blocks a turn: a command that finishes within 3 seconds returns now; anything longer continues as a background job and its result arrives as your next message, so keep working or end your turn instead of waiting. Pass background true for known-long commands like builds and full test suites; a blocking waiter is a fine way to be woken by an outside event.";
     case "claude":
       return `You run inside Infinitary, not a terminal, and nothing you write is shown to a person: the guidance above about output to the user, markdown summaries, clarifying questions and todo tracking does not apply. Your outputs are the app's tools - ${CLAUDE_TOOL_NAMES.outputs} - and a turn's final text is read as a report only when you made none. Your bash blocks until a command returns, so never sleep waiting on the checks on your pull request: the app wakes you when one fails and when they finish: end your turn. ${CLAUDE_TOOL_NAMES.rule}`;
-    case "antigravity":
-      return `You run inside Infinitary, not a terminal or an editor, and nothing you write is shown to a person. Your outputs are the app's tools - ${ANTIGRAVITY_TOOL_NAMES} - which the app's tool server named ${CLAUDE_SEAT_TOOL_SERVER} serves; call each by the name your tool list shows for it. A turn's final text is read as a report only when you made none. Your shell blocks until a command returns, so never sleep waiting on the checks on your pull request: the app wakes you when one fails and when they finish: end your turn. Ask the person nothing in your own words and wait for no approval: a question goes on a card.`;
   }
 }
 

@@ -40,8 +40,9 @@ export const modelChannels = {
     request: z.tuple([]),
     response: quotaSnapshotViewSchema.nullable(),
   },
-  // The person opened Subscriptions: an allowance read only on a press is
-  // read now (allowance-opened.md).
+  // An older window opened Subscriptions. No allowance is read only on that
+  // press any more, so the home answers its snapshot; the request stays in
+  // the contract until a major removes it (allowance-opened.md).
   "inf:quota:opened": {
     effect: "change",
     surface: "core",

@@ -152,7 +152,7 @@ export function crewSessions(
   paths: AppPaths,
   open: (spec: SessionSpec) => Promise<ModelSession>,
   specs: CrewmateSpec[] = [],
-  alsoServes: readonly ("claude" | "antigravity")[] = [],
+  alsoServes: readonly "claude"[] = [],
 ): Pick<CrewSupervisorOptions, "sessions" | "bind" | "sessionSpec"> {
   const others = Object.fromEntries(
     alsoServes.map((backend) => [backend, { backend, controlProfile: PI_CONTROL_PROFILE, open }]),
@@ -324,7 +324,7 @@ export type SetupExtras = {
   /** An account's binding; absent, every account binds to a Pi runtime. */
   bind?: CrewSupervisorOptions["bind"];
   /** The backends besides Pi the fake crewmate opens for (`crewSessions`). */
-  alsoServes?: readonly ("claude" | "antigravity")[];
+  alsoServes?: readonly "claude"[];
   /** Open cards a previous build saved, there before the supervisor starts. */
   savedCards?: Card[];
   /** The computers that run work for this one, as the crew reads them. */

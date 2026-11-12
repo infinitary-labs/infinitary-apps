@@ -10,10 +10,5 @@
       "provenance": { "origin": "change" }
     }
   ],
-  "exclusions": [
-    {
-      "id": "antigravity-crewmate-backend",
-      "reason": "Adds the walled-off Antigravity crewmate backend with no provider catalog entry, sign-in or model list, so nothing a person can choose reaches it yet; the note comes with the sign-in change that makes it usable. The one change a person can notice now, a lost Claude conversation restarting visibly, has its own entry."
-    }
-  ]
+  "exclusions": []
 }

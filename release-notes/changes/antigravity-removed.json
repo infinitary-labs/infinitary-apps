@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "antigravity-removed",
+      "kind": "removal",
+      "area": "subscriptions",
+      "title": "Crewmates no longer run on Antigravity",
+      "body": "Settings → Intelligence no longer offers Antigravity, so crewmates no longer run on your Google AI plan. Crewmates on Antigravity could not work as well as they do on your other subscriptions, so Infinitary stops offering it rather than keep a weaker choice. If you connected Antigravity, its row leaves Settings and your other subscriptions take on new work. A task that was running on it cannot pick up where it left off, and the first mate starts a new crewmate for it instead. Antigravity itself stays signed in on your computer.",
+      "noPicture": "What changed is a subscription and its sign-in that are no longer there, so there is nothing new to show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -592,8 +592,6 @@ export type FirstmateApi = {
   quota: {
     snapshot: () => Promise<QuotaSnapshotView | null>;
     refresh: () => Promise<QuotaSnapshotView | null>;
-    /** Subscriptions opened: an allowance read only on a press is read now. */
-    opened: () => Promise<QuotaSnapshotView | null>;
     models: () => Promise<ModelsCatalogView | null>;
     onSnapshot: (listener: (snapshot: QuotaSnapshotView) => void) => () => void;
   };

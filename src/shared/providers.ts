@@ -1,18 +1,13 @@
 import { z } from "zod";
-import {
-  ANTIGRAVITY_FORUM_REPLY_URL,
-  ANTIGRAVITY_PROVIDER_ID,
-  ANTIGRAVITY_SIGN_IN_WORDS,
-  ANTIGRAVITY_TERMS_URL,
-} from "./antigravity.ts";
 
 /**
  * The offered provider catalog: Codex, xAI, Claude, Kimi Code and GitHub
  * Copilot are subscriptions; OpenRouter connects with an API key. API-key
  * providers are allowed (D-6) with UI emphasis on subscriptions. A supported
- * subscription is one that runs through Pi; Claude and Antigravity are the
- * two exceptions (captain, 2026-09-24 and 2026-11-11). Cursor was removed; stored accounts for its id are
- * ignored on load (`isRetiredProvider`), not deleted. Kimi Code and GitHub
+ * subscription is one that runs through Pi; Claude is the sole exception
+ * (captain, 2026-09-24). Cursor and Antigravity were removed; stored
+ * accounts for their ids are ignored on load (`isRetiredProvider`), not
+ * deleted. Kimi Code and GitHub
  * Copilot came back through Pi on 2026-10-19 (INF-560): an account stored
  * under either id before then loads again, and a sign-in that lapsed
  * meanwhile asks to sign in again from the quota rules' own proof.
@@ -91,11 +86,10 @@ export type AuthNotice = z.infer<typeof authNoticeSchema>;
 
 /**
  * Which backend serves a provider's accounts. `pi` is the default; `claude`
- * and `antigravity` are the two subscriptions Pi cannot reach. Pi and Claude
- * each have a Firstmate seat of their own (`src/core/orchestrator/seat.ts`);
- * Antigravity serves crewmates only, so far (docs/antigravity-client.md).
+ * is the one subscription Pi cannot reach. Each has a Firstmate seat of its
+ * own (`src/core/orchestrator/seat.ts`), so either may serve either role.
  */
-export const backendIdSchema = z.enum(["pi", "claude", "antigravity"]);
+export const backendIdSchema = z.enum(["pi", "claude"]);
 export type BackendId = z.infer<typeof backendIdSchema>;
 
 /** The Firstmate orchestrator role, and the crewmate role. */
@@ -115,21 +109,6 @@ export type ProviderCatalogEntry = {
    * words; `enterprise` offers the Use GitHub Enterprise row.
    */
   codeSignIn?: { site: string; enterprise?: true };
-  /**
-   * What the person reads before the provider's sign-in starts, when its
-   * terms need saying first (Antigravity, INF-3776): a title, its
-   * sentences, two links and the go and not-now buttons. Nothing starts
-   * until the go button.
-   */
-  signInWarning?: SignInWarning;
-};
-
-export type SignInWarning = {
-  title: string;
-  sentences: readonly string[];
-  links: readonly { label: string; url: string }[];
-  go: string;
-  notNow: string;
 };
 
 /** Claude Max: a subscription Pi cannot reach, hence its own backend. */
@@ -186,26 +165,6 @@ export const PROVIDER_CATALOG: ReadonlyArray<ProviderCatalogEntry> = [
     codeSignIn: { site: "GitHub", enterprise: true },
   },
   {
-    // Google's own installed Antigravity program, in its mode for other
-    // apps, on the person's own sign-in (INF-3776): crewmates only, and the
-    // sign-in says what Google's terms and forum say before it starts.
-    id: ANTIGRAVITY_PROVIDER_ID,
-    name: "Antigravity",
-    tier: "subscription",
-    backend: "antigravity",
-    roles: ["crewmate"],
-    signInWarning: {
-      title: ANTIGRAVITY_SIGN_IN_WORDS.title,
-      sentences: ANTIGRAVITY_SIGN_IN_WORDS.sentences,
-      links: [
-        { label: ANTIGRAVITY_SIGN_IN_WORDS.terms, url: ANTIGRAVITY_TERMS_URL },
-        { label: ANTIGRAVITY_SIGN_IN_WORDS.forum, url: ANTIGRAVITY_FORUM_REPLY_URL },
-      ],
-      go: ANTIGRAVITY_SIGN_IN_WORDS.go,
-      notNow: ANTIGRAVITY_SIGN_IN_WORDS.notNow,
-    },
-  },
-  {
     id: "openrouter",
     name: "OpenRouter",
     tier: "key",
@@ -221,8 +180,10 @@ export const API_KEY_LABEL = "API key";
  * Providers removed from the catalog. Their credential directories and
  * registry rows stay on disk (nothing is deleted), and every live read
  * skips them so an old sign-in is neither a row nor a routing candidate.
+ * `google-antigravity` is the Google AI plan an alpha connected through the
+ * installed Antigravity program, removed on 2026-11-12.
  */
-export const RETIRED_PROVIDER_IDS = ["cursor"] as const;
+export const RETIRED_PROVIDER_IDS = ["cursor", "google-antigravity"] as const;
 
 export function isRetiredProvider(id: string): boolean {
   return (RETIRED_PROVIDER_IDS as readonly string[]).includes(id);

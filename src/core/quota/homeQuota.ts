@@ -1,4 +1,3 @@
-import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import type { CutOff } from "@shared/authFailure";
 import {
   accountIdFromNeedsReauthCard,
@@ -7,7 +6,6 @@ import {
 } from "@shared/credentialHealth";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { QuotaSnapshotView } from "@shared/quota";
-import { ANTIGRAVITY_MODELS } from "../antigravity/antigravityModels";
 import type { ClaudeAccess } from "../claude/claudeAccess";
 import type { ClaudeRateLimit } from "../claude/claudeEvents";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
@@ -126,7 +124,6 @@ export function startHomeQuota(options: {
   const catalogModels = () => [
     ...auth.catalogModels(vault.piModelRuntimes()),
     ...servedCatalogModels(CLAUDE_PROVIDER_ID, CLAUDE_MODELS),
-    ...servedCatalogModels(ANTIGRAVITY_PROVIDER_ID, ANTIGRAVITY_MODELS),
   ];
   const resolveQuotaAuth = async (accountId: string, resolve?: { allowPrompt?: boolean }) => {
     // A Claude account's usage credential is the machine's default

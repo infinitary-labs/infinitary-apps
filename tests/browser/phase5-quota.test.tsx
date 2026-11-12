@@ -227,10 +227,7 @@ const panelOf = (label: string) =>
 test("a model at the bottom of the shortest window can still be taken out of use and put back", async () => {
   const bridge = fakeBridge(freshHome());
   bridge.answer("inf:accounts:list", ACCOUNTS);
-  const shown = snapshotAt(Date.now());
-  bridge.answer("inf:quota:snapshot", shown);
-  // Opening Subscriptions asks the home for any allowance read only on a press; it has none new.
-  bridge.answer("inf:quota:opened", shown);
+  bridge.answer("inf:quota:snapshot", snapshotAt(Date.now()));
   bridge.answer("inf:settings:firstmate-account:get", CODEX_PERSONAL);
   answerModels(bridge);
   await openSize();

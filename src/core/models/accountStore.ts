@@ -1,10 +1,5 @@
-import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import { settingFrom } from "@shared/envSettings";
 import { backendForProvider, CLAUDE_PROVIDER_ID } from "@shared/providers";
-import {
-  type AntigravityOffers,
-  antigravityAvailableModels,
-} from "../antigravity/antigravityModels";
 import { claudeAvailableModels } from "../claude/claudeModels";
 import type { AppPaths } from "../paths";
 import { AccountVault, type AccountVaultOptions } from "../pi/accountVault";
@@ -32,12 +27,6 @@ export type AccountStoreOptions = Omit<
   claudeConfigDir: () => string;
   /** Stands in for Claude's client and its version, for tests; production asks the installed one. */
   claudeList?: Pick<Parameters<typeof claudeListReader>[0], "read" | "clientVersion">;
-  /**
-   * The models this computer's Antigravity sessions found the program
-   * offering (`AntigravityOffers`); absent where no Antigravity account
-   * signs in, such as a computer that runs work.
-   */
-  antigravityOffers?: AntigravityOffers;
   /** The Codex and Grok list requests; the providers' own transport unless a test stands in its own. */
   http?: QuotaHttp;
   /**
@@ -67,7 +56,6 @@ export function createAccountStore(
     packaged,
     claudeConfigDir,
     claudeList,
-    antigravityOffers,
     http,
     rail,
     onSettled,
@@ -90,7 +78,6 @@ export function createAccountStore(
           ...(model.name ? { name: model.name } : {}),
         }));
       if (providerId === CLAUDE_PROVIDER_ID) return claudeAvailableModels();
-      if (providerId === ANTIGRAVITY_PROVIDER_ID) return antigravityAvailableModels();
       return [];
     },
     ...(rail === "home"
@@ -114,7 +101,6 @@ export function createAccountStore(
   served = new ServedModels({
     readers: {
       [CLAUDE_PROVIDER_ID]: claudeListReader({ configDir: claudeConfigDir, ...claudeList }),
-      ...(antigravityOffers ? { [ANTIGRAVITY_PROVIDER_ID]: antigravityOffers.reader() } : {}),
       "openai-codex": codexListReader({
         resolveAuth,
         http,

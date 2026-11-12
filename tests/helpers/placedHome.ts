@@ -164,7 +164,7 @@ export function startPlacedHome(options: {
   /** What every task's account binds to here; the computer binds its own. */
   binding: SessionBinding;
   /** The backends' control planes, as this Mac's factories declare them. */
-  profiles: { pi: ControlProfile; claude?: ControlProfile; antigravity?: ControlProfile };
+  profiles: { pi: ControlProfile; claude?: ControlProfile };
   /** Where each project lives, for the crew's change and artifact tools. */
   forgeFor?: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
   /**

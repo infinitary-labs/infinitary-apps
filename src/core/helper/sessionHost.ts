@@ -271,7 +271,7 @@ type Held = {
   session: ModelSession | null;
   /** Reopening the home’s side can enable the policy without interrupting this conversation. */
   speed: boolean;
-  backend: Exclude<SessionBackend, "antigravity"> | null;
+  backend: SessionBackend | null;
   /** The last Pi shell count sent, so another task's job does not repeat it. */
   jobs: number | undefined;
   /** The job that count last named, so a change of its longest-running job is sent too. */
@@ -893,10 +893,6 @@ export class SessionHost {
     }
     const opening = (async () => {
       const binding = await this.options.bind(spec.binding);
-      // Antigravity crewmates run only on the computer the person signed in
-      // on so far (src/core/antigravity/); a computer that runs work holds none.
-      if (binding.backend === "antigravity")
-        throw new Error("This computer cannot run Antigravity conversations.");
       const factory = this.options.factories[binding.backend];
       if (!factory) throw new Error(`This computer holds no ${binding.backend} conversations.`);
       if (this.options.copies && !this.options.copies.has(held.task))

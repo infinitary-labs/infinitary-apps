@@ -16,6 +16,7 @@ import {
 } from "./devices";
 import { hostOfAddress, kindByName } from "./forge";
 import { FORGE_HOST_NAME, type ForgesView } from "./forges";
+import { englishOf, type Said } from "./i18n/said";
 import {
   INTEGRATION_KIND_NAMES,
   INTEGRATIONS_SIGN_IN_HOST,
@@ -54,7 +55,7 @@ import {
   repoPolicyOutcome,
   repoPolicyPatchSchema,
   runsHereOnly,
-  runsOnLine,
+  runsOnSaid,
 } from "./repos";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 
@@ -308,6 +309,19 @@ const directionValueSchema = z.discriminatedUnion("op", [
   retireDirection.omit({ reason: true }),
 ]);
 const DIRECTION_DONE = { add: "saved", revise: "revised", retire: "retired" } as const;
+/**
+ * The line a project's Runs on change leaves (`project-runs-on`), as a saved
+ * fact: the action's `done` words, and the feed line's fact beside them.
+ */
+export function runsOnDoneSaid(v: Record<string, unknown>): Said {
+  return runsOnSaid(
+    (v.repo as RepoView).name,
+    (v.where as string | null | undefined) ?? null,
+    v.fromHere !== false,
+    (v.repo as RepoView).runsOn === AUTOMATIC_COMPUTER,
+  );
+}
+
 const actionLines = {
   "project-setup": {
     area: "projects",
@@ -403,13 +417,7 @@ const actionLines = {
         ...(runsHereOnly(repo) ? { runsHereOnly: true } : {}),
       })),
     }),
-    done: (v) =>
-      runsOnLine(
-        (v.repo as RepoView).name,
-        (v.where as string | null | undefined) ?? null,
-        v.fromHere !== false,
-        (v.repo as RepoView).runsOn === AUTOMATIC_COMPUTER,
-      ),
+    done: (v) => englishOf(runsOnDoneSaid(v)),
   },
   // Pairing (docs/devices.md). Both stay the captain's own, on this Mac's
   // window: the Firstmate only offers a card whose button acts in Settings

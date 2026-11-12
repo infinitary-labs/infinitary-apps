@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join, resolve } from "node:path";
 import type { AccountView } from "@shared/accounts";
+import { placesAs } from "@shared/deviceNames";
+import { englishOf } from "@shared/i18n/said";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import type { ComputerForges } from "@shared/signIns";
@@ -689,6 +691,20 @@ export async function adoptHere(repos: PlacedHome["repos"], path: string) {
 /** The feed's lines, oldest first. */
 export function feed(home: PlacedHome): string[] {
   return home.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
+}
+
+/**
+ * The newest feed line holding `words`, as a computer that controls the first mate words it
+ * there, naming the first mate's computer `there` (docs/view.md, "The first mate's own words");
+ * undefined for a line saved without its fact.
+ */
+export function feedNamedThere(home: PlacedHome, words: string, there: string): string | undefined {
+  const note = home.events.findLast(
+    (event) => event.type === "firstmate_note" && event.text.includes(words),
+  );
+  return note?.type === "firstmate_note" && note.said
+    ? englishOf(placesAs(note.said, there))
+    : undefined;
 }
 
 export async function commit(dir: string, message: string): Promise<string> {

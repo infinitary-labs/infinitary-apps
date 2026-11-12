@@ -7,6 +7,7 @@ import {
   adoptHere,
   api,
   connectingNow,
+  feedNamedThere,
   gate,
   gitProject,
   kinds,
@@ -164,6 +165,10 @@ describe("a task that runs on a computer that runs work", () => {
     expect(lines().filter((line) => line.includes("out of reach"))).toEqual([
       "Mac mini is out of reach. Its work on website catches up here when it is back.",
     ]);
+    // INF-3676: here is a place a computer that controls the first mate names.
+    expect(feedNamedThere(home, "out of reach", "MacBook Pro")).toBe(
+      "Mac mini is out of reach. Its work on website catches up on MacBook Pro when it is back.",
+    );
 
     // The turn goes on there and ends while the home cannot hear it.
     slow.open();
@@ -199,6 +204,9 @@ describe("a task that runs on a computer that runs work", () => {
     expect(lines).toEqual([
       "Mac mini runs work for another first mate now. Its work on website stops when you remove it here.",
     ]);
+    expect(feedNamedThere(home, "another first mate", "MacBook Pro")).toBe(
+      "Mac mini runs work for another first mate now. Its work on website stops when you remove it on MacBook Pro.",
+    );
   });
 
   it("never nudges, wakes about or calls stuck an idle task whose computer is out of reach", async () => {

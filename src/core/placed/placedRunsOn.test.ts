@@ -6,6 +6,7 @@ import {
   CODEX_MEDIUM_STARTER,
   computerAccount,
   feed,
+  feedNamedThere,
   GROK_THERE,
   gate,
   gitProject,
@@ -126,6 +127,10 @@ describe("a project that runs on a computer that runs work", () => {
       "Running as Builder has been out of reach for a day. home's next task still waits.",
     ]);
     expect(feed(home)).toContain("To run it here instead, set home to run on this computer.");
+    // INF-3676: here and this computer are places a computer that controls the first mate names.
+    expect(feedNamedThere(home, "To run it here instead", "MacBook Pro")).toBe(
+      "To run it on MacBook Pro instead, set home to run on MacBook Pro.",
+    );
 
     // Back: it starts there, in a working copy that computer made, and its
     // cards name where it runs.
@@ -380,6 +385,9 @@ describe("a task's own Runs on", () => {
       'Running as Builder has been out of reach for a day. "footer" still waits.',
       'To run it here instead, ask your first mate to run "footer" on this computer.',
     ]);
+    expect(feedNamedThere(home, '"footer" on this computer', "MacBook Pro")).toBe(
+      'To run it on MacBook Pro instead, ask your first mate to run "footer" on MacBook Pro.',
+    );
 
     // The project moves there and back: the captain's word stands, and the
     // task he said nothing about follows its project.

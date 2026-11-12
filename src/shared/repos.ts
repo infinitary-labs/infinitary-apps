@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { contributionDestinationSchema, contributionRouteSchema } from "./contributions";
 import { costLimitSchema } from "./costLimit";
-import { HERE } from "./deviceNames";
+import { HERE, PLACE_SAID } from "./deviceNames";
 import type { ForgeKind } from "./forge";
+import { englishOf, type Said, said } from "./i18n/said";
 import { placementRequirementsSchema } from "./placement";
 import { rigorSchema } from "./rigor";
 
@@ -508,12 +509,26 @@ export function runsOnLine(
   fromHere: boolean,
   automatic = false,
 ): string {
-  if (automatic)
-    return `Infinitary chooses a computer for each new task in ${name}. Started tasks stay where they started.`;
-  if (where === null) return `${name} runs on ${HERE.this} now. Its next task starts here.`;
+  return englishOf(runsOnSaid(name, where, fromHere, automatic));
+}
+
+/**
+ * The same line as a saved fact (docs/i18n.md, "Saved facts"), saying this
+ * computer and here as places (`PLACE_SAID`), so a computer that controls
+ * the first mate names the first mate's computer there.
+ */
+export function runsOnSaid(
+  name: string,
+  where: string | null,
+  fromHere: boolean,
+  automatic = false,
+): Said {
+  if (automatic) return said("feedRunsOnAutomatic", { name });
+  if (where === null)
+    return said("feedRunsOnHere", { name, computer: PLACE_SAID.this, here: PLACE_SAID.here });
   return fromHere
-    ? `${name} runs ${where} now. Its next task starts there; the one running here finishes here.`
-    : `${name} runs ${where} now. Its next task starts there; one already running finishes where it started.`;
+    ? said("feedRunsOnFromHere", { name, where, here: PLACE_SAID.here })
+    : said("feedRunsOnThere", { name, where });
 }
 
 export const repoSetupResultSchema = z.object({

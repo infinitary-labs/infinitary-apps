@@ -133,10 +133,19 @@ The first mate's core writes its own computer as this computer (`HERE`, `src/sha
 - A request it refused with an error (`HomeRefusalError`, `src/core/devices/homeLink.ts`), never an error this computer gave itself.
 - A feed line the core marks as its own words (`saidHere`, set by `recentFeed` in `src/core/tasks/taskFeed.ts`): every line but a crewmate's report and the captain's own turn, whose this computer is the computer they were written at.
   The line a view's joining writes ends "Your first mate's tasks and conversation stay on MacBook Pro."
+- A line that says this computer or here as a place saves both as places in its fact (`PLACE_SAID`, `src/shared/deviceNames.ts`), and the view names them (`placesAs`) and words the line again: here becomes on that computer.
+  A project's Runs on line, a computer gone out of reach and the way to run a waiting task here instead save theirs, so a project moved back reads "harbour-site runs on MacBook Pro now" and its next task "starts on MacBook Pro" there.
+- In a task's record (`inf:tasks:detail`), each Activity line the core marks as its own words (`saidHere`, set by `condenseActivity` in `src/core/tasks/recordActivity.ts`), folded lines included: what the host, its own steering or the first mate wrote, never the captain's words or a crewmate's.
+  A pull request a line links moves with the words before it.
+  The record's Activity draws a line's timeline reading in its place (`timeline`, `src/core/tasks/taskTimeline.ts`), so each reading the same writers wrote is named the same way: its summary, its whole text and its retained details (`speaksAsFirstMatesComputer`, `src/shared/tasks.ts`).
+  The brief and a turn's decision are kept exactly as served and stay as written.
+  The record's newest problem (`plainProblem`) is named too.
+- A card the first mate's computer writes itself (`author: "host"`): its title and body, in `inf:cards:list`, `inf:cards:show`, the past card reads and the `inf:cards` push, before the view's notifications read it.
+  The body is markup, so the name goes in escaped, and the change bars' marks move with the words before them.
 
 The window on the first mate's own computer asks over the local door, never through `ViewBackend`, so it shows each sentence as written.
-A first mate too old to mark its lines (the `feed-said-here` contract change) has its feed lines shown as written, and its refusals still named.
-A task's timeline in its record, the cards the host writes and the phone show those words as written.
+A first mate too old to mark its lines (the `feed-said-here` and `activity-said-here` contract changes) has those lines shown as written, and its refusals and cards still named.
+A here outside a saved place (in a refusal, a card or a line saved as English alone), the brief and the phone stay as written.
 
 ## Panels in every window
 
@@ -318,8 +327,10 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 
 ## Tests
 
-- `src/main/shell.test.ts`, "names that Mac where its own refusals and feed lines say this computer" and "shows its first mate's own refusals and feed lines as its core wrote them": a view names the first mate's computer in each refusal shape, a refused request and a line it marked, and leaves the captain's own words; the first mate's own window shows each as written.
-  `src/core/tasks/taskFeed.test.ts`, "the first mate's own words on the feed": which lines the core marks.
+- `src/main/shell.test.ts`, "names that Mac where its own refusals and feed lines say this computer" and "shows its first mate's own refusals and feed lines as its core wrote them": a view names the first mate's computer in each refusal shape, a refused request, a line it marked, a task's record and its own cards, in every answer and push they ride, and leaves the captain's and a crewmate's words; the first mate's own window shows each as written.
+- `src/main/view/namedHere.test.ts`: what naming changes - a line's fact and its places, a record's own lines with the pull request they link, its timeline readings and problem, a host card's title, body and change bar, and the brief and a crewmate's words left as written.
+  `src/core/tasks/taskFeed.test.ts`, "the first mate's own words on the feed", and `src/core/tasks/recordActivity.test.ts`, "marks the lines in the first mate's computer's own words": which lines the core marks.
+  `src/core/dispatcher.placement.test.ts`, `src/core/placed/placedReach.test.ts` and `src/core/placed/placedRunsOn.test.ts`: the lines that save here as a place.
 - `src/core/connection/localDoor.test.ts`, "the local door": the door the window dials (`docs/connection.md`, "Tests").
   Every journey drives the window through it.
 - `src/core/devices/homeLink.test.ts`: the device's side against the real connection and pairing - welcome with the other Mac's name, a read held while reaching, a change refused while out of reach and never sent, an exact catch-up after a drop, a request in flight refused and not asked again, Remove seen live and while away, Leave heard and unheard.

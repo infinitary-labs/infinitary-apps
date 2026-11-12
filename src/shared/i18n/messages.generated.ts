@@ -2725,6 +2725,352 @@ export function feedComputerLeft(input: { name: string }): string {
   return `${name} left.`;
 }
 
+export function feedComputerOutOfReach(input: {
+  here: string;
+  name: string;
+  projects: string;
+}): string {
+  const here = input.here;
+  const name = input.name;
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name} خارج المتناول. يُستكمل عمله في ${projects} ${here} عند عودته.`;
+    case "de":
+      return `${name} ist außer Reichweite. Seine Arbeit an ${projects} wird ${here} nachgeholt, sobald er wieder da ist.`;
+    case "es":
+      return `${name} está fuera de alcance. Su trabajo en ${projects} se pone al día ${here} cuando vuelva.`;
+    case "fr":
+      return `${name} est hors de portée. Son travail sur ${projects} sera rattrapé ${here} à son retour.`;
+    case "ja":
+      return `${name} と連絡がつきません。戻ってきたら、${projects} での作業を${here}再開します。`;
+    case "ko":
+      return `${name} 컴퓨터와 연락이 닿지 않아요. 다시 돌아오면 ${projects}에서 하던 작업을 ${here} 이어서 처리해요.`;
+    case "pt-BR":
+      return `${name} está fora de alcance. O trabalho dele em ${projects} é retomado ${here} quando ele voltar.`;
+    case "zh-Hans":
+      return `${name} 无法联系。它回来后，它在 ${projects} 上的工作会${here}补上。`;
+    case "zh-Hant":
+      return `${name} 連絡不上。它回來後，它在 ${projects} 上的工作會${here}補上。`;
+    case "en-XA":
+      return `[${name} îš öûţ öƒ ŕéáçĥ. Îţš ŵöŕķ öñ ${projects} çáţçĥéš ûþ ${here} ŵĥéñ îţ îš ƀáçķ. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e is out of reach. Its work on \u202c${projects}\u202e catches up \u202c${here}\u202e when it is back.\u202c`;
+  }
+  return `${name} is out of reach. Its work on ${projects} catches up ${here} when it is back.`;
+}
+
+export function feedComputerOtherFirstMate(input: {
+  here: string;
+  name: string;
+  projects: string;
+}): string {
+  const here = input.here;
+  const name = input.name;
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يشغّل ${name} الآن عملًا لنائب قبطان آخر. يتوقف عمله في ${projects} عند إزالته ${here}.`;
+    case "de":
+      return `${name} führt jetzt Arbeit für einen anderen ersten Offizier aus. Seine Arbeit an ${projects} endet, wenn du ihn ${here} entfernst.`;
+    case "es":
+      return `${name} ahora ejecuta trabajo para otro primer oficial. Su trabajo en ${projects} se detiene cuando lo quites ${here}.`;
+    case "fr":
+      return `${name} exécute désormais le travail d’un autre second. Son travail sur ${projects} s’arrête quand vous le retirez ${here}.`;
+    case "ja":
+      return `${name} は現在、別の一等航海士の作業を実行しています。${projects} での作業は${here}削除すると停止します。`;
+    case "ko":
+      return `${name} 컴퓨터는 이제 다른 일등항해사의 작업을 실행해요. ${here} 제거하면 ${projects}에서 하던 작업이 멈춰요.`;
+    case "pt-BR":
+      return `${name} agora roda trabalho para outro imediato. O trabalho dele em ${projects} para quando você o remover ${here}.`;
+    case "zh-Hans":
+      return `${name} 现在为另一位大副运行工作。你${here}移除它后，它在 ${projects} 上的工作就会停止。`;
+    case "zh-Hant":
+      return `${name} 現在為另一位大副執行工作。你${here}移除它後，它在 ${projects} 上的工作就會停止。`;
+    case "en-XA":
+      return `[${name} ŕûñš ŵöŕķ ƒöŕ áñöţĥéŕ ƒîŕšţ ɱáţé ñöŵ. Îţš ŵöŕķ öñ ${projects} šţöþš ŵĥéñ ýöû ŕéɱöṽé îţ ${here}. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e runs work for another first mate now. Its work on \u202c${projects}\u202e stops when you remove it \u202c${here}\u202e.\u202c`;
+  }
+  return `${name} runs work for another first mate now. Its work on ${projects} stops when you remove it ${here}.`;
+}
+
+export function feedRunsOnHere(input: { computer: string; here: string; name: string }): string {
+  const computer = input.computer;
+  const here = input.here;
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل ${name} الآن على ${computer}. تبدأ مهمته التالية ${here}.`;
+    case "de":
+      return `${name} läuft jetzt auf ${computer}. Seine nächste Aufgabe startet ${here}.`;
+    case "es":
+      return `${name} ahora se ejecuta en ${computer}. Su próxima tarea empieza ${here}.`;
+    case "fr":
+      return `${name} s’exécute désormais sur ${computer}. Sa prochaine tâche démarre ${here}.`;
+    case "ja":
+      return `${name} は今後 ${computer} で実行されます。次のタスクは${here}開始します。`;
+    case "ko":
+      return `${name}은(는) 이제 ${computer}에서 실행돼요. 다음 작업은 ${here} 시작해요.`;
+    case "pt-BR":
+      return `O computador de ${name} agora é ${computer}. A próxima tarefa começa ${here}.`;
+    case "zh-Hans":
+      return `${name} 现在运行于 ${computer}。它的下一个任务会${here}开始。`;
+    case "zh-Hant":
+      return `${name} 現在改在 ${computer} 上執行。它的下一項任務會${here}開始。`;
+    case "en-XA":
+      return `[${name} ŕûñš öñ ${computer} ñöŵ. Îţš ñéẋţ ţášķ šţáŕţš ${here}. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e runs on \u202c${computer}\u202e now. Its next task starts \u202c${here}\u202e.\u202c`;
+  }
+  return `${name} runs on ${computer} now. Its next task starts ${here}.`;
+}
+
+export function feedRunsOnFromHere(input: { here: string; name: string; where: string }): string {
+  const here = input.here;
+  const name = input.name;
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل ${name} الآن ${where}. تبدأ مهمته التالية هناك؛ والمهمة التي تعمل ${here} تنتهي ${here}.`;
+    case "de":
+      return `${name} läuft jetzt ${where}. Seine nächste Aufgabe startet dort; die ${here} laufende endet ${here}.`;
+    case "es":
+      return `${name} ahora se ejecuta ${where}. Su próxima tarea empieza allí; la que se ejecuta ${here} termina ${here}.`;
+    case "fr":
+      return `${name} s’exécute désormais ${where}. Sa prochaine tâche y démarre ; celle en cours ${here} se termine ${here}.`;
+    case "ja":
+      return `${name} は今後 ${where} で実行されます。次のタスクはそちらで開始し、現在${here}実行中のタスクは${here}完了します。`;
+    case "ko":
+      return `${name}은(는) 이제 ${where} 실행돼요. 다음 작업은 그곳에서 시작하고, ${here} 실행 중인 작업은 ${here} 끝나요.`;
+    case "pt-BR":
+      return `${name} agora roda ${where}. A próxima tarefa começa lá; a que está rodando ${here} termina ${here}.`;
+    case "zh-Hans":
+      return `${name} 现在运行于 ${where}。它的下一个任务会在那里开始；${here}运行中的任务会${here}完成。`;
+    case "zh-Hant":
+      return `${name} 現在改為 ${where} 執行。它的下一項任務會在那裡開始；${here}執行中的任務會${here}完成。`;
+    case "en-XA":
+      return `[${name} ŕûñš ${where} ñöŵ. Îţš ñéẋţ ţášķ šţáŕţš ţĥéŕé; ţĥé öñé ŕûññîñĝ ${here} ƒîñîšĥéš ${here}. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e runs \u202c${where}\u202e now. Its next task starts there; the one running \u202c${here}\u202e finishes \u202c${here}\u202e.\u202c`;
+  }
+  return `${name} runs ${where} now. Its next task starts there; the one running ${here} finishes ${here}.`;
+}
+
+export function feedRunsOnThere(input: { name: string; where: string }): string {
+  const name = input.name;
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل ${name} الآن ${where}. تبدأ مهمته التالية هناك؛ والمهمة التي بدأت بالفعل تنتهي حيث بدأت.`;
+    case "de":
+      return `${name} läuft jetzt ${where}. Seine nächste Aufgabe startet dort; eine bereits laufende endet dort, wo sie begonnen hat.`;
+    case "es":
+      return `${name} ahora se ejecuta ${where}. Su próxima tarea empieza allí; una que ya se esté ejecutando termina donde empezó.`;
+    case "fr":
+      return `${name} s’exécute désormais ${where}. Sa prochaine tâche y démarre ; une tâche déjà en cours se termine là où elle a commencé.`;
+    case "ja":
+      return `${name} は今後 ${where} で実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。`;
+    case "ko":
+      return `${name}은(는) 이제 ${where} 실행돼요. 다음 작업은 그곳에서 시작하고, 이미 실행 중인 작업은 시작한 곳에서 끝나요.`;
+    case "pt-BR":
+      return `${name} agora roda ${where}. A próxima tarefa começa lá; uma que já esteja rodando termina onde começou.`;
+    case "zh-Hans":
+      return `${name} 现在运行于 ${where}。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。`;
+    case "zh-Hant":
+      return `${name} 現在改為 ${where} 執行。它的下一項任務會在那裡開始；已在執行的任務會在開始的地方完成。`;
+    case "en-XA":
+      return `[${name} ŕûñš ${where} ñöŵ. Îţš ñéẋţ ţášķ šţáŕţš ţĥéŕé; öñé áļŕéáðý ŕûññîñĝ ƒîñîšĥéš ŵĥéŕé îţ šţáŕţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e runs \u202c${where}\u202e now. Its next task starts there; one already running finishes where it started.\u202c`;
+  }
+  return `${name} runs ${where} now. Its next task starts there; one already running finishes where it started.`;
+}
+
+export function feedRunsOnAutomatic(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يختار Infinitary حاسوبًا لكل مهمة جديدة في ${name}. تبقى المهام التي بدأت حيث بدأت.`;
+    case "de":
+      return `Infinitary wählt für jede neue Aufgabe in ${name} einen Computer. Begonnene Aufgaben bleiben, wo sie begonnen haben.`;
+    case "es":
+      return `Infinitary elige una computadora para cada tarea nueva de ${name}. Las tareas iniciadas se quedan donde empezaron.`;
+    case "fr":
+      return `Infinitary choisit un ordinateur pour chaque nouvelle tâche de ${name}. Les tâches commencées restent là où elles ont commencé.`;
+    case "ja":
+      return `Infinitary が ${name} の新しいタスクごとにコンピューターを選びます。開始済みのタスクは開始した場所に残ります。`;
+    case "ko":
+      return `Infinitary가 ${name}의 새 작업마다 컴퓨터를 골라요. 시작된 작업은 시작한 곳에 그대로 있어요.`;
+    case "pt-BR":
+      return `O Infinitary escolhe um computador para cada nova tarefa em ${name}. Tarefas iniciadas ficam onde começaram.`;
+    case "zh-Hans":
+      return `Infinitary 会为 ${name} 中的每个新任务选择一台电脑。已开始的任务留在开始的地方。`;
+    case "zh-Hant":
+      return `Infinitary 會為 ${name} 的每項新任務選擇一台電腦。已開始的任務會留在開始的地方。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý çĥööšéš á çöɱþûţéŕ ƒöŕ éáçĥ ñéŵ ţášķ îñ ${name}. Šţáŕţéð ţášķš šţáý ŵĥéŕé ţĥéý šţáŕţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary chooses a computer for each new task in \u202c${name}\u202e. Started tasks stay where they started.\u202c`;
+  }
+  return `Infinitary chooses a computer for each new task in ${name}. Started tasks stay where they started.`;
+}
+
+export function feedRunTaskHereInstead(input: {
+  computer: string;
+  here: string;
+  task: string;
+}): string {
+  const computer = input.computer;
+  const here = input.here;
+  const task = input.task;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لتشغيلها ${here} بدلًا من ذلك، اطلب من نائب القبطان تشغيل ${task} على ${computer}.`;
+    case "de":
+      return `Um sie stattdessen ${here} auszuführen, bitte deinen ersten Offizier, ${task} auf ${computer} auszuführen.`;
+    case "es":
+      return `Para ejecutarla ${here} en su lugar, pide a tu primer oficial que ejecute ${task} en ${computer}.`;
+    case "fr":
+      return `Pour l’exécuter ${here} à la place, demandez à votre second d’exécuter ${task} sur ${computer}.`;
+    case "ja":
+      return `代わりに${here}実行するには、一等航海士に ${task} を ${computer} で実行するよう頼んでください。`;
+    case "ko":
+      return `대신 ${here} 실행하려면 일등항해사에게 ${task}을(를) ${computer}에서 실행해 달라고 하세요.`;
+    case "pt-BR":
+      return `Para rodá-la ${here}, peça ao seu imediato para rodar ${task} usando ${computer}.`;
+    case "zh-Hans":
+      return `要改为${here}运行，请让你的大副在 ${computer} 上运行 ${task}。`;
+    case "zh-Hant":
+      return `若要改為${here}執行，請讓你的大副在 ${computer} 上執行 ${task}。`;
+    case "en-XA":
+      return `[Ţö ŕûñ îţ ${here} îñšţéáð, ášķ ýöûŕ ƒîŕšţ ɱáţé ţö ŕûñ ${task} öñ ${computer}. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo run it \u202c${here}\u202e instead, ask your first mate to run \u202c${task}\u202e on \u202c${computer}\u202e.\u202c`;
+  }
+  return `To run it ${here} instead, ask your first mate to run ${task} on ${computer}.`;
+}
+
+export function feedRunProjectHereInstead(input: {
+  computer: string;
+  here: string;
+  project: string;
+}): string {
+  const computer = input.computer;
+  const here = input.here;
+  const project = input.project;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لتشغيلها ${here} بدلًا من ذلك، اضبط ${project} ليعمل على ${computer}.`;
+    case "de":
+      return `Um sie stattdessen ${here} auszuführen, stell ${project} so ein, dass es auf ${computer} läuft.`;
+    case "es":
+      return `Para ejecutarla ${here} en su lugar, configura ${project} para que se ejecute en ${computer}.`;
+    case "fr":
+      return `Pour l’exécuter ${here} à la place, réglez ${project} pour qu’il s’exécute sur ${computer}.`;
+    case "ja":
+      return `代わりに${here}実行するには、${project} の実行先を ${computer} に設定してください。`;
+    case "ko":
+      return `대신 ${here} 실행하려면 ${project}의 실행 위치를 ${computer}(으)로 설정하세요.`;
+    case "pt-BR":
+      return `Para rodá-la ${here}, defina ${computer} como o computador de ${project}.`;
+    case "zh-Hans":
+      return `要改为${here}运行，请把 ${project} 设为运行于 ${computer}。`;
+    case "zh-Hant":
+      return `若要改為${here}執行，請將 ${project} 設為在 ${computer} 上執行。`;
+    case "en-XA":
+      return `[Ţö ŕûñ îţ ${here} îñšţéáð, šéţ ${project} ţö ŕûñ öñ ${computer}. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo run it \u202c${here}\u202e instead, set \u202c${project}\u202e to run on \u202c${computer}\u202e.\u202c`;
+  }
+  return `To run it ${here} instead, set ${project} to run on ${computer}.`;
+}
+
+export function placeThisComputer(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا الحاسوب`;
+    case "de":
+      return `diesem Computer`;
+    case "es":
+      return `esta computadora`;
+    case "fr":
+      return `cet ordinateur`;
+    case "ja":
+      return `このコンピューター`;
+    case "ko":
+      return `이 컴퓨터`;
+    case "pt-BR":
+      return `este computador`;
+    case "zh-Hans":
+      return `这台电脑`;
+    case "zh-Hant":
+      return `這台電腦`;
+    case "en-XA":
+      return `[ţĥîš çöɱþûţéŕ ~~~~~]`;
+    case "ar-XB":
+      return `\u202ethis computer\u202c`;
+  }
+  return `this computer`;
+}
+
+export function placeHere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هنا`;
+    case "de":
+      return `hier`;
+    case "es":
+      return `aquí`;
+    case "fr":
+      return `ici`;
+    case "ja":
+      return `ここで`;
+    case "ko":
+      return `여기에서`;
+    case "pt-BR":
+      return `aqui`;
+    case "zh-Hans":
+      return `在这里`;
+    case "zh-Hant":
+      return `在這裡`;
+    case "en-XA":
+      return `[ĥéŕé ~~]`;
+    case "ar-XB":
+      return `\u202ehere\u202c`;
+  }
+  return `here`;
+}
+
+export function placeOn(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `على ${computer}`;
+    case "de":
+      return `auf ${computer}`;
+    case "es":
+      return `en ${computer}`;
+    case "fr":
+      return `sur ${computer}`;
+    case "ja":
+      return ` ${computer} で`;
+    case "ko":
+      return `${computer}에서`;
+    case "pt-BR":
+      return `em ${computer}`;
+    case "zh-Hans":
+      return `在 ${computer} 上`;
+    case "zh-Hant":
+      return `在 ${computer} 上`;
+    case "en-XA":
+      return `[öñ ${computer} ~]`;
+    case "ar-XB":
+      return `\u202eon \u202c${computer}`;
+  }
+  return `on ${computer}`;
+}
+
 export function feedComputerSignedIn(input: { provider: string; who: string }): string {
   const provider = input.provider;
   const who = input.who;
@@ -21828,6 +22174,17 @@ export const MESSAGES = {
   feedCareStandard,
   feedCareReviewed,
   feedComputerLeft,
+  feedComputerOutOfReach,
+  feedComputerOtherFirstMate,
+  feedRunsOnHere,
+  feedRunsOnFromHere,
+  feedRunsOnThere,
+  feedRunsOnAutomatic,
+  feedRunTaskHereInstead,
+  feedRunProjectHereInstead,
+  placeThisComputer,
+  placeHere,
+  placeOn,
   feedComputerSignedIn,
   feedFirstMateProblem,
   settleMergingChange,
@@ -22565,6 +22922,17 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   feedCareStandard: [],
   feedCareReviewed: [],
   feedComputerLeft: ["name"],
+  feedComputerOutOfReach: ["here", "name", "projects"],
+  feedComputerOtherFirstMate: ["here", "name", "projects"],
+  feedRunsOnHere: ["computer", "here", "name"],
+  feedRunsOnFromHere: ["here", "name", "where"],
+  feedRunsOnThere: ["name", "where"],
+  feedRunsOnAutomatic: ["name"],
+  feedRunTaskHereInstead: ["computer", "here", "task"],
+  feedRunProjectHereInstead: ["computer", "here", "project"],
+  placeThisComputer: [],
+  placeHere: [],
+  placeOn: ["computer"],
   feedComputerSignedIn: ["provider", "who"],
   feedFirstMateProblem: ["problem"],
   settleMergingChange: ["change"],

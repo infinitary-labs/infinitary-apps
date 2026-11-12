@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "view-names-first-mate-computer-more",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Another computer names your first mate's computer in task records, its own cards and lines that say here",
+      "body": "When you control your first mate from another computer, a task's record, the cards your first mate's computer puts up itself, and lines that said here, such as where a project's next task starts, now name the computer your first mate lives on, such as MacBook Pro. Your own words and a crewmate's keep their wording, and your first mate's own computer shows everything as before.",
+      "picture": {
+        "dark": "view-names-first-mate-computer-more-dark.webp",
+        "light": "view-names-first-mate-computer-more-light.webp",
+        "alt": "On a computer controlling the first mate, the card asking to update another computer says MacBook Pro has the newer Infinitary"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -3,12 +3,13 @@ import { reportSummary } from "@shared/feed";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START, DROPPED_BEFORE_START_ACTIVITY } from "@shared/recordDrop";
 import { withoutIntentLead } from "@shared/rigor";
-import type {
-  TaskActionLine,
-  TaskActivityLine,
-  TaskActivityRow,
-  TaskEventKind,
-  TaskEventView,
+import {
+  speaksAsFirstMatesComputer,
+  type TaskActionLine,
+  type TaskActivityLine,
+  type TaskActivityRow,
+  type TaskEventKind,
+  type TaskEventView,
 } from "@shared/tasks";
 import { THROUGH_THE_COMMAND } from "../askedFromTheCommand";
 import { INFINITARY_COMMAND } from "../integrations/commandWords";
@@ -170,6 +171,7 @@ export function condenseActivity(
         text,
         from: { id: event.from.id, key: event.from.key },
         ...(span ? { change: span } : {}),
+        ...saidHere(event),
       };
       if (event.kind === "linked" && event.relation === "origin") pending.push(line);
       else rows.push(line);
@@ -190,6 +192,7 @@ export function condenseActivity(
         kind: event.kind,
         text,
         ...(span ? { change: span } : {}),
+        ...saidHere(event),
       };
     };
     const show = (text: string) => {
@@ -318,6 +321,15 @@ export function condenseActivity(
     };
   }
   return rows;
+}
+
+/**
+ * A line in the first mate's computer's own words says so (`saidHere`), for
+ * a computer that controls it to name that computer where the line says
+ * this computer (docs/view.md, "The first mate's own words").
+ */
+function saidHere(event: TaskEventView): { saidHere?: true } {
+  return speaksAsFirstMatesComputer(event.actor) ? { saidHere: true } : {};
 }
 
 /** The task's own events and the ones that concern it, merged in timeline order. */

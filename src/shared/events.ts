@@ -220,6 +220,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     name: z.string(),
     runsOn: z.string().nullable(),
     text: z.string(),
+    /** The line as a fact, worded where it is shown; `text` is its English (docs/i18n.md, "Saved facts"). */
+    said: saidSchema.optional(),
   }),
   /**
    * A device used its link and is on the home's list (docs/devices.md).

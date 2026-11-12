@@ -6,9 +6,10 @@ import {
   speaksSeed,
   speaksTempCleanup,
 } from "@shared/contractFeatures";
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import { COMPUTER, HERE, PLACE_SAID } from "@shared/deviceNames";
 import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import { said, saidLine } from "@shared/i18n/said";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
 import { leftoversOf } from "@shared/leftoverPrograms";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
@@ -667,11 +668,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       device.saidGone = true;
       const name = this.nameOf(deviceId);
       const projects = this.projectsOf(deviceId);
+      // Here is the first mate's computer, which a computer that controls it names.
       this.options.broadcastEvent({
         type: "firstmate_note",
-        text: this.options.runsForAnotherFirstmate?.(deviceId)
-          ? `${name} runs work for another first mate now. Its work on ${projects} stops when you remove it here.`
-          : `${name} is out of reach. Its work on ${projects} catches up here when it is back.`,
+        ...saidLine(
+          this.options.runsForAnotherFirstmate?.(deviceId)
+            ? said("feedComputerOtherFirstMate", { name, projects, here: PLACE_SAID.here })
+            : said("feedComputerOutOfReach", { name, projects, here: PLACE_SAID.here }),
+        ),
       });
     }
   }

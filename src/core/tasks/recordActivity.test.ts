@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START, DROPPED_BEFORE_START_ACTIVITY } from "@shared/recordDrop";
-import { type TaskEventView, taskEventKindSchema } from "@shared/tasks";
+import { type TaskActivityLine, type TaskEventView, taskEventKindSchema } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
 import { CREWMATE_TAB_STEER_LEAD } from "../orchestrator/captainWakes";
 import { renderWake, replyWordsSpan, type TypedWake } from "../orchestrator/wakes";
@@ -346,6 +346,42 @@ describe("the record's condensed activity", () => {
         "pull request #977",
         "https://github.com/o/r/pull/977",
       ],
+    ]);
+  });
+
+  // INF-3676: a computer that controls the first mate names the first mate's computer where
+  // the record's own words say this computer, and leaves the captain's and a crewmate's alone.
+  it("marks the lines in the first mate's computer's own words, never the captain's or a crewmate's", () => {
+    const events = [
+      event("note", "a warm working copy on this computer was reused", { news: false }),
+      event("note", "No sign-in for harbour.example is saved on this computer.", { news: true }),
+      event("progress", "Checked the soundings on this computer.", null, "crewmate"),
+      event("ask", "Keep it on this computer.", null, "captain"),
+      event("note", "Moved it back to this computer.", { news: true }, "firstmate"),
+      event("steered", "Carry on with the soundings.", null, "supervisor"),
+    ];
+    const unblocked = {
+      ...event("status", "done", { status: "done", reason: "merged" }),
+      from: { id: "other", key: "FI3-9" },
+      relation: "blocker" as const,
+    };
+    const marked = (line: TaskActivityLine) => [line.text, line.saidHere === true];
+    expect(
+      condenseActivity(events, label, { concerned: [unblocked] }).map((row) => [
+        ...marked(row),
+        (row.folded ?? []).map(marked),
+      ]),
+    ).toEqual([
+      [
+        "No sign-in for harbour.example is saved on this computer.",
+        true,
+        [["a warm working copy on this computer was reused", true]],
+      ],
+      ["Checked the soundings on this computer.", false, []],
+      ["Keep it on this computer.", false, []],
+      ["Moved it back to this computer.", true, []],
+      ["Carry on with the soundings.", true, []],
+      ["FI3-9, which this task waits for, closed.", true, []],
     ]);
   });
 

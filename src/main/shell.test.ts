@@ -17,7 +17,6 @@ import { createUpdateChecker, type UpdateChecker } from "@core/update/updateChec
 import type { Card } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import type { DeviceKind, ThisMac } from "@shared/devices";
-import { type FeedLine, feedLineFrom } from "@shared/feed";
 import { HOME_CAPABILITIES, PROTOCOL_MAJORS_BEHIND, PROTOCOL_VERSION } from "@shared/ipc";
 import { DEFAULT_SAVED_KEYMAP, presetKeymap, type SavedKeymap } from "@shared/keymap";
 import type { PersonalExtensionView } from "@shared/personal/manifest";
@@ -26,10 +25,19 @@ import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/prefer
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
 import { claimedPort } from "../../tests/helpers/claimedPort";
+import {
+  answerInOwnWords,
+  CAPTAIN,
+  OWN_READS,
+  ownCards,
+  ownWords,
+  SAID,
+} from "../../tests/helpers/firstMatesOwnWords";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import type { StartEntry } from "./besideRun";
 import type { RunStatus } from "./runStatus";
 import { Shell, type ShellOptions } from "./shell";
+import { namedHere } from "./view/namedHere";
 
 /**
  * What this app is, and the switch between holding Firstmate and controlling
@@ -57,43 +65,6 @@ function shown(id: string, overrides: Partial<Card> = {}): Card {
     createdAt: 1,
     ...overrides,
   };
-}
-
-/**
- * What the first mate's core says of its own computer (INF-3486), written
- * with `here` where it says this computer: a feed line it marks as its own
- * words, a refusal in each shape a refusal takes, and a refused request.
- */
-function ownWords(here: string) {
-  return {
-    note: `Your saved sign-in was not used for "Sign up on the harbour site": No sign-in for harbour.example is saved on ${here}. Its browser is still paused for you.`,
-    openPage: `This task runs on another computer, so its project's page does not open on ${here}.`,
-    reopen: `Four task browsers are already open on ${here}. Stop one, then open this again.`,
-    stop: `${here === HERE.this ? HERE.This : here} keeps no task browsers.`,
-  };
-}
-const SAID = ownWords(HERE.this);
-/** The captain's own turn, which says this computer in the captain's words. */
-const CAPTAIN = captainLine(`Keep the harbour site on ${HERE.this}.`);
-
-/** The feed line of the captain's own turn, as the core draws it. */
-function captainLine(text: string): Omit<FeedLine, "at"> {
-  const line = feedLineFrom({ type: "user_turn", text });
-  if (!line) throw new Error("The captain's turn draws no feed line.");
-  return line;
-}
-
-/** A core's answer in its own words to a request that has one, or undefined. */
-function answerInOwnWords(channel: string): unknown {
-  if (channel === "inf:feed:recent")
-    return [
-      { kind: "info", text: SAID.note, at: 1, taskKey: "HAR-1", event: "note", saidHere: true },
-      { ...CAPTAIN, at: 2 },
-    ] satisfies FeedLine[];
-  if (channel === "inf:cards:open-page") return { refusal: SAID.openPage };
-  if (channel === "inf:browser:reopen") return { ok: false, text: SAID.reopen };
-  if (channel === "inf:browser:stop") throw new Error(SAID.stop);
-  return undefined;
 }
 
 /** The Mac where Firstmate lives: what it was asked, its pairing, and links to it. */
@@ -709,6 +680,19 @@ describe("the app as a view of another Mac", () => {
     expect(refused).toBeInstanceOf(Error);
     expect(refused.message).toContain(named.stop);
     expect(refused.message).not.toContain(HERE.This);
+
+    // INF-3676: a task's record and the cards it wrote itself, read or pushed, are named too
+    // (`namedHere.test.ts` owns what each names); a crewmate's card stays as it was.
+    mini.show(ownCards());
+    await air.until(() => air.pushes.some((push) => push.channel === "inf:cards"));
+    for (const [channel, args] of OWN_READS) {
+      const answer = await air.shell.dispatch(channel, [...args]);
+      expect(answer).toEqual(namedHere(channel, answerInOwnWords(channel), () => "MacBook Pro"));
+      expect(answer).not.toEqual(answerInOwnWords(channel));
+    }
+    expect(air.pushes.find((push) => push.channel === "inf:cards")?.payload).toEqual(
+      namedHere("inf:cards:list", ownCards(), () => "MacBook Pro"),
+    );
   });
 
   // The captain's answer on the review of one rule for every view: a home too old to list the
@@ -1280,12 +1264,19 @@ describe("the window on the first mate's own computer", () => {
       text: SAID.reopen,
     });
     await expect(at.shell.dispatch("inf:browser:stop", ["sign-up"])).rejects.toThrow(SAID.stop);
+    // INF-3676: a task's record and the cards it wrote itself, as written too.
+    for (const [channel, args] of OWN_READS)
+      expect(await at.shell.dispatch(channel, [...args])).toEqual(answerInOwnWords(channel));
+    at.own.core.events.emit("inf:cards", ownCards());
+    await expect.poll(() => pushed(at.pushes, "inf:cards")).toBe(1);
+    expect(at.pushes.find((push) => push.channel === "inf:cards")?.payload).toEqual(ownCards());
     // Every answer came over the local door from its own core.
     expect(at.own.dispatch.mock.calls.map((call) => call[0])).toEqual([
       "inf:feed:recent",
       "inf:cards:open-page",
       "inf:browser:reopen",
       "inf:browser:stop",
+      ...OWN_READS.map(([channel]) => channel),
     ]);
   });
 

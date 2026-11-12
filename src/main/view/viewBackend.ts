@@ -29,7 +29,7 @@ import {
 import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
-import { namedHere, namedHereError } from "./namedHere";
+import { namedCards, namedHere, namedHereError } from "./namedHere";
 import { ViewLook } from "./viewLook";
 import { ViewNotices } from "./viewNotices";
 
@@ -194,7 +194,10 @@ export class ViewBackend {
       // A Mac that also runs this home's work says this connection controls it.
       as: "view",
       ...(options.dial ? { dial: options.dial } : {}),
-      onPush: (channel, payload, replayed) => {
+      onPush: (channel, pushed, replayed) => {
+        // The first mate's own cards name its computer where they say this computer.
+        const payload =
+          channel === "inf:cards" ? namedCards(pushed, () => this.homeName()) : pushed;
         if (channel === "inf:cards") this.notices.observe(payload);
         if (channel === "inf:app:open-page") this.openPage(payload, replayed);
         if (channel === "inf:app:sign-in-page") void this.openSignInPage(payload, replayed);

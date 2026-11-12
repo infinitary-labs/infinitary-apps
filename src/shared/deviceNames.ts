@@ -1,4 +1,5 @@
 import type { DeviceChip, DeviceSystem } from "./devices";
+import { type Said, saidPart } from "./i18n/said.ts";
 
 /**
  * What a device is called (design skill `copy/Vocabulary.prompt.md`, "a
@@ -30,6 +31,39 @@ export const HERE = {
  */
 export function hereAs(text: string, name: string | null): string {
   return name === null ? text : text.replaceAll(HERE.This, name).replaceAll(HERE.this, name);
+}
+
+/**
+ * This computer and here as a saved fact fills a blank with them (docs/i18n.md,
+ * "Saved facts"): a line the first mate's computer says of itself, which a
+ * computer that controls it names by `placesAs`.
+ */
+export const PLACE_SAID = {
+  this: saidPart("placeThisComputer"),
+  here: saidPart("placeHere"),
+} as const;
+
+/**
+ * A fact the first mate's computer said of itself (`PLACE_SAID`), shown on
+ * another computer that controls it: there each blank filled with this
+ * computer names the first mate's computer by `name`, and each filled with
+ * here says on it (docs/view.md, "The first mate's own words").
+ */
+export function placesAs(fact: Said, name: string): Said {
+  if (!fact.a) return fact;
+  let moved = false;
+  const fills: NonNullable<Said["a"]> = {};
+  for (const [blank, fill] of Object.entries(fact.a)) {
+    const place = typeof fill === "object" && "m" in fill ? fill.m : undefined;
+    fills[blank] =
+      place === PLACE_SAID.this.m
+        ? name
+        : place === PLACE_SAID.here.m
+          ? saidPart("placeOn", { computer: name })
+          : fill;
+    if (fills[blank] !== fill) moved = true;
+  }
+  return moved ? { ...fact, a: fills } : fact;
 }
 
 /** The computer where your first mate lives, named from another one that does not know its name. */

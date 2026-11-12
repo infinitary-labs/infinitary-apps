@@ -1,7 +1,7 @@
 import type { CutOffClass } from "@shared/authFailure";
 import { isRepairAssessment } from "@shared/checkRepair";
 import { isCustomApiProvider } from "@shared/customApi";
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import { COMPUTER, HERE, PLACE_SAID } from "@shared/deviceNames";
 import {
   deviceForgeGateReason,
   deviceForgeGateRef,
@@ -14,6 +14,7 @@ import {
 } from "@shared/deviceSetup";
 import { noNewWorkDayLine, noNewWorkWaitLine } from "@shared/deviceUpdateNudge";
 import { forgeOf, forgePlace } from "@shared/forge";
+import { type Said, said, saidLine } from "@shared/i18n/said";
 import { offeringKey } from "@shared/modelSlots";
 import {
   AUTOMATIC_COMPUTER,
@@ -91,7 +92,8 @@ export function placedCutOffStartRefusal(
 type WaitSubject = {
   key: string;
   name: string;
-  runHere: string;
+  /** The line saying how to run it on the first mate's computer instead, as a fact. */
+  runHere: Said;
   /** The project's name, for the GitHub card a wait for its computer's sign-in raises. */
   project: string;
 };
@@ -732,14 +734,22 @@ export class TaskPlacement {
       return {
         key: `task:${record.id}`,
         name,
-        runHere: `To run it here instead, ask your first mate to run ${name} on ${HERE.this}.`,
+        runHere: said("feedRunTaskHereInstead", {
+          task: name,
+          computer: PLACE_SAID.this,
+          here: PLACE_SAID.here,
+        }),
         project,
       };
     }
     return {
       key: record.repoId ?? record.title,
       name: `${project}'s next task`,
-      runHere: `To run it here instead, set ${project} to run on ${HERE.this}.`,
+      runHere: said("feedRunProjectHereInstead", {
+        project,
+        computer: PLACE_SAID.this,
+        here: PLACE_SAID.here,
+      }),
       project,
     };
   }
@@ -813,7 +823,7 @@ export class TaskPlacement {
           ? noNewWorkDayLine(place.label, subject.name)
           : `${place.label} has been out of reach for a day. ${subject.name} still waits.`,
     });
-    this.options.broadcastEvent({ type: "firstmate_note", text: subject.runHere });
+    this.options.broadcastEvent({ type: "firstmate_note", ...saidLine(subject.runHere) });
   }
 
   /** A task started on the computer it waited for: the wait's last line. */

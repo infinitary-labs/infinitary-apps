@@ -210,7 +210,7 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       );
     }
     case "repo_runs_on":
-      return { kind: "info", text: event.text };
+      return { kind: "info", text: event.text, ...(event.said ? { said: event.said } : {}) };
     case "repo_unregistered":
       return line(
         "info",

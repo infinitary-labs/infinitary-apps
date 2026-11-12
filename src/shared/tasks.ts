@@ -75,6 +75,17 @@ export const taskEventActorSchema = z.enum([
 ]);
 export type TaskEventActor = z.infer<typeof taskEventActorSchema>;
 
+/**
+ * Whether what this writer says is in the first mate's computer's own words:
+ * the host's, its own steering's and the first mate's, so its this computer
+ * is that computer (docs/view.md, "The first mate's own words"). The
+ * captain's words, and a crewmate's, whose this computer is wherever it ran,
+ * are not.
+ */
+export function speaksAsFirstMatesComputer(actor: string | null | undefined): boolean {
+  return actor === "host" || actor === "firstmate" || actor === "supervisor";
+}
+
 export const taskEventKindSchema = z.enum([
   "created",
   "ask",
@@ -598,6 +609,14 @@ export const taskActivityLineSchema = z.object({
    * line names none, or the host has no page for it.
    */
   change: z.object({ url: z.string(), from: z.number(), to: z.number() }).optional(),
+  /**
+   * The line is in the first mate's computer's own words (what the host, its
+   * own steering or the first mate wrote), so a computer that controls the
+   * first mate names that computer where it says this computer (docs/view.md,
+   * "The first mate's own words"). Absent on the captain's and a crewmate's
+   * words, and from an older home.
+   */
+  saidHere: z.literal(true).optional(),
 });
 export type TaskActivityLine = z.infer<typeof taskActivityLineSchema>;
 

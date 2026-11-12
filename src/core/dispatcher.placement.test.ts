@@ -1,5 +1,7 @@
 import { rmSync } from "node:fs";
 import { join } from "node:path";
+import { HERE, placesAs } from "@shared/deviceNames";
+import { englishOf } from "@shared/i18n/said";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { expect, it, vi } from "vitest";
 import { fakeHost } from "../../tests/helpers/bootedCore";
@@ -36,6 +38,18 @@ it("records and broadcasts a project's move from automatic placement to this com
           runsOn: null,
           actor: "captain",
         }),
+      );
+      // INF-3676: its feed line says this computer and here as places, which a computer that
+      // controls the first mate names.
+      const moved = (await core.dispatch("inf:feed:recent", [])).find((line) =>
+        line.text.startsWith(`${repo.name} runs on`),
+      );
+      expect(moved).toMatchObject({
+        text: `${repo.name} runs on ${HERE.this} now. Its next task starts here.`,
+        saidHere: true,
+      });
+      expect(moved?.said && englishOf(placesAs(moved.said, "MacBook Pro"))).toBe(
+        `${repo.name} runs on MacBook Pro now. Its next task starts on MacBook Pro.`,
       );
       expect(core.services.tasks.list()).toContainEqual(
         expect.objectContaining({

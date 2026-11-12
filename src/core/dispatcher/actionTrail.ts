@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { ACTIONS, type ActionActor, type ActionName } from "@shared/actions";
+import { ACTIONS, type ActionActor, type ActionName, runsOnDoneSaid } from "@shared/actions";
 import { type RepoView, repoConfiguredEvent } from "@shared/repos";
 import type { CoreServices } from "../coreServices";
 
@@ -166,6 +166,7 @@ export function createActionTrail(
         name: repo.name,
         runsOn: repo.runsOn,
         text,
+        said: runsOnDoneSaid(value),
         actor: actor.kind,
       });
     } else services.broadcastEvent({ type: "personalized", text, actor: actor.kind });

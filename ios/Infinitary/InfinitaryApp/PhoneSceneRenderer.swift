@@ -7,6 +7,8 @@ import UIKit
 /// so work on the main thread (a board read, a card's web view, SwiftUI's layout) no longer holds the motion.
 /// The main thread only hands it new inputs - the roster, the state, the pan - when they change; it never observes
 /// a display tick. The painters are the scene's own (`ScenePen`), so the drawing and the motion stay the desktop's.
+/// The pen records each frame for the graphics chip (`PenBatch`, `ScenePenGPU`, INF-3851 piece 2), which draws it
+/// straight into the drawable, so this thread paints no pixels itself.
 final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     /// Everything one frame draws from that the main thread owns.
     struct Input {
@@ -39,6 +41,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     private var size = CGSize.zero
     private var scale: CGFloat = 1
     private var layer: CAMetalLayer?
+    private var device: MTLDevice?
     private var thread: Thread?
     /// Each attached surface's render thread; a thread whose surface has gone draws nothing more and ends.
     private var generation = 0
@@ -48,19 +51,16 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     private var now = 0.0
     private var last: Double?
     private let cache = CharacterPainter.Cache()
-    private var device: MTLDevice?
+    /// Built on the render thread at its first frame, since compiling the shaders takes a moment the main thread should not wait.
+    private var gpu: ScenePenGPU?
+    private var built: MTLDevice?
     private var queue: MTLCommandQueue?
-    private var targets: [Target] = []
+    private let batch = PenBatch()
+    /// Each frame in flight keeps its own buffers until the graphics chip has drawn it.
+    private let slots = (0..<PhoneSceneRenderer.buffers).map { _ in ScenePenGPU.Slot() }
     private var next = 0
     private let inFlight = DispatchSemaphore(value: PhoneSceneRenderer.buffers)
     private static let buffers = 3
-
-    /// One CPU-drawn frame: a shared Metal buffer the painters draw into through Core Graphics, then copied to the drawable.
-    private struct Target {
-        let buffer: MTLBuffer
-        let context: CGContext
-        let width: Int, height: Int, bytesPerRow: Int
-    }
 
     // MARK: main thread
 
@@ -68,8 +68,8 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     @MainActor func attach(_ layer: CAMetalLayer) {
         let device = MTLCreateSystemDefaultDevice()
         layer.device = device
-        layer.pixelFormat = .bgra8Unorm
-        layer.framebufferOnly = false
+        layer.pixelFormat = ScenePenGPU.pixelFormat
+        layer.framebufferOnly = true
         layer.isOpaque = false
         layer.colorspace = PenColor.space
         layer.maximumDrawableCount = PhoneSceneRenderer.buffers
@@ -83,7 +83,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         thread.name = "crew-scene-render"
         thread.qualityOfService = .userInteractive
         lock.withLock {
-            self.layer = layer; self.device = device; queue = device?.makeCommandQueue()
+            self.layer = layer; self.device = device
             self.thread = thread; maximumRate = maximum
         }
         thread.start()
@@ -159,8 +159,12 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     }
 
     private func frame(_ link: CADisplayLink) {
-        let (input, pan, size, scale, layer) = lock.withLock { (self.input, self.pan, self.size, self.scale, self.layer) }
+        let (input, pan, size, scale, layer, device) = lock.withLock { (self.input, self.pan, self.size, self.scale, self.layer, self.device) }
         guard let input, let layer else { link.isPaused = true; return }
+        if let device, built !== device {
+            // A device whose shaders fail to build draws nothing, as one with no device did, and is not tried again.
+            built = device; gpu = ScenePenGPU(device: device); queue = gpu?.device.makeCommandQueue()
+        }
         // The clock advances by elapsed time and excludes time stopped, as the main-thread clock did.
         if input.running {
             if let last { now += max(0, link.timestamp - last) }
@@ -173,28 +177,21 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
 
     private func draw(_ input: Input, pan: CGPoint, size: CGSize, scale: CGFloat, into layer: CAMetalLayer) {
         let width = Int((size.width * scale).rounded(.up)), height = Int((size.height * scale).rounded(.up))
-        guard width > 0, height > 0, let queue else { return }
+        guard width > 0, height > 0, let queue, let gpu else { return }
         if layer.drawableSize != CGSize(width: width, height: height) {
             CATransaction.begin(); CATransaction.setDisableActions(true)
             layer.drawableSize = CGSize(width: width, height: height)
             CATransaction.commit()
         }
-        inFlight.wait()
-        guard let target = target(width: width, height: height), let drawable = layer.nextDrawable(),
-              let commands = queue.makeCommandBuffer(), let blit = commands.makeBlitCommandEncoder() else { inFlight.signal(); return }
-        let cg = target.context
-        cg.saveGState()
-        cg.clear(CGRect(x: 0, y: 0, width: width, height: height))
-        // The painters draw top down in points, as a Canvas does.
-        cg.translateBy(x: 0, y: CGFloat(height)); cg.scaleBy(x: scale, y: -scale)
-        var pen = ScenePen(cg)
+        // The painters draw top down in points, as a Canvas does, into the batch rather than into pixels.
+        batch.reset(width: width, height: height, scale: scale)
+        var pen = ScenePen(batch)
         pen.translateBy(x: input.offset.width - pan.x, y: input.offset.height - pan.y)
         paint(input, in: &pen)
-        cg.restoreGState()
-        let copied = MTLSize(width: min(width, drawable.texture.width), height: min(height, drawable.texture.height), depth: 1)
-        blit.copy(from: target.buffer, sourceOffset: 0, sourceBytesPerRow: target.bytesPerRow, sourceBytesPerImage: target.bytesPerRow * height,
-                  sourceSize: copied, to: drawable.texture, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin())
-        blit.endEncoding()
+        inFlight.wait()
+        guard let drawable = layer.nextDrawable(), let commands = queue.makeCommandBuffer() else { inFlight.signal(); return }
+        next = (next + 1) % slots.count
+        gpu.encode(batch, into: drawable.texture, slot: slots[next], commands: commands)
         commands.addCompletedHandler { [inFlight] _ in inFlight.signal() }
         commands.present(drawable)
         commands.commit()
@@ -225,24 +222,6 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         // The scene scope excludes the nested first mate's separate character reading.
         CharacterFrameMetrics.shared.record(start: started, source: input.source, mode: pose.mode.rawValue, heat: pose.heat, rotation: pose.a, drawing: .scene)
         #endif
-    }
-
-    private func target(width: Int, height: Int) -> Target? {
-        if targets.first?.width != width || targets.first?.height != height {
-            // A resize waits for every frame still reading the old buffers before replacing them.
-            for _ in 1..<PhoneSceneRenderer.buffers { inFlight.wait() }
-            defer { for _ in 1..<PhoneSceneRenderer.buffers { inFlight.signal() } }
-            targets = []
-            let bytesPerRow = (width * 4 + 255) / 256 * 256
-            for _ in 0..<PhoneSceneRenderer.buffers {
-                guard let buffer = device?.makeBuffer(length: bytesPerRow * height, options: .storageModeShared),
-                      let context = ScenePen.bitmap(width: width, height: height, data: buffer.contents(), bytesPerRow: bytesPerRow)
-                else { targets = []; return nil }
-                targets.append(Target(buffer: buffer, context: context, width: width, height: height, bytesPerRow: bytesPerRow))
-            }
-        }
-        next = (next + 1) % targets.count
-        return targets[next]
     }
 }
 

@@ -92,6 +92,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/CharacterReply.swift",
     "ios/Infinitary/InfinitaryApp/CharacterSky.swift",
     "ios/Infinitary/InfinitaryApp/CharacterWarp.swift",
+    "ios/Infinitary/InfinitaryApp/PenBatch.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCharacter.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCrewPainter.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCrewScene.swift",
@@ -105,6 +106,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneSceneTouches.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSceneViewport.swift",
     "ios/Infinitary/InfinitaryApp/ScenePen.swift",
+    "ios/Infinitary/InfinitaryApp/ScenePenGPU.swift",
+    "ios/Infinitary/InfinitaryApp/ScenePenShaders.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSceneFacts.swift",
     // Secrets setup, exact approvals and damaged-key recovery, plus ApprovalKeyTests, run in rest.
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ApprovalKey.swift",

@@ -2,10 +2,12 @@ import Accelerate
 import CoreGraphics
 import SwiftUI
 
-/// INF-2566 (approved B): the scene's painters draw through this pen, over a Core Graphics context, so the same
-/// drawing runs in a SwiftUI Canvas (through `withCGContext`) and on the scene's own render thread, which
-/// SwiftUI's `GraphicsContext` cannot reach. It keeps `GraphicsContext`'s value semantics: a copy carries its own
-/// transform, opacity and blend mode, and every operation applies them to the shared context and puts it back.
+/// INF-2566 (approved B): the scene's painters draw through this pen, so the same drawing runs in a SwiftUI Canvas
+/// (through `withCGContext`) and on the scene's own render thread, which SwiftUI's `GraphicsContext` cannot reach.
+/// It keeps `GraphicsContext`'s value semantics: a copy carries its own transform, opacity and blend mode.
+/// It has two surfaces (INF-3851 piece 2, the captain's "Our own graphics-chip pen"): a Core Graphics context, where
+/// every operation applies them to the shared context and puts it back, for a Canvas, the first screen and the tests'
+/// pictures; and a `PenBatch`, which records each operation for the graphics chip, for the scene's render thread.
 struct ScenePen {
     enum Shading {
         case color(PenColor)
@@ -13,7 +15,12 @@ struct ScenePen {
         case linearGradient(PenGradient, startPoint: CGPoint, endPoint: CGPoint)
     }
 
-    let cg: CGContext
+    private enum Surface {
+        case cg(CGContext)
+        /// The batch, the target it records into and that target's pixels per pen unit.
+        case batch(PenBatch, target: Int, device: CGAffineTransform)
+    }
+    private let surface: Surface
     var opacity = 1.0
     var blendMode = CGBlendMode.normal
     private(set) var transform = CGAffineTransform.identity
@@ -21,16 +28,33 @@ struct ScenePen {
     let scale: CGFloat
 
     init(_ cg: CGContext) {
-        self.cg = cg
+        surface = .cg(cg)
         let device = cg.userSpaceToDeviceSpaceTransform
         scale = max(1, hypot(device.a, device.b))
     }
+
+    /// A pen that records into `batch`'s frame, drawing top down in points at the batch's scale.
+    init(_ batch: PenBatch) {
+        self.init(batch, target: 0, device: CGAffineTransform(scaleX: batch.scale, y: batch.scale))
+    }
+
+    private init(_ batch: PenBatch, target: Int, device: CGAffineTransform) {
+        surface = .batch(batch, target: target, device: device)
+        scale = max(1, hypot(device.a, device.b))
+    }
+
+    /// Only the two blends the painters use reach the graphics chip; plus lighter adds, as the halo does.
+    private var blend: PenBatch.Blend { blendMode == .plusLighter ? .additive : .normal }
 
     mutating func translateBy(x: CGFloat, y: CGFloat) { transform = transform.translatedBy(x: x, y: y) }
 
     func fill(_ path: Path, with shading: Shading) {
         guard opacity > 0 else { return }
-        apply {
+        if case .batch(let batch, let target, let device) = surface {
+            batch.fill(path, with: shading, opacity: opacity, blend: blend, transform: transform.concatenating(device), target: target)
+            return
+        }
+        apply { cg in
             switch shading {
             case .color(let color):
                 cg.setFillColor(color.cg)
@@ -52,7 +76,11 @@ struct ScenePen {
 
     func stroke(_ path: Path, with shading: Shading, style: StrokeStyle) {
         guard opacity > 0 else { return }
-        apply {
+        if case .batch(let batch, let target, let device) = surface {
+            batch.stroke(path, with: shading, style: style, opacity: opacity, blend: blend, transform: transform.concatenating(device), target: target)
+            return
+        }
+        apply { cg in
             cg.setLineWidth(style.lineWidth); cg.setLineCap(style.lineCap); cg.setLineJoin(style.lineJoin)
             cg.setMiterLimit(style.miterLimit)
             if !style.dash.isEmpty { cg.setLineDash(phase: style.dashPhase, lengths: style.dash) }
@@ -80,7 +108,21 @@ struct ScenePen {
         // A wide blur needs no more pixels than one point each; a narrow one keeps the screen's resolution.
         let resolution = min(scale, max(1, 3 / sigma))
         let width = Int((outer.width * resolution).rounded(.up)), height = Int((outer.height * resolution).rounded(.up))
-        guard width > 0, height > 0, let layer = ScenePen.bitmap(width: width, height: height) else { return }
+        // Three box passes approximate the Gaussian: each pass's variance is (w² - 1) / 12.
+        var box = Int((sqrt(4 * sigma * resolution * sigma * resolution + 1)).rounded())
+        if box % 2 == 0 { box += 1 }
+        guard width > 0, height > 0 else { return }
+        if case .batch(let batch, let target, let device) = surface {
+            // The graphics chip draws the layer into a texture of its own, blurs it with the same three box passes and
+            // lays it over this target, stretched over the same rectangle.
+            let layer = batch.addLayer(width: width, height: height, blurHalf: box > 1 ? box / 2 : 0)
+            var inner = ScenePen(batch, target: layer,
+                                 device: CGAffineTransform(translationX: -outer.minX, y: -outer.minY).concatenating(CGAffineTransform(scaleX: resolution, y: resolution)))
+            draw(&inner)
+            batch.lay(layer, over: outer, opacity: opacity * layerOpacity, blend: blend, transform: transform.concatenating(device), target: target)
+            return
+        }
+        guard let layer = ScenePen.bitmap(width: width, height: height) else { return }
         layer.translateBy(x: 0, y: CGFloat(height)); layer.scaleBy(x: resolution, y: -resolution)
         layer.translateBy(x: -outer.minX, y: -outer.minY)
         var inner = ScenePen(layer)
@@ -90,14 +132,11 @@ struct ScenePen {
         guard let scratch = malloc(layer.bytesPerRow * height) else { return }
         defer { free(scratch) }
         var target = vImage_Buffer(data: scratch, height: source.height, width: source.width, rowBytes: layer.bytesPerRow)
-        // Three box passes approximate the Gaussian: each pass's variance is (w² - 1) / 12.
-        var box = UInt32((sqrt(4 * sigma * resolution * sigma * resolution + 1)).rounded())
-        if box % 2 == 0 { box += 1 }
         if box > 1 {
             for pass in 0..<3 {
                 let (from, to) = pass % 2 == 0 ? (source, target) : (target, source)
                 var input = from, output = to
-                vImageBoxConvolve_ARGB8888(&input, &output, nil, 0, 0, box, box, nil, vImage_Flags(kvImageEdgeExtend))
+                vImageBoxConvolve_ARGB8888(&input, &output, nil, 0, 0, UInt32(box), UInt32(box), nil, vImage_Flags(kvImageEdgeExtend))
             }
             // Three passes leave the result in the scratch buffer; copy it back to the layer's own memory.
             vImageCopyBuffer(&target, &source, 4, vImage_Flags(kvImageNoFlags))
@@ -106,18 +145,19 @@ struct ScenePen {
         var over = self
         over.opacity *= layerOpacity
         // Both a Canvas and the render surface draw top down, so the image is flipped back upright over its rectangle.
-        over.apply {
+        over.apply { cg in
             cg.translateBy(x: 0, y: outer.minY + outer.maxY); cg.scaleBy(x: 1, y: -1)
             cg.draw(image, in: outer)
         }
     }
 
-    private func apply(_ body: () -> Void) {
+    private func apply(_ body: (CGContext) -> Void) {
+        guard case .cg(let cg) = surface else { return }
         cg.saveGState()
         cg.concatenate(transform)
         cg.setAlpha(opacity)
         cg.setBlendMode(blendMode)
-        body()
+        body(cg)
         cg.restoreGState()
     }
 

@@ -1552,9 +1552,15 @@ private struct PhoneCardPane: View {
         guard !card.isPast, host.drawn, reachable, visible, phase == .active else { return }
         onSeen()
     }
+    /// A read the connection's end fails says nothing on the card: the card asks again once back in reach, and the
+    /// computer button already says whether it is (the captain: "everywhere else in the ios app said it's in reach").
     private func readThread() {
         guard !card.isPast, reachable else { return }
-        Task { do { try await session.readThread(card.id) } catch { problem = error.localizedDescription } }
+        Task {
+            do { try await session.readThread(card.id) }
+            catch PhoneError.unavailable {}
+            catch { problem = error.localizedDescription }
+        }
     }
     private func loadPhotos() async {
         guard !photoSelection.isEmpty else { return }

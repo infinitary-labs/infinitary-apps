@@ -88,6 +88,7 @@ The native contract constants are generated from `docs/contract.json` with `node
 `pnpm generate:contract` updates them together, and `pnpm check` refuses stale native constants, theme values or bundled card code and fonts.
 Generation also verifies the required native fields in cards, Activity, task boards, records, search, last turns and crewmate transcripts, including the pushed card and task snapshots.
 The shown card reads its thread once and follows numbered `inf:cards:thread` pushes; a newer push supersedes an older thread read.
+It reads its thread again each time the computer comes back in reach, so a thread read a dropped connection fails puts no line on the card; only the computer button says whether the computer is in reach.
 Its card requests are a closed enum generated from the published contract, not a channel an HTML body chooses.
 
 A return consumes numbered replay pushes, or reads fresh snapshots after a reload welcome.

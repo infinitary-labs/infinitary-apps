@@ -18,6 +18,35 @@ extension PhoneJourney {
         try await verifySharedSeen()
         try await verifyEndedCard()
         try await verifyNextAfterClose()
+        try await verifyThreadReadAcrossDrop()
+    }
+
+    /// The captain, under a merge card that said "Your computer is out of reach" while the computer button said In reach:
+    /// "i think this is a false alarm. everywhere else in the ios app said it's in reach - need to fix it".
+    /// Data: the shown card asks for its thread on every return to reach; the home holds that read while the connection
+    /// ends, so the phone fails it, then answers the read the card asks again once back in reach. Completion: the
+    /// reconnected card's second thread read reached the home and was answered, the computer is in reach and the card
+    /// shows no line. A card that kept the failed read's words would show the out-of-reach line here.
+    private func verifyThreadReadAcrossDrop() async throws {
+        let title = app.staticTexts["card-title"]
+        XCTAssertTrue(title.waitForPresence(timeout: 10), app.debugDescription)
+        let line = app.staticTexts["card-error"]
+        XCTAssertFalse(line.exists, "No line on the card before the connection drops")
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:cards:thread"}"#)
+        _ = try await home("offline")
+        _ = try await home("online")
+        _ = try await home("card-action-held")
+        // The connection ends while that thread read is out, so the phone fails it.
+        _ = try await home("offline")
+        _ = try await home("release-card-action")
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:cards:thread"}"#)
+        _ = try await home("online")
+        // Back in reach, the card asks for its thread again, after the failed read's ending reached the card.
+        _ = try await home("card-action-held")
+        _ = try await home("release-card-action")
+        reach("In reach")
+        picture("card-thread-read-across-drop")
+        XCTAssertFalse(line.exists, "A thread read the drop failed leaves no out-of-reach line once in reach")
     }
 
     /// INF-3155, the captain: "when all the cards are already read, dismissing the current card should reveal the next

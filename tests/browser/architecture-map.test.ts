@@ -1,4 +1,4 @@
-import { FRAME_BRIDGE_VERSION } from "@shared/plugins/bridge";
+import { DRAWING_SOURCE_PREFIX, FRAME_BRIDGE_VERSION } from "@shared/plugins/bridge";
 import { frameCsp } from "@shared/plugins/containment";
 import { buildFrameDocument, type FrameTheme } from "@shared/plugins/frameDocument";
 import { expect, test } from "vitest";
@@ -191,7 +191,13 @@ const call = <K extends keyof Reader>(name: K, ...args: Parameters<Reader[K]>) =
   ) as Promise<ReturnType<Reader[K]>>;
 const read = () => call("read");
 
-type Heard = { type: string; of?: number; answers?: { name: string }[] };
+type Heard = {
+  type: string;
+  of?: number;
+  answers?: { name: string }[];
+  pictures?: { src: string; alt: string; width: number; height: number }[];
+  asked?: boolean;
+};
 
 async function mounted(
   theme: FrameTheme,
@@ -201,6 +207,8 @@ async function mounted(
     data?: object;
     /** Read the body's answers as the window does for a card (the frame controller's "form"). */
     form?: boolean;
+    /** The card body's width in pixels. */
+    width?: number;
   } = {},
 ): Promise<Heard[]> {
   const data = options.data ?? MAP_DATA;
@@ -213,7 +221,7 @@ async function mounted(
   const frame = document.createElement("iframe");
   frame.name = FRAME;
   frame.setAttribute("sandbox", "allow-scripts");
-  frame.style.cssText = "width:800px;height:900px;border:0";
+  frame.style.cssText = `width:${options.width ?? 800}px;height:900px;border:0`;
   addEventListener("message", (event) => {
     if (event.source !== frame.contentWindow) return;
     const data = event.data as Heard & { document?: unknown };
@@ -686,4 +694,199 @@ test("a double-click goes in without selecting the box's words", async () => {
   expect(await inFrame(() => (window as unknown as { selected: string[] }).selected, null)).toEqual(
     [],
   );
+});
+
+// The captain's ask for the change view's polish (INF-3874's approved plan, piece 1): the footer
+// under the diagram was "too tall and too much information"; it is two rows, at most 80 px tall at
+// a desktop card's width and 100 px at a phone's, with a comparison on.
+test("the footer is two rows, short at a desktop card's width and at a phone's", async () => {
+  const machine = Object.keys((MAP_DATA.compare[0] as { names: object }).names)[0] as string;
+  for (const [width, most] of [
+    [1024, 80],
+    [390, 100],
+  ] as const) {
+    await mounted("dark", { width, open: { at: machine, changes: 0 } });
+    const measured = await inFrame(() => {
+      const map = document.querySelector("#map") as HTMLElement;
+      const svg = map.querySelector("svg") as SVGSVGElement;
+      const more = map.querySelector("[data-morebox]") as HTMLElement;
+      return {
+        footer: map.getBoundingClientRect().bottom - svg.getBoundingClientRect().bottom,
+        moreClosed: more.hidden,
+        counts: map.querySelector("[data-pos]")?.textContent ?? "",
+      };
+    }, null);
+    expect(measured.footer, `the footer at ${width} px`).toBeLessThanOrEqual(most);
+    expect(measured.moreClosed).toBe(true);
+    expect(measured.counts).toMatch(/added|changed|removed|[+−~]\d/);
+  }
+});
+
+// The captain: "don't let scroll zoom it because that breaks the card scroll flow. needs another way."
+test("a plain scroll over the diagram is the card's, and a pinch or ⌘-scroll zooms the map", async () => {
+  await mounted("dark");
+  const wheel = (init: WheelEventInit) => {
+    const svg = document.querySelector("#map svg") as SVGSVGElement;
+    const box = svg.getBoundingClientRect();
+    const before = svg.getAttribute("viewBox");
+    const event = new WheelEvent("wheel", {
+      deltaY: -120,
+      clientX: box.left + box.width / 2,
+      clientY: box.top + box.height / 2,
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    });
+    svg.dispatchEvent(event);
+    return { cancelled: event.defaultPrevented, moved: svg.getAttribute("viewBox") !== before };
+  };
+  expect(await inFrame(wheel, {})).toEqual({ cancelled: false, moved: false });
+  expect(await inFrame(wheel, { deltaX: 80, deltaY: 0 })).toEqual({
+    cancelled: false,
+    moved: false,
+  });
+  expect(await inFrame(wheel, { ctrlKey: true, deltaY: -10 })).toEqual({
+    cancelled: true,
+    moved: true,
+  });
+  expect(await inFrame(wheel, { metaKey: true })).toEqual({ cancelled: true, moved: true });
+  // the buttons and keys zoom too, and Fit puts it back
+  const viewBox = () => document.querySelector("#map svg")?.getAttribute("viewBox") ?? "";
+  const fitted = await inFrame(() => {
+    (document.querySelector("#map [data-fit]") as HTMLButtonElement).click();
+    return document.querySelector("#map svg")?.getAttribute("viewBox") ?? "";
+  }, null);
+  await inFrame(
+    () => (document.querySelector("#map [data-zi]") as HTMLButtonElement).click(),
+    null,
+  );
+  expect(await inFrame(viewBox, null)).not.toBe(fitted);
+  expect(await call("key", "0")).toBe(true);
+  expect(await inFrame(viewBox, null)).toBe(fitted);
+});
+
+// The captain: "the diagram part needs the ability to full screen like picture views", on the
+// desktop and on the phone; piece 1 sends the diagram as a still picture to today's viewers.
+test("Full screen, F and a tap on a touch screen send the whole diagram to the picture viewer", async () => {
+  const heard = await mounted("dark");
+  const pictures = () => heard.filter((message) => message.type === "image");
+  const place = (await read()).crumbs;
+  const viewBox = () => document.querySelector("#map svg")?.getAttribute("viewBox") ?? "";
+  const before = await inFrame(viewBox, null);
+  await inFrame(
+    () => (document.querySelector("#map [data-fs]") as HTMLButtonElement).click(),
+    null,
+  );
+  await expect.poll(() => pictures().length).toBe(1);
+  const [still] = pictures()[0]?.pictures ?? [];
+  // the map's own script asks, since a card with the map is a playable preview, whose drawings a press opens nothing from
+  expect(pictures()[0]?.asked).toBe(true);
+  expect(still?.src.startsWith(DRAWING_SOURCE_PREFIX)).toBe(true);
+  expect(still?.alt.startsWith(place)).toBe(true);
+  // the picture holds every box of the place, and the map in the card stays where it was
+  const drawn = decodeURIComponent(still?.src.slice(DRAWING_SOURCE_PREFIX.length) ?? "");
+  for (const box of (await read()).boxes) expect(drawn).toContain(`data-box="${box.label}"`);
+  expect(await inFrame(viewBox, null)).toBe(before);
+  expect(await call("key", "f")).toBe(true);
+  await expect.poll(() => pictures().length).toBe(2);
+  // on a touch screen the diagram takes no drag, so a finger scrolls the card; a tap opens it
+  const finger = (moveBy: number) => {
+    const svg = document.querySelector("#map svg") as SVGSVGElement;
+    const box = svg.getBoundingClientRect();
+    const at = {
+      clientX: box.left + 40,
+      clientY: box.top + 40,
+      pointerId: 7,
+      pointerType: "touch",
+      bubbles: true,
+    };
+    svg.dispatchEvent(new PointerEvent("pointerdown", at));
+    if (moveBy)
+      svg.dispatchEvent(new PointerEvent("pointermove", { ...at, clientY: at.clientY + moveBy }));
+    svg.dispatchEvent(new PointerEvent("pointerup", { ...at, clientY: at.clientY + moveBy }));
+    return svg.getAttribute("viewBox");
+  };
+  expect(await inFrame(finger, 60)).toBe(before);
+  expect(pictures().length).toBe(2);
+  await inFrame(finger, 0);
+  await expect.poll(() => pictures().length).toBe(3);
+});
+
+// The approved plan: the comparison's counts with two arrows that step through each added, removed
+// and changed thing on this level, wrapping, with the full list under More; one toggle per comparison.
+test("the arrows step through each change on this level and wrap, and More lists them all", async () => {
+  const machine = Object.keys((MAP_DATA.compare[0] as { names: object }).names)[0] as string;
+  await mounted("dark", { open: { at: machine, changes: 0 } });
+  const listed = await inFrame(
+    () =>
+      [...document.querySelectorAll("#map [data-chg] div button")].map(
+        (button) => button.textContent ?? "",
+      ),
+    null,
+  );
+  const view = await read();
+  const tagged = view.boxes.filter(
+    (box) => box.kind === "state" && /added|removed|changed/.test(box.tag),
+  );
+  const moved = view.edges.filter((edge) => /added|removed|changed/.test(edge.tag));
+  expect(listed.length).toBe(tagged.length + moved.length);
+  const next = () => {
+    (document.querySelector("#map [data-next]") as HTMLButtonElement).click();
+    return [
+      document.querySelector("#map [data-pos]")?.textContent ?? "",
+      document.querySelector("#map [data-live]")?.textContent ?? "",
+    ];
+  };
+  for (const [index, label] of listed.entries()) {
+    const [position, words] = await inFrame(next, null);
+    expect(position).toBe(`${index + 1} of ${listed.length}`);
+    expect(words?.startsWith(label), `step ${index + 1} names ${label}`).toBe(true);
+  }
+  expect((await inFrame(next, null))[0]).toBe(`1 of ${listed.length}`);
+  // Escape lets go of the step, and the counts come back
+  expect(await call("key", "Escape")).toBe(true);
+  expect(
+    await inFrame(() => document.querySelector("#map [data-pos]")?.textContent ?? "", null),
+  ).toMatch(/added|changed/);
+  // More opens on its press, and the comparison is a toggle that turns off on a second press
+  const more = await inFrame(() => {
+    const button = document.querySelector("#map [data-more]") as HTMLButtonElement;
+    button.click();
+    return [
+      button.getAttribute("aria-expanded"),
+      (document.querySelector("#map [data-morebox]") as HTMLElement).hidden,
+    ];
+  }, null);
+  expect(more).toEqual(["true", false]);
+  const label = (MAP_DATA.compare[0] as { label: string }).label;
+  expect(await call("compare", label)).toBe("false");
+  expect((await read()).changes).toBe("");
+  expect(await call("compare", label)).toBe("true");
+});
+
+// The plan's finding: a dashed or unfilled box took a click only on its outline or words.
+test("a click anywhere inside a dashed box chooses it", async () => {
+  await mounted("dark", { open: { at: "src/main" } });
+  const outside = (await read()).boxes.find((box) => box.kind === "ext");
+  expect(outside, "the main process's map has an outside box").toBeDefined();
+  // a press on the box's empty inside, near its corner: what lies under that point takes it
+  const under = await inFrame((label) => {
+    const box = document.querySelector(
+      `[data-box="${label}"] > rect:not([class])`,
+    ) as SVGRectElement;
+    const r = box.getBoundingClientRect();
+    const at = {
+      clientX: r.left + 8,
+      clientY: r.top + 20,
+      bubbles: true,
+      pointerId: 1,
+      pointerType: "mouse",
+    };
+    const hit = document.elementFromPoint(at.clientX, at.clientY) as Element;
+    hit.dispatchEvent(new PointerEvent("pointerdown", at));
+    hit.dispatchEvent(new PointerEvent("pointerup", at));
+    return hit.closest("[data-box]")?.getAttribute("data-box");
+  }, outside?.label);
+  expect(under).toBe(outside?.label);
+  await expect.poll(async () => (await read()).live).toMatch(new RegExp(`^${outside?.label}`));
 });

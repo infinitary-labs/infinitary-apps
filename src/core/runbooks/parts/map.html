@@ -1,26 +1,13 @@
-<!-- part: map. A project's map from its .architecture.json files, and a change view between two versions.
-Copy the whole part into a card body unchanged and fill in only the JSON block below:
-  maps     every map file to draw, keyed by its folder from the project's top ("" for the top).
-  counts   optional, by a part's folder: { "files": 40, "lines": 12034 }, from git ls-files and wc.
-  compare  optional, one entry per comparison button:
-           { "label": "This pull request",
-             "files": [["src/core/tasks/store.ts", "~", 12, 3]],   path, + - or ~, lines added, lines removed
-             "was": { "src/core": { ...that folder's map file at the other version, or null if it had none } },
-             "names": { "<machine>": { "<state now>": "<state it was>" } },
-             "untraced": ["<machine you did not trace>"] }
-           A folder missing from "was" had the same map file.
-  open     optional: { "at": "<a part's folder, or a machine's name>", "changes": <a comparison's number> }
-A packed block (data-packed) holds the same JSON deflated raw and in base64, for a map too big for a card. -->
+<!-- part: map. Copy it whole into a card body and fill in only the JSON block (data-map, or data-packed when deflated); the advanced-architecture skill says what it holds. -->
 <style data-source></style>
 <div class="mz" id="map">
 <script type="application/json" data-map>
 {"maps": {}}
 </script>
-<svg role="application" aria-label="A flat map of the project: parts as boxes joined by labeled links, each opening its own map, down to its state machines"><defs><marker id="mza" viewBox="0 0 8 8" refX="7" refY="4" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="var(--fg-3)"/></marker></defs></svg>
-<div class="bar"><button type="button" data-up>Up</button><button type="button" data-fit>Fit</button><span class="cmp" data-cmps hidden>Changes:</span><span class="crumbs" data-crumbs></span></div>
-<div class="live" data-live role="status"></div>
-<div class="chg" data-chg hidden></div>
+<svg role="application" aria-label="The project's map: parts, their links and state machines"><defs><marker id="mza" viewBox="0 0 8 8" refX="7" refY="4" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="var(--fg-3)"/></marker></defs></svg>
+<div class="bar"><button type="button" data-up aria-label="Up" title="Up a level (Backspace)">‹</button><span class="crumbs" data-crumbs></span><span class="cmp" data-cmps hidden></span><span class="zoom"><button type="button" data-zo aria-label="Zoom out" title="Zoom out (−)">−</button><button type="button" data-fit title="Fit (0)">Fit</button><button type="button" data-zi aria-label="Zoom in" title="Zoom in (+)">+</button></span><button type="button" data-fs aria-label="Full screen" title="Full screen (F)">⤢</button><button type="button" data-more aria-label="More" aria-expanded="false">⋯</button></div>
+<div class="st"><span class="live" data-live role="status"></span><button type="button" data-open hidden title="Go in (Enter)">Open</button><span class="step" data-step hidden><span data-pos></span><button type="button" data-prev aria-label="Previous change" title="Previous change ([)">‹</button><button type="button" data-next aria-label="Next change" title="Next change (])">›</button></span></div>
+<div class="more" data-morebox hidden><div class="mcmp" data-mcmp></div><div class="chg" data-chg hidden></div><p class="keys" data-keys></p></div>
 <div class="bad" data-bad hidden></div>
-<div class="keys">Click a box for its links, or a pill for its state machine · double-click or Enter goes in · Esc goes back · arrows choose · drag, scroll, +, − and 0 move and zoom</div>
 </div>
 <script data-source></script>

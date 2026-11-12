@@ -455,10 +455,11 @@ function cardFrameSpec(
     // Words for the message box move the captain's focus there: only his
     // own press, as a link opens only then.
     onDraft: (text) => fromCaptain(() => props.onDraft?.(text)),
-    onImage: (index, pictures) => {
-      // A playable preview's drawings are its own controls' (INF-3107): they open nothing.
+    onImage: (index, pictures, _frame, asked) => {
+      // A playable preview's drawings are its own controls' (INF-3107): a press opens
+      // nothing from them, only the body's own script asking (`inf.picture`).
       const set = admitted()
-        ? viewablePictures(index, pictures, !isPreviewBody(props.body))
+        ? viewablePictures(index, pictures, asked === true || !isPreviewBody(props.body))
         : undefined;
       if (set) fromCaptain(() => props.onPicture?.(set, frameRef.current));
     },

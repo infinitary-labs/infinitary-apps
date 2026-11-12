@@ -119,9 +119,15 @@ export type FrameMountSpec = {
    * A picture in the frame was clicked (card pictures, phase 3): the
    * pictures of its group as the frame saw them, and which one. The
    * envelope is checked here; which sources may be shown is the caller's
-   * call (`viewablePictures`).
+   * call (`viewablePictures`). `asked` says the body's own script asked
+   * for the drawing (`inf.picture`) rather than a press landing on it.
    */
-  onImage?: (index: number, pictures: FramePicture[], frame?: HTMLIFrameElement | null) => void;
+  onImage?: (
+    index: number,
+    pictures: FramePicture[],
+    frame?: HTMLIFrameElement | null,
+    asked?: boolean,
+  ) => void;
   /**
    * A demo's Play button or poster was pressed (docs/card-authoring.md
    * "Demo recordings"): the recording's served name, its poster and caption
@@ -639,7 +645,7 @@ export class FrameController {
         return;
       case "image":
         if (message.index < message.pictures.length) {
-          this.spec.onImage?.(message.index, message.pictures);
+          this.spec.onImage?.(message.index, message.pictures, undefined, message.asked === true);
         }
         return;
       case "demo": {

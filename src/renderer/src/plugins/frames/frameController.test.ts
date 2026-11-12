@@ -956,7 +956,10 @@ describe("FrameController", () => {
       { src: "data:image/png;base64,AB==", alt: "", width: 0, height: 0 },
     ];
     controller.receive({ fm: 2, type: "image", index: 1, pictures });
-    expect(onImage).toHaveBeenCalledWith(1, pictures);
+    expect(onImage).toHaveBeenCalledWith(1, pictures, undefined, false);
+    // a body's own script asking for its drawing (inf.picture) says so, which a preview's host reads
+    controller.receive({ fm: 2, type: "image", index: 0, pictures, asked: true });
+    expect(onImage).toHaveBeenLastCalledWith(0, pictures, undefined, true);
     onImage.mockClear();
     for (const bad of [
       { fm: 2, type: "image", index: 2, pictures },

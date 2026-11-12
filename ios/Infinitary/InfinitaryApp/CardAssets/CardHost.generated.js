@@ -6525,7 +6525,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       fm: fmMarker,
       type: literal("image"),
       index: number().int().nonnegative(),
-      pictures: array(framePictureSchema).min(1).max(FRAME_MAX_PICTURES)
+      pictures: array(framePictureSchema).min(1).max(FRAME_MAX_PICTURES),
+      /**
+       * The body's own script asked for this drawing (`inf.picture`), rather
+       * than a press landing on it: a playable preview's drawings open only so.
+       */
+      asked: literal(true).optional()
     }),
     object({
       fm: fmMarker,
@@ -7238,6 +7243,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       return function () {
         storeListeners = storeListeners.filter(function (l) { return l !== listener; });
       };
+    },
+    // One of the body's own drawings in the picture viewer, as it stands, when
+    // its script asks: a playable preview's drawings are its controls, which a
+    // press opens nothing from (INF-3107), so its own Full screen asks here.
+    picture: function (drawing) {
+      if (!caps.pictures || !drawing || drawing.localName !== "svg") return;
+      post({ type: "image", index: 0, pictures: [drawingPicture(drawing)], asked: true });
     },
     stage: function (name, value) {
       var json = value === undefined ? undefined : JSON.stringify(value);
@@ -8428,7 +8440,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-11IJY9f+gsWWwCdaBrxSR1S3KDeCJmjCldnD03/9KBk=";
+  const FRAME_BRIDGE_SHA256 = "sha256-c7GQY256rcMIs4503XI6vaEj9YxcoDN3/ByhnhVHQXo=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -14666,7 +14678,7 @@ ${REVISION_HIGHLIGHT_STYLE}`;
       }
       case "image": {
         if (!document.hasFocus() || !navigator.userActivation.isActive) return;
-        const set = viewablePictures(message.index, message.pictures, !isPreviewBody(input.body));
+        const set = viewablePictures(message.index, message.pictures, message.asked === true || !isPreviewBody(input.body));
         if (set) void native({ type: "image", ...set }).catch(() => {
         });
         break;

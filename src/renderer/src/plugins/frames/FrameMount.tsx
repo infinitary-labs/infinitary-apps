@@ -135,8 +135,8 @@ export function useFrameController(
         // Only a mount that opens pictures makes them stops for the keyboard.
         ...(specRef.current.onImage
           ? {
-              onImage: (index, pictures) =>
-                specRef.current.onImage?.(index, pictures, frameRef.current),
+              onImage: (index, pictures, _frame, asked) =>
+                specRef.current.onImage?.(index, pictures, frameRef.current, asked),
             }
           : {}),
         ...(specRef.current.onDemo

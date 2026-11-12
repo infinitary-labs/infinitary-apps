@@ -346,6 +346,11 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("image"),
     index: z.number().int().nonnegative(),
     pictures: z.array(framePictureSchema).min(1).max(FRAME_MAX_PICTURES),
+    /**
+     * The body's own script asked for this drawing (`inf.picture`), rather
+     * than a press landing on it: a playable preview's drawings open only so.
+     */
+    asked: z.literal(true).optional(),
   }),
   z.object({
     fm: fmMarker,

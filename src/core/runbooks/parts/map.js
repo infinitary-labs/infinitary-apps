@@ -1,19 +1,29 @@
 (async () => {
   const root = document.getElementById("map");
-  const svg = root.querySelector("svg");
+  const $ = (q) => root.querySelector(q);
+  const svg = $("svg");
   svg.tabIndex = 0; // the map takes the keyboard: arrows choose, Enter goes in, Esc goes back
-  const liveEl = root.querySelector("[data-live]");
-  const crumbEl = root.querySelector("[data-crumbs]");
-  const chgEl = root.querySelector("[data-chg]");
-  const badEl = root.querySelector("[data-bad]");
+  const liveEl = $("[data-live]");
+  const crumbEl = $("[data-crumbs]");
+  const chgEl = $("[data-chg]");
+  const badEl = $("[data-bad]");
+  const moreEl = $("[data-morebox]");
+  const moreBtn = $("[data-more]");
+  const stepEl = $("[data-step]");
+  const posEl = $("[data-pos]");
+  const openBtn = $("[data-open]");
+  // a touch screen draws the diagram as a fitted picture: one finger scrolls the card past it, a tap opens it
+  const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
+  root.classList.toggle("touch", touch);
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const NS = "http://www.w3.org/2000/svg";
   const fmt = (x) => x.toLocaleString("en-US");
+  const DID = ["added", "removed", "changed"];
   const bad = [];
   const problem = (t) => bad.push(t);
   let D = {};
   try {
-    const block = root.querySelector("script[data-map]");
+    const block = $("script[data-map]");
     let text = block.textContent;
     if (block.hasAttribute("data-packed")) {
       const bin = Uint8Array.from(atob(text.trim()), (c) => c.charCodeAt(0));
@@ -387,7 +397,7 @@
   };
   const changeWords = (c) =>
     (c || [])
-      .map((x, i) => x && `${fmt(x)} ${["added", "removed", "changed"][i]}`)
+      .map((x, i) => x && `${fmt(x)} ${DID[i]}`)
       .filter(Boolean)
       .join(" · ");
   const box = (ref, key, label, sub, kind, x) =>
@@ -1250,7 +1260,7 @@
       // a comparison names what happened to the box right above it
       const st = cmp >= 0 && / s\d/.test(stCls(n)) && stOf(n);
       if (st) {
-        const t = ["added", "removed", "changed"]["+-~".indexOf(st)];
+        const t = DID["+-~".indexOf(st)];
         const tg = el("g", { class: "tag", transform: "translate(0 -16)" }, g);
         el("rect", { width: t.length * 6.2 + 12, height: 13, rx: 3 }, tg);
         el("text", { x: 6, y: 10 }, tg).textContent = t;
@@ -1260,29 +1270,40 @@
     }
     mark();
   }
+  // what is chosen: a box and its links, or one link the arrows stepped to and its two ends
   function mark() {
+    if (sel) hot = null;
     const lit = new Set();
+    const any = !!sel || !!hot;
     if (sel) {
       lit.add(sel);
       for (const e of V.edges) if (e.a === sel || e.b === sel) lit.add(e.a).add(e.b);
     }
+    if (hot) lit.add(hot.a).add(hot.b);
     for (const n of V.nodes)
       n.el.classList.toggle(
         "dim",
-        !!sel && !lit.has(n) && !(V.frame && n.inFrame && sel.kind === "ext"),
+        any && !lit.has(n) && !(sel && V.frame && n.inFrame && sel.kind === "ext"),
       );
     for (const n of V.nodes) n.el.classList.toggle("sel", n === sel);
     for (const e of V.edges) {
       if (!e.el) continue;
-      const on = sel && (e.a === sel || e.b === sel);
+      const on = hot ? e === hot : sel && (e.a === sel || e.b === sel);
       e.el.classList.toggle("lit", !!on);
-      e.el.classList.toggle("dim", !!sel && !on);
+      e.el.classList.toggle("dim", any && !on);
       if (e.lab)
-        e.lab.classList.toggle("show", !!on || (!sel && e.lab.classList.contains("named")));
+        e.lab.classList.toggle("show", !!on || (!any && e.lab.classList.contains("named")));
     }
     for (const p of scene.querySelectorAll(".edges path"))
       if (p._n) p.classList.toggle("lit", p._n === sel);
-    liveEl.textContent = words(sel);
+    const said = hot
+      ? `${hot.a.label} → ${hot.b.label}${hot.label ? `: ${hot.label}` : ""} · ${DID["+-~".indexOf(hot.st)]}`
+      : words(sel);
+    liveEl.textContent = said;
+    openBtn.hidden = !(sel && opens(sel));
+    if (sel && (at < 0 || items[at].n !== sel)) at = items.findIndex((it) => it.n === sel && !it.e);
+    if (!any) at = -1;
+    counter();
   }
 
   // ---- words
@@ -1299,28 +1320,26 @@
   const machWords = (m) => {
     if (cmp < 0 || !m.known || !m.cs) return "";
     const part = (c, one, many) =>
-      ["added", "removed", "changed"]
-        .map((w, j) => c[j] && `${fmt(c[j])} ${c[j] === 1 ? one : many} ${w}`)
-        .filter(Boolean);
+      DID.map((w, j) => c[j] && `${fmt(c[j])} ${c[j] === 1 ? one : many} ${w}`).filter(Boolean);
     const all = [...part(m.cs[0], "state", "states"), ...part(m.cs[1], "move", "moves")];
     return ` · ${all.length ? all.join(", ") : "unchanged"}`;
   };
   function words(n) {
     const busy = V.busy ? " · strongest links shown, click a box for all of them" : "";
+    // the place's own words: the trail names it and the counts at the end of the row say what changed
     if (!n) {
       const r = V.ref;
       if (r.kind === "mach") {
         const by = [...new Set(r.tr.map((t) => t[3]).filter(Boolean))];
-        return `${r.name}: ${r.states.length} states, ${r.tr.length} moves${r.about ? ` · ${r.about}` : ""}${by.length ? ` · moved by ${by.join(", ")}` : ""}${machWords(r)}`;
+        return `${r.states.length} states, ${r.tr.length} moves${r.about ? ` · ${r.about}` : ""}${by.length ? ` · moved by ${by.join(", ")}` : ""}`;
       }
       if (r.kind === "grp") {
         const ks = kidsOfGroup(r);
-        return `${r.name}: ${r.why ? `${r.why} · ` : ""}${ks.length === 1 ? "1 part" : `${ks.length} parts`}${sizeWords(total(ks))}${chWords(groupCh(r))}${busy}`;
+        return `${r.why ? `${r.why} · ` : ""}${ks.length === 1 ? "1 part" : `${ks.length} parts`}${sizeWords(total(ks))}${busy}`;
       }
-      if (r.kind === "part")
-        return `${r.path}${r.about ? `: ${r.about}` : ""}${sizeWords(r)}${chWords(r.ch)}`;
+      if (r.kind === "part") return `${r.path}${r.about ? `: ${r.about}` : ""}${sizeWords(r)}`;
       const ps = r.parts;
-      return `${nameOf(r)}: ${ps.length === 1 ? "1 part" : `${ps.length} parts`}${r.groups.length ? ` in ${r.groups.length} groups` : ""}${sizeWords(r.part || total(ps))}${chWords(r.part ? r.part.ch : ps.reduce((c, P) => c.map((x, j) => x + (P.ch ? P.ch[j] : 0)), [0, 0, 0]))}${busy}`;
+      return `${ps.length === 1 ? "1 part" : `${ps.length} parts`}${r.groups.length ? ` in ${r.groups.length} groups` : ""}${sizeWords(r.part || total(ps))}${busy}`;
     }
     const uses = V.edges.filter((e) => e.a === n && e.b !== n);
     const used = V.edges.filter((e) => e.b === n && e.a !== n);
@@ -1330,7 +1349,7 @@
       t += `: ${r.st === "~" ? `${fmt(r.add)} lines added and ${fmt(r.del)} removed` : r.st === "+" ? `added, ${fmt(r.add)} lines` : `removed, ${fmt(r.del)} lines`}`;
     else if (n.kind === "file") t += ": not changed";
     else if (n.kind === "state")
-      t += `: ${uses.length} ways out${uses.length ? ` (${uses.map((e) => `${e.label} → ${e.b.label}`).join("; ")})` : ""}`;
+      t += `: ${uses.length === 1 ? "1 way out" : `${uses.length} ways out`}, ${used.length === 1 ? "1 way in" : `${used.length} ways in`}`;
     else if (n.kind === "mach") t += `: ${r.states.join(", ")}${machWords(r)}`;
     else if (r && r.kind === "grp")
       t += `: ${r.why ? `${r.why} · ` : ""}${kidsOfGroup(r)
@@ -1355,28 +1374,34 @@
     return t;
   }
   const nameOf = (r) => (r.kind === "lvl" ? (r.part ? r.part.name : r.name) : r.name);
+  // the trail of places, on one line: it folds from the left, and Up still climbs past the fold
+  // the trail is one line that loses its start first: the place itself stays in view
   function crumbs() {
     crumbEl.textContent = "";
+    const line = mk("span", "", crumbEl);
     stack.forEach((r, i) => {
-      if (i) crumbEl.append(" › ");
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = nameOf(r);
+      if (i) line.append(" › ");
+      const b = mk("button", nameOf(r), line);
       if (i === stack.length - 1) b.setAttribute("aria-current", "true");
       b.onclick = () => go(stack.slice(0, i + 1));
-      crumbEl.append(b);
     });
   }
-  // ---- the change list: what was added, removed and changed at this level
   const mk = (tag, text, parent) => {
     const x = document.createElement(tag);
     if (text) x.textContent = text;
     parent.append(x);
     return x;
   };
+  // what this level added, removed and changed, in that order: the arrows step through it, More lists it all
+  let items = [];
+  let at = -1;
+  let hot = null;
   function list() {
     chgEl.textContent = "";
     chgEl.hidden = cmp < 0;
+    items = [];
+    at = -1;
+    hot = null;
     if (cmp < 0) return;
     const t = [0, 0, 0];
     let la = 0;
@@ -1409,10 +1434,15 @@
     ["Added", "Removed", "Changed"].forEach((name, i) => {
       const L = V.nodes
         .filter((n) => listed(n) && / s\d/.test(stCls(n)) && stOf(n) === "+-~"[i])
-        .map((n) => [n.label, n]);
+        .map((n) => ({ label: n.label, n, s: i }));
       const K = ln
         .filter((e) => e.st === "+-~"[i])
-        .map((e) => [`${e.a.label} → ${e.b.label}`, e.a.x === undefined ? e.b : e.a]);
+        .map((e) => ({
+          label: `${e.a.label} → ${e.b.label}`,
+          n: e.a.x === undefined ? e.b : e.a,
+          e: e.el ? e : null,
+          s: i,
+        }));
       const c = mk("div", "", cols);
       c.className = `s${i}`;
       const [b1, bn, l1, lnn] =
@@ -1424,19 +1454,38 @@
         `${name} here: ${L.length || K.length ? [L.length && `${fmt(L.length)} ${L.length === 1 ? b1 : bn}`, K.length && `${fmt(K.length)} ${K.length === 1 ? l1 : lnn}`].filter(Boolean).join(", ") : "none"}`,
         c,
       );
-      const all = [...L, ...K];
-      for (const [label, n] of all.slice(0, 6)) {
-        const b = mk("button", label, c);
-        b.type = "button";
-        b.onclick = () => {
-          sel = n;
-          mark();
-          reveal();
-          svg.focus({ preventScroll: true });
-        };
+      for (const it of [...L, ...K]) {
+        const k = items.push(it) - 1;
+        const b = mk("button", it.label, c);
+        b.onclick = () => stepTo(k);
       }
-      if (all.length > 6) mk("span", `and ${all.length - 6} more`, c);
     });
+  }
+  // the counts of this level's changes, or where the arrows stand among them
+  function counter() {
+    stepEl.hidden = cmp < 0;
+    if (cmp < 0) return;
+    posEl.textContent = "";
+    if (at >= 0 || !items.length) {
+      posEl.textContent = items.length ? `${at + 1} of ${items.length}` : "no changes here";
+      return;
+    }
+    const c = [0, 0, 0];
+    for (const it of items) c[it.s]++;
+    c.forEach((x, i) => {
+      if (!x) return;
+      if (posEl.childNodes.length) posEl.append(" · ");
+      mk("b", `${fmt(x)} ${DID[i]}`, posEl).className = `s${i}`;
+    });
+  }
+  function stepTo(k) {
+    if (!items.length) return;
+    at = (k + items.length) % items.length;
+    const it = items[at];
+    hot = it.e;
+    sel = hot ? null : it.n;
+    mark();
+    reveal(hot ? hot.el : sel && sel.el);
   }
   // ---- camera: fit, zoom and pan, all on your input
   function bounds() {
@@ -1471,6 +1520,11 @@
   }
   function fit() {
     const [x0, y0, x1, y1] = bounds();
+    // on a touch screen the diagram is as tall as the drawing fitted to the card's width
+    if (touch) {
+      const kw = Math.min(1.25, (W() - 32) / (x1 - x0));
+      svg.style.height = `${Math.max(150, Math.min(290, (y1 - y0) * kw + 64))}px`;
+    }
     const k = Math.min(1.25, (W() - 40) / (x1 - x0), (H() - 40) / (y1 - y0));
     cam.k = k;
     cam.x = (x0 + x1) / 2 - W() / k / 2;
@@ -1496,6 +1550,7 @@
     fit();
     crumbs();
     list();
+    counter();
   }
   function go(path, from) {
     stack = path;
@@ -1551,76 +1606,88 @@
   let drag = null;
   let downOn = null;
   svg.addEventListener("pointerdown", (ev) => {
-    svg.focus();
+    if (ev.button) return;
     // the box is read on the way down: once the pointer is captured, the release lands on the map
     downOn = hit(ev);
+    const finger = ev.pointerType === "touch";
+    if (!finger) svg.focus({ preventScroll: true });
     drag = {
       x: ev.clientX,
       y: ev.clientY,
       cx: cam.x,
       cy: cam.y,
       moved: false,
+      finger,
       n: downOn,
       m: hitM(ev),
     };
-    svg.setPointerCapture(ev.pointerId);
+    // a finger is never captured, so it scrolls the card; a mouse drags the map
+    if (!finger) svg.setPointerCapture(ev.pointerId);
   });
   svg.addEventListener("pointermove", (ev) => {
     if (!drag) return;
     const dx = ev.clientX - drag.x;
     const dy = ev.clientY - drag.y;
-    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
-    if (!drag.moved) return;
+    if (Math.abs(dx) + Math.abs(dy) > (drag.finger ? 8 : 3)) drag.moved = true;
+    if (!drag.moved || drag.finger) return;
     cam.x = drag.cx - dx / cam.k;
     cam.y = drag.cy - dy / cam.k;
     apply();
   });
+  svg.addEventListener("pointercancel", () => {
+    drag = null;
+  });
   svg.addEventListener("pointerup", () => {
     const d = drag;
     drag = null;
-    if (d && !d.moved && d.m) go(pathTo(d.m));
-    else if (d && !d.moved) {
+    if (!d || d.moved) return;
+    // on a touch screen the diagram is a picture: a tap opens it full screen
+    if (d.finger) still();
+    else if (d.m) go(pathTo(d.m));
+    else {
       sel = d.n;
       mark();
     }
   });
-  // the map takes its own presses, so a card never opens it as a still picture
+  // the map takes its own presses: a card opens it as a still picture only when Full screen asks
   svg.addEventListener("click", (ev) => ev.preventDefault());
   // the double-click lands on the map too, so it opens the box the second press went down on
-  svg.addEventListener("dblclick", (ev) => enter(hit(ev) || downOn));
+  svg.addEventListener("dblclick", (ev) => {
+    if (!touch) enter(hit(ev) || downOn);
+  });
+  // a plain scroll is the card's, so it scrolls past the map; a pinch or ⌘- or Ctrl-scroll zooms at the pointer
   svg.addEventListener(
     "wheel",
     (ev) => {
+      if (!ev.ctrlKey && !ev.metaKey) return;
       ev.preventDefault();
       const r = svg.getBoundingClientRect();
-      if (ev.ctrlKey || Math.abs(ev.deltaY) > Math.abs(ev.deltaX) * 2)
-        zoom(
-          Math.exp(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.0015)),
-          ev.clientX - r.left,
-          ev.clientY - r.top,
-        );
-      else {
-        cam.x += ev.deltaX / cam.k;
-        cam.y += ev.deltaY / cam.k;
-        apply();
-      }
+      zoom(
+        Math.exp(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.002)),
+        ev.clientX - r.left,
+        ev.clientY - r.top,
+      );
     },
     { passive: false },
   );
-  // keep the chosen box in view
-  const reveal = () => {
-    const [vx, vy, vw, vh] = [cam.x, cam.y, W() / cam.k, H() / cam.k];
-    if (
-      sel.x - sel.w / 2 < vx ||
-      sel.x + sel.w / 2 > vx + vw ||
-      sel.y - sel.h / 2 < vy ||
-      sel.y + sel.h / 2 > vy + vh
-    ) {
-      cam.x = sel.x - vw / 2;
-      cam.y = sel.y - vh / 2;
-      apply();
-    }
-  };
+  // bring the chosen box or link into view, and closer when the map is drawn too small to read
+  function reveal(target) {
+    if (!target || touch) return;
+    const n = target._n;
+    const b = n
+      ? { x: n.x - n.w / 2, y: n.y - n.h / 2, width: n.w, height: n.h }
+      : target.getBBox();
+    const vw = () => W() / cam.k;
+    const vh = () => H() / cam.k;
+    const x1 = b.x + b.width;
+    const y1 = b.y + b.height;
+    if (cam.k >= 0.6 && b.x >= cam.x && x1 <= cam.x + vw() && b.y >= cam.y && y1 <= cam.y + vh())
+      return;
+    if (cam.k < 0.6) cam.k = Math.min(1, (W() - 40) / b.width, (H() - 40) / b.height);
+    cam.x = b.x + b.width / 2 - vw() / 2;
+    cam.y = b.y + b.height / 2 - vh() / 2;
+    apply();
+  }
   const step = (dx, dy) => {
     const ns = V.nodes;
     if (!sel) {
@@ -1643,29 +1710,64 @@
     }
     if (best) sel = best;
   };
+  // Full screen: the diagram whole, as it stands, goes to the app's picture viewer as a still picture
+  function still() {
+    const [x0, y0, x1, y1] = bounds();
+    const was = [svg.getAttribute("viewBox"), svg.getAttribute("aria-label")];
+    svg.setAttribute("viewBox", `${x0 - 24} ${y0 - 24} ${x1 - x0 + 48} ${y1 - y0 + 48}`);
+    svg.setAttribute(
+      "aria-label",
+      `${stack.map(nameOf).join(" › ")}${cmp >= 0 ? `, with ${CMP[cmp].label}` : ""}: ${liveEl.textContent}`,
+    );
+    // the card's bridge (window.inf) copies the drawing at once; a page with none opens nothing
+    window.inf?.picture?.(svg);
+    svg.setAttribute("viewBox", was[0]);
+    svg.setAttribute("aria-label", was[1]);
+  }
   svg.addEventListener("keydown", (ev) => {
     const k = ev.key;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
     const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     if (arrows[k]) {
       step(...arrows[k]);
       mark();
-      if (sel) reveal();
+      if (sel) reveal(sel.el);
     } else if (k === "Enter") enter(sel);
     else if (k === "Escape" || k === "Backspace") {
       // at the top with nothing chosen, Escape is left for the card around the map
-      if (!sel && stack.length < 2) return;
-      if (sel) {
+      if (!sel && !hot && stack.length < 2) return;
+      if (sel || hot) {
         sel = null;
+        hot = null;
         mark();
       } else upOne();
     } else if (k === "+" || k === "=") zoom(1.25);
     else if (k === "-") zoom(0.8);
     else if (k === "0") fit();
+    else if (k === "f" || k === "F") still();
+    else if (k === "]" && cmp >= 0) stepTo(at + 1);
+    else if (k === "[" && cmp >= 0) stepTo(at < 0 ? -1 : at - 1);
     else return;
     ev.preventDefault();
   });
-  root.querySelector("[data-up]").onclick = upOne;
-  root.querySelector("[data-fit]").onclick = fit;
+  const press = (q, f) => {
+    $(q).onclick = f;
+  };
+  press("[data-up]", upOne);
+  press("[data-fit]", fit);
+  press("[data-zo]", () => zoom(0.8));
+  press("[data-zi]", () => zoom(1.25));
+  press("[data-fs]", still);
+  press("[data-open]", () => enter(sel));
+  press("[data-next]", () => stepTo(at + 1));
+  press("[data-prev]", () => stepTo(at < 0 ? -1 : at - 1));
+  press("[data-more]", () => {
+    moreEl.hidden = !moreEl.hidden;
+    moreBtn.setAttribute("aria-expanded", String(!moreEl.hidden));
+  });
+  if (!touch)
+    $("[data-keys]").textContent =
+      "Click or arrows choose · Enter goes in · Esc back · [ ] step through changes · ⌘-scroll zooms · F full screen";
   // a comparison opens at the deepest level that still holds every change
   const where = () => {
     let P = null;
@@ -1693,18 +1795,22 @@
     for (const M of machs) if (M.st) meet(pathTo(M));
     return P && P.length ? P : [top];
   };
-  const cmpEl = root.querySelector("[data-cmps]");
-  const cmpBtns = [-1, ...CMP.keys()].map((i) => {
-    const b = mk("button", i < 0 ? "None" : CMP[i].label || `Comparison ${i + 1}`, cmpEl);
-    b.type = "button";
-    b.setAttribute("aria-pressed", String(i < 0));
-    b.onclick = () => turn(i);
+  const cmpEl = $("[data-cmps]");
+  // one toggle per comparison: pressed shows what it changed, pressed again shows the map alone
+  const cmpBtns = [...CMP.keys()].map((i) => {
+    const label = CMP[i].label || `Comparison ${i + 1}`;
+    const b = mk("button", label, cmpEl);
+    b.setAttribute("aria-pressed", "false");
+    b.onclick = () => turn(cmp === i ? -1 : i);
     return b;
   });
+  const pressed = () => {
+    for (const [j, x] of cmpBtns.entries()) x.setAttribute("aria-pressed", String(j === cmp));
+  };
   cmpEl.hidden = !CMP.length;
   function turn(i) {
     compare(i);
-    for (const [j, x] of cmpBtns.entries()) x.setAttribute("aria-pressed", String(j - 1 === i));
+    pressed();
     if (cmp >= 0) return go(where());
     // a place that only the comparison drew is gone now, so the view climbs to one that is still there
     const gone = (x) => x.gone || (x.kind === "part" && !opensPart(x));
@@ -1712,15 +1818,22 @@
     while (path.length > 1 && gone(path[path.length - 1])) path = path.slice(0, -1);
     go(path);
   }
-  new ResizeObserver(() => V && fit()).observe(svg);
+  // a narrow card puts the comparison buttons under More
+  let wide = 0;
+  new ResizeObserver(() => {
+    if (root.clientWidth === wide) return;
+    wide = root.clientWidth;
+    const narrow = wide < 560;
+    root.classList.toggle("narrow", narrow);
+    (narrow ? $("[data-mcmp]") : $(".bar")).insertBefore(cmpEl, narrow ? null : $(".zoom"));
+    if (V) fit();
+  }).observe(root);
   const open = D.open || {};
   // the problems listed are the map files' own: an older file a comparison reads is history
   const listed = [...bad];
   if (Number.isInteger(open.changes) && CMP[open.changes]) {
     compare(open.changes);
-    for (const [j, x] of cmpBtns.entries()) {
-      x.setAttribute("aria-pressed", String(j - 1 === open.changes));
-    }
+    pressed();
   }
   // a part or machine the open comparison removed is a place too, while that comparison is on
   function removedPlace(L) {

@@ -744,6 +744,13 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
         storeListeners = storeListeners.filter(function (l) { return l !== listener; });
       };
     },
+    // One of the body's own drawings in the picture viewer, as it stands, when
+    // its script asks: a playable preview's drawings are its controls, which a
+    // press opens nothing from (INF-3107), so its own Full screen asks here.
+    picture: function (drawing) {
+      if (!caps.pictures || !drawing || drawing.localName !== "svg") return;
+      post({ type: "image", index: 0, pictures: [drawingPicture(drawing)], asked: true });
+    },
     stage: function (name, value) {
       var json = value === undefined ? undefined : JSON.stringify(value);
       if (json === undefined) delete form.staged[String(name)];
@@ -1940,4 +1947,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-11IJY9f+gsWWwCdaBrxSR1S3KDeCJmjCldnD03/9KBk=";
+export const FRAME_BRIDGE_SHA256 = "sha256-c7GQY256rcMIs4503XI6vaEj9YxcoDN3/ByhnhVHQXo=";

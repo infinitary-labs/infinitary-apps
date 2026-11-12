@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "map-view-polish",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A project map on a card is easier to read and opens full screen",
+      "body": "The bar under a project map on a card is now two short rows: where you are with the zoom buttons, then what is chosen with the number of changes and two arrows that step through each one. The totals, the list of changes and the keys sit behind More. Scrolling over the map scrolls the card; zoom with the buttons, the keys, a pinch or by holding Command while you scroll. Full screen, or F, opens the map in the picture viewer. On a phone the map shows as a picture that a tap opens.",
+      "picture": {
+        "dark": "map-view-polish-dark.webp",
+        "light": "map-view-polish-light.webp",
+        "alt": "A card's state machine map with its two-row bar: the trail, comparison and zoom buttons, then the description with 7 added and 6 changed beside two arrows"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

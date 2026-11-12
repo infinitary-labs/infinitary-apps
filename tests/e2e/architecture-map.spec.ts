@@ -108,6 +108,9 @@ async function choose(map: Locator, body: FrameLocator, label: string): Promise<
   throw new Error(`the arrows never chose ${label}; the map says: ${await said(body)}`);
 }
 
+/** Words read as themselves inside a pattern. */
+const escaped = (words: string) => words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 /** Chooses each box of `labels` in turn and goes into it with Enter. */
 async function goIn(map: Locator, body: FrameLocator, labels: string[]): Promise<void> {
   for (const label of labels) {
@@ -165,6 +168,21 @@ test("the map on a card goes in by keys, opens a state machine and turns on a co
         await expect(body.locator(`[data-box="${state}"]`)).not.toContainText(
           /added|removed|changed/,
         );
+    });
+
+    // The captain: "the diagram part needs the ability to full screen like picture views". A card
+    // with the map is a playable preview, whose drawings a press opens nothing from, so the map asks.
+    await test.step("F opens the machine whole in the picture viewer, and Escape closes it", async () => {
+      await pressKey(map, "f");
+      const viewer = page.getByRole("dialog", { name: /^Pictures from / });
+      await expect(viewer).toBeVisible();
+      // The viewer shows the still picture's words as its caption.
+      await expect(viewer).toContainText(
+        new RegExp(`${escaped(machine.name)}, with ${escaped(rebuild.label)}`),
+      );
+      await page.keyboard.press("Escape");
+      await expect(viewer).toHaveCount(0);
+      await expect(here(body)).toHaveText(machine.name);
     });
   } finally {
     await launched.close();

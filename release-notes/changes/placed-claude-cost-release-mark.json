@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-claude-cost-release-mark",
+      "reason": "Tests only: the placed Claude cost-hold test's stand-in command waits for its release by watching the mark file itself instead of its folder, so on macOS it no longer misses the release while other work churns the disk, and the next inference always arrives."
+    }
+  ]
+}

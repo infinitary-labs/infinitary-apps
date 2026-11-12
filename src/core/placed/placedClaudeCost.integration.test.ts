@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -114,6 +114,10 @@ it("holds a placed Claude crewmate at the next model boundary without losing its
     ])) as { dir: string };
     workDir = prepared.dir;
     expect(typeof workDir).toBe("string");
+    // The running tool's command ends once this mark holds anything; it is made
+    // empty before the command starts, and the test appends to it to release it.
+    const release = join(workDir, "release-cost");
+    writeFileSync(release, "", { flag: "wx" });
     const usage = new UsageStore(db);
     const limits = new CostLimitStore(db);
     const events: FmEvent[] = [];
@@ -192,7 +196,12 @@ it("holds a placed Claude crewmate at the next model boundary without losing its
           usage: { input_tokens: 42, output_tokens: 0 },
         },
       });
-      const command = `node -e 'const fs=require("fs");const w=fs.watch(".",done);function done(){if(fs.existsSync("release-cost"))w.close()}fs.writeFileSync("cost-tool-ready","ready");done()'`;
+      // The command watches release-cost itself as reachMark does, reading it once
+      // the watch is in place, never through the folder: on macOS a folder's watch is
+      // FSEvents, which held or dropped the release's event past the wait below
+      // while other work churned the disk, so the command never ended and the
+      // next inference never came (INF-2578).
+      const command = `node -e 'const fs=require("fs");const w=fs.watch("release-cost");const look=()=>{if(fs.readFileSync("release-cost","utf8")!=="")w.close()};w.on("change",look);setImmediate(()=>setImmediate(look));fs.writeFileSync("cost-tool-ready","ready")'`;
       writeAnthropicToolUse(res, 0, {
         id: "toolu_placed_cost",
         name: "Bash",
@@ -221,7 +230,7 @@ it("holds a placed Claude crewmate at the next model boundary without losing its
     await vi.waitFor(() =>
       expect(toolLines().some((line) => line.kind === "tool" && line.result === null)).toBe(true),
     );
-    writeFileSync(join(workDir, "release-cost"), "go");
+    appendFileSync(release, "go");
     await vi.waitFor(() => expect(next).toBeDefined(), { timeout: 5_000 });
     if (!next) throw new Error("the next placed inference did not arrive");
     await vi.waitFor(() =>
@@ -248,7 +257,7 @@ it("holds a placed Claude crewmate at the next model boundary without losing its
       }),
     );
   } finally {
-    if (workDir) writeFileSync(join(workDir, "release-cost"), "go");
+    if (workDir) appendFileSync(join(workDir, "release-cost"), "go");
     await supervisor?.disposeAll();
     await api.close();
   }

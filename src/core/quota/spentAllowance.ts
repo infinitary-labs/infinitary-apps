@@ -63,10 +63,50 @@ export function heldAgainst(
   return spentAllowanceOf(snapshot, accountId, now);
 }
 
+/**
+ * What a spent-allowance hold is observed against, so a later reading can
+ * end it before its reset (`AccountVault.noteReading`): xAI's 402 takes the
+ * limiting window of the latest reading (`heldAgainst`), and a refusal that
+ * names its own reset (Claude's) keeps the lowest percent left the sensor's
+ * own latest reading showed, before any refusal is laid over it. Without
+ * that, a reset the vendor gives back early - Claude's Fable reset, which
+ * keeps the week's reset time - left the account held and its meter at 0%
+ * until the old reset passed.
+ */
+export function spentAllowanceHold(
+  cutOff: CutOff,
+  spent: SpentAllowance | undefined,
+  sensedLeft: number | undefined,
+): { cutOff: CutOff; seen?: { leftPercent: number } } {
+  if (spent)
+    return {
+      cutOff: { ...cutOff, resetsAt: spent.resetsAt },
+      seen: { leftPercent: spent.leftPercent },
+    };
+  if (cutOff.class === "no_headroom" && cutOff.resetsAt !== undefined && sensedLeft !== undefined) {
+    return { cutOff, seen: { leftPercent: sensedLeft } };
+  }
+  return { cutOff };
+}
+
+/** The lowest percent left in one account's reading, when the sensor read it. */
+export function sensedLeftOf(
+  snapshot: QuotaSnapshotView | null | undefined,
+  accountId: string,
+): number | undefined {
+  const view = snapshot?.providers.find((entry) => entry.accountId === accountId);
+  return view?.status === "ok" ? lowestLeft(view.windows) : undefined;
+}
+
 /** What recording a cut-off on this Mac reaches (the vault, the pushed readings, the quota clock). */
 export type SpentAllowanceSeams = {
   providerOf(accountId: string): string | undefined;
   latest(): QuotaSnapshotView | undefined;
+  /**
+   * The lowest percent left in the sensor's own latest reading of the
+   * account, before any refusal is laid over it; undefined before one.
+   */
+  sensedLeft(accountId: string): number | undefined;
   /** `AccountVault.noteCutOff`. */
   hold(accountId: string, cutOff: CutOff, seen?: { leftPercent?: number }): void;
   /** Whether a spent allowance stands on the account after `hold`. */
@@ -83,7 +123,8 @@ export type SpentAllowanceSeams = {
  * account's latest reading, and that window reads 0% left until then, the
  * way a Claude refusal is laid over its meter - otherwise the hold alone
  * would not keep this Mac's routing away. With no reset to hold against
- * the vault keeps it an ordinary failed turn.
+ * the vault keeps it an ordinary failed turn. Either hold keeps what the
+ * reading showed (`spentAllowanceHold`).
  */
 export function recordCutOff(
   seams: SpentAllowanceSeams,
@@ -92,11 +133,8 @@ export function recordCutOff(
   now: number,
 ): void {
   const spent = heldAgainst(cutOff, seams.providerOf(accountId), seams.latest(), accountId, now);
-  seams.hold(
-    accountId,
-    spent ? { ...cutOff, resetsAt: spent.resetsAt } : cutOff,
-    spent ? { leftPercent: spent.leftPercent } : undefined,
-  );
+  const held = spentAllowanceHold(cutOff, spent, seams.sensedLeft(accountId));
+  seams.hold(accountId, held.cutOff, held.seen);
   if (spent && seams.holding(accountId)) {
     seams.refuse(accountId, { windowId: spent.window.id, resetsAt: spent.resetsAt, at: now });
     seams.refresh();

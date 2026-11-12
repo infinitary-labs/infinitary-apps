@@ -15,9 +15,14 @@ import type {
 } from "../accounts/credentialHealth";
 import { CredentialHealthService } from "../accounts/credentialHealthService";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
+import { createNormalizerState, fmEventsFromClaudeMessage } from "../claude/claudeEvents";
 import { claudeAvailableModels } from "../claude/claudeModels";
 import { readClaudeStore } from "../claude/claudeQuota";
 import { appPathsFor } from "../paths";
+import { createQuotaFetcher } from "../quota/fetchQuota";
+import { PushedQuotaStore, withRejectedReadings } from "../quota/pushedQuota";
+import { lowestLeft, recordCutOff } from "../quota/spentAllowance";
+import { openInMemoryDatabase } from "../storage/db";
 import type { AuthInteractionBridge } from "./piAuth";
 
 /**
@@ -867,12 +872,167 @@ describe("a typed cut-off on the account", () => {
     expect(heard).toEqual([id]);
   });
 
-  it("never ends a hold that did not record its reading, or a refusal, on a reading", async () => {
+  it("keeps a lower reading than the one it saw, and ends on a reading above that", async () => {
+    const world = claudeWorld();
+    const { vault, id } = await signedInClaude(world);
+    vault.noteCutOff(
+      id,
+      { class: "no_headroom", resetsAt: world.facts.now + 60_000 },
+      { leftPercent: 20 },
+    );
+    // The sensor catching up with the refusal: the hold now stands on 0%.
+    expect(vault.noteReading(id, 0)).toBe(false);
+    expect(vault.cutOff(id)).toMatchObject({ class: "no_headroom", leftPercent: 0 });
+    // The allowance came back, though not above the reading first seen.
+    expect(vault.noteReading(id, 20)).toBe(true);
+    expect(vault.cutOff(id)).toBeUndefined();
+  });
+
+  // Reported: after a Fable reset, Claude's "weekly (with overage)" meter read 0
+  // in Infinitary while every other meter was green and the Claude client
+  // served. The client streams the Fable limit's refusal as
+  // seven_day_overage_included with the week's reset; a Fable reset gives the
+  // usage back but keeps that reset time. Wired as homeQuota wires the sensor,
+  // the refusal and the hold; only the vendor is stood in, in the client's
+  // stream shape and the usage endpoint's (fetchQuota.test.ts's capture).
+  it("ends a Claude refusal's hold and its 0% meter once a reading after a Fable reset shows the allowance back", async () => {
+    const world = claudeWorld({ now: Date.parse("2026-11-10T17:00:00Z") });
+    const { vault, id } = await signedInClaude(world);
+    const pushed = new PushedQuotaStore(openInMemoryDatabase());
+    const fableWeekResets = Date.parse("2026-11-14T17:00:00Z");
+    const usage = (fableUsed: number) => ({
+      five_hour: { utilization: 12, resets_at: "2026-11-11T20:00:00Z" },
+      seven_day: { utilization: 41, resets_at: "2026-11-14T17:00:00Z" },
+      extra_usage: { is_enabled: false, utilization: 0 },
+      limits: [
+        { kind: "session", group: "session", percent: 12, resets_at: "2026-11-11T20:00:00Z" },
+        { kind: "weekly_all", group: "weekly", percent: 41, resets_at: "2026-11-14T17:00:00Z" },
+        {
+          kind: "weekly_scoped",
+          group: "weekly",
+          percent: fableUsed,
+          resets_at: "2026-11-14T17:00:00Z",
+          scope: { model: { id: null, display_name: "Fable" } },
+        },
+      ],
+    });
+    let answer = usage(98);
+    // homeQuota's sensor wiring.
+    const sensedLeft = new Map<string, number>();
+    const refresh = createQuotaFetcher({
+      auth: {
+        accounts: () => [
+          {
+            accountId: id,
+            accountLabel: "Personal",
+            quotaId: "claude",
+            piId: "anthropic",
+            providerLabel: "Claude",
+          },
+        ],
+        resolve: async () => ({ apiKey: "stand-in", usingOAuth: true }),
+      },
+      http: async () => ({ status: 200, json: answer }),
+      models: () => [],
+      now: () => world.facts.now,
+      onAccepted: (accountId, windows) => {
+        vault.noteAccepted(accountId);
+        const left = lowestLeft(windows);
+        if (left !== undefined) sensedLeft.set(accountId, left);
+        if (left !== undefined && vault.noteReading(accountId, left)) {
+          for (const window of pushed.windowsFor(accountId)) {
+            if (window.status === "rejected")
+              pushed.record(accountId, { ...window, status: "allowed", at: world.facts.now });
+          }
+        }
+      },
+      overlay: (view, now) =>
+        view.accountId ? withRejectedReadings(view, pushed.windowsFor(view.accountId), now) : view,
+    });
+    const zeroMeters = async () =>
+      (await refresh("demand")).snapshot.providers[0]?.windows
+        .filter((window) => window.percentRemaining === 0)
+        .map((window) => window.id);
+
+    // Fable nearly spent, then the client refuses a turn on the Fable limit.
+    await refresh("interval");
+    world.facts.now = Date.parse("2026-11-10T18:00:00Z");
+    const state = createNormalizerState();
+    for (const message of [
+      {
+        type: "rate_limit_event",
+        rate_limit_info: {
+          status: "rejected",
+          resetsAt: fableWeekResets / 1000,
+          rateLimitType: "seven_day_overage_included",
+          overageStatus: "rejected",
+          overageDisabledReason: "out_of_credits",
+          isUsingOverage: false,
+        },
+      },
+      {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "You've hit your Fable limit" }],
+        },
+        parent_tool_use_id: null,
+        error: "rate_limit",
+      },
+      {
+        type: "result",
+        subtype: "success",
+        is_error: true,
+        result: "You've hit your Fable limit",
+        api_error_status: 429,
+        total_cost_usd: 0,
+        modelUsage: {},
+      },
+    ]) {
+      const out = fmEventsFromClaudeMessage(message, "task-1", state);
+      // homeQuota's recordClaudeRateLimit and noteCutOff.
+      if (out.rateLimit?.windowId) {
+        pushed.record(id, {
+          windowId: out.rateLimit.windowId,
+          status: out.rateLimit.status,
+          ...(out.rateLimit.resetsAt !== undefined ? { resetsAt: out.rateLimit.resetsAt } : {}),
+          at: world.facts.now,
+        });
+      }
+      const cutOff = out.failure?.cutOff;
+      if (cutOff) {
+        recordCutOff(
+          {
+            providerOf: (accountId) => vault.get(accountId)?.providerId,
+            latest: () => undefined,
+            sensedLeft: (accountId) => sensedLeft.get(accountId),
+            hold: (accountId, held, seen) => vault.noteCutOff(accountId, held, seen),
+            holding: (accountId) => vault.cutOff(accountId)?.class === "no_headroom",
+            refuse: () => {},
+            refresh: () => {},
+          },
+          id,
+          cutOff,
+          world.facts.now,
+        );
+      }
+    }
+    expect(vault.cutOff(id)).toMatchObject({ class: "no_headroom", resetsAt: fableWeekResets });
+    expect(await zeroMeters()).toEqual(["seven_day_overage_included"]);
+
+    // The Fable reset is used: the usage answer is green, the week's reset unchanged.
+    world.facts.now = Date.parse("2026-11-11T17:00:00Z");
+    answer = usage(3);
+    expect(await zeroMeters()).toEqual([]);
+    expect(vault.cutOff(id)).toBeUndefined();
+  });
+
+  it("holds against the first reading after a hold that recorded none, and never ends a refusal on a reading", async () => {
     const world = claudeWorld();
     const { vault, id } = await signedInClaude(world);
     vault.noteCutOff(id, { class: "no_headroom", resetsAt: world.facts.now + 60_000 });
     expect(vault.noteReading(id, 90)).toBe(false);
-    expect(vault.cutOff(id)?.class).toBe("no_headroom");
+    expect(vault.cutOff(id)).toMatchObject({ class: "no_headroom", leftPercent: 90 });
 
     const refused = claudeWorld();
     const held = await signedInClaude(refused);

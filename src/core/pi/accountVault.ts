@@ -136,9 +136,10 @@ export type AccountCutOff = {
   /** When a spent allowance returns, epoch ms (`no_headroom` only). */
   resetsAt?: number;
   /**
-   * The lowest percent left the sensor read when a spent allowance was
-   * observed (`noteCutOff`): a later reading that shows more ends the hold
-   * early (`noteReading`), as after a top-up.
+   * The lowest percent left the sensor read since a spent allowance was
+   * observed (`noteCutOff`, then `noteReading`): a later reading that shows
+   * more ends the hold early, as after a top-up or a reset the vendor gave
+   * back before the one it named.
    */
   leftPercent?: number;
   stamp: CredentialStamp;
@@ -780,13 +781,24 @@ export class AccountVault {
 
   /**
    * A fresh allowance reading showed this much left. A spent allowance that
-   * was observed against a lower reading ends: credits were added before
-   * the reset. Answers whether a hold ended.
+   * was observed against a lower reading ends: credits were added, or the
+   * vendor reset the allowance, before the reset it named. A reading lower
+   * than the one observed, or the first one for a hold observed before any,
+   * is the sensor catching up with the refusal, so the hold keeps it.
+   * Answers whether a hold ended.
    */
   noteReading(accountId: string, leftPercent: number): boolean {
     const standing = this.cutOff(accountId);
-    if (standing?.class !== "no_headroom" || standing.leftPercent === undefined) return false;
-    if (leftPercent <= standing.leftPercent) return false;
+    if (standing?.class !== "no_headroom") return false;
+    if (standing.leftPercent === undefined || leftPercent < standing.leftPercent) {
+      const account = this.registry.accounts.find((entry) => entry.id === accountId);
+      if (account?.cutOff) {
+        account.cutOff = { ...account.cutOff, leftPercent };
+        this.saveRegistry();
+      }
+      return false;
+    }
+    if (leftPercent === standing.leftPercent) return false;
     this.clearCutOff(accountId);
     return true;
   }

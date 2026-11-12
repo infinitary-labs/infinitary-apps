@@ -154,6 +154,9 @@ export function startHomeQuota(options: {
     }
     return vault.resolveForQuota(accountId);
   };
+  // The lowest percent left in each account's latest sensed reading, before
+  // a refusal is laid over it: what a Claude refusal is held against.
+  const sensedLeft = new Map<string, number>();
   const endRefusedReadings = (accountId: string) => {
     for (const window of pushedQuota.windowsFor(accountId)) {
       if (window.status === "rejected") {
@@ -221,6 +224,8 @@ export function startHomeQuota(options: {
           // More left than when the allowance was refused: credits were
           // added, so the hold and its refused reading end now.
           const left = lowestLeft(windows);
+          if (left === undefined) sensedLeft.delete(accountId);
+          else sensedLeft.set(accountId, left);
           if (left !== undefined && vault.noteReading(accountId, left))
             endRefusedReadings(accountId);
         },
@@ -286,6 +291,7 @@ export function startHomeQuota(options: {
         {
           providerOf: (id) => vault.get(id)?.providerId,
           latest: () => quota.latest(),
+          sensedLeft: (id) => sensedLeft.get(id),
           hold: (id, held, seen) => vault.noteCutOff(id, held, seen),
           holding: (id) => vault.cutOff(id)?.class === "no_headroom",
           refuse: (id, refused) =>
@@ -304,6 +310,7 @@ export function startHomeQuota(options: {
     contextLine: () => quotaContextLine(quota.latest()),
     forgetLogin: (accountId) => {
       pushedQuota.forget(accountId);
+      sensedLeft.delete(accountId);
       quota.forgetAccount(accountId);
       void quota.refresh("account-changed");
     },

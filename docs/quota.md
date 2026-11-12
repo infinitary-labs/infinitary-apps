@@ -120,7 +120,10 @@ A Pi failure is prose, with one typed exception: xAI's `402` (credits spent) is 
 `piEvents` types it as `no_headroom` with no reset; the host fills the reset where the hold is recorded (`recordCutOff` in `src/core/quota/spentAllowance.ts`, and `ownAccounts` on a computer that runs work), from the limiting window of that sign-in's latest reading on the computer where the refusal happened.
 A 402 with no reset to hold against stays an ordinary failed turn, retried as before.
 On this Mac the hold also lays a `rejected` reading over that window, the way Claude's refusal is laid over its meter, so the sign-in reads 0% left until the reset and routing skips it; `servesThere` already skips a held sign-in on a computer.
-The hold keeps the lowest percent left the reading showed (`AccountCutOff.leftPercent`), and a later allowance reading that shows more ends it early (`AccountVault.noteReading`, from the sensor's `onAccepted`), as after a top-up; a Claude hold records none and clears only as before.
+The hold keeps the lowest percent left the reading showed (`AccountCutOff.leftPercent`), and a later allowance reading that shows more ends it early (`AccountVault.noteReading`, from the sensor's `onAccepted`), as after a top-up; a lower reading is the sensor catching up with the refusal, so the hold keeps that lower one.
+A Claude refusal names its own reset, and its hold keeps the lowest percent left of the sensor's own latest reading of the account, before any refusal is laid over it (`spentAllowanceHold`).
+So a reset Claude gives back early, such as a Fable reset, which keeps the week's reset time, ends the hold and its refused reading at the next allowance reading instead of leaving the meter at 0% until the old reset.
+A hold observed before any reading of the account keeps the first reading after it.
 The failure's record keeps the class beside the prose, so the feed line reads `no_headroom`, and the crewmate's lane waits without turns (`docs/inbox.md`).
 The pushed reading's `status` is kept on its window (`pushed_quota.status`, migration 51); a reading from before the column has none, which is unknown, never `allowed`, and its `resets_at` was stored in epoch seconds, so a reset is trusted only on a `rejected` reading.
 The rules above still hold: only a 401 renews, and "sign in again" comes only from proof.

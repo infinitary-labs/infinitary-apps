@@ -94,12 +94,13 @@ describe("lowestLeft", () => {
 });
 
 describe("recordCutOff", () => {
-  function seams(provider: string, reading: QuotaSnapshotView | undefined) {
+  function seams(provider: string, reading: QuotaSnapshotView | undefined, sensed?: number) {
     const calls: unknown[][] = [];
     let held = false;
     const seam: SpentAllowanceSeams = {
       providerOf: () => provider,
       latest: () => reading,
+      sensedLeft: () => sensed,
       hold: (id, cutOff, seen) => {
         calls.push(["hold", id, cutOff, seen]);
         // The vault holds a spent allowance only with a reset.
@@ -142,6 +143,16 @@ describe("recordCutOff", () => {
     const { seam, calls } = seams("xai", snapshot([{ id: "credits", label: "Credits" }]));
     recordCutOff(seam, "acct_grok", { class: "no_headroom" }, NOW);
     expect(calls).toEqual([["hold", "acct_grok", { class: "no_headroom" }, undefined]]);
+  });
+
+  // Reported: a Fable reset left Claude's refused meter at 0% and the account
+  // held until the week's reset, because the hold kept no reading to end on.
+  it("holds a refusal that names its own reset against the sensor's lowest reading", () => {
+    const { seam, calls } = seams("anthropic-claude", undefined, 2);
+    recordCutOff(seam, "acct_claude", { class: "no_headroom", resetsAt: RESET }, NOW);
+    expect(calls).toEqual([
+      ["hold", "acct_claude", { class: "no_headroom", resetsAt: RESET }, { leftPercent: 2 }],
+    ]);
   });
 
   it("passes another provider's cut-off through as it was", () => {

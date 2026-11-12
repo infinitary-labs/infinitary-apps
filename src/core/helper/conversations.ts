@@ -13,7 +13,7 @@ import { JobManager } from "../jobs/jobManager";
 import { Ticker } from "../orchestrator/ticker";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
-import { heldAgainst } from "../quota/spentAllowance";
+import { heldAgainst, sensedLeftOf, spentAllowanceHold } from "../quota/spentAllowance";
 import type { SessionBinding } from "../session/session";
 import { placedLeftovers } from "../tasks/leftoverPrograms";
 import type { ComputerAccounts } from "./accounts";
@@ -120,19 +120,19 @@ export function ownAccounts(
         .then((loaded) => {
           if (!loaded) return;
           // A spent allowance with no reset of its own (xAI's 402) takes the
-          // limiting window of this computer's latest reading of the account.
+          // limiting window of this computer's latest reading of the account;
+          // either kind keeps what that reading showed, which lays no refusal
+          // over it here.
+          const reading = loaded.allowance?.();
           const spent = heldAgainst(
             cutOff,
             loaded.vault.get(accountId)?.providerId,
-            loaded.allowance?.(),
+            reading,
             accountId,
             Date.now(),
           );
-          loaded.vault.noteCutOff(
-            accountId,
-            spent ? { ...cutOff, resetsAt: spent.resetsAt } : cutOff,
-            spent ? { leftPercent: spent.leftPercent } : undefined,
-          );
+          const held = spentAllowanceHold(cutOff, spent, sensedLeftOf(reading, accountId));
+          loaded.vault.noteCutOff(accountId, held.cutOff, held.seen);
         })
         .catch((error: unknown) =>
           log(`a cut-off on ${accountId} was not recorded: ${messageOf(error)}`),

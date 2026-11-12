@@ -259,7 +259,7 @@ export type SetupExtras = {
    */
   movePick?: (
     shape: WorkShape,
-    options: { withoutProvider?: string },
+    options: { withoutProvider?: string; pool?: import("@core/routing/router").RoutingPool },
   ) => { provider: string; id: string } | undefined;
   noteCutOff?: (accountId: string, cutOff: import("@shared/authFailure").CutOff) => void;
   /** A model's Settings name (`ModelSlots.nameOf`). */
@@ -493,7 +493,14 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
           },
           servedChoice: (taskId: string) => routedChoices.get(taskId),
           // A move's evaluation, never recorded until it is committed.
-          preview: (_prompt: string, shape: WorkShape, options: { withoutProvider?: string }) => {
+          preview: (
+            _prompt: string,
+            shape: WorkShape,
+            options: {
+              withoutProvider?: string;
+              pool?: import("@core/routing/router").RoutingPool;
+            },
+          ) => {
             const choice = extras.movePick?.(shape, options);
             return {
               result: {

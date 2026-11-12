@@ -708,7 +708,8 @@ After checking that the task is still active and its turn idle, it commits the r
 The sign-in card comes down, the lane's waiting rows are due at once with their spent attempts given back (`InboxStore.movedProvider`), and the task reopens in the same working copy.
 Between two Pi providers the same conversation resumes on the new model.
 To or from Claude, the new backend cannot reopen the conversation, so a new one starts and is told it moved (`CrewmateRestart` `moved`), with the brief and the earlier transcript's path, as an unopenable one is.
-A task on another computer does not move: it stays on that computer's own subscriptions.
+A task on a computer that runs work moves the same way among that computer's own sign-ins, never this Mac's (`docs/helper.md`, "A task's model"): the router evaluates it with that computer's pool (`CrewMachines.served`), no account of this Mac's is selected or recorded, and it reopens there bound to that computer's account that lists the new model.
+That computer must be in reach, since its conversation reopens there: out of reach, the move is refused in words and nothing changes, and a computer that has not said what it serves has no other model to offer.
 
 ## Requested crew speed
 

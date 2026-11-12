@@ -71,7 +71,7 @@ The same provider refusal in a row is no outage that waiting ends: the retry wou
     A model the first mate names itself still takes the captain's words.
 - An answer keeps the same-words count, so an answer that meets the same refusal again makes the lane stuck at once and tells the first mate again.
 - While nobody answers, the lane holds nothing deliverable, so the task counts as idle and the idle ladder's reminders and then the stall card follow.
-- A task on a computer that runs work cannot move to another model yet, so its notice offers a steer or a fresh restart.
+- A task on a computer that runs work moves among that computer's own sign-ins, so its notice names another model only when one of those serves it.
 
 While a lane's guidance is deliverable, the idle ladder reads the task as moving (`docs/report-sort.md`, "The idle ladder").
 The inbox sweep keeps an unfinished task's lane when its saved conversation is absent or its recorded activity is not yet resumable; neither fact makes the task gone.

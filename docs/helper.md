@@ -1154,6 +1154,7 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   Sign it in to one in Settings → Intelligence."
   When a cut-off alone withholds the sign-in that would serve it (`heldThere`, `PlacedAccounts.signInWait`), the task waits as queued work instead, and starts once that sign-in serves again (above, "Runs on").
   A task waiting for its computer chooses its model once that computer is back, and a task reopened after a restart binds the same way, by the model its record names, so it binds the account it started on while that account still lists the model.
+  A started task here moves to another model among these same sign-ins, by the sign-in card's Move, the first mate's answer to a task stuck at its provider, or a model the captain names (`TaskMoves.planMove`, `docs/task-record.md`, "Moving a started task to another provider"), and reopens here bound the same way.
 - **The first mate's card.**
   Asked to sign a computer in, the first mate calls `app_change` `device-sign-in { deviceId, provider }`, and the host files one card from the computer's own entry: "Sign in to Codex on Mac mini", with Sign in beside Not now.
   Its button opens Intelligence with that sign-in started there (`signInOn` on the open effect); the first mate starts nothing and never sees what is typed.

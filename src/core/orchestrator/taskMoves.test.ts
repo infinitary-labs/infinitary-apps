@@ -25,7 +25,9 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import type { CrewMachines } from "../placed/crewMachines";
+import type { SessionSpec } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
@@ -375,9 +377,10 @@ describe("a started task's move", () => {
       ok: false,
       text: `${handle(queued)} is ${describeStatus(queued)}; only started work moves.`,
     });
+    // Its conversation would reopen on a computer this app cannot reach (INF-3714, piece 2).
     expect(await h.supervisor.moves.requestMove("elsewhere", { by: "captain" })).toEqual({
       ok: false,
-      text: `${handle(elsewhere)} runs on another computer, so it stays on that computer's own subscriptions.`,
+      text: `${handle(elsewhere)} stays where it runs: ${moveOutOfReach("the other computer")}`,
     });
     expect(
       await h.supervisor.moves.requestMove(taskId, { by: "firstmate", model: "xai/grok-5" }),
@@ -440,6 +443,146 @@ describe("a started task's move", () => {
     expect(await h.supervisor.moves.requestMove("bare", { by: "firstmate" })).toEqual({
       ok: false,
       text: `${handle(record)} has no provider on its record to move off.`,
+    });
+  });
+
+  /**
+   * INF-3714's piece 2, approved by the captain ("Ask the first mate, and
+   * stop the retry after three identical refusals"): a started task on a
+   * computer that runs work moves in place to another model among that
+   * computer's own sign-ins, so the sign-in card's Move and the first
+   * mate's answer to a stuck task work there too. This Mac's own sign-ins
+   * would pick Grok; only the Mac mini's sign-ins hold Claude.
+   */
+  describe("on a computer that runs work (INF-3714)", () => {
+    const COPILOT = { provider: "github-copilot", id: "gpt-5.1" };
+    const CLAUDE = { provider: "anthropic-claude", id: "claude-fable-5" };
+    const GROK = { provider: "xai", id: "grok-5" };
+
+    function onTheMini(reach: { ready: boolean; said: boolean }) {
+      const moved = fakeCrewmate({ model: CLAUDE, sessionId: "s-moved-there" });
+      const opened: SessionSpec[] = [];
+      const factory = {
+        backend: "pi" as const,
+        controlProfile: PI_CONTROL_PROFILE,
+        open: async (spec: SessionSpec) => {
+          opened.push(spec);
+          return moved;
+        },
+      };
+      // What the Mac mini last said it serves: Copilot, where the task runs,
+      // and Claude under its own account.
+      const pool = {
+        available: [COPILOT, CLAUDE],
+        catalog: [],
+        note: "Studio Mac mini's own sign-ins (github-copilot, anthropic-claude): 2 models",
+        place: "Studio Mac mini",
+        accounts: new Map([
+          ["github-copilot", "mini-copilot"],
+          ["anthropic-claude", "mini-claude"],
+        ]),
+        modelAccounts: new Map([
+          ["github-copilot/gpt-5.1", "mini-copilot"],
+          ["anthropic-claude/claude-fable-5", "mini-claude"],
+        ]),
+      };
+      // A computer that has said nothing of its sign-ins serves an empty pool,
+      // as PlacedAccounts.served builds it.
+      const silent = {
+        ...pool,
+        available: [],
+        accounts: new Map<string, string>(),
+        modelAccounts: new Map<string, string>(),
+      };
+      const served = vi.fn(async () => (reach.said ? pool : silent));
+      const machines = {
+        computers: () => [MINI],
+        ready: () => reach.ready,
+        takesMoves: () => true,
+        nameOf: (id: string) => NAMES[id],
+        placeOf: (id: string) => ({ label: NAMES[id], where: `on ${NAMES[id]}` }),
+        signInWait: () => undefined,
+        folders: () => ({ work: "/work/there", sessions: "/sessions/there" }),
+        factories: () => ({ pi: factory, claude: { ...factory, backend: "claude" as const } }),
+        served,
+        servingAccount: () => undefined,
+        accountOf: () => undefined,
+        cutOffOf: () => undefined,
+        knows: () => false,
+      } as unknown as CrewMachines;
+      const selectForSpawn = vi.fn(() => "home-account");
+      const h = setup(fakeCrewmate({ model: COPILOT }), {
+        machines,
+        routedModel: COPILOT,
+        accounts: {
+          selectForSpawn,
+          reselectForResume: () => ({ changed: false }),
+          labelOf: () => "Personal",
+        },
+        // The router's pick off the provider it runs on, among the pool it is handed.
+        movePick: (_shape, options) =>
+          (options.pool?.available ?? [GROK]).find(
+            (model) => model.provider !== options.withoutProvider,
+          ),
+      });
+      const record = seedTask(h.tasks, {
+        id: "there",
+        title: "Fix the meter",
+        branch: "fm/task-there",
+        sessionFile: "/sessions/there/s-there.jsonl",
+        model: COPILOT,
+        status: "completed",
+        deviceId: MINI,
+      });
+      return { h, record, opened, moved, served, selectForSpawn };
+    }
+
+    it("moves it to a model that computer's own sign-ins serve, bound to its account there", async () => {
+      const { h, record, opened, selectForSpawn } = onTheMini({ ready: true, said: true });
+      const plan = await h.supervisor.moves.planMove(record.id);
+      expect("refused" in plan ? plan.refused : plan.choice).toEqual(CLAUDE);
+      const asked = await h.supervisor.moves.requestMove(record.id, {
+        by: "firstmate",
+        from: COPILOT.provider,
+        offered: "anthropic-claude/claude-fable-5",
+      });
+      expect(asked).toEqual({
+        ok: true,
+        text: `Moving ${handle(record)} to claude-fable-5 on Claude; it keeps its key, branch and working copy.`,
+      });
+      await vi.waitFor(() => expect(opened).toHaveLength(1));
+      // It reopens there, on the new model, bound to the Mac mini's own Claude account.
+      expect(opened[0]).toMatchObject({ machine: MINI, model: CLAUDE });
+      expect(opened[0]?.binding).toMatchObject({ accountId: "mini-claude" });
+      // No account of this Mac's is chosen or recorded for it.
+      expect(selectForSpawn).not.toHaveBeenCalled();
+      const after = h.tasks.get(record.id);
+      expect(after?.model).toBe("anthropic-claude/claude-fable-5");
+      expect(after?.accountId).toBeNull();
+      expect(after?.deviceId).toBe(MINI);
+      expect(h.tasks.timeline(record.id).map((event) => [event.actor, event.text])).toContainEqual([
+        "firstmate",
+        "the first mate moved it from Copilot to claude-fable-5 on Claude",
+      ]);
+    });
+
+    it("refuses in words while that computer is out of reach or serves no other model", async () => {
+      const away = onTheMini({ ready: false, said: true });
+      expect(await away.h.supervisor.moves.requestMove(away.record.id, { by: "captain" })).toEqual({
+        ok: false,
+        text: `${handle(away.record)} stays where it runs: ${moveOutOfReach(NAMES[MINI] ?? "")}`,
+      });
+      const silent = onTheMini({ ready: true, said: false });
+      expect(
+        await silent.h.supervisor.moves.requestMove(silent.record.id, { by: "captain" }),
+      ).toEqual({
+        ok: false,
+        text: `No other provider signed in on ${NAMES[MINI]} can take ${handle(silent.record)} now, so it stays on Copilot.`,
+      });
+      for (const { h, record, opened } of [away, silent]) {
+        expect(opened).toEqual([]);
+        expect(h.tasks.get(record.id)?.model).toBe("github-copilot/gpt-5.1");
+      }
     });
   });
 });

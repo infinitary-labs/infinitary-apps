@@ -150,6 +150,14 @@ export class TaskMoves {
     return PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name ?? provider;
   }
 
+  /** The providers a move routes among, in words: this Mac's own, or the computer's the task runs on. */
+  private signedInWhere(taskId: string): string {
+    const machine = this.host.machineOf(taskId);
+    return machine === LOCAL_MACHINE_ID
+      ? "signed-in provider"
+      : `provider signed in on ${this.computerName(machine)}`;
+  }
+
   /** Why a move refuses the model its card offered, when the app would now pick another. */
   private offerGone(
     plan: { record: TaskRecord; choice: { provider: string; id: string } },
@@ -163,13 +171,21 @@ export class TaskMoves {
   /**
    * Where a move would take a started task now (INF-849): the router's
    * evaluation for its own shape, with its current provider left out - or
-   * the model named, as R0 pins one - never recorded. A refusal is text:
-   * a task not started or closed, one on another computer, none that serves.
+   * the model named, as R0 pins one - never recorded. A task on a computer
+   * that runs work is routed among that computer's own sign-ins. A refusal
+   * is text: a task not started or closed, one whose computer is out of
+   * reach, none that serves.
    */
   async planMove(taskId: string, model?: string) {
     const source = this.modelMoveSource(taskId);
     if ("refused" in source) return source;
-    const prepared = await this.options.router?.prepare();
+    // A task on a computer that runs work moves among that computer's own
+    // sign-ins, never this Mac's (docs/helper.md, "Its own sign-ins").
+    const machine = this.host.machineOf(taskId);
+    // A computer that has said nothing of its sign-ins serves an empty pool.
+    const pool =
+      machine === LOCAL_MACHINE_ID ? undefined : await this.options.machines?.served(machine);
+    const prepared = await this.options.router?.prepare(pool ? { pool } : {});
     return this.preparedMove(taskId, model, prepared);
   }
 
@@ -183,9 +199,11 @@ export class TaskMoves {
     const handle = `${record.key || record.id} "${record.title}"`;
     if (record.kind !== "work" || record.status !== "active")
       return { refused: `${handle} is ${describeStatus(record)}; only started work moves.` };
-    if (this.host.machineOf(taskId) !== LOCAL_MACHINE_ID)
+    const machine = this.host.machineOf(taskId);
+    // Its conversation reopens there on the new model, so that computer must be in reach.
+    if (machine !== LOCAL_MACHINE_ID && this.options.machines?.ready(machine, taskId) !== true)
       return {
-        refused: `${handle} runs on another computer, so it stays on that computer's own subscriptions.`,
+        refused: `${handle} stays where it runs: ${moveOutOfReach(this.computerName(machine))}`,
       };
     return { record };
   }
@@ -232,7 +250,7 @@ export class TaskMoves {
       return {
         refused: model
           ? `${model} cannot take ${handle} now, so it stays where it runs.`
-          : `No other signed-in provider can take ${handle} now, so it stays on ${this.providerName(from ?? "")}.`,
+          : `No other ${this.signedInWhere(taskId)} can take ${handle} now, so it stays on ${this.providerName(from ?? "")}.`,
       };
     if (record.model === offeringKey(choice))
       return { refused: `${handle} already runs on ${offeringKey(choice)}.` };
@@ -306,9 +324,14 @@ export class TaskMoves {
             ? `moved by ${who} to the model named`
             : `moved by ${who} off ${from ?? "its provider"}`,
         );
-        const selecting = this.options.accounts?.selectForSpawn(taskId, choice.provider, {
-          model: choice.id,
-        });
+        // A task on a computer that runs work binds that computer's own
+        // account there when it reopens; no account of this Mac's is chosen.
+        const selecting =
+          this.host.machineOf(taskId) === LOCAL_MACHINE_ID
+            ? this.options.accounts?.selectForSpawn(taskId, choice.provider, {
+                model: choice.id,
+              })
+            : undefined;
         const accountId = selecting instanceof Promise ? await selecting : selecting;
         if (runtime && runtime.turn.busy) {
           runtime.turn.queueMove(ask);

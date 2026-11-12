@@ -17,6 +17,9 @@ import {
   minutes,
   settle,
 } from "../../../tests/helpers/idleLadderHarness";
+import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
+import type { CrewMachines } from "../placed/crewMachines";
+import type { SessionSpec } from "../session/session";
 import { ActivityStore } from "../storage/activityStore";
 import { STUCK_REFUSAL_LIMIT } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -250,6 +253,82 @@ describe("a crewmate stuck at its provider", () => {
     expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-5-5");
     expect(moved.promptCalls.join("\n")).toContain("carry on with the handoff");
     expect(crewmate.promptCalls.length).toBeGreaterThan(0);
+    await endTurn(moved, taskId, "Finished the handoff on the other model.");
+    expect(inbox.allFor(taskId)).toEqual([]);
+  });
+
+  // INF-3714's piece 2: a task on a computer that runs work is offered, and
+  // makes, the move among that computer's own sign-ins, never this Mac's.
+  it("offers and makes the move among a computer's own sign-ins for a task that runs there", async () => {
+    const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
+    const claude = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+    const grok = { provider: "xai", id: "grok-5" };
+    const MINI = "mini-device";
+    const moved = fakeCrewmate({ model: claude });
+    const opened: SessionSpec[] = [];
+    const factory = {
+      backend: "claude" as const,
+      controlProfile: PI_CONTROL_PROFILE,
+      open: async (spec: SessionSpec) => {
+        opened.push(spec);
+        return moved;
+      },
+    };
+    // The Mac mini serves Codex and Claude under its own accounts; this Mac's would pick Grok.
+    const machines = {
+      computers: () => [MINI],
+      ready: () => true,
+      takesMoves: () => true,
+      nameOf: () => "Studio Mac mini",
+      placeOf: () => ({ label: "Studio Mac mini", where: "on Studio Mac mini" }),
+      signInWait: () => undefined,
+      folders: () => ({ work: "/work/there", sessions: "/sessions/there" }),
+      factories: () => ({ claude: factory, pi: { ...factory, backend: "pi" as const } }),
+      served: async () => ({
+        available: [codex, claude],
+        catalog: [],
+        note: "Studio Mac mini's own sign-ins (openai-codex, anthropic-claude): 2 models",
+        accounts: new Map([
+          [codex.provider, "mini-codex"],
+          [claude.provider, "mini-claude"],
+        ]),
+        modelAccounts: new Map([[`${claude.provider}/${claude.id}`, "mini-claude"]]),
+      }),
+      servingAccount: () => undefined,
+      accountOf: () => undefined,
+      cutOffOf: () => undefined,
+      knows: () => false,
+    } as unknown as CrewMachines;
+    const harness = await stopped(
+      {
+        machines,
+        routedModel: codex,
+        movePick: (_shape, options) =>
+          (options.pool?.available ?? [grok]).find(
+            (model) => model.provider !== options.withoutProvider,
+          ),
+        modelName: (model) => (model.id === claude.id ? "Claude Opus 5.5" : model.id),
+      },
+      fakeCrewmate({ model: codex }),
+    );
+    const { supervisor, taskId, tasks, inbox, ops } = harness;
+    // Its conversation is held on the Mac mini.
+    tasks.placement.setDevice(taskId, MINI);
+    await supervisor.steer.steerCrewmate(taskId, "carry on with the handoff");
+    await settle();
+    await refuseUntilStuck(harness);
+    expect(stuckWakes(ops)).toHaveLength(1);
+    expect(stuckWakes(ops)[0]).toContain("unstick move, to move it to Claude Opus 5.5 off Codex");
+
+    expect(await supervisor.turns.unstick(taskId, "move")).toMatchObject({ ok: true });
+    await settle();
+    await settle();
+    // It reopened on the Mac mini, on Claude under the Mac mini's own account.
+    expect(opened.at(-1)).toMatchObject({ machine: MINI, model: claude });
+    expect(opened.at(-1)?.binding).toMatchObject({ accountId: "mini-claude" });
+    expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-5-5");
+    expect(tasks.get(taskId)?.deviceId).toBe(MINI);
+    expect(moved.promptCalls.join("\n")).toContain("carry on with the handoff");
     await endTurn(moved, taskId, "Finished the handoff on the other model.");
     expect(inbox.allFor(taskId)).toEqual([]);
   });

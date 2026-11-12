@@ -47,6 +47,11 @@ export const modelChoiceSchema = z.object({
   floorPercent: z.number(),
   /** Ranked as the router ranked them: the picked one and those eligible beside it. */
   candidates: z.array(modelChoiceCandidateSchema),
+  /**
+   * Set when models with no allowance reading took turns for the choice
+   * (INF-3782): the picked one was the one picked least recently.
+   */
+  turns: z.literal(true).optional(),
 });
 export type ModelChoice = z.infer<typeof modelChoiceSchema>;
 
@@ -98,6 +103,9 @@ export function modelChoiceLine(
     case "recency":
       return "It is the newest model in its line, with the same allowance outlook as the others.";
     case "runway-order":
+      if (choice.turns) {
+        return "No allowance is read for these models, so they take turns; it was the one picked least recently.";
+      }
       return "No model had a current allowance reading, so the usual order decided.";
     case "only-candidate":
       return "It was the only model that could take this work.";

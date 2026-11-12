@@ -20,6 +20,7 @@ import type { ModelSlots } from "./modelSlots";
 import type { PlacedWorkData, PlacedWorkScores, RankedModel } from "./placedWork";
 import { tierFor } from "./policy";
 import {
+  allowanceless,
   fallbackRank,
   isDowngrade,
   type PiModelRef,
@@ -294,15 +295,30 @@ export class Router {
     // R0's tier is whichever slot the named model sits in; a model in no
     // slot (off, but still pinnable) leaves the engine's medium default.
     const bucket = tier.bucket ?? (askPin ? this.slotOf(askPin) : undefined);
+    // Taking turns (INF-3782) reads, for each model a person placed that has
+    // no allowance row, the newest routing row that chose it.
+    const unowned = options.pool?.unowned ? kept(options.pool.unowned) : undefined;
+    const catalogKeys = new Set(catalog.map((model) => servedModelKey(model)));
+    const unownedKeys = new Set((unowned ?? []).map((ref) => `${ref.provider}/${ref.id}`));
+    const turnTakers = routable?.placed
+      ? routable.models.filter(
+          (ref) =>
+            !catalogKeys.has(`${ref.provider}/${ref.id}`) &&
+            (allowanceless(ref) || unownedKeys.has(`${ref.provider}/${ref.id}`)),
+        )
+      : [];
     const input: RoutingInput = {
       catalog,
       available,
       ...(routable ? { slotted: routable.models, slotNote: routable.note } : {}),
-      ...(options.pool?.unowned ? { unowned: kept(options.pool.unowned) } : {}),
+      ...(unowned ? { unowned } : {}),
       pins: kept(askPin ? [askPin, ...pins] : pins),
       ...(bucket ? { bucket } : {}),
       ...(this.options.capabilityFor ? { capabilityFor: this.options.capabilityFor } : {}),
       ...(options.avoidProvider ? { avoidProvider: options.avoidProvider } : {}),
+      ...(turnTakers.length >= 2
+        ? { turns: { lastPicked: this.options.decisions.lastChosenIds(turnTakers) } }
+        : {}),
       needs: { contextTokens: estimateTokens(prompt) + PROMPT_CONTEXT_HEADROOM_TOKENS },
     };
     const decision = route(input);
@@ -396,6 +412,7 @@ export class Router {
                   : decision.decidedBy,
               floorPercent: CREW_NEAR_FLOOR_PERCENT,
               computer: pool?.place ?? "home",
+              ...(decision.turns ? { turns: true as const } : {}),
             },
           }
         : {}),

@@ -35,6 +35,8 @@ import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./ca
  *    semantics, adjusted for placed work: highest first); unmeasurable
  *    signals keep runway order among themselves, and a newer id of the
  *    same model line in the same band still overrides (recency within slot).
+ *    Models no allowance is read for, placed by a person, take turns: the
+ *    one picked least recently goes (`turns`, INF-3782).
  * 4. Pins always win. Unoffered providers never become a choice.
  *
  * Two boundaries sit outside the ladder:
@@ -102,6 +104,16 @@ export type RoutingInput = {
    * Never descends a tier for it, and a pin still wins.
    */
   avoidProvider?: string;
+  /**
+   * Taking turns (INF-3782): set only when `slotted` is the person's own
+   * placement, never the slot record's fallback. Each model with no
+   * allowance row maps to the id of its newest chosen routing row; a model
+   * absent from the map was never picked. When the leader of a slot is such
+   * a model and two or more of them tie with it, the one picked least
+   * recently is chosen, so they take turns. Previews write no row, so they
+   * never advance the turn.
+   */
+  turns?: { lastPicked: ReadonlyMap<string, number> };
 };
 
 export type RoutingDecision = {
@@ -140,6 +152,12 @@ export type RoutingDecision = {
    * inside the band, same-line recency, runway order, or the only candidate.
    */
   decidedBy?: DecidedBy;
+  /**
+   * Set when models with no allowance reading took turns for this choice
+   * (INF-3782); `decidedBy` stays `runway-order`, the closed set's word for
+   * a choice no reading made.
+   */
+  turns?: true;
 };
 
 export type DecidedBy =
@@ -230,7 +248,7 @@ export function fallbackRank(requested: Slot, served: Slot): number {
  * band checks; a base-runtime provider the catalog does not offer (a
  * models.json provider) is still never a choice.
  */
-function allowanceless(ref: PiModelRef): boolean {
+export function allowanceless(ref: PiModelRef): boolean {
   return (
     isCustomApiProvider(ref.provider) ||
     (isOfferedProvider(ref.provider) && !isSensedProvider(ref.provider))
@@ -338,6 +356,8 @@ export function route(input: RoutingInput): RoutingDecision {
       model: { provider: string; id: string } & BandRank;
       ref: PiModelRef;
       slot: Slot;
+      /** A model no allowance is read for, which may take turns (INF-3782). */
+      turnTaker?: true;
     }[] = input.catalog.flatMap((model) => {
       const ref = toPiRef(model);
       if (!availableKeys.has(servedModelKey(model))) return [];
@@ -372,6 +392,7 @@ export function route(input: RoutingInput): RoutingDecision {
     // models, an offered provider's models whose allowance nobody reads, and
     // a computer's models the quota catalog does not list. Only slot
     // membership admits them.
+    const unreadKeys = new Set(unread.map((ref) => `${ref.provider}/${ref.id}`));
     const extras = [...unread, ...input.available.filter(allowanceless), ...(input.unowned ?? [])];
     const seenExtra = new Set<string>();
     for (const ref of extras) {
@@ -389,7 +410,14 @@ export function route(input: RoutingInput): RoutingDecision {
         skipped.push(miss);
         continue;
       }
-      inSlot.push({ model: { provider: ref.provider, id: ref.id }, ref, slot: candidateSlot });
+      inSlot.push({
+        model: { provider: ref.provider, id: ref.id },
+        ref,
+        slot: candidateSlot,
+        // A sensed model whose reading has not landed yet is not one: its
+        // allowance will be read, so it never takes turns.
+        ...(unreadKeys.has(key) ? {} : { turnTaker: true as const }),
+      });
     }
     if (inSlot.length === 0) continue;
     // Reviewer placement (R9): another provider at this slot when one can
@@ -431,6 +459,44 @@ export function route(input: RoutingInput): RoutingDecision {
         recencyOverride = true;
       }
     }
+    // Taking turns (INF-3782): when the leader is a model no allowance is
+    // read for, it and every other such model in the pool tie - nothing
+    // ranks them - so the one picked least recently goes, never-picked
+    // first in list order. A model with a newer id of its line among them
+    // sits out, as same-line recency says.
+    const turnLines: string[] = [];
+    let turnTakers: typeof ranked = [];
+    const turns = input.turns;
+    if (turns && chosen.turnTaker) {
+      const tied = ranked.filter((entry) => entry.turnTaker);
+      const takers = tied.filter(
+        (entry) => !tied.some((other) => newerId(other.model.id, entry.model.id) === true),
+      );
+      if (takers.length >= 2) {
+        turnTakers = takers;
+        const last = (entry: (typeof ranked)[number]) =>
+          turns.lastPicked.get(`${entry.ref.provider}/${entry.ref.id}`) ?? Number.NEGATIVE_INFINITY;
+        chosen = takers.reduce((best, entry) => (last(entry) < last(best) ? entry : best));
+        recencyOverride = false;
+        const previous = takers.reduce((best, entry) => (last(entry) > last(best) ? entry : best));
+        const names = takers.map((entry) => `${entry.ref.provider}/${entry.ref.id}`).join(", ");
+        turnLines.push(`no allowance is read for ${names}; they take turns`);
+        if (previous !== chosen && last(previous) !== Number.NEGATIVE_INFINITY) {
+          turnLines.push(`${previous.ref.provider}/${previous.ref.id} took the previous turn`);
+        }
+        for (const entry of takers) {
+          facts.set(`${entry.ref.provider}/${entry.ref.id}`, {
+            provider: entry.ref.provider,
+            model: entry.ref.id,
+            band: "unknown",
+            status:
+              entry === chosen
+                ? `picked at ${candidateSlot}`
+                : `eligible at ${candidateSlot}, took turns`,
+          });
+        }
+      }
+    }
     mark(chosen.ref, `picked at ${candidateSlot}`);
     reasons.push(...skipped);
     if (candidateSlot !== bucket) {
@@ -439,23 +505,28 @@ export function route(input: RoutingInput): RoutingDecision {
     const runnerUp = ranked.find((entry) => entry !== chosen);
     const decidedBy: DecidedBy = recencyOverride
       ? "recency"
-      : !runnerUp
-        ? "only-candidate"
-        : bandOf(runnerUp.model) !== band
-          ? "band"
-          : typeof chosen.model.spendPriority === "number"
-            ? "spend-priority"
-            : "runway-order";
+      : turnTakers.length > 0
+        ? "runway-order"
+        : !runnerUp
+          ? "only-candidate"
+          : bandOf(runnerUp.model) !== band
+            ? "band"
+            : typeof chosen.model.spendPriority === "number"
+              ? "spend-priority"
+              : "runway-order";
     const pickedBy = recencyOverride
       ? "same-line recency over spend priority"
-      : typeof chosen.model.spendPriority === "number"
-        ? `spend priority ${chosen.model.spendPriority.toFixed(2)}`
-        : "runway order";
+      : turnTakers.length > 0
+        ? "taking turns, the least recently picked"
+        : typeof chosen.model.spendPriority === "number"
+          ? `spend priority ${chosen.model.spendPriority.toFixed(2)}`
+          : "runway order";
     if (highest !== ranked[0] && bandOf(highest.model) !== band) {
       reasons.push(
         `${highest.model.provider}/${highest.model.id} has a higher spend priority but ${BAND_WORDS[bandOf(highest.model)]}`,
       );
     }
+    reasons.push(...turnLines);
     reasons.push(`picked ${chosen.model.provider}/${chosen.model.id} by ${pickedBy}`);
     return {
       bucket,
@@ -464,6 +535,7 @@ export function route(input: RoutingInput): RoutingDecision {
       reasons,
       candidates: candidates(),
       decidedBy,
+      ...(turnTakers.length > 0 ? { turns: true as const } : {}),
     };
   }
 

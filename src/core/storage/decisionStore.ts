@@ -147,6 +147,8 @@ export type SelectionFacts = {
   decidedBy: CrewDecidedBy;
   floorPercent: number;
   computer: string;
+  /** Models with no allowance reading took turns for it (INF-3782). */
+  turns?: true;
 };
 
 /**
@@ -546,6 +548,27 @@ export class DecisionStore {
            AND provider IS NOT NULL ORDER BY at DESC, id DESC LIMIT 1
        )`,
     ).all(JSON.stringify(taskIds)) as Pick<RoutingDecision, "taskId" | "bucket" | "served">[];
+  }
+
+  /**
+   * Each model's newest routing row that chose it, by id, for taking turns
+   * (INF-3782): a model never chosen is absent. Seeks the
+   * `decisions_routing_model_recent` index once per model, never the history.
+   */
+  lastChosenIds(models: readonly { provider: string; id: string }[]): Map<string, number> {
+    const out = new Map<string, number>();
+    const statement = prepared(
+      this.db,
+      `SELECT id FROM decisions WHERE kind = 'routing' AND provider IS NOT NULL
+         AND provider = ? AND model = ? ORDER BY id DESC LIMIT 1`,
+    );
+    for (const model of models) {
+      const key = `${model.provider}/${model.id}`;
+      if (out.has(key)) continue;
+      const row = statement.get(model.provider, model.id) as { id: number } | undefined;
+      if (row) out.set(key, row.id);
+    }
+    return out;
   }
 
   /** The task's newest routing decision in the order it was written; undefined when it never routed. */

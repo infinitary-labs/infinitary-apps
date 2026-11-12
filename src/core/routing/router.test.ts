@@ -1,3 +1,4 @@
+import { modelChoiceLine } from "@shared/modelChoice";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CREW_NEAR_FLOOR_PERCENT } from "@shared/quotaSignals";
 import type { WorkShape } from "@shared/routingPolicy";
@@ -6,6 +7,7 @@ import type { QuotaService } from "../quota/quotaService";
 import { openInMemoryDatabase } from "../storage/db";
 import { DecisionStore } from "../storage/decisionStore";
 import { SettingsStore } from "../storage/settingsStore";
+import { modelChoiceOf } from "./modelChoice";
 import { ModelSlots } from "./modelSlots";
 import { Router } from "./router";
 
@@ -814,6 +816,105 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
         floorPercent: CREW_NEAR_FLOOR_PERCENT,
         computer: "home",
       },
+    });
+  });
+
+  // INF-3782: a person placed two custom connection models in high and the
+  // first listed one won every start. They take turns, read from the saved
+  // routing record, so a restart continues the turn and a preview, which
+  // writes nothing, never advances it.
+  describe("models no allowance is read for take turns (INF-3782)", () => {
+    const custom = "fm-custom-0123456789abcdef";
+    const opus = { provider: custom, id: "opus-5.5" };
+    const sol = { provider: custom, id: "gpt-sol-6.1" };
+    const placed = { placed: { work: [], samples: [], charges: {} } };
+
+    function world(place: boolean) {
+      const db = openInMemoryDatabase();
+      const settings = new SettingsStore(db);
+      const slots = new ModelSlots({
+        settings,
+        accounts: () => [
+          {
+            accountId: "acct-custom",
+            accountLabel: "my connection",
+            providerId: custom,
+            models: [opus, sol],
+          },
+        ],
+        quotaModels: () => undefined,
+      });
+      slots.reconcile();
+      if (place) {
+        for (const ref of [opus, sol]) slots.setSlotMembership(`${custom}/${ref.id}`, "high", true);
+      }
+      const router = () =>
+        new Router({
+          decisions: new DecisionStore(db),
+          settings,
+          quota: fakeQuota({ generatedAt: "now", models: [] }),
+          availableModels: () => [opus, sol],
+          slots,
+        });
+      return { db, router };
+    }
+
+    it("alternates starts, keeps a preview's answer and continues after a restart", () => {
+      const { db, router } = world(true);
+      const first = router();
+      expect(first.decide("task-1", "build it", UNCLEAR, placed)?.choice).toEqual(opus);
+      expect(first.preview("build it", UNCLEAR, placed)?.result.choice).toEqual(sol);
+      expect(first.preview("build it", UNCLEAR, placed)?.result.choice).toEqual(sol);
+      expect(first.decide("task-2", "build it", UNCLEAR, placed)?.choice).toEqual(sol);
+      // A fresh Router over the same saved record is a restart of the app.
+      expect(router().decide("task-3", "build it", UNCLEAR, placed)?.choice).toEqual(opus);
+
+      const choice = modelChoiceOf(
+        { id: "task-2", model: `${custom}/gpt-sol-6.1` },
+        new DecisionStore(db),
+      );
+      expect(choice?.turns).toBe(true);
+      expect(choice?.decidedBy).toBe("runway-order");
+      expect(choice?.candidates.map((candidate) => [candidate.model, candidate.picked])).toEqual([
+        [`${custom}/opus-5.5`, false],
+        [`${custom}/gpt-sol-6.1`, true],
+      ]);
+      expect(
+        modelChoiceLine(
+          choice ?? { decidedBy: "band", floorPercent: 0, candidates: [] },
+          (model) => model,
+        ),
+      ).toBe(
+        "No allowance is read for these models, so they take turns; it was the one picked least recently.",
+      );
+    });
+
+    it("keeps today's order among models the app placed only as a fallback", () => {
+      // Only OpenRouter signed in, none of its models placed or listed: the
+      // slot record's fallback puts each at medium, and they never rotate.
+      const db = openInMemoryDatabase();
+      const settings = new SettingsStore(db);
+      const models = [
+        { provider: "openrouter", id: "some/experimental-model" },
+        { provider: "openrouter", id: "other/experimental-model" },
+      ];
+      const router = new Router({
+        decisions: new DecisionStore(db),
+        settings,
+        quota: fakeQuota({ generatedAt: "now", models: [] }),
+        availableModels: () => models,
+        slots: new ModelSlots({ settings, accounts: () => [], quotaModels: () => undefined }),
+      });
+      for (const task of ["task-1", "task-2", "task-3"]) {
+        expect(router.decide(task, "build it", UNCLEAR, placed)?.choice).toEqual(models[0]);
+      }
+    });
+
+    it("counts a named model's start as its turn", () => {
+      const { router } = world(true);
+      const named = router().decide("task-1", "build it", override("opus-5.5"), placed);
+      expect(named?.choice).toEqual(opus);
+      expect(router().decide("task-2", "build it", UNCLEAR, placed)?.choice).toEqual(sol);
     });
   });
 });

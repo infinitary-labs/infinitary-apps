@@ -189,13 +189,16 @@ export class ModelSlots {
   /**
    * The routable pool for one grain: `available` narrowed to what has a
    * slot, with the fallback ladder applied and its rung named. Each model
-   * carries the slot routing will walk.
+   * carries the slot routing will walk. `placed` is set only when the slots
+   * are the person's own record, never a rung of the fallback: only models a
+   * person placed take turns (INF-3782).
    */
-  routable(available: PiModelRef[]): { models: SlottedRef[]; note: string } {
+  routable(available: PiModelRef[]): { models: SlottedRef[]; note: string; placed?: true } {
     const assigned = this.slottedOf(available);
     if (assigned.length > 0) {
       return {
         models: assigned,
+        placed: true,
         note: `${assigned.length} of ${available.length} available models have a slot`,
       };
     }

@@ -49,5 +49,6 @@ export function modelChoiceOf(
     decidedBy: facts.selection.decidedBy,
     floorPercent: facts.selection.floorPercent,
     candidates,
+    ...(facts.selection.turns ? { turns: true as const } : {}),
   };
 }

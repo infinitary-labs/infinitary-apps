@@ -32,6 +32,8 @@ import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
  * The present-workspace index seeks the closed tasks whose working copy
  * a work computer's roster may no longer hold, read at each of its
  * contacts instead of composing every task (INF-3040).
+ * The routing-model index seeks each model's newest chosen routing row,
+ * which a start reads for the models that take turns (INF-3782).
  * `migrate` (db.ts) creates them once a database reaches the newest migration.
  */
 export function createQueryIndexes(db: AppDatabase): void {
@@ -53,6 +55,8 @@ export function createQueryIndexes(db: AppDatabase): void {
     CREATE INDEX IF NOT EXISTS decisions_sort_recent ON decisions (kind, id DESC) WHERE kind = 'sort';
     CREATE INDEX IF NOT EXISTS decisions_chosen_task_at ON decisions (kind, task_id, at DESC, id DESC)
       WHERE provider IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS decisions_routing_model_recent ON decisions (provider, model, id DESC)
+      WHERE kind = 'routing' AND provider IS NOT NULL;
     CREATE INDEX IF NOT EXISTS task_events_task_kind_at ON task_events (task_id, kind, at DESC, id DESC);
     CREATE INDEX IF NOT EXISTS task_events_firstmate_action ON task_events (task_id, at, id)
       WHERE actor = 'firstmate' AND kind <> 'decided';

@@ -34566,6 +34566,10 @@
                     "picked"
                   ]
                 }
+              },
+              "turns": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [

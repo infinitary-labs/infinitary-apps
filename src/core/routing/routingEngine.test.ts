@@ -1107,3 +1107,87 @@ describe("route - allowance bands decide before spend priority (INF-1714)", () =
     expect(decision.decidedBy).toBe("band");
   });
 });
+
+// INF-3782: a person placed two custom connection models in high
+// ("opus-5.5" and "gpt-sol-6.1" in the report) and the first listed one won
+// every start. Nothing reads their allowance, so they take turns: the one
+// picked least recently goes, never-picked first in list order.
+describe("taking turns among models no allowance is read for (INF-3782)", () => {
+  const custom = "fm-custom-0123456789abcdef";
+  const opus = { provider: custom, id: "opus-5.5" };
+  const sol = { provider: custom, id: "gpt-sol-6.1" };
+  const placed = (...refs: { provider: string; id: string }[]): SlottedRef[] =>
+    refs.map((ref) => ({ ...ref, slot: "high" as const }));
+  const turnsAfter = (picks: Record<string, number>) => ({
+    lastPicked: new Map(Object.entries(picks)),
+  });
+  const high = (extra: Partial<Parameters<typeof route>[0]> = {}) =>
+    route({
+      catalog: [],
+      available: [opus, sol],
+      slotted: placed(opus, sol),
+      pins: [],
+      bucket: "high",
+      turns: turnsAfter({}),
+      ...extra,
+    });
+
+  it("picks the least recently picked, never-picked first in list order", () => {
+    const first = high();
+    expect(first.choice).toEqual(opus);
+    expect(first.turns).toBe(true);
+    expect(first.decidedBy).toBe("runway-order");
+    expect(high({ turns: turnsAfter({ [`${custom}/opus-5.5`]: 7 }) }).choice).toEqual(sol);
+    const third = high({
+      turns: turnsAfter({ [`${custom}/opus-5.5`]: 7, [`${custom}/gpt-sol-6.1`]: 9 }),
+    });
+    expect(third.choice).toEqual(opus);
+    expect(third.reasons).toContain(`${custom}/gpt-sol-6.1 took the previous turn`);
+    // The record lists the models that took turns, so Why this model can.
+    expect(third.candidates.map((fact) => [fact.model, fact.status])).toEqual([
+      ["opus-5.5", "picked at high"],
+      ["gpt-sol-6.1", "eligible at high, took turns"],
+    ]);
+  });
+
+  it("keeps list order when the placement is not the person's own", () => {
+    const fallback = high({ turns: undefined });
+    expect(fallback.choice).toEqual(opus);
+    expect(fallback.turns).toBeUndefined();
+  });
+
+  it("still serves a subscription with a reading, or one whose reading is missing, first", () => {
+    const codex = { provider: "openai-codex", id: "gpt-5.5" };
+    const read = { provider: "codex", id: "gpt-5.5", label: "gpt-5.5" };
+    for (const row of [{ ...read, effectivePercentRemaining: 5, spendPriority: -3 }, read]) {
+      const decision = high({
+        catalog: [row],
+        available: [opus, sol, codex],
+        slotted: placed(opus, sol, codex),
+        turns: turnsAfter({ [`${custom}/opus-5.5`]: 7 }),
+      });
+      expect(decision.choice).toEqual(codex);
+      expect(decision.turns).toBeUndefined();
+    }
+  });
+
+  it("lets an older model of a line sit out while the newer one takes its turns", () => {
+    const older = { provider: custom, id: "opus-5.1" };
+    const decision = high({
+      available: [opus, older, sol],
+      slotted: placed(opus, older, sol),
+      turns: turnsAfter({ [`${custom}/gpt-sol-6.1`]: 4 }),
+    });
+    expect(decision.choice).toEqual(opus);
+    expect(decision.candidates.map((fact) => fact.model)).toEqual(["opus-5.5", "gpt-sol-6.1"]);
+  });
+
+  it("lets a pin win outright", () => {
+    const pinned = high({
+      pins: [{ provider: custom, id: "opus-5.5" }],
+      turns: turnsAfter({ [`${custom}/opus-5.5`]: 9 }),
+    });
+    expect(pinned.choice).toEqual(opus);
+    expect(pinned.decidedBy).toBe("pin");
+  });
+});

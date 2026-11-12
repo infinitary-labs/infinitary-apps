@@ -33,7 +33,6 @@ import {
   reconcileStack,
   shownEntry,
   stackOf,
-  visibleCards,
   withoutKey,
   withoutShown,
 } from "./stack";
@@ -193,10 +192,6 @@ function closeHeld(s: ShellState, match: (held: OpenRecord) => boolean): Partial
       { ...s, records, unreadCardIds: s.unreadCardIds.filter((id) => !closingIds.has(id)) },
       cardIndex,
     ),
-    focusRequest:
-      records.length === 0 && visibleCards(s.cards, s.heldBackCardIds).length === 0
-        ? s.focusRequest + 1
-        : s.focusRequest,
   };
 }
 
@@ -434,7 +429,6 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
             ),
           ),
           closedThreadIds: s.closedThreadIds.filter((id) => present.has(id)),
-          focusRequest: reconciled.lostCard ? s.focusRequest + 1 : s.focusRequest,
         };
       });
       // A card landed behind the shown one: the character's notice pulse, a
@@ -453,16 +447,12 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
         if (!s.cardsSeeded) return s;
         const letThrough = letThroughUnder(s);
         const held = { letThroughCardIds: letThrough, letThroughFocus: heldProjectFocus() };
-        const { state, lostCard } = reconcileStack(s, s.cards, holdOf(held));
+        const { state } = reconcileStack(s, s.cards, holdOf(held));
         // The focus store speaks on every rest in the pill row: unchanged, nothing is written.
         if (state.heldBackCardIds === s.heldBackCardIds && letThrough === s.letThroughCardIds) {
           return s;
         }
-        return {
-          ...state,
-          ...held,
-          focusRequest: lostCard ? s.focusRequest + 1 : s.focusRequest,
-        };
+        return { ...state, ...held };
       });
     },
     prevCard: () =>

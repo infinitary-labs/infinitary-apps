@@ -22,6 +22,7 @@ import { pluginHost } from "../plugins/host";
 import { panelCommandRefusal, runPanelCommand } from "../plugins/panelCommands";
 import { cardStage } from "./cardStage";
 import { commandRefusal, type WindowFacts } from "./commandRefusals";
+import { landLostFocus, typingWhereFocusRested } from "./focusLanding";
 import { available, modalOpen } from "./focusRecovery";
 import { projectFocus } from "./projectFocus";
 import { enterCard, moveToRegion, moveToRegionToward } from "./regions";
@@ -228,9 +229,12 @@ export function closeCommandSearch(): void {
   s.setCommandSearchOpen(false);
   const opener = searchOpener;
   searchOpener = null;
-  // With nothing to give focus back to, the main message takes it, unless
-  // the command search runs next puts it somewhere itself.
-  if (!giveFocusBack(opener) && s.view === "home") s.focusMainMessage({ yields: true });
+  // With nothing to give focus back to, focus lands by the window's rule
+  // (./focusLanding): the main message while typing, unless the command
+  // search runs next puts it somewhere itself; else the shown card.
+  if (giveFocusBack(opener) || s.view !== "home") return;
+  if (typingWhereFocusRested()) s.focusMainMessage({ yields: true });
+  else landLostFocus();
 }
 
 const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {

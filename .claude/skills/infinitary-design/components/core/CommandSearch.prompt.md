@@ -28,6 +28,6 @@ A pointer resting on a row chooses it, and a click runs it.
 
 **Where focus goes.**
 Closing gives focus back at once to what had it: a field in the shell, or the field, link or picture inside the card or panel frame it was in, its caret where it was.
-When that is gone, the main message takes it.
+When that is gone, focus lands by the window's rule: the main message while the person was typing, otherwise the shown card.
 Each opening starts with an empty field and the first row chosen.
 A command chosen in it runs after focus is back, so a command that moves focus moves it from there.

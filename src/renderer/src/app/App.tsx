@@ -14,6 +14,7 @@ import { SettingsScreen } from "../settings/SettingsScreen";
 import { CommandSearch } from "./CommandSearch";
 import { cardStage } from "./cardStage";
 import { followDictationKey } from "./dictationKey";
+import { focusLanding } from "./focusLanding";
 import { guardLostFocus } from "./focusRecovery";
 import { HomeMate } from "./HomeMate";
 import { HomePrompt } from "./HomePrompt";
@@ -29,7 +30,14 @@ import { TopBar } from "./TopBar";
 
 export function App() {
   useEffect(() => guardStrayFileDrops(), []);
-  useEffect(() => guardLostFocus(giveHandedFocusBack), []);
+  useEffect(() => {
+    const landing = focusLanding();
+    const stopGuard = guardLostFocus(giveHandedFocusBack, landing);
+    return () => {
+      stopGuard();
+      landing.stop();
+    };
+  }, []);
   useEffect(() => guardFrameFocus(), []);
   useEffect(() => guardFrameActivation(), []);
   useEffect(() => guardHeldPresses(), []);

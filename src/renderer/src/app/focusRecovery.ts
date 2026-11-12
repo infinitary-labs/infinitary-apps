@@ -22,17 +22,26 @@ export function modalOpen(): boolean {
   );
 }
 
+/** Where lost focus goes, and whether it is still waiting for its place to be ready. */
+export type Landing = { land: () => void; waiting: () => boolean };
+
 /**
  * One fallback for the whole shell: if there is no usable focused control,
- * return to the available main composer. No remembered card or pager target
- * survives a blur. A live reply field (including #712's read-only send) stays
- * focused; Settings and the first-launch gate have no available composer.
- * `wayBack` goes first and says whether it put focus somewhere: the frame
- * the window's own page just took focus from by itself gets it back
- * (`giveHandedFocusBack`).
+ * `landing` puts focus where the window's rule says (./focusLanding,
+ * docs/keyboard.md "Where focus lands"). No remembered card or pager target
+ * survives a blur. A live reply field (including #712's read-only send)
+ * stays focused; Settings and the first-launch gate have no available
+ * composer. `wayBack` goes first and says whether it put focus somewhere:
+ * the frame the window's own page just took focus from by itself gets it
+ * back (`giveHandedFocusBack`). While the landing waits for its place (a
+ * card not ready yet), every change in the window asks it again.
  */
-export function guardLostFocus(wayBack: () => boolean = () => false): () => void {
+export function guardLostFocus(wayBack: () => boolean, landing: Landing): () => void {
   const recover = () => {
+    if (landing.waiting()) {
+      landing.land();
+      return;
+    }
     const active = document.activeElement;
     if (
       active &&
@@ -42,8 +51,7 @@ export function guardLostFocus(wayBack: () => boolean = () => false): () => void
     )
       return;
     if (wayBack()) return;
-    const prompt = document.querySelector<HTMLElement>('[aria-label="Task prompt"]');
-    if (prompt && available(prompt)) prompt.focus({ preventScroll: true });
+    landing.land();
   };
   // Native pointer focus and React's live reply restoration finish before
   // recovery. Mutation callbacks can otherwise run in the blur/focus gap.
@@ -56,6 +64,10 @@ export function guardLostFocus(wayBack: () => boolean = () => false): () => void
     });
   };
   const observer = new MutationObserver((records) => {
+    if (landing.waiting()) {
+      schedule();
+      return;
+    }
     const active = document.activeElement;
     // A style write elsewhere (a hidden character, an animating shell) is not
     // a focus change. Check only when the focused control, or an ancestor,

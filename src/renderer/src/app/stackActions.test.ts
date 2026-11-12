@@ -1051,7 +1051,10 @@ describe("task records on the card stack", () => {
     );
     expect(shell().focusRequest).toBe(before);
   });
-  it("returns input focus only when the final entry closes", () => {
+  // INF-3818's accepted rule: a shortcut never changes whether a person is
+  // typing, so closing the final entry asks nothing of the main message; the
+  // lost-focus fallback lands by where focus rested (focusLanding.ts).
+  it("never asks for the main message as entries close, the final one included", () => {
     const shell = () => useShellStore.getState();
     shell().openRecord("t1");
     shell().openRecord("t2");
@@ -1059,11 +1062,9 @@ describe("task records on the card stack", () => {
     shell().closeRecord();
     expect(shell().focusRequest).toBe(before);
     shell().closeRecord();
-    expect(shell().focusRequest).toBe(before + 1);
     expect(stackOf(shell())).toHaveLength(0);
     expect(shell()).toMatchObject({ firstmateBusy: false, recording: false });
-    shell().closeRecord();
-    expect(shell().focusRequest).toBe(before + 1);
+    expect(shell().focusRequest).toBe(before);
   });
   it("closes one task's record by task and keeps whatever is shown on screen", () => {
     const shell = () => useShellStore.getState();

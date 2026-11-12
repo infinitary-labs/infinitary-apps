@@ -52,6 +52,7 @@ Command search lists every window command but search itself (`SEARCHED_COMMANDS`
 Its handler stays with the code that owns what it changes, and `followWindowCommands` takes one handler for every window command, so a new one cannot be left without one ("Handlers").
 It gets a default key only where none clashes: no two commands that can work in the same place share a default key, which `src/shared/keyboard.test.ts` checks, and a window command may instead have none and be chosen by name.
 Its control shows the key hint: the command's first key after the control's words, and every key in `aria-keyshortcuts`, read from the installed map (`useCommandKeys`, "Key hints").
+A command that changes or removes what holds focus follows "Where focus lands", so repeated shortcuts chain without Escape.
 An end-to-end journey drives the feature by keys and checks the result the person came for.
 A window key goes through `pressWindowKey` (`tests/e2e/windowKeys.ts`), because Playwright's keyboard reaches the page through the debugger and skips `before-input-event`.
 `runFromSearch` runs a command by its id the way a person does in command search.
@@ -479,7 +480,7 @@ After the captain's own click or key inside the frame it rests on nothing.
 So the window's page notes which frame holds focus each time it lets focus go, and again each time a frame posts it a message, because focus moves from one frame to another without the page hearing it; a message only makes the page look, and moves nothing.
 When the page takes focus onto nothing with no press in it, it gives focus back to that frame the same way, unless something else has taken focus by the next animation frame (`giveHandedFocusBack`).
 It gives that focus back through the frame's own window, as the captain's click had put it there, not by focusing the frame element: focus put on the element would stay the page's active element after the captain's next click into another frame, so the window would go on naming the first frame, and F6, the window's gates and the frame guards would count from where the captain no longer is.
-The way back to the main message asks it first (`guardLostFocus`), so the main message never takes that focus in its place.
+The lost-focus fallback asks it first (`guardLostFocus`), so neither the main message nor the shown card takes that focus in its place.
 A click in the window's own page is the captain's: it clears focus off the frame first, or calls off giving focus back, so focus stays where the click put it.
 
 A card the captain points at - from a Tasks row, a task key, a record's Show the card - comes forward and takes the window's focus once it appears (`focusCard`), and so does a card the first mate brings forward.
@@ -504,6 +505,29 @@ A click focuses its frame and posts its message at once, and the two reach the s
 A message from a document the card has replaced, or from a card the stage prepares or keeps drawn while it leaves, is refused as before.
 The window's own keys (F6, ⌘L, ⌘K) are the main process's, so a script that keeps every key it hears cannot keep the captain in its card.
 
+## Where focus lands
+
+A shortcut never changes whether a person is typing.
+It may move focus to the thing it acted on; only the person moves the caret into a text field or out of one.
+This holds in every preset, so a key that pages, answers or puts a card aside can be pressed again at once, with no Escape between.
+
+One owner keeps one fact about the last place focus rested: whether the person was typing there (`src/renderer/src/app/focusLanding.ts`).
+Focus rests while typing in a text-like control (`typingTarget`, the same test the keys used when not typing make), inside a frame, whose control the window cannot see, and wherever a pointer put it.
+Only a key, or code that rings focus as a key would (`focusWithRing`), leaves the person not typing.
+Command search is left out of the fact, because it gives focus back itself.
+
+When the control holding focus goes away, as when the shown card pages, is answered or is put aside, the lost-focus fallback (`guardLostFocus` in `src/renderer/src/app/focusRecovery.ts`) lands by that fact:
+
+1. Typing: the main message, its words and caret as they were.
+2. Not typing: the shown card, whole and ringed, never one of its buttons, so a held Enter cannot answer it.
+   While the card that takes its place is drawn but not ready, focus waits on the card area (`[data-stage]`), out of every field, and lands on the card once it is.
+3. Not typing and no card left: the empty card area where the installed keys include plain keys ("Keys used when not typing"), so they still work; the main message otherwise.
+
+Focus that rests anywhere else, such as in a side panel, stays there when a card changes: the card stack never asks for the main message.
+Closing something that opened over the work returns focus where it was: command search gives back the control it remembered ("Command search"), and leaving Settings lands by the fact from before Settings opened.
+A pointer click that removes its own control, such as Got it, leaves the caret in the main message.
+A card the person points at, and a card the first mate brings forward, still take focus ("Cards and frames"); sending, starting a draft, dictation and recall still focus the main message.
+
 ## Command search
 
 `commands.search` (⌘K) opens command search over the whole window, home or Settings, from wherever focus is (`CommandSearch.tsx`; the design skill's `components/core/CommandSearch.prompt.md` owns its look).
@@ -513,7 +537,7 @@ While it is open its keys reach nothing underneath, and the window's other comma
 
 Closing gives focus back at once to what had it (`closeCommandSearch`), and only then does a chosen command run, so a command that moves focus moves it from there.
 When focus was inside a card's or a panel's frame, the field inside it gets it back with its caret, as when the picture viewer closes ("Cards and frames"), unless the chosen command moves focus on.
-When nothing had focus, the main message takes it, unless the chosen command puts focus somewhere itself in the same render (`focusMainMessage`'s `yields`, `focusTakenElsewhere`).
+When nothing had focus, focus lands by the rule in "Where focus lands": the main message while the person was typing, unless the chosen command puts focus somewhere itself in the same render (`focusMainMessage`'s `yields`, `focusTakenElsewhere`), and otherwise the shown card.
 Each opening starts with an empty field and the first row chosen, also when search opens again while its last closing still fades out.
 A main-process command chosen there (a size step) is asked of the main process by its id on `inf:keyboard:run`, which runs the same handler its key runs.
 

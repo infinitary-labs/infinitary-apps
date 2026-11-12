@@ -488,8 +488,8 @@ export function reconcileStack(
               : arrived.includes(card.id)),
         ).length
       : 0,
-    // A project hold is not a loss; only the shown entry’s real departure takes focus back.
-    // A question can close behind its retained record without taking its next keyboard action.
+    // Whether the shown entry really departed: a project hold is not a loss, and
+    // a question can close behind its retained record.
     lostCard: active !== undefined && !kept.has(active.id),
   };
 }

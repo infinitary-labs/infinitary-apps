@@ -1,0 +1,114 @@
+import { hasNotTypingKeys } from "@shared/keyboard";
+import { installedBindings } from "../design/core/installedKeys";
+import { focusWithRing } from "../design/focus";
+import { available, type Landing } from "./focusRecovery";
+import { typingTarget } from "./notTypingKeys";
+import { enterCard } from "./regions";
+import { useShellStore } from "./store";
+
+/**
+ * Where focus lands when the control holding it goes away (docs/keyboard.md,
+ * "Where focus lands"): a shortcut never changes whether a person is typing.
+ * This module keeps one fact about the last place focus rested - whether a
+ * person was typing there - and the lost-focus fallback (`guardLostFocus`)
+ * lands by it: in the main message while typing, else on the shown card,
+ * else on the empty card area where plain keys are installed.
+ *
+ * Typing means focus rests in a text field, inside a frame (whose control
+ * the window cannot see), or where a pointer put it. Only a key, or code
+ * that rings focus as a key would (`focusWithRing`), leaves a person not
+ * typing. Command search is left out: it gives focus back itself.
+ */
+let restedTyping = true;
+/** The shown card is coming but not ready yet: focus waits on the stage for it. */
+let waitingForCard = false;
+/** The typing fact when Settings opened, given back when it closes. */
+let typingBeforeSettings: boolean | null = null;
+
+const stage = () => document.querySelector<HTMLElement>("[data-stage]");
+
+function typingRest(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return true;
+  // The empty card area is never a field, and only a key or this module puts focus there.
+  if (target.matches("[data-stage]")) return false;
+  if (target instanceof HTMLIFrameElement || typingTarget(target)) return true;
+  return !target.matches(":focus-visible");
+}
+
+/** Starts keeping the typing fact; returns the stop. */
+function trackRest(): () => void {
+  const focusIn = (event: FocusEvent) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("[data-command-search]")) return;
+    if (target !== stage()) waitingForCard = false;
+    restedTyping = typingRest(target);
+  };
+  // A pointer leaves a person typing, also where its click focuses nothing.
+  const pointerDown = () => {
+    restedTyping = true;
+  };
+  document.addEventListener("focusin", focusIn, true);
+  document.addEventListener("pointerdown", pointerDown, true);
+  const unsubscribe = useShellStore.subscribe((s, previous) => {
+    if (s.view === previous.view) return;
+    if (s.view === "settings") typingBeforeSettings = restedTyping;
+    else if (previous.view === "settings" && typingBeforeSettings !== null) {
+      // Leaving Settings returns focus where it was: its controls are gone,
+      // and the fallback lands by the fact from before it opened.
+      restedTyping = typingBeforeSettings;
+      typingBeforeSettings = null;
+    }
+  });
+  return () => {
+    document.removeEventListener("focusin", focusIn, true);
+    document.removeEventListener("pointerdown", pointerDown, true);
+    unsubscribe();
+  };
+}
+
+/** Whether a person was typing where focus last rested. */
+export function typingWhereFocusRested(): boolean {
+  return restedTyping;
+}
+
+/** Puts focus where the rule says, with nothing usable holding it now. */
+export function landLostFocus(): void {
+  const prompt = document.querySelector<HTMLElement>('[aria-label="Task prompt"]');
+  // Settings and the first-launch gate have no available main message: nothing to land on.
+  if (!prompt || !available(prompt)) {
+    waitingForCard = false;
+    return;
+  }
+  if (restedTyping) {
+    waitingForCard = false;
+    prompt.focus({ preventScroll: true });
+    return;
+  }
+  const area = stage();
+  const card = document.querySelector<HTMLElement>('[data-window-region="card"]');
+  if (card && available(card)) {
+    waitingForCard = false;
+    enterCard(card);
+    return;
+  }
+  // The shown card is drawn but not ready: hold focus on the stage, out of
+  // every field, and land on the card when it is (`waiting`).
+  if (card && area) {
+    if (document.activeElement !== area) area.focus({ preventScroll: true });
+    waitingForCard = true;
+    return;
+  }
+  waitingForCard = false;
+  if (area && hasNotTypingKeys(installedBindings())) focusWithRing(area, { preventScroll: true });
+  else prompt.focus({ preventScroll: true });
+}
+
+/** The landing the lost-focus fallback uses, with the typing fact kept for it. */
+export function focusLanding(): Landing & { stop: () => void } {
+  const stop = trackRest();
+  return {
+    land: landLostFocus,
+    waiting: () => waitingForCard && document.activeElement === stage(),
+    stop,
+  };
+}

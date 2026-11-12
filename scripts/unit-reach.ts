@@ -63,6 +63,25 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
       "src/core/orchestrator/wakes.words.firstmate.test.ts",
     ],
   },
+  // The Claude session contract runs the seat through tests/helpers/sessionContract.ts,
+  // which pins the seat's served prompt and contract stamp from these two
+  // modules: a change to how the seat stamps its prompt passed its pull
+  // request check and failed the merge batch on both Claude harnesses.
+  {
+    owns: (path) => path === "src/core/orchestrator/seat.ts" || path === "src/core/pi/piResources.ts",
+    readers: [
+      "src/core/claude/claudeSession.contract.integration.test.ts",
+      "src/core/claude/claudeSession.contract.test.ts",
+    ],
+  },
+  // The Claude classifier test runs scripts/score-kind-classifier.ts under
+  // plain Node, which loads the provider catalog without the test runner's
+  // resolution: an import it could not load passed the pull request check and
+  // failed the merge batch.
+  {
+    owns: (path) => path === "src/shared/providers.ts",
+    readers: ["src/core/claude/claudeClassifierSession.integration.test.ts"],
+  },
 ];
 
 /**

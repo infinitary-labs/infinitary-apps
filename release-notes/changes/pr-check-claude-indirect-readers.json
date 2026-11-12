@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "pr-check-claude-indirect-readers",
+      "reason": "Changes only which tests a pull request check runs: three Claude tests that reach a changed file through another file now run there. No result a person notices."
+    }
+  ]
+}

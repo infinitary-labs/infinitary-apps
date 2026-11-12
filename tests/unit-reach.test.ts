@@ -227,6 +227,35 @@ describe("local direct unit reach", () => {
     expect(directUnitReach(["src/core/orchestrator/starts.ts", feed], pins, root)).toEqual([]);
   });
 
+  // Two changes passed their pull request checks and failed the merge batch on
+  // a Claude test that reaches them only through another file. Each change's
+  // product files, as its pull request had them when the batch ran.
+  it("routes the Claude session contract and classifier tests to the PR check for their indirect owners", () => {
+    const contracts = [
+      "src/core/claude/claudeSession.contract.integration.test.ts",
+      "src/core/claude/claudeSession.contract.test.ts",
+    ];
+    const classifier = "src/core/claude/claudeClassifierSession.integration.test.ts";
+    const readers = [classifier, ...contracts];
+    // PR 1524 stamped the seat's prompt per backend; the contract tests read
+    // the stamp through tests/helpers/sessionContract.ts.
+    const seat = ["src/core/orchestrator/seat.ts", "src/core/pi/piResources.ts"];
+    // The classifier test imports both modules directly, so it runs too.
+    for (const owner of seat) {
+      expect(directUnitReach([owner], readers, root)).toEqual(readers);
+      expect(selectLinuxReach([owner], root).run).toEqual(expect.arrayContaining(contracts));
+    }
+    // PR 1589 gave the provider catalog an import that plain Node could not
+    // load; the classifier test's scoring process loads the catalog.
+    expect(directUnitReach(["src/shared/providers.ts"], readers, root)).toEqual([classifier]);
+    expect(selectLinuxReach(["src/shared/providers.ts"], root).run).toContain(classifier);
+    // An unrelated module, and the seat's neighbour, select none of them.
+    expect(directUnitReach(["src/shared/voice.ts"], readers, root)).toEqual([]);
+    expect(directUnitReach(["src/core/orchestrator/seatDigest.ts"], contracts, root)).toEqual([]);
+    // An edited reader keeps its own three rounds.
+    expect(directUnitReach([...seat, ...contracts], contracts, root)).toEqual([]);
+  });
+
   it("does not broaden inventory coverage to unrelated files or the whole shared folder", () => {
     const inventory = "src/shared/actions.test.ts";
     expect(directUnitReach(["src/shared/voice.ts"], [inventory], root)).toEqual([]);

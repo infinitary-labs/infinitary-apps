@@ -50,6 +50,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneLook.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneRecordRules.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ReadOnlySession.swift",
+    // The last turn's whole-word cut, which every part's message box draws (MessageComposer.swift).
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/WholeWords.swift",
     "ios/Infinitary/Info.plist",
     "ios/Infinitary/PhoneLoadClock/PhoneOrbitPace.swift",
     "ios/Infinitary/PhoneLoadClock/PhoneWaitDeadline.swift",

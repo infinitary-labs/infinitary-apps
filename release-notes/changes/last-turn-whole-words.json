@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "last-turn-whole-words",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Messages above the message box no longer stop part way through a word",
+      "body": "When your last message or your first mate's reply is too long for its line above the message box, it now ends on the last whole word that fits, followed by an ellipsis. The cut moves as the window changes size, and resting on the line still shows the whole text. The iPhone and iPad app does the same on iOS 26 and later.",
+      "picture": {
+        "dark": "last-turn-whole-words-dark.webp",
+        "light": "last-turn-whole-words-light.webp",
+        "alt": "Above the message box, your message ends \"to \"Rigor\" or…\" and your first mate's reply ends \"It will…\", each cut after a whole word"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

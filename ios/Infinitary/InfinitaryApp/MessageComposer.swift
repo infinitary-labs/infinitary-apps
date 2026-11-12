@@ -150,7 +150,7 @@ struct MessageComposer: View {
         let bubble = UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 5, topTrailingRadius: 14)
         return VStack(alignment: .leading, spacing: 4) {
             BubbleColumn {
-                Text(round.you.isEmpty ? "A picture" : round.you)
+                WholeWordsLine(words: round.you.isEmpty ? "A picture" : round.you)
                     .foregroundStyle(PhoneTheme.text)
                     .padding(.vertical, 4).padding(.horizontal, 12)
                     .background(PhoneTheme.text.opacity(0.1), in: bubble)
@@ -165,7 +165,7 @@ struct MessageComposer: View {
                     MateMark(working: busy, still: reduceMotion).frame(width: 16, height: 16)
                     if let reply = round.reply {
                         Button { replyOpen = OpenedReply(round: round) } label: {
-                            Text(reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
+                            WholeWordsLine(words: reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
                                 .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityHint("Opens the whole reply")
                             .accessibilityIdentifier("\(id)-reply")
@@ -261,6 +261,45 @@ private struct BubbleColumn: Layout {
 
     private func widest(_ width: CGFloat?) -> ProposedViewSize {
         ProposedViewSize(width: width.map { $0 * 0.75 }, height: nil)
+    }
+}
+
+/// One line of words cut after its last whole word that fits, as the Mac cuts its last turn (`WholeWords`). The text
+/// keeps every word for a reader and its own ellipsis; the line only offers it the width of the words it shows. Before
+/// iOS 26 the text's own font is out of reach, so the line keeps the text's own cut.
+private struct WholeWordsLine: View {
+    let words: String
+    @Environment(\.font) private var font
+    @Environment(\.fontResolutionContext) private var fontContext
+
+    var body: some View {
+        if #available(iOS 26, *) {
+            WholeWordsFit(words: words, font: (font ?? .body).resolve(in: fontContext)) { Text(words) }
+        } else {
+            Text(words)
+        }
+    }
+}
+
+/// Offers its one text the width `WholeWords` gives for the room it is offered, so the text's own tail cut falls right
+/// after a whole word, and takes the text's size.
+@available(iOS 26, *)
+private struct WholeWordsFit: Layout {
+    let words: String
+    let font: Font.Resolved
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(offer(proposal)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        // The room offered, not the narrower size the text took, so the cut stays where it was measured.
+        subviews.first?.place(at: bounds.origin, proposal: offer(proposal))
+    }
+
+    private func offer(_ proposal: ProposedViewSize) -> ProposedViewSize {
+        guard let room = proposal.width, room.isFinite, let width = WholeWords.width(for: words, font: font.ctFont, room: room) else { return proposal }
+        return ProposedViewSize(width: width, height: proposal.height)
     }
 }
 

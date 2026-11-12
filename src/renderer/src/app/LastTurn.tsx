@@ -1,10 +1,18 @@
 import * as m from "@shared/i18n/messages.generated";
 import { KEYBOARD_COMMANDS } from "@shared/keyboard";
 import type { LastRound, LastTurn as Turn } from "@shared/lastTurn";
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { prefersReducedMotion } from "../character/reducedMotion";
 import { useRestLabel } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
+import { useWholeWords } from "../design/core/wholeWords";
 import { useCommandKeys } from "./keyHints";
 import {
   fadeKey,
@@ -36,8 +44,9 @@ import "./lastTurn.css";
  * round dissolves, even during work; the newest stays until the next message. Each
  * reply line is a button that opens that reply whole as a note
  * (./ReplyNote, docs/composer.md "The reply note"); the captain's words
- * are plain text. Resting on a cut line shows its whole text and pauses
- * the count.
+ * are plain text. A line too long for its row ends on its last whole word
+ * and an ellipsis, never part way through a word (../design/core/wholeWords);
+ * resting on a cut line shows its whole text and pauses the count.
  *
  * Its words and busy signal are shell state (./store `lastTurn`,
  * `firstmateBusy`); this component owns only the moves a class change
@@ -53,6 +62,8 @@ import "./lastTurn.css";
 export const WORKING_WORDS = m.shellLastTurnWorking();
 /** A message that was only pictures. */
 export const PICTURE_ONLY_WORDS = m.shellLastTurnPictureOnly();
+/** The lane whose width bounds each line, which the lines' own words never size. */
+const LANE = "[data-last-turn]";
 /** A leaving round or set of words is gone after --dur-fast. */
 const LEAVE_MS = 160;
 /** One whole turn of the working mark: INF-2483's chosen steady turn at 2.0 s. */
@@ -131,6 +142,23 @@ export function MateMark({ working }: { working: boolean }) {
   );
 }
 
+/**
+ * One ref for a line's words: the rest label's measure of whether they are
+ * cut, and the cut that ends them on a whole word.
+ */
+function useCuttingRef(
+  title: (node: HTMLElement | null) => void,
+  cut: (node: HTMLElement | null) => void,
+): (node: HTMLElement | null) => void {
+  return useCallback(
+    (node: HTMLElement | null) => {
+      title(node);
+      cut(node);
+    },
+    [title, cut],
+  );
+}
+
 /** What the reply's label says beside its key when its words fit. */
 const REPLY_COMMAND_WORDS = KEYBOARD_COMMANDS["firstmate.reply"].label;
 
@@ -177,6 +205,8 @@ function MateLine({
   const reply = shown?.kind === "reply" ? shown : null;
   const mateWords = reply ? reply.text : m.shellLastTurnWorking();
   const mateFit = useOverflowTitle(shown ? mateWords : undefined);
+  const mateCut = useWholeWords(shown ? mateWords : undefined, LANE);
+  const mateRef = useCuttingRef(mateFit.ref, mateCut);
   const openReplyNote = useShellStore((s) => s.openReplyNote);
   // A reply is a button that opens it whole; the working words are not.
   const Bubble = reply ? "button" : "span";
@@ -216,7 +246,7 @@ function MateLine({
                   className="said"
                   data-leaving={leaving ? "" : undefined}
                 >
-                  <span className="words" data-last-turn-words="" ref={mateFit.ref}>
+                  <span className="words" data-last-turn-words="" ref={mateRef}>
                     {mateWords}
                   </span>
                 </span>
@@ -259,6 +289,8 @@ export function LastTurnRound({
   const said = round.you.trim();
   const you = said || m.shellLastTurnPictureOnly();
   const youFit = useOverflowTitle(leaving ? undefined : you);
+  const youCut = useWholeWords(you, LANE);
+  const youRef = useCuttingRef(youFit.ref, youCut);
   return (
     <div
       data-last-turn-pair=""
@@ -270,7 +302,7 @@ export function LastTurnRound({
     >
       <div className="row you">
         <span data-last-turn-bubble="you" title={youFit.title}>
-          <span className="words" data-last-turn-words="" ref={youFit.ref}>
+          <span className="words" data-last-turn-words="" ref={youRef}>
             {you}
           </span>
         </span>

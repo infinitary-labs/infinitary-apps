@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { setCurrentLanguage } from "../i18n/current";
+import { setComputerLocale, setCurrentLanguage } from "../i18n/current";
 import { FRAME_CSP } from "./containment";
 import {
   buildFrameDocument,
   buildPanelDocument,
   cardFrameMountRequestSchema,
+  FRAME_LOCALE_ATTRIBUTE,
   frameMountRequestSchema,
   frameTemplateSchema,
   scriptSafeJson,
@@ -72,6 +73,25 @@ describe("the frame document", () => {
       ).toContain('<html lang="ar-XB" dir="rtl"');
     } finally {
       setCurrentLanguage("en");
+    }
+  });
+
+  // The captain's answer to the review of the first languages (INF-3850):
+  // English writes dates in the computer's own forms, which a bare date call
+  // in a frame loses in the packaged Mac app, so the frame's document names
+  // the locale for its date calls; another language names its own.
+  it("names the locale a frame's dates take: the computer's in English, the language's otherwise", () => {
+    const parts = { csp: FRAME_CSP, theme: "dark" as const, style: "", html: "<p>x</p>" };
+    setComputerLocale("en-GB");
+    try {
+      expect(buildFrameDocument(parts)).toContain(
+        `<html lang="en" dir="ltr" ${FRAME_LOCALE_ATTRIBUTE}="en-GB" data-theme="dark">`,
+      );
+      expect(buildFrameDocument({ ...parts, language: "ja" })).toContain(
+        `<html lang="ja" dir="ltr" ${FRAME_LOCALE_ATTRIBUTE}="ja"`,
+      );
+    } finally {
+      setComputerLocale(undefined);
     }
   });
 

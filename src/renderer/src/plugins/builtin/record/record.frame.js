@@ -35,6 +35,12 @@
 
   /** How many activity rows the tail shows. */
   const TIMELINE_TAIL = 8;
+  /**
+   * The locale this frame's document names for dates and times
+   * (`FRAME_LOCALE_ATTRIBUTE` in src/shared/plugins/frameDocument.ts), since
+   * a bare date call writes US forms in the packaged Mac app.
+   */
+  const frameLocale = document.documentElement?.getAttribute("data-locale") ?? undefined;
 
   const root = /** @type {HTMLElement} */ (must(document.querySelector("[data-record]")));
   const taskId = root.getAttribute("data-task-id") ?? "";
@@ -329,7 +335,7 @@
    * @param {Element} [holder]
    */
   function aged(node, at, text, holder) {
-    const exact = new Date(at).toLocaleString();
+    const exact = new Date(at).toLocaleString(frameLocale);
     node.textContent = text(at);
     node.setAttribute("data-record-age", "");
     node.setAttribute("role", "img");
@@ -368,7 +374,7 @@
       entry.node.textContent = entry.text(entry.at);
       entry.node.setAttribute(
         "aria-label",
-        `${entry.node.textContent} · ${new Date(entry.at).toLocaleString()}`,
+        `${entry.node.textContent} · ${new Date(entry.at).toLocaleString(frameLocale)}`,
       );
     }
   }

@@ -6,9 +6,9 @@ import { languageFormatTag, SOURCE_LANGUAGE } from "./languages.ts";
  * (docs/i18n.md, "Formats"). Every place the app writes one for a person
  * goes through here, never through a fixed locale: `pnpm check`
  * (scripts/locale-formats.ts) refuses a locale literal or a bare
- * `toLocaleString` anywhere else. In English each writes exactly what the
- * app wrote before: numbers and money in US forms, dates and times in the
- * computer's own.
+ * `toLocaleString` anywhere else. In English numbers and money keep the US
+ * forms the app always wrote, and dates and times name the computer's own
+ * preferred locale outright ("Dates and times").
  */
 
 type When = Date | number;

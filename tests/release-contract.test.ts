@@ -28,6 +28,8 @@ import {
   upgradeCommandFor,
 } from "../src/core/update/updateChannels";
 import { packagedFlavor } from "../src/main/userDataDir";
+import { isPseudoLanguage } from "../src/shared/i18n/languages";
+import { CATALOG_LANGUAGES } from "../src/shared/i18n/messages.generated";
 import { electronBinary } from "./helpers/electronBundle";
 import { loadYamlFile } from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -176,6 +178,19 @@ describe("electron-builder configuration", () => {
     expect(arches.every((arch) => arch === "universal")).toBe(true);
     expect(parsed.win).toBeUndefined();
     expect(parsed.linux).toBeUndefined();
+  });
+
+  it("keeps exactly the catalog's languages in the macOS bundle", () => {
+    // INF-3683: macOS lists an app's languages from its .lproj folders, named
+    // in macOS's own form, so each catalog language but the pseudo-languages keeps its folder.
+    const lproj = (tag: string) =>
+      ({ "zh-Hans": "zh_CN", "zh-Hant": "zh_TW" })[tag] ?? tag.replace("-", "_");
+    const mac = parsed.mac as { electronLanguages?: string[] };
+    expect([...(mac.electronLanguages ?? [])].sort()).toEqual(
+      CATALOG_LANGUAGES.filter((tag) => !isPseudoLanguage(tag))
+        .map(lproj)
+        .sort(),
+    );
   });
 
   it("keeps the section 4 electron fuses", () => {

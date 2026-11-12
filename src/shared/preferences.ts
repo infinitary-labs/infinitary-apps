@@ -43,6 +43,18 @@ export type UiSize = z.infer<typeof uiSizeSchema>;
 export const defaultCardSizeSchema = z.enum(["usual", "wide", "full", "maximized"]);
 export type DefaultCardSize = z.infer<typeof defaultCardSizeSchema>;
 
+/**
+ * The language the captain chose for the app's words (docs/i18n.md, "The
+ * language choice"): a catalog language's tag, such as `zh-Hans`. A tag the
+ * catalog does not have, such as one a newer build wrote, reads as following
+ * the computer.
+ */
+export const languageChoiceSchema = z
+  .string()
+  .min(2)
+  .max(35)
+  .regex(/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/);
+
 /** How the app looks. The default handles records written before the wash control existed. */
 export const appearanceSchema = z.strictObject({
   theme: themeSchema,
@@ -63,6 +75,12 @@ export const appearanceSchema = z.strictObject({
   showCrewModelNames: z.boolean().optional(),
   /** How Settings → Usage shows every amount (docs/usage.md); missing means tokens. */
   usageUnit: usageUnitSchema.optional(),
+  /**
+   * The language the app speaks; missing means it follows the computer's
+   * own languages. The core keeps it in a row of its own, as it does Keep
+   * cards maximized, so an older build never meets it.
+   */
+  language: languageChoiceSchema.optional(),
 });
 export type Appearance = z.infer<typeof appearanceSchema>;
 

@@ -125,6 +125,36 @@ export function languageFromArgv(argv: readonly string[]): string {
 }
 
 /**
+ * How the main process tells a window's page the computer's own preferred
+ * locale (docs/i18n.md, "Dates and times"): an argument beside the
+ * language's, which the preload marks on the document under
+ * `COMPUTER_LOCALE_ATTRIBUTE`.
+ */
+export const LOCALE_ARG = "--fm-locale=";
+export const COMPUTER_LOCALE_ATTRIBUTE = "data-computer-locale";
+
+export function localeArgument(tag: string): string {
+  return `${LOCALE_ARG}${tag}`;
+}
+
+/** A locale tag the runtime reads, in its canonical form, or undefined for none or one it cannot read. */
+export function readableLocale(tag: string | null | undefined): string | undefined {
+  if (!tag) return undefined;
+  try {
+    return Intl.getCanonicalLocales(tag)[0];
+  } catch {
+    return undefined;
+  }
+}
+
+/** The computer's preferred locale an argument names, or undefined when none does. */
+export function localeFromArgv(argv: readonly string[]): string | undefined {
+  return readableLocale(
+    argv.find((entry) => entry.startsWith(LOCALE_ARG))?.slice(LOCALE_ARG.length),
+  );
+}
+
+/**
  * The locale the language's own numbers, money and fixed dates are written
  * in: English keeps the US forms the app has always written (`1,234`,
  * `$12.50`), a pseudo-language its base language's, and every other
@@ -159,4 +189,20 @@ export function servedLanguageName(tag: string): string {
     return tag;
   }
   return name && name !== tag ? `${name} (${tag})` : tag;
+}
+
+/**
+ * A language named in its own words, as a person who reads it looks for it
+ * in a list: `简体中文`, `Español`, `العربية`. A tag the runtime has no name
+ * for is named by the tag.
+ */
+export function ownLanguageName(tag: string): string {
+  let name: string | undefined;
+  try {
+    name = new Intl.DisplayNames([tag], { type: "language" }).of(tag);
+  } catch {
+    return tag;
+  }
+  if (!name) return tag;
+  return name.charAt(0).toLocaleUpperCase(tag) + name.slice(1);
 }

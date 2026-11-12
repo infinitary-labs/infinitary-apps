@@ -34,6 +34,7 @@ import {
   DEFAULT_LAYOUT,
   DEFAULT_PERSONAL_PANELS,
   type Layout,
+  languageChoiceSchema,
   layoutSchema,
   type PersonalPanels,
   panelArrangementSchema,
@@ -95,6 +96,9 @@ const cardMaximizeRowSchema = z.strictObject({
   keep: z.boolean(),
   maximized: z.boolean(),
 });
+
+/** The `language` row: the language the captain chose (docs/i18n.md, "The language choice"). */
+const languageRowSchema = z.strictObject({ language: languageChoiceSchema });
 
 /** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
@@ -163,6 +167,11 @@ export class SettingsStore {
         "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
       )
       .run(key, JSON.stringify(value));
+  }
+
+  private remove(key: string): void {
+    this.projection?.delete(key);
+    this.db.prepare("DELETE FROM settings WHERE key = ?").run(key);
   }
 
   getRoutingSettings(): RoutingSettings {
@@ -290,12 +299,14 @@ export class SettingsStore {
       this.set("wash-default-zero-v1", true);
     }
     const maximize = cardMaximizeRowSchema.safeParse(this.get("card-maximize"));
+    const language = languageRowSchema.safeParse(this.get("language"));
     return {
       ...DEFAULT_APPEARANCE,
       ...appearance,
       ...(maximize.success
         ? { keepCardsMaximized: maximize.data.keep, cardsMaximized: maximize.data.maximized }
         : {}),
+      ...(language.success ? { language: language.data.language } : {}),
     };
   }
 
@@ -303,13 +314,19 @@ export class SettingsStore {
    * Saves the look. Keep cards maximized and whether cards are maximized go
    * to their own row (`card-maximize`), so the `appearance` row stays one an
    * older build parses (docs/saved-data-compatibility.md); a look without
-   * them keeps the saved ones.
+   * them keeps the saved ones. The language goes to its own row too
+   * (`language`), and a look without it follows the computer again: the
+   * window always writes the whole look, so a missing language is the
+   * captain's choice to follow the computer.
    */
   setAppearance(appearance: Appearance): void {
-    const { keepCardsMaximized, cardsMaximized, ...look } = {
-      ...this.getAppearance(),
+    const { language: _saved, ...was } = this.getAppearance();
+    const { keepCardsMaximized, cardsMaximized, language, ...look } = {
+      ...was,
       ...appearance,
     };
+    if (language === undefined) this.remove("language");
+    else this.set("language", { language });
     this.set("appearance", look);
     this.set("wash-opacity-v2", true);
     if (keepCardsMaximized !== undefined || cardsMaximized !== undefined)

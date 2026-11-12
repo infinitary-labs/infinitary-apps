@@ -10,6 +10,7 @@ import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { deviceRunsWork } from "@shared/devices";
 import type { KnownForgeHost } from "@shared/forge";
+import { speakChoice } from "@shared/i18n/start";
 import { INBOX_WORDS } from "@shared/integrations";
 import { modelNames } from "@shared/modelDisplayName";
 import { offeringKey, parseOfferingKey, providerLabel } from "@shared/modelSlots";
@@ -170,6 +171,7 @@ import { WorkspaceService } from "./workspace/workspaceService";
 export async function createServices(
   host: HostCapabilities,
   emit: CoreEventSink,
+  options: { computerLanguage?: string } = {},
 ): Promise<CoreServices> {
   const paths = appPathsFor(host.app.userDataDir);
   // Refuse before account warming, shell probes, counters or any service writes.
@@ -305,6 +307,8 @@ export async function createServices(
   });
   const cardStore = new CardStore(db);
   const preferences = new ShellPreferencesService(settings, emit);
+  // Boot recovery and the inbox below word their turns in the captain's choice.
+  speakChoice(settings.getAppearance().language, options.computerLanguage);
   // The two switches (roadmap 1.4, docs/sharing.md): the wire is built here
   // from the build-time ids and handed to the sharing service, the one
   // caller of it. Diagnostics - the allowlisted events of

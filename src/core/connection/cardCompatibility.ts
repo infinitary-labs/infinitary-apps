@@ -38,3 +38,22 @@ export function threadLinesFor(
     }),
   };
 }
+
+/**
+ * A view from before `language-choice.md` reads the look strictly, so the
+ * captain's language choice is left out of the look it is pushed or answered;
+ * a view keeps its own language and never needs the home's.
+ */
+export function lookFor(channel: string, value: unknown, readsLanguage: boolean): unknown {
+  if (readsLanguage || !value || typeof value !== "object") return value;
+  if (channel === "inf:settings:appearance:get") return withoutLanguage(value);
+  if (channel !== "inf:shell:preferences") return value;
+  const look = value as Record<string, unknown>;
+  return { ...look, appearance: withoutLanguage(look.appearance) };
+}
+
+function withoutLanguage(appearance: unknown): unknown {
+  if (!appearance || typeof appearance !== "object") return appearance;
+  const { language: _chosen, ...rest } = appearance as Record<string, unknown>;
+  return rest;
+}

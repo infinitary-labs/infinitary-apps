@@ -460,6 +460,10 @@ export function hermeticEnv(input: {
     // file, so no test reads this computer's own (docs/run.md, "When the
     // command stops").
     INFINITARY_RUN_START_ENTRY: join(userDataDir, "no-start-entry"),
+    // The app speaks English unless the spec names another language, so a
+    // runner whose own computer asks for another one still reads the words
+    // the journeys expect (docs/i18n.md, "The language choice").
+    INFINITARY_LANGUAGE: "en",
     INFINITARY_CONNECTION_LOOPBACK_PORT: loopbackPort,
   };
 }

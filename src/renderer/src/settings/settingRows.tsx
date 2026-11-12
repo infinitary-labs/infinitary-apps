@@ -40,7 +40,7 @@ export function SettingRow({
   /** A stable hook for the row, so a control with no visible label is findable. */
   id?: string;
   title: string;
-  description: string;
+  description: React.ReactNode;
   /** What the setting holds, when the words alone do not show it (a folder's path). */
   detail?: React.ReactNode;
   control: React.ReactNode;

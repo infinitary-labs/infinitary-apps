@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
-import { isCheckedFile, ledgerProblems, rawWordsIn } from "../scripts/raw-words";
+import { isCheckedFile, ledgerProblems, RAW_WORDS_LEDGER, rawWordsIn } from "../scripts/raw-words";
+import { FOLLOWS_COMPUTER } from "../src/shared/i18n/start";
 
 // The approved plan (INF-3674, "What done looks like"): pnpm check refuses
 // raw words outside the ledger, and the ledger only shrinks until it is
@@ -65,4 +66,12 @@ it("refuses raw words outside the ledger, a listed file that gains some, and a l
   expect(ledgerProblems({ "src/renderer/src/a.tsx": 3 }, { "src/renderer/src/a.tsx": 3 })).toEqual(
     [],
   );
+});
+
+// The captain's answer to the review of the first languages (INF-3850):
+// English stays the default until the ledger is empty. The pull request that
+// empties it turns on following the computer's language in the same change.
+it("keeps English the default exactly while the ledger still lists raw words", () => {
+  const left = Object.values(RAW_WORDS_LEDGER).some((count) => count > 0);
+  expect(FOLLOWS_COMPUTER).toBe(!left);
 });

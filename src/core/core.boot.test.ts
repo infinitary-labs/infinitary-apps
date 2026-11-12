@@ -4,7 +4,10 @@ import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
 import { CONNECTION_PORT } from "@shared/connection";
 import { parsePairingLink } from "@shared/devices";
+import { currentLanguage, setCurrentLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { invokeContract, WORK_INVOKE_CHANNELS } from "@shared/ipc";
+import { DEFAULT_APPEARANCE } from "@shared/preferences";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeHost, listening, quotaFixture, waitFor } from "../../tests/helpers/bootedCore";
 import { recordNewerMigration } from "../../tests/helpers/database";
@@ -900,6 +903,36 @@ describe("a microphone card an earlier version left", () => {
     const next = await startCore(fakeHost(userDataDir).host);
     core = next;
     expect(await ids(next)).not.toContain("card-voice-mic-primer");
+  }, 60_000);
+});
+
+/**
+ * The review of the language choice (docs/i18n.md, "The language choice"):
+ * the captain's saved choice is the language from the moment the settings
+ * open, so boot recovery and the first mate's inbox word their turns in it,
+ * never in the computer's own.
+ */
+describe("the captain's language choice at boot", () => {
+  let core: Core | undefined;
+  let userDataDir: string;
+
+  afterEach(async () => {
+    await core?.dispose();
+    core = undefined;
+    await catalogRefreshesSettled();
+    setCurrentLanguage(SOURCE_LANGUAGE);
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  it("speaks the saved choice over the computer's language before the core is handed back", async () => {
+    userDataDir = scratchDir("infinitary-core-language-");
+    process.env.PI_OFFLINE = "1";
+    const db = openDatabase(userDataDir);
+    new SettingsStore(db).setAppearance({ ...DEFAULT_APPEARANCE, language: "ja" });
+    db.close();
+    setCurrentLanguage("de");
+    core = await startCore(fakeHost(userDataDir).host, { computerLanguage: "de" });
+    expect(currentLanguage()).toBe("ja");
   }, 60_000);
 });
 

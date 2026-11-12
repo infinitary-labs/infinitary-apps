@@ -4912,6 +4912,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "secrets-decision"
   ];
   const SOURCE_LANGUAGE = "en";
+  const PSEUDO_LANGUAGES = ["en-XA", "ar-XB"];
+  function isPseudoLanguage(tag) {
+    return PSEUDO_LANGUAGES.includes(tag);
+  }
   const RIGHT_TO_LEFT_SCRIPTS = /* @__PURE__ */ new Set([
     "Arab",
     "Hebr",
@@ -4941,9 +4945,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       return void 0;
     }
   }
+  function languageFormatTag(tag) {
+    if (tag === SOURCE_LANGUAGE) return "en-US";
+    if (isPseudoLanguage(tag)) return tag.slice(0, 2);
+    return tag;
+  }
   let language = SOURCE_LANGUAGE;
   function currentLanguage() {
     return language;
+  }
+  let computerLocale;
+  function regionalLocale(tag = language) {
+    return tag === SOURCE_LANGUAGE ? computerLocale : languageFormatTag(tag);
   }
   const SERVED_LOCALE = "en-US";
   function servedNumber(value) {
@@ -8579,6 +8592,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   union([sqlRefusalSchema, sqlRowsSchema]);
   function commandCommandsSearch() {
     switch (currentLanguage()) {
+      case "ar":
+        return `البحث في الأوامر`;
+      case "de":
+        return `Befehle suchen`;
+      case "es":
+        return `Buscar comandos`;
+      case "fr":
+        return `Rechercher des commandes`;
+      case "ja":
+        return `コマンドを検索`;
+      case "ko":
+        return `명령 검색`;
+      case "pt-BR":
+        return `Buscar comandos`;
+      case "zh-Hans":
+        return `搜索命令`;
+      case "zh-Hant":
+        return `搜尋指令`;
       case "en-XA":
         return `[Šéáŕçĥ çöɱɱáñðš ~~~~~]`;
       case "ar-XB":
@@ -8588,6 +8619,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandFocusMainMessage() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى الرسالة الرئيسية`;
+      case "de":
+        return `Zur Hauptnachricht gehen`;
+      case "es":
+        return `Ir al mensaje principal`;
+      case "fr":
+        return `Aller au message principal`;
+      case "ja":
+        return `メインのメッセージ欄へ移動`;
+      case "ko":
+        return `메인 메시지 칸으로 이동`;
+      case "pt-BR":
+        return `Ir para a mensagem principal`;
+      case "zh-Hans":
+        return `前往主消息框`;
+      case "zh-Hant":
+        return `前往主要訊息`;
       case "en-XA":
         return `[Ĝö ţö ţĥé ɱáîñ ɱéššáĝé ~~~~~~~~]`;
       case "ar-XB":
@@ -8597,6 +8646,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandFocusCardReply() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى رد البطاقة`;
+      case "de":
+        return `Zur Antwort der Karte gehen`;
+      case "es":
+        return `Ir a la respuesta de la tarjeta`;
+      case "fr":
+        return `Aller à la réponse de la carte`;
+      case "ja":
+        return `カードの返信欄へ移動`;
+      case "ko":
+        return `카드 답장으로 이동`;
+      case "pt-BR":
+        return `Ir para a resposta do cartão`;
+      case "zh-Hans":
+        return `前往卡片的回复框`;
+      case "zh-Hant":
+        return `前往卡片的回覆`;
       case "en-XA":
         return `[Ĝö ţö ţĥé çáŕð'š ŕéþļý ~~~~~~~~]`;
       case "ar-XB":
@@ -8606,6 +8673,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandFocusCardReplyWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إضافة, تعليق, رد`;
+      case "de":
+        return `ergänzen, hinzufügen, Kommentar, kommentieren`;
+      case "es":
+        return `algo que agregar, comentario`;
+      case "fr":
+        return `ajouter, commentaire, remarque`;
+      case "ja":
+        return `追記, コメント, 返信`;
+      case "ko":
+        return `추가할 말, 댓글, 답장`;
+      case "pt-BR":
+        return `algo a acrescentar, comentário, comentar`;
+      case "zh-Hans":
+        return `补充, 评论, 回复`;
+      case "zh-Hant":
+        return `補充, 留言, 意見`;
       case "en-XA":
         return `[áñýţĥîñĝ ţö áðð, çöɱɱéñţ ~~~~~~~~]`;
       case "ar-XB":
@@ -8615,6 +8700,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandFocusCardBody() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى نص البطاقة`;
+      case "de":
+        return `Zum Inhalt der Karte gehen`;
+      case "es":
+        return `Ir al cuerpo de la tarjeta`;
+      case "fr":
+        return `Aller au corps de la carte`;
+      case "ja":
+        return `カードの本文へ移動`;
+      case "ko":
+        return `카드 본문으로 이동`;
+      case "pt-BR":
+        return `Ir para o corpo do cartão`;
+      case "zh-Hans":
+        return `前往卡片正文`;
+      case "zh-Hant":
+        return `前往卡片內文`;
       case "en-XA":
         return `[Ĝö ţö ţĥé çáŕð'š ƀöðý ~~~~~~~]`;
       case "ar-XB":
@@ -8624,6 +8727,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandFocusCardActions() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى أزرار البطاقة`;
+      case "de":
+        return `Zu den Tasten der Karte gehen`;
+      case "es":
+        return `Ir a los botones de la tarjeta`;
+      case "fr":
+        return `Aller aux boutons de la carte`;
+      case "ja":
+        return `カードのボタンへ移動`;
+      case "ko":
+        return `카드 버튼으로 이동`;
+      case "pt-BR":
+        return `Ir para os botões do cartão`;
+      case "zh-Hans":
+        return `前往卡片的按钮`;
+      case "zh-Hant":
+        return `前往卡片的按鈕`;
       case "en-XA":
         return `[Ĝö ţö ţĥé çáŕð'š ƀûţţöñš ~~~~~~~~]`;
       case "ar-XB":
@@ -8633,6 +8754,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice1() {
     switch (currentLanguage()) {
+      case "ar":
+        return `ضغط الخيار الموصى به`;
+      case "de":
+        return `Die empfohlene Wahl drücken`;
+      case "es":
+        return `Presionar la opción recomendada`;
+      case "fr":
+        return `Appuyer sur le choix recommandé`;
+      case "ja":
+        return `推奨の選択肢を押す`;
+      case "ko":
+        return `추천 선택지 누르기`;
+      case "pt-BR":
+        return `Pressionar a escolha recomendada`;
+      case "zh-Hans":
+        return `点击推荐的选项`;
+      case "zh-Hant":
+        return `按下建議的選項`;
       case "en-XA":
         return `[Þŕéšš ţĥé ŕéçöɱɱéñðéð çĥöîçé ~~~~~~~~~~]`;
       case "ar-XB":
@@ -8642,6 +8781,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice1Words() {
     switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة, زر, افتراضي, أول`;
+      case "de":
+        return `Karte, Taste, Schaltfläche, Standard, erste`;
+      case "es":
+        return `tarjeta, botón, predeterminada, primera`;
+      case "fr":
+        return `carte, bouton, défaut, premier`;
+      case "ja":
+        return `カード, ボタン, 既定, 最初`;
+      case "ko":
+        return `카드, 버튼, 기본, 첫째`;
+      case "pt-BR":
+        return `cartão, botão, padrão, primeira`;
+      case "zh-Hans":
+        return `卡片, 按钮, 默认, 第一个`;
+      case "zh-Hant":
+        return `卡片, 按鈕, 預設, 第一個`;
       case "en-XA":
         return `[çáŕð, ƀûţţöñ, ðéƒáûļţ, ƒîŕšţ ~~~~~~~~~~]`;
       case "ar-XB":
@@ -8651,6 +8808,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice2() {
     switch (currentLanguage()) {
+      case "ar":
+        return `ضغط الخيار الثاني`;
+      case "de":
+        return `Die zweite Wahl drücken`;
+      case "es":
+        return `Presionar la segunda opción`;
+      case "fr":
+        return `Appuyer sur le deuxième choix`;
+      case "ja":
+        return `2番目の選択肢を押す`;
+      case "ko":
+        return `두 번째 선택지 누르기`;
+      case "pt-BR":
+        return `Pressionar a segunda escolha`;
+      case "zh-Hans":
+        return `点击第二个选项`;
+      case "zh-Hant":
+        return `按下第二個選項`;
       case "en-XA":
         return `[Þŕéšš ţĥé šéçöñð çĥöîçé ~~~~~~~~]`;
       case "ar-XB":
@@ -8660,6 +8835,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice2Words() {
     switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة, زر`;
+      case "de":
+        return `Karte, Taste, Schaltfläche`;
+      case "es":
+        return `tarjeta, botón`;
+      case "fr":
+        return `carte, bouton`;
+      case "ja":
+        return `カード, ボタン`;
+      case "ko":
+        return `카드, 버튼`;
+      case "pt-BR":
+        return `cartão, botão`;
+      case "zh-Hans":
+        return `卡片, 按钮`;
+      case "zh-Hant":
+        return `卡片, 按鈕`;
       case "en-XA":
         return `[çáŕð, ƀûţţöñ ~~~~]`;
       case "ar-XB":
@@ -8669,6 +8862,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice3() {
     switch (currentLanguage()) {
+      case "ar":
+        return `ضغط الخيار الثالث`;
+      case "de":
+        return `Die dritte Wahl drücken`;
+      case "es":
+        return `Presionar la tercera opción`;
+      case "fr":
+        return `Appuyer sur le troisième choix`;
+      case "ja":
+        return `3番目の選択肢を押す`;
+      case "ko":
+        return `세 번째 선택지 누르기`;
+      case "pt-BR":
+        return `Pressionar a terceira escolha`;
+      case "zh-Hans":
+        return `点击第三个选项`;
+      case "zh-Hant":
+        return `按下第三個選項`;
       case "en-XA":
         return `[Þŕéšš ţĥé ţĥîŕð çĥöîçé ~~~~~~~~]`;
       case "ar-XB":
@@ -8678,6 +8889,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice3Words() {
     switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة, زر`;
+      case "de":
+        return `Karte, Taste, Schaltfläche`;
+      case "es":
+        return `tarjeta, botón`;
+      case "fr":
+        return `carte, bouton`;
+      case "ja":
+        return `カード, ボタン`;
+      case "ko":
+        return `카드, 버튼`;
+      case "pt-BR":
+        return `cartão, botão`;
+      case "zh-Hans":
+        return `卡片, 按钮`;
+      case "zh-Hant":
+        return `卡片, 按鈕`;
       case "en-XA":
         return `[çáŕð, ƀûţţöñ ~~~~]`;
       case "ar-XB":
@@ -8687,6 +8916,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice4() {
     switch (currentLanguage()) {
+      case "ar":
+        return `ضغط الخيار الرابع`;
+      case "de":
+        return `Die vierte Wahl drücken`;
+      case "es":
+        return `Presionar la cuarta opción`;
+      case "fr":
+        return `Appuyer sur le quatrième choix`;
+      case "ja":
+        return `4番目の選択肢を押す`;
+      case "ko":
+        return `네 번째 선택지 누르기`;
+      case "pt-BR":
+        return `Pressionar a quarta escolha`;
+      case "zh-Hans":
+        return `点击第四个选项`;
+      case "zh-Hant":
+        return `按下第四個選項`;
       case "en-XA":
         return `[Þŕéšš ţĥé ƒöûŕţĥ çĥöîçé ~~~~~~~~]`;
       case "ar-XB":
@@ -8696,6 +8943,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsChoice4Words() {
     switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة, زر`;
+      case "de":
+        return `Karte, Taste, Schaltfläche`;
+      case "es":
+        return `tarjeta, botón`;
+      case "fr":
+        return `carte, bouton`;
+      case "ja":
+        return `カード, ボタン`;
+      case "ko":
+        return `카드, 버튼`;
+      case "pt-BR":
+        return `cartão, botão`;
+      case "zh-Hans":
+        return `卡片, 按钮`;
+      case "zh-Hant":
+        return `卡片, 按鈕`;
       case "en-XA":
         return `[çáŕð, ƀûţţöñ ~~~~]`;
       case "ar-XB":
@@ -8705,6 +8970,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsNext() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى الجزء التالي من النافذة`;
+      case "de":
+        return `Zum nächsten Teil des Fensters gehen`;
+      case "es":
+        return `Ir a la siguiente parte de la ventana`;
+      case "fr":
+        return `Aller à la partie suivante de la fenêtre`;
+      case "ja":
+        return `ウインドウの次の部分へ移動`;
+      case "ko":
+        return `창의 다음 부분으로 이동`;
+      case "pt-BR":
+        return `Ir para a próxima parte da janela`;
+      case "zh-Hans":
+        return `前往窗口的下一个部分`;
+      case "zh-Hant":
+        return `前往視窗的下一個部分`;
       case "en-XA":
         return `[Ĝö ţö ţĥé ñéẋţ þáŕţ öƒ ţĥé ŵîñðöŵ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8714,6 +8997,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsPrevious() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى الجزء السابق من النافذة`;
+      case "de":
+        return `Zum vorherigen Teil des Fensters gehen`;
+      case "es":
+        return `Ir a la parte anterior de la ventana`;
+      case "fr":
+        return `Aller à la partie précédente de la fenêtre`;
+      case "ja":
+        return `ウインドウの前の部分へ移動`;
+      case "ko":
+        return `창의 이전 부분으로 이동`;
+      case "pt-BR":
+        return `Ir para a parte anterior da janela`;
+      case "zh-Hans":
+        return `前往窗口的上一个部分`;
+      case "zh-Hant":
+        return `前往視窗的上一個部分`;
       case "en-XA":
         return `[Ĝö ţö ţĥé þŕéṽîöûš þáŕţ öƒ ţĥé ŵîñðöŵ ~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8723,6 +9024,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandComputersPrevious() {
     switch (currentLanguage()) {
+      case "ar":
+        return `حواسيب العمل السابقة`;
+      case "de":
+        return `Vorherige Arbeitscomputer`;
+      case "es":
+        return `Computadoras de trabajo anteriores`;
+      case "fr":
+        return `Ordinateurs de travail précédents`;
+      case "ja":
+        return `前の作業コンピューター`;
+      case "ko":
+        return `이전 작업 컴퓨터`;
+      case "pt-BR":
+        return `Computadores de trabalho anteriores`;
+      case "zh-Hans":
+        return `上一组工作电脑`;
+      case "zh-Hant":
+        return `上一組工作電腦`;
       case "en-XA":
         return `[Þŕéṽîöûš ŵöŕķ çöɱþûţéŕš ~~~~~~~~]`;
       case "ar-XB":
@@ -8732,6 +9051,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandComputersNext() {
     switch (currentLanguage()) {
+      case "ar":
+        return `حواسيب العمل التالية`;
+      case "de":
+        return `Nächste Arbeitscomputer`;
+      case "es":
+        return `Computadoras de trabajo siguientes`;
+      case "fr":
+        return `Ordinateurs de travail suivants`;
+      case "ja":
+        return `次の作業コンピューター`;
+      case "ko":
+        return `다음 작업 컴퓨터`;
+      case "pt-BR":
+        return `Próximos computadores de trabalho`;
+      case "zh-Hans":
+        return `下一组工作电脑`;
+      case "zh-Hant":
+        return `下一組工作電腦`;
       case "en-XA":
         return `[Ñéẋţ ŵöŕķ çöɱþûţéŕš ~~~~~~~]`;
       case "ar-XB":
@@ -8741,6 +9078,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandProjectFocusOpen() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التركيز على مشروع`;
+      case "de":
+        return `Auf ein Projekt konzentrieren`;
+      case "es":
+        return `Centrarse en un proyecto`;
+      case "fr":
+        return `Se concentrer sur un projet`;
+      case "ja":
+        return `プロジェクトに絞り込む`;
+      case "ko":
+        return `프로젝트에 집중`;
+      case "pt-BR":
+        return `Focar em um projeto`;
+      case "zh-Hans":
+        return `聚焦于一个项目`;
+      case "zh-Hant":
+        return `聚焦在一個專案`;
       case "en-XA":
         return `[Ƒöçûš öñ á þŕöĵéçţ ~~~~~~]`;
       case "ar-XB":
@@ -8750,6 +9105,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandProjectFocusOpenWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تصفية, مشروع, شارة`;
+      case "de":
+        return `Filter, filtern, Projekt`;
+      case "es":
+        return `filtrar, proyecto, etiqueta`;
+      case "fr":
+        return `filtre, projet, pastille`;
+      case "ja":
+        return `フィルター, 絞り込み, プロジェクト`;
+      case "ko":
+        return `필터, 프로젝트, 알약`;
+      case "pt-BR":
+        return `filtrar, filtro, projeto, etiqueta`;
+      case "zh-Hans":
+        return `筛选, 项目, 标签`;
+      case "zh-Hant":
+        return `篩選, 專案, 標籤`;
       case "en-XA":
         return `[ƒîļţéŕ, þŕöĵéçţ, þîļļ ~~~~~~~]`;
       case "ar-XB":
@@ -8759,6 +9132,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandProjectFocusClear() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض كل المشاريع`;
+      case "de":
+        return `Alle Projekte anzeigen`;
+      case "es":
+        return `Mostrar todos los proyectos`;
+      case "fr":
+        return `Afficher tous les projets`;
+      case "ja":
+        return `すべてのプロジェクトを表示`;
+      case "ko":
+        return `모든 프로젝트 보기`;
+      case "pt-BR":
+        return `Mostrar todos os projetos`;
+      case "zh-Hans":
+        return `显示所有项目`;
+      case "zh-Hant":
+        return `顯示所有專案`;
       case "en-XA":
         return `[Šĥöŵ áļļ þŕöĵéçţš ~~~~~~]`;
       case "ar-XB":
@@ -8768,6 +9159,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandProjectFocusClearWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تصفية, تركيز, مشروع, مسح`;
+      case "de":
+        return `Filter, Fokus, Projekt, zurücksetzen, aufheben`;
+      case "es":
+        return `filtrar, enfocar, proyecto, borrar`;
+      case "fr":
+        return `filtre, concentrer, projet, effacer`;
+      case "ja":
+        return `フィルター, 絞り込み, プロジェクト, 解除`;
+      case "ko":
+        return `필터, 집중, 프로젝트, 지우기`;
+      case "pt-BR":
+        return `filtro, foco, projeto, limpar`;
+      case "zh-Hans":
+        return `筛选, 聚焦, 项目, 清除`;
+      case "zh-Hant":
+        return `篩選, 聚焦, 專案, 清除`;
       case "en-XA":
         return `[ƒîļţéŕ, ƒöçûš, þŕöĵéçţ, çļéáŕ ~~~~~~~~~~]`;
       case "ar-XB":
@@ -8777,6 +9186,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsPrevious() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض البطاقة السابقة`;
+      case "de":
+        return `Vorherige Karte anzeigen`;
+      case "es":
+        return `Mostrar la tarjeta anterior`;
+      case "fr":
+        return `Afficher la carte précédente`;
+      case "ja":
+        return `前のカードを表示`;
+      case "ko":
+        return `이전 카드 보기`;
+      case "pt-BR":
+        return `Mostrar o cartão anterior`;
+      case "zh-Hans":
+        return `显示上一张卡片`;
+      case "zh-Hant":
+        return `顯示上一張卡片`;
       case "en-XA":
         return `[Šĥöŵ ţĥé þŕéṽîöûš çáŕð ~~~~~~~~]`;
       case "ar-XB":
@@ -8786,6 +9213,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsNext() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض البطاقة التالية`;
+      case "de":
+        return `Nächste Karte anzeigen`;
+      case "es":
+        return `Mostrar la tarjeta siguiente`;
+      case "fr":
+        return `Afficher la carte suivante`;
+      case "ja":
+        return `次のカードを表示`;
+      case "ko":
+        return `다음 카드 보기`;
+      case "pt-BR":
+        return `Mostrar o próximo cartão`;
+      case "zh-Hans":
+        return `显示下一张卡片`;
+      case "zh-Hant":
+        return `顯示下一張卡片`;
       case "en-XA":
         return `[Šĥöŵ ţĥé ñéẋţ çáŕð ~~~~~~]`;
       case "ar-XB":
@@ -8795,6 +9240,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsMinimize() {
     switch (currentLanguage()) {
+      case "ar":
+        return `وضع البطاقة جانبًا`;
+      case "de":
+        return `Karte beiseitelegen`;
+      case "es":
+        return `Apartar la tarjeta`;
+      case "fr":
+        return `Mettre la carte de côté`;
+      case "ja":
+        return `カードを脇に置く`;
+      case "ko":
+        return `카드 치워 두기`;
+      case "pt-BR":
+        return `Deixar o cartão de lado`;
+      case "zh-Hans":
+        return `把卡片放到一边`;
+      case "zh-Hant":
+        return `把卡片放到一旁`;
       case "en-XA":
         return `[Þûţ çáŕð ášîðé ~~~~~]`;
       case "ar-XB":
@@ -8804,6 +9267,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsDone() {
     switch (currentLanguage()) {
+      case "ar":
+        return `ضغط «تم» أو «فهمت» في الملاحظة`;
+      case "de":
+        return `„Fertig“ oder „Verstanden“ der Notiz drücken`;
+      case "es":
+        return `Presionar Hecho o Entendido en la nota`;
+      case "fr":
+        return `Appuyer sur Terminé ou Compris de la note`;
+      case "ja":
+        return `お知らせの「完了」または「了解」を押す`;
+      case "ko":
+        return `알림의 완료 또는 확인 누르기`;
+      case "pt-BR":
+        return `Pressionar Concluído ou Entendi da nota`;
+      case "zh-Hans":
+        return `点击便笺的“完成”或“知道了”`;
+      case "zh-Hant":
+        return `按下筆記的「完成」或「知道了」`;
       case "en-XA":
         return `[Þŕéšš ţĥé ñöţé'š Ðöñé öŕ Ĝöţ îţ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8813,6 +9294,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsDoneWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة, ملاحظة, إجابة, تم, فهمت`;
+      case "de":
+        return `Karte, Notiz, Antwort, fertig, verstanden`;
+      case "es":
+        return `tarjeta, nota, respuesta, hecho, entendido`;
+      case "fr":
+        return `carte, note, réponse, terminé, compris`;
+      case "ja":
+        return `カード, お知らせ, 回答, 完了, 了解`;
+      case "ko":
+        return `카드, 알림, 답변, 완료, 확인`;
+      case "pt-BR":
+        return `cartão, nota, resposta, concluído, entendi`;
+      case "zh-Hans":
+        return `卡片, 便笺, 回答, 完成, 知道了`;
+      case "zh-Hant":
+        return `卡片, 筆記, 回答, 完成, 知道了`;
       case "en-XA":
         return `[çáŕð, ñöţé, áñšŵéŕ, ðöñé, ĝöţ îţ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8822,6 +9321,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsDecline() {
     switch (currentLanguage()) {
+      case "ar":
+        return `رفض كل خيارات البطاقة`;
+      case "de":
+        return `Jede Wahl auf der Karte ablehnen`;
+      case "es":
+        return `Rechazar todas las opciones de la tarjeta`;
+      case "fr":
+        return `Refuser tous les choix de la carte`;
+      case "ja":
+        return `カードのすべての選択肢を断る`;
+      case "ko":
+        return `카드의 모든 선택지 거절`;
+      case "pt-BR":
+        return `Recusar todas as escolhas do cartão`;
+      case "zh-Hans":
+        return `拒绝卡片上的所有选项`;
+      case "zh-Hant":
+        return `婉拒卡片上的所有選項`;
       case "en-XA":
         return `[Ðéçļîñé éṽéŕý çĥöîçé öñ ţĥé çáŕð ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8831,6 +9348,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsDeclineWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة, رفض, لا, ليس الآن, لا شيء`;
+      case "de":
+        return `Karte, ablehnen, nein, nicht jetzt, keine, zurückweisen`;
+      case "es":
+        return `tarjeta, rechazar, no, ahora no, ninguna, descartar`;
+      case "fr":
+        return `carte, refuser, non, pas maintenant, aucun, rejeter`;
+      case "ja":
+        return `カード, 断る, いいえ, 今はしない, なし, 却下`;
+      case "ko":
+        return `카드, 거절, 아니요, 나중에, 없음, 거부`;
+      case "pt-BR":
+        return `cartão, recusar, não, agora não, nenhuma, rejeitar`;
+      case "zh-Hans":
+        return `卡片, 拒绝, 不, 暂不, 都不要, 驳回`;
+      case "zh-Hant":
+        return `卡片, 婉拒, 不要, 暫時不要, 都不要, 拒絕`;
       case "en-XA":
         return `[çáŕð, ðéçļîñé, ñö, ñöţ ñöŵ, ñöñé, ŕéĵéçţ ~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8840,6 +9375,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsMaximize() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تكبير البطاقة أو استعادتها`;
+      case "de":
+        return `Karte maximieren oder wiederherstellen`;
+      case "es":
+        return `Maximizar o restaurar la tarjeta`;
+      case "fr":
+        return `Agrandir ou restaurer la carte`;
+      case "ja":
+        return `カードを最大化または元に戻す`;
+      case "ko":
+        return `카드 최대화 또는 복원`;
+      case "pt-BR":
+        return `Maximizar ou restaurar o cartão`;
+      case "zh-Hans":
+        return `最大化或还原卡片`;
+      case "zh-Hant":
+        return `放大或還原卡片`;
       case "en-XA":
         return `[Ṁáẋîɱîžé öŕ ŕéšţöŕé çáŕð ~~~~~~~~]`;
       case "ar-XB":
@@ -8849,6 +9402,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsMaximizeWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `كامل, شاشة, تكبير, توسيع, أكبر`;
+      case "de":
+        return `Vollbild, Bildschirm, vergrößern, erweitern, größer`;
+      case "es":
+        return `completa, pantalla, agrandar, expandir, más grande`;
+      case "fr":
+        return `plein, écran, agrandir, développer, plus grand`;
+      case "ja":
+        return `全体, 画面, 拡大, 広げる, 大きく`;
+      case "ko":
+        return `전체, 화면, 확대, 펼치기, 크게`;
+      case "pt-BR":
+        return `cheia, tela, ampliar, expandir, maior`;
+      case "zh-Hans":
+        return `全屏, 屏幕, 放大, 展开, 更大`;
+      case "zh-Hant":
+        return `全螢幕, 螢幕, 放大, 展開, 變大`;
       case "en-XA":
         return `[ƒûļļ, šçŕééñ, éñļáŕĝé, éẋþáñð, ƀîĝĝéŕ ~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8858,6 +9429,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsNextRevision() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى المنطقة المعدّلة التالية`;
+      case "de":
+        return `Zum nächsten überarbeiteten Bereich gehen`;
+      case "es":
+        return `Ir a la siguiente zona revisada`;
+      case "fr":
+        return `Aller à la zone révisée suivante`;
+      case "ja":
+        return `次の改訂箇所へ移動`;
+      case "ko":
+        return `다음 수정된 부분으로 이동`;
+      case "pt-BR":
+        return `Ir para a próxima área revisada`;
+      case "zh-Hans":
+        return `前往下一处修改过的区域`;
+      case "zh-Hant":
+        return `前往下一個修改過的區域`;
       case "en-XA":
         return `[Ĝö ţö ţĥé ñéẋţ ŕéṽîšéð áŕéá ~~~~~~~~~]`;
       case "ar-XB":
@@ -8867,6 +9456,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsNextRevisionWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تغييرات, تعديل, روابط`;
+      case "de":
+        return `Änderungen, Überarbeitung, Links`;
+      case "es":
+        return `cambios, revisión, enlaces`;
+      case "fr":
+        return `modifications, révision, liens`;
+      case "ja":
+        return `変更, 改訂, リンク`;
+      case "ko":
+        return `변경, 수정, 링크`;
+      case "pt-BR":
+        return `alterações, revisão, links`;
+      case "zh-Hans":
+        return `改动, 修订, 链接`;
+      case "zh-Hant":
+        return `變更, 修訂, 連結`;
       case "en-XA":
         return `[çĥáñĝéš, ŕéṽîšîöñ, ļîñķš ~~~~~~~~]`;
       case "ar-XB":
@@ -8876,6 +9483,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsPointAt() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الإشارة إلى جزء من البطاقة`;
+      case "de":
+        return `Auf einen Teil der Karte zeigen`;
+      case "es":
+        return `Señalar una parte de la tarjeta`;
+      case "fr":
+        return `Désigner une partie de la carte`;
+      case "ja":
+        return `カードの一部を指し示す`;
+      case "ko":
+        return `카드의 한 부분 가리키기`;
+      case "pt-BR":
+        return `Apontar para uma parte do cartão`;
+      case "zh-Hans":
+        return `指向卡片的某个部分`;
+      case "zh-Hant":
+        return `指向卡片的某個部分`;
       case "en-XA":
         return `[Þöîñţ áţ á þáŕţ öƒ ţĥé çáŕð ~~~~~~~~~]`;
       case "ar-XB":
@@ -8885,6 +9510,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsPointAtWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `شرح, تعليق, تحديد, ملاحظة`;
+      case "de":
+        return `anmerken, kommentieren, auswählen, Notiz`;
+      case "es":
+        return `anotar, comentar, seleccionar, nota`;
+      case "fr":
+        return `annoter, commenter, sélectionner, note`;
+      case "ja":
+        return `注釈, コメント, 選択, メモ`;
+      case "ko":
+        return `주석, 댓글, 선택, 메모`;
+      case "pt-BR":
+        return `anotar, comentar, selecionar, nota`;
+      case "zh-Hans":
+        return `标注, 评论, 选择, 批注`;
+      case "zh-Hant":
+        return `標註, 留言, 選取, 筆記`;
       case "en-XA":
         return `[áññöţáţé, çöɱɱéñţ, šéļéçţ, ñöţé ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8894,6 +9537,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsThread() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إظهار سلسلة البطاقة أو إخفاؤها`;
+      case "de":
+        return `Verlauf der Karte ein- oder ausblenden`;
+      case "es":
+        return `Mostrar u ocultar el hilo de la tarjeta`;
+      case "fr":
+        return `Afficher ou masquer le fil de la carte`;
+      case "ja":
+        return `カードのスレッドを表示/非表示`;
+      case "ko":
+        return `카드 스레드 보기 또는 숨기기`;
+      case "pt-BR":
+        return `Mostrar ou ocultar a conversa do cartão`;
+      case "zh-Hans":
+        return `显示或隐藏卡片的讨论`;
+      case "zh-Hant":
+        return `顯示或隱藏卡片的討論串`;
       case "en-XA":
         return `[Šĥöŵ öŕ ĥîðé ţĥé çáŕð'š ţĥŕéáð ~~~~~~~~~~]`;
       case "ar-XB":
@@ -8903,6 +9564,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsThreadWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `طي, توسيع, دردشة, ردود, رسائل`;
+      case "de":
+        return `einklappen, ausklappen, Chat, Antworten, Nachrichten`;
+      case "es":
+        return `contraer, expandir, chat, respuestas, mensajes`;
+      case "fr":
+        return `replier, déplier, discussion, réponses, messages`;
+      case "ja":
+        return `折りたたむ, 展開, チャット, 返信, メッセージ`;
+      case "ko":
+        return `접기, 펼치기, 채팅, 답장, 메시지`;
+      case "pt-BR":
+        return `recolher, expandir, conversa, respostas, mensagens`;
+      case "zh-Hans":
+        return `折叠, 展开, 聊天, 回复, 消息`;
+      case "zh-Hant":
+        return `收合, 展開, 聊天, 回覆, 訊息`;
       case "en-XA":
         return `[çöļļáþšé, éẋþáñð, çĥáţ, ŕéþļîéš, ɱéššáĝéš ~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8912,6 +9591,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsThreadNew() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى رسائل السلسلة الجديدة`;
+      case "de":
+        return `Zu den neuen Nachrichten im Verlauf gehen`;
+      case "es":
+        return `Ir a los mensajes nuevos del hilo`;
+      case "fr":
+        return `Aller aux nouveaux messages du fil`;
+      case "ja":
+        return `スレッドの新着メッセージへ移動`;
+      case "ko":
+        return `스레드의 새 메시지로 이동`;
+      case "pt-BR":
+        return `Ir para as mensagens novas da conversa`;
+      case "zh-Hans":
+        return `前往讨论中的新消息`;
+      case "zh-Hant":
+        return `前往討論串的新訊息`;
       case "en-XA":
         return `[Ĝö ţö ţĥé ţĥŕéáð'š ñéŵ ɱéššáĝéš ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8921,6 +9618,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsThreadNewWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `قفز, أسفل, الأحدث, النهاية, غير مقروءة, ردود`;
+      case "de":
+        return `springen, nach unten, neueste, Ende, ungelesen, Antworten`;
+      case "es":
+        return `saltar, abajo, último, final, sin leer, respuestas`;
+      case "fr":
+        return `sauter, bas, dernier, fin, non lus, réponses`;
+      case "ja":
+        return `ジャンプ, 下, 最新, 末尾, 未読, 返信`;
+      case "ko":
+        return `건너뛰기, 아래, 최신, 맨 아래, 읽지 않음, 답장`;
+      case "pt-BR":
+        return `pular, descer, recentes, fim, não lidas, respostas`;
+      case "zh-Hans":
+        return `跳转, 向下, 最新, 底部, 未读, 回复`;
+      case "zh-Hant":
+        return `跳到, 往下, 最新, 底部, 未讀, 回覆`;
       case "en-XA":
         return `[ĵûɱþ, ðöŵñ, ļáţéšţ, ƀöţţöɱ, ûñŕéáð, ŕéþļîéš ~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8930,6 +9645,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowInfo() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض المعلومات`;
+      case "de":
+        return `Info anzeigen`;
+      case "es":
+        return `Mostrar información`;
+      case "fr":
+        return `Afficher Infos`;
+      case "ja":
+        return `情報を表示`;
+      case "ko":
+        return `정보 보기`;
+      case "pt-BR":
+        return `Mostrar Informações`;
+      case "zh-Hans":
+        return `显示信息`;
+      case "zh-Hant":
+        return `顯示資訊`;
       case "en-XA":
         return `[Šĥöŵ Îñƒö ~~~]`;
       case "ar-XB":
@@ -8939,6 +9672,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowInfoWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مهمة, سجل, علامة تبويب, فتح`;
+      case "de":
+        return `Aufgabe, Protokoll, Tab, öffnen`;
+      case "es":
+        return `tarea, registro, pestaña, abrir`;
+      case "fr":
+        return `tâche, fiche, onglet, ouvrir`;
+      case "ja":
+        return `タスク, 記録, タブ, 開く`;
+      case "ko":
+        return `작업, 기록, 탭, 열기`;
+      case "pt-BR":
+        return `tarefa, registro, aba, abrir`;
+      case "zh-Hans":
+        return `任务, 记录, 标签页, 打开`;
+      case "zh-Hant":
+        return `任務, 紀錄, 分頁, 開啟`;
       case "en-XA":
         return `[ţášķ, ŕéçöŕð, ţáƀ, öþéñ ~~~~~~~~]`;
       case "ar-XB":
@@ -8948,6 +9699,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowCards() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض البطاقات`;
+      case "de":
+        return `Karten anzeigen`;
+      case "es":
+        return `Mostrar tarjetas`;
+      case "fr":
+        return `Afficher Cartes`;
+      case "ja":
+        return `カードを表示`;
+      case "ko":
+        return `카드 보기`;
+      case "pt-BR":
+        return `Mostrar Cartões`;
+      case "zh-Hans":
+        return `显示卡片`;
+      case "zh-Hant":
+        return `顯示卡片`;
       case "en-XA":
         return `[Šĥöŵ Çáŕðš ~~~~]`;
       case "ar-XB":
@@ -8957,6 +9726,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowCardsWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مهمة, سجل, علامة تبويب, قرارات, ملاحظات`;
+      case "de":
+        return `Aufgabe, Protokoll, Tab, Entscheidungen, Notizen`;
+      case "es":
+        return `tarea, registro, pestaña, decisiones, notas`;
+      case "fr":
+        return `tâche, fiche, onglet, décisions, notes`;
+      case "ja":
+        return `タスク, 記録, タブ, 判断, お知らせ`;
+      case "ko":
+        return `작업, 기록, 탭, 결정, 알림`;
+      case "pt-BR":
+        return `tarefa, registro, aba, decisões, notas`;
+      case "zh-Hans":
+        return `任务, 记录, 标签页, 决定, 便笺`;
+      case "zh-Hant":
+        return `任務, 紀錄, 分頁, 決定, 筆記`;
       case "en-XA":
         return `[ţášķ, ŕéçöŕð, ţáƀ, ðéçîšîöñš, ñöţéš ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8966,6 +9753,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowActivity() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض النشاط`;
+      case "de":
+        return `Aktivität anzeigen`;
+      case "es":
+        return `Mostrar actividad`;
+      case "fr":
+        return `Afficher Activité`;
+      case "ja":
+        return `アクティビティを表示`;
+      case "ko":
+        return `활동 보기`;
+      case "pt-BR":
+        return `Mostrar Atividade`;
+      case "zh-Hans":
+        return `显示动态`;
+      case "zh-Hant":
+        return `顯示動態`;
       case "en-XA":
         return `[Šĥöŵ Åçţîṽîţý ~~~~~]`;
       case "ar-XB":
@@ -8975,6 +9780,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowActivityWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مهمة, سجل, علامة تبويب, خط زمني, تاريخ`;
+      case "de":
+        return `Aufgabe, Protokoll, Tab, Zeitachse, Verlauf`;
+      case "es":
+        return `tarea, registro, pestaña, cronología, historial`;
+      case "fr":
+        return `tâche, fiche, onglet, chronologie, historique`;
+      case "ja":
+        return `タスク, 記録, タブ, タイムライン, 履歴`;
+      case "ko":
+        return `작업, 기록, 탭, 타임라인, 내역`;
+      case "pt-BR":
+        return `tarefa, registro, aba, linha do tempo, histórico`;
+      case "zh-Hans":
+        return `任务, 记录, 标签页, 时间线, 历史`;
+      case "zh-Hant":
+        return `任務, 紀錄, 分頁, 時間軸, 歷史`;
       case "en-XA":
         return `[ţášķ, ŕéçöŕð, ţáƀ, ţîɱéļîñé, ĥîšţöŕý ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -8984,6 +9807,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowCrewmate() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض فرد الطاقم`;
+      case "de":
+        return `Crewmitglied anzeigen`;
+      case "es":
+        return `Mostrar tripulante`;
+      case "fr":
+        return `Afficher Équipier`;
+      case "ja":
+        return `乗組員を表示`;
+      case "ko":
+        return `선원 보기`;
+      case "pt-BR":
+        return `Mostrar Tripulante`;
+      case "zh-Hans":
+        return `显示船员`;
+      case "zh-Hant":
+        return `顯示船員`;
       case "en-XA":
         return `[Šĥöŵ Çŕéŵɱáţé ~~~~~]`;
       case "ar-XB":
@@ -8993,6 +9834,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowCrewmateWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مهمة, محادثة, ملاحظات, علامة تبويب`;
+      case "de":
+        return `Aufgabe, Unterhaltung, Notizen, Tab`;
+      case "es":
+        return `tarea, conversación, notas, pestaña`;
+      case "fr":
+        return `tâche, conversation, notes, onglet`;
+      case "ja":
+        return `タスク, 会話, ノート, タブ`;
+      case "ko":
+        return `작업, 대화, 기록, 탭`;
+      case "pt-BR":
+        return `tarefa, sessão, transcrição, aba`;
+      case "zh-Hans":
+        return `任务, 对话, 记录, 标签页`;
+      case "zh-Hant":
+        return `任務, 對話, 筆記, 分頁`;
       case "en-XA":
         return `[ţášķ, šéššîöñ, ţŕáñšçŕîþţ, ţáƀ ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9002,6 +9861,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandBrowserControl() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تولّي التحكم في المتصفح أو إعادته`;
+      case "de":
+        return `Browser übernehmen oder zurückgeben`;
+      case "es":
+        return `Tomar o devolver el control del navegador`;
+      case "fr":
+        return `Prendre ou rendre le contrôle du navigateur`;
+      case "ja":
+        return `ブラウザの操作を引き継ぐ/戻す`;
+      case "ko":
+        return `브라우저 제어 가져오기 또는 돌려주기`;
+      case "pt-BR":
+        return `Assumir ou devolver o controle do navegador`;
+      case "zh-Hans":
+        return `接管或交还浏览器控制权`;
+      case "zh-Hant":
+        return `接手或交還瀏覽器控制`;
       case "en-XA":
         return `[Ţáķé öŕ ŕéţûŕñ ƀŕöŵšéŕ çöñţŕöļ ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9011,6 +9888,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandBrowserControlWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تسليم, تولّي, إعادة, متصفح`;
+      case "de":
+        return `übergeben, übernehmen, zurückgeben, Browser`;
+      case "es":
+        return `devolver, tomar, control, navegador`;
+      case "fr":
+        return `rendre, prendre, contrôle, navigateur`;
+      case "ja":
+        return `引き渡し, 引き継ぐ, 戻す, ブラウザ`;
+      case "ko":
+        return `넘겨주기, 가져오기, 돌려주기, 브라우저`;
+      case "pt-BR":
+        return `devolver, assumir, retornar, navegador`;
+      case "zh-Hans":
+        return `交还, 接管, 归还, 浏览器`;
+      case "zh-Hant":
+        return `交還, 接手, 歸還, 瀏覽器`;
       case "en-XA":
         return `[ĥáñðƀáçķ, ţáķé, ŕéţûŕñ, ƀŕöŵšéŕ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9020,6 +9915,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandTaskMoveComputer() {
     switch (currentLanguage()) {
+      case "ar":
+        return `نقل المهمة إلى حاسوب آخر`;
+      case "de":
+        return `Aufgabe auf einen anderen Computer verschieben`;
+      case "es":
+        return `Mover la tarea a otra computadora`;
+      case "fr":
+        return `Déplacer la tâche vers un autre ordinateur`;
+      case "ja":
+        return `タスクを別のコンピューターへ移す`;
+      case "ko":
+        return `작업을 다른 컴퓨터로 옮기기`;
+      case "pt-BR":
+        return `Mover a tarefa para outro computador`;
+      case "zh-Hans":
+        return `将任务移到另一台电脑`;
+      case "zh-Hant":
+        return `把任務移到另一台電腦`;
       case "en-XA":
         return `[Ṁöṽé ţĥé ţášķ ţö áñöţĥéŕ çöɱþûţéŕ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9029,6 +9942,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandTaskMoveComputerWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `حاسوب, جهاز, نقل, سجل`;
+      case "de":
+        return `Computer, Mac, Rechner, verschieben, Gerät, Protokoll`;
+      case "es":
+        return `computadora, equipo, mover, dispositivo, registro`;
+      case "fr":
+        return `ordinateur, déplacer, appareil, fiche`;
+      case "ja":
+        return `コンピューター, マック, マシン, 移動, デバイス, 記録`;
+      case "ko":
+        return `컴퓨터, 맥, 옮기기, 기기, 기록`;
+      case "pt-BR":
+        return `computador, máquina, mover, dispositivo, registro`;
+      case "zh-Hans":
+        return `电脑, 计算机, 设备, 移动, 迁移, 记录`;
+      case "zh-Hant":
+        return `電腦, 機器, 移動, 裝置, 紀錄`;
       case "en-XA":
         return `[çöɱþûţéŕ, ɱáç, ɱáçĥîñé, ɱöṽé, ðéṽîçé, ŕéçöŕð ~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9038,6 +9969,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandTaskCloseDone() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إغلاق المهمة كمنجزة`;
+      case "de":
+        return `Aufgabe als erledigt schließen`;
+      case "es":
+        return `Cerrar la tarea como hecha`;
+      case "fr":
+        return `Clore la tâche comme terminée`;
+      case "ja":
+        return `タスクを完了として閉じる`;
+      case "ko":
+        return `작업을 완료로 닫기`;
+      case "pt-BR":
+        return `Encerrar a tarefa como concluída`;
+      case "zh-Hans":
+        return `将任务关闭为已完成`;
+      case "zh-Hant":
+        return `將任務以完成關閉`;
       case "en-XA":
         return `[Çļöšé ţĥé ţášķ áš ðöñé ~~~~~~~~]`;
       case "ar-XB":
@@ -9047,6 +9996,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandTaskCloseDoneWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تم, إنهاء, منتهية, مكتملة, إغلاق, سجل, مهمة`;
+      case "de":
+        return `erledigt, fertig, beenden, abgeschlossen, abschließen, schließen, Protokoll, Aufgabe`;
+      case "es":
+        return `hecho, terminar, terminada, completar, cerrar, registro, tarea`;
+      case "fr":
+        return `terminé, finir, fini, achevé, clore, fermer, fiche, tâche`;
+      case "ja":
+        return `完了, 終了, 済み, 閉じる, 記録, タスク`;
+      case "ko":
+        return `완료, 마치기, 끝남, 종료, 닫기, 기록, 작업`;
+      case "pt-BR":
+        return `concluído, concluir, terminar, terminado, completo, encerrar, fechar, registro, tarefa`;
+      case "zh-Hans":
+        return `完成, 结束, 已完成, 做完, 关闭, 记录, 任务`;
+      case "zh-Hant":
+        return `完成, 結束, 已完成, 做完, 關閉, 紀錄, 任務`;
       case "en-XA":
         return `[ðöñé, ƒîñîšĥ, ƒîñîšĥéð, çöɱþļéţé, çļöšé, ŕéçöŕð, ţášķ ~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9056,6 +10023,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowBrowser() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض المتصفح`;
+      case "de":
+        return `Browser anzeigen`;
+      case "es":
+        return `Mostrar navegador`;
+      case "fr":
+        return `Afficher Navigateur`;
+      case "ja":
+        return `ブラウザを表示`;
+      case "ko":
+        return `브라우저 보기`;
+      case "pt-BR":
+        return `Mostrar Navegador`;
+      case "zh-Hans":
+        return `显示浏览器`;
+      case "zh-Hant":
+        return `顯示瀏覽器`;
       case "en-XA":
         return `[Šĥöŵ Ɓŕöŵšéŕ ~~~~]`;
       case "ar-XB":
@@ -9065,6 +10050,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsShowBrowserWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مهمة, صفحة, علامة تبويب`;
+      case "de":
+        return `Aufgabe, Seite, Tab`;
+      case "es":
+        return `tarea, página, pestaña`;
+      case "fr":
+        return `tâche, page, onglet`;
+      case "ja":
+        return `タスク, ページ, タブ`;
+      case "ko":
+        return `작업, 페이지, 탭`;
+      case "pt-BR":
+        return `tarefa, página, aba`;
+      case "zh-Hans":
+        return `任务, 网页, 标签页`;
+      case "zh-Hant":
+        return `任務, 網頁, 分頁`;
       case "en-XA":
         return `[ţášķ, þáĝé, ţáƀ ~~~~~]`;
       case "ar-XB":
@@ -9074,6 +10077,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsNextTab() {
     switch (currentLanguage()) {
+      case "ar":
+        return `علامة التبويب التالية`;
+      case "de":
+        return `Nächster Tab`;
+      case "es":
+        return `Pestaña siguiente`;
+      case "fr":
+        return `Onglet suivant`;
+      case "ja":
+        return `次のタブ`;
+      case "ko":
+        return `다음 탭`;
+      case "pt-BR":
+        return `Próxima aba`;
+      case "zh-Hans":
+        return `下一个标签页`;
+      case "zh-Hant":
+        return `下一個分頁`;
       case "en-XA":
         return `[Ñéẋţ ţáƀ ~~~]`;
       case "ar-XB":
@@ -9083,6 +10104,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsNextTabWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مهمة, علامة تبويب`;
+      case "de":
+        return `Aufgabe, Tab`;
+      case "es":
+        return `tarea, pestaña`;
+      case "fr":
+        return `tâche, onglet`;
+      case "ja":
+        return `タスク, タブ`;
+      case "ko":
+        return `작업, 탭`;
+      case "pt-BR":
+        return `tarefa, aba`;
+      case "zh-Hans":
+        return `任务, 标签页`;
+      case "zh-Hant":
+        return `任務, 分頁`;
       case "en-XA":
         return `[ţášķ, ţáƀ ~~~]`;
       case "ar-XB":
@@ -9092,6 +10131,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsPreviousTab() {
     switch (currentLanguage()) {
+      case "ar":
+        return `علامة التبويب السابقة`;
+      case "de":
+        return `Vorheriger Tab`;
+      case "es":
+        return `Pestaña anterior`;
+      case "fr":
+        return `Onglet précédent`;
+      case "ja":
+        return `前のタブ`;
+      case "ko":
+        return `이전 탭`;
+      case "pt-BR":
+        return `Aba anterior`;
+      case "zh-Hans":
+        return `上一个标签页`;
+      case "zh-Hant":
+        return `上一個分頁`;
       case "en-XA":
         return `[Þŕéṽîöûš ţáƀ ~~~~]`;
       case "ar-XB":
@@ -9101,6 +10158,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCardsPreviousTabWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مهمة, علامة تبويب`;
+      case "de":
+        return `Aufgabe, Tab`;
+      case "es":
+        return `tarea, pestaña`;
+      case "fr":
+        return `tâche, onglet`;
+      case "ja":
+        return `タスク, タブ`;
+      case "ko":
+        return `작업, 탭`;
+      case "pt-BR":
+        return `tarefa, aba`;
+      case "zh-Hans":
+        return `任务, 标签页`;
+      case "zh-Hant":
+        return `任務, 分頁`;
       case "en-XA":
         return `[ţášķ, ţáƀ ~~~]`;
       case "ar-XB":
@@ -9110,6 +10185,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsOpen() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح الإعدادات`;
+      case "de":
+        return `Einstellungen öffnen`;
+      case "es":
+        return `Abrir Configuración`;
+      case "fr":
+        return `Ouvrir les Réglages`;
+      case "ja":
+        return `設定を開く`;
+      case "ko":
+        return `설정 열기`;
+      case "pt-BR":
+        return `Abrir Ajustes`;
+      case "zh-Hans":
+        return `打开设置`;
+      case "zh-Hant":
+        return `開啟設定`;
       case "en-XA":
         return `[Öþéñ Šéţţîñĝš ~~~~~]`;
       case "ar-XB":
@@ -9119,6 +10212,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsKeyboard() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح إعدادات لوحة المفاتيح`;
+      case "de":
+        return `Tastatureinstellungen öffnen`;
+      case "es":
+        return `Abrir la configuración del teclado`;
+      case "fr":
+        return `Ouvrir les réglages du clavier`;
+      case "ja":
+        return `キーボード設定を開く`;
+      case "ko":
+        return `키보드 설정 열기`;
+      case "pt-BR":
+        return `Abrir os ajustes do teclado`;
+      case "zh-Hans":
+        return `打开键盘设置`;
+      case "zh-Hant":
+        return `開啟鍵盤設定`;
       case "en-XA":
         return `[Öþéñ Ķéýƀöáŕð šéţţîñĝš ~~~~~~~~]`;
       case "ar-XB":
@@ -9128,6 +10239,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsPanels() {
     switch (currentLanguage()) {
+      case "ar":
+        return `ترتيب اللوحات`;
+      case "de":
+        return `Panels anordnen`;
+      case "es":
+        return `Organizar paneles`;
+      case "fr":
+        return `Organiser les panneaux`;
+      case "ja":
+        return `パネルを並べ替える`;
+      case "ko":
+        return `패널 정리`;
+      case "pt-BR":
+        return `Organizar painéis`;
+      case "zh-Hans":
+        return `排列面板`;
+      case "zh-Hant":
+        return `排列面板`;
       case "en-XA":
         return `[Åŕŕáñĝé þáñéļš ~~~~~]`;
       case "ar-XB":
@@ -9137,6 +10266,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsPanelsWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `أشرطة, تخطيط, ترتيب, نقل, إخفاء, إظهار`;
+      case "de":
+        return `Leisten, Layout, Anordnung, Reihenfolge, verschieben, ausblenden, einblenden`;
+      case "es":
+        return `barras, disposición, orden, mover, ocultar, mostrar`;
+      case "fr":
+        return `colonnes, disposition, ordre, déplacer, masquer, afficher`;
+      case "ja":
+        return `パネル列, レイアウト, 順序, 移動, 隠す, 表示`;
+      case "ko":
+        return `레일, 배치, 순서, 옮기기, 숨기기, 보기`;
+      case "pt-BR":
+        return `barras laterais, layout, ordem, mover, ocultar, mostrar`;
+      case "zh-Hans":
+        return `侧栏, 布局, 顺序, 移动, 隐藏, 显示`;
+      case "zh-Hant":
+        return `側欄, 版面, 順序, 移動, 隱藏, 顯示`;
       case "en-XA":
         return `[ŕáîļš, ļáýöûţ, öŕðéŕ, ɱöṽé, ĥîðé, šĥöŵ ~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9146,6 +10293,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUpdatesShow() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض التحديث المتاح`;
+      case "de":
+        return `Verfügbares Update anzeigen`;
+      case "es":
+        return `Mostrar la actualización disponible`;
+      case "fr":
+        return `Afficher la mise à jour disponible`;
+      case "ja":
+        return `利用可能なアップデートを表示`;
+      case "ko":
+        return `사용 가능한 업데이트 보기`;
+      case "pt-BR":
+        return `Mostrar a atualização disponível`;
+      case "zh-Hans":
+        return `显示可用的更新`;
+      case "zh-Hant":
+        return `顯示可用的更新`;
       case "en-XA":
         return `[Šĥöŵ áṽáîļáƀļé ûþðáţé ~~~~~~~]`;
       case "ar-XB":
@@ -9155,6 +10320,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUpdatesShowWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تحديث, إعادة تشغيل, مستقر, ألفا`;
+      case "de":
+        return `Update, Aktualisierung, neu starten, stabil, Alpha`;
+      case "es":
+        return `actualizar, reiniciar, estable, alfa`;
+      case "fr":
+        return `mise à jour, redémarrer, stable, alpha`;
+      case "ja":
+        return `アップデート, 再起動, 安定版, アルファ版`;
+      case "ko":
+        return `업데이트, 다시 시작, 안정, 알파`;
+      case "pt-BR":
+        return `atualização, atualizar, reiniciar, estável, alfa`;
+      case "zh-Hans":
+        return `更新, 重启, 稳定版, 测试版`;
+      case "zh-Hant":
+        return `更新, 重新啟動, 穩定版, 測試版`;
       case "en-XA":
         return `[ûþðáţé, ŕéšţáŕţ, šţáƀļé, áļþĥá ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9164,6 +10347,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUpdatesLater() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحديث لاحقًا`;
+      case "de":
+        return `Später aktualisieren`;
+      case "es":
+        return `Actualizar más tarde`;
+      case "fr":
+        return `Mettre à jour plus tard`;
+      case "ja":
+        return `後でアップデート`;
+      case "ko":
+        return `나중에 업데이트`;
+      case "pt-BR":
+        return `Atualizar mais tarde`;
+      case "zh-Hans":
+        return `稍后更新`;
+      case "zh-Hant":
+        return `稍後更新`;
       case "en-XA":
         return `[Ûþðáţé ļáţéŕ ~~~~]`;
       case "ar-XB":
@@ -9173,6 +10374,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUpdatesLaterWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تحديث, لاحقًا, إلغاء, حفظ, عمل`;
+      case "de":
+        return `Update, später, abbrechen, sichern, Arbeit`;
+      case "es":
+        return `actualizar, después, cancelar, guardando, trabajo`;
+      case "fr":
+        return `mise à jour, plus tard, annuler, enregistrement, travail`;
+      case "ja":
+        return `アップデート, 後で, キャンセル, 保存中, 作業`;
+      case "ko":
+        return `업데이트, 나중에, 취소, 저장, 작업`;
+      case "pt-BR":
+        return `atualização, depois, cancelar, salvando, trabalho`;
+      case "zh-Hans":
+        return `更新, 稍后, 取消, 保存, 工作`;
+      case "zh-Hant":
+        return `更新, 稍後, 取消, 儲存, 工作`;
       case "en-XA":
         return `[ûþðáţé, ļáţéŕ, çáñçéļ, šáṽîñĝ, ŵöŕķ ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9182,6 +10401,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUpdatesCheck() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحقق من وجود تحديثات`;
+      case "de":
+        return `Nach Updates suchen`;
+      case "es":
+        return `Buscar actualizaciones`;
+      case "fr":
+        return `Rechercher les mises à jour`;
+      case "ja":
+        return `アップデートを確認`;
+      case "ko":
+        return `업데이트 확인`;
+      case "pt-BR":
+        return `Verificar atualizações`;
+      case "zh-Hans":
+        return `检查更新`;
+      case "zh-Hant":
+        return `檢查更新`;
       case "en-XA":
         return `[Çĥéçķ ƒöŕ ûþðáţéš ~~~~~~]`;
       case "ar-XB":
@@ -9191,6 +10428,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUpdatesCheckWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تحديث, نسخة, إصدار, جديد`;
+      case "de":
+        return `Update, Aktualisierung, Version, neu`;
+      case "es":
+        return `actualizar, versión, lanzamiento, nueva`;
+      case "fr":
+        return `mise à jour, version, publication, nouveau`;
+      case "ja":
+        return `アップデート, バージョン, リリース, 新しい`;
+      case "ko":
+        return `업데이트, 버전, 릴리스, 새로운`;
+      case "pt-BR":
+        return `atualização, versão, lançamento, novo`;
+      case "zh-Hans":
+        return `更新, 版本, 发布, 新版`;
+      case "zh-Hant":
+        return `更新, 版本, 發布, 新版`;
       case "en-XA":
         return `[ûþðáţé, ṽéŕšîöñ, ŕéļéášé, ñéŵ ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9200,6 +10455,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandWhatsNewShow() {
     switch (currentLanguage()) {
+      case "ar":
+        return `عرض ما الجديد`;
+      case "de":
+        return `Neuigkeiten anzeigen`;
+      case "es":
+        return `Mostrar las novedades`;
+      case "fr":
+        return `Afficher les nouveautés`;
+      case "ja":
+        return `新機能を表示`;
+      case "ko":
+        return `새로운 기능 보기`;
+      case "pt-BR":
+        return `Mostrar as novidades`;
+      case "zh-Hans":
+        return `显示新功能`;
+      case "zh-Hant":
+        return `顯示新功能`;
       case "en-XA":
         return `[Šĥöŵ ŵĥáţ'š ñéŵ ~~~~~]`;
       case "ar-XB":
@@ -9209,6 +10482,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandWhatsNewShowWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إصدار, ملاحظات, تغييرات, نسخة`;
+      case "de":
+        return `Versionshinweise, Neuigkeiten, Änderungen, Version`;
+      case "es":
+        return `lanzamiento, notas, cambios, versión`;
+      case "fr":
+        return `version, notes, nouveautés, modifications`;
+      case "ja":
+        return `リリース, ノート, 変更, バージョン`;
+      case "ko":
+        return `릴리스, 노트, 변경, 버전`;
+      case "pt-BR":
+        return `lançamento, notas, novidades, alterações, versão`;
+      case "zh-Hans":
+        return `发布, 说明, 更新内容, 版本`;
+      case "zh-Hant":
+        return `發布, 說明, 變更, 版本`;
       case "en-XA":
         return `[ŕéļéášé, ñöţéš, çĥáñĝéš, ṽéŕšîöñ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9218,6 +10509,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandFirstmateReply() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح رد نائب القبطان`;
+      case "de":
+        return `Antwort des ersten Offiziers öffnen`;
+      case "es":
+        return `Abrir la respuesta del primer oficial`;
+      case "fr":
+        return `Ouvrir la réponse du second`;
+      case "ja":
+        return `一等航海士の返信を開く`;
+      case "ko":
+        return `일등항해사의 답장 열기`;
+      case "pt-BR":
+        return `Abrir a resposta do imediato`;
+      case "zh-Hans":
+        return `打开大副的回复`;
+      case "zh-Hant":
+        return `開啟大副的回覆`;
       case "en-XA":
         return `[Öþéñ ţĥé ƒîŕšţ ɱáţé'š ŕéþļý ~~~~~~~~~]`;
       case "ar-XB":
@@ -9227,6 +10536,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandFirstmateReplyWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إجابة, رسالة, ملاحظة, أخير`;
+      case "de":
+        return `Antwort, Nachricht, Notiz, letzte`;
+      case "es":
+        return `respuesta, mensaje, nota, última`;
+      case "fr":
+        return `réponse, message, note, dernière`;
+      case "ja":
+        return `回答, メッセージ, メモ, 最後`;
+      case "ko":
+        return `답변, 메시지, 알림, 마지막`;
+      case "pt-BR":
+        return `resposta, mensagem, nota, última`;
+      case "zh-Hans":
+        return `回答, 消息, 便笺, 最后`;
+      case "zh-Hant":
+        return `回答, 訊息, 筆記, 最後`;
       case "en-XA":
         return `[áñšŵéŕ, ɱéššáĝé, ñöţé, ļášţ ~~~~~~~~~]`;
       case "ar-XB":
@@ -9236,6 +10563,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsRunbooks() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح أدلة التشغيل`;
+      case "de":
+        return `Leitfäden öffnen`;
+      case "es":
+        return `Abrir Manuales`;
+      case "fr":
+        return `Ouvrir Procédures`;
+      case "ja":
+        return `ランブックを開く`;
+      case "ko":
+        return `런북 열기`;
+      case "pt-BR":
+        return `Abrir Manuais`;
+      case "zh-Hans":
+        return `打开操作手册`;
+      case "zh-Hant":
+        return `開啟作業手冊`;
       case "en-XA":
         return `[Öþéñ Ŕûñƀööķš ~~~~~]`;
       case "ar-XB":
@@ -9245,6 +10590,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsRunbooksWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إرشادات, مهارات, تعليمات`;
+      case "de":
+        return `Anleitungen, Fähigkeiten, Anweisungen`;
+      case "es":
+        return `guía, habilidades, instrucciones`;
+      case "fr":
+        return `consignes, compétences, instructions`;
+      case "ja":
+        return `手引き, スキル, 手順`;
+      case "ko":
+        return `안내, 스킬, 지침`;
+      case "pt-BR":
+        return `orientações, habilidades, instruções, manuais`;
+      case "zh-Hans":
+        return `指南, 技能, 说明`;
+      case "zh-Hant":
+        return `指引, 技能, 說明`;
       case "en-XA":
         return `[ĝûîðáñçé, šķîļļš, îñšţŕûçţîöñš ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9254,6 +10617,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRunbooksOpenFolder() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح مجلد أدلة التشغيل`;
+      case "de":
+        return `Deinen Leitfäden-Ordner öffnen`;
+      case "es":
+        return `Abrir tu carpeta de manuales`;
+      case "fr":
+        return `Ouvrir votre dossier de procédures`;
+      case "ja":
+        return `ランブックのフォルダを開く`;
+      case "ko":
+        return `런북 폴더 열기`;
+      case "pt-BR":
+        return `Abrir a sua pasta de manuais`;
+      case "zh-Hans":
+        return `打开你的操作手册文件夹`;
+      case "zh-Hant":
+        return `開啟你的作業手冊資料夾`;
       case "en-XA":
         return `[Öþéñ ýöûŕ ŕûñƀööķš ƒöļðéŕ ~~~~~~~~~]`;
       case "ar-XB":
@@ -9263,6 +10644,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRunbooksOpenFolderWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `مجلد, إرشادات, تخصيص`;
+      case "de":
+        return `Ordner, Verzeichnis, Anleitungen, anpassen`;
+      case "es":
+        return `directorio, guía, personalizar`;
+      case "fr":
+        return `répertoire, consignes, personnaliser`;
+      case "ja":
+        return `ディレクトリ, 手引き, カスタマイズ`;
+      case "ko":
+        return `디렉터리, 안내, 사용자화`;
+      case "pt-BR":
+        return `diretório, pasta, orientações, personalizar`;
+      case "zh-Hans":
+        return `目录, 指南, 自定义`;
+      case "zh-Hant":
+        return `目錄, 指引, 自訂`;
       case "en-XA":
         return `[ðîŕéçţöŕý, ĝûîðáñçé, çûšţöɱîžé ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9272,6 +10671,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsUsage() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح الاستخدام`;
+      case "de":
+        return `Nutzung öffnen`;
+      case "es":
+        return `Abrir Uso`;
+      case "fr":
+        return `Ouvrir Utilisation`;
+      case "ja":
+        return `使用量を開く`;
+      case "ko":
+        return `사용량 열기`;
+      case "pt-BR":
+        return `Abrir Uso`;
+      case "zh-Hans":
+        return `打开用量`;
+      case "zh-Hant":
+        return `開啟用量`;
       case "en-XA":
         return `[Öþéñ Ûšáĝé ~~~~]`;
       case "ar-XB":
@@ -9281,6 +10698,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsUsageWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `رموز, نماذج, تكلفة, دولارات`;
+      case "de":
+        return `Token, Modelle, Kosten, Dollar`;
+      case "es":
+        return `consumo, modelos, costo, dólares`;
+      case "fr":
+        return `jetons, modèles, coût, dollars`;
+      case "ja":
+        return `トークン, モデル, 費用, ドル`;
+      case "ko":
+        return `토큰, 모델, 비용, 달러`;
+      case "pt-BR":
+        return `tokens, modelos, custo, dólares`;
+      case "zh-Hans":
+        return `令牌, 模型, 费用, 美元`;
+      case "zh-Hant":
+        return `用量, 模型, 費用, 美元`;
       case "en-XA":
         return `[ţöķéñš, ɱöðéļš, çöšţ, ðöļļáŕš ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9290,6 +10725,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsAutomation() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح الأتمتة`;
+      case "de":
+        return `Automatisierung öffnen`;
+      case "es":
+        return `Abrir Automatización`;
+      case "fr":
+        return `Ouvrir Automatisation`;
+      case "ja":
+        return `自動化を開く`;
+      case "ko":
+        return `자동화 열기`;
+      case "pt-BR":
+        return `Abrir Automação`;
+      case "zh-Hans":
+        return `打开自动化`;
+      case "zh-Hant":
+        return `開啟自動化`;
       case "en-XA":
         return `[Öþéñ Åûţöɱáţîöñ ~~~~~]`;
       case "ar-XB":
@@ -9299,6 +10752,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsAutomationWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `جدولة, مجدولة, متكررة, تذكير, إيقاف مؤقت`;
+      case "de":
+        return `Zeitplan, geplant, wiederkehrend, Erinnerung, pausieren`;
+      case "es":
+        return `programar, programada, periódica, recordatorio, pausar`;
+      case "fr":
+        return `planifier, planifié, récurrent, rappel, pause`;
+      case "ja":
+        return `スケジュール, 予定, 定期, リマインダー, 一時停止`;
+      case "ko":
+        return `예약, 예약됨, 반복, 알림, 일시 정지`;
+      case "pt-BR":
+        return `agendar, agendado, recorrente, lembrete, pausar`;
+      case "zh-Hans":
+        return `计划, 定时, 重复, 提醒, 暂停`;
+      case "zh-Hant":
+        return `排程, 已排程, 定期, 提醒, 暫停`;
       case "en-XA":
         return `[šçĥéðûļé, šçĥéðûļéð, ŕéçûŕŕîñĝ, ŕéɱîñðéŕ, þáûšé ~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9308,6 +10779,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsIntegrations() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح التكاملات`;
+      case "de":
+        return `Integrationen öffnen`;
+      case "es":
+        return `Abrir Integraciones`;
+      case "fr":
+        return `Ouvrir Intégrations`;
+      case "ja":
+        return `連携を開く`;
+      case "ko":
+        return `연동 열기`;
+      case "pt-BR":
+        return `Abrir Integrações`;
+      case "zh-Hans":
+        return `打开集成`;
+      case "zh-Hant":
+        return `開啟整合`;
       case "en-XA":
         return `[Öþéñ Îñţéĝŕáţîöñš ~~~~~~]`;
       case "ar-XB":
@@ -9317,6 +10806,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsIntegrationsWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `اتصال, ربط, تسجيل الدخول`;
+      case "de":
+        return `Verbindung, verbinden, anmelden`;
+      case "es":
+        return `conexión, conectar, iniciar sesión`;
+      case "fr":
+        return `connexion, connecter, se connecter, compte`;
+      case "ja":
+        return `接続, つなぐ, サインイン`;
+      case "ko":
+        return `깃허브, 연결, 연결하기, 로그인`;
+      case "pt-BR":
+        return `github, conexão, conectar, entrar, login`;
+      case "zh-Hans":
+        return `连接, 关联, 登录`;
+      case "zh-Hant":
+        return `連線, 連接, 登入`;
       case "en-XA":
         return `[ĝîţĥûƀ, çöññéçţîöñ, çöññéçţ, šîĝñ îñ ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9326,6 +10833,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsSecrets() {
     switch (currentLanguage()) {
+      case "ar":
+        return `فتح الأسرار`;
+      case "de":
+        return `Geheimnisse öffnen`;
+      case "es":
+        return `Abrir Secretos`;
+      case "fr":
+        return `Ouvrir Secrets`;
+      case "ja":
+        return `シークレットを開く`;
+      case "ko":
+        return `비밀 정보 열기`;
+      case "pt-BR":
+        return `Abrir Segredos`;
+      case "zh-Hans":
+        return `打开机密`;
+      case "zh-Hant":
+        return `開啟機密`;
       case "en-XA":
         return `[Öþéñ Šéçŕéţš ~~~~]`;
       case "ar-XB":
@@ -9335,6 +10860,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSettingsSecretsWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `سر, مفتاح, موافقة, استرداد`;
+      case "de":
+        return `Geheimnis, Schlüssel, Freigabe, Wiederherstellung`;
+      case "es":
+        return `secreto, clave, aprobación, recuperación`;
+      case "fr":
+        return `secret, clé, approbation, récupération`;
+      case "ja":
+        return `秘密, キー, 承認, 復元`;
+      case "ko":
+        return `비밀, 키, 승인, 복구`;
+      case "pt-BR":
+        return `segredo, chave, aprovação, recuperação`;
+      case "zh-Hans":
+        return `机密, 密钥, 批准, 恢复`;
+      case "zh-Hant":
+        return `機密, 金鑰, 核准, 復原`;
       case "en-XA":
         return `[šéçŕéţ, ķéý, áþþŕöṽáļ, ŕéçöṽéŕý ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9344,6 +10887,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandAutomationPauseAll() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف كل عمليات الأتمتة مؤقتًا`;
+      case "de":
+        return `Alle Automatisierungen pausieren`;
+      case "es":
+        return `Pausar todas las automatizaciones`;
+      case "fr":
+        return `Mettre en pause toutes les automatisations`;
+      case "ja":
+        return `すべての自動化を一時停止`;
+      case "ko":
+        return `모든 자동화 일시 정지`;
+      case "pt-BR":
+        return `Pausar todas as automações`;
+      case "zh-Hans":
+        return `暂停所有自动化`;
+      case "zh-Hant":
+        return `暫停所有自動化`;
       case "en-XA":
         return `[Þáûšé áļļ áûţöɱáţîöñš ~~~~~~~]`;
       case "ar-XB":
@@ -9353,6 +10914,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandAutomationPauseAllWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `جدولة, مجدولة, متكررة, إيقاف`;
+      case "de":
+        return `Zeitplan, geplant, wiederkehrend, anhalten, stoppen`;
+      case "es":
+        return `programar, programada, periódica, detener`;
+      case "fr":
+        return `planifier, planifié, récurrent, arrêter`;
+      case "ja":
+        return `スケジュール, 予定, 定期, 停止`;
+      case "ko":
+        return `예약, 예약됨, 반복, 중지`;
+      case "pt-BR":
+        return `agendar, agendado, recorrente, parar`;
+      case "zh-Hans":
+        return `计划, 定时, 重复, 停止`;
+      case "zh-Hant":
+        return `排程, 已排程, 定期, 停止`;
       case "en-XA":
         return `[šçĥéðûļé, šçĥéðûļéð, ŕéçûŕŕîñĝ, šţöþ ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9362,6 +10941,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUsageUnit() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تبديل وحدات الاستخدام`;
+      case "de":
+        return `Einheit der Nutzung wechseln`;
+      case "es":
+        return `Cambiar las unidades de Uso`;
+      case "fr":
+        return `Changer les unités d’Utilisation`;
+      case "ja":
+        return `使用量の単位を切り替える`;
+      case "ko":
+        return `사용량 단위 바꾸기`;
+      case "pt-BR":
+        return `Trocar as unidades de Uso`;
+      case "zh-Hans":
+        return `切换用量单位`;
+      case "zh-Hant":
+        return `切換用量單位`;
       case "en-XA":
         return `[Šŵîţçĥ Ûšáĝé ûñîţš ~~~~~~]`;
       case "ar-XB":
@@ -9371,6 +10968,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandUsageUnitWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `رموز, تكلفة, دولارات, تقدير`;
+      case "de":
+        return `Token, Kosten, Dollar, Schätzung`;
+      case "es":
+        return `consumo, costo, dólares, estimación`;
+      case "fr":
+        return `jetons, coût, dollars, estimation`;
+      case "ja":
+        return `トークン, 費用, ドル, 見積もり`;
+      case "ko":
+        return `토큰, 비용, 달러, 추정`;
+      case "pt-BR":
+        return `tokens, custo, dólares, estimativa`;
+      case "zh-Hans":
+        return `令牌, 费用, 美元, 估算`;
+      case "zh-Hant":
+        return `用量, 費用, 美元, 估計`;
       case "en-XA":
         return `[ţöķéñš, çöšţ, ðöļļáŕš, éšţîɱáţé ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9380,6 +10995,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandAllowanceRecheck() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إعادة التحقق من الرصيد`;
+      case "de":
+        return `Kontingent erneut prüfen`;
+      case "es":
+        return `Volver a consultar la asignación`;
+      case "fr":
+        return `Revérifier l’allocation`;
+      case "ja":
+        return `利用枠を再確認`;
+      case "ko":
+        return `사용 한도 다시 확인`;
+      case "pt-BR":
+        return `Verificar a franquia de novo`;
+      case "zh-Hans":
+        return `重新检查额度`;
+      case "zh-Hant":
+        return `重新檢查額度`;
       case "en-XA":
         return `[Ŕéçĥéçķ áļļöŵáñçé ~~~~~~]`;
       case "ar-XB":
@@ -9389,6 +11022,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandAllowanceRecheckWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `رصيد, حصة, تحديث, استخدام, حد, حساب, تبديل`;
+      case "de":
+        return `Kontingent, aktualisieren, Nutzung, Limit, Konto, wechseln`;
+      case "es":
+        return `asignación, actualizar, uso, límite, cuenta, cambiar`;
+      case "fr":
+        return `quota, actualiser, utilisation, limite, compte, changer`;
+      case "ja":
+        return `上限, 更新, 使用量, 制限, アカウント, 切り替え`;
+      case "ko":
+        return `한도, 새로 고침, 사용량, 제한, 계정, 전환`;
+      case "pt-BR":
+        return `cota, atualizar, uso, limite, conta, trocar`;
+      case "zh-Hans":
+        return `配额, 刷新, 用量, 限制, 账户, 切换`;
+      case "zh-Hant":
+        return `額度, 重新整理, 用量, 上限, 帳號, 切換`;
       case "en-XA":
         return `[ǫûöţá, ŕéƒŕéšĥ, ûšáĝé, ļîɱîţ, áççöûñţ, šŵîţçĥ ~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9398,6 +11049,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandDevicesTryAgainWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `أجهزة, إعادة الاتصال, اتصال, حواسيب`;
+      case "de":
+        return `Geräte, SSH, erneut verbinden, verbinden, Computer`;
+      case "es":
+        return `dispositivos, reconectar, conectar, computadoras`;
+      case "fr":
+        return `appareils, ssh, reconnecter, connecter, ordinateurs`;
+      case "ja":
+        return `デバイス, 再接続, 接続, マック`;
+      case "ko":
+        return `기기, 다시 연결, 연결, 맥`;
+      case "pt-BR":
+        return `dispositivos, ssh, reconectar, conectar, computadores`;
+      case "zh-Hans":
+        return `设备, 重新连接, 连接, 电脑`;
+      case "zh-Hant":
+        return `裝置, 重新連線, 連線, 電腦`;
       case "en-XA":
         return `[ðéṽîçéš, ššĥ, ŕéçöññéçţ, çöññéçţ, ɱáçš ~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9407,6 +11076,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSizeLarger() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تكبير كل شيء`;
+      case "de":
+        return `Alles größer machen`;
+      case "es":
+        return `Agrandar todo`;
+      case "fr":
+        return `Tout agrandir`;
+      case "ja":
+        return `すべてを大きく表示`;
+      case "ko":
+        return `모두 크게`;
+      case "pt-BR":
+        return `Aumentar tudo`;
+      case "zh-Hans":
+        return `放大所有内容`;
+      case "zh-Hant":
+        return `全部放大`;
       case "en-XA":
         return `[Ṁáķé éṽéŕýţĥîñĝ ļáŕĝéŕ ~~~~~~~~]`;
       case "ar-XB":
@@ -9416,6 +11103,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSizeSmaller() {
     switch (currentLanguage()) {
+      case "ar":
+        return `تصغير كل شيء`;
+      case "de":
+        return `Alles kleiner machen`;
+      case "es":
+        return `Achicar todo`;
+      case "fr":
+        return `Tout réduire`;
+      case "ja":
+        return `すべてを小さく表示`;
+      case "ko":
+        return `모두 작게`;
+      case "pt-BR":
+        return `Diminuir tudo`;
+      case "zh-Hans":
+        return `缩小所有内容`;
+      case "zh-Hant":
+        return `全部縮小`;
       case "en-XA":
         return `[Ṁáķé éṽéŕýţĥîñĝ šɱáļļéŕ ~~~~~~~~]`;
       case "ar-XB":
@@ -9425,6 +11130,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandSizeReset() {
     switch (currentLanguage()) {
+      case "ar":
+        return `العودة إلى الحجم المعتاد`;
+      case "de":
+        return `Zur üblichen Größe zurückkehren`;
+      case "es":
+        return `Volver al tamaño habitual`;
+      case "fr":
+        return `Revenir à la taille habituelle`;
+      case "ja":
+        return `通常のサイズに戻す`;
+      case "ko":
+        return `원래 크기로`;
+      case "pt-BR":
+        return `Voltar ao tamanho normal`;
+      case "zh-Hans":
+        return `恢复为默认大小`;
+      case "zh-Hant":
+        return `回到一般大小`;
       case "en-XA":
         return `[Ŕéţûŕñ ţö ţĥé ûšûáļ šîžé ~~~~~~~~]`;
       case "ar-XB":
@@ -9434,6 +11157,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMessageDeleteToLineStart() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الحذف حتى بداية السطر`;
+      case "de":
+        return `Bis zum Zeilenanfang löschen`;
+      case "es":
+        return `Borrar hasta el inicio de la línea`;
+      case "fr":
+        return `Supprimer jusqu’au début de la ligne`;
+      case "ja":
+        return `行頭まで削除`;
+      case "ko":
+        return `줄 처음까지 지우기`;
+      case "pt-BR":
+        return `Apagar até o início da linha`;
+      case "zh-Hans":
+        return `删除到行首`;
+      case "zh-Hant":
+        return `刪除到行首`;
       case "en-XA":
         return `[Ðéļéţé ƀáçķ ţö ţĥé šţáŕţ öƒ ţĥé ļîñé ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9443,6 +11184,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMessageDeleteToLineEnd() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الحذف حتى نهاية السطر`;
+      case "de":
+        return `Bis zum Zeilenende löschen`;
+      case "es":
+        return `Borrar hasta el final de la línea`;
+      case "fr":
+        return `Supprimer jusqu’à la fin de la ligne`;
+      case "ja":
+        return `行末まで削除`;
+      case "ko":
+        return `줄 끝까지 지우기`;
+      case "pt-BR":
+        return `Apagar até o fim da linha`;
+      case "zh-Hans":
+        return `删除到行尾`;
+      case "zh-Hant":
+        return `刪除到行尾`;
       case "en-XA":
         return `[Ðéļéţé ţö ţĥé éñð öƒ ţĥé ļîñé ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9452,6 +11211,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMessageDeleteWordBefore() {
     switch (currentLanguage()) {
+      case "ar":
+        return `حذف الكلمة التي قبل المؤشر`;
+      case "de":
+        return `Wort vor dem Cursor löschen`;
+      case "es":
+        return `Borrar la palabra antes del cursor`;
+      case "fr":
+        return `Supprimer le mot avant le curseur`;
+      case "ja":
+        return `カーソルの前の単語を削除`;
+      case "ko":
+        return `커서 앞 단어 지우기`;
+      case "pt-BR":
+        return `Apagar a palavra antes do cursor`;
+      case "zh-Hans":
+        return `删除光标前的词`;
+      case "zh-Hant":
+        return `刪除游標前的字詞`;
       case "en-XA":
         return `[Ðéļéţé ţĥé ŵöŕð ƀéƒöŕé ţĥé çûŕšöŕ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9461,6 +11238,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMessagePutBackDeleted() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إرجاع آخر ما حُذف`;
+      case "de":
+        return `Zuletzt Gelöschtes wiederherstellen`;
+      case "es":
+        return `Recuperar lo último que se borró`;
+      case "fr":
+        return `Rétablir le dernier texte supprimé`;
+      case "ja":
+        return `最後に削除したものを元に戻す`;
+      case "ko":
+        return `마지막으로 지운 내용 되돌리기`;
+      case "pt-BR":
+        return `Restaurar o que foi apagado por último`;
+      case "zh-Hans":
+        return `恢复上次删除的内容`;
+      case "zh-Hant":
+        return `復原上次刪除的內容`;
       case "en-XA":
         return `[Þûţ ƀáçķ ŵĥáţ ŵáš ļášţ ðéļéţéð ~~~~~~~~~~]`;
       case "ar-XB":
@@ -9470,6 +11265,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMessageRecall() {
     switch (currentLanguage()) {
+      case "ar":
+        return `استعادة آخر رسالة مُرسلة`;
+      case "de":
+        return `Zuletzt gesendete Nachricht zurückholen`;
+      case "es":
+        return `Recuperar el último mensaje enviado`;
+      case "fr":
+        return `Rappeler le dernier message envoyé`;
+      case "ja":
+        return `最後に送ったメッセージを呼び戻す`;
+      case "ko":
+        return `마지막으로 보낸 메시지 다시 불러오기`;
+      case "pt-BR":
+        return `Recuperar a última mensagem enviada`;
+      case "zh-Hans":
+        return `找回上一条发送的消息`;
+      case "zh-Hant":
+        return `叫回上一則送出的訊息`;
       case "en-XA":
         return `[Ɓŕîñĝ ƀáçķ ţĥé ļášţ ɱéššáĝé šéñţ ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9479,6 +11292,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandDevicesTryAgain() {
     switch (currentLanguage()) {
+      case "ar":
+        return `محاولة الوصول إلى حواسيبك مجددًا`;
+      case "de":
+        return `Erneut versuchen, deine Computer zu erreichen`;
+      case "es":
+        return `Volver a intentar llegar a tus computadoras`;
+      case "fr":
+        return `Réessayer de joindre vos ordinateurs`;
+      case "ja":
+        return `コンピューターへの接続を再試行`;
+      case "ko":
+        return `컴퓨터에 다시 연락하기`;
+      case "pt-BR":
+        return `Tentar alcançar seus computadores de novo`;
+      case "zh-Hans":
+        return `再次尝试连接你的电脑`;
+      case "zh-Hant":
+        return `再次嘗試連絡你的電腦`;
       case "en-XA":
         return `[Ţŕý áĝáîñ ţö ŕéáçĥ ýöûŕ çöɱþûţéŕš ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9488,6 +11319,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsLeft() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى الجزء الأيسر من النافذة`;
+      case "de":
+        return `Zum Teil des Fensters links gehen`;
+      case "es":
+        return `Ir a la parte de la ventana de la izquierda`;
+      case "fr":
+        return `Aller à la partie de la fenêtre à gauche`;
+      case "ja":
+        return `ウインドウの左の部分へ移動`;
+      case "ko":
+        return `창의 왼쪽 부분으로 이동`;
+      case "pt-BR":
+        return `Ir para a parte da janela à esquerda`;
+      case "zh-Hans":
+        return `前往窗口左侧的部分`;
+      case "zh-Hant":
+        return `前往視窗左側的部分`;
       case "en-XA":
         return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ öñ ţĥé ļéƒţ ~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9497,6 +11346,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsLeftWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `جزء, لوحة, يسار`;
+      case "de":
+        return `Bereich, Panel, links`;
+      case "es":
+        return `sección, panel, izquierda`;
+      case "fr":
+        return `volet, panneau, gauche`;
+      case "ja":
+        return `ペイン, パネル, 左`;
+      case "ko":
+        return `창, 패널, 왼쪽`;
+      case "pt-BR":
+        return `área, painel, esquerda`;
+      case "zh-Hans":
+        return `窗格, 面板, 左`;
+      case "zh-Hant":
+        return `窗格, 面板, 左`;
       case "en-XA":
         return `[þáñé, þáñéļ, ļéƒţ ~~~~~~]`;
       case "ar-XB":
@@ -9506,6 +11373,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsDown() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى الجزء السفلي من النافذة`;
+      case "de":
+        return `Zum Teil des Fensters darunter gehen`;
+      case "es":
+        return `Ir a la parte de la ventana de abajo`;
+      case "fr":
+        return `Aller à la partie de la fenêtre en dessous`;
+      case "ja":
+        return `ウインドウの下の部分へ移動`;
+      case "ko":
+        return `창의 아래 부분으로 이동`;
+      case "pt-BR":
+        return `Ir para a parte da janela abaixo`;
+      case "zh-Hans":
+        return `前往窗口下方的部分`;
+      case "zh-Hant":
+        return `前往視窗下方的部分`;
       case "en-XA":
         return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ ƀéļöŵ ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9515,6 +11400,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsDownWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `جزء, لوحة, أسفل`;
+      case "de":
+        return `Bereich, Panel, unten, runter`;
+      case "es":
+        return `sección, panel, abajo`;
+      case "fr":
+        return `volet, panneau, bas`;
+      case "ja":
+        return `ペイン, パネル, 下`;
+      case "ko":
+        return `창, 패널, 아래`;
+      case "pt-BR":
+        return `área, painel, abaixo`;
+      case "zh-Hans":
+        return `窗格, 面板, 下`;
+      case "zh-Hant":
+        return `窗格, 面板, 下`;
       case "en-XA":
         return `[þáñé, þáñéļ, ðöŵñ ~~~~~~]`;
       case "ar-XB":
@@ -9524,6 +11427,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsUp() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى الجزء العلوي من النافذة`;
+      case "de":
+        return `Zum Teil des Fensters darüber gehen`;
+      case "es":
+        return `Ir a la parte de la ventana de arriba`;
+      case "fr":
+        return `Aller à la partie de la fenêtre au-dessus`;
+      case "ja":
+        return `ウインドウの上の部分へ移動`;
+      case "ko":
+        return `창의 위 부분으로 이동`;
+      case "pt-BR":
+        return `Ir para a parte da janela acima`;
+      case "zh-Hans":
+        return `前往窗口上方的部分`;
+      case "zh-Hant":
+        return `前往視窗上方的部分`;
       case "en-XA":
         return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ áƀöṽé ~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9533,6 +11454,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsUpWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `جزء, لوحة, أعلى`;
+      case "de":
+        return `Bereich, Panel, oben, hoch`;
+      case "es":
+        return `sección, panel, arriba`;
+      case "fr":
+        return `volet, panneau, haut`;
+      case "ja":
+        return `ペイン, パネル, 上`;
+      case "ko":
+        return `창, 패널, 위`;
+      case "pt-BR":
+        return `área, painel, acima`;
+      case "zh-Hans":
+        return `窗格, 面板, 上`;
+      case "zh-Hant":
+        return `窗格, 面板, 上`;
       case "en-XA":
         return `[þáñé, þáñéļ, ûþ ~~~~~]`;
       case "ar-XB":
@@ -9542,6 +11481,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsRight() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى الجزء الأيمن من النافذة`;
+      case "de":
+        return `Zum Teil des Fensters rechts gehen`;
+      case "es":
+        return `Ir a la parte de la ventana de la derecha`;
+      case "fr":
+        return `Aller à la partie de la fenêtre à droite`;
+      case "ja":
+        return `ウインドウの右の部分へ移動`;
+      case "ko":
+        return `창의 오른쪽 부분으로 이동`;
+      case "pt-BR":
+        return `Ir para a parte da janela à direita`;
+      case "zh-Hans":
+        return `前往窗口右侧的部分`;
+      case "zh-Hant":
+        return `前往視窗右側的部分`;
       case "en-XA":
         return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ öñ ţĥé ŕîĝĥţ ~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9551,6 +11508,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandRegionsRightWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `جزء, لوحة, يمين`;
+      case "de":
+        return `Bereich, Panel, rechts`;
+      case "es":
+        return `sección, panel, derecha`;
+      case "fr":
+        return `volet, panneau, droite`;
+      case "ja":
+        return `ペイン, パネル, 右`;
+      case "ko":
+        return `창, 패널, 오른쪽`;
+      case "pt-BR":
+        return `área, painel, direita`;
+      case "zh-Hans":
+        return `窗格, 面板, 右`;
+      case "zh-Hant":
+        return `窗格, 面板, 右`;
       case "en-XA":
         return `[þáñé, þáñéļ, ŕîĝĥţ ~~~~~~]`;
       case "ar-XB":
@@ -9560,6 +11535,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveLeft() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحرك يسارًا`;
+      case "de":
+        return `Nach links`;
+      case "es":
+        return `Mover a la izquierda`;
+      case "fr":
+        return `Aller à gauche`;
+      case "ja":
+        return `左へ移動`;
+      case "ko":
+        return `왼쪽으로 이동`;
+      case "pt-BR":
+        return `Mover para a esquerda`;
+      case "zh-Hans":
+        return `向左移动`;
+      case "zh-Hant":
+        return `向左移動`;
       case "en-XA":
         return `[Ṁöṽé ļéƒţ ~~~]`;
       case "ar-XB":
@@ -9569,6 +11562,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveLeftWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `سهم, يسار, السابق`;
+      case "de":
+        return `Pfeil, links, vorherige`;
+      case "es":
+        return `flecha, izquierda, anterior`;
+      case "fr":
+        return `flèche, gauche, précédent`;
+      case "ja":
+        return `矢印, 左, 前`;
+      case "ko":
+        return `화살표, 왼쪽, 이전`;
+      case "pt-BR":
+        return `seta, esquerda, anterior`;
+      case "zh-Hans":
+        return `方向键, 左, 上一个`;
+      case "zh-Hant":
+        return `方向鍵, 左, 上一個`;
       case "en-XA":
         return `[áŕŕöŵ, ļéƒţ, þŕéṽîöûš ~~~~~~~]`;
       case "ar-XB":
@@ -9578,6 +11589,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveDown() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحرك لأسفل`;
+      case "de":
+        return `Nach unten`;
+      case "es":
+        return `Mover hacia abajo`;
+      case "fr":
+        return `Descendre`;
+      case "ja":
+        return `下へ移動`;
+      case "ko":
+        return `아래로 이동`;
+      case "pt-BR":
+        return `Mover para baixo`;
+      case "zh-Hans":
+        return `向下移动`;
+      case "zh-Hant":
+        return `向下移動`;
       case "en-XA":
         return `[Ṁöṽé ðöŵñ ~~~]`;
       case "ar-XB":
@@ -9587,6 +11616,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveDownWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `سهم, أسفل, التالي`;
+      case "de":
+        return `Pfeil, unten, runter, nächste`;
+      case "es":
+        return `flecha, abajo, siguiente`;
+      case "fr":
+        return `flèche, bas, suivant`;
+      case "ja":
+        return `矢印, 下, 次`;
+      case "ko":
+        return `화살표, 아래, 다음`;
+      case "pt-BR":
+        return `seta, baixo, próximo`;
+      case "zh-Hans":
+        return `方向键, 下, 下一个`;
+      case "zh-Hant":
+        return `方向鍵, 下, 下一個`;
       case "en-XA":
         return `[áŕŕöŵ, ðöŵñ, ñéẋţ ~~~~~~]`;
       case "ar-XB":
@@ -9596,6 +11643,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveUp() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحرك لأعلى`;
+      case "de":
+        return `Nach oben`;
+      case "es":
+        return `Mover hacia arriba`;
+      case "fr":
+        return `Monter`;
+      case "ja":
+        return `上へ移動`;
+      case "ko":
+        return `위로 이동`;
+      case "pt-BR":
+        return `Mover para cima`;
+      case "zh-Hans":
+        return `向上移动`;
+      case "zh-Hant":
+        return `向上移動`;
       case "en-XA":
         return `[Ṁöṽé ûþ ~~~]`;
       case "ar-XB":
@@ -9605,6 +11670,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveUpWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `سهم, أعلى, السابق`;
+      case "de":
+        return `Pfeil, oben, hoch, vorherige`;
+      case "es":
+        return `flecha, arriba, anterior`;
+      case "fr":
+        return `flèche, haut, précédent`;
+      case "ja":
+        return `矢印, 上, 前`;
+      case "ko":
+        return `화살표, 위, 이전`;
+      case "pt-BR":
+        return `seta, cima, anterior`;
+      case "zh-Hans":
+        return `方向键, 上, 上一个`;
+      case "zh-Hant":
+        return `方向鍵, 上, 上一個`;
       case "en-XA":
         return `[áŕŕöŵ, ûþ, þŕéṽîöûš ~~~~~~~]`;
       case "ar-XB":
@@ -9614,6 +11697,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveRight() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحرك يمينًا`;
+      case "de":
+        return `Nach rechts`;
+      case "es":
+        return `Mover a la derecha`;
+      case "fr":
+        return `Aller à droite`;
+      case "ja":
+        return `右へ移動`;
+      case "ko":
+        return `오른쪽으로 이동`;
+      case "pt-BR":
+        return `Mover para a direita`;
+      case "zh-Hans":
+        return `向右移动`;
+      case "zh-Hant":
+        return `向右移動`;
       case "en-XA":
         return `[Ṁöṽé ŕîĝĥţ ~~~~]`;
       case "ar-XB":
@@ -9623,6 +11724,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveRightWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `سهم, يمين, التالي`;
+      case "de":
+        return `Pfeil, rechts, nächste`;
+      case "es":
+        return `flecha, derecha, siguiente`;
+      case "fr":
+        return `flèche, droite, suivant`;
+      case "ja":
+        return `矢印, 右, 次`;
+      case "ko":
+        return `화살표, 오른쪽, 다음`;
+      case "pt-BR":
+        return `seta, direita, próximo`;
+      case "zh-Hans":
+        return `方向键, 右, 下一个`;
+      case "zh-Hant":
+        return `方向鍵, 右, 下一個`;
       case "en-XA":
         return `[áŕŕöŵ, ŕîĝĥţ, ñéẋţ ~~~~~~]`;
       case "ar-XB":
@@ -9632,6 +11751,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveFirst() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى البداية`;
+      case "de":
+        return `Zum Anfang`;
+      case "es":
+        return `Ir al principio`;
+      case "fr":
+        return `Aller au début`;
+      case "ja":
+        return `先頭へ移動`;
+      case "ko":
+        return `처음으로 이동`;
+      case "pt-BR":
+        return `Mover para o início`;
+      case "zh-Hans":
+        return `移到开头`;
+      case "zh-Hant":
+        return `移到開頭`;
       case "en-XA":
         return `[Ṁöṽé ţö ţĥé šţáŕţ ~~~~~~]`;
       case "ar-XB":
@@ -9641,6 +11778,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveFirstWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `بداية, أعلى, أول`;
+      case "de":
+        return `Pos1, Anfang, oben, erste, Beginn`;
+      case "es":
+        return `inicio, arriba, primero, principio`;
+      case "fr":
+        return `début, haut, premier, commencement`;
+      case "ja":
+        return `ホーム, 上端, 最初, 先頭`;
+      case "ko":
+        return `처음, 맨 위, 첫째, 시작`;
+      case "pt-BR":
+        return `início, topo, primeiro, começo`;
+      case "zh-Hans":
+        return `开头, 顶部, 第一个, 起始`;
+      case "zh-Hant":
+        return `開頭, 頂端, 第一個, 起點`;
       case "en-XA":
         return `[ĥöɱé, ţöþ, ƒîŕšţ, ƀéĝîññîñĝ ~~~~~~~~~]`;
       case "ar-XB":
@@ -9650,6 +11805,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveLast() {
     switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى النهاية`;
+      case "de":
+        return `Zum Ende`;
+      case "es":
+        return `Ir al final`;
+      case "fr":
+        return `Aller à la fin`;
+      case "ja":
+        return `末尾へ移動`;
+      case "ko":
+        return `끝으로 이동`;
+      case "pt-BR":
+        return `Mover para o fim`;
+      case "zh-Hans":
+        return `移到末尾`;
+      case "zh-Hant":
+        return `移到結尾`;
       case "en-XA":
         return `[Ṁöṽé ţö ţĥé éñð ~~~~~]`;
       case "ar-XB":
@@ -9659,6 +11832,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMoveLastWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `نهاية, أسفل, آخر`;
+      case "de":
+        return `Ende, unten, letzte`;
+      case "es":
+        return `fin, abajo, último`;
+      case "fr":
+        return `fin, bas, dernier`;
+      case "ja":
+        return `エンド, 下端, 最後, 末尾`;
+      case "ko":
+        return `끝, 맨 아래, 마지막`;
+      case "pt-BR":
+        return `fim, final, último`;
+      case "zh-Hans":
+        return `末尾, 底部, 最后一个`;
+      case "zh-Hant":
+        return `結尾, 底部, 最後一個`;
       case "en-XA":
         return `[éñð, ƀöţţöɱ, ļášţ ~~~~~~]`;
       case "ar-XB":
@@ -9668,6 +11859,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMovePageUp() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحرك صفحة لأعلى`;
+      case "de":
+        return `Eine Seite nach oben`;
+      case "es":
+        return `Subir una página`;
+      case "fr":
+        return `Remonter d’une page`;
+      case "ja":
+        return `1ページ上へ移動`;
+      case "ko":
+        return `한 페이지 위로 이동`;
+      case "pt-BR":
+        return `Subir uma página`;
+      case "zh-Hans":
+        return `向上翻一页`;
+      case "zh-Hant":
+        return `向上移動一頁`;
       case "en-XA":
         return `[Ṁöṽé ûþ á þáĝé ~~~~~]`;
       case "ar-XB":
@@ -9677,6 +11886,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMovePageUpWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `صفحة لأعلى, تمرير`;
+      case "de":
+        return `Bild auf, Seite hoch, scrollen, blättern`;
+      case "es":
+        return `retroceder página, desplazar`;
+      case "fr":
+        return `page précédente, défiler`;
+      case "ja":
+        return `ページアップ, スクロール`;
+      case "ko":
+        return `페이지 위로, 스크롤`;
+      case "pt-BR":
+        return `página acima, rolar`;
+      case "zh-Hans":
+        return `上翻页, 滚动`;
+      case "zh-Hant":
+        return `上一頁, 捲動`;
       case "en-XA":
         return `[þáĝé ûþ, šçŕöļļ ~~~~~]`;
       case "ar-XB":
@@ -9686,6 +11913,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMovePageDown() {
     switch (currentLanguage()) {
+      case "ar":
+        return `التحرك صفحة لأسفل`;
+      case "de":
+        return `Eine Seite nach unten`;
+      case "es":
+        return `Bajar una página`;
+      case "fr":
+        return `Descendre d’une page`;
+      case "ja":
+        return `1ページ下へ移動`;
+      case "ko":
+        return `한 페이지 아래로 이동`;
+      case "pt-BR":
+        return `Descer uma página`;
+      case "zh-Hans":
+        return `向下翻一页`;
+      case "zh-Hant":
+        return `向下移動一頁`;
       case "en-XA":
         return `[Ṁöṽé ðöŵñ á þáĝé ~~~~~~]`;
       case "ar-XB":
@@ -9695,6 +11940,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandMovePageDownWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `صفحة لأسفل, تمرير`;
+      case "de":
+        return `Bild ab, Seite runter, scrollen, blättern`;
+      case "es":
+        return `avanzar página, desplazar`;
+      case "fr":
+        return `page suivante, défiler`;
+      case "ja":
+        return `ページダウン, スクロール`;
+      case "ko":
+        return `페이지 아래로, 스크롤`;
+      case "pt-BR":
+        return `página abaixo, rolar`;
+      case "zh-Hans":
+        return `下翻页, 滚动`;
+      case "zh-Hant":
+        return `下一頁, 捲動`;
       case "en-XA":
         return `[þáĝé ðöŵñ, šçŕöļļ ~~~~~~]`;
       case "ar-XB":
@@ -9704,6 +11967,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCancel() {
     switch (currentLanguage()) {
+      case "ar":
+        return `إلغاء`;
+      case "de":
+        return `Abbrechen`;
+      case "es":
+        return `Cancelar`;
+      case "fr":
+        return `Annuler`;
+      case "ja":
+        return `キャンセル`;
+      case "ko":
+        return `취소`;
+      case "pt-BR":
+        return `Cancelar`;
+      case "zh-Hans":
+        return `取消`;
+      case "zh-Hant":
+        return `取消`;
       case "en-XA":
         return `[Çáñçéļ ~~]`;
       case "ar-XB":
@@ -9713,6 +11994,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function commandCancelWords() {
     switch (currentLanguage()) {
+      case "ar":
+        return `هروب, إغلاق, رجوع`;
+      case "de":
+        return `Esc, schließen, zurück, abbrechen`;
+      case "es":
+        return `escape, cerrar, volver, atrás`;
+      case "fr":
+        return `échap, fermer, retour`;
+      case "ja":
+        return `エスケープ, 閉じる, 戻る`;
+      case "ko":
+        return `나가기, 닫기, 뒤로`;
+      case "pt-BR":
+        return `sair, fechar, voltar`;
+      case "zh-Hans":
+        return `退出, 关闭, 返回`;
+      case "zh-Hant":
+        return `跳出, 關閉, 返回`;
       case "en-XA":
         return `[éšçáþé, éšç, çļöšé, ƀáçķ ~~~~~~~~]`;
       case "ar-XB":
@@ -11380,8 +13679,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function escapeAttribute(text) {
     return text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
   }
+  const FRAME_LOCALE_ATTRIBUTE = "data-locale";
   function languageAttributes(language2 = currentLanguage()) {
-    return `lang="${escapeAttribute(language2)}" dir="${textDirection(language2)}"`;
+    const locale = regionalLocale(language2);
+    return `lang="${escapeAttribute(language2)}" dir="${textDirection(language2)}"${locale ? ` ${FRAME_LOCALE_ATTRIBUTE}="${escapeAttribute(locale)}"` : ""}`;
   }
   function buildFrameDocument(parts) {
     const theme = escapeAttribute(parts.theme);
@@ -14109,7 +16410,89 @@ details[open]::details-content {
   const effectsCss = '/* Infinitary — radii, shadows, glow, blur, motion. */\n:root {\n  --radius-xs: 3px; /* small controls: a 14-16px box that must read square, not round */\n  --radius-s: 6px; /* badges, keycaps */\n  --radius-m: 10px; /* buttons, inputs */\n  --radius-l: 16px; /* cards, panels */\n  --radius-pill: 999px; /* voice input shell, pills */\n  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);\n  --shadow-2: 0 8px 30px -12px rgba(0, 0, 0, 0.6);\n  --shadow-card: 0 12px 40px -16px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(150, 180, 255, 0.06) inset;\n  --glow-accent: 0 0 32px -8px var(--accent-glow);\n  /* solid card material (legacy acrylic token names) */\n  --acrylic-bg: var(--bg-2);\n  --acrylic-blur: none; /* @kind other */\n  --acrylic-border: var(--line-1);\n  --acrylic-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 24px 48px -24px rgba(0, 0, 0, 0.6);\n  --blur-overlay: blur(16px); /* @kind other */\n  /* motion — 160 in place, 360 for a surface, 700 for a dissolve; the card\n     stack, popovers, summaries and button labels have their own moves below */\n  --ease-drift: cubic-bezier(0.25, 0.1, 0.25, 1); /* @kind other */\n  --ease-out: cubic-bezier(0.32, 0.72, 0, 1); /* @kind other — the glide */\n  --dur-fast: 160ms; /* @kind other */\n  --dur-med: 360ms; /* @kind other */\n  --dur-slow: 700ms; /* @kind other */\n  --dur-fade: 160ms; /* @kind other — opacity-only opt-in, also under reduced motion */\n  --dur-quick: 200ms; /* @kind other — a popover grows, a summary slides or moves, a closed card drops away */\n  --dur-page: 300ms; /* @kind other — a card pages in, or comes forward after a close */\n  --dur-arrive: 420ms; /* @kind other — a card arrives on an empty stage */\n  --dur-popover-out: 120ms; /* @kind other */\n  --dur-summary-out: 100ms; /* @kind other */\n  --delay-label: 500ms; /* @kind other — the first icon-button label waits this long */\n  --move-page: 32px; /* @kind other — paging slides this far, with the arrow */\n  --move-arrive: 12px; /* @kind other */\n  --move-drop: 10px; /* @kind other — a closed card drops this far */\n  --move-stack: 8px; /* @kind other — the next card comes forward from this far up */\n  --move-summary: 8px; /* @kind other — a summary slides this far from what it describes */\n  --scale-arrive: 0.98; /* @kind other */\n  --scale-stack: 0.97; /* @kind other — a card behind the shown one */\n  --scale-pop: 0.94; /* @kind other — a popover grows from this size */\n}\n[data-theme="light"] {\n  --shadow-1: 0 1px 2px rgba(20, 30, 60, 0.1);\n  --shadow-2: 0 8px 30px -12px rgba(20, 30, 60, 0.18);\n  --shadow-card: 0 12px 40px -16px rgba(20, 30, 60, 0.22);\n  --acrylic-bg: var(--bg-2);\n  --acrylic-blur: none; /* @kind other */\n  --acrylic-border: var(--line-1);\n  --acrylic-shadow:\n    inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 32px -12px rgba(20, 30, 60, 0.28),\n    0 2px 8px -2px rgba(20, 30, 60, 0.1);\n}\n\n/* Shared by the shell and every frame. Character motion has its own guard.\n   Only short, explicitly opted-in opacity fades survive. */\n@media (prefers-reduced-motion: reduce) {\n  :root {\n    --dur-fast: 0ms;\n    --dur-med: 0ms;\n    --dur-slow: 0ms;\n    --dur-quick: 0ms;\n    --dur-page: 0ms;\n    --dur-arrive: 0ms;\n    --dur-popover-out: 0ms;\n    --dur-summary-out: 0ms;\n  }\n}\n';
   const fontsCss = '/* Infinitary webfonts - Space Grotesk (UI/display) + JetBrains Mono (data/code).\n   Vendored locally from Google Fonts (SIL Open Font License 1.1) so the package is offline-complete.\n   Binaries live in assets/fonts/; regenerate by re-fetching the css2 URL below with a woff2-capable UA.\n   https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,300..700;1,300..700&display=swap */\n/* JetBrains Mono italic cyrillic-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n/* JetBrains Mono italic cyrillic */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n/* JetBrains Mono italic greek */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n/* JetBrains Mono italic vietnamese */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* JetBrains Mono italic latin-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* JetBrains Mono italic latin */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n/* JetBrains Mono normal cyrillic-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n/* JetBrains Mono normal cyrillic */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n/* JetBrains Mono normal greek */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n/* JetBrains Mono normal vietnamese */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* JetBrains Mono normal latin-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* JetBrains Mono normal latin */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n/* Space Grotesk normal vietnamese */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* Space Grotesk normal latin-ext */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* Space Grotesk normal latin */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n';
   const spacingCss = "/* Infinitary — spacing scale (4px base). Generous whitespace is the default; density is the exception. */\n:root {\n  --space-1: 4px;\n  --space-2: 8px;\n  --space-3: 12px;\n  --space-4: 16px;\n  --space-5: 24px;\n  --space-6: 32px;\n  --space-7: 48px;\n  --space-8: 64px;\n  --space-9: 96px;\n  /* layout - dock rails are at least one fifth of the window, not resizable */\n  --rail-width: max(300px, 20vw);\n  /* layout - the voice input: one line is the pill, and the radius stays half of it at every height */\n  --prompt-height: calc(var(--space-7) + var(--space-1));\n  --prompt-radius: calc(var(--prompt-height) / 2);\n  /* layout - a card's reply field: one line of --text-sm is the pill (2px is its hairline), and the radius stays half of it at every height */\n  --reply-height: calc(var(--text-sm) * var(--leading-body) + 2 * var(--space-2) + 2px);\n  --reply-radius: calc(var(--reply-height) / 2);\n}\n";
-  const typographyCss = '/* Infinitary — typography. Space Grotesk for UI and display, JetBrains Mono for data, keybinds, code. */\n:root {\n  --font-ui: "Space Grotesk", system-ui, sans-serif;\n  --font-mono: "JetBrains Mono", ui-monospace, monospace;\n  --text-xs: 11px; /* micro labels, uppercase tracked */\n  --text-sm: 12.5px; /* secondary, metadata */\n  --text-base: 14px; /* body */\n  --text-md: 16px; /* card titles, input text */\n  --text-lg: 20px; /* section titles */\n  --text-xl: 28px; /* card headlines */\n  --text-display: 44px; /* null-state greeting */\n  --leading-tight: 1.15;\n  --leading-body: 1.55;\n  --tracking-label: 0.09em; /* uppercase micro labels */\n  --tracking-display: -0.02em;\n  --weight-light: 300;\n  --weight-regular: 400;\n  --weight-medium: 500;\n  --weight-semibold: 600;\n}\nbody {\n  font-family: var(--font-ui);\n  font-size: var(--text-base);\n  line-height: var(--leading-body);\n  color: var(--text-body);\n  background: var(--bg-0);\n  -webkit-font-smoothing: antialiased;\n}\na {\n  color: var(--accent);\n  text-decoration: none;\n}\na:hover {\n  color: var(--accent-strong);\n}\n';
+  const typographyCss = `/* Infinitary — typography. Space Grotesk for UI and display, JetBrains Mono for data, keybinds, code. */
+:root {
+  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --text-xs: 11px; /* micro labels, uppercase tracked */
+  --text-sm: 12.5px; /* secondary, metadata */
+  --text-base: 14px; /* body */
+  --text-md: 16px; /* card titles, input text */
+  --text-lg: 20px; /* section titles */
+  --text-xl: 28px; /* card headlines */
+  --text-display: 44px; /* null-state greeting */
+  --leading-tight: 1.15;
+  --leading-body: 1.55;
+  --tracking-label: 0.09em; /* uppercase micro labels */
+  --tracking-display: -0.02em;
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+}
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: var(--text-body);
+  background: var(--bg-0);
+  -webkit-font-smoothing: antialiased;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--accent-strong);
+}
+
+/* The languages Space Grotesk and JetBrains Mono do not draw take this
+   computer's own typeface for their script, named after the brand face so
+   Latin words keep it (docs/i18n.md, "Typefaces for every language"). The
+   document's lang names the language (src/renderer/src/app/language.ts). */
+:root:lang(zh-Hans) {
+  --font-ui:
+    "Space Grotesk", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei",
+    system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "PingFang SC", "Noto Sans Mono CJK SC", ui-monospace, monospace;
+}
+:root:lang(zh-Hant) {
+  --font-ui:
+    "Space Grotesk", "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "PingFang TC", "Noto Sans Mono CJK TC", ui-monospace, monospace;
+}
+:root:lang(ja) {
+  --font-ui:
+    "Space Grotesk", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP",
+    "Yu Gothic UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Hiragino Sans", "Noto Sans Mono CJK JP", ui-monospace, monospace;
+}
+:root:lang(ko) {
+  --font-ui:
+    "Space Grotesk", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", system-ui,
+    sans-serif;
+  --font-mono:
+    "JetBrains Mono", "Apple SD Gothic Neo", "Noto Sans Mono CJK KR", ui-monospace, monospace;
+}
+:root:lang(ar) {
+  --font-ui:
+    "Space Grotesk", "Geeza Pro", "SF Arabic", "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Geeza Pro", "Noto Sans Arabic", ui-monospace, monospace;
+}
+/* Tracking spaces out Chinese, Japanese and Korean glyphs that are already
+   evenly set, and breaks the joins between Arabic letters. */
+:root:lang(zh-Hans),
+:root:lang(zh-Hant),
+:root:lang(ja),
+:root:lang(ko),
+:root:lang(ar) {
+  --tracking-label: 0;
+  --tracking-display: 0;
+}
+:root:lang(ar) body * {
+  letter-spacing: 0;
+}
+`;
   const FONT_URL = /url\(\s*['"]?\.\.\/assets\/fonts\/([A-Za-z0-9._-]+)['"]?\s*\)/g;
   function frameFontFaces(css = fontsCss) {
     return css.replaceAll(FONT_URL, (_match, file) => `url(${frameFontUrl(file)})`);

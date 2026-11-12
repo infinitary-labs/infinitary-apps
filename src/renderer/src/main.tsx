@@ -1,10 +1,10 @@
-import { setCurrentLanguage } from "@shared/i18n/current";
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./app/App";
-import { documentLanguage } from "./app/language";
+import { LanguageRoot } from "./app/LanguageRoot";
+import { documentLanguage, followLanguage } from "./app/language";
 import { hydratePreferences } from "./app/preferences";
 import { countPresses } from "./app/presses";
+import { useShellStore } from "./app/store";
 import { registerDesignFixtures } from "./design/fixtures";
 import { startPersonalPlugins } from "./personal/personalPlugins";
 import { registerBuiltinPlugin, startGatedPanels } from "./plugins/builtin";
@@ -41,13 +41,21 @@ registerDesignFixtures(pluginHost);
 // The persisted theme and layout are read before the first paint, so the
 // window opens the way the captain left it rather than correcting itself a
 // frame later. A failed read has already fallen back to the defaults.
-// The window's language is the one its preload marked on the document,
-// read before anything is worded (docs/i18n.md, "The language fact").
-void Promise.all([hydratePreferences(), documentLanguage()]).then(([, language]) => {
-  setCurrentLanguage(language);
+// The window's language is the one the captain chose, or the computer's own
+// its preload marked on the document, read before anything is worded and
+// followed after (docs/i18n.md, "The language choice").
+void Promise.all([hydratePreferences(), documentLanguage()]).then(([, computer]) => {
+  followLanguage(
+    computer,
+    () => useShellStore.getState().language,
+    (listener) =>
+      useShellStore.subscribe((state, previous) => {
+        if (state.language !== previous.language) listener();
+      }),
+  );
   createRoot(container).render(
     <React.StrictMode>
-      <App />
+      <LanguageRoot />
     </React.StrictMode>,
   );
 });

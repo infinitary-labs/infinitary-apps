@@ -22,9 +22,19 @@ import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { crewWorkHeldThere } from "@core/update/updateHold";
 import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
-import { currentLanguage } from "@shared/i18n/current";
-import { languageArgument } from "@shared/i18n/languages";
-import { languageOverride, startLanguage } from "@shared/i18n/start";
+import { setComputerLocale, setCurrentLanguage } from "@shared/i18n/current";
+import {
+  languageArgument,
+  localeArgument,
+  readableLocale,
+  SOURCE_LANGUAGE,
+} from "@shared/i18n/languages";
+import {
+  chosenLanguage,
+  defaultLanguage,
+  languageOverride,
+  startLanguage,
+} from "@shared/i18n/start";
 import { platformArgument } from "@shared/platform";
 import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
@@ -128,6 +138,20 @@ function appNameOfFolder(dir: string): string {
 // This desktop's conventions (design skill readme, "Linux desktop
 // conventions"): a Mac keeps its inset window buttons, menu and Dock.
 const desktop = hostDesktop();
+/**
+ * The catalog language the operating system asks for, read once the app is
+ * ready (docs/i18n.md, "The language fact"): what a saved choice is weighed
+ * against, and what the default language is once the app follows the
+ * computer ("The default language").
+ */
+let systemLanguage: string = SOURCE_LANGUAGE;
+
+/**
+ * The computer's own preferred locale, the first of its preferred languages,
+ * read with its language: English writes dates and times in it (docs/i18n.md,
+ * "Dates and times").
+ */
+let computerLocale: string | undefined;
 
 function createMainWindow(
   mainDir: string,
@@ -168,7 +192,8 @@ function createMainWindow(
       additionalArguments: [
         ...additionalArguments,
         platformArgument(hostPlatform()),
-        languageArgument(currentLanguage()),
+        languageArgument(defaultLanguage(systemLanguage)),
+        ...(computerLocale ? [localeArgument(computerLocale)] : []),
       ],
       ...REQUIRED_WEB_PREFERENCES,
       devTools: !isRelease,
@@ -551,10 +576,10 @@ export async function startApp(
     const starting = app.whenReady().then(async () => {
       // The language this process speaks, from the computer's own languages,
       // before anything is worded or any window opens (docs/i18n.md).
-      startLanguage(
-        app.getPreferredSystemLanguages(),
-        languageOverride(process.env, app.isPackaged),
-      );
+      const preferred = app.getPreferredSystemLanguages();
+      systemLanguage = startLanguage(preferred, languageOverride(process.env, app.isPackaged));
+      computerLocale = readableLocale(preferred[0]);
+      setComputerLocale(computerLocale);
       // An installed Linux app with no git, or with its sandbox off (an
       // AppImage promises neither), asks before it opens (./linuxStartup.ts).
       // A run has nobody to ask: with no git it says so and exits, and with
@@ -800,7 +825,10 @@ export async function startApp(
         // Started by a command, a page the core would open goes to each
         // computer that controls it (docs/run.md, "Control from another computer").
         startCore: async () => {
-          const core = await startCore(voiceHost, { startedByCommand: windowless });
+          const core = await startCore(voiceHost, {
+            startedByCommand: windowless,
+            computerLanguage: systemLanguage,
+          });
           capabilities.started?.(core);
           return core;
         },
@@ -923,6 +951,16 @@ export async function startApp(
         endRun(1, RUN_WORDS.controls);
         return;
       }
+      // The language the captain chose in Settings → Appearance, or the
+      // computer's own: the menus, the tray, the dialogs and the crew follow
+      // each change (docs/i18n.md, "The language choice"), and a window
+      // follows it from the same saved look.
+      setCurrentLanguage(
+        chosenLanguage(shell.preferences.get().appearance.language, systemLanguage),
+      );
+      shell.preferences.subscribe((value) => {
+        setCurrentLanguage(chosenLanguage(value.appearance.language, systemLanguage));
+      });
       // The host serves model files; download policy and the trail run through core dispatch.
       // A panel drawn in the frame realm reads the lib this build made
       // (out/frame-lib, beside out/main) and, for one of the captain's own or

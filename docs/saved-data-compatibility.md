@@ -406,6 +406,13 @@ Keep cards maximized and whether cards are maximized now live in a settings row 
 An older build reads `appearance` strictly, so neither goes in it, and it still reads theme, size and wash; it ignores the new row and opens cards at Default card size.
 A look written without them keeps the saved row.
 
+## The language choice
+
+The language the captain chose in Settings → Appearance lives in a settings row of its own, `language`, beside the `appearance` row (`SettingsStore.getAppearance` and `setAppearance`).
+An older build reads `appearance` strictly, so the choice never goes in it; that build ignores the new row and speaks its own default language.
+A look written without a language removes the row, which means the default language.
+A saved language this build's catalog lacks, such as one a newer build added, falls back to the default language too (`chosenLanguage`).
+
 ## A task's pin
 
 Migration 122 adds the `pinned_at` column to `tasks`, empty on every row, and a partial index over the pinned rows, so the board reads the few pinned tasks without walking the record (INF-3127).

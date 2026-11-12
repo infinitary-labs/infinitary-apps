@@ -159,9 +159,9 @@ export function relationLine(relation: {
   return relation.outgoing ? "Duplicates" : "Duplicated by";
 }
 
-/** A date and time in the captain's own words and time zone. */
+/** A date and time in the captain's own words and time zone, in the locale the frame's document names. */
 export function whenOf(at: number): string {
-  return new Date(at).toLocaleString(undefined, {
+  return new Date(at).toLocaleString(frameLocale(), {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -211,4 +211,13 @@ export function askWords(
     case "direction":
       return `What should I know about the direction “${quoted(about.text)}” (d:${about.id})? `;
   }
+}
+
+/**
+ * The locale the panel's frame document names for dates and times
+ * (`FRAME_LOCALE_ATTRIBUTE`, docs/i18n.md "Dates and times"), or the
+ * runtime's own when it names none.
+ */
+function frameLocale(): string | undefined {
+  return globalThis.document?.documentElement.getAttribute("data-locale") ?? undefined;
 }

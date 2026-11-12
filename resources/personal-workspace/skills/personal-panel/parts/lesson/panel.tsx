@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { LessonSnapshot } from "./record";
 import styles from "./panel.css";
 
-const dateLabel = (date: string) => new Intl.DateTimeFormat(undefined, {
+// The locale the frame's document names for dates; a bare call writes US forms in the packaged Mac app.
+const dateLabel = (date: string) => new Intl.DateTimeFormat(document.documentElement.getAttribute("data-locale") ?? undefined, {
   month: "short", day: "numeric",
 }).format(new Date(`${date}T12:00:00`));
 

@@ -203,6 +203,34 @@ describe("SettingsStore preferences", () => {
     });
   });
 
+  // The approved plan (INF-3674): a Settings choice overrides the computer's
+  // language, and an older build still reads the rest of the look.
+  it("keeps the language choice in its own row, and a look without one follows the computer", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    settings.setAppearance({ theme: "light", size: 125, language: "ja" });
+    // A theme change writes the whole look it read, language included.
+    settings.setAppearance({ ...settings.getAppearance(), theme: "dark" });
+    expect(new SettingsStore(db).getAppearance()).toMatchObject({
+      theme: "dark",
+      size: 125,
+      language: "ja",
+    });
+    const row = JSON.parse(
+      (
+        db.prepare("SELECT value FROM settings WHERE key = ?").get("appearance") as {
+          value: string;
+        }
+      ).value,
+    );
+    expect(appearanceSchema.omit({ language: true }).safeParse(row).success).toBe(true);
+    expect(row.language).toBeUndefined();
+    const { language: _chosen, ...followComputer } = settings.getAppearance();
+    settings.setAppearance(followComputer);
+    expect(new SettingsStore(db).getAppearance().language).toBeUndefined();
+    expect(new SettingsStore(db).getAppearance().theme).toBe("dark");
+  });
+
   it("keeps the panels the captain moved", () => {
     const settings = store();
     settings.setLayout({

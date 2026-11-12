@@ -69,7 +69,7 @@ import { createKeyIdentity } from "../devices/identity";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
-import { threadLinesFor } from "./cardCompatibility";
+import { lookFor, threadLinesFor } from "./cardCompatibility";
 import { CONTRACT_CHANGES, contractChange, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import {
@@ -555,6 +555,7 @@ export function pushFrameIn(entry: JournalEntry, spelling: Spelling): string {
 const CARD_ANNOTATIONS = contractChange("card-annotations");
 /** Files for the captain on a card (`card-files.md`). */
 const CARD_FILES = contractChange("card-files");
+const LANGUAGE_CHOICE = contractChange("language-choice");
 
 /** Which added card fields a view's card decoder reads. */
 type CardReads = { updates: boolean; ended: boolean; annotations: boolean; files: boolean };
@@ -592,8 +593,9 @@ function cardPushFor(
   reads: CardReads,
   sharedCards = true,
   taskAllow = true,
+  readsLanguage = true,
 ): string {
-  const spelled = pushFrameIn(entry, spelling);
+  const spelled = lookPushFor(entry, spelling, readsLanguage);
   const text =
     taskAllow || !entry.channel.startsWith("inf:cards") ? spelled : frameWithoutTaskAllow(spelled);
   if ((!sharedCards || !reads.annotations) && THREAD_CHANNELS.has(entry.channel)) {
@@ -609,6 +611,14 @@ function cardPushFor(
   if ((reads.updates && reads.ended && reads.files) || entry.channel !== "inf:cards") return text;
   const frame = JSON.parse(text);
   return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload, reads) });
+}
+
+/** A look pushed to a view, without the language choice it cannot read (`lookFor`). */
+function lookPushFor(entry: JournalEntry, spelling: Spelling, readsLanguage: boolean): string {
+  const spelled = pushFrameIn(entry, spelling);
+  if (readsLanguage || entry.channel !== "inf:shell:preferences") return spelled;
+  const frame = JSON.parse(spelled);
+  return JSON.stringify({ ...frame, payload: lookFor(entry.channel, frame.payload, false) });
 }
 
 /** What each refusal at `FETCH_APP_PATH` says; none echoes the code. */
@@ -897,6 +907,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.cardReads,
                 client.sharedCards,
                 client.taskAllow,
+                listsChange(client.changes, LANGUAGE_CHOICE),
               ),
             );
       } catch (error) {
@@ -1067,6 +1078,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.cardReads,
                 client.sharedCards,
                 client.taskAllow,
+                listsChange(client.changes, LANGUAGE_CHOICE),
               ),
         );
       client.welcomed = true;
@@ -1152,10 +1164,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           actor,
           client.role === "view" ? viewerOf(client) : undefined,
         );
-        const value =
+        const value = lookFor(
+          channel,
           client.taskAllow || !channel.startsWith("inf:cards")
             ? answered
-            : withoutTaskAllow(answered);
+            : withoutTaskAllow(answered),
+          listsChange(client.changes, LANGUAGE_CHOICE),
+        );
         reply({
           ok: true,
           value:

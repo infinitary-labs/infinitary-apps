@@ -14,6 +14,7 @@ import {
   crewmateEvidenceDir,
   crewmateTempDir,
 } from "../paths";
+import { languageCompletionHeadings } from "../prompts/captainLanguage";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
 import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
@@ -134,10 +135,11 @@ it.each(["pi", "claude"] as const)(
     expect(open()).toContain("The captain's language is English (en).");
     setCurrentLanguage("ja");
     try {
-      // The catalog has no Japanese headings yet, so none are offered.
+      // The catalog has Japanese, so the merge card's headings are offered in it, in order.
       const prompt = open();
       expect(prompt).toContain("The captain's language is Japanese (ja).");
-      expect(prompt).not.toContain("may head its four sections in it");
+      expect(languageCompletionHeadings()).not.toContain("Why");
+      expect(prompt).toContain(languageCompletionHeadings().join(", "));
       // A pseudo-language is a test's window, so the crew still writes English.
       setCurrentLanguage("en-XA");
       expect(open()).toContain("The captain's language is English (en).");

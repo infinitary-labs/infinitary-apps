@@ -1,4 +1,9 @@
-import { languageFromArgv, textDirection } from "@shared/i18n/languages";
+import {
+  COMPUTER_LOCALE_ATTRIBUTE,
+  languageFromArgv,
+  localeFromArgv,
+  textDirection,
+} from "@shared/i18n/languages";
 import { PLATFORM_ATTRIBUTE, platformFromArgv } from "@shared/platform";
 import { WINDOW_MATERIAL_ATTRIBUTE, windowMaterialFromArgv } from "@shared/windowMaterial";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
@@ -51,11 +56,14 @@ contextBridge.exposeInMainWorld("firstmate", frozen);
 const windowMaterial = windowMaterialFromArgv(process.argv);
 const platform = platformFromArgv(process.argv);
 const language = languageFromArgv(process.argv);
+const computerLocale = localeFromArgv(process.argv);
 const markWindowMaterial = () => {
   document.documentElement?.setAttribute(WINDOW_MATERIAL_ATTRIBUTE, windowMaterial);
   if (platform) document.documentElement?.setAttribute(PLATFORM_ATTRIBUTE, platform);
   document.documentElement?.setAttribute("lang", language);
   document.documentElement?.setAttribute("dir", textDirection(language));
+  if (computerLocale)
+    document.documentElement?.setAttribute(COMPUTER_LOCALE_ATTRIBUTE, computerLocale);
 };
 markWindowMaterial();
 document.addEventListener("DOMContentLoaded", markWindowMaterial, { once: true });

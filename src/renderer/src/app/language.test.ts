@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { documentLanguage } from "./language";
+import {
+  currentLanguage,
+  regionalLocale,
+  setComputerLocale,
+  setCurrentLanguage,
+} from "@shared/i18n/current";
+import { COMPUTER_LOCALE_ATTRIBUTE } from "@shared/i18n/languages";
+import { afterEach, describe, expect, it } from "vitest";
+import { documentLanguage, followLanguage } from "./language";
 
 // The approved plan (INF-3674): a window speaks the language its preload
 // marked on the document. The page's module script runs while the document
@@ -38,5 +45,63 @@ describe("the window's language", () => {
   it("is read at once from a complete document, and is English with no mark", async () => {
     await expect(documentLanguage(asDocument(new Doc("complete", "de")))).resolves.toBe("de");
     await expect(documentLanguage(asDocument(new Doc("complete", "")))).resolves.toBe("en");
+  });
+});
+
+// The approved plan (INF-3674): the window follows the captain's choice in
+// Settings, and the computer's language while there is none, live.
+describe("following the language choice", () => {
+  afterEach(() => {
+    setCurrentLanguage("en");
+    setComputerLocale(undefined);
+  });
+
+  const marks = (computerLocale?: string) => {
+    const attributes = new Map<string, string>();
+    const doc = {
+      documentElement: {
+        setAttribute: (name: string, value: string) => attributes.set(name, value),
+        getAttribute: (name: string) =>
+          name === COMPUTER_LOCALE_ATTRIBUTE ? (computerLocale ?? null) : null,
+      },
+    } as unknown as Document;
+    return { doc, attributes };
+  };
+
+  // The captain's answer to the review of the first languages (INF-3850):
+  // English stays the default and only a choice switches the language; in
+  // English, dates and times take the computer's own locale, named outright.
+  it("speaks the choice, marks lang and dir, and returns to English with the computer's date forms", () => {
+    const { doc, attributes } = marks("en-GB");
+    let choice: string | null = null;
+    let changed = () => {};
+    const stop = followLanguage(
+      "en",
+      () => choice,
+      (listener) => {
+        changed = listener;
+        return () => {};
+      },
+      doc,
+    );
+    expect([currentLanguage(), attributes.get("lang"), attributes.get("dir")]).toEqual([
+      "en",
+      "en",
+      "ltr",
+    ]);
+    expect(regionalLocale()).toBe("en-GB");
+    choice = "ar";
+    changed();
+    expect([currentLanguage(), attributes.get("lang"), attributes.get("dir")]).toEqual([
+      "ar",
+      "ar",
+      "rtl",
+    ]);
+    expect(regionalLocale()).toBe("ar");
+    choice = null;
+    changed();
+    expect([currentLanguage(), attributes.get("dir")]).toEqual(["en", "ltr"]);
+    expect(regionalLocale()).toBe("en-GB");
+    stop();
   });
 });

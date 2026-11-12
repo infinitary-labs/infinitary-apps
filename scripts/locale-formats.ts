@@ -19,8 +19,6 @@ export const FIXED_LOCALE_PLACES: Readonly<Record<string, string>> = {
   "src/core/prompts/timeZone.ts": "reads a zone's offset out of the formatter's own English words",
   "src/core/orchestrator/calendar.ts": "reads wall-clock numbers out of the formatter's parts",
   "src/core/runbooks/parts/map.js": "a part of the served guidance, which stays English",
-  "src/panels/knowledge/words.ts": "runs in a panel's frame, which learns the language over the frame bridge in the screens' piece",
-  "src/renderer/src/plugins/builtin/record/record.frame.js": "runs in a frame, which learns the language over the frame bridge in the screens' piece",
 };
 
 const FORMAT_METHODS = new Set(["toLocaleString", "toLocaleDateString", "toLocaleTimeString"]);

@@ -41,6 +41,12 @@ export type CoreOptions = {
    * page a view's own request opens always does (`inf:app:open-page`).
    */
   startedByCommand?: boolean;
+  /**
+   * The language the computer itself asks for (docs/i18n.md, "The language
+   * choice"): the core speaks the captain's saved choice over it from the
+   * moment its settings open, before any boot work words a turn.
+   */
+  computerLanguage?: string;
 };
 
 export async function startCore(given: HostCapabilities, options: CoreOptions = {}): Promise<Core> {
@@ -92,7 +98,9 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       events.emit("inf:app:sign-in-page", { url, id, port: to.port });
     },
   };
-  const services = await createServices(host, events.emit);
+  const services = await createServices(host, events.emit, {
+    ...(options.computerLanguage ? { computerLanguage: options.computerLanguage } : {}),
+  });
   const dispatch = createCoreDispatcher({
     services,
     host,

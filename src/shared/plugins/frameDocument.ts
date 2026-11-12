@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { APP_FRAME_SCHEME } from "../csp";
-import { currentLanguage } from "../i18n/current";
+import { currentLanguage, regionalLocale } from "../i18n/current";
 import { textDirection } from "../i18n/languages";
 import { PANEL_READ_NAMES, personalIdSchema } from "../personal/manifest";
 import { sqlViewNameSchema } from "../sql";
@@ -261,15 +261,26 @@ export type FrameDocumentParts = {
 };
 
 /**
+ * Where a frame's document names the locale its dates and times are written
+ * in (docs/i18n.md, "Dates and times"): a frame program reads it there and
+ * hands it to each date call, since a bare call writes US forms in the
+ * packaged Mac app. A frame program that cannot import this reads the same
+ * name written out.
+ */
+export const FRAME_LOCALE_ATTRIBUTE = "data-locale";
+
+/**
  * The `lang` and `dir` a frame's document is born with: the app's language
  * and the way its text runs, so a frame's own words and its layout follow
- * the window's (docs/i18n.md, "The language fact").
+ * the window's (docs/i18n.md, "The language fact"), and the locale its dates
+ * and times take (`FRAME_LOCALE_ATTRIBUTE`).
  */
 function languageAttributes(language = currentLanguage()): string {
-  return `lang="${escapeAttribute(language)}" dir="${textDirection(language)}"`;
+  const locale = regionalLocale(language);
+  return `lang="${escapeAttribute(language)}" dir="${textDirection(language)}"${locale ? ` ${FRAME_LOCALE_ATTRIBUTE}="${escapeAttribute(locale)}"` : ""}`;
 }
 
-/** Assembles one frame document. Pure for a given language; the same text on every host. */
+/** Assembles one frame document. Pure for a given language and computer locale (`regionalLocale`). */
 export function buildFrameDocument(parts: FrameDocumentParts): string {
   const theme = escapeAttribute(parts.theme);
   return [

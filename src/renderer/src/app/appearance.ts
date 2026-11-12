@@ -34,6 +34,12 @@ export type AppearanceSlice = {
   /** How Settings → Usage shows every amount, remembered by the core (docs/usage.md). */
   usageUnit: UsageUnit;
   /**
+   * The language the captain chose in Settings → Appearance, or null to
+   * follow the computer (docs/i18n.md, "The language choice").
+   */
+  language: string | null;
+  setLanguage: (language: string | null) => void;
+  /**
    * Why the last appearance write was refused, beside the control that made
    * it, while the window shows the saved look again. The next write clears it.
    */
@@ -59,6 +65,7 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     washStrength: appearance.washStrength ?? DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: appearance.showCrewModelNames ?? true,
     usageUnit: appearance.usageUnit ?? "tokens",
+    language: appearance.language ?? null,
   } satisfies Partial<ShellState>;
   return Object.fromEntries(
     Object.entries(look).filter(([key, value]) => s[key as keyof typeof look] !== value),
@@ -115,6 +122,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
         washStrength: s.washStrength,
         showCrewModelNames: s.showCrewModelNames,
         usageUnit: s.usageUnit,
+        ...(s.language ? { language: s.language } : {}),
       };
       return window.infinitary.settings.setAppearance({ ...saved, ...change });
     });
@@ -131,6 +139,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     washStrength: DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: DEFAULT_APPEARANCE.showCrewModelNames ?? true,
     usageUnit: "tokens",
+    language: null,
     appearanceError: null,
     applyAppearance: (appearance) => appearanceSave.apply(appearance),
     refreshAppearance: () => {
@@ -171,6 +180,12 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     setUsageUnit: (usageUnit) => {
       set({ usageUnit });
       saveAppearance("usageUnit", { usageUnit });
+    },
+    // Following the computer is a look with no language: the core removes
+    // the saved choice (src/core/storage/settingsStore.ts).
+    setLanguage: (language) => {
+      set({ language });
+      saveAppearance("language", { language: language ?? undefined });
     },
   };
 }

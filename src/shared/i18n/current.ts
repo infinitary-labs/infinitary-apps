@@ -1,5 +1,6 @@
 import {
   languageFormatTag,
+  readableLocale,
   SOURCE_LANGUAGE,
   type TextDirection,
   textDirection,
@@ -66,11 +67,25 @@ export function languageLocale(): string {
   return languageFormatTag(language);
 }
 
+let computerLocale: string | undefined;
+
 /**
- * The locale for dates and times written in the computer's own forms:
- * undefined in English, so the runtime uses the computer's own region as it
- * always has, and the chosen language's tag otherwise.
+ * Sets the computer's own preferred locale, the first of its preferred
+ * languages, set where the process starts: the main process from the
+ * computer, a window's page from its preload's mark.
  */
-export function regionalLocale(): string | undefined {
-  return language === SOURCE_LANGUAGE ? undefined : languageFormatTag(language);
+export function setComputerLocale(tag: string | null | undefined): void {
+  computerLocale = readableLocale(tag);
+}
+
+/**
+ * The locale for dates and times written in the computer's own forms
+ * (docs/i18n.md, "Dates and times"): in English the computer's own
+ * preferred locale, named explicitly, since the packaged Mac app keeps only
+ * the shipped languages' folders and the runtime's own default would fall
+ * back to US forms; undefined when none was set; and the chosen language's
+ * tag otherwise. `tag` names another language than the process's own.
+ */
+export function regionalLocale(tag: string = language): string | undefined {
+  return tag === SOURCE_LANGUAGE ? computerLocale : languageFormatTag(tag);
 }

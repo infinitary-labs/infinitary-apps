@@ -20,7 +20,7 @@ import {
   taskBrowserReturnSchema,
   taskBrowserSizeSchema,
 } from "../taskBrowser";
-import { taskBoardSchema, taskDetailSchema, taskViewSchema } from "../tasks";
+import { taskBoardReadSchema, taskBoardSchema, taskDetailSchema, taskViewSchema } from "../tasks";
 import { type ChannelDeclaration, okSchema } from "./common";
 
 /** The feed, the crew's counts, the task board and records, and a task's browser. */
@@ -45,11 +45,13 @@ export const taskChannels = {
   // which clears its new mark. The record's lifecycle toggles ride
   // `inf:task:run`; every other write to a task happens by talking to the
   // Firstmate.
+  // `{ closed: false }` reads it without the closed rows, the first read a
+  // view makes when it comes back (`board-without-closed.md`).
   "inf:tasks:board": {
     effect: "read",
     surface: "core",
     reach: "views",
-    request: z.tuple([]),
+    request: z.tuple([taskBoardReadSchema.optional()]),
     response: taskBoardSchema,
   },
   "inf:tasks:detail": {

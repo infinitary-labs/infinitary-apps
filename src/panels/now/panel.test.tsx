@@ -128,6 +128,27 @@ describe("a group that opens and closes", () => {
   });
 });
 
+// INF-3750's option B: a collapsed Done counts the rows a board read without
+// its closed rows left out beside the ones it holds.
+describe("a Done group whose closed rows were left out", () => {
+  it("counts them with its own rows", () => {
+    const html = renderToStaticMarkup(
+      <Group
+        group="landed"
+        rows={[{ task: task({ status: "done", closedAt: 5 }), group: "landed", depth: 0 }]}
+        board={board()}
+        leftOut={4}
+        open={false}
+        selectedTaskIds={[]}
+        litTaskId={null}
+        onToggle={() => {}}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).toMatch(/data-now-count="landed"[^>]*>5</);
+  });
+});
+
 /**
  * A row's pin (INF-3127) is the task's: a minimized card with no task
  * behind it lists among the tasks, but the app has no task to pin there,

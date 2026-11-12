@@ -135,7 +135,14 @@ import type {
   TaskBrowserReturn,
   TaskBrowserSize,
 } from "./taskBrowser";
-import type { MoveOptions, ProjectView, TaskBoard, TaskBoardDelta, TaskDetail } from "./tasks";
+import type {
+  MoveOptions,
+  ProjectView,
+  TaskBoard,
+  TaskBoardDelta,
+  TaskBoardRead,
+  TaskDetail,
+} from "./tasks";
 import type { PresenceSettings, UpdateChannel, UpdateInstallResult, UpdateStatus } from "./update";
 import type { MicAccess, RecognizerPlace, VoiceDownloadProgress, VoiceStatus } from "./voice";
 
@@ -499,8 +506,11 @@ export type FirstmateApi = {
    * toggles are `task.run`; every other write is a conversation.
    */
   tasks: {
-    /** The live board a client resyncs from; live updates ride onBoard. */
-    board: () => Promise<TaskBoard>;
+    /**
+     * The live board a client resyncs from; live updates ride onBoard.
+     * `{ closed: false }` reads it without its closed rows (`board-without-closed.md`).
+     */
+    board: (read?: TaskBoardRead) => Promise<TaskBoard>;
     /** One record in full: view, intent, brief, outcome, timeline, asks. */
     detail: (taskId: string) => Promise<TaskDetail>;
     /** The captain opened a filing's record. Clears its new mark. */

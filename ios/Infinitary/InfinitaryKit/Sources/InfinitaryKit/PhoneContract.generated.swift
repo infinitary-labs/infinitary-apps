@@ -12,6 +12,7 @@ public enum PhoneContract {
     public static let maxFrameBytes = 67108864
     public static let frameParts = "frame-parts"
     public static let cardAnnotations = "card-annotations"
+    public static let boardWithoutClosed = "board-without-closed"
     public static let cards = "inf:cards:list"
     public static let feed = "inf:feed:recent"
 }

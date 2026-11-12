@@ -29987,7 +29987,20 @@
       "reach": "views",
       "request": {
         "type": "array",
-        "maxItems": 0
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "closed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "closed"
+            ]
+          }
+        ],
+        "items": false
       },
       "response": {
         "type": "object",
@@ -31764,6 +31777,26 @@
                 "type"
               ]
             }
+          },
+          "closedLeftOut": {
+            "type": "object",
+            "properties": {
+              "done": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "required": [
+              "done"
+            ]
           }
         },
         "required": [
@@ -67971,6 +68004,26 @@
                 "type"
               ]
             }
+          },
+          "closedLeftOut": {
+            "type": "object",
+            "properties": {
+              "done": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "required": [
+              "done"
+            ]
           }
         },
         "required": [

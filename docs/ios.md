@@ -467,6 +467,7 @@ The phone keeps a working parent and its live parts together, hides dropped rows
 Only the groups with tasks show.
 Pinned comes first, never folds, and holds every task the captain pinned, whatever its state or age, in the order it was pinned, newest last, as on the Mac (INF-3127); a pinned task's parts list under it there and nowhere else, each still unpinned (INF-3512), except a finished part not pinned itself, which stays in Done.
 Waiting on you, Working and Queued always show their rows, under a micro uppercase label with no count; Backlog and Done fold, start folded and show their count, and Backlog adds "· N could not start" and "· N new".
+On a home that lists `board-without-closed`, the phone's first board read leaves out the week's closed rows (`docs/task-retention.md`, "A view's first board read"); Done counts the rows left out, and opening Done, a search or a task the light board lacks reads the whole board once (`ReadOnlySession.readClosedRows`).
 Rows follow the Mac's order: priority, then oldest first, with Done newest closed first and a part indented under its parent in the same group, up to three levels.
 Each row shows the Mac's status mark (`PhoneTaskMark`), the key, the title and the Mac's one dim word: starting, could not start, checks, waiting, blocked, held or found on another task.
 A title takes up to two lines on an iPhone, which has no pointer to show the rest, and one on an iPad, as on the Mac.

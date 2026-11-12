@@ -25,6 +25,13 @@ import XCTest
         return (try XCTUnwrap(read["dials"] as? [[String: Any]]), try XCTUnwrap(read["refused"] as? Int))
     }
 
+    /// How many of the first reads - the cards, the feed and the task board - the home has answered so far.
+    private func answered() async throws -> [String: Int] {
+        let state = try await home("routing-state", method: "GET")
+        let readings = try XCTUnwrap(state["readings"] as? [String: Int])
+        return readings.filter { ["cards", "feed", "boards"].contains($0.key) }
+    }
+
     private func shape(bytesPerSec: Int, delayMs: Int) async throws {
         _ = try await home("relay-shape", ["bytesPerSec": bytesPerSec, "delayMs": delayMs])
     }
@@ -294,7 +301,9 @@ import XCTest
 
     /// INF-2666 measured a record standing in for the captain's, in reach on a good link, then weakened to 4 KB/s and
     /// dropped: six dials, each cut 10 s in, for the whole weak spell, though the welcome replayed nothing missed. The
-    /// home's own record is used here, since cards seeded into it would stay for the journeys sharing the home.
+    /// home's own record is used here, since cards seeded into it would stay for the journeys sharing the home. The
+    /// home counts the first reads it answers, so the redial is seen reading none of them again; its bytes stay under
+    /// the first dial's, whose own size follows how light the first reads are (INF-3764's board without closed rows).
     func testADropOnAWeakLinkComesBackFromTheReplay() async throws {
         let session = try await joined()
         let watch = Watch(session)
@@ -309,6 +318,7 @@ import XCTest
             first = down
             try await watch.hold(1)
         }
+        let firstReads = try await answered()
         try await shape(bytesPerSec: 4_000, delayMs: 300)
         let dropped = watch.now
         _ = try await home("relay-drop")
@@ -316,8 +326,10 @@ import XCTest
         try await watch.hold(10)
         let dials = try await readings().dials
         XCTAssertEqual(dials.count, 2, "One redial")
+        let againReads = try await answered()
+        XCTAssertEqual(againReads, firstReads, "The replaying welcome read nothing again")
         let again = try XCTUnwrap(dials.last?["down"] as? Int)
-        XCTAssertLessThan(again, first / 2, "The replaying welcome read nothing again: \(again) bytes after \(first)")
+        XCTAssertLessThan(again, first, "The replaying welcome read nothing again: \(again) bytes after \(first)")
         XCTAssertLessThanOrEqual(watch.said("reaching", since: dropped), 1, "Reaching shows at most once")
         XCTAssertEqual(watch.said("lost", since: dropped), 0)
         XCTAssertEqual(session.contact, "in-reach")

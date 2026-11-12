@@ -16,7 +16,7 @@ import {
 import { requestCharacterEmote } from "../character/emoteSignal";
 import { stageNow } from "../character/stageClock";
 import { changesOff, changesOffWords, isView } from "../devices/viewWords";
-import { appReadExecutor } from "../plugins/reads/appExecutor";
+import { appReadExecutor, readBoardWithoutClosed } from "../plugins/reads/appExecutor";
 import { resyncReads } from "../plugins/reads/resync";
 import { detectVoiceSupport } from "../voice/voiceInput";
 import { recognizerPlace } from "../voice/whisperClient";
@@ -198,8 +198,8 @@ function readDevicesShown(): void {
 
 /** Seeds the crew orbit's roster from the board, and each active work task's activity. */
 function readBoard(): void {
-  void window.infinitary.tasks
-    .board()
+  // The orbit has no use for closed rows: they never fly.
+  void readBoardWithoutClosed()
     .then((board) => {
       seedCrew(crewOrbit(), board.tasks, stageNow(), board.links);
       reconcileCrew(crewOrbit(), board, stageNow());
@@ -341,7 +341,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     // and reads again on a gap, so a large board moves the stage too.
     appReadExecutor().subscribe(
       "tasks.board",
-      {},
+      { closed: false },
       {
         onValue: (value) => {
           const board = value as TaskBoard;

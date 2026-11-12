@@ -50,6 +50,14 @@ function changed(): void {
   for (const listener of listeners) listener();
 }
 
+/**
+ * Whether the board read so far left out its closed rows, and whether this
+ * store asks for them: it reads the board without them until a key names
+ * neither a row it lists nor earlier work, which may be work closed this week.
+ */
+let boardLesser = false;
+let wantsClosed = false;
+
 /** Earlier work the board does not list, looked up once per key. */
 function lookUp(key: string): void {
   if (asked.has(key) || boardRows.has(key)) return;
@@ -58,34 +66,45 @@ function lookUp(key: string): void {
     .read("tasks.search", { query: key })
     .then((rows) => {
       const task = rows.find((row) => row.key === key);
-      if (!task) return;
+      if (!task) {
+        if (boardLesser) readClosedRows(key);
+        return;
+      }
       earlier.set(key, task);
       changed();
     })
     .catch(() => {});
 }
 
+/** Reads the board again with its closed rows, which may list `key`. */
+function readClosedRows(key: string): void {
+  asked.delete(key);
+  if (wantsClosed || !stopBoard) return;
+  wantsClosed = true;
+  const lesser = stopBoard;
+  stopBoard = null;
+  readBoard();
+  lesser();
+}
+
 /** The board is read while any key is wanted or any reader holds it. */
 function readBoard(): void {
   if (stopBoard) return;
-  stopBoard = appReadExecutor().subscribe(
-    "tasks.board",
-    {},
-    {
-      onValue: (value) => {
-        const rows = (value as TaskBoard).tasks;
-        boardRows = new Map(rows.map((row) => [row.key, row]));
-        boardById = new Map(rows.map((row) => [row.id, row]));
-        boardByCard = new Map(
-          rows.flatMap((row) => (row.waitingCardId ? [[row.waitingCardId, row] as const] : [])),
-        );
-        boardSeen = true;
-        for (const key of wanted.keys()) lookUp(key);
-        changed();
-      },
-      onError: () => {},
+  stopBoard = appReadExecutor().subscribe("tasks.board", wantsClosed ? {} : { closed: false }, {
+    onValue: (value) => {
+      boardLesser = (value as TaskBoard).closedLeftOut !== undefined;
+      const rows = (value as TaskBoard).tasks;
+      boardRows = new Map(rows.map((row) => [row.key, row]));
+      boardById = new Map(rows.map((row) => [row.id, row]));
+      boardByCard = new Map(
+        rows.flatMap((row) => (row.waitingCardId ? [[row.waitingCardId, row] as const] : [])),
+      );
+      boardSeen = true;
+      for (const key of wanted.keys()) lookUp(key);
+      changed();
     },
-  );
+    onError: () => {},
+  });
 }
 
 /** Lets the board go once nothing wants a key and nothing holds it. */
@@ -94,6 +113,8 @@ function releaseBoard(): void {
   stopBoard();
   stopBoard = null;
   boardSeen = false;
+  boardLesser = false;
+  wantsClosed = false;
 }
 
 export const taskKeyIndex = {

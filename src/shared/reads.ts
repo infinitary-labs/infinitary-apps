@@ -93,6 +93,18 @@ export type ReadEntry<C extends CoreInvokeChannel, A extends z.ZodType> = {
   args: A;
   toRequest: (args: z.infer<A>, grant: ReadGrant) => InvokeRequest<C>;
   invalidate: ReadInvalidation<z.infer<A>>;
+  /**
+   * Readers that ask for less of a pushed value share one value with the
+   * readers that ask for all of it: it is read with `args` while every
+   * reader asks for less (`asksLess`), and read again whole once a reader
+   * that asks for all of it joins a lesser value (`lesser`). The task board
+   * is the one this is for (`board-without-closed.md`).
+   */
+  narrows?: {
+    args: z.infer<A>;
+    asksLess: (args: z.infer<A>) => boolean;
+    lesser: (value: unknown) => boolean;
+  };
   description: string;
 };
 
@@ -322,12 +334,25 @@ export const readCatalog = {
   // re-reads only when ITS task changes or gains a timeline event.
   "tasks.board": entry({
     channel: "inf:tasks:board",
-    args: noArgs,
-    toRequest: () => [],
+    // `closed: false` asks for the board without its closed rows: a reader
+    // that has no use for them yet, so a view's first read stays light.
+    args: z.strictObject({ closed: z.literal(false).optional() }),
+    toRequest: (args) => (args.closed === false ? [{ closed: false }] : []),
+    narrows: {
+      args: { closed: false },
+      asksLess: (args) => args.closed === false,
+      lesser: (value) => (value as TaskBoard).closedLeftOut !== undefined,
+    },
     invalidate: {
       presentation: true,
       valueFromPush: "inf:tasks",
-      sameValue: (current, next) => (current as TaskBoard).seq >= (next as TaskBoard).seq,
+      // A newer board, or the whole board where a lesser one is held, is news.
+      sameValue: (current, next) => {
+        const held = current as TaskBoard;
+        const read = next as TaskBoard;
+        if (held.seq !== read.seq) return held.seq > read.seq;
+        return held.closedLeftOut === undefined || read.closedLeftOut !== undefined;
+      },
       // Above the measured trigger the core pushes what changed (P5); the
       // executor folds it onto the board it holds, and a gap re-reads.
       deltaFromPush: {
@@ -336,7 +361,8 @@ export const readCatalog = {
           applyTaskBoardDelta(current as TaskBoard, delta as TaskBoardDelta),
       },
     },
-    description: "The live task board: open, underway, and recently closed work.",
+    description:
+      "The live task board: open, underway, and recently closed work. `closed: false` leaves out the closed rows a reader has no use for yet.",
   }),
   "tasks.detail": entry({
     channel: "inf:tasks:detail",

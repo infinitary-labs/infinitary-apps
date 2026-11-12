@@ -39,6 +39,7 @@ There is no setting for any of it.
 ## What it shows
 
 The board reads the same sequenced `tasks.board` the Tasks panel paints.
+It reads the whole board, the week's closed rows included, so while it shows the window's lighter first read gives way to the whole one (`docs/task-retention.md`, "A view's first board read").
 Each ordinary task appears once, under its own shared group (`nowGroupOf`, `src/shared/nowPanel.ts`), named with the panel's words, in one of its lanes:
 
 - Waiting on you, with "Decisions, not another stage" beside its label.

@@ -401,9 +401,24 @@ export function newestListedWrite(board: PanelTaskBoard): number {
  * An `operation` row alone, the trail of an app change, docks nothing.
  */
 export function onRail(board: PanelTaskBoard): boolean {
-  return board.tasks.some(
-    (task) => nowGroupOf(task) !== null || task.kind !== "operation" || isPinned(task),
+  return (
+    leftOutDone(board) > 0 ||
+    board.tasks.some(
+      (task) => nowGroupOf(task) !== null || task.kind !== "operation" || isPinned(task),
+    )
   );
+}
+
+/**
+ * How many Done rows a board read without its closed rows left out
+ * (`closedLeftOut`), in one project or in all: the Done group counts them
+ * before the panel reads them, and reads them when it opens.
+ */
+export function leftOutDone(board: PanelTaskBoard, projectId: string | null = null): number {
+  const done = board.closedLeftOut?.done;
+  if (!done) return 0;
+  if (projectId !== null) return done[projectId]?.length ?? 0;
+  return Object.values(done).reduce((count, ids) => count + ids.length, 0);
 }
 
 /**

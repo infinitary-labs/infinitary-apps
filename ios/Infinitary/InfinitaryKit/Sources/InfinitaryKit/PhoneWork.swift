@@ -287,7 +287,24 @@ public struct PhoneBoard: Decodable, Sendable {
     public internal(set) var tasks: [PhoneTask]
     public let projects: [Project]
     public let links: [Link]?
+    /// INF-3764: present when the board was read without its closed rows (`board-without-closed.md`): the ids of the
+    /// rows left out that Tasks lists under Done, by project, so Done counts them before they are read.
+    public internal(set) var closedLeftOut: ClosedLeftOut? = nil
+    public struct ClosedLeftOut: Decodable, Sendable { public let done: [String: [String]] }
     public struct Link: Decodable, Sendable { public let fromId: String; public let toId: String; public let type: String }
+
+    /// How many Done rows this board left out: zero on a whole board.
+    public var leftOutDone: Int { closedLeftOut?.done.values.reduce(0) { $0 + $1.count } ?? 0 }
+
+    /// The Mac's `applyTaskBoardDelta` keeps a board read without its closed rows so, less each row the delta brings
+    /// back or takes off the whole board.
+    func leaving(_ gone: Set<String>) -> ClosedLeftOut? {
+        guard let left = closedLeftOut else { return nil }
+        return ClosedLeftOut(done: left.done.compactMapValues { ids in
+            let kept = ids.filter { !gone.contains($0) }
+            return kept.isEmpty ? nil : kept
+        })
+    }
     public struct Project: Decodable, Sendable {
         public let id: String
         public let name: String
@@ -311,7 +328,8 @@ public struct PhoneBoard: Decodable, Sendable {
         let edges = (links ?? []).filter { !unlinked.contains(key($0)) && !linked.contains(key($0)) } + delta.links.added
         return PhoneBoard(seq: delta.seq,
                           tasks: rows.sorted { $0.createdAt == $1.createdAt ? $0.id < $1.id : $0.createdAt < $1.createdAt },
-                          projects: delta.projects, links: edges.sorted { key($0) < key($1) })
+                          projects: delta.projects, links: edges.sorted { key($0) < key($1) },
+                          closedLeftOut: leaving(removed.union(upserted)))
     }
 
     /// INF-2773: a run of deltas read in one catch-up, folded with one sort at the end. It gives the board that
@@ -323,17 +341,19 @@ public struct PhoneBoard: Decodable, Sendable {
         var rows = Dictionary(tasks.map { ($0.id, $0) }, uniquingKeysWith: { _, later in later })
         var edges = Dictionary((links ?? []).map { (key($0), $0) }, uniquingKeysWith: { _, later in later })
         var at = seq, projects = self.projects
+        var gone = Set<String>()
         for delta in deltas where delta.seq > at {
             guard delta.baseSeq == at else { return nil }
-            for id in delta.removed { rows[id] = nil }
-            for task in delta.upserts { rows[task.id] = task }
+            for id in delta.removed { rows[id] = nil; gone.insert(id) }
+            for task in delta.upserts { rows[task.id] = task; gone.insert(task.id) }
             for link in delta.links.removed { edges[key(link)] = nil }
             for link in delta.links.added { edges[key(link)] = link }
             at = delta.seq; projects = delta.projects
         }
         return PhoneBoard(seq: at,
                           tasks: rows.values.sorted { $0.createdAt == $1.createdAt ? $0.id < $1.id : $0.createdAt < $1.createdAt },
-                          projects: projects, links: edges.values.sorted { key($0) < key($1) })
+                          projects: projects, links: edges.values.sorted { key($0) < key($1) },
+                          closedLeftOut: leaving(gone))
     }
 
     /// INF-1517: the Mac's `presentTask` rule (src/shared/taskWaiting.ts, docs/task-record.md "Minimized cards in

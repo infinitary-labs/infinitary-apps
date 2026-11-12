@@ -20,7 +20,7 @@ export function useProjectName(projectId: string | undefined): string {
     () =>
       appReadExecutor().subscribe(
         "tasks.board",
-        {},
+        { closed: false },
         {
           onValue: (value) => setProjects((value as TaskBoard).projects),
           onError: () => {},
@@ -39,7 +39,7 @@ export function useBoardTasks(): readonly TaskView[] {
     () =>
       appReadExecutor().subscribe(
         "tasks.board",
-        {},
+        { closed: false },
         {
           onValue: (value) => setTasks((value as TaskBoard).tasks),
           onError: () => {},

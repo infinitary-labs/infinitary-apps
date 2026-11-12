@@ -1,5 +1,5 @@
 import { type NowGroupInput, nowGroupOf } from "./nowPanel";
-import type { ProjectView, TaskView } from "./tasks";
+import { closedLeftOutDone, type ProjectView, type TaskBoard, type TaskView } from "./tasks";
 
 /**
  * The project focus (docs/project-focus.md): which projects get a pill in
@@ -37,7 +37,8 @@ export type ProjectPills = {
 /**
  * Every project set up in Settings, in the task board's order, plus Scratch
  * (the project with no repository) and the app's own workspace (its repo of
- * kind `personal`) while each has a task the Tasks panel lists; an archived
+ * kind `personal`) while each has a task the Tasks panel lists, counting the
+ * Done rows a board read without its closed rows left out; an archived
  * project gets none (the captain's answer to INF-1091's question 8, and to
  * INF-1292's: one project of yours and an idle workspace leave nothing to
  * choose).
@@ -45,6 +46,7 @@ export type ProjectPills = {
 export function projectPillsOf(board: {
   projects: readonly FocusProjectInput[];
   tasks: readonly FocusTaskInput[];
+  closedLeftOut?: TaskBoard["closedLeftOut"];
 }): ProjectPills {
   const counts = new Map<string, { waiting: number; working: number; listed: number }>();
   let waiting = 0;
@@ -68,7 +70,7 @@ export function projectPillsOf(board: {
       (project) =>
         !project.archived &&
         ((project.repo !== null && project.repo.kind !== "personal") ||
-          (counts.get(project.id)?.listed ?? 0) > 0),
+          (counts.get(project.id)?.listed ?? 0) + closedLeftOutDone(board, project.id) > 0),
     )
     .map((project) => ({
       id: project.id,

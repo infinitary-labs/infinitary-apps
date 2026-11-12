@@ -1,3 +1,4 @@
+import { boardWithoutClosed } from "@shared/boardWithoutClosed";
 import { type Card, isReadyDecision, mergeEffectOf } from "@shared/cards";
 import { cardWords } from "@shared/cardWords";
 import type { TaskCostView } from "@shared/costLimit";
@@ -37,6 +38,7 @@ import {
   sortBoardTasks,
   type TaskActionLine,
   type TaskBoard,
+  type TaskBoardRead,
   type TaskCardRow,
   type TaskDetail,
   type TaskEventView,
@@ -409,7 +411,13 @@ export class TaskProtocol {
 
   // ---- reads --------------------------------------------------------------
 
-  board(): TaskBoard {
+  /** The board; `{ closed: false }` leaves out its closed rows (`boardWithoutClosed`). */
+  board(read?: TaskBoardRead): TaskBoard {
+    if (read?.closed === false) {
+      const cardTasks = new Set<string>();
+      for (const card of this.options.cards.snapshot()) if (card.taskId) cardTasks.add(card.taskId);
+      return boardWithoutClosed(this.board(), cardTasks);
+    }
     return this.options.tasks.readProjection(() => {
       const outer = this.readingFacts;
       const pending = this.pendingFacts;

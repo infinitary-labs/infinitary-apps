@@ -539,8 +539,28 @@ export const taskBoardSchema = z.object({
   tasks: z.array(taskViewSchema),
   /** Edges whose both ends are on the board. */
   links: z.array(taskLinkViewSchema),
+  /**
+   * Present when this board was read without the closed rows
+   * (`inf:tasks:board` with `{ closed: false }`, `boardWithoutClosed`): it
+   * left out every closed row that is not pinned, not a parent of a row it
+   * keeps, not a part of live work and not the task of a card on the stack.
+   * `done` lists the ids of the rows it left out that Tasks shows under Done,
+   * by project id, so a client counts them before it reads them. A delta
+   * that brings one back, or takes one off the whole board, takes its id
+   * out. A snapshot push carries the whole board and none of this
+   * (`board-without-closed.md`).
+   */
+  closedLeftOut: z.object({ done: z.record(z.string(), z.array(z.string())) }).optional(),
 });
 export type TaskBoard = z.infer<typeof taskBoardSchema>;
+
+/**
+ * How a client asks for the board (`inf:tasks:board`): `closed: false` reads it
+ * without the closed rows, the first read a view makes when it comes back, so
+ * a week of closed work never holds up its catch-up; no argument reads it whole.
+ */
+export const taskBoardReadSchema = z.object({ closed: z.boolean() });
+export type TaskBoardRead = z.infer<typeof taskBoardReadSchema>;
 
 /** Closed rows stay on the board this long after closing. */
 export const BOARD_RECENT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -895,11 +915,39 @@ export function applyTaskBoardDelta(board: TaskBoard, delta: TaskBoardDelta): Ta
   const links = new Map(board.links.map((link) => [linkKey(link), link]));
   for (const link of delta.links.removed) links.delete(linkKey(link));
   for (const link of delta.links.added) links.set(linkKey(link), link);
-  return {
+  const next: TaskBoard = {
     seq: delta.seq,
     at: delta.at,
     projects: delta.projects,
     tasks: sortBoardTasks([...rows.values()]),
     links: sortBoardLinks([...links.values()]),
   };
+  // A board read without its closed rows stays so: a row the delta brings
+  // back, or takes off the whole board, is no longer one it left out.
+  if (board.closedLeftOut) {
+    const gone = new Set([...delta.removed, ...delta.upserts.map((task) => task.id)]);
+    const done: Record<string, string[]> = {};
+    for (const [projectId, ids] of Object.entries(board.closedLeftOut.done)) {
+      const left = ids.filter((id) => !gone.has(id));
+      if (left.length > 0) done[projectId] = left;
+    }
+    next.closedLeftOut = { done };
+  }
+  return next;
+}
+
+/**
+ * How many rows Tasks lists under Done that `board` left out (`closedLeftOut`),
+ * in one project or in all: zero on a whole board.
+ */
+export function closedLeftOutDone(
+  board: Pick<TaskBoard, "closedLeftOut">,
+  projectId?: string,
+): number {
+  const done = board.closedLeftOut?.done;
+  if (!done) return 0;
+  if (projectId !== undefined) return done[projectId]?.length ?? 0;
+  let count = 0;
+  for (const ids of Object.values(done)) count += ids.length;
+  return count;
 }

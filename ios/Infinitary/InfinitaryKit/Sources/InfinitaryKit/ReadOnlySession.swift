@@ -129,6 +129,10 @@ public struct PhoneNotice: Equatable, Sendable {
     public var onSignInEnded: ((String) -> Void)?
     /// The computer takes a sign-in's return from this phone (`sign-in-return`), said in its welcome or implied by a newer major.
     public private(set) var homeTakesSignInReturn = false
+    /// INF-3764: the home reads the board without its closed rows (`board-without-closed.md`), so the first board read
+    /// leaves them out; `closedRowsWanted` is set once Tasks shows Done or a search on this connection, and reads them.
+    @ObservationIgnored private var homeLeavesClosed = false
+    @ObservationIgnored private var closedRowsWanted = false
     @ObservationIgnored private let phone: PhoneIdentity
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
@@ -923,6 +927,8 @@ public struct PhoneNotice: Equatable, Sendable {
             homeTakesUsage = homeMajor >= PhoneContract.phoneDiagnosticsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
             homeTakesSignInReturn = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneGoogleWords.signInReturn)
+            homeLeavesClosed = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
+            closedRowsWanted = false
             if !sceneObservations { computers = [] }
             sceneGeneration += 1
             contact = "reaching"
@@ -1140,7 +1146,19 @@ public struct PhoneNotice: Equatable, Sendable {
     private func refresh(_ channel: String, on socket: URLSessionWebSocketTask) async throws {
         if pending.values.contains(channel) { dirty.insert(channel); return }
         nextID += 1; pending[nextID] = channel; waitingSince[nextID] = Date()
-        try await send(["t": "invoke", "id": nextID, "channel": channel, "args": []], on: socket)
+        // INF-3764: the board leaves out its closed rows until Tasks shows them.
+        let lesser = channel == PhoneRequest.board.rawValue && homeLeavesClosed && !closedRowsWanted
+        let args: [Any] = lesser ? [["closed": false]] : []
+        try await send(["t": "invoke", "id": nextID, "channel": channel, "args": args], on: socket)
+    }
+
+    /// INF-3764: Tasks shows Done or a search, so the closed rows the first board read left out are read now, and every
+    /// board read on this connection reads them too.
+    public func readClosedRows() {
+        guard !closedRowsWanted else { return }
+        closedRowsWanted = true
+        guard syncedBoard?.closedLeftOut != nil, let socket else { return }
+        Task { try? await self.refresh(PhoneRequest.board.rawValue, on: socket) }
     }
 
     private func send(_ object: [String: Any], on socket: URLSessionWebSocketTask) async throws {

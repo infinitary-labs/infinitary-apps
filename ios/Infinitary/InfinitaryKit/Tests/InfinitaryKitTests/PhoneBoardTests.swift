@@ -211,4 +211,29 @@ struct PhoneBoardTests {
         #expect(held.applying(run: run + [try delta(base: 47, seq: 48, upserts: [], removed: [])]) == nil)
         #expect(held.applying(run: [try delta(base: 39, seq: 40, upserts: [], removed: ["t-chart"])])?.tasks.count == 2)
     }
+
+    /// INF-3764: a board read without its closed rows names the Done rows it left out; a delta that brings one or
+    /// removes one takes it off that list, and Done counts the rows it left out until they are read.
+    @Test func aBoardWithoutItsClosedRowsCountsTheDoneRowsItLeftOut() throws {
+        var done = task("t-anchor", key: "INF-11", title: "Set the anchor", status: "done")
+        done["closedAt"] = 1_793_000_000_400
+        let json: [String: Any] = [
+            "seq": 41, "tasks": [done, task("t-chart", key: "INF-12", title: "Chart the northern entrance", status: "open")],
+            "projects": [["id": "proj-harbour", "name": "Harbour"]],
+            "closedLeftOut": ["done": ["proj-harbour": ["t-a", "t-b"]]],
+        ]
+        let held = try JSONDecoder().decode(PhoneBoard.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(held.leftOutDone == 2)
+        let landed = try #require(PhoneTaskList(board: held, cards: []).parts.first { $0.section == .group(.landed) })
+        #expect(landed.count == landed.rows.count + 2)
+        let searched = PhoneTaskList(board: held, cards: [], query: "anchor").parts.first { $0.section == .group(.landed) }
+        #expect(searched?.count == searched?.rows.count)
+
+        var brought = task("t-a", key: "INF-9", title: "Sound the channel", status: "done")
+        brought["closedAt"] = 1_793_000_000_300
+        let next = try #require(held.applying(delta(base: 41, seq: 42, upserts: [brought], removed: [])))
+        #expect(next.closedLeftOut?.done["proj-harbour"] == ["t-b"])
+        let emptied = try #require(next.applying(run: [try delta(base: 42, seq: 43, upserts: [], removed: ["t-b"])]))
+        #expect(emptied.leftOutDone == 0)
+    }
 }

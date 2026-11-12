@@ -44,8 +44,10 @@ public struct PhoneTaskList: Sendable {
         public let aside: [PhoneCard]
         /// Where each row in Pinned would list otherwise (the Mac's `home`): its wait line follows it.
         var homes: [String: PhoneTaskGroup] = [:]
+        /// INF-3764: the Done rows a board read without its closed rows left out, counted until they are read.
+        var leftOut = 0
         public var id: String { section.id }
-        public var count: Int { rows.count + aside.count }
+        public var count: Int { rows.count + aside.count + leftOut }
         /// Crew filings here not opened yet, and starts that failed (`newFilingCount`, `failedStartCount`).
         public var new: Int { rows.filter { $0.task.filingNew == true }.count }
         public var failed: Int { rows.filter { $0.task.startNotice != nil }.count }
@@ -186,7 +188,11 @@ public struct PhoneTaskList: Sendable {
                 for at in members where !placed.contains(tasks[at].id) { place(at, 0) }
             }
             let aside = group == .waiting ? (board?.tasklessMinimized(cards) ?? []).filter { matches($0.title) } : []
-            if !rows.isEmpty || !aside.isEmpty { parts.append(Part(section: .group(group), rows: rows, aside: aside)) }
+            // A search reads the closed rows whole, so only the unsearched list counts the ones left out.
+            let leftOut = group == .landed && words.isEmpty ? board?.leftOutDone ?? 0 : 0
+            if !rows.isEmpty || !aside.isEmpty || leftOut > 0 {
+                parts.append(Part(section: .group(group), rows: rows, aside: aside, leftOut: leftOut))
+            }
         }
         // A search's older closed work from the computer, minus what the groups list, newest closed first.
         if !words.isEmpty {

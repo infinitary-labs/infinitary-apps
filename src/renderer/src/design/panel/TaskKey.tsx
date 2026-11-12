@@ -169,12 +169,17 @@ export function usePanelTaskKeys(reads: PanelReads, texts: readonly string[]): P
   const [board, setBoard] = useState<ReadonlyMap<string, string> | null>(null);
   const [found, setFound] = useState<ReadonlyMap<string, string>>(new Map());
   const searches = useRef(new Map<string, (() => void) | null>());
+  // The board without its closed rows, until a key names neither a row it
+  // lists nor earlier work: it may be work closed this week.
+  const lesser = useRef(false);
+  const [wantsClosed, setWantsClosed] = useState(false);
   useEffect(
     () =>
-      reads.subscribe("tasks.board", (value) =>
-        setBoard(new Map(value.tasks.map((task) => [task.key, task.id]))),
-      ),
-    [reads],
+      reads.subscribe("tasks.board", wantsClosed ? {} : { closed: false }, (value) => {
+        lesser.current = value.closedLeftOut !== undefined;
+        setBoard(new Map(value.tasks.map((task) => [task.key, task.id])));
+      }),
+    [reads, wantsClosed],
   );
   useEffect(() => {
     if (!board || !wanted) return;
@@ -188,6 +193,10 @@ export function usePanelTaskKeys(reads: PanelReads, texts: readonly string[]): P
         searches.current.set(key, null);
         const task = rows.find((row) => row.key === key);
         if (task) setFound((current) => new Map(current).set(key, task.id));
+        else if (lesser.current) {
+          searches.current.delete(key);
+          setWantsClosed(true);
+        }
       });
       if (answered) stop();
       else searches.current.set(key, stop);

@@ -150,6 +150,7 @@ export async function startPhoneHome(
   const readings = {
     cards: 0,
     feed: 0,
+    boards: 0,
     connections: 0,
     stalledConnections: 0,
     homeAttempts: 0,
@@ -445,6 +446,7 @@ export async function startPhoneHome(
         }
         if (channel === "inf:cards:list") readings.cards += 1;
         if (channel === "inf:feed:recent") readings.feed += 1;
+        if (channel === "inf:tasks:board") readings.boards += 1;
         if (
           [
             "inf:cards:act",

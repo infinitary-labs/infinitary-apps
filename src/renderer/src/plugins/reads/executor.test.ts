@@ -226,6 +226,48 @@ describe("ReadExecutor", () => {
     for (const stop of stops) stop();
   });
 
+  // INF-3750's option B, which the captain chose to start: the window's first
+  // board read leaves out the week's closed rows, and reads them once a reader
+  // that shows them (Done opened, the task board) joins.
+  it("reads the board without its closed rows until a reader asks for them, sharing one board", async () => {
+    const { fake, push } = api();
+    const lesser = { seq: 4, tasks: ["live"], closedLeftOut: { done: { p: ["d1"] } } };
+    const whole = { seq: 4, tasks: ["live", "d1"] };
+    const read = vi.fn(async (_name: string, args: unknown) =>
+      (args as { closed?: false }).closed === false ? lesser : whole,
+    );
+    const executor = new ReadExecutor({ ...fake, read });
+    const orbit: unknown[] = [];
+    const tasks: unknown[] = [];
+    const stopOrbit = executor.subscribe(
+      "tasks.board",
+      { closed: false },
+      { onValue: (v) => orbit.push(v), onError: () => {} },
+    );
+    const stopKeys = executor.subscribe(
+      "tasks.board",
+      { closed: false },
+      { onValue: () => {}, onError: () => {} },
+    );
+    await flush();
+    expect(read.mock.calls.map((call) => call[1])).toEqual([{ closed: false }]);
+    expect(orbit).toEqual([lesser]);
+    // Done opens: the same board is read whole once, for every reader, though its seq has not moved.
+    const stopDone = executor.subscribe(
+      "tasks.board",
+      {},
+      { onValue: (v) => tasks.push(v), onError: () => {} },
+    );
+    await vi.advanceTimersByTimeAsync(COALESCE_MS * 2);
+    expect(read.mock.calls.map((call) => call[1])).toEqual([{ closed: false }, {}]);
+    expect(orbit).toEqual([lesser, whole]);
+    expect(tasks.at(-1)).toEqual(whole);
+    // A lesser board of the same seq never replaces the whole one held.
+    push("inf:tasks", lesser);
+    expect(orbit.at(-1)).toEqual(whole);
+    for (const stop of [stopOrbit, stopKeys, stopDone]) stop();
+  });
+
   // INF-2526: the card stack changed while the first board read was still on
   // its way, that read was dropped, and nothing read the board again, so on a
   // quiet home pointing at a crewmate never opened its summary.

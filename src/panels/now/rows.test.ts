@@ -6,6 +6,7 @@ import {
   earlierRowsOf,
   hasSingleRegisteredRepoProject,
   isPinned,
+  leftOutDone,
   type NowRow,
   newestListedWrite,
   newFilingCount,
@@ -574,6 +575,26 @@ describe("a pinned task's parts in Pinned (INF-3512)", () => {
     const both = rowsOf(board({ tasks: pinnedDone }), noFilter);
     expect(listed(both, "pinned")?.at(-1)).toEqual(["FI3-1363", 1]);
     expect(both.has("landed")).toBe(false);
+  });
+});
+
+// INF-3750's option B, which the captain chose to start: the first board read
+// leaves out the week's closed rows, and Done counts them until it reads them.
+describe("a board read without its closed rows", () => {
+  const lesser = board({
+    tasks: [],
+    closedLeftOut: { done: { "proj-r1": ["d1", "d2"], scratch: ["d3"] } },
+  });
+
+  it("counts the Done rows it left out, in all projects or the one in focus", () => {
+    expect(leftOutDone(lesser)).toBe(3);
+    expect(leftOutDone(lesser, "scratch")).toBe(1);
+    expect(leftOutDone(lesser, "elsewhere")).toBe(0);
+    expect(leftOutDone(board())).toBe(0);
+  });
+
+  it("keeps the panel on its rail when Done work is all it holds", () => {
+    expect(onRail(lesser)).toBe(true);
   });
 });
 

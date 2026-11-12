@@ -18,8 +18,27 @@ export function reconcileBoard(
   if (!current) return next;
   const tasks = keepUnchanged(current.tasks, next.tasks);
   const projects = keepUnchanged(current.projects, next.projects);
-  if (tasks === current.tasks && projects === current.projects) return current;
+  if (
+    tasks === current.tasks &&
+    projects === current.projects &&
+    sameLeftOut(current.closedLeftOut, next.closedLeftOut)
+  )
+    return current;
   return { ...next, tasks, projects };
+}
+
+/** Whether two boards leave out as many Done rows in each project: all the panel reads of them. */
+function sameLeftOut(
+  current: PanelTaskBoard["closedLeftOut"],
+  next: PanelTaskBoard["closedLeftOut"],
+): boolean {
+  if (current === next) return true;
+  if (!current || !next) return false;
+  const projects = Object.keys(next.done);
+  return (
+    projects.length === Object.keys(current.done).length &&
+    projects.every((id) => current.done[id]?.length === next.done[id]?.length)
+  );
 }
 
 /**

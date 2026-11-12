@@ -77,7 +77,7 @@ function start(): void {
   railStore.subscribe(notify);
   appReadExecutor().subscribe(
     "tasks.board",
-    {},
+    { closed: false },
     {
       onValue: (value) => {
         const board = value as TaskBoard;

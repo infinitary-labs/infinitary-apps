@@ -128,9 +128,18 @@ struct PhoneTasks: View {
                 earlier = found
             } catch { if !Task.isCancelled { problem = error.localizedDescription } }
         }
-        // INF-1524: a task key pressed on a card opens that task's record here.
-        .onChange(of: messageContext.openTask, initial: true) { _, key in
-            guard let key, let task = session.board?.tasks.first(where: { $0.key == key }) else { return }
+        // INF-3764: Done opened or a search reads the closed rows the first board read left out. Only a list on screen
+        // asks, and only it reads the board for it (INF-2764).
+        .onChange(of: shown && (searching || expanded.contains(.group(.landed))) && session.board?.closedLeftOut != nil,
+                  initial: true) { _, wants in if wants { session.readClosedRows() } }
+        // INF-1524: a task key pressed on a card opens that task's record here. A key the board read without its closed
+        // rows does not list may be work closed this week: those are read, and the key opens once they arrive.
+        .onChange(of: "\(messageContext.openTask ?? "")|\(session.board?.closedLeftOut == nil)", initial: true) { _, _ in
+            guard let key = messageContext.openTask else { return }
+            guard let task = session.board?.tasks.first(where: { $0.key == key }) else {
+                if session.board?.closedLeftOut != nil { session.readClosedRows() }
+                return
+            }
             messageContext.openTask = nil
             messageContext.taskID = task.id; selected = task
         }

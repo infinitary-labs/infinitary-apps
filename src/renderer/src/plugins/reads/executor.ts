@@ -60,8 +60,11 @@ export class ReadSubscriptionError extends Error {
 
 type AnyEntry = ReadEntry<never, z.ZodType>;
 
-/** One running read; `join` adds a reader and returns what removes it. */
-type Source = { join: (listener: ReadListener) => () => void };
+/**
+ * One running read; `join` adds a reader and returns what removes it. A
+ * reader of an entry that `narrows` says whether it asks for less.
+ */
+type Source = { join: (listener: ReadListener, asksLess?: boolean) => () => void };
 
 export class ReadExecutor {
   /** The running pushed reads, by name and request, while any reader holds one. */
@@ -103,18 +106,23 @@ export class ReadExecutor {
     // The task board is the one this is for: a hover summary that opens
     // per row, and a Tasks panel remounted on the way back from Settings,
     // each rebuilt the whole board in the core (INF-1860).
+    // Readers that ask for less share the source of those asking for all
+    // of it (`narrows`), keyed by the whole request.
+    const { narrows } = entry;
+    const asksLess = narrows?.asksLess(args) ?? false;
+    const whole = asksLess ? entry.args.parse({}) : args;
     const key =
       invalidate.valueFromPush || invalidate.deltaFromPush
-        ? `${name}\u0000${JSON.stringify(entry.toRequest(args, grant))}`
+        ? `${name}\u0000${JSON.stringify(entry.toRequest(whole as never, grant))}`
         : undefined;
     let source = key === undefined ? undefined : this.shared.get(key);
     if (!source) {
-      source = this.open(readName, entry, args, grant, () => {
+      source = this.open(readName, entry, whole, grant, () => {
         if (key !== undefined) this.shared.delete(key);
       });
       if (key !== undefined) this.shared.set(key, source);
     }
-    return source.join(listener);
+    return source.join(listener, asksLess);
   }
 
   /** One read's run, held value and invalidations, handed to every reader joined to it. */
@@ -126,6 +134,11 @@ export class ReadExecutor {
     closed: () => void,
   ): Source {
     const listeners = new Set<ReadListener>();
+    // The readers that ask for all of a value that `narrows`: while there
+    // are none it is read with the lesser args.
+    const wholeReaders = new Set<ReadListener>();
+    const { narrows } = entry;
+    const readArgs = () => (narrows && wholeReaders.size === 0 ? narrows.args : args);
     const each = (send: (listener: ReadListener) => void) => {
       for (const listener of [...listeners]) {
         try {
@@ -141,6 +154,8 @@ export class ReadExecutor {
 
     let disposed = false;
     let inFlight = false;
+    // The read in flight asks for the lesser value (`narrows`).
+    let inFlightLesser = false;
     let dirty = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     // Counts every value delivered. A read that started before a pushed
@@ -167,11 +182,17 @@ export class ReadExecutor {
         return;
       }
       inFlight = true;
+      inFlightLesser = narrows !== undefined && wholeReaders.size === 0;
       const started = epoch;
       this.api
-        .read(readName, args, grant)
+        .read(readName, readArgs(), grant)
         .then((value) => {
-          if (disposed || started !== epoch) return;
+          if (disposed) return;
+          if (started !== epoch) {
+            // A push landed first; a reader still waiting for the whole value reads again.
+            if (wantsWhole()) dirty = true;
+            return;
+          }
           // A re-run that found nothing new is not news to the subscriber.
           if (hasValue && sameValue?.(current, value)) return;
           deliver(value);
@@ -197,6 +218,9 @@ export class ReadExecutor {
       if (disposed || timer !== undefined) return;
       timer = setTimeout(run, COALESCE_MS);
     };
+    /** A reader asks for all of a value while the one held is the lesser. */
+    const wantsWhole = () =>
+      narrows !== undefined && wholeReaders.size > 0 && hasValue && narrows.lesser(current);
 
     const detach: (() => void)[] = [];
     const { invalidate } = entry;
@@ -272,7 +296,7 @@ export class ReadExecutor {
       closed();
     };
     return {
-      join: (subscriber) => {
+      join: (subscriber, asksLess = false) => {
         // Its own entry, so one listener object subscribed twice is two readers.
         const listener: ReadListener = {
           onValue: (value) => subscriber.onValue(value),
@@ -280,6 +304,12 @@ export class ReadExecutor {
         };
         const first = listeners.size === 0;
         listeners.add(listener);
+        if (narrows && !asksLess) {
+          wholeReaders.add(listener);
+          // The lesser value held, or on its way, is read again whole.
+          if (!first && inFlight && inFlightLesser) dirty = true;
+          else if (wantsWhole()) schedule();
+        }
         if (first) {
           run();
         } else if (hasValue) {
@@ -295,6 +325,7 @@ export class ReadExecutor {
           schedule();
         }
         return () => {
+          wholeReaders.delete(listener);
           if (listeners.delete(listener) && listeners.size === 0) stop();
         };
       },

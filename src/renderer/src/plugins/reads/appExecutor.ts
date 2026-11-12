@@ -143,10 +143,28 @@ function rememberFound(tasks: readonly TaskView[]): void {
   }
 }
 
+/**
+ * The board without its closed rows, for a reader with no use for them yet
+ * (`board-without-closed.md`); a home from before that change refuses the
+ * argument, and is asked for the whole board instead.
+ */
+export function readBoardWithoutClosed(): Promise<TaskBoard> {
+  return window.infinitary.tasks
+    .board({ closed: false })
+    .catch(() => window.infinitary.tasks.board());
+}
+
 export function firstmateReadApi(): ReadApi {
   let board: TaskBoard | undefined;
   const rememberBoard = (next: TaskBoard) => {
-    if (!board || next.seq >= board.seq) board = next;
+    // A newer board, or as new a board with its closed rows where one without them is held.
+    if (
+      !board ||
+      next.seq > board.seq ||
+      (next.seq === board.seq &&
+        (board.closedLeftOut !== undefined || next.closedLeftOut === undefined))
+    )
+      board = next;
     return board;
   };
   let projected: { raw: TaskBoard; cards: unknown; value: TaskBoard } | undefined;
@@ -160,8 +178,14 @@ export function firstmateReadApi(): ReadApi {
   };
   return {
     read: async (name, args, grant) => {
+      if (name === "tasks.board" && (args as { closed?: false }).closed === false) {
+        // An older home refuses the lesser read: the whole board answers it.
+        return window.infinitary.plugins
+          .read(name, args as never, grant)
+          .catch(() => window.infinitary.plugins.read(name, {}, grant));
+      }
       const value = await window.infinitary.plugins.read(name, args as never, grant);
-      if (name === "projects.list") rememberBoard(await window.infinitary.tasks.board());
+      if (name === "projects.list") rememberBoard(await readBoardWithoutClosed());
       return value;
     },
     present: (name, value) => {

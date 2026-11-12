@@ -37,6 +37,8 @@ An invalidation is any of: an `inf:event` predicate (`events`), a push channel (
 `ReadExecutor.subscribe(name, args, listener, grant)` validates the name and args synchronously, reads, and re-reads on each declared invalidation, coalescing bursts to one read per `COALESCE_MS` with exactly one follow-up for an invalidation that lands mid-read.
 A read that started before a pushed value landed is dropped as stale; a delta that cannot apply (a gap, no value yet) falls back to a full read.
 A pushed read (`valueFromPush` or `deltaFromPush`) runs once however many subscribe to the same request: they share one read and one held value, and a subscriber that arrives while it runs is handed that value with no read of its own.
+An entry may declare `narrows`: arguments that ask for less of the same value (`tasks.board` with `{ closed: false }`).
+Readers asking less share the whole readers' source; while only they read, it reads the lesser value, and the first whole reader to join makes it read the whole value once.
 A resync (the source of truth could not replay a gap, [the view](../docs/view.md)) re-runs every read the window holds.
 Names are frozen once landed: adding an entry is additive, renaming one is a protocol change, and every core shape is published in `docs/contract.json` under the version rule ([contract](../docs/contract.md)).
 

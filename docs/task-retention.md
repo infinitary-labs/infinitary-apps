@@ -14,6 +14,12 @@ This document is what keeps that durable record honest at scale: what is bounded
   A row the change did not reach is the same object on both boards (`docs/task-record.md`, the row cache), and the diff knows it by identity without serializing it, so the diff too costs the rows rebuilt and not the board.
   A client whose board does not carry the delta's `baseSeq` has missed a push and resyncs from `inf:tasks:board`; the read executor does exactly that (`deltaFromPush` in `src/shared/reads.ts`).
   The first push, and the first push after rows vanish (a purge, a failed spawn's discard), are snapshots: a delta needs a base.
+- **A view's first board read** leaves out the week's closed rows (`inf:tasks:board` with `{ closed: false }`, `boardWithoutClosed` in `src/shared/boardWithoutClosed.ts`).
+  It keeps open and active work, pinned rows, the tasks of open cards, the closed parts of live parents, any closed row some group other than Done lists, and the parents of every kept row.
+  It names the Done rows it left out per project in `closedLeftOut`, so the Tasks panel, the project pills and the phone count them before reading them, and a delta that brings or removes one takes it off that list.
+  A view reads the whole board once a reader needs closed rows: a Done group opened, a search typed, the task board shown, a task key that names closed work, or a personal panel.
+  On a record with a week of 1,500 closed tasks and 150 live ones the first read falls from about 1.74 MB to about 0.25 MB.
+  A home that predates the read refuses its argument; the window then reads the whole board, and the phone sends it only to a home that lists the `board-without-closed` contract change.
   Dev and e2e can lower the row trigger with `INFINITARY_TASK_DELTA_ROWS`; a packaged build always measures against the design's.
 - **Ordinary timeline history** targets `TIMELINE_CAP` (500) events.
   The write that pushes a timeline past the target folds its oldest ordinary events into one `compacted` event toward `TIMELINE_KEEP` (400) rows, inside the same transaction.

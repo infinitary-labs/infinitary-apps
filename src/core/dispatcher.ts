@@ -817,7 +817,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:crew:counts": () => services.supervisor.facts.crewCounts(),
 
-    "inf:tasks:board": () => services.taskProtocol.board(),
+    "inf:tasks:board": (read) => services.taskProtocol.board(read),
 
     "inf:tasks:detail": (taskId) => services.taskProtocol.detail(taskId),
 

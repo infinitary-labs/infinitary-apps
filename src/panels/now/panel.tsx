@@ -35,6 +35,7 @@ import {
   hasSingleRegisteredRepoProject,
   isCardOnly,
   isPinned,
+  leftOutDone,
   type NowGroup,
   type NowRow,
   newestListedWrite,
@@ -249,9 +250,16 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   // The board the app pushed, as it lands, reconciled against the one held:
   // a row the change never touched keeps its object, so its memoized paint
   // holds, and a push that moves nothing listed is no new board at all.
+  // The board is read without its closed rows until the captain opens Done
+  // or types a search, which reads them: a view coming back does not wait
+  // for a week of closed work (board-without-closed.md).
+  const [wantsClosed, setWantsClosed] = useState(false);
   useEffect(
-    () => reads.subscribe("tasks.board", (next) => setBoard((held) => reconcileBoard(held, next))),
-    [reads],
+    () =>
+      reads.subscribe("tasks.board", wantsClosed ? {} : { closed: false }, (next) =>
+        setBoard((held) => reconcileBoard(held, next)),
+      ),
+    [reads, wantsClosed],
   );
 
   // On its rail once the board holds an ask's record or a row it lists,
@@ -441,15 +449,21 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
 
   // The groups as painted: typed words show every match, even in a group
   // the captain left collapsed.
+  const doneLeftOut = board ? leftOutDone(board, project) : 0;
+  useEffect(() => {
+    if (typed !== "" || expanded.has("landed")) setWantsClosed(true);
+  }, [typed, expanded]);
   const shownGroups = useMemo(
     () =>
-      PANEL_GROUPS.filter((group) => (rows.get(group) ?? []).length > 0).map((group) => ({
+      PANEL_GROUPS.filter(
+        (group) => (rows.get(group) ?? []).length > 0 || (group === "landed" && doneLeftOut > 0),
+      ).map((group) => ({
         group,
         open: typed !== "" || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
         collapsible: !OPEN_BY_DEFAULT.has(group),
         taskIds: (rows.get(group) ?? []).map((row) => row.task.id),
       })),
-    [rows, typed, expanded],
+    [rows, typed, expanded, doneLeftOut],
   );
   const navItems = useMemo(() => nowNavItems(shownGroups), [shownGroups]);
   const stop = rovingKey(navItems, lastStop);
@@ -688,6 +702,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
                 group={group}
                 rows={rows.get(group) ?? []}
                 board={board}
+                leftOut={group === "landed" ? doneLeftOut : 0}
                 newCount={
                   group === "queued" || group === "backlog"
                     ? newFilingCount(rows.get(group) ?? [])
@@ -730,6 +745,7 @@ export function Group({
   group,
   rows,
   board,
+  leftOut = 0,
   newCount = 0,
   open,
   selectedTaskIds,
@@ -750,6 +766,8 @@ export function Group({
   group: PanelGroup;
   rows: NowRow[];
   board: PanelTaskBoard;
+  /** Rows of this group the board left out until it is read whole (`leftOutDone`), counted with its own. */
+  leftOut?: number;
   /** Crew-filed rows in this group the captain has not opened. */
   newCount?: number;
   open: boolean;
@@ -865,7 +883,7 @@ export function Group({
           // label without one.
           <>
             <span className="n" data-now-count={group}>
-              {rows.length}
+              {rows.length + leftOut}
             </span>
             {group === "backlog" && failedStartCount(rows.map((row) => row.task)) > 0 && (
               <span className="n" data-now-failed={group}>

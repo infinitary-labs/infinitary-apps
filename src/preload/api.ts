@@ -380,7 +380,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       counts: () => invoke("inf:crew:counts"),
     },
     tasks: {
-      board: () => invoke("inf:tasks:board"),
+      board: (read) => (read ? invoke("inf:tasks:board", read) : invoke("inf:tasks:board")),
       detail: (taskId) => invoke("inf:tasks:detail", taskId),
       opened: (taskId) => invoke("inf:tasks:opened", taskId),
       crewmateResult: (taskId, ref) => invoke("inf:tasks:crewmate:result", taskId, ref),

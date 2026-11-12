@@ -334,13 +334,22 @@ declare module "@infinitary/contracts" {
     };
   };
 
-  /** \`tasks.board\`: open and underway work plus recently closed rows. */
+  /**
+   * \`tasks.board\`: open and underway work plus recently closed rows. Read with
+   * \`{ closed: false }\` (\`reads.subscribe("tasks.board", { closed: false }, listener)\`),
+   * it may leave out the closed rows until a panel that reads them whole asks.
+   */
   export type PanelTaskBoard = {
     /** Monotonic per change; a later value with a lower seq is stale. */
     seq: number;
     at: number;
     projects: PanelProject[];
     tasks: PanelTaskRow[];
+    /**
+     * Present when the closed rows were left out: the ids of the left-out rows
+     * Tasks lists under Done, by project id, so a count can include them.
+     */
+    closedLeftOut?: { done: Record<string, string[]> };
   };
 
   /** One task a Drop task would name: a part, or a task waiting on it. */
@@ -905,6 +914,11 @@ declare module "@infinitary/contracts" {
       >(
         name: N,
         listener: (value: PanelReadValue<N>) => void,
+      ): () => void;
+      (
+        name: "tasks.board",
+        args: { closed?: false },
+        listener: (value: PanelTaskBoard) => void,
       ): () => void;
       (
         name: "tasks.detail",

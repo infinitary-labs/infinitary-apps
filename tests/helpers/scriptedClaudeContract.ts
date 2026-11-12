@@ -162,6 +162,8 @@ export async function scriptedClaudeWorld(
     listBackgroundTasks: (tasks: { id: string; type?: string; description: string }[]) => void;
     fold: () => void;
     endClient: (error?: Error) => void;
+    /** The stand-in client's own folder, where its config and transcripts live. */
+    clientDir: string;
   }
 > {
   const root = scratchDir("infinitary-claude-scripted-contract-");
@@ -525,6 +527,7 @@ export async function scriptedClaudeWorld(
   });
   const clock = manualClock();
   return {
+    clientDir: root,
     factory: new BoundsWatcher(clock).factory(
       createClaudeSessionFactory({
         configDir,

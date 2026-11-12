@@ -1,4 +1,4 @@
-import { cpSync, type PathLike, readdirSync } from "node:fs";
+import { cpSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Type } from "typebox";
 import { afterEach, expect, it, vi } from "vitest";
@@ -20,7 +20,7 @@ import {
 } from "../../../tests/helpers/sessionContract";
 import { runningCalls } from "../../renderer/src/cards/crewmateState";
 import { PROTOCOL_VERSION } from "../../shared/ipc";
-import { workOrders } from "../../shared/work";
+import { type WorkOrderResponse, workOrders } from "../../shared/work";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { crewmateSessionsDir } from "../paths";
@@ -36,24 +36,83 @@ import { CrewTranscripts } from "../tasks/crewTranscript";
  */
 
 /**
- * Who lists a folder or reads a file's size through node:fs, told to a case
- * that listens (INF-3705); every other case reads straight through.
+ * Every folder listing, file-size read and file read made through node:fs
+ * or node:fs/promises, told to a case that listens (INF-3705, INF-3719);
+ * every other case reads straight through. A read of an open file is told
+ * by the path it was opened at, with the bytes it took.
  */
-const fsReads = vi.hoisted(() => ({
-  listen: undefined as ((kind: "list" | "stat", path: string) => void) | undefined,
-}));
+type FsRead = "list" | "stat" | "exists" | "open" | "read" | "link";
+const fsReads = vi.hoisted(() => {
+  const reads = {
+    listen: undefined as ((kind: FsRead, path: string, bytes?: number) => void) | undefined,
+    /** The path each open file descriptor was opened at. */
+    opened: new Map<number, string>(),
+    /** `fn` reading through, telling the listener after; `native` stays reachable. */
+    told<F extends (...args: never[]) => unknown>(kind: FsRead, fn: F, counted?: boolean): F {
+      const wrapped = ((...args: never[]) => {
+        const result = fn(...args);
+        const path = String(args[0]);
+        const bytes = (value: unknown) =>
+          !counted
+            ? undefined
+            : typeof value === "string"
+              ? Buffer.byteLength(value)
+              : (value as Buffer).length;
+        if (result instanceof Promise)
+          void result.then(
+            (value) => reads.listen?.(kind, path, bytes(value)),
+            () => {},
+          );
+        else reads.listen?.(kind, path, bytes(result));
+        return result;
+      }) as unknown as F;
+      return Object.assign(wrapped, fn);
+    },
+  };
+  return reads;
+});
 
 vi.mock("node:fs", async (load) => {
   const actual = await load<typeof import("node:fs")>();
-  const readdirSync = ((path: PathLike, options?: unknown) => {
-    fsReads.listen?.("list", String(path));
-    return actual.readdirSync(path, options as never);
-  }) as typeof actual.readdirSync;
-  const statSync = ((path: PathLike, options?: unknown) => {
-    fsReads.listen?.("stat", String(path));
-    return actual.statSync(path, options as never);
-  }) as typeof actual.statSync;
-  return { ...actual, readdirSync, statSync };
+  const openSync = ((...args: Parameters<typeof actual.openSync>) => {
+    const fd = actual.openSync(...args);
+    fsReads.opened.set(fd, String(args[0]));
+    fsReads.listen?.("open", String(args[0]));
+    return fd;
+  }) as typeof actual.openSync;
+  const readSync = ((fd: number, ...rest: unknown[]) => {
+    const read = (actual.readSync as (...args: unknown[]) => number)(fd, ...rest);
+    fsReads.listen?.("read", fsReads.opened.get(fd) ?? `fd:${fd}`, read);
+    return read;
+  }) as typeof actual.readSync;
+  return {
+    ...actual,
+    readdirSync: fsReads.told("list", actual.readdirSync),
+    statSync: fsReads.told("stat", actual.statSync),
+    lstatSync: fsReads.told("stat", actual.lstatSync),
+    existsSync: fsReads.told("exists", actual.existsSync),
+    accessSync: fsReads.told("exists", actual.accessSync),
+    readFileSync: fsReads.told("read", actual.readFileSync, true),
+    readlinkSync: fsReads.told("link", actual.readlinkSync),
+    realpathSync: fsReads.told("link", actual.realpathSync),
+    openSync,
+    readSync,
+  };
+});
+
+vi.mock("node:fs/promises", async (load) => {
+  const actual = await load<typeof import("node:fs/promises")>();
+  return {
+    ...actual,
+    readdir: fsReads.told("list", actual.readdir),
+    stat: fsReads.told("stat", actual.stat),
+    lstat: fsReads.told("stat", actual.lstat),
+    access: fsReads.told("exists", actual.access),
+    readFile: fsReads.told("read", actual.readFile, true),
+    readlink: fsReads.told("link", actual.readlink),
+    realpath: fsReads.told("link", actual.realpath),
+    open: fsReads.told("open", actual.open),
+  };
 });
 
 afterEach(async () => {
@@ -698,6 +757,175 @@ it("reads a placed Claude record's own files once per check however many calls i
     session.dispose();
     await session.closed();
     sent.mockRestore();
+  }
+});
+
+/**
+ * What the home reads from disk over one step of a placed Claude turn that
+ * already ended `calls` calls: from the step's events arriving, through the
+ * live copy of the record they start, to the check after it. Each read is
+ * told by its kind and where it reads, with paths under the home's own folder
+ * and the record's staged skills named by what they are.
+ */
+async function homeReadsOverOneStep(calls: number) {
+  let now = 0;
+  const scheduled = new Set<{ due: number; run: () => void }>();
+  const schedule = (ms: number, run: () => void) => {
+    expect(scheduled.size).toBe(0);
+    const timer = { due: now + ms, run };
+    scheduled.add(timer);
+    return () => {
+      scheduled.delete(timer);
+    };
+  };
+  const fireNext = () => {
+    const timer = scheduled.values().next().value;
+    if (!timer) return;
+    scheduled.delete(timer);
+    now = Math.max(now, timer.due);
+    timer.run();
+  };
+  // The model makes `calls` calls on its own, then each further call waits to be let go.
+  let started = 0;
+  const waiting: (() => void)[] = [];
+  const inner = await scriptedClaudeWorld({
+    beforeTool: () =>
+      started++ < calls ? Promise.resolve() : new Promise((go) => waiting.push(go)),
+  });
+  const world = await placedContractWorld(inner, { now: () => now, schedule });
+  const { tasks, paths, devices } = world.placement;
+  // The working copy's own skills, which the session stages beside its record there.
+  cpSync(
+    join(process.cwd(), ".claude", "skills", "infinitary-design"),
+    join(world.homeDir, ".claude", "skills", "infinitary-design"),
+    { recursive: true },
+  );
+  const recordDir = crewmateSessionsDir(paths, CREWMATE_TASK);
+  // The computer's own reads, and its client's, are its own work, not the home's.
+  const theirs = [world.computerDir, inner.clientDir];
+  let sessionId = "";
+  const where = (path: string) => {
+    const named = sessionId ? path.replaceAll(sessionId, "<session>") : path;
+    if (named.startsWith(join(recordDir, "staged"))) return "record:staged";
+    if (named.startsWith(recordDir)) return `record${named.slice(recordDir.length)}`;
+    if (named.startsWith(paths.userData)) return `home${named.slice(paths.userData.length)}`;
+    return named;
+  };
+  // Over the step: each read by its kind and place, the bytes the reads took, and the bytes copied home.
+  let reads: Record<string, number> | undefined;
+  let bytesRead = 0;
+  let bytesCopied = 0;
+  fsReads.listen = (kind, path, took) => {
+    if (!reads || theirs.some((dir) => path.startsWith(dir))) return;
+    const key = `${kind} ${where(path)}`;
+    reads[key] = (reads[key] ?? 0) + 1;
+    bytesRead += took ?? 0;
+  };
+  const ask = devices.ask.bind(devices);
+  let copying = 0;
+  let copies = 0;
+  const sent = vi.spyOn(devices, "ask").mockImplementation(async (device, channel, args) => {
+    if (channel === "inf:session:copy") copying += 1;
+    try {
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:copy") {
+        copies += 1;
+        for (const file of (answer as WorkOrderResponse<"inf:session:copy">).files)
+          if (reads) bytesCopied += Buffer.byteLength(file.data, "base64");
+      }
+      return answer;
+    } finally {
+      if (channel === "inf:session:copy") copying -= 1;
+    }
+  });
+  const session = await world.factory.open({
+    ...crewmateSessionSpec(
+      paths,
+      { taskId: CREWMATE_TASK, machineId: world.machine, cwd: world.homeDir, model: world.model },
+      world.binding,
+    ),
+    tools: [
+      boundTool({
+        name: CONTRACT_TOOL,
+        label: "Look up",
+        description: "Look the contract answer up.",
+        parameters: Type.Object({}),
+        run: async () => ({ text: "Looked up." }),
+      }),
+    ],
+  });
+  tasks.turns.setSessionFile(CREWMATE_TASK, session.sessionId);
+  sessionId = session.sessionId;
+  const events: string[] = [];
+  session.subscribe((event) => {
+    events.push(event.type);
+  });
+  const count = (type: string) => events.filter((each) => each === type).length;
+  /** The model asked again and waits to make its next call, with every call before it ended. */
+  const waitingAfter = async (ended: number) => {
+    await expect
+      .poll(
+        () => ({
+          ended: count("tool_end"),
+          requests: count("request_started"),
+          waiting: waiting.length,
+        }),
+        { timeout: 10_000 },
+      )
+      .toEqual({ ended, requests: ended + 1, waiting: 1 });
+    await expect.poll(() => scheduled.size).toBe(1);
+  };
+  /** One live copy and the check after it: done once the check armed or left the next copy. */
+  const copyAndCheck = async () => {
+    const before = copies;
+    fireNext();
+    await expect.poll(() => copies > before && copying === 0, { timeout: 5_000 }).toBe(true);
+    // The check after the copy runs as the copy settles; a tick lets it finish.
+    await new Promise((resolve) => setImmediate(resolve));
+  };
+  inner.answer("loop");
+  const asking = session.prompt("Run the footer check on Mac mini, file by file.");
+  try {
+    await waitingAfter(calls);
+    // The first copy brings the record and its staged skills home.
+    await copyAndCheck();
+    expect(
+      readdirSync(join(recordDir, "staged"), { recursive: true, encoding: "utf8" }),
+    ).toContainEqual(expect.stringMatching(/infinitary-design\/SKILL\.md$/));
+    // One more step, read from its first event to the check after its copy.
+    reads = {};
+    waiting.shift()?.();
+    await waitingAfter(calls + 1);
+    await copyAndCheck();
+    const step = { reads, bytesRead, bytesCopied };
+    reads = undefined;
+    return step;
+  } finally {
+    reads = undefined;
+    for (const go of waiting.splice(0)) go();
+    await session.abort();
+    await asking;
+    session.dispose();
+    await session.closed();
+    sent.mockRestore();
+  }
+}
+
+// INF-3719: a step of a placed crewmate's turn must cost the home the same
+// disk work early in a turn as late in it, whichever function does the reading;
+// INF-3705's freeze was a check that read once more for every call the turn
+// had ended.
+it("reads the same from disk for a step of a placed Claude turn however many calls it ended", async () => {
+  const early = await homeReadsOverOneStep(25);
+  await placedContractCleanup();
+  await scriptedClaudeCleanup();
+  const late = await homeReadsOverOneStep(100);
+  // The same reads of the same files, step for step: a read repeated per ended call shows here.
+  expect(late.reads).toEqual(early.reads);
+  // And no read takes more than the step brought home: a whole growing file read again shows here.
+  for (const step of [early, late]) {
+    expect(step.bytesCopied).toBeGreaterThan(0);
+    expect(step.bytesRead).toBeLessThanOrEqual(step.bytesCopied);
   }
 });
 

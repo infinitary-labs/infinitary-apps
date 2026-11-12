@@ -242,6 +242,8 @@ export async function placedContractWorld<T extends Pick<ContractWorld, "factory
     factory,
     machine: deviceId,
     homeDir: folders.work,
+    /** The computer's own data folder, whose files only the computer reads. */
+    computerDir: dataDir,
     placement: {
       db,
       tasks,

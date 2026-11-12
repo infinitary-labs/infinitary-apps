@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 /**
  * Which task keys link, for every place the window draws one (FI3-1271):
  * one store for the window reads the board once while anything asks, looks
- * a key the board does not list up once in earlier work, and keeps only an
- * exact match; a task's own key on its own card or record stays text.
+ * up every key the board does not list once, all of them in one exact-key
+ * read (INF-3896); a task's own key on its own card or record stays text.
  */
 
 const row = (id: string, key: string) => ({ id, key, waitingCardId: null }) as unknown as TaskView;
@@ -22,12 +22,14 @@ const stop = vi.fn(() => {
 });
 vi.mock("../plugins/reads/appExecutor", () => ({ appReadExecutor: () => ({ subscribe }) }));
 
-const earlier: Record<string, TaskView[]> = {
-  "FI3-7": [row("t-earlier", "FI3-7")],
-  // A search is by words: the near miss it finds is no match.
-  "F13-572": [row("t-near", "FI3-572")],
+// The recorded tasks the board does not list, by key; F13-572 names none.
+const earlier: Record<string, TaskView> = {
+  "FI3-7": row("t-earlier", "FI3-7"),
+  "FI3-572": row("t-near", "FI3-572"),
 };
-const read = vi.fn(async (_read: string, args: { query: string }) => earlier[args.query] ?? []);
+const read = vi.fn(async (_read: string, args: { keys: string[] }) =>
+  args.keys.flatMap((key) => earlier[key] ?? []),
+);
 vi.stubGlobal("window", { infinitary: { plugins: { read } } });
 
 const { linkedKeys, taskKeyIndex } = await import("./taskLinks");
@@ -54,20 +56,22 @@ describe("the window's task key store", () => {
     expect(stop).toHaveBeenCalledTimes(1);
   });
 
-  it("looks a key the board does not list up once, keeping only an exact match", async () => {
+  it("looks up every key the board does not list once, in one read by exact key", async () => {
     const heard = vi.fn();
     const quiet = taskKeyIndex.subscribe(heard);
     const one = taskKeyIndex.watch(["SCR-1", "FI3-7", "F13-572"]);
     const two = taskKeyIndex.watch(["FI3-7"]);
     board([row("t1", "SCR-1")]);
     await vi.waitFor(() => expect(taskKeyIndex.task("FI3-7")?.id).toBe("t-earlier"));
-    // Only the keys the board does not list, each once, however many ask.
-    expect(read.mock.calls.map(([, args]) => args.query).sort()).toEqual(["F13-572", "FI3-7"]);
+    // One read for the keys the board does not list, each once, however many ask.
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(read.mock.calls[0]?.[0]).toBe("tasks.keys");
+    expect(read.mock.calls[0]?.[1].keys.sort()).toEqual(["F13-572", "FI3-7"]);
     expect(taskKeyIndex.task("F13-572")).toBeUndefined();
     expect(heard).toHaveBeenCalled();
     // A later asker of the same key finds it without asking again.
     const three = taskKeyIndex.watch(["FI3-7"]);
-    expect(read).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledTimes(1);
     for (const done of [one, two, three, quiet]) done();
   });
 

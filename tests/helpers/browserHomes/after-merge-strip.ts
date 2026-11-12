@@ -17,7 +17,7 @@ const TASK_ID = "task-triage-skill";
  */
 export const asked: HomeRead[] = [
   ["inf:cards:thread", [CARD_ID]],
-  ["inf:tasks:search", ["DOT-41"]],
+  ["inf:tasks:keys", [["DOT-41"]]],
 ];
 
 /** What the after-merge strip test's card reads back. */

@@ -1,3 +1,4 @@
+import { TASK_KEYS_PER_READ } from "@shared/channels/tasks";
 import type { FrameBox, FrameTaskGesture } from "@shared/plugins/bridge";
 import { taskKeysIn } from "@shared/taskKeys";
 import type { TaskBoard, TaskView } from "@shared/tasks";
@@ -25,9 +26,9 @@ const NO_KEYS: readonly string[] = [];
 /**
  * Which keys name recorded tasks, for every place the window draws a key:
  * one store for the whole window. While anything asks, it reads the board
- * once, which answers for live and recent work and keeps each task current;
- * a key the board does not list is looked up once in earlier work
- * (`tasks.search`) and kept only on an exact match. Nothing is guessed:
+ * once without its closed rows, which answers for live work and keeps each
+ * task current; every key the board does not list is looked up once by its
+ * exact key, all of a turn's keys in one read (`tasks.keys`). Nothing is guessed:
  * `F13-572` links nothing where no project F13 exists, however close
  * FI3-572 is.
  */
@@ -50,61 +51,72 @@ function changed(): void {
   for (const listener of listeners) listener();
 }
 
-/**
- * Whether the board read so far left out its closed rows, and whether this
- * store asks for them: it reads the board without them until a key names
- * neither a row it lists nor earlier work, which may be work closed this week.
- */
-let boardLesser = false;
-let wantsClosed = false;
+/** Keys waiting for the next lookup, sent together once the current turn ends. */
+const pending = new Set<string>();
+let flushQueued = false;
 
-/** Earlier work the board does not list, looked up once per key. */
+/**
+ * A key the board does not list, looked up once: every such key the window
+ * asks for in one turn goes in one exact-key read (`tasks.keys`), which
+ * finds live work and work closed at any age, this week's included
+ * (INF-3896). A key that names no task stays text.
+ */
 function lookUp(key: string): void {
   if (asked.has(key) || boardRows.has(key)) return;
   asked.add(key);
-  void window.infinitary.plugins
-    .read("tasks.search", { query: key })
-    .then((rows) => {
-      const task = rows.find((row) => row.key === key);
-      if (!task) {
-        if (boardLesser) readClosedRows(key);
-        return;
-      }
-      earlier.set(key, task);
-      changed();
-    })
-    .catch(() => {});
+  pending.add(key);
+  if (flushQueued) return;
+  flushQueued = true;
+  queueMicrotask(flushLookups);
 }
 
-/** Reads the board again with its closed rows, which may list `key`. */
-function readClosedRows(key: string): void {
-  asked.delete(key);
-  if (wantsClosed || !stopBoard) return;
-  wantsClosed = true;
-  const lesser = stopBoard;
-  stopBoard = null;
-  readBoard();
-  lesser();
+function flushLookups(): void {
+  flushQueued = false;
+  const keys = [...pending];
+  pending.clear();
+  for (let at = 0; at < keys.length; at += TASK_KEYS_PER_READ) {
+    void window.infinitary.plugins
+      .read("tasks.keys", { keys: keys.slice(at, at + TASK_KEYS_PER_READ) })
+      .then(found)
+      .catch(() => {
+        // A home built before this read answers each key's search of earlier work.
+        for (const key of keys.slice(at, at + TASK_KEYS_PER_READ)) {
+          void window.infinitary.plugins
+            .read("tasks.search", { query: key })
+            .then((rows) => found(rows.filter((row) => row.key === key)))
+            .catch(() => {});
+        }
+      });
+  }
+}
+
+function found(rows: readonly TaskView[]): void {
+  if (rows.length === 0) return;
+  for (const task of rows) earlier.set(task.key, task);
+  changed();
 }
 
 /** The board is read while any key is wanted or any reader holds it. */
 function readBoard(): void {
   if (stopBoard) return;
-  stopBoard = appReadExecutor().subscribe("tasks.board", wantsClosed ? {} : { closed: false }, {
-    onValue: (value) => {
-      boardLesser = (value as TaskBoard).closedLeftOut !== undefined;
-      const rows = (value as TaskBoard).tasks;
-      boardRows = new Map(rows.map((row) => [row.key, row]));
-      boardById = new Map(rows.map((row) => [row.id, row]));
-      boardByCard = new Map(
-        rows.flatMap((row) => (row.waitingCardId ? [[row.waitingCardId, row] as const] : [])),
-      );
-      boardSeen = true;
-      for (const key of wanted.keys()) lookUp(key);
-      changed();
+  stopBoard = appReadExecutor().subscribe(
+    "tasks.board",
+    { closed: false },
+    {
+      onValue: (value) => {
+        const rows = (value as TaskBoard).tasks;
+        boardRows = new Map(rows.map((row) => [row.key, row]));
+        boardById = new Map(rows.map((row) => [row.id, row]));
+        boardByCard = new Map(
+          rows.flatMap((row) => (row.waitingCardId ? [[row.waitingCardId, row] as const] : [])),
+        );
+        boardSeen = true;
+        for (const key of wanted.keys()) lookUp(key);
+        changed();
+      },
+      onError: () => {},
     },
-    onError: () => {},
-  });
+  );
 }
 
 /** Lets the board go once nothing wants a key and nothing holds it. */
@@ -113,8 +125,6 @@ function releaseBoard(): void {
   stopBoard();
   stopBoard = null;
   boardSeen = false;
-  boardLesser = false;
-  wantsClosed = false;
 }
 
 export const taskKeyIndex = {

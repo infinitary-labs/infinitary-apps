@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TASK_KEYS_PER_READ } from "./channels/tasks";
 import type { CrewLive, CrewTranscript } from "./crewTranscript";
 import type { FmEvent } from "./events";
 import { changesFeed } from "./feed";
@@ -428,6 +429,17 @@ export const readCatalog = {
     toRequest: (args) => [args.query],
     invalidate: { pushes: ["inf:tasks", "inf:tasks:delta"] },
     description: "Closed work older than the board's window, or dropped, matching typed text.",
+  }),
+  // The tasks the window's words name by exact key, live or closed at any
+  // age (INF-3896): one request for every key the board does not list.
+  "tasks.keys": entry({
+    channel: "inf:tasks:keys",
+    args: z.strictObject({
+      keys: z.array(z.string().min(1).max(64)).min(1).max(TASK_KEYS_PER_READ),
+    }),
+    toRequest: (args) => [args.keys],
+    invalidate: { pushes: ["inf:tasks", "inf:tasks:delta"] },
+    description: "Recorded tasks, live or closed at any age, with exactly these keys.",
   }),
   "projects.list": entry({
     channel: "inf:projects:list",

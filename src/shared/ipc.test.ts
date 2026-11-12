@@ -539,6 +539,7 @@ describe("ipc contract", () => {
       "inf:tasks:crewmate:picture",
       "inf:tasks:crewmate:result",
       "inf:tasks:detail",
+      "inf:tasks:keys",
       "inf:tasks:opened",
       "inf:tasks:search",
       "inf:usage:summary",

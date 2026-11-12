@@ -1191,6 +1191,20 @@ export class TaskStore {
     return oldestFirst(this.read(rows));
   }
 
+  /**
+   * The rows whose keys are among these, sought through the key index and
+   * upper-cased as `byKey` reads one, oldest first: the window's lookup of
+   * the task keys it draws (`TaskProtocol.byKeys`).
+   */
+  getManyByKey(keys: readonly string[]): TaskRecord[] {
+    if (keys.length === 0) return [];
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM ${this.readTable()} WHERE key IN (SELECT upper(value) FROM json_each(?))`,
+    ).all(JSON.stringify(keys)) as Row[];
+    return oldestFirst(this.read(rows));
+  }
+
   /** Only active rows among these ids; graph readers keep their own edge order. */
   getActiveMany(ids: readonly string[]): TaskRecord[] {
     if (ids.length === 0) return [];

@@ -521,6 +521,19 @@ export class TaskProtocol {
     return found.map((record) => this.viewOf(record, graph, tiers));
   }
 
+  /**
+   * The tasks with exactly these keys, live or closed at any age, in one
+   * read of the key index: the window's lookup of the keys it draws, never
+   * a search of the closed history per key (INF-3896).
+   */
+  byKeys(keys: readonly string[]): TaskView[] {
+    const found = this.options.tasks.getManyByKey(keys);
+    if (found.length === 0) return [];
+    const graph = this.graphFor(found);
+    const tiers = this.tiersOf(found);
+    return found.map((record) => this.viewOf(record, graph, tiers));
+  }
+
   detail(id: string): TaskDetail {
     const { tasks } = this.options;
     const record = tasks.get(id);

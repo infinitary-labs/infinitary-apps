@@ -9,7 +9,7 @@ import { DEFAULT_USAGE_QUERY, USAGE_TASK_PAGE } from "./usage";
  * and nothing account-, auth-, or card-shaped is in it.
  */
 describe("the read catalog", () => {
-  it("freezes the names (v0, the three task reads of task-system P3, the preferences of talk-to-personalize Step 1, the open changes of git integration PR 1.2, and the record through SQL of Phase B, Settings → Usage, the knowledge browser, and a card's knowledge references and a task's knowledge used, and the task card's Crewmate tab)", () => {
+  it("freezes the names (v0, the three task reads of task-system P3, the preferences of talk-to-personalize Step 1, the open changes of git integration PR 1.2, and the record through SQL of Phase B, Settings → Usage, the knowledge browser, and a card's knowledge references and a task's knowledge used, and the task card's Crewmate tab, and the window's lookup of task keys)", () => {
     expect([...READ_NAMES].sort()).toEqual([
       "automation.history",
       "automation.list",
@@ -39,6 +39,7 @@ describe("the read catalog", () => {
       "tasks.crewmate",
       "tasks.crewmate.live",
       "tasks.detail",
+      "tasks.keys",
       "tasks.search",
       "update.status",
       "usage.summary",
@@ -68,13 +69,15 @@ describe("the read catalog", () => {
                   ? { ids: ["f-abc123"] }
                   : name === "knowledge.uses"
                     ? { task: "t-1" }
-                    : "scope" in shape
-                      ? { scope: "captain" }
-                      : "query" in shape
-                        ? { query: "x" }
-                        : "id" in shape
-                          ? { id: "x" }
-                          : {};
+                    : name === "tasks.keys"
+                      ? { keys: ["INF-1"] }
+                      : "scope" in shape
+                        ? { scope: "captain" }
+                        : "query" in shape
+                          ? { query: "x" }
+                          : "id" in shape
+                            ? { id: "x" }
+                            : {};
       const args = entry.args.parse(sample);
       const request = (entry.toRequest as (a: unknown, grant: object) => unknown[])(args, {});
       expect(invokeContract[entry.channel].request.safeParse(request).success, name).toBe(true);

@@ -24,6 +24,13 @@ import { taskBoardReadSchema, taskBoardSchema, taskDetailSchema, taskViewSchema 
 import { type ChannelDeclaration, okSchema } from "./common";
 
 /** The feed, the crew's counts, the task board and records, and a task's browser. */
+/**
+ * How many keys one exact-key lookup carries (`inf:tasks:keys`): a bound on
+ * the request's size, well above the keys a window draws at once; a window
+ * with more sends several.
+ */
+export const TASK_KEYS_PER_READ = 500;
+
 export const taskChannels = {
   "inf:feed:recent": {
     effect: "read",
@@ -100,6 +107,16 @@ export const taskChannels = {
     surface: "core",
     reach: "views",
     request: z.tuple([z.string().max(200)]),
+    response: z.array(taskViewSchema),
+  },
+  // The recorded tasks with exactly these keys, live or closed at any age
+  // (INF-3896): the window looks up every task key it draws that the board
+  // does not list in one request. A key that names no task is left out.
+  "inf:tasks:keys": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.array(z.string().min(1).max(64)).min(1).max(TASK_KEYS_PER_READ)]),
     response: z.array(taskViewSchema),
   },
   // Opening a filing clears its new mark (quiet ledger). Not a verdict.

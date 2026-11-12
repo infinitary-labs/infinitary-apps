@@ -840,6 +840,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.taskProtocol.crewmatePicture(taskId, ref),
 
     "inf:tasks:search": (query) => services.taskProtocol.search(query),
+    "inf:tasks:keys": (keys) => services.taskProtocol.byKeys(keys),
 
     "inf:tasks:opened": (taskId) => ({ opened: services.tasks.markOpened(taskId) }),
 

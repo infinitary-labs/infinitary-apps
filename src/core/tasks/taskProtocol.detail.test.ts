@@ -279,6 +279,36 @@ describe("the task protocol (task-system P3)", () => {
     expect((await protocol.search("gauge")).map((task) => task.id)).toEqual(["q"]);
   });
 
+  // INF-3896: the window looked up each earlier key it draws with a search of
+  // the whole closed history, and the search skips work closed this week.
+  it("finds tasks by exact key in one read, live or closed at any age, this week's included", async () => {
+    const { tasks, protocol, tick } = taskProtocolFixture();
+    tasks.create({ id: "old", title: "Older work", prompt: "p", repoId: null });
+    tasks.close("old", { status: "done", reason: "settled", actor: "host" });
+    tick(BOARD_RECENT_MS + 1);
+    tasks.create({ id: "week", title: "Closed this week", prompt: "p", repoId: null });
+    tasks.close("week", { status: "done", reason: "settled", actor: "host" });
+    tasks.create({ id: "dropped", title: "Dropped", prompt: "p", repoId: null });
+    tasks.close("dropped", { status: "dropped", reason: "superseded", actor: "host" });
+    tasks.create({ id: "live", title: "Live", prompt: "p", repoId: null });
+    tasks.create({ id: "other", title: "Not asked for", prompt: "p", repoId: null });
+    const keyOf = (id: string) => tasks.get(id)?.key ?? "";
+    // The search of earlier work never finds this week's work: the board lists it.
+    expect(await protocol.search(keyOf("week"))).toEqual([]);
+    const found = protocol.byKeys([
+      keyOf("old"),
+      keyOf("week").toLowerCase(),
+      keyOf("dropped"),
+      keyOf("live"),
+      "NOPE-404",
+    ]);
+    expect(found.map((task) => task.id).sort()).toEqual(["dropped", "live", "old", "week"]);
+    // Each is the board's own row shape, as a search answers it.
+    const week = found.find((task) => task.id === "week");
+    expect(week).toEqual(protocol.board().tasks.find((task) => task.id === "week"));
+    expect(protocol.byKeys(["NOPE-404"])).toEqual([]);
+  });
+
   it("serves a detail with intent, brief, outcome, timeline and asks that parses on the wire", () => {
     const { tasks, protocol } = taskProtocolFixture();
     tasks.create({

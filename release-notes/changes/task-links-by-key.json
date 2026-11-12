@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "task-links-by-key",
+      "kind": "improvement",
+      "title": "Cards that name many earlier tasks open without a pause",
+      "body": "When cards name earlier tasks, the window finds all of them at once instead of searching your task history for each one, and it now also links tasks closed this week.",
+      "area": "tasks",
+      "noPicture": "The cards look the same; the change removes a pause while the tasks they name are found.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

@@ -562,6 +562,11 @@ export class TaskService {
     return this.writer.store.byKey(key);
   }
 
+  /** The rows with these keys, in one read of the key index. */
+  getManyByKey(keys: readonly string[]): TaskRecord[] {
+    return this.writer.store.getManyByKey(keys);
+  }
+
   select(input: TaskSelectionInput) {
     return selectTasks(this.options.db, input);
   }

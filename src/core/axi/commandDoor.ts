@@ -4,7 +4,7 @@ import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import { asTheCommand } from "../askedFromTheCommand";
 import { EventJournal, type JournalEntry, type JournalLimits } from "../connection/journal";
-import type { CoreDispatch } from "../dispatcher";
+import { type CoreDispatch, VIEWER_CHANNELS } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { INFINITARY_COMMAND, type Inbox } from "../integrations";
 import { type AxiChannel, CaptainInvalid, type CaptainTool } from "./channel";
@@ -20,7 +20,8 @@ import type { CaptainOpInput } from "./protocol";
  * The inbox's switch in Settings, Integrations, is the command's: off, it
  * refuses every verb and the notes stay. It reaches every core request a
  * view of this computer reaches - not a computer's work, not Secrets, and
- * not a task browser's pictures, which go only to a window - and reads and
+ * not what only a window asks (`VIEWER_CHANNELS`), such as a task browser's
+ * pictures - and reads and
  * changes as the captain (INF-1895): each request runs as the command's
  * (`asTheCommand`), so what it changes is recorded as the captain's from
  * the command. Every argument list is checked against the published
@@ -33,19 +34,13 @@ import type { CaptainOpInput } from "./protocol";
  * with `reloaded`.
  */
 
-/** The requests only a window may make: a task browser's pictures go to the one that asked. */
-const WINDOW_ONLY = new Set<string>([
-  "inf:browser:watch",
-  "inf:browser:unwatch",
-  "inf:browser:size",
-]);
-
 /** Whether `infinitary-axi` reaches a core request at all, read or change. */
 export function commandReaches(channel: CoreInvokeChannel): boolean {
   return (
     invokeContract[channel].reach !== "work" &&
     !channel.includes("secret") &&
-    !WINDOW_ONLY.has(channel)
+    // Only a window asks these: a task browser's pictures, and this computer's own window.
+    !VIEWER_CHANNELS.has(channel)
   );
 }
 

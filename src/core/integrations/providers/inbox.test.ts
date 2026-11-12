@@ -243,6 +243,27 @@ describe("the inbox", () => {
     expect(closed.error).toContain(`${INFINITARY_COMMAND} is off`);
   });
 
+  // INF-3898, the captain's "Yes" to one line in the box saying when, and from which folder, the old name last ran.
+  it("keeps the old name's last run for Settings, and Delete removes it with the rest", async () => {
+    const { inbox, integrations } = await setup();
+    const doorOf = () => integrations.view().integrations.find((row) => row.id === INBOX_ID)?.door;
+    // Not kept, nothing is recorded: there is no box to show it in.
+    inbox.door.oldNameRan("/before");
+    await integrations.signIn("inbox");
+    expect(doorOf()?.oldName).toBeUndefined();
+
+    const before = Date.now();
+    inbox.door.oldNameRan("/scripts/deploy");
+    inbox.door.oldNameRan("/scripts/backup");
+    // Only the newest run.
+    expect(doorOf()?.oldName).toEqual({ at: expect.any(Number), cwd: "/scripts/backup" });
+    expect(doorOf()?.oldName?.at).toBeGreaterThanOrEqual(before);
+
+    await integrations.remove("inbox");
+    await integrations.signIn("inbox");
+    expect(doorOf()?.oldName).toBeUndefined();
+  });
+
   // INF-1567, the captain's direction C: "the switch is the pause, and Delete moves to Data".
   it("switched off, refuses scripts and tells no rule but keeps the key and the notes", async () => {
     const { dir, integrations, scheduler, run, served, wakes } = await setup();

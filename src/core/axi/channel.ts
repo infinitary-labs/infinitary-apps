@@ -370,6 +370,9 @@ export class AxiChannel {
       answer(failed(`${tool || "That"} is not a command this door runs.`, "NO_TOOL"));
       return;
     }
+    // The old name's last use, so Settings can say what still runs it before it is retired.
+    if (tool === INBOX_COMMAND && !("refused" in tools))
+      tools.inbox?.oldNameRan(form.get("cwd") ?? "");
     if ("refused" in tools) {
       answer({
         exitCode: 1,

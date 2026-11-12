@@ -19232,6 +19232,22 @@
                         "state",
                         "path"
                       ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
+                      ]
                     }
                   },
                   "required": [
@@ -19564,6 +19580,22 @@
                         "state",
                         "path"
                       ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
+                      ]
                     }
                   },
                   "required": [
@@ -19872,6 +19904,22 @@
                         "state",
                         "path"
                       ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
+                      ]
                     }
                   },
                   "required": [
@@ -20173,6 +20221,22 @@
                         "state",
                         "path"
                       ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
+                      ]
                     }
                   },
                   "required": [
@@ -20473,6 +20537,22 @@
                       "required": [
                         "state",
                         "path"
+                      ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
                       ]
                     }
                   },
@@ -20790,6 +20870,22 @@
                       "required": [
                         "state",
                         "path"
+                      ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
                       ]
                     }
                   },
@@ -21114,6 +21210,22 @@
                           "required": [
                             "state",
                             "path"
+                          ]
+                        },
+                        "oldName": {
+                          "type": "object",
+                          "properties": {
+                            "at": {
+                              "type": "number"
+                            },
+                            "cwd": {
+                              "type": "string",
+                              "maxLength": 4096
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "cwd"
                           ]
                         }
                       },
@@ -21449,6 +21561,22 @@
                           "required": [
                             "state",
                             "path"
+                          ]
+                        },
+                        "oldName": {
+                          "type": "object",
+                          "properties": {
+                            "at": {
+                              "type": "number"
+                            },
+                            "cwd": {
+                              "type": "string",
+                              "maxLength": 4096
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "cwd"
                           ]
                         }
                       },
@@ -21799,6 +21927,22 @@
                         "state",
                         "path"
                       ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
+                      ]
                     }
                   },
                   "required": [
@@ -22092,6 +22236,22 @@
                       "required": [
                         "state",
                         "path"
+                      ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
                       ]
                     }
                   },
@@ -72519,6 +72679,22 @@
                       "required": [
                         "state",
                         "path"
+                      ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
                       ]
                     }
                   },

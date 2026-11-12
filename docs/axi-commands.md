@@ -171,7 +171,8 @@ Its changes are the window's own buttons, as the captain: `say <words>` sends th
 Nothing to do is an answer with exit 0 that says so: a closed card closed again answers `closed: already`, a stopped task stopped again `stopped: already`, a running one started again `started: already`.
 A button the card does not have, an unknown question or a verb the noun does not know exits 2 naming the valid ones; the app's own refusal prints its words with exit 1.
 `api` reaches any request of the published contract the command reaches (`docs/contract.json`): `api list` lists them, `api show <channel>` its arguments, and `api <channel> [arg]...` sends one, each argument read as JSON when it parses and else as words (`--string` keeps words, `--input` reads the list from a file); the arguments are checked against the contract before anything is sent, and a refusal names the argument's position with exit 2.
-It reaches every core request a view of this computer reaches, not a computer's work, not Secrets and not a task browser's pictures, reads and changes alike.
+It reaches every core request a view of this computer reaches, not a computer's work, not Secrets and not what only a window asks (`VIEWER_CHANNELS`, `src/core/dispatcher.ts`: a task browser's pictures, and this computer's own window saying it is open or holding work for an update), reads and changes alike.
+Each refused request exits 1 with the app's words and is never sent on, and `api list` names none of them.
 Every request runs as the command's (`asTheCommand`, `src/core/askedFromTheCommand.ts`), so each event the captain's change writes on a task's timeline carries `through: "command"` (`TaskWriter.addEvent`), and the record's Activity line ends "From infinitary-axi."
 (`condenseActivity`): the record and the first mate reading it tell a change from the command from a click in the window.
 `watch` prints the pushes the core sends after a cursor, waiting up to `--for` seconds for the next one; the door keeps the latest pushes numbered from a fresh epoch each run, so a cursor from before answers `reloaded`, and `--only` or `--channel` narrow it.
@@ -179,7 +180,9 @@ Every request runs as the command's (`asTheCommand`, `src/core/askedFromTheComma
 The skill stays the person's own: the personal skills a crewmate is given (`personalResources`, `src/core/session/personalResources.ts`) never include `infinitary-axi`, in either skills folder (the captain's answer on its review).
 `note "<words>"` and `receipts --after <cursor>` are the inbox's verbs, word for word: a note records one event and answers its id, whether this drop recorded it, and how many rules listen; `--request-id` makes a repeat record once, and `--source` names where it came from.
 A request id or source is one word of letters, digits and `._:@/+-`, at most 128; anything else, or a note with no words, is refused with exit 1.
-`infinitary-inbox-axi`, its old name, answers the same for one release, each answer opening with a `notice` line naming the new one.
+`infinitary-inbox-axi`, its old name, answers the same until the captain retires it, each answer opening with the line `notice: infinitary-inbox-axi is now infinitary-axi; the old name still works`; with `--json` the same words are the answer's `notice` field instead, so the answer still parses (`withRenamedNotice`).
+A script written for the old inbox may name the inbox's folder, `<data>/integrations/inbox`, in `INFINITARY_INBOX`; when `INFINITARY_DATA` names no data folder, the launcher takes the one above it.
+Each run of the old name keeps when it ran and from which working folder in the inbox's folder (`old-name.json`), and the Infinitary command box in Settings shows that one line, so the captain sees what still runs it before retiring it (`docs/integrations.md`, "The inbox").
 
 ## The Secrets foundation command
 

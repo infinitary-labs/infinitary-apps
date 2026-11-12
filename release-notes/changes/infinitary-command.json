@@ -4,7 +4,7 @@
       "id": "infinitary-command",
       "kind": "feature",
       "title": "Infinitary from your terminal",
-      "body": "The Infinitary Inbox in Settings, Integrations is now the Infinitary command. Run infinitary-axi in a terminal on this computer to see what waits on you, and to read your cards, tasks, crew, allowance, projects, Automation rules and knowledge. Run infinitary-axi setup to point your own AI agents at it. Notes from your scripts work as before, and the old name infinitary-inbox-axi still works for this release.",
+      "body": "The Infinitary Inbox in Settings, Integrations is now the Infinitary command. Run infinitary-axi in a terminal on this computer to see what waits on you, and to read your cards, tasks, crew, allowance, projects, Automation rules and knowledge. Run infinitary-axi setup to point your own AI agents at it. Notes from your scripts work as before, and the old name infinitary-inbox-axi still works.",
       "area": "settings",
       "picture": {
         "dark": "infinitary-command-dark.webp",

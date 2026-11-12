@@ -38,7 +38,9 @@ import { INFINITARY_COMMAND } from "../commandWords";
  * 0600): each event as it was recorded, and each handled mark once a first
  * mate turn handled the rule's delivery that carried it. A line's `seq` is
  * its place in the log: a look reads events after a cursor of it, and a
- * receipts read lists lines after one.
+ * receipts read lists lines after one. Once something ran the command's
+ * old name, `infinitary-inbox-axi`, it also holds when that last happened
+ * and from which folder (`old-name.json`, 0600), which Settings shows.
  *
  * The switch in Settings is the connection's pause (INF-1567, the
  * captain's direction C): off, the command refuses and the rule is told
@@ -104,6 +106,8 @@ export type InboxReceiptLine = {
 export type InboxDoor = {
   note: (input: { text: string; requestId?: string; source?: string }) => InboxReceipt;
   receipts: (after: number) => { receipts: InboxReceiptLine[]; cursor: number; more: boolean };
+  /** The door ran the command's old name from this working folder: kept as its last use. */
+  oldNameRan: (cwd: string) => void;
 };
 
 /** What the inbox asks of Automation: a look now, how many rules listen, and its rule added. */
@@ -130,6 +134,8 @@ export type InboxOptions = {
   linkDir: string;
   /** A folder whose link the Linux packages install, read only (`/usr/bin`). */
   installedDir?: string;
+  /** What Settings shows changed, such as the old name's last use: push the integrations' view. */
+  changed?: () => void;
   now?: () => number;
 };
 
@@ -238,6 +244,7 @@ export class Inbox {
   readonly door: InboxDoor = {
     note: (input) => this.note(input),
     receipts: (after) => this.receipts(after),
+    oldNameRan: (cwd) => this.oldNameRan(cwd),
   };
 
   /** What Settings shows: the line to copy, and the link a click can make. */
@@ -245,15 +252,16 @@ export class Inbox {
     const { command, dataDir, defaultDataDir, linkDir, installedDir } = this.options;
     const named = dataDir === defaultDataDir ? "" : `INFINITARY_DATA=${quoted(dataDir)} `;
     const line = `${named}${quoted(command)}`;
+    const oldName = this.oldName();
+    const seen = { command, line, ...(oldName ? { oldName } : {}) };
     const installed = installedDir ? join(installedDir, INFINITARY_COMMAND) : undefined;
     if (installed && this.leadsHere(installed))
-      return { command, line, link: { state: "linked", path: installed } };
+      return { ...seen, link: { state: "linked", path: installed } };
     const path = join(linkDir, INFINITARY_COMMAND);
-    if (this.leadsHere(path)) return { command, line, link: { state: "linked", path } };
-    if (this.exists(path)) return { command, line, link: { state: "taken", path } };
+    if (this.leadsHere(path)) return { ...seen, link: { state: "linked", path } };
+    if (this.exists(path)) return { ...seen, link: { state: "taken", path } };
     return {
-      command,
-      line,
+      ...seen,
       link: { state: this.writable(linkDir) ? "offered" : "unwritable", path },
     };
   }
@@ -383,6 +391,36 @@ export class Inbox {
       cursor: page.at(-1)?.seq ?? after,
       more: due.length > page.length,
     };
+  }
+
+  /**
+   * The old name's last use, kept while the inbox is: only its newest run,
+   * so the file never grows, and Delete in Data removes it with the rest.
+   */
+  private oldNameRan(cwd: string): void {
+    if (!this.kept) return;
+    this.folder();
+    const record = { at: this.now(), cwd: cwd.slice(0, 4096) };
+    writeFileSync(this.path("old-name.json"), `${JSON.stringify(record)}\n`, { mode: 0o600 });
+    this.options.changed?.();
+  }
+
+  private oldName(): { at: number; cwd: string } | undefined {
+    try {
+      const record = JSON.parse(readFileSync(this.path("old-name.json"), "utf8")) as unknown;
+      if (
+        record &&
+        typeof record === "object" &&
+        "at" in record &&
+        "cwd" in record &&
+        typeof record.at === "number" &&
+        typeof record.cwd === "string"
+      )
+        return { at: record.at, cwd: record.cwd };
+    } catch {
+      // Never run, or a record cut by a crash mid-write: nothing to show.
+    }
+    return undefined;
   }
 
   private key(): string | undefined {

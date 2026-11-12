@@ -1,5 +1,6 @@
 import type { AutomationList, AutomationRule } from "@shared/automation";
 import { FORGE_CLI_WORDS, FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
+import { formatDateTime } from "@shared/i18n/format";
 import {
   INBOX_WORDS,
   INTEGRATION_EFFECT_WORDS,
@@ -995,6 +996,14 @@ function InboxDoorPanel({
       <p className="fm-integrations-door-note" data-inbox-setup="">
         {INBOX_WORDS.setup(link.state === "linked")}
       </p>
+      {door.oldName && (
+        <p className="fm-integrations-door-note" data-inbox-old-name="">
+          {INBOX_WORDS.oldName(
+            formatDateTime(door.oldName.at, { dateStyle: "medium", timeStyle: "short" }),
+            door.oldName.cwd,
+          )}
+        </p>
+      )}
       <p className="fm-integrations-door-lead" data-inbox-rule={rule?.state ?? "unread"}>
         {rule ? `${rule.words} ` : ""}
         {INBOX_WORDS.offKeeps}

@@ -172,8 +172,11 @@ export type CoreDispatch = <C extends CoreInvokeChannel>(
   viewer?: BrowserViewer,
 ) => Promise<InvokeResponse<C>>;
 
-/** The requests that need to know who watches: the pictures go to it alone. */
-const VIEWER_CHANNELS = new Set<CoreInvokeChannel>([
+/**
+ * The requests that need to know who watches: the pictures go to it alone.
+ * Only a window asks them, so `infinitary-axi` reaches none (`commandReaches`).
+ */
+export const VIEWER_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<CoreInvokeChannel>([
   "inf:browser:watch",
   "inf:browser:unwatch",
   "inf:browser:size",

@@ -4,7 +4,13 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { INBOX_WORDS, INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import { decode } from "@toon-format/toon";
-import { INBOX_EVENT, INBOX_FENCE, INFINITARY_COMMAND } from "../../src/core/integrations";
+import { RENAMED_WORDS } from "../../src/core/axi/captainCommands";
+import {
+  INBOX_COMMAND,
+  INBOX_EVENT,
+  INBOX_FENCE,
+  INFINITARY_COMMAND,
+} from "../../src/core/integrations";
 import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -32,7 +38,10 @@ import { focusOn, pressKey, runFromSearch } from "./windowKeys";
  *   Delete moves to Data"): off, scripts get an error and the key and
  *   notes stay; the box says when the rule is paused or gone in
  *   Automation, never "told at once" when it is false (their q4); Delete
- *   in the Data section removes the notes and the key.
+ *   in the Data section removes the notes and the key. INF-3898 (the
+ *   captain's answers: the old name lives until they retire it, and the
+ *   box says when it last ran): the old name `infinitary-inbox-axi` still
+ *   answers, with its notice, and the box names the folder it ran from.
  * - Data: one deploy notice with a request id and a source, the way a CI
  *   script would send it.
  * - Completion signal: the link on disk, the rule's saved state, the first
@@ -168,6 +177,17 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
       [receipt.event, "handled"],
     ]);
   expect(seen.turns).toHaveLength(1);
+
+  // The old name still answers, with its notice, and the box says when and from where it last ran
+  // (INF-3898, the captain's answers: the old name lives until they retire it, with one line in the box).
+  const scriptDir = scratchDir("infinitary-inbox-script-");
+  const oldLine = line.replace(/infinitary-axi'$/, `${INBOX_COMMAND}'`);
+  const old = await sh(`cd '${scriptDir}' && ${oldLine} receipts`, process.env.PATH ?? "");
+  expect(old.exitCode).toBe(0);
+  expect(old.stdout.split("\n")[0]).toBe(`notice: ${RENAMED_WORDS}`);
+  const oldNameLine = door.locator("[data-inbox-old-name]");
+  await expect(oldNameLine).toContainText(INBOX_COMMAND);
+  await expect(oldNameLine).toContainText(scriptDir);
 
   const rules = () => page.evaluate(async () => (await window.infinitary.automation.list()).rules);
 

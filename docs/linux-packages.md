@@ -43,7 +43,7 @@ No check installs a package over Firstmate 3000's yet: each installs on a clean 
 
 ## Your own command
 
-Each package puts the person's own command on everyone's search path, so a script runs `infinitary-axi` by its short name (`docs/axi-commands.md`, "Infinitary from your terminal"), and its old name `infinitary-inbox-axi` for one release.
+Each package puts the person's own command on everyone's search path, so a script runs `infinitary-axi` by its short name (`docs/axi-commands.md`, "Infinitary from your terminal"), and its old name `infinitary-inbox-axi` until the captain retires it.
 The Ubuntu and Fedora install script links `/usr/bin/infinitary-axi` and `/usr/bin/infinitary-inbox-axi` to the same names in `/opt/infinitary/resources/axi-bin`, leaving a path alone while it holds something not of this package's, and the removal script takes each link away on a removal alone while it still leads into `/opt/infinitary`.
 The Arch package owns the same links, and the Nix package links them in its `bin` to the commands in its `lib/infinitary/resources/axi-bin`.
 Settings reads the `/usr/bin/infinitary-axi` link as linked; the Nix link is on the person's path but Settings does not look for it, so it offers the full path.

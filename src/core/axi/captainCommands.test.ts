@@ -3,8 +3,9 @@ import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { request as httpsRequest } from "node:https";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { secretsChannels } from "@shared/channels/secrets";
 import { COMMAND_PATH, LOCAL_DOOR_KEY_HEADER } from "@shared/connection";
-import { invokeContract } from "@shared/ipc";
+import { CORE_INVOKE_CHANNELS, invokeContract } from "@shared/ipc";
 import { decode } from "@toon-format/toon";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
@@ -13,6 +14,7 @@ import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { startConnection } from "../connection/connection";
 import { readLocalDoor } from "../connection/localDoor";
+import { VIEWER_CHANNELS } from "../dispatcher";
 import { type Core, startCore } from "../index";
 import { INBOX_COMMAND, INFINITARY_COMMAND } from "../integrations/commandWords";
 import { INBOX_ID } from "../integrations/providers/inbox";
@@ -51,6 +53,8 @@ let userDataDir: string;
 let core: Core;
 let connection: ReturnType<typeof startConnection>;
 let closeDoor: () => void;
+/** Every request the door sent on to the core, by channel. */
+const sent: string[] = [];
 const stuck = ["axi-read", "axi-watch", "axi-off", "axi-act", "axi-api"] as const;
 
 beforeAll(async () => {
@@ -80,7 +84,14 @@ beforeAll(async () => {
     axiProcess: forkChildProcess(entry),
   });
   // As the app wires it (src/main/app.ts): the door's command beside the connection.
-  const door = openCommandDoor(core);
+  const booting = core;
+  const door = openCommandDoor({
+    ...core,
+    dispatch: (channel, args, actor, viewer) => {
+      sent.push(channel);
+      return booting.dispatch(channel, args, actor, viewer);
+    },
+  });
   if (!door) throw new Error("the core opened no command process");
   closeDoor = () => door.close();
   connection = startConnection({
@@ -335,12 +346,60 @@ describe("infinitary-axi", () => {
     expect(missed).toMatchObject({ reloaded: true });
   });
 
-  it("answers its old name for one release with a notice, and keeps the inbox's note", async () => {
+  it("refuses each kind of request it does not reach, sending nothing on", async () => {
+    // INF-1880's accepted answer: not a computer's work, not Secrets, not what only a window asks.
+    const refused = [
+      CORE_INVOKE_CHANNELS.find((channel) => invokeContract[channel].reach === "work"),
+      Object.keys(secretsChannels)[0],
+      [...VIEWER_CHANNELS][0],
+    ];
+    const listed = answer((await run(["api", "list"])).stdout) as {
+      channels: { channel: string }[];
+    };
+    for (const channel of refused) {
+      if (!channel) throw new Error("a refused kind has no request");
+      sent.length = 0;
+      const asked = await run(["api", channel]);
+      expect(asked.exitCode).toBe(1);
+      expect(asked.stdout).toMatch(
+        /is asked only by a computer that runs work|is answered only in the window/,
+      );
+      expect(sent).toEqual([]);
+      expect(listed.channels.map((row) => row.channel)).not.toContain(channel);
+    }
+    // Nothing only a window asks is listed, such as this computer's own window saying it is open.
+    const names = new Set(listed.channels.map((row) => row.channel));
+    expect([...VIEWER_CHANNELS].filter((channel) => names.has(channel))).toEqual([]);
+  });
+
+  it("answers its old name with a notice until you retire it, and keeps the inbox's note", async () => {
     const noted = await run(["note", "--source", "ci", "Deploy finished"], {}, INBOX_COMMAND);
     expect(noted.exitCode).toBe(0);
     const [notice, ...rest] = noted.stdout.split("\n");
-    expect(notice).toBe(`notice: ${INBOX_COMMAND} is now ${INFINITARY_COMMAND}`);
+    const words = `${INBOX_COMMAND} is now ${INFINITARY_COMMAND}; the old name still works`;
+    expect(notice).toBe(`notice: ${words}`);
     expect(decode(rest.join("\n").split(/\nhelp\[/)[0] ?? "")).toMatchObject({ recorded: true });
+
+    // With --json, the notice is a field of the answer, so the answer still parses.
+    const json = await run(["note", "--json", "Deploy started"], {}, INBOX_COMMAND);
+    expect(json.exitCode).toBe(0);
+    expect(JSON.parse(json.stdout)).toMatchObject({ notice: words, recorded: true });
+
+    // A script written for the old inbox names its folder, not the data folder.
+    const inbox = join(userDataDir, "integrations", INBOX_ID);
+    const named = await run(
+      ["receipts", "--json"],
+      { INFINITARY_DATA: "", INFINITARY_INBOX: inbox },
+      INBOX_COMMAND,
+    );
+    expect(named.exitCode).toBe(0);
+    expect(JSON.parse(named.stdout)).toMatchObject({ notice: words });
+
+    // Settings says when the old name last ran, and from where.
+    const door = core.services.integrations
+      .view()
+      .integrations.find((row) => row.id === INBOX_ID)?.door;
+    expect(door?.oldName?.cwd).toBe(process.cwd());
   });
 
   it("says saved notes stay only while notes are kept, never after they are deleted", async () => {

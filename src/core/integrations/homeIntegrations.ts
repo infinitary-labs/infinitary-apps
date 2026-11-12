@@ -89,6 +89,7 @@ export function startHomeIntegrations(options: {
     ),
     linkDir: standIns.inboxLinkDir || "/usr/local/bin",
     ...(host.app.packaged && host.app.platform === "linux" ? { installedDir: "/usr/bin" } : {}),
+    changed: () => integrationsChanged(),
     now,
   });
   const integrationSettings = new IntegrationSettingsStore(paths.integrationsDir);

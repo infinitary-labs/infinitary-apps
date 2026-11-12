@@ -21,8 +21,8 @@ export const CREWMATE_INTEGRATIONS_LINE = `Integrations reach places outside you
 export const INFINITARY_COMMAND = "infinitary-axi";
 
 /**
- * The inbox's own command before `infinitary-axi`, kept one release as a
- * second name of it that adds a notice line (INF-1880's answer on the old
- * name).
+ * The inbox's own command before `infinitary-axi`, kept as a second name of
+ * it that adds a notice until the captain retires it (INF-1880's answer on
+ * the old name, INF-3898's on how long it lives).
  */
 export const INBOX_COMMAND = "infinitary-inbox-axi";

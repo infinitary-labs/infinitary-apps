@@ -1381,8 +1381,27 @@ function commands(cwd: string): Record<string, AxiCommand<CaptainConnection>> {
   };
 }
 
-/** The line the old name adds to every answer, for the one release it lives on. */
-export const RENAMED_NOTICE = `notice: ${INBOX_COMMAND} is now ${C}`;
+/** What the old name adds to every answer, until the captain retires it. */
+export const RENAMED_WORDS = `${INBOX_COMMAND} is now ${C}; the old name still works`;
+
+/**
+ * An answer of the old name: a `notice` line above it, or with `--json` a
+ * `notice` field inside the answer's object, so it still parses. An
+ * answer that is not one JSON object, such as an error, keeps the line.
+ */
+export function withRenamedNotice(stdout: string, argv: readonly string[]): string {
+  const flags = argv.includes("--") ? argv.slice(0, argv.indexOf("--")) : argv;
+  if (flags.includes("--json")) {
+    try {
+      const parsed = JSON.parse(stdout) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+        return `${JSON.stringify({ notice: RENAMED_WORDS, ...parsed }, null, 2)}\n`;
+    } catch {
+      // Not JSON: the line goes above it.
+    }
+  }
+  return `notice: ${RENAMED_WORDS}\n${stdout}`;
+}
 
 export function captainAxi(
   version: string,

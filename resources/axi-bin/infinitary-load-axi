@@ -7,7 +7,8 @@
 # for a crewmate whose instructions predate the Infinitary rename: copies,
 # because a Windows checkout cannot make links. The name it ran
 # as says which command it is; infinitary-axi is the person's own, run from
-# any shell of theirs, and infinitary-inbox-axi its old name (below). The
+# any shell of theirs, and infinitary-inbox-axi its old name, kept until
+# the person retires it (below). The
 # app puts this directory
 # first on the search path of a task's shell only when that task has the
 # tool (src/core/axi/channel.ts), with three variables: the loopback address
@@ -62,8 +63,10 @@ curl=/usr/bin/curl
 # this user runs it, from any shell, through the app's local door - the
 # folder the running app writes its loopback address, its certificate's pin
 # and its key into, under the data folder INFINITARY_DATA names or the
-# release's. The key travels as a header read from a file only this user
-# can read, never on a command line. No shell's limit applies.
+# release's. A script written for the old inbox may name its folder,
+# <data>/integrations/inbox, in INFINITARY_INBOX instead: the data folder
+# is the one above it. The key travels as a header read from a file only
+# this user can read, never on a command line. No shell's limit applies.
 person=
 case $tool in
   infinitary-axi | infinitary-inbox-axi) person=1 ;;
@@ -74,6 +77,11 @@ if [ -n "$person" ]; then
     exit 1
   fi
   data=${INFINITARY_DATA:-}
+  if [ -z "$data" ] && [ -n "${INFINITARY_INBOX:-}" ]; then
+    data=${INFINITARY_INBOX%/}
+    data=${data%/*}
+    data=${data%/*}
+  fi
   if [ -z "$data" ]; then
     if [ -d "$HOME/Library/Application Support" ]; then
       data="$HOME/Library/Application Support/infinitary"

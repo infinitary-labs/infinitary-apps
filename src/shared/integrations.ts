@@ -158,7 +158,10 @@ export function integrationRenameWords(rename: z.infer<typeof integrationRenameS
  * the link a click can make into `/usr/local/bin` - made (`linked`, or
  * installed by a Linux package), free to make (`offered`), a folder only an
  * administrator can write (`unwritable`), or a path something else holds
- * (`taken`).
+ * (`taken`). Once something ran the command's old name,
+ * `infinitary-inbox-axi`, it also says when that last happened and from
+ * which folder (`oldName`), so the captain knows what still uses it before
+ * retiring it.
  */
 export const integrationDoorViewSchema = z
   .object({
@@ -170,6 +173,15 @@ export const integrationDoorViewSchema = z
         path: z.string().max(4096),
       })
       .strict(),
+    oldName: z
+      .object({
+        /** When the old name last ran, in epoch milliseconds. */
+        at: z.number(),
+        /** The working folder it ran from. */
+        cwd: z.string().max(4096),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type IntegrationDoorView = z.infer<typeof integrationDoorViewSchema>;
@@ -316,6 +328,9 @@ export const INBOX_WORDS = {
   linked: (path: string) => `Linked as ${path}, so the short name works too.`,
   offered: (folder: string) => `Link it into ${folder} to use the short name infinitary-axi.`,
   link: "Link it",
+  /** Something still runs the old name, `infinitary-inbox-axi`: when it last did, and from where. */
+  oldName: (when: string, cwd: string) =>
+    `Something ran the old name infinitary-inbox-axi on ${when}, in ${cwd}. It still works; infinitary-axi is the new name.`,
   /** A turned-on rule listens. */
   told: "Your first mate is told of a note at once.",
   /** Every rule on the inbox is paused in Automation. */

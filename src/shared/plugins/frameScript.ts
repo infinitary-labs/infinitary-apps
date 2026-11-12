@@ -136,7 +136,8 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  * a `tasks` message, which only a card or a record mount sends. The bridge
  * wraps each one where text writes it, outside links, controls (a toggle's
  * summary, a role=button element and a draft button among them), scripts,
- * styles and drawings, in `<a data-inf-task>` (role link, in the
+ * styles and drawings - but inside a choice's label, whose click on the key
+ * opens the task and leaves the choice as it was (INF-3945) - in `<a data-inf-task>` (role link, in the
  * tab order), again whenever the document changes, and posts the one-way
  * `task` message: `rest` with the key's box when the pointer lands on one,
  * `leave` when it goes or on a press, Esc or a scroll (after a press or Esc,
@@ -251,7 +252,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
   var form = { on: false, locked: false, fill: null, filling: false, staged: {}, first: new WeakMap(), last: "", fields: new WeakMap() };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
-  var UNLINKED = "a, button, summary, label, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
+  var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
   var entries = { known: null };
   var caps = { pictures: false, escape: false };
@@ -1947,4 +1948,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-c7GQY256rcMIs4503XI6vaEj9YxcoDN3/ByhnhVHQXo=";
+export const FRAME_BRIDGE_SHA256 = "sha256-gkdHJ/BYEqZJ65wWk9SrdDWB4nBQ4V5m5DvtTcSlahE=";

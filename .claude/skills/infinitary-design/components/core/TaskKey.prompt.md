@@ -22,6 +22,7 @@ One rule, one summary and one way of opening serve every place; a card body's ke
   Everywhere else on the card - its title, its body, its thread - the card's own key stays text.
 - **Where a key stays text.**
   A key inside a control that already does one thing stays text, so the control keeps its one action: a button, a toggle's summary (an Activity line's, whose opened text links), a `role=button` element, a draft button, a link, a Tasks row or a board tile, a Knowledge list row, a Cards row title, an action label, a collapsed panel's newest line and a thread's collapsed cue.
+  A choice's label in a card body is not such a control: its key links, a click on the key opens the task and leaves the choice as it was, and the label's other words still pick it.
   The last turn above the input is plain text, never a link, so its keys stay text too (`VoiceInput.prompt.md`).
   A confirmation sentence - Drop task's, a board move's - stays text, since following a link would abandon the confirmation.
   The summary never takes the pointer, so its keys stay text; so do the board's passing status line, Diagnostics' raw records, inputs, menus, notifications and what a screen reader announces.

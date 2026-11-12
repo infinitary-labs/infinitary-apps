@@ -751,3 +751,108 @@ test("a task key in Settings › Usage opens its summary there, and a click open
     await launched.close();
   }
 });
+
+const CHOICE_CARD = "Pick the ledger work to start";
+
+/**
+ * INF-3945 (the captain: "why the task key is not turned into a link? hard to
+ * know what it even is without it being a link"): a key in a choice's label
+ * links like a key in the body's words. A click or Enter on the key opens its
+ * task and leaves the checkbox or radio as it was; the label's other words
+ * still pick the choice.
+ */
+function seedChoices(userDataDir: string): {
+  ids: { ledger: string; format: string };
+  keys: [string, string];
+} {
+  const db = openDatabase(userDataDir);
+  try {
+    const tasks = new TaskService({ db, strict: true });
+    const ledger = seedTask(tasks, {
+      id: "choice-ledger",
+      title: LEDGER_TITLE,
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const format = seedTask(tasks, {
+      id: "choice-format",
+      title: "Choose the ledger format",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const author = seedTask(tasks, {
+      id: "choice-author",
+      title: "Plan the ledger work",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    new CardStore(db).upsert({
+      id: "card-choice-author-1",
+      taskId: author.id,
+      author: "crewmate",
+      priority: 20,
+      title: CHOICE_CARD,
+      meta: "crewmate 1",
+      body:
+        "<p>Two pieces of ledger work are ready.</p>" +
+        `<fieldset><legend>Ledger work</legend><label><input type="checkbox" name="start" value="ledger"> Start <span class="inf-mono">${ledger.key}</span> now, before the format is chosen</label></fieldset>` +
+        `<fieldset data-inf-options-only><legend>Format</legend><label><input type="radio" name="format" value="choose"> Let ${format.key} choose the format</label>` +
+        '<label><input type="radio" name="format" value="csv"> Use CSV</label></fieldset>',
+      status: "ready",
+      createdAt: Date.now(),
+      actions: [
+        { id: "later", label: "Not now", variant: "secondary" },
+        { id: "go", label: "Start", variant: "primary", default: true },
+      ],
+    });
+    return { ids: { ledger: ledger.id, format: format.id }, keys: [ledger.key, format.key] };
+  } finally {
+    db.close();
+  }
+}
+
+test("a task key in a choice's label opens its task and leaves the choice as it was", async () => {
+  const userDataDir = scratchDir("infinitary-choice-task-keys-");
+  const { ids, keys } = seedChoices(userDataDir);
+  const [ledgerKey, formatKey] = keys;
+  const launched = await launchApp({ userDataDir });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 820 });
+    await showCard(page, CHOICE_CARD);
+    const body = cardBody(page, CHOICE_CARD);
+    const checkbox = body.locator('input[name="start"]');
+    const radio = body.locator('input[name="format"][value="choose"]');
+
+    await test.step("each key a label writes is a link, inside its label", async () => {
+      await expect(linkedTaskKeys(body)).toHaveText([ledgerKey, formatKey]);
+      await expect(linkedTaskKeys(body.locator("label"))).toHaveText([ledgerKey, formatKey]);
+      await cardSurface(page).screenshot({ path: test.info().outputPath("choice-key-links.png") });
+    });
+
+    await test.step("a click on the key opens its task and leaves the checkbox unpicked", async () => {
+      await clickInBody(linkedTaskKeys(body).filter({ hasText: ledgerKey }));
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", ids.ledger);
+      await page.mouse.move(4, 400);
+      await hideRecord(page).click();
+      await expect(shownCard(page, CHOICE_CARD)).toBeVisible();
+      await expect(checkbox).not.toBeChecked();
+    });
+
+    await test.step("Enter on a radio's key opens its task and leaves the radio unpicked", async () => {
+      await pressKey(linkedTaskKeys(body).filter({ hasText: formatKey }), "Enter");
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", ids.format);
+      await hideRecord(page).click();
+      await expect(shownCard(page, CHOICE_CARD)).toBeVisible();
+      await expect(radio).not.toBeChecked();
+    });
+
+    await test.step("a click on the label's other words still picks the choice", async () => {
+      await clickInBody(body.locator("label").filter({ has: checkbox }));
+      await expect(checkbox).toBeChecked();
+      await expect(recordCard(page)).toHaveCount(0);
+    });
+  } finally {
+    await launched.close();
+  }
+});

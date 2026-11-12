@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-choice-task-keys",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Task keys in a card's choices are links",
+      "body": "A task key written in a checkbox or radio choice on a card now opens that task, as keys in the card's other words do. Clicking the key leaves the choice as it was; clicking the choice's other words still picks it.",
+      "picture": {
+        "dark": "card-choice-task-keys-dark.webp",
+        "light": "card-choice-task-keys-light.webp",
+        "alt": "A decision card with a checkbox reading Start SCR-1 now and a radio reading Let SCR-2 choose the format, each task key underlined as a link"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

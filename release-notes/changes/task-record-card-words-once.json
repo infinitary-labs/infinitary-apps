@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-record-card-words-once",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "An open task record with many cards no longer pauses the app at each update",
+      "body": "While a task's record is open, it refreshes whenever your tasks or cards change. It used to read the words of every card the task ever showed again at each refresh, which paused the app on tasks with many or long cards. It now reads each card's words once, so on tasks with long cards a refresh takes about half as long or less.",
+      "noPicture": "The record looks the same; only how long its refresh takes changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

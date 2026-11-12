@@ -103,6 +103,9 @@ const QUIET_OBSERVATIONS: ReadonlySet<CardObservationKind> = new Set(["availabil
 /** The longest a summary reads; a longer first line ends in an ellipsis. */
 const SUMMARY_CHARS = 200;
 
+/** How many tasks' card words the reader keeps at once, the least recently read let go first. */
+const WORDS_TASKS_MAX = 16;
+
 /**
  * What a paged read stands on: the newest record of each source it saw on
  * its first page. Later pages read up to the same cut, so work that
@@ -173,6 +176,14 @@ const SOURCE_RANK: Record<TimelineSource, number> = {
 };
 
 export class TaskTimeline {
+  /**
+   * Each recently read task's card words, by offer observation id. An
+   * observation never changes once written, so its words are read from its
+   * body once; the window reads a task's history again on every push while
+   * its record is open, and a body can run to megabytes (INF-3909).
+   */
+  private readonly words = new Map<string, Map<string, string>>();
+
   constructor(private readonly options: TaskTimelineOptions) {}
 
   /** The task's whole timeline, in order. */
@@ -183,6 +194,7 @@ export class TaskTimeline {
   /** Plain readings and exact retained details shared with Activity; no current-row substitution. */
   history(taskId: string): TimelineReading[] {
     const { placed, records, activityGroups } = this.collect(taskId, undefined, true);
+    const wordsOf = this.offerWords(taskId);
     return placed
       .map(({ entry }) => ({ entry, record: records.get(entry.id) ?? null }))
       .map(({ entry, record }) => {
@@ -219,7 +231,7 @@ export class TaskTimeline {
             const observation = record.observation;
             return {
               entry,
-              text: observationText(observation, entry.summary),
+              text: observationText(observation, entry.summary, wordsOf),
               ...(observation.kind === "action" && observation.payload.frameValue !== undefined
                 ? { details: observation.payload.frameValue }
                 : {}),
@@ -235,6 +247,26 @@ export class TaskTimeline {
           ? { activityRowId: activityGroups.get(reading.entry.id) }
           : {}),
       }));
+  }
+
+  /**
+   * The words of a task's offers, each body read once: what this read does
+   * not ask for is let go with it, so an erased card's words go too.
+   */
+  private offerWords(taskId: string): (observation: OfferObservation) => string {
+    const held = this.words.get(taskId);
+    const kept = new Map<string, string>();
+    this.words.delete(taskId);
+    this.words.set(taskId, kept);
+    if (this.words.size > WORDS_TASKS_MAX) {
+      const oldest = this.words.keys().next().value;
+      if (oldest !== undefined) this.words.delete(oldest);
+    }
+    return (observation) => {
+      const words = held?.get(observation.id) ?? cardWords(observation.payload.body);
+      kept.set(observation.id, words);
+      return words;
+    };
   }
 
   /** Each normalized entry with its owner's exact typed payload, for agent history reads. */
@@ -640,8 +672,14 @@ function observationEntry(
   };
 }
 
+type OfferObservation = Extract<CardObservation, { kind: "offer" }>;
+
 /** Saved words for the window; agent reads retain the whole typed record. */
-function observationText(observation: CardObservation, summary: string): string | null {
+function observationText(
+  observation: CardObservation,
+  summary: string,
+  wordsOf: (observation: OfferObservation) => string,
+): string | null {
   switch (observation.kind) {
     case "offer": {
       const choices = observation.payload.actions.map(
@@ -649,7 +687,7 @@ function observationText(observation: CardObservation, summary: string): string 
       );
       return [
         observation.payload.title,
-        cardWords(observation.payload.body),
+        wordsOf(observation),
         ...(choices.length ? [choices.join("\n")] : []),
       ].join("\n\n");
     }

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { Card } from "@shared/cards";
 import { TIMELINE_CONTENT_KINDS, timelineEntrySchema } from "@shared/timeline";
 import { TIMELINE_BRIEF_REVISED, timelineConversationWords } from "@shared/timelineWords";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CardService } from "../orchestrator/cardService";
 import { CardStore } from "../storage/cardStore";
@@ -19,6 +19,19 @@ import { EVENT_CONTENT, OBSERVATION_CONTENT, TaskTimeline } from "./taskTimeline
 // threads, and its crewmate's actions - explicit aliases only, a stable
 // order and paging, and exact expansion - so moving the records later
 // leaves what an existing user's task shows unchanged.
+
+// Counts each card body the reader turns into words (INF-3909); the words are the real ones.
+const bodiesRead = vi.hoisted(() => ({ count: 0 }));
+vi.mock("@shared/cardWords", async (actual) => {
+  const real = await actual<typeof import("@shared/cardWords")>();
+  return {
+    ...real,
+    cardWords: (body: string) => {
+      bodiesRead.count += 1;
+      return real.cardWords(body);
+    },
+  };
+});
 
 const T0 = Date.parse("2026-10-20T16:00:00.000Z");
 const WORKTREE = "/work/rerun-practice";
@@ -307,6 +320,40 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
     ).toEqual(["does the flush cover windows too?", "Yes: the flush runs on every platform."]);
     // The same read again is the same timeline.
     expect(world.timeline.entries("rerun")).toEqual(entries);
+  });
+
+  it("reads each card's words from its body once, however often the record is opened (INF-3909)", () => {
+    const world = setup();
+    history(world);
+    const words = (reading: { text?: string | null }) => reading.text;
+    const offers = () =>
+      world.timeline
+        .history("rerun")
+        .filter((reading) => reading.entry.content.kind === "card-offer");
+    const before = bodiesRead.count;
+    const first = offers();
+    expect(first).toHaveLength(1);
+    expect(first[0]?.text).toContain(
+      "Which fix should I keep?\n\nTwo fixes pass the practice release.",
+    );
+    expect(bodiesRead.count - before).toBe(1);
+    // The window reads the record again on every push while it is open.
+    expect(offers().map(words)).toEqual(first.map(words));
+    expect(offers().map(words)).toEqual(first.map(words));
+    expect(bodiesRead.count - before).toBe(1);
+    // A new card is read once; the earlier one is not read again.
+    world.cards.emitCrewmateCard(
+      "rerun",
+      { ...decision, id: "which-check", title: "Which check next?", body: "<p>Linux next.</p>" },
+      "Rerun",
+    );
+    const after = offers();
+    expect(after.slice(0, 1).map(words)).toEqual(first.map(words));
+    expect(after[1]?.text).toContain("Which check next?\n\nLinux next.");
+    expect(bodiesRead.count - before).toBe(2);
+    // The new card's stack broadcast waits on a timer; stop it before the record closes.
+    world.cards.dispose();
+    world.db.close();
   });
 
   it("reads another task's event that concerns this one, linked by how that task stands to it", () => {

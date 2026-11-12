@@ -349,6 +349,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/tasks/taskProtocol.ts": {
     SEARCH_LIMIT: physical("older matches drop out unnamed; type more words to narrow"),
   },
+  "src/core/tasks/taskTimeline.ts": {
+    WORDS_TASKS_MAX: physical("the least recently read task's card words are let go and read again at its next read"),
+  },
   "src/core/tasks/taskGraph.ts": {
     MAX_HIERARCHY_WALK: physical("none yet: the ancestor walk stops silently at 64"),
   },

@@ -11,8 +11,15 @@
  * its confirm (the captain's pick on INF-3052, "Nothing more: the batch's
  * run and its recheck together passed every test"). Main's own full check
  * runs only for files no batch built.
+ *
+ * A batch pull request (docs/testing.md, "A batch pull request") is sorted
+ * the same way from its own run, which batch-pull-request.yml starts and
+ * scripts/batch-pull.mjs reads: its files are covered only when the run
+ * passed on exactly them and the batch changed no file its own check is made
+ * of.
  */
 import { QUEUE, readQueueState } from "../.github/infinitary/rules.mjs";
+import { BATCH_PULL_RUN, isBatchPull, isBatchPullRun, sortBatchPull } from "./batch-pull.mjs";
 
 /**
  * The change's queue state from its version's statuses, newest first as
@@ -72,14 +79,49 @@ export function sortMainPush({ tree, queue, main, open, between }) {
 const statusesOf = (github, repo, ref) =>
   github.paginate(github.rest.repos.listCommitStatusesForRef, { ...repo, ref, per_page: 100 });
 
-/** A commit's queue state: that of the pull request it merged, or null when it merged none. */
-async function commitQueue(github, repo, sha) {
+/** The pull request a commit merged, or undefined when it merged none. */
+async function mergedPull(github, repo, sha) {
   const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
     ...repo,
     commit_sha: sha,
   });
-  const pull = pulls.find((candidate) => candidate.merge_commit_sha === sha);
+  return pulls.find((candidate) => candidate.merge_commit_sha === sha);
+}
+
+/** A commit's queue state: that of the pull request it merged, or null when it merged none. */
+async function commitQueue(github, repo, sha) {
+  const pull = await mergedPull(github, repo, sha);
   return pull ? readQueueStatus(await statusesOf(github, repo, pull.head.sha)) : null;
+}
+
+/** A merged batch pull request's sort: its own runs on its version, their latest jobs, and the files it changed. */
+async function readBatchPull(github, repo, pull, tree) {
+  const repository = `${repo.owner}/${repo.repo}`;
+  const { data: whole } = await github.rest.pulls.get({ ...repo, pull_number: pull.number });
+  const files = await github.paginate(github.rest.pulls.listFiles, {
+    ...repo,
+    pull_number: pull.number,
+    per_page: 100,
+  });
+  const listed = await github.paginate(github.rest.actions.listWorkflowRuns, {
+    ...repo,
+    workflow_id: BATCH_PULL_RUN.split("/").pop(),
+    head_sha: pull.head.sha,
+    event: "pull_request",
+    per_page: 100,
+  });
+  const runs = [];
+  for (const run of listed) {
+    if (!isBatchPullRun(run, repository) || run.head_sha !== pull.head.sha) continue;
+    const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+      ...repo,
+      run_id: run.id,
+      filter: "latest",
+      per_page: 100,
+    });
+    runs.push({ id: run.id, jobs });
+  }
+  return sortBatchPull({ tree, runs, files, total: whole.changed_files });
 }
 
 /** Every open pull request with its current version and queue state. */
@@ -114,9 +156,11 @@ async function readBetween(github, repo, run, sha) {
   return Promise.all(compared.commits.map((commit) => commitQueue(github, repo, commit.sha)));
 }
 
-/** main.yml's sort: reads the pushed commit's pull request, its queue state and main's newest files. */
+/** main.yml's sort: reads the pushed commit's pull request, its queue state or its own batch run, and main's newest files. */
 export async function readMainPush(github, repo, { sha, tree }) {
-  const queue = await commitQueue(github, repo, sha);
+  const pull = await mergedPull(github, repo, sha);
+  if (pull && isBatchPull(pull, `${repo.owner}/${repo.repo}`)) return readBatchPull(github, repo, pull, tree);
+  const queue = pull ? readQueueStatus(await statusesOf(github, repo, pull.head.sha)) : null;
   if (queue?.kind !== "passed") return { kind: "full" };
   if (queue.tree === tree) return { kind: "covered", run: queue.run };
   const { data: branch } = await github.rest.repos.getBranch({ ...repo, branch: "main" });

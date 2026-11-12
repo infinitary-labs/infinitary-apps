@@ -391,6 +391,13 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // Its confirm reruns failed files on the machines the sweep took, which
     // are hosted on Linux (INF-3012's direction A).
     "infinitary-batch-checks.yml:confirm",
+    // A batch pull request's run of the same swept batch (INF-3759's plan,
+    // piece 2): its reading of the batch and of the failures, its confirm
+    // and its last job.
+    "batch-checks.yml:batch",
+    "batch-checks.yml:failures",
+    "batch-checks.yml:confirm",
+    "batch-checks.yml:passed",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
@@ -670,7 +677,10 @@ describe("a release's hosted machines", () => {
     }
     expect(passing.sort()).toEqual([
       // The swept batch's critical path (INF-2507) and its sweep, the alpha's
-      // full check (INF-2430's plan, piece 3).
+      // full check (INF-2430's plan, piece 3), on the shipped queue's batch
+      // and on a batch pull request (INF-3759's plan, piece 2).
+      "batch-checks.yml:critical-path",
+      "batch-checks.yml:sweep",
       "infinitary-batch-checks.yml:critical-path",
       "infinitary-batch-checks.yml:sweep",
       "main.yml:verify",

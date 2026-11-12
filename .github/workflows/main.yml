@@ -77,6 +77,10 @@ jobs:
   # ends this run at once, cutting no alpha and leaving no failed run; only
   # files no batch built get the full check (the captain's pick on INF-3052,
   # "A: keep a fallback full check on main for versions no batch built").
+  # A batch pull request's files are a passed batch's when its own run passed
+  # on exactly them and the batch changed no file under .github/, which its
+  # run reads from the pull request itself (docs/testing.md, "A batch pull
+  # request").
   sort:
     name: ${{ format('{0} · Compare with checked batches', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     runs-on: ubuntu-24.04
@@ -91,9 +95,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The sort and the shipped queue's rules it reads the batch's state with.
+          # The sort, the shipped queue's rules it reads the batch's state
+          # with, and its reader of a batch pull request's own run.
           sparse-checkout: |
             scripts/batch.mjs
+            scripts/batch-pull.mjs
             scripts/after-merge-paths.mjs
             .github/infinitary/rules.mjs
           sparse-checkout-cone-mode: false
@@ -157,7 +163,8 @@ jobs:
       # (docs/testing.md, "Main's desktop release check").
       hosted: true
   # The Linux automatic startup fixtures, beside the full check, on GitHub's
-  # hosted Ubuntu; a covered push's batch ran them (infinitary-batch-checks.yml).
+  # hosted Ubuntu; a covered push's batch ran them (infinitary-batch-checks.yml,
+  # batch-checks.yml).
   startup:
     needs: [alpha-wait, sort]
     if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' && needs.sort.outputs.kind != 'ignored' }}

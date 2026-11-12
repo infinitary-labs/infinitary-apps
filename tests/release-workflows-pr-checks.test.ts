@@ -43,12 +43,19 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     ["requested full sweep", "workflow_dispatch", "", "refs/heads/fm/task-ci-contract"],
     ["ordinary proposal", "pull_request", "fm/task-ci-contract", "refs/pull/42/merge"],
     ["release notes and record", "pull_request", "fm/task-release-alpha", "refs/pull/471/merge"],
+    // INF-3759's plan, piece 2: a pushed task branch runs what its pull
+    // request runs, measured from the commit it left main at.
+    ["pushed task branch", "push", "", "refs/heads/fm/task-ci-contract"],
   ])("runs the real Linux gate for %s", (_name, eventName, headRef, ref) => {
     const ci = loadCi();
+    // A pull request or a pushed branch, each one change, against a request.
+    const change = eventName !== "workflow_dispatch";
     // The event must reach every job, not disappear behind a branch/path filter.
     expect(ci.on).toHaveProperty("pull_request", null);
     // INF-2340 (captain's route "drop-ci-main"): a push to main starts none of
-    // these jobs, since main.yml's full check runs the same commands.
+    // these jobs, since main.yml's full check runs the same commands. No push
+    // starts them yet: a task branch's push waits for the switch (INF-3759's
+    // plan, piece 3).
     expect(Object.keys(ci.on).toSorted()).toEqual(["pull_request", "workflow_dispatch"]);
     const github = new data.Dictionary(
       { key: "event_name", value: new data.StringData(eventName) },
@@ -67,7 +74,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // INF-2915's plan: the paths step decides the build, the browser tests
     // and the critical path (scripts/pr-paths.ts).
     const paths = gate.find((step) => step.id === "paths");
-    expect(paths?.run).toBe("node scripts/pr-paths.ts --base HEAD^1");
+    expect(paths?.run).toBe('node scripts/pr-paths.ts --base "$CHANGE_BASE"');
+    // INF-3759's plan, piece 2: the step that says where the change starts,
+    // which the notes, paths, reader and critical-path steps all read.
+    const base = gate.find((step) => step.run?.startsWith("base=$(git merge-base "));
+    expect(base).toBeDefined();
     // INF-2441 (captain's choice: "Run the tests that read each changed file
     // inside the pull request's build check"): the pull request's round of
     // the unit and integration tests that read a changed file (docs/testing.md).
@@ -93,7 +104,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const skips = gate.find((step) => step.run?.startsWith("node scripts/untagged-skips.ts "));
     const evidence = gate.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
     for (const step of [build, desktop, criticalPath, skips, evidence]) expect(step).toBeDefined();
-    const gated = [notes, paths, reach, chromium, browser, adherence, build, desktop];
+    const gated = [base, notes, paths, reach, chromium, browser, adherence, build, desktop];
     gated.push(criticalPath, skips);
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
@@ -113,9 +124,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         ),
       );
       const fullSweep = id === "unit-tests" || id === "integration-tests" || id === "probe-tests";
-      expect(eligible.evaluate().coerceString(), id).toBe(
-        fullSweep && eventName === "pull_request" ? "false" : "true",
-      );
+      expect(eligible.evaluate().coerceString(), id).toBe(fullSweep && change ? "false" : "true");
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without step-level skips beyond the
       // gate's pull request and changed-path steps and the critical path's
@@ -140,19 +149,26 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // ci.yml calls no other workflow.
     expect(Object.keys(ci.calls)).toEqual([]);
     // Every machine installs from the lockfile before it runs anything but a
-    // pull request's notes and paths steps, plain Node that needs no install
-    // and reads the base parent its checkout fetched; a requested full sweep
-    // has no pull request to compare, and release.yml's notes job covers each
-    // change on main. The jobs together run each check once: a pull request
-    // runs the unit tests that read its changed files in the gate, where no
-    // unit sweep runs, and a requested sweep runs none there; the sweeps are
-    // the next case's.
+    // change's base, notes and paths steps, git and plain Node that need no
+    // install and read the commits its checkout fetched: a pull request's
+    // base parent, and for a pushed branch the commit it left main at; a
+    // requested full sweep has no change to compare, and release.yml's notes
+    // job covers each change on main. The jobs together run each check once:
+    // a change runs the unit tests that read its changed files in the gate,
+    // where no unit sweep runs, and a requested sweep runs none there; the
+    // sweeps are the next case's.
     const install = "pnpm install --frozen-lockfile";
     const machines = ciJobs(eventName);
+    const from = eventName === "pull_request" ? "HEAD^1" : "origin/main";
     for (const { id, name, runs } of machines)
       expect(runs.slice(0, runs.indexOf(install) + 1), name).toEqual(
-        eventName === "pull_request" && id === "typecheck-lint-build"
-          ? [notes?.run, paths?.run, install]
+        change && id === "typecheck-lint-build"
+          ? [
+              `base=$(git merge-base ${from} HEAD)\necho "CHANGE_BASE=$base" >> "$GITHUB_ENV"`,
+              notes?.run,
+              paths?.run,
+              install,
+            ]
           : [install],
       );
     const checks = machines
@@ -163,19 +179,23 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         "pnpm build",
         "pnpm check",
         "pnpm typecheck",
-        ...(eventName === "pull_request"
-          ? [reach?.run, criticalPath?.run, skips?.run]
-          : ["pnpm lint:adherence"]),
+        ...(change ? [reach?.run, criticalPath?.run, skips?.run] : ["pnpm lint:adherence"]),
       ].toSorted(),
     );
-    // The browser project runs once: in a pull request's gate, and in a
-    // requested sweep's unit-tests, whose gate runs none.
+    // The browser project runs once: in a change's gate, and in a requested
+    // sweep's unit-tests, whose gate runs none.
     const browserRuns = machines.flatMap(({ id, runs }) =>
       runs.filter((run) => /^pnpm test .*--project browser\b/.test(run)).map(() => id),
     );
-    expect(browserRuns).toEqual([
-      eventName === "pull_request" ? "typecheck-lint-build" : "unit-tests",
-    ]);
+    expect(browserRuns).toEqual([change ? "typecheck-lint-build" : "unit-tests"]);
+    // The job says what started it (scripts/ci-job-names.mjs).
+    expect(machines.find(({ id }) => id === "typecheck-lint-build")?.name).toBe(
+      {
+        pull_request: "Pull request · Code, build, affected tests and critical path (Linux)",
+        push: "Branch push · Code, build, affected tests and critical path (Linux)",
+        workflow_dispatch: "Manual request · Code and build (Linux)",
+      }[eventName],
+    );
   });
 
   // INF-2915's plan, the captain's direction B with the light profile: the
@@ -242,17 +262,28 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const file = "tests/e2e/critical-path.spec.ts";
     expect(existsSync(join(root, file))).toBe(true);
     expect(laneOf(file)).toBe("desktop");
-    // The pull request's merge commit against its base parent: an edit to
-    // the journey runs it three rounds and alone (scripts/journey-runs.ts).
+    // The change against where it starts, its base parent for a pull
+    // request's merge commit: an edit to the journey runs it three rounds
+    // and alone (scripts/journey-runs.ts).
     expect(step?.run).toBe(
-      `scripts/on-screen.sh node scripts/journey-runs.ts --base HEAD^1 --files ${file} --alone-out playwright-report/alone -- --project=desktop`,
+      `scripts/on-screen.sh node scripts/journey-runs.ts --base "$CHANGE_BASE" --files ${file} --alone-out playwright-report/alone -- --project=desktop`,
     );
+    // A pull request fetches its merge commit and its base parent; a pushed
+    // branch has no merge commit, so it fetches every commit to find the one
+    // it left main at (INF-3759's plan, piece 2).
     const checkout = steps.find((candidate) => candidate.uses === "actions/checkout@v4");
-    expect(checkout?.with?.["fetch-depth"]).toBe(2);
-    // Every pull request version that builds the app, and no request.
+    const depth = (event: string) =>
+      workflowValue(String(checkout?.with?.["fetch-depth"]), { github: { event_name: event } });
+    expect(depth("pull_request")).toBe(2);
+    expect(depth("workflow_dispatch")).toBe(2);
+    expect(depth("push")).toBe(0);
+    // Every version of a pull request or a pushed branch that builds the
+    // app, and no request.
     for (const [event, built, runs] of [
       ["pull_request", "true", true],
       ["pull_request", "false", false],
+      ["push", "true", true],
+      ["push", "false", false],
       ["workflow_dispatch", "", false],
     ] as const) {
       const contexts = {

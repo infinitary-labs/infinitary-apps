@@ -20,6 +20,7 @@
 /** What started the run, as each job name leads with it (docs/testing.md, "CI job names"). */
 export const TRIGGERS = Object.freeze([
   "Pull request",
+  "Branch push",
   "Main push",
   "Manual request",
   "Merge batch",

@@ -623,12 +623,35 @@ A send-back or a resume is the queue's own by-hand start, from Settings → Proj
 A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the composed commit.
 The composed commit is `main`'s version the batch run names with each change's version merged in order: `bash .github/actions/infinitary-batch/compose.sh apply <base> <tree> <number:version>...` rebuilds it on any clone.
 
+## A batch pull request
+
+A batch can also be one pull request (INF-3759's plan, piece 2): a branch of this repository whose name starts with `infinitary-batch/` holds several approved changes, one commit each, and its pull request against `main` runs the swept batch on its own version.
+It runs beside the shipped queue, which composes its own batches and reads none of this.
+`batch-pull-request.yml` starts on every pull request, since a pull request has no filter on the name of its branch, and its one job, `Merge batch · Batch checks`, runs only when the branch starts with `infinitary-batch/`, comes from this repository itself and targets `main`.
+A fork's branch of that name starts nothing, so code from a fork never reaches this project's own Mac; every other pull request shows the job skipped.
+A newer version of the pull request cancels the run of the older one.
+
+That job calls `batch-checks.yml` on the pull request's version, which runs what the shipped queue's batch runs with nothing composed, since the branch already holds its changes.
+Its `sweep`, `critical-path` and `startup` jobs make the same calls as `infinitary-batch-checks.yml` with that version as `ref` and no batch to compose.
+When one of them fails, its `failures` job reads each failed job's log for the test files it names as failed, with the shipped queue's own reader (`scripts/batch-failures.mjs`), and its `confirm` job runs those files three rounds with no retries on the same version, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did (`scripts/batch-confirm.ts`).
+A failed job whose log names no test file failed for something no rerun of a test answers, so nothing runs again.
+The last job, `Merge batch · Batch passed (tree T; base B)`, passes once all three checks passed, or once the confirm passed, and names the tree T of the pull request's version and the main version B the branch left `main` at.
+A batch that passed on its confirm still shows its failed job on the pull request and its run ends failed, so its last job, not the run's result, says the batch passed.
+
+`main.yml`'s `sort` job reads a push that merged a batch pull request from that pull request's own run (`scripts/batch.mjs`, `scripts/batch-pull.mjs`).
+The push is covered when a run on the pull request's version named exactly the pushed files in its last job, and the batch changed no file under `.github/`.
+A pull request's run reads its workflows and their actions from the pull request itself, so a batch that changes one chose its own check, and main runs its full check instead.
+A file list GitHub cut short counts as a changed check file.
+Main also runs its full check when it moved under the batch, since the pushed files are then not the ones the batch checked.
+The alpha's proof follows a covered run to the batch pull request's run the same way it follows one to the queue's: it requires a completed run of `batch-pull-request.yml`, started by a pull request from a batch branch of this repository, whose last job names the source's tree, and after a passed confirm it counts each failed job of the checks as passed (`scripts/main-alpha-proof.mjs`).
+`tests/batch-pull.test.ts` holds the two workflow files, the confirm's plan, main's sort and the alpha's proof for a batch pull request.
+
 ## CI job names
 
 Every job's name says what started its run and what it checks, in one scheme (INF-2410, the captain: "i want to distinguish what triggered the job and what they check"; scheme "A. Trigger first"): `Trigger · Purpose (platform or device; group or round)`, such as `Main push · App journeys (Linux; serial group 3/4)` or `Pull request · Code, build, affected tests and critical path (Linux)`.
-The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the batch checks the shipped queue calls; the queue's own jobs name no trigger), `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
+The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Branch push` (a pushed branch's own check, "A pushed branch"), `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the batch checks the shipped queue calls, and a batch pull request's; the queue's own jobs name no trigger), `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
 A called workflow takes its caller's trigger through its `trigger` input, so each level of GitHub's full name leads with it: `Main push · Desktop checks / Main push · Linux journeys / Main push · App journeys (Linux; serial group 3/4)`; a runner list that shows only the last level still says what started it.
-A workflow only a caller starts (`alpha-wait.yml`, `linux-startup.yml`, `mac-installer.yml`, `mac-update.yml`) requires that input and keeps no fallback of its own, and a release says its trigger once, in its `resolve` job's `trigger` output, which every later job's name and every workflow it calls read (INF-2539).
+A workflow only a caller starts (`alpha-wait.yml`, `batch-checks.yml`, `linux-startup.yml`, `mac-installer.yml`, `mac-update.yml`) requires that input and keeps no fallback of its own, and a release says its trigger once, in its `resolve` job's `trigger` output, which every later job's name and every workflow it calls read (INF-2539).
 Workflow names and files, job ids, run titles, concurrency groups and artifact names keep their earlier names, so triggers, queues and the readers of `github.workflow` are unchanged.
 A reader that judges a run by its jobs (the alpha's proof, stable promotion, the phone's order and cancellation, installer reuse and journey timing) compares `legacyJobName(name)`, which reads a job named before or after the scheme alike; a name that does not lead with a known trigger on every level stays as it is and never passes for a known job.
 `tests/ci-job-names.test.ts` evaluates every job's name in every workflow for each trigger that can start it and holds each to the scheme.
@@ -648,7 +671,7 @@ The cost is GitHub's per-minute bill for those jobs.
 - `verify.yml`, whose `request` job, `linux-checks` lane, every Linux test group and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
 - `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`.
 
-`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `infinitary-batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
+`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `infinitary-batch-checks.yml` and `batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
 `infinitary-batch-checks.yml` passes `hosted: true` to its sweep and its critical path, its startup fixtures name hosted Ubuntu themselves, and its own job and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04`; the shipped queue's own jobs run where it names ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
@@ -773,6 +796,14 @@ The browser tests run only when a path is under `src/renderer/` or `tests/browse
 An empty change or an unreadable diff runs everything.
 No pull request runs the Linux startup fixtures, the node-headers proof or the adherence lint: none caught a problem on a pull request, the swept batch or main's full check runs all three, and `pnpm check:changed` runs the adherence lint before each push.
 `tests/pr-paths.test.ts` holds the two decisions to real changes on main, and `tests/release-workflows-pr-checks.test.ts` holds the check's steps to them.
+
+### A pushed branch
+
+The same job runs for a pushed branch as for its pull request, named `Branch push · Code, build, affected tests and critical path (Linux)` (INF-3759's plan, piece 2).
+A pull request's change starts at the base parent of its merge commit; a pushed branch has no merge commit, so its change starts at the commit the branch left `main` at.
+The job's `Find the change's base` step finds that commit, and the release notes check, the paths step, the reader of changed files and the critical path all measure the change from it, so commits `main` gained since are never read as the branch's own.
+A pushed branch fetches every commit to find it, where a pull request fetches two.
+No push starts `ci.yml` yet: its triggers are a pull request and a request by hand.
 
 ### The weekly audit of the pull request check
 

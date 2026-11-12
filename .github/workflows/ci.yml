@@ -12,6 +12,9 @@ name: ci
 # never in extra PR repeat jobs, and once more here beside the tests that read
 # a changed file. Full unit, integration and probe sweeps run here only on
 # request, never on PRs.
+# A pushed branch runs the same job as its pull request, measured from the
+# commit the branch left main at; no push starts this file yet (docs/testing.md,
+# "A pushed branch").
 # A push to main starts none of these jobs (INF-2340): main.yml's full check
 # runs the same commands in verify.yml's linux-checks lane and its Linux test
 # groups, every probe included.
@@ -52,33 +55,45 @@ concurrency:
 jobs:
   # Each job's name leads with what started it (scripts/ci-job-names.mjs).
   typecheck-lint-build:
-    name: ${{ github.event_name == 'pull_request' && 'Pull request · Code, build, affected tests and critical path (Linux)' || 'Manual request · Code and build (Linux)' }}
+    name: ${{ github.event_name == 'pull_request' && 'Pull request · Code, build, affected tests and critical path (Linux)' || github.event_name == 'push' && 'Branch push · Code, build, affected tests and critical path (Linux)' || 'Manual request · Code and build (Linux)' }}
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
         with:
           # The pull request's merge commit and its base parent, for the notes,
-          # paths and reader steps.
-          fetch-depth: 2
+          # paths and reader steps. A pushed branch has no merge commit, so it
+          # fetches every commit to find the one it left main at.
+          fetch-depth: ${{ github.event_name != 'push' && 2 || 0 }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      # Where the change starts, for the notes, paths, reader and critical-path
+      # steps: the base parent of a pull request's merge commit, and for a
+      # pushed branch the commit it left main at, so main's newer commits are
+      # never read as the branch's own changes.
+      - name: Find the change's base
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        env:
+          FROM: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
+        run: |
+          base=$(git merge-base "$FROM" HEAD)
+          echo "CHANGE_BASE=$base" >> "$GITHUB_ENV"
       # A change adds its release note or exclusion and the ledger stays
       # consistent (docs/release-notes.md "The release check"). Plain Node, no
       # install, under a second, so a miss fails here instead of at the alpha.
       - name: Release notes
-        if: ${{ github.event_name == 'pull_request' }}
-        run: node scripts/release-notes.ts change --base HEAD^1
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: node scripts/release-notes.ts change --base "$CHANGE_BASE"
       # What this version runs beyond its code checks (INF-2915's plan):
       # build=false when every changed path is a test, docs, a release note
       # or the phone app; browser=true when one is the renderer or its
       # browser tests. Plain Node, no install.
       - name: Changed paths
         id: paths
-        if: ${{ github.event_name == 'pull_request' }}
-        run: node scripts/pr-paths.ts --base HEAD^1
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: node scripts/pr-paths.ts --base "$CHANGE_BASE"
       - uses: ./.github/actions/node-headers
       - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
@@ -89,14 +104,14 @@ jobs:
       - run: pnpm check
       # The adherence lint caught nothing on 372 pull request runs (INF-2915's
       # plan), so it runs on a request, as main's check does, and before each
-      # push in pnpm check:changed, never on a pull request.
+      # push in pnpm check:changed, never on a pull request or a pushed branch.
       - run: pnpm lint:adherence
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
       # Chromium, about 15 seconds, for the browser step and for an
       # integration file the next step runs that starts it, such as
       # tests/run-temp-root.test.ts (the integration groups install it too).
       - uses: ./.github/actions/browser-chromium
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name != 'workflow_dispatch' }}
       # Each edited test file, and the unedited unit and integration tests
       # that import or read each changed file, run once here
       # (scripts/unit-reach.ts directUnitReach), so a break the crewmate's
@@ -106,19 +121,19 @@ jobs:
       # Mac-listed reader is listed with the run that owns it, and a selected
       # file that did not run fails it.
       - name: Unit and integration tests that read a changed file
-        if: ${{ github.event_name == 'pull_request' }}
-        run: node scripts/unit-repeats.ts --reach --base HEAD^1 --run
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --run
         timeout-minutes: 30
       # The browser layer (docs/testing.md, "The browser layer"): every
       # browser file, about three minutes, when the version touches the
       # renderer or its browser tests. A requested sweep runs them in
       # unit-tests, and the swept batch on every approved change.
       - name: Browser tests
-        if: ${{ github.event_name == 'pull_request' && steps.paths.outputs.browser == 'true' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.browser == 'true' }}
         run: pnpm test --project browser
         timeout-minutes: 30
       - run: pnpm build
-        if: ${{ github.event_name != 'pull_request' || steps.paths.outputs.build == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.paths.outputs.build == 'true' }}
       # The critical path (INF-2480's plan, captain: "path six-steps (launch,
       # sign in, project, first mate, crewmate card, merge)"; INF-2507): the
       # one journey every pull request that builds the app runs, on the app
@@ -126,14 +141,14 @@ jobs:
       # (docs/testing.md, "The critical path"). A change that edits it runs
       # it three rounds and alone, as any edited journey.
       - uses: ./.github/actions/linux-desktop
-        if: ${{ github.event_name == 'pull_request' && steps.paths.outputs.build == 'true' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.build == 'true' }}
       - name: Critical-path journey
         id: critical-path
-        if: ${{ github.event_name == 'pull_request' && steps.paths.outputs.build == 'true' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.build == 'true' }}
         # The journey ends at 75 minutes and its command at 90 (INF-1083,
         # the captain's check limits, as journeys.yml).
         timeout-minutes: 90
-        run: scripts/on-screen.sh node scripts/journey-runs.ts --base HEAD^1 --files tests/e2e/critical-path.spec.ts --alone-out playwright-report/alone -- --project=desktop
+        run: scripts/on-screen.sh node scripts/journey-runs.ts --base "$CHANGE_BASE" --files tests/e2e/critical-path.spec.ts --alone-out playwright-report/alone -- --project=desktop
         env:
           INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json

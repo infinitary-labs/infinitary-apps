@@ -2,6 +2,7 @@
  * source. This grants no substitute for release-specific package/update gates.
  * The caller reads the run and its latest job executions from GitHub, not artifacts.
  */
+import { BATCH_PULL_CHECKS, BATCH_PULL_CONFIRM, isBatchPullRun } from "./batch-pull.mjs";
 import { legacyJobName } from "./ci-job-names.mjs";
 
 // Main runs no phone check (INF-2492), so every job of the run is the
@@ -147,6 +148,14 @@ function checkMainRun(run, jobs, repository, source) {
 // named the test files that failed, and the confirm ran each of them again,
 // three rounds, and passed. Its run ends failed, since its checks failed,
 // and the tree is named by the confirm's own last job.
+//
+// A batch pull request's run (batch-pull-request.yml; docs/testing.md, "A
+// batch pull request") is read the same way: its one job calls
+// batch-checks.yml, whose sweep is verify.yml and whose last job names the
+// tree. Its confirm runs in the same run, so a run that ended failed passes
+// when its last job named the tree and every confirm job passed. Main's sort
+// names such a run only when the batch changed no file its own check is made
+// of (scripts/batch.mjs).
 const COVERED = /^covered by batch (\d+)$/;
 const QUEUE_RUN = ".github/workflows/infinitary-queue.yml";
 const OLD_BATCH_RUN = ".github/workflows/batch.yml";
@@ -180,15 +189,34 @@ const under = (jobs, lead) => legacy(jobs.filter((job) => job.name.startsWith(le
 const passedOn = (jobs, tree) => jobs.some((job) => green(job) &&
   (job.name === `Batch passed (tree ${tree})` || job.name.startsWith(`Batch passed (tree ${tree}; base `)));
 
+/** A batch pull request's run passed its full check on exactly `tree`. */
+function verifyBatchPullEvidence(run, named, tree) {
+  const confirms = named.filter((job) => job.name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_CONFIRM}`));
+  const confirmed = run.conclusion !== "success" && confirms.length > 0 && confirms.every(green);
+  if (run.conclusion !== "success" && !confirmed)
+    throw new Error("A covered main push needs a successful batch run.");
+  let jobs = under(named, BATCH_PULL_CHECKS);
+  if (!passedOn(jobs, tree))
+    throw new Error("The batch run swept other files than the alpha source.");
+  // The confirm ran every failed job's failed files again and passed.
+  if (confirmed)
+    jobs = jobs.map((job) => job.status === "completed" && job.conclusion === "failure" ? { ...job, conclusion: "success" } : job);
+  if (!checksPassed(jobs, "verify / "))
+    throw new Error("The batch run did not complete every full-check owner successfully.");
+  return { runId: run.id, attempt: run.run_attempt, url: run.html_url, journeys: everyLinuxJourney(jobs, "verify / ") };
+}
+
 /** The batch run's full check passed on exactly `tree`, the alpha source's files. */
 export function verifyBatchEvidence(run, named, repository, tree) {
-  if (![QUEUE_RUN, OLD_BATCH_RUN].includes(run.path) || run.head_branch !== "main" ||
-      run.head_repository?.full_name !== repository || run.repository?.full_name !== repository ||
+  const pulled = isBatchPullRun(run, repository);
+  if (!pulled && (![QUEUE_RUN, OLD_BATCH_RUN].includes(run.path) || run.head_branch !== "main" ||
+      run.head_repository?.full_name !== repository || run.repository?.full_name !== repository) ||
       run.status !== "completed")
     throw new Error("A covered main push needs a successful batch run.");
   if (named.some((job) => job.run_id !== run.id || !Number.isSafeInteger(job.run_attempt) ||
       job.run_attempt < 1 || job.run_attempt > run.run_attempt))
     throw new Error("Batch jobs must belong to a completed attempt of this run.");
+  if (pulled) return verifyBatchPullEvidence(run, named, tree);
   const shipped = run.path === QUEUE_RUN;
   const confirmed = shipped && passedOn(under(named, BATCH_CONFIRM), tree);
   if (run.conclusion !== "success" && !confirmed)

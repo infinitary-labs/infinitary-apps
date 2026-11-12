@@ -1,0 +1,227 @@
+name: Batch checks
+
+# The swept batch on a batch pull request's version (docs/testing.md, "A
+# batch pull request"), called by batch-pull-request.yml. It runs what the
+# shipped queue's batch runs (infinitary-batch-checks.yml): the alpha's full
+# check - every Linux journey on GitHub's hosted machines and every journey
+# on the mini's release check line, without the phone check - and the
+# critical path and the Linux startup fixtures in jobs of their own. The
+# batch's branch already holds its changes, one commit each, so every job
+# checks out that version and nothing is composed.
+#
+# When a check fails, the failures job reads each failed job's log for the
+# test files it names (scripts/batch-failures.mjs) and the confirm job runs
+# those files three rounds on the same version, on the platform whose job
+# failed (the captain's pick on INF-3012, "A only: the confirm step"). The
+# last job passes once every check passed, or once the confirm passed, and
+# names the tree of the batch's version and the main version the batch left
+# main at, which main's check and the alpha's proof follow
+# (scripts/batch.mjs, scripts/main-alpha-proof.mjs).
+#
+# Its jobs lead with the trigger its caller names, Merge batch
+# (scripts/ci-job-names.mjs).
+
+on:
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        required: true
+        type: string
+      head:
+        description: The batch pull request's version, a full commit id, which every job checks out
+        required: true
+        type: string
+
+# verify.yml reads its caller's run, and the failures job reads this run's logs.
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  # The tree the batch's version holds, which the last job names, and the
+  # main version the batch left main at.
+  batch:
+    name: ${{ format('{0} · Read the batch', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    outputs:
+      tree: ${{ steps.read.outputs.tree }}
+      base: ${{ steps.read.outputs.base }}
+    steps:
+      - id: read
+        uses: actions/github-script@v7
+        env:
+          HEAD: ${{ inputs.head }}
+          MAIN: ${{ github.event.repository.default_branch }}
+        with:
+          script: |
+            const {data: commit} = await github.rest.git.getCommit({...context.repo, commit_sha: process.env.HEAD});
+            const {data: compared} = await github.rest.repos.compareCommits({...context.repo, base: process.env.MAIN, head: process.env.HEAD, per_page: 1});
+            core.setOutput('tree', commit.tree.sha);
+            core.setOutput('base', compared.merge_base_commit.sha);
+
+  # The alpha's full check on the batch's version, without the phone check:
+  # hosted Linux, and the Mac lanes on the release split line.
+  sweep:
+    needs: batch
+    name: ${{ format('{0} · Desktop checks', inputs.trigger) }}
+    uses: ./.github/workflows/verify.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+      profile: stable
+      all_journeys: true
+      hosted: true
+      mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_split || '' }}
+
+  # The critical path (INF-2507; docs/testing.md, "The critical path") on the
+  # batch's version, in a job of its own, so the batch's check runs it
+  # whatever part of the full check the sweep runs (the captain, on INF-2508:
+  # "the e2e journey + browser tests should all run during the sweep batch").
+  critical-path:
+    needs: batch
+    name: ${{ format('{0} · Critical-path journey', inputs.trigger) }}
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+      hosted: true
+      suite: affected
+      lane: desktop
+      files: tests/e2e/critical-path.spec.ts
+      artifact-suffix: critical-path
+
+  # The Linux automatic startup fixtures on the batch's version (the
+  # captain's pick on INF-3052, "In the batch check, beside the critical-path
+  # journey"), so they run before a merge.
+  startup:
+    needs: batch
+    name: ${{ format('{0} · Linux startup', inputs.trigger) }}
+    uses: ./.github/workflows/linux-startup.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+
+  # After a failed check: what the confirm runs again, from the failed jobs'
+  # logs. Both outputs are empty when a failed job's log named no test file.
+  failures:
+    needs: [sweep, critical-path, startup]
+    if: ${{ !cancelled() && (needs.sweep.result == 'failure' || needs.critical-path.result == 'failure' || needs.startup.result == 'failure') }}
+    name: ${{ format('{0} · Read the failures', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    outputs:
+      jobs: ${{ steps.read.outputs.jobs }}
+      files: ${{ steps.read.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head }}
+          # The failure reader and the shipped queue's rules it reads a log with.
+          sparse-checkout: |
+            scripts/batch-failures.mjs
+            scripts/batch-pull.mjs
+            .github/infinitary/rules.mjs
+          sparse-checkout-cone-mode: false
+      - id: read
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {failures} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-failures.mjs`).href);
+            await failures({github, context, core});
+
+  # The confirm: each failed test file three rounds on the batch's version,
+  # on Linux when a Linux job failed and on the Mac when a Mac job did, the
+  # same machines the sweep took (scripts/batch-confirm.ts).
+  confirm:
+    needs: failures
+    if: ${{ !cancelled() && needs.failures.outputs.jobs != '' }}
+    name: ${{ format('{0} · Confirm failed tests ({1})', inputs.trigger, matrix.platform == 'mac' && 'Mac' || 'Linux') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(contains(needs.failures.outputs.jobs, '(Mac)') && (contains(needs.failures.outputs.jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
+    runs-on: ${{ matrix.platform == 'mac' && (fromJSON(vars.MAC_QUEUES || '{}').release_split || fromJSON(vars.MAC_QUEUES || '{}').split || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - name: Checkout the keep-awake action
+        if: matrix.platform == 'mac'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+      - name: Keep the Mac awake
+        if: matrix.platform == 'mac'
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head }}
+          path: Application Support/firstmate
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
+      - run: pnpm install --frozen-lockfile
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # A journey among the files needs the built app, and on Linux the
+      # virtual desktop source-journeys.yml prepares.
+      - id: journeys
+        env:
+          FILES: ${{ needs.failures.outputs.files }}
+        run: |
+          case " $FILES " in *.spec.ts\ *) echo "any=true" >> "$GITHUB_OUTPUT" ;; esac
+      - if: steps.journeys.outputs.any == 'true' && matrix.platform == 'linux'
+        uses: ./Application Support/firstmate/.github/actions/linux-desktop
+        with:
+          working-directory: Application Support/firstmate
+      - if: steps.journeys.outputs.any == 'true'
+        run: pnpm build
+      - if: steps.journeys.outputs.any == 'true' && matrix.platform == 'mac'
+        run: pnpm exec playwright install ffmpeg
+      - if: steps.journeys.outputs.any == 'true'
+        uses: ./Application Support/firstmate/.github/actions/demo-encoder
+        with:
+          working-directory: Application Support/firstmate
+      - name: Run each failed test file three rounds
+        env:
+          FILES: ${{ needs.failures.outputs.files }}
+          PLATFORM: ${{ matrix.platform }}
+          JOURNEYS: ${{ steps.journeys.outputs.any }}
+          SCREEN: 2560x1600x24
+        run: |
+          if [ "$PLATFORM" = mac ]; then
+            cores="$(node scripts/job-cores.ts)"
+            node scripts/batch-confirm.ts --files "$FILES" -- "--workers=$(( cores > 1 ? cores / 2 : 1 ))"
+          elif [ "$JOURNEYS" = true ]; then
+            scripts/on-screen.sh node scripts/batch-confirm.ts --files "$FILES"
+          else
+            node scripts/batch-confirm.ts --files "$FILES"
+          fi
+
+  # Passes once the sweep, the critical path and the startup fixtures all
+  # passed, or once the confirm passed, and names the tree they built and
+  # the main version the batch left main at, which main's sort and the
+  # alpha's proof read.
+  passed:
+    needs: [batch, sweep, critical-path, startup, confirm]
+    if: ${{ !cancelled() && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || needs.confirm.result == 'success') }}
+    name: ${{ format('{0} · Batch passed (tree {1}; base {2})', inputs.trigger, needs.batch.outputs.tree, needs.batch.outputs.base) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          TREE: ${{ needs.batch.outputs.tree }}
+        run: echo "The batch checks passed on tree $TREE."

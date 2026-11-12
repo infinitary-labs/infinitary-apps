@@ -190,14 +190,14 @@ export type CiJob = {
 export function ciJobs(
   eventName: string,
   sweep = eventName === "workflow_dispatch",
-  // What the pull request's paths step decided (scripts/pr-paths.ts); a
-  // request runs no paths step.
+  // What the paths step of a pull request or a pushed branch decided
+  // (scripts/pr-paths.ts); a request runs no paths step.
   paths: { build: boolean; browser: boolean } = { build: true, browser: true },
 ): { id: string; name: string; runs: string[] }[] {
   const ci = loadCi();
   const github = { event_name: eventName };
   const steps =
-    eventName === "pull_request"
+    eventName !== "workflow_dispatch"
       ? {
           paths: { outputs: { build: String(paths.build), browser: String(paths.browser) } },
           "critical-path": { outcome: paths.build ? "success" : "skipped" },
@@ -229,7 +229,7 @@ export function ciJobs(
         runs: job.steps.flatMap((step) =>
           step.run &&
           (step.if === undefined || workflowValue(step.if, { github, steps, ...contexts }) === true)
-            ? [interpolated(step, contexts)]
+            ? [interpolated(step, { github, ...contexts })]
             : [],
         ),
       };

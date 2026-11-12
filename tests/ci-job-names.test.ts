@@ -228,6 +228,37 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
+  // INF-3759's plan, piece 2: a pushed task branch runs its pull request's
+  // one job, named for the push.
+  { file: "ci.yml", trigger: "Branch push", scenario: { github: { event_name: "push" } } },
+  // A batch pull request's run (batch-pull-request.yml), whose one job calls
+  // batch-checks.yml on the pull request's version; its checks passed, so
+  // its last job runs.
+  {
+    file: "batch-pull-request.yml",
+    trigger: "Merge batch",
+    scenario: {
+      github: {
+        event_name: "pull_request",
+        head_ref: "infinitary-batch/rehearsal",
+        base_ref: "main",
+        repository: "infinitary-labs/infinitary",
+        event: {
+          pull_request: {
+            head: { sha: "a".repeat(40), repo: { full_name: "infinitary-labs/infinitary" } },
+          },
+          repository: { default_branch: "main" },
+        },
+      },
+      needs: {
+        batch: { result: "success", outputs: { tree: "b".repeat(40), base: "c".repeat(40) } },
+        sweep: { result: "success" },
+        "critical-path": { result: "success" },
+        startup: { result: "success" },
+        confirm: { result: "skipped" },
+      },
+    },
+  },
 ];
 
 describe("CI job names (INF-2410 scheme A, trigger first)", () => {
@@ -254,6 +285,7 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
   it("covers every workflow", () => {
     const called = new Set([
       "alpha-wait.yml",
+      "batch-checks.yml",
       "linux-startup.yml",
       "mac-installer.yml",
       "mac-update.yml",
@@ -284,6 +316,7 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
     }
     expect(callOnly.toSorted()).toEqual([
       "alpha-wait.yml",
+      "batch-checks.yml",
       "linux-startup.yml",
       "mac-installer.yml",
       "mac-update.yml",

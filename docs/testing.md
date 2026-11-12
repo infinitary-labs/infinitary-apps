@@ -1545,8 +1545,12 @@ Each wait lasts as long as its step's time limit, ten minutes for each install s
 That limit holds the download too, so the Linux packages' virtual screen installs with `--no-install-recommends`.
 ImageMagick's recommended packages, Ghostscript and its fonts, are 25 MB that the AppImage check's one screenshot never uses, and a slow mirror can stretch them past ten minutes.
 A mirror can also stall the list refresh partway: a connection that keeps sending a little never trips apt's own timer, which ends only a connection silent for 30 seconds, so `apt-get update` waits until the step's limit fails the job before any test runs.
-Because apt prints a line as it starts each file or gives one up, the helper takes a refresh that prints nothing for 90 seconds as stalled, ends it and starts a fresh one with new connections, three refreshes in all.
-Ninety seconds is longer than apt's own longest silence, about a minute while it retries a silent connection, and three stalled refreshes still end inside an install step's ten minutes, or end at all where a step has no limit of its own.
+Because apt prints a line as it starts each file or gives one up, the helper takes a refresh that prints nothing for 90 seconds as stalled, ends it and starts a fresh one with new connections.
+A mirror part way through its own update can serve a package list that the index it already served does not describe, and `apt-get update` then fails with status 100, naming the list's unexpected size and asking `Mirror sync in progress?`, though the same refresh passes once the mirror's update has moved on.
+So the helper waits 60 seconds after a refresh that fails and starts a fresh one.
+Stalled and failed refreshes share one count, three refreshes in all, and any other status stops the step at once.
+Ninety seconds is longer than apt's own longest silence, about a minute while it retries a silent connection.
+The pause after a failure is shorter than the 90 seconds a stall takes to notice, so three refreshes of either kind still end inside an install step's ten minutes, or end at all where a step has no limit of its own.
 An install inside a container needs none of this: the container's apt is its own, and nothing in it updates automatically.
 
 ## The Linux source desktop

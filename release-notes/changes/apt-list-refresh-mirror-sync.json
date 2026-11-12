@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "apt-list-refresh-mirror-sync",
+      "reason": "The Linux check machines start a package-list refresh again when it fails because Ubuntu's mirror is part way through its own update, instead of failing the check; it changes only how the project's checks prepare their machines, not the app."
+    }
+  ]
+}

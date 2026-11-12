@@ -257,12 +257,19 @@ export class FirstmateContext {
    */
   private renderCaptainResolutions(now: number): string[] {
     const since = Math.max(this.resolutionsSeenThrough + 1, now - RESOLVED_CONTEXT_WINDOW_MS);
-    const cardLines = this.options.supervisor.cards
-      .captainResolutionsSince(since, Number.POSITIVE_INFINITY)
-      .filter(({ card }) => card.taskId !== undefined || card.id.startsWith("card-fm-"))
-      .map((resolution) => ({
-        at: resolution.resolvedAt,
-        lines: () => this.cardResolutionLines(resolution, now),
+    // Every resolution counts, but only the lines shown read a card's words:
+    // read whole for each, a busy few hours' cards held the main thread for
+    // a quarter second on a record the captain's size (INF-3957).
+    const cards = this.options.supervisor.cards;
+    const cardLines = cards
+      .captainResolutionHeadsSince(since)
+      .filter(({ cardId, taskId }) => taskId !== undefined || cardId.startsWith("card-fm-"))
+      .map((head) => ({
+        at: head.resolvedAt,
+        lines: () => {
+          const resolution = cards.resolutionOf(head.cardId);
+          return resolution ? this.cardResolutionLines(resolution, now) : [];
+        },
       }));
     const clickLines = this.options.tasks.taskCardClicksSince(since).map((click) => ({
       at: click.at,

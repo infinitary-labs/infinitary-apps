@@ -963,10 +963,76 @@ describe("CardService", () => {
       answers,
       observation: choice?.id,
     });
-    // The Firstmate's resolutions line reads them back off the row.
+    // The captain's resolutions read them back off the row, through the
+    // same selection as the first mate's context line.
     expect(cards.captainResolutionsSince(0, 5)).toEqual([
       expect.objectContaining({ action: "right", answers }),
     ]);
+  });
+
+  // INF-3957: the first mate's context build picks its resolutions from the
+  // narrow read and reads only the shown ones whole, so the narrow read must
+  // pick exactly the cards and choices the whole read keeps.
+  it("picks the same captain resolutions without reading the cards' words", () => {
+    // One clock for the rows and the observations, so each choice finds its offer.
+    const { tasks, make } = setup(undefined, () => Date.now());
+    seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
+    const cards = make();
+    const chosen = cards.emitCrewmateCard("t1", decision, "m");
+    cards.resolve(cards.get(chosen) as Card, "right", "right", [
+      { name: "notes", values: ["soon"], changed: true },
+    ]);
+    vi.advanceTimersByTime(5);
+    // A revision offers a new action; the captain chose the revised one.
+    const revised = cards.addFirstmateCard({ ...decision, id: "launch-review" });
+    cards.addFirstmateCard({
+      ...decision,
+      id: revised,
+      actions: [{ id: "up", label: "Up", default: true }],
+    });
+    cards.resolve(cards.get(revised) as Card, "up", "up");
+    vi.advanceTimersByTime(5);
+    // The app's Decline is on the offer the captain saw, never on the card's own actions.
+    const declined = cards.emitCrewmateCard("t1", { ...decision, title: "Ship it?" }, "m");
+    cards.resolve(cards.get(declined) as Card, "app-decline", "app-decline");
+    vi.advanceTimersByTime(5);
+    const dismissed = cards.emitCrewmateCard("t1", { ...decision, title: "Again?" }, "m");
+    cards.resolve(cards.get(dismissed) as Card, "close", "close");
+    vi.advanceTimersByTime(5);
+    // The first mate closing its own card is not the captain's choice.
+    const closed = cards.addFirstmateCard({ ...decision, id: "closed-by-firstmate" });
+    cards.close(closed, { kind: "firstmate" });
+
+    const whole = cards.captainResolutionsSince(0, Number.POSITIVE_INFINITY);
+    expect(whole.map(({ card, action }) => [card.id, action])).toEqual([
+      [dismissed, "close"],
+      [declined, "app-decline"],
+      [revised, "up"],
+      [chosen, "right"],
+    ]);
+    expect(
+      cards.captainResolutionHeadsSince(0).map(({ cardId, taskId, action, resolvedAt }) => ({
+        cardId,
+        taskId,
+        action,
+        resolvedAt,
+      })),
+    ).toEqual(
+      whole.map(({ card, action, resolvedAt }) => ({
+        cardId: card.id,
+        taskId: card.taskId,
+        action,
+        resolvedAt,
+      })),
+    );
+    // Each one read whole answers as the whole read did, offer and answers included.
+    for (const resolution of whole)
+      expect(cards.resolutionOf(resolution.card.id)).toEqual(resolution);
+    expect(cards.resolutionOf(revised)?.offer?.actions.map((entry) => entry.id)).toEqual([
+      "up",
+      "app-decline",
+    ]);
+    expect(cards.resolutionOf(closed)).toBeDefined();
   });
 
   it("records no answers for a choice that carried none", () => {

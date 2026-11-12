@@ -33,7 +33,7 @@ import {
 import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
-import type { CardResolution, DuplicateResult } from "../storage/cardStore";
+import type { CardResolution, DuplicateResult, ResolutionHead } from "../storage/cardStore";
 import type { TaskOriginLine } from "../tasks/taskOrigin";
 import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { CardEvidence, type CardInteractionEvidence } from "./cardEvidence";
@@ -1602,12 +1602,25 @@ export class CardService {
    * agent, not the captain.
    */
   captainResolutionsSince(since: number, limit: number): CardResolution[] {
-    return this.host.cardStore.resolvedSince(
-      since,
-      limit,
-      ({ card, offer, action }) =>
-        action === "close" || (offer?.actions ?? card.actions).some((entry) => entry.id === action),
-    );
+    return this.captainResolutionHeadsSince(since)
+      .slice(0, limit)
+      .flatMap(({ cardId }) => this.resolutionOf(cardId) ?? []);
+  }
+
+  /**
+   * The captain's resolutions since `since`, newest first, each without its
+   * card's words: the one selection `captainResolutionsSince` reads too.
+   * `resolutionOf` reads one whole for a reader that shows it.
+   */
+  captainResolutionHeadsSince(since: number): ResolutionHead[] {
+    return this.host.cardStore
+      .resolutionHeadsSince(since)
+      .filter(({ action, actions }) => byCaptain(action, actions));
+  }
+
+  /** One resolved card whole, words and closing offer included. */
+  resolutionOf(cardId: string): CardResolution | undefined {
+    return this.host.cardStore.resolutionOf(cardId);
   }
 
   /**
@@ -1620,8 +1633,7 @@ export class CardService {
       1,
       ({ card, offer, action }) =>
         (cardId === undefined || card.id === cardId) &&
-        (action === "close" ||
-          (offer?.actions ?? card.actions).some((entry) => entry.id === action)),
+        byCaptain(action, offer?.actions ?? card.actions),
       taskId,
     )[0];
   }
@@ -1656,6 +1668,14 @@ export class CardService {
     if (this.broadcastTimer) return;
     this.broadcastTimer = setTimeout(() => this.flushBroadcast(), 60);
   }
+}
+
+/**
+ * Whether the captain resolved a card: a dismissal (`close`) or one of the
+ * actions the card offered, never an app or agent close.
+ */
+function byCaptain(action: string, actions: Card["actions"]): boolean {
+  return action === "close" || actions.some((entry) => entry.id === action);
 }
 
 /** A task's origin line as the card carries it (`cardAskedSchema`). */

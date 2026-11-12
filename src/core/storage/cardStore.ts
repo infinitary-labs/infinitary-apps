@@ -17,6 +17,7 @@ import {
   cardAnswersSchema,
   cardContributorSchema,
   cardObservationPayloadSchemas,
+  cardOfferPayloadSchema,
   cardRevisionSchema,
   cardSchema,
   cardWord,
@@ -35,6 +36,7 @@ import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
 import type { TaskCardRow } from "@shared/tasks";
 import { z } from "zod";
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 
 /**
  * Persisted cards (decision D-9): unresolved cards survive a restart and
@@ -129,6 +131,55 @@ export type CardResolution = {
   answers?: CardAnswer[];
   /** Exact offer dispatched at the closing interaction, when capture exists. */
   offer?: CardObservationPayload<"offer">;
+};
+
+/** One card's action observations, oldest first: never its offers' words. */
+const ACTION_OBSERVATIONS =
+  "SELECT * FROM card_observations WHERE card_id = ? AND kind = 'action' ORDER BY seq";
+
+/** One offer observation of a card, by its offer id. */
+const OFFER_OBSERVATION =
+  "SELECT * FROM card_observations WHERE id = ? AND card_id = ? AND kind = 'offer'";
+
+/**
+ * The action observation that closed a resolution, among a card's action
+ * observations. CardService commits the row resolution first, then its
+ * action observation; earlier observations belong to a previous
+ * resolution, not this offer.
+ */
+function closingAction(
+  rows: readonly ObservationRow[],
+  chosenAction: string,
+  resolvedAt: number,
+): CardObservation | undefined {
+  return rows
+    .flatMap((row) => observationOf(row) ?? [])
+    .findLast(
+      (entry) =>
+        entry.kind === "action" &&
+        entry.payload.closes &&
+        entry.payload.actionId === chosenAction &&
+        entry.recordedAt >= resolvedAt,
+    );
+}
+
+/**
+ * A resolution without the card's words: its effective actions are the
+ * closing offer's when one was captured, else the card's own
+ * (`CardStore.resolutionHeadsSince`).
+ */
+export type ResolutionHead = {
+  cardId: string;
+  taskId?: string;
+  action: string;
+  resolvedAt: number;
+  actions: Card["actions"];
+};
+
+type ResolvedRow = Row & {
+  chosen_action: string;
+  resolved_at: number;
+  answers_json: string | null;
 };
 
 /**
@@ -596,61 +647,124 @@ export class CardStore {
     keep: (resolution: CardResolution) => boolean = () => true,
     taskId?: string,
   ): CardResolution[] {
-    // One task's read seeks its own cards through `cards_task_id`; folding
-    // it into the walk of every answered card read them all (INF-3641).
-    const rows = (
+    // Every task's read picks from the narrow heads, the selection the first
+    // mate's context build reads (INF-3957); one task's read seeks its own
+    // cards through `cards_task_id` instead (INF-3641). Either reads each
+    // card whole only until `limit` are kept.
+    const reads: (() => CardResolution | undefined)[] =
       taskId === undefined
-        ? this.db
-            .prepare(
-              `SELECT * FROM cards
-               WHERE resolved_at IS NOT NULL AND resolved_at >= ? AND chosen_action IS NOT NULL
-               ORDER BY resolved_at DESC, id`,
-            )
-            .all(since)
-        : this.db
-            .prepare(
-              `SELECT * FROM cards
-               WHERE task_id = ? AND resolved_at IS NOT NULL AND resolved_at >= ?
-                 AND chosen_action IS NOT NULL
-               ORDER BY resolved_at DESC, id`,
-            )
-            .all(taskId, since)
-    ) as (Row & {
-      chosen_action: string;
-      resolved_at: number;
-      answers_json: string | null;
-    })[];
+        ? this.resolutionHeadsSince(since).map(
+            ({ cardId }) =>
+              () =>
+                this.resolutionOf(cardId),
+          )
+        : (
+            this.db
+              .prepare(
+                `SELECT * FROM cards
+                 WHERE task_id = ? AND resolved_at IS NOT NULL AND resolved_at >= ?
+                   AND chosen_action IS NOT NULL
+                 ORDER BY resolved_at DESC, id`,
+              )
+              .all(taskId, since) as ResolvedRow[]
+          ).map((row) => () => this.resolutionOfRow(row));
     const kept: CardResolution[] = [];
-    for (const row of rows) {
+    for (const read of reads) {
       if (kept.length >= limit) break;
-      const card = fromRow(row);
-      if (!card) continue;
-      const answers = row.answers_json
-        ? cardAnswersSchema.safeParse(JSON.parse(row.answers_json))
-        : undefined;
-      const observations = this.observations(card.id);
-      // CardService commits the row resolution first, then its action observation.
-      // Earlier observations belong to a previous resolution, not this offer.
-      const closing = observations.findLast(
-        (entry) =>
-          entry.kind === "action" &&
-          entry.payload.closes &&
-          entry.payload.actionId === row.chosen_action &&
-          entry.recordedAt >= row.resolved_at,
-      );
-      const offer = closing?.offerId
-        ? observations.find((entry) => entry.id === closing.offerId && entry.kind === "offer")
-        : undefined;
-      const resolution = {
-        card,
-        action: row.chosen_action,
-        resolvedAt: row.resolved_at,
-        ...(offer?.kind === "offer" ? { offer: offer.payload } : {}),
-        ...(answers?.success && answers.data.length > 0 ? { answers: answers.data } : {}),
-      };
-      if (keep(resolution)) kept.push(resolution);
+      const resolution = read();
+      if (resolution && keep(resolution)) kept.push(resolution);
     }
     return kept;
+  }
+
+  /**
+   * The cards resolved at or after `since`, newest first, each without its
+   * words: what choosing among them reads. A reader that shows only some of
+   * them reads those whole with `resolutionOf`, so the words of the rest -
+   * every card the captain answered in a busy few hours - are never read
+   * (the first mate's context build, INF-3957).
+   */
+  resolutionHeadsSince(since: number): ResolutionHead[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, task_id, actions_json, chosen_action, resolved_at FROM cards
+         WHERE resolved_at IS NOT NULL AND resolved_at >= ? AND chosen_action IS NOT NULL
+         ORDER BY resolved_at DESC, id`,
+      )
+      .all(since) as {
+      id: string;
+      task_id: string | null;
+      actions_json: string;
+      chosen_action: string;
+      resolved_at: number;
+    }[];
+    const actionsOf = prepared(this.db, ACTION_OBSERVATIONS);
+    const offerActionsOf = prepared(
+      this.db,
+      `SELECT json_extract(payload_json, '$.actions') AS actions FROM card_observations
+       WHERE id = ? AND card_id = ? AND kind = 'offer' AND json_valid(payload_json)`,
+    );
+    return rows.flatMap((row) => {
+      let actions: Card["actions"];
+      try {
+        const offerId = closingAction(
+          actionsOf.all(row.id) as ObservationRow[],
+          row.chosen_action,
+          row.resolved_at,
+        )?.offerId;
+        const offered = offerId
+          ? (offerActionsOf.get(offerId, row.id) as { actions: string | null } | undefined)
+          : undefined;
+        const parsed = offered?.actions
+          ? cardOfferPayloadSchema.shape.actions.safeParse(JSON.parse(offered.actions))
+          : undefined;
+        actions = parsed?.success ? parsed.data : oneMergeEffect(JSON.parse(row.actions_json));
+      } catch {
+        return [];
+      }
+      return [
+        {
+          cardId: row.id,
+          ...(row.task_id ? { taskId: row.task_id } : {}),
+          action: row.chosen_action,
+          resolvedAt: row.resolved_at,
+          actions,
+        },
+      ];
+    });
+  }
+
+  /** One resolution whole, words and closing offer included, as `resolvedSince` reads it. */
+  resolutionOf(cardId: string): CardResolution | undefined {
+    const row = prepared(
+      this.db,
+      "SELECT * FROM cards WHERE id = ? AND resolved_at IS NOT NULL AND chosen_action IS NOT NULL",
+    ).get(cardId) as ResolvedRow | undefined;
+    return row ? this.resolutionOfRow(row) : undefined;
+  }
+
+  private resolutionOfRow(row: ResolvedRow): CardResolution | undefined {
+    const card = fromRow(row);
+    if (!card) return undefined;
+    const answers = row.answers_json
+      ? cardAnswersSchema.safeParse(JSON.parse(row.answers_json))
+      : undefined;
+    const offerId = closingAction(
+      prepared(this.db, ACTION_OBSERVATIONS).all(card.id) as ObservationRow[],
+      row.chosen_action,
+      row.resolved_at,
+    )?.offerId;
+    const offerRow = offerId
+      ? (prepared(this.db, OFFER_OBSERVATION).get(offerId, card.id) as ObservationRow | undefined)
+      : undefined;
+    const offer = offerRow ? observationOf(offerRow) : undefined;
+    return {
+      card,
+      action: row.chosen_action,
+      resolvedAt: row.resolved_at,
+      ...(offer?.kind === "offer" ? { offer: offer.payload } : {}),
+      ...(answers?.success && answers.data.length > 0 ? { answers: answers.data } : {}),
+    };
   }
 
   /**

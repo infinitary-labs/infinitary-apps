@@ -845,6 +845,23 @@ export class InboxStore {
   }
 
   /**
+   * Whether a row about `ref` is still on the recipient's lane - waiting, or
+   * handed to a turn that has not ended - and not set aside: the recipient
+   * has not yet finished a turn on that news. A container reads it before it
+   * closes on its last part's close (INF-3846, docs/task-graph.md "The close
+   * rules").
+   */
+  holdsUnhandled(recipient: string, ref: string): boolean {
+    return (
+      this.db
+        .prepare(
+          "SELECT 1 FROM inbox WHERE recipient = ? AND ref = ? AND escalated_at IS NULL LIMIT 1",
+        )
+        .get(recipient, ref) !== undefined
+    );
+  }
+
+  /**
    * Whether the captain's choice on a card still waits on the recipient's
    * lane, not yet handed to a turn: its author has not heard the answer
    * (INF-1389 friction 1, `CardService` refuses a revision written blind).

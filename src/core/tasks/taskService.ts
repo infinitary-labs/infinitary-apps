@@ -59,6 +59,7 @@ import {
 import { TaskRepetitionStore } from "../storage/taskRepetitionStore";
 import { selectTasks, type TaskSelectionInput } from "../storage/taskSelection";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
+import { admitUnderParent, type ContainerLoop, reopenHeldContainers } from "./containerParents";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import { TaskArchive } from "./taskArchive";
 import { TaskCapture } from "./taskCapture";
@@ -564,6 +565,25 @@ export class TaskService {
     return this.writer.store.list();
   }
 
+  /**
+   * Containers closed while a part under them is live open again
+   * (`containerParents.ts`), except one a live part waits on, directly or
+   * through other tasks: opened, it would wait on its own part (INF-3846).
+   */
+  reopenHeldContainers(): string[] {
+    return reopenHeldContainers(this.writer, this.containerLoop);
+  }
+
+  /** A container read as open: the wait loop through one of its live parts, in words (`ContainerLoop`). */
+  private readonly containerLoop: ContainerLoop = (parent) => {
+    const live = (task: TaskRecord) => task.id === parent || TaskService.blockerHoldsClose(task);
+    for (const part of this.writer.store.listLiveChildren(parent)) {
+      const cycle = liveWaitCycle(this, parent, part.id, live);
+      if (cycle) return waitCycleWords(this, cycle);
+    }
+    return undefined;
+  };
+
   /** Rows waiting to start (the old queued set, every kind). */
   listOpen(): TaskRecord[] {
     return this.writer.store.listByStatus("open");
@@ -979,6 +999,10 @@ export class TaskService {
         },
         feed: false,
       });
+      // A closed container opens before the waits go in, so the link writer
+      // reads it live and refuses a part that waits on it (INF-3846).
+      if (parent && !TaskService.isClosed(record))
+        admitUnderParent(this.writer, parent, key, actor, at, this.containerLoop);
       for (const blockerId of input.blockedBy ?? []) {
         this.graph.insertLink(blockerId, record.id, "blocks", actor, at);
       }
@@ -1404,6 +1428,10 @@ export class TaskService {
           `Refused: ${keyOrId(parent)} is already under ${keyOrId(record)}; making it the parent would close a cycle.`,
         );
       }
+      // A closed container opens first, so the check below reads it live; a
+      // refusal rolls the opening back with the rest of this write (INF-3846).
+      if (!TaskService.isClosed(record))
+        admitUnderParent(this.writer, parent, keyOrId(record), actor, at, this.containerLoop);
       // A parent waits on its parts until they close (INF-3167): a part that
       // waits on the task it would go under, directly or through other
       // tasks, would wait on itself, the loop the link writer refuses too.

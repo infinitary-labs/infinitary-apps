@@ -1661,7 +1661,13 @@
         {
           "from": "done",
           "to": "open",
-          "why": "the first mate corrects a required action",
+          "why": "a required action is corrected, or a part goes under its closed container",
+          "by": "orchestrator"
+        },
+        {
+          "from": "dropped",
+          "to": "open",
+          "why": "a part goes under its closed container",
           "by": "orchestrator"
         }
       ],

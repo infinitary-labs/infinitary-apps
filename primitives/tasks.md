@@ -58,7 +58,7 @@ Every relation below is one kind of the checked relationship contract, with its 
 - Retry provenance: a stronger-model retry names the attempt it retries, a `retry-of` row; the escalation stamp beside it stays on the shape as a fact of how it ran.
 - Typed result: `result_schema` on the shape makes the report's `result` a checked JSON object, delivered to the first mate and to any task whose basis names it.
 
-Close rules: a parent closes only when every child is closed, except host delivery children (`isDeliveryChild`); a task does not close while any blocker is still live work (a soft hold the captain may override); a container no crewmate holds completes with its children.
+Close rules: a parent closes only when every child is closed, except host delivery children (`isDeliveryChild`); a task does not close while any blocker is still live work (a soft hold the captain may override); a container no crewmate holds completes with its children, after the first mate has finished a turn on its last part's news, and opens again when a live part is filed under it.
 An answer task closes `done/answered` on the captain's choice on its crewmate's card, unless the crewmate declared that card `continues`, or through `settle_task` done, why `answered`, when it was declared an internal step and a live task builds on it or waits on it.
 A reported, idle task whose result was handed on through verified file delivery or a captain result choice can also close `done/answered` without `internal_step`; the handoff receipt never bypasses unmerged-work, outstanding-work or relationship checks (`docs/task-graph.md`).
 An operation delivers a named effect, not code or an answer card, and is declared with the operation constraint; `in_folder` work is an operation too.

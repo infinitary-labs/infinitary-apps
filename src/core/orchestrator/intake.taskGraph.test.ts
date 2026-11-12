@@ -42,6 +42,7 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
+import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
@@ -1294,6 +1295,201 @@ describe("parent tasks with planned children", () => {
     const started = tasks.get(implement.id);
     expect(started && tasks.graph.basisOf(started)).toEqual({ ref: planKey, verified: false });
     expect(builder.promptCalls[0] ?? "").not.toContain("grounded in");
+  });
+
+  // INF-3846 piece 1: the secrets work stream's parent read finished 224 ms
+  // after its plan was approved, before the first mate filed the parts the
+  // plan named under it (INF-1492, INF-774).
+  it("keeps a container open until the first mate has acted on its plan's approval", async () => {
+    const planner = fakeCrewmate();
+    const { supervisor, tasks, specs, cards, inbox } = setup(planner, { classifier: byTitle });
+    const parent = supervisor.intake.plan({
+      title: "Move website sign-ins into Settings → Secrets",
+      intent: intentOf("move website sign-ins into the new Secrets tab once it is ready"),
+    });
+    const plan = await supervisor.intake.commission({
+      title: "Plan moving website sign-ins into Secrets",
+      intent: {
+        goal: "propose how the sign-ins move as one card",
+        userWords: "move website sign-ins into the new Secrets tab once it is ready",
+        constraints: [{ kind: "read-only" }],
+      },
+      parent: parent.key,
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      title: "Move the sign-ins in one piece",
+      body: "<p>One piece: the section moves once the Secrets tab ships.</p>",
+      asking: true,
+      actions: [
+        { id: "build", label: "Approve and build", default: true },
+        { id: "abandon", label: "Abandon", declines: true },
+      ],
+    });
+    planner.emit({ type: "turn_end", taskId: plan.taskId });
+    planner.finishPrompt();
+    await tick();
+    const card = cards().find((entry) => entry.taskId === plan.taskId) as Card;
+    supervisor.cardActions.act(card.id, "build");
+    await tick();
+    expect(tasks.get(plan.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+
+    // The approval waits on the first mate's lane: the parent stays open.
+    expect(inbox.holdsUnhandled(FIRSTMATE_RECIPIENT, plan.taskId)).toBe(true);
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(parent.id)?.status).toBe("open");
+
+    // Its turn files the part the plan named, and the parent holds it.
+    const part = supervisor.intake.plan({
+      title: "Move Website sign-ins into Settings → Secrets",
+      intent: intentOf("move the section"),
+      parent: parent.key,
+    });
+    inbox.ack(inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.id));
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(parent.id)?.status).toBe("open");
+    expect(tasks.get(part.id)?.parentId).toBe(parent.id);
+
+    // A turn that filed nothing leaves nothing to wait for: the parent closes.
+    supervisor.intake.dropTask(part.id, { reason: "not wanted" });
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(parent.id)).toMatchObject({ status: "done", closedReason: "finished" });
+  });
+
+  it("opens a container again when a part is filed or moved under it, and no other closed parent", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const planOf = (title: string, parent?: string) =>
+      supervisor.intake.plan({ title, intent: intentOf(title), ...(parent ? { parent } : {}) });
+    const container = planOf("Declutter the settings page");
+    tasks.close(planOf("Plan it", container.id).id, {
+      status: "done",
+      reason: "answered",
+      actor: "captain",
+    });
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(container.id)).toMatchObject({ status: "done", closedReason: "finished" });
+
+    const build = planOf("Build it", container.id);
+    expect(tasks.get(container.id)).toMatchObject({
+      status: "open",
+      closedReason: null,
+      closedAt: null,
+      startPolicy: "on-request",
+    });
+    expect(tasks.timeline(container.id).at(-1)).toMatchObject({
+      actor: "firstmate",
+      kind: "status",
+      text: `open again: a part was filed under it (${build.key})`,
+      data: { status: "open", reopened: true },
+    });
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(container.id)?.status).toBe("open");
+
+    // Closed again with its parts, and opened again by a move.
+    supervisor.intake.dropTask(build.id, { reason: "not wanted" });
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(container.id)?.status).toBe("done");
+    const loose = planOf("Group the rows");
+    tasks.setParent(loose.id, container.id, "firstmate");
+    expect(tasks.get(container.id)?.status).toBe("open");
+
+    // A parent that closed for its own reasons keeps its close: the part carries its work on.
+    const merged = planOf("Fix the meter");
+    tasks.close(merged.id, { status: "done", reason: "merged", actor: "host" });
+    const dropped = planOf("Rename the dock");
+    tasks.close(dropped.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+    planOf("Follow the meter fix", merged.key);
+    tasks.setParent(loose.id, dropped.id, "firstmate");
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(merged.id)).toMatchObject({ status: "done", closedReason: "merged" });
+    expect(tasks.get(dropped.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+  });
+
+  // INF-3846 review: opening a container must never leave it waiting on its
+  // own part while that part waits on it, a loop nothing would ever wake.
+  it("refuses a part under a closed container that waits on it, and opens no container into that loop", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const planOf = (title: string, parent?: string, blockedBy?: string[]) =>
+      supervisor.intake.plan({
+        title,
+        intent: intentOf(title),
+        ...(parent ? { parent } : {}),
+        ...(blockedBy ? { blockedBy } : {}),
+      });
+    const container = planOf("Declutter the settings page");
+    tasks.close(planOf("Plan it", container.id).id, {
+      status: "done",
+      reason: "answered",
+      actor: "captain",
+    });
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(container.id)?.status).toBe("done");
+    const closedAt = tasks.get(container.id)?.closedAt;
+
+    // Waiting on the container directly, and through another task.
+    expect(() => planOf("Build it", container.key, [container.key])).toThrow("Circular wait");
+    const between = planOf("Agree the layout", undefined, [container.key]);
+    expect(() => planOf("Build it", container.key, [between.key])).toThrow("Circular wait");
+    expect(() => tasks.setParent(between.id, container.id, "firstmate")).toThrow(
+      `Refused: ${container.key} would wait on its part ${between.key}`,
+    );
+    // Each refusal rolled its opening back.
+    expect(tasks.get(container.id)).toMatchObject({ status: "done", closedAt });
+    expect(tasks.get(between.id)?.parentId).toBeNull();
+
+    // A record an earlier release left with that loop stays as it is.
+    const stream = planOf("Secrets management");
+    const part = planOf("Encrypt saved sign-ins", stream.id);
+    tasks.close(stream.id, {
+      status: "done",
+      reason: "finished",
+      actor: "host",
+      data: { container: true },
+    });
+    tasks.graph.link(stream.id, part.id, "blocks", "firstmate");
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(stream.id)?.status).toBe("done");
+    // Nor does a part filed or moved under it with no wait of its own.
+    expect(() => planOf("Rotate the keys", stream.key)).toThrow("Circular wait");
+    const loose = planOf("Audit the keychain");
+    expect(() => tasks.setParent(loose.id, stream.id, "firstmate")).toThrow("Circular wait");
+    expect(tasks.get(stream.id)?.status).toBe("done");
+    expect(tasks.get(loose.id)?.parentId).toBeNull();
+  });
+
+  it("opens again each container an earlier release closed while a part under it is live", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const planOf = (title: string, parent?: string) =>
+      supervisor.intake.plan({ title, intent: intentOf(title), ...(parent ? { parent } : {}) });
+    // INF-774's record: its plan approved, the host's container close, then
+    // parts filed under the closed parent, as an earlier release allowed.
+    const stream = planOf("Secrets management");
+    const part = planOf("Encrypt saved sign-ins", stream.id);
+    tasks.close(stream.id, {
+      status: "done",
+      reason: "finished",
+      actor: "host",
+      text: "everything under it is finished",
+      data: { container: true },
+    });
+    // The captain's own drop keeps its open parts planned on purpose.
+    const dropped = planOf("Rename the dock");
+    const kept = planOf("Pick the new name", dropped.id);
+    tasks.close(dropped.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(stream.id)).toMatchObject({ status: "open", closedReason: null });
+    expect(tasks.timeline(stream.id).at(-1)).toMatchObject({
+      actor: "host",
+      text: "open again: a part under it is still open",
+    });
+    expect(tasks.get(part.id)?.status).toBe("open");
+    expect(tasks.get(dropped.id)?.status).toBe("dropped");
+    expect(tasks.get(kept.id)?.status).toBe("open");
+    // Nothing more to repair: a second sweep writes nothing.
+    const lines = tasks.timeline(stream.id).length;
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.timeline(stream.id)).toHaveLength(lines);
   });
 
   it("closes a parent no crewmate holds once every child is closed", async () => {

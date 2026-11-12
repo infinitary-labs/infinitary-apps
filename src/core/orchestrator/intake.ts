@@ -16,6 +16,7 @@ import { NOTHING_SPAWNED, type ReviewAssigned } from "../pi/crewTools";
 import { programShape } from "../program/programRunner";
 import { tierFor } from "../routing/policy";
 import type { RouteResult } from "../routing/router";
+import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskGate, TaskRecord, TaskStartPolicy } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
@@ -974,9 +975,13 @@ export class TaskIntake {
    * could ever close it; once every child is closed it closes too: done
    * when any child is done, else dropped. A parent that carries a
    * crewmate, ever started, still has an open child, or has a card of its
-   * own waiting on the captain is left exactly as it is.
+   * own waiting on the captain is left exactly as it is, and so is one
+   * whose last part's news the first mate has not finished a turn on: its
+   * answer may file the next parts (INF-3846). A container closed while a
+   * part under it is live opens again first.
    */
   completeContainers(): void {
+    this.options.tasks.reopenHeldContainers();
     for (const record of this.options.tasks.listOpen()) {
       if (record.kind !== "work" || record.startPolicy !== "on-request") continue;
       if (
@@ -992,6 +997,10 @@ export class TaskIntake {
         continue;
       }
       if (this.host.cards.snapshot().some((card) => card.taskId === record.id)) continue;
+      if (
+        children.some((child) => this.options.inbox.holdsUnhandled(FIRSTMATE_RECIPIENT, child.id))
+      )
+        continue;
       const done = children.some((child) => child.status === "done");
       this.host.settling.closing.closeAndPurge([record.id], () =>
         this.options.tasks.close(record.id, {

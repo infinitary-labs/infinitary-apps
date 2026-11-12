@@ -433,6 +433,16 @@ export class TaskEventStore {
     return row?.ref;
   }
 
+  /** A task's newest event of `kind`, if it has one. */
+  latestOfKind(taskId: string, kind: TaskEventKind): TaskEvent | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT * FROM task_events WHERE task_id = ? AND kind = ? ORDER BY at DESC, id DESC LIMIT 1",
+      )
+      .get(taskId, kind) as Row | undefined;
+    return row ? fromRow(row) : undefined;
+  }
+
   /** When a task's newest event of `kind` happened, if it has one. */
   latestAt(taskId: string, kind: TaskEventKind): number | undefined {
     const row = this.db

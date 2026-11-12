@@ -1273,6 +1273,24 @@ export class TaskStore {
     return row.at ?? undefined;
   }
 
+  /**
+   * Tasks closed with a container close's reason (finished or cancelled) that
+   * have a live child, for the container repair (INF-3846): it seeks the
+   * live rows by status, so it grows with open work, never with the closed
+   * history, and leaves out merged and answered parents.
+   */
+  closedParentsWithLiveChildren(): string[] {
+    const rows = prepared(
+      this.db,
+      `SELECT DISTINCT parent.id AS id FROM tasks AS child
+       JOIN tasks AS parent ON parent.id = child.parent_id
+       WHERE child.status IN ('open', 'active') AND parent.status IN ('done', 'dropped')
+         AND parent.closed_reason IN ('finished', 'cancelled')
+       ORDER BY parent.id`,
+    ).all() as { id: string }[];
+    return rows.map((row) => row.id);
+  }
+
   /** Live children for review witnesses; closed children's payloads are not read. */
   listLiveChildren(parentId: string): TaskRecord[] {
     const key = `live-children:${parentId}`;

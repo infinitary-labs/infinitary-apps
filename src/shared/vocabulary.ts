@@ -93,7 +93,7 @@ export function sendWriteWords(place: string): string {
 }
 
 /** How carefully the work was done, by rigor tier. */
-export const CARE_WORDS: Words<Rigor> = {
+export const RIGOR_WORDS: Words<Rigor> = {
   quick: "Quick",
   standard: "Default",
   reviewed: "Careful",
@@ -182,11 +182,11 @@ export function changeLinesShortWords(added: number, deleted: number): string {
 }
 
 /**
- * The word after the care level's name in a merge card's reference, shown
+ * The word after the rigor level's name in a merge card's reference, shown
  * only when the level is not Default (INF-3709's plan, the captain's answer
- * 3): `Careful care`.
+ * 3; renamed from care in INF-3959): `Careful rigor`.
  */
-export const CARE_REFERENCE_WORD = "care";
+export const RIGOR_REFERENCE_WORD = "rigor";
 
 /** An independent review's verdict, as a fact strip says it. */
 export const REVIEW_WORDS: Words<"pass" | "findings" | "blocked"> = {

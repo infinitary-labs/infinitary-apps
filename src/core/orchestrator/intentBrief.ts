@@ -11,7 +11,7 @@ import {
   isAnswerKind,
   type WorkKind,
 } from "@shared/routingPolicy";
-import { CARE_WORDS } from "@shared/vocabulary";
+import { RIGOR_WORDS } from "@shared/vocabulary";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 
@@ -438,7 +438,7 @@ export const REVIEW_FIX_RULES =
  * nothing on the name.
  */
 export function renderRigorSection(rigor: Rigor): string {
-  return `Care: ${CARE_WORDS[rigor]} (${rigor}) - what it asks is in the care guidance served with your instructions.`;
+  return `Rigor: ${RIGOR_WORDS[rigor]} (${rigor}) - what it asks is in the rigor guidance served with your instructions.`;
 }
 
 /**
@@ -487,7 +487,7 @@ export function renderOperationShapeSection(): string {
     "Operation shape: the effect is the deliverable. Make the effect named in the goal and check that it took. Commit nothing, push nothing, open no pull request, and stop and report if code must change.",
     "The captain's words authorize only the effects the goal names. Keychain and signing access, writes outside this task's own project, payments and browser handoffs still ask under their existing consent rules; anything beyond the named effects asks too.",
     "Your own project's writes go at once. You have no pull request tools and no merge card; check_change records the diagnosis of a workflow run you read and reserves its rerun. Show what took effect on a factual note with no settle action, then report the result and its evidence; the first mate closes it done and finished from that evidence. A note stays until the captain presses its Got it, but that press is not proof of success.",
-    "Care: none - this task delivers an effect, not code through a gate.",
+    "Rigor: none - this task delivers an effect, not code through a gate.",
   ].join("\n");
 }
 
@@ -604,7 +604,7 @@ function answerShape(internalStep: boolean): string {
       "Each figure carries its own names and numbers, with one sentence beside it; everything else - reasoning, steps, caveats, evidence, paths - goes in <details> whose <summary> names what is inside.",
       ANSWER_CONTINUES_CARD,
       "When the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
-      "Care: none - this task ships nothing.",
+      "Rigor: none - this task ships nothing.",
       "Your worktree is a laboratory: install, run, and edit there freely to find the answer, but commit nothing, push nothing, and open no pull request. Nothing in it ships; it is discarded when this task closes, and anything worth keeping goes in your report.",
       "Your report is what survives this task; the first mate closes it once the next step has started, unless a card of yours is waiting on the captain.",
     ].join(" ");
@@ -618,7 +618,7 @@ function answerShape(internalStep: boolean): string {
     ANSWER_MARK_WORDS,
     "Your report stays the short factual account; the card is where the answer is shown.",
     "Your report is also the answer this task keeps, and work built on it starts from it: when the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
-    "Care: none - this task ships nothing; the card is the deliverable.",
+    "Rigor: none - this task ships nothing; the card is the deliverable.",
     "Your worktree is a laboratory: install, run, and edit there freely to find the answer, but commit nothing, push nothing, and open no pull request. Nothing in it ships; it is discarded when this task closes, and anything worth keeping - paths, commands, a reproduction, a sketch of a fix - goes in the card.",
     "The card and your report are the only things that survive this task.",
   ];

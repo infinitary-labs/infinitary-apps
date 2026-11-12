@@ -799,7 +799,7 @@ describe("CrewSupervisor", () => {
       expect(h.authorization()).toBeUndefined();
       const edit = h.tasks
         .timeline(h.taskId)
-        .find((event) => event.kind === "note" && event.text.includes("Care: Careful"));
+        .find((event) => event.kind === "note" && event.text.includes("Rigor: Careful"));
       expect(edit).toMatchObject({ actor: "captain" });
       expect(edit?.text).toContain("from the merge card");
       // The care notice and the choice start the idle crewmate together.

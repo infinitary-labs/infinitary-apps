@@ -4,7 +4,7 @@ The user-facing care labels are Quick (stored `quick`), Default (stored `standar
 These names do not alter the gates, review, fallback, or persisted values.
 
 This document is the care model's one home: the three care names the host records, how a task's care is derived, what the evidence contract is, how a review runs, and what the host holds as a record.
-What each care asks of a crewmate is the Care levels runbook's (`resources/runbooks/care`), served by the care's name and held by nothing of the host's (INF-1876, the captain: "the host only knows the three names as typed fact - a metadata. how to execute each care level becomes something the runbooks cover").
+What each care asks of a crewmate is the Rigor levels runbook's (`resources/runbooks/care`), served by the care's name and held by nothing of the host's (INF-1876, the captain: "the host only knows the three names as typed fact - a metadata. how to execute each care level becomes something the runbooks cover").
 
 Rigor derives from the user's words and the repository's configured rigor alone (captain rulings, 2026-09-19): standard is every project's standing value, never the intelligence tier or an escalation.
 Careful's guidance orders the review before the pull request, on the builder's branch; the host holds neither the push nor the merge on it.
@@ -23,7 +23,7 @@ Every crewmate's coding session receives the working copy's own instruction file
 `projectResources.ts` reads the first available root instruction file (`AGENTS.md`, otherwise `CLAUDE.md`) and discovers skills directly under `.claude/skills` and `.agents/skills`, from the working copy alone.
 Pi serves the instruction file through its resource loader's `agentsFiles` and exposes the project skills through its skill loader; Claude stages the project skills as a local plugin and appends the project instructions to its prompt (`piResourceLoader.ts`, `claudeProjectResources.ts`, `claude/claudeSessionOptions.ts`).
 These are project resources, not the person's machine-wide instructions, skills, or agent configuration; Claude's empty `settingSources` does not prevent the app from supplying the working copy's own resources.
-The prompt's core carries the consent rule and the facts every crewmate needs; the Care levels runbook's sections follow by the care's name - its Default section when care is standard or reviewed, its Careful section beside that when care is reviewed, and its Quick sentence when care is quick (`resources/runbooks/care/runbook.json`, `docs/runbooks.md`).
+The prompt's core carries the consent rule and the facts every crewmate needs; the Rigor levels runbook's sections follow by the care's name - its Default section when care is standard or reviewed, its Careful section beside that when care is reviewed, and its Quick sentence when care is quick (`resources/runbooks/care/runbook.json`, `docs/runbooks.md`).
 A task whose typed delivery and care say a section does not apply is not served that section, on either model backend and on a task that runs on another computer.
 Unknown facts are served the Default section and the delivery judgment.
 The resource readers supply the project-specific instructions and skills.
@@ -379,7 +379,7 @@ Stopping decisions belong to the agents' guidance, while consent and version ide
 
 **The repository's rigor is a posture.**
 `app_change project-settings` writes `rigor` beside `delivery` and `autonomy` (`configure_repo` is retired); Settings → Projects writes the same row.
-The project-settings feed line (`repo_configured` in `src/shared/feed.ts`) names the care (`CARE_WORDS`: Quick, Default, Careful) only when the column is set, and says nothing when the host derives it.
+The project-settings feed line (`repo_configured` in `src/shared/feed.ts`) names the care (`RIGOR_WORDS`: Quick, Default, Careful) only when the column is set, and says nothing when the host derives it.
 The context block does the same: `rigor` is on a repo only when the column is set (`firstmateContext`'s `repos`).
 `rigorFor` reads the column as `repoRigor` (rule 3 above).
 `setup_repo` is retired; `project-setup` puts up the setup card, where the captain may set a new project's care before it is added (`docs/fleet.md` "Asking the first mate to add a project").
@@ -670,7 +670,7 @@ The merge validates the published and PR heads without waking the work computer 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Delivery direct-pr (captain rule): a crewmate that opens a PR must babysit CI (`check_change`, through the app's own sign-in) until every check on the head SHA is green before the final report; the local evidence is the standard tier's (the Standing CI rule in `docs/testing.md`), not the full suite; the first mate must not present any land/merge/accept decision while CI is red or running.
-- Delivery care (captain-approved 2026-09-19; `docs/delivery-rigor.md` is the one home): three care names - quick, standard, reviewed, shown as Quick, Default and Careful - and what each asks is the Care levels runbook's (INF-1876).
+- Delivery care (captain-approved 2026-09-19; `docs/delivery-rigor.md` is the one home): three care names - quick, standard, reviewed, shown as Quick, Default and Careful - and what each asks is the Rigor levels runbook's (INF-1876).
   Standard is EVERY repository's default (captain ruling 2026-09-19; a task with no gate to land through takes no tier at all), whose Default section the crewmate prompt serves (`buildCrewmateSystemPrompt`, every backend) when care is standard, reviewed, or unknown, while the first mate's care rule relays the user's words on care as `rigor_ask`.
   A known quick task is served the Quick section and, when delivery is a pull request, the delivery judgment.
   A task with no gate is not served the direct-pr passage.

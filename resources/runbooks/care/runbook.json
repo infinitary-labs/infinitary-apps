@@ -1,7 +1,7 @@
 {
   "id": "care",
-  "name": "Care levels",
-  "description": "What each care level asks of a change: Quick, Default and Careful.",
+  "name": "Rigor levels",
+  "description": "What each rigor level asks of a change: Quick, Default and Careful.",
   "firstmate": "guide.md",
   "crew": [
     {

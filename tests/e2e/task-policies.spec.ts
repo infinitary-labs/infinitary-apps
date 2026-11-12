@@ -11,7 +11,7 @@ import {
   POLICY_MERGING_WORDS,
   POLICY_SOURCE_WORDS,
 } from "../../src/shared/taskPolicies";
-import { CARE_WORDS } from "../../src/shared/vocabulary";
+import { RIGOR_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import type { ScriptedArgs, ScriptedCall } from "../helpers/scriptedCalls";
 import { waitForFirstmateIdle } from "./crew";
@@ -136,7 +136,7 @@ test("keyboard requests change queued policies, show their sources and Activity,
       POLICY_DELIVERY_WORDS["direct-pr"],
     );
     await expect(recordFact(app.page, "merging")).toContainText(POLICY_MERGING_WORDS.on);
-    await expect(recordFact(app.page, "care")).toContainText(CARE_WORDS.reviewed);
+    await expect(recordFact(app.page, "care")).toContainText(RIGOR_WORDS.reviewed);
     await expect(recordFact(app.page, "care")).toContainText(POLICY_SOURCE_WORDS.task);
     await pressKey(recordTab(app.page, "activity"), "Enter");
     await expect

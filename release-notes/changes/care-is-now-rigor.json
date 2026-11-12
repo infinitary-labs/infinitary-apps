@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "care-is-now-rigor",
+      "kind": "improvement",
+      "title": "The Care setting is now called Rigor",
+      "body": "The setting that decides how thoroughly a project's work is checked before you merge it is now called Rigor, on Settings, a task's Info, merge cards and the phone app. Its levels stay Quick, Default and Careful, and every project keeps its choice.",
+      "area": "projects",
+      "picture": {
+        "dark": "care-is-now-rigor-dark.webp",
+        "light": "care-is-now-rigor-light.webp",
+        "alt": "A project's Rigor row in Settings, with Careful chosen among Quick, Default and Careful"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

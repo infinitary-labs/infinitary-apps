@@ -19,11 +19,11 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import type { WorkShape } from "@shared/routingPolicy";
 import {
-  CARE_REFERENCE_WORD,
-  CARE_WORDS,
   changeLinesShortWords,
   changeLinesWords,
   DEFAULT_WORKSPACE_WORD,
+  RIGOR_REFERENCE_WORD,
+  RIGOR_WORDS,
 } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -600,7 +600,7 @@ describe("the task graph (task-system P2)", () => {
         // state, so the line holds only the reference - the project, and
         // the care level because it is not Default.
         `<p class="inf-foot-line"><span class="inf-foot-ref"><span data-fact="project"><span class="${SETTLE_FACT_VALUE_CLASS}">${DEFAULT_WORKSPACE_WORD}</span></span>` +
-        `<span data-fact="care"><span class="${SETTLE_FACT_VALUE_CLASS}">${CARE_WORDS.quick}</span> ${CARE_REFERENCE_WORD}</span></span></p>` +
+        `<span data-fact="care"><span class="${SETTLE_FACT_VALUE_CLASS}">${RIGOR_WORDS.quick}</span> ${RIGOR_REFERENCE_WORD}</span></span></p>` +
         // The app's line says the merge closes the task (INF-2490).
         `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${MERGE_CLOSES_WORDS.closes}</p>` +
         "</div>",

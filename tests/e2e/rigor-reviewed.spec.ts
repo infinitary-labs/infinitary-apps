@@ -14,7 +14,7 @@ import {
 } from "../../src/shared/cards";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskView } from "../../src/shared/tasks";
-import { CARE_WORDS, CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import { CHECK_WORDS, MERGE_WORDS, RIGOR_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -381,7 +381,7 @@ test("a reviewed task's review passes before its completion card, which merges w
   await expect(frame.locator("h3")).toHaveText([...COMPLETION_CARD_HEADINGS]);
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(REPO_NAME);
-  await expect(facts.care).toHaveText(CARE_WORDS.reviewed);
+  await expect(facts.care).toHaveText(RIGOR_WORDS.reviewed);
   await expect(facts.change.locator('a[href="https://github.com/o/meterlab/pull/55"]')).toHaveText(
     "#55",
   );

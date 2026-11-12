@@ -28,7 +28,7 @@ import {
 } from "@shared/repos";
 import { rigorSchema } from "@shared/rigor";
 import { signInPlace } from "@shared/signIns";
-import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
+import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { CoreDispatch } from "../dispatcher";
 import { renderSignInRefusal, SignInRequiredError } from "../forge";
@@ -376,7 +376,7 @@ function setupCard(
       FIELDS.care,
       (["quick", "standard", "reviewed"] as const).map((value) => ({
         value,
-        label: CARE_WORDS[value],
+        label: RIGOR_WORDS[value],
       })),
       proposed.rigor,
     ),

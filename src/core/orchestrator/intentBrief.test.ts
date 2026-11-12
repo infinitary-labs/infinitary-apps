@@ -270,21 +270,21 @@ describe("renderRigorSection (INF-1876: the care is a name)", () => {
     const standard = renderRigorSection("standard");
     const reviewed = renderRigorSection("reviewed");
     for (const line of [quick, standard, reviewed]) {
-      expect(line.startsWith("Care: ")).toBe(true);
+      expect(line.startsWith("Rigor: ")).toBe(true);
       expect(line).not.toContain("\n");
-      expect(line).toContain("what it asks is in the care guidance served with your instructions");
+      expect(line).toContain("what it asks is in the rigor guidance served with your instructions");
       // No procedure, no reviewer and no fix rules: the care runbook holds them.
       expect(line).not.toContain("reviewer");
       expect(line).not.toContain(REVIEW_FIX_RULES);
     }
     expect(quick).toBe(
-      "Care: Quick (quick) - what it asks is in the care guidance served with your instructions.",
+      "Rigor: Quick (quick) - what it asks is in the rigor guidance served with your instructions.",
     );
     expect(standard).toBe(
-      "Care: Default (standard) - what it asks is in the care guidance served with your instructions.",
+      "Rigor: Default (standard) - what it asks is in the rigor guidance served with your instructions.",
     );
     expect(reviewed).toBe(
-      "Care: Careful (reviewed) - what it asks is in the care guidance served with your instructions.",
+      "Rigor: Careful (reviewed) - what it asks is in the rigor guidance served with your instructions.",
     );
   });
 });
@@ -623,7 +623,9 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
 
   it("tells an answer task it ships nothing and its worktree is scratch", () => {
     const section = renderAnswerShapeSection();
-    expect(section).toContain("Care: none - this task ships nothing; the card is the deliverable.");
+    expect(section).toContain(
+      "Rigor: none - this task ships nothing; the card is the deliverable.",
+    );
     expect(section).toContain("Your worktree is a laboratory");
     expect(section).toContain("commit nothing, push nothing, and open no pull request");
     expect(section).toContain("The card and your report are the only things that survive");
@@ -668,7 +670,7 @@ describe("the answer shape of a step the Firstmate declared (docs/sequences.md)"
     expect(step).toContain(
       "Show a card, as any crewmate does, when the captain must decide or see something",
     );
-    expect(step).toContain("Care: none - this task ships nothing.");
+    expect(step).toContain("Rigor: none - this task ships nothing.");
     expect(step).not.toContain("it lands as one card");
     // The captain's own ask - anything not declared a step - keeps the card.
     for (const asked of [renderAnswerShapeSection(false), renderAnswerShapeSection()]) {

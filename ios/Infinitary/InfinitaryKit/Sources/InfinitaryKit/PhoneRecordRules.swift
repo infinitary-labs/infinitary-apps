@@ -299,7 +299,7 @@ public enum PhoneRecord {
     public static func deliveryWords(_ task: PhoneTask) -> String {
         let mode = task.policies?.delivery.value ?? task.delivery?.mode
         let care = task.policies?.rigor.value ?? task.rigor
-        return [mode.map { deliveryNames[$0] ?? $0 }, care.map { "\(PhoneRecordWords.care[$0] ?? $0) care" }]
+        return [mode.map { deliveryNames[$0] ?? $0 }, care.map { "\(PhoneRecordWords.care[$0] ?? $0) rigor" }]
             .compactMap(\.self).joined(separator: " · ")
     }
 
@@ -331,12 +331,12 @@ public enum PhoneRecord {
         if let assignee = task.assignee { fact("crewmate", "Crewmate", assignee + (task.modelLabel.map { " on \($0)" } ?? "")) }
         if let branch = task.repo?.branch, !branch.isEmpty { fact("branch", "Branch", branch) }
         let lands = (task.delivery?.mode.map { [modeWords[$0] ?? $0] } ?? []) + (task.delivery?.landedMode != nil ? ["merged"] : [])
-            + (task.rigor.map { ["care: \(PhoneRecordWords.care[$0] ?? $0)"] } ?? [])
+            + (task.rigor.map { ["rigor: \(PhoneRecordWords.care[$0] ?? $0)"] } ?? [])
         if let policies = task.policies {
             fact("delivery", "Delivery", PhoneRecordWords.policyDelivery[policies.delivery.value] ?? policies.delivery.value, policies.delivery.source)
             fact("merging", "Merging", policies.autonomy.value ? PhoneRecordWords.policyMergesOn : PhoneRecordWords.policyMergesOff,
                  policies.autonomy.source)
-            fact("care", "Care", PhoneRecordWords.care[policies.rigor.value] ?? policies.rigor.value, policies.rigor.source)
+            fact("care", "Rigor", PhoneRecordWords.care[policies.rigor.value] ?? policies.rigor.value, policies.rigor.source)
         } else if !lands.isEmpty { fact("delivery", "Delivery", lands.joined(separator: " · ")) }
         if let runsOn = task.runsOn {
             fact("runs-on", "Runs on", runsOn.label, runsOn.source)

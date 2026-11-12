@@ -6,11 +6,11 @@ import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { openDatabase } from "../../src/core/storage/db";
 import { CHECKS_ABSENT_WORDS } from "../../src/shared/checkSnapshot";
 import {
-  CARE_WORDS,
   CHECK_WORDS,
   changeLinesShortWords,
   changeLinesWords,
   MERGE_WORDS,
+  RIGOR_WORDS,
 } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -170,7 +170,7 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
   // there), and the checks.
   const frame = cardBody(page, MOCK_SENT_UP_CARD_TITLE);
   const facts = factsStrip(frame);
-  await expect(facts.care).toHaveText(CARE_WORDS.quick);
+  await expect(facts.care).toHaveText(RIGOR_WORDS.quick);
   await expect(facts.change).toHaveText(branch);
   await expect(facts.change.locator("a")).toHaveCount(0);
   await expect(facts.checks).toHaveText(CHECKS_ABSENT_WORDS);

@@ -31,7 +31,7 @@ export function reasoningWord(reasoning: Reasoning): string {
 
 /** Why the reasoning sits below what its level asks, as one sentence; null when it does not. */
 export function reasoningNote(reasoning: Reasoning): string | null {
-  if (reasoning.lower === "quick") return "Reasoning one step lower for Quick care.";
+  if (reasoning.lower === "quick") return "Reasoning one step lower for Quick rigor.";
   if (reasoning.lower === "capped") return "Reasoning at the most this model offers.";
   return null;
 }

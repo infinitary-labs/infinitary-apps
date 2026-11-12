@@ -47,7 +47,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | Appearance | 外觀 | Standard. |
 | Intelligence (Settings tab) | 智慧等級 | 智慧 is Taiwan's word for intelligence; 等級 says it is a level, not reasoning. |
 | Reasoning | 推理 | The fact strip's label. |
-| care levels (Quick, Default, Careful) | 快速、預設、謹慎 | The dimension itself is 謹慎度, as in 謹慎度：快速. |
+| rigor levels (Quick, Default, Careful) | 快速、預設、謹慎 | The dimension itself is 謹慎度, as in 謹慎度：快速. |
 | Merges on its own | 自行合併 | Short label. |
 | Asks first | 先問過你 | Warmer than 先詢問 and still short. |
 | a stronger model | 更強的模型 | As in 已改用更強的模型. |

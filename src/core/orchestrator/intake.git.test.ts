@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { SETTLE_FACT_VALUE_CLASS } from "@shared/cards";
-import { CARE_REFERENCE_WORD, CARE_WORDS } from "@shared/vocabulary";
+import { RIGOR_REFERENCE_WORD, RIGOR_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -258,7 +258,7 @@ describe("the task graph (task-system P2)", () => {
       await tick();
       const body = cards().find((card) => card.title === "The meter is fixed")?.body ?? "";
       expect(body).toContain(
-        `<span data-fact="care"><span class="${SETTLE_FACT_VALUE_CLASS}">${CARE_WORDS.quick}</span> ${CARE_REFERENCE_WORD}</span>`,
+        `<span data-fact="care"><span class="${SETTLE_FACT_VALUE_CLASS}">${RIGOR_WORDS.quick}</span> ${RIGOR_REFERENCE_WORD}</span>`,
       );
       expect(body).toContain(
         `<span data-fact="change"><span class="${SETTLE_FACT_VALUE_CLASS}">fm/task-${taskId}</span></span>`,

@@ -208,7 +208,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": {
           "change": {
             "noun": "Pull request",
@@ -554,7 +554,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": {
           "change": {
             "noun": "Pull request",
@@ -1540,7 +1540,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working · Waiting for the batch check",
@@ -1755,7 +1755,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working · Waiting for the batch check",
@@ -1970,7 +1970,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working · Waiting for the batch check",
@@ -2184,7 +2184,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working · Retrying at its provider",
@@ -2398,7 +2398,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Idle · Stuck at its provider",
@@ -2638,7 +2638,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": {
           "change": {
             "noun": "Pull request",
@@ -3962,7 +3962,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": {
           "change": null,
           "checks": null,
@@ -5255,7 +5255,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working",
@@ -5403,7 +5403,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working",
@@ -5784,7 +5784,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working",
@@ -6278,7 +6278,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working",
@@ -6605,7 +6605,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working",
@@ -6805,7 +6805,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working",
@@ -6996,7 +6996,7 @@
           "level": "high",
           "lower": "quick"
         },
-        "reason": "Reasoning one step lower for Quick care.",
+        "reason": "Reasoning one step lower for Quick rigor.",
         "delivery": null,
         "browser": null,
         "label": "Working",

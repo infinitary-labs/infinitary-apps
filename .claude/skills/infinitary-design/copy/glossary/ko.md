@@ -43,7 +43,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | account | 계정 | |
 | Settings | 설정 | |
 | Appearance | 모양 | As macOS's Korean System Settings names it |
-| care levels | 주의 수준 | "{care} care" is 주의 수준: {care} |
+| rigor levels | 주의 수준 | "{care} rigor" is 주의 수준: {care} |
 | Quick / Default / Careful | 빠르게 / 기본 / 신중하게 | |
 | Merges on its own / Asks first | 알아서 병합 / 먼저 물어봄 | |
 | a stronger model | 더 강력한 모델 | |

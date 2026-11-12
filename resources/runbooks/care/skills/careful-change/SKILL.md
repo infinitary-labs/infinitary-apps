@@ -16,7 +16,7 @@ A passed review holds when a later version is the same change.
 A docs, comment or wording commit after the proof keeps the proof already run; the reviewer confirms it reaches no scenario.
 A code repair after the code passed gets a review of its own difference and reruns only the proof it reaches.
 
-## Care raised on work already built
+## Rigor raised on work already built
 
 Careful means an independent review before the merge.
 Commit any remaining work on your branch and report under the five headings without pushing.

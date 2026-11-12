@@ -64,9 +64,9 @@ describe("the deliverable axis (Task B)", () => {
     // The three facts an answer task is told, and the two lines it is not.
     expect(brief).toContain("this task's deliverable is an answer, not a change");
     expect(brief).toContain("commit nothing, push nothing, and open no pull request");
-    expect(brief).toContain("Care: none - this task ships nothing");
+    expect(brief).toContain("Rigor: none - this task ships nothing");
     expect(brief).not.toContain("Delivery: ");
-    expect(brief).not.toContain("Care: Default");
+    expect(brief).not.toContain("Rigor: Default");
     // And no rigor is stamped either: the record says it ships nothing.
     expect(tasks.get(taskId)?.shape?.rigor).toBeUndefined();
   });
@@ -696,9 +696,9 @@ describe("the deliverable axis (Task B)", () => {
     expect(shape).toMatchObject({ kind: "research", deliverable: "answer" });
     // No posture it cannot act on, and the answer's shape in its place.
     expect(brief).not.toContain("Delivery: ");
-    expect(brief).not.toContain("Care: Default");
+    expect(brief).not.toContain("Rigor: Default");
     expect(brief).toContain("this task's deliverable is an answer, not a change");
-    expect(brief).toContain("Care: none - this task ships nothing");
+    expect(brief).toContain("Rigor: none - this task ships nothing");
     // An answer gets no origin section, so it keeps the line telling it to read the origin.
     expect(brief).toContain("Read the origin's report and card with the tasks query");
     expect(brief).not.toContain("Recorded origin ");
@@ -712,7 +712,7 @@ describe("the deliverable axis (Task B)", () => {
     const { shape, brief, spec } = await filedFollowup("fix");
     expect(shape).toMatchObject({ kind: "fix", deliverable: "change", rigor: "standard" });
     expect(brief).toContain("Delivery: direct-pr");
-    expect(brief).toContain("Care: Default (standard)");
+    expect(brief).toContain("Rigor: Default (standard)");
     expect(brief).not.toContain("deliverable is an answer");
     // A change is handed its origin's findings, so its origin reaches it
     // once: the section, without the filing's line telling it to go and read them.

@@ -10,7 +10,7 @@ import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { presentTask } from "@shared/taskWaiting";
 import { taskWaitStatus } from "@shared/taskWaits";
-import { CARE_WORDS } from "@shared/vocabulary";
+import { RIGOR_WORDS } from "@shared/vocabulary";
 import { type ComponentProps, useEffect, useMemo, useRef, useState } from "react";
 import { focusPanelCard } from "../app/shellCommands";
 import type { RecordView } from "../app/stack";
@@ -109,7 +109,7 @@ function deliveryWordsOf(detail: TaskDetail): string {
   const care = detail.policies?.rigor.value ?? detail.rigor;
   return [
     ...(mode ? [DELIVERY_WORDS[mode] ?? mode] : []),
-    ...(care ? [m.cardRecordCare({ care: CARE_WORDS[care] ?? care })] : []),
+    ...(care ? [m.cardRecordCare({ care: RIGOR_WORDS[care] ?? care })] : []),
   ].join(" · ");
 }
 

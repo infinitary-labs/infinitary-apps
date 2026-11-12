@@ -2437,11 +2437,11 @@ export function feedProjectSettingsCare(input: {
     case "zh-Hant":
       return `${who}專案 ${name} · 設定：${delivery}，${merging}，謹慎度：${care}`;
     case "en-XA":
-      return `[${who}Þŕöĵéçţ ${name} · šéţţîñĝš: ${delivery}, ${merging}, çáŕé: ${care} ~~~~~~~~~~~]`;
+      return `[${who}Þŕöĵéçţ ${name} · šéţţîñĝš: ${delivery}, ${merging}, ŕîĝöŕ: ${care} ~~~~~~~~~~~]`;
     case "ar-XB":
-      return `${who}\u202eProject \u202c${name}\u202e · settings: \u202c${delivery}\u202e, \u202c${merging}\u202e, care: \u202c${care}`;
+      return `${who}\u202eProject \u202c${name}\u202e · settings: \u202c${delivery}\u202e, \u202c${merging}\u202e, rigor: \u202c${care}`;
   }
-  return `${who}Project ${name} · settings: ${delivery}, ${merging}, care: ${care}`;
+  return `${who}Project ${name} · settings: ${delivery}, ${merging}, rigor: ${care}`;
 }
 
 export function feedDeliveryPull(): string {
@@ -14210,11 +14210,11 @@ export function cardRecordCare(input: { care: string }): string {
     case "zh-Hant":
       return `謹慎度：${care}`;
     case "en-XA":
-      return `[${care} çáŕé ~~]`;
+      return `[${care} ŕîĝöŕ ~~]`;
     case "ar-XB":
-      return `${care}\u202e care\u202c`;
+      return `${care}\u202e rigor\u202c`;
   }
-  return `${care} care`;
+  return `${care} rigor`;
 }
 
 export function cardRecordUnreadable(): string {

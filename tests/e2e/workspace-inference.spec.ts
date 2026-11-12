@@ -8,8 +8,8 @@ import { cardMetaWords, FIRSTMATE_CARD_META } from "../../src/shared/cards";
 import {
   AUTONOMY_SWITCH_NAME,
   AUTONOMY_WORDS,
-  CARE_WORDS,
   PROJECT_DELIVERY_WORDS,
+  RIGOR_WORDS,
 } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
@@ -329,7 +329,7 @@ test("the captain can set project policy from the accordion in settings", async 
   await row.screenshot({ path: testInfo.outputPath("collapsed-asks-first.png") });
   await header.click();
   await expect(row.getByRole("button", { expanded: true })).toBeVisible();
-  await expect(page.getByRole("radio", { name: CARE_WORDS.standard })).toBeChecked();
+  await expect(page.getByRole("radio", { name: RIGOR_WORDS.standard })).toBeChecked();
   const approvalSwitch = page.getByRole("switch", { name: AUTONOMY_SWITCH_NAME });
   const stateLabel = row.locator("[data-switch-state-label]");
   const storedAutonomy = () =>
@@ -378,8 +378,8 @@ test("the captain can set project policy from the accordion in settings", async 
   await approvalSwitch.click();
   await expect(approvalSwitch).toHaveAttribute("aria-checked", "false");
   await expect(stateLabel).toHaveText(AUTONOMY_WORDS.putsInItself);
-  await page.getByRole("radio", { name: CARE_WORDS.reviewed }).click();
-  await expect(page.getByRole("radio", { name: CARE_WORDS.reviewed })).toBeChecked();
+  await page.getByRole("radio", { name: RIGOR_WORDS.reviewed }).click();
+  await expect(page.getByRole("radio", { name: RIGOR_WORDS.reviewed })).toBeChecked();
   await expect
     .poll(
       async () => {

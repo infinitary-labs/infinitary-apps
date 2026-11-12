@@ -12,8 +12,8 @@ import { devicePlace } from "./signIns";
 import {
   AUTONOMY_SWITCH_NAME,
   AUTONOMY_WORDS,
-  CARE_WORDS,
   PROJECT_DELIVERY_WORDS,
+  RIGOR_WORDS,
 } from "./vocabulary";
 
 /**
@@ -103,7 +103,7 @@ export const SETUP_CARD_WORDS = {
   runsOn: "Runs on",
   delivery: "Where changes go",
   autonomy: AUTONOMY_SWITCH_NAME,
-  care: "Care",
+  care: "Rigor",
   /** The fact naming the task key Firstmate asked for, when it named one. */
   key: "Task key",
 } as const;
@@ -122,7 +122,7 @@ export function setupSettingsWords(
     repo.autonomy
       ? `${AUTONOMY_WORDS.putsInItself.toLowerCase()} (autonomy on)`
       : `${AUTONOMY_WORDS.asksFirst.toLowerCase()} (autonomy off)`,
-    `${CARE_WORDS[repo.rigor ?? "standard"]} care (rigor ${repo.rigor ?? "standard"})`,
+    `${RIGOR_WORDS[repo.rigor ?? "standard"]} rigor (${repo.rigor ?? "standard"})`,
     repo.runsOn === AUTOMATIC_COMPUTER ? "chooses a computer for each new task" : `runs ${where}`,
   ].join(", ");
 }

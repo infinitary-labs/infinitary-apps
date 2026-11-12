@@ -25,7 +25,7 @@ import type { DropEffects } from "@shared/tasks";
 import { savedTaskTitle, taskTitleRefusal } from "@shared/taskTitle";
 import { cutText } from "@shared/textCut";
 import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
-import { CARE_WORDS } from "@shared/vocabulary";
+import { RIGOR_WORDS } from "@shared/vocabulary";
 import { amendBriefGoal, type BriefPart, type SpawnIntent } from "../orchestrator/intentBrief";
 import { KIND_SOURCE } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
@@ -1298,9 +1298,9 @@ export class TaskService {
               ? POLICY_DELIVERY_WORDS[next.delivery.value]
               : key === "autonomy"
                 ? POLICY_MERGING_WORDS[next.autonomy.value ? "on" : "off"]
-                : CARE_WORDS[next.rigor.value];
+                : RIGOR_WORDS[next.rigor.value];
           changes.push(
-            `${key === "autonomy" ? "Merging" : key === "rigor" ? "Care" : "Delivery"}: ${value} (${POLICY_SOURCE_WORDS[next[key].source]})${from}`,
+            `${key === "autonomy" ? "Merging" : key === "rigor" ? "Rigor" : "Delivery"}: ${value} (${POLICY_SOURCE_WORDS[next[key].source]})${from}`,
           );
         }
         if (next.rigor.requested !== next.rigor.value) changes.push(POLICY_CARE_BOUND);

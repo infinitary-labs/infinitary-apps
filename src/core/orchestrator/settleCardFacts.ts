@@ -30,8 +30,6 @@ import { overrideCellWords, overrideWords, standingOverride } from "@shared/hold
 import { opensPullRequest, QUEUE_STATUS, type RepoDelivery } from "@shared/repos";
 import {
   BATCH_CHECK_WORDS,
-  CARE_REFERENCE_WORD,
-  CARE_WORDS,
   CHECK_WORDS,
   CHECKS_NOT_READ_WORDS,
   changeLinesShortWords,
@@ -40,6 +38,8 @@ import {
   MERGE_ANYWAY_WORDS,
   REVIEW_EARLIER_WORDS,
   REVIEW_WORDS,
+  RIGOR_REFERENCE_WORD,
+  RIGOR_WORDS,
   RUN_WATCH_WORDS,
 } from "@shared/vocabulary";
 import { queueKind } from "../queue/shipped/rules.mjs";
@@ -426,7 +426,7 @@ export class SettleFacts {
     // shows only when it is not Default (the captain's answer 3).
     const policies = this.options.tasks.policiesOf(record);
     if (policies && policies.rigor.value !== "standard")
-      ref("care", CARE_WORDS[policies.rigor.value], undefined, ` ${CARE_REFERENCE_WORD}`);
+      ref("care", RIGOR_WORDS[policies.rigor.value], undefined, ` ${RIGOR_REFERENCE_WORD}`);
     const line = `<p class="inf-foot-line">${
       states.length > 0
         ? `<span class="inf-foot-states">${states

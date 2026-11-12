@@ -13,8 +13,8 @@ import type { DeviceSignIns } from "@shared/signIns";
 import {
   AUTONOMY_SWITCH_NAME,
   AUTONOMY_WORDS,
-  CARE_WORDS,
   PROJECT_DELIVERY_WORDS,
+  RIGOR_WORDS,
 } from "@shared/vocabulary";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -57,9 +57,9 @@ import { useSettingSave } from "./useSettingSave";
  */
 
 const RIGOR_OPTIONS = [
-  { value: "quick" as const, label: CARE_WORDS.quick },
-  { value: "standard" as const, label: CARE_WORDS.standard },
-  { value: "reviewed" as const, label: CARE_WORDS.reviewed },
+  { value: "quick" as const, label: RIGOR_WORDS.quick },
+  { value: "standard" as const, label: RIGOR_WORDS.standard },
+  { value: "reviewed" as const, label: RIGOR_WORDS.reviewed },
 ];
 
 const chevron = (
@@ -211,7 +211,7 @@ export function ProjectsTab() {
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)", marginBottom: ROW_GAP }}>
         Add a project here or ask your first mate, and open one to change how it works. A row says
         only what is set differently from a new project, which is offered as pull requests where it
-        lives, waits for your word before merging, takes Default care and runs on a computer chosen
+        lives, waits for your word before merging, takes Default rigor and runs on a computer chosen
         automatically.
       </div>
       <div
@@ -748,20 +748,18 @@ function ProjectRow({
             }
           />
           <PolicyRow
-            title="Care"
+            title="Rigor"
             description={
               personal
                 ? "Nothing here passes through a gate."
-                : repo.rigor
-                  ? "The standing care for every task here."
-                  : "Default care for every task here."
+                : "How thoroughly work here is checked."
             }
             control={
               personal ? (
                 <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>none</span>
               ) : (
                 <GroupedPills
-                  name="Care"
+                  name="Rigor"
                   htmlName={`rigor-${repo.id}`}
                   value={(repo.rigor ?? "standard") as Rigor}
                   options={RIGOR_OPTIONS}

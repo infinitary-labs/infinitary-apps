@@ -9,7 +9,7 @@ import {
 } from "../../src/core/orchestrator/settleWords";
 import { openDatabase } from "../../src/core/storage/db";
 import type { RiskDimension } from "../../src/shared/cards";
-import { CARE_WORDS } from "../../src/shared/vocabulary";
+import { RIGOR_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, startGitHubStub } from "./githubStub";
@@ -164,7 +164,7 @@ test("a merge card the app merges on its own shows once, after the merge, with i
     // The merge card's fact strip beside Chat, the pull request linked.
     const facts = factsStrip(frame);
     await expect(facts.project).toHaveText("meterlab");
-    await expect(facts.care).toHaveText(CARE_WORDS.quick);
+    await expect(facts.care).toHaveText(RIGOR_WORDS.quick);
     await expect(facts.change.locator("a")).toHaveAttribute("href", /\/pull\/\d+$/);
     // One note: no closing note of the first mate's beside it.
     expect(

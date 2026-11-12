@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { CARE_WORDS, DEFAULT_WORKSPACE_WORD, MERGE_WORDS } from "../../src/shared/vocabulary";
+import { DEFAULT_WORKSPACE_WORD, MERGE_WORDS, RIGOR_WORDS } from "../../src/shared/vocabulary";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_MODEL_LABEL } from "./mockModels";
@@ -110,7 +110,7 @@ test("an entity-escaped body is refused by name and the raw-tag retry renders as
   // the task's effective care are named there, not a delivery posture.
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(DEFAULT_WORKSPACE_WORD);
-  await expect(facts.care).toHaveText(CARE_WORDS.quick);
+  await expect(facts.care).toHaveText(RIGOR_WORDS.quick);
   // The card names the DISPATCHED model (review F1) on its top line, the
   // mock transport's model by its catalog name; the strip no longer
   // repeats it (INF-3709's plan).

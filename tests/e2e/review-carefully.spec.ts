@@ -6,10 +6,10 @@ import { openDatabase } from "../../src/core/storage/db";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskView } from "../../src/shared/tasks";
 import {
-  CARE_WORDS,
   CHECK_WORDS,
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
+  RIGOR_WORDS,
 } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -158,7 +158,7 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
     .poll(detail, { timeout: 30_000 })
     .toMatchObject({ policies: { rigor: { value: "reviewed", source: "task" } } });
   const edit = (await detail()).events.find(
-    (event) => event.kind === "note" && event.text.includes(CARE_WORDS.reviewed),
+    (event) => event.kind === "note" && event.text.includes(RIGOR_WORDS.reviewed),
   );
   expect(edit).toMatchObject({ actor: "captain" });
   expect(edit?.text).toContain("from the merge card");
@@ -205,7 +205,7 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
   const again = shownCard(page, MOCK_CAREFUL_REVIEWED_CARD_TITLE);
   await expect(again).toBeVisible({ timeout: 30_000 });
   const againFacts = factsStrip(cardBody(page, MOCK_CAREFUL_REVIEWED_CARD_TITLE));
-  await expect(againFacts.care).toHaveText(CARE_WORDS.reviewed);
+  await expect(againFacts.care).toHaveText(RIGOR_WORDS.reviewed);
   // The review's risk is among its state's words on rest (INF-3709's plan).
   await expect(againFacts.cell("review")).toHaveAttribute("title", /risk low/);
   await expect(again.getByRole("button", reviewChoice)).toHaveCount(0);

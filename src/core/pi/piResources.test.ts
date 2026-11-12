@@ -1750,7 +1750,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // the runbook says what it asks); a task on the personal workspace has
     // no care at all (contract v3.7: care exists only where a change lands
     // through a gate).
-    expect(prompt).toContain("# Default care\n\nBefore opening or updating a pull request:");
+    expect(prompt).toContain("# Default rigor\n\nBefore opening or updating a pull request:");
     expect(prompt).toContain(
       "The one exception is a task on the personal workspace: there you build in place",
     );
@@ -1832,7 +1832,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(quick).toContain(
       "Quick asks nothing beyond the repository's own gate and green checks: the five headings are welcome on your report, nothing more is required, and the Default procedure does not apply.",
     );
-    expect(quick).not.toContain("# Default care");
+    expect(quick).not.toContain("# Default rigor");
     expect(prompt).not.toContain("Quick asks nothing beyond");
     // Careful is served the Default section and its own, which points at
     // the careful-change skill; the reviewer reaches the crewmate through
@@ -1841,7 +1841,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       delivery: "direct-pr",
       rigor: "reviewed",
     });
-    expect(careful).toContain("# Default care");
+    expect(careful).toContain("# Default rigor");
     expect(careful).toContain("# Careful\n\nOpen the careful-change skill before your first edit");
     expect(prompt).not.toContain("# Careful");
     expect(prompt).not.toMatch(/\breviewer\b/);

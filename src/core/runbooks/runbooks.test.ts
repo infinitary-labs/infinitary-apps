@@ -342,7 +342,7 @@ describe("runbooks over existing prompt and skill doors", () => {
     }
     // The skill travels with the runbook, and the first mate reads its guide.
     expect(books.crew(code).skills.map((skill) => skill.name)).toContain("careful-change");
-    expect(books.firstmate().text).toContain("# Care levels");
+    expect(books.firstmate().text).toContain("# Rigor levels");
     books.set("care", false);
     const off = new Runbooks(root, new SettingsStore(db));
     expect(off.crew({ ...code, care: "reviewed" }).text).not.toContain(section("careful.json"));

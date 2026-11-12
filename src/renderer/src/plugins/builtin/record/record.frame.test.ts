@@ -799,19 +799,19 @@ describe("compact task record frame", () => {
     ).toEqual([
       ["crewmate", "Crewmate", "crewmate 21 on GPT-6 Sol"],
       ["branch", "Branch", "fm/task-ab12"],
-      ["delivery", "Delivery", "As a pull request · care: Default"],
+      ["delivery", "Delivery", "As a pull request · rigor: Default"],
     ]);
     // The closed More row names what it holds beside its label.
     expect(frame.node("more-preview").text()).toBe("branch · delivery");
     const facts = frame.node("facts").text();
     expect(facts).toContain("Crewmate crewmate 21 on GPT-6 Sol");
     expect(facts).toContain("Branch fm/task-ab12");
-    expect(facts).toContain("Delivery As a pull request · care: Default");
+    expect(facts).toContain("Delivery As a pull request · rigor: Default");
     expect(facts).not.toContain("openai/gpt-6-sol");
     frame.push(task({ rigor: "quick" }));
     expect(frame.section("details").hidden).toBe(false);
-    expect(frame.node("facts").text()).toBe("Delivery care: Quick");
-    expect(frame.fact("delivery")?.text()).toBe("care: Quick");
+    expect(frame.node("facts").text()).toBe("Delivery rigor: Quick");
+    expect(frame.fact("delivery")?.text()).toBe("rigor: Quick");
     expect(frame.fact("crewmate")).toBeUndefined();
     frame.push(task());
     expect(frame.fact("delivery")).toBeUndefined();
@@ -819,9 +819,9 @@ describe("compact task record frame", () => {
   });
 
   it.each([
-    ["direct-pr", "quick", "As a pull request · care: Quick"],
-    ["local-only", "standard", "Merged locally, no pull request · care: Default"],
-    ["in-place", "reviewed", "Built in place · care: Careful"],
+    ["direct-pr", "quick", "As a pull request · rigor: Quick"],
+    ["local-only", "standard", "Merged locally, no pull request · rigor: Default"],
+    ["in-place", "reviewed", "Built in place · rigor: Careful"],
   ] as const)(
     "reads %s delivery and %s care through the same fact identity",
     (mode, rigor, words) => {

@@ -1,7 +1,7 @@
 import { changeNumberLabel, type ForgeKind } from "@shared/forge";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { QUEUE_STATUS, type RepoView } from "@shared/repos";
-import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
+import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
 
 /**
  * Words of a project's policy rows in Settings -> Projects (`ProjectsTab`),
@@ -130,7 +130,7 @@ export function queueWaitingWords(delivery: RepoView["delivery"]): string {
 /**
  * The quiet words after a closed project row's name (INF-1495, the captain's
  * direction A): each names one way the project differs from a new one, which
- * is offered as pull requests where it lives, asks first, takes Default care
+ * is offered as pull requests where it lives, asks first, takes Default rigor
  * and runs on a computer chosen automatically.
  */
 export const PROJECT_ROW_WORDS = {
@@ -138,8 +138,8 @@ export const PROJECT_ROW_WORDS = {
   linked: "linked",
   localMerge: PROJECT_DELIVERY_WORDS["local-only"],
   mergesOnItsOwn: AUTONOMY_WORDS.putsInItself.toLowerCase(),
-  quick: `${CARE_WORDS.quick} care`,
-  careful: `${CARE_WORDS.reviewed} care`,
+  quick: `${RIGOR_WORDS.quick} rigor`,
+  careful: `${RIGOR_WORDS.reviewed} rigor`,
   runs: (where: string) => `runs ${where}`,
 } as const;
 

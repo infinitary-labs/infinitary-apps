@@ -14,7 +14,7 @@ import {
   RUNS_ON_THIS_MAC,
 } from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
-import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
+import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
 import { resolveWorkComputer } from "@shared/workComputer";
 import { z } from "zod";
 import type { CoreDispatch } from "../dispatcher";
@@ -237,7 +237,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     origin: "Where it lives",
     delivery: "Where changes go",
     autonomy: "Ask before merging",
-    rigor: "Care",
+    rigor: "Rigor",
     costLimit: "Cost limit",
     runsOn: "Runs on",
     placementRequirements: "Computer requirements",
@@ -250,7 +250,8 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     if (key === "scope") return value == null || value === "" ? "Not set" : String(value);
     if (key === "delivery") return PROJECT_DELIVERY_WORDS[value as RepoView["delivery"]];
     if (key === "autonomy") return value ? AUTONOMY_WORDS.putsInItself : AUTONOMY_WORDS.asksFirst;
-    if (key === "rigor") return CARE_WORDS[(value ?? "standard") as NonNullable<RepoView["rigor"]>];
+    if (key === "rigor")
+      return RIGOR_WORDS[(value ?? "standard") as NonNullable<RepoView["rigor"]>];
     if (key === "origin" && value === null) return "Kept on this computer";
     if (key === "runsOn")
       return value === AUTOMATIC_COMPUTER

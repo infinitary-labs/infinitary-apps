@@ -53,10 +53,10 @@ A number placeholder sits directly against its counter with no space (「{count}
 | System Settings (macOS) | システム設定 | macOS's own name. |
 | Reduce motion (macOS) | 視差効果を減らす | macOS's own Japanese setting name, used only in the path to it. |
 | Appearance | 外観 | macOS Japanese. |
-| care (the level) | 慎重さ | 「慎重さ：{care}」 replaces "{care} care". |
-| Quick | クイック | Care level. |
-| Default | 標準 | Care level. |
-| Careful | 慎重 | Care level. |
+| rigor (the level) | 慎重さ | 「慎重さ：{care}」 replaces "{care} rigor". |
+| Quick | クイック | Rigor level. |
+| Default | 標準 | Rigor level. |
+| Careful | 慎重 | Rigor level. |
 | Merges on its own | 自動でマージ | Merge setting. |
 | Asks first | 先に確認 | Merge setting. |
 | a stronger model | より強力なモデル | Replaces escalation. |

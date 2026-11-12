@@ -46,7 +46,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | account | compte | |
 | Settings | Réglages | As macOS French says it; macOS's own "System Settings" is "Réglages Système". |
 | Appearance | Apparence | |
-| care levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The care label reads "Soin : {care}". |
+| rigor levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The rigor label reads "Soin : {care}". |
 | Merges on its own | Fusionne seul | "fusionne seul" in the feed. |
 | Asks first | Demande d’abord | |
 | Ask before merging | Demander avant de fusionner | |

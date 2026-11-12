@@ -848,7 +848,7 @@
     const lands = [
       ...(delivery ? [modeWords[delivery.mode] ?? delivery.mode] : []),
       ...(delivery?.landedMode ? ["merged"] : []),
-      ...(current.rigor ? [`care: ${careWords[current.rigor] ?? current.rigor}`] : []),
+      ...(current.rigor ? [`rigor: ${careWords[current.rigor] ?? current.rigor}`] : []),
     ];
     const policies = current.policies;
     const sourceWords = { task: "This task", parent: "Parent task", project: "Project setting" };
@@ -881,7 +881,7 @@
         policies.autonomy.value ? "Merges on its own" : "Asks first",
         policies.autonomy.source,
       );
-      policy("care", "Care", careWords[policies.rigor.value], policies.rigor.source);
+      policy("care", "Rigor", careWords[policies.rigor.value], policies.rigor.source);
     } else if (lands.length > 0) facts.push(...fact("delivery", "Delivery", lands.join(" · ")));
     // Where it runs (docs/helper.md, "A task's own Runs on"), once another Mac runs work.
     if (current.runsOn) {
@@ -916,7 +916,7 @@
     const helper = must(document.querySelector("[data-policy-helper]"));
     helper.textContent = [
       ...(policies && policies.rigor.requested !== policies.rigor.value
-        ? ["Local merge uses Default care; Careful remains requested for pull requests."]
+        ? ["Local merge uses Default rigor; Careful remains requested for pull requests."]
         : []),
       ...(closed && policies ? ["This task is closed. Its policies are kept as history."] : []),
       ...(!closed && (policies || current.runsOn)

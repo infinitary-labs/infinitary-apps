@@ -145,7 +145,7 @@ describe("one task's facts on the crew summary and the task record", () => {
     const { why, reasoning, reason, ...recordShared } = Object.fromEntries(onRecord);
     expect(recordShared).toEqual(Object.fromEntries(shown));
     expect(reasoning).toBe("Extra high");
-    expect(reason).toBe("Reasoning one step lower for Quick care.");
+    expect(reason).toBe("Reasoning one step lower for Quick rigor.");
     expect(why).toBe("Why this modelBuilding from the plan in SCR-1.Comparison not recorded");
     // One order on both: the record only moves its strip below its rows.
     expect(onRecord.map(([id]) => id)).toEqual(TASK_FACTS.filter((id) => id !== "browser"));

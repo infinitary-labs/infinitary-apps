@@ -238,7 +238,7 @@ public enum PhoneRecordWords {
     public static let policyMergesOff = "Asks first"
     public static let policySource = ["task": "This task", "project": "Project setting", "parent": "Parent task"]
     public static let policyHelper = "Ask your first mate to change these for this task."
-    public static let policyCareBound = "Local merge uses Default care; Careful remains requested for pull requests."
+    public static let policyCareBound = "Local merge uses Default rigor; Careful remains requested for pull requests."
 }
 
 public enum PhonePastEnding {

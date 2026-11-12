@@ -93,7 +93,7 @@ describe("reasoning words", () => {
 
   it("says why reasoning sits below what its level asks, and nothing when it does not", () => {
     expect(reasoningNote({ level: "high", lower: "quick" })).toBe(
-      "Reasoning one step lower for Quick care.",
+      "Reasoning one step lower for Quick rigor.",
     );
     expect(reasoningNote({ level: "medium", lower: "capped" })).toBe(
       "Reasoning at the most this model offers.",
@@ -105,7 +105,7 @@ describe("reasoning words", () => {
 describe("modelFootnote", () => {
   it("joins why the model and why the reasoning is lower as two sentences", () => {
     expect(modelFootnote(reason("R3", "high"), { level: "high", lower: "quick" })).toBe(
-      "Building with no plan to follow yet. Reasoning one step lower for Quick care.",
+      "Building with no plan to follow yet. Reasoning one step lower for Quick rigor.",
     );
   });
 

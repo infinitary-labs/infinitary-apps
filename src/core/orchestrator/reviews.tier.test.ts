@@ -123,7 +123,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         .at(-1);
       expect(notice).toContain(POLICY_GUIDANCE_HEADING);
       expect(notice).toContain(careCarefulGuide.trim());
-      expect(notice).not.toContain("# Default care");
+      expect(notice).not.toContain("# Default rigor");
     } finally {
       repo.dispose();
     }

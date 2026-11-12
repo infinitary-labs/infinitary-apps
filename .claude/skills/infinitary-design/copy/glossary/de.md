@@ -55,7 +55,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | account | Konto | |
 | Settings | Einstellungen | Plural, so "Die Einstellungen sind offen". |
 | Appearance | Erscheinungsbild | As macOS German names it. |
-| care levels: Quick, Default, Careful | Schnell, Standard, Sorgfältig | "{care} care" is "Sorgfalt: {care}". |
+| rigor levels: Quick, Default, Careful | Schnell, Standard, Sorgfältig | "{care} rigor" is "Sorgfalt: {care}". |
 | Merges on its own | Führt selbst zusammen | |
 | Asks first | Fragt vorher | |
 | a stronger model | ein stärkeres Modell | |

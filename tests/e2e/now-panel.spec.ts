@@ -2,7 +2,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { reportSummary } from "../../src/shared/feed";
 import { DROP_TASK_LABEL } from "../../src/shared/recordDrop";
 import type { TaskBoard } from "../../src/shared/tasks";
-import { CARE_WORDS } from "../../src/shared/vocabulary";
+import { RIGOR_WORDS } from "../../src/shared/vocabulary";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, settled, within } from "./layout";
@@ -221,7 +221,7 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     const careFact = recordFact(page, "care");
     const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), task?.id ?? "");
     expect(detail).toMatchObject({ delivery: null, policies: { rigor: { value: "quick" } } });
-    await expect(careFact).toContainText(CARE_WORDS.quick);
+    await expect(careFact).toContainText(RIGOR_WORDS.quick);
     // Now, the crewmate's own newest doing, leads the record: the report's headline.
     await expect(taskFact(pane, "now")).toHaveText(reportSummary(MOCK_COMPLETION_TEXT));
     // The goal shows whole and the captain's words fold under it (INF-2261);

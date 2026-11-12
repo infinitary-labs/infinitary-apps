@@ -44,7 +44,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | account | حساب | |
 | Settings | الإعدادات | |
 | Appearance | المظهر | |
-| care | العناية | Written as "العناية: {care}" so the care label needs no agreement. |
+| rigor | العناية | Written as "العناية: {care}" so the rigor label needs no agreement. |
 | Quick | سريع | |
 | Default | افتراضي | |
 | Careful | متأنٍّ | Chosen over "حذر", which reads as wary rather than thorough. |

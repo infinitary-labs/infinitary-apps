@@ -55,7 +55,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Secrets (the Settings section) | 机密 | |
 | Devices | 设备 | |
 | Observe | 观测 | |
-| care levels: Quick, Default, Careful | 快速、默认、谨慎 | A record cell reads 快速把关, and a settings line reads 把关：谨慎. |
+| rigor levels: Quick, Default, Careful | 快速、默认、谨慎 | A record cell reads 快速把关, and a settings line reads 把关：谨慎. |
 | Merges on its own / Asks first | 自动合并 / 先询问 | Used instead of autonomy. |
 | a stronger model | 更强的模型 | Used instead of escalation. |
 | computer | 电脑 | Every computer, Macs, Linux and Windows alike, instead of machine or device type. |

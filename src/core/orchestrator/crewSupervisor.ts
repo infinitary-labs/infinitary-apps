@@ -24,7 +24,7 @@ import {
   type TaskPolicyEdits,
   taskPolicyEditsSchema,
 } from "@shared/taskPolicies";
-import { CARE_WORDS } from "@shared/vocabulary";
+import { RIGOR_WORDS } from "@shared/vocabulary";
 import { resolveFirstmateCardId } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { CrewPrograms, ProgramRunner } from "../program/programRunner";
@@ -1162,7 +1162,7 @@ export class CrewSupervisor {
         if (card.taskId !== taskId || !isRoutineMergeCard(card)) continue;
         this.cards.takeDown(
           card.id,
-          `The captain made this task ${CARE_WORDS[policies.rigor.value]}.`,
+          `The captain made this task ${RIGOR_WORDS[policies.rigor.value]}.`,
         );
         if (record.delivery?.captainWait?.cardId === card.id)
           this.options.tasks.delivery.clearCaptainWait(taskId);

@@ -115,7 +115,7 @@ export const POLICY_DELIVERY_WORDS = {
 export const POLICY_MERGING_WORDS = { on: "Merges on its own", off: "Asks first" } as const;
 export const POLICY_HELPER = "Ask your first mate to change these for this task.";
 export const POLICY_CARE_BOUND =
-  "Local merge uses Default care; Careful remains requested for pull requests.";
+  "Local merge uses Default rigor; Careful remains requested for pull requests.";
 
 const CARE_RANK = { quick: 0, standard: 1, reviewed: 2 } as const;
 
@@ -147,11 +147,11 @@ export function policyEditConsequences(input: {
     const previous = CARE_RANK[input.before.rigor.value];
     if (next > previous) {
       parts.push(
-        "Higher care requires missing validation or review before the next push or merge.",
+        "Higher rigor requires missing validation or review before the next push or merge.",
       );
     } else if (next < previous) {
       parts.push(
-        "A lower care removes only policy-owned requirements and keeps counts and history.",
+        "A lower rigor removes only policy-owned requirements and keeps counts and history.",
       );
     }
   }

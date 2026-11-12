@@ -351,7 +351,7 @@ public struct PhoneTaskFacts: Sendable {
                              "xhigh": "Extra high", "default": "Model's own"]
 
     static func reasoningNote(_ reasoning: PhoneTask.Reasoning) -> String? {
-        if reasoning.lower == "quick" { return "Reasoning one step lower for Quick care." }
+        if reasoning.lower == "quick" { return "Reasoning one step lower for Quick rigor." }
         if reasoning.lower == "capped" { return "Reasoning at the most this model offers." }
         return nil
     }

@@ -44,7 +44,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | subscription | assinatura | |
 | Settings | Ajustes | Follows Apple's Brazilian Portuguese; macOS's own is "Ajustes do Sistema". |
 | Appearance | Aparência | |
-| care levels | Rápido, Padrão, Cuidadoso | "{care} care" is "Cuidado {care}"; the feed says "cuidado: Rápido". |
+| rigor levels | Rápido, Padrão, Cuidadoso | "{care} rigor" is "Cuidado {care}"; the feed says "cuidado: Rápido". |
 | Merges on its own / Asks first | Mescla por conta própria / Pergunta antes | |
 | a stronger model | um modelo mais forte | |
 | Reasoning | Raciocínio | |

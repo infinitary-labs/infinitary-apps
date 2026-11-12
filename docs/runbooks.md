@@ -4,7 +4,7 @@ A runbook is a folder of guidance, not a program runtime and not a skill.
 Its `runbook.json` may name a first-mate section, one crew section or several each with its own selector, a skills folder and HTML parts or pictures.
 A section is plain text, either a Markdown file or a JSON string.
 Delivery, Testing and Naming sections are Markdown; `node scripts/generate-runbook-fallback.ts` produces their code fallback for app and plain-Node consumers, and `pnpm check` refuses drift.
-Care levels retains its JSON-string fallbacks, and runbooks other people made may still use JSON strings.
+Rigor levels retains its JSON-string fallbacks, and runbooks other people made may still use JSON strings.
 Skills inside it use the Agent Skills format and are read on demand.
 The host does not decide which subject an ask belongs to.
 
@@ -29,7 +29,7 @@ The manifest may declare a replacement; enabling it turns the named runbook off 
 Adding a runbook from elsewhere uses the existing installer; personal copies use the same guidance reader and switches.
 
 Enabled first-mate sections go through the appended-instructions door at each idle boundary, with `instructions_sha` over the exact joined text.
-They are joined in list order - the shared `BUILTIN_RUNBOOK_ORDER` (Common workflows, Delivery judgment, Testing rules, Care levels, Commit and PR naming, Programs, Casual projects, Lessons, Batched pull requests, Computer cleanup, Advanced architecture), then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
+They are joined in list order - the shared `BUILTIN_RUNBOOK_ORDER` (Common workflows, Delivery judgment, Testing rules, Rigor levels, Commit and PR naming, Programs, Casual projects, Lessons, Batched pull requests, Computer cleanup, Advanced architecture), then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
 Runbooks are outside the first mate's hard fixed-context budget; the model's physical context window still applies.
 A switch affects the first mate's next idle boundary and newly opened crew conversations, not a prompt already running.
 No procedure is refused for exceeding the core budget.
@@ -125,7 +125,7 @@ Lessons holds its first-mate section and the lesson skill with its tested card p
 Its guide points to the workspace-owned `personal-panel/parts/lesson/` template; executable panel source is not inside the runbook's guidance skill.
 It declares ongoing work and a requested intelligence rather than a special task kind.
 Testing rules supplies only its selected crew sections.
-Care levels holds what each of the three care names asks (`resources/runbooks/care`): the host records Quick, Default and Careful as typed facts and selects by them, and holds nothing else on a name.
+Rigor levels holds what each of the three care names asks (`resources/runbooks/care`): the host records Quick, Default and Careful as typed facts and selects by them, and holds nothing else on a name.
 Its Default section, served at Default and Careful, carries the procedure before a pull request, the evidence-first validation and the five report headings; its Quick section says nothing beyond the project's gate and green checks is required; its Careful section points at the `careful-change` skill, which holds the independent review's order - commit, report, no push or card until the review passed - the care notice for work already built and the live validation contract; and its first-mate guide says when to commission the review, how to relay findings and when to steer the push and the card.
 With no runbook reader present, the crewmate prompt serves the same bundled sections itself (`careGuideFor`, `src/core/pi/piResources.ts`), so a crewmate on a work computer or in a test is told the same.
 Turning it off leaves the names on the record and serves no procedure for them.

@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { MERGE_LINE_MARK, mergedWords } from "../../src/core/orchestrator/settleWords";
 import { openDatabase } from "../../src/core/storage/db";
-import { CARE_WORDS, MERGE_NOT_NOW_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import { MERGE_NOT_NOW_WORDS, MERGE_WORDS, RIGOR_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -136,7 +136,7 @@ test("the host holds a Firstmate merge where autonomy is off, and the captain's 
   // The strip gives the task's care without the old autonomy cell; the
   // captain still gets the actual merge decision in the footer.
   const frame = cardBody(page, cardTitle);
-  await expect(factsStrip(frame).care).toHaveText(CARE_WORDS.quick);
+  await expect(factsStrip(frame).care).toHaveText(RIGOR_WORDS.quick);
   await expect(page.getByRole("button", { name: MERGE_WORDS["merge-pr"] })).toBeVisible();
   // INF-2744: the merge closes the task and drops its own working copy, so
   // Discard sits beside it, and Not now does not.
@@ -208,7 +208,7 @@ test("a task the captain said to merge on green merges from its own merge card, 
   const card = shownCard(page, cardTitle);
   await expect(card).toBeVisible({ timeout: 15_000 });
   const frame = cardBody(page, cardTitle);
-  await expect(factsStrip(frame).care).toHaveText(CARE_WORDS.quick);
+  await expect(factsStrip(frame).care).toHaveText(RIGOR_WORDS.quick);
   await expect(frame.locator(`[${MERGE_LINE_MARK}]`)).toContainText(mergedWords("", true).trim());
   await expect(card.getByRole("button", { name: MERGE_WORDS["merge-pr"] })).toHaveCount(0);
   expect(

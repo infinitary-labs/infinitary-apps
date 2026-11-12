@@ -95,4 +95,4 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 - [The task record](../docs/task-record.md): "A task's change", "A task's change evidence and permissions".
 - [The forge seam](../docs/forge.md): "Check facts and crew judgment", "Saved change stories", "A requested merge", "No-mistakes' attestation".
 - [Delivery rigor](../docs/delivery-rigor.md): "The three care names", "The review", "The record and its holds", "The holds".
-- [Runbooks](../docs/runbooks.md): the delivery judgment and the Care levels runbook.
+- [Runbooks](../docs/runbooks.md): the delivery judgment and the Rigor levels runbook.

@@ -72,3 +72,7 @@ A use Infinitary needs to work (task classification) shows on and off, its note 
 A use the answering model's approval predates shows off with one `--text-xs` / `--fg-3` line, "Turning it on asks your OK for Jev once."; turning it on opens the `ConsentDialog` with that model's approval, and Not now leaves it off.
 Turning Jev on, or picking an OpenRouter decision model not yet approved, opens the same dialog: Jev's key field sits inside it.
 A home on an older version draws the answerer row alone.
+
+The board ends with a ghost "Reset to starting levels" under Decisions.
+A first click arms it as a danger `Button` "Confirm reset", with a ghost "Cancel" beside it and the note "Always use choices are untouched." in `--text-xs` / `--fg-3`.
+The second click puts every model back in its starting levels; Cancel puts the button back unpressed and returns focus to it, as the provider row's "Reset model slots" offers Cancel beside its "Confirm reset".

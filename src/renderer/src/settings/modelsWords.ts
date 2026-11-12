@@ -2,6 +2,18 @@
 export const STARTING_LEVELS_SUMMARY = "no levels chosen - using the starting levels";
 export const NOT_IN_USE = "not in use";
 
+/**
+ * The Models card's reset at its foot: the first press arms it, the second
+ * resets, and Cancel puts it back unpressed, as the provider row's reset in
+ * Subscriptions offers.
+ */
+export const STARTING_LEVELS_RESET = {
+  reset: "Reset to starting levels",
+  confirm: "Confirm reset",
+  cancel: "Cancel",
+  note: "Always use choices are untouched.",
+} as const;
+
 /** The Decisions row's menu item that opens the OpenRouter picker, offered while OpenRouter has models. */
 export const USE_OPENROUTER_DECISION_MODEL = "Use an OpenRouter decision model";
 

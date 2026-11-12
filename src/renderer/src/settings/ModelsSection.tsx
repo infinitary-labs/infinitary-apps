@@ -7,11 +7,11 @@ import type { ModelSlotsView, ReasoningChoice, Slot } from "@shared/modelSlots";
 import { SLOTS } from "@shared/modelSlots";
 import type { RoutingSettings } from "@shared/quota";
 import { allowanceProviderOf, servedModelKey } from "@shared/quota";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../design";
 import { DecisionsGroup } from "./DecisionsGroup";
 import { ModelLevels } from "./ModelLevels";
-import { NOT_IN_USE, STARTING_LEVELS_SUMMARY } from "./modelsWords";
+import { NOT_IN_USE, STARTING_LEVELS_RESET, STARTING_LEVELS_SUMMARY } from "./modelsWords";
 
 /**
  * "Which of my models may Firstmate use, and as what." Level-first: four
@@ -103,6 +103,7 @@ export function ModelsSection({
   const models = slots?.models ?? [];
   const byName = slots?.byName ?? [];
   const [resetArmed, setResetArmed] = useState(false);
+  const resetButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open || !focusAccountId) return;
     document.getElementById("fm-subs-models-panel")?.scrollIntoView({ block: "nearest" });
@@ -206,8 +207,9 @@ export function ModelsSection({
               onSetDecisionUse={onSetDecisionUse}
             />
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <Button
+              ref={resetButton}
               variant={resetArmed ? "danger" : "ghost"}
               size="sm"
               onClick={() => {
@@ -219,12 +221,25 @@ export function ModelsSection({
                 setResetArmed(false);
               }}
             >
-              {resetArmed ? "Confirm reset" : "Reset to starting levels"}
+              {resetArmed ? STARTING_LEVELS_RESET.confirm : STARTING_LEVELS_RESET.reset}
             </Button>
             {resetArmed && (
-              <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
-                Always use choices are untouched.
-              </span>
+              <>
+                {/* Cancel leaves the levels as they are and hands focus back to the reset. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setResetArmed(false);
+                    resetButton.current?.focus();
+                  }}
+                >
+                  {STARTING_LEVELS_RESET.cancel}
+                </Button>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
+                  {STARTING_LEVELS_RESET.note}
+                </span>
+              </>
             )}
           </div>
         </div>

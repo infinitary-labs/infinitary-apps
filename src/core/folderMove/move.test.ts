@@ -135,10 +135,18 @@ function olderFolder(): World {
   recordStartAtLogin(from, true);
 
   // The database, its newest rows only in the log: built beside, copied in
-  // while still open, as a quit that never folded its log leaves it.
+  // while still open, as a quit that never folded its log leaves it. A
+  // reader holds the empty file's view from before the first write, so no
+  // checkpoint can fold any of the log into the main file, however many
+  // pages the migrations write: SQLite folds the log by itself once it
+  // passes a thousand pages, before a pragma set after them could stop it.
   const build = join(base, "build");
+  mkdirSync(build);
+  const firstView = new Database(join(build, "firstmate.db"));
+  firstView.pragma("journal_mode = WAL");
+  firstView.exec("BEGIN");
+  firstView.prepare("SELECT count(*) FROM sqlite_master").get();
   const db = openDatabase(build);
-  db.pragma("wal_autocheckpoint = 0");
   seedProject(db, { id: "r-inside", name: "inside", path: inFleet, setupKind: "init", addedAt: 1 });
   const tasks = new TaskService({ db });
   seedTask(tasks, {
@@ -162,6 +170,7 @@ function olderFolder(): World {
     JSON.stringify(join(from, "firstmate", "sessions", "rolling.jsonl")),
   );
   for (const name of readdirSync(build)) copyFileSync(join(build, name), join(from, name));
+  firstView.close();
   db.close();
 
   for (const { copy, file } of CLAUDE_SESSIONS) {

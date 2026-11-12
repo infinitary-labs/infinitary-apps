@@ -585,6 +585,8 @@ describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", 
   // INF-643 captain approval: replace the source-text ban on xattr with the safety fact
   // it intended. Execute the generated hooks through real Homebrew on quarantined fixture
   // apps; ownership may change, but quarantine, unrelated metadata and app bytes may not.
+  // Homebrew after 7.0.13 loads a cask only by name, refusing a path or Ruby source, so the
+  // generated casks reach it through a tap of their own, trusted where Homebrew has tap trust.
   it.each(versions)(
     "Homebrew %s records ownership without changing quarantine or app contents",
     (version) => {
@@ -618,10 +620,23 @@ describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", 
           },
           tap,
         );
+        const source = join(world.dir, "taps", tap.repo);
+        mkdirSync(join(source, "Casks"), { recursive: true });
+        world.git(source, "init", "--quiet", "--initial-branch=main");
+        for (const channel of ["stable", "alpha"] as const) {
+          writeFileSync(
+            join(source, "Casks", `${tap.caskTokens[channel]}.rb`),
+            renderCask(channel, target, notice, tap),
+          );
+        }
+        world.git(source, "add", "--all");
+        world.git(source, "commit", "--quiet", "-m", "generated casks");
+        world.brewOk("tap", tap.tap, source);
+        if (existsSync(join(world.prefix, "Library/Homebrew/cmd/trust.rb"))) {
+          world.brewOk("trust", "--tap", tap.tap);
+        }
         for (const channel of ["stable", "alpha"] as const) {
           const token = tap.caskTokens[channel];
-          const cask = join(world.dir, `${token}.rb`);
-          writeFileSync(cask, renderCask(channel, target, notice, tap));
           const staged = join(world.prefix, "Caskroom", token, artifactVersion);
           mkdirSync(staged, { recursive: true });
           checked("/usr/bin/ditto", ["-x", "-k", artifact.zip, staged]);
@@ -647,7 +662,7 @@ describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", 
             script,
             `
 require "cask/cask_loader"
-cask = Cask::CaskLoader.load(Pathname(${JSON.stringify(cask)}))
+cask = Cask::CaskLoader.load(${JSON.stringify(`${tap.tap}/${token}`)})
 phases = [:preflight_steps, :preflight, :postflight_steps, :postflight]
 hooks = cask.artifacts.select { |artifact| phases.include?(artifact.class.dsl_key) }
 raise "Expected ownership and channel hooks" unless hooks.length == 2

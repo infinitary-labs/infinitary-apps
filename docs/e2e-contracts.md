@@ -189,6 +189,7 @@ For a pointer activation dispatched inside a hidden frame, `focusOn(target, { fo
 Hover alone does not change Chromium's focus-visible modality, so scripted default focus is not evidence of pointer focus.
 A `fill` moves focus the same way, so a window key a journey presses after filling a field inside a frame (`pressWindowKey`) waits on `focusOn(field)` first: a key that reaches the window before it hears focus moved finds the window's focus where it was before, and command search opened then gives focus back there (INF-1132).
 `focus()` on an inert element does nothing, and the stage keeps a card inert until it appears, as a task record does until its body draws (`docs/renderer.md`), so both first wait until neither the target nor a frame around it is inert.
+`focus()` on a disabled control does nothing either, and a control stays disabled while its value loads, as Settings' Start at login does until its saved setting is read, so both also wait until the target is enabled.
 They take their turn on the page's one input queue (`takeTurn`, `tests/e2e/inputQueue.ts`), the queue `expandDock` and `clickInBody` use, so a dock expanded in the background never overlaps them.
 A target that is a frame's body is not focusable by itself: press on the frame's element (`frameIn(scope)`), which is where the window's focus goes.
 The `e2e-bare-focus` Biome rule (`tests/lint/e2e-bare-focus.grit`) refuses an awaited `target.focus()` in a `*.spec.ts`.

@@ -144,6 +144,10 @@ test("the window starts the command in the background, quits alone, and stops it
         COMMAND_STOP_WORDS.startAtLogin,
       );
       const login = settingRow(page, "start-at-login").getByRole("switch");
+      // The switch stays disabled until it has read the saved setting, which
+      // beside the command is a question to the command; its off before then
+      // is a placeholder, not the setting.
+      await expect(login).toBeEnabled();
       await expect(login).toHaveAttribute("aria-checked", "false");
       await focusOn(login);
       await pressKey(login, "Space");

@@ -324,10 +324,12 @@ async function holdsFocus(target: Locator, acrossFrames = false): Promise<boolea
 }
 
 /**
- * Whether `target` can take focus: neither it nor any frame it sits in is
- * inside an inert part of its document. `focus()` on an inert element does
- * nothing, and the stage keeps a card inert until it appears: a task record
- * waits for its body to draw (INF-510).
+ * Whether `target` can take focus: it is not disabled, and neither it nor
+ * any frame it sits in is inside an inert part of its document. `focus()` on
+ * a disabled or inert element does nothing. A control stays disabled until
+ * what it shows has loaded, as Settings' Start at login does until its saved
+ * setting is read, and the stage keeps a card inert until it appears: a task
+ * record waits for its body to draw (INF-510).
  */
 async function canTakeFocus(target: Locator): Promise<boolean> {
   const handles: ElementHandle<Node>[] = [];
@@ -335,10 +337,12 @@ async function canTakeFocus(target: Locator): Promise<boolean> {
     let element: ElementHandle<Node> | null = await target.elementHandle({ timeout: 1_000 });
     while (element) {
       handles.push(element);
-      const inert = await element.evaluate(
-        (node) => (node as Element).closest?.("[inert]") != null,
-      );
-      if (inert) return false;
+      // A frame's element is never disabled, so asking each level asks the target.
+      const held = await element.evaluate((node) => {
+        const each = node as Element;
+        return each.closest?.("[inert]") != null || each.matches?.(":disabled") === true;
+      });
+      if (held) return false;
       const frame = await element.ownerFrame();
       element = frame?.parentFrame() ? await frame.frameElement() : null;
     }
@@ -355,7 +359,7 @@ async function canTakeFocus(target: Locator): Promise<boolean> {
 async function untilFocusable(target: Locator): Promise<void> {
   await expect
     .poll(() => canTakeFocus(target), {
-      message: "the target can take focus: nothing inert holds it",
+      message: "the target can take focus: it is enabled and nothing inert holds it",
     })
     .toBe(true);
 }
@@ -377,7 +381,8 @@ export async function untilFocused(target: Locator): Promise<void> {
  * lands a moment later, and a key pressed in between goes wherever focus
  * still was. A journey that focuses an element goes through here, or
  * presses a key on it through `pressKey`. A target that cannot take focus
- * yet, such as a card the stage has not shown, is focused once it can. The
+ * yet, such as a card the stage has not shown or a control still disabled
+ * while its value loads, is focused once it can. The
  * press takes its turn behind any other input to the page (`takeTurn`,
  * tests/e2e/inputQueue.ts).
  */

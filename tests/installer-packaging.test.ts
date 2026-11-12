@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSyn
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { expect, it, onTestFinished } from "vitest";
-import { notarizationRunner } from "../scripts/installer-notarize.ts";
+import { notarizationRunner } from "../scripts/notarize.ts";
 import { hostEnv } from "../src/core/hostEnv";
 import { scratchDir } from "./helpers/scratchDirs";
 

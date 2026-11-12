@@ -139,8 +139,9 @@ describe("signed release workflow", () => {
     expect(workflow).toContain("scripts/verify-app.sh");
     expect(workflow).toContain("--signed --gatekeeper");
     expect(workflow).toContain("scripts/check-app-launch.sh");
-    expect(workflow).toContain("xcrun notarytool submit");
-    expect(workflow).toContain("xcrun stapler staple");
+    // Notarizing, stapling and validating the ticket are the workflow's own
+    // scripts/notarize.ts's (tests/installer-notarize.test.ts).
+    expect(workflow).toContain("node .release-tooling/scripts/notarize.ts ");
     expect(workflow).toContain("gh release download");
     expect(workflow).toContain("shasum -a 256 -c");
   });

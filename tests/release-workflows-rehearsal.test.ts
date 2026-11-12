@@ -598,6 +598,11 @@ describe("the signed channel workflow", () => {
     // alpha run 42464772458 failed on a 504 from GitHub's release server
     // (tests/ensure-electron-installed.test.ts runs the step).
     const zipsReader = ".github/actions/electron-download/zips.mjs";
+    // Both of its notarizations, the app's and the disk image's, go through
+    // the workflow's own scripts/notarize.ts, which recovers from a dropped
+    // connection to Apple, after the alpha run 43170881035 lost its disk
+    // image's upload to a connect timeout (tests/installer-notarize.test.ts).
+    const notarizer = "scripts/notarize.ts";
     // The publish job's install restores Electron's and git's downloads
     // through the workflow's own action as well, which an older alpha's
     // commit may predate (docs/testing.md, "Downloads from GitHub's release
@@ -607,7 +612,7 @@ describe("the signed channel workflow", () => {
     // older alpha's commit predates (INF-3224; tests/release-workflows-handoff.test.ts).
     const fetcher = "scripts/fetch-without-credential.sh";
     for (const [job, jobSteps, tooling] of [
-      ["release", signingSteps, [...gate, zipsReader]],
+      ["release", signingSteps, [...gate, notarizer, zipsReader]],
       ["publish", publishSteps, [...gate, ...packageCheck, ...downloads, fetcher]],
     ] as const) {
       const fetched = jobSteps.findIndex(
@@ -638,5 +643,13 @@ describe("the signed channel workflow", () => {
     expect(
       signingSteps.findIndex((candidate) => candidate.with?.path === ".release-tooling"),
     ).toBeLessThan(packaged);
+    const notarizes = signingSteps.filter((candidate) =>
+      /notarytool|stapler/.test(candidate.run ?? ""),
+    );
+    expect(notarizes.map((candidate) => candidate.id)).toEqual([]);
+    for (const id of ["notarize", "dmg"])
+      expect(signingSteps.find((candidate) => candidate.id === id)?.run, id).toContain(
+        `node .release-tooling/${notarizer} `,
+      );
   });
 });

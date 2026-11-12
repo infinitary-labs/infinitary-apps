@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-notarization-drops",
+      "reason": "Release work: the release's Mac notarization recovers from a dropped connection to Apple's notary service instead of failing the release."
+    }
+  ]
+}

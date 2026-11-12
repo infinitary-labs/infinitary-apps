@@ -263,6 +263,14 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   Most of the disk image's time is Apple's notarization wait, so the signing job starts the disk image in the background once the zip is built and the record read.
   Meanwhile it runs the zip's Gatekeeper and launch gates and uploads the zip's artifact; then it waits for the disk image, prints its log, fails on its exit status, and uploads the manifest and the disk image.
   The update check fetches only the zip's artifact.
+- **Notarization survives a dropped connection to Apple.**
+  The app and the disk image are each notarized through the workflow's own `scripts/notarize.ts`, so a release that builds an older commit notarizes the same way.
+  It uploads the archive, saves the submission ID Apple assigns, reads that submission until Apple accepts or rejects it, then staples the ticket and validates it.
+  A recorded transport failure, one of Foundation's network errors or notarytool's connect or read timeout, gets retries for status reads and ticket attachment, waiting fifteen seconds, thirty seconds, then one minute three times.
+  An upload such a failure broke off is uploaded again as a new submission of the same bytes, up to three uploads, since a submission whose upload broke off may never receive its file; its journal keeps the abandoned ID.
+  A rejection or an authentication error fails at once, and only acceptance followed by a validated ticket passes.
+  The wait has no budget of its own: the signing job's time limit bounds it, as it bounded `notarytool submit --wait`.
+  Each failed request's output goes to the job's log.
 - **Release notes are checked first (`docs/release-notes.md`).**
   The `notes` job runs before `verify` or any signing, on the resolved source with full history.
   Every source change since the previous release needs a note or a reviewed exclusion, reviewed with its change before merge.
@@ -568,7 +576,7 @@ Before installation, signing or trust changes, `scripts/installer-environment.ts
 It creates the scratch home's `Library/Preferences` before writing the keychain search list, because Security does not create that parent directory.
 Before packaging, it checks the disposable identity's search-list visibility and signs and verifies a throwaway executable; finding the certificate alone is not signing proof.
 It builds real release binaries at ordered fixture versions, notarizes them, and tests the actual native updater on Apple silicon and Intel.
-The packager's automatic notarization is disabled: `scripts/installer-notarize.ts` submits each app and disk image once, saves its submission ID and artifact digest, and reads that same submission until Apple accepts or rejects it.
+The packager's automatic notarization is disabled: `scripts/installer-notarize.ts`, the guarded entry to the release's `scripts/notarize.ts`, submits each app and disk image once, saves its submission ID and artifact digest, and reads that same submission until Apple accepts or rejects it.
 The upload streams normal output and saves the assigned ID before the upload finishes; JSON output would withhold it until the command ends.
 Uploads use the enclosing workflow's time limit, not the two-minute deadline for status and ticket commands.
 If saving an ID fails, the script stops its upload child and reports that failure; it never continues without the journal.

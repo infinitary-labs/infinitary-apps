@@ -835,8 +835,9 @@ jobs:
       # probe replaces the source's once the app is packaged, before any
       # launch; the app's bytes stay the source's. The Electron zips'
       # reader the package step runs is the workflow's own too, since that
-      # older commit may predate it.
-      - name: Check out the workflow's own launch gate and Electron zips reader
+      # older commit may predate it, and so is the notarization both the app
+      # and the disk image go through.
+      - name: Check out the workflow's own launch gate, Electron zips reader and notarization
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -846,6 +847,7 @@ jobs:
           sparse-checkout: |
             scripts/check-app-launch.sh
             scripts/app-runtime-version.mjs
+            scripts/notarize.ts
             .github/actions/electron-download/zips.mjs
 
       - name: Package and sign the universal app
@@ -907,7 +909,11 @@ jobs:
         id: work-mode
         run: scripts/check-helper.sh "dist/mac-universal/$APP_NAME"
 
-      # Notarize the exact bundle, then staple.
+      # Notarize the exact bundle, then staple and validate its ticket. A
+      # dropped connection to Apple does not end the release: an upload it
+      # broke off is uploaded again, and status reads and stapling are retried
+      # (scripts/notarize.ts; alpha run 43170881035 lost its disk image's
+      # upload to a connect timeout).
       - name: Notarize
         id: notarize
         env:
@@ -918,12 +924,7 @@ jobs:
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/notary" && mkdir -p "$RUNNER_TEMP/notary"
           ditto -c -k --sequesterRsrc --keepParent "dist/mac-universal/$APP_NAME" "$RUNNER_TEMP/notary/notarize.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/notary/notarize.zip" \
-            --key "$APPLE_API_KEY" \
-            --key-id "$APPLE_API_KEY_ID" \
-            --issuer "$APPLE_API_ISSUER" \
-            --wait
-          xcrun stapler staple "dist/mac-universal/$APP_NAME"
+          node .release-tooling/scripts/notarize.ts "$RUNNER_TEMP/notary/notarize.zip" "dist/mac-universal/$APP_NAME" "$RUNNER_TEMP/notary/app.json"
 
       - name: Build the distribution zip
         id: zip-build
@@ -1004,8 +1005,7 @@ jobs:
           scripts/build-mac-dmg.sh "$FINAL/$APP_NAME" "$VERSION" "$RUNNER_TEMP/dmg"
           DIST_DMG="$RUNNER_TEMP/dmg/$DMG_NAME"
           codesign --force --sign "$SIGN_IDENTITY" --keychain "$CSC_KEYCHAIN" --timestamp "$DIST_DMG"
-          xcrun notarytool submit "$DIST_DMG" --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" --wait
-          xcrun stapler staple "$DIST_DMG"
+          node .release-tooling/scripts/notarize.ts "$DIST_DMG" "$DIST_DMG" "$RUNNER_TEMP/dmg-job/notary.json"
           scripts/verify-mac-dmg.sh "$DIST_DMG" "$FINAL_ZIP" "$VERSION"
           (cd "$(dirname "$DIST_DMG")" && shasum -a 256 "$DMG_NAME" > "$DMG_NAME.sha256")
           SH

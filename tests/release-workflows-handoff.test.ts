@@ -456,7 +456,8 @@ describe("the signed channel workflow", () => {
      * image starts in the background, so the zip's gate and upload run while
      * Apple notarizes it, and the step that waits for it passes or fails on
      * its outcome. The disk image's own scripts and Apple's tools are
-     * stand-ins; the notarization stand-in holds until the test lets it go.
+     * stand-ins, behind the workflow's own scripts/notarize.ts; the upload
+     * stand-in holds until the test lets it go.
      */
     it("builds the disk image beside the zip's steps, and its waiting step reports how it ended", () => {
       const resolve = resolveOutputs();
@@ -466,13 +467,25 @@ describe("the signed channel workflow", () => {
         const work = join(temp, "source");
         const bin = join(temp, "bin");
         mkdirSync(join(work, "scripts"), { recursive: true });
+        mkdirSync(join(work, ".release-tooling", "scripts"), { recursive: true });
+        cpSync(
+          join(root, "scripts", "notarize.ts"),
+          join(work, ".release-tooling", "scripts", "notarize.ts"),
+        );
         mkdirSync(bin);
         const gate = join(temp, "notarization-done");
+        const submission = "7cb8517c-e1ac-435c-a45c-f3c87fa03fa2";
         const tools: Record<string, string> = {
           [join(bin, "ditto")]: 'for last; do :; done; mkdir -p "$last"',
           [join(bin, "codesign")]: "exit 0",
-          [join(bin, "xcrun")]:
-            `if [[ "$1" == notarytool ]]; then while [[ ! -e "${gate}" ]]; do sleep 0.1; done; fi`,
+          // notarytool's normal output for an upload, and its JSON for a read.
+          [join(bin, "xcrun")]: [
+            'case "$1 $2" in',
+            `  "notarytool submit") while [[ ! -e "${gate}" ]]; do sleep 0.1; done`,
+            `    printf 'Submission ID received\\n  id: ${submission}\\nSuccessfully uploaded file\\n' ;;`,
+            `  "notarytool info") printf '{"id":"${submission}","status":"Accepted"}\\n' ;;`,
+            "esac",
+          ].join("\n"),
           [join(work, "scripts", "build-mac-dmg.sh")]:
             'mkdir -p "$3" && echo image > "$3/$DMG_NAME"',
           [join(work, "scripts", "verify-mac-dmg.sh")]: `echo "checked $1"; exit ${verifyStatus}`,
@@ -501,7 +514,10 @@ describe("the signed channel workflow", () => {
           );
           return { result, outputs: outputsOf(output) };
         };
-        const started = stepRun("dmg", { steps: {}, secrets: {} });
+        const started = stepRun("dmg", {
+          steps: { "asc-key": { outputs: { key_path: join(temp, "AuthKey.p8") } } },
+          secrets: { APP_STORE_CONNECT_KEY_ID: "KEY", APP_STORE_CONNECT_ISSUER_ID: "ISSUER" },
+        });
         expect(started.result.status, started.result.stderr).toBe(0);
         // The start returned while notarization still holds: nothing is built yet.
         expect(existsSync(join(temp, "dmg-job", "status"))).toBe(false);
@@ -512,6 +528,9 @@ describe("the signed channel workflow", () => {
       const passed = background(0);
       expect(passed.done.result.status, passed.done.result.stderr).toBe(0);
       expect(passed.done.result.stdout).toContain(`checked ${passed.started.outputs.path}`);
+      expect(passed.done.result.stdout).toContain(
+        "Notarization accepted as submission 7cb8517c-e1ac-435c-a45c-f3c87fa03fa2",
+      );
       expect(readFileSync(passed.started.outputs.path ?? "", "utf8")).toBe("image\n");
       expect(existsSync(`${passed.started.outputs.path}.sha256`)).toBe(true);
       const failed = background(3);

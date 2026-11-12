@@ -6,7 +6,7 @@ import {
   installerAppEnvironment,
   installerServerEnvironment,
 } from "../scripts/installer-environment.ts";
-import { notarizeArtifact, recordNotarizationNetwork } from "../scripts/installer-notarize.ts";
+import { notarizeArtifact, recordNotarizationNetwork } from "../scripts/notarize.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-816's approved repair: notarize once, keep the assigned submission after a
@@ -23,7 +23,7 @@ const status = (value: string) => ok({ id, status: value });
 
 type CommandResult = Awaited<ReturnType<Parameters<typeof notarizeArtifact>[1]["run"]>>;
 
-function fixture(results: CommandResult[]) {
+function fixture(results: CommandResult[], uploads?: number) {
   const dir = scratchDir("inf-notary-recovery-");
   const upload = join(dir, "app.zip");
   // The archive's actual bytes are immaterial to the status protocol; hash a
@@ -44,12 +44,14 @@ function fixture(results: CommandResult[]) {
     (
       _command: string,
       args: string[],
-      _onStdout?: (chunk: string) => void,
+      onStdout?: (chunk: string) => void,
     ): CommandResult | Promise<CommandResult> => {
       calls.push(args);
       snapshots.push(JSON.parse(readFileSync(inputs.journal, "utf8")));
       const result = results.shift();
       if (!result) throw new Error(`Unexpected request: ${args.slice(0, 2).join(" ")}`);
+      // An upload's output streams as notarizationRunner streams it.
+      if (args[1] === "submit") onStdout?.(result.stdout);
       return result;
     },
   );
@@ -62,6 +64,7 @@ function fixture(results: CommandResult[]) {
     retryDelays: [15, 30],
     pollDelay: 30,
     waitBudget: 60,
+    ...(uploads === undefined ? {} : { uploads }),
   };
   return {
     inputs,
@@ -239,6 +242,53 @@ describe("installer notarization recovery", () => {
       throw new Error("diagnostics unavailable");
     });
     await expect(broken.check()).rejects.toThrow("No network route");
+  });
+});
+
+// The release's notarization (release.yml's app and disk image steps) uploads
+// up to three times. Alpha run 43170881035, job 131026500441: Apple assigned
+// the disk image a submission, then the upload broke off on a connect timeout
+// and the bare `notarytool submit --wait` ended the release.
+describe("release notarization", () => {
+  const brokenOff = "7cb8517c-e1ac-435c-a45c-f3c87fa03fa2";
+  const connectTimeout = {
+    status: 1,
+    stdout: `Conducting pre-submission checks for Infinitary-0.7.1-alpha.556-mac-universal.dmg and initiating connection to the Apple notary service...\nSubmission ID received\n  id: ${brokenOff}\n`,
+    stderr: "Error: HTTPClientError.connectTimeout\n",
+  };
+
+  it("uploads again after alpha run 43170881035's broken-off upload and waits on the new submission", async () => {
+    const f = fixture([connectTimeout, ok({ id }), status("Accepted"), ok(), ok()], 3);
+    await expect(f.check()).resolves.toBe(id);
+    expect(f.calls.map((args) => args.slice(0, 2).join(" "))).toEqual([
+      "notarytool submit",
+      "notarytool submit",
+      "notarytool info",
+      "stapler staple",
+      "stapler validate",
+    ]);
+    expect(f.calls[2]?.[2]).toBe(id);
+    // The second upload starts from a fresh journal that keeps the first ID.
+    expect(f.snapshots[1]).toMatchObject({ phase: "submitting", abandoned: [brokenOff] });
+    expect(f.snapshots[1]).not.toHaveProperty("id");
+    expect(f.read()).toMatchObject({ id, phase: "validated", abandoned: [brokenOff] });
+    expect(f.recordNetwork).toHaveBeenCalledWith("submit", 0, connectTimeout);
+    expect(f.pause.mock.calls.flat()).toEqual([15]);
+  });
+
+  // Apple's answer to an unregistered throwaway key, read on a Mac with
+  // notarytool 1.1.3: an authentication refusal is never uploaded again.
+  it("refuses Apple's authentication refusal at the upload without uploading again", async () => {
+    const refused = {
+      status: 1,
+      stdout: "",
+      stderr:
+        "Error: HTTP status code: 401. Unauthenticated. Ensure that all authentication arguments are correct.\n",
+    };
+    const f = fixture([refused], 3);
+    await expect(f.check()).rejects.toThrow("HTTP status code: 401. Unauthenticated.");
+    expect(f.run).toHaveBeenCalledTimes(1);
+    expect(f.pause).not.toHaveBeenCalled();
   });
 });
 

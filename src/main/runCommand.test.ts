@@ -10,6 +10,7 @@ import {
   runCommand,
   runningByCommand,
   runOptions,
+  stopRunningCommand,
 } from "./runCommand";
 
 /**
@@ -65,6 +66,21 @@ describe("a window opened beside a run", () => {
     expect(runningByCommand(dataDir, (pid) => pid === 4242)).toBe(true);
     leave();
     expect(runningByCommand(dataDir, () => true)).toBe(false);
+  });
+
+  // INF-1352's plan, piece 7: "Quit closes only the window, and Settings → General offers
+  // Stop", which signals the command as a terminal's stop does.
+  it("stops the command that runs the folder, and signals nothing when none does", () => {
+    const dataDir = scratchDir("infinitary-run-marker-");
+    const signalled: number[] = [];
+    const signal = (pid: number) => void signalled.push(pid);
+    expect(stopRunningCommand(dataDir, () => true, signal)).toBe(false);
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"));
+    symlinkSync(`${hostname()}-4242`, join(dataDir, "SingletonLock"));
+    expect(stopRunningCommand(dataDir, (pid) => pid === 4242, signal)).toBe(true);
+    expect(signalled).toEqual([4242]);
+    expect(stopRunningCommand(dataDir, () => false, signal)).toBe(false);
+    expect(signalled).toEqual([4242]);
   });
 
   it("reads a note a crashed run left as nothing running", () => {

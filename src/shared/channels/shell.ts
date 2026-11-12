@@ -73,6 +73,15 @@ export const shellChannels = {
     request: z.tuple([]),
     response: z.boolean(),
   },
+  // Stop, in Settings → General beside Infinitary started by a command
+  // (docs/run.md, "Quit and Stop"): its first mate and crew stop cleanly
+  // until the person starts Infinitary again; false where none runs beside.
+  "inf:app:stop-command": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
+    response: z.boolean(),
+  },
   "inf:app:quit": {
     effect: "change",
     surface: "host",

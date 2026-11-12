@@ -21,6 +21,7 @@ import {
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import type { UpdateStatus } from "@shared/update";
 import { commandNotice, entryWaitMs, type JoinedRun, runEnd, type StartEntry } from "./besideRun";
+import type { CommandStarter } from "./commandStarter";
 import type { RunStatus } from "./runStatus";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { answerOwnApp, OWN_APP } from "./view/viewBackend";
@@ -70,6 +71,16 @@ export type BesideOptions = {
   installsUpdates: boolean;
   /** Whether the program this window runs was replaced since it started. */
   programReplaced: () => boolean;
+  /**
+   * The starter this window starts the command with, where it may
+   * (docs/run.md, "The window starts it"): Start it here starts the command
+   * again through it, and Start at login is the command's.
+   */
+  starter?: CommandStarter;
+  /** When this window started the command it opened beside, while that one has not welcomed it yet. */
+  startedAt?: number;
+  /** Stops the command's first mate and its crew cleanly, as a signal does; false when none runs. */
+  stopCommand?: () => boolean;
 };
 
 export type BesideWindowOptions = {
@@ -110,9 +121,19 @@ export class BesideWindow {
   private reading: Promise<void> | null = null;
   private welcomed = false;
   private closed = false;
+  /** When this window last started the command, until that one welcomes it. */
+  private startedAt: number | null;
+  /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
+  private startsOver = false;
+
+  /** Whether this window starts the command itself, so leaving it lets nothing start it again. */
+  get startsCommand(): boolean {
+    return this.options.beside.starter !== undefined;
+  }
 
   constructor(private readonly options: BesideWindowOptions) {
     const { beside } = options;
+    this.startedAt = beside.startedAt ?? null;
     this.joined = joinedRun(beside.status());
     this.look = new ViewLook(beside.look, (value) =>
       options.broadcast("inf:shell:preferences", value),
@@ -158,7 +179,7 @@ export class BesideWindow {
    * while no command runs draws at once, under its notice.
    */
   async start(): Promise<void> {
-    if (this.options.beside.status().running === false) {
+    if (this.startedAt === null && this.options.beside.status().running === false) {
       this.away();
       await this.window.ready(0);
       return;
@@ -198,8 +219,29 @@ export class BesideWindow {
   startHere(): boolean {
     if (this.shown?.state !== "stopped") return false;
     if (this.options.beside.status().running !== false) return false;
-    this.options.relaunch({ startHere: true });
+    const { starter } = this.options.beside;
+    // A command that could not start is not started again: this window runs the first mate itself.
+    if (!starter || this.shown.ending === "start-failed") {
+      this.options.relaunch({ startHere: true });
+      return true;
+    }
+    this.startedAt = this.options.now();
+    this.startsOver = true;
+    this.show(null);
+    void starter.start().then((started) => {
+      if (!started && !this.closed) this.options.relaunch({ startHere: true });
+    });
     return true;
+  }
+
+  /**
+   * Stop, in Settings → General (docs/run.md, "Quit and Stop"): the
+   * command's first mate and its crew stop cleanly, and nothing starts
+   * them again until the person does. False while none runs.
+   */
+  stop(): boolean {
+    if (this.shown !== null || !this.options.beside.stopCommand) return false;
+    return this.options.beside.stopCommand();
   }
 
   /**
@@ -257,6 +299,18 @@ export class BesideWindow {
     if (channel === "inf:settings:dictation:get" || channel === "inf:settings:dictation:set")
       this.dictation = (answer as InvokeResponse<"inf:settings:dictation:get">).enabled;
     return answer;
+  }
+
+  /**
+   * The window joins a first mate on another computer: it closes, and the
+   * command's first mate stops with nothing set to start it again.
+   */
+  async leave(): Promise<void> {
+    this.close();
+    await this.options.beside.starter?.stop({ forget: true }).catch((error: unknown) => {
+      console.warn(`[shell] could not let the command's starter go: ${(error as Error).message}`);
+    });
+    this.options.beside.stopCommand?.();
   }
 
   close(): void {
@@ -323,8 +377,13 @@ export class BesideWindow {
     let answer: OwnWindowAnswer;
     try {
       if (ask.kind === "start-at-login") {
-        if (ask.set !== undefined) presence.setStartAtLogin(ask.set);
-        answer = { kind: "start-at-login", enabled: presence.getStartAtLogin() };
+        // Start at login starts the command where this window starts it, never the window.
+        const login = this.options.beside.starter?.atLogin ?? {
+          get: () => presence.getStartAtLogin(),
+          set: (enabled: boolean) => presence.setStartAtLogin(enabled),
+        };
+        if (ask.set !== undefined) login.set(ask.set);
+        answer = { kind: "start-at-login", enabled: login.get() };
       } else
         answer = { kind: "choose-files", paths: await chooseFiles({ multiple: ask.multiple }) };
     } catch (error) {
@@ -340,7 +399,9 @@ export class BesideWindow {
     if (this.closed) return;
     this.stopReading();
     this.stoppedAt = null;
-    const under = this.shown !== null;
+    this.startedAt = null;
+    const under = this.shown !== null || this.startsOver;
+    this.startsOver = false;
     this.show(null);
     // The command came back on a new copy of the program: this window follows it.
     if (this.options.beside.programReplaced()) {
@@ -400,27 +461,44 @@ export class BesideWindow {
   /** One reading of the command's records: the notice, or none while a command runs. */
   private read(): void {
     const { beside, now } = this.options;
-    const end = runEnd(beside.status(), this.joined);
+    const waitMs = entryWaitMs(beside.restartWaitMs, this.options.localWindow?.readyMs);
+    const status = beside.status();
+    let end = runEnd(status, this.joined);
+    // The command this window started has not welcomed it yet: an end
+    // recorded before it started is an earlier command's, and the window
+    // waits for this one as long as it would for a start entry, then says
+    // it stopped without saying why.
+    const started = this.startedAt;
+    if (started !== null && status.running === false && (end?.at ?? 0) < started)
+      end =
+        now() - started < waitMs
+          ? null
+          : { ending: "crashed", exitCode: null, of: null, at: started };
     if (!end) {
       this.stoppedAt = null;
       this.show(null);
       return;
     }
     this.stoppedAt ??= now();
-    this.show(
-      commandNotice({
-        end,
-        entry: beside.startEntry(),
-        // Counted from the command's own record of its stop, where it left one.
-        goneFor: now() - (end.at ?? this.stoppedAt),
-        waitMs: entryWaitMs(beside.restartWaitMs, this.options.localWindow?.readyMs),
-      }),
-    );
+    const notice = commandNotice({
+      end,
+      entry: beside.startEntry(),
+      // Counted from the command's own record of its stop, where it left one.
+      goneFor: now() - (end.at ?? this.stoppedAt),
+      waitMs,
+    });
+    // Beside the program this window starts, the notice speaks of the person's first mate.
+    this.show(notice && beside.starter ? { ...notice, byWindow: true } : notice);
   }
 
   private show(notice: CommandNotice | null): void {
     const was = this.shown;
-    if (was?.state === notice?.state && was?.ending === notice?.ending) return;
+    if (
+      was?.state === notice?.state &&
+      was?.ending === notice?.ending &&
+      was?.byWindow === notice?.byWindow
+    )
+      return;
     this.shown = notice;
     this.options.changed();
   }

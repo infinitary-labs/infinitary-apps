@@ -140,6 +140,7 @@ test("Infinitary's window opened while a command runs joins it, and offers Start
       expect(await page.evaluate(() => window.infinitary.devices.thisMac())).toEqual({
         role: "home",
         left: null,
+        byCommand: true,
       });
       await expect(page.locator("[data-remote-control]")).toHaveCount(0);
       await expect(noticeOver(page)).toHaveCount(0);

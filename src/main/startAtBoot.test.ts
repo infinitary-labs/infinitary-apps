@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Launchctl } from "@core/helper/background";
+import { loginAgentFile, sessionAgentFile } from "@core/helper/runAgent";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { RUN_SETTINGS_EXIT, RUN_WORDS } from "./runCommand";
@@ -263,6 +264,19 @@ describe("starting at boot on a Mac", () => {
     expect(statSync(prepared).mode & 0o777).toBe(0o600);
     // launchd opens the log as this user, in a folder of theirs that is there.
     expect(existsSync(dirname(log))).toBe(true);
+  });
+
+  // The reviewer's finding on INF-1352's piece 7: an agent the window left for Start at login
+  // would start a second run at every login beside the boot entry's.
+  it("lets the window's own agent go with the boot entry in place of it", async () => {
+    const { context: c } = mac();
+    const agents = [loginAgentFile(c), sessionAgentFile(c)];
+    for (const agent of agents) {
+      mkdirSync(dirname(agent), { recursive: true });
+      writeFileSync(agent, "the window's agent\n");
+    }
+    expect((await runStartAtBoot({ off: false }, c)).code).toBe(0);
+    expect(agents.filter((agent) => existsSync(agent))).toEqual([]);
   });
 
   it("quotes a home with a space or a quote in the administrator's line", async () => {

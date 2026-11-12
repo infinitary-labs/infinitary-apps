@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as m from "./i18n/messages.generated";
 
 /**
  * The notice over the whole window opened beside Infinitary started by a
@@ -17,10 +18,38 @@ export const commandNoticeSchema = z.strictObject({
   /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
   state: z.enum(["waiting", "stopped"]),
   ending: commandEndingSchema,
+  /**
+   * Set when this window started the program itself (docs/run.md, "The
+   * window starts it"): the person never ran a command, so the line speaks
+   * of their first mate, and Start it here starts that program again.
+   */
+  byWindow: z.literal(true).optional(),
 });
 export type CommandNotice = z.infer<typeof commandNoticeSchema>;
 
-/** The words on the notice. They say "started by a command", never the command's own word. */
+/**
+ * The words on the notice. Beside a command the person set up they say
+ * "started by a command", never the command's own word; beside the program
+ * this window started they speak of the person's first mate, from the
+ * catalog (docs/i18n.md).
+ */
+function byWindowLine(notice: CommandNotice): string {
+  if (notice.state === "waiting")
+    return notice.ending === "updated"
+      ? m.commandNoticeWindowUpdating()
+      : m.commandNoticeWindowRestarting();
+  switch (notice.ending) {
+    case "updated":
+      return m.commandNoticeWindowUpdated();
+    case "crashed":
+      return m.commandNoticeWindowCrashed();
+    case "start-failed":
+      return m.commandNoticeWindowStartFailed();
+    default:
+      return m.commandNoticeWindowStopped();
+  }
+}
+
 export const COMMAND_NOTICE_WORDS = {
   title: (notice: CommandNotice): string =>
     notice.ending === "updated"
@@ -29,6 +58,7 @@ export const COMMAND_NOTICE_WORDS = {
         : "Infinitary was updated"
       : "Infinitary stopped",
   line: (notice: CommandNotice): string => {
+    if (notice.byWindow) return byWindowLine(notice);
     if (notice.state === "waiting")
       return notice.ending === "updated"
         ? "Infinitary started by a command is starting again on its new version. This window waits for it."

@@ -1529,6 +1529,7 @@ It grades the plan's bar, each a soft hold (`graded` in `tests/e2e/perf.ts`), so
 Every run prints each measure as a `[perf]` line, and writes `latency.json`, each stall in words and the trace into the run's own directory.
 It also prints, ungraded, the window's start, its memory, a core request's round trip and the first mate's answer, timed by the window's own clock from the Enter to the reply and idle state it hears (INF-1352's plan, to compare the window before and after it reaches its first mate over the local door).
 A second test, also printed and ungraded, times a crewmate's card picture from the card reaching the window to its picture drawn, and twelve changes of a page a task's browser shows from the change to its picture in the window's view, and writes `picture-latency.json`.
+A third test, printed and ungraded, measures the window beside the first mate in its own program against the window running it itself (INF-1352's plan, piece 7): the memory of each program and the two together, the window's start, a core request's round trip, the first mate's answer, a key's round trip and 30 bursts of fast typing timed from each key to the screen drawn after it, while the stand-in crew writes; it starts the command through a stand-in service manager (`tests/e2e/serviceManagerStandIn.ts`) and writes `two-programs-latency.json`.
 The app ticks at its own period, so a minute pass may or may not fall in a stretch; judge a measure near its bar over several runs.
 
 ## The runner's automatic updates

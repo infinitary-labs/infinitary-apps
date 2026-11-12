@@ -19,8 +19,13 @@ import type { RunStatus } from "./runStatus";
 /** The command a window joined, as its note in the data folder names it. */
 export type JoinedRun = { pid: number; startedAt: string };
 
-/** The start entry the app wrote that is in place now, by the system that reads it; null for none. */
-export type StartEntry = "linux-unit" | "mac-daemon" | null;
+/**
+ * The start entry the app wrote that is in place now, by the system that
+ * reads it; null for none. A Mac's agent is the one the window sets up
+ * (`mac-agent`, docs/run.md, "The window starts it"); on Linux the window's
+ * and `start-at-boot`'s are one unit.
+ */
+export type StartEntry = "linux-unit" | "mac-daemon" | "mac-agent" | null;
 
 /** How a command that no longer runs ended, and with which code when it said. */
 export type CommandEnd = {
@@ -35,7 +40,8 @@ export type CommandEnd = {
 /**
  * The start entry's own wait before it starts the command again: the
  * unit's `RestartSec=10` and launchd's ten seconds between starts of one
- * job (`bootUnit`, `bootPlist`, src/core/helper/background.ts).
+ * job (`bootUnit`, `bootPlist`, src/core/helper/background.ts, which the
+ * window's own agent writes too, src/core/helper/runAgent.ts).
  */
 export const START_ENTRY_RESTART_MS = 10_000;
 
@@ -85,8 +91,8 @@ function sameRun(a: JoinedRun, b: JoinedRun): boolean {
 /**
  * Whether the start entry in place starts the command again after this
  * end. The Linux unit restarts on a failure and never after code 78, a
- * settings file to fix; the Mac's entry restarts every failed exit, 78
- * included. Neither restarts a clean stop.
+ * settings file to fix; a Mac's entry and agent restart every failed exit,
+ * 78 included. None restarts a clean stop.
  */
 export function entryRestarts(entry: StartEntry, end: CommandEnd): boolean {
   if (!entry) return false;

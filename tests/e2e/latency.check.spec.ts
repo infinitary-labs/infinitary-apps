@@ -3,20 +3,26 @@
 // scrolling the Tasks list, graded against the plan's bar on a perf run.
 // A second test prints, ungraded, a card picture's and a task browser
 // picture's time to reach the window (INF-1352's plan, measure=inside-pieces).
-import { createReadStream, writeFileSync } from "node:fs";
+// A third prints, ungraded, the same measures with the first mate in a
+// program of its own beside the window, against the window running it
+// itself, with INF-1450's fast-typing check timed to the screen.
+import { execFileSync } from "node:child_process";
+import { createReadStream, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { FREEZE_THRESHOLD_MS, type FreezeIncident } from "../../src/core/freeze/freezeRecorder";
 import { appPathsFor } from "../../src/core/paths";
+import { RUN_MARKER, RunMarkerSchema } from "../../src/main/runCommand";
 import { readFreezes } from "../helpers/freezeRecord";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedCaptainSizedRecord } from "./captainSizedRecord";
 import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
-import { launchApp } from "./launch";
-import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { GRADES_BUDGETS, graded, PERF_TAG } from "./perf";
 import { encodeInBrowser, WORKING_COPY_PICTURES } from "./pictureFixtures";
 import { promptInput } from "./prompt";
@@ -41,6 +47,7 @@ import {
   taskBrowserJourneys,
 } from "./scenarios/taskBrowserJourneys";
 import { WRITING_CREW_MARKER, WRITING_CREW_SIZE, writingCrew } from "./scenarios/writingCrew";
+import { serviceManagerStandIn } from "./serviceManagerStandIn";
 import { showCard } from "./stack";
 import { MAC_ONLY_TAG } from "./tags";
 import { browserView, pageSays } from "./taskBrowser";
@@ -605,4 +612,238 @@ test("a card's picture and a task browser's picture reach the window", {
     await launched.close();
     await new Promise<void>((resolve) => watched.close(() => resolve()));
   }
+});
+
+/** INF-1450's check: bursts of fast typing, each this many characters, about 20 a second. */
+const BURSTS = 30;
+const BURST_CHARACTERS = 50;
+const BURST_SPACING_MS = 52;
+/** A key whose character reached the screen later than this was one a person feels. */
+const FELT_KEY_MS = 200;
+const BURST_TEXT = "the crew changed the history while i was typing this ";
+
+/** Every process of a program: its own and each it started, by the system's process list. */
+function processTree(root: number): { pids: number[]; rssMiB: number } {
+  const rows = execFileSync("ps", ["-A", "-o", "pid=,ppid=,rss="], { encoding: "utf8" })
+    .trim()
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/).map(Number) as [number, number, number]);
+  const pids = [root];
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const [pid, ppid] of rows)
+      if (pids.includes(ppid) && !pids.includes(pid)) {
+        pids.push(pid);
+        grew = true;
+      }
+  }
+  const kb = rows.filter(([pid]) => pids.includes(pid)).reduce((sum, [, , rss]) => sum + rss, 0);
+  return { pids, rssMiB: Math.round(kb / 1024) };
+}
+
+/** A program's own main process alone, by the system's process list. */
+function ownRssMiB(pid: number): number {
+  const kb = Number(execFileSync("ps", ["-o", "rss=", "-p", String(pid)], { encoding: "utf8" }));
+  return Math.round(kb / 1024);
+}
+
+/**
+ * INF-1450's fast-typing check, timed to the screen: each character from
+ * the moment the test sends its key to the first frame the window drew
+ * after the field took it, at about twenty keys a second without waiting
+ * for one key before sending the next, as a person types. The window's
+ * keys pass through its main process, so a stall there shows here.
+ */
+async function fastTyping(page: Page): Promise<{ keyMs: number[][]; feltBursts: number }> {
+  const input = promptInput(page);
+  await focusOn(input);
+  const keyMs: number[][] = [];
+  for (let burst = 0; burst < BURSTS; burst += 1) {
+    await input.fill("");
+    await input.evaluate((field: HTMLTextAreaElement | HTMLInputElement) => {
+      const drawn: number[] = [];
+      const kept = window as unknown as { __drawn: number[]; __drawnListener?: () => void };
+      if (kept.__drawnListener) field.removeEventListener("input", kept.__drawnListener);
+      kept.__drawn = drawn;
+      kept.__drawnListener = () => {
+        const length = field.value.length;
+        // Two animation frames: the first runs before the frame that shows the character.
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            const at = performance.timeOrigin + performance.now();
+            for (let i = 0; i < length; i += 1) drawn[i] ??= at;
+          }),
+        );
+      };
+      field.addEventListener("input", kept.__drawnListener);
+    });
+    const sentAt: number[] = [];
+    const presses: Promise<void>[] = [];
+    for (let i = 0; i < BURST_CHARACTERS; i += 1) {
+      sentAt.push(Date.now());
+      presses.push(page.keyboard.press(BURST_TEXT[i % BURST_TEXT.length] ?? "a"));
+      await new Promise((resolve) => setTimeout(resolve, BURST_SPACING_MS));
+    }
+    await Promise.all(presses);
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __drawn: number[] }).__drawn.length))
+      .toBe(BURST_CHARACTERS);
+    const drawn = await page.evaluate(() => (window as unknown as { __drawn: number[] }).__drawn);
+    keyMs.push(drawn.map((at, i) => at - (sentAt[i] ?? at)));
+  }
+  await input.fill("");
+  return { keyMs, feltBursts: keyMs.filter((ms) => ms.some((one) => one > FELT_KEY_MS)).length };
+}
+
+/**
+ * The measures piece 4 printed, taken on one window: memory across every
+ * process given, the time to an idle first mate, a core request's round
+ * trip, the first mate's answer reaching the window, a key press's round
+ * trip, and INF-1450's fast typing, with six crewmates writing.
+ */
+async function measured(
+  launched: LaunchedApp,
+  startMs: number,
+  programs: () => { name: string; pid: number }[],
+) {
+  const { page } = launched;
+  const answerMs: number[] = [];
+  for (let n = 1; n <= WRITING_CREW_SIZE; n += 1)
+    answerMs.push(
+      await timedAsk(page, `${SPAWN_PROMPT_MARKER} ${WRITING_CREW_MARKER} ${n}`, 60_000),
+    );
+  const writing = () =>
+    page.evaluate(
+      async (marker) =>
+        (await window.infinitary.tasks.board()).tasks.filter(
+          (task) => task.title.includes(marker) && task.status === "active",
+        ).length,
+      WRITING_CREW_MARKER,
+    );
+  await expect.poll(writing, { timeout: 60_000 }).toBe(WRITING_CREW_SIZE);
+  const requestMs = await page.evaluate(async (count) => {
+    const took: number[] = [];
+    for (let n = 0; n < count; n += 1) {
+      const began = performance.now();
+      await window.infinitary.app.healthcheck();
+      took.push(performance.now() - began);
+    }
+    return took;
+  }, ROUND_TRIPS);
+  const memory = programs().map(({ name, pid }) => ({
+    name,
+    mainMiB: ownRssMiB(pid),
+    ...processTree(pid),
+  }));
+  const input = promptInput(page);
+  await focusOn(input);
+  const keyMs: number[] = [];
+  for (const key of TYPED) {
+    const began = performance.now();
+    await page.keyboard.press(key);
+    keyMs.push(performance.now() - began);
+  }
+  await input.fill("");
+  const typing = await fastTyping(page);
+  return { startMs, memory, answerMs, requestMs, keyMs, typing, writingCrew: await writing() };
+}
+
+/** The measures in words, one `[perf]` line each, under `label`. */
+function printed(label: string, report: Awaited<ReturnType<typeof measured>>): void {
+  const sorted = (values: number[]) => [...values].sort((a, b) => a - b);
+  const at = (values: number[], share: number) =>
+    sorted(values)[Math.min(values.length - 1, Math.floor(values.length * share))] ?? 0;
+  const keys = report.typing.keyMs.flat();
+  console.log(`[perf] ${label}: start to an idle first mate ${Math.round(report.startMs)} ms`);
+  for (const program of report.memory)
+    console.log(
+      `[perf] ${label}: ${program.name} main process ${program.mainMiB} MiB, with its ${program.pids.length - 1} other processes ${program.rssMiB} MiB`,
+    );
+  console.log(
+    `[perf] ${label}: memory across every program ${report.memory.reduce((sum, p) => sum + p.rssMiB, 0)} MiB`,
+  );
+  console.log(
+    `[perf] ${label}: core request round trip, median ${at(report.requestMs, 0.5).toFixed(2)} ms`,
+  );
+  console.log(
+    `[perf] ${label}: the first mate's answer reaching the window, median ${Math.round(at(report.answerMs, 0.5))} ms`,
+  );
+  console.log(
+    `[perf] ${label}: key press round trip, median ${at(report.keyMs, 0.5).toFixed(1)} ms, p95 ${at(report.keyMs, 0.95).toFixed(1)} ms`,
+  );
+  console.log(
+    `[perf] ${label}: fast typing to the screen, ${keys.length} keys in ${report.typing.keyMs.length} bursts: median ${Math.round(at(keys, 0.5))} ms, p95 ${Math.round(at(keys, 0.95))} ms, p99 ${Math.round(at(keys, 0.99))} ms, max ${Math.round(Math.max(...keys))} ms; ${report.typing.feltBursts} bursts with a key over ${FELT_KEY_MS} ms`,
+  );
+}
+
+// INF-1352's plan, piece 7, measure=inside-pieces: "Memory and latency are measured again across
+// two programs", with INF-1450's intermittent fast-typing check verified on actual screen
+// updates. Printed, not graded: the window running the first mate itself, then the window
+// beside the command it started, each on its own copy of a record the captain's size.
+test("the window beside the first mate in its own program, against the window running it itself", {
+  tag: [PERF_TAG, MAC_ONLY_TAG],
+}, async () => {
+  test.setTimeout(1_200_000);
+  const reports: Record<string, Awaited<ReturnType<typeof measured>>> = {};
+
+  // One program: the window runs the first mate itself.
+  {
+    const userDataDir = scratchDir("infinitary-latency-one-program-");
+    await seedCaptainSizedRecord(userDataDir);
+    const launchedAt = performance.now();
+    const launched = await launchApp({
+      userDataDir,
+      withMockProvider: true,
+      scenarios: [writingCrew],
+    });
+    try {
+      await waitForFirstmateIdle(launched.page);
+      const startMs = performance.now() - launchedAt;
+      reports.one = await measured(launched, startMs, () => [
+        { name: "the window", pid: launched.app.process().pid ?? 0 },
+      ]);
+      printed("one program", reports.one);
+    } finally {
+      await launched.close();
+    }
+  }
+
+  // Two programs: the window starts `<app> run` and opens beside it.
+  {
+    const userDataDir = scratchDir("infinitary-latency-two-programs-");
+    await seedCaptainSizedRecord(userDataDir);
+    const homeDir = scratchDir("infinitary-latency-two-programs-home-");
+    const standIn = serviceManagerStandIn(homeDir);
+    const provider = await startMockProvider({ scenarios: [writingCrew] });
+    try {
+      const launchedAt = performance.now();
+      const launched = await launchApp({
+        userDataDir,
+        homeDir,
+        reuseMockProvider: provider,
+        env: { ...standIn.env, INFINITARY_WINDOW_STARTS_RUN: "1" },
+      });
+      try {
+        await waitForFirstmateIdle(launched.page);
+        const startMs = performance.now() - launchedAt;
+        const command = RunMarkerSchema.parse(
+          JSON.parse(readFileSync(join(userDataDir, RUN_MARKER), "utf8")),
+        ).pid;
+        reports.two = await measured(launched, startMs, () => [
+          { name: "the window", pid: launched.app.process().pid ?? 0 },
+          { name: "the command", pid: command },
+        ]);
+        printed("two programs", reports.two);
+      } finally {
+        await launched.close();
+      }
+    } finally {
+      standIn.stopAll();
+      await provider.close();
+    }
+  }
+  writeFileSync(
+    test.info().outputPath("two-programs-latency.json"),
+    JSON.stringify(reports, null, 2),
+  );
 });

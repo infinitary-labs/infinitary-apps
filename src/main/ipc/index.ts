@@ -166,6 +166,7 @@ export function registerIpc(options: IpcOptions): void {
 
   // The notice over a window whose command stopped (docs/run.md, "When the command stops").
   handleInvoke("inf:app:start-here", rendererSource, () => shell.startHere());
+  handleInvoke("inf:app:stop-command", rendererSource, () => shell.stopCommand());
   handleInvoke("inf:app:quit", rendererSource, () => {
     // After this answer, so the window is not torn down under its own request.
     setImmediate(() => app.quit());

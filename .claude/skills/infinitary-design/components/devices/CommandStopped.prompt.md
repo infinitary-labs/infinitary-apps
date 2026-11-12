@@ -2,7 +2,8 @@
 
 The notice over a window that was opened while Infinitary started by a command ran this computer's first mate, once that command no longer runs (the app's `docs/run.md`, "When the command stops").
 The window joined that first mate and holds none of its own, so with the command gone it has nothing to show: it says so over the whole window, and never starts a first mate by itself.
-Its words always say "started by a command", never the command's own name.
+Beside a command the person set up, its words say "started by a command", never the command's own name.
+Beside the program the window started itself (`byWindow`), the person never ran a command, so the line speaks of their first mate instead, as in "Your first mate could not start."
 
 **The surface.**
 The modal-level surface command search, the picture viewer and the consent dialog use: `--bg-0` at 80% under `--blur-overlay`, over the whole window, the top bar included.
@@ -14,12 +15,12 @@ It grows in like a popover, from `--scale-pop` over `--dur-quick`; reduced motio
 The title at `--text-md`, weight 500, `--fg-1`: "Infinitary stopped", or "Infinitary is updating" and "Infinitary was updated" when the command ended for its own update.
 Under it one line at `--text-sm` / `--fg-2` saying what happened and what the window does about it.
 While whatever started the command at boot is expected to start it again, the line ends "This window waits for it." and there is no way to start it here.
-Once nothing will start it again, or nothing did in time, the line ends "Start it here to carry on in this window."
+Once nothing will start it again, or nothing did in time, the line ends "Start it here to carry on in this window." beside a command, and says Start it here starts it again beside the program the window started.
 The line names how the command ended only as far as its own record says: stopped, ended for its update, could not start, or "stopped without saying why" when it left no record.
 
 **The buttons.**
 At the panel's foot, right-aligned: Quit (ghost), then Start it here (primary, the notice's one accent) once it is offered.
-Start it here starts Infinitary again in this window as this computer's own first mate.
+Start it here starts Infinitary again in this window as this computer's own first mate, or, beside the program the window started, starts that program again and waits for it.
 Quit closes this window's program and is always there, so the person is never held in front of a window that can do nothing.
 While the window waits, Quit is the only button.
 

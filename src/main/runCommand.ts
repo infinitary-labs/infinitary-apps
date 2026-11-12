@@ -194,6 +194,32 @@ export function runningByCommand(
   return holder === undefined || holder === pid;
 }
 
+/**
+ * Stop, in Settings -> General beside a command (docs/run.md, "Quit and
+ * Stop"): asks the command running on this folder to stop as a signal stops
+ * it, so it ends cleanly with 0 and no starter starts it again. False when
+ * no command runs here.
+ */
+export function stopRunningCommand(
+  dataDir: string,
+  alive: (pid: number) => boolean = processAlive,
+  signal: (pid: number) => void = (pid) => process.kill(pid, "SIGTERM"),
+): boolean {
+  if (!runningByCommand(dataDir, alive)) return false;
+  let pid: number;
+  try {
+    pid = RunMarkerSchema.parse(JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"))).pid;
+  } catch {
+    return false;
+  }
+  try {
+    signal(pid);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** The process Chromium's lock link names; undefined where there is no link to read, null for none. */
 export function lockHolder(dataDir: string): number | null | undefined {
   let link: string;

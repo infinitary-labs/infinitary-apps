@@ -8,6 +8,7 @@ import {
   dictationKeyLabel,
   dictationKeySchema,
 } from "@shared/dictation";
+import * as m from "@shared/i18n/messages.generated";
 import { catalogEntry, providerServesRole } from "@shared/providers";
 import type { PiModelRefView } from "@shared/quota";
 import type { PresenceSettings } from "@shared/update";
@@ -454,10 +455,61 @@ function DictationRow() {
   );
 }
 
+/**
+ * Stop, beside Infinitary started by a command (docs/run.md, "Quit and
+ * Stop"): quitting closes only the window, so this row is where the person
+ * ends the first mate and crew. A first press arms it, as Purge does.
+ */
+function StopCommandRow() {
+  const [armed, setArmed] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const stop = () => {
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    setStopping(true);
+    void window.infinitary.app
+      .stopCommand()
+      .then((stopped) => setNote(stopped ? null : m.settingsCommandStopFailed()))
+      .catch((caught: unknown) =>
+        setNote(caught instanceof Error ? caught.message : String(caught)),
+      )
+      .finally(() => {
+        setStopping(false);
+        setArmed(false);
+      });
+  };
+  return (
+    <SettingRow
+      id="stop-command"
+      error={note}
+      title={m.settingsCommandStopTitle()}
+      description={m.settingsCommandStopDescription()}
+      control={
+        <Button
+          variant={armed ? "danger" : "secondary"}
+          size="sm"
+          onClick={stop}
+          pending={stopping}
+          pendingLabel={m.settingsCommandStopping()}
+        >
+          {armed ? m.settingsCommandStopConfirm() : m.settingsCommandStop()}
+        </Button>
+      }
+    />
+  );
+}
+
 export function GeneralTab() {
   // On a computer that controls another, its login, Dock, dictation and panels
   // are that computer's own: their rows stay off this tab (docs/view.md).
-  const remote = isView(useShellStore((s) => s.thisMac));
+  const thisMac = useShellStore((s) => s.thisMac);
+  const remote = isView(thisMac);
+  // Beside a command that runs (`ThisMac.byCommand`), quitting closes only
+  // the window: Stop is offered, and Start at login starts the first mate.
+  const byCommand = thisMac?.role === "home" && thisMac.byCommand === true && !thisMac.command;
   // Presence (D-17): dock on, start-at-login off by default; both live in
   // main (login item with the OS, dock visibility persisted).
   const presenceSave = useSettingSave(() => window.infinitary.presence.get());
@@ -535,7 +587,9 @@ export function GeneralTab() {
             id="start-at-login"
             error={presenceField === "startAtLogin" ? presenceSave.error : null}
             title="Start at login"
-            description="Launch Infinitary when you sign in."
+            description={
+              byCommand ? m.settingsCommandStartAtLogin() : "Launch Infinitary when you sign in."
+            }
             control={
               <Switch
                 checked={presence?.startAtLogin ?? false}
@@ -578,6 +632,7 @@ export function GeneralTab() {
             />
           }
         />
+        {byCommand && <StopCommandRow />}
         {!remote && <DictationRow />}
         {!remote && <YourPanelsRow />}
         <SettingRow

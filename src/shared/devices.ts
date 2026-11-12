@@ -751,6 +751,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
      * window whose own program runs the first mate.
      */
     command: commandNoticeSchema.optional(),
+    /**
+     * The window stands beside Infinitary started by a command, which runs
+     * the first mate in a program of its own (docs/run.md, "Quit and Stop"):
+     * quitting closes only the window, and Settings → General offers Stop.
+     */
+    byCommand: z.literal(true).optional(),
   }),
   z.strictObject({
     role: z.literal("view"),

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "window-starts-first-mate",
+      "kind": "feature",
+      "title": "Your first mate keeps working after you quit the window",
+      "body": "Opening Infinitary now starts your first mate and crew in the background, and the window joins them. Quitting closes only the window, so work carries on; Settings → General offers Stop to end it until you open Infinitary again. Start at login now starts your first mate and crew rather than the window, and an update starts the new version for them.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "window-starts-first-mate-dark.webp",
+        "light": "window-starts-first-mate-light.webp",
+        "alt": "Settings, General: Start at login reads Start your first mate and crew when you sign in, and a new row says your first mate keeps working without this window, with a Stop button"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

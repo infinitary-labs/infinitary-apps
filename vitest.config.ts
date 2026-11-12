@@ -91,6 +91,7 @@ const isolatedUnit = [
   "src/core/placed/placedModelLabel.test.ts",
   // It loads the Claude client's tools, whose import sets an environment variable.
   "src/core/session/answerFiles.test.ts",
+  "src/main/commandStarter.test.ts",
   "src/main/host/macUpdates.test.ts",
   "src/main/voice/voiceHelper.test.ts",
   "src/main/voice/voiceProtocol.test.ts",

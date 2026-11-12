@@ -7568,6 +7568,136 @@ export function settingsModelsResetNote(): string {
   return `Always use choices are untouched.`;
 }
 
+export function settingsCommandStopTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ķééþš ŵöŕķîñĝ ŵîţĥöûţ ţĥîš ŵîñðöŵ ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate keeps working without this window\u202c`;
+  }
+  return `Your first mate keeps working without this window`;
+}
+
+export function settingsCommandStopDescription(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ǫûîţţîñĝ çļöšéš öñļý ţĥîš ŵîñðöŵ, áñð ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ çáŕŕý öñ. Šţöþ éñðš ţĥéɱ ûñţîļ ýöû šţáŕţ Îñƒîñîţáŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eQuitting closes only this window, and your first mate and crew carry on. Stop ends them until you start Infinitary again.\u202c`;
+  }
+  return `Quitting closes only this window, and your first mate and crew carry on. Stop ends them until you start Infinitary again.`;
+}
+
+export function settingsCommandStop(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţöþ ~~]`;
+    case "ar-XB":
+      return `\u202eStop\u202c`;
+  }
+  return `Stop`;
+}
+
+export function commandNoticeWindowRestarting(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé šţöþþéð áñð îš šţáŕţîñĝ áĝáîñ. Ţĥîš ŵîñðöŵ ŵáîţš ƒöŕ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate stopped and is starting again. This window waits for it.\u202c`;
+  }
+  return `Your first mate stopped and is starting again. This window waits for it.`;
+}
+
+export function commandNoticeWindowUpdating(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé îš šţáŕţîñĝ áĝáîñ öñ îţš ñéŵ ṽéŕšîöñ. Ţĥîš ŵîñðöŵ ŵáîţš ƒöŕ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate is starting again on its new version. This window waits for it.\u202c`;
+  }
+  return `Your first mate is starting again on its new version. This window waits for it.`;
+}
+
+export function commandNoticeWindowStopped(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ ŵéŕé šţöþþéð. Šţáŕţ îţ ĥéŕé ţö šţáŕţ ţĥéɱ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate and crew were stopped. Start it here to start them again.\u202c`;
+  }
+  return `Your first mate and crew were stopped. Start it here to start them again.`;
+}
+
+export function commandNoticeWindowUpdated(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé éñðéð ƒöŕ îţš ûþðáţé áñð ĥáš ñöţ šţáŕţéð áĝáîñ. Šţáŕţ îţ ĥéŕé ţö šţáŕţ îţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate ended for its update and has not started again. Start it here to start it again.\u202c`;
+  }
+  return `Your first mate ended for its update and has not started again. Start it here to start it again.`;
+}
+
+export function commandNoticeWindowCrashed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé šţöþþéð ŵîţĥöûţ šáýîñĝ ŵĥý áñð ĥáš ñöţ šţáŕţéð áĝáîñ. Šţáŕţ îţ ĥéŕé ţö šţáŕţ îţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate stopped without saying why and has not started again. Start it here to start it again.\u202c`;
+  }
+  return `Your first mate stopped without saying why and has not started again. Start it here to start it again.`;
+}
+
+export function commandNoticeWindowStartFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé çöûļð ñöţ šţáŕţ. Šţáŕţ îţ ĥéŕé ţö ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate could not start. Start it here to try again.\u202c`;
+  }
+  return `Your first mate could not start. Start it here to try again.`;
+}
+
+export function settingsCommandStopConfirm(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöñƒîŕɱ šţöþ ~~~~]`;
+    case "ar-XB":
+      return `\u202eConfirm stop\u202c`;
+  }
+  return `Confirm stop`;
+}
+
+export function settingsCommandStopping(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţöþþîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eStopping...\u202c`;
+  }
+  return `Stopping...`;
+}
+
+export function settingsCommandStopFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĥáð áļŕéáðý šţöþþéð. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate had already stopped.\u202c`;
+  }
+  return `Your first mate had already stopped.`;
+}
+
+export function settingsCommandStartAtLogin(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţáŕţ ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ ŵĥéñ ýöû šîĝñ îñ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStart your first mate and crew when you sign in.\u202c`;
+  }
+  return `Start your first mate and crew when you sign in.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -8280,6 +8410,19 @@ export const MESSAGES = {
   settingsModelsResetConfirm,
   settingsModelsResetCancel,
   settingsModelsResetNote,
+  settingsCommandStopTitle,
+  settingsCommandStopDescription,
+  settingsCommandStop,
+  commandNoticeWindowRestarting,
+  commandNoticeWindowUpdating,
+  commandNoticeWindowStopped,
+  commandNoticeWindowUpdated,
+  commandNoticeWindowCrashed,
+  commandNoticeWindowStartFailed,
+  settingsCommandStopConfirm,
+  settingsCommandStopping,
+  settingsCommandStopFailed,
+  settingsCommandStartAtLogin,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -8997,4 +9140,17 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsModelsResetConfirm: [],
   settingsModelsResetCancel: [],
   settingsModelsResetNote: [],
+  settingsCommandStopTitle: [],
+  settingsCommandStopDescription: [],
+  settingsCommandStop: [],
+  commandNoticeWindowRestarting: [],
+  commandNoticeWindowUpdating: [],
+  commandNoticeWindowStopped: [],
+  commandNoticeWindowUpdated: [],
+  commandNoticeWindowCrashed: [],
+  commandNoticeWindowStartFailed: [],
+  settingsCommandStopConfirm: [],
+  settingsCommandStopping: [],
+  settingsCommandStopFailed: [],
+  settingsCommandStartAtLogin: [],
 };

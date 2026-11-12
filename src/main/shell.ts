@@ -229,13 +229,24 @@ export class Shell {
 
   thisMac(): ThisMac {
     if (this.mode?.kind === "view") return this.mode.view.thisMac();
+    const beside = this.mode?.kind === "beside";
     const command = this.mode?.kind === "beside" ? this.mode.beside.notice() : null;
     return {
       role: "home",
       left: this.options.joined.left(),
       ...(this.homeCaughtUp ? { caughtUp: this.homeCaughtUp } : {}),
       ...(command ? { command } : {}),
+      ...(beside ? { byCommand: true as const } : {}),
     };
+  }
+
+  /**
+   * Stop, in Settings → General, beside a command (docs/run.md, "Quit and
+   * Stop"): its first mate and crew stop cleanly until the person starts
+   * Infinitary again. False where the window runs no first mate beside one.
+   */
+  stopCommand(): boolean {
+    return this.mode?.kind === "beside" ? this.mode.beside.stop() : false;
   }
 
   /**
@@ -277,10 +288,17 @@ export class Shell {
    * the link once, keeps the grant, then stops this Mac's own Firstmate and
    * starts every window over as the other Mac's. Joined as a Mac, this Mac
    * also runs that Mac's work: the work folder keeps the same grant and the
-   * work starts in the background. A refusal changes nothing here.
+   * work starts in the background. A refusal changes nothing here. Beside
+   * a command this window starts, that command's first mate is this Mac's
+   * own: it stops, and nothing starts it again (docs/run.md, "Joining
+   * another computer"). Beside a boot entry, which would start it again, it
+   * is refused.
    */
   async join(text: string): Promise<JoinOutcome> {
-    if (this.mode?.kind !== "home" || this.switching) return { ok: false, refused: "other" };
+    const joinable =
+      this.mode?.kind === "home" ||
+      (this.mode?.kind === "beside" && this.mode.beside.startsCommand);
+    if (!joinable || this.switching) return { ok: false, refused: "other" };
     let kind: string;
     try {
       kind = parsePairingLink(text).kind;
@@ -679,6 +697,11 @@ export class Shell {
 
   private async stopHome(): Promise<void> {
     const mode = this.mode;
+    if (mode?.kind === "beside") {
+      this.mode = null;
+      await mode.beside.leave();
+      return;
+    }
     if (mode?.kind !== "home") return;
     this.mode = null;
     mode.detach();

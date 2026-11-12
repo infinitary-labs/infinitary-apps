@@ -8,6 +8,7 @@ import {
   type Launcher,
   wantedBy,
 } from "@core/helper/background";
+import { loginAgentFile, sessionAgentFile } from "@core/helper/runAgent";
 import { lingerStays } from "@core/helper/words";
 import { HERE } from "@shared/deviceNames";
 import type { StartEntry } from "./besideRun";
@@ -265,6 +266,11 @@ function macStartAtBoot(asked: BootAsked, context: BootContext): BootResult {
         env: context.env,
       }),
     );
+    // The boot entry starts the run from now on: the agent the window set up
+    // for Start at login would start a second one at every login, which
+    // refuses and starts again (docs/run.md, "The window starts it").
+    rmSync(loginAgentFile(context), { force: true });
+    rmSync(sessionAgentFile(context), { force: true });
   } catch (error) {
     return {
       code: 1,

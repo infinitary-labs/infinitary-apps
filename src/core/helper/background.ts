@@ -327,11 +327,13 @@ export function bootUnit(options: {
  * among them, so the new version runs; a clean stop (exit 0) does not. It
  * runs at the priority of an app the person started, as the home's own work
  * does (INF-247). What it says goes to `log`, which launchd opens as `user`.
+ * With no `user` it is an agent in the session of the user who loads it, as
+ * the window loads the run it starts (`startRunAgent`, ./runAgent.ts).
  */
 export function bootPlist(options: {
   label: string;
-  user: string;
-  homeDir: string;
+  user?: string;
+  homeDir?: string;
   launcher: Launcher;
   settings?: string;
   log: string;
@@ -344,7 +346,10 @@ export function bootPlist(options: {
     ...(options.settings ? ["--settings", options.settings] : []),
   ];
   // Named, so the run finds its data folder in this account's home whatever a system job is given.
-  const env = Object.entries({ HOME: options.homeDir, ...options.env });
+  const env = Object.entries({
+    ...(options.homeDir ? { HOME: options.homeDir } : {}),
+    ...options.env,
+  });
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
@@ -352,8 +357,7 @@ export function bootPlist(options: {
     "<dict>",
     "\t<key>Label</key>",
     `\t<string>${xml(options.label)}</string>`,
-    "\t<key>UserName</key>",
-    `\t<string>${xml(options.user)}</string>`,
+    ...(options.user ? ["\t<key>UserName</key>", `\t<string>${xml(options.user)}</string>`] : []),
     "\t<key>ProgramArguments</key>",
     "\t<array>",
     ...words.map((word) => `\t\t<string>${xml(word)}</string>`),
@@ -370,13 +374,17 @@ export function bootPlist(options: {
     `\t<string>${xml(options.log)}</string>`,
     "\t<key>StandardErrorPath</key>",
     `\t<string>${xml(options.log)}</string>`,
-    "\t<key>EnvironmentVariables</key>",
-    "\t<dict>",
-    ...env.flatMap(([key, value]) => [
-      `\t\t<key>${xml(key)}</key>`,
-      `\t\t<string>${xml(value)}</string>`,
-    ]),
-    "\t</dict>",
+    ...(env.length > 0
+      ? [
+          "\t<key>EnvironmentVariables</key>",
+          "\t<dict>",
+          ...env.flatMap(([key, value]) => [
+            `\t\t<key>${xml(key)}</key>`,
+            `\t\t<string>${xml(value)}</string>`,
+          ]),
+          "\t</dict>",
+        ]
+      : []),
     "</dict>",
     "</plist>",
     "",
@@ -422,6 +430,27 @@ type AgentText = { launcher: Launcher; env: Readonly<Record<string, string>> };
 /** Startup outcome: running, verified next login, refusal, unsupported setup, or unreadable facts. */
 export type InBackgroundNow = "running" | "at-login" | "failed" | "unavailable" | "unknown";
 
+/**
+ * Loads a Mac agent from its file in this user's session: running once
+ * launchd took it, failed when it refused, and at-login with no session.
+ * The window's run agent loads this way too (./runAgent.ts).
+ */
+export async function loadAgent(
+  launchctl: Launchctl,
+  uid: number,
+  service: Service,
+): Promise<InBackgroundNow> {
+  const domain = `gui/${uid}`;
+  // One left loaded goes first, so launchd reads this file again.
+  await launchctl(["bootout", `${domain}/${service.label}`]);
+  const started = await launchctl(["bootstrap", domain, service.file]);
+  if (started.ok) return "running";
+  // launchd knows the domain only while the user is logged in: asking for it
+  // tells an absent session from a refusal, without reading launchctl's words.
+  const session = await launchctl(["print", domain]);
+  return session.ok ? "failed" : "at-login";
+}
+
 const launchd: Adapter = {
   service: (context, named) => {
     const label = named ?? serviceLabel(context.flavor, context.spelling);
@@ -439,18 +468,7 @@ const launchd: Adapter = {
       }),
     );
   },
-  load: async (context, service) => {
-    const launchctl = launchctlOf(context);
-    const domain = `gui/${context.uid}`;
-    // One left loaded by an earlier join goes first, so launchd reads this file.
-    await launchctl(["bootout", `${domain}/${service.label}`]);
-    const started = await launchctl(["bootstrap", domain, service.file]);
-    if (started.ok) return "running";
-    // launchd knows the domain only while the user is logged in: asking for it
-    // tells an absent session from a refusal, without reading launchctl's words.
-    const session = await launchctl(["print", domain]);
-    return session.ok ? "failed" : "at-login";
-  },
+  load: (context, service) => loadAgent(launchctlOf(context), context.uid, service),
   unload: async (context, service) => {
     await launchctlOf(context)(["bootout", `gui/${context.uid}/${service.label}`]);
   },
@@ -553,13 +571,13 @@ function adapterOf(context: BackgroundContext): Adapter {
   return "systemctl" in context ? systemd : launchd;
 }
 
-function launchctlOf(context: BackgroundContext): Launchctl {
+export function launchctlOf(context: ServiceManager): Launchctl {
   if (!("launchctl" in context)) throw new Error("launchd is not this computer's service manager.");
   return context.launchctl;
 }
 
 /** systemd's own, always about this user's services. */
-function systemctlOf(context: BackgroundContext): Systemctl {
+export function systemctlOf(context: ServiceManager): Systemctl {
   if (!("systemctl" in context)) throw new Error("systemd is not this computer's service manager.");
   const { systemctl } = context;
   return (args) => systemctl(["--user", ...args]);

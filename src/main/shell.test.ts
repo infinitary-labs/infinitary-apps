@@ -1455,10 +1455,14 @@ describe("the window beside a command's first mate", () => {
       readyMs?: number;
       installsUpdates?: boolean;
       programReplaced?: boolean;
+      /** When this window started the command, and the starter it started it with. */
+      startedAt?: number;
+      starts?: boolean;
     } = {},
   ) {
     const startCore = vi.fn(async () => ownCore().core);
     const relaunch = vi.fn();
+    const restartWindows = vi.fn();
     const openPage = vi.fn(async (_url: string) => {});
     const pushes: { channel: string; payload: unknown }[] = [];
     /** What the command's records say now, and which start entry is in place. */
@@ -1473,6 +1477,20 @@ describe("the window beside a command's first mate", () => {
       startAtLogin: false,
       picked: ["/home/kai/report.pdf"],
       notified: [] as { title: string; body: string }[],
+    };
+    /** The command's starter (docs/run.md, "The window starts it"), and Stop's signals. */
+    const starter = {
+      start: vi.fn(async () => true),
+      atLogin: {
+        get: () => starter.login,
+        set: (on: boolean) => {
+          starter.login = on;
+        },
+      },
+      inPlace: () => true,
+      stop: vi.fn(async (_how: { forget: boolean }) => {}),
+      login: false,
+      stops: 0,
     };
     const made = new Shell({
       joined: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "joined"), () => {}),
@@ -1495,6 +1513,12 @@ describe("the window beside a command's first mate", () => {
         chooseFiles: async () => program.picked,
         installsUpdates: options.installsUpdates ?? false,
         programReplaced: () => command.programReplaced,
+        ...(options.starts ? { starter } : {}),
+        ...(options.startedAt === undefined ? {} : { startedAt: options.startedAt }),
+        stopCommand: () => {
+          starter.stops += 1;
+          return command.records.running === true;
+        },
       },
       startCore,
       startConnection: () => {
@@ -1508,12 +1532,22 @@ describe("the window beside a command's first mate", () => {
         show: (notification) => program.notified.push(notification),
       },
       deviceName: async () => "MacBook Pro",
-      restartWindows: vi.fn(),
+      restartWindows,
       relaunch,
       updates: ownUpdates().updates,
     });
     stops.push(() => made.dispose());
-    return { shell: made, startCore, relaunch, openPage, pushes, command, program };
+    return {
+      shell: made,
+      startCore,
+      relaunch,
+      restartWindows,
+      openPage,
+      pushes,
+      command,
+      program,
+      starter,
+    };
   }
 
   it("asks the command's first mate over its door, with no core here", async () => {
@@ -1525,7 +1559,7 @@ describe("the window beside a command's first mate", () => {
     expect(at.startCore).not.toHaveBeenCalled();
     expect(at.shell.core()).toBeNull();
     // This computer's own window: nothing to leave, no device of the first mate's.
-    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, byCommand: true });
     expect(await at.shell.dispatch("inf:repos:list", [])).toEqual({ run: "inf:repos:list" });
     expect(command.run.dispatch.mock.calls.at(-1)?.slice(0, 3)).toEqual([
       "inf:repos:list",
@@ -1597,13 +1631,14 @@ describe("the window beside a command's first mate", () => {
     const command = commandRun();
     const at = besideShell(command.doorDir, { readyMs: 20 });
     await at.shell.start();
-    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, byCommand: true });
     await command.open().settled();
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
       .toEqual({
         role: "home",
         left: null,
+        byCommand: true,
         caughtUp: 1,
       });
     expect(await at.shell.dispatch("inf:repos:list", [])).toEqual({ run: "inf:repos:list" });
@@ -1716,7 +1751,12 @@ describe("the window beside a command's first mate", () => {
     await command.stop();
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
-      .toEqual({ role: "home", left: null, command: { state: "stopped", ending: "crashed" } });
+      .toEqual({
+        role: "home",
+        left: null,
+        byCommand: true,
+        command: { state: "stopped", ending: "crashed" },
+      });
     expect(at.pushes.at(-1)).toEqual({
       channel: "inf:devices:this-mac",
       payload: at.shell.thisMac(),
@@ -1737,7 +1777,7 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => at.shell.dispatch("inf:repos:list", []).catch(() => "lost"))
       .toBe("lost");
-    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, byCommand: true });
     expect(at.shell.startHere()).toBe(false);
     expect(at.relaunch).not.toHaveBeenCalled();
   });
@@ -1753,11 +1793,21 @@ describe("the window beside a command's first mate", () => {
     await command.stop();
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
-      .toEqual({ role: "home", left: null, command: { state: "waiting", ending: "updated" } });
+      .toEqual({
+        role: "home",
+        left: null,
+        byCommand: true,
+        command: { state: "waiting", ending: "updated" },
+      });
     expect(at.shell.startHere()).toBe(false);
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
-      .toEqual({ role: "home", left: null, command: { state: "stopped", ending: "updated" } });
+      .toEqual({
+        role: "home",
+        left: null,
+        byCommand: true,
+        command: { state: "stopped", ending: "updated" },
+      });
     expect(at.relaunch).not.toHaveBeenCalled();
   });
 
@@ -1775,6 +1825,7 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.thisMac()).toEqual({
       role: "home",
       left: null,
+      byCommand: true,
       command: { state: "waiting", ending: "updated" },
     });
     at.command.records = { running: true, run: JOINED, lastStop: at.command.records.lastStop };
@@ -1782,7 +1833,7 @@ describe("the window beside a command's first mate", () => {
     // The command the entry started welcomes it: the notice goes and the window reads everything.
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
-      .toEqual({ role: "home", left: null, caughtUp: 1 });
+      .toEqual({ role: "home", left: null, byCommand: true, caughtUp: 1 });
     await expect.poll(() => at.shell.preferences.get().appearance.theme).toBe("light");
   });
 
@@ -1820,5 +1871,130 @@ describe("the window beside a command's first mate", () => {
     // Before this window's update replaces the copy, the first mate ends with its work saved.
     await at.shell.updateReplacing();
     expect(command.there.holds.at(-1)).toBe("replaced");
+  });
+
+  // INF-1352's plan, piece 7, starter=login-agent: an earlier command's stop is not this one's.
+  it("waits with no notice for the command it started, then joins it", async () => {
+    const command = commandRun();
+    const records = stopped("quit", 0, { pid: 7, startedAt: "2026-10-30T08:00:00.000Z" });
+    const at = besideShell(command.doorDir, {
+      records,
+      startedAt: Date.now() + 1,
+      readyMs: 60_000,
+    });
+    const starting = at.shell.start();
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, byCommand: true });
+    at.command.records = { running: true, run: JOINED, lastStop: records.lastStop };
+    await command.open().settled();
+    await starting;
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toEqual({ role: "home", left: null, byCommand: true });
+    expect(await at.shell.dispatch("inf:repos:list", [])).toEqual({ run: "inf:repos:list" });
+    expect(at.startCore).not.toHaveBeenCalled();
+    // With no starter (a boot entry), joining would leave a command that entry starts again.
+    expect(await at.shell.join("not a link")).toEqual({ ok: false, refused: "other" });
+  });
+
+  it("stops the command on Stop, and starts it again through its starter on Start it here", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true, readyMs: 50 });
+    await at.shell.start();
+    expect(await at.shell.join("not a link")).toEqual({ ok: false, refused: "not-a-link" });
+    expect(at.shell.stopCommand()).toBe(true);
+    expect(at.starter.stops).toBe(1);
+    at.command.records = stopped("quit", 0);
+    await command.stop();
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toEqual({
+        role: "home",
+        left: null,
+        byCommand: true,
+        // The captain's answer on the review: the notice speaks of the program this window started.
+        command: { state: "stopped", ending: "quit", byWindow: true },
+      });
+    // Under the notice there is nothing to stop.
+    expect(at.shell.stopCommand()).toBe(false);
+    at.starter.start.mockResolvedValueOnce(false);
+    expect(at.shell.startHere()).toBe(true);
+    expect(at.starter.start).toHaveBeenCalledTimes(1);
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, byCommand: true });
+    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+  });
+
+  it("keeps the notice down while the command Start it here started comes up, then starts the window over", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true, readyMs: 5_000 });
+    await at.shell.start();
+    at.shell.stopCommand();
+    const records = stopped("quit", 0);
+    if (records.lastStop) records.lastStop.stoppedAt = new Date(Date.now() - 1_000).toISOString();
+    at.command.records = records;
+    await command.stop();
+    await expect
+      .poll(
+        () => {
+          const here = at.shell.thisMac();
+          return here.role === "home" ? here.command?.state : null;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe("stopped");
+    expect(at.shell.startHere()).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, byCommand: true });
+    at.command.records = {
+      running: true,
+      run: { pid: 43, startedAt: new Date().toISOString() },
+      lastStop: null,
+    };
+    await command.open().settled();
+    await expect.poll(() => at.restartWindows.mock.calls.length, { timeout: 5_000 }).toBe(1);
+    expect(at.relaunch).not.toHaveBeenCalled();
+  });
+
+  it("runs the first mate here on Start it here once the command could not start", async () => {
+    const command = commandRun();
+    const at = besideShell(command.doorDir, { starts: true, records: stopped("start-failed", 1) });
+    await at.shell.start();
+    expect(at.shell.startHere()).toBe(true);
+    expect(at.starter.start).not.toHaveBeenCalled();
+    expect(at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+  });
+
+  // "Start at login starts the command, not the window."
+  it("answers Start at login from the command's starter, never this program's login item", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true });
+    await at.shell.start();
+    command.run.core.events.emit("inf:own-window:ask", {
+      id: "ask-1",
+      ask: { kind: "start-at-login", set: true },
+    });
+    await expect
+      .poll(() => command.there.answers)
+      .toEqual([["ask-1", { kind: "start-at-login", enabled: true }]]);
+    expect(at.starter.login).toBe(true);
+    expect(at.program.startAtLogin).toBe(false);
+  });
+
+  // Joining another computer from beside a command: that command's first mate is this
+  // computer's own, so it stops, and nothing set to start it again remains.
+  it("joins another computer with a pasted link, stopping the command and letting its starter go", async () => {
+    const pro = await otherMac();
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true });
+    await at.shell.start();
+    await expect(at.shell.join(await pro.link())).resolves.toEqual({ ok: true });
+    await expect.poll(() => at.shell.thisMac().role).toBe("view");
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true }]]);
+    expect(at.starter.stops).toBe(1);
+    expect(at.startCore).not.toHaveBeenCalled();
   });
 });

@@ -144,6 +144,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
           ? invoke("inf:app:choose-folder")
           : invoke("inf:app:choose-folder", startAt),
       startHere: () => invoke("inf:app:start-here"),
+      stopCommand: () => invoke("inf:app:stop-command"),
       quit: () => invoke("inf:app:quit"),
       controlWindow: (control) => invoke("inf:window:control", control),
       windowState: () => invoke("inf:window:state"),

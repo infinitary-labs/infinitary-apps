@@ -8,6 +8,7 @@ import { ownComputerName } from "@core/devices/computerName";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
+import { windowFromWork } from "@core/helper/fromWindow";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { type Core, startCore } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
@@ -41,6 +42,7 @@ import {
   startedHere,
 } from "./besideRun";
 import { disableChromiumFeatures } from "./chromiumFeatures";
+import { commandStarter } from "./commandStarter";
 import { frameFontFiles } from "./frames/fontFiles";
 import { frameLibPins } from "./frames/frameLibFiles";
 import { FrameMountRegistry } from "./frames/frameMounts";
@@ -61,7 +63,9 @@ import { startOwnDisplay } from "./ownDisplay";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
   followInstalledProgram,
+  lockHolder,
   markRunning,
+  processAlive,
   programIdentity,
   RUN_SETTINGS_EXIT,
   RUN_UPDATED_EXIT,
@@ -69,6 +73,7 @@ import {
   type RunEnd,
   runningByCommand,
   runOptions,
+  stopRunningCommand,
   windowProfileDir,
 } from "./runCommand";
 import { readKeychainLock, runEnvironment } from "./runEnvironment";
@@ -368,15 +373,55 @@ export async function startApp(
   // for the command that ended, which no later launch waits for again.
   const startsHere = !windowless && process.argv.includes(START_HERE_ARG);
   if (startsHere) noteStartedHere(dataDir, readRunStatus(dataDir));
-  const besideRun =
-    !windowless &&
-    (runningByCommand(dataDir) ||
-      (!startsHere &&
-        betweenStops(readRunStatus(dataDir), ownStartEntry(), {
-          now: Date.now(),
-          waitMs: entryWaitMs(restartWaitMs),
-          startedHere: startedHere(dataDir),
-        })));
+  // This user's work: a computer that joins here runs its home's work
+  // there, and a computer a command or its address added controls its
+  // home with the grant its work keeps (docs/view.md, "A Mac that runs work").
+  const work = workContext(isolatedUserDataDir);
+  // The window starts the command itself (docs/run.md, "The window starts
+  // it"; the captain's answer on INF-1352's plan, starter=login-agent): with
+  // none running, it sets `<app> run` up with this account's service manager
+  // and opens beside it. Never where that run would not open the folder or
+  // would control another computer, beside a boot entry, which starts the
+  // run itself, or once the person chose Start it here.
+  const joinedHere = new JoinedHome(join(dataDir, "joined"));
+  const starter =
+    windowless ||
+    move ||
+    startsHere ||
+    ownStartEntry() === "mac-daemon" ||
+    dataFolderRefusal(dataDir) ||
+    joinedHere.read() ||
+    windowFromWork(work.place.dataDir, joinedHere.leftDeviceId())
+      ? null
+      : commandStarter({
+          work,
+          flavor: work.place.flavor,
+          dataDir,
+          isolated: Boolean(isolatedUserDataDir),
+          switched: userDataChoice.kind === "switch",
+          packaged: app.isPackaged,
+        });
+  let besideRun = !windowless && runningByCommand(dataDir);
+  // When this window started the command it opens beside, until that one welcomes it.
+  let startedAt: number | undefined;
+  // A window already running its first mate here holds the folder's lock:
+  // this launch only focuses it, and a command started now could not open it.
+  const holder = lockHolder(dataDir);
+  const heldByWindow = typeof holder === "number" && processAlive(holder);
+  if (!besideRun && starter && !heldByWindow) {
+    startedAt = Date.now();
+    besideRun = await starter.start();
+    if (!besideRun) {
+      // It runs its first mate itself: the agent never starts a run beside it.
+      startedAt = undefined;
+      await starter.stop({ forget: false }).catch(() => {});
+    }
+  } else if (!besideRun && !windowless && !startsHere)
+    besideRun = betweenStops(readRunStatus(dataDir), ownStartEntry(), {
+      now: Date.now(),
+      waitMs: entryWaitMs(restartWaitMs),
+      startedHere: startedHere(dataDir),
+    });
   if (besideRun) app.setPath("userData", windowProfileDir(dataDir));
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
@@ -668,10 +713,6 @@ export async function startApp(
       const standInReturnHost = isDev
         ? settingFrom(process.env, "SIGN_IN_RETURN_HOST")?.trim() || undefined
         : undefined;
-      // This user's work: a computer that joins here runs its home's work
-      // there, and a computer a command or its address added controls its
-      // home with the grant its work keeps (docs/view.md, "A Mac that runs work").
-      const work = workContext(isolatedUserDataDir);
       const { serviceManager } = work;
       // Whether the program this window runs was replaced since it started,
       // read where a run follows it (`followInstalledProgram`).
@@ -684,7 +725,7 @@ export async function startApp(
         const now = programIdentity(programPath);
         return programAtStart !== null && now !== null && now !== programAtStart;
       };
-      const shell = new Shell({
+      const shell: Shell = new Shell({
         keySystem: desktop.keys,
         joined: new JoinedHome(join(dataDir, "joined")),
         // Beside a run: its local door, its pictures, and this window's own look.
@@ -695,13 +736,23 @@ export async function startApp(
                 crewmatesDir: appPathsFor(dataDir).crewmatesDir,
                 look: new JoinedHome(join(app.getPath("userData"), "look")),
                 status: () => readRunStatus(dataDir),
-                startEntry: ownStartEntry,
+                // The agent this window set up starts the command again too.
+                startEntry: () =>
+                  ownStartEntry() ??
+                  (starter?.inPlace()
+                    ? hostPlatform() === "linux"
+                      ? "linux-unit"
+                      : "mac-agent"
+                    : null),
                 ...(restartWaitMs === undefined ? {} : { restartWaitMs }),
                 presence: host.presence,
                 chooseFiles: async (choice) => (await host.browser?.chooseFiles?.(choice)) ?? [],
                 // Only a window installs an update on a Mac that updates itself.
                 installsUpdates: Boolean(host.macUpdates),
                 programReplaced,
+                ...(starter ? { starter } : {}),
+                ...(startedAt === undefined ? {} : { startedAt }),
+                stopCommand: () => stopRunningCommand(dataDir),
               },
             }
           : {}),
@@ -814,6 +865,16 @@ export async function startApp(
             : {}),
         }),
       });
+      // Start at login starts the command where the window starts it, never
+      // the window: a login item the window had moves to the command.
+      if (besideRun && starter && host.presence.getStartAtLogin()) {
+        try {
+          starter.atLogin.set(true);
+          host.presence.setStartAtLogin(false);
+        } catch (error) {
+          console.warn(`[run] Start at login stays the window's: ${(error as Error).message}`);
+        }
+      }
       configurePermissions(session.defaultSession, rendererSource, () => shell.dictationEnabled());
       // A folder that moved to Infinitary, or one a move holds, is never opened
       // here: nothing is started on it (./savedDataRefusal.ts).

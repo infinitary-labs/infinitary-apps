@@ -8,6 +8,7 @@ It is for a computer or an account where nobody sits at Infinitary's window, suc
 The app owns what no starter can do: running with no window, a clean stop, and an exit with its reason.
 Whatever runs the command owns everything about how it runs: when it starts (at boot, at login or by hand), as which account, whether it starts again after a crash or an update, its priority, its log and its settings file.
 So the app adds no option per setup: a macOS boot entry, a Linux service, a login item and a terminal all run the same command.
+Infinitary's own window is one more such starter: opened with no command running, it sets the command up with this account's service manager and opens beside it ("The window starts it" below).
 On screen the mode is called "started by a command", beside Settings' "Start at login"; the words server, service, daemon and headless stay off the app's screens (`docs/vocabulary.md`).
 
 ## The command
@@ -149,11 +150,43 @@ An update the command's own first mate installs ends the same way (INF-3660's pl
 A command never starts itself again: it would come back as a window.
 On a Mac whose installed app updates itself, only a program in the person's own session can replace the copy, so the window opened beside the command installs it while the command holds the crew's saved work, and the command ends with 75 once the window says the copy is replaced (`docs/alpha.md`, "Saving work before an update").
 
+## The window starts it
+
+Opening Infinitary's window with no command running starts `<app> run` in the background and opens the window beside it, so the first mate never runs in the window's program (INF-1352's plan, piece 7, the captain's answer starter=login-agent: "The window sets it up in the background through the seam a work computer uses, so a crash restarts it and Start at login keeps it").
+The window asks this account's own service manager, as a computer that runs work sets up `<app> work run` (`docs/helper.md`, "In the background"; `startRunAgent`, `src/core/helper/runAgent.ts`):
+
+- **On a Mac** it loads an agent into this user's session, labelled `<bundle id>.run` (`.dev.run` for a development run, `runLabelOf`).
+  The agent runs `<app> run` at once, at the priority of an app the person started, starts it again after a failed exit and never after a clean one, and writes what the run says to `run.log` in the data folder (`runAgentPlist`).
+  Its file is `run-agent.plist` in the data folder, which launchd never reads by itself, so the agent lasts until the person logs out.
+- **On Linux** it starts the same user service `<app> start-at-boot` writes, writing it first where none is ("Starting at boot" below).
+
+Each start writes the Mac agent's file anew, so it starts the program this window is.
+On Linux each start writes the service again wherever it differs from the one this window would write, such as a moved program or another data folder's settings, keeping the settings file a `start-at-boot` service names.
+The window then opens beside the command as below, and waits with no notice for it to welcome the window, for as long as it would wait for a start entry; an earlier command's stop on record is not this one's.
+Where the command cannot start - no service manager, no login session to give it to, or the service manager refused it - the window lets the agent go and runs its first mate itself, as it always did.
+It starts no command for a data folder named with Chromium's `--user-data-dir` switch, for an installed app whose home is pinned away from the account's own (macOS's `CFFIXED_USER_HOME`, or a `HOME` naming another folder), since its agent carries no settings and the service manager starts the run with the account's own home, so that run would open another data folder, while a move of the folder is due, for a folder the app refuses, for an app that joined another computer, beside a Mac's boot entry in `/Library/LaunchDaemons`, which starts the run itself, or after the person chose Start it here on a command that could not start.
+A development run, `pnpm dev` and every journey among them, starts one only with `INFINITARY_WINDOW_STARTS_RUN=1`, so it keeps the window's own first mate and runs the code it was started from; a journey that sets it also names a stand-in service manager.
+An installed app reads neither, and never starts one for an isolated data folder.
+
+**Start at login** starts the command, not the window: while the window stands beside a command it can start, the switch moves the Mac agent's file into `~/Library/LaunchAgents`, which launchd reads at every login, and back, or gives the Linux service the link its user's login reads (`setRunAgentAtLogin`).
+A login item the window had before moves to the command the first time the window starts beside it, and the window's own is turned off.
+
+**Joining another computer** from beside the command: the command's first mate is this computer's own, so joining stops it and lets the agent go, its files and the Linux service with it, and the window becomes a view of the other computer (`Shell.join`, `src/main/shell.ts`).
+Joining by its address is not offered beside a command, and beside a boot entry the window did not set up, which would start the command again at the next boot, joining is refused.
+
+## Quit and Stop
+
+Quitting the window closes only the window: the command's first mate and crew keep working (the captain's answer quit=window-only).
+Settings -> General says so beside the window and offers Stop, which the person presses twice, as Purge (`StopCommandRow`, `src/renderer/src/settings/GeneralTab.tsx`; `inf:app:stop-command`).
+Stop signals the command as a terminal's stop does, so it stops its crew cleanly and exits 0, and neither the agent nor the service starts it again (`stopRunningCommand`, `src/main/runCommand.ts`).
+The window then shows its notice, and Start it here starts the command again through the service manager; opening Infinitary again starts it too.
+The window says it stands beside a command as `byCommand` on what this app is (`inf:devices:this-mac`).
+
 ## The window opened beside it
 
 Opening Infinitary's window in the same account while the command runs opens the window as a view of the command's first mate, over its local door (INF-1352's plan, piece 6, the captain's answer window_joins=join, which reverses INF-1228's "It says a command started Infinitary here, and quits").
 The window asks before it asks for the single-instance lock, since a process the lock refused never becomes ready: `run.json` names a live process that holds Chromium's lock, which on a Mac and on Linux is a link naming its holder (`SingletonLock`, `<host>-<pid>`) (`runningByCommand`).
-A note a crashed run left names a process that is gone or holds no lock, so the window opens as usual, with its own first mate, unless a start entry is about to start the command again ("When the command stops" below).
+A note a crashed run left names a process that is gone or holds no lock, so the window starts the command as above, or, where it cannot, opens with its own first mate unless a start entry is about to start the command again ("When the command stops" below).
 
 One rule splits the work between the two programs (INF-3660's plan and the captain's answers on it): the first mate keeps the settings, the records and the crew, and only this computer's window touches the desktop.
 The first mate stores each setting once and tells the window, the window applies it to its own program, and the command's program applies nothing to a window (`BesideWindow`, `src/main/besideWindow.ts`; `startCore`'s `startedByCommand`, `src/core/index.ts`).
@@ -170,7 +203,7 @@ The first mate stores each setting once and tells the window, the window applies
   A view on another computer keeps its own look and keys, as before.
 - **Show in Dock and Start at login** (dock=split).
   Show in Dock is the first mate's setting: the window applies it to its own program at each welcome and whenever the first mate says it changed (`inf:presence:dock`), and the command's own Dock call does nothing.
-  Start at login is the system's setting for the program a person opens, so the window reads and changes it: the first mate asks the window (`inf:own-window:ask`, answered with `inf:own-window:answer`; `OwnWindow`, `src/core/ownWindow.ts`), whether Settings here asked or the first mate did on the captain's words.
+  Start at login is the system's setting for what starts at login, so the window reads and changes it - the command's agent or service where the window can start the command, otherwise its own login item: the first mate asks the window (`inf:own-window:ask`, answered with `inf:own-window:answer`; `OwnWindow`, `src/core/ownWindow.ts`), whether Settings here asked or the first mate did on the captain's words.
   With no window open the first mate answers what the data folder last remembered (`start-at-login.json`) and refuses a change in plain words (`OWN_WINDOW_WORDS`, `src/shared/ownWindow.ts`).
 - **Notifications** (notifications=window).
   The window posts the first mate's card-worthy moments to this computer's Notification Center, as a view on another computer posts them (`ViewNotices`, `src/main/view/viewNotices.ts`; `docs/view.md`, "Notifications").
@@ -204,16 +237,17 @@ While the first mate is out of reach the window reads the command's own records 
 - **How it ended.**
   The command records why it stopped only on a clean stop, so a stop record that names another command than the one the window joined, by its process and start time, means the joined one left none: it crashed (`runEnd`, `src/main/besideRun.ts`).
 - **Waiting for the start entry.**
-  Where the start entry the app wrote is in place - the user's systemd service on Linux, the entry in `/Library/LaunchDaemons` on a Mac (`startEntryInPlace`, `src/main/startAtBoot.ts`) - and it starts the command again after that end, the notice says the window waits for it and offers only Quit (`entryRestarts`: after a crash or a failed exit such as an update's 75, never after a clean stop, and on Linux never after 78).
+  Where the start entry the app wrote is in place - the user's systemd service on Linux, the entry in `/Library/LaunchDaemons` or the agent the window loaded on a Mac (`startEntryInPlace`, `src/main/startAtBoot.ts`) - and it starts the command again after that end, the notice says the window waits for it and offers only Quit (`entryRestarts`: after a crash or a failed exit such as an update's 75, never after a clean stop, and on Linux never after 78).
   The wait is the entry's own ten seconds plus the ten seconds a window allows a command to welcome it, counted from the command's own record of its stop, or from when the window first saw it gone where it left none; after it the notice offers Start it here (`entryWaitMs`).
   A start entry a person wrote by hand is not recognised, so the notice offers Start it here at once.
 - **Start it here.**
   Where no entry will start it again, the notice offers Start it here beside Quit at once.
-  It starts the app again as this computer's own first mate (`--start-here`), which takes the data folder's lock as every start does, and only while the records still say no command runs.
+  Where the window can start the command it starts it again through the service manager and waits for it as above; otherwise, or where the command could not start, it starts the app again as this computer's own first mate (`--start-here`), which takes the data folder's lock as every start does, and only while the records still say no command runs.
   That start notes which ended command the person answered (`run-started-here.json` in the data folder), so no later launch waits for that same end again.
 - **The notice.**
   It covers the whole window; Escape does not close it, Tab moves between its buttons, and Quit is always there (`CommandStopped`, `src/renderer/src/devices/CommandStopped.tsx`; the design skill's `components/devices/CommandStopped.prompt.md`).
   Its words say "started by a command" and how it ended (`COMMAND_NOTICE_WORDS`, `src/shared/commandNotice.ts`), and the window hears it as `command` on what this app is (`inf:devices:this-mac`).
+  Beside the program the window started itself, where the person never ran a command, the notice carries `byWindow` and its line speaks of their first mate instead, from the message catalog; a command the person set up keeps the words above.
 - **When the command is back.**
   The command's welcome takes the notice down; a window that stood under it starts its pages over and reads everything from the command that came back.
 - **Opened between two starts.**
@@ -262,10 +296,14 @@ With a settings file and the system folders as its path, a run never asks a stan
 `tests/e2e/run-window.spec.ts` opens the built app's window beside such a command: it shows the command's card as this computer's own window, and once the command is stopped it offers Start it here beside Quit by keys, with Escape closing nothing.
 A command killed over an earlier stop's record is told as stopped without saying why; under a stand-in start entry the window waits for a command that ended for its update and follows the new program, offers Start it here once the entry's time passed and takes the notice down for a late command, and a window opened between two starts waits unless Start it here answered that end.
 Its last journey changes the theme at the first mate from a second client of the local door, which the window draws, and changes it back in the window, which the first mate keeps.
+`tests/e2e/window-starts-run.spec.ts` opens the window with no command running against a stand-in service manager that runs the job it is given (`tests/e2e/serviceManagerStandIn.ts`): the window starts the command and shows its card, Settings -> General offers Stop and moves Start at login to the command, Quit leaves the command running and the window opened again joins it, Stop ends it with nothing starting it again, Start it here starts a new one, and a replaced program ends it for the service manager to start the new one.
+Its second test starts a crewmate whose step stays open, quits the window and opens it again: the step is still open, the task is still running on the same command, and the window's browser profile folder is its own, held by a different process from the command's.
+`src/core/helper/runAgent.test.ts` holds the agent's file and the Linux service against stand-ins: where each lives, Start at login moving it, a refused start, and letting it go.
+`tests/e2e/latency.check.spec.ts` prints, on a perf run on a Mac, memory across both programs and the time a request, an answer, a key and a fast-typing burst take to reach the screen, against the window running its first mate itself (`docs/testing.md`, "The latency check").
 `tests/e2e/panels-every-window.spec.ts` holds the panels in that window and in one on another computer: a panel drawn from the first mate's built files, an action answered there, and a panel built again while the window is open.
-`src/main/runCommand.test.ts` holds the words after `run`, the window's reading of `run.json` and the lock, and the program's identity.
+`src/main/runCommand.test.ts` holds the words after `run`, the window's reading of `run.json` and the lock, Stop's signal, and the program's identity.
 `src/main/besideRun.test.ts` holds how a command ended, which start entry starts it again, the notice for each ending and wait, and the note Start it here leaves.
-`src/main/shell.test.ts` holds the window beside a command against a stand-in door and presence: it asks over the door with no core, follows the first mate's look and keys from its own copy, applies its Dock choice, answers Start at login and a file picker from its own program, posts its cards' notifications, reads everything once a late door opens, shows the notice and never starts a first mate by itself.
+`src/main/shell.test.ts` holds the window beside a command against a stand-in door and presence: it asks over the door with no core, follows the first mate's look and keys from its own copy, applies its Dock choice, answers Start at login and a file picker from its own program, posts its cards' notifications, reads everything once a late door opens, shows the notice and never starts a first mate by itself; and, beside a command it started, waits for it with no notice, answers Start at login from the command's starter, stops it on Stop, starts it again on Start it here, and joins another computer by stopping it.
 `src/core/ownWindow.test.ts` and `src/core/core.connection.test.ts` hold the first mate's side: what it asks of this computer's window and says with none open, the requests it takes only from that window, and that a command's own program posts no notification and changes no login item.
 `src/core/update/updateHold.test.ts` holds the save a window's update waits for: a running turn, Update later, a window that leaves mid-save, and the replaced program.
 `src/main/runSettings.test.ts` holds the settings file's reading and each reason it refuses one; `src/core/hostEnv.test.ts` holds the search path a child gets from it with no shell asked, and `src/core/claude/claudeCli.test.ts` the locator's login-shell rung it skips.

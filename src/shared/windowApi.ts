@@ -187,6 +187,12 @@ export type FirstmateApi = {
      * first mate. False where nothing offers it.
      */
     startHere: () => Promise<boolean>;
+    /**
+     * Stop, beside Infinitary started by a command (`ThisMac.byCommand`):
+     * its first mate and crew stop until the person starts Infinitary again.
+     * False where none runs beside this window.
+     */
+    stopCommand: () => Promise<boolean>;
     /** Quits this window's program. */
     quit: () => Promise<{ ok: true }>;
     /** One of the window's own buttons where the app draws them; answers the window's state after it. */

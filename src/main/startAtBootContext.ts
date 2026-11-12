@@ -34,6 +34,16 @@ const CARRIED = [
   "PI_OFFLINE",
 ];
 
+/** What a development run's start entry carries of its environment: the settings that chose its data folder. */
+export function carriedRunEnv(env: NodeJS.ProcessEnv): Record<string, string> {
+  return Object.fromEntries(
+    CARRIED.flatMap((name) => {
+      const value = env[name];
+      return value ? [[name, value]] : [];
+    }),
+  );
+}
+
 export async function answerBootCommand(
   asked: { boot: string[] | null; help: string[] | null },
   dataDir: string,
@@ -71,14 +81,7 @@ export async function answerBootCommand(
     label: runLabelOf(flavor),
     launcher,
     dataDir,
-    env: app.isPackaged
-      ? {}
-      : Object.fromEntries(
-          CARRIED.flatMap((name) => {
-            const value = env[name];
-            return value ? [[name, value]] : [];
-          }),
-        ),
+    env: app.isPackaged ? {} : carriedRunEnv(env),
     cwd: process.cwd(),
     systemctl: program("SYSTEMCTL", "systemctl"),
     loginctl: program("LOGINCTL", "loginctl"),

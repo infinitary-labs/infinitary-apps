@@ -756,5 +756,18 @@
   "settingsModelsReset": "Reset to starting levels",
   "settingsModelsResetConfirm": "Confirm reset",
   "settingsModelsResetCancel": "Cancel",
-  "settingsModelsResetNote": "Always use choices are untouched."
+  "settingsModelsResetNote": "Always use choices are untouched.",
+  "settingsCommandStopTitle": "Your first mate keeps working without this window",
+  "settingsCommandStopDescription": "Quitting closes only this window, and your first mate and crew carry on. Stop ends them until you start Infinitary again.",
+  "settingsCommandStop": "Stop",
+  "commandNoticeWindowRestarting": "Your first mate stopped and is starting again. This window waits for it.",
+  "commandNoticeWindowUpdating": "Your first mate is starting again on its new version. This window waits for it.",
+  "commandNoticeWindowStopped": "Your first mate and crew were stopped. Start it here to start them again.",
+  "commandNoticeWindowUpdated": "Your first mate ended for its update and has not started again. Start it here to start it again.",
+  "commandNoticeWindowCrashed": "Your first mate stopped without saying why and has not started again. Start it here to start it again.",
+  "commandNoticeWindowStartFailed": "Your first mate could not start. Start it here to try again.",
+  "settingsCommandStopConfirm": "Confirm stop",
+  "settingsCommandStopping": "Stopping...",
+  "settingsCommandStopFailed": "Your first mate had already stopped.",
+  "settingsCommandStartAtLogin": "Start your first mate and crew when you sign in."
 }

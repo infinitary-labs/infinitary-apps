@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-thread-record",
+      "reason": "On Linux the journey launcher starts the app drawing in software, skipping a graphics start-up journeys never use, and records what each thread of the app's processes waits on just before it closes the app, so a window that stops drawing names the process that held it; a test-only change with nothing a person notices."
+    }
+  ]
+}

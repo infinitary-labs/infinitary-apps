@@ -69,3 +69,27 @@ it("INF-1813 leaves no link into removed scratch when a Claude crew session stag
   expect(readFileSync(join(copied, "runbook-files", "lessons", "SKILL.md"), "utf8")).toBe(skill);
   expect(existsSync(join(diagnostics.dir, "collection-errors.log"))).toBe(false);
 });
+
+it.runIf(process.platform === "linux")(
+  "records each thread of a running app's processes with its state before the app closes",
+  () => {
+    // The bug it serves: on Linux the architecture-map journey's card frame
+    // never drew because the window stopped drawing, with no error and no
+    // failure picture, so nothing said which process or thread held it.
+    const root = scratchDir("journey-diagnostics-");
+    const diagnostics = launchDiagnostics(join(root, "userData"), undefined, join(root, "run"));
+    diagnostics.threads(process.pid, "before closing");
+    diagnostics.stop();
+    const [heading = "", owner = "", ...threads] = readFileSync(
+      join(diagnostics.dir, "threads.txt"),
+      "utf8",
+    ).split("\n");
+    expect(heading).toMatch(/^# before closing, \d{4}-\d\d-\d\dT/);
+    expect(owner).toBe(`${process.pid} browser`);
+    // This thread reads its own record, so Linux reports it running.
+    expect(threads).toContainEqual(
+      expect.stringMatching(new RegExp(`^  ${process.pid} .+ R \\S+$`)),
+    );
+    expect(existsSync(join(diagnostics.dir, "collection-errors.log"))).toBe(false);
+  },
+);

@@ -1080,6 +1080,8 @@ The provider record keeps decoded request bodies with sequence numbers and times
 `launch.json` identifies the disposable userData and worker; no account store or whole HOME is copied.
 The existing failure uploads in `journeys.yml`, `source-journeys.yml` and `verify.yml` already keep this run directory under `test-results/`.
 Main-process streams attach as soon as Playwright returns the launched process; a failure inside `electron.launch` itself has only Playwright's launch error, not these streams.
+On Linux, just before each close, the launcher also adds to `threads.txt` every process of the app and of the virtual screen, with each thread's name, its state and the kernel function it sleeps in (`appThreads` in `tests/e2e/launchDiagnostics.ts`).
+A window whose drawing process stops raises no error, and Playwright's failure picture then waits five seconds for a frame and gives up, so this record is what names the process and thread that held the window.
 Playwright clears a run's output directory as the run starts, and that used to be all of `test-results/`, so a second run of the same working copy deleted the first one's traces and pictures while it was still going, and the two shared one JSON result.
 The newest ten finished runs are kept, and every live one; `--last-failed` still reads the working copy's last run, from `test-results/.last-run.json`.
 A spec saves its pictures and JSON with `test.info().outputPath(name)` (or the `testInfo` it was handed), so each lands in that test's own directory inside the run's, beside its trace: `test-results/runs/<run>/<spec>-<test title>-<lane>/<name>` (Playwright shortens a long title with a hash).
@@ -1482,6 +1484,7 @@ The running agent keeps its old signature until it restarts, so the grant holds 
 ### Drawing in software
 
 In a virtual Mac every app a journey starts draws in software (`--disable-gpu`, `virtualMacSwitches` in `tests/e2e/virtualMac.ts`).
+Linux journeys draw in software too, for a reason of their own ("The Linux source desktop").
 Its paravirtualized Metal now and then never signals that a frame finished, and Chromium's GPU process waits for that signal with no limit (`CALayerTreeCoordinator::ApplyBackpressure`).
 The app then draws nothing, `requestAnimationFrame` stops, and a screenshot waits until the GPU watchdog ends the process 25 to 50 s later, past Playwright's 30 s (INF-747).
 Other apps in the same guest keep drawing, because each GPU process waits on its own signal.
@@ -1584,6 +1587,10 @@ With no window manager the window under the pointer takes the keyboard, so the l
 It starts Xvfb with `-noreset`: Xvfb otherwise resets as its last client leaves, which is `xdotool` itself before any app opens, and puts the pointer back at the screen's centre.
 Every app window opens centred, so a pointer at the centre sits in each one, and the windows of parallel journeys, opening and closing over one another, hand it to the window under test, whose page then hears it leave what its journey rests on.
 Linux text is antialiased in grey, as macOS draws it (`--disable-lcd-text`): Chromium draws subpixel text only on an opaque layer of its own, so a component would otherwise draw different pixels in a panel and out of one.
+Linux journeys draw in software from the start (`--disable-gpu`), as a virtual Mac's do ("Drawing in software").
+A Linux runner has no graphics card, so the window composites in software either way, but without the switch Chromium's drawing process first starts Mesa's software GL (llvmpipe): its driver and compiler, a GPU watchdog and a shader cache in each launch's fresh home, only to report GL unusable.
+Journeys never use GL there, so they skip that start-up, which depends on what the machine has installed and runs in the process whose stall leaves a window undrawn with no error.
+If a window stops drawing again, the record of what each thread waits on ("Per-run e2e evidence") names that process's threads.
 A journey reads this computer's desktop through `tests/e2e/desktop.ts` (`THIS_DESKTOP`, `HAS_APP_MENU`, and a key's words and `aria-keyshortcuts` through their owners in `src/shared/keyboard.ts`), and its dictation key and hints through `tests/e2e/dictation.ts`, so the same journey reads ⌘ and right ⌥ on a Mac and Ctrl and right Ctrl on Linux.
 A step whose subject only a Mac has - the window wash, Show in dock, the app menu - runs where the desktop has it, the rest of its journey runs on both, and the test carries `MAC_ONLY_TAG` so a pull request's Mac job runs that step.
 A journey whose whole subject is the Mac's skips on Linux, says why and carries `MAC_ONLY_TAG` ("Tests that need a Mac"): the shell keys' default keys (`multiline-composer`, `card-threads`; `docs/composer.md`, "Shell keys"), the window wash (`window-wash`, `activity-runs`), macOS's microphone permission (`mic-access`), macOS's question about other apps' data (`macos-privacy`), the app's own git (`app-git`, `run-work`; `docs/forge.md`, "The app's own git"), the Mac app another Mac downloads with its zip tools (`devices`, `run-work`), `CFFIXED_USER_HOME` (`user-data-folder`) and the real voice model (`voice-freeze.check`).

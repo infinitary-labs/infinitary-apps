@@ -542,6 +542,11 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       // subpixel (LCD) text only on an opaque layer of its own, so the same
       // component would draw different pixels in and out of a panel.
       ...(process.platform === "linux" ? ["--disable-lcd-text"] : []),
+      // A Linux runner has no graphics card, so the window always composites
+      // in software; without this its drawing process first starts Mesa's
+      // software GL (llvmpipe, its compiler and a shader cache in the fresh
+      // home) only to find GL unusable (docs/testing.md, "Drawing in software").
+      ...(process.platform === "linux" ? ["--disable-gpu"] : []),
       // In a virtual Mac the app draws in software (tests/e2e/virtualMac.ts).
       ...virtualMacSwitches(),
       ...(options.args ?? []),
@@ -608,6 +613,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     const keys = options.keys ?? "legacy";
     if (options.shell !== false && keys !== "new-profile") await pickKeyPreset(page, keys);
   } catch (error) {
+    diagnostics.threads(watch(app).child.pid, "before closing a launch that failed");
     diagnostics.snapshot();
     await closeApp(app);
     diagnostics.snapshot();
@@ -629,6 +635,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     close: () => {
       closing ??= (async () => {
         const closingAt = performance.now();
+        diagnostics.threads(watch(app).child.pid, "before closing");
         diagnostics.snapshot();
         await closeApp(app);
         diagnostics.snapshot();

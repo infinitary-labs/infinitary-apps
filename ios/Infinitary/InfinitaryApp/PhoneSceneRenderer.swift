@@ -45,11 +45,13 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     private var thread: Thread?
     /// Each attached surface's render thread; a thread whose surface has gone draws nothing more and ends.
     private var generation = 0
-    private var maximumRate: Float = 60
+    /// The most frames a second the surface's screen shows.
+    private var screenRate = 60
 
     // The render thread's own.
     private var now = 0.0
     private var last: Double?
+    private var rate: Float?
     private let cache = CharacterPainter.Cache()
     /// Built on the render thread at its first frame, since compiling the shaders takes a moment the main thread should not wait.
     private var gpu: ScenePenGPU?
@@ -73,8 +75,8 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         layer.isOpaque = false
         layer.colorspace = PenColor.space
         layer.maximumDrawableCount = PhoneSceneRenderer.buffers
-        // The captain selected the permitted display rate, up to 120. iOS retains power/thermal control.
-        let maximum = Float(min(120, (layer.delegate as? UIView)?.window?.screen.maximumFramesPerSecond ?? UIScreen.main.maximumFramesPerSecond))
+        // INF-3851: the screen's full rate, up to 120, or 30 while Low Power Mode is on (`PhoneSceneRate`).
+        let screen = (layer.delegate as? UIView)?.window?.screen.maximumFramesPerSecond ?? UIScreen.main.maximumFramesPerSecond
         let generation = lock.withLock { () -> Int in
             self.generation += 1
             return self.generation
@@ -84,7 +86,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         thread.qualityOfService = .userInteractive
         lock.withLock {
             self.layer = layer; self.device = device
-            self.thread = thread; maximumRate = maximum
+            self.thread = thread; screenRate = screen
         }
         thread.start()
     }
@@ -132,8 +134,8 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     private func run(_ generation: Int) {
         let tick = Tick(self, generation: generation)
         let link = CADisplayLink(target: tick, selector: #selector(Tick.tick(_:)))
-        let maximum = lock.withLock { maximumRate }
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 1, maximum: maximum, preferred: maximum)
+        rate = nil
+        pace(link)
         link.add(to: .current, forMode: .default)
         Thread.current.threadDictionary[Self.linkKey] = link
         while current(generation) {
@@ -165,6 +167,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
             // A device whose shaders fail to build draws nothing, as one with no device did, and is not tried again.
             built = device; gpu = ScenePenGPU(device: device); queue = gpu?.device.makeCommandQueue()
         }
+        pace(link)
         // The clock advances by elapsed time and excludes time stopped, as the main-thread clock did.
         if input.running {
             if let last { now += max(0, link.timestamp - last) }
@@ -173,6 +176,16 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
             last = nil; link.isPaused = true
         }
         draw(input, pan: pan, size: size, scale: scale, into: layer)
+    }
+
+    /// Asks the display link for the rate Low Power Mode calls for, changing it only when the rate changes.
+    private func pace(_ link: CADisplayLink) {
+        let screen = lock.withLock { screenRate }
+        let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        let wanted = PhoneSceneRate.rate(lowPower: lowPower, screen: screen)
+        guard wanted != rate else { return }
+        rate = wanted
+        link.preferredFrameRateRange = PhoneSceneRate.range(lowPower: lowPower, screen: screen)
     }
 
     private func draw(_ input: Input, pan: CGPoint, size: CGSize, scale: CGFloat, into layer: CAMetalLayer) {

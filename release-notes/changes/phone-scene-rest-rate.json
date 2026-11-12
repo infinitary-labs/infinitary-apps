@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-scene-rest-rate",
+      "kind": "improvement",
+      "title": "Infinitary on iPhone uses less power in Low Power Mode",
+      "body": "The crew scene on iPhone and iPad keeps its smooth motion as before. While Low Power Mode is on, it draws 30 times a second, so leaving the app open uses less battery.",
+      "area": "devices",
+      "noPicture": "The scene looks the same; only how often it is drawn changes in Low Power Mode.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

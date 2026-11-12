@@ -382,7 +382,8 @@ A blurred layer, the busy halo, is drawn into a texture of its own at the resolu
 The shaders are Metal source (`ScenePenShaders`) compiled once per process on the render thread, so the build needs no Metal toolchain.
 `ScenePenAgreementTests` draws fixed frames through both pens, every state, reaction, fidget and warp, the busy halo and the crowded scene in both themes, and requires at least 99.5% of pixels to agree within 4/255.
 The main thread only hands the renderer what it shows (the roster, the state, the palette, the pan and the marks) and never waits for a frame.
-That display link requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in; iOS still chooses the delivered cadence under power and thermal constraints.
+That display link requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in, and 30 while Low Power Mode is on (`PhoneSceneRate`, INF-3851).
+The render thread reads Low Power Mode at each frame and changes the link's range only when the rate changes; iOS still chooses the delivered cadence under power and thermal constraints.
 The clock advances by elapsed time, excludes hidden/background time and stops callbacks while hidden, inactive or under Reduce Motion, which shows a settled pose without emotes.
 `scripts/generate-phone-scene.ts` generates native geometry, targets, timing and reply comparison traces from the desktop owners; the phone gate checks that they are current.
 Simulator callback timings measure that run, not physical ProMotion delivery, battery use or thermal behavior.

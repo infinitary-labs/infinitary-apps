@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "lean-board-rows",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "The app pauses less when you have a long history of tasks",
+      "body": "Your task list now carries only what it shows. A change's write-up, its checks with a running app and its repair history stay with the task and load when you open it, so updating the list takes much less work when you have thousands of tasks. Tasks and their records show the same as before.",
+      "noPicture": "Nothing on screen changes; the list sends less data behind the same rows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -9,6 +9,8 @@ This document is what keeps that durable record honest at scale: what is bounded
 
 - **The board push** (`inf:tasks`) is the live set - open, active, closed within seven days, plus the parents of shown rows - and the pinned tasks, whatever their age, never other history.
   The pinned rows are the few the captain chose, read through a partial index (`tasks_pinned`), so they stay bounded by the captain's own pins.
+  A row's `delivery` leaves out the change stories, the live validation record and the check repair record, which grow with each version of a change (`deliveryViewOf`, `src/core/tasks/deliveryView.ts`).
+  No view draws them from a row: a task's record reads its validation from `liveValidation` on its own read, `inf:tasks:detail`, and a change's story rides its merge card.
   Above the measured trigger (500 rows on the board, or a snapshot over 256 KB of JSON; `BOARD_DELTA_TRIGGER` in `src/shared/tasks.ts`) the core pushes `inf:tasks:delta` instead: the difference between the board it just brought up to date and the one it last pushed, on the same `seq`.
   The delta is a diff of two snapshots (`diffTaskBoards`), never a replay of the writer's bookkeeping, so a derived change with no write of its own (a blocker closing, a card leaving the stack) crosses like any other, and `applyTaskBoardDelta(prev, diff(prev, next))` equals `next` by construction (`src/shared/tasks.test.ts`, 200 seeded pairs; `taskProtocol.push.test.ts` over the real writer).
   A row the change did not reach is the same object on both boards (`docs/task-record.md`, the row cache), and the diff knows it by identity without serializing it, so the diff too costs the rows rebuilt and not the board.

@@ -1,10 +1,12 @@
+import { readFileSync } from "node:fs";
 import {
   DROPPED_BEFORE_START_ACTIVITY,
   dropReviewKeys,
   NO_LONGER_WANTED,
 } from "@shared/recordDrop";
-import { BOARD_RECENT_MS, taskDetailSchema } from "@shared/tasks";
+import { BOARD_RECENT_MS, taskBoardSchema, taskDetailSchema } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { taskProtocolFixture } from "../../../tests/helpers/taskProtocol";
 import { DecisionStore } from "../storage/decisionStore";
@@ -310,6 +312,51 @@ describe("the task protocol (task-system P3)", () => {
     });
     expect(detail.events.map((event) => event.kind)).toEqual(["created", "ask", "report"]);
     expect(detail.dropEffects).toEqual({ parts: [], waiting: [], underway: [] });
+  });
+
+  // INF-3908 (INF-3896's piece 2): on the captain's record these three made
+  // 16.1 MB of a 21.5 MB board, and no view draws them from a row.
+  it("sends no change story, live validation or check repair record on a board row or a record's delivery", () => {
+    const { tasks, protocol } = taskProtocolFixture();
+    tasks.create({ id: "a", title: "Color the chart", prompt: "p", repoId: "r1" });
+    const head = "a".repeat(40);
+    // A real check repair record, as an older profile saved it.
+    const saved = JSON.parse(
+      readFileSync(
+        new URL("../../../tests/fixtures/replay/sep30-handoff-agree/tables.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { tasks: { id: string; delivery_json: string | null }[] };
+    const ciRepair = JSON.parse(
+      saved.tasks.find((row) => row.id === "e8ef69f8")?.delivery_json ?? "{}",
+    ).ciRepair;
+    const story = {
+      revisions: [{ revision: 1, head, base: "main", title: "feat(chart): color the chart" }],
+      receipts: [],
+      published: { revision: 1, head, state: "confirmed", region: "", regionHash: "", number: 88 },
+    };
+    seedDelivery(tasks, "a", {
+      mode: "direct-pr",
+      prNumber: 88,
+      changeLabel: "#88",
+      headSha: head,
+      ci: "green",
+      presentation: story as never,
+      presentations: [{ ...story, branch: "fm/older" } as never],
+      liveValidation: noSurfaceProof(head),
+      ciRepair,
+    });
+    expect(tasks.get("a")?.delivery?.ciRepair?.diagnoses.length).toBeGreaterThan(0);
+
+    const row = taskBoardSchema.parse(protocol.board()).tasks.find((task) => task.id === "a");
+    const detail = protocol.detail("a");
+    for (const delivery of [row?.delivery, detail.delivery]) {
+      expect(delivery).toMatchObject({ prNumber: 88, changeLabel: "#88", ci: "green" });
+      for (const field of ["presentation", "presentations", "liveValidation", "ciRepair"])
+        expect(delivery).not.toHaveProperty(field);
+    }
+    // The record still draws its validation, from its own read.
+    expect(detail.liveValidation).toMatchObject({ head, revision: 1, verdict: "no-surface" });
   });
 
   it("keeps a captain drop of unstarted work as a dropped record, not done", () => {

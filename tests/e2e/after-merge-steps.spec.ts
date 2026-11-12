@@ -161,10 +161,17 @@ for (const variant of ["steps", "none", "waits", "firstmate"] as const) {
       await input.press("Enter");
       const card = shownCard(page, AFTER_MERGE_STORY_TITLE);
       await expect(card).toBeVisible({ timeout: 45_000 });
+      // The card has arrived once its body has drawn, not when its region is
+      // up: the stage holds a new card at opacity 0 until then, which
+      // Playwright already reads as visible (docs/e2e-contracts.md). On a
+      // fresh runner's first launch that drawing came about nine seconds after
+      // the region (batch 772), past an expectation's own wait, so the body
+      // gets the arrival's allowance - and a card with no steps is read only
+      // once there is a drawn body to have none in.
+      const body = cardBody(page, AFTER_MERGE_STORY_TITLE);
+      await expect(body.locator("body")).toBeVisible({ timeout: 45_000 });
       // The steps lead the card's body (INF-3149), inside its document.
-      const listed = cardBody(page, AFTER_MERGE_STORY_TITLE).getByRole("region", {
-        name: AFTER_MERGE_LEAD,
-      });
+      const listed = body.getByRole("region", { name: AFTER_MERGE_LEAD });
       if (steps) {
         await expect(listed).toContainText(continueTitle);
         await expect(listed).toContainText(METER_AFTER_MERGE_STEP.goal);

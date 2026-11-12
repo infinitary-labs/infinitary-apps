@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
 import {
   ANNOTATE,
   EMPTY_NOTE,
@@ -8,8 +9,8 @@ import {
   POINT_AT,
   POINTED_AT,
   queuedNotesWords,
+  sendNotesLabel,
 } from "../../src/shared/cardNotes";
-import { CARD_CHAT_LABEL } from "../../src/shared/cards";
 import {
   ANNOTATION_COMMENT,
   ANNOTATION_RANGE,
@@ -30,10 +31,12 @@ import {
   cardAnnotations,
 } from "./scenarios/cardAnnotations";
 import { cardReply, cardThread, shownCard } from "./stack";
-import { focusOn, pressKey, runFromSearch, untilFocused } from "./windowKeys";
+import { focusOn, pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
 
 /**
- * Intent: the captain-approved desktop annotation plan. Real card text from its
+ * Intent: the captain-approved desktop annotation plan, and INF-3786's approved
+ * plan (Annotate on selected words, keep a note on a press outside, open a note
+ * from its mark, Remove in the editor, Send N notes). Real card text from its
  * queue-check example, the real frame bridge, reply, database and author turn.
  * Portable: no sign-in; native Copy/Paste uses only the disposable Linux desktop.
  * One disposable app per author case.
@@ -55,6 +58,9 @@ for (const author of ["crewmate", "firstmate"] as const) {
         body = frame.locator("body");
       const pop = a.page.getByRole("dialog", { name: new RegExp(`^${ANNOTATE} `) });
       const comment = pop.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
+      const annotate = a.page.getByRole("button", { name: new RegExp(`^${ANNOTATE}`) });
+      const pointAt = a.page.getByRole("button", { name: new RegExp(`^${POINT_AT}`) });
+      const title = shownCard(a.page, ANNOTATION_TITLE).getByText(ANNOTATION_TITLE).first();
       await runFromSearch(a.app, a.page, "cards.point-at");
       await pressKey(body, "ArrowDown");
       await pressKey(body, "Enter");
@@ -76,7 +82,7 @@ for (const author of ["crewmate", "firstmate"] as const) {
       await frame.locator("p").nth(1).dispatchEvent("click");
       await expect(pop).toBeVisible();
       await pressKey(comment, "Enter");
-      await a.page.getByRole("button", { name: new RegExp(`^${POINT_AT}`) }).click();
+      await pointAt.click();
       // A browser Selection is the real range input to the bridge, including inline text.
       const selectWords = async () => {
         await focusOn(body);
@@ -98,28 +104,27 @@ for (const author of ["crewmate", "firstmate"] as const) {
         await frame.locator("p").first().dispatchEvent("pointerup");
       };
       // Frame-local keys follow the selection's focused body, not native window injection.
-      // Escape closes the empty pick before the card.
+      // With Point at off a selection only offers Annotate; Escape takes the offer before the card.
       await selectWords();
-      await expect(pop).toBeVisible();
-      await pressKey(body, "Escape");
+      await expect(annotate).toBeVisible();
       await expect(pop).toHaveCount(0);
+      await pressKey(body, "Escape");
+      await expect(annotate).toHaveCount(0);
       await expect(shownCard(a.page, ANNOTATION_TITLE)).toBeVisible();
+      // With Point at on a selection opens the editor at once, the caret in its comment.
       await runFromSearch(a.app, a.page, "cards.point-at");
       await selectWords();
       await expect(pop).toBeVisible();
-      await pressKey(body, "Enter");
       await untilFocused(comment);
       await expect(pop.getByText(ANNOTATION_RANGE, { exact: true })).toBeVisible();
       await pressKey(comment, "Escape");
       await expect(pop).toHaveCount(0);
-      await selectWords();
-      await expect(pop).toBeVisible();
-      await pressKey(body, "Escape");
-      await expect(pop).toHaveCount(0);
       await expect(shownCard(a.page, ANNOTATION_TITLE)).toBeVisible();
+      await runFromSearch(a.app, a.page, "cards.point-at");
+      await expect(pointAt).toHaveAttribute("aria-pressed", "false");
       // Tab enters the optional comment; Enter queues as-is. Removing it is not a send.
       await selectWords();
-      await expect(pop).toBeVisible();
+      await expect(annotate).toBeVisible();
       await pressKey(body, "Tab");
       await untilFocused(comment);
       await pressKey(comment, "Enter");
@@ -127,9 +132,71 @@ for (const author of ["crewmate", "firstmate"] as const) {
       expect(readings).toHaveLength(0);
       await a.page.getByRole("button", { name: NOTE_REMOVE, exact: true }).nth(1).click();
       await expect(a.page.getByText(queuedNotesWords(1), { exact: true })).toBeVisible();
+      // A click on Annotate opens the editor with the caret in its comment; a press
+      // outside closes it and keeps its words as a queued note, never sending.
       await selectWords();
+      await annotate.click();
+      await untilFocused(comment);
+      await typeInto(comment, ANNOTATION_COMMENT);
+      await title.click();
+      await expect(pop).toHaveCount(0);
+      await expect(a.page.getByText(queuedNotesWords(2), { exact: true })).toBeVisible();
+      await expect(a.page.getByText(ANNOTATION_COMMENT, { exact: true })).toBeVisible();
+      expect(readings).toHaveLength(0);
+      await expect(
+        frame.locator("body").evaluate(() => window.getSelection()?.toString()),
+      ).resolves.toBe("");
+      // A click on the queued words, Point at off, opens that note; Remove is reached by Tab.
+      await focusOn(body);
+      await frame
+        .locator("p")
+        .first()
+        .evaluate((element, words) => {
+          const node = element.firstChild;
+          if (!node) throw new Error("paragraph has no text");
+          const start = (node.textContent ?? "").indexOf(words);
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + words.length);
+          const box = range.getBoundingClientRect();
+          element.dispatchEvent(
+            new MouseEvent("click", {
+              bubbles: true,
+              cancelable: true,
+              clientX: box.left + box.width / 2,
+              clientY: box.top + box.height / 2,
+            }),
+          );
+        }, ANNOTATION_RANGE);
       await expect(pop).toBeVisible();
-      await expect(pop.getByText(ANNOTATION_RANGE, { exact: true })).toBeVisible();
+      await untilFocused(comment);
+      await expect(comment).toHaveValue(ANNOTATION_COMMENT);
+      const remove = pop.getByRole("button", { name: NOTE_REMOVE, exact: true });
+      await pressKey(comment, "Tab");
+      await untilFocused(remove);
+      await pressKey(remove, "Enter");
+      await expect(pop).toHaveCount(0);
+      await expect(a.page.getByText(queuedNotesWords(1), { exact: true })).toBeVisible();
+      await untilFocused(pointAt);
+      // An empty new note closes on a press outside and queues nothing.
+      await selectWords();
+      await pressKey(body, "Enter");
+      await untilFocused(comment);
+      await title.click();
+      await expect(pop).toHaveCount(0);
+      await expect(a.page.getByText(queuedNotesWords(1), { exact: true })).toBeVisible();
+      // A press on a card choice that queues the note does not take the choice.
+      await selectWords();
+      await pressKey(body, "Enter");
+      await comment.fill(ANNOTATION_COMMENT);
+      await a.page.getByRole("button", { name: new RegExp(`^${NOTE_GOT_IT_LABEL}`) }).click();
+      await expect(a.page.getByText(queuedNotesWords(2), { exact: true })).toBeVisible();
+      await expect(shownCard(a.page, ANNOTATION_TITLE)).toBeVisible();
+      expect(readings).toHaveLength(0);
+      await a.page.getByRole("button", { name: NOTE_REMOVE, exact: true }).nth(1).click();
+      await expect(a.page.getByText(queuedNotesWords(1), { exact: true })).toBeVisible();
+      await selectWords();
+      await expect(annotate).toBeVisible();
       // Native Copy/Paste is exercised only on the disposable Linux CI desktop.
       // Local browser coverage uses a private headless clipboard instead.
       if (process.platform === "linux" && process.env.CI === "true") {
@@ -144,8 +211,11 @@ for (const author of ["crewmate", "firstmate"] as const) {
         await expect
           .poll(() => readInMain(() => a.app.evaluate(({ clipboard }) => clipboard.readText())))
           .toBe(ANNOTATION_RANGE);
-        await pressKey(body, "Tab");
-        await untilFocused(comment);
+      }
+      await pressKey(body, "Tab");
+      await untilFocused(comment);
+      await expect(pop.getByText(ANNOTATION_RANGE, { exact: true })).toBeVisible();
+      if (process.platform === "linux" && process.env.CI === "true") {
         await pressKey(comment, "ControlOrMeta+v");
         await expect(comment).toHaveValue(ANNOTATION_RANGE);
       }
@@ -171,7 +241,9 @@ for (const author of ["crewmate", "firstmate"] as const) {
         ),
       ).toEqual([ANNOTATION_RANGE]);
       await cardReply(a.page).field.fill(ANNOTATION_WORDS);
-      await a.page.getByRole("button", { name: new RegExp(`^${CARD_CHAT_LABEL}`) }).click();
+      // While notes wait the send button names them, and its key sends them.
+      const send = a.page.getByRole("button", { name: new RegExp(`^${sendNotesLabel(2)}`) });
+      await pressKey(send, "Enter");
       await expect.poll(() => readings.length).toBe(1);
       expect(readings[0]).toContain(ANNOTATION_WORDS);
       expect(readings[0]).toContain(`${POINTED_AT}:`);
@@ -229,7 +301,9 @@ for (const author of ["crewmate", "firstmate"] as const) {
         { startWords: ANNOTATION_RANGE, endWords: ANNOTATION_RANGE_END },
       );
       await paragraphs.first().dispatchEvent("pointerup");
-      await expect(pop).toBeVisible();
+      await expect(annotate).toBeVisible();
+      await pressKey(cardBody(a.page, ANNOTATION_TITLE).locator("body"), "Enter");
+      await untilFocused(comment);
       await pressKey(comment, "ControlOrMeta+Enter");
       await expect.poll(() => readings.length).toBe(2);
       expect(readings[1]).toContain(ANNOTATION_RANGE_END);

@@ -212,3 +212,19 @@
   margin-inline-start: var(--space-2);
   color: var(--fg-3);
 }
+
+/* The empty field's key hint gives way before it would run into the hint's words,
+   as when Send 2 notes takes more of the thread's column (INF-3786). */
+.inf-reply-pill {
+  container-type: inline-size;
+}
+@container (max-width: 180px) {
+  .inf-reply-pill [data-reply-key] {
+    display: none;
+  }
+}
+.inf-reply-pill textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

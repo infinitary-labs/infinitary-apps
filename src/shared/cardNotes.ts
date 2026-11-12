@@ -48,6 +48,10 @@ export const NOTE_REMOVE = "Remove";
 export const NOT_SENT = "Not sent";
 export const NOTE_PLACEHOLDER = "Add a comment, or queue as-is";
 export const NOTE_DISCARD_HINT = "Cancel discards your comment. Queue keeps it.";
+/** The card's send button while notes wait (INF-3786): the notes and any typed words leave as one reply. */
+export function sendNotesLabel(count: number): string {
+  return `Send ${count} ${count === 1 ? "note" : "notes"}`;
+}
 export function queuedNotesWords(count: number): string {
   return `${count} ${count === 1 ? "note" : "notes"} not sent`;
 }

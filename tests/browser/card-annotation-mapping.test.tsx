@@ -77,13 +77,14 @@ test("a refreshed merge card keeps the repeated occurrence through selection, qu
       },
       { words: ANNOTATION_RANGE, endWords: ANNOTATION_RANGE_END, across },
     );
+    // INF-3786: a selection only offers Annotate; Tab in the card opens its comment.
+    await userEvent.keyboard("{Tab}");
     await expect.element(comment).toBeVisible();
   };
   await select();
   const exact = [{ text: ANNOTATION_RANGE, first: renderedStart.start, last: renderedStart.start }];
   await expect.poll(async () => (await readHighlights())["inf-point"]).toEqual(exact);
   expect(useShellStore.getState().annotationPick?.note.start).toBe(start.start);
-  await userEvent.keyboard("{Tab}");
   await expect.poll(() => document.activeElement === comment.element()).toBe(true);
   await userEvent.keyboard("{Enter}");
   await expect.poll(async () => (await readHighlights())["inf-point-queued"]).toEqual(exact);
@@ -106,7 +107,6 @@ test("a refreshed merge card keeps the repeated occurrence through selection, qu
   await expect
     .poll(async () => (await readHighlights())["inf-point"])
     .toEqual([{ text: selected, first: renderedStart.start, last: renderedEnd.start }]);
-  await userEvent.keyboard("{Tab}");
   await expect.poll(() => document.activeElement === comment.element()).toBe(true);
   await userEvent.keyboard("{Enter}");
   const notes = useShellStore.getState().replyNotes[card.id];

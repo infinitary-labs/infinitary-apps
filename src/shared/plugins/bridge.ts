@@ -300,6 +300,8 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
     focus: z.boolean(),
   }),
   z.object({ fm: fmMarker, type: z.literal("point-exit"), document: z.string() }),
+  z.object({ fm: fmMarker, type: z.literal("selection-cleared"), document: z.string() }),
+  z.object({ fm: fmMarker, type: z.literal("pointer-down"), document: z.string() }),
   z.object({
     fm: fmMarker,
     type: z.literal("revealed"),
@@ -446,6 +448,8 @@ export type HostMessage =
       queued: FrameAnnotationTarget[];
       current?: FrameAnnotationTarget;
       focus?: boolean;
+      /** Clears the frame's selection once its note is queued. */
+      clear?: boolean;
     }
   | {
       fm: typeof FRAME_BRIDGE_VERSION;

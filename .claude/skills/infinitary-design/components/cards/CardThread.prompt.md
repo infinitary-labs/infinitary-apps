@@ -4,6 +4,8 @@ The body's sandboxed frame is untouched by it.
 **Before the first message** the thread does not exist and nothing is drawn for it.
 The card has one field - a pill reading "anything to add?" with the clip beside it - above the action row, under one `--line-1` hairline after the body, and a quiet **Chat** button at the right edge of the action row, after the default (INF-924, the captain's Approve and build: "i meant always showing the text input. after typing, pressing "chat" or "enter" will send the reply without making a choice. pressing any other choice will send the text along with the choice").
 Chat is a ghost button with a speech bubble before its label and ⏎ as its key; it takes no number key, never closes the card, puts the caret in the field when there is nothing to send, and lights (`--accent-dim` fill, `--fg-1` label) once there is.
+While notes from Point at or Annotate wait, the same button reads **Send 1 note** or **Send 2 notes** as a small primary button, with no speech bubble or drawn key (Enter in the field still sends), and reads Chat again once none wait (INF-3786): the notes and the field's words still leave together as one reply.
+The empty field's key gives way before it would run into "anything to add?" in a narrow column.
 Enter or Chat sends the field as a reply; any other button carries its words with the choice (`ResponseCard.prompt.md`, "The card's one field").
 A card with no buttons ends with the field and a lone Chat.
 While a file or picture is attached, the choices are off, with "Send the file as a reply first" at the row's left, until it goes as a reply.

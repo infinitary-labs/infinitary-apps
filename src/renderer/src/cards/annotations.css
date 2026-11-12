@@ -72,6 +72,17 @@
   box-shadow: var(--shadow-card);
   font: var(--text-sm) / var(--leading-body) var(--font-ui);
 }
+.inf-annotation-popover:focus {
+  outline: none;
+}
+.inf-annotate-offer {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  border-radius: var(--radius-m);
+  background: var(--bg-2);
+  box-shadow: var(--shadow-card);
+}
 .inf-annotation-popover strong {
   font-weight: 500;
 }

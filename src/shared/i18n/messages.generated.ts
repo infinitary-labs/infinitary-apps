@@ -4215,16 +4215,6 @@ export function refuseDevicesOn(input: { home: string }): string {
   return `Devices is on ${home}`;
 }
 
-export function cardAnnotationHint(): string {
-  switch (currentLanguage()) {
-    case "en-XA":
-      return `[Çöþý ţĥé šéļéçţéð ŵöŕðš, öŕ þŕéšš Ţáƀ ţö áðð á çöɱɱéñţ. ~~~~~~~~~~~~~~~~~~~]`;
-    case "ar-XB":
-      return `\u202eCopy the selected words, or press Tab to add a comment.\u202c`;
-  }
-  return `Copy the selected words, or press Tab to add a comment.`;
-}
-
 export function cardAnnotationKeys(input: { sendKey: string }): string {
   const sendKey = input.sendKey;
   switch (currentLanguage()) {
@@ -7977,7 +7967,6 @@ export const MESSAGES = {
   refuseSecretsTab,
   refuseRunbooksFolderOn,
   refuseDevicesOn,
-  cardAnnotationHint,
   cardAnnotationKeys,
   cardAnswersAnswered,
   cardAnswersPicked,
@@ -8695,7 +8684,6 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   refuseSecretsTab: [],
   refuseRunbooksFolderOn: ["computer"],
   refuseDevicesOn: ["home"],
-  cardAnnotationHint: [],
   cardAnnotationKeys: ["sendKey"],
   cardAnswersAnswered: ["answered", "total"],
   cardAnswersPicked: ["answered", "total"],

@@ -4,6 +4,7 @@ import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import {
+  ANNOTATE,
   EDIT_UNAVAILABLE,
   NOTE_COMMENT_LABEL,
   NOTE_EDIT,
@@ -67,35 +68,34 @@ test("selection keeps usual Copy, unrelated typing does not repaint, and an abse
       );
     };
     const comment = page.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
-    // Review r2: frame-focused Escape consumes the empty pick, never the card.
+    const annotate = page.getByRole("button", { name: new RegExp(`^${ANNOTATE}`) });
+    // INF-3786: with Point at off a selection only offers Annotate; frame-focused
+    // Escape consumes the offer, never the card (review r2).
     await selectWords();
-    await expect.element(comment).toBeVisible();
+    await expect.element(annotate).toBeVisible();
+    expect(comment.query()).toBeNull();
     await userEvent.keyboard("{Escape}");
-    await expect.element(comment).not.toBeInTheDocument();
-    expect(useShellStore.getState().annotationPick).toBeNull();
+    await expect.element(annotate).not.toBeInTheDocument();
+    expect(useShellStore.getState().annotationOffer).toBeNull();
     expect(frame.isConnected).toBe(true);
 
+    // With Point at on, a selection opens the editor at once with the caret in its comment.
     await userEvent.click(page.getByRole("button", { name: new RegExp(`^${POINT_AT}`) }));
     await selectWords();
     await expect.element(comment).toBeVisible();
+    await expect.poll(() => document.activeElement === comment.element()).toBe(true);
     const selectedSpan = useShellStore.getState().annotationPick?.note.span;
     expect(selectedSpan).toBeDefined();
-    await userEvent.keyboard("{Enter}");
-    await expect.poll(() => document.activeElement === comment.element()).toBe(true);
-    expect(useShellStore.getState().annotationPick?.note.span).toEqual(selectedSpan);
-    await userEvent.keyboard("{Escape}");
-    await expect.element(comment).not.toBeInTheDocument();
-    await selectWords();
-    await expect.element(comment).toBeVisible();
     await userEvent.keyboard("{Escape}");
     await expect.element(comment).not.toBeInTheDocument();
     expect(useShellStore.getState().annotationPick).toBeNull();
-    expect(useShellStore.getState().pointAtCard).toBeNull();
     expect(frame.isConnected).toBe(true);
+    await userEvent.click(page.getByRole("button", { name: new RegExp(`^${POINT_AT}`) }));
+    expect(useShellStore.getState().pointAtCard).toBeNull();
 
     // The captain's as-is selection route uses Tab, then Enter, without sending.
     await selectWords();
-    await expect.element(comment).toBeVisible();
+    await expect.element(annotate).toBeVisible();
     await userEvent.keyboard("{Tab}");
     await expect.poll(() => document.activeElement === comment.element()).toBe(true);
     await userEvent.keyboard("{Enter}");
@@ -106,7 +106,7 @@ test("selection keeps usual Copy, unrelated typing does not repaint, and an abse
     });
     await userEvent.click(page.getByRole("button", { name: NOTE_REMOVE, exact: true }));
     await selectWords();
-    await expect.element(comment).toBeVisible();
+    await expect.element(annotate).toBeVisible();
     expect(document.activeElement).toBe(frame);
     expect(await inCardBody(ANNOTATION_TITLE, () => window.getSelection()?.toString())).toBe(
       ANNOTATION_RANGE,

@@ -1,5 +1,5 @@
 import { fileSizeWords } from "@shared/attachments";
-import { queuedNotesWords } from "@shared/cardNotes";
+import { queuedNotesWords, sendNotesLabel } from "@shared/cardNotes";
 import {
   CARD_CHAT_LABEL,
   CARD_REPLY_HINT,
@@ -159,7 +159,9 @@ const fieldIn = (from: Element, cardId: string) =>
  * at the right edge of the card's choices, or beside the field at the
  * thread's foot. It never closes the card and takes no number key; it shows
  * ⏎, which does the same from the field, and lights once there is something
- * to send. With nothing to send it puts the caret in the field.
+ * to send. With nothing to send it puts the caret in the field. While notes
+ * wait it reads Send 2 notes as the primary button (INF-3786), so the send is
+ * named; the notes and the field's words still leave as one reply.
  */
 export function ChatButton({
   cardId,
@@ -181,17 +183,21 @@ export function ChatButton({
   const notes = useShellStore((s) => s.replyNotes[cardId] ?? NO_NOTES);
   const something = length > 0 || images.length > 0 || pastes.length > 0 || notes.length > 0;
   const lit = something && !over;
+  const naming = notes.length > 0;
   return (
     <Button
-      variant="ghost"
+      variant={naming ? "primary" : "ghost"}
+      size={naming ? "sm" : "md"}
       data-card-chat={cardId}
       data-lit={lit ? "" : undefined}
-      icon={chatIcon}
-      keys={CHAT_KEY}
+      // Named, it needs no icon or key: the thread's column keeps room for the field,
+      // whose Enter still sends.
+      icon={naming ? undefined : chatIcon}
+      keys={naming ? undefined : CHAT_KEY}
       disabled={sending}
       // Past a reply's limit nothing leaves: Chat is off, as Enter is.
       off={over}
-      style={lit ? { background: "var(--accent-dim)", color: "var(--fg-1)" } : undefined}
+      style={lit && !naming ? { background: "var(--accent-dim)", color: "var(--fg-1)" } : undefined}
       onClick={(event) => {
         // The caret goes to the field either way, as a send by Enter leaves it.
         if (focusField) focusField();
@@ -199,7 +205,7 @@ export function ChatButton({
         if (lit) void sendReply(cardId, collect);
       }}
     >
-      {CARD_CHAT_LABEL}
+      {naming ? sendNotesLabel(notes.length) : CARD_CHAT_LABEL}
     </Button>
   );
 }
@@ -426,6 +432,7 @@ export function ReplyRow({
       >
         <AnnotationControls cardId={cardId} collect={collect} />
         <div
+          className="inf-reply-pill"
           style={{
             position: "relative",
             flex: 1,

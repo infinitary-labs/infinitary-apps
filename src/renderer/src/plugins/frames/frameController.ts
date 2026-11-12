@@ -75,6 +75,10 @@ export type FrameMountSpec = {
   pluginId: string;
   onAnnotation?: (target: FrameAnnotationTarget, box: FrameBox, focusComment: boolean) => void;
   onPointExit?: () => void;
+  /** The selection an Annotate offer was shown for is gone. */
+  onSelectionCleared?: () => void;
+  /** The captain pressed inside the frame's annotated document. */
+  onPointerDown?: () => void;
   revision?: { offerId: string; starts: readonly number[] };
   /** Read-catalog names the plugin declared (its manifest's capabilities.reads). */
   reads: readonly string[];
@@ -562,6 +566,12 @@ export class FrameController {
       case "point-exit":
         this.spec.onPointExit?.();
         return;
+      case "selection-cleared":
+        this.spec.onSelectionCleared?.();
+        return;
+      case "pointer-down":
+        this.spec.onPointerDown?.();
+        return;
       case "revealed": {
         const pending = this.revealing;
         if (
@@ -669,6 +679,7 @@ export class FrameController {
     queued: FrameAnnotationTarget[],
     current?: FrameAnnotationTarget,
     focus = false,
+    clear = false,
   ): void {
     if (!this.ready || !this.documentId || !this.spec.onAnnotation) return;
     this.port.post({
@@ -679,6 +690,7 @@ export class FrameController {
       queued,
       ...(current ? { current } : {}),
       focus,
+      ...(clear ? { clear } : {}),
     });
   }
 

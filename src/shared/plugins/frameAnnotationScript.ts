@@ -1,6 +1,6 @@
 /** Trusted bridge code: targets and offsets only. Comments never enter this document. */
 export const FRAME_ANNOTATION_SCRIPT = `
-  var annotation = { enabled: false, mode: false, index: -1, current: null, queued: [] };
+  var annotation = { enabled: false, mode: false, index: -1, current: null, queued: [], offered: false };
   var annotationControl = 'a,button,input,select,textarea,summary,label,[role=button],[contenteditable],[data-inf-action],[data-inf-draft]';
   function annotationParts() { return Array.from(document.querySelectorAll('[data-inf-target]')).filter(function(el) { return el.getClientRects().length && !el.matches(annotationControl); }); }
   function annotationPart(node) {
@@ -52,38 +52,62 @@ export const FRAME_ANNOTATION_SCRIPT = `
     post({ type: 'annotate', document: documentId, target: note, focus: focusComment !== false, box: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right } });
   }
   document.addEventListener('pointermove', function(event) {
-    if (!annotation.enabled || !annotation.mode || window.getSelection()?.toString()) return;
+    // A picked part stays lit while its note editor is open; a click on another part still picks it.
+    if (!annotation.enabled || !annotation.mode || annotation.current?.kind || window.getSelection()?.toString()) return;
     var el = annotationPart(event.target);
     annotation.current = el ? { start: Number(el.getAttribute('data-inf-target')) } : null;
     paintAnnotations();
   });
+  // A click on a queued note's mark, with Point at off, opens that note; controls keep their own click.
+  function queuedMark(event) {
+    if (event.target.closest?.(annotationControl)) return null;
+    for (var i = 0; i < annotation.queued.length; i++) {
+      var note = annotation.queued[i], el = document.querySelector('[data-inf-target="' + note.start + '"]');
+      var range = el && note.span ? annotationRange(el, note.span) : null;
+      if (range && Array.from(range.getClientRects()).some(function(r) { return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; })) return { el: el, span: note.span };
+    }
+    var part = annotationPart(event.target);
+    return part && annotation.queued.some(function(note) { return !note.span && note.start === Number(part.getAttribute('data-inf-target')); }) ? { el: part } : null;
+  }
   document.addEventListener('click', function(event) {
-    if (!annotation.enabled || !annotation.mode || event.metaKey || event.ctrlKey) return;
+    if (!annotation.enabled || event.metaKey || event.ctrlKey) return;
     if (window.getSelection()?.toString()) return;
+    if (!annotation.mode) {
+      var mark = queuedMark(event);
+      if (mark) { event.preventDefault(); event.stopImmediatePropagation(); pickAnnotation(mark.el, mark.span, true); }
+      return;
+    }
     var el = annotationPart(event.target);
     if (!el) return;
     event.preventDefault(); event.stopImmediatePropagation(); pickAnnotation(el);
   }, true);
   function selectedAnnotation(focusComment) {
-    if (!annotation.enabled) return;
+    if (!annotation.enabled) return false;
     var selection = window.getSelection();
-    if (!selection || selection.isCollapsed || !selection.rangeCount) return;
+    if (!selection || selection.isCollapsed || !selection.rangeCount) return false;
     var range = selection.getRangeAt(0), el = annotationPart(range.startContainer);
     var last = annotationPart(range.endContainer);
-    if (!el || !last) return;
+    if (!el || !last) return false;
     var prefix = document.createRange(); prefix.selectNodeContents(el); prefix.setEnd(range.startContainer,range.startOffset);
     var start = prefix.toString().length;
     prefix.selectNodeContents(last); prefix.setEnd(range.endContainer,range.endOffset);
     var span = {start:start,end:prefix.toString().length};
     if (last !== el) span.endPart = Number(last.getAttribute('data-inf-target'));
+    annotation.offered = focusComment !== true;
     pickAnnotation(el, span, focusComment === true);
+    return true;
   }
   document.addEventListener('pointerup', function() { selectedAnnotation(); });
   document.addEventListener('keyup', function(event) { if (event.shiftKey) selectedAnnotation(); });
+  // A press in the card closes the host's note editor and Annotate offer, keeping the note's words.
+  document.addEventListener('pointerdown', function(event) { if (event.isTrusted && annotation.enabled) post({ type: 'pointer-down', document: documentId }); }, true);
+  // The host's Annotate offer leaves with the selection it was offered for.
+  document.addEventListener('selectionchange', function() {
+    if (annotation.offered && window.getSelection()?.isCollapsed !== false) { annotation.offered = false; post({ type: 'selection-cleared', document: documentId }); }
+  });
   document.addEventListener('keydown', function(event) {
-    if (annotation.enabled && annotation.current?.span && window.getSelection()?.toString() && !event.target.closest?.(annotationControl) && (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey))) {
+    if (annotation.enabled && window.getSelection()?.toString() && !event.target.closest?.(annotationControl) && (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey)) && selectedAnnotation(true)) {
       event.preventDefault(); event.stopImmediatePropagation();
-      pickAnnotation(document.querySelector('[data-inf-target="' + annotation.current.start + '"]'), annotation.current.span, true);
       return;
     }
     if (!annotation.enabled || !annotation.mode || event.target.closest?.(annotationControl)) return;

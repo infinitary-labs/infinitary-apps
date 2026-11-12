@@ -408,7 +408,6 @@
   "refuseSecretsTab": "Secrets",
   "refuseRunbooksFolderOn": "Your runbooks folder is on {computer}",
   "refuseDevicesOn": "Devices is on {home}",
-  "cardAnnotationHint": "Copy the selected words, or press Tab to add a comment.",
   "cardAnnotationKeys": "Enter queues · {sendKey} queues and sends · Esc closes when empty",
   "cardAnswersAnswered": "{answered} of {total} answered",
   "cardAnswersPicked": "{answered} of {total} picked",

@@ -19,24 +19,27 @@ import {
 import { notePart } from "@shared/cardNoteTargets";
 import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { Button, IconButton } from "../design";
 import { thisDesktop } from "../design/core/desktop";
-import { type NoteReveal, revealNote } from "./annotationBridge";
+import {
+  focusPointAt,
+  type NoteReveal,
+  queueNote,
+  removeNote,
+  revealNote,
+  sameNote,
+  settleAnnotation,
+} from "./annotationBridge";
 import type { CollectAnswers } from "./PrototypeBody";
 import { cardBodyHtml } from "./prototypeSrcdoc";
 import { useAnnotationHome } from "./useAnnotationHome";
 import "./annotations.css";
 
 export const NO_NOTES: CardNote[] = [];
-export function sameNote(a: CardNote, b: CardNote): boolean {
-  return (
-    a.key === b.key && a.start === b.start && JSON.stringify(a.span) === JSON.stringify(b.span)
-  );
-}
 
 export function AnnotationControls({
   cardId,
@@ -49,6 +52,9 @@ export function AnnotationControls({
   const mode = useShellStore((s) => s.pointAtCard === cardId);
   const pick = useShellStore((s) =>
     s.annotationPick?.cardId === cardId ? s.annotationPick : null,
+  );
+  const offer = useShellStore((s) =>
+    s.annotationOffer?.cardId === cardId ? s.annotationOffer : null,
   );
   const sending = useShellStore((s) => s.sendingReplies[cardId]);
   const keys = useCommandKeys("cards.point-at");
@@ -67,7 +73,9 @@ export function AnnotationControls({
           aria-keyshortcuts={keys["aria-keyshortcuts"]}
           style={{ flexShrink: 0, ...(mode ? { background: "var(--accent-dim)" } : {}) }}
           tone={mode ? "accent" : "neutral"}
-          onClick={() => useShellStore.setState({ pointAtCard: mode ? null : cardId })}
+          onClick={() =>
+            useShellStore.setState({ pointAtCard: mode ? null : cardId, annotationOffer: null })
+          }
         >
           <svg
             width="16"
@@ -84,6 +92,7 @@ export function AnnotationControls({
           </svg>
         </IconButton>
       </span>
+      {offer && !pick && !sending && <AnnotateOffer cardId={cardId} />}
       {pick && (
         <AnnotationPopover
           key={`${pick.note.key}-${JSON.stringify(pick.note.span)}`}
@@ -123,18 +132,7 @@ export function QueuedNotes({ cardId }: { cardId: string }) {
             >
               {NOTE_EDIT}
             </Button>
-            <Button
-              variant="ghost"
-              disabled={sending}
-              onClick={() =>
-                useShellStore.setState((s) => ({
-                  replyNotes: {
-                    ...s.replyNotes,
-                    [cardId]: (s.replyNotes[cardId] ?? []).filter((n) => n !== note),
-                  },
-                }))
-              }
-            >
+            <Button variant="ghost" disabled={sending} onClick={() => removeNote(cardId, note)}>
               {NOTE_REMOVE}
             </Button>
           </div>
@@ -168,42 +166,87 @@ export function NoteAnchor({ cardId, note }: { cardId: string; note: CardNote })
   );
 }
 
+/**
+ * Selected words with Point at off (INF-3786): one small Annotate under them, drawn by the window
+ * so the frame's selection and Copy stay as they are. Enter or Tab in the card presses it too.
+ */
+function AnnotateOffer({ cardId }: { cardId: string }) {
+  const offer = useShellStore((s) => s.annotationOffer);
+  const own = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const press = (event: PointerEvent) => {
+      if (own.current?.contains(event.target as Node)) return;
+      if (useShellStore.getState().annotationOffer?.cardId === cardId)
+        useShellStore.setState({ annotationOffer: null });
+    };
+    document.addEventListener("pointerdown", press, true);
+    return () => document.removeEventListener("pointerdown", press, true);
+  }, [cardId]);
+  if (!offer || offer.cardId !== cardId) return null;
+  const left = Math.max(8, Math.min(offer.box.left, innerWidth - 140));
+  const below = offer.box.bottom + 6;
+  const top = below + 36 > innerHeight ? Math.max(8, offer.box.top - 42) : below;
+  // The solid holder keeps the card's next line from showing through the button's clear face.
+  return createPortal(
+    <div ref={own} className="inf-annotate-offer" style={{ left, top }}>
+      <Button
+        size="sm"
+        variant="secondary"
+        keys={ANNOTATE_KEY}
+        onClick={() =>
+          useShellStore.setState((s) =>
+            s.annotationOffer ? { annotationPick: s.annotationOffer, annotationOffer: null } : {},
+          )
+        }
+      >
+        {ANNOTATE}
+      </Button>
+    </div>,
+    document.body,
+  );
+}
+
+/** The key Annotate shows: Enter (or Tab) in the card opens the editor on the selected words. */
+const ANNOTATE_KEY = "⏎";
+
 function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: CollectAnswers }) {
   const pick = useShellStore((s) => s.annotationPick);
+  const queued = useShellStore((s) =>
+    pick ? (s.replyNotes[cardId] ?? NO_NOTES).some((n) => sameNote(n, pick.note)) : false,
+  );
   const field = useRef<HTMLTextAreaElement>(null);
   const pop = useRef<HTMLDivElement>(null);
   const [hint, setHint] = useState(false);
   const [height, setHeight] = useState(240);
-  const [writing, setWriting] = useState(pick?.focusComment !== false);
   useLayoutEffect(() => {
-    if (pick?.focusComment !== false) {
-      field.current?.focus();
-      setWriting(true);
-    }
+    field.current?.focus();
     if (pop.current) setHeight(pop.current.getBoundingClientRect().height);
-  }, [pick?.focusComment]);
+  }, []);
+  // A press outside closes the editor and keeps its words (INF-3786). A view over the
+  // window, such as command search, holds the focus, so a press there leaves the note open.
+  useEffect(() => {
+    const press = (event: PointerEvent) => {
+      const own = pop.current;
+      if (!own || own.contains(event.target as Node) || !own.contains(document.activeElement))
+        return;
+      settleAnnotation();
+      requestAnimationFrame(() => {
+        if (document.activeElement === document.body) focusPointAt(cardId);
+      });
+    };
+    document.addEventListener("pointerdown", press, true);
+    return () => document.removeEventListener("pointerdown", press, true);
+  }, [cardId]);
   if (!pick || pick.cardId !== cardId) return null;
   const cancel = () => {
     useShellStore.setState({ annotationPick: null });
-    document
-      .querySelector<HTMLButtonElement>(`[data-card-point-at="${CSS.escape(cardId)}"]`)
-      ?.focus();
+    focusPointAt(cardId);
   };
   const queue = (send: boolean) => {
     if (useShellStore.getState().sendingReplies[cardId]) return;
-    const { note } = pick;
-    useShellStore.setState((s) => ({
-      replyNotes: {
-        ...s.replyNotes,
-        [cardId]: [...(s.replyNotes[cardId] ?? []).filter((n) => !sameNote(n, note)), note],
-      },
-      annotationPick: null,
-    }));
+    queueNote(cardId, pick.note);
     if (send) void useShellStore.getState().sendReply(cardId, collect);
-    else
-      document
-        .querySelector<HTMLButtonElement>(`[data-card-point-at="${CSS.escape(cardId)}"]`)
-        ?.focus();
+    else focusPointAt(cardId);
   };
   const sendKey = thisDesktop().mac ? "⌘Enter" : "Ctrl+Enter";
   const left = Math.max(8, Math.min(pick.box.left, innerWidth - 328));
@@ -213,15 +256,18 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
       ref={pop}
       className="inf-annotation-popover"
       role="dialog"
+      tabIndex={-1}
       aria-label={`${ANNOTATE} ${pick.note.kind}`}
-      onFocusCapture={() => setWriting(true)}
       style={{ left, top }}
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing) return;
+        // Enter in the comment queues; on a focused button it presses that button.
         if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
           event.stopPropagation();
-          queue(event.metaKey || event.ctrlKey);
+          if (event.target === field.current) {
+            event.preventDefault();
+            queue(event.metaKey || event.ctrlKey);
+          }
         }
         if (event.key === "Escape") {
           event.preventDefault();
@@ -262,13 +308,22 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
         }}
       />
       <p className="inf-annotation-hint" role="status">
-        {!writing
-          ? m.cardAnnotationHint()
-          : hint
-            ? NOTE_DISCARD_HINT
-            : m.cardAnnotationKeys({ sendKey })}
+        {hint ? NOTE_DISCARD_HINT : m.cardAnnotationKeys({ sendKey })}
       </p>
       <div className="inf-annotation-actions">
+        {queued && (
+          // Remove sits apart at the row's start, away from Cancel and Queue.
+          <Button
+            variant="ghost"
+            style={{ marginInlineEnd: "auto" }}
+            onClick={() => {
+              removeNote(cardId, pick.note);
+              focusPointAt(cardId);
+            }}
+          >
+            {NOTE_REMOVE}
+          </Button>
+        )}
         <Button variant="ghost" onClick={cancel}>
           {NOTE_CANCEL}
         </Button>

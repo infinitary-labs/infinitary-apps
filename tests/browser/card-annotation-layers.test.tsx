@@ -36,6 +36,8 @@ test("picture viewer and command search cover the annotation popover without cle
     },
     ANNOTATION_RANGE,
   );
+  // INF-3786: a selection only offers Annotate; Enter in the card opens its comment.
+  await userEvent.keyboard("{Enter}");
   const comment = page.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
   await expect.element(comment).toBeVisible();
   await userEvent.fill(comment, ANNOTATION_COMMENT);

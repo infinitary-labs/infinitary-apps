@@ -518,15 +518,23 @@ The shared icon button sits outside the bordered field, centred on its last line
 The choices row keeps the queued-note count visible while notes wait.
 Its default key is ⇧⌘A (Ctrl+Shift+A on Linux).
 Arrow keys move through the body parts, Enter opens an annotation popover, and Escape leaves Point at.
-Selecting text opens the same popover even when Point at is off, retaining the native selection and frame focus so usual Copy still works.
-Tab, Enter or a click enters its comment field; picking a whole part focuses the field directly.
+With Point at off, selecting text shows one small Annotate button under the words, drawn by the host outside the frame, and opens no popover, so the native selection and usual Copy are untouched.
+Annotate shows ⏎ as its key: a click on it, or Enter or Tab in the frame while the words are selected, opens the popover with the caret in its comment.
+The button leaves when a press in the card or the window clears the selection, and on Escape.
+With Point at on, selecting text or clicking a part opens the popover at once, with the caret in its comment.
 The host draws the popover outside the authored frame, with the excerpt, an optional comment, Cancel and Queue.
 The popover stays below modal views, keeping its draft while the picture viewer or command search covers it.
 Enter in the comment field queues the note, and Command+Enter queues and sends all queued notes (Ctrl+Enter on Linux).
 Escape closes an empty popover; with a comment it explains that Cancel discards it.
+A press anywhere outside the popover closes it and keeps its words: a new note with words is queued, an empty new note is dropped, and a queued note keeps its edit.
+Picking another part with Point at on does the same before the new part opens; Cancel is the only control that drops typed words.
+A press outside never sends, and a card choice clicked in that press stays held because a note now waits.
+With Point at off, a click on queued words, or on a part with a queued note, opens that note's popover holding its comment; links, buttons and form fields keep their own click, and dragging still selects.
+The popover on a queued note adds Remove at the start of its button row, apart from Cancel and Queue.
+Queuing a note clears the frame's selection, and after Queue, Remove or a press outside that lands nowhere, keyboard focus returns to the card's Point at.
 This temporary host comment box is the annotation exception to the one-field rule, not another field an author creates.
 Queuing the first note opens the existing thread, where notes show Not sent with Edit and Remove in its scroller.
-Chat or Enter in the ordinary reply field sends them together as one reply.
+While notes wait, Chat reads Send 1 note or Send N notes as the primary button; it or Enter in the ordinary reply field sends them together as one reply.
 A text note highlights only its selected range, including while queued and when revealed from its thread anchor.
 A whole-part note highlights its part instead.
 Notes identify parts by their normalized revision-navigation identity, preserving moved unchanged parts without guessing edited ones.

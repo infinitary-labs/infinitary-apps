@@ -14,14 +14,74 @@ export type NoteReveal = "revealed" | "missing" | "unavailable";
 
 const bridges = new Map<
   string,
-  { sync: () => void; reveal: (note: CardNote, edit: boolean) => Promise<NoteReveal> }
+  {
+    sync: (clear?: boolean) => void;
+    reveal: (note: CardNote, edit: boolean) => Promise<NoteReveal>;
+  }
 >();
 export function syncAnnotation(cardId?: string): void {
   if (cardId) bridges.get(cardId)?.sync();
 }
-/** Escape consumes only this card's empty pick, without discarding a comment. */
+
+export function sameNote(a: CardNote, b: CardNote): boolean {
+  return (
+    a.key === b.key && a.start === b.start && JSON.stringify(a.span) === JSON.stringify(b.span)
+  );
+}
+
+/** Keyboard focus goes back to the card's Point at once its row is drawn again. */
+export function focusPointAt(cardId: string): void {
+  requestAnimationFrame(() =>
+    document
+      .querySelector<HTMLButtonElement>(`[data-card-point-at="${CSS.escape(cardId)}"]`)
+      ?.focus(),
+  );
+}
+
+/** Queue (or replace) a note and close its editor; the frame's selection clears with it. */
+export function queueNote(cardId: string, note: CardNote): void {
+  useShellStore.setState((s) => ({
+    replyNotes: {
+      ...s.replyNotes,
+      [cardId]: [...(s.replyNotes[cardId] ?? []).filter((n) => !sameNote(n, note)), note],
+    },
+    annotationPick: null,
+  }));
+  bridges.get(cardId)?.sync(true);
+}
+
+export function removeNote(cardId: string, note: CardNote): void {
+  useShellStore.setState((s) => ({
+    replyNotes: {
+      ...s.replyNotes,
+      [cardId]: (s.replyNotes[cardId] ?? []).filter((n) => !sameNote(n, note)),
+    },
+    ...(s.annotationPick?.cardId === cardId && sameNote(s.annotationPick.note, note)
+      ? { annotationPick: null }
+      : {}),
+  }));
+}
+
+/**
+ * A press outside the open note editor closes it and keeps its words (INF-3786):
+ * a note with words, or one already queued, is queued; an empty new note is dropped.
+ */
+export function settleAnnotation(): void {
+  const s = useShellStore.getState();
+  const pick = s.annotationPick;
+  if (!pick || s.sendingReplies[pick.cardId]) return;
+  const queued = (s.replyNotes[pick.cardId] ?? []).some((n) => sameNote(n, pick.note));
+  if (pick.note.comment || queued) queueNote(pick.cardId, pick.note);
+  else useShellStore.setState({ annotationPick: null });
+}
+
+/** Escape consumes only this card's Annotate offer or empty pick, without discarding a comment. */
 export function dismissEmptyAnnotation(cardId: string | undefined): boolean {
-  const { annotationPick: pick, pointAtCard } = useShellStore.getState();
+  const { annotationPick: pick, annotationOffer: offer, pointAtCard } = useShellStore.getState();
+  if (cardId && offer?.cardId === cardId) {
+    useShellStore.setState({ annotationOffer: null });
+    return true;
+  }
   if (!cardId || pick?.cardId !== cardId || pick.note.comment) return false;
   useShellStore.setState({
     annotationPick: null,
@@ -52,7 +112,7 @@ export function useAnnotationBridge(
     let previousMode = false;
     const target = (note: CardNote): FrameAnnotationTarget | undefined =>
       noteTarget(latest.current.parts, note, latest.current.originalToRendered);
-    const sync = () => {
+    const sync = (clear = false) => {
       const s = useShellStore.getState();
       const mode = s.pointAtCard === cardId;
       const current =
@@ -61,12 +121,7 @@ export function useAnnotationBridge(
         const t = target(note);
         return t ? [t] : [];
       });
-      controller.current?.annotate(
-        mode && s.annotationPick?.cardId !== cardId,
-        queued,
-        current,
-        mode && !previousMode,
-      );
+      controller.current?.annotate(mode, queued, current, mode && !previousMode, clear);
       if (mode && !previousMode) frame.current?.focus();
       previousMode = mode;
     };
@@ -103,15 +158,6 @@ export function useAnnotationBridge(
         whenFrameHoldsFocus(
           () => frame.current,
           () => {
-            const open = useShellStore.getState().annotationPick;
-            if (open?.cardId === cardId && open.note.comment) {
-              sync();
-              if (focusComment !== false)
-                document
-                  .querySelector<HTMLTextAreaElement>(".inf-annotation-popover textarea")
-                  ?.focus();
-              return;
-            }
             const rect = frame.current?.getBoundingClientRect();
             const source = cardBodyHtml(
               useShellStore.getState().cards.find((card) => card.id === cardId)?.body ??
@@ -127,21 +173,40 @@ export function useAnnotationBridge(
                 : {}),
             });
             if (!note || !rect) return;
+            const at = {
+              top: rect.top + box.top,
+              bottom: rect.top + box.bottom,
+              left: rect.left + box.left,
+              right: rect.left + box.right,
+            };
+            const s = useShellStore.getState();
+            if (s.annotationPick?.cardId === cardId && sameNote(s.annotationPick.note, note)) {
+              document
+                .querySelector<HTMLTextAreaElement>(".inf-annotation-popover textarea")
+                ?.focus();
+              return;
+            }
+            // Selected words with Point at off only offer Annotate; Copy keeps the selection.
+            if (!focusComment && s.pointAtCard !== cardId) {
+              useShellStore.setState({ annotationOffer: { cardId, note, box: at } });
+              return;
+            }
+            settleAnnotation();
             useShellStore.setState({
-              annotationPick: {
-                cardId,
-                note,
-                focusComment,
-                box: {
-                  top: rect.top + box.top,
-                  bottom: rect.top + box.bottom,
-                  left: rect.left + box.left,
-                  right: rect.left + box.right,
-                },
-              },
+              annotationPick: { cardId, note, box: at },
+              annotationOffer: null,
             });
           },
         );
+      },
+      onPointerDown: () => {
+        settleAnnotation();
+        if (useShellStore.getState().annotationOffer?.cardId === cardId)
+          useShellStore.setState({ annotationOffer: null });
+      },
+      onSelectionCleared: () => {
+        if (useShellStore.getState().annotationOffer?.cardId === cardId)
+          useShellStore.setState({ annotationOffer: null });
       },
       onPointExit: () => {
         dismissEmptyAnnotation(cardId);
@@ -166,6 +231,8 @@ export function useAnnotationBridge(
       if (bridges.get(cardId) === bridge) bridges.delete(cardId);
       if (useShellStore.getState().annotationPick?.cardId === cardId)
         useShellStore.setState({ annotationPick: null });
+      if (useShellStore.getState().annotationOffer?.cardId === cardId)
+        useShellStore.setState({ annotationOffer: null });
     };
   }, [cardId, controller, frame, supported]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: a revised body remaps every kept target

@@ -643,6 +643,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       annotation.queued = data.queued || []; annotation.current = data.current || null;
       paintAnnotations();
       if (data.focus) { window.getSelection()?.removeAllRanges(); document.body.tabIndex = -1; document.body.focus(); }
+      else if (data.clear) window.getSelection()?.removeAllRanges();
     } else if (data.type === "annotate-selection") {
       // The phone's own Annotate in the selection's menu: the words selected now open the popover with its comment ready.
       if (data.document === documentId) selectedAnnotation(true);
@@ -1939,4 +1940,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-eLZ8baImHdEN3VZ7OpYBWVgbgEd5kND24CRmuNbu5UA=";
+export const FRAME_BRIDGE_SHA256 = "sha256-11IJY9f+gsWWwCdaBrxSR1S3KDeCJmjCldnD03/9KBk=";

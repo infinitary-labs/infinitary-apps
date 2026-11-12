@@ -61,7 +61,9 @@ export type CardSlice = {
   replyDrafts: Record<string, string>;
   replyNotes: Record<string, CardNote[]>;
   pointAtCard: string | null;
-  annotationPick: { cardId: string; note: CardNote; box: FrameBox; focusComment?: boolean } | null;
+  annotationPick: { cardId: string; note: CardNote; box: FrameBox } | null;
+  /** Selected words with Point at off: the host offers Annotate under them, and opens no editor yet. */
+  annotationOffer: { cardId: string; note: CardNote; box: FrameBox } | null;
   /** Replies in flight, by card: the send control's own guard. */
   sendingReplies: Record<string, true>;
   /** A rejected reply, by card, shown under the row until the next keystroke. */
@@ -151,6 +153,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
     replyNotes: {},
     pointAtCard: null,
     annotationPick: null,
+    annotationOffer: null,
     sendingReplies: {},
     replyErrors: {},
     replyNotices: {},

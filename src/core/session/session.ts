@@ -13,9 +13,10 @@ import type { BoundTool, CrewmateToolDelegate } from "./tools";
  * One model session for three roles: the backend-neutral contract the
  * crewmate, the Firstmate seat and the classifier each open a session
  * through, the role being nothing but the options it passes (its preset:
- * `crewmateSessionSpec`, `seatSessionSpec`, `questionSessionSpec`). Pi and
- * Claude are its two implementations, each behind its own seam
- * (`src/core/pi/`, `src/core/claude/`); nothing here imports a backend's
+ * `crewmateSessionSpec`, `seatSessionSpec`, `questionSessionSpec`). Pi,
+ * Claude and Antigravity are its implementations, each behind its own seam
+ * (`src/core/pi/`, `src/core/claude/`, `src/core/antigravity/`, which so far
+ * serves crewmates only); nothing here imports a backend's
  * runtime. An account becomes a binding in one place (`binding.ts`).
  *
  * Every session is opened on a machine (decision D-11): `machine` rides
@@ -27,7 +28,7 @@ import type { BoundTool, CrewmateToolDelegate } from "./tools";
 /** This Mac, where every session runs unless its task names another computer. */
 export const LOCAL_MACHINE_ID = "local";
 
-export type SessionBackend = "pi" | "claude";
+export type SessionBackend = "pi" | "claude" | "antigravity";
 
 /**
  * What a backend can honestly deliver on the control plane. Steer is the
@@ -75,7 +76,9 @@ export type ControlProfile = {
  */
 export type SessionBinding =
   | { backend: "pi"; accountId?: string; runtime: ModelRuntime; local?: boolean }
-  | { backend: "claude"; accountId: string };
+  | { backend: "claude"; accountId: string }
+  /** Antigravity holds its own Google sign-in, as Claude's client holds its own (`src/core/antigravity/`). */
+  | { backend: "antigravity"; accountId: string };
 
 /** An image riding a prompt or steer (base64, no data: prefix). */
 export type SessionImage = { mimeType: string; data: string };
@@ -115,7 +118,25 @@ export function openingReasoning<T extends string>(
  */
 export type SessionResume =
   | { backend: "pi"; sessionFile: string }
-  | { backend: "claude"; sessionId: string };
+  | { backend: "claude"; sessionId: string }
+  | { backend: "antigravity"; sessionId: string };
+
+/**
+ * How an Antigravity conversation's resume token starts: the program names
+ * its own conversations, so the prefix keeps one from reading as a Claude
+ * session (`crewmateResume`, src/core/orchestrator/crewSession.ts).
+ */
+export const ANTIGRAVITY_TOKEN = "antigravity:";
+
+/**
+ * The name a resume token's record takes in a task's sessions folder
+ * (`<name>.jsonl`): a Claude session's id, or an Antigravity conversation's
+ * id without its prefix, the name `AntigravityRecord` writes. A Pi token is
+ * its own file's path and keeps it.
+ */
+export function recordNameOf(token: string): string {
+  return token.startsWith(ANTIGRAVITY_TOKEN) ? token.slice(ANTIGRAVITY_TOKEN.length) : token;
+}
 
 /**
  * A rolling session that started over under a new id at an attachment
@@ -407,7 +428,11 @@ export type SessionFactory = {
   open(spec: SessionSpec): Promise<ModelSession>;
 };
 
-export type SessionFactories = { pi: SessionFactory; claude?: SessionFactory };
+export type SessionFactories = {
+  pi: SessionFactory;
+  claude?: SessionFactory;
+  antigravity?: SessionFactory;
+};
 
 /** Generic admission: a role's needs against a backend's profile, with no role names. */
 export function admits(profile: ControlProfile, needs: SessionSpec["needs"]): boolean {

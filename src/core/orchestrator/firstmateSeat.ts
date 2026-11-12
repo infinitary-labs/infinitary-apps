@@ -433,6 +433,8 @@ export class FirstmateSeat {
    */
   private recordedResume(backend: SeatBackend): SessionResume | undefined {
     const settings = this.options.settings;
+    // No Antigravity seat exists yet: its factory refuses the seat's spec.
+    if (backend === "antigravity") return undefined;
     if (backend === "claude") {
       const sessionId = settings.getFirstmateClaudeSession();
       return sessionId ? { backend, sessionId } : undefined;

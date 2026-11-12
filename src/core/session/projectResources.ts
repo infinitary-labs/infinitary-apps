@@ -7,9 +7,10 @@ import { join } from "node:path";
  * its CLAUDE.md where it has none, and the skill folders under
  * `.claude/skills` and `.agents/skills`. Each backend serves them its own
  * way - Pi through the crewmate's resource loader, Claude through the
- * prompt it appends and a local plugin (docs/architecture.md section 5,
- * docs/claude-client.md) - but both read them here, from the working
- * copy's root alone. Opted-in personal resources are read separately by
+ * prompt it appends and a local plugin, Antigravity in the instructions at
+ * the head of its conversation (docs/architecture.md section 5,
+ * docs/claude-client.md, docs/antigravity-client.md) - but each reads them
+ * here, from the working copy's root alone. Opted-in personal resources are read separately by
  * `personalResources.ts`; configuration and the app's agentDir stay out.
  */
 

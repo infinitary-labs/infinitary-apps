@@ -145,15 +145,20 @@ export function fakeCrewmate(options: FakeSessionOptions = {}): FakeCrewmate {
  * A supervisor's session options over fakes: one Pi factory whose `open`
  * the case supplies, bindings that carry the account, and the crewmate
  * preset, keeping every crewmate the host started (its callbacks are what a
- * case plays the crewmate's tool calls into).
+ * case plays the crewmate's tool calls into). `alsoServes` names the other
+ * backends the same fake opens for, which a case's `bind` then picks.
  */
 export function crewSessions(
   paths: AppPaths,
   open: (spec: SessionSpec) => Promise<ModelSession>,
   specs: CrewmateSpec[] = [],
+  alsoServes: readonly ("claude" | "antigravity")[] = [],
 ): Pick<CrewSupervisorOptions, "sessions" | "bind" | "sessionSpec"> {
+  const others = Object.fromEntries(
+    alsoServes.map((backend) => [backend, { backend, controlProfile: PI_CONTROL_PROFILE, open }]),
+  );
   return {
-    sessions: { pi: { backend: "pi", controlProfile: PI_CONTROL_PROFILE, open } },
+    sessions: { pi: { backend: "pi", controlProfile: PI_CONTROL_PROFILE, open }, ...others },
     bind: async (accountId) => fakeBinding(accountId),
     sessionSpec: (crewmate, binding) => {
       specs.push(crewmate);
@@ -318,6 +323,8 @@ export type SetupExtras = {
   now?: () => number;
   /** An account's binding; absent, every account binds to a Pi runtime. */
   bind?: CrewSupervisorOptions["bind"];
+  /** The backends besides Pi the fake crewmate opens for (`crewSessions`). */
+  alsoServes?: readonly ("claude" | "antigravity")[];
   /** Open cards a previous build saved, there before the supervisor starts. */
   savedCards?: Card[];
   /** The computers that run work for this one, as the crew reads them. */
@@ -513,7 +520,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
       : undefined);
   const supervisor = new CrewSupervisor({
     ...clock,
-    ...crewSessions(paths, open, specs),
+    ...crewSessions(paths, open, specs, extras.alsoServes),
     ...(extras.bind ? { bind: extras.bind } : {}),
     workspace: realWorkspace ?? workspace,
     repos,

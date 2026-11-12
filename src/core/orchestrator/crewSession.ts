@@ -19,6 +19,7 @@ import { sourceContext, sourceIdentity } from "../selfSource/resolve";
 import { serveAnswerFiles } from "../session/answerFiles";
 import type { OpenReads } from "../session/openReads";
 import {
+  ANTIGRAVITY_TOKEN,
   type ContractStamp,
   LOCAL_MACHINE_ID,
   type SessionBackend,
@@ -103,7 +104,8 @@ const CLAUDE_SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9
 
 /**
  * The recorded resume token, read by the backend that will reopen it: a Pi
- * session file is an absolute `.jsonl` path, a Claude session a uuid. A
+ * session file is an absolute `.jsonl` path, a Claude session a uuid, an
+ * Antigravity conversation its id after `antigravity:`. A
  * token of the wrong shape (a record another backend wrote) reopens
  * nothing, so the crewmate starts a fresh conversation rather than failing
  * its resume.
@@ -118,12 +120,19 @@ export function crewmateResume(
       ? { backend: "pi", sessionFile: token }
       : undefined;
   }
+  if (backend === "antigravity") {
+    const sessionId = token.startsWith(ANTIGRAVITY_TOKEN)
+      ? token.slice(ANTIGRAVITY_TOKEN.length)
+      : "";
+    return sessionId ? { backend: "antigravity", sessionId } : undefined;
+  }
   return CLAUDE_SESSION_ID.test(token) ? { backend: "claude", sessionId: token } : undefined;
 }
 
 /** What the task record keeps to reopen a crewmate's conversation. */
 export function crewmateResumeToken(resume: SessionResume | undefined): string | undefined {
   if (!resume) return undefined;
+  if (resume.backend === "antigravity") return `${ANTIGRAVITY_TOKEN}${resume.sessionId}`;
   return resume.backend === "pi" ? resume.sessionFile : resume.sessionId;
 }
 

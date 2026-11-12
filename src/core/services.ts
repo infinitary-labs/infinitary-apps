@@ -30,6 +30,7 @@ import type { WorkPosture } from "@shared/workPosture";
 import type { AccountBackend } from "./accounts/accountBackend";
 import { CredentialHealthService } from "./accounts/credentialHealthService";
 import { buildProviderViews } from "./accounts/providerViews";
+import { createAntigravitySessionFactory } from "./antigravity/session";
 import { initAttachmentsDir } from "./attachments";
 import { recoverAtBoot } from "./bootRecovery";
 import { openTaskChannel, startTaskBrowsers } from "./browser/homeTaskBrowsers";
@@ -608,6 +609,14 @@ export async function createServices(
         log: (line) => console.warn(`[claude-session] ${line}`),
         accessSettings: async () => accessFlagSettings(await readClaudeAccess()),
         costReportingAllowed: () => claudeCostReportingAllowed(),
+      }),
+    ),
+    // Crewmates on the person's installed Antigravity (docs/antigravity-client.md);
+    // nothing binds to it until its sign-in and model list arrive.
+    antigravity: bounds.factory(
+      createAntigravitySessionFactory({
+        clientVersion: host.app.version,
+        log: (line) => console.warn(`[antigravity-session] ${line}`),
       }),
     ),
   };

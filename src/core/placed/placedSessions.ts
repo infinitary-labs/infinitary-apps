@@ -106,7 +106,7 @@ export type PlacedSessionsOptions = {
   paths: AppPaths;
   devices: WorkDevices;
   /** Each backend's control plane on this Mac, which it presents from there. */
-  profiles: { pi: ControlProfile; claude?: ControlProfile };
+  profiles: { pi: ControlProfile; claude?: ControlProfile; antigravity?: ControlProfile };
   /** A paired computer's name, as Devices lists it. */
   deviceName: (deviceId: string) => string | undefined;
   /** The computers that run work on the list, by device id; absent, none. */

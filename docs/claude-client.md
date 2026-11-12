@@ -186,6 +186,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
     Known-path copies remain immediate; attachment, explicit refresh and retirement wait for discovery, so a new task never walks all Claude project folders on the main thread.
     Beside it, `<id>.served.jsonl` stamps the contract (version, prompt, instructions, tools shas) and each prompt's acknowledged uuids (`docs/provenance-capture.md`).
     A resume reads the client's own transcript; an id it has none for (a crash before the first turn, or the client's 30-day sweep) starts fresh under a new id, and the app's copy of the old session stays.
+    A crewmate's session that opens under another id than the one it was asked to resume, with no renewal to say why, is carried as one that could not be reopened (`CrewSessions.openCrewmate`).
     The Settings purge removes that copy with the rest of the first mate's transcripts (`docs/task-retention.md`); the client's own file is not the app's to delete.
   - **Not the SDK's session store.**
     `Options.sessionStore` (`@alpha`) mirrors fine, but resuming from it makes the SDK itself read the person's Claude credential (`security find-generic-password` on the default Keychain item, or `.credentials.json`), write it into a temporary config dir without its refresh token, and run the client there - the app never reads a provider token, and a client without its refresh token cannot renew mid-session.

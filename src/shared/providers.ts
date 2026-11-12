@@ -4,8 +4,8 @@ import { z } from "zod";
  * The offered provider catalog: Codex, xAI, Claude, Kimi Code and GitHub
  * Copilot are subscriptions; OpenRouter connects with an API key. API-key
  * providers are allowed (D-6) with UI emphasis on subscriptions. A supported
- * subscription is one that runs through Pi; Claude is the sole exception
- * (captain, 2026-09-24). Cursor was removed; stored accounts for its id are
+ * subscription is one that runs through Pi; Claude and Antigravity are the
+ * two exceptions (captain, 2026-09-24 and 2026-11-11). Cursor was removed; stored accounts for its id are
  * ignored on load (`isRetiredProvider`), not deleted. Kimi Code and GitHub
  * Copilot came back through Pi on 2026-10-19 (INF-560): an account stored
  * under either id before then loads again, and a sign-in that lapsed

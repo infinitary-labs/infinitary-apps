@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { BackendId } from "@shared/providers";
 import { locateClaudeTranscript } from "../claude/claudeTranscript";
+import { recordNameOf } from "../session/session";
 import { sessionDialectAt } from "../storage/sessionReader";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -89,8 +90,10 @@ function sizeOf(path: string): number {
 /** This Mac's copy of a record a computer that runs work holds, once it has one. */
 function placedCopyOf(dir: string, token: string | null): string | null {
   if (!token) return null;
-  // A Pi token is that computer's file; a Claude token is the session id its copy is named by.
-  const path = token.endsWith(".jsonl") ? join(dir, basename(token)) : appCopyOf(dir, token);
+  // A Pi token is that computer's file; a Claude or Antigravity token names the copy by its id.
+  const path = token.endsWith(".jsonl")
+    ? join(dir, basename(token))
+    : appCopyOf(dir, recordNameOf(token));
   return path && existsSync(path) ? path : null;
 }
 

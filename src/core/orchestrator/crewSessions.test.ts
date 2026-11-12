@@ -9,6 +9,8 @@
  * record.
  */
 
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -19,6 +21,7 @@ import {
   workComputer,
 } from "../../../tests/helpers/crewHarness";
 import { deferred } from "../../../tests/helpers/deferred";
+import { crewmateSessionsDir } from "../paths";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 
@@ -364,5 +367,27 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     expect(interrupts(h.tasks, "t-elsewhere")).toEqual([]);
     expect(h.tasks.get("t-unstarted")?.status).toBe("open");
     expect(interrupts(h.tasks, "t-unstarted")).toEqual([]);
+  });
+  // INF-3776's approved plan: an Antigravity crewmate's record is the file
+  // the app writes, `<conversation id>.jsonl` in the task's sessions folder,
+  // so the task names a file that exists and lists it once.
+  it("records an Antigravity conversation by the record file the app writes", async () => {
+    const crewmate = fakeCrewmate({
+      sessionId: "standin-conv1",
+      resume: { backend: "antigravity", sessionId: "standin-conv1" },
+    });
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await tick();
+    const dir = crewmateSessionsDir(h.paths, taskId);
+    const file = join(dir, "standin-conv1.jsonl");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(file, '{"type":"session","version":3,"id":"standin-conv1"}\n');
+
+    const sessions = h.tasks.archive.sessions(taskId, { dir, computer: "this Mac" });
+    expect(sessions.map((session) => [session.file, session.current])).toEqual([[file, true]]);
   });
 });

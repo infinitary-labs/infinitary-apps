@@ -14,7 +14,12 @@ import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import { crewRunbookText } from "../runbooks/runbooks";
 import { OpenReads } from "../session/openReads";
-import { LOCAL_MACHINE_ID, type ModelSession, type SessionSpec } from "../session/session";
+import {
+  LOCAL_MACHINE_ID,
+  type ModelSession,
+  recordNameOf,
+  type SessionSpec,
+} from "../session/session";
 import { INBOX_ATTEMPT_MAX, type InboxRow } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import {
@@ -149,17 +154,17 @@ export class CrewSessions {
     if (runbookSkills) spec.runbookSkills = runbookSkills;
     if (this.core.disposed()) throw new Error("This computer is stopping.");
     const session = await factory.open(spec);
+    // Unopenable: the backend could not take the recorded conversation, or
+    // it was asked to and opened another one instead - a Claude client with
+    // no transcript for it, an Antigravity program that could not reopen it.
+    // A Pi token is the file Pi opens, so a Pi session never opens another.
+    const asked = spec.shape.turns === "rolling" ? spec.shape.record.resume : undefined;
+    const opened = crewmateResumeToken(session.resume());
     const unopenable =
-      Boolean(crewmate.resumeToken) && spec.shape.turns === "rolling" && !spec.shape.record.resume;
-    if (unopenable) {
-      this.core.options.tasks.note(
-        task.id,
-        movedTo
-          ? `it moved to a new conversation on ${movedTo}, which cannot reopen its earlier one; the earlier one is kept`
-          : "its earlier conversation could not be reopened, so it starts a fresh one",
-        { news: true },
-      );
-    }
+      Boolean(crewmate.resumeToken) &&
+      spec.shape.turns === "rolling" &&
+      (!asked ||
+        (asked.backend !== "pi" && opened !== undefined && opened !== crewmateResumeToken(asked)));
     this.carryRestart(
       task,
       crewmate.machineId,
@@ -184,12 +189,12 @@ export class CrewSessions {
       machine === LOCAL_MACHINE_ID
         ? { sessions: crewmateSessionsDir(this.core.options.paths, task.id) }
         : this.core.options.machines?.folders(machine, task.id);
-    // A Claude token is not a path. Its durable copy belongs to the computer
+    // A Claude or Antigravity token is not a path. Its durable copy belongs to the computer
     // running the session, not to this computer's copy of the transcript.
     const file = isAbsolute(token)
       ? token
       : folders
-        ? join(folders.sessions, `${token}.jsonl`)
+        ? join(folders.sessions, `${recordNameOf(token)}.jsonl`)
         : undefined;
     if (!file) return;
     const model = session.modelRef();
@@ -229,6 +234,14 @@ export class CrewSessions {
         news: false,
         data: { conversation: { from: renewal.from, changed: [...renewal.changed] } },
       });
+    } else if (unopenable) {
+      this.core.options.tasks.note(
+        task.id,
+        movedTo
+          ? `it moved to a new conversation on ${movedTo}, which cannot reopen its earlier one; the earlier one is kept`
+          : "its earlier conversation could not be reopened, so it starts a fresh one",
+        { news: true },
+      );
     }
     const restart: CrewmateRestart | undefined =
       renewal ??
@@ -262,10 +275,10 @@ export class CrewSessions {
       .filter((event) => event.kind === "briefed")
       .at(-1);
     const brief = briefed ? this.core.options.tasks.servedBrief(briefed) : undefined;
-    // A Pi conversation's token is its file; a Claude one's names the
-    // app's copy in the task's sessions folder.
+    // A Pi conversation's token is its file; a Claude or Antigravity one's
+    // names the app's record in the task's sessions folder.
     const named = (dir: string) =>
-      isAbsolute(restart.from) ? restart.from : join(dir, `${restart.from}.jsonl`);
+      isAbsolute(restart.from) ? restart.from : join(dir, `${recordNameOf(restart.from)}.jsonl`);
     let earlier: string | undefined;
     if (machine === LOCAL_MACHINE_ID) {
       const path = named(crewmateSessionsDir(this.core.options.paths, task.id));

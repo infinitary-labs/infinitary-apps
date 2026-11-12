@@ -55,6 +55,8 @@ export type ReportIntakeHost = {
   clientJobStart(taskId: string): number | undefined;
   /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
+  /** Whether a relay made now wakes the first mate at once (`CrewTurns.relayWakesNow`). */
+  relayWakesNow(task: TaskRuntime): boolean;
   /** The captain's words a report passes on, read where he typed them (`CaptainOverrides.relayedCaptainWords`). */
   relayedCaptainWords(
     taskId: string,
@@ -68,7 +70,9 @@ export type ReportIntakeHost = {
  * follow-ups, its progress notes, its explicit report with what it declares
  * about whose turn follows, a response its card line carries, and its live
  * validation records with the write a validation request approved. The
- * report is sorted when the turn ends, not here. The crew supervisor
+ * report is sorted when the turn ends, not here, except a relay
+ * (`needs_firstmate`), which wakes the first mate when it is made
+ * (`CrewTurns.relayNow`). The crew supervisor
  * composes it and its callers reach it as `CrewSupervisor.reportIntake`.
  */
 export class ReportIntake {
@@ -327,7 +331,8 @@ export class ReportIntake {
   /**
    * report (WI-1): the crewmate's explicit report for the turn in flight.
    * It wins over the turn's final text and is sorted exactly once, when the
-   * turn ends; implausible text is refused here, with the fix, instead of
+   * turn ends, or when it is made for a relay (`needs_firstmate`, which
+   * the turn's end then does not wake again); implausible text is refused here, with the fix, instead of
    * being set aside later. What it declares about whose turn follows
    * (FI3-435) is checked here too: a wait or finished, never both, and a
    * wait's card is one of the crewmate's own that is up. The receipt says
@@ -431,7 +436,11 @@ export class ReportIntake {
       receipt.push(
         this.host.cards.threadAwaitingAuthor(task.id)
           ? "The first mate is woken for it when this turn ends only if the captain's reply under your card has your answer by then: answer it in that thread or revise the card."
-          : "The first mate is woken for it when this turn ends.",
+          : task.relayWoken?.request === declaration.needsFirstmate
+            ? "The first mate was already woken for this request in this turn."
+            : this.host.relayWakesNow(task)
+              ? "The first mate is woken for it now, while your turn goes on."
+              : "The first mate is woken for it when this turn ends.",
       );
     } else if (declaration?.finished && this.host.cards.answerNoteForTask(task.id)) {
       receipt.push(

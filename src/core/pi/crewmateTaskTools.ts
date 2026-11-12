@@ -348,7 +348,7 @@ export const REPORT_TOOL = crewmateTool({
     needs_firstmate: Type.Optional(
       Type.String({
         description:
-          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. For checks you cannot run or work on another computer, name the computer, need and destination. Wakes at turn end, even with a card or wait, after your reply. It authorizes nothing. Requested answers use responses, not progress or news.",
+          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. For checks you cannot run or work on another computer, name the computer, need and destination. Wakes the first mate when sent, even with a card or wait; an unanswered captain reply holds it to turn end. It authorizes nothing. Requested answers use responses, not progress or news.",
       }),
     ),
     captain_words_from: Type.Optional(

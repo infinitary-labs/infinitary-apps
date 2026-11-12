@@ -282,6 +282,8 @@ export class TaskTurns {
       usage?: Record<string, unknown>;
       /** What the report declared about whose turn follows it (FI3-435). */
       declared?: ReportDeclaration;
+      /** When its relay woke the first mate, if before the turn ended (INF-3926's finding 2). */
+      askedAt?: number;
     },
   ): number {
     const at = this.writer.now();
@@ -308,7 +310,7 @@ export class TaskTurns {
           ? this.writer.mergeDelivery(record, {
               captainWait: wait ? { at, ...wait } : undefined,
               finishedAt: finished ? at : undefined,
-              needsFirstmate: request ? { at, request } : undefined,
+              needsFirstmate: request ? { at: input.askedAt ?? at, request } : undefined,
               checkBack,
             })
           : undefined;

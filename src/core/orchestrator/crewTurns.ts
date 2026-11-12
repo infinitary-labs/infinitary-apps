@@ -34,7 +34,7 @@ import type { DependencyInstall } from "../workspace/workspaceService";
 import { ciFactOf } from "./ciFact";
 import type { CrewCore } from "./crewCore";
 import { handedDirections, servesDirections } from "./crewDirections";
-import { type MoveAsk, SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
+import { type MoveAsk, type RelayWoken, SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
 import { updatePauseLine } from "./crewUpdates";
 import { JOB_BOUND_MS } from "./idleLadder";
@@ -88,6 +88,8 @@ const QUEUED_GUIDANCE_FOLD = "queued-guidance";
 type TurnActs = {
   filed: TaskRuntime["filedThisTurn"];
   withdrawn: TaskRuntime["withdrawnThisTurn"];
+  /** The relay this turn already woke the first mate for (`TaskRuntime.relayWoken`). */
+  relayed?: RelayWoken;
 };
 
 /** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
@@ -355,6 +357,7 @@ export class CrewTurns {
     task.explicitReport = undefined;
     task.explicitSummary = undefined;
     task.explicitDeclared = undefined;
+    task.relayWoken = undefined;
     task.lastTurnError = undefined;
     task.lastTurnCutOff = undefined;
     task.lastTurnContextOverflow = undefined;
@@ -476,6 +479,7 @@ export class CrewTurns {
         .recordValidationReport(task, text, summary, declared, responseText)
         .then((receipt) => {
           this.core.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
+          this.relayNow(task);
           return receipt;
         });
     const receipt = this.core.reportIntake.recordExplicitReport(
@@ -489,7 +493,63 @@ export class CrewTurns {
     // the stage now. A card the captain already had waits for the turn's
     // end, so it comes back once, with the crewmate's last word (INF-926).
     this.core.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
+    this.relayNow(task);
     return receipt;
+  }
+
+  /**
+   * A relay wakes the first mate when it is made (INF-3926's finding 2):
+   * a report that declares `needs_firstmate` carries a captain decision
+   * only the first mate can carry out, and its crewmate's turn may go on
+   * for an hour after it. So the report call itself sorts it at row 0a
+   * and wakes the first mate, with the same words the turn's end would
+   * send. A captain reply still waiting for this crewmate's answer holds
+   * it (row 0), and the turn's end decides as before. The same request
+   * twice in one turn wakes once. A relay the turn's end would not sort
+   * (a review's verdict, a repair assessment) waits for it as before.
+   */
+  /** Whether a relay this task's crewmate makes now wakes the first mate at once (`relayNow`). */
+  relayWakesNow(task: TaskRuntime): boolean {
+    if (this.core.cards.threadAwaitingAuthor(task.id)) return false;
+    const record = this.core.options.tasks.get(task.id);
+    if (!record || TaskService.isClosed(record)) return false;
+    // A reviewer's or a repair assessment's report settles at the turn's
+    // end through its own owner, which carries its request on.
+    return record.shape?.kind !== "review" && !isRepairAssessment(record.shape);
+  }
+
+  private relayNow(task: TaskRuntime): void {
+    const report = task.explicitReport;
+    const declared = task.explicitDeclared;
+    const request = declared?.needsFirstmate;
+    if (report === undefined || !request) return;
+    if (task.relayWoken?.request === request) return;
+    if (!this.relayWakesNow(task)) return;
+    task.relayWoken = {
+      request,
+      report,
+      at: this.core.now(),
+      filed: task.filedThisTurn.length,
+      withdrawn: task.withdrawnThisTurn.length,
+    };
+    const turn = { filed: [...task.filedThisTurn], withdrawn: [...task.withdrawnThisTurn] };
+    this.core.options.tasks.readProjection(() => {
+      const { wake } = this.reportWake(task, report, turn, declared, true);
+      if (this.core.bypassesSupervision(task.id)) {
+        this.core.hooks().notifyOp(wake, "crewmate-report", task.id);
+        return;
+      }
+      const sort = sortReport({
+        ...this.core.ladder.witnesses(task.id, this.core.now()),
+        filedFollowups: turn.filed.length > 0,
+        finished: declared?.finished === true,
+        needsFirstmate: true,
+        workObservable: task.session?.controlProfile.backgroundWork === "host",
+      });
+      this.recordSort(task.id, task.title, wake, sort.verdict, sort.reason, sort.rule, () => {
+        if (sort.wake) this.core.hooks().notifyOp(wake, "crewmate-report", task.id);
+      });
+    });
   }
 
   /**
@@ -637,6 +697,8 @@ export class CrewTurns {
     task.filedThisTurn = [];
     const withdrawn = task.withdrawnThisTurn;
     task.withdrawnThisTurn = [];
+    const relayed = task.relayWoken;
+    task.relayWoken = undefined;
     const implausible =
       candidate && !options.interrupted ? implausibleReport(candidate) : undefined;
     const turnError =
@@ -760,6 +822,9 @@ export class CrewTurns {
         text: report,
         ...(candidateSummary ? { summary: candidateSummary } : {}),
         ...(declared ? { declared } : {}),
+        // The relay's ask stands from when it woke the first mate, so an
+        // act of the first mate's before this turn ended answers it.
+        ...(relayed && declared?.needsFirstmate === relayed.request ? { askedAt: relayed.at } : {}),
       });
       // A declared wait places the captain gate before the sort reads it.
       if (declared?.wait) this.core.ladder.syncCaptainGate(task.id, this.core.now());
@@ -920,10 +985,10 @@ export class CrewTurns {
       void saved.then((committed) => {
         const record = this.core.options.tasks.get(task.id);
         if (committed && record && !TaskService.isClosed(record))
-          this.sortReport(task, report, { filed, withdrawn }, declared);
+          this.sortReport(task, report, { filed, withdrawn, relayed }, declared);
       });
     } else if (report) {
-      this.sortReport(task, report, { filed, withdrawn }, declared);
+      this.sortReport(task, report, { filed, withdrawn, relayed }, declared);
     }
     if (!turnError && !options.interrupted && !paused) this.askForCheckBack(task, declared);
     this.afterTurn(task, move, recoverContext);
@@ -1169,23 +1234,32 @@ export class CrewTurns {
     );
   }
 
-  private sortReportInProjection(
+  /**
+   * The report wake's typed facts, and the witnesses the sort reads beside
+   * them: one builder for the turn's end and for a relay sent when it is
+   * made (`relayNow`), so both say the same.
+   */
+  private reportWake(
     task: TaskRuntime,
     report: string,
     { filed, withdrawn }: TurnActs,
     declared: ReportDeclaration | undefined,
-    handed: boolean,
-  ): void {
+    pending = false,
+  ) {
     const finished = declared?.finished === true;
     const needsFirstmate = declared?.needsFirstmate;
-    // Read what the report owner normalized and kept, never the uncapped declaration.
-    const reports = this.core.options.tasks.lastReportEntries(task.id);
+    // Read what the report owner normalized and kept, never the uncapped
+    // declaration. A relay sent as it is made (`pending`) is not on the
+    // record yet: its own words stand, and its stall and recovery facts
+    // wait for the turn's end, which then wakes with them.
+    const reports = pending ? [] : this.core.options.tasks.lastReportEntries(task.id);
     const kept = report ? reports.at(-1) : undefined;
     const workWait = kept?.declared.workWait;
     const record = this.core.options.tasks.get(task.id);
     // F3 of INF-1554 (R1 of INF-1644): the ladder's one rule, a check-back
     // with no claimed job owns no wait; its witnesses already leave it out.
     const unownedTimer =
+      !pending &&
       declared?.checkBack !== undefined &&
       record !== undefined &&
       this.core.ladder.unownedTimer(record);
@@ -1258,6 +1332,38 @@ export class CrewTurns {
         ...(earlierPass ? { earlierPass } : {}),
       },
     };
+    return { wake, record, witnesses, stall, recoveryWays, waiting, review };
+  }
+
+  private sortReportInProjection(
+    task: TaskRuntime,
+    report: string,
+    turn: TurnActs,
+    declared: ReportDeclaration | undefined,
+    handed: boolean,
+  ): void {
+    const { filed, relayed } = turn;
+    const needsFirstmate = declared?.needsFirstmate;
+    // The relay already woke the first mate when it was made (INF-3926's
+    // finding 2): the same report with nothing new since sends no second wake.
+    if (
+      relayed &&
+      needsFirstmate === relayed.request &&
+      report === relayed.report &&
+      filed.length === relayed.filed &&
+      turn.withdrawn.length === relayed.withdrawn &&
+      !declared?.workWait &&
+      !declared?.recoveryWays?.length &&
+      !declared?.checkBack
+    )
+      return;
+    const finished = declared?.finished === true;
+    const { wake, record, witnesses, stall, recoveryWays, waiting, review } = this.reportWake(
+      task,
+      report,
+      turn,
+      declared,
+    );
     // A program's part answering its call is the program's to read (INF-799);
     // one that names a check-back says its work still runs (INF-2037).
     const programPart =

@@ -159,6 +159,13 @@ export type TaskRuntime = {
   /** What `explicitReport` declared about whose turn follows it (FI3-435). */
   explicitDeclared?: ReportDeclaration;
   /**
+   * The relay this turn already woke the first mate for, when its report
+   * was made (INF-3926's finding 2): the request, the report it rode, when,
+   * and how many filings and withdrawals the turn had then. The turn's end
+   * sends no second wake for the same unchanged relay.
+   */
+  relayWoken?: RelayWoken;
+  /**
    * The record's event of the kept report (`TaskTurns.keptReport`) this
    * runtime's turns already named: a later turn names it only once.
    */
@@ -243,3 +250,12 @@ export type TaskRuntime = {
 
 /** A steer handed into a running turn, by its words' digest and when it was handed over. */
 export type UnreadSteer = { sha: string; since: number; woken?: true };
+
+/** A relay the first mate was woken for when its report was made (`TaskRuntime.relayWoken`). */
+export type RelayWoken = {
+  request: string;
+  report: string;
+  at: number;
+  filed: number;
+  withdrawn: number;
+};

@@ -872,11 +872,15 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
           answersMessage: askedOn(supervisor, card.id),
         });
         expect(specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK })).toBe(
-          "Reported. The first mate is woken for it when this turn ends.",
+          "Reported. The first mate is woken for it now, while your turn goes on.",
         );
+        // INF-3926's finding 2: the relay wakes the first mate when it is
+        // made, while the crewmate's turn still runs, not when it ends.
+        expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
+        expect(reportWakes(ops)).toHaveLength(1);
         await endTurn(crewmate, taskId);
 
-        expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
+        // The turn's end sends no second wake for the same relay.
         expect(reportWakes(ops)).toHaveLength(1);
         const wake = reportWakes(ops)[0] ?? "";
         expect(wake).toContain(APPROVAL);
@@ -1012,6 +1016,60 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(
         inbox.allFor(FIRSTMATE_RECIPIENT).filter((row) => renderWake(row).includes(ASK)),
       ).toHaveLength(1);
+    });
+
+    // INF-3926's finding 2: a relay waited an hour for its crewmate's turn
+    // to end. It wakes when made, and an act of the first mate's while that
+    // turn still runs answers it, so the idle ladder does not raise it again.
+    it("dates the relay's ask from its wake, so the first mate's act during the turn answers it", async () => {
+      const { supervisor, crewmate, card, ops, specs, tasks, taskId } =
+        await plannerWithCard("client");
+      supervisor.cardActions.replyToCard(card.id, APPROVAL);
+      await tick();
+      specs[0]?.onReply?.({
+        cardId: card.id,
+        text: "Firstmate starts the builder next.",
+        answersMessage: askedOn(supervisor, card.id),
+      });
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        const relayedAt = Date.parse("2026-11-11T20:22:00Z");
+        vi.setSystemTime(relayedAt);
+        specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
+        expect(reportWakes(ops)).toHaveLength(1);
+        vi.setSystemTime(relayedAt + 60_000);
+        await supervisor.steer.steerCrewmate(taskId, "The builder is started.");
+        vi.setSystemTime(relayedAt + 60 * 60_000);
+        await endTurn(crewmate, taskId);
+        const record = tasks.get(taskId);
+        expect(record?.delivery?.needsFirstmate).toEqual({ at: relayedAt, request: ASK });
+        expect(record && tasks.firstmateActedSince(record, relayedAt)).toBe(relayedAt + 60_000);
+        expect(reportWakes(ops)).toHaveLength(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("wakes again at the turn's end when the report changed after the relay", async () => {
+      const { supervisor, crewmate, card, ops, sorts, specs, taskId } =
+        await plannerWithCard("client");
+      supervisor.cardActions.replyToCard(card.id, APPROVAL);
+      await tick();
+      specs[0]?.onReply?.({
+        cardId: card.id,
+        text: "Firstmate starts the builder next.",
+        answersMessage: askedOn(supervisor, card.id),
+      });
+      specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
+      expect(reportWakes(ops)).toHaveLength(1);
+      specs[0]?.onReport?.(`${RELAY} The plan card now names the builder.`, undefined, {
+        needsFirstmate: ASK,
+      });
+      expect(reportWakes(ops)).toHaveLength(1);
+      await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
+      expect(reportWakes(ops)).toHaveLength(2);
+      expect(reportWakes(ops)[1]).toContain("The plan card now names the builder.");
     });
 
     it("refuses a request with no reason, and keeps nothing of it", async () => {

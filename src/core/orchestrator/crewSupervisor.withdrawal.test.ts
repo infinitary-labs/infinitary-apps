@@ -88,10 +88,13 @@ describe("a decision its crewmate withdrew (INF-2828)", () => {
 
     // The crewmate reads the record's ending in close_card's own answer.
     expect(answer).toBe(`Closed card "${TITLE}" (${h.cardId}). ${WITHDRAWN_UNCHOSEN}`);
-    // The first mate's wake for the claim carries the withdrawal beside it.
+    // The relay woke the first mate when it was made (INF-3926's finding 2);
+    // the withdrawal came after it, so the turn's end wakes it again with the
+    // withdrawal beside the claim.
     const woke = h.ledgerFacts.slice(before);
-    expect(woke).toHaveLength(1);
-    expect(woke[0]).toMatchObject({
+    expect(woke).toHaveLength(2);
+    expect(woke[0]).not.toHaveProperty("withdrawn");
+    expect(woke[1]).toMatchObject({
       kind: "report",
       needsFirstmate:
         "Please have a crewmate on the laptop run the password session for the new Mac.",

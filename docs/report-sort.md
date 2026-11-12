@@ -56,6 +56,11 @@ The persisted `answer` hold, not the newest historical message, is authoritative
 Some captain decisions reach a crewmate that only the first mate can carry out: a build the captain approved by reply under an answer task's card, a merge, a discard, a stronger model, unrelated work.
 The crewmate relays the captain's words verbatim and declares it: `report`'s top-level `needs_firstmate`, a few words on what the first mate must do.
 Row 0a wakes the first mate on any backend, above an open decision card, a declared wait and every moving witness, because each of those would otherwise hold the report quiet; a relay whose card was withdrawn also wakes at row 6, but without the request on the wake.
+A relay is sorted when the report is made, not when the crewmate's turn ends (INF-3926's finding 2: a relay of the captain's decision waited an hour for its crewmate's turn to end, while another task built the opposite change; `CrewTurns.relayNow`).
+The report call records the row 0a sort and sends the same wake the turn's end would, while the turn goes on.
+The turn's end sends no second wake for that relay when nothing came after it: the same report and request, no filing, withdrawal, work wait, recovery way or check-back since; anything new wakes it again with the whole report.
+The request stands on the record from the relay's wake (`delivery.needsFirstmate.at`), so an act of the first mate's while the turn still runs answers it and the idle ladder does not raise it again.
+A captain reply still waiting for the crewmate's answer holds the relay to the turn's end (row 0), and a reviewer's or a repair assessment's report, which settles through its own owner at the turn's end, keeps its request for that owner.
 It sits below row 0: the captain's reply is answered first (`HANDOFF`: one thread line naming who is next), and the report tool's receipt says so when that reply is still open.
 The wake carries the request beside the report's own words (`needsFirstmate` on the facts) and says it authorizes nothing by itself: the first mate checks the captain's words and starts the existing successor once (`HANDOFF`).
 The `report` event keeps the request, and so do the record's delivery facts (`delivery.needsFirstmate`) until the crewmate's next turn starts, as they keep a declared wait (FI3-714); the durable inbox's content dedupe keeps a repeated relay to one wake.
@@ -292,7 +297,7 @@ It carries the first mate's own sentence, has no actions, places no gate, and no
 Work no message of the captain's covers gets it only for a merge or a release (INF-1467).
 
 **A request the first mate leaves unanswered is raised again** (FI3-714, filed from FI3-710).
-A crewmate's request that the first mate act wakes it once, at the report (row 0a).
+A crewmate's request that the first mate act wakes it once, when the report is made (row 0a).
 A woken turn that ends without acting on it used to leave the request with the crewmate's open card holding the turn, which nothing climbs past.
 So while the request stands - from the report that asked until the crewmate's next turn starts - and the first mate has not acted on the task since, the reconciler reads the first mate's turn (step 3).
 The first mate has acted when an event of its own lands on the task's timeline after the request - a steer, an interrupt, a card, an answer, a change, a link, a close - never the `decided` record each of its turns about the task leaves, or when a task built on it (its basis, by key or id) or under it (its parent) is created or started since, whether that task is still open or has merged or been dropped (`IdleLadder.firstmateActedSince`, INF-976).

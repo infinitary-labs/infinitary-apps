@@ -550,6 +550,7 @@ export class CrewSupervisor {
       clientJobStart: (taskId) => this.starts.clientJobStart(taskId),
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
       relayedCaptainWords: (taskId, from) => this.overrides.relayedCaptainWords(taskId, from),
+      relayWakesNow: (task) => this.turns.relayWakesNow(task),
     });
     this.inPlaceWork = new InPlaceWork(options, {
       now: this.now,

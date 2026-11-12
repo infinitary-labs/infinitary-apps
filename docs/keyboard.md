@@ -526,6 +526,7 @@ The second key may be an arrow, held or not (`⌘K ⌘→`, `G ↓`), because th
 While it waits, the page is told each pair that may follow (`nextKeys`, the `inf:keyboard:next` push) and shows the next-keys hint, a quiet strip at the window's bottom listing each next key and its command's words; the push says null once the wait ends.
 The window hears the second key in `before-input-event`, whichever place the first was in: a listed key runs its pair once (`secondKeyCommand`) and reaches nothing else, and any other key ends the wait and acts as it would have, so a mismatch never swallows input.
 A key pressed after a not-typing first key but before that key's offer landed reached its document before the wait began, so the wait hears it at its own offer instead, the same way.
+Such a key that is also an anywhere key, as Emacs on Linux's Ctrl+B after Ctrl+X, reaches the document too when it is one of the pairs that first key starts, so the pair runs at its offer instead of the anywhere command running at its press; right after a Ctrl+X cut in a text field, it therefore does nothing there.
 Escape (taken, to stop the wait), the window losing focus, a navigation, recording a key and an input method's composition end it too, and so does focus moving to another document while a not-typing pair waits; a lone modifier and the first key held do not.
 A hint draws both keys (`⌘K S`); a menu cannot show two keys, so it shows the command's first single key, and `aria-keyshortcuts`, which has no way to say two keys in turn, leaves them out.
 
@@ -539,15 +540,17 @@ The customization is Keyboard settings only (the captain's `customization=ui-onl
 
 The Preset row, above the search, picks a whole set of keys to start from: Vim, the default for a new profile, Emacs and VS Code (`PRESET_IDS`, `PRESET_LABELS`).
 Legacy is the catalog's own keys, as every version before presets had them; it is offered only to a profile that had it, one updated from an older version, which stays on it with every key it changed (the captain's pick on INF-3547: "They stay on Legacy with every changed key intact"), and What's new tells it presets exist.
-Emacs is offered only on a Mac for now, since a Ctrl system keeps Ctrl+X, C, V, K and B for itself (`presetsOffered`).
-Each preset is the catalog's keys with the commands it changes replaced (`presetKeys`), written as a Mac writes keys and read on each system through `systemKeys`:
+Each preset is the catalog's keys with the commands it changes replaced (`presetKeys`), written as a Mac writes keys and read on each system through `systemKeys`, except where a preset has its own table for a Ctrl system (`CTRL_TABLES`), written as that system presses keys, since a Mac's Control keys have no place there:
 
 - Vim keeps every ⌘ key and adds, while not typing, h j k l to move, g g and ⇧G for the start and the end, ⌃D, ⌃F, ⌃U and ⌃B to page, : for command search, / for Find a task, i and r for the main message and the reply, `?` for Keyboard settings, q to put a card aside, and g with c, a, t, ⇧T, s, p or b for a card's body, its buttons, its tabs, Settings, the project focus and the task board; ⌃W with w, p, h, j, k, l, c or o moves between the window's parts and puts aside or maximizes a card; anywhere, ⌃N and ⌃P move, ⌃[ cancels and ⌃Tab steps through a card's tabs.
 - Emacs keeps every ⌘ key and adds ⌥X for command search, ⌃G to cancel, ⌃N, ⌃P, ⌃F and ⌃B to move, ⌃V and ⌥V to page, and ⌃X with o, b, ⌃B, p, m, 0, k, 1 and the arrows for the next part, Find a task, the task board, the project focus, the main message, putting a card aside, maximizing it and the cards beside it; while not typing, < and > go to the start and the end, and ⌃H with b or n opens Keyboard settings or What's new, since ⌥⇧< types a character and ⌃H deletes in a text field.
+- Emacs on a Ctrl system (Linux) splits Ctrl+X and Ctrl+V the way Emacs's CUA mode does: while typing they cut and paste, and outside a text field Ctrl+X starts the same two-key commands as on a Mac (o, b, Ctrl+B, p, m, 0, k, 1, the arrows and the size keys) and Ctrl+V pages down.
+  Anywhere, Alt+X searches commands, Ctrl+G cancels, which leaves a message too, Ctrl+N, Ctrl+P, Ctrl+F and Ctrl+B move, a message's cursor included, Alt+V pages up, Ctrl+S finds a task and Ctrl+Tab steps through a card's tabs; in a message Ctrl+K deletes to the end of the line and Alt+Y puts it back; while not typing, < and >, and Ctrl+H with b or n, do what they do on a Mac.
+  So Ctrl+K no longer searches commands and Ctrl+B no longer opens the task board there, which Ctrl+X Ctrl+B does (the captain's picks on INF-3547's later piece 5); every other Linux key stays.
 - VS Code holds no plain key: ⇧⌘P and F1 search commands, ⌘P finds a task, ⌘K starts a second key (⌘K ⌘S Keyboard settings, ⌘K Z maximize, ⌘K W put aside, ⌘K ⌘ and an arrow the part that way), ⌃` shows the crewmate, ⌃R the project focus, ⌃Tab a card's tabs and F7 the next revised part.
 
 ⌘1 to ⌘4 answer a card in every preset.
-A preset's keys pass the rules a person's key does ("Which keys a command may take"), except the catalog's own keys it keeps, which stay as they always were; `src/shared/keyPresets.test.ts` holds each preset, on each system it is offered on, to keys that all survive the resolve with no two commands sharing one where both work.
+A preset's keys pass the rules a person's key does ("Which keys a command may take"), except the catalog's own keys it keeps, which stay as they always were; `src/shared/keyPresets.test.ts` holds each preset, on each system, to keys that all survive the resolve with no two commands sharing one where both work.
 
 ### What is saved
 
@@ -576,6 +579,7 @@ One pair of core requests carries them, on the first mate's own computer only: t
 A key held with ⌥ alone works anywhere, as Emacs's ⌥X does; it no longer types its character in any text field, so the recorder warns, naming the character (`bindingWarning`: "⌥X types “≈”, which no text field will take from this key once it is a shortcut.").
 
 On a Ctrl system an anywhere shortcut holds Ctrl or Alt instead, and the keys it keeps for itself are its own (`CTRL_SYSTEM_KEYS`): Ctrl+Q and Ctrl+W, Alt+F4, the editing keys with Ctrl+Y and Ctrl+Shift+V, the input method's Ctrl+Space, Ctrl+Shift+U and Ctrl+., a terminal's Ctrl+Alt+T, and Ctrl+Alt with a function key; every chord that holds the Super key belongs to the desktop.
+Ctrl+X and Ctrl+V cut and paste only in a text field, so, like a Mac text field's Control keys, they may work when not typing or be a second key; Ctrl+C copies text selected anywhere and keeps its job.
 
 Recall's ↑ and the size keys' catalog keys stay what they are; the rules judge only what a person records and what a preset adds.
 

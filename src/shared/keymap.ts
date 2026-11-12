@@ -289,7 +289,7 @@ function ownKeys(
   panels: readonly PanelCommand[],
   system: KeySystem,
 ): readonly KeyBinding[] {
-  return isPanelCommandId(id) && !presetChanges(preset, id)
+  return isPanelCommandId(id) && !presetChanges(preset, id, system)
     ? entryOf(id, panels, system).keys
     : presetKeys(preset, id, system);
 }
@@ -371,8 +371,9 @@ const CTRL_SYSTEM_KEYS: readonly ReservedKey[] = [
   { chord: { key: "w", ctrl: true }, job: "closes the window" },
   { chord: { key: "F4", alt: true }, job: "closes the window" },
   { chord: { key: "c", ctrl: true }, job: "copies" },
-  { chord: { key: "x", ctrl: true }, job: "cuts" },
-  { chord: { key: "v", ctrl: true }, job: "pastes" },
+  // Cut and paste only in a text field, so outside one they may be keys, as Emacs's are.
+  { chord: { key: "x", ctrl: true }, job: "cuts", field: true },
+  { chord: { key: "v", ctrl: true }, job: "pastes", field: true },
   { chord: { key: "v", ctrl: true, shift: true }, job: "pastes" },
   { chord: { key: "a", ctrl: true }, job: "selects all" },
   { chord: { key: "z", ctrl: true }, job: "undoes" },
@@ -733,12 +734,12 @@ export function resolveBindings(
     if (!isChanged(saved, id))
       place(id, presetKeys(saved.preset, id, system), true, catalogKeys(id, system));
   for (const command of panels)
-    if (!isChanged(saved, command.id) && presetChanges(saved.preset, command.id))
+    if (!isChanged(saved, command.id) && presetChanges(saved.preset, command.id, system))
       place(command.id, presetKeys(saved.preset, command.id, system), true);
   // A suggestion is checked like a person's own key: a panel names it as text,
   // as a Mac writes it.
   for (const command of panels)
-    if (!isChanged(saved, command.id) && !presetChanges(saved.preset, command.id))
+    if (!isChanged(saved, command.id) && !presetChanges(saved.preset, command.id, system))
       place(command.id, systemKeys(command.keys, system), true);
   return resolved as Bindings;
 }

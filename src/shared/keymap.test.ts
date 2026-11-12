@@ -171,6 +171,41 @@ describe("the keys a command may take", () => {
     );
   });
 
+  // INF-3547's later piece 5, the captain's approved Emacs keys on Linux: Ctrl+X
+  // and Ctrl+V cut and paste only in a text field there, so outside one they
+  // may be keys; Ctrl+C copies selected text anywhere and keeps that job.
+  it("lets Linux's Ctrl+X and Ctrl+V work when not typing or as a second key, never anywhere", () => {
+    const outside = { when: "not-typing" as const };
+    expect(
+      bindingProblem(
+        { key: "x", ctrl: true, ...outside, second: { key: "o" } },
+        "regions.next",
+        [],
+        "ctrl",
+      ),
+    ).toBeNull();
+    expect(
+      bindingProblem({ key: "v", ctrl: true, ...outside }, "move.page-down", [], "ctrl"),
+    ).toBeNull();
+    expect(
+      bindingProblem(
+        { key: "j", ctrl: true, second: { key: "v", ctrl: true } },
+        "cards.next",
+        [],
+        "ctrl",
+      ),
+    ).toBeNull();
+    expect(bindingProblem({ key: "x", ctrl: true }, "regions.next", [], "ctrl")).toBe(
+      "Ctrl+X cuts",
+    );
+    expect(bindingProblem({ key: "v", ctrl: true }, "move.page-down", [], "ctrl")).toBe(
+      "Ctrl+V pastes",
+    );
+    expect(bindingProblem({ key: "c", ctrl: true, ...outside }, "cards.next", [], "ctrl")).toBe(
+      "Ctrl+C copies",
+    );
+  });
+
   it("refuses the keys that keep their own jobs, and says which job", () => {
     expect(bindingProblem({ key: "Enter", meta: true }, "commands.search")).toMatch(/^Enter sends/);
     expect(bindingProblem({ key: "Tab", meta: true }, "commands.search")).toMatch(/^Tab moves/);

@@ -53,7 +53,7 @@ describe("each preset", () => {
   const panels = tasksPanelCommands();
 
   for (const system of SYSTEMS)
-    for (const preset of PRESET_IDS.filter((id) => presetsOffered(system, true).includes(id))) {
+    for (const preset of PRESET_IDS) {
       it(`${preset} on ${system}: every key it gives works, and none is shared where both work`, () => {
         const bindings = resolveBindings(presetKeymap(preset), panels, system);
         for (const id of allCommandIds(panels)) {
@@ -89,9 +89,8 @@ describe("each preset", () => {
         expect(presetKeys(preset, id)).toEqual(DEFAULT_BINDINGS[id]);
   });
 
-  it("offers Legacy only where the profile had it, and Emacs only on a Mac", () => {
-    expect(presetsOffered("mac", false)).toEqual(["vim", "emacs", "vscode"]);
-    expect(presetsOffered("mac", true)).toEqual(["vim", "emacs", "vscode", "legacy"]);
-    expect(presetsOffered("ctrl", false)).toEqual(["vim", "vscode"]);
+  it("offers Legacy only where the profile had it", () => {
+    expect(presetsOffered(false)).toEqual(["vim", "emacs", "vscode"]);
+    expect(presetsOffered(true)).toEqual(["vim", "emacs", "vscode", "legacy"]);
   });
 });

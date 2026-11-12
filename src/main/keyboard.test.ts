@@ -644,6 +644,38 @@ describe("not-typing offers", () => {
       expect(next().at(-1)).toEqual({ next: null });
     });
 
+    // INF-3547's later piece 5: Emacs on Linux's Ctrl+X Ctrl+B, whose Ctrl+X
+    // works only when not typing while Ctrl+B also moves left anywhere.
+    it("finishes a pair whose second key is also an anywhere key, pressed before the first key's offer", () => {
+      const window = windowWithKeys();
+      const { ran, handlers } = recordingHandlers();
+      const bindings = resolveBindings({
+        ...DEFAULT_SAVED_KEYMAP,
+        keys: {
+          "settings.open": [
+            { key: "x", ctrl: true, when: "not-typing", second: { key: "b", ctrl: true } },
+          ],
+          "move.left": [{ key: "b", ctrl: true }],
+        },
+      });
+      followWindowCommands(window.win, handlers, {
+        bindings: () => bindings,
+        panels: () => [],
+      });
+      const ctrlX = { ...press, key: "x", code: "KeyX", ctrl: true };
+      const ctrlB = { ...press, key: "b", code: "KeyB", ctrl: true };
+      expect(window.type({ key: "x", code: "KeyX", control: true })).toBe(false);
+      // Ctrl+B reaches the document behind Ctrl+X instead of moving left now.
+      expect(window.type({ key: "b", code: "KeyB", control: true })).toBe(false);
+      expect(ran).toEqual([]);
+      offerWindowKey(window.contents, ctrlX);
+      offerWindowKey(window.contents, ctrlB);
+      expect(ran).toEqual(["settings.open"]);
+      // Pressed on its own, Ctrl+B moves left.
+      expect(window.type({ key: "b", code: "KeyB", control: true })).toBe(true);
+      expect(ran).toEqual(["settings.open", "move.left"]);
+    });
+
     it("never finishes a pair with a key pressed before the pair's first key", () => {
       const { contents, type, ran } = pairFixture();
       type({ key: press.key, code: press.code });

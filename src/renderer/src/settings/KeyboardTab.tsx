@@ -230,11 +230,9 @@ export function KeyboardTab() {
               value={snapshot.saved.preset}
               // Not while saving: a disabled pill drops the focus an arrow just moved.
               disabled={recording !== null}
-              options={presetsOffered(
-                thisDesktop().keys,
-                legacyOffered(snapshot.saved),
-                snapshot.saved.preset,
-              ).map((value) => ({ value, label: PRESET_LABELS[value] }))}
+              options={presetsOffered(legacyOffered(snapshot.saved), snapshot.saved.preset).map(
+                (value) => ({ value, label: PRESET_LABELS[value] }),
+              )}
               onChange={(next) => {
                 setResetArmed(false);
                 write(withPreset(snapshot.saved, next), "all");

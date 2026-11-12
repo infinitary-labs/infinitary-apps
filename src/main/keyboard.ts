@@ -333,6 +333,20 @@ export function followWindowCommands(
    * next key is often pressed before the last one's offer lands.
    */
   let witnessed: Witness[] = [];
+  /** The witness of the last key pressed, a lone modifier aside; null when it had none. */
+  let lastDown: Witness | null = null;
+  /** Whether a key may finish a not-typing pair that this witnessed key would start. */
+  const pairsWith = (first: Witness, press: KeyPress): boolean => {
+    const bindings = inPlace(first.bindings, true);
+    const context = { notTyping: true };
+    const panels = keys.panels();
+    if (!startsTwoKeys(first.press, context, bindings, panels)) return false;
+    const id = secondKeyCommand(first.press, press, context, bindings);
+    return (
+      (id !== undefined && isWindowCommand(id)) ||
+      secondKeyPanelCommand(first.press, press, bindings, panels, context) !== undefined
+    );
+  };
   const stop = () => {
     witnessed = [];
     recording = false;
@@ -463,11 +477,15 @@ export function followWindowCommands(
     witnessed = press.composing
       ? []
       : witnessed.filter((seen) => seen.frame === frame && seen.bindings === bindings);
+    // The key pressed just before this one, if it reached this document and
+    // is not yet offered back: a not-typing first key may still start a pair.
+    const before = MODIFIER_KEYS.has(press.key) ? null : lastDown;
     let witness: Witness | null = null;
     if (!press.composing && !MODIFIER_KEYS.has(press.key) && hasNotTypingKeys(bindings)) {
       witness = { press, bindings, frame };
       witnessed = [...witnessed, witness].slice(-WITNESSES_MAX);
     }
+    if (!MODIFIER_KEYS.has(press.key)) lastDown = witness;
     // A key the window takes reaches no document, which therefore never offers it.
     const forget = () => {
       witnessed = witnessed.filter((seen) => seen !== witness);
@@ -476,6 +494,11 @@ export function followWindowCommands(
       forget();
       return;
     }
+    // A listed second key of the not-typing key pressed just before it, whose
+    // offer has not landed, reaches the document as that key did: the wait
+    // then hears it at its own offer, before any anywhere key it also is.
+    if (!press.composing && before && witnessed.includes(before) && pairsWith(before, press))
+      return;
     const action = desktopKeyAction(press, desktop.system);
     if (action !== undefined) {
       forget();

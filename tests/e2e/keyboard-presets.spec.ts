@@ -2,12 +2,12 @@ import { type ElectronApplication, expect, type Page, test } from "@playwright/t
 import { openDatabase } from "../../src/core/storage/db";
 import { keyboardPresets, MIGRATIONS } from "../../src/core/storage/migrations";
 import { bindingLabel, type CommandId, type KeyBinding } from "../../src/shared/keyboard";
-import { type PresetId, presetKeys, presetsOffered } from "../../src/shared/keyPresets";
+import { type PresetId, presetKeys } from "../../src/shared/keyPresets";
 import { scratchDir } from "../helpers/scratchDirs";
 import { THIS_DESKTOP } from "./desktop";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
-import { MAC_ONLY_TAG } from "./tags";
+import { boardCard } from "./taskBoard";
 import {
   commandSearch,
   endRecording,
@@ -29,12 +29,9 @@ import {
  * preset's, and the preset's own keys pressed through the window's input
  * path doing what they promise. Completion is the screen: the row's checked
  * pill, the keys each row shows, and the dialog, section or field a key
- * opens. No sign-in, personal data or shared resource; Emacs, offered only
- * on a Mac, needs one.
+ * opens. No sign-in, personal data or shared resource, and no platform
+ * prerequisite: each system presses its own preset keys (`presetKeys`).
  */
-
-/** The presets a new profile is offered on this computer: Emacs only on a Mac (`presetsOffered`). */
-const OFFERED_HERE = presetsOffered(THIS_DESKTOP.keys, false);
 
 /** A key no preset gives, which a person records in each journey. */
 const OWN_KEY: KeyBinding = { key: "F9" };
@@ -118,7 +115,7 @@ test("Vim: a new profile starts on it, with no Legacy, and moves by its plain ke
       await runFromSearch(app, page, "settings.keyboard");
       await expect(keyboard.preset("vim")).toBeChecked();
       await expect(keyboard.preset("vscode")).toBeVisible();
-      await expect(keyboard.preset("emacs")).toHaveCount(OFFERED_HERE.includes("emacs") ? 1 : 0);
+      await expect(keyboard.preset("emacs")).toBeVisible();
       await expect(keyboard.preset("legacy")).toHaveCount(0);
       await showsPresetKeys(page, "vim", "move.down");
       await showsPresetKeys(page, "vim", "regions.left");
@@ -148,10 +145,7 @@ test("Vim: a new profile starts on it, with no Legacy, and moves by its plain ke
   }
 });
 
-test("Emacs: picked in the Preset row, and driven by ⌥X, ⌃G and ⌃H", {
-  tag: MAC_ONLY_TAG,
-}, async () => {
-  test.skip(THIS_DESKTOP.keys !== "mac", "Emacs is offered only on a Mac for now");
+test("Emacs: picked in the Preset row, and driven by ⌥X, ⌃G, ⌃H, ⌃X and ⌃K", async () => {
   const launched = await launchApp({ withMockProvider: true });
   const { app, page } = launched;
   const keyboard = keyboardSettings(page);
@@ -170,7 +164,9 @@ test("Emacs: picked in the Preset row, and driven by ⌥X, ⌃G and ⌃H", {
     });
 
     await test.step("⌥X searches commands, ⌃G cancels it, and ⌃H B opens the keys", async () => {
-      await runFromSearch(app, page, "focus.main-message");
+      // ⌘L (Ctrl+L on Linux) goes to the main message in Emacs on both systems;
+      // command search's Ctrl+K deletes a line there on Linux.
+      await pressWindowKey(app, "l", ["meta"]);
       await expect(prompt).toBeFocused();
       await pressWindowKey(app, "x", ["alt"]);
       await expect(search.dialog).toBeVisible();
@@ -183,6 +179,25 @@ test("Emacs: picked in the Preset row, and driven by ⌥X, ⌃G and ⌃H", {
       await pressWindowKey(app, "b");
       await expect(keyboard.section).toBeVisible();
       await expect(keyboard.preset("emacs")).toBeChecked();
+    });
+
+    // INF-3547's later piece 5, the captain's approved Linux keys: outside a
+    // message Ctrl+X starts Emacs's commands, and in one Ctrl+K deletes to the
+    // end of the line, on Linux as on a Mac.
+    await test.step("⌃K deletes to the end of the line, and ⌃X ⌃B opens the task board", async () => {
+      await pressWindowKey(app, "l", ["meta"]);
+      await expect(prompt).toBeFocused();
+      await prompt.fill("keep this line");
+      // The caret at the line's start: Home there scrolls on a Mac and moves it on Linux.
+      await prompt.evaluate((field) => (field as HTMLTextAreaElement).setSelectionRange(0, 0));
+      await expect(prompt).toBeFocused();
+      await pressWindowKey(app, "k", ["control"]);
+      await expect(prompt).toHaveValue("");
+      await pressWindowKey(app, "Escape");
+      await expect(prompt).not.toBeFocused();
+      await pressWindowKey(app, "x", ["control"]);
+      await pressWindowKey(app, "b", ["control"]);
+      await expect(boardCard(page)).toBeVisible();
     });
   } finally {
     await launched.close();

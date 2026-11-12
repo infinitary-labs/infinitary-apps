@@ -186,6 +186,62 @@ const VSCODE: PresetTable = {
   "cards.next-revision": [{ key: "F7" }],
 };
 
+/**
+ * Emacs on a Ctrl system (INF-3547's later piece 5, the captain's approved
+ * Linux keys), written as Linux presses them, since a Mac's Control keys have
+ * no place there (`systemChord`). Ctrl+X and Ctrl+V cut and paste while
+ * typing, as in every Linux app, and outside a text field Ctrl+X starts
+ * Emacs's commands and Ctrl+V pages down, the split Emacs's CUA mode makes.
+ * Ctrl+G cancels, which leaves a message too; Ctrl+N, P, F and B move
+ * anywhere, a message's cursor included; Alt+X searches commands, so Ctrl+K
+ * deletes to the end of the line in a message, with Alt+Y putting it back;
+ * the task board moves from Ctrl+B to Ctrl+X Ctrl+B.
+ */
+const lin = (key: string, shift = false): KeyChord => ({
+  key,
+  ctrl: true,
+  ...(shift ? { shift: true } : {}),
+});
+/** Ctrl+X, then a key: Emacs's prefix, outside a text field. */
+const linX = (second: KeyChord): KeyBinding => pair(lin("x"), second, true);
+/** Ctrl+H, then a key, outside a text field. */
+const linH = (key: string): KeyBinding => pair(lin("h"), { key }, true);
+const EMACS_CTRL: PresetTable = {
+  "commands.search": [{ key: "x", alt: true }],
+  cancel: [lin("g")],
+  "move.down": [lin("n")],
+  "move.up": [lin("p")],
+  "move.right": [lin("f")],
+  "move.left": [lin("b")],
+  "move.page-down": [bare("v", { ctrl: true })],
+  "move.page-up": [{ key: "v", alt: true }],
+  "move.first": [bare("<")],
+  "move.last": [bare(">")],
+  // Ctrl+P moves up anywhere, which in the main message brings back the last one.
+  "message.recall": [{ key: "ArrowUp" }],
+  "message.delete-to-line-end": [lin("k")],
+  "message.put-back-deleted": [{ key: "y", alt: true }],
+  "regions.next": [{ key: "F6" }, linX({ key: "o" })],
+  "panel:now/find": [lin("f", true), linX({ key: "b" }), lin("s")],
+  "panel:now/board": [linX(lin("b"))],
+  "project-focus.open": [lin("p", true), linX({ key: "p" })],
+  "cards.minimize": [lin("m", true), linX({ key: "0" }), linX({ key: "k" })],
+  "cards.maximize": [linX({ key: "1" })],
+  "cards.previous": [lin("[", true), lin("{", true), linX({ key: "ArrowLeft" })],
+  "cards.next": [lin("]", true), lin("}", true), linX({ key: "ArrowRight" })],
+  "cards.next-tab": [lin("Tab")],
+  "cards.previous-tab": [lin("Tab", true)],
+  "focus.main-message": [lin("l"), linX({ key: "m" })],
+  "settings.keyboard": [linH("b")],
+  "whats-new.show": [linH("n")],
+  "size.larger": [lin("+"), lin("="), linX(lin("+")), linX(lin("="))],
+  "size.smaller": [lin("-"), linX(lin("-"))],
+  "size.reset": [lin("0"), linX(lin("0"))],
+};
+
+/** A preset's own table for a Ctrl system, written as that system presses keys, where the Mac's cannot be read there. */
+const CTRL_TABLES: Partial<Readonly<Record<PresetId, PresetTable>>> = { emacs: EMACS_CTRL };
+
 const TABLES: Readonly<Record<PresetId, PresetTable>> = {
   legacy: {},
   vim: VIM,
@@ -194,8 +250,17 @@ const TABLES: Readonly<Record<PresetId, PresetTable>> = {
 };
 
 /** Whether a preset gives this command keys of its own, a panel's command among them. */
-export function presetChanges(preset: PresetId, id: AnyCommandId): boolean {
-  return Object.hasOwn(TABLES[preset], id);
+export function presetChanges(
+  preset: PresetId,
+  id: AnyCommandId,
+  system: KeySystem = "mac",
+): boolean {
+  return Object.hasOwn(tableOn(preset, system), id);
+}
+
+/** A preset's table on a system: its own Ctrl table there, if it has one. */
+function tableOn(preset: PresetId, system: KeySystem): PresetTable {
+  return (system === "ctrl" ? CTRL_TABLES[preset] : undefined) ?? TABLES[preset];
 }
 
 /**
@@ -208,19 +273,21 @@ export function presetKeys(
   id: AnyCommandId,
   system: KeySystem = "mac",
 ): readonly KeyBinding[] {
-  const own = TABLES[preset][id];
-  if (own) return systemKeys(own, system);
+  const native = system === "ctrl" ? CTRL_TABLES[preset] : undefined;
+  if (native) {
+    const own = native[id];
+    if (own) return own;
+  } else {
+    const own = TABLES[preset][id];
+    if (own) return systemKeys(own, system);
+  }
   return isCatalogCommand(id) ? systemKeys(KEYBOARD_COMMANDS[id].keys, system) : [];
 }
 
 /**
- * The presets the Preset row offers on a system. Legacy only where the
- * profile had it - it ran a version from before presets - and Emacs only
- * on a Mac for now: Linux takes Ctrl+X, C, V, K and B for itself, so its
- * Emacs keys are separate work. The chosen preset is always offered.
+ * The presets the Preset row offers. Legacy only where the profile had it -
+ * it ran a version from before presets; the chosen preset is always offered.
  */
-export function presetsOffered(system: KeySystem, legacy: boolean, chosen?: PresetId): PresetId[] {
-  return PRESET_IDS.filter(
-    (id) => id === chosen || (id === "legacy" ? legacy : id === "emacs" ? system === "mac" : true),
-  );
+export function presetsOffered(legacy: boolean, chosen?: PresetId): PresetId[] {
+  return PRESET_IDS.filter((id) => id === chosen || id !== "legacy" || legacy);
 }

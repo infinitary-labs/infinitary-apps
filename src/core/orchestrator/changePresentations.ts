@@ -692,6 +692,15 @@ export class ChangePresentations {
               }));
             return { ...view, before: media(view.before), after: media(view.after) };
           }),
+          // The free-form part names its pictures by the story's copies' names.
+          ...(story.whatChangedPart
+            ? {
+                whatChangedPart: story.assets.reduce(
+                  (part, asset) => part.replaceAll(asset.id, copiedId(asset.id)),
+                  story.whatChangedPart,
+                ),
+              }
+            : {}),
           pictures: story.pictures.map((picture) => ({
             ...picture,
             id: copiedId(picture.id),
@@ -1344,12 +1353,11 @@ function completionWayOut(
 function sameStoryWords(saved: ChangePresentation, next: ChangePresentation): boolean {
   const canonical = (story: ChangePresentation): string => {
     const names = new Map(story.assets.map((asset) => [asset.id, asset.uploadSha256]));
+    // A free-form part names its pictures inside its HTML, so every name is replaced.
     const named = (value: string): string => {
-      for (const [id, digest] of names) {
-        if (value === id) return digest;
-        if (value.startsWith(`${id}.`)) return `${digest}${value.slice(id.length)}`;
-      }
-      return value;
+      let text = value;
+      for (const [id, digest] of names) text = text.replaceAll(id, digest);
+      return text;
     };
     const walk = (value: unknown): unknown => {
       if (typeof value === "string") return named(value);

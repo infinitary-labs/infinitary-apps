@@ -17,6 +17,7 @@ export type PlacedMedia = {
 
 const STORY_MAP = contractChange("story-map");
 const LIVE_VALIDATION_TABLE = contractChange("live-validation-table");
+const STORY_PART = contractChange("story-part");
 
 /** Each picture's bytes first, so the home holds them when it shows the card. */
 export async function sendPictures(
@@ -73,6 +74,10 @@ export async function carryStory(
     )
       throw new Error(
         `A map view needs a newer Infinitary on ${HOME.the}; update it before preparing this story. Nothing was sent.`,
+      );
+    if (story?.whatChangedPart !== undefined && !listsChange(media.homeChanges?.(), STORY_PART))
+      throw new Error(
+        `A free-form part needs a newer Infinitary on ${HOME.the}; update it before preparing this story. Nothing was sent.`,
       );
     if (story) await sendPictures(media, story.pictures, signal);
     return await send();

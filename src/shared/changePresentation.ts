@@ -101,6 +101,14 @@ export const changePresentationDraftSchema = z
     publishable: z.literal(true),
     why: z.array(words).min(1).max(2),
     whatChanged: z.array(words).min(1).max(5),
+    /**
+     * The crewmate's own drawing of what changed (INF-3749's free-form part,
+     * as the captain amended it): the path of an HTML file the merge card
+     * draws under What changed in place of the bullets, which the pull
+     * request and the squash message keep. The story parameter's own words
+     * say it (`WHAT_CHANGED_PART_RULE`), so the field carries no copy.
+     */
+    whatChangedPart: z.string().min(1).max(4096).optional(),
     before: z.array(words).length(1),
     after: z.array(words).length(1),
     views: z.array(presentationViewSchema).max(30),
@@ -154,6 +162,8 @@ const savedPresentationShape = z.strictObject({
   head,
   why: paragraphs,
   whatChanged: paragraphs,
+  /** The free-form part's HTML, its pictures named by the story's own copies. */
+  whatChangedPart: z.string().min(1).max(60000).optional(),
   before: paragraphs,
   after: paragraphs,
   views: z.array(

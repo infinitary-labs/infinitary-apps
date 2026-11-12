@@ -112,8 +112,17 @@ export const SKIP_RULES_DESCRIPTION = [
 export const AFTER_MERGE_STORY_RULE =
   "Optional afterMerge: work started once this merges, not repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself (Automation, settings, directions): it files no task.";
 
+/**
+ * INF-3749's free-form part, as the captain amended it: "a freeform
+ * expression of what changed" that replaces the structured What changed on
+ * the card and "follow[s] the picture-first principle as well".
+ */
+export const WHAT_CHANGED_PART_RULE =
+  "Optional whatChangedPart names an HTML file in your card body folder: the merge card draws it under What changed in place of the bullets, which the pull request keeps; lead with a figure or picture of each change, one sentence beside each, the rest in <details>, no question or button.";
+
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "why one sentence; whatChanged 1 to 5 one-clause bullets of what a person gains; before and after one sentence each, with any measured number; checked 1 to 6 observed {check, result} facts outside recorded scenarios. With a live validation record, give validationRows [{id, scenario, evidence}], exactly one public row per scenario; the app supplies results and counts. Kept files open on the merge card only, never upload to the pull request.",
+  WHAT_CHANGED_PART_RULE,
   "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base and each kept view's Before media.",
   "Before media name base, After media head; media taken on another version name it with applicability, kept as data, not displayed; kind new has no Before.",
   "layout adjacent needs exactly two media in each shown state.",
@@ -141,7 +150,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
       (async ({ story }, signal) => {
         const root = cardPictureRoot(delegate);
         if (!root) throw new Error("This task has no retained-evidence folder.");
-        const prepared = await stageChangePresentation(story, root);
+        const prepared = await stageChangePresentation(story, root, delegate.cardBodiesDir);
         return { text: await callWithSignal(prepare, [prepared], signal) };
       })
     );
@@ -274,7 +283,7 @@ export const SHOW_MERGE_CARD_TOOL = crewmateTool({
         if (story) {
           const root = cardPictureRoot(delegate);
           if (!root) throw new Error("This task has no retained-evidence folder.");
-          staged = await stageChangePresentation(story, root);
+          staged = await stageChangePresentation(story, root, delegate.cardBodiesDir);
         }
         const card = {
           id,

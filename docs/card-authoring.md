@@ -254,6 +254,7 @@ After a push the card names the same revision, and the host republishes a pull r
 The saved story's title wins over the title field, and its risk and required actions supply the host's controls.
 A breaking marker in a title, such as the built-in naming runbook's `!:`, is metadata, not excited copy; the saved title keeps it.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
+A story's free-form part, the crewmate's own picture-first account of what changed, takes the place of the What changed bullets on the merge card (`docs/forge.md`, "A free-form part").
 Both surfaces use the same title, named by the naming runbook; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
 Each view's caption sits above its own table on the card: Before and After head a changed view's columns, a new view's table is headed New, and empty sections disappear.
 Version-1 stories keep their existing drawing; the report, legacy descriptions and free-form completion outline stay unchanged.

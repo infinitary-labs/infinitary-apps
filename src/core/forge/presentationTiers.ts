@@ -211,7 +211,10 @@ export function tieredPresentationCardBody(story: ChangePresentation, mapPart?: 
     `<h3>${TIERED_STORY_HEADINGS[0]}</h3>`,
     paragraphs(story.why),
     `<h3>${TIERED_STORY_HEADINGS[1]}</h3>`,
-    `<ul>${story.whatChanged.map((line) => `<li>${html(line)}</li>`).join("")}</ul>`,
+    // The crewmate's own picture-first account replaces the bullets on the
+    // card; the pull request and the squash message keep the bullets.
+    story.whatChangedPart ??
+      `<ul>${story.whatChanged.map((line) => `<li>${html(line)}</li>`).join("")}</ul>`,
     `<h3>${TIERED_STORY_HEADINGS[2]}</h3>`,
     `<p><strong>Before:</strong> ${story.before.map(html).join(" ")}</p>`,
     `<p><strong>After:</strong> ${story.after.map(html).join(" ")}</p>`,

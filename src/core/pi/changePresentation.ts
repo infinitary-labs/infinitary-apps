@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFile, realpath, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 import { deflateRawSync } from "node:zlib";
-import { CARD_PICTURE_TYPES } from "@shared/cardPictures";
+import { CARD_PICTURE_TYPES, CARD_TYPEFACE_HOST } from "@shared/cardPictures";
+import type { CardPicture } from "@shared/cards";
 import {
   type ChangePresentationDraft,
   changePresentationDraftSchema,
@@ -11,8 +12,11 @@ import {
   type RetainedPresentationMedia,
   type StagedChangePresentation,
 } from "@shared/changePresentation";
+import { APP_FRAME_SCHEME } from "@shared/csp";
 import { presentationHtmlText } from "../forge";
+import { readCardBodyFile } from "./cardBodyFile";
 import { type CardPictureRoot, containedFile, verifyCardImages } from "./cardImages";
+import { lintCardShape } from "./cardLint";
 
 export type { StagedChangePresentation } from "@shared/changePresentation";
 
@@ -56,10 +60,62 @@ async function packedMap(src: string, root: CardPictureRoot): Promise<string> {
   return deflateRawSync(Buffer.from(JSON.stringify(data))).toString("base64");
 }
 
+const PART_REFUSED = "Story part refused";
+
+/**
+ * A free-form part's HTML (`docs/forge.md`, "A free-form part"): a card body
+ * fragment in the task's card body folder, or named by an absolute path in
+ * its evidence folder, read as emit_card reads a body_file.
+ */
+async function readPart(
+  src: string,
+  root: CardPictureRoot,
+  cardBodiesDir: string | undefined,
+): Promise<string> {
+  const evidence = root.evidenceDir
+    ? await realpath(root.evidenceDir).catch(() => undefined)
+    : undefined;
+  const inEvidence =
+    evidence !== undefined &&
+    isAbsolute(src) &&
+    (await realpath(src).then(
+      (file) => {
+        const rel = relative(evidence, file);
+        return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+      },
+      () => false,
+    ));
+  const home = inEvidence ? evidence : cardBodiesDir;
+  if (!home)
+    throw new Error(
+      `${PART_REFUSED}: name a file in your card body folder or your evidence folder.`,
+    );
+  let part: string;
+  try {
+    part = await readCardBodyFile(src, home);
+  } catch (caught) {
+    const said = caught instanceof Error ? caught.message : String(caught);
+    throw new Error(
+      `${PART_REFUSED}: ${said.replace(/^Card body file refused: /, "").replace("the task's card body folder", "your card body folder or your evidence folder")}`,
+    );
+  }
+  // The part sits inside the app's own merge card: it carries no question
+  // or button, since only the app's merge action answers that card.
+  if (/<\s*(?:input|select|textarea|button|form)\b/i.test(part) || /data-inf-action\b/i.test(part))
+    throw new Error(
+      `${PART_REFUSED}: the part is pictures and words only, with no question, field or button; the merge card's one answer is the app's merge action.`,
+    );
+  const refusal = lintCardShape({ title: "What changed", body: part, actions: [] });
+  if (refusal) throw new Error(`${PART_REFUSED}: ${refusal}`);
+  return part;
+}
+
 /** Validate selected bytes using the existing card reader, without displaying a card. */
 export async function stageChangePresentation(
   input: ChangePresentationDraft,
   root: CardPictureRoot,
+  /** The task's card body folder, where a free-form part's file usually is. */
+  cardBodiesDir?: string,
 ): Promise<StagedChangePresentation> {
   const draft = changePresentationDraftSchema.parse(input);
   const selected = draft.views.flatMap((view) => [...view.before, ...view.after]);
@@ -79,9 +135,8 @@ export async function stageChangePresentation(
     const add = (asset: PresentationAsset) => {
       if (!assets.some((kept) => kept.id === asset.id)) assets.push(asset);
     };
-    const media: RetainedPresentationMedia[] = [];
-    for (const [index, picture] of verified.pictures.entries()) {
-      const source = selected[index] as PresentationMedia;
+    /** Keep a verified picture, and its recording when it is a demo's poster, as story assets. */
+    const retain = async (picture: CardPicture): Promise<void> => {
       let image: PresentationAsset | undefined;
       for (const [extension, mediaType] of Object.entries(CARD_PICTURE_TYPES)) {
         const file = `${picture.id}.${extension}`;
@@ -126,6 +181,11 @@ export async function stageChangePresentation(
           durationMs: demo.durationMs,
         });
       }
+    };
+    const media: RetainedPresentationMedia[] = [];
+    for (const [index, picture] of verified.pictures.entries()) {
+      const source = selected[index] as PresentationMedia;
+      await retain(picture);
       media.push({
         asset: picture.demo?.id ?? picture.id,
         ...(picture.demo ? { poster: picture.id } : {}),
@@ -151,14 +211,36 @@ export async function stageChangePresentation(
         after,
       });
     }
-    const { publishable: _publishable, views: _sourceViews, ...story } = draft;
+    // The free-form part's pictures are checked and kept as a card body's
+    // are, and named in its HTML by the story's own copies.
+    let part: { body: string; pictures: CardPicture[] } | undefined;
+    if (draft.whatChangedPart !== undefined) {
+      const verifiedPart = await verifyCardImages(
+        await readPart(draft.whatChangedPart, root, cardBodiesDir),
+        root,
+        (file) => copies.add(file),
+      );
+      if (verifiedPart.body.includes(`${APP_FRAME_SCHEME}://${CARD_TYPEFACE_HOST}/`))
+        throw new Error(
+          `${PART_REFUSED}: the part draws in the card's own type and cannot load a font.`,
+        );
+      for (const picture of verifiedPart.pictures) await retain(picture);
+      part = verifiedPart;
+    }
+    const {
+      publishable: _publishable,
+      views: _sourceViews,
+      whatChangedPart: _part,
+      ...story
+    } = draft;
     return {
       version: 2,
       ...story,
+      ...(part ? { whatChangedPart: part.body } : {}),
       projectText: story.projectText ?? "",
       views,
       assets,
-      pictures: verified.pictures,
+      pictures: [...verified.pictures, ...(part?.pictures ?? [])],
     };
   } catch (caught) {
     await Promise.all(

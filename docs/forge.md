@@ -1134,7 +1134,7 @@ New stories use version 2: the same title on the card and pull request, named by
 The story's words ask for less than those counts allow: one Why sentence, change bullets of one clause naming what a person gains, and a Before and After carrying any measured number; commands, file names and counts go in folded verification.
 Aim for 150 open words on the card and 250 on the pull request.
 The zod schema carries the captain’s selected item counts and refuses past them; the author owns sentence length and word targets, with no invented per-sentence character refusal.
-The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, when `layout` adjacent applies, what a view's `map` is ("A map view" below), what each After picture's `faults` answer is, and who reads the story and what `publishable` declares, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
+The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, when `layout` adjacent applies, what a view's `map` is ("A map view" below), what each After picture's `faults` answer is, what `whatChangedPart` is ("A free-form part" below), and who reads the story and what `publishable` declares, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
 Every After picture or poster carries `faults`: the crewmate's answer, for that final take, to what a person using the view would call wrong, `[]` when nothing (INF-3814's direction B).
 Each fault names its cause: `change`, `before-change` (there before the change, filed by the follow-up rule when it is a real defect) or `chosen` (what the captain's words or an approved plan chose).
 Preparation refuses the story while any fault's cause is `change`, so the crewmate fixes it, takes the picture again and answers for the new take; the host judges no picture and reads only the declared cause.
@@ -1177,6 +1177,18 @@ A map view is kind changed with no Before and one After picture, the drawing as 
 On the merge card the host fills the part the runbook ships with the packed block under the view's caption, so the captain goes in and out of each part and turns the comparison on and off; the runbook's switch does not matter, and a card whose part cannot be read shows the picture.
 In the pull request, which cannot run the part, the view's heading is its caption and its picture follows it.
 A computer that runs work sends a story with a map view only to a home that lists `story-map` and otherwise refuses it before sending.
+
+### A free-form part
+
+A story may carry a free-form part: the crewmate's own account of what changed, as HTML, which the merge card draws under What changed in place of the `whatChanged` bullets.
+It follows the card rules' picture-first default: a figure or picture of each change, one sentence beside each, and the rest folded in `<details>`.
+`whatChangedPart` names its file, in the task's card body folder or by an absolute path in its evidence folder; preparation reads it as emit_card reads a `body_file` and checks it as a card body, with the figure-type and escaped-markup checks.
+It refuses a part with a question, field or button, since the merge card's only answer is the app's merge action, and a part that loads a font.
+Each picture or recording the part names by its path is checked and kept as a card body's are, saved among the story's media and named in the part by the story's own copy; the merge card names the card's copies instead.
+The saved part counts toward the story's 60,000-character limit, and a changed part is a new story revision.
+The pull request and the squash message keep the `whatChanged` bullets, because a description cannot run the part and the commit needs words; the part's pictures are never uploaded.
+A crewmate that wants a drawing in the pull request adds a picture of it as a view.
+A computer that runs work sends a story with a free-form part only to a home that lists `story-part` and otherwise refuses it before sending.
 
 ### No-mistakes' attestation
 

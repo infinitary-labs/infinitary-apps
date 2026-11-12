@@ -46,7 +46,6 @@ import type {
   TaskKind,
   TaskRecord,
   TaskRetentionFields,
-  TaskSearchFields,
   TaskStartPolicy,
   TaskStatus,
   TaskStore,
@@ -57,7 +56,13 @@ import {
   type TaskReferenceKind,
 } from "../storage/taskReferenceStore";
 import { TaskRepetitionStore } from "../storage/taskRepetitionStore";
-import { selectTasks, type TaskSelectionInput } from "../storage/taskSelection";
+import {
+  type ClosedTaskSearch,
+  type ClosedTaskSearchInput,
+  selectClosedTasks,
+  selectTasks,
+  type TaskSelectionInput,
+} from "../storage/taskSelection";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
 import { admitUnderParent, type ContainerLoop, reopenHeldContainers } from "./containerParents";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
@@ -629,9 +634,12 @@ export class TaskService {
     return this.writer.store.listPinned();
   }
 
-  /** Each closed row's search fields, oldest first, without reading the rest of it. */
-  listClosedSearchFields(): TaskSearchFields[] {
-    return this.writer.store.listClosedSearchFields();
+  /**
+   * The window's search of earlier work in this process, for a host with no
+   * record process (`TaskProtocol.search`); it returns only the matches' ids.
+   */
+  searchClosed(input: ClosedTaskSearchInput): ClosedTaskSearch {
+    return selectClosedTasks(this.options.db, input);
   }
 
   /** Each closed row's retention fields with its close in `[from, upTo]`, without composing it. */

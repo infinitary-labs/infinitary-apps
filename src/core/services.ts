@@ -467,6 +467,8 @@ export async function createServices(
     startAttempt: (taskId) => tasks.starts.startAttemptOf(taskId),
     // The crewmate's solid on the orbit: the slot its newest routing chose.
     tiers: (taskIds) => servedSlots(ledger, taskIds),
+    // The window's search of earlier work reads in the record process, off this thread.
+    searchClosed: host.recordProcess ? (input) => recordReader.closed(input) : undefined,
     // The summary's line under the model: the same decision, its typed columns.
     modelReason: (record) =>
       modelReasonOf(record, {

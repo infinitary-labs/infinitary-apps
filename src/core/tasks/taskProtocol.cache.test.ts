@@ -228,8 +228,8 @@ describe("the task protocol (task-system P3)", () => {
 
   // INF-939: each open of a record's Info read the whole history several
   // times over, and so did the search for each older key a record names.
-  it("reads a record and searches older keys without reading the rest of the history (INF-939)", () => {
-    const read = (history: number) => {
+  it("reads a record and searches older keys without reading the rest of the history (INF-939)", async () => {
+    const read = async (history: number) => {
       const f = taskProtocolFixture();
       // The rows the record names: its parent, its filing's origin, a
       // blocker, the work its baseline wait names, and a part whose close
@@ -290,20 +290,24 @@ describe("the task protocol (task-system P3)", () => {
           repairs: [],
         },
       });
-      const scan = rowsRead(f.db, () => f.tasks.listClosedSearchFields());
+      // With no record process the search reads in this process, within the call.
+      let searched: ReturnType<typeof f.protocol.search> | undefined;
       const rows = {
         subject: rowsRead(f.db, () => f.protocol.detail("subject")),
         waiting: rowsRead(f.db, () => f.protocol.detail("waiting")),
-        // The search scans each closed row's searched fields once, and reads only what it found.
-        search: rowsRead(f.db, () => f.protocol.search("gauge")) - scan,
+        // SQLite still visits each closed row here, but only the matches reach JavaScript,
+        // then only the rows it found; a record process takes even that off the main thread.
+        search: rowsRead(f.db, () => {
+          searched = f.protocol.search("gauge");
+        }),
       };
       const subject = f.protocol.detail("subject");
       const waiting = f.protocol.detail("waiting");
-      const found = f.protocol.search("gauge");
+      const found = (await searched) ?? [];
       return { rows, subject, waiting, found, f };
     };
-    const short = read(0);
-    const long = read(200);
+    const short = await read(0);
+    const long = await read(200);
     const keyOf = (id: string) => long.f.tasks.get(id)?.key;
     expect(long.subject).toMatchObject({
       parentId: "parent",
@@ -320,6 +324,7 @@ describe("the task protocol (task-system P3)", () => {
     // The same record reads the same, however long the history behind it.
     expect(long.subject).toEqual(short.subject);
     expect(long.found).toEqual(short.found);
+    expect(long.rows.search).toBeGreaterThan(0);
     expect(long.rows).toEqual(short.rows);
   });
 

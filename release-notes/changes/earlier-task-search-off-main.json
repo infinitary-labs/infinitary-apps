@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "earlier-task-search-off-main",
+      "kind": "improvement",
+      "title": "Looking up earlier tasks keeps the window responsive",
+      "body": "When cards and panels name older tasks, or you search Tasks for earlier work, the window no longer pauses while those tasks are found, even with a long task history.",
+      "area": "tasks",
+      "noPicture": "The window looks the same; the change removes a pause while older tasks are looked up.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

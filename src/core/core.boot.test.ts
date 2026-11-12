@@ -76,7 +76,7 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
 
   // Regression: service composition must honor the host's optional reader capability.
   it.each(["absent", "available", "failed"] as const)(
-    "agent search and scoring honor the %s record-process capability",
+    "agent and window searches and scoring honor the %s record-process capability",
     async (state) => {
       const mainHistory = vi.spyOn(PlacedWorkScores.prototype, "data");
       try {
@@ -122,6 +122,12 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
           expect(found.total).toBe(1);
         }
         expect(processSearch).toHaveBeenCalledTimes(state === "absent" ? 0 : 1);
+        // The window's search of earlier work reads the same way (`inf:tasks:search`).
+        const windowSearch = vi.spyOn(booted.services.recordReader, "closed");
+        const earlier = booted.dispatch("inf:tasks:search", ["audit"]);
+        if (state === "failed") await expect(earlier).rejects.toThrow("configured reader failed");
+        else expect((await earlier).map((task) => task.id)).toEqual(["archived-audit"]);
+        expect(windowSearch).toHaveBeenCalledTimes(state === "absent" ? 0 : 1);
         seedTask(tasks, {
           id: "ranking",
           title: "Audit the next session",

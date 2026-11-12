@@ -1,6 +1,6 @@
 import { PlacedWorkScores } from "../routing/placedWork";
 import type { AppDatabase } from "../storage/db";
-import { registerTaskSearch, selectTasks } from "../storage/taskSelection";
+import { registerTaskSearch, selectClosedTasks, selectTasks } from "../storage/taskSelection";
 import type { RecordChild, RecordParent } from "./protocol";
 
 /** Owns the reader's scoring state and one committed work snapshot per incoming batch. */
@@ -46,12 +46,14 @@ export class RecordReadEngine {
             const answer =
               request.kind === "tasks"
                 ? selectTasks(this.db, request.input)
-                : {
-                    data: data
-                      ? this.scores.preparedCharges(request.input.rows, data)
-                      : { work: [], samples: [], charges: {} },
-                    prices: this.prices,
-                  };
+                : request.kind === "closed"
+                  ? selectClosedTasks(this.db, request.input)
+                  : {
+                      data: data
+                        ? this.scores.preparedCharges(request.input.rows, data)
+                        : { work: [], samples: [], charges: {} },
+                      prices: this.prices,
+                    };
             return { type: "answer", id, answer };
           } catch (error) {
             return { type: "error", id, message: String(error) };

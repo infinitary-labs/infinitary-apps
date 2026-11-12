@@ -13,6 +13,15 @@ export type TaskSelectionInput = Pick<TaskQueryInput, "status" | "text" | "snaps
   skip: number;
 };
 
+/**
+ * The window's search of earlier work (`TaskProtocol.search`): the typed
+ * text as typed (the search trims and folds it), the start of the board's
+ * window and how many to answer.
+ */
+export type ClosedTaskSearchInput = { text: string; recentFrom: number; limit: number };
+/** The ids it found, newest closed first; the views are composed from these alone. */
+export type ClosedTaskSearch = { ids: string[] };
+
 const registered = new WeakSet<AppDatabase>();
 export function registerTaskSearch(db: AppDatabase): void {
   if (registered.has(db)) return;
@@ -80,4 +89,35 @@ export function selectTasks(db: AppDatabase, input: TaskSelectionInput): TaskSel
       ? { order: matches.map((row) => row.id) }
       : {}),
   };
+}
+
+type ClosedMatch = { id: string; closed_at: number | null; created_at: number; seq: number };
+
+/**
+ * Closed work the board does not list - dropped work of any age, any work
+ * closed before `recentFrom`, and a question, decision or operation closed
+ * within the window - whose key, title or goal holds the folded text, newest
+ * closed first, at most `limit`. SQLite seeks the closed rows and matches
+ * them, so only the matches' ids leave this read: the record process answers
+ * the window's searches with it, off the main thread (docs/task-record.md).
+ */
+export function selectClosedTasks(db: AppDatabase, input: ClosedTaskSearchInput): ClosedTaskSearch {
+  const needle = foldForSearch(input.text.trim());
+  if (!needle) return { ids: [] };
+  registerTaskSearch(db);
+  const matches = prepared(
+    db,
+    `SELECT id, closed_at, created_at, seq FROM task_records
+     WHERE status IN ('done', 'dropped')
+       AND (status = 'dropped' OR kind <> 'work' OR COALESCE(closed_at, 0) < ?)
+       AND (instr(task_search_fold(COALESCE(key, '')), ?) > 0
+         OR instr(task_search_fold(title), ?) > 0
+         OR instr(task_search_fold(COALESCE(goal, '')), ?) > 0)`,
+  ).all(input.recentFrom, needle, needle, needle) as ClosedMatch[];
+  // Sorting the compact matches here keeps SQLite from a temporary sort.
+  matches.sort(
+    (a, b) =>
+      (b.closed_at ?? 0) - (a.closed_at ?? 0) || a.created_at - b.created_at || a.seq - b.seq,
+  );
+  return { ids: matches.slice(0, input.limit).map((row) => row.id) };
 }

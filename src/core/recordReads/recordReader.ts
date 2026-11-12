@@ -1,6 +1,11 @@
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import type { PlacedWorkAnswer, PlacedWorkRead } from "../routing/placedWork";
-import type { TaskSelection, TaskSelectionInput } from "../storage/taskSelection";
+import type {
+  ClosedTaskSearch,
+  ClosedTaskSearchInput,
+  TaskSelection,
+  TaskSelectionInput,
+} from "../storage/taskSelection";
 import type { RecordAnswer, RecordChild, RecordParent, RecordRead } from "./protocol";
 
 // Keep reader failure recoverable at attachment points. Opening uses the SQL
@@ -15,7 +20,7 @@ type Pending = {
   reject: (error: Error) => void;
 };
 
-/** One read-only process, shared by concurrent starts and searches; never a synchronous fallback. */
+/** One read-only process, shared by concurrent starts and the agents' and window's searches; never a synchronous fallback. */
 export class RecordReader {
   private child: HostChildProcess | undefined;
   private ready = false;
@@ -38,6 +43,11 @@ export class RecordReader {
 
   tasks(input: TaskSelectionInput): Promise<TaskSelection> {
     return this.read({ kind: "tasks", input }) as Promise<TaskSelection>;
+  }
+
+  /** The window's search of earlier work (`TaskProtocol.search`). */
+  closed(input: ClosedTaskSearchInput): Promise<ClosedTaskSearch> {
+    return this.read({ kind: "closed", input }) as Promise<ClosedTaskSearch>;
   }
 
   get pid(): number | undefined {

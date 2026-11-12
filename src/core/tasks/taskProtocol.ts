@@ -56,6 +56,7 @@ import type { ProjectRecord } from "../storage/projectStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
 import { oldestFirst, type TaskDelivery, type TaskRecord } from "../storage/taskRecords";
+import type { ClosedTaskSearch, ClosedTaskSearchInput } from "../storage/taskSelection";
 import { standingDependencyWaits } from "./dependencyWaits";
 import { holdingWaits, waitsSince } from "./holdingWaits";
 import { queueWaitOf } from "./queueWait";
@@ -198,6 +199,12 @@ export type TaskProtocolOptions = {
    * read for the rows a view shows; absent means every tier reads null.
    */
   tiers?: (taskIds: readonly string[]) => ReadonlyMap<string, Slot>;
+  /**
+   * Find the closed work a typed search names (`search`) in the read-only
+   * record process, off the main thread (docs/task-record.md); absent, the
+   * task service reads the same selection in this process.
+   */
+  searchClosed?: (input: ClosedTaskSearchInput) => Promise<ClosedTaskSearch>;
   /**
    * A model (`provider/id`) by the name the captain knows it ("GPT-6 Sol"),
    * through the one model-name lookup (`ModelSlots.nameOf`); the record
@@ -489,30 +496,24 @@ export class TaskProtocol {
    * closed within it (the panel lists only work as landed) - whose key, title or goal holds
    * the typed text (FI3-579 piece 3). Empty text finds nothing, so nothing
    * earlier is ever listed unasked. Newest closed first, at most
-   * `SEARCH_LIMIT`; card and report text is never searched.
+   * `SEARCH_LIMIT`; card and report text is never searched. The record
+   * process finds the matches when the host has one (`searchClosed`), so a
+   * burst of lookups never walks the closed history on the main thread.
    */
-  search(text: string): TaskView[] {
-    const needle = foldForSearch(text.trim());
-    if (!needle) return [];
-    const { tasks } = this.options;
-    const cutoff = this.now() - BOARD_RECENT_MS;
-    // The match reads only the searched fields; whole rows only for what it found.
-    const matched = tasks
-      .listClosedSearchFields()
-      .filter(
-        (record) =>
-          (record.status === "dropped" ||
-            record.kind !== "work" ||
-            (record.closedAt ?? 0) < cutoff) &&
-          [record.key, record.title, record.goal ?? ""].some((field) =>
-            foldForSearch(field).includes(needle),
-          ),
-      )
-      .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))
-      .slice(0, SEARCH_LIMIT);
-    if (matched.length === 0) return [];
-    const rows = new Map(tasks.getMany(matched.map((row) => row.id)).map((row) => [row.id, row]));
-    const found = matched.flatMap((row) => rows.get(row.id) ?? []);
+  async search(text: string): Promise<TaskView[]> {
+    if (!foldForSearch(text.trim())) return [];
+    const input = { text, recentFrom: this.now() - BOARD_RECENT_MS, limit: SEARCH_LIMIT };
+    const { ids } = this.options.searchClosed
+      ? await this.options.searchClosed(input)
+      : this.options.tasks.searchClosed(input);
+    return this.foundViews(ids);
+  }
+
+  /** The views of the rows a search found, in its order; whole rows are read only for these. */
+  private foundViews(ids: readonly string[]): TaskView[] {
+    if (ids.length === 0) return [];
+    const rows = new Map(this.options.tasks.getMany(ids).map((row) => [row.id, row]));
+    const found = ids.flatMap((id) => rows.get(id) ?? []);
     // Closed rows wait on nothing, so the graph around them is all a view reads.
     const graph = this.graphFor(found);
     const tiers = this.tiersOf(found);

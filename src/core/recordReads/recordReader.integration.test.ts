@@ -26,7 +26,7 @@ const AUDIT_STARTS = 9;
 vi.setConfig({ testTimeout: 40_000 });
 
 describe("finding A: the actual background record reader", () => {
-  it("answers placement and search on a long record while the parent's event loop continues", async () => {
+  it("answers placement and the agents' and window's searches on a long record while the parent's event loop continues", async () => {
     const dir = scratchDir("infinitary-record-reader-");
     const db = openDatabase(dir);
     const reader = new RecordReader(forkChildProcess(entry), join(dir, "firstmate.db"));
@@ -91,7 +91,14 @@ describe("finding A: the actual background record reader", () => {
         limit: 1,
         skip: 0,
       });
-      const [answers, found] = await Promise.all([Promise.all(placements), search]);
+      // The window's search of earlier work (`TaskProtocol.search`): every row closed before the board's window.
+      const earlierInput = { text: "session report 662", recentFrom: AT + 1, limit: 50 };
+      const earlier = reader.closed(earlierInput);
+      const [answers, found, earlierFound] = await Promise.all([
+        Promise.all(placements),
+        search,
+        earlier,
+      ]);
       expect(reader.pid).toBeDefined();
       expect(reader.pid).not.toBe(process.pid);
       expect(parentTurns).toBeGreaterThan(0);
@@ -109,6 +116,9 @@ describe("finding A: the actual background record reader", () => {
       expect(mainData).not.toHaveBeenCalled();
       mainData.mockRestore();
       expect(found).toEqual({ ids: [`history-${AUDIT_RECORD_TASKS - 1}`], total: 1 });
+      // The same matches, in the same order, as the selection read in this process.
+      expect(earlierFound.ids).toHaveLength(11);
+      expect(earlierFound).toEqual(tasks.searchClosed(earlierInput));
       console.log(
         JSON.stringify({
           scenario: "concurrent placement and search",
@@ -117,6 +127,7 @@ describe("finding A: the actual background record reader", () => {
           parentTurns,
           separateProcess: reader.pid !== process.pid,
           returnedTaskIds: found.ids,
+          earlierWorkIds: earlierFound.ids.length,
           returnedHistoryRows: answers[0]?.work.length,
         }),
       );

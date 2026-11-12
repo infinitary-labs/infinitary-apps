@@ -12,7 +12,6 @@ import type {
   TaskKind,
   TaskRecord,
   TaskRetentionFields,
-  TaskSearchFields,
   TaskStartPolicy,
   TaskStatus,
   TaskWorkspaceState,
@@ -961,28 +960,6 @@ export class TaskStore {
       `SELECT * FROM ${this.readTable()} WHERE pinned_at IS NOT NULL`,
     ).all() as Row[];
     return oldestFirst(this.read(rows));
-  }
-
-  /**
-   * Each closed row's status, kind, close time and the fields a search
-   * matches on, oldest first, without reading the rest of the row
-   * (`TaskProtocol.search`).
-   */
-  listClosedSearchFields(): TaskSearchFields[] {
-    const rows = prepared(
-      this.db,
-      `SELECT id, key, kind, status, title, goal, closed_at FROM ${this.readTable()}
-       WHERE status NOT IN ('open', 'active') ORDER BY created_at, seq`,
-    ).all() as Pick<Row, "id" | "key" | "kind" | "status" | "title" | "goal" | "closed_at">[];
-    return rows.map((row) => ({
-      id: row.id,
-      key: row.key ?? "",
-      kind: row.kind,
-      status: row.status,
-      title: row.title,
-      goal: row.goal,
-      closedAt: row.closed_at,
-    }));
   }
 
   /**

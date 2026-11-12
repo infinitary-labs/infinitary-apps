@@ -723,12 +723,6 @@ export type TaskRecord = {
   pinnedAt?: number | null;
 };
 
-/** What a search of closed work reads of each row (`TaskStore.listClosedSearchFields`). */
-export type TaskSearchFields = Pick<
-  TaskRecord,
-  "id" | "key" | "kind" | "status" | "title" | "goal" | "closedAt"
->;
-
 /**
  * What the passes over closed tasks' files read of each row
  * (`ClosedTaskFiles`, `TaskTempFiles`): which task, whether and when it

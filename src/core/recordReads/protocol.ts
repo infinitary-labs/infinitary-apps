@@ -1,10 +1,16 @@
 import type { PlacedWorkAnswer, PlacedWorkRead } from "../routing/placedWork";
-import type { TaskSelection, TaskSelectionInput } from "../storage/taskSelection";
+import type {
+  ClosedTaskSearch,
+  ClosedTaskSearchInput,
+  TaskSelection,
+  TaskSelectionInput,
+} from "../storage/taskSelection";
 
 export type RecordRead =
   | { kind: "tasks"; input: TaskSelectionInput }
+  | { kind: "closed"; input: ClosedTaskSearchInput }
   | { kind: "placed"; input: PlacedWorkRead };
-export type RecordAnswer = TaskSelection | PlacedWorkAnswer;
+export type RecordAnswer = TaskSelection | ClosedTaskSearch | PlacedWorkAnswer;
 export type RecordParent =
   | { type: "open"; path: string }
   | { type: "batch"; reads: { id: number; request: RecordRead }[] };

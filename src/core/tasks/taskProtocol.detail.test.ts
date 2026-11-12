@@ -196,7 +196,7 @@ describe("the task protocol (task-system P3)", () => {
     expect(protocol.detail("quick").reasoning).toEqual({ level: "medium", lower: "capped" });
   });
 
-  it("finds closed work beyond the board's window, and dropped work, only for typed text", () => {
+  it("finds closed work beyond the board's window, and dropped work, only for typed text", async () => {
     const { tasks, protocol, tick } = taskProtocolFixture();
     tasks.create({ id: "old-done", title: "Reconcile idle answers", prompt: "p", repoId: null });
     tasks.create({
@@ -214,26 +214,26 @@ describe("the task protocol (task-system P3)", () => {
     tasks.create({ id: "recent", title: "Recent zebra", prompt: "p", repoId: null });
     tasks.close("recent", { status: "done", reason: "settled", actor: "host" });
     tasks.close("dropped", { status: "dropped", reason: "superseded", actor: "host" });
-    const ids = (text: string) => protocol.search(text).map((task) => task.id);
+    const ids = async (text: string) => (await protocol.search(text)).map((task) => task.id);
     // Nothing earlier until text is typed.
-    expect(protocol.search("")).toEqual([]);
-    expect(protocol.search("   ")).toEqual([]);
+    expect(await protocol.search("")).toEqual([]);
+    expect(await protocol.search("   ")).toEqual([]);
     // Eight-day-old work by title, and dropped work of any age, never live or
     // recently done work (the board lists those).
-    expect(ids("idle")).toEqual(["old-done"]);
-    expect(ids("ZEBRA").sort()).toEqual(["dropped", "old-goal"]);
+    expect(await ids("idle")).toEqual(["old-done"]);
+    expect((await ids("ZEBRA")).sort()).toEqual(["dropped", "old-goal"]);
     // Key and goal match too.
-    const key = protocol.search("idle")[0]?.key ?? "";
-    expect(ids(key.toLowerCase())).toEqual(["old-done"]);
-    expect(ids("nothing like this")).toEqual([]);
+    const key = (await protocol.search("idle"))[0]?.key ?? "";
+    expect(await ids(key.toLowerCase())).toEqual(["old-done"]);
+    expect(await ids("nothing like this")).toEqual([]);
     // The result is the board's own row shape, so the panel paints it as any row.
-    expect(protocol.search("idle")[0]).toMatchObject({
+    expect((await protocol.search("idle"))[0]).toMatchObject({
       status: "done",
       title: "Reconcile idle answers",
     });
   });
 
-  it("answers at most 50 earlier matches, newest first, the limit the panel contract names", () => {
+  it("answers at most 50 earlier matches, newest first, the limit the panel contract names", async () => {
     const { tasks, protocol, tick } = taskProtocolFixture();
     for (let i = 0; i < 55; i += 1) {
       tasks.create({ id: `old-${i}`, title: `Older zebra ${i}`, prompt: "p", repoId: null });
@@ -241,13 +241,13 @@ describe("the task protocol (task-system P3)", () => {
       tick(1);
     }
     tick(BOARD_RECENT_MS + 1);
-    const found = protocol.search("zebra");
+    const found = await protocol.search("zebra");
     // `PanelTaskSearch` says an answer of 50 may have been cut; the task board asks for narrower words then.
     expect(found).toHaveLength(50);
     expect(found[0]?.id).toBe("old-54");
   });
 
-  it("finds a title with a curly apostrophe or quote from the plain one typed (FI3-930)", () => {
+  it("finds a title with a curly apostrophe or quote from the plain one typed (FI3-930)", async () => {
     const { tasks, protocol } = taskProtocolFixture();
     const titles = {
       note: "What’s new in 0.1.28",
@@ -258,23 +258,23 @@ describe("the task protocol (task-system P3)", () => {
       tasks.create({ id, kind: "question", title, prompt: "p", repoId: null });
       tasks.close(id, { status: "done", reason: "answered", actor: "host" });
     }
-    const ids = (text: string) => protocol.search(text).map((task) => task.id);
-    expect(ids("what's new")).toEqual(["note"]);
-    expect(ids("What’s new")).toEqual(["note"]);
-    expect(ids('"later"')).toEqual(["quoted"]);
-    expect(ids("don’t")).toEqual(["plain"]);
+    const ids = async (text: string) => (await protocol.search(text)).map((task) => task.id);
+    expect(await ids("what's new")).toEqual(["note"]);
+    expect(await ids("What’s new")).toEqual(["note"]);
+    expect(await ids('"later"')).toEqual(["quoted"]);
+    expect(await ids("don’t")).toEqual(["plain"]);
   });
 
-  it("finds a question answered within the board's window, which the panel never lists", () => {
+  it("finds a question answered within the board's window, which the panel never lists", async () => {
     const { tasks, protocol } = taskProtocolFixture();
     tasks.create({ id: "q", kind: "question", title: "Gauge", prompt: "p", repoId: null });
     tasks.close("q", { status: "done", reason: "answered", actor: "host" });
     tasks.create({ id: "w", title: "Gauge work", prompt: "p", repoId: null });
     tasks.close("w", { status: "done", reason: "settled", actor: "host" });
     const key = protocol.board().tasks.find((task) => task.id === "q")?.key ?? "";
-    expect(protocol.search(key).map((task) => task.id)).toEqual(["q"]);
+    expect((await protocol.search(key)).map((task) => task.id)).toEqual(["q"]);
     // Recently done work stays the board's: the panel lists it as landed.
-    expect(protocol.search("gauge").map((task) => task.id)).toEqual(["q"]);
+    expect((await protocol.search("gauge")).map((task) => task.id)).toEqual(["q"]);
   });
 
   it("serves a detail with intent, brief, outcome, timeline and asks that parses on the wire", () => {

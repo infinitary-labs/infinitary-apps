@@ -1246,6 +1246,7 @@ With no identical copy left, the refusal names the view and side the picture sho
 #### The one call to the merge card
 
 `show_merge_card` (`src/core/pi/forgeTools.ts`, INF-3717) takes a crewmate from its committed work to the saved-story merge card in one call, walking fixed steps in order (`src/core/orchestrator/mergeCardSteps.ts`): work committed, story words, branch pushed at that version, review and live proof at this version, pull request open, story published and read back, checks passed, no open waits, card shown.
+Its optional story refers to the full shape served on `prepare_change`, and both calls validate it through the same story parser before staging.
 It resolves the change once, on the branch the working copy has checked out.
 It does the app's own steps itself: it prepares the story it was given at the committed version, prepares the same words again once live proof was accepted since the story with the same scenarios, opens the pull request with the story or publishes it on the open one, and reads it back.
 It stops at the first step someone else supplies, and its answer names what it did, the missing step and who supplies it: the crewmate, the reviewer through the first mate, the first mate, the captain or the checks.

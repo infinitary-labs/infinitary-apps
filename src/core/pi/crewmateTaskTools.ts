@@ -121,7 +121,7 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "Not for an optional improvement (a refactor, extra assurance, a nicer wording): that is one line in your report, and the first mate decides whether the captain sees it.",
   "Not for work your own change needs to be finished, or documents it makes stale: those are yours.",
   "Search tasks first (text, project); if a match exists, file nothing and report its key.",
-  "The separate planned task waits for the first mate to triage your report; nothing starts on its own and filing does not hold up your work.",
+  "The planned task waits for the first mate to triage; filing starts nothing and does not hold up your work.",
   FOLLOWUP_AFTER_MERGE_RULE,
   "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
   "Set blocks_me only for a real dependency your task cannot merge without; it stops your task closing.",
@@ -244,7 +244,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: false,
           description:
-            "After verifying a published release, report each merged task it contains in your project, internal changes included, with its earliest release: version, release page, tasks and evidence of membership and earliest publication. Collect all task keys with tasks skip before recording; group those with the same earliest release and report again for other groups. Arrange missing verification; never guess from merge time or call unknown unshipped. Existing attributions stay unless corrects names the previous version you read. This records facts only, never publishes or merges.",
+            "After verifying a published release, report every included merged task, internal ones included, with its earliest release, page and evidence of membership and earliest publication. Collect all keys with tasks skip; report each earliest-release group. Arrange missing verification; never infer from merge time or call unknown unshipped. Existing attributions stay unless corrects names the previous version. Records facts, never publishes or merges.",
         },
       ),
     ),
@@ -276,7 +276,7 @@ export const REPORT_TOOL = crewmateTool({
         }),
         {
           description:
-            "Read-only recovery findings for the first mate, never a card. Only a workaround may be consent-free; passing a hold or choosing a stronger model remains the captain's, as does sign-in. Signing, releases, merges, destruction and access use asks-first; a workaround never bypasses consent or replays an unknown effect.",
+            "Read-only recovery findings for the first mate, never a card. Only a workaround may be consent-free; holds, stronger models and sign-in remain the captain's. Signing, releases, merges, destruction and access use asks-first; never bypass consent or replay an unknown effect.",
         },
       ),
     ),
@@ -324,7 +324,7 @@ export const REPORT_TOOL = crewmateTool({
     waits_on: Type.Optional(
       Type.Array(Type.String(), {
         description:
-          "Keys of open tasks whose close gives what your work needs, such as a merge: each is recorded as a wait that holds your start and merge until that task closes, when its close steers you; work nobody has started goes to the first mate. When only part of a task would give it, say which part with needs_firstmate instead. A replaced task's wait goes to its carrier; unknown, closed or circular keys refuse the report. Never with finished.",
+          "Keys of open tasks whose close gives what your work needs; each wait holds start and merge until its close steers you. Unstarted work goes to the first mate. If only part gives it, name that part with needs_firstmate. A replaced task's wait goes to its carrier; unknown, closed or circular keys refuse the report. Never with finished.",
       }),
     ),
     finished: Type.Optional(
@@ -348,19 +348,19 @@ export const REPORT_TOOL = crewmateTool({
     needs_firstmate: Type.Optional(
       Type.String({
         description:
-          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. Also for checks you cannot run or work on another computer: name the computer, what is needed and where. Wakes at turn end, even with a card or wait, after any captain reply has your answer. It authorizes nothing. Requested answers use responses; never use this for progress or news.",
+          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. For checks you cannot run or work on another computer, name the computer, need and destination. Wakes at turn end, even with a card or wait, after your reply. It authorizes nothing. Requested answers use responses, not progress or news.",
       }),
     ),
     captain_words_from: Type.Optional(
       Type.String({
         description:
-          "Whenever this report passes on words the captain typed to you, name where: the id of your own card they replied under or clicked, or crewmate-tab for a line in your Crewmate tab. The app reads their newest words there, and work filed from this report quotes them as what the captain asked. A card on another task, or one with none of their words, refuses the report.",
+          "When reporting the captain's words, name your card they replied under or clicked, or crewmate-tab. The app reads the newest words there and quotes them in filed work. A card on another task or without their words refuses the report.",
       }),
     ),
     files: Type.Optional(
       Type.Array(Type.String(), {
         description:
-          "Absolute paths of files on your computer this report hands to another task. The app keeps verified copies; the first mate's steer delivers them. Never paste a file's content anywhere: it may hold secrets.",
+          "Absolute paths of files this report hands to another task. The app keeps verified copies for the first mate's steer. Never paste contents: they may hold secrets.",
       }),
     ),
     result: Type.Optional(
@@ -369,7 +369,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: true,
           description:
-            "The JSON answer required by your brief's result shape; fix any named invalid field. A waiting_on_captain, needs_firstmate, check_back or responses report may omit it. The next task reads this as data; text stays the plain account.",
+            "The brief's JSON result; fix invalid fields. A waiting_on_captain, needs_firstmate, check_back or responses report may omit it. The next task reads this as data; text stays the plain account.",
         },
       ),
     ),

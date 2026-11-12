@@ -465,7 +465,7 @@ export const ALLOWS_PARAM =
  * the crewmate: no sections, length or required items.
  */
 export const SINCE_SEEN_PARAM =
-  "When your merge card's answer says the captain saw an earlier merge card for this change, show it again with a quick summary, in your own words, of what changed since then, so they need not work it out. Only the captain reads it: the card draws it first, under the time they saw that card, and it never reaches the pull request, the story or the merge's message.";
+  "When the captain saw an earlier merge card, summarize changes since in your words. The card draws it first under that viewing time; only the captain reads it, never the pull request, story or merge message.";
 
 /**
  * The saved-story rule, said once (INF-416 piece J). A top-level parameter,
@@ -473,12 +473,12 @@ export const SINCE_SEEN_PARAM =
  * tools do not restate it.
  */
 export const SAVED_STORY_RULE = [
-  "The saved-story rule, said once: every branch and local-only change uses prepare_change's story. show_merge_card prepares, publishes and shows it in one call; what follows is for where it is not served.",
-  "Pass the current revision as presentation here and to open_change, using its saved title, one merge action and no body, body_file, risk or required_actions; with autonomy on the app merges from it. When the host identifies an upstream contribution, show its published presentation as a note with no actions instead; its maintainers merge it.",
-  "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses the story after checks pass.",
-  "Public GitHub and GitLab upload selected inspected media unless the host declares the contribution's media card-only; that route publishes text and keeps pictures on the card. Other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",
-  "Keep local paths and private threads out of published text. After a push, show the same presentation: the host republishes a pull request's published story at the pushed version. Changed story words, or a later local-only or plain-branch commit, need a newly prepared revision with the same base and title and updated verification; publish where needed before the card.",
-  "After the captain's merge click, a story revised at the same version keeps their approval: publish it and put up no new merge card, which would ask them again; only another commit needs one.",
+  "The saved-story rule, said once: every branch and local-only change uses prepare_change's story. show_merge_card prepares, publishes and shows it; the rest applies where it is not served.",
+  "Pass the current revision as presentation here and to open_change, with its saved title and one merge action, no body, body_file, risk or required_actions; autonomy on merges from it. A host-identified upstream contribution shows its published presentation as a note without actions; maintainers merge it.",
+  "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses it after checks pass.",
+  "Public GitHub and GitLab upload inspected media unless the host marks it card-only; other hosts publish text with media on the card. Plain Git keeps the story on the card. Never downgrade a failed upload.",
+  "After a push, show the same presentation; the host republishes the pull request story at that version. Changed words or a later local-only or plain-branch commit need a revision with the same base, title and updated verification; publish it where needed before the card.",
+  "After the merge click, a same-version story revision keeps approval: publish it without another merge card; only another commit needs one.",
 ].join(" ");
 
 /**
@@ -486,10 +486,9 @@ export const SAVED_STORY_RULE = [
  * for the captain"). A top-level parameter, so a Claude crewmate reads it whole.
  */
 export const CARD_FILES_PARAM = [
-  "Files for the captain - a document to open, edit, attach or send: absolute paths, or paths relative to your working copy, each a file of at most 1 GB.",
-  "The app keeps a copy with your task's card copies where you run and draws each as a row with Save; the captain's click saves it into Downloads on the computer whose window was clicked, and the file moves only then.",
-  "Never name a path for the captain instead, least of all one on another computer or in your temporary or evidence folder.",
-  "A revision passes its files again: its list replaces the card's.",
+  "Files for the captain to open, edit, attach or send: absolute or working-copy-relative paths, at most 1 GB each.",
+  "The app keeps copies where you run, with a Save row per file; the captain's click moves it to Downloads on that window's computer, never before.",
+  "Never give a path instead, especially on another computer or in temporary or evidence folders. Revisions pass files again; the list replaces the card's.",
 ].join(" ");
 
 const crewmateCardParams = Type.Object({
@@ -550,7 +549,7 @@ const crewmateCardParams = Type.Object({
   body_file: Type.Optional(
     Type.String({
       description:
-        "Write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path, or relative to that folder). To revise, edit the file in place - only what the captain's words changed - so the app can mark what changed; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
+        "Write card bodies as UTF-8 HTML in the task's card body folder outside the working copy; name an absolute or folder-relative path. Revise in place only what the captain's words changed, so the app can mark it. A full rewrite is fine when the answer changed shape; say so in the opening sentence. Call emit_card again with the same id. Give exactly one of body_file or body; inline body is accepted. The app reads only on this call and runs the usual checks; it does not watch edits.",
     }),
   ),
 });

@@ -184,7 +184,11 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
     callback: "onPrepareChange",
   },
   open_change: { params: { title: "Fix", body: "Intent" }, callback: "onOpenChange" },
-  show_merge_card: { params: { id: "merge-fix" }, callback: "onShowMergeCard" },
+  // The prompt-budget trim keeps the same story accepted on both tool routes.
+  show_merge_card: {
+    params: { id: "merge-fix", story: undefined },
+    callback: "onShowMergeCard",
+  },
   check_change: {
     params: {
       diagnosis: {
@@ -279,14 +283,43 @@ describe("the crewmate tool spec", () => {
       const claudeTool = claudeCrewmateTools(claudeDelegate).find(
         (tool) => tool.name === spec.name,
       );
-      const piContent = await runPi(piTool as PiTool, call.params);
-      const claudeContent = await runClaude(claudeTool as ClaudeTool, call.params);
+      const params =
+        spec.name === "show_merge_card"
+          ? { ...call.params, story: CALLS.prepare_change?.params.story }
+          : call.params;
+      const piContent = await runPi(piTool as PiTool, params);
+      const claudeContent = await runClaude(claudeTool as ClaudeTool, params);
       expect(claudeContent, spec.name).toEqual(piContent);
       expect(
         piDelegate.calls.map((entry) => entry.callback),
         spec.name,
       ).toEqual([call.callback]);
       expect(claudeDelegate.calls, spec.name).toEqual(piDelegate.calls);
+    }
+  });
+
+  // Prompt-budget trim: referring to prepare_change must not let a malformed
+  // story reach the host, even though the served object no longer repeats its shape.
+  it("refuses an invalid merge story before either runtime reaches the host", async () => {
+    const media = scratchDir("infinitary-invalid-merge-story-");
+    for (const runtime of ["pi", "claude"] as const) {
+      const delegate = { ...crewmateToolDelegate(), picturesDir: media, cwd: media };
+      const params = {
+        id: "merge-fix",
+        story: { ...(CALLS.prepare_change?.params.story as object), views: "not a list" },
+      };
+      if (runtime === "pi") {
+        const tool = createCrewmateTools(delegate).find(
+          (entry) => entry.name === "show_merge_card",
+        );
+        await expect(runPi(tool as PiTool, params)).rejects.toThrow();
+      } else {
+        const tool = claudeCrewmateTools(delegate).find(
+          (entry) => entry.name === "show_merge_card",
+        );
+        await expect(runClaude(tool as ClaudeTool, params)).rejects.toThrow();
+      }
+      expect(delegate.calls).toEqual([]);
     }
   });
 

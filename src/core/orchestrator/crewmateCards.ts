@@ -11,7 +11,7 @@ import {
   requestWriteEffectOf,
   settleEffectOf,
 } from "@shared/cards";
-import { readyPresentation } from "@shared/changePresentation";
+import { type MergeCardRequest, readyPresentation } from "@shared/changePresentation";
 import { everyFailureDiagnosed } from "@shared/checkRepair";
 import { currentCheckStatus, everyFailureOnMain, failedBatch } from "@shared/checkSnapshot";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
@@ -34,11 +34,17 @@ import {
 import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { crewmateCardPicturesDir } from "../paths";
 import { lintCrewmateCard } from "../pi/cardLint";
-import { savedStoryRefusal } from "../pi/cardTool";
+import {
+  emittedAction,
+  parseStableCardId,
+  STABLE_CARD_ID_MAX,
+  savedStoryRefusal,
+} from "../pi/cardTool";
 import { verifyKeptValidationEvidence } from "../pi/validationEvidence";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import {
   CardRefusedError,
+  cardRefusalOf,
   type DeclaredCardInput,
   type EmittedAction,
   type EmittedCardInput,
@@ -50,11 +56,13 @@ import { recordValidation as checkValidationTransition } from "../tasks/liveVali
 import { TaskService } from "../tasks/taskService";
 import { CardBrowserActions } from "./cardBrowserActions";
 import { revisionNotice } from "./cardChanges";
+import { crewmateCardId } from "./cardEmit";
 import type { CardService } from "./cardService";
 import { escapeCardText } from "./cardText";
 import type { CardCaller } from "./cardThreads";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import { type MergeCardWalk, mergeCardAnswer } from "./mergeCardSteps";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import type { SettleOwners } from "./settleOwners";
 import { contributionStatusLine, pendingMergeLine } from "./settleWords";
@@ -206,6 +214,117 @@ export class CrewmateCards {
         ...(input.answersMessage !== undefined ? { answersMessage: input.answersMessage } : {}),
       },
     );
+  }
+
+  /**
+   * show_merge_card's last steps (INF-3717 piece 2), after the walk up to
+   * the card: the checks passed, no open work the task waits on, then the
+   * saved story's merge card with the one merge action the app builds. The
+   * card path is emit_card's own, so the card, its strip and its approval
+   * rules are the same. The answer names what was done and the first step
+   * someone else supplies; a card the app refused is kept as a refusal.
+   */
+  async showMergeCard(
+    task: TaskRuntime,
+    walk: MergeCardWalk,
+    request: MergeCardRequest,
+  ): Promise<string> {
+    if (walk.stop || !walk.ready) return mergeCardAnswer(walk);
+    const { did } = walk;
+    const stop = (
+      step: "checks" | "waits" | "card",
+      missing: string,
+      by: "checks" | "first-mate" | "crewmate",
+    ) => mergeCardAnswer({ did, stop: { step, missing, by } });
+    // Checks still running are a step not yet true, whose finish wakes the
+    // crewmate. Failed checks, an empty reading, an unreadable change or a
+    // review gate are the crewmate's, with the refusal's whole guidance,
+    // recorded as emit_card records it.
+    const checksStop = (refused: CardRefusedError, title: string) => {
+      if (refused.running) return stop("checks", refused.why, "checks");
+      this.recordCardRefusal(task, { title, ...cardRefusalOf(refused) });
+      return stop("checks", refused.message, "crewmate");
+    };
+    let stableId: string;
+    try {
+      stableId = parseStableCardId(request.id) ?? "";
+      if (!stableId) throw new Error("Give the merge card an id, such as merge-footer-fix.");
+    } catch (caught) {
+      return stop("card", caught instanceof Error ? caught.message : String(caught), "crewmate");
+    }
+    // The captain already chose on a card under this id, and the choice
+    // reached the crewmate: the card goes up under a new id instead of being
+    // refused for asking again. A choice still on its way keeps the refusal,
+    // which carries it.
+    const answered = (id: string) => {
+      const full = crewmateCardId(task.id, id);
+      const past = this.host.cards.past(full);
+      return (
+        past?.ending.how === "chose" &&
+        (past.ending.by ?? "captain") === "captain" &&
+        !this.options.inbox.holdsUndeliveredChoice(task.id, full)
+      );
+    };
+    let id = stableId;
+    for (let next = 2; answered(id); next++) {
+      const suffix = `-${next}`;
+      id = `${stableId.slice(0, STABLE_CARD_ID_MAX - suffix.length)}${suffix}`;
+    }
+    if (id !== stableId)
+      did.push(`You answered card ${stableId} already, so the merge card goes up as ${id}.`);
+    const merge = emittedAction({
+      id: "merge",
+      default: true,
+      effect: {
+        kind: "merge",
+        after: request.after ?? "close",
+        ...(request.asksFirst?.trim() ? { asks_first: request.asksFirst } : {}),
+      },
+    });
+    // 7 and 8: checks before the wait, so a wait never hides checks still running.
+    if (merge.effect?.kind === "merge" && merge.effect.after === "close") {
+      const waiting = this.options.tasks.graph.blockerRefusal(task.id);
+      if (waiting) {
+        try {
+          const reading = await this.pendingCiGate(task.id, {
+            title: walk.ready.title,
+            body: "",
+            actions: [{ ...merge, label: merge.label ?? "" }],
+            id,
+          });
+          if (reading === "running")
+            return stop("checks", "The pull request's checks are still running.", "checks");
+        } catch (caught) {
+          if (caught instanceof CardRefusedError && caught.reason === "checks")
+            return checksStop(caught, walk.ready.title);
+          throw caught;
+        }
+        return stop("waits", waiting.text, "first-mate");
+      }
+    }
+    try {
+      const shown = await this.crewmateCardWrite(task, {
+        title: walk.ready.title,
+        body: "",
+        presentationRevision: walk.ready.revision,
+        actions: [merge],
+        id,
+        ...(request.reply?.trim() ? { reply: request.reply.trim() } : {}),
+        ...(request.reply?.trim() && request.interim === true ? { interim: true } : {}),
+        ...(request.answersMessage !== undefined ? { answersMessage: request.answersMessage } : {}),
+        ...(request.sinceSeen?.trim() ? { sinceSeen: request.sinceSeen.trim() } : {}),
+      });
+      const said = typeof shown === "string" ? shown : "";
+      return mergeCardAnswer(
+        walk,
+        `Showed the merge card from story revision ${walk.ready.revision}${said ? ` (${said})` : ""}.`,
+      );
+    } catch (caught) {
+      if (caught instanceof CardRefusedError && caught.reason === "checks")
+        return checksStop(caught, walk.ready.title);
+      this.recordCardRefusal(task, { title: walk.ready.title, ...cardRefusalOf(caught) });
+      return stop("card", caught instanceof Error ? caught.message : String(caught), "crewmate");
+    }
   }
 
   /** One card as it stands, for a writer about to revise or answer it. */
@@ -1145,6 +1264,7 @@ export class CrewmateCards {
         `Card refused: the checks read ${state}, not passed; a merge decision must wait. Read them again with check_change, fix or wait, and emit the merge card again once they pass.${read.overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it; when main's newest run of every failed check failed too, the reading says so and the card goes up at once stating that fact, so spend no rerun on it." : ""}${batch ? " The failed batch check is the project's queue's: no checks override passes it, so it gets no Merge anyway; fix the cause in a new version, or answer a send-back of a version that already holds the fix with check_change's answered verdict." : ""}${empty ? " No check has registered at this version: if this pull request has no checks at all, declare that with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks; an empty reading alone stays pending." : ""}${this.waitingReplyNote(taskId)} ${softHoldWords("checks", "crewmate")}`,
         "checks",
         `its checks read ${state}, not passed`,
+        read.overall === "pending" && !empty && !read.problem,
       );
     });
   }

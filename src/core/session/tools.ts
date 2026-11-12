@@ -201,6 +201,8 @@ export class CardRefusedError extends Error {
     message: string,
     readonly reason: CardRefusalReason,
     readonly why: string,
+    /** A checks refusal whose checks registered and are still running: the app wakes the crewmate when they finish. */
+    readonly running = false,
   ) {
     super(message);
     this.name = "CardRefusedError";
@@ -462,6 +464,15 @@ export type CrewmateToolDelegate = {
   ) => Promise<string>;
   onOpenChange?: (
     input: import("@shared/changePresentation").OpenChangeInput,
+    signal?: AbortSignal,
+  ) => Promise<string>;
+  /**
+   * show_merge_card (INF-3717 piece 2): the merge card in one call, the
+   * story staged where the crewmate runs when it gave one. Returns what was
+   * done and the card shown, or the one thing missing and who supplies it.
+   */
+  onShowMergeCard?: (
+    input: import("@shared/changePresentation").ShowMergeCardInput,
     signal?: AbortSignal,
   ) => Promise<string>;
   onCheckChange?: (input?: CheckChangeInput, signal?: AbortSignal) => Promise<string>;

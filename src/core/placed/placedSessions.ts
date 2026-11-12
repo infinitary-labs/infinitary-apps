@@ -64,6 +64,9 @@ import type { WorkDevices } from "./workDevices";
 /** A computer that runs its tasks' stops at the close (`task-stops.md`, docs/leftover-programs.md). */
 const TASK_STOPS = contractChange("task-stops");
 
+/** A computer that serves show_merge_card (`show-merge-card.md`, INF-3717 piece 2). */
+const SHOW_MERGE_CARD = contractChange("show-merge-card");
+
 /**
  * The home's side of a crewmate's conversation held on a computer that runs
  * work (docs/helper.md, "Holding a conversation"; src/shared/work.ts).
@@ -322,6 +325,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   takesChangePresentations(machine: string): boolean {
     const version = this.options.devices.version(machine);
     return version ? speaksChangePresentations(version.contract) : false;
+  }
+
+  /** Whether the computer serves show_merge_card; one that does not keeps the three calls. */
+  takesMergeCardCall(machine: string): boolean {
+    return listsChange(this.options.devices.version(machine)?.changes, SHOW_MERGE_CARD);
   }
 
   takesCheckDeclarations(machine: string): boolean {

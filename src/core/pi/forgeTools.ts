@@ -16,6 +16,7 @@ import { Type } from "typebox";
 import { githubRead } from "../session/githubRead";
 import { callWithSignal, crewmateTool, stringEnum, zodParameter } from "../session/tools";
 import { cardPictureRoot } from "./cardImages";
+import { SINCE_SEEN_PARAM } from "./cardTool";
 import { stageChangePresentation } from "./changePresentation";
 
 /**
@@ -200,6 +201,99 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
     (async (params, signal) => ({
       text: await callWithSignal(onOpenChange, [openChangeInputSchema.parse(params)], signal),
     })),
+});
+
+export const SHOW_MERGE_CARD_TOOL_NAME = "show_merge_card";
+
+/** show_merge_card's own words (INF-3717 piece 2): every rule a Claude crewmate needs is here. */
+export const SHOW_MERGE_CARD_TOOL_DESCRIPTION = [
+  "Show your merge card in one call: the ordinary way to deliver a change once its work is committed.",
+  "Pass story, in prepare_change's shape and rules, when its words are new or changed; leave it out to use the newest.",
+  "The app works through fixed steps: work committed, story words, branch pushed at that version, review and live proof at this version, pull request open, story published and read back, checks passed, no open work the task waits on, card shown.",
+  "It does each step that is its own - preparing the story, preparing the same words again once live proof was accepted since, opening the pull request, publishing the story and reading it back - and stops at the first step someone else supplies.",
+  "Its answer says what it did, the one thing missing and who supplies it: do your part, or end your turn for someone else's, then call again. It repeats nothing already done and adds no revision for the same words.",
+  "The card is the saved story's merge card, with the one merge action the app builds; there is no body, risk, required actions or actions to give. id names it: reuse it to revise your open merge card; after the captain answered one, the app uses a new id.",
+  "Use prepare_change, open_change and emit_card only for rare cases: words around a story, recovery after an uncertain write, another project, a stacked change or an upstream contribution.",
+].join(" ");
+
+export const SHOW_MERGE_CARD_TOOL = crewmateTool({
+  name: SHOW_MERGE_CARD_TOOL_NAME,
+  label: "Show merge card",
+  description: SHOW_MERGE_CARD_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    id: Type.String({
+      description: "The merge card's stable kebab-case id, such as merge-footer-fix.",
+    }),
+    story: Type.Optional(
+      zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
+        description: PREPARE_CHANGE_STORY_DESCRIPTION,
+      }),
+    ),
+    reply: Type.Optional(
+      Type.String({
+        description:
+          "Your short answer in this card's thread, saying what changed where, when the card answers the captain's words.",
+      }),
+    ),
+    interim: Type.Optional(
+      Type.Boolean({
+        description: "True when reply is a progress note; the captain's reply still waits.",
+      }),
+    ),
+    answers_message: Type.Optional(
+      Type.Integer({
+        minimum: 1,
+        description:
+          "The number of the captain's message under this card that reply answers; a reply that answers it names it.",
+      }),
+    ),
+    after: Type.Optional(
+      stringEnum(["close", "continue"], {
+        description:
+          "What follows the merge: close ends the task once nothing else is open (the default); continue wakes you once it is merged.",
+      }),
+    ),
+    asks_first: Type.Optional(
+      Type.String({
+        description:
+          "Why a standing direction leaves this merge to the captain even with autonomy on.",
+      }),
+    ),
+    since_seen: Type.Optional(Type.String({ description: SINCE_SEEN_PARAM })),
+  }),
+  bind: (delegate) => {
+    const show = delegate.onShowMergeCard;
+    return (
+      show &&
+      (async (
+        { id, story, reply, interim, answers_message, after, asks_first, since_seen },
+        signal,
+      ) => {
+        let staged: Awaited<ReturnType<typeof stageChangePresentation>> | undefined;
+        if (story) {
+          const root = cardPictureRoot(delegate);
+          if (!root) throw new Error("This task has no retained-evidence folder.");
+          staged = await stageChangePresentation(story, root);
+        }
+        const card = {
+          id,
+          ...(reply !== undefined ? { reply } : {}),
+          ...(interim !== undefined ? { interim } : {}),
+          ...(answers_message !== undefined ? { answersMessage: answers_message } : {}),
+          ...(after !== undefined ? { after } : {}),
+          ...(asks_first !== undefined ? { asksFirst: asks_first } : {}),
+          ...(since_seen !== undefined ? { sinceSeen: since_seen } : {}),
+        };
+        return {
+          text: await callWithSignal(
+            show,
+            [{ ...(staged ? { story: staged } : {}), card }],
+            signal,
+          ),
+        };
+      })
+    );
+  },
 });
 
 export const CHECK_CHANGE_TOOL = crewmateTool({

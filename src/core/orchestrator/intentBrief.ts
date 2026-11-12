@@ -135,8 +135,8 @@ export const AFTER_MERGE_DELIVERY_RULE =
   "Work needing this merged first goes in the story's afterMerge";
 
 const DELIVERY_TEXT: Record<RepoDelivery, string> = {
-  "direct-pr": `direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change). ${AFTER_MERGE_DELIVERY_RULE}`,
-  "queue-pr": `queue-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change), as with direct-pr. The captain's merge click queues the approved version. ${AFTER_MERGE_DELIVERY_RULE}`,
+  "direct-pr": `direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then show_merge_card, or open_change where show_merge_card is not served). ${AFTER_MERGE_DELIVERY_RULE}`,
+  "queue-pr": `queue-pr - finished work is pushed and opened as a pull request where the project lives (git push, then show_merge_card, or open_change where show_merge_card is not served), as with direct-pr. The captain's merge click queues the approved version. ${AFTER_MERGE_DELIVERY_RULE}`,
   "local-only": "local-only - work merges on a local branch and never leaves the machine",
 };
 

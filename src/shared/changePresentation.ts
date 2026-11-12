@@ -217,6 +217,34 @@ export const openChangeInputSchema = z.object({
 });
 export type OpenChangeInput = z.infer<typeof openChangeInputSchema>;
 
+/**
+ * The merge card show_merge_card raises (INF-3717 piece 2): its id and the
+ * crewmate's own words beside it. The app builds the one merge action and
+ * takes the rest from the saved story, so no body, risk, required actions
+ * or other action can be given.
+ */
+export const mergeCardRequestSchema = z.object({
+  id: z.string(),
+  reply: z.string().optional(),
+  interim: z.boolean().optional(),
+  /** The captain's message number the reply answers (`answers_message`). */
+  answersMessage: z.number().int().min(1).optional(),
+  /** What follows the merge: the task closes, or its crewmate continues. */
+  after: z.enum(["close", "continue"]).optional(),
+  /** Why a standing direction leaves this merge to the captain. */
+  asksFirst: z.string().optional(),
+  /** What changed since the captain saw an earlier merge card (`since_seen`). */
+  sinceSeen: z.string().optional(),
+});
+export type MergeCardRequest = z.infer<typeof mergeCardRequestSchema>;
+
+/** show_merge_card as the home takes it: the story staged where the crewmate runs, if given, and the card. */
+export const showMergeCardInputSchema = z.object({
+  story: stagedChangePresentationSchema.optional(),
+  card: mergeCardRequestSchema,
+});
+export type ShowMergeCardInput = z.infer<typeof showMergeCardInputSchema>;
+
 /** Durable write states belong to TaskService, not a network retry queue. */
 export type PresentationReceipt = {
   destination: HostedPresentationDestination;

@@ -79,6 +79,11 @@ export const CHANGE_RECOVERY: Partial<
     "it may already be offered",
     "Check your project's open changes before offering it again.",
   ],
+  "inf:work:show-merge-card": [
+    "showing your merge card",
+    "the card may already be up",
+    "Read your task with tasks before calling show_merge_card again.",
+  ],
   "inf:work:check-change": [
     "checking this change",
     "its results may already be recorded",

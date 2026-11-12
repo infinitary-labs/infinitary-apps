@@ -118,7 +118,7 @@ describe("renderIntentBrief", () => {
     expect(brief).toContain("- no new dependencies");
     expect(brief).toContain("- keep the public API stable");
     expect(brief).toContain(
-      "Delivery: direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change).",
+      "Delivery: direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then show_merge_card, or open_change where show_merge_card is not served).",
     );
     expect(brief).toContain("Delivery note: stack on top of PR 41");
     // The user's words come before every constraint elaboration.
@@ -425,7 +425,7 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     );
     expect(brief).toContain(`The builder's report:\n${facts.builderReport}`);
     expect(brief).toContain(
-      "Delivery: direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change).",
+      "Delivery: direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then show_merge_card, or open_change where show_merge_card is not served).",
     );
     // The host's goal, not the Firstmate's.
     expect(brief).not.toContain("ignored: the host names the goal");

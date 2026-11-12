@@ -141,6 +141,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:work:github-write": WORK_REQUEST,
   "inf:work:prepare-change": WORK_REQUEST,
   "inf:work:open-change": WORK_REQUEST,
+  "inf:work:show-merge-card": WORK_REQUEST,
   "inf:work:check-change": WORK_REQUEST,
   "inf:work:download-artifact": WORK_REQUEST,
   "inf:work:record-knowledge": WORK_REQUEST,

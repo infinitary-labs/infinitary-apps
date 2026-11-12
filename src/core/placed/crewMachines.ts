@@ -182,6 +182,12 @@ export type CrewMachines = {
    * cannot tell.
    */
   takesStops?(machine: string): boolean;
+  /**
+   * Whether that computer serves show_merge_card (INF-3717 piece 2): it
+   * lists `show-merge-card` among its contract changes. One that does not
+   * keeps prepare_change, open_change and emit_card.
+   */
+  takesMergeCardCall?(machine: string): boolean;
   takesChangePresentations?(machine: string): boolean;
   /** The working copy's dependencies, installed there; a failure is an outcome. */
   install(machine: string, taskId: string): Promise<DependencyInstall>;

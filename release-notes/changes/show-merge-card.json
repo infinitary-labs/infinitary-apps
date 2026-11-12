@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "show-merge-card",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Crewmates bring up their merge card in one step",
+      "body": "A crewmate now opens its pull request, publishes its story there and shows you the merge card in one step. When something is still missing, such as the checks or a review, the crewmate learns exactly what it is and who provides it, so your merge card comes up sooner and with fewer retries.",
+      "noPicture": "The merge card looks the same; what changed is how the crewmate gets it in front of you.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

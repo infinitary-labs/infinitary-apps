@@ -1079,6 +1079,7 @@ export async function createServices(
     checkCi: (taskId) => changeDelivery.checks.readForOffer(taskId),
     prepareChange: (taskId, input) => changeDelivery.publication.preparePresentation(taskId, input),
     openChange: (taskId, input) => changeDelivery.publication.open(taskId, input),
+    mergeCardSteps: (taskId, story) => changeDelivery.mergeCard.walk(taskId, story),
     completionPresentation: (taskId, revision) =>
       changeDelivery.publication.completionPresentation(taskId, revision),
     validateLocalStory: (taskId) => changeDelivery.publication.validateLocalStory(taskId),

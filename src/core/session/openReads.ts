@@ -23,6 +23,7 @@ export const APP_TOOL_REQUESTS = {
   github_write: "inf:work:github-write",
   prepare_change: "inf:work:prepare-change",
   open_change: "inf:work:open-change",
+  show_merge_card: "inf:work:show-merge-card",
   check_change: "inf:work:check-change",
   download_artifact: "inf:work:download-artifact",
   knowledge: "inf:work:knowledge",

@@ -75,6 +75,7 @@ export function crewmateToolDelegate(): Required<
     onGithubWrite: async (input) => answer("onGithubWrite", "github changed")(input),
     onPrepareChange: async (input) => answer("onPrepareChange", "story prepared")(input),
     onOpenChange: async (input) => answer("onOpenChange", "change opened")(input),
+    onShowMergeCard: async (input) => answer("onShowMergeCard", "merge card shown")(input),
     onCheckChange: async () => answer("onCheckChange", "overall: green")(),
     browser: {
       navigate: async (input) => ({ text: answer("browser.navigate", "page opened")(input) }),

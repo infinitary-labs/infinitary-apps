@@ -4,6 +4,7 @@ import { ChangeMerge } from "./changeMerge";
 import { ChangePublication } from "./changePublication";
 import { CheckChangeTool } from "./checkChangeTool";
 import { DraftReadiness } from "./draftReadiness";
+import { MergeCardSteps } from "./mergeCardSteps";
 import { MergeReviews } from "./mergeReviews";
 import { ProjectQueue } from "./projectQueue";
 import type { SettleServiceHost } from "./settleHost";
@@ -21,6 +22,8 @@ export type ChangeDelivery = {
   settleHooks: Pick<SettleServiceHost, "mergePullRequest" | "removeQueuedApproval" | "mergeReview">;
   checkTool: CheckChangeTool;
   publication: ChangePublication;
+  /** show_merge_card's steps up to the card: the story, the push, the proof and the publication. */
+  mergeCard: MergeCardSteps;
   /** A project's queue facts: its workflows read, and when its queue answered. */
   queue: ProjectQueue;
 };
@@ -32,6 +35,7 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
   const checks = new ChangeChecks(context, readiness, queue);
   const merges = new ChangeMerge(context, checks, queue);
   const reviews = new MergeReviews(context, checks, merges);
+  const publication = new ChangePublication(context, checks, readiness);
   return {
     checks,
     merges,
@@ -42,7 +46,8 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
       mergeReview: reviews.mergeReview.bind(reviews),
     },
     checkTool: new CheckChangeTool(context, checks, reviews),
-    publication: new ChangePublication(context, checks, readiness),
+    publication,
+    mergeCard: new MergeCardSteps(context, publication),
     queue,
   };
 }

@@ -1,7 +1,8 @@
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import { browserShellMessages } from "../browserScript";
 import type { Scenario } from "../mockProvider";
-import { calledTool, providerMessages } from "../providerRequest";
-import { preparedRevision, prepareMockStory } from "./changeStory";
+import { calledTool, providerMessages, toolCallCount } from "../providerRequest";
+import { mockStory } from "./changeStory";
 
 /** INF-1965: one saved-story author, with no forge calls for local-only work. */
 export const DESTINATION_STORY_MARKER = "capture the destination completion";
@@ -12,7 +13,7 @@ export function destinationStory(local: boolean): Scenario {
     ({ body, isFirstmate, wantsStream }) => {
       if (isFirstmate || !wantsStream || !body.includes(DESTINATION_STORY_MARKER)) return undefined;
       const messages = providerMessages(body);
-      if (calledTool(body, "emit_card") || browserShellMessages(messages).pending)
+      if (calledTool(body, "report") || browserShellMessages(messages).pending)
         return { text: "Waiting for the recorded work." };
       if (!calledTool(body, "bash"))
         return {
@@ -30,35 +31,32 @@ export function destinationStory(local: boolean): Scenario {
         .map((message) => message.text)
         .find((text) => /[0-9a-f]{40}\n[0-9a-f]{40}/.test(text));
       if (!reading) return { text: "Waiting for the committed change." };
-      if (!calledTool(body, "prepare_change"))
-        return { calls: [prepareMockStory(DESTINATION_STORY_TITLE, reading)] };
-      if (!local && !calledTool(body, "open_change"))
+      // INF-3717 piece 2: one call prepares the story, publishes it where
+      // the branch is pushed and shows the merge card, or names the one
+      // thing missing; called again, it repeats nothing.
+      if (/Showed the merge card from story revision \d/.test(body))
+        return {
+          calls: [{ name: "report", args: { text: "The meter change is committed and ready." } }],
+        };
+      const shows = toolCallCount(body, "show_merge_card");
+      if (shows === 0)
         return {
           calls: [
             {
-              name: "open_change",
+              name: "show_merge_card",
               args: {
-                title: DESTINATION_STORY_TITLE,
-                presentation: preparedRevision(body),
+                id: "merge-meter",
+                story: mockStory(DESTINATION_STORY_TITLE, reading),
               },
             },
           ],
         };
-      if (!local && !calledTool(body, "check_change"))
-        return { calls: [{ name: "check_change", args: {} }] };
-      return {
-        calls: [
-          {
-            name: "emit_card",
-            args: {
-              title: DESTINATION_STORY_TITLE,
-              presentation: preparedRevision(body),
-              // INF-2744: one merge card whether or not the task merges on its own.
-              actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
-            },
-          },
-          { name: "report", args: { text: "The meter change is committed and ready." } },
-        ],
-      };
+      if (shows >= 3) return { text: "The merge card is still missing a step." };
+      // A step not yet true, such as the checks: read them, then call again.
+      const again: ScriptedCall[] = [
+        { name: "check_change", args: {} },
+        { name: "show_merge_card", args: { id: "merge-meter" } },
+      ];
+      return { calls: again };
     };
 }

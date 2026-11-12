@@ -207,6 +207,10 @@ export async function answerCall(
       const { input } = request as InvokeRequest<"inf:work:open-change">[0];
       return { text: await (callbacks?.onOpenChange ?? missing())(input) };
     }
+    case "inf:work:show-merge-card": {
+      const { input } = request as InvokeRequest<"inf:work:show-merge-card">[0];
+      return { text: await (callbacks?.onShowMergeCard ?? missing())(input) };
+    }
     case "inf:work:check-change": {
       if (!reach.takesCheckDeclarations(placed.deviceId))
         return {

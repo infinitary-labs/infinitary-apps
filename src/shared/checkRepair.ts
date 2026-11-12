@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /** Agent-declared diagnosis; the host never infers ownership from report prose. */
 export type CheckDiagnosis = {
   headSha: string;
@@ -296,3 +298,63 @@ export function everyFailureDiagnosed(delivery: {
     ciRepair.diagnoses.some((d) => d.headSha === headSha && d.check === check),
   );
 }
+
+/** check_change's declarations, as the crewmate's tool takes them and the work channel carries them. */
+export const checkChangeInputSchema = z.object({
+  change: z.string().optional(),
+  declaration: z
+    .object({
+      headSha: z.string(),
+      verdict: z.enum(CHECK_DECLARATION_VERDICTS),
+      evidence: z.string(),
+      check: z.string().optional(),
+      repairId: z.string().optional(),
+      outcome: z.enum(["passed", "failed", "superseded", "void"]).optional(),
+    })
+    .optional(),
+  pull: z.number().int().min(1).optional(),
+  absentChecks: z
+    .object({ headSha: z.string(), evidence: z.string(), localGate: z.string() })
+    .optional(),
+  skipRules: z.object({ headSha: z.string(), method: z.literal("squash") }).optional(),
+  diagnosis: z
+    .object({
+      headSha: z.string(),
+      check: z.string(),
+      classification: z.enum(["own-regression", "baseline-blocked", "suspected-flake", "unknown"]),
+      evidence: z.string(),
+      dependencyTask: z.string().optional(),
+      changedTest: z.boolean().optional(),
+    })
+    .optional(),
+  repair: z
+    .object({
+      id: z.string(),
+      sourceHead: z.string(),
+      headSha: z.string(),
+      check: z.string(),
+      evidence: z.string(),
+    })
+    .optional(),
+  rerun: z.object({ headSha: z.string(), check: z.string(), evidence: z.string() }).optional(),
+  conflictRepair: z
+    .object({
+      fromHead: z.string(),
+      toHead: z.string(),
+      newBase: z.string(),
+      // `none` travels by its older name, so this shape is the one every
+      // build on this contract admits (`wireRepairImpact`, INF-493).
+      impact: z.enum([LEGACY_NO_IMPACT, "changed-work", "unknown"]),
+      changedPaths: z.array(z.string()),
+      evidence: z.string(),
+      validation: z.string(),
+    })
+    .optional(),
+  captainGuidance: z
+    .object({
+      mark: z.number().int().min(1),
+      impact: z.enum(MERGE_GUIDANCE_IMPACTS),
+      evidence: z.string(),
+    })
+    .optional(),
+});

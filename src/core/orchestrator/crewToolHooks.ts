@@ -394,6 +394,7 @@ export class CrewToolHooks {
     CrewmateSpec,
     | "onPrepareChange"
     | "onOpenChange"
+    | "onShowMergeCard"
     | "onCheckChange"
     | "onReadWorkflow"
     | "onDownloadArtifact"
@@ -422,6 +423,7 @@ export class CrewToolHooks {
     const {
       prepareChange,
       openChange,
+      mergeCardSteps,
       checkChange,
       readWorkflow,
       downloadArtifact,
@@ -432,6 +434,10 @@ export class CrewToolHooks {
     const canPrepare =
       machine === LOCAL_MACHINE_ID ||
       this.core.options.machines?.takesChangePresentations?.(machine);
+    // A computer that runs work on an older version keeps the three calls
+    // until it lists the change (`show-merge-card.md`).
+    const canShowMergeCard =
+      machine === LOCAL_MACHINE_ID || this.core.options.machines?.takesMergeCardCall?.(machine);
     return {
       ...(openChange &&
       checkChange &&
@@ -446,6 +452,18 @@ export class CrewToolHooks {
               : {}),
             onOpenChange: (input: import("@shared/changePresentation").OpenChangeInput) =>
               openChange(task.id, input),
+            ...(prepareChange && mergeCardSteps && canPrepare && canShowMergeCard
+              ? {
+                  onShowMergeCard: async (
+                    input: import("@shared/changePresentation").ShowMergeCardInput,
+                  ) =>
+                    this.core.crewmateCards.showMergeCard(
+                      task,
+                      await mergeCardSteps(task.id, input.story),
+                      input.card,
+                    ),
+                }
+              : {}),
             onCheckChange: async (input?: CheckChangeInput) => {
               const read = await checkChange(task.id, input);
               // A declaration that ended the approval in front with a hold

@@ -586,6 +586,7 @@ describe("ipc contract", () => {
       "inf:work:report",
       "inf:work:revise-required-action",
       "inf:work:secrets",
+      "inf:work:show-merge-card",
       "inf:work:sign-in",
       "inf:work:sign-ins",
       "inf:work:speed",

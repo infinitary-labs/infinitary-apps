@@ -16,6 +16,7 @@ import {
   sessionHostHooks,
   TASK,
 } from "../../../tests/helpers/sessionHostWorld";
+import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 
 /**
  * A crewmate's conversation held on a computer that runs work
@@ -291,6 +292,40 @@ describe("a conversation held on a computer that runs work", () => {
       }
       expect(cards).toEqual([]);
       expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain("since_seen refused: ");
+    },
+  );
+
+  // INF-3717 piece 2: an older home has no show_merge_card order, so the
+  // computer sends nothing and its crewmate keeps the three calls.
+  it.each([
+    { homeChanges: ["show-merge-card"], sent: true },
+    { homeChanges: [], sent: false },
+  ])(
+    "sends show_merge_card only to a home that lists its change ($homeChanges)",
+    async ({ homeChanges, sent }) => {
+      const at = await placed({
+        homeChanges,
+        tools: CREWMATE_TOOLS.filter((tool) => tool.name === "show_merge_card"),
+      });
+      await at.open();
+      model([
+        { tools: [{ name: "show_merge_card", args: { id: "merge-footer", after: "close" } }] },
+        { text: "Done." },
+      ]);
+      await at.order("inf:session:prompt", [{ orderId: "merge:1", task: TASK, text: "Show it." }]);
+      await at.ended(1);
+
+      const asked = at.home.effects.filter(
+        (effect) => effect.channel === "inf:work:show-merge-card",
+      );
+      if (sent) {
+        expect(asked[0]?.request.input).toEqual({ card: { id: "merge-footer", after: "close" } });
+        return;
+      }
+      expect(asked).toEqual([]);
+      expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+        "show_merge_card needs a newer Infinitary",
+      );
     },
   );
 });

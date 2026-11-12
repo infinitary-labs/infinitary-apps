@@ -25,7 +25,7 @@ Work that ships nothing - an answer, a review the host raised, work in the perso
 - Its shape: `changeRecordSchema`, `changeVersionSchema`, `changeChecksSchema`, `changeReviewSchema`, `changeStorySchema`, `changeConsentSchema` and `changeReceiptSchema` in [`../src/shared/change.ts`](../src/shared/change.ts), published in `docs/contract.json`.
 - The projection from a task's record: `projectChange`, `projectOtherChange`, `otherChangeNumbers`, `carriesChange` and `isHostRaisedShape` in [`../src/core/storage/changeProjection.ts`](../src/core/storage/changeProjection.ts).
 - Reading it: `TaskService.changeFor` over `changes.forTask` for a task's own change, `TaskService.changesFor` over `changes.allForTask` for every change it names, and `CardService` over `changes.get` for the card that offers a version.
-- Naming it: `open_change` (`repository`, `base`, `branch`), `check_change` (`pull`, or one of the task's change ids) and `prepare_change` in the crewmate's tools ([`../src/core/pi/crewTools.ts`](../src/core/pi/crewTools.ts)), and a review commissioned with `spawn_crewmate review_of`.
+- Naming it: `open_change` (`repository`, `base`, `branch`), `check_change` (`pull`, or one of the task's change ids), `prepare_change` and `show_merge_card` in the crewmate's tools ([`../src/core/pi/crewTools.ts`](../src/core/pi/crewTools.ts)), and a review commissioned with `spawn_crewmate review_of`.
 - Which change is current: the task's own, or the one `delivery.checkTarget` selects, which `check_change pull`, a named change id, a successful `open_change` (its `branch`, or the checked-out branch when it names none), a saved-story merge card for the checked-out branch's change and the captain's click on a merge card naming a review set.
 
 ## Operations and lifecycle

@@ -62,20 +62,37 @@ export class ChangePublication {
    * and the completion card to show. Nothing is uploaded and no card shown.
    */
   async preparePresentation(taskId: string, staged: StagedChangePresentation): Promise<string> {
+    return (await this.prepareStory(taskId, staged)).said;
+  }
+
+  /**
+   * prepare_change's work, typed for show_merge_card: the revision saved, or
+   * only the words when nothing was saved. `reuseSame` answers the newest
+   * revision for the same words at the same version instead of adding one.
+   */
+  async prepareStory(
+    taskId: string,
+    staged: StagedChangePresentation,
+    how: { reuseSame?: boolean } = {},
+  ): Promise<{ revision?: number; said: string }> {
+    const said = (text: string) => ({ said: text });
     try {
       const contribution = await this.options.prepareContribution?.(taskId);
-      if (contribution) return contribution;
+      if (contribution) return said(contribution);
       const local = this.localStoryDestination(taskId);
       if (local) {
-        if (!this.options.presentations) return "Saved change stories are unavailable.";
-        const revision = await this.options.presentations.prepare(taskId, staged, local);
-        return `Prepared presentation ${revision} for ${staged.head}. Nothing was uploaded and no card was shown. This work merges locally: pass presentation: ${revision} to emit_card; no open_change or host sign-in is needed.`;
+        if (!this.options.presentations) return said("Saved change stories are unavailable.");
+        const revision = await this.options.presentations.prepare(taskId, staged, local, how);
+        return {
+          revision,
+          said: `Prepared presentation ${revision} for ${staged.head}. Nothing was uploaded and no card was shown. This work merges locally: pass presentation: ${revision} to emit_card; no open_change or host sign-in is needed.`,
+        };
       }
       // A story is prepared for the task's own project; a change opened in
       // another managed project carries its body instead (INF-2510).
       const located = this.context.locate(taskId, "open", "own");
-      if ("said" in located) return located.said;
-      if (!this.options.presentations) return "Saved change stories are unavailable.";
+      if ("said" in located) return said(located.said);
+      if (!this.options.presentations) return said("Saved change stories are unavailable.");
       try {
         // The story is for the change on the branch the working copy has
         // checked out; each change keeps its own (INF-2490).
@@ -89,24 +106,40 @@ export class ChangePublication {
           hasChangeRequests(located.forge.kind) &&
           (await located.forge.changeFor(branch))
         )
-          return "This pull request predates saved stories and will not be rewritten into one. To replace its description, pass body to open_change.";
+          return said(
+            "This pull request predates saved stories and will not be rewritten into one. To replace its description, pass body to open_change.",
+          );
         const merged =
           branch === current.branch
             ? await this.mergedBeforeStories(ledger, current.number, located.forge)
             : undefined;
-        if (merged) return merged;
-        const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
+        if (merged) return said(merged);
+        const revision = await this.options.presentations.prepare(
+          taskId,
+          staged,
+          located.forge,
+          how,
+        );
         const destination = this.options.tasks.delivery
           .changePresentation(taskId, branch)
           ?.revisions.find((saved) => saved.revision === revision)?.destination;
-        return `Prepared presentation ${revision} for ${staged.head}. ${destination ? `${storyAudience(destination)} ` : ""}No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
+        return {
+          revision,
+          said: `Prepared presentation ${revision} for ${staged.head}. ${destination ? `${storyAudience(destination)} ` : ""}No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`,
+        };
       } catch (caught) {
         if (isSignInForgeFailure(caught))
-          return crewSignInText(this.context.signInFact(located.forge, located.record.repoId));
-        return `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`;
+          return said(
+            crewSignInText(this.context.signInFact(located.forge, located.record.repoId)),
+          );
+        return said(
+          `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`,
+        );
       }
     } catch (caught) {
-      return `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`;
+      return said(
+        `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
     } finally {
       await this.options.presentations?.discardStaged(taskId, staged);
     }
@@ -176,7 +209,7 @@ export class ChangePublication {
   }
 
   /** Delivery, not the presence of an origin, decides whether a story reaches a host. */
-  private localStoryDestination(taskId: string): LocalPresentationDestination | undefined {
+  localStoryDestination(taskId: string): LocalPresentationDestination | undefined {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error("The task no longer exists.");
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;

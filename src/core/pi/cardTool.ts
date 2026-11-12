@@ -465,7 +465,7 @@ export const SINCE_SEEN_PARAM =
  * tools do not restate it.
  */
 export const SAVED_STORY_RULE = [
-  "The saved-story rule, said once: every branch and local-only change uses prepare_change's story.",
+  "The saved-story rule, said once: every branch and local-only change uses prepare_change's story. show_merge_card prepares, publishes and shows it in one call; what follows is for where it is not served.",
   "Pass the current revision as presentation here and to open_change, using its saved title, one merge action and no body, body_file, risk or required_actions; with autonomy on the app merges from it. When the host identifies an upstream contribution, show its published presentation as a note with no actions instead; its maintainers merge it.",
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses the story after checks pass.",
   "Public GitHub and GitLab upload selected inspected media unless the host declares the contribution's media card-only; that route publishes text and keeps pictures on the card. Other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",

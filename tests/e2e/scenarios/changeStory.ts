@@ -1,5 +1,5 @@
 import type { ChangePresentationDraft } from "@shared/changePresentation";
-import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
 import { MOCK_RISK } from "../mockProvider";
 
 /**
@@ -25,24 +25,28 @@ export const MOCK_GITHUB_STORY: Omit<
   projectText: "",
 };
 
+/** The story a scripted author passes, at the two versions its git reading printed. */
+export function mockStory(
+  title: string,
+  gitReading: string | undefined,
+  content = MOCK_GITHUB_STORY,
+): ScriptedArgs<"prepare_change">["story"] {
+  const versions = gitReading?.match(/\b[0-9a-f]{40}\b/g) ?? [];
+  return {
+    ...content,
+    title,
+    base: versions.at(-2) ?? "",
+    head: versions.at(-1) ?? "",
+    publishable: true,
+  };
+}
+
 export function prepareMockStory(
   title: string,
   gitReading: string | undefined,
   content = MOCK_GITHUB_STORY,
 ): ScriptedCall {
-  const versions = gitReading?.match(/\b[0-9a-f]{40}\b/g) ?? [];
-  return {
-    name: "prepare_change",
-    args: {
-      story: {
-        ...content,
-        title,
-        base: versions.at(-2) ?? "",
-        head: versions.at(-1) ?? "",
-        publishable: true,
-      },
-    },
-  };
+  return { name: "prepare_change", args: { story: mockStory(title, gitReading, content) } };
 }
 
 export function preparedRevision(reading: string): number {

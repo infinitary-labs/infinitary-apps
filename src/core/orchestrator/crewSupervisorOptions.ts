@@ -385,6 +385,16 @@ export type CrewSupervisorOptions = {
     input: import("@shared/changePresentation").OpenChangeInput,
   ) => Promise<string>;
   /**
+   * show_merge_card's steps up to the card (INF-3717 piece 2): the story
+   * prepared, pushed, proved, opened and published, or the first step
+   * someone else supplies. The card itself goes up through the crewmate's
+   * own card path (`CrewmateCards.showMergeCard`).
+   */
+  mergeCardSteps?: (
+    taskId: string,
+    story?: import("@shared/changePresentation").StagedChangePresentation,
+  ) => Promise<import("./mergeCardSteps").MergeCardWalk>;
+  /**
    * The saved story as its merge card shows it. `pictures` are the copies
    * minted for this card alone, the only files a refused card removes; the
    * body may also show the live proof the task's validation record keeps.

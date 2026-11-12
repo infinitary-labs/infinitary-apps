@@ -278,6 +278,9 @@ export type SetupExtras = {
     input: import("@shared/changePresentation").OpenChangeInput,
   ) => Promise<string>;
   completionPresentation?: CrewSupervisorOptions["completionPresentation"];
+  prepareChange?: CrewSupervisorOptions["prepareChange"];
+  /** show_merge_card's walk to the card (INF-3717 piece 2); served with prepareChange. */
+  mergeCardSteps?: CrewSupervisorOptions["mergeCardSteps"];
   validateLocalStory?: CrewSupervisorOptions["validateLocalStory"];
   checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
   readWorkflow?: CrewSupervisorOptions["readWorkflow"];
@@ -570,6 +573,8 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.completionPresentation
       ? { completionPresentation: extras.completionPresentation }
       : {}),
+    ...(extras.prepareChange ? { prepareChange: extras.prepareChange } : {}),
+    ...(extras.mergeCardSteps ? { mergeCardSteps: extras.mergeCardSteps } : {}),
     ...(extras.validateLocalStory ? { validateLocalStory: extras.validateLocalStory } : {}),
     ...(extras.checkChange ? { checkChange: extras.checkChange } : {}),
     ...(extras.readWorkflow ? { readWorkflow: extras.readWorkflow } : {}),

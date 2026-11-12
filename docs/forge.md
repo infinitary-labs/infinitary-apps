@@ -617,7 +617,7 @@ Opening the task’s own change, selecting its own pull request or naming its ow
 The task's single pull request fields then name its own pull request at its own head, keeping none of the other pull request's number, head or checks; opening it names none until the opened pull request is noted.
 Every change id a reading reports is the id of the change it read, so passing it back selects that same change; a change whose review the capped list no longer keeps is read again by its number, never swapped for the current one.
 `open_change` with `branch` opens or updates the pull request of an existing pushed branch the captain asked for, without moving its head, and that pull request becomes the current change (INF-2184).
-`prepare_change`, `open_change` with no `branch` and the saved-story merge card all act on the branch the working copy has checked out, and the task's own branch only when none is (INF-3717).
+`prepare_change`, `open_change` with no `branch`, `show_merge_card` and the saved-story merge card all act on the branch the working copy has checked out, and the task's own branch only when none is (INF-3717).
 `open_change` makes the change it opened or answered current only once it succeeds, so a refused call leaves the current change as it was; the merge card makes the change whose story it shows current, since its merge acts on the current change.
 A crewmate on a computer that runs work does the same with a branch it checked out there: the home reads its checkout for the story and brings that branch home to read it (`docs/helper.md`, "Reading its branch here").
 
@@ -1202,6 +1202,17 @@ When the stored copy a saved story names is gone, the home keeps it again from a
 With no identical copy left, the refusal names the view and side the picture showed and asks for the story to be prepared again from the picture's original file, whose bytes still pass the kept Before comparison.
 
 `open_change` takes the prepared `presentation` revision instead of `body` for a new pull request, merge request or plain branch; local-only work skips that call.
+
+#### The one call to the merge card
+
+`show_merge_card` (`src/core/pi/forgeTools.ts`, INF-3717) takes a crewmate from its committed work to the saved-story merge card in one call, walking fixed steps in order (`src/core/orchestrator/mergeCardSteps.ts`): work committed, story words, branch pushed at that version, review and live proof at this version, pull request open, story published and read back, checks passed, no open waits, card shown.
+It resolves the change once, on the branch the working copy has checked out.
+It does the app's own steps itself: it prepares the story it was given at the committed version, prepares the same words again once live proof was accepted since the story with the same scenarios, opens the pull request with the story or publishes it on the open one, and reads it back.
+It stops at the first step someone else supplies, and its answer names what it did, the missing step and who supplies it: the crewmate, the reviewer through the first mate, the first mate, the captain or the checks.
+A pull request that carried the story and closed stops it; it neither reopens nor replaces that pull request.
+Called again it repeats nothing: the same words at the same version add no revision (`prepare`'s `reuseSame`), and a story published at the shown revision is not sent again.
+The card is today's saved-story merge card with the one merge action the call builds itself, under the id the crewmate gave, revising its open card there; once the captain answered a card under that id, it goes up under the id with a numbered suffix (`CrewmateCards.showMergeCard`).
+A crewmate on a computer that runs work is served the call only once that computer lists the `show-merge-card` change; one that does not keeps the three calls (`docs/helper.md`).
 The native GitHub attachment capability checks destination identity, public/private/internal visibility and write/maintain/admin permission before each upload.
 It sends raw bytes once to `https://uploads.github.com/user-attachments/assets`, with the short names `recording.mp4` or `picture.<format>` and the app's own sign-in; it refuses redirects, unsupported credentials and non-native returned URLs.
 In unpackaged tests, the existing API-base override also routes attachment uploads to the local GitHub stand-in, which retains and serves the actual bytes; packaged builds keep the native upload origin.

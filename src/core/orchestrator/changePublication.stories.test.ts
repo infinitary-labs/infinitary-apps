@@ -1207,6 +1207,222 @@ describe("shared story delivery boundaries", () => {
     );
   });
 
+  // INF-3717 piece 2, the captain's direction A: "One call that shows the
+  // merge card or names the one thing missing". show_merge_card's walk does
+  // the app's own steps and stops at the first one someone else supplies.
+  describe("show_merge_card's walk to the card (INF-3717 piece 2)", () => {
+    const opens = (at: { forge: FakeForge }) =>
+      at.forge.calls.filter((call) => call.startsWith("openChange")).length;
+
+    it("prepares, opens and reads back on the first call in INF-3472's shape, and repeats nothing when called again", async () => {
+      const { at, story: saved } = await deliveringFromAnotherBranch();
+      // One title for the story, the pull request and the card.
+      const story = { ...saved, title: "feat: share the story" };
+      const first = await at.service.mergeCard.walk("ab12cd34", story);
+      expect(first.stop).toBeUndefined();
+      expect(first.ready).toEqual({ revision: 1, title: story.title });
+      expect(first.did).toEqual([
+        "Prepared story revision 1 at the committed version.",
+        "Opened pull request #1413 https://github.com/x/y/pull/1413 with the story and read it back.",
+      ]);
+      expect(opens(at)).toBe(1);
+      expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({
+        branch: phone,
+        number: 1413,
+      });
+      // The card call reads the same change and shows the story the walk named.
+      expect(await at.service.publication.completionPresentation("ab12cd34", 1)).toMatchObject({
+        revision: 1,
+      });
+      // Called again with the same words: no revision, no second publication.
+      const again = await at.service.mergeCard.walk("ab12cd34", story);
+      expect(again.ready).toEqual({ revision: 1, title: story.title });
+      expect(again.did).toEqual([
+        "Story revision 1 already says these words at this version, so no revision was added.",
+      ]);
+      expect(at.tasks.delivery.changePresentation("ab12cd34", phone)?.revisions).toHaveLength(1);
+      expect(opens(at)).toBe(1);
+      // And with no story, the newest saved one, still with nothing repeated.
+      expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
+        did: [],
+        ready: { revision: 1, title: story.title },
+      });
+    });
+
+    it("stops at the commit when the committed version cannot be read", async () => {
+      const at = await saved();
+      const walk = await at.service.mergeCard.walk("ab12cd34");
+      expect(walk.stop).toEqual({
+        step: "commit",
+        missing: "Work computer is asleep",
+        by: "crewmate",
+      });
+    });
+
+    it("stops at the story when the checked-out branch has none and none was given", async () => {
+      const { at } = await deliveringFromAnotherBranch();
+      const walk = await at.service.mergeCard.walk("ab12cd34");
+      expect(walk.stop).toMatchObject({ step: "story", by: "crewmate" });
+      expect(walk.stop?.missing).toContain(`${phone} has no prepared story. Pass story`);
+      expect(opens(at)).toBe(0);
+    });
+
+    it("stops at the push when the branch is pushed at another version, opening nothing", async () => {
+      const { at, story: saved } = await deliveringFromAnotherBranch();
+      // One title for the story, the pull request and the card.
+      const story = { ...saved, title: "feat: share the story" };
+      Object.assign(at.forge, { branchHead: async () => repaired });
+      const walk = await at.service.mergeCard.walk("ab12cd34", story);
+      expect(walk.did).toEqual(["Prepared story revision 1 at the committed version."]);
+      expect(walk.stop).toEqual({
+        step: "push",
+        missing: `${phone} is pushed at another version than the committed one. Push it (git push).`,
+        by: "crewmate",
+      });
+      expect(opens(at)).toBe(0);
+    });
+
+    it("stops at the proof and names the reviewer when no review judged this version", async () => {
+      const { at, story: saved } = await deliveringFromAnotherBranch();
+      // One title for the story, the pull request and the card.
+      const story = { ...saved, title: "feat: share the story" };
+      seedDelivery(at.tasks, "ab12cd34", {
+        liveValidation: { ...noSurfaceProof(original), reviews: [] },
+      });
+      const walk = await at.service.mergeCard.walk("ab12cd34", story);
+      expect(walk.stop).toMatchObject({ step: "proof", by: "reviewer" });
+      expect(opens(at)).toBe(0);
+    });
+
+    it("stops at the pull request when the one that carried the story closed, sending nothing again", async () => {
+      const { at, story: saved } = await deliveringFromAnotherBranch();
+      // One title for the story, the pull request and the card.
+      const story = { ...saved, title: "feat: share the story" };
+      expect((await at.service.mergeCard.walk("ab12cd34", story)).ready).toBeDefined();
+      at.forge.change = null;
+      const walk = await at.service.mergeCard.walk("ab12cd34", story);
+      expect(walk.stop).toMatchObject({ step: "pull", by: "captain" });
+      expect(walk.stop?.missing).toContain("is no longer open. Publication stops");
+      expect(opens(at)).toBe(1);
+    });
+
+    it("prepares the same words again once the live proof is accepted since the story, then stops repeating it", async () => {
+      const { at, story: saved } = await deliveringFromAnotherBranch();
+      const story = {
+        ...saved,
+        version: 2 as const,
+        title: "feat: share the story",
+        validationRows: [],
+        checked: [{ check: "Read the saved publication", result: "It names the story." }],
+      };
+      // The story was prepared while the review was still to come.
+      seedDelivery(at.tasks, "ab12cd34", {
+        liveValidation: { ...noSurfaceProof(original), reviews: [] },
+      });
+      expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
+        "Prepared presentation 1 ",
+      );
+      // Revision 1 was published on the checked-out branch's pull request.
+      const first = at.tasks.delivery.changePresentation("ab12cd34", phone)
+        ?.revisions[0] as ChangePresentation;
+      expect(first.liveValidation?.verdict).toBeUndefined();
+      const region = presentationMarkdown(first, new Map(), "passed");
+      const published = {
+        revision: 1,
+        head: original,
+        state: "confirmed" as const,
+        region,
+        regionHash: createHash("sha256").update(region).digest("hex"),
+        contentHash: presentationContentHash(first),
+        number: 1413,
+      };
+      at.tasks.delivery.updateChangePresentation(
+        "ab12cd34",
+        (old) => ({
+          ...(old ?? { revisions: [first], receipts: [] }),
+          publication: published,
+          published,
+        }),
+        phone,
+      );
+      at.forge.change = {
+        ...at.forge.opened,
+        number: 1413,
+        url: "https://github.com/x/y/pull/1413",
+        branch: phone,
+        title: story.title,
+        headSha: original,
+        body: region,
+      };
+      seedDelivery(at.tasks, "ab12cd34", { liveValidation: noSurfaceProof(original) });
+      const walk = await at.service.mergeCard.walk("ab12cd34");
+      expect(walk.ready).toEqual({ revision: 2, title: story.title });
+      expect(walk.did).toEqual([
+        "Prepared story revision 2 with the same words and the live validation accepted since.",
+        "Published the story on pull request #1413 https://github.com/x/y/pull/1413 and read it back.",
+      ]);
+      const ledger = at.tasks.delivery.changePresentation("ab12cd34", phone);
+      expect(ledger?.revisions.at(-1)).toMatchObject({
+        revision: 2,
+        liveValidation: { verdict: "no-surface" },
+      });
+      expect(ledger?.published?.revision).toBe(2);
+      expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
+        did: [],
+        ready: { revision: 2, title: story.title },
+      });
+      expect(opens(at)).toBe(0);
+      expect(at.update).toHaveBeenCalledTimes(1);
+    });
+
+    // The story-destinations journey's plain case: a host that keeps no pull
+    // requests keeps the story on the card, so the walk records the pushed
+    // branch as the change and publishes nothing there.
+    it("records the pushed branch on a host with no pull requests, keeping the story on the card", async () => {
+      // The crewmate delivers from a branch it checked out, as INF-3472 did.
+      const at = await saved("github", async () => ({ branch: phone, head: original }));
+      const destination = { kind: "branch" as const, origin: "https://git.example.test/x/y.git" };
+      Object.assign(at.forge, {
+        kind: "git",
+        place: null,
+        hasChecks: false,
+        attachments: undefined,
+        storyDestination: async () => destination,
+        change: { branch: phone, headSha: original, title: "fix: share the story" },
+      });
+      at.bringBranchHome.mockResolvedValue("");
+      at.readHead.mockResolvedValue(original);
+      const story = { ...at.story, title: "fix: share the story", destination };
+      const first = await at.service.mergeCard.walk("ab12cd34", story);
+      expect(first.stop).toBeUndefined();
+      expect(first.ready).toEqual({ revision: 1, title: story.title });
+      expect(first.did).toEqual([
+        "Prepared story revision 1 at the committed version.",
+        `Recorded the pushed branch ${phone} as the change; where the project lives keeps no pull requests, so the story stays on the merge card.`,
+      ]);
+      expect(opens(at)).toBe(0);
+      // Called again, it records nothing again.
+      expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
+        did: [],
+        ready: { revision: 1, title: story.title },
+      });
+    });
+
+    it("names the app's own words when opening the pull request fails", async () => {
+      const { at, story: saved } = await deliveringFromAnotherBranch();
+      // One title for the story, the pull request and the card.
+      const story = { ...saved, title: "feat: share the story" };
+      Object.assign(at.forge, {
+        openChange: async () => {
+          throw new Error("GitHub refused the pull request");
+        },
+      });
+      const walk = await at.service.mergeCard.walk("ab12cd34", story);
+      expect(walk.stop).toMatchObject({ step: "pull", by: "app" });
+      expect(walk.stop?.missing).toContain("GitHub refused the pull request");
+    });
+  });
+
   it("stops, opening nothing, when the recorded pre-story PR merged outside the app (INF-92 F3)", async () => {
     const at = await saved();
     const story = at.tasks.delivery.changePresentation("ab12cd34")

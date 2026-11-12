@@ -88,12 +88,14 @@ import { HANDOVER_IN_DIR_NAME, HANDOVER_OUT_DIR_NAME } from "../tasks/handoverFi
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { MovedFolders } from "../workspace/workMove";
+import { carryStory, type PlacedMedia, sendPictures } from "./placedStoryMedia";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
 
 /** A story view carrying a map (`story-map.md`). */
 const STORY_MAP = contractChange("story-map");
+const SHOW_MERGE_CARD = contractChange("show-merge-card");
 
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
@@ -1314,41 +1316,12 @@ export class SessionHost {
       ).text;
     const ask = (channel: WorkInvokeChannel, fields: object, toolSignal?: AbortSignal) =>
       this.withDeadline(channel, (deadline) => text(channel, fields, deadline), toolSignal);
-    const sendPictures = async (pictures: readonly CardPicture[], signal: AbortSignal) => {
-      // Each picture's bytes first, so the home holds them when it shows the card.
-      for (const picture of pictures) {
-        const { extension, data } = this.options.tasks.picture(held.task, picture.id);
-        await this.call(
-          held,
-          "inf:work:picture",
-          {
-            callId: randomUUID(),
-            id: picture.id,
-            extension,
-            data: data.toString("base64"),
-          },
-          signal,
-        );
-        // A poster's recording follows it, a piece at a time.
-        if (!picture.demo) continue;
-        const { id, kind } = picture.demo;
-        const recording = this.options.tasks.recording(held.task, id, kind);
-        for (let offset = 0; offset < recording.length; offset += CARD_MEDIA_PIECE_BYTES) {
-          await this.call(
-            held,
-            "inf:work:media",
-            {
-              callId: randomUUID(),
-              id,
-              extension: kind,
-              offset,
-              size: recording.length,
-              data: recording.subarray(offset, offset + CARD_MEDIA_PIECE_BYTES).toString("base64"),
-            },
-            signal,
-          );
-        }
-      }
+    const media: PlacedMedia = {
+      task: held.task,
+      tasks: this.options.tasks,
+      homeChanges: this.options.homeChanges,
+      call: (channel, fields, signal) =>
+        this.call(held, channel, { callId: randomUUID(), ...fields }, signal),
     };
     return {
       taskId: held.task,
@@ -1390,7 +1363,7 @@ export class SessionHost {
                 `since_seen refused: ${HOME.the} runs an older Infinitary that cannot show it; nothing was sent. Show the card without since_seen and say what changed in its thread until ${HOME.the} is updated.`,
               );
             // Each picture's bytes first, so the home holds them when it shows the card.
-            await sendPictures(card.pictures ?? [], signal);
+            await sendPictures(media, card.pictures ?? [], signal);
             // Each project font its preview names, before the card too.
             for (const typeface of typefaces) {
               await this.call(
@@ -1542,34 +1515,25 @@ export class SessionHost {
       onPrepareChange: (story, toolSignal) =>
         this.withDeadline(
           "inf:work:prepare-change",
-          async (signal) => {
-            try {
-              if (
-                story.validationRows &&
-                !listsChange(this.options.homeChanges?.(), contractChange("live-validation-table"))
-              )
-                throw new Error(
-                  `Live validation rows need a newer Infinitary on ${HOME.the}; update it before preparing this story. Nothing was sent.`,
-                );
-              if (
-                story.views.some((view) => view.map !== undefined) &&
-                !listsChange(this.options.homeChanges?.(), STORY_MAP)
-              )
-                throw new Error(
-                  `A map view needs a newer Infinitary on ${HOME.the}; update it before preparing this story. Nothing was sent.`,
-                );
-              await sendPictures(story.pictures, signal);
-              return await text("inf:work:prepare-change", { input: story }, signal);
-            } finally {
-              await this.options.tasks
-                .discardCardCopies(
-                  held.task,
-                  story.assets.map((asset) => asset.file),
-                )
-                .catch(() => {
-                  console.warn("Could not remove transferred story staging copies", held.task);
-                });
-            }
+          (signal) =>
+            carryStory(media, story, signal, () =>
+              text("inf:work:prepare-change", { input: story }, signal),
+            ),
+          toolSignal,
+        ),
+      // show_merge_card walks the steps at the home, which serves the tool
+      // only once it lists the change; the story's pictures travel first.
+      onShowMergeCard: (input, toolSignal) =>
+        this.withDeadline(
+          "inf:work:show-merge-card",
+          (signal) => {
+            if (!listsChange(this.options.homeChanges?.(), SHOW_MERGE_CARD))
+              throw new Error(
+                `show_merge_card needs a newer Infinitary on ${HOME.the}; use prepare_change, open_change and emit_card until it is updated. Nothing was sent.`,
+              );
+            return carryStory(media, input.story, signal, () =>
+              text("inf:work:show-merge-card", { input }, signal),
+            );
           },
           toolSignal,
         ),

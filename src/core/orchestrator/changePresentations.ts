@@ -149,6 +149,13 @@ export class ChangePresentations {
     taskId: string,
     staged: StagedChangePresentation,
     target: PresentationTarget,
+    how: {
+      /**
+       * The same words at the same version answer the newest revision, so a
+       * call made again adds no revision and uploads nothing (show_merge_card).
+       */
+      reuseSame?: boolean;
+    } = {},
   ): Promise<number> {
     try {
       return await this.serial(
@@ -196,6 +203,8 @@ export class ChangePresentations {
             story.afterMerge &&
             this.options.tasks.delivery.afterMergeRefusal(taskId, story.afterMerge);
           if (steps) throw new Error(steps);
+          if (how.reuseSame && prior && prior.head === story.head && sameStoryWords(prior, story))
+            return prior.revision;
           await this.checkRetained(story);
           // Before media for a surviving view stays the original comparison, never silently refreshed.
           for (const view of prior?.views ?? []) {
@@ -708,6 +717,44 @@ export class ChangePresentations {
         await this.cleanupMedia(taskId, copies);
         throw error;
       }
+    });
+  }
+
+  /**
+   * The newest story again, its words unchanged, once live validation was
+   * accepted after it was prepared with the same scenarios (show_merge_card,
+   * INF-3717 piece 2): a new revision whose validation summary is the one
+   * accepted now. Undefined when nothing needs it: no live validation on the
+   * story, proof not accepted yet, the story at another version, a write
+   * still being reconciled, or the summary already current. Scenarios that
+   * changed refuse, since only the crewmate can write their public rows.
+   */
+  async refreshValidation(taskId: string, branch: string | undefined): Promise<number | undefined> {
+    return this.serial(taskId, async () => {
+      const record = this.options.tasks.delivery.changePresentation(taskId, branch);
+      const newest = record?.revisions.at(-1);
+      if (!record || !newest?.liveValidation || newest.version !== 2) return undefined;
+      if (record.publication && record.publication.state !== "confirmed") return undefined;
+      if ((await this.options.head(taskId)) !== newest.head) return undefined;
+      const state = this.options.tasks.get(taskId)?.delivery?.liveValidation;
+      const current = liveValidationSummary(state, newest.head, false);
+      if (
+        !current?.verdict ||
+        (current.revision === newest.liveValidation.revision &&
+          current.label === newest.liveValidation.label)
+      )
+        return undefined;
+      const story = changePresentationSchema.parse({
+        ...newest,
+        revision: newest.revision + 1,
+        liveValidation: presentationValidation(state, newest.head, newest.validationRows),
+      });
+      await this.save(taskId, branch, (old) => ({
+        ...this.required(old),
+        revisions: [...this.required(old).revisions, story],
+      }));
+      await this.options.onPrepared?.(taskId, story.head, branch);
+      return story.revision;
     });
   }
 
@@ -1287,6 +1334,39 @@ function completionWayOut(
   if (!published || record.publication?.state !== "confirmed")
     return `Story revision ${newest.revision} is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the merge card with presentation ${newest.revision}.`;
   return `The newest story is revision ${newest.revision}: show the merge card with presentation ${newest.revision}.`;
+}
+
+/**
+ * Two revisions saying the same thing (show_merge_card): every field but the
+ * revision, with each picture named by its bytes rather than the copy's
+ * minted name, so staging the same files again reads as the same story.
+ */
+function sameStoryWords(saved: ChangePresentation, next: ChangePresentation): boolean {
+  const canonical = (story: ChangePresentation): string => {
+    const names = new Map(story.assets.map((asset) => [asset.id, asset.uploadSha256]));
+    const named = (value: string): string => {
+      for (const [id, digest] of names) {
+        if (value === id) return digest;
+        if (value.startsWith(`${id}.`)) return `${digest}${value.slice(id.length)}`;
+      }
+      return value;
+    };
+    const walk = (value: unknown): unknown => {
+      if (typeof value === "string") return named(value);
+      if (Array.isArray(value)) return value.map(walk);
+      if (value && typeof value === "object")
+        return Object.fromEntries(
+          Object.entries(value)
+            .filter(([, item]) => item !== undefined)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, item]) => [key, walk(item)]),
+        );
+      return value;
+    };
+    const { revision: _revision, ...words } = story;
+    return JSON.stringify(walk(words));
+  };
+  return canonical(saved) === canonical(next);
 }
 
 /** The refusal when the committed code is ahead of the pushed branch. */

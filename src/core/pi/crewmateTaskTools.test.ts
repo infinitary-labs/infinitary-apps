@@ -184,6 +184,7 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
     callback: "onPrepareChange",
   },
   open_change: { params: { title: "Fix", body: "Intent" }, callback: "onOpenChange" },
+  show_merge_card: { params: { id: "merge-fix" }, callback: "onShowMergeCard" },
   check_change: {
     params: {
       diagnosis: {

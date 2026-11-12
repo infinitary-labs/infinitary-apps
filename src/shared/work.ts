@@ -6,12 +6,12 @@ import {
   cardPictureSchema,
   riskDeclarationSchema,
 } from "./cards";
-import { openChangeInputSchema, stagedChangePresentationSchema } from "./changePresentation";
 import {
-  CHECK_DECLARATION_VERDICTS,
-  LEGACY_NO_IMPACT,
-  MERGE_GUIDANCE_IMPACTS,
-} from "./checkRepair";
+  openChangeInputSchema,
+  showMergeCardInputSchema,
+  stagedChangePresentationSchema,
+} from "./changePresentation";
+import { checkChangeInputSchema } from "./checkRepair";
 import { crewResponseSchema } from "./crewResponses";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
@@ -432,66 +432,6 @@ export const placedCardAnswerSchema = z.union([
 ]);
 export type PlacedCardAnswer = z.infer<typeof placedCardAnswerSchema>;
 
-/** check_change's declarations, as the crewmate's tool takes them (src/shared/checkRepair.ts). */
-const checkChangeInputSchema = z.object({
-  change: z.string().optional(),
-  declaration: z
-    .object({
-      headSha: z.string(),
-      verdict: z.enum(CHECK_DECLARATION_VERDICTS),
-      evidence: z.string(),
-      check: z.string().optional(),
-      repairId: z.string().optional(),
-      outcome: z.enum(["passed", "failed", "superseded", "void"]).optional(),
-    })
-    .optional(),
-  pull: z.number().int().min(1).optional(),
-  absentChecks: z
-    .object({ headSha: z.string(), evidence: z.string(), localGate: z.string() })
-    .optional(),
-  skipRules: z.object({ headSha: z.string(), method: z.literal("squash") }).optional(),
-  diagnosis: z
-    .object({
-      headSha: z.string(),
-      check: z.string(),
-      classification: z.enum(["own-regression", "baseline-blocked", "suspected-flake", "unknown"]),
-      evidence: z.string(),
-      dependencyTask: z.string().optional(),
-      changedTest: z.boolean().optional(),
-    })
-    .optional(),
-  repair: z
-    .object({
-      id: z.string(),
-      sourceHead: z.string(),
-      headSha: z.string(),
-      check: z.string(),
-      evidence: z.string(),
-    })
-    .optional(),
-  rerun: z.object({ headSha: z.string(), check: z.string(), evidence: z.string() }).optional(),
-  conflictRepair: z
-    .object({
-      fromHead: z.string(),
-      toHead: z.string(),
-      newBase: z.string(),
-      // `none` travels by its older name, so this shape is the one every
-      // build on this contract admits (`wireRepairImpact`, INF-493).
-      impact: z.enum([LEGACY_NO_IMPACT, "changed-work", "unknown"]),
-      changedPaths: z.array(z.string()),
-      evidence: z.string(),
-      validation: z.string(),
-    })
-    .optional(),
-  captainGuidance: z
-    .object({
-      mark: z.number().int().min(1),
-      impact: z.enum(MERGE_GUIDANCE_IMPACTS),
-      evidence: z.string(),
-    })
-    .optional(),
-});
-
 /**
  * A read of the home's knowledge, as the `knowledge` tool hands it to the
  * host (`KnowledgeReadInput`, docs/knowledge.md "The tools"). The home's
@@ -793,6 +733,15 @@ export const workRequests = {
   "inf:work:open-change": {
     effect: "change",
     request: asked({ input: openChangeInputSchema }),
+    response: toolTextSchema,
+  },
+  /**
+   * show_merge_card (`show-merge-card.md`): the home walks the steps up to
+   * the merge card and shows it, or answers the one thing missing.
+   */
+  "inf:work:show-merge-card": {
+    effect: "change",
+    request: asked({ input: showMergeCardInputSchema }),
     response: toolTextSchema,
   },
   /** check_change: the home reads the change's checks, and records what the crewmate declared. */

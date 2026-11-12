@@ -322,7 +322,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/panels/now/cards/board.tsx": 43,
   "src/panels/now/panel.tsx": 5,
   "src/panels/now/rows.ts": 3,
-  "src/panels/now/words.ts": 8,
+  "src/panels/now/words.ts": 13,
   "src/renderer/src/accounts/ConnectChips.tsx": 22,
   "src/renderer/src/accounts/CopyCode.tsx": 1,
   "src/renderer/src/accounts/CustomApiForm.tsx": 172,

@@ -53,6 +53,14 @@ describe("what a manifest declares about its cards", () => {
     expect(panelCommandDeclarationSchema.safeParse({ id: "none", label: "None" }).success).toBe(
       false,
     );
+    // A command may ask its panel by a name of its own, with no button (INF-3823's
+    // Collapse all parts), but still names exactly one thing it does.
+    const asks = { id: "fold", label: "Collapse all parts", asks: "collapse-parts" };
+    expect(panelCommandDeclarationSchema.safeParse(asks).success).toBe(true);
+    expect(panelCardsProblem({ commands: [asks] }, [], "tasks")).toBeNull();
+    expect(panelCommandDeclarationSchema.safeParse({ ...asks, presses: "open" }).success).toBe(
+      false,
+    );
     expect(
       panelCommandDeclarationSchema.safeParse({
         id: "odd",

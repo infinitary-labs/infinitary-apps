@@ -12,7 +12,7 @@ import { useShellStore } from "../app/store";
 import { setInstalledKeymap } from "../design/core/installedKeys";
 import type { SidePanelContribution } from "./contributions";
 import type { PluginHost } from "./host";
-import { pressHeaderButton } from "./PanelHeaderButtons";
+import { pressHeaderButton, pressPanelAsk } from "./PanelHeaderButtons";
 import { emitNamedCard } from "./panelCards";
 import { panelRail } from "./panelRail";
 import { railStore } from "./railStore";
@@ -23,9 +23,10 @@ import { railStore } from "./railStore";
  * with the key it suggests. The window installs them with the catalog's,
  * in the order the panels were added, so a suggested key is taken only
  * where no other command already uses it; Keyboard settings gives one a
- * key of a person's own. A command puts up one of the panel's named cards
- * or presses one of its header buttons - the same call its button makes,
- * as data - so it works while the panel is collapsed.
+ * key of a person's own. A command puts up one of the panel's named cards,
+ * presses one of its header buttons - the same call its button makes, as
+ * data - or asks the panel by a name of its own with no button, so it works
+ * while the panel is collapsed.
  */
 
 /** The commands of every registered panel, in the order the panels were added. */
@@ -79,7 +80,7 @@ function resolve(host: PluginHost, id: PanelCommandId) {
 
 /**
  * Why a panel's command cannot run now, beyond what holds every key: one
- * that presses a button needs its panel on a rail with something to show -
+ * that presses a button or asks the panel needs its panel on a rail with something to show -
  * for a panel whose own code decides, one it says shows; one that puts up
  * a card works from anywhere, Settings included, the panel collapsed or not.
  */
@@ -91,7 +92,7 @@ export function panelCommandRefusal(
   const found = resolve(host, id);
   if (!found) return m.panelCommandGone();
   if (recording) return m.panelCommandRecording();
-  if (found.command.presses === undefined) return null;
+  if (found.command.emits !== undefined) return null;
   if (railStore.isHidden(found.panel.id)) return m.panelCommandHidden({ title: found.panel.title });
   if (found.panel.source.get() === null)
     return m.panelCommandNothingToShow({ title: found.panel.title });
@@ -106,7 +107,7 @@ export function panelCommandRefusal(
 /**
  * Runs a panel's command: its named card at the front of the stack, from
  * the home screen, with the keyboard's focus in it once it is drawn
- * (`focusCard`); or its header button pressed into the panel.
+ * (`focusCard`); or its header button, or its own ask, pressed into the panel.
  */
 export function runPanelCommand(
   host: PluginHost,
@@ -121,6 +122,10 @@ export function runPanelCommand(
     if (s.view !== "home") s.setView("home");
     const cardId = emitNamedCard(panel.id, command.emits, command.data);
     if (cardId !== null) focusCard(panelCardEntryId(panel.id, cardId));
+    return;
+  }
+  if (command.asks !== undefined) {
+    pressPanelAsk(panel.id, command.asks, "key");
     return;
   }
   const button = panel.header?.find((candidate) => candidate.id === command.presses);

@@ -453,3 +453,105 @@ export function summaryOf(
     ...(failed > 0 ? [{ text: `${failed} could not start` }] : []),
   ];
 }
+
+/**
+ * How far a task's parts are along (INF-3823's plan, direction B, the
+ * captain's choice "Every task filed under it, reviews and dropped ones
+ * included, as the app counts today"): every task filed under it, finished
+ * or dropped ones counted as finished, from the row's own counts. Null on a
+ * task with no parts.
+ */
+export function partsCountOf(task: PanelTaskRow): { closed: number; total: number } | null {
+  const { closed, total } = task.children;
+  return total > 0 ? { closed, total } : null;
+}
+
+/** What one part reads as on a collapsed parent's bar: the row marks' own states. */
+export type PartState = "done" | "waiting" | "working" | "rest";
+
+/** The open parts of each task the board holds, by priority then age, read once per board. */
+const openPartsByBoard = new WeakMap<PanelTaskBoard, ReadonlyMap<string, PanelTaskRow[]>>();
+
+function openPartsOf(board: PanelTaskBoard): ReadonlyMap<string, PanelTaskRow[]> {
+  let parts = openPartsByBoard.get(board);
+  if (!parts) {
+    const next = new Map<string, PanelTaskRow[]>();
+    for (const task of board.tasks) {
+      if (task.parentId === null || task.status === "done" || task.status === "dropped") continue;
+      const list = next.get(task.parentId) ?? [];
+      list.push(task);
+      next.set(task.parentId, list);
+    }
+    for (const list of next.values())
+      list.sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt);
+    parts = next;
+    openPartsByBoard.set(board, parts);
+  }
+  return parts;
+}
+
+/**
+ * A collapsed parent's bar: one state per part, the finished ones first,
+ * then each open part in its order - waiting on you, working now, or not
+ * finished. The board lists every open task, so a part the board does not
+ * hold is finished; a count the board cannot match reads not finished.
+ */
+export function partsBarOf(board: PanelTaskBoard, task: PanelTaskRow): PartState[] {
+  const count = partsCountOf(task);
+  if (!count) return [];
+  const bar: PartState[] = Array.from({ length: count.closed }, () => "done" as const);
+  for (const part of openPartsOf(board).get(task.id) ?? []) {
+    if (bar.length >= count.total) break;
+    const group = nowGroupOf(part);
+    bar.push(group === "waiting" ? "waiting" : group === "working" ? "working" : "rest");
+  }
+  while (bar.length < count.total) bar.push("rest");
+  return bar;
+}
+
+/** One group's rows with the collapsed tasks' parts left out. */
+export type FoldedRows = {
+  /** The rows the group draws. */
+  shown: NowRow[];
+  /** Tasks with rows listed under them in this group: each offers the collapse control. */
+  parents: ReadonlySet<string>;
+  /** A part left out, by the collapsed task it is under: the outermost, which is drawn. */
+  hiddenUnder: ReadonlyMap<string, string>;
+  /** A row's nearest drawn row above it in its tree: ← from a part goes there. */
+  parentRowOf: ReadonlyMap<string, string>;
+};
+
+/**
+ * Leaves out the parts of collapsed tasks (INF-3823's plan): every row
+ * listed under a collapsed task, at any depth, except a part that waits on
+ * you, which is never hidden. A row's tree is the list's own indentation,
+ * so it agrees with what the group draws.
+ */
+export function foldRows(rows: readonly NowRow[], collapsed: ReadonlySet<string>): FoldedRows {
+  const shown: NowRow[] = [];
+  const parents = new Set<string>();
+  const hiddenUnder = new Map<string, string>();
+  const parentRowOf = new Map<string, string>();
+  // The rows above this one in its tree, outermost first.
+  const above: NowRow[] = [];
+  rows.forEach((row, index) => {
+    while (above.length > 0 && (above.at(-1)?.depth ?? 0) >= row.depth) above.pop();
+    const next = rows[index + 1];
+    if (next && next.depth > row.depth) parents.add(row.task.id);
+    const folder = above.find((up) => collapsed.has(up.task.id) && !hiddenUnder.has(up.task.id));
+    if (folder && nowGroupOf(row.task) !== "waiting") hiddenUnder.set(row.task.id, folder.task.id);
+    else shown.push(row);
+    const up = [...above].reverse().find((candidate) => !hiddenUnder.has(candidate.task.id));
+    if (up) parentRowOf.set(row.task.id, up.task.id);
+    above.push(row);
+  });
+  return { shown, parents, hiddenUnder, parentRowOf };
+}
+
+/** Where the panel keeps the tasks the captain collapsed, in its own store slice. */
+export const COLLAPSED_KEY = "collapsed";
+
+/** The collapsed tasks a stored value names: task ids, anything else ignored. */
+export function collapsedIdsOf(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
+}

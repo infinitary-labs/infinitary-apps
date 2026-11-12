@@ -104,8 +104,15 @@ export function pressHeaderButton(
     emitNamedCard(panelId, button.emits, button.data);
     return;
   }
+  pressPanelAsk(panelId, button.id, via);
+}
+
+/** Asks a panel by name, as its header button would: from the home screen, the panel opened first. */
+export function pressPanelAsk(panelId: string, ask: string, via: PanelAskVia): void {
+  const s = useShellStore.getState();
+  if (s.view !== "home") s.setView("home");
   if (railStore.isCollapsed(panelId)) railStore.toggleCollapsed(panelId);
-  pushPanelAsk(panelId, button.id, via);
+  pushPanelAsk(panelId, ask, via);
 }
 
 /** Lucide's, 14 px, the stroke of the header's own chevron and search. */

@@ -30,8 +30,12 @@ import { groupNavKey, nowNavItems, nowNavMove, rovingKey, rowNavKey } from "./na
 import styles from "./panel.css";
 import { reconcileBoard, reconcileRows } from "./reconcile";
 import {
+  COLLAPSED_KEY,
+  collapsedIdsOf,
   earlierRowsOf,
+  type FoldedRows,
   failedStartCount,
+  foldRows,
   hasSingleRegisteredRepoProject,
   isCardOnly,
   isPinned,
@@ -45,6 +49,9 @@ import {
   PANEL_GROUP_LABELS,
   PANEL_GROUPS,
   type PanelGroup,
+  type PartState,
+  partsBarOf,
+  partsCountOf,
   projectChipsOf,
   projectNameOf,
   rowStartOf,
@@ -53,7 +60,15 @@ import {
   summaryOf,
   wordOf,
 } from "./rows";
-import { failedCountWords, newCountWords } from "./words";
+import {
+  COLLAPSE_ALL_ASK,
+  EXPAND_ALL_ASK,
+  failedCountWords,
+  foldLabel,
+  newCountWords,
+  partsCountWords,
+  ROW_COLLAPSED_WORDS,
+} from "./words";
 
 /**
  * The Tasks panel (task-system design section 10, P4; the design skill's
@@ -138,7 +153,7 @@ import { failedCountWords, newCountWords } from "./words";
  */
 let paintedRows = 0;
 
-export default function TasksPanel({ reads, point, view, asks, rail, tasks }: PanelProps) {
+export default function TasksPanel({ reads, point, view, asks, rail, tasks, store }: PanelProps) {
   const [board, setBoard] = useState<PanelTaskBoard | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<PanelGroup>>(() => new Set());
   const [found, setFound] = useState<{ query: string; tasks: PanelTaskRow[] }>({
@@ -147,6 +162,10 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   });
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  // The tasks the captain collapsed (INF-3823's plan): none at first, and a
+  // collapsed task stays collapsed, kept in the panel's own store slice so a
+  // restart finds it as it was.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const groupsRef = useRef<HTMLDivElement>(null);
   const queryRef = useRef<HTMLInputElement>(null);
   const newestSeen = useRef(0);
@@ -262,6 +281,48 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
     [reads, wantsClosed],
   );
 
+  // The collapsed tasks as kept, and again whenever the kept list changes.
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      void store
+        .get(COLLAPSED_KEY)
+        .then((value) => {
+          if (live) setCollapsed(new Set(collapsedIdsOf(value)));
+        })
+        .catch(() => {});
+    load();
+    const stop = store.subscribe((key) => {
+      if (key === COLLAPSED_KEY) load();
+    });
+    return () => {
+      live = false;
+      stop();
+    };
+  }, [store]);
+  const boardNow = useRef(board);
+  boardNow.current = board;
+  const collapsedNow = useRef(collapsed);
+  collapsedNow.current = collapsed;
+  // Collapse or expand tasks, and keep the list: only tasks the board still
+  // holds are kept, so finished work that left the board leaves the list.
+  const setFolded = useCallback(
+    (ids: readonly string[] | "all", on: boolean) => {
+      const next = new Set(ids === "all" && !on ? [] : collapsedNow.current);
+      if (ids !== "all") for (const id of ids) on ? next.add(id) : next.delete(id);
+      collapsedNow.current = next;
+      setCollapsed(next);
+      const held = new Set(boardNow.current?.tasks.map((task) => task.id) ?? []);
+      void store
+        .set(
+          COLLAPSED_KEY,
+          [...next].filter((id) => held.has(id)),
+        )
+        .catch(() => {});
+    },
+    [store],
+  );
+
   // On its rail once the board holds an ask's record or a row it lists,
   // saying why not to a command that would open it; collapsed, it says how
   // many wait and how many work.
@@ -296,6 +357,24 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
     heldRows.current = reconcileRows(heldRows.current, next);
     return heldRows.current;
   }, [board, query, project, found, typed]);
+  // Each group's rows with the collapsed tasks' parts left out. Typed words
+  // show every match, even a part under a collapsed task, and leave what is
+  // collapsed as it was.
+  const folded = useMemo(() => {
+    const kept = typed ? new Set<string>() : collapsed;
+    return new Map([...rows].map(([group, list]) => [group, foldRows(list, kept)] as const));
+  }, [rows, collapsed, typed]);
+  const fold = useMemo(() => {
+    const parents = new Set<string>();
+    const hiddenUnder = new Map<string, string>();
+    const parentRowOf = new Map<string, string>();
+    for (const group of folded.values()) {
+      for (const id of group.parents) parents.add(id);
+      for (const [id, up] of group.hiddenUnder) hiddenUnder.set(id, up);
+      for (const [id, up] of group.parentRowOf) parentRowOf.set(id, up);
+    }
+    return { parents, hiddenUnder, parentRowOf };
+  }, [folded]);
   if (board) {
     performance.mark("now:render:start");
     paintedRows = 0;
@@ -346,7 +425,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   // Position and inspection have different lifetimes. Only a changed list
   // or its layout measures rows; hovering reuses those positions, including
   // when inspection exposes an overflow dependency lane.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the edge ends and the expanded groups describe the DOM whose positions the observer reads
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the edge ends, the expanded groups and the collapsed tasks describe the DOM whose positions the observer reads
   useLayoutEffect(() => {
     const root = groupsRef.current;
     if (!root) return;
@@ -380,7 +459,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
       observer.disconnect();
       root.removeEventListener("animationend", measure);
     };
-  }, [edgeEnds, expanded]);
+  }, [edgeEnds, expanded, folded]);
   const inspectedId = restedId ?? view.litTaskId;
   const edges = useMemo(
     () =>
@@ -437,6 +516,17 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   useEffect(() => {
     if (caretAsk > 0) queryRef.current?.focus();
   }, [caretAsk]);
+  // Collapse all parts and Expand all parts, from command search.
+  const parentsNow = useRef(fold.parents);
+  parentsNow.current = fold.parents;
+  useEffect(
+    () =>
+      asks.subscribe((button: string) => {
+        if (button === COLLAPSE_ALL_ASK) setFolded([...parentsNow.current], true);
+        else if (button === EXPAND_ALL_ASK) setFolded("all", false);
+      }),
+    [asks, setFolded],
+  );
 
   const toggle = (group: PanelGroup) =>
     setExpanded((current) => {
@@ -461,12 +551,16 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
         group,
         open: typed !== "" || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
         collapsible: !OPEN_BY_DEFAULT.has(group),
-        taskIds: (rows.get(group) ?? []).map((row) => row.task.id),
+        taskIds: (folded.get(group)?.shown ?? []).map((row) => row.task.id),
       })),
-    [rows, typed, expanded, doneLeftOut],
+    [rows, folded, typed, expanded, doneLeftOut],
   );
   const navItems = useMemo(() => nowNavItems(shownGroups), [shownGroups]);
-  const stop = rovingKey(navItems, lastStop);
+  // A row a collapse hid hands its stop to the collapsed task it is under.
+  const hiddenStop = lastStop?.startsWith("row:")
+    ? fold.hiddenUnder.get(lastStop.slice("row:".length))
+    : undefined;
+  const stop = rovingKey(navItems, hiddenStop ? rowNavKey(hiddenStop) : lastStop);
   // A stop F6 lands on shows the ring: the key was the app's, not this page's.
   // So does the one focus follows to from a row that showed it.
   const focusStop = (
@@ -523,6 +617,23 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
     if (event.defaultPrevented) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = event.target as HTMLElement;
+    // On a task with parts listed under it, ← collapses it and → expands it;
+    // from a part, ← goes to the row it is listed under.
+    const rowId = target.matches("[data-now-row]") ? target.dataset.nowRow : undefined;
+    if (rowId && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+      const shut = !typed && collapsed.has(rowId);
+      if (fold.parents.has(rowId) && shut === (event.key === "ArrowRight")) {
+        event.preventDefault();
+        setFolded([rowId], !shut);
+        return;
+      }
+      const up = fold.parentRowOf.get(rowId);
+      if (event.key === "ArrowLeft" && up) {
+        event.preventDefault();
+        focusStop(rowNavKey(up));
+        return;
+      }
+    }
     // → from a row reaches its first control (a backlog row's Start, then
     // its pin); → and ← move between them, and ← from the first goes back.
     const item = target.closest<HTMLElement>("[data-now-item]");
@@ -701,6 +812,9 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
                 key={group}
                 group={group}
                 rows={rows.get(group) ?? []}
+                fold={folded.get(group)}
+                collapsed={typed ? NONE : collapsed}
+                onFold={setFolded}
                 board={board}
                 leftOut={group === "landed" ? doneLeftOut : 0}
                 newCount={
@@ -731,6 +845,11 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   );
 }
 
+const NONE: ReadonlySet<string> = new Set();
+
+/** Past this many parts a collapsed row's bar draws its segments with a hairline gap, so they fit. */
+const MANY_PARTS = 30;
+
 /** The last press on a row's Start: the row as it stood, and the app's refusal once it answered. */
 type StartPress = { taskId: string; updatedAt: number; refusal: string | null };
 
@@ -744,6 +863,9 @@ function boxKey(row: HTMLElement): string {
 export function Group({
   group,
   rows,
+  fold,
+  collapsed = NONE,
+  onFold,
   board,
   leftOut = 0,
   newCount = 0,
@@ -765,6 +887,12 @@ export function Group({
 }: {
   group: PanelGroup;
   rows: NowRow[];
+  /** The rows with the collapsed tasks' parts left out; all of them when absent. */
+  fold?: FoldedRows | undefined;
+  /** The tasks collapsed now: a collapsed row draws its bar. */
+  collapsed?: ReadonlySet<string>;
+  /** Collapse or expand a task's parts; the control is drawn only where it is set. */
+  onFold?: (ids: readonly string[], on: boolean) => void;
   board: PanelTaskBoard;
   /** Rows of this group the board left out until it is read whole (`leftOutDone`), counted with its own. */
   leftOut?: number;
@@ -809,13 +937,16 @@ export function Group({
   const body = useMemo(() => {
     if (!open) return null;
     const names = { projects };
-    return rows.map(({ task, depth, home }) => {
+    return (fold?.shown ?? rows).map(({ task, depth, home }) => {
       const start =
         (group === "backlog" || home === "backlog") && press !== undefined
           ? rowStartOf(task)
           : null;
       const pressed =
         press?.taskId === task.id && press.updatedAt === task.updatedAt ? press : null;
+      const count = partsCountOf(task);
+      const folds = onFold !== undefined && fold?.parents.has(task.id) === true;
+      const shut = folds && collapsed.has(task.id);
       return (
         <Row
           key={task.id}
@@ -840,12 +971,21 @@ export function Group({
           onStart={onStart}
           onFocusStart={onFocusStart}
           onPin={onPin}
+          parts={count ? `${count.closed}/${count.total}` : undefined}
+          folds={folds}
+          shut={shut}
+          bar={shut ? partsBarOf(board, task).join(" ") : undefined}
+          onFold={onFold}
         />
       );
     });
   }, [
     open,
     rows,
+    fold,
+    collapsed,
+    onFold,
+    board,
     group,
     projects,
     singleProject,
@@ -940,6 +1080,11 @@ const Row = memo(function Row({
   onStart,
   onFocusStart,
   onPin,
+  parts,
+  folds = false,
+  shut = false,
+  bar,
+  onFold,
 }: {
   /** The actual rendered section, including open rows nested in Working. */
   group: PanelGroup;
@@ -969,13 +1114,25 @@ const Row = memo(function Row({
   onFocusStart?: (start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
   /** The row's pin, on a panel that pins tasks. */
   onPin?: ((task: PanelTaskRow) => void) | undefined;
+  /** Its finished parts and all of them, `3/7`, on a task with parts. */
+  parts?: string | undefined;
+  /** It has rows listed under it: it offers the collapse control. */
+  folds?: boolean;
+  /** It is collapsed. */
+  shut?: boolean;
+  /** A collapsed row's bar: each part's state, parted by spaces. */
+  bar?: string | undefined;
+  onFold?: ((ids: readonly string[], on: boolean) => void) | undefined;
 }) {
   paintedRows += 1;
   const word = wordOf(task);
   const trailing = rowTrailing(task, singleProject ? "" : projectName);
   const place = task.place ? ` · ${task.place.where}` : "";
   const waiting = task.blockedBy.length > 0 ? ` · Blocked by ${task.blockedBy.join(", ")}` : "";
-  const label = `${task.key} · ${task.title} · ${projectName}${place} · ${taskStatusLabel(taskStatusOf(task))}${waiting}`;
+  const [closedParts = "", allParts = ""] = parts?.split("/") ?? [];
+  const partsWords = parts ? ` · ${partsCountWords(Number(closedParts), Number(allParts))}` : "";
+  const shutWords = shut ? ` · ${ROW_COLLAPSED_WORDS}` : "";
+  const label = `${task.key} · ${task.title} · ${projectName}${place} · ${taskStatusLabel(taskStatusOf(task))}${waiting}${partsWords}${shutWords}`;
   const row = (
     <button
       type="button"
@@ -989,6 +1146,7 @@ const Row = memo(function Row({
       data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
       data-now-connecting={trailing.connecting ? "" : undefined}
       data-now-catching-up={trailing.catchingUp ? "" : undefined}
+      data-now-collapsed={shut ? "" : undefined}
       data-now-nav={rowNavKey(task.id)}
       tabIndex={isStop ? 0 : -1}
       style={{ "--depth": String(depth) } as CSSProperties}
@@ -1020,6 +1178,19 @@ const Row = memo(function Row({
       {(group === "queued" || home === "queued") && task.queueWait && task.status === "open" && (
         <span data-now-queue-wait="">{task.queueWait.line}</span>
       )}
+      {bar && (
+        <span
+          data-now-bar=""
+          aria-hidden="true"
+          data-now-many={bar.split(" ").length > MANY_PARTS ? "" : undefined}
+        >
+          {bar.split(" ").map((state, index) => (
+            // The bar is the parts in order; a part has no identity of its own here.
+            // biome-ignore lint/suspicious/noArrayIndexKey: one segment per part, in order
+            <i key={index} data-now-part={state as PartState} />
+          ))}
+        </span>
+      )}
       {trailing.place ? (
         // Last first: what does not fit leaves whole, the project's
         // name before the place, never "out of reach" or "catching up".
@@ -1044,14 +1215,17 @@ const Row = memo(function Row({
     </button>
   );
   const pin = isCardOnly(task) ? undefined : onPin;
-  if (startLabel === undefined && !pin) return row;
+  if (startLabel === undefined && !pin && parts === undefined && !folds) return row;
   const focusControl = (control: HTMLElement, row: HTMLElement, at: PanelTaskRow) => {
     onStop?.(rowNavKey(at.id));
     onFocusStart?.(control, row, at);
   };
   return (
-    <div data-now-item="">
+    <div data-now-item="" data-now-folds={folds || parts !== undefined ? "" : undefined}>
       {row}
+      {(folds || parts !== undefined) && (
+        <RowFold task={task} parts={parts} folds={folds} shut={shut} onFold={onFold} />
+      )}
       <RowControls>
         {startLabel !== undefined && (
           <RowStart
@@ -1069,6 +1243,79 @@ const Row = memo(function Row({
     </div>
   );
 });
+
+/**
+ * A task's parts at its row's end (INF-3823's plan): the finished parts and
+ * all of them in mono, `3/7`, and, where rows list under it, the panel's
+ * own chevron, as on a folding group's header; a press collapses or expands
+ * it. The keyboard collapses and expands from the row (← and →), so it is
+ * no stop of its own. Its width is kept on the row's item (`--now-fold-w`)
+ * so the title and the row's controls stay clear of it.
+ */
+function RowFold({
+  task,
+  parts,
+  folds,
+  shut,
+  onFold,
+}: {
+  task: PanelTaskRow;
+  parts: string | undefined;
+  folds: boolean;
+  shut: boolean;
+  onFold?: ((ids: readonly string[], on: boolean) => void) | undefined;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    const set = () => box.parentElement?.style.setProperty("--now-fold-w", `${box.offsetWidth}px`);
+    set();
+    const observer = new ResizeObserver(set);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+  const label = foldLabel(shut, task.key);
+  const rest = useRestLabel(folds ? label : undefined);
+  const count = parts && (
+    <span className="n" data-now-parts="">
+      {parts}
+    </span>
+  );
+  if (!folds || !onFold) {
+    return (
+      <span
+        data-now-fold=""
+        aria-hidden="true"
+        ref={(element) => {
+          ref.current = element;
+        }}
+      >
+        {count}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      data-now-fold={task.id}
+      tabIndex={-1}
+      aria-label={label}
+      aria-expanded={shut ? "false" : "true"}
+      {...rest}
+      ref={(element) => {
+        ref.current = element;
+        rest.ref(element);
+      }}
+      onClick={() => onFold([task.id], !shut)}
+    >
+      {count}
+      <span className="caret" aria-hidden="true">
+        <PanelExpandChevron collapsed={shut} />
+      </span>
+    </button>
+  );
+}
 
 /** The row this control belongs to. */
 function rowOfControl(control: HTMLElement): HTMLElement | null {

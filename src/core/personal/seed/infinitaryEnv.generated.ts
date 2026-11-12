@@ -1497,6 +1497,12 @@ declare module "@infinitary/contracts" {
     label: string;
     emits?: string;
     presses?: string;
+    /**
+     * Instead of \`emits\` or \`presses\`: a name of the panel's own, with no
+     * button, that the command asks the panel by, heard as a header button's
+     * press (\`asks.subscribe\`); it opens the panel first.
+     */
+    asks?: string;
     data?: StoreValue;
     /**
      * A key it suggests, as a Mac writes it: \`⌘B\`, \`⇧⌘F\`, \`⌃⌥N\`, \`F7\`. The

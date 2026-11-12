@@ -4,6 +4,7 @@ import { RECORD_NEXT_LABELS } from "../../shared/recordBar";
 import { taskMovesOf } from "../../shared/taskMoves";
 import {
   earlierRowsOf,
+  foldRows,
   hasSingleRegisteredRepoProject,
   isPinned,
   leftOutDone,
@@ -11,6 +12,8 @@ import {
   newestListedWrite,
   newFilingCount,
   onRail,
+  partsBarOf,
+  partsCountOf,
   projectChipsOf,
   projectNameOf,
   rowStartOf,
@@ -776,4 +779,121 @@ it("names each pending batch state without moving it to the Queued group", () =>
         ?.map((row) => row.task.id),
     ).toEqual([member.id]);
   }
+});
+
+/**
+ * A parent's progress and its collapse (INF-3823's plan, direction B, with
+ * the captain's answers: "None. Everything starts expanded as today, and a
+ * task stays collapsed once you collapse it." and "Every task filed under
+ * it, reviews and dropped ones included, as the app counts today.").
+ */
+describe("a task with parts (INF-3823)", () => {
+  const parent = task({
+    id: "plan",
+    key: "FI3-1",
+    title: "Translate the app",
+    status: "active",
+    activity: "idle",
+    children: { total: 5, closed: 2 },
+  });
+  const working = task({
+    id: "ship",
+    key: "FI3-4",
+    parentId: "plan",
+    status: "active",
+    activity: "running",
+    createdAt: 4,
+  });
+  const decision = task({
+    id: "ask",
+    key: "FI3-5",
+    parentId: "plan",
+    status: "active",
+    activity: "idle",
+    waitingCardId: "card-1",
+    createdAt: 5,
+  });
+  const queued = task({
+    id: "iphone",
+    key: "FI3-6",
+    parentId: "plan",
+    status: "open",
+    activity: "idle",
+    createdAt: 6,
+  });
+  const review = task({
+    id: "review",
+    key: "FI3-7",
+    parentId: "iphone",
+    status: "open",
+    activity: "idle",
+    createdAt: 7,
+  });
+  const solo = task({
+    id: "solo",
+    key: "FI3-9",
+    status: "active",
+    activity: "running",
+    createdAt: 9,
+  });
+  const tree = board({ tasks: [parent, working, decision, queued, review, solo] });
+  const workingFolded = (collapsed: string[] = []) =>
+    foldRows(rowsOf(tree, { query: "", projectId: null }).get("working") ?? [], new Set(collapsed));
+
+  it("counts every task filed under it, finished and dropped ones as finished, from the row's own counts", () => {
+    expect(partsCountOf(parent)).toEqual({ closed: 2, total: 5 });
+    expect(partsCountOf(solo)).toBeNull();
+  });
+
+  it("draws one bar segment per part: finished first, then each open part by its state, in order", () => {
+    expect(partsBarOf(tree, parent)).toEqual(["done", "done", "working", "waiting", "rest"]);
+    // A part the board does not list reads not finished, never a made-up state.
+    const sparse = board({ tasks: [{ ...parent, children: { total: 4, closed: 1 } }] });
+    expect(partsBarOf(sparse, sparse.tasks[0] as PanelTaskRow)).toEqual([
+      "done",
+      "rest",
+      "rest",
+      "rest",
+    ]);
+  });
+
+  it("lists everything while nothing is collapsed, offering the control on each row with rows under it", () => {
+    const folded = workingFolded();
+    expect(folded.shown.map((row) => row.task.id)).toEqual([
+      "plan",
+      "ship",
+      "iphone",
+      "review",
+      "solo",
+    ]);
+    expect([...folded.parents].sort()).toEqual(["iphone", "plan"]);
+    expect(folded.hiddenUnder.size).toBe(0);
+    expect(folded.parentRowOf.get("review")).toBe("iphone");
+  });
+
+  it("leaves out every row under a collapsed task, at any depth, each under the drawn task", () => {
+    const folded = workingFolded(["plan"]);
+    expect(folded.shown.map((row) => row.task.id)).toEqual(["plan", "solo"]);
+    expect(folded.hiddenUnder.get("ship")).toBe("plan");
+    expect(folded.hiddenUnder.get("review")).toBe("plan");
+    // It still offers the control, so it can be expanded again.
+    expect(folded.parents.has("plan")).toBe(true);
+    // A collapse under a collapsed task keeps its own state, and hides only its own rows once expanded.
+    expect(workingFolded(["iphone"]).shown.map((row) => row.task.id)).toEqual([
+      "plan",
+      "ship",
+      "iphone",
+      "solo",
+    ]);
+  });
+
+  it("never hides a part that waits on you, as in Pinned where it lists under its parent", () => {
+    const pinned = board({
+      tasks: [{ ...parent, pinnedAt: 10 }, working, decision, queued, solo],
+    });
+    const rows = rowsOf(pinned, { query: "", projectId: null }).get("pinned") ?? [];
+    const folded = foldRows(rows, new Set(["plan"]));
+    expect(folded.shown.map((row) => row.task.id)).toEqual(["plan", "ask"]);
+    expect(folded.parentRowOf.get("ask")).toBe("plan");
+  });
 });

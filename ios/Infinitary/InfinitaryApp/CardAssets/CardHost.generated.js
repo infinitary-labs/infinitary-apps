@@ -10751,12 +10751,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     label: string().min(1).max(60),
     emits: panelNameSchema.optional(),
     presses: panelNameSchema.optional(),
+    asks: panelNameSchema.optional(),
     data: panelCardDataSchema.optional(),
     key: string().min(1).max(12).refine((key) => parseSuggestedKey(key) !== null, "a key as a Mac writes it, such as ⌘B").optional(),
     words: array(string().min(1).max(PANEL_COMMAND_WORD_MAX).regex(/^\S+$/, "one word")).max(PANEL_COMMAND_WORDS_MAX).optional()
   }).refine(
-    (command) => command.emits === void 0 !== (command.presses === void 0),
-    "a command either emits a card or presses a header button"
+    (command) => [command.emits, command.presses, command.asks].filter((name) => name !== void 0).length === 1,
+    "a command either emits a card, presses a header button or asks the panel"
   );
   strictObject({
     id: panelCardIdSchema.optional(),

@@ -138,8 +138,11 @@ export const PANEL_COMMAND_WORDS_MAX = 8;
 export const PANEL_COMMAND_WORD_MAX = 24;
 
 /**
- * A command in command search: it puts up one of the named cards (`emits`)
- * or presses one of the header buttons (`presses`), exactly one of the two.
+ * A command in command search: it puts up one of the named cards (`emits`),
+ * presses one of the header buttons (`presses`), or asks the panel itself by
+ * a name of its own with no button (`asks`), exactly one of the three; an
+ * ask opens the panel and is heard as a header button's press is
+ * (`asks.subscribe`).
  * `key` suggests a key as a Mac writes it (`⌘B`, `⇧⌘F`, `⌃⌥N`, `F7`); the
  * app gives it only where no other command already uses it. `words` are
  * other words command search finds it by.
@@ -150,6 +153,7 @@ export const panelCommandDeclarationSchema: z.ZodType<PanelCommandDeclaration> =
     label: z.string().min(1).max(60),
     emits: panelNameSchema.optional(),
     presses: panelNameSchema.optional(),
+    asks: panelNameSchema.optional(),
     data: panelCardDataSchema.optional(),
     key: z
       .string()
@@ -163,8 +167,10 @@ export const panelCommandDeclarationSchema: z.ZodType<PanelCommandDeclaration> =
       .optional(),
   })
   .refine(
-    (command) => (command.emits === undefined) !== (command.presses === undefined),
-    "a command either emits a card or presses a header button",
+    (command) =>
+      [command.emits, command.presses, command.asks].filter((name) => name !== undefined).length ===
+      1,
+    "a command either emits a card, presses a header button or asks the panel",
   );
 
 /** What `cards.emit` takes, checked at the boundary in either realm. */

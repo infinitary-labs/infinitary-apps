@@ -53,3 +53,23 @@ export const EARLIER_LABEL = "earlier";
 
 /** The panel's own group at its top: the tasks the captain pinned, whatever their state (INF-3127). */
 export const PINNED_LABEL = "pinned";
+
+/**
+ * A task's parts (INF-3823's plan): how many are finished, in words, for
+ * the row's accessible label; the row shows them as `3/7`.
+ */
+export function partsCountWords(closed: number, total: number): string {
+  return `${closed} of ${total} ${total === 1 ? "part" : "parts"} finished`;
+}
+
+/** What a collapsed row's accessible label adds: its parts are not listed under it. */
+export const ROW_COLLAPSED_WORDS = "parts collapsed";
+
+/** The collapse control's name and rest label: what a press does. */
+export function foldLabel(collapsed: boolean, key: string): string {
+  return `${collapsed ? "Expand" : "Collapse"} ${key}'s parts`;
+}
+
+/** The panel's asks from command search: collapse every task with parts listed under it, or expand all. */
+export const COLLAPSE_ALL_ASK = "collapse-parts";
+export const EXPAND_ALL_ASK = "expand-parts";

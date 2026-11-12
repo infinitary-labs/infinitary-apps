@@ -53,6 +53,18 @@
       "words": ["kanban", "board"]
     },
     {
+      "id": "collapse-parts",
+      "label": "Collapse all parts",
+      "asks": "collapse-parts",
+      "words": ["fold", "subtasks", "children", "hide"]
+    },
+    {
+      "id": "expand-parts",
+      "label": "Expand all parts",
+      "asks": "expand-parts",
+      "words": ["unfold", "subtasks", "children", "show"]
+    },
+    {
       "id": "board-move",
       "label": "Move the selected task",
       "emits": "board",

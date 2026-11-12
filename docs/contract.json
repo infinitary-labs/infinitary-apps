@@ -50321,6 +50321,12 @@
                         "maxLength": 32,
                         "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
                       },
+                      "asks": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
                       "data": {
                         "$ref": "#/$defs/__schema0"
                       },
@@ -50811,6 +50817,12 @@
                         "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
                       },
                       "presses": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "asks": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 32,
@@ -70343,6 +70355,12 @@
                         "maxLength": 32,
                         "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
                       },
+                      "asks": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
                       "data": {
                         "$ref": "#/$defs/__schema0"
                       },
@@ -70833,6 +70851,12 @@
                         "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
                       },
                       "presses": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "asks": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 32,

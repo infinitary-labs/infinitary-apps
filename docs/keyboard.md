@@ -150,7 +150,7 @@ These keys are not commands and keep their own owners:
 ## A panel's commands
 
 A side panel adds its own commands to the window's (`commands` in its `manifest.json`; `docs/ui-plugins.md`, "A panel's cards"), whoever made it.
-Each is a window command the shell page runs, `panel:<panel>/<command>`, that never repeats on a held key and only shows or brings forward: it puts up one of the panel's named cards at the front of the stack, from anywhere, the panel collapsed or not, with the keyboard's focus in the card once it is drawn, or it presses one of the panel's header buttons, which opens the panel and asks it.
+Each is a window command the shell page runs, `panel:<panel>/<command>`, that never repeats on a held key and only shows or brings forward: it puts up one of the panel's named cards at the front of the stack, from anywhere, the panel collapsed or not, with the keyboard's focus in the card once it is drawn, or it presses one of the panel's header buttons, or asks the panel by a name of its own with no button (`asks`), either of which opens the panel and asks it.
 A focus move still waiting for the card to draw is forgotten once command search opens or the stage has shown that card and then shows another entry, even if the first card returns before it draws.
 The id is how a key a person gives it is kept: a saved key whose panel is not here now is listed under the commands this window does not know, runs nothing, survives Reset all keys, and works again when the panel comes back.
 
@@ -163,7 +163,7 @@ The app's own panels' commands read as the window's own, as the app's own panels
 A header button shows the key of its panel's command that does the same: the one that presses it, or that puts up the same card - with the same data first, else with any.
 A panel's own page reads its commands' keys too (`PanelProps.keys`; `panelKeys` and `usePanelKeys` in `src/renderer/src/app/keyHints.ts`): each of its commands that has a key now, by its id in the manifest, drawn as this computer draws it, with its `aria-keyshortcuts` where one press makes it.
 The window pushes them into the page's frame with its view state, again whenever a key changes, so a control in the page that does what a command does names that command's key; a crewmate's draft panel gets none, as its commands reach nothing.
-A command that presses a button refuses while its panel is hidden or has nothing to show (for a panel whose own code decides, while it says it does not show, in the words it gave `rail.show` when it gave some); one that puts up a card refuses only while a recording runs, beside what holds every key.
+A command that presses a button or asks the panel refuses while its panel is hidden or has nothing to show (for a panel whose own code decides, while it says it does not show, in the words it gave `rail.show` when it gave some); one that puts up a card refuses only while a recording runs, beside what holds every key.
 A button that presses is pressed as the captain's key (`via: "key"`), its own click as `click`, so a panel may tell them apart: the Tasks panel's search opens and closes on its click, and its key always opens it.
 
 ### The Tasks panel's commands
@@ -179,6 +179,8 @@ The app's own Tasks panel is an ordinary panel folder (`docs/ui-plugins.md`, "Th
 | `panel:now/board-done`, Show done tasks | the board, its Done · 7d list shown with focus on its rows | none: chosen by name |
 | `panel:now/board-dropped`, Show dropped tasks | the board, its Dropped · 7d list shown with focus on its rows | none: chosen by name |
 | `panel:now/board-move`, Move the selected task | the board, the selected tile's ⋯ menu open with focus on its first entry | none: chosen by name |
+| `panel:now/collapse-parts`, Collapse all parts | asks the panel to collapse every task with parts listed under it (`.claude/skills/infinitary-design/components/now/NowPanel.prompt.md`, "Parts"); focus on a hidden part goes to its task's row | none: chosen by name (fold, subtasks, children and hide find it too) |
+| `panel:now/expand-parts`, Expand all parts | asks the panel to expand every collapsed task | none: chosen by name (unfold, subtasks, children and show find it too) |
 
 The board's commands put the same card up with the place in its data (`{ "focus": "find" }`), and the board answers each time it is put up once (`card.revision`).
 Once one has a key, the board shows it on its own control that does the same (`docs/task-board.md`, "Keys").
@@ -382,7 +384,7 @@ A held movement key repeats as the arrow does; Move to the start, Move to the en
 
 A list is one Tab stop, and the arrows move through it, as lists do on a Mac.
 
-- The Tasks list (`src/panels/now/panel.tsx`, its keys in `nav.ts`): ↑ and ↓ move between the rows and the headers of the groups that open and close, Home and End to the ends; → opens a closed group and then steps into it, ← closes an open one and goes up from a row to its group's header; Enter opens the row's task as a click does; on a backlog row → moves to its Start, which Enter presses and ← leaves, and focus follows a task that starts to its row in its new group; → then reaches the row's pin (every row's first → where it has no Start), which Enter pins or unpins, and focus follows the row into or out of Pinned (INF-3127).
+- The Tasks list (`src/panels/now/panel.tsx`, its keys in `nav.ts`): ↑ and ↓ move between the rows and the headers of the groups that open and close, Home and End to the ends; → opens a closed group and then steps into it, ← closes an open one and goes up from a row to its group's header; on a task with rows listed under it ← collapses it and → expands it first, and from a part ← goes to the row it is listed under (INF-3823); Enter opens the row's task as a click does; on a backlog row → moves to its Start, which Enter presses and ← leaves, and focus follows a task that starts to its row in its new group; → then reaches the row's pin (every row's first → where it has no Start), which Enter pins or unpins, and focus follows the row into or out of Pinned (INF-3127).
   A row's stop is its task's, whatever group lists it, and the stop focus was last on stays the list's Tab stop while it is listed (`rovingKey`), so F6 away and back finds it again; while its task sits in a closed group, that group's header holds the stop.
   A group that is always open has a label, not a stop.
   Focus resting on a row whose task moves to another group (queued to working as its crewmate begins) stays on its row there, or goes to the header of the closed group it moved into; a row that leaves the list hands focus to the list's stop as it then stands.

@@ -29,7 +29,7 @@ The row keeps the full project name in its accessible label; the preview shows i
 A blocked or held row, or working one waiting on its checks, carries exactly one dim word after the title; a child row indents under its parent when both belong to the same group.
 The task key also stays on hover, search, and the row locator.
 The shared mark, word and reason follow the Shared task status rule below; group membership is not a status.
-Nothing else in the rail: no chips, meters, models, or ages - everything richer hides behind a rest (the crew summary, Row hover below) or a click (the record).
+Nothing else in the rail: no chips, models, or ages, and one meter only, a collapsed task's parts bar (Parts, below) - everything richer hides behind a rest (the crew summary, Row hover below) or a click (the record).
 
 ```jsx
 <NowPanel counts={{waiting:1,working:2}} groups={{
@@ -61,6 +61,28 @@ Group headers are the design system's micro labels; a collapsed group's header c
 Queued and backlog also count crew-filed rows the captain has not opened, as ` · N new` beside the count, and such a row's one dim word is `found on <key>` unless it is blocked or held.
 A collapsible header ends with the host panel expand chevron: the same 14px down stroke the rail uses to collapse a panel, in `--fg-2`, turned 180° so it points up while the group is collapsed and down while it is open.
 In the app this is a Tier-2 frame template (`src/renderer/src/plugins/builtin/now/`), not this JSX; the look is the same, and with nothing to show there is no panel and no rail.
+
+## Parts (INF-3823)
+
+The captain's words: "allow parent tasks that have children nodes in the tasks panel to be "collapsed". ideally, after collapsing, we can see the progress of the overall parent like how many steps are done, not losing visibility", with direction B, count and bar.
+A task with parts ends its row with how many are finished and how many there are, in dim mono on its first line, `3/7`, collapsed or expanded; it is the one place the panel shows a task's finished parts beside it, since finished parts list under done · 7d.
+The count reads every task filed under it, reviews and dropped ones included, a dropped one counted as finished, as the app counts a task's parts everywhere (the captain's answer "Every task filed under it, reviews and dropped ones included, as the app counts today"); only its direct parts count, never the parts of its parts.
+A row with rows listed under it in its group adds the host panel expand chevron after the count, the same 14px stroke as a folding group's header, in `--fg-2`, pointing down while expanded and up while collapsed.
+The count and the chevron are one button, 2px in from the row's right end, with a `--bg-2` surface on hover; a press collapses or expands the task, and its accessible name and rest label say what a press does, `Collapse FI3-12's parts` or `Expand FI3-12's parts`, with its state as expanded or not.
+A row with a count and nothing listed under it shows the count alone, with no button.
+The row's words keep clear of it, and the row's Start and pin show to its left on rest.
+The row's accessible label adds the count in words, `3 of 7 parts finished`, and `parts collapsed` while it is collapsed.
+
+Collapsing hides every row listed under the task in its group, at any depth, except a part that waits on you, which is never hidden: it keeps its row and its indentation under the collapsed task (in Pinned, where parts list under their parent whatever their state).
+A collapsed row adds a bar under its title, 3px tall, 2px below the title and 1px above the row's edge, from the title's left edge to the row's right: one segment per part, 2px apart (1px past 30 parts), each with a 2px radius - finished parts first in `--fg-3`, then each open part in its order, working now in `--warn`, waiting on you in `--accent`, and the rest as a `--line-2` outline.
+A part the board does not list reads finished when the count says so, otherwise not finished.
+Nothing starts collapsed (the captain's answer "None.
+Everything starts expanded as today, and a task stays collapsed once you collapse it."); a collapsed task stays collapsed across restarts, kept in the panel's own store, until it is expanded or leaves the board.
+Typed words in the filter show every match, a part under a collapsed task included, and leave what is collapsed as it was.
+Group counts and the collapsed summary still count every task; a blocker line to a hidden row is not drawn, as for a folded group.
+A row focus rested on that a collapse hid hands focus to the collapsed task's row.
+Command search offers `Collapse all parts` and `Expand all parts`, with no default key.
+The phone keeps its own list; it follows in a later piece.
 
 ## Start on a backlog row (INF-1663)
 
@@ -236,6 +258,7 @@ Resting on a row still does not slow the stage.
 
 The list is one Tab stop, and the arrows move through it (the app's `docs/keyboard.md`, "Lists and Settings").
 The arrows ↑ and ↓ move between the rows and the headers of the groups that open and close, Home and End go to the ends, → opens a closed group and steps into it, ← closes an open one and goes up from a row to its header, and Enter opens the row's task as a click does.
+On a task with rows listed under it, ← collapses it and → expands it before anything else; from a part, ← goes to the row it is listed under, and from there on as before.
 On a backlog row, → moves to its Start, Enter or Space presses it, ← goes back to the row, and ↑ and ↓ move on as from the row; the Start is no Tab stop of its own.
 A task that starts from there moves to Queued, then Working, and focus follows its row.
 The header of a group that is always open is a label, not a stop.

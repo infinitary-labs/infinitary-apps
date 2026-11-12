@@ -315,6 +315,77 @@
     #000 calc(var(--now-start-w, 0px) + 18px)
   );
 }
+/* A task with parts (INF-3823's plan): its finished parts and all of them
+   in mono, then the panel's own chevron where rows list under it, at the
+   row's end on its first line, always shown. The row keeps its words
+   clear of it (`--now-fold-w`), and its Start and pin sit before it. */
+[data-now-item][data-now-folds] > [data-now-row] {
+  padding-inline-end: calc(6px + var(--now-fold-w, 0px));
+}
+[data-now] [data-now-fold] {
+  position: absolute;
+  /* On the title's own line: the row's first line is as tall as its status
+     mark's (the panel's body size), and the title's smaller line sits
+     centred in it. */
+  top: calc(5px + (var(--text-base) - var(--text-sm)) * var(--leading-body) / 2);
+  inset-inline-end: 2px;
+  height: 1lh;
+  /* The title's own font, size and line, so the count's text sits on the
+     title's baseline: one line, read across. */
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  display: block;
+  white-space: nowrap;
+  padding-block: 0;
+  padding-inline: 4px 2px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--fg-2);
+}
+[data-now] span[data-now-fold] {
+  padding-inline-end: 4px;
+  pointer-events: none;
+}
+[data-now] button[data-now-fold]:hover {
+  background: var(--bg-2);
+}
+[data-now-fold] .caret {
+  margin-inline-start: 2px;
+  vertical-align: middle;
+}
+/* A collapsed task's bar: one segment per part, in the row marks' colors -
+   finished, working now, waiting on you, not finished - 3px under its title. */
+[data-now-bar] {
+  grid-column: 2 / -1;
+  grid-row: 3;
+  display: flex;
+  gap: 2px;
+  height: 3px;
+  margin: 2px 0 1px;
+  overflow: hidden;
+}
+[data-now-bar][data-now-many] {
+  gap: 1px;
+}
+[data-now-bar] i {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: var(--radius-xs);
+}
+[data-now-part="done"] {
+  background: var(--fg-3);
+}
+[data-now-part="working"] {
+  background: var(--warn);
+}
+[data-now-part="waiting"] {
+  background: var(--accent);
+}
+[data-now-part="rest"] {
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
 :is([data-now-item]:hover, [data-now-item]:has(:focus-visible)) .key {
   opacity: 0;
 }
@@ -330,6 +401,10 @@
   align-items: center;
   gap: 4px;
   pointer-events: none;
+}
+/* Beside a task's parts, its Start and pin sit before them. */
+[data-now] [data-now-item][data-now-folds] > [data-now-controls] {
+  inset-inline-end: calc(8px + var(--now-fold-w, 0px));
 }
 [data-now] [data-now-start],
 [data-now] [data-now-pin] {

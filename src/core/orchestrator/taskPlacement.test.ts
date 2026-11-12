@@ -25,6 +25,7 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import type { CrewMachines } from "../placed/crewMachines";
+import { LOCAL_MACHINE_ID } from "../session/session";
 import { seedTask } from "../tasks/seedTask";
 import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
 import { PLACED_WAIT_DAY_MS } from "./taskPlacement";
@@ -281,5 +282,24 @@ describe("where a task runs", () => {
       source: "task",
       reason: "Your first mate chooses a computer when this task starts. It stays there.",
     });
+  });
+
+  it("tells a crewmate and the first mate to hand the captain files on a card only where that computer takes them (INF-3757)", () => {
+    // An older computer's emit_card has no files: its crewmate keeps the old way.
+    const takes = { now: false };
+    const machines = {
+      ...oneComputer().machines,
+      takesCardFiles: () => takes.now,
+    } as unknown as CrewMachines;
+    const { supervisor } = setup(fakeCrewmate(), { machines });
+    expect(supervisor.placement.computersFor(MINI).computers?.cardFiles).toBe(false);
+    expect(supervisor.placement.everyComputerTakesCardFiles()).toBe(false);
+    // A crewmate on the home always has them.
+    expect(supervisor.placement.computersFor(LOCAL_MACHINE_ID).computers).not.toHaveProperty(
+      "cardFiles",
+    );
+    takes.now = true;
+    expect(supervisor.placement.computersFor(MINI).computers).not.toHaveProperty("cardFiles");
+    expect(supervisor.placement.everyComputerTakesCardFiles()).toBe(true);
   });
 });

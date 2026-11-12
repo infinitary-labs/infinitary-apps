@@ -603,6 +603,8 @@ export function buildEmittedCard(
     status: "ready",
     createdAt,
     ...(input.pictures?.length ? { pictures: input.pictures } : {}),
+    // A revision's list replaces the card's: one without files takes them away.
+    ...(input.files?.length ? { files: input.files } : {}),
     // Facts first, then the author's hint, which only widens (the
     // captain's Q5 A); decided again on every revision, since a revised
     // body can hold a different table or picture.

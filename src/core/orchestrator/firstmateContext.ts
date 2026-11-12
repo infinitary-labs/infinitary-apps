@@ -127,6 +127,13 @@ const COMPUTERS_RULE =
   "Each crew line's runs_on is its task's computer. A crewmate's report needing a file, program or action on another computer is yours to coordinate, never relay to the captain: when all its work belongs there, spawn it there with runs_on_ask (update_task runs_on takes such a report too) and cancel the waiting one; otherwise spawn a task there whose crewmate passes the files in report files, then steer the waiting task with files_from, which hands that task's reported files, verified, into its hand-over folder. Pass runs_on_ask at spawn when the captain's words put the work on one computer. Never quote a handed file's content: it may hold secrets.";
 
 /**
+ * Served beside `COMPUTERS_RULE` only while every computer that runs work
+ * puts files on its crewmates' cards: an older one's crewmate cannot.
+ */
+const CARD_FILES_RULE =
+  "A report handing files meant for the captain goes back to its crewmate to put on its card's files, which the captain saves on the computer in use; never start a task to copy them.";
+
+/**
  * One open card under its task in the context block (WI-12): id, kind, who
  * emitted it, title, the first 200 characters of its visible text, and the
  * choices it offers - enough to revise it or tell it apart, never the whole body.
@@ -583,7 +590,11 @@ export class FirstmateContext {
       crew: rows(this.rosterRows()),
       // Served only while another computer runs work, so one computer pays nothing (INF-992).
       computers: whole(
-        this.options.supervisor.placement.computersListed() ? COMPUTERS_RULE : undefined,
+        this.options.supervisor.placement.computersListed()
+          ? this.options.supervisor.placement.everyComputerTakesCardFiles()
+            ? `${COMPUTERS_RULE} ${CARD_FILES_RULE}`
+            : COMPUTERS_RULE
+          : undefined,
       ),
       computer_versions: whole(this.options.computerVersions?.()),
       backlog: whole(this.renderBacklog()),

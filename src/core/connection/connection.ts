@@ -553,20 +553,23 @@ export function pushFrameIn(entry: JournalEntry, spelling: Spelling): string {
 }
 
 const CARD_ANNOTATIONS = contractChange("card-annotations");
+/** Files for the captain on a card (`card-files.md`). */
+const CARD_FILES = contractChange("card-files");
 
 /** Which added card fields a view's card decoder reads. */
-type CardReads = { updates: boolean; ended: boolean; annotations: boolean };
+type CardReads = { updates: boolean; ended: boolean; annotations: boolean; files: boolean };
 
 /**
  * Keep old desktop strict card decoders working: a snapshot leaves out each
  * added field the view does not read. Phones already ignore optional JSON fields.
  */
 function legacyCardSnapshot(value: unknown, reads: CardReads): unknown {
-  if (!Array.isArray(value) || (reads.updates && reads.ended)) return value;
-  return value.map(({ currentUpdateId, currentUpdateSeen, ended, ...card }) => ({
+  if (!Array.isArray(value) || (reads.updates && reads.ended && reads.files)) return value;
+  return value.map(({ currentUpdateId, currentUpdateSeen, ended, files, ...card }) => ({
     ...card,
     ...(reads.updates ? { currentUpdateId, currentUpdateSeen } : {}),
     ...(reads.ended ? { ended } : {}),
+    ...(reads.files && files ? { files } : {}),
   }));
 }
 
@@ -603,7 +606,7 @@ function cardPushFor(
       }),
     });
   }
-  if ((reads.updates && reads.ended) || entry.channel !== "inf:cards") return text;
+  if ((reads.updates && reads.ended && reads.files) || entry.channel !== "inf:cards") return text;
   const frame = JSON.parse(text);
   return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload, reads) });
 }
@@ -993,6 +996,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         ended: hello.system === "ios" || readsEndedCards(hello.protocolVersion, hello.changes),
         // A view that lists the change draws typed notes, the phone included; one without it reads plain lines.
         annotations: listsChange(hello.changes, CARD_ANNOTATIONS),
+        // An older desktop reads a card strictly; a phone ignores the field and draws no Save.
+        files: hello.system === "ios" || listsChange(hello.changes, CARD_FILES),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
@@ -1196,7 +1201,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         spelling: FIRST_SPELLING,
         appVersion: undefined,
         changes: undefined,
-        cardReads: { updates: false, ended: false, annotations: false },
+        cardReads: { updates: false, ended: false, annotations: false, files: false },
         sharedCards: false,
         taskAllow: false,
         streamed: "none",

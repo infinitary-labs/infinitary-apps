@@ -194,6 +194,58 @@ export function cardHeadingAfter(): string {
   return `After`;
 }
 
+export function cardFileLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîļé ~~]`;
+    case "ar-XB":
+      return `\u202eFile\u202c`;
+  }
+  return `File`;
+}
+
+export function cardFileSave(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eSave\u202c`;
+  }
+  return `Save`;
+}
+
+export function cardFileSaving(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽîñĝ ~~]`;
+    case "ar-XB":
+      return `\u202eSaving\u202c`;
+  }
+  return `Saving`;
+}
+
+export function cardFileSaved(input: { savedAs: string }): string {
+  const savedAs = input.savedAs;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[šáṽéð îñ Ðöŵñļöáðš áš ${savedAs} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202esaved in Downloads as \u202c${savedAs}`;
+  }
+  return `saved in Downloads as ${savedAs}`;
+}
+
+export function cardFileNotSaved(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${name} ŵáš ñöţ šáṽéð. Šáṽé îţ áĝáîñ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e was not saved. Save it again.\u202c`;
+  }
+  return `${name} was not saved. Save it again.`;
+}
+
 export function feedStarted(): string {
   switch (currentLanguage()) {
     case "en-XA":
@@ -7543,6 +7595,11 @@ export const MESSAGES = {
   cardHeadingWhatChanged,
   cardHeadingBefore,
   cardHeadingAfter,
+  cardFileLabel,
+  cardFileSave,
+  cardFileSaving,
+  cardFileSaved,
+  cardFileNotSaved,
   feedStarted,
   feedReported,
   feedReportedBare,
@@ -8256,6 +8313,11 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   cardHeadingWhatChanged: [],
   cardHeadingBefore: [],
   cardHeadingAfter: [],
+  cardFileLabel: [],
+  cardFileSave: [],
+  cardFileSaving: [],
+  cardFileSaved: ["savedAs"],
+  cardFileNotSaved: ["name"],
   feedStarted: [],
   feedReported: ["summary"],
   feedReportedBare: [],

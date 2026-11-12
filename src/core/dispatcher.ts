@@ -625,6 +625,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return opened.ok ? { browser: opened.handle } : { refusal: opened.text };
     },
 
+    "inf:cards:file": (cardId, fileId, offset) => services.cardFiles.piece(cardId, fileId, offset),
     "inf:cards:past": (cardId) => services.supervisor.cards.past(cardId) ?? null,
     "inf:cards:show-past": (cardId) => {
       const past = services.supervisor.cards.past(cardId);

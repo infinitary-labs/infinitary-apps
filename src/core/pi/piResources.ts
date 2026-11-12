@@ -99,8 +99,8 @@ export function crewmateEvidenceNote(evidenceDir: string): string {
  * here; selected proof still goes in evidence. The app enforces the folder's
  * lifetime, so the note does not ask the crewmate to classify old files.
  */
-export function crewmateTempNote(tempDir: string): string {
-  return `Your temporary folder is ${tempDir} (the app creates it). Put bulk working material there when you choose where it goes: downloads and unpacked copies, throwaway test environments, and bulk output from test runs. Do not point every process's temporary directory there, and do not change another project's own test conventions. This folder promises no retention after the task closes. It stays while you are working, idle, paused, or waiting for review or a merge. The app removes it when the task is done or dropped, after its writers stop, with no seven-day wait. A cancellation or a failure that closes the task can remove it without a last chance to copy files out; a failure that can resume does not. Selected proof belongs in your evidence folder, which keeps its seven-day policy and any live-task protection. A later task does not keep this temporary folder: move anything it needs into evidence before you finish. Put deliverables in the project, the chosen output location, your report, or a verified card copy, never only here or in evidence. If a volume is still mounted, the folder stays and is tried again; never force-detach a volume.`;
+export function crewmateTempNote(tempDir: string, cardFiles = true): string {
+  return `Your temporary folder is ${tempDir} (the app creates it). Put bulk working material there when you choose where it goes: downloads and unpacked copies, throwaway test environments, and bulk output from test runs. Do not point every process's temporary directory there, and do not change another project's own test conventions. This folder promises no retention after the task closes. It stays while you are working, idle, paused, or waiting for review or a merge. The app removes it when the task is done or dropped, after its writers stop, with no seven-day wait. A cancellation or a failure that closes the task can remove it without a last chance to copy files out; a failure that can resume does not. Selected proof belongs in your evidence folder, which keeps its seven-day policy and any live-task protection. A later task does not keep this temporary folder: move anything it needs into evidence before you finish. Put deliverables in the project, the chosen output location, your report, or a verified card copy, never only here or in evidence${cardFiles ? "; a file for the captain rides your card's files" : ""}. If a volume is still mounted, the folder stays and is tried again; never force-detach a volume.`;
 }
 
 /**
@@ -144,6 +144,8 @@ export type CrewmateComputers = {
   workers: readonly { name: string; sameComputer?: boolean }[];
   /** Its shell has `infinitary-files-axi`, which copies a file from another of them (docs/files.md). */
   files?: boolean;
+  /** False when this task's computer is older and its emit_card has no files (`card-files`). */
+  cardFiles?: false;
 };
 
 /** A crewmate's word for a computer that runs work, with its role. */
@@ -173,7 +175,7 @@ export function crewmateComputersNote(computers: CrewmateComputers): string {
   const reach = computers.files
     ? `To read a file on another of these computers, copy it with ${FILES_COMMAND} in your shell: \`ls <computer>:<folder>\` lists a folder, \`get <computer>:<path>\` copies one file into your hand-over folder and prints its path, and the bare command names each computer. A program or action on another of these computers, or a file that command refuses, is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until a file reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer reaches you only once you copy it.`
     : `A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until it reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer is such a file.`;
-  return `The captain's computers: ${listed.join("; ")}. ${here} ${reach} The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files. A handed${computers.files ? " or copied" : ""} file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
+  return `The captain's computers: ${listed.join("; ")}. ${here} ${reach} The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files.${computers.cardFiles === false ? "" : " A file for the captain to open, edit, attach or send rides your card's files, which the captain saves on the computer in use: never name its path for the captain, least of all one on another computer."} A handed${computers.files ? " or copied" : ""} file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
 }
 
 export function crewmateCardBodiesNote(cardBodiesDir: string): string {
@@ -324,7 +326,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
     renderReferenceImport(),
     ...(backend ? [crewmateBackendNote(backend)] : []),
     ...(evidenceDir ? [crewmateEvidenceNote(evidenceDir)] : []),
-    ...(tempDir ? [crewmateTempNote(tempDir)] : []),
+    ...(tempDir ? [crewmateTempNote(tempDir, computers?.cardFiles !== false)] : []),
     ...(cardBodiesDir ? [crewmateCardBodiesNote(cardBodiesDir)] : []),
     ...(timeZone ? [crewmateTimeZoneNote(timeZone)] : []),
     ...(language ? [crewmateLanguageNote(language)] : []),

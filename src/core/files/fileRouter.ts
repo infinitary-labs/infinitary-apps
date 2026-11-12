@@ -132,6 +132,42 @@ export class FileRouter {
     };
   }
 
+  /**
+   * Sets one file on a computer that runs work aside there, for the home to
+   * read piece by piece (a card's file for the captain's Save,
+   * docs/card-authoring.md "Files for the captain"). Refused in words when
+   * that computer is out of reach or must be updated first.
+   */
+  async setAsideThere(machine: string, path: string): Promise<FileSnapshot> {
+    const computer = this.options.computers().find((one) => one.id === machine);
+    if (!computer) throw new Refused("The computer that keeps this file is no longer on the list.");
+    if (!computer.inReach)
+      throw new Refused(
+        `${computer.name} keeps this file and is out of reach now; save it again once it is back.`,
+      );
+    if (!computer.answers)
+      throw new Refused(
+        `Infinitary on ${computer.name} must be updated before this file can be saved.`,
+      );
+    return fileSnapshotSchema.parse(
+      await this.options.ask(machine, "inf:files:snapshot", [{ path }]),
+    );
+  }
+
+  /** One piece of a copy set aside there, from `offset`. */
+  async readThere(machine: string, id: string, offset: number): Promise<Buffer> {
+    const piece = fileOrders["inf:files:read"].response.parse(
+      await this.options.ask(machine, "inf:files:read", [{ id, offset }]),
+    );
+    if (piece.offset !== offset) throw new Refused("The copy stopped short; save it again.");
+    return Buffer.from(piece.data, "base64");
+  }
+
+  /** Lets a copy set aside there go. */
+  async releaseThere(machine: string, id: string): Promise<void> {
+    await this.options.ask(machine, "inf:files:release", [{ id }]).catch(() => undefined);
+  }
+
   private async answer(run: () => Promise<FilesAnswer>): Promise<FilesAnswer> {
     try {
       return await run();

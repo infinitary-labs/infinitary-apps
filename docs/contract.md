@@ -174,6 +174,7 @@ A view's `inf:cards:minimize` changes saved stack visibility without resolving a
 The optional fourth boolean argument of `inf:cards:reply`, an older view's send-time decision that an ordinary card leaves the stack, is read no more (INF-770).
 Every replied-under card stays, and the home keeps the hold in the existing awaiting and reply-stamp fields; waiting stamped cards keep their place until answered.
 
+A card's files for the captain (`docs/card-authoring.md`, "Files for the captain") ride the card as references in its optional `files`, the `card-files` change, and travel only by the `inf:cards:file` view read, a piece of 1 MB at a time, when the captain clicks Save.
 A preview's project fonts (`docs/card-authoring.md`, "Fonts by reference") travel by the `inf:cards:typeface` view read, which answers the home's own copy of a font by its minted name, and by the `inf:work:typeface` work request, which carries a kept font home before the card that names it.
 
 A saved story's `version` is 1 or 2: version 2 carries up to six typed `checked` facts beside folded `verification`, and a version-1 story stays readable and keeps its rendering (`docs/forge.md`, "Saved change stories").

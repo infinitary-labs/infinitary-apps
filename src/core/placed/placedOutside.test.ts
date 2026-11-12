@@ -34,6 +34,8 @@ import {
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { renderIntegrationReply } from "../axi/integrationCommands";
 import type { IntegrationReply } from "../axi/protocol";
+import { CardFileReads } from "../files/cardFileReads";
+import { saveIntoDownloads } from "../files/downloadsSave";
 import * as hostEnvironment from "../hostEnv";
 import { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "../integrations";
 import { READ_HOUR_MS } from "../integrations/outsideReads";
@@ -422,6 +424,66 @@ describe("the files command between this Mac and a computer that runs work", () 
     // The other computer's own sign-ins stay there.
     const refused = await files.copy(`${there}:${join(at.dataDir, "home.json")}`);
     expect(refused.text).toContain("never copies");
+  });
+
+  // INF-3757, direction C, under the captain's condition: "the file content
+  // should not physically get attached to the card. data transfer should
+  // only happen when user click". A crewmate there puts a file on its card;
+  // the card reaches this Mac with the reference alone, and a Save in this
+  // Mac's window reads the copy kept there over the connection.
+  it("saves a card's file kept on the computer that runs work into this Mac's Downloads only on Save", async () => {
+    const { at, home } = await withFiles();
+    const letter = randomBytes(2 * 1024 * 1024 + 41);
+    model((_request, index) =>
+      index === 0
+        ? {
+            tools: [
+              {
+                name: "emit_card",
+                args: {
+                  title: "The letter is ready",
+                  body: "<p>The letter to the landlord is ready to send.</p>",
+                  files: [join(at.folders("t-letter").temp, "letter to the landlord.docx")],
+                },
+              },
+            ],
+          }
+        : { text: "The letter is on the card." },
+    );
+    mkdirSync(at.folders("t-letter").temp, { recursive: true });
+    writeFileSync(join(at.folders("t-letter").temp, "letter to the landlord.docx"), letter);
+    await at.start("t-letter", "Write the letter to the landlord.");
+    await expect
+      .poll(() => home.cards().find((card) => card.taskId === "t-letter")?.files?.length)
+      .toBe(1);
+    const card = home.cards().find((one) => one.taskId === "t-letter");
+    const file = card?.files?.[0];
+    if (!card || !file || !home.files) throw new Error("The card's file did not arrive.");
+    expect(file).toMatchObject({
+      name: "letter to the landlord.docx",
+      bytes: letter.length,
+      computer: at.deviceId,
+    });
+    // Nothing of the file crossed with the card, and nothing is set aside there yet.
+    const setAside = () => {
+      const dir = join(at.dataDir, "file-reach");
+      return existsSync(dir) ? readdirSync(dir) : [];
+    };
+    expect(setAside()).toEqual([]);
+    const reads = new CardFileReads({
+      card: (id) => home.cards().find((one) => one.id === id),
+      localDir: () => scratchDir("infinitary-card-files-none-here-"),
+      router: home.files,
+    });
+    const downloads = scratchDir("infinitary-card-files-downloads-");
+    const saved = await saveIntoDownloads({
+      folder: downloads,
+      read: (offset) => reads.piece(card.id, file.id, offset),
+    });
+    expect(saved.savedAs).toBe("letter to the landlord.docx");
+    expect(readFileSync(saved.path).equals(letter)).toBe(true);
+    // The copy set aside there for the save is let go once the last piece arrives.
+    await expect.poll(setAside).toEqual([]);
   });
 });
 

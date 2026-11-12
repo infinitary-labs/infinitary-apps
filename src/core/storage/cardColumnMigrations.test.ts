@@ -7,6 +7,7 @@ import {
   columnNames,
   REVERSE_AFTER_MERGE,
   REVERSE_ANSWERED_BY,
+  REVERSE_CARD_FILES,
   REVERSE_MIGRATION_57,
   REVERSE_MIGRATION_59,
   REVERSE_MIGRATION_65,
@@ -26,6 +27,7 @@ import type { AppDatabase } from "./db";
 import {
   CARD_AFTER_MERGE_MIGRATION_VERSION,
   CARD_ANSWERER_MIGRATION_VERSION,
+  CARD_FILES_MIGRATION_VERSION,
   openDatabase,
 } from "./db";
 import { dropViews } from "./views";
@@ -71,6 +73,16 @@ const olderCard = (meta: string) =>
 /** An older first mate card, as the versions before migrations 77 and 87 saved it. */
 const OLDER_FIRSTMATE_CARD =
   "INSERT INTO cards (id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('legacy', 'card', 'firstmate', 15, 'Before', 'firstmate', '<p>Old.</p>', '[]', 'ready', 1)";
+
+/** A letter a crewmate kept for the captain on a computer that runs work: its reference, never its bytes. */
+const LETTER = {
+  id: `t1-${"b".repeat(32)}`,
+  name: "letter to the landlord.docx",
+  bytes: 18_432,
+  sha256: "b".repeat(64),
+  path: `/work/tasks/t1/cards/t1-${"b".repeat(32)}.file`,
+  computer: "device-mac-mini",
+};
 
 /** Drops these card columns, newest last, one statement each. */
 const dropCardColumns = (...columns: string[]) =>
@@ -442,6 +454,25 @@ const CARD_COLUMNS: CardColumnCase[] = [
       expect(store.get(offer.id)).not.toHaveProperty("afterMerge");
     },
     reverse: REVERSE_AFTER_MERGE,
+    rows: "older card",
+  },
+  // INF-3757, direction C: a crewmate's card carries files for the captain
+  // by reference, and a restart must keep drawing their Save rows; a
+  // revision with no files draws none.
+  {
+    it: "INF-3757 upgrades existing cards with no files, keeps a card's file references across reopen and reverses without losing it",
+    from: CARD_FILES_MIGRATION_VERSION - 1,
+    added: "files_json",
+    card: olderCard("crewmate"),
+    id: "card-old",
+    legacy: (offer) => expect(offer).not.toHaveProperty("files"),
+    write: (offer, store) => store.upsert({ ...offer, files: [LETTER] }),
+    readBack: (store, offer) => {
+      expect(store.get(offer.id)?.files).toEqual([LETTER]);
+      store.upsert(offer);
+      expect(store.get(offer.id)).not.toHaveProperty("files");
+    },
+    reverse: REVERSE_CARD_FILES,
     rows: "older card",
   },
 ];

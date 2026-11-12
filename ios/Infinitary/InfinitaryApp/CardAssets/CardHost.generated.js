@@ -4815,6 +4815,31 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     waitsFor: array(string().max(64)).optional()
   });
   const afterMergeShownListSchema = array(afterMergeShownSchema);
+  const CARD_FILE_ID = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})$/;
+  const cardFileSchema = strictObject({
+    id: string().regex(CARD_FILE_ID),
+    /** The file's own name, as the captain's Downloads gets it. */
+    name: string().min(1).max(255),
+    bytes: number().int().positive(),
+    sha256: string().regex(/^[0-9a-f]{64}$/),
+    path: string().min(1).max(4096),
+    computer: string().min(1).max(128).optional()
+  });
+  object({
+    name: string(),
+    /** The whole file's size and sha256, which the saving window checks. */
+    bytes: number().int().positive(),
+    sha256: string().regex(/^[0-9a-f]{64}$/),
+    offset: number().int().nonnegative(),
+    /** The piece, base64; at most `CARD_FILE_PIECE_BYTES`. */
+    data: string()
+  });
+  object({
+    /** The name it has in Downloads, which differs from its own when that name held another file. */
+    savedAs: string(),
+    /** The full path on the computer that saved it, for showing it in the file browser. */
+    path: string()
+  });
   const cardCornerSchema = object({
     icon: literal("minus"),
     label: string(),
@@ -5389,6 +5414,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * card that names none.
      */
     pictures: array(cardPictureSchema).optional(),
+    /** Files for the captain (`cards.files_json`, docs/card-authoring.md): references, never bytes. */
+    files: array(cardFileSchema).optional(),
     /**
      * The width the host decided at emit (`cards.width`): the body's facts,
      * widened by the author's hint. Absent means default-wide; regular means short plain copy.
@@ -5730,6 +5757,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     afterMerge: afterMergeShownListSchema.optional(),
     actions: array(cardActionSchema),
     pictures: array(cardPictureSchema).optional(),
+    files: array(cardFileSchema).optional(),
     width: cardWidthSchema.optional(),
     attachment: liveAttachmentSchema.optional(),
     risk: riskAssessmentSchema.optional(),

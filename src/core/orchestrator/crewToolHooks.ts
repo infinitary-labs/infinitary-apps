@@ -1,15 +1,18 @@
+import { homedir } from "node:os";
 import { join } from "node:path";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { type SpeedSelection, speedNote } from "@shared/crewSpeed";
 import { COMPUTER, HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import { isPullRepair } from "@shared/routingPolicy";
+import { protectedPlaces } from "../files/fileReach";
 import type {
   DownloadArtifactInput,
   GithubReadInput,
   GithubWriteInput,
   ReadWorkflowInput,
 } from "../forge";
+import { hostEnv } from "../hostEnv";
 import { jobExitWake } from "../jobs/jobManager";
 import { knowledgeBinding } from "../knowledge/knowledgeTools";
 import {
@@ -84,7 +87,13 @@ export class CrewToolHooks {
       tempDir: there?.temp ?? crewmateTempDir(this.core.options.paths, task.id),
       // A task on another computer keeps its reported files there and sends them home.
       ...(machine === LOCAL_MACHINE_ID
-        ? { handoverDir: crewmateHandoverDir(this.core.options.paths, task.id) }
+        ? {
+            handoverDir: crewmateHandoverDir(this.core.options.paths, task.id),
+            protectedPlaces: protectedPlaces({
+              userData: this.core.options.paths.userData,
+              home: hostEnv().HOME ?? homedir(),
+            }),
+          }
         : {}),
       // A task held on another computer checks its recordings and fonts where it runs.
       ...(machine === LOCAL_MACHINE_ID && this.core.options.probeMedia

@@ -1,6 +1,7 @@
 import type { AccountView } from "./accounts";
 import type { ChosenFile, DroppedPath } from "./attachments";
 import type { AutomationList, AutomationRule, AutomationSave, AutomationSpec } from "./automation";
+import type { CardFileSaved } from "./cardFiles";
 import type {
   Card,
   CardActionSource,
@@ -472,6 +473,12 @@ export type FirstmateApi = {
      * opened in, or a refusal in words.
      */
     openPage: (cardId: string) => Promise<{ refusal?: string; browser?: TaskBrowserHandle }>;
+    /**
+     * Save a file the card carries into this computer's Downloads, on the
+     * captain's click: the name it took there and its full path, or a
+     * refusal in words thrown as an error.
+     */
+    saveFile: (cardId: string, fileId: string) => Promise<CardFileSaved>;
     /** The captain's reply, verbatim; the core routes it to the card's author. */
     reply: (
       cardId: string,

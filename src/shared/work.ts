@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cardFileSchema } from "./cardFiles";
 import { CARD_MEDIA_KINDS, CARD_MEDIA_PIECE_BYTES, CARD_TYPEFACE_KINDS } from "./cardPictures";
 import {
   cardEffectSchema,
@@ -374,6 +375,8 @@ export const placedCardSchema = z.object({
   ),
   id: z.string().optional(),
   pictures: z.array(cardPictureSchema).optional(),
+  /** Files for the captain kept there, by reference (`card-files.md`); the home names this computer. */
+  files: z.array(cardFileSchema.omit({ computer: true })).optional(),
   presentationRevision: z.number().int().positive().optional(),
   sinceSeen: z.string().optional(), // `merge-card-since-seen.md`: never sent to an older home
   width: z.enum(["wide", "full"]).optional(),

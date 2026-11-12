@@ -4,6 +4,7 @@ import {
   addCardAfterMerge,
   addCardAnswerer,
   addCardContributions,
+  addCardFiles,
   clearInterimAnswers,
   migrateCardEffects,
   migrateOneMergeEffect,
@@ -1343,6 +1344,7 @@ export const MIGRATIONS: readonly Migration[] = [
   (db) => addColumn(db, "activity_events", "said_json", "TEXT"),
   // A task lane stuck at its provider after the same refusal three times in a row.
   addProviderRefusals,
+  addCardFiles,
 ];
 
 /**

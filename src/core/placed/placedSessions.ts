@@ -63,6 +63,7 @@ import type { WorkDevices } from "./workDevices";
 
 /** A computer that runs its tasks' stops at the close (`task-stops.md`, docs/leftover-programs.md). */
 const TASK_STOPS = contractChange("task-stops");
+const CARD_FILES = contractChange("card-files");
 
 /** A computer that serves show_merge_card (`show-merge-card.md`, INF-3717 piece 2). */
 const SHOW_MERGE_CARD = contractChange("show-merge-card");
@@ -380,6 +381,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    */
   takesStops(machine: string): boolean {
     return this.keepsBrowsers(machine) && this.listsStops(machine);
+  }
+
+  /** Whether the computer's emit_card takes files for the captain (docs/card-authoring.md). */
+  takesCardFiles(machine: string): boolean {
+    return listsChange(this.options.devices.version(machine)?.changes, CARD_FILES);
   }
 
   /** Whether the computer's close order runs the task's stops and answers its report. */

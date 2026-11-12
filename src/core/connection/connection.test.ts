@@ -746,6 +746,61 @@ describe("the home's connection", () => {
     },
   );
 
+  // INF-3757's files for the captain: a desktop from before them decodes a
+  // card strictly, so its copy leaves out `files`; a desktop listing the
+  // change saves them, and the phone, which ignores a field it does not
+  // know, gets them as they are. The card carries only the reference.
+  it("keeps an older desktop's card decoding while a desktop listing card files reads them", async () => {
+    const card = cardSchema.parse({
+      id: "card-inf3753-letter",
+      taskId: "inf3753",
+      title: "The letter is ready",
+      author: "crewmate",
+      priority: 30,
+      meta: "Crewmate",
+      body: "<p>The letter to the landlord is ready to send.</p>",
+      actions: [],
+      status: "ready",
+      createdAt: 1000,
+      files: [
+        {
+          id: `inf3753-${"a".repeat(32)}`,
+          name: "letter to the landlord.docx",
+          bytes: 18_432,
+          sha256: "a".repeat(64),
+          path: `/work/tasks/inf3753/cards/inf3753-${"a".repeat(32)}.file`,
+          computer: "device-mac-mini",
+        },
+      ],
+    });
+    const at = await home({
+      dispatch: (async (channel) => {
+        if (channel === "inf:cards:list") return [card];
+        throw new Error("Unexpected request");
+      }) as CoreDispatch,
+    });
+    const grant = await at.join();
+    const old = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
+    const current = await connectClient(grant, {
+      protocolVersion: PROTOCOL_VERSION,
+      changes: ["card-files"],
+    });
+    const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
+    const legacyDecoder = cardSchema.omit({ files: true }).strict();
+    expect(legacyDecoder.parse((await old.invoke("inf:cards:list", []))[0])).toMatchObject({
+      id: card.id,
+    });
+    expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
+    expect((await phone.invoke("inf:cards:list", []))[0]).toEqual(card);
+    at.events.emit("inf:cards", [card]);
+    const oldPush = await old.push((push) => push.channel === "inf:cards");
+    expect(legacyDecoder.parse((oldPush.payload as unknown[])[0])).toMatchObject({ id: card.id });
+    expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+    await old.close();
+    await current.close();
+    await phone.close();
+  });
+
   // INF-2225, INF-2214's approved shared cards: a desktop from before shared
   // cards decodes thread lines strictly, so its copy leaves out who
   // contributed a line, what it answers and whether it is a clarification;

@@ -156,6 +156,15 @@ export function addCardAfterMerge(db: AppDatabase): void {
 }
 
 /**
+ * The files for the captain a card holds by reference (docs/card-authoring.md,
+ * "Files for the captain"): name, size, sha256 and where the kept copy is,
+ * never the bytes. Dropping the column reverses it.
+ */
+export function addCardFiles(db: AppDatabase): void {
+  addColumn(db, "cards", "files_json", "TEXT");
+}
+
+/**
  * Shared cards (INF-2225, docs/card-threads.md "Shared cards"): who actually
  * wrote a thread line on a card that is not theirs, which captain message a
  * final answer ends, a closed card's dated clarification, the response a

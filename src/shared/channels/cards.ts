@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cardFilePieceSchema, cardFileSavedSchema } from "../cardFiles";
 import { cardNotesSchema } from "../cardNotes";
 import { CARD_MEDIA_PIECE_BYTES, CARD_MEDIA_TYPES, CARD_TYPEFACE_TYPES } from "../cardPictures";
 import {
@@ -158,6 +159,30 @@ export const cardChannels = {
       /** The piece, base64. */
       data: z.string(),
     }),
+  },
+  // A piece of a file for the captain a card carries (docs/card-authoring.md,
+  // "Files for the captain"): how the window whose Save the captain clicked
+  // gets the file, wherever its kept copy is, at most `CARD_FILE_PIECE_BYTES`
+  // from an offset. Nothing is read before that click.
+  "inf:cards:file": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([
+      z.string().min(1).max(256),
+      z.string().min(1).max(128),
+      z.number().int().nonnegative(),
+    ]),
+    response: cardFilePieceSchema,
+  },
+  // Saves a card's file into Downloads on the computer whose window asked,
+  // reading it through `inf:cards:file` (docs/card-authoring.md, "Files for
+  // the captain"): never over another file of the same name.
+  "inf:cards:save-file": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.string().min(1).max(256), z.string().min(1).max(128)]),
+    response: cardFileSavedSchema,
   },
   // A closed card as the captain last saw it (FI3-579 piece 2): a pure
   // read, null for a card that is open or unknown.

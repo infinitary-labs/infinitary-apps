@@ -16,6 +16,7 @@ import type { DevicePairing } from "./devices/pairing";
 import type { PhoneDoor } from "./devices/phoneDoor";
 import type { RemoteLogin } from "./devices/remoteLogin";
 import type { SshConnections } from "./devices/sshConnections";
+import type { CardFileReads } from "./files/cardFileReads";
 import type { FirstRunService } from "./firstRun";
 import type { ForgeSignIns } from "./forge";
 import type { FreezeRecorder } from "./freeze/freezeRecorder";
@@ -75,6 +76,8 @@ import type { WorkspaceService } from "./workspace/workspaceService";
 export type CoreServices = {
   runbooks: Runbooks;
   paths: AppPaths;
+  /** A card's files for the captain, read a piece at a time for a window's Save (docs/card-authoring.md). */
+  cardFiles: CardFileReads;
   auth: PiAuthService;
   vault: AccountVault;
   flagship: Flagship;

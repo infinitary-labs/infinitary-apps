@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-files",
+      "kind": "feature",
+      "title": "Save a crewmate's files from its card",
+      "body": "When a crewmate hands you a document to open, edit or send, it puts the file on its card instead of naming where it sits. Press Save on the file's row and it lands in Downloads on the computer you are using, even when the work ran on another Mac. Nothing is copied until you press Save, and a file already in Downloads is never written over.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-files-dark.webp",
+        "light": "card-files-light.webp",
+        "alt": "A crewmate's card with a file row naming landlord-letter.txt, its size and Save, saved in Downloads"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -58,6 +58,14 @@ A second copy of the same file lands under the same name.
 Neither computer keeps its own copy once the file is delivered.
 A copy left in `file-reach/` when the app stopped goes before the next one, and a set-aside copy nobody read for ten minutes is let go, since the home that asked for it stopped.
 
+## Files on a card
+
+A crewmate's file for the captain is kept with its task's card copies on the computer it runs on, and the card carries only its reference (`docs/card-authoring.md`, "Files for the captain").
+The captain's Save reads it then, and only then: the home reads its own copy in pieces, and a copy on a computer that runs work is set aside there with `inf:files:snapshot`, checked against the card's size and sha256, read with `inf:files:read` and let go with `inf:files:release` once the last piece is served or after two minutes with no piece asked (`CardFileReads`, `src/core/files/cardFileReads.ts`).
+The home keeps nothing of it: each piece goes on to the window that asked, which saves it into Downloads on its own computer.
+The home asks only for a copy whose name is that file's kept name.
+The copy there goes with that task's folder (`docs/task-retention.md`), so a Save after that answers that the app no longer keeps the file.
+
 ## What is refused
 
 The command follows that computer's own file permissions, and refuses the app's own sign-ins and keys by place, with links followed, so a link elsewhere that points into one is refused too (`protectedPlaces`).
@@ -103,4 +111,5 @@ A copy cut off by a lost connection answers that the copy may already be in the 
 - `src/core/devices/pairing.test.ts`, "finds whether a computer listed before that runs on this Mac from where it dials now".
 - `src/core/axi/channel.test.ts`, "the infinitary-files-axi command": the real launcher and command process reaching only the granted task's files, and a copy kept past the shell's limit and read with the next look.
 - `src/core/pi/piResources.test.ts`: the computers paragraph names the command once the shell has it.
-- `src/core/placed/placedOutside.test.ts`, "the files command between this Mac and a computer that runs work": over the real connection, a Pi crewmate on that computer, which joins as another user on this Mac, names the computers, lists a folder on this Mac, copies a file and a database in use into its hand-over folder there, each read there as its own user, and is refused a sign-in and a file in the captain's Documents, with each copy one line on the task's record here; and a task here copies a file from that computer piece by piece, with neither computer keeping a copy and that computer's own sign-ins refused.
+- `src/core/files/cardFileSave.test.ts`: a card's file kept once at 0600 and reused by a later version, the refusals, a Save of the home's copy whole and checked into Downloads, a save that never writes over a file, a copy on a computer that runs work read only on Save and let go after the last piece, and a changed or missing copy saving nothing.
+- `src/core/placed/placedOutside.test.ts`, "the files command between this Mac and a computer that runs work": over the real connection, a Pi crewmate on that computer, which joins as another user on this Mac, names the computers, lists a folder on this Mac, copies a file and a database in use into its hand-over folder there, each read there as its own user, and is refused a sign-in and a file in the captain's Documents, with each copy one line on the task's record here; and a task here copies a file from that computer piece by piece, with neither computer keeping a copy and that computer's own sign-ins refused; and a card's file a crewmate there keeps reaches this Mac as its reference alone and saves whole into Downloads only on Save.

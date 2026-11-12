@@ -216,6 +216,34 @@ Leaving it, Esc - which closes nothing else - or a scroll of the body lets the n
 A past card keeps the chart of the version the captain saw.
 `tests/browser/risk-chart.test.tsx` reads the chart, and a journey through `riskChart` in `tests/e2e/stack.ts`: each dot's `data-risk-dot` and `data-risk-level`, and its note's `data-risk-note`.
 
+## Files for the captain
+
+A file the captain is to open, edit, attach or send rides the crewmate's card, never a path in its words (INF-3757, direction C).
+A path names a file on one computer, and the captain may be at another.
+The crewmate names each file in emit_card's `files`: an absolute path, or one relative to its working copy, to a regular, non-empty file of at most 1 GB (`CARD_FILES_PARAM`, `src/core/pi/cardTool.ts`).
+The host keeps one checked copy at 0600 in the task's `cards` folder on the computer the crewmate runs on, named by the file's id, `<taskId>-<the first 32 hex of its sha256>.file` (`keepCardFiles`, `src/core/pi/cardFiles.ts`).
+That copy outlives the temporary folder the file came from and goes with the task's other card copies.
+Two files of one name, the same file twice, a folder and an empty file are refused, and a refusal names the path, never the content.
+The app's own sign-ins and keys on that computer are refused by place, as the files command refuses them, links and other names followed (`isProtectedFile`, `protectedPlaces`, `src/core/files/fileReach.ts`).
+The card carries only the reference (`cardFileSchema`, `src/shared/cardFiles.ts`): the name, size, sha256 and where the copy is, and the home stamps `computer` with the computer the task runs on, never what the crewmate claimed.
+The bytes never ride the card: they move only when the captain clicks Save.
+
+Each file draws one row of host chrome between the body and the buttons (`CardFiles`, `src/renderer/src/cards/CardFiles.tsx`; the design skill's ResponseCard, "Files for the captain"): its name, its size and Save.
+Save is never a card action: it answers nothing, runs no effect, and the body's frame never sees it.
+The click asks the window's own process (`inf:cards:save-file`, a host channel), which asks the home for the file a piece of 1 MB at a time (`inf:cards:file`, a `views` read) and saves it into Downloads on the computer whose window was clicked (`saveIntoDownloads`, `src/core/files/downloadsSave.ts`).
+The pieces land in a hidden part file, checked against the card's size and sha256, and only then take a name.
+A save never writes over a file: a file of the same content already under the name is the saved file, and one with other content keeps its name while the save takes `name (2).ext` and on.
+The home reads its own copy from the file's id alone, never from the recorded path, and a copy on a computer that runs work through the file orders (`CardFileReads`, `src/core/files/cardFileReads.ts`; `docs/files.md`, "Files on a card").
+The row then reads "saved in Downloads as" the name it took, or why it was not saved, in the words of the refusal without the window's transport wrapping (`readableRequest`, `src/preload/readableRequest.ts`).
+
+A revision passes its files again, and its list replaces the card's; a revision with none draws none.
+Files ride only the crewmate's own task's card, never a contribution to someone else's, and never a saved-story card.
+The first mate's cards carry none.
+A past card draws no Save rows.
+A desktop from before files on a card gets the card without them (`legacyCardSnapshot`, `src/core/connection/connection.ts`), and a computer that runs work refuses a card's files for a home that does not list the `card-files` change, telling the crewmate to hand them on in its report.
+The crewmate's instructions tell it to hand the captain files on its card only where its computer lists `card-files`, and the first mate's sends a file for the captain back to its card only while every computer that runs work lists it (`computersFor`, `everyComputerTakesCardFiles`, `src/core/orchestrator/taskPlacement.ts`).
+Saving on the phone is not built: the phone ignores the field.
+
 ## The picture check
 
 For a crewmate card whose action merges, `lintCrewmateCard` reads only what the body declares, under the Before and After headings (`COMPLETION_PICTURES_REFUSAL`, `src/core/pi/cardLint.ts`): a `data-inf-no-picture` element with words in it passes; otherwise After holds at least one picture, and when any After picture is not inside a `data-inf-new` element Before holds at least one too.

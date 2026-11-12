@@ -1,5 +1,6 @@
 import { importChosenFile, inspectPath } from "@core/attachments";
 import type { BrowserViewer } from "@core/browser/browserViews";
+import { saveIntoDownloads } from "@core/files/downloadsSave";
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { writePrivateFile } from "@core/secrets/custody";
@@ -189,6 +190,17 @@ export function registerIpc(options: IpcOptions): void {
     if (!event.sender.isDestroyed()) event.sender.send("inf:window:fence", { token });
     return { ok: true as const };
   });
+
+  // A card's file for the captain, saved into this computer's Downloads on
+  // his click (docs/card-authoring.md, "Files for the captain"): read a piece
+  // at a time from wherever its kept copy is, through the core this window
+  // talks to, here or on the other Mac.
+  handleInvoke("inf:cards:save-file", rendererSource, (_event, cardId, fileId) =>
+    saveIntoDownloads({
+      folder: app.getPath("downloads"),
+      read: (offset) => shell.dispatch("inf:cards:file", [cardId, fileId, offset]),
+    }),
+  );
 
   // Metadata only, chosen by the captain in the trusted window. No value or recovery key enters this export.
   handleInvoke("inf:secrets:export", rendererSource, async (event) => {

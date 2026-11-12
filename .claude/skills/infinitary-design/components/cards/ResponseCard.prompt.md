@@ -154,6 +154,16 @@ The crewmate's one line sits `--space-2` under it in `--fg-2`, so the two read a
 Leaving, Esc (which closes nothing else) or a scroll of the body closes it; a dot reached by the keyboard while the body is scrolled brings the chart back.
 A past card draws the chart its version had, at its title's top right.
 
+**Files for the captain.**
+A crewmate's card may carry files for the captain - a form to fill in, a document to attach and send.
+Each is one row of host chrome in the same place and style as a live attachment, above it when a card has both: the micro label `FILE`, the file's own name in mono `--fg-1` (`BIR_FORM_USA_filled.docx`), then in `--fg-3` its size after `·` (`48 KB`), then, pushed right, a small `secondary` Button `Save`.
+The name gives way with an ellipsis and the whole name on hover; the button never does.
+`Save` is reached with Tab like every button and draws the focus ring.
+While it saves, the button reads `Saving` and is off; once saved, the line after the size reads `· saved in Downloads as <name>`, the name the file took there, and `Save` stays to save it again.
+When the file cannot be saved, the line reads why in `--fg-2` instead, one line with an ellipsis and the whole sentence on hover, until the next click.
+A click saves into Downloads on the computer whose window was clicked and is never a card action: it runs no effect, answers nothing, stays enabled while the card's buttons wait on a request, and the body's script can neither see nor press it.
+A past card does not draw the rows.
+
 **A live attachment.**
 A card may carry one live thing the app owns and its author labels: a crewmate's door to its task's own browser (`TaskBrowser.prompt.md`, "From a card"), which may open a page from its task's project, such as a finished game's `Play`.
 It is a strip of host chrome between the body and the action row, on a decision and a note alike: a `--line-1` hairline above it, `--space-2` above and below, 16 px at its sides like the action row, `--text-xs`.

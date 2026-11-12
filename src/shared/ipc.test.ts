@@ -254,6 +254,9 @@ describe("ipc contract", () => {
       "inf:app:open-runbook-folder",
       "inf:app:quit",
       "inf:app:start-here",
+      // A card's file saved into the Downloads of the computer whose window
+      // the captain clicked Save in (docs/card-authoring.md, "Files for the captain").
+      "inf:cards:save-file",
       "inf:devices:join",
       "inf:devices:join-at",
       "inf:devices:join-held",
@@ -364,6 +367,7 @@ describe("ipc contract", () => {
       "inf:browser:watch",
       "inf:cards:act",
       "inf:cards:close",
+      "inf:cards:file",
       "inf:cards:list",
       "inf:cards:media",
       "inf:cards:minimize",

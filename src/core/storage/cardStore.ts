@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { type CardFile, cardFileSchema } from "@shared/cardFiles";
 import { type CardNote, cardNotesSchema } from "@shared/cardNotes";
 import {
   CARD_CAPTURE_VERSION,
@@ -32,6 +33,7 @@ import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
 import type { TaskCardRow } from "@shared/tasks";
+import { z } from "zod";
 import type { AppDatabase } from "./db";
 
 /**
@@ -77,6 +79,7 @@ type Row = {
   lifecycle_id: string | null;
   offer_id: string | null;
   attachment_json: string | null;
+  files_json: string | null;
   risk_json: string | null;
   replies: number | null;
   holds_place: number | null;
@@ -143,6 +146,20 @@ function attachmentOf(row: Row): LiveAttachment | undefined {
 }
 
 /**
+ * A row's files for the captain, read on their own like its attachment:
+ * ones that no longer read are left off the card rather than taking it along.
+ */
+function filesOf(row: Row): CardFile[] | undefined {
+  if (!row.files_json) return undefined;
+  try {
+    const parsed = z.array(cardFileSchema).min(1).safeParse(JSON.parse(row.files_json));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * A row's risk assessment, read on its own like its attachment: one that no
  * longer reads is left off its card rather than taking the card with it.
  */
@@ -158,6 +175,7 @@ function riskOf(row: Row): RiskAssessment | undefined {
 
 function fromRow(row: Row): Card | undefined {
   const attachment = attachmentOf(row);
+  const files = filesOf(row);
   const risk = riskOf(row);
   const parsed = cardSchema.safeParse({
     id: row.id,
@@ -174,6 +192,7 @@ function fromRow(row: Row): Card | undefined {
     status: row.status,
     createdAt: row.created_at,
     ...(row.pictures_json ? { pictures: JSON.parse(row.pictures_json) } : {}),
+    ...(files ? { files } : {}),
     ...(row.awaiting ? { awaiting: row.awaiting } : {}),
     ...(row.sent_back_at !== null ? { sentBackAt: row.sent_back_at } : {}),
     ...(row.width ? { width: row.width } : {}),
@@ -377,8 +396,8 @@ export class CardStore {
   upsert(card: Card): void {
     this.db
       .prepare(
-        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized, continues, answering, answered_by, after_merge_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized, continues, answering, answered_by, after_merge_json, files_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            kind = excluded.kind,
            author = excluded.author,
@@ -407,7 +426,8 @@ export class CardStore {
            continues = excluded.continues,
            answering = excluded.answering,
            answered_by = excluded.answered_by,
-           after_merge_json = excluded.after_merge_json`,
+           after_merge_json = excluded.after_merge_json,
+           files_json = excluded.files_json`,
       )
       .run(
         card.id,
@@ -440,6 +460,7 @@ export class CardStore {
         card.answering ? 1 : null,
         card.answeredBy ?? null,
         card.afterMerge?.length ? JSON.stringify(card.afterMerge) : null,
+        card.files?.length ? JSON.stringify(card.files) : null,
       );
   }
 

@@ -1,4 +1,5 @@
-import { writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CARD_MEDIA_PIECE_BYTES } from "@shared/cardPictures";
 import type { CardPicture } from "@shared/cards";
@@ -328,4 +329,84 @@ describe("a conversation held on a computer that runs work", () => {
       );
     },
   );
+
+  // INF-3757, direction C, and the captain's condition on it: "the file
+  // content should not physically get attached to the card. data transfer
+  // should only happen when user click". The card crosses to the home with
+  // the file's reference alone; the copy stays in the task's `cards` folder
+  // here until a Save reads it.
+  it("keeps a card's file for the captain here and sends the home only its reference", async () => {
+    const at = await placed({ homeChanges: ["card-files"] });
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    const letter = Buffer.from("Dear landlord, the heating in flat 4 has been off since Monday.\n");
+    writeFileSync(join(folders.temp, "letter to the landlord.txt"), letter);
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "The letter is ready",
+              body: "<p>The letter to the landlord is ready to send.</p>",
+              files: [join(folders.temp, "letter to the landlord.txt")],
+            },
+          },
+        ],
+      },
+      { text: "Shown." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "rows:files", task: TASK, text: "Hand it over." },
+    ]);
+    await at.ended(1);
+
+    // Only the card crosses: no picture order carries the file.
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual(["inf:work:card"]);
+    const sha256 = createHash("sha256").update(letter).digest("hex");
+    const id = `${TASK}-${sha256.slice(0, 32)}`;
+    const card = at.home.effects[0]?.request.card as { files?: unknown[] };
+    expect(card.files).toEqual([
+      {
+        id,
+        name: "letter to the landlord.txt",
+        bytes: letter.length,
+        sha256,
+        path: join(folders.cards, `${id}.file`),
+      },
+    ]);
+    expect(JSON.stringify(at.home.effects)).not.toContain("heating in flat 4");
+    expect(readFileSync(join(folders.cards, `${id}.file`))).toEqual(letter);
+  });
+
+  it("refuses a card's files for a home too old to show them, and tells the crewmate what to do instead", async () => {
+    const at = await placed({ homeChanges: [] });
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    writeFileSync(join(folders.temp, "letter to the landlord.txt"), "Dear landlord.\n");
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "The letter is ready",
+              body: "<p>The letter is ready.</p>",
+              files: [join(folders.temp, "letter to the landlord.txt")],
+            },
+          },
+        ],
+      },
+      { text: "Refused." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "rows:old-files", task: TASK, text: "Hand it over." },
+    ]);
+    await at.ended(1);
+
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual([]);
+    expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+      "runs an older Infinitary that cannot show files on a card",
+    );
+  });
 });

@@ -453,6 +453,16 @@ export class FileReach {
   }
 }
 
+/**
+ * Whether an existing file is one of the app's sign-ins or keys, or inside
+ * one of these places (`protectedPlaces`): by its name, and by device and
+ * inode for it and every folder above it, so a link or another name for one
+ * is caught too. A card's files are held to it before they are copied.
+ */
+export async function isProtectedFile(path: string, places: readonly string[]): Promise<boolean> {
+  return SIGN_IN_FILE_NAMES.has(basename(path)) || (await reachesPlace(path, places));
+}
+
 function protectedRefusal(path: string): FileRefusal {
   return new FileRefusal(
     `${path} holds the app's own sign-ins or keys, which the files command never copies.`,

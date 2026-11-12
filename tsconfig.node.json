@@ -40,6 +40,7 @@
     // plane constants are pure too; the orbit e2e reads its capacity here.
     // Framework-free consumers joined to the real card/task producers in readyWaiting.test.
     "src/renderer/src/cards/recordFooter.ts",
+    "src/renderer/src/cards/cardFileWords.ts",
     "src/renderer/src/plugins/reads/executor.ts",
     "src/renderer/src/cards/cardGeometry.ts",
     // The focus grace is pure too; frame journeys wait out synthetic gestures with its frame count.

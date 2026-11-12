@@ -169,6 +169,7 @@ export class CardEvidence {
         // so a past card shows the button its ending names.
         actions: withAppDecline(card).actions,
         ...(card.pictures?.length ? { pictures: card.pictures } : {}),
+        ...(card.files?.length ? { files: card.files } : {}),
         ...(card.width ? { width: card.width } : {}),
         ...(card.attachment ? { attachment: card.attachment } : {}),
         ...(card.risk ? { risk: card.risk } : {}),
@@ -522,6 +523,7 @@ function offerFingerprint(card: Card): string {
         ...(card.answering ? [{ answering: true }] : []),
         ...(card.holdsPlace ? [{ holdsPlace: true }] : []),
         ...(card.reviewTaskId ? [{ reviewTaskId: card.reviewTaskId }] : []),
+        ...(card.files?.length ? [{ files: card.files }] : []),
       ]),
     )
     .digest("hex");

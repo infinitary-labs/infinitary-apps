@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { readableRequest } from "./readableRequest";
 
-const channels = ["inf:cards:act", "inf:cards:reply"] as const;
+// A card's Save shows its refusal in the file's row, as act and reply show theirs (INF-3757).
+const channels = ["inf:cards:act", "inf:cards:reply", "inf:cards:save-file"] as const;
+const FALLBACKS = {
+  "inf:cards:act": /^Could not use this choice\. Please try again\.$/,
+  "inf:cards:reply": /^Could not send this reply\. Please try again\.$/,
+  "inf:cards:save-file": /^Could not save this file\. Please try again\.$/,
+} as const;
 
 for (const channel of channels) {
   describe(channel, () => {
@@ -56,11 +62,7 @@ for (const channel of channels) {
         readableRequest(channel, async () => {
           throw failure;
         }),
-      ).rejects.toThrow(
-        channel === "inf:cards:act"
-          ? /^Could not use this choice\. Please try again\.$/
-          : /^Could not send this reply\. Please try again\.$/,
-      );
+      ).rejects.toThrow(FALLBACKS[channel]);
     });
   });
 }

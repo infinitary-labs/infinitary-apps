@@ -119,8 +119,10 @@ export const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
 /** INF-3108's record of the close controls it gave back, undone: its one table. */
 export const REVERSE_CLOSE_CONTROL_RESTORE = "DROP TABLE IF EXISTS card_close_control_restore;\n";
-/** INF-3071's ended card kept on the stack, undone. */
-export const REVERSE_ENDED = "DROP INDEX cards_ended;\nALTER TABLE cards DROP COLUMN ended_json;\n";
+/** The files for the captain a card holds by reference, undone: the `cards` column. */
+export const REVERSE_CARD_FILES = "ALTER TABLE cards DROP COLUMN files_json;\n";
+/** INF-3071's ended card kept on the stack, with the later card column undone. */
+export const REVERSE_ENDED = `${REVERSE_CARD_FILES}DROP INDEX cards_ended;\nALTER TABLE cards DROP COLUMN ended_json;\n`;
 /** INF-2796's after-merge steps on a merge card, with the later card column undone. */
 export const REVERSE_AFTER_MERGE = `${REVERSE_ENDED}ALTER TABLE cards DROP COLUMN after_merge_json;\n`;
 /** INF-1670's answerer of a card whose author cannot answer, with the later card column undone. */

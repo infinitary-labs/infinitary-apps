@@ -174,6 +174,19 @@ export class CrewmateCards {
     // A computer from before shared cards would read the typed result as
     // its own card shown: it is refused before anything is written.
     const machine = this.host.machineOf(task.id);
+    if (input.files?.length) {
+      if (target.kind !== "new" && target.kind !== "own")
+        throw new Error(
+          `Card refused: files ride only your own task's card; card ${target.id} is not this task's.`,
+        );
+      // The home names the computer holding each kept copy: the one this task runs on.
+      input = {
+        ...input,
+        files: input.files.map(({ computer: _claimed, ...file }) =>
+          machine === LOCAL_MACHINE_ID ? file : { ...file, computer: machine },
+        ),
+      };
+    }
     if (
       target.kind !== "new" &&
       target.kind !== "own" &&

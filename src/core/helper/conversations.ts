@@ -1,5 +1,6 @@
 import { appendFileSync } from "node:fs";
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import type { WorkInvokeChannel } from "@shared/ipc";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { PlacedSpec } from "@shared/work";
@@ -7,6 +8,7 @@ import { accessFlagSettings, readClaudeAccess } from "../claude/claudeAccess";
 import { claudeCostReportingAllowed } from "../claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { createClaudeSessionFactory } from "../claude/session";
+import { protectedPlaces } from "../files/fileReach";
 import { ForgeSignInStore } from "../forge";
 import { captureLoginPath, hostEnv } from "../hostEnv";
 import { JobManager } from "../jobs/jobManager";
@@ -297,6 +299,12 @@ export async function startConversations(options: {
     runningJobCount: (task) => jobs.runningJobCount(task),
     oldestRunningJob: (task) => jobs.oldestRunningJob(task),
     killJobs: (task) => jobs.killForOwner(task),
+    // The app's own sign-ins and keys here, which a card's files never copy.
+    protectedPlaces: protectedPlaces({
+      userData: dirname(options.dataDir),
+      home: hostEnv().HOME ?? homedir(),
+      workDir: options.dataDir,
+    }),
     ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
     ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
     ...(options.homeVersion ? { homeVersion: options.homeVersion } : {}),

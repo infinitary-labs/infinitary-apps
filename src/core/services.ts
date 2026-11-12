@@ -48,6 +48,7 @@ import { ownComputerName } from "./devices/computerName";
 import { startHomeDevices } from "./devices/homeDevices";
 import { createEventSeam } from "./eventSeam";
 import type { CoreEventSink } from "./events";
+import { homeCardFileReads } from "./files/cardFileReads";
 import { startHomeFiles } from "./files/homeFiles";
 import { startFirstLaunch } from "./firstLaunch";
 import { startHomeForges } from "./forge/homeForges";
@@ -1878,6 +1879,7 @@ export async function createServices(
   });
   return {
     paths,
+    cardFiles: homeCardFileReads((cardId) => cardStore.get(cardId), paths, files),
     timeline,
     auth,
     vault,

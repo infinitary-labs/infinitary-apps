@@ -96,6 +96,8 @@ import type { WorkingCopies } from "./workingCopies";
 /** A story view carrying a map (`story-map.md`). */
 const STORY_MAP = contractChange("story-map");
 const SHOW_MERGE_CARD = contractChange("show-merge-card");
+/** Files for the captain on a card, kept here until a Save asks for them (`card-files.md`). */
+const CARD_FILES = contractChange("card-files");
 
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
@@ -158,6 +160,11 @@ export type SessionHostOptions = {
    * "Demo recordings"). Absent, a card naming one is refused here.
    */
   probeMedia?: MediaProbe;
+  /**
+   * The app's own sign-ins and keys on this computer (`protectedPlaces`),
+   * which a crewmate's card files never copy.
+   */
+  protectedPlaces?: readonly string[];
   /**
    * This computer's loader for a preview's project font (docs/card-authoring.md
    * "Fonts by reference"). Absent, a card naming one is refused here.
@@ -1331,6 +1338,7 @@ export class SessionHost {
       taskId: held.task,
       cwd: folders.work,
       picturesDir: folders.cards,
+      ...(this.options.protectedPlaces ? { protectedPlaces: this.options.protectedPlaces } : {}),
       cardBodiesDir: folders.cardBodies,
       evidenceDir: folders.evidence,
       // Reported files are kept in the temporary folder, which goes when the task closes.
@@ -1366,6 +1374,13 @@ export class SessionHost {
               throw new Error(
                 `since_seen refused: ${HOME.the} runs an older Infinitary that cannot show it; nothing was sent. Show the card without since_seen and say what changed in its thread until ${HOME.the} is updated.`,
               );
+            // A card's files stay here until the captain saves one; a home
+            // without the change would drop them, so it is told in words instead.
+            if (card.files?.length && !listsChange(this.options.homeChanges?.(), CARD_FILES)) {
+              throw new Error(
+                `Card refused: ${HOME.the} runs an older Infinitary that cannot show files on a card; hand the files on in your report until it is updated.`,
+              );
+            }
             // Each picture's bytes first, so the home holds them when it shows the card.
             await sendPictures(media, card.pictures ?? [], signal);
             // Each project font its preview names, before the card too.

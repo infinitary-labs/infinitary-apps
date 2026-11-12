@@ -1,3 +1,4 @@
+import type { CardFile } from "@shared/cardFiles";
 import {
   type AgentEffect,
   type CardMutation,
@@ -40,6 +41,7 @@ import {
   zodParameter,
 } from "../session/tools";
 import { MAX_CARD_BODY_LENGTH, readCardBodyFile } from "./cardBodyFile";
+import { type CardFileRoot, keepCardFiles } from "./cardFiles";
 import { type CardPictureRoot, cardPictureRoot, verifyCardImages } from "./cardImages";
 
 /**
@@ -189,6 +191,12 @@ export type EmittedCard = {
    * (card pictures, phase 2): written on the card row, never the bytes.
    */
   pictures?: CardPicture[];
+  /**
+   * The files for the captain the host kept where the crewmate runs
+   * (`files`, docs/card-authoring.md "Files for the captain"): references,
+   * never the bytes.
+   */
+  files?: CardFile[];
   /**
    * The author's width hint (`width` on the tool): it can only widen what
    * the body's facts already ask for (`decidedCardWidth`).
@@ -473,8 +481,20 @@ export const SAVED_STORY_RULE = [
   "After the captain's merge click, a story revised at the same version keeps their approval: publish it and put up no new merge card, which would ask them again; only another commit needs one.",
 ].join(" ");
 
+/**
+ * Files for the captain on a crewmate's card (docs/card-authoring.md, "Files
+ * for the captain"). A top-level parameter, so a Claude crewmate reads it whole.
+ */
+export const CARD_FILES_PARAM = [
+  "Files for the captain - a document to open, edit, attach or send: absolute paths, or paths relative to your working copy, each a file of at most 1 GB.",
+  "The app keeps a copy with your task's card copies where you run and draws each as a row with Save; the captain's click saves it into Downloads on the computer whose window was clicked, and the file moves only then.",
+  "Never name a path for the captain instead, least of all one on another computer or in your temporary or evidence folder.",
+  "A revision passes its files again: its list replaces the card's.",
+].join(" ");
+
 const crewmateCardParams = Type.Object({
   ...sharedCardParams,
+  files: Type.Optional(Type.Array(Type.String(), { description: CARD_FILES_PARAM })),
   // INF-2884: a revision's reply that names no captain message is refused
   // while one waits, unless it is marked a progress note.
   interim: Type.Optional(Type.Boolean({ description: CARD_PARAMS.interim })),
@@ -692,13 +712,15 @@ function savedStoryRefusedFields(params: EmitCardParams, note = false): string[]
         "browser_button",
         "browser_handoff",
         "browser_page",
+        "files",
         "asking",
         "design_only",
         "continues",
       ] as const
     ).filter((field) => {
       const value = params[field];
-      return field === "body" || field === "body_file" ? value !== undefined : Boolean(value);
+      if (field === "body" || field === "body_file") return value !== undefined;
+      return Array.isArray(value) ? value.length > 0 : Boolean(value);
     }),
   ];
 }
@@ -750,6 +772,8 @@ async function emitCard(
     ) => string | CardMutation | undefined | Promise<string | CardMutation | undefined>;
     firstmate?: boolean;
     pictures?: CardPictureRoot;
+    /** Where a crewmate's card files are kept; absent, a card naming files is refused. */
+    files?: CardFileRoot;
     cardBodiesDir?: string;
     /** The schema offered `browser_button`: the crewmate's task has its own browser. */
     browserButton?: boolean;
@@ -856,10 +880,13 @@ async function emitCard(
   // working-copy path is verified, copied under the task and rewritten
   // before the lint reads the card, so the lint never sees a path.
   const { body, pictures } = await verifyCardImages(sourceBody, options.pictures);
+  // Files for the captain are kept where the crewmate runs; the card holds their references.
+  const files = firstmate ? [] : await keepCardFiles(params.files ?? [], options.files);
   const card: DeclaredCard = {
     title: params.title,
     body,
     ...(pictures.length ? { pictures } : {}),
+    ...(files.length ? { files } : {}),
     actions: (params.actions ?? []).map(emittedAction),
     ...(id ? { id } : {}),
     ...(params.width ? { width: params.width } : {}),
@@ -933,10 +960,20 @@ function crewmateEmitCard(
   browserButton: boolean,
 ): (params: EmitCardParams, signal?: AbortSignal) => Promise<ToolOutput> {
   const pictures = cardPictureRoot(delegate);
+  const files =
+    delegate.picturesDir && delegate.cwd && delegate.taskId
+      ? {
+          worktree: delegate.cwd,
+          dir: delegate.picturesDir,
+          taskId: delegate.taskId,
+          protectedPlaces: delegate.protectedPlaces ?? [],
+        }
+      : undefined;
   return async (params, signal) => {
     try {
       return {
         text: await emitCard(params, {
+          ...(files ? { files } : {}),
           onCard: (card) => callWithSignal(onCard, [card], signal),
           cardBodiesDir: delegate.cardBodiesDir,
           contributionNotes: delegate.contributionNotes,

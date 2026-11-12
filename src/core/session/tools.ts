@@ -1,4 +1,5 @@
 import type { AfterMergeShown } from "@shared/afterMerge";
+import type { CardFile } from "@shared/cardFiles";
 import type { CardEffect, CardMutation, CardPicture, LiveAttachment } from "@shared/cards";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import type { CrewResponse } from "@shared/crewResponses";
@@ -102,6 +103,12 @@ export type EmittedCardInput = {
   reviewTaskId?: string;
   /** The pictures the tool verified in the body, for the card row (card pictures, phase 2). */
   pictures?: CardPicture[];
+  /**
+   * The files for the captain the tool kept where the crewmate runs
+   * (`files`, docs/card-authoring.md "Files for the captain"): references,
+   * never the bytes. The home names the computer that holds them.
+   */
+  files?: CardFile[];
   /** The author's width hint: it can only widen what the body's facts ask for. */
   width?: "wide" | "full";
   holdsPlace?: boolean;
@@ -325,6 +332,11 @@ export type CrewmateToolDelegate = {
    * names a picture from the working copy is refused.
    */
   picturesDir?: string;
+  /**
+   * The app's own sign-ins and keys on the computer this crewmate runs on
+   * (`protectedPlaces`), which a card's files never copy.
+   */
+  protectedPlaces?: readonly string[];
   /** Author-editable UTF-8 card bodies, outside the working copy. */
   cardBodiesDir?: string;
   /**

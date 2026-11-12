@@ -188,6 +188,12 @@ export type CrewMachines = {
    * keeps prepare_change, open_change and emit_card.
    */
   takesMergeCardCall?(machine: string): boolean;
+  /**
+   * Whether the computer's crewmates put files on their cards (`card-files`,
+   * docs/card-authoring.md "Files for the captain"); false while the home
+   * cannot tell.
+   */
+  takesCardFiles?(machine: string): boolean;
   takesChangePresentations?(machine: string): boolean;
   /** The working copy's dependencies, installed there; a failure is an outcome. */
   install(machine: string, taskId: string): Promise<DependencyInstall>;

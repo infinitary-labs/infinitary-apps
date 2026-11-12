@@ -8,7 +8,13 @@ import type { CrewmateToolDelegate } from "../../src/core/session/tools";
 export function crewmateToolDelegate(): Required<
   Omit<
     CrewmateToolDelegate,
-    "picturesDir" | "evidenceDir" | "cardBodiesDir" | "handoverDir" | "probeMedia" | "probeTypeface"
+    | "picturesDir"
+    | "protectedPlaces"
+    | "evidenceDir"
+    | "cardBodiesDir"
+    | "handoverDir"
+    | "probeMedia"
+    | "probeTypeface"
   >
 > & {
   calls: { callback: string; input: unknown }[];

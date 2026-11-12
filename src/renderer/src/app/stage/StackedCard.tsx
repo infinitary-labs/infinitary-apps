@@ -25,6 +25,7 @@ import { afterMergeStrip } from "../../cards/afterMergeStrip";
 import { answersLine } from "../../cards/answersLine";
 import { bridgeActionIds } from "../../cards/bridgeActions";
 import { CardAttachment } from "../../cards/CardAttachment";
+import { CardFiles } from "../../cards/CardFiles";
 import { ChatButton, LiveMessageList, ThreadSegments } from "../../cards/CardThread";
 import { useCardReadingPlace } from "../../cards/cardReadingPlace";
 import { useCardTask } from "../../cards/cardTask";
@@ -454,9 +455,11 @@ export function StackedCard({
             : undefined
         }
         attachment={
-          !bare && ((card.answerDone && !card.noteDone) || card.attachment) ? (
+          !bare &&
+          ((card.answerDone && !card.noteDone) || card.attachment || card.files?.length) ? (
             <>
               {card.answerDone && !card.noteDone && <AnswerDone done={card.answerDone} />}
+              {card.files?.length ? <CardFiles cardId={card.id} files={card.files} /> : null}
               {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
             </>
           ) : undefined

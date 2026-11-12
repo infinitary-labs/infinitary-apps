@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { afterMergeShownListSchema } from "./afterMerge.ts";
+import { cardFileSchema } from "./cardFiles.ts";
 import { cardCornerSchema, noteDoneSchema } from "./cardLeave.ts";
 import { cardNotesSchema, pointedAtLines } from "./cardNotes.ts";
 import { SPELLINGS } from "./codeNames.ts";
@@ -1157,6 +1158,8 @@ export const cardSchema = z.strictObject({
    * card that names none.
    */
   pictures: z.array(cardPictureSchema).optional(),
+  /** Files for the captain (`cards.files_json`, docs/card-authoring.md): references, never bytes. */
+  files: z.array(cardFileSchema).optional(),
   /**
    * The width the host decided at emit (`cards.width`): the body's facts,
    * widened by the author's hint. Absent means default-wide; regular means short plain copy.
@@ -1840,6 +1843,7 @@ export const cardOfferPayloadSchema = z.strictObject({
   afterMerge: afterMergeShownListSchema.optional(),
   actions: z.array(cardActionSchema),
   pictures: z.array(cardPictureSchema).optional(),
+  files: z.array(cardFileSchema).optional(),
   width: cardWidthSchema.optional(),
   attachment: liveAttachmentSchema.optional(),
   risk: riskAssessmentSchema.optional(),

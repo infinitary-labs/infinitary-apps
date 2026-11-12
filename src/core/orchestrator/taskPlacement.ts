@@ -549,7 +549,24 @@ export class TaskPlacement {
         : machines.placeOf(machineId).where.startsWith("as ")
           ? machines.placeOf(machineId).who
           : machines.nameOf(machineId);
-    return { computers: { workers, ...(here ? { here } : {}) } };
+    // An older computer's emit_card has no files, so its crewmate is not told to use them.
+    const cardFiles =
+      machineId === LOCAL_MACHINE_ID || machines.takesCardFiles?.(machineId) === true;
+    return {
+      computers: { workers, ...(here ? { here } : {}), ...(cardFiles ? {} : { cardFiles: false }) },
+    };
+  }
+
+  /**
+   * Whether every computer that runs work puts files on its crewmates'
+   * cards, so the first mate may send a file for the captain back to its
+   * card (`COMPUTERS_RULE`).
+   */
+  everyComputerTakesCardFiles(): boolean {
+    const machines = this.options.machines;
+    return (machines?.computers() ?? []).every(
+      (device) => machines?.takesCardFiles?.(device) === true,
+    );
   }
 
   /**

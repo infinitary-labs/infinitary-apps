@@ -1523,6 +1523,35 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     );
   });
 
+  it("tells a crewmate to hand the captain files on its card only where its emit_card takes them (INF-3757)", () => {
+    // The captain on INF-3757: "whenever we hand a file to the captain, we should
+    // make sure it's always on the captain's current computer"; an older work
+    // computer's emit_card has no files, so its crewmate keeps the old way.
+    const prompt = (cardFiles?: false) =>
+      buildCrewmateSystemPrompt(
+        "claude",
+        undefined,
+        undefined,
+        undefined,
+        false,
+        undefined,
+        "/work/tasks/t1/temp",
+        {
+          here: "Kun's Mac mini",
+          workers: [{ name: "Kun's Mac mini" }],
+          ...(cardFiles === false ? { cardFiles } : {}),
+        },
+      );
+    const current = prompt();
+    expect(current).toContain(
+      "A file for the captain to open, edit, attach or send rides your card's files, which the captain saves on the computer in use: never name its path for the captain",
+    );
+    expect(current).toContain("a file for the captain rides your card's files");
+    const older = prompt(false);
+    expect(older).not.toContain("card's files");
+    expect(older).toContain("To hand files to another task, pass their paths in report files.");
+  });
+
   it("briefs itself on the record, not in message text (ruling D5)", () => {
     const prompt = buildCrewmateSystemPrompt();
     expect(prompt).toContain("Your task arrives as a structured intent");

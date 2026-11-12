@@ -478,9 +478,13 @@ Four pieces:
   A module that will not import or a render that throws shows the quiet line (`personal/panelBoundary.tsx`), and a panel's own page tells the host how its body fared (`panel.body`: drawn, or stopped and why), which is what `place_panel` reads back.
 - **The host side**: `FrameMount` given `panel` instead of `template`, with the panel stylesheet (`panelStylesheet()`: the tokens, the typefaces, and exactly the side panel body's context - not `FRAME_BASE_STYLE`, which dresses a card's bare markup).
   The controller binds the store verb to the mount's extension id (`FrameMountSpec.store`, a crewmate's draft to its draft slice) - the frame names a key, never whose slice - and an added panel declares only the card actions every panel has and receives only its header buttons' presses as view state ("A panel's cards" above).
-  Its watchdog is armed: a panel whose page is showing and leaves four pings unanswered is torn down and mounted again once on its own; a second stop after that start shows "This panel stopped responding." with a Retry, and its header says that instead of the counts the page last sent.
+  Its watchdog is armed: a panel whose page is showing and leaves four pings unanswered is torn down and mounted again on its own once per start; a second stop after that start shows "This panel stopped responding." with a Retry, and its header says that instead of the counts the page last sent.
+  A start is the first mount, a Retry, or a page mounted again on its own that then answered four pings in a row, as many as a stop misses (`onSteady`, INF-3798): a reload that worked earns a later stop its own reload, while a page that stops again at once is left to Retry.
   A collapsed panel, one off its rail, or any frame while the window is hidden is not stopped for missed pings, so it keeps refreshing when it can run again.
   Every message between the window and a frame passes through the main process, so each tick also asks the main process (`inf:frames:alive`); a tick whose question it has not answered counts against no frame, and a pause of the app's own main process never stops a page (INF-935).
+  A ping goes out before its tick's question and is judged by the answer to the next tick's question, so the page's answer, sent as the ping arrived, has already passed through the main process: a main process that stalls again moments after each answer cannot make a healthy page miss (INF-3798).
+  A stop therefore comes at most `FRAME_WATCHDOG_STOP_INTERVALS` ticks after a page stops answering.
+  A page being loaded waits on the main process at every step, so a tick it has not answered starts that page's window to be born again.
   The bridge reports a body's exact height, and a panel mount takes it unrounded, so it lays out exactly as the panel's own content does.
 
 The compiler points every panel's host imports at `app-frame://lib/<file>`; the allowlist is the same for every source.

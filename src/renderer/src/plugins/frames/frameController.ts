@@ -212,9 +212,18 @@ export type FrameMountSpec = {
    * not born or leaves FRAME_WATCHDOG_MISSES pings in a row unanswered - its
    * event loop wedged by a runaway script - is reported once. The caller
    * tears the frame down. Misses are not counted while `paused` says the
-   * page is hidden, or while the main process has not answered `askMain`.
+   * page is hidden, or while the main process has not answered `askMain`
+   * (`armWatchdog` says how a ping is judged against its answers).
    */
   onUnresponsive?: () => void;
+  /**
+   * Called once per document of a watchdog-armed mount, when it has
+   * answered FRAME_WATCHDOG_MISSES of the watchdog's pings in a row: as
+   * long a run of answers as the run of misses that stops a page. A mount
+   * that reloads a stopped page on its own takes it as that reload having
+   * worked (INF-3798).
+   */
+  onSteady?: () => void;
   /**
    * A card body's form (inline decisions, contract 4.22): the host tells
    * every document of the mount to watch its named controls, handing it the
@@ -242,6 +251,14 @@ export const FRAME_COLLECT_TIMEOUT_MS = 1_000;
 export const FRAME_WATCHDOG_INTERVAL_MS = 1_000;
 /** Consecutive unanswered pings that make a frame unresponsive. */
 export const FRAME_WATCHDOG_MISSES = 4;
+/**
+ * The most intervals a page that stops answering keeps its frame while the
+ * main process answers: its first unanswered ping goes out within one
+ * interval, and each ping is judged two answered intervals after it went
+ * out (`armWatchdog`), so the last of FRAME_WATCHDOG_MISSES is judged two
+ * intervals after the streak's last ping.
+ */
+export const FRAME_WATCHDOG_STOP_INTERVALS = FRAME_WATCHDOG_MISSES + 2;
 
 export type WatchdogTimers = {
   setInterval: (callback: () => void, ms: number) => unknown;
@@ -276,7 +293,10 @@ export type FrameControllerDeps = {
    * Asks the main process for an answer that changes nothing. Every message
    * between the window and a frame passes through the main process, so a
    * second in which it has not answered says nothing about the frame: that
-   * tick counts no miss (INF-935). Absent, every tick counts.
+   * tick counts no miss (INF-935), and a ping is judged only by the answer
+   * to a question asked after the main process passed it on (INF-3798).
+   * Absent, the main process is taken to answer each question by the next
+   * tick.
    */
   askMain?: () => Promise<unknown>;
 };
@@ -325,13 +345,21 @@ export class FrameController {
   private readonly subscriptions = new Map<number, () => void>();
   private watchdog: unknown = null;
   private pingSeq = 0;
-  /** The watchdog's own last ping; `heard` pings in between. */
-  private watchedSeq = 0;
+  /**
+   * The watchdog's own pings not yet judged, each with the question to the
+   * main process whose answer judges it; `heard` pings come in between.
+   */
+  private watched: { seq: number; judgedBy: number }[] = [];
   private answeredSeq = 0;
   /** Each `heard` waiting on the pong to its own ping, by that ping's number. */
   private readonly hearing = new Map<number, () => void>();
   private missed = 0;
+  /** Pings this document answered in a row, until it is steady (`onSteady`). */
+  private kept = 0;
+  private steady = false;
   private unborn = 0;
+  /** The last question asked before the watched document was expected. */
+  private expectedAfter = 0;
   private mainAsked = 0;
   private mainAnswered = 0;
   private stopStoreNotices: (() => void) | null = null;
@@ -818,67 +846,121 @@ export class FrameController {
   }
 
   /**
-   * A fresh document gets a fresh watchdog. Before `ready` a tick counts the
-   * document as not yet born; after it, a ping is missed when the next tick
-   * finds it still unanswered, so a throttled host clock only pings less
-   * often - it never counts a miss the frame did not make. A tick while the
-   * page is hidden counts nothing and sends nothing: a collapsed panel, or
-   * the window while the screen is off, may not run, and that is not a wedge.
-   * The streak starts again when the page is showing. A tick while the
-   * main process has not answered the last tick's question counts nothing
-   * and sends nothing either: the frame's answers wait in that same process.
+   * A fresh document gets a fresh watchdog, ticking every interval.
+   *
+   * Every message between the window and a frame waits in the main process,
+   * so the watchdog judges a frame only against the main process's own
+   * answers (INF-935): a tick while the main process has not answered the
+   * question the last tick asked judges nothing and sends nothing. A ping
+   * goes out before its tick's question, so that question's answer says the
+   * main process passed the ping on. A healthy frame answers at once, so its
+   * answer stands in the main process ahead of the next tick's question,
+   * and the answer to THAT question judges the ping: a ping is missed when
+   * it is still unanswered then. Judged by the first answer alone, a main
+   * process that stalls again a few milliseconds after each answer let the
+   * question's answer through and held the frame's, so a healthy frame
+   * missed once per stall (INF-3798). A throttled host clock only pings
+   * less often - it never counts a miss the frame did not make.
+   *
+   * Before `ready` a tick counts the document as not yet born, once the
+   * main process has answered a question asked after it was expected. Its
+   * load waits on the main process at every step, so a tick at which the
+   * main process has not answered starts that count again.
+   *
+   * A tick while the page is hidden counts nothing and sends nothing: a
+   * collapsed panel, or the window while the screen is off, may not run,
+   * and that is not a wedge. The streak starts again when the page shows.
    */
   private armWatchdog(): void {
     this.disarmWatchdog();
     if (!this.spec.onUnresponsive) return;
     const timers = this.deps.timers ?? browserTimers;
+    this.restartStreak();
+    this.kept = 0;
+    this.steady = false;
+    this.watchdog = timers.setInterval(() => this.tick(), FRAME_WATCHDOG_INTERVAL_MS);
+  }
+
+  /** Forgets every miss, unborn tick and unjudged ping: counting starts from now. */
+  private restartStreak(): void {
     this.missed = 0;
     this.unborn = 0;
-    this.answeredSeq = this.pingSeq;
-    this.watchdog = timers.setInterval(() => {
-      if (this.deps.paused?.()) {
-        this.missed = 0;
-        this.unborn = 0;
-        this.answeredSeq = this.pingSeq;
-        return;
-      }
-      if (!this.mainAnswering()) return;
-      if (!this.ready) {
+    this.watched = [];
+    this.expectedAfter = this.mainAsked;
+  }
+
+  private tick(): void {
+    if (this.deps.paused?.()) {
+      this.restartStreak();
+      return;
+    }
+    if (!this.mainAnsweredLast()) {
+      this.unborn = 0;
+      return;
+    }
+    if (!this.ready) {
+      if (this.mainAnswered > this.expectedAfter) {
         this.unborn += 1;
-        if (this.unborn >= FRAME_WATCHDOG_MISSES) this.unresponsive();
-        return;
-      }
-      if (this.answeredSeq < this.watchedSeq) {
-        this.missed += 1;
-        if (this.missed >= FRAME_WATCHDOG_MISSES) {
+        if (this.unborn >= FRAME_WATCHDOG_MISSES) {
           this.unresponsive();
           return;
         }
-      } else {
-        this.missed = 0;
       }
-      this.pingSeq += 1;
-      this.watchedSeq = this.pingSeq;
-      this.port.post({ fm: V, type: "ping", seq: this.pingSeq });
-    }, FRAME_WATCHDOG_INTERVAL_MS);
+      this.askMain();
+      return;
+    }
+    for (const ping of this.watched) {
+      if (ping.judgedBy > this.mainAnswered) continue;
+      if (this.answeredSeq >= ping.seq) {
+        this.missed = 0;
+        this.keep();
+        continue;
+      }
+      this.missed += 1;
+      this.kept = 0;
+      if (this.missed >= FRAME_WATCHDOG_MISSES) {
+        this.unresponsive();
+        return;
+      }
+    }
+    this.watched = this.watched.filter((ping) => ping.judgedBy > this.mainAnswered);
+    this.pingSeq += 1;
+    this.port.post({ fm: V, type: "ping", seq: this.pingSeq });
+    this.askMain();
+    // Its tick's question says the main process passed it on; the next one,
+    // asked once that answer is in, judges it.
+    this.watched.push({ seq: this.pingSeq, judgedBy: this.mainAsked + 1 });
+  }
+
+  /** One more ping answered in a row; a run as long as the stopping streak makes the document steady. */
+  private keep(): void {
+    if (this.steady) return;
+    this.kept += 1;
+    if (this.kept < FRAME_WATCHDOG_MISSES) return;
+    this.steady = true;
+    this.spec.onSteady?.();
   }
 
   /**
-   * Whether the main process answered the question the last tick asked; if
-   * so, asks the next one. One question is in flight at a time.
+   * Whether the main process answered the question the last tick asked.
+   * Without `askMain` it is taken to answer each question by the next tick.
    */
-  private mainAnswering(): boolean {
-    const ask = this.deps.askMain;
-    if (!ask) return true;
-    if (this.mainAnswered < this.mainAsked) return false;
+  private mainAnsweredLast(): boolean {
+    if (!this.deps.askMain) this.mainAnswered = this.mainAsked;
+    return this.mainAnswered >= this.mainAsked;
+  }
+
+  /** Asks the main process the next question. One question is in flight at a time. */
+  private askMain(): void {
     this.mainAsked += 1;
+    const ask = this.deps.askMain;
+    if (!ask) return;
     const seq = this.mainAsked;
     // A refusal is an answer too: the main process ran to give it.
     const heard = () => {
       if (seq > this.mainAnswered) this.mainAnswered = seq;
     };
     void ask().then(heard, heard);
-    return true;
   }
 
   private unresponsive(): void {

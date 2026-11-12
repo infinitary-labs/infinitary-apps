@@ -143,6 +143,7 @@ export function useFrameController(
         ...(specRef.current.onUnresponsive
           ? { onUnresponsive: () => specRef.current.onUnresponsive?.() }
           : {}),
+        onSteady: () => specRef.current.onSteady?.(),
         ...(specRef.current.form
           ? {
               form: {
@@ -284,9 +285,14 @@ export function FrameMount({
   // A watchdog-armed mount that stopped answering, and the retry that
   // remounts it: a fresh document, from the same source. The first stop
   // after each start remounts on its own; a second shows Retry (INF-936).
+  // A start is the first mount, a Retry, and a page mounted again on its own
+  // once it has answered as many pings in a row as a stop misses (INF-3798):
+  // that reload worked, so a stop hours later remounts on its own again,
+  // while a page that stops again at once is left to Retry.
   const [wedged, setWedged] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const reloadedRef = useRef(false);
+  const [steadyDocument, setSteadyDocument] = useState<string | null>(null);
   const onMountErrorRef = useRef(onMountError);
   onMountErrorRef.current = onMountError;
   // A panel source is compared by content: its owner hands a fresh object
@@ -354,6 +360,11 @@ export function FrameMount({
       },
       ...(spec.onUnresponsive
         ? {
+            onSteady: () => {
+              reloadedRef.current = false;
+              if (mount) setSteadyDocument(mount.mountId);
+              spec.onSteady?.();
+            },
             onUnresponsive: () => {
               // Removing the iframe detaches the wedged document; the browser
               // reaps its dedicated process, and the served document goes too.
@@ -379,6 +390,7 @@ export function FrameMount({
   const onDrawnRef = useRef(onDrawn);
   onDrawnRef.current = onDrawn;
   const drawn = mount !== null && drawnDocument === mount.mountId;
+  const steady = mount !== null && steadyDocument === mount.mountId;
   useEffect(() => {
     if (drawn) onDrawnRef.current?.();
   }, [drawn]);
@@ -436,6 +448,7 @@ export function FrameMount({
       src={mount.url}
       data-frame-mount={mount.mountId}
       data-frame-drawn={drawn ? "" : undefined}
+      data-frame-steady={steady ? "" : undefined}
       data-frame-reveal={reveal ? "" : undefined}
       style={{
         width: "100%",

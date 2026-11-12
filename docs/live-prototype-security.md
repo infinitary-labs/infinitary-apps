@@ -223,6 +223,8 @@ A crewmate's draft is bound apart: its own store slice, set by the host from the
 **Isolation.**
 Each panel mount is its own host, so its own site and renderer process, like a scripted card; a runaway panel wedges only itself.
 The frame watchdog is armed for an added panel: it is torn down and its served document goes with it; the panel mounts once more on its own, and a second stop shows "This panel stopped responding." with a Retry.
+A page that wedges again at once never answers the four pings in a row that would earn it another reload on its own, so a runaway panel always ends at the Retry.
+One that answers four pings and then wedges is mounted again each time, at most once every ten ticks; it gains nothing it lacked, since a page that answers its pings may already keep its own process busy.
 
 **Measured through the real path** (`tests/e2e/installed-panel-containment.spec.ts`): a hostile panel added by talking - fetched from a folder, checked, consented on the host's card - that assembles its URL and the app's API name at run time to get past the install tidy-up, then tries: `fetch`, `sendBeacon`, a WebSocket, an image and an iframe on a live local server, top-level navigation, `window.open`, the parent's DOM, `eval`, `new Function`, `localStorage`, `window.infinitary`, an unpinned lib file, another mount's host, the fonts host and the personal-extension scheme as scripts, an undeclared read, a gesture, the mediated fetch, and another panel's store slice.
 Every one is refused; the server counts zero requests; the other slice is untouched and the write landed in its own.

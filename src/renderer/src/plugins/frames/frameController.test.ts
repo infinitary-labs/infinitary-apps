@@ -18,6 +18,7 @@ import { COALESCE_MS, type ReadApi, ReadExecutor } from "../reads/executor";
 import {
   FRAME_WATCHDOG_INTERVAL_MS,
   FRAME_WATCHDOG_MISSES,
+  FRAME_WATCHDOG_STOP_INTERVALS,
   FrameController,
   type FrameMountSpec,
   type FrameStoreDeps,
@@ -579,12 +580,20 @@ describe("FrameController", () => {
       onUnresponsive: () => void,
       paused?: () => boolean,
       askMain?: () => Promise<unknown>,
+      onSteady?: () => void,
     ) {
       let tick: () => void = () => {};
       const cleared: unknown[] = [];
       const posted: HostMessage[] = [];
       const controller = new FrameController(
-        { pluginId: "host", reads: [], actions: [], onAction: vi.fn(), onUnresponsive },
+        {
+          pluginId: "host",
+          reads: [],
+          actions: [],
+          onAction: vi.fn(),
+          onUnresponsive,
+          ...(onSteady ? { onSteady } : {}),
+        },
         "dark",
         {
           executor: new ReadExecutor(fakeApi()),
@@ -606,7 +615,22 @@ describe("FrameController", () => {
         { post: (message) => posted.push(message) },
       );
       const pings = () => posted.filter((m) => m.type === "ping");
-      return { controller, tick: () => tick(), cleared, pings };
+      const lastPing = () => {
+        const last = pings().at(-1);
+        return last?.type === "ping" ? last.seq : 0;
+      };
+      return { controller, tick: () => tick(), cleared, pings, lastPing };
+    }
+
+    /** A main process that answers the questions it was asked when the test says. */
+    function heldMain() {
+      const waiting: (() => void)[] = [];
+      const askMain = vi.fn(() => new Promise<void>((resolve) => waiting.push(resolve)));
+      const answer = async () => {
+        for (const resolve of waiting.splice(0)) resolve();
+        await flush();
+      };
+      return { askMain, answer };
     }
 
     it("stays quiet while the frame answers every ping", () => {
@@ -660,13 +684,15 @@ describe("FrameController", () => {
 
     it("reports a frame that misses consecutive pings once, and stops pinging it", () => {
       const onUnresponsive = vi.fn();
-      const { controller, tick, cleared, pings } = armed(onUnresponsive);
+      const { controller, tick, cleared, pings, lastPing } = armed(onUnresponsive);
       controller.receive({ fm: 2, type: "ready" });
+      // The first ping is judged missed two ticks after it went out; one late
+      // answer then resets the count: only consecutive misses count.
       tick();
-      // One late answer resets the count: only consecutive misses count.
       tick();
-      controller.receive({ fm: 2, type: "pong", seq: 2 });
-      for (let round = 0; round < FRAME_WATCHDOG_MISSES; round++) tick();
+      tick();
+      controller.receive({ fm: 2, type: "pong", seq: lastPing() });
+      for (let round = 1; round < FRAME_WATCHDOG_STOP_INTERVALS; round++) tick();
       expect(onUnresponsive).not.toHaveBeenCalled();
       tick();
       expect(onUnresponsive).toHaveBeenCalledTimes(1);
@@ -684,9 +710,10 @@ describe("FrameController", () => {
     it("gives an expected document the same window to be born, then reports it", () => {
       const onUnresponsive = vi.fn();
       const { controller, tick, pings } = armed(onUnresponsive);
-      // A script that wedges its frame before `ready` reaches the host.
+      // A script that wedges its frame before `ready` reaches the host. The
+      // first tick asks the main process; each tick it has answered counts.
       controller.expectDocument();
-      for (let round = 1; round < FRAME_WATCHDOG_MISSES; round++) tick();
+      for (let round = 0; round < FRAME_WATCHDOG_MISSES; round++) tick();
       expect(onUnresponsive).not.toHaveBeenCalled();
       expect(pings()).toEqual([]); // nothing to ping before the bridge exists
       tick();
@@ -716,15 +743,14 @@ describe("FrameController", () => {
       for (let round = 0; round < FRAME_WATCHDOG_MISSES * 3; round++) tick();
       expect(onUnresponsive).not.toHaveBeenCalled();
       expect(pings()).toEqual([]);
-      // A pause in the middle of a streak does not carry the misses over.
+      // A pause one tick short of a stop does not carry its misses over.
       hidden = false;
-      tick();
-      tick();
+      for (let round = 1; round < FRAME_WATCHDOG_STOP_INTERVALS; round++) tick();
       hidden = true;
       for (let round = 0; round < FRAME_WATCHDOG_MISSES * 2; round++) tick();
       expect(onUnresponsive).not.toHaveBeenCalled();
       hidden = false;
-      for (let round = 0; round < FRAME_WATCHDOG_MISSES; round++) tick();
+      for (let round = 1; round < FRAME_WATCHDOG_STOP_INTERVALS; round++) tick();
       expect(onUnresponsive).not.toHaveBeenCalled();
       tick();
       expect(onUnresponsive).toHaveBeenCalledTimes(1);
@@ -766,13 +792,110 @@ describe("FrameController", () => {
       controller.receive({ fm: 2, type: "pong", seq: 1 });
       tick();
       expect(pings()).toHaveLength(2);
-      // A frame stuck on its own while the main process answers is still stopped.
+      // A frame stuck on its own while the main process answers is still
+      // stopped: the last of four unanswered pings, the first sent just now,
+      // is judged two answered ticks after it went out.
       for (let round = 0; round < FRAME_WATCHDOG_MISSES; round++) {
         answer();
         await flush();
         tick();
       }
+      expect(onUnresponsive).not.toHaveBeenCalled();
+      answer();
+      await flush();
+      tick();
       expect(onUnresponsive).toHaveBeenCalledTimes(1);
+    });
+
+    // INF-3798: on 0.7.1-alpha.549 the main process stalled back to back for
+    // 0.1 to 9.6 s with a median gap of 3 ms, and four healthy panels were
+    // stopped. In each gap the main process answered the window's question
+    // and passed the newest ping on; the frame's answer reached it after the
+    // next stall began, so the next tick found that ping unanswered.
+    it("counts no miss when the main process answers between stalls and holds the frame's answer through the next", async () => {
+      const onUnresponsive = vi.fn();
+      const main = heldMain();
+      const { controller, tick, pings, lastPing } = armed(onUnresponsive, undefined, main.askMain);
+      controller.receive({ fm: 2, type: "ready" });
+      let held: number | undefined;
+      const stallAndGap = async (frameAnswers: boolean) => {
+        // The window ticks during a stall: it pings and asks the main process.
+        tick();
+        // A gap: the frame's answer held through the stall comes through
+        // first, then the main process answers, and the newest ping reaches
+        // the frame, whose answer waits through the next stall.
+        if (held !== undefined) controller.receive({ fm: 2, type: "pong", seq: held });
+        await main.answer();
+        held = frameAnswers ? lastPing() : undefined;
+      };
+      const cycles = FRAME_WATCHDOG_MISSES * 3;
+      for (let cycle = 0; cycle < cycles; cycle++) await stallAndGap(true);
+      expect(onUnresponsive).not.toHaveBeenCalled();
+      expect(pings()).toHaveLength(cycles);
+      // A frame that stops answering in the same stalls is still stopped.
+      for (let cycle = 1; cycle < FRAME_WATCHDOG_STOP_INTERVALS; cycle++) await stallAndGap(false);
+      expect(onUnresponsive).not.toHaveBeenCalled();
+      await stallAndGap(false);
+      expect(onUnresponsive).toHaveBeenCalledTimes(1);
+    });
+
+    // INF-3798: a page mounted again during the same stalls waits on the main
+    // process at every step of its load, one step per gap.
+    it("does not stop a document being born while the main process stalls past each tick", async () => {
+      const onUnresponsive = vi.fn();
+      const main = heldMain();
+      const { controller, tick, pings } = armed(onUnresponsive, undefined, main.askMain);
+      controller.expectDocument();
+      for (let cycle = 0; cycle < FRAME_WATCHDOG_MISSES * 3; cycle++) {
+        tick(); // answered: it counts, and asks again
+        tick(); // a stall past the tick: the question is still waiting
+        await main.answer(); // a gap
+      }
+      expect(onUnresponsive).not.toHaveBeenCalled();
+      controller.receive({ fm: 2, type: "ready" });
+      tick();
+      expect(pings()).toHaveLength(1);
+      // A document that is not born while the main process answers every tick is stopped.
+      const stuckMain = heldMain();
+      const unborn = armed(onUnresponsive, undefined, stuckMain.askMain);
+      unborn.controller.expectDocument();
+      for (let round = 0; round < FRAME_WATCHDOG_MISSES; round++) {
+        unborn.tick();
+        await stuckMain.answer();
+      }
+      expect(onUnresponsive).not.toHaveBeenCalled();
+      unborn.tick();
+      expect(onUnresponsive).toHaveBeenCalledTimes(1);
+    });
+
+    // INF-3798: a panel mounts a stopped page again on its own once per
+    // start, and a page that answered the watchdog this long is a start.
+    it("calls a document steady once it answered as many pings in a row as a stop misses, once per document", () => {
+      const onSteady = vi.fn();
+      const { controller, tick, lastPing } = armed(vi.fn(), undefined, undefined, onSteady);
+      const answering = (rounds: number) => {
+        for (let round = 0; round < rounds; round++) {
+          tick();
+          controller.receive({ fm: 2, type: "pong", seq: lastPing() });
+        }
+      };
+      controller.receive({ fm: 2, type: "ready" });
+      // A miss before the run is complete starts it again: an answer to a
+      // later ping answers every earlier one, so two pings go unanswered
+      // until the first of them is judged.
+      answering(FRAME_WATCHDOG_MISSES - 1);
+      tick();
+      tick();
+      answering(FRAME_WATCHDOG_MISSES);
+      expect(onSteady).not.toHaveBeenCalled();
+      answering(1);
+      expect(onSteady).toHaveBeenCalledTimes(1);
+      answering(FRAME_WATCHDOG_STOP_INTERVALS * 2);
+      expect(onSteady).toHaveBeenCalledTimes(1);
+      // A new document of the mount earns it again.
+      controller.receive({ fm: 2, type: "ready" });
+      answering(FRAME_WATCHDOG_STOP_INTERVALS);
+      expect(onSteady).toHaveBeenCalledTimes(2);
     });
 
     it("does not count an unborn document while the main process has not answered", async () => {

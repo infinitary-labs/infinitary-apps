@@ -2,7 +2,7 @@ import { type ElectronApplication, expect, type Page, test } from "@playwright/t
 import { counted } from "../../src/panels/knowledge/words";
 import {
   FRAME_WATCHDOG_INTERVAL_MS,
-  FRAME_WATCHDOG_MISSES,
+  FRAME_WATCHDOG_STOP_INTERVALS,
 } from "../../src/renderer/src/plugins/frames/frameController";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
@@ -24,7 +24,7 @@ import { KNOWLEDGE_RETIRE_PROMPT_MARKER, knowledgeRetire } from "./scenarios/kno
  */
 
 /** Longer than the watchdog's unanswered pings take to stop a page, with two seconds to spare. */
-const PAUSE_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_MISSES + 2_000;
+const PAUSE_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_STOP_INTERVALS + 2_000;
 
 /** The panel's collapsed count of `n` concepts. */
 const conceptsLine = (n: number) => counted(n, "concept", "concepts");
@@ -184,8 +184,8 @@ test("an open panel keeps its page through a pause of the app's main process", a
   }
 });
 
-test("a panel the watchdog stops mounts again once, and a second stop does not keep its old counts in the header", async () => {
-  test.setTimeout(120_000);
+test("a panel the watchdog stops mounts again on its own once per start, and a stop it leaves to Retry does not keep its old counts in the header", async () => {
+  test.setTimeout(150_000);
   const userDataDir = scratchDir("infinitary-knowledge-stopped-");
   const seeded = await seedKnowledge(userDataDir);
   const { app, page } = await launchApp({
@@ -210,7 +210,18 @@ test("a panel the watchdog stops mounts again once, and a second stop does not k
     await expect(panelBody(page, "knowledge").locator("body")).toBeVisible({ timeout: 30_000 });
     await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toHaveCount(0);
 
-    // A second stop of the fresh page is left to the captain's Retry.
+    // A fresh page that has answered as many pings in a row as a stop misses
+    // is a new start: its own stop mounts a fresh page on its own too (INF-3798).
+    const second = await frameIn(knowledge).getAttribute("src");
+    await expect(frameIn(knowledge)).toHaveAttribute("data-frame-steady", "", { timeout: 30_000 });
+    await pauseProcess(await pagePid(app, page, "knowledge"));
+    await expect(frameIn(knowledge)).not.toHaveAttribute("src", second ?? "", { timeout: 30_000 });
+    await expect(panelBody(page, "knowledge").locator("body")).toBeVisible({ timeout: 30_000 });
+    await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toHaveCount(0);
+
+    // A stop of a fresh page that has not answered that long yet is left to
+    // the captain's Retry.
+    await expect(frameIn(knowledge)).not.toHaveAttribute("data-frame-steady", "");
     await pauseProcess(await pagePid(app, page, "knowledge"));
     await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toBeVisible({
       timeout: 30_000,

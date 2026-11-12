@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { CARD_BODY_WORDS } from "../../src/renderer/src/cards/cardBodyWords";
 import {
   FRAME_WATCHDOG_INTERVAL_MS,
-  FRAME_WATCHDOG_MISSES,
+  FRAME_WATCHDOG_STOP_INTERVALS,
 } from "../../src/renderer/src/plugins/frames/frameController";
 import { FRAME_BRIDGE_SHA256 } from "../../src/shared/plugins/frameScript";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
@@ -22,10 +22,10 @@ import { pager, showCard, shownEntry } from "./stack";
  */
 
 /**
- * FRAME_WATCHDOG_INTERVAL_MS x (FRAME_WATCHDOG_MISSES + 1), plus slack: the
+ * FRAME_WATCHDOG_INTERVAL_MS x FRAME_WATCHDOG_STOP_INTERVALS, plus slack: the
  * budget a perf run holds the teardown to (./perf.ts). Every run measures it.
  */
-const WATCHDOG_WINDOW_MS = FRAME_WATCHDOG_INTERVAL_MS * (FRAME_WATCHDOG_MISSES + 1) + 3_000;
+const WATCHDOG_WINDOW_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_STOP_INTERVALS + 3_000;
 
 let launched: LaunchedApp;
 

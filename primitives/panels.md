@@ -69,6 +69,7 @@ The words "extension" and "plugin" never reach a user surface.
 A compile refusal is a `PersonalCompileError` naming `<id>/<file>` and the import, and that panel mounts nothing.
 A throw or a module that will not import shows the quiet line "This panel stopped drawing." with the chrome staying; the boundary resets on the next version.
 A framed panel that leaves four pings unanswered is torn down and mounted once more; a second stop shows "This panel stopped responding." with a Retry.
+A mounted-again page that then answers four pings in a row has a fresh start, so its own later stop mounts it once more too (`docs/ui-plugins.md`).
 A registration refusal is logged, kept in its own words and reported to the core, so the crewmate and the first mate read why a panel is missing.
 Two launches that never settled turn the switch off with reason `safe-mode`; off disposes every server host, forgets every compiled panel and pushes one empty snapshot.
 The store refuses a write over its cap with the cap named.

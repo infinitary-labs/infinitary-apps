@@ -95,11 +95,16 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     const ready = join(held, "ready");
     const resume = join(held, "resume");
     // That computer checks and unpacks the copy it got for longer than the limit.
+    // It reads the copy to its end first: this Mac ends the copy only once
+    // the copy's two minutes with nothing moving have handed over to the time
+    // limit. Its tar can be done before that end, and a loaded Mac hears its
+    // own packing end a moment later, so a step reached before the end let
+    // the fake clock's jump stop the update for nothing moving instead.
     const marker = `printf "${UPDATE_STARTING}`;
     const ssh = sshd.ssh({
       remote: them.env,
       programs: {
-        [marker]: `printf reached >> "${ready}"; while [ ! -f "${resume}" ]; do sleep 1; done; ${marker}`,
+        [marker]: `cat >/dev/null; printf reached >> "${ready}"; while [ ! -f "${resume}" ]; do sleep 1; done; ${marker}`,
       },
     });
     const at = await home({ ssh, bundle: standInBundle(record) });

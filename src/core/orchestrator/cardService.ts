@@ -51,6 +51,7 @@ import {
 } from "./cardThreads";
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
+import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { settleCardFacts } from "./settleCardFacts";
@@ -118,6 +119,8 @@ export class CardService {
   private readonly threads: CardThreads;
   private readonly emits: CardEmits;
   readonly hostCards: HostCardStack;
+  /** The put-off choices the host keeps and raises again (INF-3846 piece 3). */
+  readonly putOffs: PutOffs;
   private broadcastTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly unsubscribeTasks: () => void;
 
@@ -129,6 +132,14 @@ export class CardService {
       (id, reason) => this.takeDown(id, reason),
     );
     this.evidence = new CardEvidence(host, this.cards);
+    this.putOffs = new PutOffs({
+      now: host.now,
+      tasks: host.tasks,
+      cardStore: host.cardStore,
+      // The same card, back on top: its answer was only put off.
+      raise: ({ minimized: _aside, awaiting: _held, ...card }) =>
+        this.put({ ...card, priority: this.topPriority(card.priority) }),
+    });
     this.ended = new EndedCards(host.cardStore, this);
     const stack: CardStack = {
       cards: this.cards,
@@ -145,7 +156,7 @@ export class CardService {
       resolve: (...args) => this.resolve(...args),
     };
     this.threads = new CardThreads(host, stack);
-    this.emits = new CardEmits(host, stack, this.threads);
+    this.emits = new CardEmits(host, stack, this.threads, this.putOffs);
     host.cardStore.markCaptureEpoch(host.now(), host.build);
     // Unresolved cards survive restarts (D-9). Migration 73 has retired
     // their keep-open actions and streaming state. A card with a lifecycle
@@ -1260,6 +1271,10 @@ export class CardService {
       });
       return false;
     }
+    // A put-off choice (INF-3846 piece 3) answers nothing yet: the host
+    // keeps the card, so its task stays as it is and its row stays open.
+    // Read from the chosen action itself, as `answerTaskResponse` reads it.
+    const putOff = card.actions.some((entry) => entry.id === action && entry.until !== undefined);
     if (card.taskId && tasks.get(card.taskId)) {
       tasks.capture.recordCardResolved(card.taskId, {
         cardId: card.id,
@@ -1273,10 +1288,10 @@ export class CardService {
       // the action as its timeline reason. A real gate change restarts the
       // idle clock; putting a card aside never enters this path.
       this.host.syncCaptainGate(card.taskId, this.host.now());
-      closedAnswer = this.host.closeAnsweredTask(card, action, by);
+      if (!putOff) closedAnswer = this.host.closeAnsweredTask(card, action, by);
     }
     const row = tasks.capture.openCardTaskFor(card.id);
-    if (!row) return closedAnswer;
+    if (!row || putOff) return closedAnswer;
     if (this.directionRetention?.(card.id, action, by, card.offerId)) {
       tasks.placement.setGate(row.id, null, "the chosen direction is awaiting verified saving");
       return closedAnswer;

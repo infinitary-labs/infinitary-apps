@@ -69,6 +69,7 @@ import { admitUnderParent, type ContainerLoop, reopenHeldContainers } from "./co
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import { TaskArchive } from "./taskArchive";
 import { TaskCapture } from "./taskCapture";
+import { CLOSE_EVENT_KIND } from "./taskCloses";
 import { TaskDeliveries } from "./taskDeliveries";
 import { TaskGraph, TaskGraphRefusal } from "./taskGraph";
 import { TaskPlacement } from "./taskPlacement";
@@ -356,19 +357,6 @@ export type TaskServiceOptions = {
    * build; a packaged app logs and continues.
    */
   strict?: boolean;
-};
-
-const CLOSE_EVENT_KIND: Record<TaskClosedReason, InsertTaskEvent["kind"]> = {
-  landed: "landed",
-  merged: "merged",
-  released: "status",
-  answered: "status",
-  settled: "status",
-  finished: "status",
-  cancelled: "status",
-  discarded: "status",
-  failed: "failed",
-  superseded: "status",
 };
 
 function defaultCloseText(input: CloseInput): string {

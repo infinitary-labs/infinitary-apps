@@ -341,6 +341,13 @@ const ACTIONS_EFFECTS =
 const ACTIONS_OPEN =
   " or kind open with target settings|subscriptions|projects and sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it.";
 
+/**
+ * A put-off choice ("Not until…", INF-3846 piece 3): the app keeps the card
+ * and raises the same card again, so its author sets no reminder of its own.
+ */
+const ACTIONS_UNTIL =
+  " until on an action with no effect offers Not until: kind close with task (a task key; back when that task closes, merged or not), date with at (an ISO time), event with integration, event and filter (any event an automation rule can wait for) or word (back when the captain asks). The click reaches you as usual and an automation rule raises the same card again then; set no reminder.";
+
 export const CARD_PARAMS = {
   title: "Short sentence-case title",
   body: "The card body: a raw HTML fragment",
@@ -351,9 +358,9 @@ export const CARD_PARAMS = {
   interim: "True when reply is a progress note; the captain's reply still waits.",
   width:
     "Body: short text narrow; wide 800 px; full ≤1,040 px; pass it only to require more room; it only widens.",
-  actions: `${ACTIONS_EFFECTS}${ACTIONS_OPEN}`,
+  actions: `${ACTIONS_EFFECTS}${ACTIONS_OPEN}${ACTIONS_UNTIL}`,
   /** A crewmate's actions, which may also ask to send a write it kept (FI3-1571 piece 4). */
-  crewActions: `${ACTIONS_EFFECTS} or kind request_write with ask naming the id github_write returned;${ACTIONS_OPEN}`,
+  crewActions: `${ACTIONS_EFFECTS} or kind request_write with ask naming the id github_write returned;${ACTIONS_OPEN}${ACTIONS_UNTIL}`,
   risk: RISK_PARAM,
   asking: "True on a question card, not a ready plan.",
   design_only: "True only as the declared design-only fact.",

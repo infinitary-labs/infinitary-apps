@@ -57,6 +57,8 @@ export type ListenedEvent = {
   filters?: readonly { name: string; label: string; defaultValue?: string; required?: true }[];
   /** The integration says when something arrives, so a rule finds its place as soon as it listens. */
   atOnce?: boolean;
+  /** Why a filter's value could never match, refused when the rule is saved; undefined when it can. */
+  checkFilter?: (filter: Record<string, string> | undefined) => string | undefined;
 };
 
 /** One look's answer: where to look from next and what arrived. */
@@ -113,6 +115,12 @@ export type SchedulerOptions = {
    * receipts, docs/integrations.md "The inbox").
    */
   handled?: (integration: string, events: string[], at: number) => void;
+  /**
+   * Show a kept card again (docs/automation.md, "A rule that shows a card"):
+   * a rule that names a card raises it when it runs, instead of waking the
+   * first mate. Absent, such a run raises nothing.
+   */
+  raise?: (cardId: string) => void;
 };
 
 const TICK_MS = 60 * 1000;
@@ -347,7 +355,7 @@ export class Scheduler {
       if (record.state !== "enabled" || record.nextFire > now) continue;
       const missed = missedOccurrences(record.spec, record.nextFire, now);
       const next =
-        record.spec.kind === "once"
+        record.spec.kind === "once" || record.card
           ? { nextFire: record.nextFire, state: "completed" as const }
           : { nextFire: computeNextFire(record.spec, now), state: "enabled" as const };
       const project = record.projectId ? this.options.projectOf?.(record.projectId) : undefined;
@@ -371,15 +379,37 @@ export class Scheduler {
         },
         next,
         now,
-        (run) => {
-          const queued = this.options.notify(
+        (run) =>
+          this.deliver(record, run, now, () =>
             wakeOf(record, { prompt, catchUp, missed, run }, project),
-            "scheduled",
-          );
-          return typeof queued === "number" ? queued : null;
-        },
+          ),
       );
     }
+  }
+
+  /**
+   * A run's delivery, inside its transaction: a rule that names a card
+   * raises it and its run is handled at once, naming the card; any other
+   * wakes the first mate through the inbox and answers the row it queued.
+   */
+  private deliver(
+    record: ScheduleRecord,
+    run: number,
+    now: number,
+    wake: () => TypedWake,
+  ): number | null {
+    if (record.card) {
+      this.options.raise?.(record.card);
+      this.options.store.settle(run, {
+        delivery: "handled",
+        at: now,
+        tasks: [],
+        cards: [record.card],
+      });
+      return null;
+    }
+    const queued = this.options.notify(wake(), "scheduled");
+    return typeof queued === "number" ? queued : null;
   }
 
   /** Every look still running has answered and been acted on: for a test. */
@@ -497,7 +527,11 @@ export class Scheduler {
       return;
     }
     const now = this.now();
-    const next = { nextFire: now, state: "enabled" as const, cursor: answer.cursor };
+    const next = {
+      nextFire: now,
+      state: record.card ? ("completed" as const) : ("enabled" as const),
+      cursor: answer.cursor,
+    };
     const project = record.projectId ? this.options.projectOf?.(record.projectId) : undefined;
     const unsent = this.unsent(current);
     if (unsent?.events && this.foldEvents(current, unsent, fresh, next, project, found)) return;
@@ -520,17 +554,14 @@ export class Scheduler {
       },
       next,
       now,
-      (run) => {
-        const queued = this.options.notify(
+      (run) =>
+        this.deliver(record, run, now, () =>
           wakeOf(
             record,
             { prompt, catchUp: false, missed: 0, run, events: eventsFact(found, fresh.length) },
             project,
           ),
-          "scheduled",
-        );
-        return typeof queued === "number" ? queued : null;
-      },
+        ),
     );
   }
 
@@ -717,7 +748,7 @@ export class Scheduler {
     captainRequested = false,
     name?: string,
     projectId?: string,
-    options: { draft?: boolean } & SaysChange = {},
+    options: { draft?: boolean; card?: string } & SaysChange = {},
   ): ScheduleRecord {
     const { spec, connection } = this.checkEvent(normalized(given));
     const trimmed = prompt.trim();
@@ -737,6 +768,7 @@ export class Scheduler {
       state: draft ? "draft" : "enabled",
       revision: 1,
       ...(connection ? { connection } : {}),
+      ...(options.card ? { card: options.card } : {}),
     };
     this.options.store.insert(record);
     this.announce(automationWords.created(draft, spec, trimmed), options);
@@ -811,6 +843,7 @@ export class Scheduler {
         ? { cursor: record.cursor }
         : {}),
       ...(connection ? { connection } : {}),
+      ...(record.card ? { card: record.card } : {}),
     };
     const recalled = edited ? this.recall(id, "edited") : 0;
     this.options.store.save(next);
@@ -943,7 +976,7 @@ export class Scheduler {
    * An event rule names an event something connected declares: kept by the
    * integration's id, found by its id or its name.
    */
-  private checkEvent(spec: ScheduleSpec): { spec: ScheduleSpec; connection?: string } {
+  checkEvent(spec: ScheduleSpec): { spec: ScheduleSpec; connection?: string } {
     if (spec.kind !== "event") return { spec };
     const found = this.options.events?.find(spec.integration, spec.event);
     if (!found) {
@@ -961,6 +994,8 @@ export class Scheduler {
       (field) => field.required && !spec.filter?.[field.name]?.trim(),
     );
     if (missing) throw new Error(`Name the ${missing.label} for this event.`);
+    const unmatched = found.checkFilter?.(spec.filter);
+    if (unmatched) throw new Error(unmatched);
     return {
       spec: {
         kind: "event",

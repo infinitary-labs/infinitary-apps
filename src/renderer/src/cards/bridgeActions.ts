@@ -16,9 +16,13 @@ import type { CardAction } from "@shared/cards";
  *
  * An action with no effect is a reply to the card's own author, which a body
  * may still raise: the worst it can do is send its own emitter a message.
+ * A put-off choice (`until`, INF-3846 piece 3) is withheld too: on its click
+ * the host keeps the card off the stack, which only the captain may ask.
  */
 export function bridgeActionIds(actions: readonly CardAction[]): string[] {
-  const effectIds = new Set(actions.filter((action) => action.effect).map((action) => action.id));
+  const effectIds = new Set(
+    actions.filter((action) => action.effect || action.until).map((action) => action.id),
+  );
   const declared = new Set<string>();
   const ids: string[] = [];
   for (const action of actions) {

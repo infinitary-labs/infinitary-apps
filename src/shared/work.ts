@@ -25,6 +25,7 @@ import {
   placementFactsRequestSchema,
 } from "./placement";
 import { privateSiteSchema } from "./privateSites";
+import { putOffUntilSchema } from "./putOff";
 import { reasoningSchema } from "./reasoning";
 import { keptRecoveryWaySchema, workWaitSchema } from "./recovery";
 import { requiredActionRevisionInputSchema, requiredActionsSchema } from "./requiredActions";
@@ -371,6 +372,7 @@ export const placedCardSchema = z.object({
       default: z.boolean().optional(),
       effect: cardEffectSchema.optional(),
       danger: z.boolean().optional(),
+      until: putOffUntilSchema.optional(), // `card-put-off.md`: never sent to an older home
     }),
   ),
   id: z.string().optional(),

@@ -496,6 +496,17 @@ const EMIT_CARD_NESTED_CARRIERS: Record<string, string> = {
     "An action's effect is what the host does on the click; with no effect the click returns to you as a message.",
   "actions[].danger": "danger true renders a destructive choice",
   "actions[].declines": "declines true marks your own way to say no to every choice",
+  // INF-3846 piece 3: a choice the captain puts off until a task closes, a time, an event or their word.
+  "actions[].until": "until on an action with no effect offers Not until",
+  "actions[].until.task":
+    "kind close with task (a task key; back when that task closes, merged or not)",
+  "actions[].until.at": "date with at (an ISO time)",
+  "actions[].until.integration":
+    "event with integration, event and filter (any event an automation rule can wait for)",
+  "actions[].until.event":
+    "event with integration, event and filter (any event an automation rule can wait for)",
+  "actions[].until.filter":
+    "event with integration, event and filter (any event an automation rule can wait for)",
   "actions[].effect<merge>.after":
     "kind merge with after close (ends the task once nothing else is open) or continue",
   "actions[].effect<merge>.review": "review (check_change pull's id; omit for your current change)",

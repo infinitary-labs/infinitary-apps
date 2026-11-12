@@ -104,7 +104,8 @@ function useListenable(): Listenable[] {
       off();
     };
   }, [waits]);
-  return (view?.integrations ?? []).flatMap((integration) =>
+  // The integrations' events, then the app's own, which need nothing connected.
+  return [...(view?.integrations ?? []), ...(view?.appEvents ?? [])].flatMap((integration) =>
     (integration.events ?? []).map((event) => ({
       value: `${integration.id}/${event.name}`,
       when: automationEventWords(event.label, integration.name),

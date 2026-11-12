@@ -333,6 +333,17 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         }
         return withdrawn.text;
       }),
+    raisePutOff: (input) =>
+      asText(() => {
+        const record = resolve(input.task);
+        host.asks.attach(record.id, "update_task");
+        const raised = supervisor.cards.putOffs.raiseForTask(record.id);
+        if (raised === 0)
+          return `${record.key} has no card put off; nothing changed. Its decisions name what the captain chose.`;
+        const words = `Raised again the card${raised === 1 ? "" : "s"} the captain put off on ${record.key}: ${record.title}`;
+        tookEffect(record.id, words);
+        return `${words}.`;
+      }),
     pin: (input) =>
       asText(() => {
         const record = resolve(input.task);

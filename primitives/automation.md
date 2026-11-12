@@ -14,9 +14,11 @@ The first mate's `schedule_prompt` and `cancel_schedule` and Settings → Automa
 - Use it for a reminder, a recurring check, a weekly audit, or a reaction to a mail, calendar or integration event.
 - It is not a second task runner: a rule never runs work itself, holds no task state and tracks no outcome beyond its delivery; the work it leads to runs on [tasks.md](tasks.md).
 - Do not build a feature's own timer, cron table, polling loop or "watch for new X" job that wakes an agent; save a rule (as a draft when the captain has not yet asked for it) with the feature's knowledge in its prompt.
-- Do not add an event source by polling inside the feature; declare the event on its integration ([integrations.md](integrations.md)) and let an event rule listen.
+- Do not add an event source by polling inside the feature; declare the event on its integration ([integrations.md](integrations.md)), or, for an event the app itself tells, in `APP_EVENTS` (`../src/core/integrations/appEvents.ts`) beside its owner's look, and let an event rule listen.
+  Either way Settings → Automation and the agents' integrations tool list and name it.
 - A panel's own data refresh is not an automation rule: a panel read's poll interval or invalidation ([live-reads.md](live-reads.md); `../docs/ui-plugins.md`, "The read catalog, v0") and a personal panel server's background task (`../docs/ui-plugins.md`, "Personal extensions") refresh data and never wake an agent.
 - A multi-step guided way of working is a parent task with child tasks or a [programs.md](programs.md) run; a rule may start one, not replace it.
+- A feature that brings something back at a moment saves a rule that does it, as a card's Not until choice saves a rule that shows the card again (`../docs/automation.md`, "A rule that shows a card"); the app's own "A task closes" event (`tasks/task_closed`, declared in `APP_EVENTS`) is one any rule can listen for.
 
 ## Owner and entry points
 

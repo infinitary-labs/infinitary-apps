@@ -684,7 +684,8 @@ describe("two additions that overlap (INF-948)", () => {
     });
     expect(one).toMatchObject({ status: "fulfilled", value: { id: "mcp-studio-notes" } });
     expect(other).toMatchObject({ status: "fulfilled", value: { id: "mcp-studio-notes-2" } });
-    const rows = service.roster();
+    // The roster's connections; the app's own events row beside them is not one.
+    const rows = service.roster().filter((row) => row.kind === "mcp");
     expect(rows.map((row) => [row.id, row.name])).toEqual([
       ["mcp-studio-notes", "Studio notes"],
       ["mcp-studio-notes-2", "Studio-notes"],

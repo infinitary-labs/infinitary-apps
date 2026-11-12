@@ -109,6 +109,7 @@ export type ReportSortRule =
   | "waited-on"
   | "review-reread"
   | "captain-card"
+  | "put-off"
   | "finished"
   | "filed-followups"
   | "in-backlog"
@@ -271,6 +272,16 @@ export type Witnesses = {
    * it or to triage what it filed.
    */
   inBacklog?: boolean;
+  /**
+   * The captain put off a card on the task ("Not until…", INF-3846 piece
+   * 3): the host keeps it and raises the same card again when its moment
+   * comes. `wait` is a put-off an Automation rule raises (a task's close, a
+   * time or an event), `word` one only the captain's word brings back.
+   * Nobody nudges it, and its report wakes no one - unless the task it
+   * awaits is one nobody has started (`waitsOnUnstarted`), which is the
+   * first mate's to start, as for any wait.
+   */
+  putOff?: "wait" | "word";
 };
 
 export type ReportSortFacts = Witnesses & {
@@ -381,6 +392,15 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
             : facts.finishedCardUp
               ? "its crewmate declared its work finished while its own card is still open; its explicit ending remains the captain's move."
               : "a decision card for this task is on the captain's screen; the next move is theirs.",
+    };
+  }
+  if (facts.putOff && !facts.finished && !facts.filedFollowups && !facts.waitsOnUnstarted) {
+    return {
+      rule: "put-off",
+      verdict: "routine",
+      wake: false,
+      reason:
+        "the captain put off its card until a task closes, a time, an event or their word; an automation rule raises it again then.",
     };
   }
   if (facts.finished) {
@@ -551,6 +571,8 @@ export function idleTurn(witnesses: Witnesses): IdleTurn {
   if (
     witnesses.answerReady ||
     witnesses.decisionCardOpen ||
+    // A put-off card is the captain's to bring back (INF-3846 piece 3).
+    (witnesses.putOff && !witnesses.waitsOnUnstarted) ||
     witnesses.finishedCardUp ||
     witnesses.finishedNoCard
   )

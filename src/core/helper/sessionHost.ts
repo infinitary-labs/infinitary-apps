@@ -257,6 +257,8 @@ const RETRIES = 2;
 
 /** A merge card's summary of what changed since the captain last saw one (`merge-card-since-seen.md`). */
 const MERGE_CARD_SINCE_SEEN = contractChange("merge-card-since-seen");
+/** A put-off choice the home keeps and raises again (`card-put-off.md`). */
+const CARD_PUT_OFF = contractChange("card-put-off");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -1377,6 +1379,15 @@ export class SessionHost {
                 `Card refused: ${HOME.the} runs an older Infinitary that cannot show files on a card; hand the files on in your report until it is updated.`,
               );
             }
+            // An older home would drop the put-off and show a plain choice
+            // nobody brings back, so nothing is sent (INF-3846 piece 3).
+            if (
+              card.actions.some((action) => action.until !== undefined) &&
+              !listsChange(this.options.homeChanges?.(), CARD_PUT_OFF)
+            )
+              throw new Error(
+                `until refused: ${HOME.the} runs an older Infinitary that cannot keep a put-off choice; nothing was sent. Offer the choice without until, and set your own reminder until ${HOME.the} is updated.`,
+              );
             // Each picture's bytes first, so the home holds them when it shows the card.
             await sendPictures(media, card.pictures ?? [], signal);
             // Each project font its preview names, before the card too.

@@ -3,6 +3,7 @@ import {
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
   type IntegrationApprovalChoice,
+  type IntegrationEventView,
   type IntegrationKind,
   type IntegrationSettingsPatch,
   type IntegrationSignInConsent,
@@ -27,6 +28,7 @@ import type {
   WriteAskOutcome,
 } from "@shared/writeAsk";
 import type { LegacyCalls } from "../storage/outsideDataScrub";
+import { APP_EVENTS, appEventSource } from "./appEvents";
 import {
   type IntegrationActionSpec,
   type IntegrationAnswer,
@@ -34,6 +36,7 @@ import {
   type IntegrationCaller,
   type IntegrationConnection,
   type IntegrationEventFilter,
+  type IntegrationEventSpec,
   type IntegrationLook,
   IntegrationOutcomeUnknown,
   type PanelCaller,
@@ -231,7 +234,11 @@ export type IntegrationListen = {
 const CONNECTION_REF = /^c-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** What holds a name now (`IntegrationsService.holder`). */
-type Holder = { row: Row } | { claim: IntegrationKind } | { reserved: string; signedOut: boolean };
+type Holder =
+  | { row: Row }
+  | { claim: IntegrationKind }
+  | { reserved: string; signedOut: boolean }
+  | { app: string };
 
 /** A fence's random value: 64 bits, which nobody who wrote the fenced words could guess. */
 const FENCE_VALUE_BYTES = 8;
@@ -260,6 +267,12 @@ export class IntegrationsService {
       addable: this.options.bindings
         .filter((binding) => binding.many || !connected.has(binding.kind))
         .map((binding) => ({ kind: binding.kind, name: INTEGRATION_KIND_NAMES[binding.kind] })),
+      // The app's own events, always there, which a rule listens to the same way.
+      appEvents: APP_EVENTS.map((source) => ({
+        id: source.id,
+        name: source.name,
+        events: source.events.map(eventView),
+      })),
     };
   }
 
@@ -288,7 +301,15 @@ export class IntegrationsService {
 
   /** Every integration a caller may reach, without their actions' shapes. */
   roster(): Record<string, unknown>[] {
-    return this.rows().map((row) => this.rosterEntry(row));
+    return [
+      ...this.rows().map((row) => this.rosterEntry(row)),
+      ...APP_EVENTS.map((source) => ({
+        name: source.name,
+        id: source.id,
+        kind: "app",
+        events: source.events.map((event) => event.name),
+      })),
+    ];
   }
 
   /** One row as the roster lists it. */
@@ -310,6 +331,16 @@ export class IntegrationsService {
 
   /** One integration's actions with what each does and its input's JSON Schema. */
   show(name: string): Record<string, unknown> | IntegrationAnswer {
+    const own = appEventSource(name);
+    if (own)
+      return {
+        integration: own.name,
+        id: own.id,
+        kind: "app",
+        about: "The app's own events: always there, with nothing to connect and no actions.",
+        actions: [],
+        events: own.events.map((spec) => eventShown(own.id, spec)),
+      };
     const row = this.find(name);
     if (!("connection" in row)) return row;
     const view = this.viewOf(row);
@@ -338,14 +369,7 @@ export class IntegrationsService {
         : {}),
       ...(row.connection.events?.length
         ? {
-            events: row.connection.events.map((spec) => ({
-              name: spec.name,
-              label: spec.label,
-              description: spec.description,
-              ...(spec.filters ? { filters: spec.filters } : {}),
-              looks: spec.every === 1 ? "every minute" : `every ${spec.every} minutes`,
-              listen: `schedule_prompt on_event "${view.id}/${spec.name}": it runs as new ones arrive, their summaries at {{events}} in its prompt or after it`,
-            })),
+            events: row.connection.events.map((spec) => eventShown(view.id, spec)),
           }
         : {}),
     };
@@ -1035,7 +1059,9 @@ Do not repeat this call; read ${name} to check what happened first.`
       throw new IntegrationRefusal(
         "claim" in holder
           ? `An integration named ${name} is being added, so ${kindName} cannot be added beside it until that ends. Then sign in to ${kindName} again.`
-          : `${name} belongs to your ${holder.reserved} connection, so ${kindName} cannot be added under it.`,
+          : "app" in holder
+            ? `${name} names the app's own ${holder.app} events, so ${kindName} cannot be added under it.`
+            : `${name} belongs to your ${holder.reserved} connection, so ${kindName} cannot be added under it.`,
       );
     this.signingIn?.abort();
     const controller = new AbortController();
@@ -1388,26 +1414,7 @@ Do not repeat this call; read ${name} to check what happened first.`
           rule: integrationRule(this.allowed(row, spec), enabled),
         };
       }),
-      ...(row.connection.events?.length
-        ? {
-            events: row.connection.events.map((spec) => ({
-              name: spec.name,
-              label: spec.label,
-              every: spec.every,
-              ...(spec.filters
-                ? {
-                    filters: spec.filters.map((field) => ({
-                      name: field.name,
-                      label: field.label,
-                      ...(field.defaultValue !== undefined
-                        ? { defaultValue: field.defaultValue }
-                        : {}),
-                    })),
-                  }
-                : {}),
-            })),
-          }
-        : {}),
+      ...(row.connection.events?.length ? { events: row.connection.events.map(eventView) } : {}),
       ...this.secretsOf(row),
     };
   }
@@ -1435,6 +1442,9 @@ Do not repeat this call; read ${name} to check what happened first.`
     if (named) return { row: named };
     const claim = this.claims.get(wanted);
     if (claim && claim.kind !== except?.kind) return { claim: claim.kind };
+    // The app's own event sources are named like integrations (`APP_EVENTS`).
+    const app = appEventSource(name);
+    if (app) return { app: app.name };
     const reserved = this.reservedNames().find(
       (entry) =>
         entry.id !== except?.id &&
@@ -1465,6 +1475,10 @@ Do not repeat this call; read ${name} to check what happened first.`
     if ("claim" in holder)
       throw new IntegrationRefusal(
         `An integration named ${name.trim()} is being added. Choose another name.`,
+      );
+    if ("app" in holder)
+      throw new IntegrationRefusal(
+        `${name.trim()} names the app's own ${holder.app} events. Choose another name.`,
       );
     throw new IntegrationRefusal(
       `${name.trim()} belongs to your ${holder.reserved} connection${holder.signedOut ? ", even while signed out" : ""}. Choose another name.`,
@@ -1541,4 +1555,34 @@ Do not repeat this call; read ${name} to check what happened first.`
       refused: "invalid",
     };
   }
+}
+
+/** An event as Settings reads it. */
+function eventView(spec: IntegrationEventSpec): IntegrationEventView {
+  return {
+    name: spec.name,
+    label: spec.label,
+    every: spec.every,
+    ...(spec.filters
+      ? {
+          filters: spec.filters.map((field) => ({
+            name: field.name,
+            label: field.label,
+            ...(field.defaultValue !== undefined ? { defaultValue: field.defaultValue } : {}),
+          })),
+        }
+      : {}),
+  };
+}
+
+/** An event as the integrations tool shows it, with how a rule listens to it. */
+function eventShown(id: string, spec: IntegrationEventSpec): Record<string, unknown> {
+  return {
+    name: spec.name,
+    label: spec.label,
+    description: spec.description,
+    ...(spec.filters ? { filters: spec.filters } : {}),
+    looks: spec.every === 1 ? "every minute" : `every ${spec.every} minutes`,
+    listen: `schedule_prompt on_event "${id}/${spec.name}": it runs as new ones arrive, their summaries at {{events}} in its prompt or after it`,
+  };
 }

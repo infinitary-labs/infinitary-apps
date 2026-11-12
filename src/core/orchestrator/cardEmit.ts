@@ -20,6 +20,7 @@ import { revisionLinks } from "./cardNavigation";
 import type { CardServiceHost, CardStack } from "./cardStackTypes";
 import type { CardThreads } from "./cardThreads";
 import { waitingCardWords } from "./idleWakes";
+import type { PutOffs } from "./putOffs";
 import { emittedSettleFacts } from "./settleCardFacts";
 
 /**
@@ -55,6 +56,7 @@ export class CardEmits {
     private readonly host: CardServiceHost,
     private readonly stack: CardStack,
     private readonly threads: CardThreads,
+    private readonly putOffs: Pick<PutOffs, "check">,
   ) {}
 
   /**
@@ -186,6 +188,59 @@ export class CardEmits {
   }
 
   /**
+   * A put-off choice ("Not until…", INF-3846 piece 3) names what an
+   * Automation rule can wait for: a task's close by key, kept as the task's
+   * id, a time still to come, or an event something connected tells. One it
+   * could never see come true is refused with its fix.
+   */
+  private putOffsChecked(input: EmittedCardInput): EmittedCardInput {
+    if (!input.actions.some((action) => action.until)) return input;
+    const now = this.host.now();
+    const actions = input.actions.map((action) => {
+      const until = action.until;
+      if (!until) return action;
+      if (action.effect)
+        throw new Error(
+          `Card refused: action "${action.id}" carries both until and an effect. A put-off is an ordinary choice the app keeps; give it no effect. Nothing was shown.`,
+        );
+      if (until.kind === "date") {
+        if (!Number.isFinite(until.at))
+          throw new Error(
+            `Card refused: action "${action.id}"'s until at is not a time. Give an ISO time with its offset, such as 2026-11-20T09:00:00-08:00. Nothing was shown.`,
+          );
+        if (until.at <= now)
+          throw new Error(
+            `Card refused: action "${action.id}"'s until at has already passed. Name a time still to come. Nothing was shown.`,
+          );
+        return action;
+      }
+      if (until.kind === "close") {
+        const awaited = until.task ? this.host.tasks.resolve(until.task) : undefined;
+        if (!awaited)
+          throw new Error(
+            `Card refused: action "${action.id}"'s until task "${until.task}" names no task. Give the key of the task it waits for. Nothing was shown.`,
+          );
+        if (TaskService.isClosed(awaited))
+          throw new Error(
+            `Card refused: ${awaited.key} has already closed, so there is nothing to wait for. Ask the question now, or name another task. Nothing was shown.`,
+          );
+        return { ...action, until: { kind: "close" as const, task: awaited.id } };
+      }
+      if (until.kind === "event") {
+        try {
+          this.putOffs.check(until);
+        } catch (error) {
+          throw new Error(
+            `Card refused: action "${action.id}"'s until event cannot be waited for. ${error instanceof Error ? error.message : String(error)} Nothing was shown.`,
+          );
+        }
+      }
+      return action;
+    });
+    return { ...input, actions };
+  }
+
+  /**
    * Create or revise an agent-emitted card. A still-open card with the same
    * stable id is updated in place (same stack position); otherwise a new
    * card is minted.
@@ -209,6 +264,7 @@ export class CardEmits {
         `Action "${write.id}" asks to send a crewmate's write, which only that crewmate's card may.`,
       );
     }
+    input = this.putOffsChecked(input);
     const settle = input.actions.find((action) => settleEffectOf(action) || mergeEffectOf(action));
     if (settle && !context.taskId) {
       throw new Error(
@@ -585,6 +641,7 @@ export function buildEmittedCard(
         ...(danger ? { danger: true } : {}),
         ...(action.declines ? { declines: true as const } : {}),
         ...(action.care ? { care: action.care } : {}),
+        ...(action.until ? { until: action.until } : {}),
       };
     });
   const width = decidedCardWidth(input);

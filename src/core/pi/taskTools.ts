@@ -88,6 +88,8 @@ export type TaskToolsDelegate = {
   drop(input: { task: string; reason: string; confirm?: boolean; replacedBy?: string }): string;
   /** Withdraw the captain's kept merge approval on his words; the work stays (FI3-304). */
   withdrawMerge(input: { task: string }): string;
+  /** Raise the task's put-off cards now, on the captain's words (INF-3846 piece 3). */
+  raisePutOff?(input: { task: string }): string;
   /** Pin a task to the top of Tasks, or unpin it, on the captain's words (INF-3127). */
   pin(input: { task: string; pinned: boolean }): string;
   /** Correct a required action's words, keeping its filing (docs/required-actions.md). */
@@ -414,6 +416,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           description: "The captain takes back a merge they clicked; the work stays",
         }),
       ),
+      raise_put_off: Type.Optional(
+        Type.Boolean({
+          description:
+            "On the captain's words: raise again now the card they put off on this task with a Not until choice.",
+        }),
+      ),
       take_back_yes: Type.Optional(
         Type.String({
           description: "On the captain's words: the card id of a yes in the task's allowed facts",
@@ -488,6 +496,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         return { text: delegate.pin({ task: params.task, pinned: params.pinned }) };
       }
       if (params.withdraw_merge) return { text: delegate.withdrawMerge({ task: params.task }) };
+      if (params.raise_put_off)
+        return {
+          text: delegate.raisePutOff
+            ? delegate.raisePutOff({ task: params.task })
+            : "Put-off cards are not available here.",
+        };
       if (params.take_back_yes?.trim())
         return {
           text: delegate.withdrawAllowance({

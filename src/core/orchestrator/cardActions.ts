@@ -288,6 +288,9 @@ export class CardActions {
     // bookkeeping. Resolution can close the card's answer task as well.
     const chosen = card.actions.find((action) => action.id === actionId);
     if (!chosen) throw new CardChoiceUnavailableError("undeclared");
+    // A put-off (INF-3846 piece 3) is kept only on the captain's own click,
+    // never a body's script; the frame is never offered it (`bridgeActionIds`).
+    if (chosen.until && source !== "chrome") throw new CardChoiceUnavailableError("undeclared");
     // A frame value belongs only to a frame reply, never a host effect; a
     // footer click's value is only ever its answers.
     let valueJson: string | undefined;
@@ -540,6 +543,7 @@ export class CardActions {
         by,
         evidence,
         () => {
+          if (chosen.until) this.core.cards.putOffs.keep(card, actionId, chosen.until);
           if (firstmateAsk)
             takenFirstmateAsk = this.core.options.tasks.delivery.takeWriteAsk(
               firstmateAsk.rowId,

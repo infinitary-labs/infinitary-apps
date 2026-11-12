@@ -259,6 +259,19 @@ export type IdleLadderHost = {
    * "Taking control"); absent = no task has a browser.
    */
   browserWithCaptain?: (taskId: string) => boolean;
+  /**
+   * The captain's put-off on this task ("Not until…", INF-3846 piece 3),
+   * which the host keeps and raises again: `word` when every one waits for
+   * their word, else `wait`. Absent or undefined = none is.
+   */
+  putOff?: (taskId: string) => "wait" | "word" | undefined;
+  /**
+   * The tasks this task's put-offs wait to close, which count as its waits
+   * (`waitsOnUnstarted`): one nobody has started is the first mate's to start.
+   */
+  putOffAwaits?: (taskId: string) => TaskRecord[];
+  /** Whether this closed card is put off, so the row its click left stays open. */
+  cardPutOff?: (cardId: string) => boolean;
 };
 
 export class IdleLadder {
@@ -293,6 +306,7 @@ export class IdleLadder {
     const gate = record?.gate ?? null;
     const cardUp = this.decisionCardsFor(taskId).length > 0;
     const answerReady = this.host.answerNoteForTask?.(taskId) !== undefined;
+    const putOff = this.host.putOff?.(taskId);
     const gateCardUp =
       gate?.kind === "captain" && gate.ref !== undefined && this.cardOpen(gate.ref);
     // A wait its crewmate declared is the captain's turn while a card of
@@ -336,6 +350,7 @@ export class IdleLadder {
       ...(record ? this.waitWitnesses(record) : { waitsOnUnstarted: false }),
       reviewOpen: record ? this.reviewOpen(record) : false,
       inBacklog: record?.status === "active" && record.backlogSince != null,
+      ...(putOff ? { putOff } : {}),
     };
   }
 
@@ -378,7 +393,7 @@ export class IdleLadder {
   private waitWitnesses(
     record: TaskRecord,
   ): Pick<Witnesses, "waitsOnUnstarted" | "waitsOnUnderway"> {
-    const waits = uniqueTasks(this.liveWaits(record));
+    const waits = this.awaited(record);
     const unstarted = waits.some(
       (task) => this.chainOf(task, new Set([record.id])).unstarted.length > 0,
     );
@@ -478,7 +493,7 @@ export class IdleLadder {
   unstartedWaits(record: TaskRecord): TaskRecord[] {
     return [
       ...new Map(
-        uniqueTasks(this.liveWaits(record))
+        this.awaited(record)
           .flatMap((task) => this.chainOf(task, new Set([record.id])).unstarted)
           .map((task) => [task.id, task]),
       ).values(),
@@ -496,6 +511,22 @@ export class IdleLadder {
     return uniqueTasks(this.liveWaits(record)).filter(
       (task) => this.chainOf(task, new Set([record.id])).unstarted.length === 0,
     );
+  }
+
+  /**
+   * The live work a task waits on, each once: its typed waits, and the tasks
+   * its put-offs wait to close (INF-3846 piece 3), which only a start may
+   * begin like any other wait.
+   */
+  private awaited(record: TaskRecord): TaskRecord[] {
+    const waits = uniqueTasks(this.liveWaits(record));
+    const seen = new Set([record.id, ...waits.map((task) => task.id)]);
+    for (const task of this.host.putOffAwaits?.(record.id) ?? []) {
+      if (seen.has(task.id) || !TaskService.blockerHoldsClose(task)) continue;
+      seen.add(task.id);
+      waits.push(task);
+    }
+    return waits;
   }
 
   /**
@@ -720,6 +751,7 @@ export class IdleLadder {
       idleTurn(witnesses) === "asked"
         ? (record.recoveryCount ?? 0) < 2
         : witnesses.decisionCardOpen ||
+          (witnesses.putOff !== undefined && !witnesses.waitsOnUnstarted) ||
           witnesses.finishedCardUp === true ||
           witnesses.finishedNoCard === true;
     if ((record.recoveryRung ?? 0) < 3 && held) return undefined;
@@ -1491,9 +1523,10 @@ export class IdleLadder {
         // the choice, a dismissal, or a close_card closes it
         // (recordCardResolution). One whose card is off the stack anyway -
         // a park from before P0, a crash between the two writes - no longer
-        // applies and closes quietly; nothing brings a card back.
+        // applies and closes quietly. A card the captain put off is kept by
+        // the host, which raises it again, so its row stays (INF-3846).
         const cardId = gate?.ref;
-        if (!cardId || !this.cardOpen(cardId)) {
+        if (!cardId || (!this.cardOpen(cardId) && this.host.cardPutOff?.(cardId) !== true)) {
           tasks.close(record.id, {
             status: "dropped",
             reason: "superseded",

@@ -77,6 +77,8 @@ describe("EMIT_CARD_TOOL_DESCRIPTION", () => {
       "danger",
       // INF-3108: the author's own way to say no, which keeps the app's Decline off.
       "declines",
+      // INF-3846 piece 3: a choice the captain puts off until a task closes, a time, an event or their word.
+      "until",
     ]);
   });
 });

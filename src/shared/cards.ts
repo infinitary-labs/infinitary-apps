@@ -7,6 +7,7 @@ import { SPELLINGS } from "./codeNames.ts";
 import { cardEndedSchema } from "./endedCard.ts";
 import { HOST_OPS } from "./hostOps.ts";
 import { servedNumber } from "./i18n/format.ts";
+import { putOffUntilSchema } from "./putOff.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
 import { rigorSchema } from "./rigor.ts";
 
@@ -321,6 +322,8 @@ export const cardActionSchema = z.object({
   passes: z.literal("checks").optional(),
   /** The choice says no to every other one (INF-3108); a decision with none gets `withAppDecline`'s. */
   declines: z.literal(true).optional(),
+  /** A put-off ("Not until…", INF-3846 piece 3): the host keeps the card and raises it again (`./putOff`). */
+  until: putOffUntilSchema.optional(),
 });
 export type CardAction = z.infer<typeof cardActionSchema>;
 

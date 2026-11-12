@@ -57,10 +57,12 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
     };
   if (facts.timedWait && Number.isFinite(record.gate?.until))
     return { state: "active", reason: "timed-wait" };
-  if (facts.decisionCardOpen || facts.captainGateOwed) return { state: "idle", reason: "captain" };
+  if (facts.decisionCardOpen || facts.captainGateOwed || facts.putOff === "word")
+    return { state: "idle", reason: "captain" };
   // A blocks edge holding its close, or a wait it declared on other work
-  // (FI3-671, FI3-250): either way it waits on another task.
-  if (facts.blocked || facts.waitsOnUnderway || facts.waitsOnUnstarted)
+  // (FI3-671, FI3-250): either way it waits on another task. A put-off an
+  // Automation rule raises waits on its moment the same way (INF-3846 piece 3).
+  if (facts.blocked || facts.waitsOnUnderway || facts.waitsOnUnstarted || facts.putOff === "wait")
     return { state: "idle", reason: "dependency" };
   if (!facts.observable && facts.clientJobs === undefined)
     return { state: "unknown", reason: "unobserved" };

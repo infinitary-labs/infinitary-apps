@@ -5,6 +5,7 @@ import type { CheckChangeInput } from "@shared/checkRepair";
 import type { CrewResponse } from "@shared/crewResponses";
 import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { InvokeRequest } from "@shared/ipc";
+import type { PutOffUntil } from "@shared/putOff";
 import type { RequiredAction, RequiredActionRevisionInput } from "@shared/requiredActions";
 import type { Rigor } from "@shared/rigor";
 import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
@@ -68,6 +69,8 @@ export type EmittedAction = {
   declines?: true;
   /** The care the captain's click sets on the task; the host's own, never declared. */
   care?: Rigor;
+  /** A put-off choice ("Not until…"): the host keeps the card and raises it again then. */
+  until?: PutOffUntil;
 };
 
 /**

@@ -225,6 +225,23 @@ export const integrationsViewSchema = z
     integrations: z.array(integrationViewSchema).max(64),
     /** The kinds that can be connected now, each once: the tab's add chips. */
     addable: z.array(z.object({ kind: integrationKindSchema, name: z.string() }).strict()).max(16),
+    /**
+     * The app's own events, always there with nothing to connect, which a
+     * rule listens to as it does an integration's (docs/automation.md, "A
+     * task closes"). Absent from a home without them.
+     */
+    appEvents: z
+      .array(
+        z
+          .object({
+            id: integrationIdSchema,
+            name: z.string().min(1).max(64),
+            events: z.array(integrationEventViewSchema).max(32),
+          })
+          .strict(),
+      )
+      .max(8)
+      .optional(),
   })
   .strict();
 export type IntegrationsView = z.infer<typeof integrationsViewSchema>;

@@ -32,6 +32,7 @@ import {
 import { cardWrittenText } from "@shared/cardWrittenText";
 import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
 import { pastCardEndingWords } from "@shared/pastCard";
+import { type KeptPutOff, keptPutOffSchema } from "@shared/putOff";
 import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
 import type { TaskCardRow } from "@shared/tasks";
 import { z } from "zod";
@@ -92,6 +93,7 @@ type Row = {
   required_actions_json: string | null;
   after_merge_json: string | null;
   ended_json: string | null;
+  put_off_json?: string | null;
 };
 
 /** One superseded version of a card revised in place (WI-12). */
@@ -612,6 +614,51 @@ export class CardStore {
       .run(ended ? JSON.stringify(ended) : null, cardId);
   }
 
+  /**
+   * The put-off a captain's click left on a closed card (INF-3846 piece 3),
+   * kept until the card is raised again; `undefined` clears it.
+   */
+  keepPutOff(cardId: string, putOff: KeptPutOff | undefined): void {
+    prepared(this.db, "UPDATE cards SET put_off_json = ? WHERE id = ?").run(
+      putOff ? JSON.stringify(putOff) : null,
+      cardId,
+    );
+  }
+
+  /** The put-off kept on one card, by its id. */
+  putOffOf(cardId: string): KeptPutOff | undefined {
+    const row = prepared(this.db, "SELECT put_off_json FROM cards WHERE id = ?").get(cardId) as
+      | { put_off_json: string | null }
+      | undefined;
+    if (!row?.put_off_json) return undefined;
+    try {
+      const parsed = keptPutOffSchema.safeParse(JSON.parse(row.put_off_json));
+      return parsed.success ? parsed.data : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Every closed card with a kept put-off, oldest first, as `PutOffs` reads them by task. */
+  listPutOff(): { card: Card; putOff: KeptPutOff }[] {
+    const rows = prepared(
+      this.db,
+      "SELECT * FROM cards WHERE put_off_json IS NOT NULL ORDER BY created_at",
+    ).all() as Row[];
+    return rows.flatMap((row) => {
+      if (row.resolved_at === null) return [];
+      const card = fromRow(row);
+      let putOff: KeptPutOff | undefined;
+      try {
+        const parsed = keptPutOffSchema.safeParse(JSON.parse(row.put_off_json ?? "null"));
+        putOff = parsed.success ? parsed.data : undefined;
+      } catch {
+        putOff = undefined;
+      }
+      return card && putOff ? [{ card, putOff }] : [];
+    });
+  }
+
   /** The resolved cards the stack still draws, ended, restored on boot. */
   listEnded(): { card: Card; ended: CardEnded }[] {
     const rows = this.db
@@ -938,7 +985,7 @@ export class CardStore {
   reopen(cardId: string): void {
     this.db
       .prepare(
-        "UPDATE cards SET resolved_at = NULL, chosen_action = NULL, ended_json = NULL WHERE id = ?",
+        "UPDATE cards SET resolved_at = NULL, chosen_action = NULL, ended_json = NULL, put_off_json = NULL WHERE id = ?",
       )
       .run(cardId);
   }

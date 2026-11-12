@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-put-off",
+      "kind": "feature",
+      "title": "A question you put off comes back when its moment arrives",
+      "body": "A card can now offer a Not until choice: until another task closes, until a set time, until something your automations can wait for happens, or until you ask. When you pick it, the app keeps the card, holds the work without nudging anyone, adds an automation that waits for that moment, and shows you the same card again then. To bring it back early, ask your first mate. Automations can also now run when a task closes.",
+      "area": "cards",
+      "noPicture": "The choice is an ordinary button on the card; what is new is the same card coming back later, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

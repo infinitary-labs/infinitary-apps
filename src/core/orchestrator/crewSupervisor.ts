@@ -637,6 +637,9 @@ export class CrewSupervisor {
       wakeDeadGate: (record, dead) => this.starts.wakeDeadGate(record, dead),
       completeContainers: () => this.intake.completeContainers(),
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
+      putOff: (taskId) => this.cards.putOffs.witness(taskId),
+      putOffAwaits: (taskId) => this.cards.putOffs.awaits(taskId),
+      cardPutOff: (cardId) => this.cards.putOffs.kept(cardId) !== undefined,
       ...(options.readCheckWatch || options.readRunWatch
         ? {
             checksWatched: (record: TaskRecord) =>

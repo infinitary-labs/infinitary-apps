@@ -20,7 +20,9 @@ The host raises three cards about work: the idle ladder's stall card, after two 
 Every other host moment (a refused settle, a dead gate, a quiet crewmate) is a feed line plus one wake, not a card.
 Do not build a feature-specific button kind, card kind, stamp or runner: a new feature declares actions and, where the host must act, one of the existing effects.
 Do not build a second consent path (a confirm dialog in a panel, a frame-side button that settles, an agent tool that merges): consent is a click on a card's host chrome.
-A deferral is an action the author offers, and its reminder is `schedule_prompt` (see [automation.md](automation.md)); there is no automatic Later or park.
+A deferral is an action the author offers; there is no automatic Later or park.
+An author's Not until choice names a task's close, a time, an Automation event or the captain's word in its `until` field, and the host keeps the card when the captain clicks it and an Automation rule raises the same card again then ([card-authoring.md](../docs/card-authoring.md), "Not until").
+Any other reminder is `schedule_prompt` (see [automation.md](automation.md)).
 A question that needs a structured answer uses the questions in the body ([decision-questions.md](decision-questions.md)), not a new form surface.
 
 ## Owner and entry points

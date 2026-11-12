@@ -75,7 +75,9 @@ import { FirstmateAgent, type RunningComputerVersion } from "./orchestrator/firs
 import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
+import { waitThroughAutomation } from "./orchestrator/putOffs";
 import { Scheduler } from "./orchestrator/scheduler";
+import { withTaskEvents } from "./orchestrator/taskEvents";
 import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
 import type { TypedWake } from "./orchestrator/wakes";
 import { WorkflowEvidenceService } from "./orchestrator/workflowEvidence";
@@ -1413,12 +1415,13 @@ export async function createServices(
     inbox,
     broadcastEvent,
     now: ticker.now,
-    // An event rule looks through the integrations (docs/automation.md, "Events").
-    events: {
+    // An event rule looks through the integrations and the task events (docs/automation.md).
+    events: withTaskEvents(tasks, {
       find: (integration, event) => integrations.listenable(integration, event),
       look: (integration, event, cursor, filter, connection) =>
         integrations.look(integration, event, cursor, filter, connection),
-    },
+    }),
+    raise: (cardId) => void supervisor.cards.putOffs.raiseCard(cardId),
     // The inbox's receipts say an event was handled once its delivery was.
     handled: (integration, events, at) => {
       if (integration === INBOX_ID) integrationInbox.handled(events, at);
@@ -1431,6 +1434,7 @@ export async function createServices(
         : undefined;
     },
   });
+  waitThroughAutomation(supervisor.cards.putOffs, scheduler, tasks);
   // A drop is looked at once, not at the next minute (docs/integrations.md, "The inbox").
   integrationInbox.wakeThrough({
     dropped: () => scheduler.lookNow(INBOX_ID),

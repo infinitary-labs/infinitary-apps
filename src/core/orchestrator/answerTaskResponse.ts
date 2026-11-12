@@ -19,6 +19,8 @@ export function taskResultResponse(
   if (card.actions.some((entry) => entry.effect?.kind === "request_write")) return false;
   if (card.attachment?.kind === "browser" && card.attachment.handoff) return false;
   if (signedOff) return card.answering === true && record.shape?.deliverable === "answer";
+  // A put-off (INF-3846 piece 3) answers later, when the same card is back.
+  if (card.actions.some((entry) => entry.id === action && entry.until)) return false;
   // A declared choice retains its own meaning; bare close and put-away never receipt an answer.
   if (card.actions.some((entry) => entry.id === action)) return true;
   return action === "answer-done" && card.answering === true && card.actions.length === 0;

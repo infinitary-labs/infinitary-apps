@@ -40,6 +40,24 @@ A rule `schedule_prompt` makes, and a one-time rule leaving once it ran, say the
 - `projectId` names the project the prompt is about, if any.
   The first mate's prompt names that project's key and name while it is live; an archived or removed project is left out.
 - Schedules are every N minutes (15 at least), every day at a time, on chosen weekdays at a time, once, or each time an integration's event arrives ("Events").
+- `card` names a card the rule shows again instead of a prompt ("A rule that shows a card").
+
+## A rule that shows a card
+
+A card's Not until choice waits through a rule (`docs/card-authoring.md`, "Not until"; `PutOffs` in `src/core/orchestrator/putOffs.ts`).
+The captain's click saves it turned on, with `card` naming the card (`schedules.card_id`) and a prompt that names the card, so Automation lists it like any rule.
+When it runs, its run raises that card through the put-offs (`raise` on the Scheduler) instead of waking the first mate, and is handled at once naming the card; the rule is then `completed` and leaves Automation on the next tick, whether it was a one-time or an event rule.
+Raising the card early on the captain's word, or the close of the card's own task, deletes the rule; a rule whose card was raised already runs and raises nothing.
+
+## A task closes
+
+The app's own tasks tell one event an event rule can listen for beside the integrations' (`taskEvents` in `src/core/orchestrator/taskEvents.ts`): `tasks/task_closed`, "A task closes", with a required `task` filter naming the task by key or id.
+It is declared in `APP_EVENTS` (`src/core/integrations/appEvents.ts`), the app's own event sources: the integrations view carries them as `appEvents`, so Settings → Automation offers "A task closes" in a rule's event list with its Task field, and the agents' integrations roster and `show tasks` name it like an integration's event.
+Nothing is connected for it, so it is always there.
+A rule naming a task the record does not hold is refused when it is saved.
+It fires once the named task is closed, whatever closed it, and a task the record no longer holds counts as closed.
+Its cursor only marks that the rule looked, so a task that closed before the rule's first look still fires it on the next one.
+It declares `atOnce`, and every close looks at once at the rules listening to it (`lookOnClose`), so nothing waits for the next minute.
 
 ## Drafts
 

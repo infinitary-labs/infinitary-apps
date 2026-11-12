@@ -5,6 +5,7 @@ import {
   type CardPicture,
   LIVE_ATTACHMENT_LABEL_MAX,
 } from "@shared/cards";
+import type { PutOffUntil } from "@shared/putOff";
 import { type RequiredAction, requiredActionsSchema } from "@shared/requiredActions";
 import {
   RISK_DIMENSIONS,
@@ -140,6 +141,36 @@ export function agentEffect(effect: EffectParam): AgentEffect {
 }
 
 /**
+ * A put-off as the model passes it ("Not until…", INF-3846 piece 3): flat,
+ * a task key for a close, an ISO time for a date, and an integration, its
+ * event and filter for an event, as an Automation event rule names them.
+ * The home resolves the key to its task and refuses an unknown task, a time
+ * already past or an event nothing connected tells (`CardEmits`), so a time
+ * that does not parse stays unparsed here.
+ */
+export type UntilParam = {
+  kind: "close" | "date" | "event" | "word";
+  task?: string;
+  at?: string;
+  integration?: string;
+  event?: string;
+  filter?: Record<string, string>;
+};
+
+export function putOffUntil(until: UntilParam): PutOffUntil {
+  if (until.kind === "close") return { kind: "close", task: until.task?.trim() ?? "" };
+  if (until.kind === "date") return { kind: "date", at: Date.parse(until.at ?? "") };
+  if (until.kind === "event")
+    return {
+      kind: "event",
+      integration: until.integration?.trim() ?? "",
+      event: until.event?.trim() ?? "",
+      ...(until.filter ? { filter: until.filter } : {}),
+    };
+  return { kind: "word" };
+}
+
+/**
  * The emit_card action parameter's own fields, shared by the Pi and Claude
  * tools. A crewmate's action may come without a label (`DeclaredAction`).
  */
@@ -150,6 +181,7 @@ export function emittedAction(action: {
   effect?: EffectParam;
   danger?: boolean;
   declines?: boolean;
+  until?: UntilParam;
 }): DeclaredAction {
   return {
     id: action.id,
@@ -158,6 +190,7 @@ export function emittedAction(action: {
     ...(action.effect ? { effect: agentEffect(action.effect) } : {}),
     ...(action.danger ? { danger: true } : {}),
     ...(action.declines ? { declines: true } : {}),
+    ...(action.until ? { until: putOffUntil(action.until) } : {}),
   };
 }
 
@@ -329,6 +362,16 @@ const browserOpenEffectParam = Type.Object({
   sign_in: Type.Optional(Type.String()),
 });
 
+/** A put-off choice's end; its rules ride the actions parameter (`CARD_PARAMS.actions`). */
+const untilParam = Type.Object({
+  kind: stringEnum(["close", "date", "event", "word"]),
+  task: Type.Optional(Type.String()),
+  at: Type.Optional(Type.String()),
+  integration: Type.Optional(Type.String()),
+  event: Type.Optional(Type.String()),
+  filter: Type.Optional(Type.Unsafe<Record<string, string>>({ type: "object" })),
+});
+
 /** One declared action, with the effects a role's schema may declare. */
 function actionParam<Effect extends TSchema>(effect: Effect) {
   // Open to fields it does not declare, so a retired `keeps_open` reaches
@@ -342,6 +385,7 @@ function actionParam<Effect extends TSchema>(effect: Effect) {
       effect: Type.Optional(effect),
       danger: Type.Optional(Type.Boolean()),
       declines: Type.Optional(Type.Boolean()),
+      until: Type.Optional(untilParam),
     },
     { additionalProperties: true },
   );

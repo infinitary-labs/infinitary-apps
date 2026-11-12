@@ -4968,6 +4968,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function servedNumber(value) {
     return value.toLocaleString(SERVED_LOCALE);
   }
+  const putOffUntilSchema = discriminatedUnion("kind", [
+    object({ kind: literal("close"), task: string().min(1).max(64) }),
+    object({ kind: literal("date"), at: number().int().nonnegative() }),
+    object({
+      kind: literal("event"),
+      integration: string().min(1).max(48),
+      event: string().min(1).max(48),
+      filter: record(string(), string()).optional()
+    }),
+    object({ kind: literal("word") })
+  ]);
+  object({
+    action: string().min(1),
+    until: putOffUntilSchema,
+    at: number().int().nonnegative(),
+    rule: string().min(1).optional(),
+    /**
+     * The task it belongs to, kept when the captain clicked: the card's own
+     * task, else the decision or host-card row the click left open. Absent
+     * for a card with neither.
+     */
+    task: string().min(1).optional()
+  });
   const requiredActionSchema = object({
     id: string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     sharedId: string().min(1).max(64).optional(),
@@ -5178,7 +5201,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     passes: literal("checks").optional(),
     /** The choice says no to every other one (INF-3108); a decision with none gets `withAppDecline`'s. */
-    declines: literal(true).optional()
+    declines: literal(true).optional(),
+    /** A put-off ("Not until…", INF-3846 piece 3): the host keeps the card and raises it again (`./putOff`). */
+    until: putOffUntilSchema.optional()
   });
   const cardDemoSchema = strictObject({
     /** The copy's minted id, `<taskId>-<32 hex>`; its file is `<id>.<kind>`. */

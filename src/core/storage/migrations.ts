@@ -1345,6 +1345,21 @@ export const MIGRATIONS: readonly Migration[] = [
   // A task lane stuck at its provider after the same refusal three times in a row.
   addProviderRefusals,
   addCardFiles,
+  // INF-3846 piece 3: a put-off choice ("Not until…") the host keeps on the
+  // closed card's row until an Automation rule raises the same card again
+  // (`PutOffs`, docs/card-authoring.md "Not until"), and the rule names the
+  // card it raises in `schedules.card_id` (docs/automation.md, "A rule that
+  // shows a card"). Null on every existing card and rule. A partial index
+  // finds the kept cards without walking them. `CardStore` and
+  // `ScheduleStore` are the only writers and no published view reads
+  // either. Dropping the index and both columns reverses it.
+  (db) => {
+    addColumn(db, "cards", "put_off_json", "TEXT");
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS cards_put_off ON cards(created_at) WHERE put_off_json IS NOT NULL",
+    );
+    addColumn(db, "schedules", "card_id", "TEXT");
+  },
 ];
 
 /**

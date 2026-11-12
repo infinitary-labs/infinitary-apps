@@ -49,6 +49,13 @@ export type ScheduleRecord = {
    * is picked again.
    */
   connection?: string;
+  /**
+   * The card this rule shows again when it runs (a put-off, docs/card-authoring.md
+   * "Not until"; docs/automation.md "A rule that shows a card"): its run
+   * raises that card instead of waking the first mate, and the rule
+   * finishes after that one run. Absent on every other rule.
+   */
+  card?: string;
 };
 
 export type RuleState = "draft" | "enabled" | "paused" | "completed";
@@ -124,6 +131,7 @@ type Row = {
   event_filter: string | null;
   event_cursor: string | null;
   event_connection: string | null;
+  card_id: string | null;
 };
 
 type RunRow = {
@@ -252,6 +260,7 @@ function fromRow(row: Row): ScheduleRecord {
     revision: row.revision,
     ...(row.event_cursor !== null ? { cursor: row.event_cursor } : {}),
     ...(row.event_connection !== null ? { connection: row.event_connection } : {}),
+    ...(row.card_id !== null ? { card: row.card_id } : {}),
   };
 }
 
@@ -261,8 +270,8 @@ export class ScheduleStore {
   insert(record: ScheduleRecord): void {
     this.db
       .prepare(
-        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, event_integration, event_name, event_filter, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id, event_cursor, event_connection)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, event_integration, event_name, event_filter, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id, event_cursor, event_connection, card_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         record.id,
@@ -277,6 +286,7 @@ export class ScheduleStore {
         record.projectId ?? null,
         record.cursor ?? null,
         record.connection ?? null,
+        record.card ?? null,
       );
   }
 
@@ -286,7 +296,7 @@ export class ScheduleStore {
       .prepare(
         `UPDATE schedules SET spec_kind = ?, interval_minutes = ?, hour = ?, minute = ?, at = ?, days = ?, time_zone = ?,
            event_integration = ?, event_name = ?, event_filter = ?, prompt = ?, next_fire = ?, captain_requested = ?, name = ?, state = ?,
-           revision = ?, project_id = ?, event_cursor = ?, event_connection = ? WHERE id = ?`,
+           revision = ?, project_id = ?, event_cursor = ?, event_connection = ?, card_id = ? WHERE id = ?`,
       )
       .run(
         ...specColumns(record.spec),
@@ -299,6 +309,7 @@ export class ScheduleStore {
         record.projectId ?? null,
         record.cursor ?? null,
         record.connection ?? null,
+        record.card ?? null,
         record.id,
       );
   }

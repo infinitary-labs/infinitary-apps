@@ -14,6 +14,7 @@ import {
   IntegrationsService,
   PanelAsks,
 } from ".";
+import { APP_EVENTS, TASK_CLOSED_EVENT, TASK_EVENTS_ID } from "./appEvents";
 import type { IntegrationActionSpec, IntegrationBinding } from "./binding";
 import { IntegrationOutcomeUnknown } from "./binding";
 import { OLDER_BUILD_OFF_MAX } from "./store";
@@ -198,6 +199,20 @@ describe("GitHub names stay with the GitHub connection (INF-882)", () => {
 });
 
 describe("IntegrationsService", () => {
+  // The app's own events every view carries (`APP_EVENTS`), as Settings reads them.
+  const APP_EVENTS_VIEW = APP_EVENTS.map((source) => ({
+    id: source.id,
+    name: source.name,
+    events: source.events.map((spec) => ({
+      name: spec.name,
+      label: spec.label,
+      every: spec.every,
+      ...(spec.filters
+        ? { filters: spec.filters.map((field) => ({ name: field.name, label: field.label })) }
+        : {}),
+    })),
+  }));
+
   it("draws GitHub from the github.com sign-in, and keeps its settings across a restart until it is removed", async () => {
     const signIns = new Map([["github.com", { state: "ok" as const, login: "octo" }]]);
     const dir = join(scratchDir("fm-integrations-"), "integrations");
@@ -237,6 +252,7 @@ describe("IntegrationsService", () => {
         },
       ],
       addable: [],
+      appEvents: APP_EVENTS_VIEW,
     });
     expect(first.rosterLine()).toBe("GitHub (signed in as octo)");
 
@@ -261,11 +277,56 @@ describe("IntegrationsService", () => {
     expect(restarted.view()).toEqual({
       integrations: [],
       addable: [{ kind: "github", name: "GitHub" }],
+      appEvents: APP_EVENTS_VIEW,
     });
     expect(restarted.rosterLine()).toBeUndefined();
     // Signing in again starts from the kind's defaults, not the removed row's.
     signIns.set("github.com", { state: "ok", login: "octo" });
     expect(open().view().integrations[0]).toMatchObject({ name: "GitHub", paused: false });
+  });
+  it("lists the app's own task-close event beside the integrations, and keeps its name", () => {
+    // The captain's answer on the put-off review: declare "A task closes" in
+    // the integrations listing, so Settings → Automation and the agents'
+    // integrations tool read and name it, its Task field with it.
+    const dir = join(scratchDir("fm-integrations-"), "integrations");
+    const service = new IntegrationsService({
+      bindings: [mcpNames([{ id: "mcp-notes", name: "Notes" }])],
+      store: new IntegrationSettingsStore(dir),
+      secrets: new FileIntegrationSecrets(join(dir, "secrets")),
+    });
+    expect(service.view().appEvents).toEqual([
+      {
+        id: TASK_EVENTS_ID,
+        name: "Tasks",
+        events: [
+          {
+            name: TASK_CLOSED_EVENT.name,
+            label: "A task closes",
+            every: 1,
+            filters: [{ name: "task", label: "Task" }],
+          },
+        ],
+      },
+    ]);
+    expect(service.roster()).toContainEqual({
+      name: "Tasks",
+      id: TASK_EVENTS_ID,
+      kind: "app",
+      events: [TASK_CLOSED_EVENT.name],
+    });
+    expect(service.show("tasks")).toMatchObject({
+      integration: "Tasks",
+      actions: [],
+      events: [
+        expect.objectContaining({
+          label: "A task closes",
+          listen: expect.stringContaining(`"${TASK_EVENTS_ID}/${TASK_CLOSED_EVENT.name}"`),
+        }),
+      ],
+    });
+    expect(() => service.configure("mcp-notes", { name: "Tasks" })).toThrow(
+      "Tasks names the app's own Tasks events. Choose another name.",
+    );
   });
 });
 

@@ -1723,7 +1723,7 @@
       "name": "a card on the stage",
       "in": "orchestrator",
       "about": "Where a card stands between its author and the captain",
-      "states": ["held", "shown", "awaiting answer", "aside", "resolved", "ended"],
+      "states": ["held", "shown", "awaiting answer", "aside", "resolved", "put off", "ended"],
       "moves": [
         {
           "from": "held",
@@ -1771,6 +1771,24 @@
           "from": "resolved",
           "to": "shown",
           "why": "raised again under its old id",
+          "by": "orchestrator"
+        },
+        {
+          "from": "shown",
+          "to": "put off",
+          "why": "the captain picks a Not until choice",
+          "by": "orchestrator"
+        },
+        {
+          "from": "put off",
+          "to": "shown",
+          "why": "its Automation rule runs, or the captain asks",
+          "by": "orchestrator"
+        },
+        {
+          "from": "put off",
+          "to": "resolved",
+          "why": "its own task closes",
           "by": "orchestrator"
         }
       ]

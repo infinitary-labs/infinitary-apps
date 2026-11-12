@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "frame-key-offer-at-press",
+      "reason": "A person's own keys go straight to the card's frame that holds focus, so the window page almost never hears one; it did when a key was injected into the window, as the keyboard journey does, and its late offer could then run a plain key's command. Nothing a person does changes."
+    }
+  ]
+}

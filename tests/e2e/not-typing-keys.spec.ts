@@ -6,11 +6,11 @@ import { TAKE_CONTROL_LABEL } from "../../src/shared/taskBrowser";
 import { claimedPort } from "../helpers/claimedPort";
 import { crewComposer, crewmateView } from "./crewmateTab";
 import { keyWords } from "./desktop";
-import { cardBody, frameGesturesDecided } from "./frames";
+import { cardBody, cardBodyElement, frameGesturesDecided } from "./frames";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { expandDock, nowFrame, nowRow, pressRow } from "./rails";
+import { dockFrameElement, expandDock, nowFrame, nowRow, pressRow } from "./rails";
 import {
   NOT_TYPING_MARKER,
   NOT_TYPING_TITLES,
@@ -21,6 +21,7 @@ import {
 } from "./scenarios/notTypingKeys";
 import {
   cardReply,
+  focusFrameAfterStage,
   minimizeForLegacyView,
   pager,
   showCard,
@@ -84,6 +85,49 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
     await expect(field).toHaveValue("s");
     await expect(settings()).toHaveCount(0);
   };
+  // A busy page runs the work a key press deferred only after later presses
+  // came in, as the Mac's hidden window once did in a merge batch's run of
+  // this journey. Every timer the window page sets while it dispatches a key
+  // waits for the returned release. The release then asks the window about
+  // one more offer, which no press witnessed: the window answers offers in
+  // turn, so its answer comes after it decided every offer the held work sent.
+  const holdPressWork = async (): Promise<() => Promise<void>> => {
+    await page.evaluate(() => {
+      const { setTimeout: later, clearTimeout: forget } = window;
+      const held = new Map<number, () => void>();
+      let next = -1;
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...rest: unknown[]) => {
+        if (window.event?.type !== "keydown" || typeof handler !== "function")
+          return later(handler, timeout, ...rest);
+        const id = next--;
+        held.set(id, () => handler(...rest));
+        return id;
+      }) as typeof window.setTimeout;
+      window.clearTimeout = ((id?: number) => {
+        if (id === undefined || !held.delete(id)) forget(id);
+      }) as typeof window.clearTimeout;
+      (window as unknown as { pressWorkHeld: () => void }).pressWorkHeld = () => {
+        window.setTimeout = later;
+        window.clearTimeout = forget;
+        for (const run of held.values()) run();
+        held.clear();
+      };
+    });
+    return () =>
+      page.evaluate(async () => {
+        (window as unknown as { pressWorkHeld: () => void }).pressWorkHeld();
+        await window.infinitary.keyboard.offer({
+          key: "F24",
+          code: "F24",
+          meta: false,
+          ctrl: false,
+          alt: false,
+          shift: false,
+          composing: false,
+          repeat: false,
+        });
+      });
+  };
   try {
     await test.step("Legacy keeps Escape in the message", async () => {
       await focusOn(prompt);
@@ -137,8 +181,9 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
         await frameKey(body.getByRole("region", { name: "Note text" }), "s");
         await expect(settings()).toBeVisible();
         await home();
+        // Settings took the cards away, so going home makes every card's page again.
         await showCard(page, cardTitle);
-        await stagePrepared(page);
+        await focusFrameAfterStage(page, cardBodyElement(page, cardTitle));
         await frameKey(body.getByRole("radio", { name: "Ready for review" }), "s");
         await expect(settings()).toBeVisible();
         await home();
@@ -159,6 +204,22 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
           if (titles.includes(card.title)) await window.infinitary.cards.minimize(card.id, false);
       }, notes);
       await expect(pager(page, notes.length)).toBeVisible();
+    });
+
+    await test.step("a key pressed in a card's frame stays the frame's when the window page offers late", async () => {
+      await showCard(page, NOT_TYPING_TITLES.served);
+      await stagePrepared(page);
+      const body = cardBody(page, NOT_TYPING_TITLES.served);
+      // The window page hears the window key pressed in the frame's field,
+      // then focus comes back to it and the reply's own key is witnessed
+      // before that first key's offer runs.
+      const release = await holdPressWork();
+      await keepsLetter(body.getByRole("textbox", { name: "Note", exact: true }));
+      await keepsLetter(cardReply(page).field);
+      await release();
+      await expect(settings()).toHaveCount(0);
+      await pressWindowKey(app, "Escape");
+      await expect(shownEntry(page)).toBeFocused();
     });
 
     await test.step("a card's used key stays local; unfocused and unwitnessed offers do nothing", async () => {
@@ -224,7 +285,7 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
       if (!task) throw new Error("The scenario's task is missing");
       await expandDock(page, "now");
       await pressRow(page, task.key);
-      await stagePrepared(page);
+      await focusFrameAfterStage(page, dockFrameElement(page, "now"));
       await frameKey(nowRow(page, task.key), "s");
       await expect(settings()).toBeVisible();
       await home();
@@ -321,7 +382,10 @@ test("warned answer keys survive a restart, allow other saves and run their card
     await pressKey(promptInput(restarted.page), "Enter");
     await expect(pager(restarted.page, 2)).toBeVisible({ timeout: 60_000 });
     await showCard(restarted.page, RISKY_KEYS_TITLES.question);
-    await stagePrepared(restarted.page);
+    await focusFrameAfterStage(
+      restarted.page,
+      cardBodyElement(restarted.page, RISKY_KEYS_TITLES.question),
+    );
     // The captain kept risky offers from card content: witness the native press, then offer it there.
     const note = cardBody(restarted.page, RISKY_KEYS_TITLES.question).getByRole("region", {
       name: "Project note",

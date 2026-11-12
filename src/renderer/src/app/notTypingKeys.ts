@@ -15,7 +15,12 @@ export function typingTarget(target: EventTarget): boolean {
 /** Offer after the whole event: a list or control may already have used it. */
 export function followNotTypingKeys(): () => void {
   const down = (event: KeyboardEvent) => {
-    const typing = event.composedPath().some(typingTarget);
+    // Where the press went is read during dispatch, as its path is: a key this
+    // page heard while a frame held its focus is that frame's to offer, even
+    // once focus has come back to the page before this offer runs.
+    const elsewhere =
+      event.composedPath().some(typingTarget) ||
+      document.activeElement instanceof HTMLIFrameElement;
     setTimeout(() => {
       if (
         !hasNotTypingKeys(installedBindings()) ||
@@ -25,7 +30,7 @@ export function followNotTypingKeys(): () => void {
         event.defaultPrevented ||
         event.isComposing ||
         event.keyCode === 229 ||
-        typing
+        elsewhere
       )
         return;
       const press: KeyPress = {

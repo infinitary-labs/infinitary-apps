@@ -18,6 +18,8 @@ import type { PushChannel, PushPayload } from "../../src/shared/ipc";
 import type { RiskDimension } from "../../src/shared/risk";
 import { drawnFrame } from "./frames";
 import { takeTurn } from "./inputQueue";
+import { promptInput } from "./prompt";
+import { focusOn } from "./windowKeys";
 
 /**
  * Paging helpers for the card stack.
@@ -189,7 +191,7 @@ export const shownCardFrame = (page: Page) => drawnFrame(page, `${SHOWN_ENTRY} i
  * window with every key, so a key could land in that hand-off. A journey
  * that drives a page's keys after the stage changed waits here, then puts
  * the keyboard in that page with a command, which tells every page where
- * focus is.
+ * focus is, or goes through `focusFrameAfterStage`.
  */
 export async function stagePrepared(page: Page): Promise<void> {
   await expect(page.locator('[data-card-layer] [data-stage-entry="outgoing"]')).toHaveCount(0);
@@ -198,6 +200,22 @@ export async function stagePrepared(page: Page): Promise<void> {
       '[data-card-layer] [data-stage-entry="warm"] iframe:is([data-frame-drawn], [data-frame-held])',
     ),
   ).toHaveCount(1);
+}
+
+/**
+ * `stagePrepared`, then focus in `frame`, a card's or a panel's frame
+ * element, brought there from the window's own page as the shell moves it,
+ * so Chromium tells every page where focus is. A focus move inside a frame
+ * tells no other page, and a page the stage prepared meanwhile then hands
+ * the window's focus to the window's own page at Playwright's next key,
+ * which can be lost (docs/keyboard.md, "Cards and frames"). A journey whose
+ * next Playwright key goes into a frame right after the stage changed
+ * starts here, then focuses the control it presses inside `frame`.
+ */
+export async function focusFrameAfterStage(page: Page, frame: Locator): Promise<void> {
+  await stagePrepared(page);
+  await focusOn(promptInput(page));
+  await focusOn(frame);
 }
 
 /**

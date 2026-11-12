@@ -730,6 +730,7 @@ A bare key may also start a two-key shortcut ("Two-key shortcuts"); a preset's p
 The main process lets a not-typing key reach the focused document and remembers the native press, focused frame and installed map.
 The shell and the frame bridge offer an unused trusted key after all its handlers finish, only outside text-like inputs, textareas, selects, editable content and declared typing controls, and never during composition.
 The target path is read during dispatch, before the browser clears it.
+So is whether a frame held the window page's focus: a key the page heard then is that frame's, and the page never offers it, even when focus came back to the page before the offer.
 Every text field, the Crewmate prompt and the recorder therefore keep their letters; a controlled task browser consumes and forwards its keys before an offer, and its hidden page has no offering bridge.
 A frame's `key` message carries the key, not a command; `FrameController` accepts only the current document and `FrameMount` forwards only the frame that holds focus, with no focus grace.
 The host-only `inf:keyboard:offer` request resolves only installed not-typing bindings against the same native key, modifiers and focused frame, once.

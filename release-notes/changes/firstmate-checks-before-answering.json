@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-checks-before-answering",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Your first mate checks before it answers a question of fact",
+      "body": "When you ask your first mate something factual, such as whether a fix has reached a release, it now looks it up first or has a crewmate read it. When it has not checked, it says so plainly instead of answering as if it knew.",
+      "noPicture": "The change is in what the first mate says, not in how any screen looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

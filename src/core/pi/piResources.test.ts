@@ -587,6 +587,12 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
       "WHEN IN DOUBT: read the record or delegate a read, and ask the captain only what only they can decide.",
     );
     expect(core).not.toContain("ask, escalate, or delegate");
+    // INF-3926 finding 4: two first mate answers given as fact with nothing
+    // read first were both wrong; a factual answer is looked up first, or
+    // says plainly that it was not checked.
+    expect(core).toContain(
+      "Before answering a factual question, look it up (the context, a typed lookup or a delegated read), or say plainly that you have not checked.",
+    );
   });
 
   it("stays in the contract size band (v1 ~1,060 tokens; v1.1 adds the answer and boundary rules, v1.3 the routing rule, v1.5 the card-actions and filing rules, v1.6 the effect vocabulary, v1.7 the resumable-settle and structured-refusal rules, v2.8 the personalization case, v2.9 the personal-surface spawn rule, v3.0 the work-shape facts in place of the judged class, v3.1 the escalation trigger, v3.3 the reviewed tier's routing rule, v3.5 the task-level delivery ask, v3.9 the autonomy ask, v4.6 the sequences rule, v4.9 the not-signed-in rule, v4.11 install by talking, v4.14 the delegated thread answer)", () => {

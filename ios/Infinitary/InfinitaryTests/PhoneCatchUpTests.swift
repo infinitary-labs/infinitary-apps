@@ -86,12 +86,19 @@ import XCTest
         XCTAssertEqual(shown.cards, 1, "The catch-up of two card lists changed the shown cards once")
         XCTAssertEqual(emotes, [], "A reaction from while the phone was away did not play")
 
-        // The board read into the held copy is the one the computer reads fresh.
-        let fresh = try await session.request(.board, as: PhoneBoard.self)
-        try await until("the board at the fresh read's version") { (session.board?.seq ?? -1) >= fresh.seq }
+        // The board read into the held copy is the one the computer reads fresh, read the way the session holds it.
+        // INF-3764 (docs/task-retention.md, "A view's first board read"): until Tasks shows Done or a search, the
+        // session reads the board without its closed rows, naming the Done rows left out, and a delta keeps it so;
+        // a whole board pushed brings every row. The computer answers in the order asked, so once the lighter read
+        // answers, every board read the session sent before it has landed.
+        let lighter = try await session.request(.board, args: [["closed": false]], as: PhoneBoard.self)
+        try await until("the board at the fresh read's version") { (session.board?.seq ?? -1) >= lighter.seq }
+        var fresh = lighter
+        if session.board?.closedLeftOut == nil { fresh = try await session.request(.board, as: PhoneBoard.self) }
         XCTAssertEqual(session.board?.seq, fresh.seq)
         XCTAssertEqual(session.board?.tasks.map(\.id), fresh.tasks.map(\.id))
         XCTAssertEqual(session.board?.tasks.map(\.status), fresh.tasks.map(\.status))
+        XCTAssertEqual(session.board?.closedLeftOut?.done, fresh.closedLeftOut?.done)
 
         _ = try await home("emote")
         try await until("the live reaction") { emotes == ["ponder"] }

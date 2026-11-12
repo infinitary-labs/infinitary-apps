@@ -128,7 +128,7 @@ function PanelCardChrome({ title, attribution }: { title: string; attribution: s
           {attribution}
         </span>
       )}
-      <CardCorner style={{ marginLeft: "auto" }} />
+      <CardCorner style={{ marginInlineStart: "auto" }} />
     </div>
   );
 }

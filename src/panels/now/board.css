@@ -69,7 +69,7 @@
   display: flex;
   flex: 0 1 220px;
   min-width: 120px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .fm-board-find {
@@ -94,7 +94,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  right: var(--space-2);
+  inset-inline-end: var(--space-2);
   display: flex;
   align-items: center;
   color: var(--fg-3);
@@ -185,7 +185,7 @@
 }
 
 .fm-board-lane-note {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: var(--text-sm);
   color: var(--fg-3);
   white-space: nowrap;
@@ -221,7 +221,7 @@
 }
 
 .fm-board-column-foot > .fm-board-n {
-  margin-right: auto;
+  margin-inline-end: auto;
 }
 
 /* Previous, Next and Show all: quiet text buttons. One at a lane's end
@@ -273,11 +273,11 @@
 
 .fm-board-list-head .fm-board-pager,
 .fm-board-list-head .fm-board-lane-note {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .fm-board-list-head .fm-board-lane-note + .fm-board-pager {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
 }
 
 .fm-board-list-note {
@@ -304,7 +304,7 @@
 }
 
 .fm-board-list-foot > .fm-board-n {
-  margin-right: auto;
+  margin-inline-end: auto;
 }
 
 .fm-board-column {
@@ -316,8 +316,8 @@
 }
 
 .fm-board-column + .fm-board-column {
-  border-left: 1px solid var(--line-1);
-  padding-left: var(--space-3);
+  border-inline-start: 1px solid var(--line-1);
+  padding-inline-start: var(--space-3);
 }
 
 /* A tile and what rides with it: its ⋯ menu and a move's confirmation. */
@@ -335,7 +335,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: var(--space-2) var(--space-3);
-  text-align: left;
+  text-align: start;
   font: inherit;
   color: inherit;
   background: var(--bg-1);
@@ -359,7 +359,7 @@
 .fm-board-more {
   position: absolute;
   top: var(--space-1);
-  right: var(--space-1);
+  inset-inline-end: var(--space-1);
   opacity: 0;
   background: var(--bg-3);
   border-radius: var(--radius-s);
@@ -406,7 +406,7 @@
 }
 
 .fm-board-tile-project {
-  margin-left: auto;
+  margin-inline-start: auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -481,7 +481,7 @@
   align-items: center;
   column-gap: var(--space-3);
   padding: var(--space-1) var(--space-3);
-  padding-right: calc(var(--space-3) + 28px);
+  padding-inline-end: calc(var(--space-3) + 28px);
   background: transparent;
   border-color: transparent;
 }
@@ -497,7 +497,7 @@
 }
 
 .fm-board-tile[data-board-row] .fm-board-tile-project {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 
 .fm-board-tile[data-board-row] .fm-board-tile-title,
@@ -592,7 +592,7 @@
 }
 
 .fm-board-column + .fm-board-column::before {
-  left: calc(var(--space-3) / 2);
+  inset-inline-start: calc(var(--space-3) / 2);
 }
 
 .fm-board-lane[data-board-accepts="yes"]::before {
@@ -672,7 +672,7 @@
 }
 
 .fm-board-hint {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);

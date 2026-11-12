@@ -1,5 +1,6 @@
+import * as m from "@shared/i18n/messages.generated";
 import { useLayoutEffect, useRef, useState } from "react";
-import { ASKED_SHOW_ALL, ASKED_SHOW_LESS, askedWords } from "./askedWords";
+import { askedWords } from "./askedWords";
 
 /** How many lines a folded question shows. */
 const FOLDED_LINES = 2;
@@ -45,7 +46,7 @@ export function QuestionBubble({
       data-question-bubble=""
       disabled={!interactive}
       aria-expanded={interactive ? open : undefined}
-      aria-label={interactive ? (open ? ASKED_SHOW_LESS : ASKED_SHOW_ALL) : undefined}
+      aria-label={interactive ? (open ? m.cardAskedShowLess() : m.cardAskedShowAll()) : undefined}
       onClick={(event) => {
         const selection = event.currentTarget.ownerDocument.getSelection();
         // Dragging selects the captain's words; a pointer release must not fold them away.
@@ -68,7 +69,7 @@ export function QuestionBubble({
         border: 0,
         borderRadius: "4px 11px 11px 11px",
         background: "color-mix(in srgb, var(--fg-1) 8%, transparent)",
-        textAlign: "left",
+        textAlign: "start",
         cursor: interactive ? "pointer" : "default",
       }}
     >

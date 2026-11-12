@@ -194,6 +194,9 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Emptiness is a feature — the null state is ~90% empty.
   Settings has two gaps, owned by `settingRows.tsx` (`SECTION_GAP` 32 above a section, `ROW_GAP` 12 between rows and from a label or intro line to its first row) plus `LABEL_GAP` 8 from a label to its intro line; a tab never writes its own.
   Settings' tabs stand in one column on the left of the page, the section beside them (`components/core/SettingsTabs.prompt.md`).
+- **Direction:** every layout runs both ways, so a right-to-left language (Arabic, Hebrew) mirrors it.
+  A side is named by its logical form - `margin-inline-start`, `padding-inline-end`, `border-inline-start`, `inset-inline-end`, `text-align: start` - never `left` or `right`; a box centred with `left: 50%` and `translateX(-50%)` mirrors to itself and stays physical, and a measured coordinate (a pointer's, an orbit's) is never mirrored.
+  The rails stay where a person docked them, and the first mate and the crew orbit are drawn the same both ways (the app's `docs/i18n.md`, "Right to left").
 - **Backgrounds:** the window is translucent on macOS (the app's `docs/translucent-window.md`): native under-window material on shown Macs, tinted once by the body with `--material-tint` at the chosen wash opacity (0% by default); the app paints no other window-sized surface, no imagery, no gradients except a barely-there radial glow behind the first mate (`--accent-glow` at low opacity, lifted by `--halo-boost`).
   No textures, no patterns.
   Panels stay chromeless on the tint and the voice input's shell is its hairline alone; cards paint solid `--bg-2` without blur; only modal overlays keep their own blur.

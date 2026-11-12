@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { PINNED_MARK_LABEL } from "@shared/taskPin";
 import { taskStatusLabel } from "@shared/taskPresentation";
 import { PinGlyph } from "../../design/core/PinGlyph";
@@ -84,14 +85,14 @@ function Reviewing({ builderId }: { builderId: string }) {
   const builder = useBoardTasks().find((row) => row.id === builderId);
   return (
     <div className="blocked" data-crew-reviewing="">
-      <span className="label">Reviewing</span>
+      <span className="label">{m.crewSummaryReviewing()}</span>
       {builder ? (
         <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(builder)}>
           {builder.key}
         </TaskKey>
       ) : (
         <span className="key" data-crew-reviewing-key="">
-          another task
+          {m.crewSummaryAnotherTask()}
         </span>
       )}
     </div>
@@ -107,7 +108,7 @@ function PartOf({ parentId }: { parentId: string }) {
   if (!program) return null;
   return (
     <div className="blocked" data-crew-part-of="">
-      <span className="label">Part of</span>
+      <span className="label">{m.crewSummaryPartOf()}</span>
       <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(program)}>
         {program.key}
       </TaskKey>
@@ -130,7 +131,7 @@ function ProgramParts({ programId }: { programId: string }) {
     <div className="fm-task-facts parts" data-crew-program-parts="">
       <div className="row">
         <div className="label" data-task-fact-label="">
-          Parts
+          {m.crewSummaryParts()}
         </div>
         <div data-crew-parts-count="">{counts}</div>
       </div>
@@ -142,7 +143,7 @@ function ProgramParts({ programId }: { programId: string }) {
       {running.length > 0 && (
         <div className="row">
           <div className="label" data-task-fact-label="">
-            Running
+            {m.crewSummaryRunning()}
           </div>
           <div className="running" data-crew-program-running="">
             {running.map((part) => (
@@ -169,7 +170,7 @@ function BlockedBy({ keys }: { keys: readonly string[] }) {
   const tasks = useBoardTasks();
   return (
     <div className="blocked" data-crew-blocked="">
-      <span className="label">Blocked by</span>
+      <span className="label">{m.crewSummaryBlockedBy()}</span>
       {keys.map((key) => {
         const task = tasks.find((row) => row.key === key);
         return (

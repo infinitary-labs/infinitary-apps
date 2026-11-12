@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { PanelFeedLine } from "@shared/personal/contracts";
 import { waitRecordedTime } from "@shared/taskPresentation";
 import type { TaskView } from "@shared/tasks";
@@ -24,14 +25,14 @@ export function LineSummary({ line, task }: { line: PanelFeedLine; task: TaskVie
       {task && (
         <div className="fm-task-facts line-facts">
           <div className="row">
-            <span className="label">Task</span>
+            <span className="label">{m.panelLineTask()}</span>
             <span className="title" data-task-fact="task">
               {task.title}
             </span>
           </div>
           {project && (
             <div className="row">
-              <span className="label">Project</span>
+              <span className="label">{m.panelLineProject()}</span>
               <span data-task-fact="project">{project}</span>
             </div>
           )}

@@ -4,9 +4,9 @@ import {
   type AfterMergeShown,
   afterMergeWaitWords,
 } from "@shared/afterMerge";
+import * as m from "@shared/i18n/messages.generated";
 import type { RequiredAction } from "@shared/requiredActions";
 import { escapeHtml } from "./prototypeSrcdoc";
-import { REQUIRED_ACTIONS_LEAD } from "./requiredActionsWords";
 
 /**
  * What happens after a merge card's merge (INF-3149, the captain's direction
@@ -27,10 +27,11 @@ export function afterMergeStrip(
 ): string {
   if (!actions.length && !steps.length) return "";
   const text = (words: string) => escapeHtml(words);
+  const requiredLead = m.cardRequiredActionsLead();
   const lead = (who: "captain" | "crew", words: string) =>
     `<p data-inf-after-merge-lead="${who}">${text(words)}</p>`;
   const yours = actions.length
-    ? `<section aria-label="${text(REQUIRED_ACTIONS_LEAD)}" data-inf-required-actions="">${lead("captain", REQUIRED_ACTIONS_LEAD)}<ul>${actions
+    ? `<section aria-label="${text(requiredLead)}" data-inf-required-actions="">${lead("captain", requiredLead)}<ul>${actions
         .map(
           (action) =>
             `<li><span>${text(`${action.title} · ${action.target}`)}</span><p>${text(action.consequence)}</p></li>`,

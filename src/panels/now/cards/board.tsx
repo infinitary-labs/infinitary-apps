@@ -1090,7 +1090,7 @@ export default function TaskBoardCard({
         data-board-lifted={dragging?.taskId === task.id ? "" : undefined}
         style={
           depth > 0
-            ? ({ marginLeft: `calc(${depth} * var(--space-3))` } as CSSProperties)
+            ? ({ marginInlineStart: `calc(${depth} * var(--space-3))` } as CSSProperties)
             : undefined
         }
       >

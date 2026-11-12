@@ -1,4 +1,5 @@
 import type { LiveAttachment } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { PAGE_ATTACHMENT_WORDS } from "@shared/projectPage";
 import {
   type AttachmentStanding,
@@ -131,7 +132,7 @@ export function CardAttachmentStrip({
           : {}),
       }}
     >
-      <MicroLabel style={{ flexShrink: 0 }}>Browser</MicroLabel>
+      <MicroLabel style={{ flexShrink: 0 }}>{m.cardBrowserWord()}</MicroLabel>
       <span
         data-attachment-line=""
         data-browser-driver={line ? (line.driver ?? "stopped") : undefined}
@@ -242,7 +243,7 @@ export function PageAttachmentStrip({
         fontSize: "var(--text-xs)",
       }}
     >
-      <MicroLabel style={{ flexShrink: 0 }}>Browser</MicroLabel>
+      <MicroLabel style={{ flexShrink: 0 }}>{m.cardBrowserWord()}</MicroLabel>
       <span
         data-attachment-line=""
         title={refusal ?? undefined}

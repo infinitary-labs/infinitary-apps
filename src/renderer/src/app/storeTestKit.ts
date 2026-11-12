@@ -14,13 +14,13 @@ export const gesture = (extra: Record<string, unknown> = {}) =>
   expect.objectContaining({ id: expect.stringMatching(/^[0-9a-f]{32}$/), ...extra });
 
 /** A card with an action is a decision; the store collapses only action-less notes. */
-export const DECIDE: Card["actions"] = [{ id: "go", label: "Go", default: true }];
+export const DECIDE: Card["actions"] = [{ id: "go", label: "Go", default: true }]; // i18n-exempt: not shown, test data
 
 export function card(overrides: Partial<Card> & Pick<Card, "id" | "status">): Card {
   return {
     author: "firstmate",
     priority: 10,
-    title: "Card",
+    title: "Card", // i18n-exempt: not shown, test data
     meta: "firstmate",
     body: "",
     actions: [],

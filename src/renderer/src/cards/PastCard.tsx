@@ -1,5 +1,6 @@
 import { anythingElseOf, type CardWidth, PAST_CARD_WORDS_LEAD, type PastCard } from "@shared/cards";
 import { formatDateTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { pastCardEndingWords } from "@shared/pastCard";
 import type { FramePicture } from "@shared/plugins/bridge";
 import { wordedTitle } from "@shared/welcome";
@@ -157,12 +158,12 @@ export function PastCardColumn({
                 flexShrink: 0,
               }}
             >
-              Past
+              {m.cardPastMark()}
             </span>
             <span data-past-ending="" {...endingCut} style={{ ...microText, flex: 1 }}>
               {strip}
             </span>
-            <CardCorner style={{ marginLeft: "auto" }} />
+            <CardCorner style={{ marginInlineStart: "auto" }} />
           </div>
           <div
             data-past-title=""
@@ -189,7 +190,7 @@ export function PastCardColumn({
               <div
                 ref={asideRef}
                 data-card-aside=""
-                style={{ position: "absolute", top: 8, right: 16, zIndex: 1 }}
+                style={{ position: "absolute", top: 8, insetInlineEnd: 16, zIndex: 1 }}
               >
                 <RiskChart risk={risk} />
               </div>
@@ -299,7 +300,7 @@ export function PastThreadColumn({ past, width }: { past: PastCard; width: numbe
         display: "flex",
         flexDirection: "column",
         minHeight: 0,
-        borderLeft: "1px solid var(--line-2)",
+        borderInlineStart: "1px solid var(--line-2)",
       }}
     >
       <div
@@ -310,7 +311,7 @@ export function PastThreadColumn({ past, width }: { past: PastCard; width: numbe
           padding: "14px 8px 8px 16px",
         }}
       >
-        <MicroLabel>Thread</MicroLabel>
+        <MicroLabel>{m.cardThreadLabel()}</MicroLabel>
       </div>
       <MessageList messages={past.messages} own={past.taskId} />
     </div>
@@ -333,8 +334,8 @@ export function PastCardUnreadable({
   }, [loading, onDrawn]);
   return (
     <ResponseCard
-      title={loading ? "" : "This card could not be read"}
-      meta="past card"
+      title={loading ? "" : m.cardPastUnreadable()}
+      meta={m.cardPastMeta()}
       width={width}
       minHeight={120}
     >

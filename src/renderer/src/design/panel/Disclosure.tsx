@@ -76,14 +76,14 @@ export function Disclosure({
           background: hover ? "var(--bg-2)" : "transparent",
           color: "inherit",
           font: "inherit",
-          textAlign: "left",
+          textAlign: "start",
           cursor: "pointer",
         }}
       >
         <MicroLabel count={count}>{label}</MicroLabel>
         <span
           style={{
-            marginLeft: "auto",
+            marginInlineStart: "auto",
             display: "inline-flex",
             color: "var(--fg-3)",
             transform: isOpen ? "rotate(90deg)" : "none",

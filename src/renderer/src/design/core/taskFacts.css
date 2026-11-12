@@ -41,7 +41,7 @@
 /* The age keeps the line's right edge, whatever the note's length. */
 .fm-task-facts .now .age,
 .fm-task-facts .plan .age {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .fm-task-facts .title {
   color: var(--fg-1);
@@ -136,7 +136,7 @@
 }
 .fm-task-facts .cell .age::before {
   content: "·";
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
   font-family: var(--font-ui);
 }
 .fm-task-facts :is(.title, .note, .reason) {
@@ -289,7 +289,7 @@
 }
 .fm-task-facts .plan .current::before {
   content: "·";
-  margin-right: var(--space-2);
+  margin-inline-end: var(--space-2);
   color: var(--fg-3);
 }
 .fm-task-facts .plan-dots {
@@ -314,8 +314,8 @@
 .fm-task-facts .plan-dots .dot::before {
   content: "";
   position: absolute;
-  left: -50%;
-  right: 50%;
+  inset-inline-start: -50%;
+  inset-inline-end: 50%;
   top: 5.5px;
   border-top: 1px solid var(--line-2);
 }
@@ -380,10 +380,10 @@
 .fm-task-facts .plan-list::before {
   content: "";
   position: absolute;
-  left: 5.5px;
+  inset-inline-start: 5.5px;
   top: 12px;
   bottom: 12px;
-  border-left: 1px solid var(--line-1);
+  border-inline-start: 1px solid var(--line-1);
 }
 /* Its marks start on the card's one left edge, under the labels (FI3-1159). */
 .fm-task-facts .plan-list .item {
@@ -427,7 +427,7 @@
   font: inherit;
   color: var(--accent);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
 }
 .fm-task-facts .plan-list .earlier:hover {
   text-decoration: underline;
@@ -466,11 +466,11 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-left: var(--space-2);
-  border-left: 2px solid var(--line-2);
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--line-2);
 }
 .fm-task-facts .why-candidate[data-picked] {
-  border-left-color: var(--accent);
+  border-inline-start-color: var(--accent);
 }
 .fm-task-facts .why-name {
   color: var(--fg-1);

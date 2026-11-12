@@ -33,7 +33,7 @@ const Elbow = () => (
     <path d="M3.5 0.5V7.5H11" fill="none" stroke="currentColor" strokeWidth="1.2" />
   </svg>
 );
-const Prompt = () => <span aria-hidden="true">&gt;</span>;
+const Prompt = () => <span aria-hidden="true">&gt;</span>; // i18n-exempt: not shown (a symbol)
 
 function Line({
   line,

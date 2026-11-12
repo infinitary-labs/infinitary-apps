@@ -1,12 +1,17 @@
 import type { DictationSettings } from "@shared/dictation";
+import * as m from "@shared/i18n/messages.generated";
 import { type MicLine, readMicAccess, settledMicLine } from "../voice/micAccess";
 import { voiceController } from "../voice/voiceController";
 import { insertVoiceTranscript } from "../voice/voiceInput";
 import { mainInputHeld, transcribeRecording } from "./composer";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 
-/** The voice notice when the voice model's download fails. */
-export const VOICE_MODEL_DOWNLOAD_FAILED = "The voice model download failed. Try again.";
+/**
+ * The voice notice when the voice model's download fails, worded as the
+ * module loads (English, before any language is set) for a spec; the notice
+ * itself is worded when it goes up.
+ */
+export const VOICE_MODEL_DOWNLOAD_FAILED = m.shellVoiceDownloadFailed();
 
 /** Hold-to-talk: the saved dictation choice, the recording and its transcript (docs/composer.md, "Voice"). */
 export type VoiceSlice = {
@@ -71,7 +76,7 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
         .catch(() => {
           if (!get().dictation?.enabled) return;
           set({
-            voiceNotice: { kind: "error", message: VOICE_MODEL_DOWNLOAD_FAILED },
+            voiceNotice: { kind: "error", message: m.shellVoiceDownloadFailed() },
           });
         });
     },
@@ -138,7 +143,7 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
           if (get().recording) {
             return stopWith({
               kind: "error",
-              message: "The microphone is unavailable. You can still type.",
+              message: m.shellVoiceMicUnavailable(),
             });
           }
         }

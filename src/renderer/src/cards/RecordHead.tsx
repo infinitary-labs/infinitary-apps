@@ -1,4 +1,6 @@
 import { DELIVERY_BASIS_WORDS, DELIVERY_FACTS_LABEL } from "@shared/deliveryFacts";
+import { formatList, formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { recordAttentionOf, recordClosedLineOf } from "@shared/recordAttention";
 import type { TaskDetail } from "@shared/tasks";
 import type { ReactNode } from "react";
@@ -47,12 +49,14 @@ export function RecordAttention({
       {attention?.urgent && box}
       {charted && filing && (
         <section className="why" data-record-section="filing">
-          <h3 className="label">Why</h3>
+          <h3 className="label">{m.cardRecordWhy()}</h3>
           <p className="goal" data-record-why="">
-            {filing.why || "No reason was recorded."}
+            {filing.why || m.cardRecordNoReason()}
           </p>
           <p className="verdict" data-record-verdict="">
-            {filing.verdict ? `First mate: ${filing.verdict}` : "Your first mate has not said yet."}
+            {filing.verdict
+              ? m.cardRecordVerdict({ verdict: filing.verdict })
+              : m.cardRecordNoVerdict()}
           </p>
         </section>
       )}
@@ -138,30 +142,33 @@ export function RecordRelations({
   return (
     <>
       {parentKey && (
-        <Row label="Part of">
+        <Row label={m.cardRecordPartOf()}>
           <div className="keys" data-record-fact="parent">
             {keys([parentKey])}
           </div>
         </Row>
       )}
       {detail.blockedBy.length > 0 && (
-        <Row label="Waits on">
+        <Row label={m.cardRecordWaitsOn()}>
           <div className="keys" data-record-fact="blocked-by">
             {keys(detail.blockedBy)}
           </div>
         </Row>
       )}
       {detail.blocks.length > 0 && (
-        <Row label="Holds up">
+        <Row label={m.cardRecordHoldsUp()}>
           <div className="keys" data-record-fact="blocks">
             {keys(detail.blocks)}
           </div>
         </Row>
       )}
       {detail.children.total > 0 && (
-        <Row label="Parts">
+        <Row label={m.cardRecordParts()}>
           <div data-record-fact="children">
-            {`${detail.children.closed} of ${detail.children.total} closed`}
+            {m.cardRecordChildrenClosed({
+              closed: formatNumber(detail.children.closed),
+              total: formatNumber(detail.children.total),
+            })}
           </div>
         </Row>
       )}
@@ -185,12 +192,12 @@ export function recordWordsFoldName(detail: TaskDetail): string | null {
   const count = recordAsksOf(detail).length + (words ? 1 : 0);
   const filed = Boolean(detail.filing) && detail.status !== "open";
   const parts: string[] = [];
-  if (filed) parts.push("Why it was filed");
-  if (detail.skippedPlanBecause) parts.push("why there was no plan");
-  if (count > 0) parts.push(`your ${count} ${count === 1 ? "message" : "messages"}`);
+  if (filed) parts.push(m.cardRecordFiledWhy());
+  if (detail.skippedPlanBecause) parts.push(m.cardRecordFoldNoPlan());
+  if (count > 0) parts.push(m.cardRecordFoldMessages({ count }));
   if (parts.length === 0) return null;
-  const name = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0];
-  return `${name?.charAt(0).toUpperCase()}${name?.slice(1)}`;
+  const name = formatList(parts, "and");
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 }
 
 /**
@@ -217,7 +224,7 @@ export function RecordGoal({
   const filed = Boolean(filing) && detail.status !== "open";
   const closed = detail.status === "done" || detail.status === "dropped";
   return (
-    <Row label="Goal">
+    <Row label={m.cardRecordGoal()}>
       <div className="goal-cell">
         {detail.goal && (
           <p className="goal" data-record-goal="">
@@ -238,26 +245,26 @@ export function RecordGoal({
             <div className="fold-body">
               {filed && filing && (
                 <section className="why" data-record-section="filed">
-                  <h3 className="label">Why it was filed</h3>
-                  <p data-record-filed-why="">{filing.why || "No reason was recorded."}</p>
+                  <h3 className="label">{m.cardRecordFiledWhy()}</h3>
+                  <p data-record-filed-why="">{filing.why || m.cardRecordNoReason()}</p>
                   {!closed && (
                     <p className="verdict" data-record-filed-verdict="">
                       {filing.verdict
-                        ? `First mate: ${filing.verdict}`
-                        : "Your first mate has not said yet."}
+                        ? m.cardRecordVerdict({ verdict: filing.verdict })
+                        : m.cardRecordNoVerdict()}
                     </p>
                   )}
                 </section>
               )}
               {detail.skippedPlanBecause && (
                 <section className="why" data-record-plan-skip-section="">
-                  <h3 className="label">Why your first mate built without a plan</h3>
+                  <h3 className="label">{m.cardRecordNoPlanWhy()}</h3>
                   <p data-record-plan-skip="">{detail.skippedPlanBecause}</p>
                 </section>
               )}
               {(words || asks.length > 0) && (
                 <section className="why">
-                  <h3 className="label">You said</h3>
+                  <h3 className="label">{m.cardRecordYouSaid()}</h3>
                   {words && (
                     <blockquote className="words" data-record-words="">
                       <KeyedText text={words} own={detail.id} />

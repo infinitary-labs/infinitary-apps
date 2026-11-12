@@ -1,3 +1,5 @@
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 
 export type QuotaPace = "ahead" | "on_pace" | "behind" | "unknown";
@@ -30,11 +32,12 @@ const paceColors: Record<QuotaPace, string> = {
   unknown: "var(--idle)",
 };
 
-const paceLabels: Record<QuotaPace, string> = {
-  ahead: "ahead",
-  on_pace: "on pace",
-  behind: "behind",
-  unknown: "-",
+/** Each pace's word, read when the meter draws so it follows a language change. */
+const paceLabels: Record<QuotaPace, () => string> = {
+  ahead: m.uiQuotaPaceAhead,
+  on_pace: m.uiQuotaPaceOnPace,
+  behind: m.uiQuotaPaceBehind,
+  unknown: () => "-",
 };
 
 export function QuotaMeter({
@@ -87,15 +90,17 @@ export function QuotaMeter({
           }}
         >
           {known ? (
-            <span style={{ color: "var(--fg-1)" }}>{Math.round(percentRemaining)}% left</span>
+            <span style={{ color: "var(--fg-1)" }}>
+              {m.uiPercentLeft({ percent: formatNumber(Math.round(percentRemaining)) })}
+            </span>
           ) : (
-            "no data"
+            m.uiQuotaNoData()
           )}
           {/* An unknown pace says nothing - no placeholder glyph. */}
           {known && (low || pace !== "unknown") && (
             <span>
               {" "}
-              · <span style={{ color }}>{low ? "low" : paceLabels[pace]}</span>
+              · <span style={{ color }}>{low ? m.uiQuotaLow() : paceLabels[pace]()}</span>
             </span>
           )}
           {resetText && <span style={{ color: "var(--fg-3)" }}> · {resetText}</span>}

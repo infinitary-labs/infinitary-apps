@@ -20,7 +20,7 @@
   border: none;
   border-bottom: 1px solid var(--line-1);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   color: var(--fg-1);
   font: inherit;
   font-size: var(--text-sm);

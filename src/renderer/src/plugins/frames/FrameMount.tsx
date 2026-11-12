@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { FrameEntryRef, HostMessage } from "@shared/plugins/bridge";
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
 import type {
@@ -45,8 +46,13 @@ type MountSource =
   | { template: FrameTemplate; panel?: undefined }
   | { panel: FramePanelSource; template?: undefined };
 
-/** Shown when an armed watchdog tore a wedged panel down (the card body's line, for a panel). */
-export const PANEL_UNRESPONSIVE_LINE = "This panel stopped responding.";
+/**
+ * Shown when an armed watchdog tore a wedged panel down (the card body's line,
+ * for a panel): the window words it as `m.panelUnresponsiveLine()` where it
+ * draws it. This English is what the window tells the crew (a stopped body's
+ * `why`, ../panelMounts.ts), which stays English (docs/i18n.md).
+ */
+export const PANEL_UNRESPONSIVE_LINE = "This panel stopped responding."; // i18n-exempt: served to the crew
 
 /**
  * A hidden page may not answer a ping. The watchdog does not count that as
@@ -408,7 +414,7 @@ export function FrameMount({
         }}
       >
         <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
-          {PANEL_UNRESPONSIVE_LINE}
+          {m.panelUnresponsiveLine()}
         </p>
         <Button
           variant="secondary"
@@ -418,7 +424,7 @@ export function FrameMount({
             setAttempt((n) => n + 1);
           }}
         >
-          Retry
+          {m.panelRetry()}
         </Button>
       </div>
     );
@@ -430,7 +436,7 @@ export function FrameMount({
         data-frame-mount-failed=""
         style={{ color: "var(--fg-3)", fontSize: "var(--text-sm)", padding: "var(--space-3)" }}
       >
-        This panel could not be opened. {failure}
+        {m.panelCouldNotOpen({ failure })}
       </div>
     );
   }

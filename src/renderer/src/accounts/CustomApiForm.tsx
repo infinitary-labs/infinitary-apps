@@ -741,7 +741,7 @@ export function CustomApiForm({
                   <Button
                     variant="secondary"
                     size="sm"
-                    style={{ marginLeft: "var(--space-2)" }}
+                    style={{ marginInlineStart: "var(--space-2)" }}
                     onClick={() => {
                       edited("address");
                       // The app's own correction for the same server keeps what was approved for it.

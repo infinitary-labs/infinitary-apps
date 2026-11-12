@@ -124,7 +124,7 @@ export function FilesStatus({ intake }: { intake: FileIntake | undefined }) {
 
 /** Whether a drag carries files: the only drags an input answers. */
 function carriesFiles(event: React.DragEvent): boolean {
-  return Array.from(event.dataTransfer?.types ?? []).includes("Files");
+  return Array.from(event.dataTransfer?.types ?? []).includes("Files"); // i18n-exempt: not shown (a drag data type)
 }
 
 /**

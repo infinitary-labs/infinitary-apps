@@ -7,7 +7,7 @@
      window-centred, so the caption must be too - never the stage's centre,
      which an unpaired rail shifts. The width still follows the stage. */
   position: fixed;
-  left: 50%;
+  left: 50%; /* physical: centred on the window, which mirrors to itself */
   /* A refused notice can lift the input. Keep setup above it, with at
      least one scrollable band even in the smallest window. */
   top: min(

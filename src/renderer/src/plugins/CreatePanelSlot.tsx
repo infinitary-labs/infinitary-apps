@@ -1,4 +1,5 @@
 import { CREATE_PANEL_SLOT_HINT, CREATE_PANEL_SLOT_TITLE } from "@shared/createPanelSlot";
+import * as m from "@shared/i18n/messages.generated";
 import { IconButton } from "../design";
 import { createPanelSlot, useCreatePanelSlotShown } from "./createPanelSlotStore";
 
@@ -66,7 +67,7 @@ export function CreatePanelSlot() {
       </button>
       <span data-create-panel-slot-hide="">
         <IconButton
-          label="Hide"
+          label={m.panelHide()}
           size={24}
           onClick={() => createPanelSlot.hide()}
           style={{ color: "var(--fg-3)" }}

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   KNOWLEDGE_STANDING_WORDS,
   type KnowledgeRef,
@@ -29,13 +30,15 @@ const NONE: readonly KnowledgeRef[] = [];
 
 /** The words a reference is read by: what it is, its id, what it says and where it stands. */
 export function referenceLabel(ref: KnowledgeRef): string {
-  const kind = ref.kind === "finding" ? "Finding" : "Concept";
+  const named = { id: ref.id, title: ref.title.replace(/[.\s]+$/, "") };
+  const kind =
+    ref.kind === "finding" ? m.cardKnowledgeFindingRef(named) : m.cardKnowledgeConceptRef(named);
   const standing = ref.standing
     ? ` · ${KNOWLEDGE_STANDING_WORDS[ref.standing]}`
     : ref.retired
-      ? " · Retired"
+      ? ` · ${m.cardKnowledgeRetired()}`
       : "";
-  return `${kind} ${ref.id}: ${ref.title.replace(/[.\s]+$/, "")}${standing}`;
+  return `${kind}${standing}`;
 }
 
 /** The mark a reference's standing takes: checked with evidence, worth another look, or neither. */

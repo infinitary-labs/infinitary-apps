@@ -93,6 +93,7 @@ export function isAudioSilent(samples: Float32Array, threshold = 0.006): boolean
  * transcript in Chinese, Japanese or Korean is never read as the empty one
  * (INF-608).
  */
+// i18n-exempt: not shown (transcripts compared, never shown)
 const STOCK_HALLUCINATIONS = new Set([
   "",
   "you",

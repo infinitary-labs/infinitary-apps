@@ -1,9 +1,9 @@
 import { type CardCornerWords, cardCornerOf } from "@shared/cardLeave";
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { createContext, useContext } from "react";
 import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
-import { MAXIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
 
 /**
  * The shown card's size, lent by the stage to the card it shows (design
@@ -71,7 +71,7 @@ export function CardSizeToggle() {
   return (
     <IconButton
       data-card-size-toggle={size.maximized ? "restore" : "maximize"}
-      label={size.maximized ? RESTORE_LABEL : MAXIMIZE_LABEL}
+      label={size.maximized ? m.uiCardRestore() : m.uiCardMaximize()}
       // Esc also restores a maximized card (app/App.tsx), so Restore card
       // names it when Maximize or restore card has no key of its own.
       keys={size.maximized ? (size.keys ?? fixedKeys("Escape").keys) : size.keys}

@@ -1,4 +1,4 @@
-import { COMPUTER } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { onReducedMotionChange, prefersReducedMotion } from "../character/reducedMotion";
@@ -6,29 +6,39 @@ import { Badge, MicroLabel } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { usePopoverPresence } from "../design/motion";
 
-/** The panel's words, one owner: what the OS setting changes in this app. */
+/**
+ * The panel's words, one owner: what the OS setting changes in this app,
+ * each worded from the catalog when it is read.
+ */
 export const REDUCED_MOTION_COPY = {
-  label: "Reduced motion",
-  headline: `Your ${COMPUTER.one} is set to reduce motion, so your first mate holds still.`,
-  points: [
-    {
-      subject: "Your first mate",
-      text: "is one still picture. It does not show when it is listening or working, react, blink or follow your pointer.",
-    },
-    {
-      subject: "Crewmates",
-      text: "sit still on their ring. Their color still changes, but you will not see them arrive, report in, finish or flicker.",
-    },
-    { subject: "The voice waveform", text: "holds still while you talk." },
-    {
-      subject: "Cards, panels and Settings",
-      text: "appear at once instead of sliding or fading. A few short fades remain.",
-    },
-  ],
-  change: "To change it, open System Settings › Accessibility › Display › Reduce motion.",
+  get label() {
+    return m.shellReducedMotionLabel();
+  },
+  get headline() {
+    return m.shellReducedMotionHeadline();
+  },
+  get points() {
+    return [
+      { subject: m.shellReducedMotionMateSubject(), text: m.shellReducedMotionMateText() },
+      { subject: m.shellReducedMotionCrewSubject(), text: m.shellReducedMotionCrewText() },
+      {
+        subject: m.shellReducedMotionWaveformSubject(),
+        text: m.shellReducedMotionWaveformText(),
+      },
+      {
+        subject: m.shellReducedMotionInterfaceSubject(),
+        text: m.shellReducedMotionInterfaceText(),
+      },
+    ] as const;
+  },
+  get change() {
+    return m.shellReducedMotionChangeMac();
+  },
   /** Where to change it on a desktop other than a Mac's, whose settings differ by desktop. */
-  changeOnLinux: "To change it, turn animations back on in your desktop's accessibility settings.",
-} as const;
+  get changeOnLinux() {
+    return m.shellReducedMotionChangeLinux();
+  },
+};
 
 function useReducedMotion(): boolean {
   return useSyncExternalStore(onReducedMotionChange, prefersReducedMotion);
@@ -154,7 +164,7 @@ export function ReducedMotionPanel({ id, ref }: { id?: string; ref?: React.Ref<H
       <ul
         style={{
           margin: 0,
-          paddingLeft: 16,
+          paddingInlineStart: 16,
           display: "flex",
           flexDirection: "column",
           gap: "var(--space-1)",

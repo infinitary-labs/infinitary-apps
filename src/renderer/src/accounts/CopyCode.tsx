@@ -35,7 +35,7 @@ export function useCopyCode(
       aria-atomic="true"
       style={{
         display: inline ? "inline" : "block",
-        marginLeft: inline ? "var(--space-2)" : undefined,
+        marginInlineStart: inline ? "var(--space-2)" : undefined,
         fontSize: "var(--text-sm)",
         color: state === "failed" ? "var(--danger)" : "var(--fg-2)",
       }}
@@ -68,7 +68,7 @@ export function CopyCodeButton({ state, onCopy }: { state: CopyState; onCopy: ()
       size="sm"
       pending={state === "copying"}
       pendingLabel="Copying..."
-      style={{ marginLeft: "var(--space-2)" }}
+      style={{ marginInlineStart: "var(--space-2)" }}
       onClick={onCopy}
     >
       Copy code

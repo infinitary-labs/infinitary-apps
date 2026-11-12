@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { PanelAskVia } from "@shared/personal/contracts";
 import {
   type PanelIntegrationsRequest,
@@ -110,7 +111,7 @@ export type FramedPanelContent = {
  * a fresh page, which says the counts again.
  */
 function notePanelStopped(panel: string): void {
-  panelRail.summarize(panel, [{ text: PANEL_UNRESPONSIVE_LINE }]);
+  panelRail.summarize(panel, [{ text: m.panelUnresponsiveLine() }]);
 }
 
 /** The compiled version a page draws: the lib's own, or a pinned version of a panel's graph. */

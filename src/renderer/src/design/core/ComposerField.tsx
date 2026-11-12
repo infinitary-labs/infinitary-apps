@@ -629,7 +629,7 @@ export function ComposerField({
         boxShadow: "none",
         fontFamily: "var(--font-ui)",
         color: "var(--fg-1)",
-        textAlign: "left",
+        textAlign: "start",
         ...style,
       }}
     />

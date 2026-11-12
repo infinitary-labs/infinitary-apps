@@ -69,7 +69,7 @@ describe("cardBodyMarkup", () => {
 
   it("builds a page born held, so its animations wait until the card is shown (FI3-871)", () => {
     expect(buildPrototypeSrcdoc("<p>Plain.</p>", "light")).toContain(
-      '<html data-theme="light" data-inf-held>',
+      '<html lang="en" dir="ltr" data-theme="light" data-inf-held>',
     );
   });
 

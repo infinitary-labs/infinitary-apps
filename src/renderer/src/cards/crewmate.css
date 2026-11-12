@@ -75,7 +75,7 @@
   display: inline-block;
   width: 0.5em;
   height: 1em;
-  margin-left: 2px;
+  margin-inline-start: 2px;
   vertical-align: -0.15em;
   background: var(--hot);
 }
@@ -88,7 +88,7 @@
 }
 .fm-crew-call .reading {
   color: var(--fg-3);
-  margin-left: 1ch;
+  margin-inline-start: 1ch;
 }
 .fm-crew-result {
   color: var(--fg-3);
@@ -200,10 +200,10 @@
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--fg-3);
-  margin-right: var(--space-2);
+  margin-inline-end: var(--space-2);
 }
 .fm-crew-queued {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
   font-size: var(--text-xs);
   color: var(--warn);
 }

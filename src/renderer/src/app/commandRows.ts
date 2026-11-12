@@ -1,3 +1,5 @@
+import { currentLanguage, inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import {
   allCommandIds,
   type Bindings,
@@ -54,6 +56,21 @@ export function commandMatches(
 }
 
 /**
+ * The words a catalog command is found by beyond its label: its own search
+ * words, and in another language its English label and search words too, so
+ * a person who knows a command's English name still finds it (docs/keyboard.md).
+ */
+function catalogSearchWords(command: KeyboardCommand): readonly string[] {
+  const own = command.searchWords ?? [];
+  if (currentLanguage() === SOURCE_LANGUAGE) return own;
+  const english = inLanguage(SOURCE_LANGUAGE, () => [
+    command.label,
+    ...(command.searchWords ?? []),
+  ]);
+  return [...own, ...english];
+}
+
+/**
  * Whether this build offers a command where it acts: one whose Settings
  * section this build does not show - Devices, behind the multi-machine
  * gate, or Secrets without protected storage - is never listed
@@ -85,7 +102,7 @@ export function commandRows(
     if (isCatalogCommand(id)) {
       const command: KeyboardCommand = KEYBOARD_COMMANDS[id];
       if (!searched.has(id) || !commandOffered(id, sections)) return [];
-      if (!commandMatches(command.label, query, command.searchWords)) return [];
+      if (!commandMatches(command.label, query, catalogSearchWords(command))) return [];
       const windowId = id as WindowCommandId;
       return [
         {

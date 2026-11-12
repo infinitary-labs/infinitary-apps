@@ -1,22 +1,29 @@
 /**
  * The first-launch gate's words (docs/first-launch.md), in a plain module a
- * spec can load, so it reads them from here rather than typing them.
+ * spec can load, so it reads them from here rather than typing them. Each
+ * is worded from the catalog when it is shown.
  */
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 
-export const GATE_TITLE = "Connect a subscription to begin";
+export const GATE_TITLE = (): string => m.shellGateTitle();
 
 /**
  * The home computer's first screen (captain, INF-417): the exact heading,
  * including the capital C. A connected subscription that still cannot answer
  * keeps the older heading, and a computer that controls another's first mate
- * keeps `GATE_TITLE`.
+ * keeps `GATE_TITLE`. Worded as the module loads, in English before any
+ * language is set, for a spec to read; the gate reads `gateHomeTitle`.
  */
-export const GATE_HOME_TITLE = "Welcome aboard Infinitary, Captain";
+export const GATE_HOME_TITLE = m.shellGateHomeTitle();
+
+/** The home computer's first-screen heading, worded when shown. */
+export function gateHomeTitle(): string {
+  return m.shellGateHomeTitle();
+}
 
 /** The heading when a subscription is connected and still cannot answer. */
 export function gateRecoveryTitle(): string {
-  return `Set up your first mate on ${HERE.this}`;
+  return m.shellGateRecoveryTitle();
 }
 
 /**
@@ -24,21 +31,15 @@ export function gateRecoveryTitle(): string {
  * (captain, INF-417: reword the suggested introduction, keep the always-on ask).
  */
 export function gateIntro(): string {
-  return [
-    "I'm your first mate.",
-    "I'll help you manage the rest of the crew.",
-    `Set me up on a ${COMPUTER.one} that stays on as much as possible.`,
-    `Your other devices need me awake.`,
-  ].join(" ");
+  return m.shellGateIntro();
 }
 
 /** The remaining-need line when a connected subscription still cannot answer. */
-export const GATE_STILL_NEEDS =
-  "Your first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, Copilot, or OpenRouter with an API key.";
+export const GATE_STILL_NEEDS = (): string => m.shellGateStillNeeds();
 
 /** The always-on line that stays with that remaining-need message. */
 export function gateStaysOn(): string {
-  return `Pick a ${COMPUTER.one} that stays on. Other ${COMPUTER.many} need it awake.`;
+  return m.shellGateStaysOn();
 }
 
 /**
@@ -46,23 +47,21 @@ export function gateStaysOn(): string {
  * Firstmate was chosen on (`FreshCheck`), it names that connection instead.
  */
 export function freshCheckTitle(label: string): string {
-  return `Check ${label} again to begin`;
+  return m.shellGateFreshCheckTitle({ label });
 }
 
 /** What the fresh check covers and what it may cost, before anything is sent. */
 export function freshCheckLine(check: { label: string; models: readonly string[] }): string {
-  const need =
-    check.models.length === 1 ? "its model needs" : `its ${check.models.length} models need`;
-  return `Your first mate answers from ${check.label}, and ${need} one fresh check. Checking may use billable tokens and sends only test text, never your work.`;
+  return m.shellGateFreshCheckLine({ count: check.models.length, label: check.label });
 }
 
 /** The line under the heading on a computer that controls another (docs/view.md). */
 export function gateRunLine(mac: string): string {
-  return `Connect one for your first mate on ${mac}. It signs in from here.`;
+  return m.shellGateRunLine({ computer: mac });
 }
 
-export const FRESH_CHECK_ACTION = "Check again";
-export const FRESH_CHECK_PENDING = "Checking...";
+export const FRESH_CHECK_ACTION = (): string => m.shellGateFreshCheckAction();
+export const FRESH_CHECK_PENDING = (): string => m.shellGateFreshCheckPending();
 
 /** A model the fresh check stopped at, with the server's reason in safe words. */
 export function freshCheckFailure(model: string, reason: string): string {

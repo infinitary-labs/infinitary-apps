@@ -2,6 +2,7 @@ import type { CrewSpeed } from "@shared/crewSpeed";
 import type { DecisionModelId, DecisionsSettings, DecisionsView } from "@shared/decisions";
 import { DECISION_MODEL_CATALOG } from "@shared/decisions";
 import type { DecisionUseRequest } from "@shared/decisionUses";
+import * as m from "@shared/i18n/messages.generated";
 import { modelNames } from "@shared/modelDisplayName";
 import type { ModelSlotsView, ReasoningChoice, Slot } from "@shared/modelSlots";
 import { SLOTS } from "@shared/modelSlots";
@@ -11,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../design";
 import { DecisionsGroup } from "./DecisionsGroup";
 import { ModelLevels } from "./ModelLevels";
-import { NOT_IN_USE, STARTING_LEVELS_RESET, STARTING_LEVELS_SUMMARY } from "./modelsWords";
+import { NOT_IN_USE, STARTING_LEVELS_SUMMARY } from "./modelsWords";
 
 /**
  * "Which of my models may Firstmate use, and as what." Level-first: four
@@ -221,7 +222,7 @@ export function ModelsSection({
                 setResetArmed(false);
               }}
             >
-              {resetArmed ? STARTING_LEVELS_RESET.confirm : STARTING_LEVELS_RESET.reset}
+              {resetArmed ? m.settingsModelsResetConfirm() : m.settingsModelsReset()}
             </Button>
             {resetArmed && (
               <>
@@ -234,10 +235,10 @@ export function ModelsSection({
                     resetButton.current?.focus();
                   }}
                 >
-                  {STARTING_LEVELS_RESET.cancel}
+                  {m.settingsModelsResetCancel()}
                 </Button>
                 <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
-                  {STARTING_LEVELS_RESET.note}
+                  {m.settingsModelsResetNote()}
                 </span>
               </>
             )}

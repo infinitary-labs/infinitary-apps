@@ -287,7 +287,7 @@ function MenuItem({
       style={{
         background: hover && !dim ? "var(--bg-3)" : "transparent",
         border: 0,
-        textAlign: "left",
+        textAlign: "start",
         padding: "7px 10px",
         borderRadius: "var(--radius-s)",
         fontFamily: "var(--font-ui)",

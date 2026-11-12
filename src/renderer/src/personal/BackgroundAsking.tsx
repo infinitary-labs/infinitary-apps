@@ -1,7 +1,8 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { PersonalExtensionView } from "@shared/personal/manifest";
 import { useState } from "react";
 import { Button } from "../design";
-import { INTEGRATION_ASK_AGAIN, integrationAskLine } from "./panelBoundaryWords";
+import { integrationAskLine } from "./panelBoundaryWords";
 
 type Ask = NonNullable<PersonalExtensionView["integrationAsks"]>[number];
 
@@ -49,7 +50,7 @@ function AskLine({ id, ask }: { id: string; ask: Ask }) {
             .finally(() => setAsking(false));
         }}
       >
-        {INTEGRATION_ASK_AGAIN}
+        {m.panelIntegrationAskAgain()}
       </Button>
     </div>
   );

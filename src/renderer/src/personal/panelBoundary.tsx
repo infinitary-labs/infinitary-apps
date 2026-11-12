@@ -1,5 +1,5 @@
+import * as m from "@shared/i18n/messages.generated";
 import { Component, type ReactNode } from "react";
-import { CARD_STOPPED_LINE, PANEL_STOPPED_LINE } from "./panelBoundaryWords";
 
 export function PanelStoppedLine({ card = false }: { card?: boolean }) {
   return (
@@ -7,7 +7,7 @@ export function PanelStoppedLine({ card = false }: { card?: boolean }) {
       data-personal-stopped=""
       style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}
     >
-      {card ? CARD_STOPPED_LINE : PANEL_STOPPED_LINE}
+      {card ? m.panelCardStopped() : m.panelStoppedLine()}
     </p>
   );
 }

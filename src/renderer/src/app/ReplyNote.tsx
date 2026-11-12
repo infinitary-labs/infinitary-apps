@@ -1,8 +1,9 @@
+import * as m from "@shared/i18n/messages.generated";
 import { useLayoutEffect, useState } from "react";
 import { QuestionBubble } from "../cards/QuestionBubble";
 import { ResponseCard } from "../design/cards/ResponseCard";
 import { MateMark } from "./LastTurn";
-import { CONVERSATION_HEADING } from "./lastTurnWords";
+import { conversationHeading } from "./lastTurnWords";
 import type { ReplyNote } from "./stack";
 import "./replyNote.css";
 
@@ -22,7 +23,7 @@ export function ReplyNoteCard({
   return (
     <ResponseCard
       kind="note"
-      headExtra={<h3 className="reply-note-heading">{CONVERSATION_HEADING}</h3>}
+      headExtra={<h3 className="reply-note-heading">{conversationHeading()}</h3>}
       width={width}
       minHeight={120}
     >
@@ -36,13 +37,13 @@ function ConversationMessages({ note }: { note: ReplyNote }) {
   return (
     <div className="reply-note-messages">
       <div className="reply-note-question" data-reply-note-question="">
-        <span className="reply-note-speaker">You</span>
+        <span className="reply-note-speaker">{m.shellReplyNoteYou()}</span>
         <QuestionBubble text={note.you} open={open} onOpenChange={setOpen} selectable />
       </div>
       <div className="reply-note-answer">
         <span className="reply-note-speaker reply-note-mate">
           <MateMark working={false} />
-          First mate
+          {m.shellReplyNoteFirstMate()}
         </span>
         <div
           data-reply-note=""

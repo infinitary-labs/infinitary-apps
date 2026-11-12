@@ -90,7 +90,7 @@
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--fg-3);
-  margin-right: 2px;
+  margin-inline-end: 2px;
 }
 
 /* An account connected while the gate is up: the row in place of its chip. */
@@ -133,7 +133,7 @@
 .fm-connect-aside-frame {
   width: min(560px, 100%);
   margin: var(--space-4) auto 0;
-  text-align: left;
+  text-align: start;
   border: 1px solid var(--line-1);
   border-radius: var(--radius-m);
   background: var(--bg-1);
@@ -160,7 +160,7 @@
   background: var(--bg-3);
   border-radius: var(--radius-s);
   padding: 2px 8px;
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
 }
 
 .fm-code-step-actions {

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Badge } from "../core/Badge";
@@ -101,7 +102,7 @@ export function CardStack({
           <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ position: "relative", display: "inline-flex" }}>
               <IconButton
-                label="Previous card"
+                label={m.uiCardStackPrevious()}
                 size={28}
                 onClick={onPrev}
                 disabled={index <= 0}
@@ -124,7 +125,7 @@ export function CardStack({
             </span>
             <span style={{ position: "relative", display: "inline-flex" }}>
               <IconButton
-                label="Next card"
+                label={m.uiCardStackNext()}
                 size={28}
                 onClick={onNext}
                 disabled={index >= count - 1}
@@ -144,12 +145,12 @@ export function CardStack({
                 style={{
                   position: "absolute",
                   left: "100%",
-                  marginLeft: "var(--space-2)",
+                  marginInlineStart: "var(--space-2)",
                   whiteSpace: "nowrap",
                 }}
               >
                 <Badge tone="accent" mono>
-                  {unread} new
+                  {m.uiCardStackNew({ count: unread })}
                 </Badge>
               </span>
             )}

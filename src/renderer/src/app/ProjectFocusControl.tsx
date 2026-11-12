@@ -1,3 +1,5 @@
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { elsewhereWords, type ProjectPill } from "@shared/projectFocus";
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -99,7 +101,11 @@ function Counts({ waiting, working }: { waiting: number; working: number }) {
 
 /** The words a pill's rest shows: its name and both counts. */
 function wordsOf(name: string, waiting: number, working: number): string {
-  return `${name} · ${waiting} waiting on you · ${working} working`;
+  return m.shellProjectPillWords({
+    name,
+    waiting: formatNumber(waiting),
+    working: formatNumber(working),
+  });
 }
 
 type Item = { id: string; name: string; waiting: number; working: number; key?: string };
@@ -199,7 +205,12 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
   const projects: readonly ProjectPill[] = pills?.projects ?? [];
   const focused = projects.find((project) => project.id === focus) ?? null;
   const items: Item[] = [
-    { id: "all", name: "All projects", waiting: pills?.waiting ?? 0, working: pills?.working ?? 0 },
+    {
+      id: "all",
+      name: m.shellProjectAll(),
+      waiting: pills?.waiting ?? 0,
+      working: pills?.working ?? 0,
+    },
     ...projects.map((project) => ({ ...project })),
   ];
 
@@ -372,7 +383,7 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
   if (!pillShown && phase === "closed") return null;
 
   if (phase === "closed") {
-    const name = focused ? focused.name : "All projects";
+    const name = focused ? focused.name : m.shellProjectAll();
     const waiting = focused ? focused.waiting : (pills?.waiting ?? 0);
     const working = focused ? focused.working : (pills?.working ?? 0);
     return (
@@ -388,7 +399,7 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
         />
         {focused && (
           <IconButton
-            label="Show all projects"
+            label={m.shellProjectShowAll()}
             size={22}
             {...clearKeys}
             data-project-focus-clear=""
@@ -440,7 +451,7 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
       style={{ left: placement?.left ?? 0 }}
       onKeyDown={onRowKey}
     >
-      <div data-project-focus-row="" role="radiogroup" aria-label="Focus on a project">
+      <div data-project-focus-row="" role="radiogroup" aria-label={m.shellProjectFocusRow()}>
         {items
           .filter((item) => item.id === "all" || shownIds.includes(item.id))
           .map((item, index) => (
@@ -464,7 +475,7 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
           data-project-focus-more=""
           aria-haspopup="menu"
           aria-expanded={menu ? "true" : "false"}
-          aria-label={`${hidden.length} more projects`}
+          aria-label={m.shellProjectMoreCount({ count: hidden.length })}
           style={slide("more", shownIds.length + 1)}
           onClick={() => setMenu((was) => !was)}
           onKeyDown={(event) => {
@@ -479,7 +490,7 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
       )}
       <span className="fm-pf-slide" style={slide("fold", shownIds.length + 2)}>
         <IconButton
-          label="Close the project row"
+          label={m.shellProjectCloseRow()}
           keys="Esc"
           aria-keyshortcuts="Escape"
           size={26}
@@ -539,7 +550,7 @@ function SummaryPill({
       data-pf-focused={focused ? "" : undefined}
       aria-haspopup="true"
       aria-expanded="false"
-      aria-label={`Focus on a project: ${words}`}
+      aria-label={m.shellProjectFocusPill({ words })}
       aria-keyshortcuts={keys["aria-keyshortcuts"]}
       onClick={onOpen}
     >
@@ -571,7 +582,7 @@ function MoreMenu({
       ref={ref}
       className="fm-pf-menu"
       role="menu"
-      aria-label="More projects"
+      aria-label={m.shellProjectMoreMenu()}
       data-project-focus-menu=""
       style={{ left: at }}
       onKeyDown={(event) => {

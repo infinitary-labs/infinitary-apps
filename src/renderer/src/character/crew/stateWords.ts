@@ -1,4 +1,5 @@
 import type { CrewWord } from "@shared/firstRun";
+import * as m from "@shared/i18n/messages.generated";
 
 /**
  * The crewmate's state words (captain's call of 2026-10-01, task FI3-436;
@@ -16,7 +17,14 @@ import type { CrewWord } from "@shared/firstRun";
  * it the painted frames on a clock and reads the one word to draw.
  */
 export const CREW_STATE_WORD = {
-  words: { working: "Working", idle: "Idle" } satisfies Record<CrewWord, string>,
+  words: {
+    get working() {
+      return m.crewStateWorking();
+    },
+    get idle() {
+      return m.crewStateIdle();
+    },
+  } satisfies Record<CrewWord, string>,
   /** A crewmate must have held its settled state this long before a word appears. */
   holdMs: 1000,
   /** A showing counts after this long at full strength. */

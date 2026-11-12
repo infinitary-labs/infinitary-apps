@@ -5,7 +5,7 @@
   margin-bottom: var(--space-2);
 }
 .fm-line-summary time {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--fg-3);

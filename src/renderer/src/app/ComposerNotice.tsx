@@ -1,4 +1,5 @@
 import { COMPOSER_NOTICE_WORDS, type ComposerNotice as ComposerNoticeKind } from "@shared/composer";
+import * as m from "@shared/i18n/messages.generated";
 import { Button } from "../design";
 import { isView, namedNoticeWords } from "../devices/viewWords";
 import { NoticeStrip } from "./NoticeStrip";
@@ -34,7 +35,7 @@ export function ComposerNoticeView({
     <NoticeStrip width={width} data-composer-notice={notice}>
       <span style={{ flex: 1, fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>{words}</span>
       <Button variant="ghost" size="sm" onClick={onDismiss} style={{ flexShrink: 0 }}>
-        Dismiss notice
+        {m.shellComposerNoticeDismiss()}
       </Button>
     </NoticeStrip>
   );

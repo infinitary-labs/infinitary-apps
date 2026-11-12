@@ -48,7 +48,7 @@ export function Switch({
         display: "inline-flex",
         alignItems: "center",
         gap: 10,
-        marginLeft: labelPosition === "before" ? "auto" : undefined,
+        marginInlineStart: labelPosition === "before" ? "auto" : undefined,
         cursor: disabled || off ? "default" : "pointer",
         opacity: disabled || off ? 0.4 : 1,
       }}

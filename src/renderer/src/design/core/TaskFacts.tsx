@@ -1,4 +1,5 @@
-import { formatDate, formatDateTime } from "@shared/i18n/format";
+import { formatDate, formatDateTime, formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { useMinute } from "./useMinute";
 
 export { useMinute } from "./useMinute";
@@ -153,8 +154,12 @@ function Cell({
   );
 }
 
-/** The word the plan is labelled with on every surface (the captain's pick, FI3-734). */
-export const PLAN_LABEL = "Progress";
+/**
+ * The word the plan is labelled with on every surface (the captain's pick,
+ * FI3-734), in English for the tests; the surfaces call the message when
+ * they draw.
+ */
+export const PLAN_LABEL = m.uiTaskFactsProgress();
 
 const MARK_COLOR: Record<PlanItemState, string> = {
   done: "var(--fg-2)",
@@ -221,9 +226,9 @@ function PlanCount({ plan }: { plan: TaskPlan }) {
   return (
     <>
       <span className="count" data-task-fact-count="">
-        {done} of {total}
+        {m.uiTaskFactsPlanCount({ done: formatNumber(done), total: formatNumber(total) })}
       </span>
-      {skipped > 0 && <span className="count">· {skipped} skipped</span>}
+      {skipped > 0 && <span className="count">{m.uiTaskFactsPlanSkipped({ count: skipped })}</span>}
     </>
   );
 }
@@ -258,7 +263,7 @@ function PlanDots({ plan }: { plan: TaskPlan }) {
     ? [
         {
           state: "done",
-          short: `${fold.folded.length} done`,
+          short: m.uiTaskFactsFoldedDone({ count: fold.folded.length }),
           label: fold.folded.map((item) => item.label).join(", "),
           group: fold.folded.length,
           fold: "done",
@@ -272,7 +277,7 @@ function PlanDots({ plan }: { plan: TaskPlan }) {
         ...clip.shown,
         {
           state: clip.later.every((node) => node.state === "done") ? "done" : "next",
-          short: `${clip.later.length} more`,
+          short: m.uiTaskFactsFoldedMore({ count: clip.later.length }),
           label: clip.later.map((node) => node.label).join(", "),
           group: clip.later.length,
           fold: "later",
@@ -286,7 +291,10 @@ function PlanDots({ plan }: { plan: TaskPlan }) {
       data-task-plan-dots={nodes.length}
       data-stagger={nodes.length > PLAN_FOLD_PAST ? "" : undefined}
       role="img"
-      aria-label={`${PLAN_LABEL}: ${done} of ${total} done`}
+      aria-label={m.uiTaskFactsPlanDotsName({
+        done: formatNumber(done),
+        total: formatNumber(total),
+      })}
     >
       {nodes.map((node, index) => (
         <div
@@ -336,7 +344,7 @@ function PlanList({ plan, now, focusable }: { plan: TaskPlan; now: number; focus
             data-task-plan-earlier=""
             onClick={() => setUnfoldedAt(plan.at)}
           >
-            Show earlier · {fold.folded.length}
+            {m.uiTaskFactsShowEarlier({ count: formatNumber(fold.folded.length) })}
           </button>
         </div>
       )}
@@ -347,7 +355,7 @@ function PlanList({ plan, now, focusable }: { plan: TaskPlan; now: number; focus
           </span>
           <span className="label-text" data-plan-label="">
             {item.label}
-            {item.state === "skipped" && <span className="skipped"> skipped</span>}
+            {item.state === "skipped" && <span className="skipped"> {m.uiTaskFactsSkipped()}</span>}
           </span>
           {item.state === "done" ? (
             <Age at={item.since} now={now} focusable={focusable} />
@@ -411,7 +419,7 @@ export function TaskFactStrip({
         {facts.model && (
           <div className="cell model">
             <div className="label" data-task-fact-label="">
-              Model
+              {m.uiTaskFactsModel()}
             </div>
             <div className="value">
               <span data-task-fact="model" title={facts.model}>
@@ -426,14 +434,18 @@ export function TaskFactStrip({
           </div>
         )}
         {facts.reasoning && (
-          <Cell label="Reasoning" fact="reasoning" data-level={facts.reasoning.level}>
+          <Cell
+            label={m.uiTaskFactsReasoning()}
+            fact="reasoning"
+            data-level={facts.reasoning.level}
+          >
             {reasoningWord(facts.reasoning)}
           </Cell>
         )}
         {(change || checks || watching) && (
           <div className="cell" data-task-fact-change-cell="">
             <div className="label" data-task-fact-label="">
-              {change ? change.noun : "Checks"}
+              {change ? change.noun : m.uiTaskFactsChecks()}
             </div>
             <div className="value" {...(checks?.problem ? { "data-check-read-problem": "" } : {})}>
               {change && (
@@ -481,7 +493,7 @@ export function TaskFactStrip({
           </div>
         )}
         {review && (
-          <Cell label="Review" fact="review" data-dot={review.dot}>
+          <Cell label={m.uiTaskFactsReview()} fact="review" data-dot={review.dot}>
             <FactDot state={review.dot} />
             {review.words}
           </Cell>
@@ -542,7 +554,7 @@ function SummaryStrip({ facts }: { facts: TaskFacts }) {
           {facts.model && (
             <div className="cell model">
               <div className="label" data-task-fact-label="">
-                Model
+                {m.uiTaskFactsModel()}
               </div>
               <div className="value">
                 <span data-task-fact="model" title={facts.model}>
@@ -559,7 +571,7 @@ function SummaryStrip({ facts }: { facts: TaskFacts }) {
           {(change || checks) && (
             <div className="cell">
               <div className="label" data-task-fact-label="">
-                {change ? change.noun : "Checks"}
+                {change ? change.noun : m.uiTaskFactsChecks()}
               </div>
               <div className="value">
                 {change && (
@@ -582,7 +594,7 @@ function SummaryStrip({ facts }: { facts: TaskFacts }) {
       )}
       {review && (
         <div className="cells">
-          <Cell label="Review" fact="review" data-dot={review.dot}>
+          <Cell label={m.uiTaskFactsReview()} fact="review" data-dot={review.dot}>
             <FactDot state={review.dot} />
             {review.words}
           </Cell>
@@ -604,10 +616,12 @@ function whenOf(at: number, now: number): string {
 /** How long before the choice its reading was taken. */
 function readBefore(measuredAt: number, at: number): string {
   const minutes = Math.max(0, Math.floor((at - measuredAt) / 60_000));
-  if (minutes < 1) return "read just before";
-  if (minutes < 60) return `read ${minutes}m before`;
+  if (minutes < 1) return m.uiTaskFactsReadJustBefore();
+  if (minutes < 60) return m.uiTaskFactsReadMinutesBefore({ minutes: formatNumber(minutes) });
   const hours = Math.floor(minutes / 60);
-  return hours < 24 ? `read ${hours}h before` : `read ${Math.floor(hours / 24)}d before`;
+  return hours < 24
+    ? m.uiTaskFactsReadHoursBefore({ hours: formatNumber(hours) })
+    : m.uiTaskFactsReadDaysBefore({ days: formatNumber(Math.floor(hours / 24)) });
 }
 
 /**
@@ -636,11 +650,11 @@ function ModelWhy({ why }: { why: TaskModelWhy }) {
             const facts = [
               candidate.band ? bandWords(candidate.band, comparison.floorPercent) : undefined,
               candidate.percentRemaining !== undefined
-                ? `${Math.round(candidate.percentRemaining)}% left`
+                ? m.uiPercentLeft({ percent: formatNumber(Math.round(candidate.percentRemaining)) })
                 : undefined,
               candidate.measuredAt !== undefined ? readBefore(candidate.measuredAt, at) : undefined,
               candidate.resetsAtMs !== undefined
-                ? `resets ${whenOf(candidate.resetsAtMs, Date.now())}`
+                ? m.uiTaskFactsResets({ when: whenOf(candidate.resetsAtMs, Date.now()) })
                 : undefined,
             ].filter((fact): fact is string => fact !== undefined);
             return (
@@ -792,7 +806,7 @@ export function TaskFactRows({
       {withTask && (
         <div className="row">
           <div className="label" data-task-fact-label="">
-            Task
+            {m.uiTaskFactsTask()}
           </div>
           <div className="title" data-task-fact="task">
             {facts.title}
@@ -802,7 +816,7 @@ export function TaskFactRows({
       {project ? (
         <div className="row">
           <div className="label" data-task-fact-label="">
-            Project
+            {m.uiTaskFactsProject()}
           </div>
           <div className="title" data-task-fact="project">
             {project}
@@ -813,7 +827,7 @@ export function TaskFactRows({
       {facts.now !== null && (
         <div className="row">
           <div className="label" data-task-fact-label="">
-            Now
+            {m.uiTaskFactsNow()}
           </div>
           <div className="now">
             <span className="note" data-task-fact="now">
@@ -830,7 +844,7 @@ export function TaskFactRows({
       {plan && (
         <div className="row">
           <div className="label" data-task-fact-label="">
-            {PLAN_LABEL}
+            {m.uiTaskFactsProgress()}
           </div>
           {/* The same words on both surfaces: the count and the current item. */}
           <div className="plan" data-task-fact="plan" data-task-plan-items={plan.items.length}>
@@ -840,8 +854,8 @@ export function TaskFactRows({
                 current
                   ? current.label
                   : planCounts(plan.items).done === planCounts(plan.items).total
-                    ? "All done"
-                    : "Between items"
+                    ? m.uiTaskFactsAllDone()
+                    : m.uiTaskFactsBetweenItems()
               }
             />
             <Age at={plan.at} now={now} focusable={focusable} />
@@ -853,7 +867,7 @@ export function TaskFactRows({
       {facts.browser && onOpenBrowser && (
         <div className="row browser">
           <div className="label" data-task-fact-label="">
-            Browser
+            {m.uiTaskFactsBrowser()}
           </div>
           <div
             className="browser-line"
@@ -863,7 +877,7 @@ export function TaskFactRows({
             <span className="site">{facts.browser.site}</span>
             <span>{facts.browser.words}</span>
             <button type="button" className="link" data-browser-open="" onClick={onOpenBrowser}>
-              Open
+              {m.uiTaskFactsOpen()}
             </button>
           </div>
         </div>

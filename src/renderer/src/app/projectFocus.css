@@ -16,7 +16,7 @@
 }
 
 [data-project-focus="closed"] {
-  left: 50%;
+  left: 50%; /* physical: centred with translateX(-50%), which mirrors to itself */
   transform: translateX(-50%);
 }
 
@@ -74,7 +74,7 @@
 .fm-pf-arrow {
   display: inline-flex;
   color: var(--fg-3);
-  margin-right: -3px;
+  margin-inline-end: -3px;
 }
 
 .fm-pf-tail {
@@ -170,7 +170,7 @@
   font: 500 var(--text-sm) / 1 var(--font-ui);
   cursor: pointer;
   white-space: nowrap;
-  text-align: left;
+  text-align: start;
 }
 
 .fm-pf-item:hover {

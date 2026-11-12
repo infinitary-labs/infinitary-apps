@@ -1,10 +1,6 @@
+import * as m from "@shared/i18n/messages.generated";
 import { useState } from "react";
 import { Button } from "../design";
-import {
-  BACKGROUND_EXITED_LINE,
-  BACKGROUND_RETRY,
-  BACKGROUND_STOPPED_LINE,
-} from "./panelBoundaryWords";
 
 /**
  * The host's own status for a panel whose background work it stopped, and
@@ -35,7 +31,7 @@ export function BackgroundStopped({
       }}
     >
       <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
-        {reason === "exited" ? BACKGROUND_EXITED_LINE : BACKGROUND_STOPPED_LINE}
+        {reason === "exited" ? m.panelBackgroundExited() : m.panelBackgroundStopped()}
       </p>
       <Button
         variant="secondary"
@@ -48,7 +44,7 @@ export function BackgroundStopped({
             .finally(() => setAsking(false));
         }}
       >
-        {BACKGROUND_RETRY}
+        {m.panelRetry()}
       </Button>
     </div>
   );

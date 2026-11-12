@@ -17,7 +17,7 @@
 }
 .fm-crew-model-anchor {
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
 }
 .fm-crew-model-anchor:not([data-painted]) {

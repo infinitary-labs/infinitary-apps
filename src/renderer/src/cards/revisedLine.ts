@@ -1,5 +1,6 @@
 import type { CardChanges } from "@shared/cards";
-import { formatDate, formatTime } from "@shared/i18n/format";
+import { formatDate, formatNumber, formatTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 
 /**
  * The quiet line under a revised card's title (design skill ResponseCard,
@@ -11,21 +12,17 @@ import { formatDate, formatTime } from "@shared/i18n/format";
  */
 export function revisedLine(changes: CardChanges, now: number = Date.now()): string {
   const time = clock(changes.at, now);
-  if (changes.rewritten) return `Rewritten ${time}`;
-  const clauses = [`Revised ${time}`];
-  if (changes.added > 0) clauses.push(`${count(changes.added, "part")} new`);
+  if (changes.rewritten) return m.cardRevisedRewritten({ time });
+  const clauses = [m.cardRevisedRevised({ time })];
+  if (changes.added > 0) clauses.push(m.cardRevisedPartsNew({ count: changes.added }));
   if (changes.removed > 0) {
     clauses.push(
       changes.added > 0
-        ? `${changes.removed} removed`
-        : `${count(changes.removed, "part")} removed`,
+        ? m.cardRevisedRemoved({ count: formatNumber(changes.removed) })
+        : m.cardRevisedPartsRemoved({ count: changes.removed }),
     );
   }
   return clauses.join(" · ");
-}
-
-function count(n: number, noun: string): string {
-  return `${n} ${n === 1 ? noun : `${noun}s`}`;
 }
 
 /** The time of day, with the date in front when it was not today. */

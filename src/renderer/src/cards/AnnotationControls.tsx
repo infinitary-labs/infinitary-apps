@@ -18,6 +18,7 @@ import {
 } from "@shared/cardNotes";
 import { notePart } from "@shared/cardNoteTargets";
 import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCommandKeys } from "../app/keyHints";
@@ -262,10 +263,10 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
       />
       <p className="inf-annotation-hint" role="status">
         {!writing
-          ? "Copy the selected words, or press Tab to add a comment."
+          ? m.cardAnnotationHint()
           : hint
             ? NOTE_DISCARD_HINT
-            : `Enter queues · ${sendKey} queues and sends · Esc closes when empty`}
+            : m.cardAnnotationKeys({ sendKey })}
       </p>
       <div className="inf-annotation-actions">
         <Button variant="ghost" onClick={cancel}>

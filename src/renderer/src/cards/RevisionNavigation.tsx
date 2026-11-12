@@ -1,4 +1,6 @@
 import type { CardMessage, RevisionTarget } from "@shared/cards";
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { isRevisedLine } from "@shared/threadLines";
 import {
   createContext,
@@ -192,8 +194,10 @@ export function RevisionNavigation({
     const next = () => {
       if (!active) return;
       const lists =
-        messages?.filter((m) => m.revision?.released && m.revision.targets.length) ?? [];
-      const row = lists.find((m) => m.id === selected.current?.message) ?? lists.at(-1);
+        messages?.filter(
+          (message) => message.revision?.released && message.revision.targets.length,
+        ) ?? [];
+      const row = lists.find((message) => message.id === selected.current?.message) ?? lists.at(-1);
       const targets = row?.revision?.targets;
       if (!row || !targets?.length) return;
       const previous =
@@ -252,7 +256,7 @@ export function RevisionLinks({ message }: { message: CardMessage }) {
   const revision = message.revision;
   if (!revision)
     return message.who === "host" && isRevisedLine(message.text) ? (
-      <span data-revision-unavailable="">Change links unavailable</span>
+      <span data-revision-unavailable="">{m.cardRevisionLinksUnavailable()}</span>
     ) : null;
   if (!revision.released) return null;
   return (
@@ -282,16 +286,16 @@ export function RevisionLinks({ message }: { message: CardMessage }) {
             aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
           >
-            {expanded ? "Show fewer" : `${revision.targets.length - 3} more`}
+            {expanded
+              ? m.cardRevisionShowFewer()
+              : m.cardRevisionMore({ count: formatNumber(revision.targets.length - 3) })}
           </button>
         )}
       </div>
       {revision.removed > 0 && (
-        <span>
-          {revision.removed} {revision.removed === 1 ? "part removed" : "parts removed"}
-        </span>
+        <span>{m.cardRevisedPartsRemoved({ count: revision.removed })}</span>
       )}
-      {missing && <div role="status">This area is no longer available in the current card.</div>}
+      {missing && <div role="status">{m.cardRevisionAreaGone()}</div>}
     </div>
   );
 }

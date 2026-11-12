@@ -1,4 +1,6 @@
 import { isDrawingSource } from "@shared/cardPictures";
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -6,12 +8,7 @@ import { thisDesktop, WINDOW_CONTROLS_CLEARANCE } from "../core/desktop";
 import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 import { useRestLabel } from "../core/restLabel";
-import {
-  pictureHint,
-  pictureSize,
-  RECORDING_UNPLAYABLE,
-  SHOWN_AT_OWN_SIZE,
-} from "./pictureViewerWords";
+import { pictureHint, pictureSize } from "./pictureViewerWords";
 
 /**
  * Where a card's picture is read (card pictures, phase 3 of the locked
@@ -191,7 +188,7 @@ export function PictureViewer({
   // focus, and in its description (docs/keyboard.md, "Facts shown on rest").
   // Esc stays the viewer's own, which closes it and the label with it.
   const ownSizeId = useId();
-  const ownSize = useRestLabel(zoomable ? undefined : SHOWN_AT_OWN_SIZE);
+  const ownSize = useRestLabel(zoomable ? undefined : m.uiPictureViewerShownAtOwnSize());
 
   const clearGif = useCallback(() => {
     window.clearTimeout(gifEnd.current);
@@ -447,7 +444,9 @@ export function PictureViewer({
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={demo ? `Demo from ${title}` : `Pictures from ${title}`}
+      aria-label={
+        demo ? m.uiPictureViewerDemoFrom({ title }) : m.uiPictureViewerPicturesFrom({ title })
+      }
       tabIndex={-1}
       data-picture-viewer=""
       style={{
@@ -509,7 +508,7 @@ export function PictureViewer({
           {count}
         </span>
         <IconButton
-          label="Close the viewer"
+          label={m.uiPictureViewerClose()}
           {...fixedKeys("Escape")}
           onClick={close}
           style={noDrag}
@@ -635,7 +634,7 @@ export function PictureViewer({
           <button
             type="button"
             data-picture=""
-            aria-label="Actual size"
+            aria-label={m.uiPictureViewerActualSize()}
             aria-pressed={atOne}
             aria-disabled={!zoomable}
             aria-describedby={zoomable ? captionId : `${ownSizeId} ${captionId}`}
@@ -746,7 +745,7 @@ export function PictureViewer({
         {pictures.length > 1 && (
           <>
             <IconButton
-              label="Previous picture"
+              label={m.uiPictureViewerPrevious()}
               {...fixedKeys("ArrowLeft")}
               size={NAV_SIZE}
               disabled={index === 0}
@@ -758,7 +757,7 @@ export function PictureViewer({
               </svg>
             </IconButton>
             <IconButton
-              label="Next picture"
+              label={m.uiPictureViewerNext()}
               {...fixedKeys("ArrowRight")}
               size={NAV_SIZE}
               disabled={index === pictures.length - 1}
@@ -799,7 +798,7 @@ export function PictureViewer({
           {demo?.caption || picture.alt}
         </p>
         <span id={ownSizeId} hidden>
-          {SHOWN_AT_OWN_SIZE}
+          {m.uiPictureViewerShownAtOwnSize()}
         </span>
         {demo ? (
           <div
@@ -816,7 +815,15 @@ export function PictureViewer({
           >
             <IconButton
               ref={playRef}
-              label={ended ? "Replay" : playing ? (gif ? "Stop" : "Pause") : "Play"}
+              label={
+                ended
+                  ? m.uiPictureViewerReplay()
+                  : playing
+                    ? gif
+                      ? m.uiPictureViewerStop()
+                      : m.uiPictureViewerPause()
+                    : m.uiPictureViewerPlay()
+              }
               disabled={failed}
               onClick={pressPlay}
               style={{ flex: "none", color: "var(--fg-1)" }}
@@ -837,8 +844,11 @@ export function PictureViewer({
               <input
                 type="range"
                 data-demo-seek=""
-                aria-label="Seek"
-                aria-valuetext={`${clock(time)} of ${clock(length)}`}
+                aria-label={m.uiPictureViewerSeek()}
+                aria-valuetext={m.uiPictureViewerSeekValue({
+                  time: clock(time),
+                  length: clock(length),
+                })}
                 min={0}
                 max={length || 0}
                 step="any"
@@ -865,7 +875,7 @@ export function PictureViewer({
                 whiteSpace: "nowrap",
               }}
             >
-              {failed ? RECORDING_UNPLAYABLE : `${clock(time)} / ${clock(length)}`}
+              {failed ? m.uiPictureViewerUnplayable() : `${clock(time)} / ${clock(length)}`}
             </span>
           </div>
         ) : null}
@@ -900,7 +910,10 @@ export function PictureViewer({
                 // biome-ignore lint/suspicious/noArrayIndexKey: a group may name one picture twice
                 key={at}
                 type="button"
-                aria-label={`Picture ${at + 1}: ${thumb.alt}`}
+                aria-label={m.uiPictureViewerThumb({
+                  number: formatNumber(at + 1),
+                  alt: thumb.alt,
+                })}
                 aria-current={at === index}
                 onClick={() => go(at)}
                 style={{

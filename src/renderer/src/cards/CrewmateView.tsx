@@ -5,6 +5,7 @@ import {
   elapsedWords,
   CREWMATE_WORDS as WORDS,
 } from "@shared/crewTranscript";
+import * as m from "@shared/i18n/messages.generated";
 import { isSafeCardHref } from "@shared/linkify";
 import { browserDriverOf } from "@shared/taskBrowser";
 import { taskFactsOf } from "@shared/taskFacts";
@@ -243,7 +244,7 @@ function Composer({
       if (result.ok) change("");
       else setRefusal(result.text);
     } catch {
-      setRefusal("This line could not be sent right now.");
+      setRefusal(m.cardCrewmateSendFailed());
     } finally {
       setSending(false);
     }
@@ -252,6 +253,7 @@ function Composer({
     <>
       <div className="fm-crew-compose" data-crew-composer="" data-focus={focus ? "" : undefined}>
         <span className="prompt" aria-hidden="true">
+          {/* i18n-exempt: a symbol */}
           &gt;
         </span>
         <ComposerField
@@ -399,13 +401,13 @@ export function CrewmateView({ taskId, onDrawn }: { taskId: string; onDrawn: () 
       ref={surface}
       data-task-crewmate={taskId}
       data-crew-state={state}
-      aria-label="Crewmate"
+      aria-label={m.cardCrewmateSurface()}
       style={SURFACE}
     >
       <RecordPaneChrome
         reading={facts?.status ?? null}
         pillTone={detail ? recordPillToneOf(detail) : "neutral"}
-        taskKey={detail ? detail.key : unreadable ? "this record could not be read" : null}
+        taskKey={detail ? detail.key : unreadable ? m.cardRecordUnreadable() : null}
         title={facts?.title ?? ""}
         tabs={
           detail && (
@@ -424,7 +426,7 @@ export function CrewmateView({ taskId, onDrawn }: { taskId: string; onDrawn: () 
             className="fm-crew-log"
             style={{ order: 1 }}
             role="log"
-            aria-label="The crewmate's session"
+            aria-label={m.cardCrewmateLog()}
             // biome-ignore lint/a11y/noNoninteractiveTabindex: the transcript scrolls by keys.
             tabIndex={0}
             data-crew-log=""

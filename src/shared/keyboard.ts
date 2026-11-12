@@ -1,4 +1,4 @@
-import { COMPUTER } from "./deviceNames";
+import * as m from "./i18n/messages.generated.ts";
 import type { KeySystem } from "./platform";
 /**
  * The app's keyboard commands (docs/keyboard.md). One catalog names every
@@ -123,6 +123,17 @@ export type KeyboardCommand = {
 );
 
 /**
+ * A command's other search words, from its catalog message: one string of
+ * words separated by commas, so a translation keeps them as one message.
+ */
+function searchWords(words: string): readonly string[] {
+  return words
+    .split(/[,、，]/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+}
+
+/**
  * Every command a key runs. An id is stable: it is how a changed key is
  * remembered, so it is never renamed or reused. Enter, Tab, the Mac's own
  * editing keys and the dictation key are not commands here; they keep their
@@ -131,7 +142,9 @@ export type KeyboardCommand = {
 export const KEYBOARD_COMMANDS = {
   // The window's own commands, in the order command search lists them.
   "commands.search": {
-    label: "Search commands",
+    get label() {
+      return m.commandCommandsSearch();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -140,7 +153,9 @@ export const KEYBOARD_COMMANDS = {
   },
   // The way back from wherever focus is, a card's or a panel's frame included.
   "focus.main-message": {
-    label: "Go to the main message",
+    get label() {
+      return m.commandFocusMainMessage();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -149,19 +164,25 @@ export const KEYBOARD_COMMANDS = {
   },
   // The card's one field (INF-924): a reply, or words for a choice.
   "focus.card-reply": {
-    label: "Go to the card's reply",
+    get label() {
+      return m.commandFocusCardReply();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [{ key: "l", meta: true, shift: true }],
-    searchWords: ["anything to add", "comment"],
+    get searchWords() {
+      return searchWords(m.commandFocusCardReplyWords());
+    },
   },
   // The shown card's own places (docs/keyboard.md, "Cards and frames"):
   // its body to read and answer, and its buttons. No key of their own yet:
   // chosen by name, and a person may give them one.
   "focus.card-body": {
-    label: "Go to the card's body",
+    get label() {
+      return m.commandFocusCardBody();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -170,7 +191,9 @@ export const KEYBOARD_COMMANDS = {
   },
   // Focus only: a button is pressed by its own key, through the click's checks.
   "focus.card-actions": {
-    label: "Go to the card's buttons",
+    get label() {
+      return m.commandFocusCardActions();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -184,46 +207,64 @@ export const KEYBOARD_COMMANDS = {
   // unanswered question is not sent, and a pending or disabled button does
   // not run.
   "cards.choice-1": {
-    label: "Press the recommended choice",
+    get label() {
+      return m.commandCardsChoice1();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "close",
     keys: [{ key: "1", meta: true }],
-    searchWords: ["card", "button", "default", "first"],
+    get searchWords() {
+      return searchWords(m.commandCardsChoice1Words());
+    },
   },
   "cards.choice-2": {
-    label: "Press the second choice",
+    get label() {
+      return m.commandCardsChoice2();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "close",
     keys: [{ key: "2", meta: true }],
-    searchWords: ["card", "button"],
+    get searchWords() {
+      return searchWords(m.commandCardsChoice2Words());
+    },
   },
   "cards.choice-3": {
-    label: "Press the third choice",
+    get label() {
+      return m.commandCardsChoice3();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "close",
     keys: [{ key: "3", meta: true }],
-    searchWords: ["card", "button"],
+    get searchWords() {
+      return searchWords(m.commandCardsChoice3Words());
+    },
   },
   "cards.choice-4": {
-    label: "Press the fourth choice",
+    get label() {
+      return m.commandCardsChoice4();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "close",
     keys: [{ key: "4", meta: true }],
-    searchWords: ["card", "button"],
+    get searchWords() {
+      return searchWords(m.commandCardsChoice4Words());
+    },
   },
   // The window's parts in turn (docs/keyboard.md, "Parts of the window"):
   // F6 as other desktop apps move between their panes. A function key needs
   // no modifier; on a Mac it may need Fn, so it can be changed like any key.
   "regions.next": {
-    label: "Go to the next part of the window",
+    get label() {
+      return m.commandRegionsNext();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -231,7 +272,9 @@ export const KEYBOARD_COMMANDS = {
     keys: [{ key: "F6" }],
   },
   "regions.previous": {
-    label: "Go to the previous part of the window",
+    get label() {
+      return m.commandRegionsPrevious();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -242,40 +285,56 @@ export const KEYBOARD_COMMANDS = {
   // (docs/keyboard.md, "Parts of the window"), read from where each part is
   // drawn now. No key of their own: chosen by name, or given one.
   "regions.left": {
-    label: "Go to the part of the window on the left",
+    get label() {
+      return m.commandRegionsLeft();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["pane", "panel", "left"],
+    get searchWords() {
+      return searchWords(m.commandRegionsLeftWords());
+    },
   },
   "regions.down": {
-    label: "Go to the part of the window below",
+    get label() {
+      return m.commandRegionsDown();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["pane", "panel", "down"],
+    get searchWords() {
+      return searchWords(m.commandRegionsDownWords());
+    },
   },
   "regions.up": {
-    label: "Go to the part of the window above",
+    get label() {
+      return m.commandRegionsUp();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["pane", "panel", "up"],
+    get searchWords() {
+      return searchWords(m.commandRegionsUpWords());
+    },
   },
   "regions.right": {
-    label: "Go to the part of the window on the right",
+    get label() {
+      return m.commandRegionsRight();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["pane", "panel", "right"],
+    get searchWords() {
+      return searchWords(m.commandRegionsRightWords());
+    },
   },
   // A key of a person's own for the arrows, Home, End, the page keys and
   // Escape (docs/keyboard.md, "Moving by a key of your own"): each presses
@@ -283,88 +342,126 @@ export const KEYBOARD_COMMANDS = {
   // process runs them, because only it can press a real key in the window's
   // page. No key of their own: given one, or chosen by name.
   "move.left": {
-    label: "Move left",
+    get label() {
+      return m.commandMoveLeft();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
     risk: "navigate",
     keys: [],
-    searchWords: ["arrow", "left", "previous"],
+    get searchWords() {
+      return searchWords(m.commandMoveLeftWords());
+    },
   },
   "move.down": {
-    label: "Move down",
+    get label() {
+      return m.commandMoveDown();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
     risk: "navigate",
     keys: [],
-    searchWords: ["arrow", "down", "next"],
+    get searchWords() {
+      return searchWords(m.commandMoveDownWords());
+    },
   },
   "move.up": {
-    label: "Move up",
+    get label() {
+      return m.commandMoveUp();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
     risk: "navigate",
     keys: [],
-    searchWords: ["arrow", "up", "previous"],
+    get searchWords() {
+      return searchWords(m.commandMoveUpWords());
+    },
   },
   "move.right": {
-    label: "Move right",
+    get label() {
+      return m.commandMoveRight();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
     risk: "navigate",
     keys: [],
-    searchWords: ["arrow", "right", "next"],
+    get searchWords() {
+      return searchWords(m.commandMoveRightWords());
+    },
   },
   "move.first": {
-    label: "Move to the start",
+    get label() {
+      return m.commandMoveFirst();
+    },
     scope: "window",
     runs: "main",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["home", "top", "first", "beginning"],
+    get searchWords() {
+      return searchWords(m.commandMoveFirstWords());
+    },
   },
   "move.last": {
-    label: "Move to the end",
+    get label() {
+      return m.commandMoveLast();
+    },
     scope: "window",
     runs: "main",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["end", "bottom", "last"],
+    get searchWords() {
+      return searchWords(m.commandMoveLastWords());
+    },
   },
   "move.page-up": {
-    label: "Move up a page",
+    get label() {
+      return m.commandMovePageUp();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
     risk: "navigate",
     keys: [],
-    searchWords: ["page up", "scroll"],
+    get searchWords() {
+      return searchWords(m.commandMovePageUpWords());
+    },
   },
   "move.page-down": {
-    label: "Move down a page",
+    get label() {
+      return m.commandMovePageDown();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
     risk: "navigate",
     keys: [],
-    searchWords: ["page down", "scroll"],
+    get searchWords() {
+      return searchWords(m.commandMovePageDownWords());
+    },
   },
   cancel: {
-    label: "Cancel",
+    get label() {
+      return m.commandCancel();
+    },
     scope: "window",
     runs: "main",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["escape", "esc", "close", "back"],
+    get searchWords() {
+      return searchWords(m.commandCancelWords());
+    },
   },
   "computers.previous": {
-    label: "Previous work computers",
+    get label() {
+      return m.commandComputersPrevious();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -372,7 +469,9 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
   },
   "computers.next": {
-    label: "Next work computers",
+    get label() {
+      return m.commandComputersNext();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -382,27 +481,37 @@ export const KEYBOARD_COMMANDS = {
   // The top bar's project pill (docs/project-focus.md): its row opens with
   // focus on the pills, and focus leaves by name.
   "project-focus.open": {
-    label: "Focus on a project",
+    get label() {
+      return m.commandProjectFocusOpen();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "view",
     keys: [{ key: "p", meta: true, shift: true }],
-    searchWords: ["filter", "project", "pill"],
+    get searchWords() {
+      return searchWords(m.commandProjectFocusOpenWords());
+    },
   },
   "project-focus.clear": {
-    label: "Show all projects",
+    get label() {
+      return m.commandProjectFocusClear();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "view",
     keys: [],
-    searchWords: ["filter", "focus", "project", "clear"],
+    get searchWords() {
+      return searchWords(m.commandProjectFocusClearWords());
+    },
   },
   // ⇧⌘[ as a Mac reports it while ⌘ is down (`[` with Shift), and as the
   // shifted character other input reports (`{` with Shift).
   "cards.previous": {
-    label: "Show the previous card",
+    get label() {
+      return m.commandCardsPrevious();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -413,7 +522,9 @@ export const KEYBOARD_COMMANDS = {
     ],
   },
   "cards.next": {
-    label: "Show the next card",
+    get label() {
+      return m.commandCardsNext();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -424,7 +535,9 @@ export const KEYBOARD_COMMANDS = {
     ],
   },
   "cards.minimize": {
-    label: "Put card aside",
+    get label() {
+      return m.commandCardsMinimize();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -432,8 +545,12 @@ export const KEYBOARD_COMMANDS = {
     keys: [{ key: "m", meta: true, shift: true }],
   },
   "cards.done": {
-    label: "Press the note's Done or Got it",
-    searchWords: ["card", "note", "answer", "done", "got it"],
+    get label() {
+      return m.commandCardsDone();
+    },
+    get searchWords() {
+      return searchWords(m.commandCardsDoneWords());
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -443,8 +560,12 @@ export const KEYBOARD_COMMANDS = {
   // INF-3108: the shown decision's way to say no, the app's Decline or the
   // author's own, chosen by name; ⌘1-⌘4 also reach it by its place.
   "cards.decline": {
-    label: "Decline every choice on the card",
-    searchWords: ["card", "decline", "no", "not now", "none", "reject"],
+    get label() {
+      return m.commandCardsDecline();
+    },
+    get searchWords() {
+      return searchWords(m.commandCardsDeclineWords());
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -452,154 +573,216 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
   },
   "cards.maximize": {
-    label: "Maximize or restore card",
+    get label() {
+      return m.commandCardsMaximize();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "view",
     keys: [],
-    searchWords: ["full", "screen", "enlarge", "expand", "bigger"],
+    get searchWords() {
+      return searchWords(m.commandCardsMaximizeWords());
+    },
   },
   "cards.next-revision": {
-    label: "Go to the next revised area",
+    get label() {
+      return m.commandCardsNextRevision();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["changes", "revision", "links"],
+    get searchWords() {
+      return searchWords(m.commandCardsNextRevisionWords());
+    },
   },
   // The shown card's thread folded into the card's foot, or beside it again
   // (docs/card-threads.md, "The shell"): ⌘\ as a sidebar is shown or hidden.
   "cards.point-at": {
-    label: "Point at a part of the card",
+    get label() {
+      return m.commandCardsPointAt();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [{ key: "a", meta: true, shift: true }],
-    searchWords: ["annotate", "comment", "select", "note"],
+    get searchWords() {
+      return searchWords(m.commandCardsPointAtWords());
+    },
   },
   "cards.thread": {
-    label: "Show or hide the card's thread",
+    get label() {
+      return m.commandCardsThread();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [{ key: "\\", meta: true }],
-    searchWords: ["collapse", "expand", "chat", "replies", "messages"],
+    get searchWords() {
+      return searchWords(m.commandCardsThreadWords());
+    },
   },
   // The shown card's jump down in its thread, while the captain reads above
   // its foot (docs/card-threads.md, "Keeping your place"): chosen by name.
   "cards.thread-new": {
-    label: "Go to the thread's new messages",
+    get label() {
+      return m.commandCardsThreadNew();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["jump", "down", "latest", "bottom", "unread", "replies"],
+    get searchWords() {
+      return searchWords(m.commandCardsThreadNewWords());
+    },
   },
   // The shown task card's tabs (docs/task-card-tabs.md): Info, Cards,
   // Activity (INF-2261), the crewmate's session and the browser's pages,
   // and on a card about a task its way to them (INF-358). No key of their
   // own yet: chosen by name.
   "cards.show-info": {
-    label: "Show Info",
+    get label() {
+      return m.commandCardsShowInfo();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "record", "tab", "open"],
+    get searchWords() {
+      return searchWords(m.commandCardsShowInfoWords());
+    },
   },
   "cards.show-cards": {
-    label: "Show Cards",
+    get label() {
+      return m.commandCardsShowCards();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "record", "tab", "decisions", "notes"],
+    get searchWords() {
+      return searchWords(m.commandCardsShowCardsWords());
+    },
   },
   "cards.show-activity": {
-    label: "Show Activity",
+    get label() {
+      return m.commandCardsShowActivity();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "record", "tab", "timeline", "history"],
+    get searchWords() {
+      return searchWords(m.commandCardsShowActivityWords());
+    },
   },
   "cards.show-crewmate": {
-    label: "Show Crewmate",
+    get label() {
+      return m.commandCardsShowCrewmate();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "session", "transcript", "tab"],
+    get searchWords() {
+      return searchWords(m.commandCardsShowCrewmateWords());
+    },
   },
   "browser.control": {
-    label: "Take or return browser control",
+    get label() {
+      return m.commandBrowserControl();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["handback", "take", "return", "browser"],
+    get searchWords() {
+      return searchWords(m.commandBrowserControlWords());
+    },
   },
   // The shown task record's Move to a computer (docs/helper.md, "Moving a
   // started task"): opens its picker, which saves nothing until Move.
   "task.move-computer": {
-    label: "Move the task to another computer",
+    get label() {
+      return m.commandTaskMoveComputer();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["computer", "mac", "machine", "move", "device", "record"],
+    get searchWords() {
+      return searchWords(m.commandTaskMoveComputerWords());
+    },
   },
   // The shown task record's Close as done (INF-3169's plan, piece 3): opens
   // its one confirm, which closes nothing until its own Close as done.
   "task.close-done": {
-    label: "Close the task as done",
+    get label() {
+      return m.commandTaskCloseDone();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["done", "finish", "finished", "complete", "close", "record", "task"],
+    get searchWords() {
+      return searchWords(m.commandTaskCloseDoneWords());
+    },
   },
   "cards.show-browser": {
-    label: "Show Browser",
+    get label() {
+      return m.commandCardsShowBrowser();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "page", "tab"],
+    get searchWords() {
+      return searchWords(m.commandCardsShowBrowserWords());
+    },
   },
   "cards.next-tab": {
-    label: "Next tab",
+    get label() {
+      return m.commandCardsNextTab();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "tab"],
+    get searchWords() {
+      return searchWords(m.commandCardsNextTabWords());
+    },
   },
   "cards.previous-tab": {
-    label: "Previous tab",
+    get label() {
+      return m.commandCardsPreviousTab();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "tab"],
+    get searchWords() {
+      return searchWords(m.commandCardsPreviousTabWords());
+    },
   },
   "settings.open": {
-    label: "Open Settings",
+    get label() {
+      return m.commandSettingsOpen();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -609,7 +792,9 @@ export const KEYBOARD_COMMANDS = {
   // Chosen by name, and from the app menu's Keyboard Settings…, which no
   // change of keys can take away.
   "settings.keyboard": {
-    label: "Open Keyboard settings",
+    get label() {
+      return m.commandSettingsKeyboard();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
@@ -618,177 +803,243 @@ export const KEYBOARD_COMMANDS = {
   },
   // Settings → Panels (INF-2344), chosen by name: no default key.
   "settings.panels": {
-    label: "Arrange panels",
+    get label() {
+      return m.commandSettingsPanels();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["rails", "layout", "order", "move", "hide", "show"],
+    get searchWords() {
+      return searchWords(m.commandSettingsPanelsWords());
+    },
   },
   // The update notice is also reached by name; opening it grants no installation consent.
   "updates.show": {
-    label: "Show available update",
+    get label() {
+      return m.commandUpdatesShow();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["update", "restart", "stable", "alpha"],
+    get searchWords() {
+      return searchWords(m.commandUpdatesShowWords());
+    },
   },
   // INF-2245: the update notice's Update later, chosen by name while an
   // update saves the crew's work; a person may give it a key.
   "updates.later": {
-    label: "Update later",
+    get label() {
+      return m.commandUpdatesLater();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["update", "later", "cancel", "saving", "work"],
+    get searchWords() {
+      return searchWords(m.commandUpdatesLaterWords());
+    },
   },
   // INF-2073: Settings → General's Check for updates, chosen by name; a person may give it a key.
   "updates.check": {
-    label: "Check for updates",
+    get label() {
+      return m.commandUpdatesCheck();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["update", "version", "release", "new"],
+    get searchWords() {
+      return searchWords(m.commandUpdatesCheckWords());
+    },
   },
   // The newest release note again (docs/release-notes.md "Reading a note
   // again"): chosen by name, and from the Help menu's What's New, like
   // Keyboard settings; a person may give it a key.
   "whats-new.show": {
-    label: "Show what's new",
+    get label() {
+      return m.commandWhatsNewShow();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["release", "notes", "changes", "version"],
+    get searchWords() {
+      return searchWords(m.commandWhatsNewShowWords());
+    },
   },
   // The first mate's newest reply, whole, as a note at the front
   // (docs/composer.md "The reply note"): chosen by name, so it opens after
   // the line above the input has faded too.
   "firstmate.reply": {
-    label: "Open the first mate's reply",
+    get label() {
+      return m.commandFirstmateReply();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["answer", "message", "note", "last"],
+    get searchWords() {
+      return searchWords(m.commandFirstmateReplyWords());
+    },
   },
   "settings.runbooks": {
-    label: "Open Runbooks",
+    get label() {
+      return m.commandSettingsRunbooks();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["guidance", "skills", "instructions"],
+    get searchWords() {
+      return searchWords(m.commandSettingsRunbooksWords());
+    },
   },
   "runbooks.open-folder": {
-    label: "Open your runbooks folder",
+    get label() {
+      return m.commandRunbooksOpenFolder();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["directory", "guidance", "customize"],
+    get searchWords() {
+      return searchWords(m.commandRunbooksOpenFolderWords());
+    },
   },
   // Settings → Usage (docs/usage.md), chosen by name: it has no default key.
   "settings.usage": {
-    label: "Open Usage",
+    get label() {
+      return m.commandSettingsUsage();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["tokens", "models", "cost", "dollars"],
+    get searchWords() {
+      return searchWords(m.commandSettingsUsageWords());
+    },
   },
   // Settings → Automation (docs/automation.md), chosen by name: no default key.
   "settings.automation": {
-    label: "Open Automation",
+    get label() {
+      return m.commandSettingsAutomation();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["schedule", "scheduled", "recurring", "reminder", "pause"],
+    get searchWords() {
+      return searchWords(m.commandSettingsAutomationWords());
+    },
   },
   // Settings → Integrations (docs/integrations.md), chosen by name: no default key.
   "settings.integrations": {
-    label: "Open Integrations",
+    get label() {
+      return m.commandSettingsIntegrations();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["github", "connection", "connect", "sign in"],
+    get searchWords() {
+      return searchWords(m.commandSettingsIntegrationsWords());
+    },
   },
   "settings.secrets": {
-    label: "Open Secrets",
+    get label() {
+      return m.commandSettingsSecrets();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["secret", "key", "approval", "recovery"],
+    get searchWords() {
+      return searchWords(m.commandSettingsSecretsWords());
+    },
     section: "secrets",
   },
   // Every running automation paused at once, as Settings → Automation's
   // Pause all does; it opens Automation so the change is seen. No default key.
   "automation.pause-all": {
-    label: "Pause all automations",
+    get label() {
+      return m.commandAutomationPauseAll();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["schedule", "scheduled", "recurring", "stop"],
+    get searchWords() {
+      return searchWords(m.commandAutomationPauseAllWords());
+    },
   },
   // Tokens or estimated dollars, everywhere in Usage at once; it opens
   // Usage, so the switch is seen, and the core remembers the choice.
   "usage.unit": {
-    label: "Switch Usage units",
+    get label() {
+      return m.commandUsageUnit();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "view",
     keys: [],
-    searchWords: ["tokens", "cost", "dollars", "estimate"],
+    get searchWords() {
+      return searchWords(m.commandUsageUnitWords());
+    },
   },
   // Every account's allowance read again, as the spent-allowance card's
   // Recheck allowance and Subscriptions' Refresh do: a login switched
   // elsewhere is read first (docs/quota.md "A changed login"). No default key.
   "allowance.recheck": {
-    label: "Recheck allowance",
+    get label() {
+      return m.commandAllowanceRecheck();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "view",
     keys: [],
-    searchWords: ["quota", "refresh", "usage", "limit", "account", "switch"],
+    get searchWords() {
+      return searchWords(m.commandAllowanceRecheckWords());
+    },
   },
   // This Mac's own SSH connections to the Macs it added by their address,
   // each it stopped trying tried once more (docs/devices.md, "Through the
   // home's SSH"); chosen by name, and only where Devices shows.
   "devices.try-again": {
-    label: `Try again to reach your ${COMPUTER.many}`,
+    get label() {
+      return m.commandDevicesTryAgain();
+    },
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["devices", "ssh", "reconnect", "connect", "macs"],
+    get searchWords() {
+      return searchWords(m.commandDevicesTryAgainWords());
+    },
     section: "devices",
   },
   // Control too, as the window always took it; the menu shows the first.
   "size.larger": {
-    label: "Make everything larger",
+    get label() {
+      return m.commandSizeLarger();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
@@ -801,7 +1052,9 @@ export const KEYBOARD_COMMANDS = {
     ],
   },
   "size.smaller": {
-    label: "Make everything smaller",
+    get label() {
+      return m.commandSizeSmaller();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
@@ -812,7 +1065,9 @@ export const KEYBOARD_COMMANDS = {
     ],
   },
   "size.reset": {
-    label: "Return to the usual size",
+    get label() {
+      return m.commandSizeReset();
+    },
     scope: "window",
     runs: "main",
     repeat: true,
@@ -823,35 +1078,45 @@ export const KEYBOARD_COMMANDS = {
     ],
   },
   "message.delete-to-line-start": {
-    label: "Delete back to the start of the line",
+    get label() {
+      return m.commandMessageDeleteToLineStart();
+    },
     scope: "message-field",
     repeat: true,
     risk: "edit",
     keys: [{ key: "u", ctrl: true }],
   },
   "message.delete-to-line-end": {
-    label: "Delete to the end of the line",
+    get label() {
+      return m.commandMessageDeleteToLineEnd();
+    },
     scope: "message-field",
     repeat: true,
     risk: "edit",
     keys: [{ key: "k", ctrl: true }],
   },
   "message.delete-word-before": {
-    label: "Delete the word before the cursor",
+    get label() {
+      return m.commandMessageDeleteWordBefore();
+    },
     scope: "message-field",
     repeat: true,
     risk: "edit",
     keys: [{ key: "w", ctrl: true }],
   },
   "message.put-back-deleted": {
-    label: "Put back what was last deleted",
+    get label() {
+      return m.commandMessagePutBackDeleted();
+    },
     scope: "message-field",
     repeat: true,
     risk: "edit",
     keys: [{ key: "y", ctrl: true }],
   },
   "message.recall": {
-    label: "Bring back the last message sent",
+    get label() {
+      return m.commandMessageRecall();
+    },
     scope: "main-message",
     repeat: false,
     risk: "edit",
@@ -1331,6 +1596,7 @@ export function desktopKeyAction(press: KeyPress, system: KeySystem): DesktopKey
   return DESKTOP_KEYS.find((entry) => chordMatches(entry.chord, press))?.action;
 }
 
+// i18n-exempt: Electron's own accelerator names, read by the menu and never shown as words
 const ACCELERATOR_KEYS: Readonly<Record<string, string>> = {
   "+": "Plus",
   " ": "Space",
@@ -1343,6 +1609,7 @@ const ACCELERATOR_KEYS: Readonly<Record<string, string>> = {
 
 /** A chord as an Electron menu accelerator (`Command+Plus`). */
 export function chordAccelerator(chord: KeyChord): string {
+  // i18n-exempt: Electron's own accelerator names, never shown as words
   const modifiers = [
     chord.meta && "Command",
     chord.ctrl && "Control",
@@ -1379,6 +1646,7 @@ const KEY_GLYPHS: Readonly<Record<string, string>> = {
 };
 
 /** A named key as Linux and other Ctrl systems write it in a hint and on a key cap. */
+// i18n-exempt: key names stay as the keyboard writes them (docs/i18n.md, "What stays English")
 const KEY_WORDS: Readonly<Record<string, string>> = {
   ArrowUp: "↑",
   ArrowDown: "↓",
@@ -1399,6 +1667,7 @@ export function chordLabel(chord: KeyChord, system: KeySystem = "mac"): string {
   if (system !== "mac") {
     const key =
       KEY_WORDS[chord.key] ?? (chord.key.length === 1 ? chord.key.toUpperCase() : chord.key);
+    // i18n-exempt: key names stay as the keyboard writes them
     return [
       chord.ctrl && "Ctrl",
       chord.alt && "Alt",

@@ -1,4 +1,5 @@
 import type { CardAsked } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { clock } from "./revisedLine";
 
 /**
@@ -10,16 +11,24 @@ import { clock } from "./revisedLine";
 
 /** Each kind's label before its time. */
 export const ASKED_LABELS = {
-  asked: "You asked",
-  said: "You said",
-  chose: "You chose",
-  automation: "Run by an automation",
-} as const;
+  get asked() {
+    return m.cardAskedYouAsked();
+  },
+  get said() {
+    return m.cardAskedYouSaid();
+  },
+  get chose() {
+    return m.cardAskedYouChose();
+  },
+  get automation() {
+    return m.cardAskedAutomation();
+  },
+};
 
 /** The label's tail when the source sits on another task: "· through 3 tasks". */
 export function throughWords(through: number | undefined): string {
   if (!through) return "";
-  return ` · through ${through} ${through === 1 ? "task" : "tasks"}`;
+  return ` ${m.cardAskedThrough({ count: through })}`;
 }
 
 /**
@@ -34,9 +43,10 @@ export function askedLabel(
   now: number = Date.now(),
 ): string {
   const kind = asked.kind ?? "asked";
-  if (kind === "from") return `From ${asked.key ?? ""}`.trim();
-  const on = kind === "chose" && asked.card ? ` on “${asked.card}”` : "";
-  return `${ASKED_LABELS[kind]}${on} · ${clock(asked.at, now)}${throughWords(asked.through)}`;
+  if (kind === "from") return m.cardAskedFrom({ key: asked.key ?? "" }).trim();
+  const label =
+    kind === "chose" && asked.card ? m.cardAskedChoseOn({ card: asked.card }) : ASKED_LABELS[kind];
+  return `${label} · ${clock(asked.at, now)}${throughWords(asked.through)}`;
 }
 
 /**
@@ -55,12 +65,16 @@ export function askedText(asked: Pick<CardAsked, "kind" | "text" | "choice">): s
   return written ? `${asked.choice ?? ""} · ${written}` : (asked.choice ?? "");
 }
 
-/** Names of the bubble's expand/fold actions; no separate link is drawn. */
-export const ASKED_SHOW_ALL = "Show all";
-export const ASKED_SHOW_LESS = "Show less";
+/**
+ * Names of the bubble's expand/fold actions; no separate link is drawn.
+ * These constants hold the source language's words as the module loads,
+ * for the specs; the window words them when shown (`m.cardAskedShowAll`).
+ */
+export const ASKED_SHOW_ALL = m.cardAskedShowAll();
+export const ASKED_SHOW_LESS = m.cardAskedShowLess();
 
-/** A message that was only pictures says so, with no quotation marks. */
-export const ASKED_PICTURE_WORDS = "A picture";
+/** A message that was only pictures says so, with no quotation marks; the source words, as `ASKED_SHOW_ALL`. */
+export const ASKED_PICTURE_WORDS = m.cardAskedPicture();
 
 /**
  * The captain's words in the bubble, without added quotation marks, or
@@ -69,5 +83,5 @@ export const ASKED_PICTURE_WORDS = "A picture";
  */
 export function askedWords(text: string, open: boolean): string {
   const words = open ? text.trim() : text.replace(/\s+/g, " ").trim();
-  return words || ASKED_PICTURE_WORDS;
+  return words || m.cardAskedPicture();
 }

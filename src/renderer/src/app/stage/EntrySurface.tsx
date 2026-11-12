@@ -286,7 +286,7 @@ export function EntrySurface({
               gridColumn: 2,
               gridRow: 2,
               minWidth: 0,
-              borderLeft: "1px solid var(--line-2)",
+              borderInlineStart: "1px solid var(--line-2)",
             }}
           >
             <ReplyRow cardId={id} inThread collect={collect} />

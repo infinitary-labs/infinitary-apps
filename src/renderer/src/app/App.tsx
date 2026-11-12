@@ -132,6 +132,7 @@ export function App() {
       <CommandStoppedNotice />
       {home && <HomeMate />}
       <div
+        data-rail-row=""
         style={{
           position: "absolute",
           inset: 0,

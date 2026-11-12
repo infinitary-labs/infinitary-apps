@@ -645,7 +645,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
           data-now-edges={edges.length > 0 ? "" : undefined}
           ref={groupsRef}
           onKeyDown={onListKey}
-          style={edges.length > 0 ? { paddingLeft: DEPENDENCY_VISUAL.gutterPx } : undefined}
+          style={edges.length > 0 ? { paddingInlineStart: DEPENDENCY_VISUAL.gutterPx } : undefined}
         >
           {edges.length > 0 && (
             <svg

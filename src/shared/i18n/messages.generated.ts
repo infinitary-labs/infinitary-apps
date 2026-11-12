@@ -1851,6 +1851,5529 @@ export function welcomeFigure(): string {
   return `Your window, one part per press: the message box, a card, Activity and Tasks`;
 }
 
+export function commandCommandsSearch(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéáŕçĥ çöɱɱáñðš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eSearch commands\u202c`;
+  }
+  return `Search commands`;
+}
+
+export function commandFocusMainMessage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé ɱáîñ ɱéššáĝé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the main message\u202c`;
+  }
+  return `Go to the main message`;
+}
+
+export function commandFocusCardReply(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé çáŕð'š ŕéþļý ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the card's reply\u202c`;
+  }
+  return `Go to the card's reply`;
+}
+
+export function commandFocusCardReplyWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áñýţĥîñĝ ţö áðð, çöɱɱéñţ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eanything to add, comment\u202c`;
+  }
+  return `anything to add, comment`;
+}
+
+export function commandFocusCardBody(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé çáŕð'š ƀöðý ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the card's body\u202c`;
+  }
+  return `Go to the card's body`;
+}
+
+export function commandFocusCardActions(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé çáŕð'š ƀûţţöñš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the card's buttons\u202c`;
+  }
+  return `Go to the card's buttons`;
+}
+
+export function commandCardsChoice1(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéšš ţĥé ŕéçöɱɱéñðéð çĥöîçé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress the recommended choice\u202c`;
+  }
+  return `Press the recommended choice`;
+}
+
+export function commandCardsChoice1Words(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çáŕð, ƀûţţöñ, ðéƒáûļţ, ƒîŕšţ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ecard, button, default, first\u202c`;
+  }
+  return `card, button, default, first`;
+}
+
+export function commandCardsChoice2(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéšš ţĥé šéçöñð çĥöîçé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress the second choice\u202c`;
+  }
+  return `Press the second choice`;
+}
+
+export function commandCardsChoice2Words(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çáŕð, ƀûţţöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202ecard, button\u202c`;
+  }
+  return `card, button`;
+}
+
+export function commandCardsChoice3(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéšš ţĥé ţĥîŕð çĥöîçé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress the third choice\u202c`;
+  }
+  return `Press the third choice`;
+}
+
+export function commandCardsChoice3Words(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çáŕð, ƀûţţöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202ecard, button\u202c`;
+  }
+  return `card, button`;
+}
+
+export function commandCardsChoice4(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéšš ţĥé ƒöûŕţĥ çĥöîçé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress the fourth choice\u202c`;
+  }
+  return `Press the fourth choice`;
+}
+
+export function commandCardsChoice4Words(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çáŕð, ƀûţţöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202ecard, button\u202c`;
+  }
+  return `card, button`;
+}
+
+export function commandRegionsNext(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé ñéẋţ þáŕţ öƒ ţĥé ŵîñðöŵ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the next part of the window\u202c`;
+  }
+  return `Go to the next part of the window`;
+}
+
+export function commandRegionsPrevious(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé þŕéṽîöûš þáŕţ öƒ ţĥé ŵîñðöŵ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the previous part of the window\u202c`;
+  }
+  return `Go to the previous part of the window`;
+}
+
+export function commandComputersPrevious(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéṽîöûš ŵöŕķ çöɱþûţéŕš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrevious work computers\u202c`;
+  }
+  return `Previous work computers`;
+}
+
+export function commandComputersNext(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñéẋţ ŵöŕķ çöɱþûţéŕš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNext work computers\u202c`;
+  }
+  return `Next work computers`;
+}
+
+export function commandProjectFocusOpen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒöçûš öñ á þŕöĵéçţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFocus on a project\u202c`;
+  }
+  return `Focus on a project`;
+}
+
+export function commandProjectFocusOpenWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ƒîļţéŕ, þŕöĵéçţ, þîļļ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202efilter, project, pill\u202c`;
+  }
+  return `filter, project, pill`;
+}
+
+export function commandProjectFocusClear(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ áļļ þŕöĵéçţš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow all projects\u202c`;
+  }
+  return `Show all projects`;
+}
+
+export function commandProjectFocusClearWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ƒîļţéŕ, ƒöçûš, þŕöĵéçţ, çļéáŕ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202efilter, focus, project, clear\u202c`;
+  }
+  return `filter, focus, project, clear`;
+}
+
+export function commandCardsPrevious(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ ţĥé þŕéṽîöûš çáŕð ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow the previous card\u202c`;
+  }
+  return `Show the previous card`;
+}
+
+export function commandCardsNext(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ ţĥé ñéẋţ çáŕð ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow the next card\u202c`;
+  }
+  return `Show the next card`;
+}
+
+export function commandCardsMinimize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þûţ çáŕð ášîðé ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePut card aside\u202c`;
+  }
+  return `Put card aside`;
+}
+
+export function commandCardsDone(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéšš ţĥé ñöţé'š Ðöñé öŕ Ĝöţ îţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress the note's Done or Got it\u202c`;
+  }
+  return `Press the note's Done or Got it`;
+}
+
+export function commandCardsDoneWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çáŕð, ñöţé, áñšŵéŕ, ðöñé, ĝöţ îţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ecard, note, answer, done, got it\u202c`;
+  }
+  return `card, note, answer, done, got it`;
+}
+
+export function commandCardsDecline(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéçļîñé éṽéŕý çĥöîçé öñ ţĥé çáŕð ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDecline every choice on the card\u202c`;
+  }
+  return `Decline every choice on the card`;
+}
+
+export function commandCardsDeclineWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çáŕð, ðéçļîñé, ñö, ñöţ ñöŵ, ñöñé, ŕéĵéçţ ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ecard, decline, no, not now, none, reject\u202c`;
+  }
+  return `card, decline, no, not now, none, reject`;
+}
+
+export function commandCardsMaximize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁáẋîɱîžé öŕ ŕéšţöŕé çáŕð ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMaximize or restore card\u202c`;
+  }
+  return `Maximize or restore card`;
+}
+
+export function commandCardsMaximizeWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ƒûļļ, šçŕééñ, éñļáŕĝé, éẋþáñð, ƀîĝĝéŕ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202efull, screen, enlarge, expand, bigger\u202c`;
+  }
+  return `full, screen, enlarge, expand, bigger`;
+}
+
+export function commandCardsNextRevision(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé ñéẋţ ŕéṽîšéð áŕéá ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the next revised area\u202c`;
+  }
+  return `Go to the next revised area`;
+}
+
+export function commandCardsNextRevisionWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çĥáñĝéš, ŕéṽîšîöñ, ļîñķš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202echanges, revision, links\u202c`;
+  }
+  return `changes, revision, links`;
+}
+
+export function commandCardsPointAt(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þöîñţ áţ á þáŕţ öƒ ţĥé çáŕð ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePoint at a part of the card\u202c`;
+  }
+  return `Point at a part of the card`;
+}
+
+export function commandCardsPointAtWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áññöţáţé, çöɱɱéñţ, šéļéçţ, ñöţé ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eannotate, comment, select, note\u202c`;
+  }
+  return `annotate, comment, select, note`;
+}
+
+export function commandCardsThread(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ öŕ ĥîðé ţĥé çáŕð'š ţĥŕéáð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow or hide the card's thread\u202c`;
+  }
+  return `Show or hide the card's thread`;
+}
+
+export function commandCardsThreadWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çöļļáþšé, éẋþáñð, çĥáţ, ŕéþļîéš, ɱéššáĝéš ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ecollapse, expand, chat, replies, messages\u202c`;
+  }
+  return `collapse, expand, chat, replies, messages`;
+}
+
+export function commandCardsThreadNew(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé ţĥŕéáð'š ñéŵ ɱéššáĝéš ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the thread's new messages\u202c`;
+  }
+  return `Go to the thread's new messages`;
+}
+
+export function commandCardsThreadNewWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ĵûɱþ, ðöŵñ, ļáţéšţ, ƀöţţöɱ, ûñŕéáð, ŕéþļîéš ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ejump, down, latest, bottom, unread, replies\u202c`;
+  }
+  return `jump, down, latest, bottom, unread, replies`;
+}
+
+export function commandCardsShowInfo(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ Îñƒö ~~~]`;
+    case "ar-XB":
+      return `\u202eShow Info\u202c`;
+  }
+  return `Show Info`;
+}
+
+export function commandCardsShowInfoWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţášķ, ŕéçöŕð, ţáƀ, öþéñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etask, record, tab, open\u202c`;
+  }
+  return `task, record, tab, open`;
+}
+
+export function commandCardsShowCards(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ Çáŕðš ~~~~]`;
+    case "ar-XB":
+      return `\u202eShow Cards\u202c`;
+  }
+  return `Show Cards`;
+}
+
+export function commandCardsShowCardsWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţášķ, ŕéçöŕð, ţáƀ, ðéçîšîöñš, ñöţéš ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etask, record, tab, decisions, notes\u202c`;
+  }
+  return `task, record, tab, decisions, notes`;
+}
+
+export function commandCardsShowActivity(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ Åçţîṽîţý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow Activity\u202c`;
+  }
+  return `Show Activity`;
+}
+
+export function commandCardsShowActivityWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţášķ, ŕéçöŕð, ţáƀ, ţîɱéļîñé, ĥîšţöŕý ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etask, record, tab, timeline, history\u202c`;
+  }
+  return `task, record, tab, timeline, history`;
+}
+
+export function commandCardsShowCrewmate(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ Çŕéŵɱáţé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow Crewmate\u202c`;
+  }
+  return `Show Crewmate`;
+}
+
+export function commandCardsShowCrewmateWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţášķ, šéššîöñ, ţŕáñšçŕîþţ, ţáƀ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etask, session, transcript, tab\u202c`;
+  }
+  return `task, session, transcript, tab`;
+}
+
+export function commandBrowserControl(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţáķé öŕ ŕéţûŕñ ƀŕöŵšéŕ çöñţŕöļ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTake or return browser control\u202c`;
+  }
+  return `Take or return browser control`;
+}
+
+export function commandBrowserControlWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ĥáñðƀáçķ, ţáķé, ŕéţûŕñ, ƀŕöŵšéŕ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ehandback, take, return, browser\u202c`;
+  }
+  return `handback, take, return, browser`;
+}
+
+export function commandTaskMoveComputer(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ţĥé ţášķ ţö áñöţĥéŕ çöɱþûţéŕ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMove the task to another computer\u202c`;
+  }
+  return `Move the task to another computer`;
+}
+
+export function commandTaskMoveComputerWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çöɱþûţéŕ, ɱáç, ɱáçĥîñé, ɱöṽé, ðéṽîçé, ŕéçöŕð ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ecomputer, mac, machine, move, device, record\u202c`;
+  }
+  return `computer, mac, machine, move, device, record`;
+}
+
+export function commandTaskCloseDone(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöšé ţĥé ţášķ áš ðöñé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClose the task as done\u202c`;
+  }
+  return `Close the task as done`;
+}
+
+export function commandTaskCloseDoneWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ðöñé, ƒîñîšĥ, ƒîñîšĥéð, çöɱþļéţé, çļöšé, ŕéçöŕð, ţášķ ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202edone, finish, finished, complete, close, record, task\u202c`;
+  }
+  return `done, finish, finished, complete, close, record, task`;
+}
+
+export function commandCardsShowBrowser(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ Ɓŕöŵšéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eShow Browser\u202c`;
+  }
+  return `Show Browser`;
+}
+
+export function commandCardsShowBrowserWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţášķ, þáĝé, ţáƀ ~~~~~]`;
+    case "ar-XB":
+      return `\u202etask, page, tab\u202c`;
+  }
+  return `task, page, tab`;
+}
+
+export function commandCardsNextTab(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñéẋţ ţáƀ ~~~]`;
+    case "ar-XB":
+      return `\u202eNext tab\u202c`;
+  }
+  return `Next tab`;
+}
+
+export function commandCardsNextTabWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţášķ, ţáƀ ~~~]`;
+    case "ar-XB":
+      return `\u202etask, tab\u202c`;
+  }
+  return `task, tab`;
+}
+
+export function commandCardsPreviousTab(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéṽîöûš ţáƀ ~~~~]`;
+    case "ar-XB":
+      return `\u202ePrevious tab\u202c`;
+  }
+  return `Previous tab`;
+}
+
+export function commandCardsPreviousTabWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţášķ, ţáƀ ~~~]`;
+    case "ar-XB":
+      return `\u202etask, tab\u202c`;
+  }
+  return `task, tab`;
+}
+
+export function commandSettingsOpen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Šéţţîñĝš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Settings\u202c`;
+  }
+  return `Open Settings`;
+}
+
+export function commandSettingsKeyboard(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Ķéýƀöáŕð šéţţîñĝš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Keyboard settings\u202c`;
+  }
+  return `Open Keyboard settings`;
+}
+
+export function commandSettingsPanels(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åŕŕáñĝé þáñéļš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eArrange panels\u202c`;
+  }
+  return `Arrange panels`;
+}
+
+export function commandSettingsPanelsWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŕáîļš, ļáýöûţ, öŕðéŕ, ɱöṽé, ĥîðé, šĥöŵ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202erails, layout, order, move, hide, show\u202c`;
+  }
+  return `rails, layout, order, move, hide, show`;
+}
+
+export function commandUpdatesShow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ áṽáîļáƀļé ûþðáţé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow available update\u202c`;
+  }
+  return `Show available update`;
+}
+
+export function commandUpdatesShowWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ûþðáţé, ŕéšţáŕţ, šţáƀļé, áļþĥá ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eupdate, restart, stable, alpha\u202c`;
+  }
+  return `update, restart, stable, alpha`;
+}
+
+export function commandUpdatesLater(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûþðáţé ļáţéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eUpdate later\u202c`;
+  }
+  return `Update later`;
+}
+
+export function commandUpdatesLaterWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ûþðáţé, ļáţéŕ, çáñçéļ, šáṽîñĝ, ŵöŕķ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eupdate, later, cancel, saving, work\u202c`;
+  }
+  return `update, later, cancel, saving, work`;
+}
+
+export function commandUpdatesCheck(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķ ƒöŕ ûþðáţéš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCheck for updates\u202c`;
+  }
+  return `Check for updates`;
+}
+
+export function commandUpdatesCheckWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ûþðáţé, ṽéŕšîöñ, ŕéļéášé, ñéŵ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eupdate, version, release, new\u202c`;
+  }
+  return `update, version, release, new`;
+}
+
+export function commandWhatsNewShow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ ŵĥáţ'š ñéŵ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow what's new\u202c`;
+  }
+  return `Show what's new`;
+}
+
+export function commandWhatsNewShowWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŕéļéášé, ñöţéš, çĥáñĝéš, ṽéŕšîöñ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202erelease, notes, changes, version\u202c`;
+  }
+  return `release, notes, changes, version`;
+}
+
+export function commandFirstmateReply(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ ţĥé ƒîŕšţ ɱáţé'š ŕéþļý ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the first mate's reply\u202c`;
+  }
+  return `Open the first mate's reply`;
+}
+
+export function commandFirstmateReplyWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áñšŵéŕ, ɱéššáĝé, ñöţé, ļášţ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eanswer, message, note, last\u202c`;
+  }
+  return `answer, message, note, last`;
+}
+
+export function commandSettingsRunbooks(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Ŕûñƀööķš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Runbooks\u202c`;
+  }
+  return `Open Runbooks`;
+}
+
+export function commandSettingsRunbooksWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ĝûîðáñçé, šķîļļš, îñšţŕûçţîöñš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eguidance, skills, instructions\u202c`;
+  }
+  return `guidance, skills, instructions`;
+}
+
+export function commandRunbooksOpenFolder(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ ýöûŕ ŕûñƀööķš ƒöļðéŕ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen your runbooks folder\u202c`;
+  }
+  return `Open your runbooks folder`;
+}
+
+export function commandRunbooksOpenFolderWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ðîŕéçţöŕý, ĝûîðáñçé, çûšţöɱîžé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202edirectory, guidance, customize\u202c`;
+  }
+  return `directory, guidance, customize`;
+}
+
+export function commandSettingsUsage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Ûšáĝé ~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Usage\u202c`;
+  }
+  return `Open Usage`;
+}
+
+export function commandSettingsUsageWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţöķéñš, ɱöðéļš, çöšţ, ðöļļáŕš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etokens, models, cost, dollars\u202c`;
+  }
+  return `tokens, models, cost, dollars`;
+}
+
+export function commandSettingsAutomation(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Åûţöɱáţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Automation\u202c`;
+  }
+  return `Open Automation`;
+}
+
+export function commandSettingsAutomationWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[šçĥéðûļé, šçĥéðûļéð, ŕéçûŕŕîñĝ, ŕéɱîñðéŕ, þáûšé ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eschedule, scheduled, recurring, reminder, pause\u202c`;
+  }
+  return `schedule, scheduled, recurring, reminder, pause`;
+}
+
+export function commandSettingsIntegrations(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Îñţéĝŕáţîöñš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Integrations\u202c`;
+  }
+  return `Open Integrations`;
+}
+
+export function commandSettingsIntegrationsWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ĝîţĥûƀ, çöññéçţîöñ, çöññéçţ, šîĝñ îñ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202egithub, connection, connect, sign in\u202c`;
+  }
+  return `github, connection, connect, sign in`;
+}
+
+export function commandSettingsSecrets(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Šéçŕéţš ~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Secrets\u202c`;
+  }
+  return `Open Secrets`;
+}
+
+export function commandSettingsSecretsWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[šéçŕéţ, ķéý, áþþŕöṽáļ, ŕéçöṽéŕý ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202esecret, key, approval, recovery\u202c`;
+  }
+  return `secret, key, approval, recovery`;
+}
+
+export function commandAutomationPauseAll(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáûšé áļļ áûţöɱáţîöñš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePause all automations\u202c`;
+  }
+  return `Pause all automations`;
+}
+
+export function commandAutomationPauseAllWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[šçĥéðûļé, šçĥéðûļéð, ŕéçûŕŕîñĝ, šţöþ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eschedule, scheduled, recurring, stop\u202c`;
+  }
+  return `schedule, scheduled, recurring, stop`;
+}
+
+export function commandUsageUnit(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šŵîţçĥ Ûšáĝé ûñîţš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSwitch Usage units\u202c`;
+  }
+  return `Switch Usage units`;
+}
+
+export function commandUsageUnitWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţöķéñš, çöšţ, ðöļļáŕš, éšţîɱáţé ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etokens, cost, dollars, estimate\u202c`;
+  }
+  return `tokens, cost, dollars, estimate`;
+}
+
+export function commandAllowanceRecheck(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéçĥéçķ áļļöŵáñçé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecheck allowance\u202c`;
+  }
+  return `Recheck allowance`;
+}
+
+export function commandAllowanceRecheckWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ǫûöţá, ŕéƒŕéšĥ, ûšáĝé, ļîɱîţ, áççöûñţ, šŵîţçĥ ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202equota, refresh, usage, limit, account, switch\u202c`;
+  }
+  return `quota, refresh, usage, limit, account, switch`;
+}
+
+export function commandDevicesTryAgainWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ðéṽîçéš, ššĥ, ŕéçöññéçţ, çöññéçţ, ɱáçš ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202edevices, ssh, reconnect, connect, macs\u202c`;
+  }
+  return `devices, ssh, reconnect, connect, macs`;
+}
+
+export function commandSizeLarger(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁáķé éṽéŕýţĥîñĝ ļáŕĝéŕ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake everything larger\u202c`;
+  }
+  return `Make everything larger`;
+}
+
+export function commandSizeSmaller(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁáķé éṽéŕýţĥîñĝ šɱáļļéŕ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake everything smaller\u202c`;
+  }
+  return `Make everything smaller`;
+}
+
+export function commandSizeReset(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéţûŕñ ţö ţĥé ûšûáļ šîžé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReturn to the usual size\u202c`;
+  }
+  return `Return to the usual size`;
+}
+
+export function commandMessageDeleteToLineStart(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéļéţé ƀáçķ ţö ţĥé šţáŕţ öƒ ţĥé ļîñé ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDelete back to the start of the line\u202c`;
+  }
+  return `Delete back to the start of the line`;
+}
+
+export function commandMessageDeleteToLineEnd(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéļéţé ţö ţĥé éñð öƒ ţĥé ļîñé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDelete to the end of the line\u202c`;
+  }
+  return `Delete to the end of the line`;
+}
+
+export function commandMessageDeleteWordBefore(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéļéţé ţĥé ŵöŕð ƀéƒöŕé ţĥé çûŕšöŕ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDelete the word before the cursor\u202c`;
+  }
+  return `Delete the word before the cursor`;
+}
+
+export function commandMessagePutBackDeleted(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þûţ ƀáçķ ŵĥáţ ŵáš ļášţ ðéļéţéð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePut back what was last deleted\u202c`;
+  }
+  return `Put back what was last deleted`;
+}
+
+export function commandMessageRecall(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓŕîñĝ ƀáçķ ţĥé ļášţ ɱéššáĝé šéñţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBring back the last message sent\u202c`;
+  }
+  return `Bring back the last message sent`;
+}
+
+export function commandDevicesTryAgain(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ţö ŕéáçĥ ýöûŕ çöɱþûţéŕš ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTry again to reach your computers\u202c`;
+  }
+  return `Try again to reach your computers`;
+}
+
+export function uiCardMaximize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁáẋîɱîžé çáŕð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMaximize card\u202c`;
+  }
+  return `Maximize card`;
+}
+
+export function uiCardRestore(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšţöŕé çáŕð ~~~~]`;
+    case "ar-XB":
+      return `\u202eRestore card\u202c`;
+  }
+  return `Restore card`;
+}
+
+export function uiCardStackPrevious(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéṽîöûš çáŕð ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrevious card\u202c`;
+  }
+  return `Previous card`;
+}
+
+export function uiCardStackNext(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñéẋţ çáŕð ~~~]`;
+    case "ar-XB":
+      return `\u202eNext card\u202c`;
+  }
+  return `Next card`;
+}
+
+export function uiCardStackNew(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ñéŵ ~~]`;
+        default:
+          return `[${count} ñéŵ ~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e new\u202c`;
+        default:
+          return `${count}\u202e new\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} new`;
+    default:
+      return `${count} new`;
+  }
+}
+
+export function uiPictureViewerDemoFrom(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéɱö ƒŕöɱ ${title} ~~~~]`;
+    case "ar-XB":
+      return `\u202eDemo from \u202c${title}`;
+  }
+  return `Demo from ${title}`;
+}
+
+export function uiPictureViewerPicturesFrom(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þîçţûŕéš ƒŕöɱ ${title} ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePictures from \u202c${title}`;
+  }
+  return `Pictures from ${title}`;
+}
+
+export function uiPictureViewerClose(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöšé ţĥé ṽîéŵéŕ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClose the viewer\u202c`;
+  }
+  return `Close the viewer`;
+}
+
+export function uiPictureViewerActualSize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åçţûáļ šîžé ~~~~]`;
+    case "ar-XB":
+      return `\u202eActual size\u202c`;
+  }
+  return `Actual size`;
+}
+
+export function uiPictureViewerPrevious(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéṽîöûš þîçţûŕé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrevious picture\u202c`;
+  }
+  return `Previous picture`;
+}
+
+export function uiPictureViewerNext(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñéẋţ þîçţûŕé ~~~~]`;
+    case "ar-XB":
+      return `\u202eNext picture\u202c`;
+  }
+  return `Next picture`;
+}
+
+export function uiPictureViewerReplay(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéþļáý ~~]`;
+    case "ar-XB":
+      return `\u202eReplay\u202c`;
+  }
+  return `Replay`;
+}
+
+export function uiPictureViewerStop(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţöþ ~~]`;
+    case "ar-XB":
+      return `\u202eStop\u202c`;
+  }
+  return `Stop`;
+}
+
+export function uiPictureViewerPause(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáûšé ~~]`;
+    case "ar-XB":
+      return `\u202ePause\u202c`;
+  }
+  return `Pause`;
+}
+
+export function uiPictureViewerPlay(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þļáý ~~]`;
+    case "ar-XB":
+      return `\u202ePlay\u202c`;
+  }
+  return `Play`;
+}
+
+export function uiPictureViewerSeek(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šééķ ~~]`;
+    case "ar-XB":
+      return `\u202eSeek\u202c`;
+  }
+  return `Seek`;
+}
+
+export function uiPictureViewerSeekValue(input: { length: string; time: string }): string {
+  const length = input.length;
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${time} öƒ ${length} ~~]`;
+    case "ar-XB":
+      return `${time}\u202e of \u202c${length}`;
+  }
+  return `${time} of ${length}`;
+}
+
+export function uiPictureViewerThumb(input: { alt: string; number: string }): string {
+  const alt = input.alt;
+  const number = input.number;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þîçţûŕé ${number}: ${alt} ~~~~]`;
+    case "ar-XB":
+      return `\u202ePicture \u202c${number}\u202e: \u202c${alt}`;
+  }
+  return `Picture ${number}: ${alt}`;
+}
+
+export function uiPictureViewerUnplayable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš ŕéçöŕðîñĝ çöûļð ñöţ ƀé þļáýéð. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis recording could not be played.\u202c`;
+  }
+  return `This recording could not be played.`;
+}
+
+export function uiPictureViewerShownAtOwnSize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵñ áţ îţš öŵñ šîžé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShown at its own size\u202c`;
+  }
+  return `Shown at its own size`;
+}
+
+export function uiPictureViewerHintOne(input: { size: string }): string {
+  const size = input.size;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${size} · 1:1 · ðŕáĝ öŕ šçŕöļļ ţö ɱöṽé ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${size}\u202e · 1:1 · drag or scroll to move\u202c`;
+  }
+  return `${size} · 1:1 · drag or scroll to move`;
+}
+
+export function uiPictureViewerHintOwn(input: { size: string }): string {
+  const size = input.size;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${size} · šĥöŵñ áţ îţš öŵñ šîžé ~~~~~~~~]`;
+    case "ar-XB":
+      return `${size}\u202e · shown at its own size\u202c`;
+  }
+  return `${size} · shown at its own size`;
+}
+
+export function uiPictureViewerHintFitted(input: { size: string }): string {
+  const size = input.size;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${size} · ƒîţţéð · çļîçķ öŕ Ž ƒöŕ 1:1 ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${size}\u202e · fitted · click or Z for 1:1\u202c`;
+  }
+  return `${size} · fitted · click or Z for 1:1`;
+}
+
+export function uiCardKindDecision(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéçîšîöñ ~~~]`;
+    case "ar-XB":
+      return `\u202eDecision\u202c`;
+  }
+  return `Decision`;
+}
+
+export function uiCardKindNote(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñöţé ~~]`;
+    case "ar-XB":
+      return `\u202eNote\u202c`;
+  }
+  return `Note`;
+}
+
+export function uiCardKindAttention(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åţţéñţîöñ ~~~]`;
+    case "ar-XB":
+      return `\u202eAttention\u202c`;
+  }
+  return `Attention`;
+}
+
+export function uiCardKindTask(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ~~]`;
+    case "ar-XB":
+      return `\u202eTask\u202c`;
+  }
+  return `Task`;
+}
+
+export function uiCardTaskRecord(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ŕéçöŕð ~~~~]`;
+    case "ar-XB":
+      return `\u202eTask record\u202c`;
+  }
+  return `Task record`;
+}
+
+export function uiButtonPending(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵöŕķîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eWorking...\u202c`;
+  }
+  return `Working...`;
+}
+
+export function uiConsentNotNow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñöţ ñöŵ ~~~]`;
+    case "ar-XB":
+      return `\u202eNot now\u202c`;
+  }
+  return `Not now`;
+}
+
+export function uiTaskFactsProgress(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕöĝŕéšš ~~~]`;
+    case "ar-XB":
+      return `\u202eProgress\u202c`;
+  }
+  return `Progress`;
+}
+
+export function uiTaskFactsPlanCount(input: { done: string; total: string }): string {
+  const done = input.done;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${done} öƒ ${total} ~~]`;
+    case "ar-XB":
+      return `${done}\u202e of \u202c${total}`;
+  }
+  return `${done} of ${total}`;
+}
+
+export function uiTaskFactsPlanSkipped(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[· ${count} šķîþþéð ~~~~]`;
+        default:
+          return `[· ${count} šķîþþéð ~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202e· \u202c${count}\u202e skipped\u202c`;
+        default:
+          return `\u202e· \u202c${count}\u202e skipped\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `· ${count} skipped`;
+    default:
+      return `· ${count} skipped`;
+  }
+}
+
+export function uiTaskFactsFoldedDone(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ðöñé ~~]`;
+        default:
+          return `[${count} ðöñé ~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e done\u202c`;
+        default:
+          return `${count}\u202e done\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} done`;
+    default:
+      return `${count} done`;
+  }
+}
+
+export function uiTaskFactsFoldedMore(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ɱöŕé ~~]`;
+        default:
+          return `[${count} ɱöŕé ~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e more\u202c`;
+        default:
+          return `${count}\u202e more\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} more`;
+    default:
+      return `${count} more`;
+  }
+}
+
+export function uiTaskFactsPlanDotsName(input: { done: string; total: string }): string {
+  const done = input.done;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕöĝŕéšš: ${done} öƒ ${total} ðöñé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eProgress: \u202c${done}\u202e of \u202c${total}\u202e done\u202c`;
+  }
+  return `Progress: ${done} of ${total} done`;
+}
+
+export function uiTaskFactsShowEarlier(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ éáŕļîéŕ · ${count} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow earlier · \u202c${count}`;
+  }
+  return `Show earlier · ${count}`;
+}
+
+export function uiTaskFactsSkipped(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[šķîþþéð ~~~]`;
+    case "ar-XB":
+      return `\u202eskipped\u202c`;
+  }
+  return `skipped`;
+}
+
+export function uiTaskFactsAllDone(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åļļ ðöñé ~~~]`;
+    case "ar-XB":
+      return `\u202eAll done\u202c`;
+  }
+  return `All done`;
+}
+
+export function uiTaskFactsBetweenItems(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓéţŵééñ îţéɱš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eBetween items\u202c`;
+  }
+  return `Between items`;
+}
+
+export function uiTaskFactsModel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöðéļ ~~]`;
+    case "ar-XB":
+      return `\u202eModel\u202c`;
+  }
+  return `Model`;
+}
+
+export function uiTaskFactsReasoning(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéášöñîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eReasoning\u202c`;
+  }
+  return `Reasoning`;
+}
+
+export function uiTaskFactsChecks(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķš ~~]`;
+    case "ar-XB":
+      return `\u202eChecks\u202c`;
+  }
+  return `Checks`;
+}
+
+export function uiTaskFactsReview(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéṽîéŵ ~~]`;
+    case "ar-XB":
+      return `\u202eReview\u202c`;
+  }
+  return `Review`;
+}
+
+export function uiTaskFactsReadJustBefore(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŕéáð ĵûšţ ƀéƒöŕé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eread just before\u202c`;
+  }
+  return `read just before`;
+}
+
+export function uiTaskFactsReadMinutesBefore(input: { minutes: string }): string {
+  const minutes = input.minutes;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŕéáð ${minutes}ɱ ƀéƒöŕé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eread \u202c${minutes}\u202em before\u202c`;
+  }
+  return `read ${minutes}m before`;
+}
+
+export function uiTaskFactsReadHoursBefore(input: { hours: string }): string {
+  const hours = input.hours;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŕéáð ${hours}ĥ ƀéƒöŕé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eread \u202c${hours}\u202eh before\u202c`;
+  }
+  return `read ${hours}h before`;
+}
+
+export function uiTaskFactsReadDaysBefore(input: { days: string }): string {
+  const days = input.days;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŕéáð ${days}ð ƀéƒöŕé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eread \u202c${days}\u202ed before\u202c`;
+  }
+  return `read ${days}d before`;
+}
+
+export function uiTaskFactsResets(input: { when: string }): string {
+  const when = input.when;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŕéšéţš ${when} ~~~]`;
+    case "ar-XB":
+      return `\u202eresets \u202c${when}`;
+  }
+  return `resets ${when}`;
+}
+
+export function uiTaskFactsTask(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ~~]`;
+    case "ar-XB":
+      return `\u202eTask\u202c`;
+  }
+  return `Task`;
+}
+
+export function uiTaskFactsProject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕöĵéçţ ~~~]`;
+    case "ar-XB":
+      return `\u202eProject\u202c`;
+  }
+  return `Project`;
+}
+
+export function uiTaskFactsNow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñöŵ ~]`;
+    case "ar-XB":
+      return `\u202eNow\u202c`;
+  }
+  return `Now`;
+}
+
+export function uiTaskFactsBrowser(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓŕöŵšéŕ ~~~]`;
+    case "ar-XB":
+      return `\u202eBrowser\u202c`;
+  }
+  return `Browser`;
+}
+
+export function uiTaskFactsOpen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ ~~]`;
+    case "ar-XB":
+      return `\u202eOpen\u202c`;
+  }
+  return `Open`;
+}
+
+export function uiPercentLeft(input: { percent: string }): string {
+  const percent = input.percent;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${percent}% ļéƒţ ~~]`;
+    case "ar-XB":
+      return `${percent}\u202e% left\u202c`;
+  }
+  return `${percent}% left`;
+}
+
+export function uiTaskResourceRunUnavailable(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕûñ šţáţûš ûñáṽáîļáƀļé öñ ${computer} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRun status unavailable on \u202c${computer}`;
+  }
+  return `Run status unavailable on ${computer}`;
+}
+
+export function uiTaskResourceUse(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûšé ~]`;
+    case "ar-XB":
+      return `\u202eUse\u202c`;
+  }
+  return `Use`;
+}
+
+export function uiTaskResourceRun(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕûñ ~]`;
+    case "ar-XB":
+      return `\u202eRun\u202c`;
+  }
+  return `Run`;
+}
+
+export function uiQuotaPaceAhead(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áĥéáð ~~]`;
+    case "ar-XB":
+      return `\u202eahead\u202c`;
+  }
+  return `ahead`;
+}
+
+export function uiQuotaPaceOnPace(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[öñ þáçé ~~~]`;
+    case "ar-XB":
+      return `\u202eon pace\u202c`;
+  }
+  return `on pace`;
+}
+
+export function uiQuotaPaceBehind(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ƀéĥîñð ~~]`;
+    case "ar-XB":
+      return `\u202ebehind\u202c`;
+  }
+  return `behind`;
+}
+
+export function uiQuotaLow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ļöŵ ~]`;
+    case "ar-XB":
+      return `\u202elow\u202c`;
+  }
+  return `low`;
+}
+
+export function uiQuotaNoData(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ñö ðáţá ~~~]`;
+    case "ar-XB":
+      return `\u202eno data\u202c`;
+  }
+  return `no data`;
+}
+
+export function uiQuotaMeterNameLeft(input: { label: string; percent: string }): string {
+  const label = input.label;
+  const percent = input.percent;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${label} ${percent}% ļéƒţ ~~~]`;
+    case "ar-XB":
+      return `${label}\u202e \u202c${percent}\u202e% left\u202c`;
+  }
+  return `${label} ${percent}% left`;
+}
+
+export function uiQuotaMeterNameNotRead(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${label} ñöţ ŕéáð ~~~]`;
+    case "ar-XB":
+      return `${label}\u202e not read\u202c`;
+  }
+  return `${label} not read`;
+}
+
+export function uiSlotPremium(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéɱîûɱ ~~~]`;
+    case "ar-XB":
+      return `\u202ePremium\u202c`;
+  }
+  return `Premium`;
+}
+
+export function uiSlotHigh(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĥîĝĥ ~~]`;
+    case "ar-XB":
+      return `\u202eHigh\u202c`;
+  }
+  return `High`;
+}
+
+export function uiSlotMedium(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéð ~]`;
+    case "ar-XB":
+      return `\u202eMed\u202c`;
+  }
+  return `Med`;
+}
+
+export function uiSlotLow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ļöŵ ~]`;
+    case "ar-XB":
+      return `\u202eLow\u202c`;
+  }
+  return `Low`;
+}
+
+export function uiSubscriptionUnpinModel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûñþîñ ɱöðéļ ~~~~]`;
+    case "ar-XB":
+      return `\u202eUnpin model\u202c`;
+  }
+  return `Unpin model`;
+}
+
+export function uiSubscriptionPinModel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þîñ ɱöðéļ ~~~]`;
+    case "ar-XB":
+      return `\u202ePin model\u202c`;
+  }
+  return `Pin model`;
+}
+
+export function uiVoiceLevel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ļîṽé ṽöîçé ļéṽéļ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLive voice level\u202c`;
+  }
+  return `Live voice level`;
+}
+
+export function uiVoiceHint(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţýþé, öŕ þŕéšš/ĥöļð ŕîĝĥţ ⌥ ţö ţáļķ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etype, or press/hold right ⌥ to talk\u202c`;
+  }
+  return `type, or press/hold right ⌥ to talk`;
+}
+
+export function uiVoiceSubmit(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šûƀɱîţ ~~]`;
+    case "ar-XB":
+      return `\u202eSubmit\u202c`;
+  }
+  return `Submit`;
+}
+
+export function uiVoiceRemove(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéɱöṽé ${name} ~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${name}`;
+  }
+  return `Remove ${name}`;
+}
+
+export function uiVoiceImage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[îɱáĝé ~~]`;
+    case "ar-XB":
+      return `\u202eimage\u202c`;
+  }
+  return `image`;
+}
+
+export function uiVoiceTaskPrompt(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ þŕöɱþţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eTask prompt\u202c`;
+  }
+  return `Task prompt`;
+}
+
+export function uiVoiceAbandon(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åƀáñðöñ ~~~]`;
+    case "ar-XB":
+      return `\u202eAbandon\u202c`;
+  }
+  return `Abandon`;
+}
+
+export function uiVoiceAccept(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åççéþţ ~~]`;
+    case "ar-XB":
+      return `\u202eAccept\u202c`;
+  }
+  return `Accept`;
+}
+
+export function refuseACardCoversTheComputers(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å çáŕð çöṽéŕš ţĥé çöɱþûţéŕš ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA card covers the computers\u202c`;
+  }
+  return `A card covers the computers`;
+}
+
+export function refuseARecordingIsRunning(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å ŕéçöŕðîñĝ îš ŕûññîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA recording is running\u202c`;
+  }
+  return `A recording is running`;
+}
+
+export function refuseCloseTheOpenDialogFirst(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöšé ţĥé öþéñ ðîáļöĝ ƒîŕšţ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClose the open dialog first\u202c`;
+  }
+  return `Close the open dialog first`;
+}
+
+export function refuseCommandSearchIsOpen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöɱɱáñð šéáŕçĥ îš öþéñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCommand search is open\u202c`;
+  }
+  return `Command search is open`;
+}
+
+export function refuseEveryProjectIsShown(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éṽéŕý þŕöĵéçţ îš šĥöŵñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEvery project is shown\u202c`;
+  }
+  return `Every project is shown`;
+}
+
+export function refuseInfinitaryCouldNotConfirmHowThisCopy(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Îñƒîñîţáŕý çöûļð ñöţ çöñƒîŕɱ ĥöŵ ţĥîš çöþý ŵáš îñšţáļļéð ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary could not confirm how this copy was installed\u202c`;
+  }
+  return `Infinitary could not confirm how this copy was installed`;
+}
+
+export function refuseNoCardIsShown(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö çáŕð îš šĥöŵñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo card is shown\u202c`;
+  }
+  return `No card is shown`;
+}
+
+export function refuseNoCardThreadIsReadAboveIts(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö çáŕð ţĥŕéáð îš ŕéáð áƀöṽé îţš ļáţéšţ ɱéššáĝé ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo card thread is read above its latest message\u202c`;
+  }
+  return `No card thread is read above its latest message`;
+}
+
+export function refuseNoReleaseNotesYet(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö ŕéļéášé ñöţéš ýéţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo release notes yet\u202c`;
+  }
+  return `No release notes yet`;
+}
+
+export function refuseNoUpdateIsAvailable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö ûþðáţé îš áṽáîļáƀļé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo update is available\u202c`;
+  }
+  return `No update is available`;
+}
+
+export function refuseNoUpdateIsSavingWorkNow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö ûþðáţé îš šáṽîñĝ ŵöŕķ ñöŵ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo update is saving work now\u202c`;
+  }
+  return `No update is saving work now`;
+}
+
+export function refuseSecretsIsNotInThisBuild(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéçŕéţš îš ñöţ îñ ţĥîš ƀûîļð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSecrets is not in this build\u202c`;
+  }
+  return `Secrets is not in this build`;
+}
+
+export function refuseSettingsIsAlreadyOpen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš îš áļŕéáðý öþéñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSettings is already open\u202c`;
+  }
+  return `Settings is already open`;
+}
+
+export function refuseSettingsIsOpen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš îš öþéñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSettings is open\u202c`;
+  }
+  return `Settings is open`;
+}
+
+export function refuseSettingsIsRecordingAKey(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš îš ŕéçöŕðîñĝ á ķéý ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSettings is recording a key\u202c`;
+  }
+  return `Settings is recording a key`;
+}
+
+export function refuseSettingsIsWaitingForADictationKey(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš îš ŵáîţîñĝ ƒöŕ á ðîçţáţîöñ ķéý ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSettings is waiting for a dictation key\u202c`;
+  }
+  return `Settings is waiting for a dictation key`;
+}
+
+export function refuseShowABrowserWithControlAvailableFirst(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ á ƀŕöŵšéŕ ŵîţĥ çöñţŕöļ áṽáîļáƀļé ƒîŕšţ ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow a browser with control available first\u202c`;
+  }
+  return `Show a browser with control available first`;
+}
+
+export function refuseShowAStartedTaskThatCanMove(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ á šţáŕţéð ţášķ ţĥáţ çáñ ɱöṽé ţö áñöţĥéŕ çöɱþûţéŕ ƒîŕšţ ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow a started task that can move to another computer first\u202c`;
+  }
+  return `Show a started task that can move to another computer first`;
+}
+
+export function refuseShowAStartedTasksRecordFirst(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ á šţáŕţéð ţášķ'š ŕéçöŕð ƒîŕšţ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow a started task's record first\u202c`;
+  }
+  return `Show a started task's record first`;
+}
+
+export function refuseThatTabIsAlreadyShown(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥáţ ţáƀ îš áļŕéáðý šĥöŵñ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThat tab is already shown\u202c`;
+  }
+  return `That tab is already shown`;
+}
+
+export function refuseThereIsNoOtherTabToGo(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥéŕé îš ñö öţĥéŕ ţáƀ ţö ĝö ţö ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThere is no other tab to go to\u202c`;
+  }
+  return `There is no other tab to go to`;
+}
+
+export function refuseThereIsOnlyOneProject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥéŕé îš öñļý öñé þŕöĵéçţ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThere is only one project\u202c`;
+  }
+  return `There is only one project`;
+}
+
+export function refuseTheseAreTheFirstComputers(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥéšé áŕé ţĥé ƒîŕšţ çöɱþûţéŕš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThese are the first computers\u202c`;
+  }
+  return `These are the first computers`;
+}
+
+export function refuseTheseAreTheLastComputers(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥéšé áŕé ţĥé ļášţ çöɱþûţéŕš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThese are the last computers\u202c`;
+  }
+  return `These are the last computers`;
+}
+
+export function refuseThisCardHasNoDoneOrGot(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö Ðöñé öŕ Ĝöţ îţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no Done or Got it\u202c`;
+  }
+  return `This card has no Done or Got it`;
+}
+
+export function refuseThisCardHasNoButtons(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö ƀûţţöñš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no buttons\u202c`;
+  }
+  return `This card has no buttons`;
+}
+
+export function refuseThisCardHasNoChangeLinks(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö çĥáñĝé ļîñķš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no change links\u202c`;
+  }
+  return `This card has no change links`;
+}
+
+export function refuseThisCardHasNoSuchChoice(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö šûçĥ çĥöîçé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no such choice\u202c`;
+  }
+  return `This card has no such choice`;
+}
+
+export function refuseThisCardHasNoSuchTab(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö šûçĥ ţáƀ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no such tab\u202c`;
+  }
+  return `This card has no such tab`;
+}
+
+export function refuseThisCardHasNoTabs(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö ţáƀš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no tabs\u202c`;
+  }
+  return `This card has no tabs`;
+}
+
+export function refuseThisCardHasNoThreadYet(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö ţĥŕéáð ýéţ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no thread yet\u202c`;
+  }
+  return `This card has no thread yet`;
+}
+
+export function refuseThisCardHasNoWayToSay(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ĥáš ñö ŵáý ţö šáý ñö ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card has no way to say no\u202c`;
+  }
+  return `This card has no way to say no`;
+}
+
+export function refuseThisCardIsNotAboutATask(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð îš ñöţ áƀöûţ á ţášķ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card is not about a task\u202c`;
+  }
+  return `This card is not about a task`;
+}
+
+export function refuseThisCardIsWorking(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð îš ŵöŕķîñĝ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card is working\u202c`;
+  }
+  return `This card is working`;
+}
+
+export function refuseThisCardTakesNoReply(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð ţáķéš ñö ŕéþļý ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card takes no reply\u202c`;
+  }
+  return `This card takes no reply`;
+}
+
+export function refuseThisIsTheFirstCard(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš îš ţĥé ƒîŕšţ çáŕð ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis is the first card\u202c`;
+  }
+  return `This is the first card`;
+}
+
+export function refuseThisIsTheLastCard(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš îš ţĥé ļášţ çáŕð ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis is the last card\u202c`;
+  }
+  return `This is the last card`;
+}
+
+export function refuseYourFirstMateHasNotRepliedYet(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĥáš ñöţ ŕéþļîéð ýéţ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate has not replied yet\u202c`;
+  }
+  return `Your first mate has not replied yet`;
+}
+
+export function refuseTabIsOnComputer(input: { computer: string; tab: string }): string {
+  const computer = input.computer;
+  const tab = input.tab;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${tab} îš öñ ${computer} ~~~]`;
+    case "ar-XB":
+      return `${tab}\u202e is on \u202c${computer}`;
+  }
+  return `${tab} is on ${computer}`;
+}
+
+export function refuseSecretsTab(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéçŕéţš ~~~]`;
+    case "ar-XB":
+      return `\u202eSecrets\u202c`;
+  }
+  return `Secrets`;
+}
+
+export function refuseRunbooksFolderOn(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ŕûñƀööķš ƒöļðéŕ îš öñ ${computer} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour runbooks folder is on \u202c${computer}`;
+  }
+  return `Your runbooks folder is on ${computer}`;
+}
+
+export function refuseDevicesOn(input: { home: string }): string {
+  const home = input.home;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéṽîçéš îš öñ ${home} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eDevices is on \u202c${home}`;
+  }
+  return `Devices is on ${home}`;
+}
+
+export function cardAnnotationHint(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöþý ţĥé šéļéçţéð ŵöŕðš, öŕ þŕéšš Ţáƀ ţö áðð á çöɱɱéñţ. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCopy the selected words, or press Tab to add a comment.\u202c`;
+  }
+  return `Copy the selected words, or press Tab to add a comment.`;
+}
+
+export function cardAnnotationKeys(input: { sendKey: string }): string {
+  const sendKey = input.sendKey;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éñţéŕ ǫûéûéš · ${sendKey} ǫûéûéš áñð šéñðš · Éšç çļöšéš ŵĥéñ éɱþţý ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter queues · \u202c${sendKey}\u202e queues and sends · Esc closes when empty\u202c`;
+  }
+  return `Enter queues · ${sendKey} queues and sends · Esc closes when empty`;
+}
+
+export function cardAnswersAnswered(input: { answered: string; total: string }): string {
+  const answered = input.answered;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${answered} öƒ ${total} áñšŵéŕéð ~~~~~]`;
+    case "ar-XB":
+      return `${answered}\u202e of \u202c${total}\u202e answered\u202c`;
+  }
+  return `${answered} of ${total} answered`;
+}
+
+export function cardAnswersPicked(input: { answered: string; total: string }): string {
+  const answered = input.answered;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${answered} öƒ ${total} þîçķéð ~~~~]`;
+    case "ar-XB":
+      return `${answered}\u202e of \u202c${total}\u202e picked\u202c`;
+  }
+  return `${answered} of ${total} picked`;
+}
+
+export function cardAnswersChanged(input: { changed: string; counted: string }): string {
+  const changed = input.changed;
+  const counted = input.counted;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${counted} · ${changed} çĥáñĝéð ~~~~]`;
+    case "ar-XB":
+      return `${counted}\u202e · \u202c${changed}\u202e changed\u202c`;
+  }
+  return `${counted} · ${changed} changed`;
+}
+
+export function cardAskedYouAsked(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû ášķéð ~~~]`;
+    case "ar-XB":
+      return `\u202eYou asked\u202c`;
+  }
+  return `You asked`;
+}
+
+export function cardAskedYouSaid(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû šáîð ~~~]`;
+    case "ar-XB":
+      return `\u202eYou said\u202c`;
+  }
+  return `You said`;
+}
+
+export function cardAskedYouChose(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû çĥöšé ~~~]`;
+    case "ar-XB":
+      return `\u202eYou chose\u202c`;
+  }
+  return `You chose`;
+}
+
+export function cardAskedAutomation(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕûñ ƀý áñ áûţöɱáţîöñ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRun by an automation\u202c`;
+  }
+  return `Run by an automation`;
+}
+
+export function cardAskedChoseOn(input: { card: string }): string {
+  const card = input.card;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû çĥöšé öñ “${card}” ~~~~~]`;
+    case "ar-XB":
+      return `\u202eYou chose on “\u202c${card}\u202e”\u202c`;
+  }
+  return `You chose on “${card}”`;
+}
+
+export function cardAskedThrough(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[· ţĥŕöûĝĥ ${count} ţášķ ~~~~~]`;
+        default:
+          return `[· ţĥŕöûĝĥ ${count} ţášķš ~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202e· through \u202c${count}\u202e task\u202c`;
+        default:
+          return `\u202e· through \u202c${count}\u202e tasks\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `· through ${count} task`;
+    default:
+      return `· through ${count} tasks`;
+  }
+}
+
+export function cardAskedFrom(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒŕöɱ ${key} ~~]`;
+    case "ar-XB":
+      return `\u202eFrom \u202c${key}`;
+  }
+  return `From ${key}`;
+}
+
+export function cardAskedShowAll(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ áļļ ~~~]`;
+    case "ar-XB":
+      return `\u202eShow all\u202c`;
+  }
+  return `Show all`;
+}
+
+export function cardAskedShowLess(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ ļéšš ~~~]`;
+    case "ar-XB":
+      return `\u202eShow less\u202c`;
+  }
+  return `Show less`;
+}
+
+export function cardAskedPicture(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å þîçţûŕé ~~~]`;
+    case "ar-XB":
+      return `\u202eA picture\u202c`;
+  }
+  return `A picture`;
+}
+
+export function cardBodyStopped(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð šţöþþéð ŕéšþöñðîñĝ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card stopped responding.\u202c`;
+  }
+  return `This card stopped responding.`;
+}
+
+export function cardBodyFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð çöûļð ñöţ ƀé öþéñéð. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card could not be opened.\u202c`;
+  }
+  return `This card could not be opened.`;
+}
+
+export function cardBodyFrameTitle(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${title} ƀöðý ~~]`;
+    case "ar-XB":
+      return `${title}\u202e body\u202c`;
+  }
+  return `${title} body`;
+}
+
+export function cardBodyRetry(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéţŕý ~~]`;
+    case "ar-XB":
+      return `\u202eRetry\u202c`;
+  }
+  return `Retry`;
+}
+
+export function cardBrowserWord(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓŕöŵšéŕ ~~~]`;
+    case "ar-XB":
+      return `\u202eBrowser\u202c`;
+  }
+  return `Browser`;
+}
+
+export function cardThreadRemoveNamed(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéɱöṽé ${name} ~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${name}`;
+  }
+  return `Remove ${name}`;
+}
+
+export function cardThreadRemovePicture(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéɱöṽé þîçţûŕé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove picture\u202c`;
+  }
+  return `Remove picture`;
+}
+
+export function cardThreadReplyField(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéþļý ţö ţĥîš çáŕð ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReply to this card\u202c`;
+  }
+  return `Reply to this card`;
+}
+
+export function cardThreadAddFiles(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åðð ƒîļéš ţö ţĥîš ŕéþļý ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd files to this reply\u202c`;
+  }
+  return `Add files to this reply`;
+}
+
+export function cardThreadLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥŕéáð ~~]`;
+    case "ar-XB":
+      return `\u202eThread\u202c`;
+  }
+  return `Thread`;
+}
+
+export function cardThreadCollapse(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöļļáþšé ţĥŕéáð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eCollapse thread\u202c`;
+  }
+  return `Collapse thread`;
+}
+
+export function cardThreadNoComment(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö çöɱɱéñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eNo comment\u202c`;
+  }
+  return `No comment`;
+}
+
+export function cardThreadNoAnswer(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ñö áñšŵéŕ ~~~]`;
+    case "ar-XB":
+      return `\u202eno answer\u202c`;
+  }
+  return `no answer`;
+}
+
+export function cardThreadSettingChanged(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çĥáñĝéð ~~~]`;
+    case "ar-XB":
+      return `\u202echanged\u202c`;
+  }
+  return `changed`;
+}
+
+export function cardThreadSettingAsProposed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áš þŕöþöšéð ~~~~]`;
+    case "ar-XB":
+      return `\u202eas proposed\u202c`;
+  }
+  return `as proposed`;
+}
+
+export function cardThreadSettingsSent(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš šéñţ ŵîţĥ ýöûŕ ŕéþļý áţ ${time} ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSettings sent with your reply at \u202c${time}`;
+  }
+  return `Settings sent with your reply at ${time}`;
+}
+
+export function cardThreadSettingsNote(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéñţ ţö ţĥé áûţĥöŕ áš çöñţéẋţ. Å ŕéþļý ñéṽéŕ áþþŕöṽéš ƀûîļðîñĝ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSent to the author as context. A reply never approves building.\u202c`;
+  }
+  return `Sent to the author as context. A reply never approves building.`;
+}
+
+export function cardThreadWhoCaptain(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ýöû ~]`;
+    case "ar-XB":
+      return `\u202eyou\u202c`;
+  }
+  return `you`;
+}
+
+export function cardThreadWhoCrewmate(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çŕéŵ ~~]`;
+    case "ar-XB":
+      return `\u202ecrew\u202c`;
+  }
+  return `crew`;
+}
+
+export function cardThreadWhoFirstmate(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ɱáţé ~~]`;
+    case "ar-XB":
+      return `\u202emate\u202c`;
+  }
+  return `mate`;
+}
+
+export function cardThreadWhoHost(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áþþ ~]`;
+    case "ar-XB":
+      return `\u202eapp\u202c`;
+  }
+  return `app`;
+}
+
+export function cardThreadWorking(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŵöŕķîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eworking\u202c`;
+  }
+  return `working`;
+}
+
+export function cardThreadCard(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[çáŕð ~~]`;
+    case "ar-XB":
+      return `\u202ecard\u202c`;
+  }
+  return `card`;
+}
+
+export function cardThreadCardUpdated(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ûþðáţéð ~~~]`;
+    case "ar-XB":
+      return `\u202eupdated\u202c`;
+  }
+  return `updated`;
+}
+
+export function cardThreadSettingsCount(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[šéţţîñĝš · ${count} ṽáļûé ~~~~~~]`;
+        default:
+          return `[šéţţîñĝš · ${count} ṽáļûéš ~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202esettings · \u202c${count}\u202e value\u202c`;
+        default:
+          return `\u202esettings · \u202c${count}\u202e values\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `settings · ${count} value`;
+    default:
+      return `settings · ${count} values`;
+  }
+}
+
+export function cardThreadMessageCount(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ɱéššáĝé ~~~]`;
+        default:
+          return `[${count} ɱéššáĝéš ~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e message\u202c`;
+        default:
+          return `${count}\u202e messages\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} message`;
+    default:
+      return `${count} messages`;
+  }
+}
+
+export function cardThreadCue(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ ţĥŕéáð, ${count} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow thread, \u202c${count}`;
+  }
+  return `Show thread, ${count}`;
+}
+
+export function cardThreadCueWorking(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ ţĥŕéáð, áûţĥöŕ ŵöŕķîñĝ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow thread, author working\u202c`;
+  }
+  return `Show thread, author working`;
+}
+
+export function cardThreadNewCount(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${count} ñéŵ ~~]`;
+    case "ar-XB":
+      return `${count}\u202e new\u202c`;
+  }
+  return `${count} new`;
+}
+
+export function cardThreadJumpNew(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Ĝö ţö ţĥé ${count} ñéŵ ɱéššáĝé ~~~~~~~~]`;
+        default:
+          return `[Ĝö ţö ţĥé ${count} ñéŵ ɱéššáĝéš ~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eGo to the \u202c${count}\u202e new message\u202c`;
+        default:
+          return `\u202eGo to the \u202c${count}\u202e new messages\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Go to the ${count} new message`;
+    default:
+      return `Go to the ${count} new messages`;
+  }
+}
+
+export function cardThreadJumpLatest(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé ļáţéšţ ɱéššáĝé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the latest message\u202c`;
+  }
+  return `Go to the latest message`;
+}
+
+export function cardThreadCount(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţĥŕéáð · ${count} ~~~]`;
+    case "ar-XB":
+      return `\u202ethread · \u202c${count}`;
+  }
+  return `thread · ${count}`;
+}
+
+export function cardThreadRevisedBy(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéṽîšéð ƀý ${label} ~~~~]`;
+    case "ar-XB":
+      return `\u202eRevised by \u202c${label}`;
+  }
+  return `Revised by ${label}`;
+}
+
+export function cardThreadWrittenBy(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵŕîţţéñ ƀý ${label} ~~~~]`;
+    case "ar-XB":
+      return `\u202eWritten by \u202c${label}`;
+  }
+  return `Written by ${label}`;
+}
+
+export function cardThreadRevisedByAfterClose(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéṽîšéð ƀý ${label}, áƒţéŕ ţĥé çáŕð çļöšéð ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRevised by \u202c${label}\u202e, after the card closed\u202c`;
+  }
+  return `Revised by ${label}, after the card closed`;
+}
+
+export function cardThreadWrittenByAfterClose(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵŕîţţéñ ƀý ${label}, áƒţéŕ ţĥé çáŕð çļöšéð ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWritten by \u202c${label}\u202e, after the card closed\u202c`;
+  }
+  return `Written by ${label}, after the card closed`;
+}
+
+export function cardThreadWrittenAfterClose(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵŕîţţéñ áƒţéŕ ţĥé çáŕð çļöšéð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWritten after the card closed\u202c`;
+  }
+  return `Written after the card closed`;
+}
+
+export function cardCrewmateSendFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš ļîñé çöûļð ñöţ ƀé šéñţ ŕîĝĥţ ñöŵ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis line could not be sent right now.\u202c`;
+  }
+  return `This line could not be sent right now.`;
+}
+
+export function cardCrewmateSurface(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çŕéŵɱáţé ~~~]`;
+    case "ar-XB":
+      return `\u202eCrewmate\u202c`;
+  }
+  return `Crewmate`;
+}
+
+export function cardCrewmateLog(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé çŕéŵɱáţé'š šéššîöñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe crewmate's session\u202c`;
+  }
+  return `The crewmate's session`;
+}
+
+export function cardKnowledgeFindingRef(input: { id: string; title: string }): string {
+  const id = input.id;
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîñðîñĝ ${id}: ${title} ~~~~]`;
+    case "ar-XB":
+      return `\u202eFinding \u202c${id}\u202e: \u202c${title}`;
+  }
+  return `Finding ${id}: ${title}`;
+}
+
+export function cardKnowledgeConceptRef(input: { id: string; title: string }): string {
+  const id = input.id;
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöñçéþţ ${id}: ${title} ~~~~]`;
+    case "ar-XB":
+      return `\u202eConcept \u202c${id}\u202e: \u202c${title}`;
+  }
+  return `Concept ${id}: ${title}`;
+}
+
+export function cardKnowledgeRetired(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéţîŕéð ~~~]`;
+    case "ar-XB":
+      return `\u202eRetired\u202c`;
+  }
+  return `Retired`;
+}
+
+export function cardPastMark(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þášţ ~~]`;
+    case "ar-XB":
+      return `\u202ePast\u202c`;
+  }
+  return `Past`;
+}
+
+export function cardPastUnreadable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð çöûļð ñöţ ƀé ŕéáð ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card could not be read\u202c`;
+  }
+  return `This card could not be read`;
+}
+
+export function cardPastMeta(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þášţ çáŕð ~~~]`;
+    case "ar-XB":
+      return `\u202epast card\u202c`;
+  }
+  return `past card`;
+}
+
+export function cardRecordDeliveryDirectPr(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þûļļ ŕéǫûéšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202ePull request\u202c`;
+  }
+  return `Pull request`;
+}
+
+export function cardRecordDeliveryQueuePr(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓáţçĥéð þûļļ ŕéǫûéšţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBatched pull request\u202c`;
+  }
+  return `Batched pull request`;
+}
+
+export function cardRecordDeliveryLocalOnly(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ļöçáļ ɱéŕĝé ~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal merge\u202c`;
+  }
+  return `Local merge`;
+}
+
+export function cardRecordDeliveryInPlace(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓûîļţ îñ þļáçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eBuilt in place\u202c`;
+  }
+  return `Built in place`;
+}
+
+export function cardRecordCare(input: { care: string }): string {
+  const care = input.care;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${care} çáŕé ~~]`;
+    case "ar-XB":
+      return `${care}\u202e care\u202c`;
+  }
+  return `${care} care`;
+}
+
+export function cardRecordUnreadable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţĥîš ŕéçöŕð çöûļð ñöţ ƀé ŕéáð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethis record could not be read\u202c`;
+  }
+  return `this record could not be read`;
+}
+
+export function cardRecordChecking(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķîñĝ ŵĥéţĥéŕ îţ šţáŕţéð ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChecking whether it started\u202c`;
+  }
+  return `Checking whether it started`;
+}
+
+export function cardRecordStillStarting(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţîļļ šţáŕţîñĝ. Ýöû çáñ ķééþ ŵöŕķîñĝ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStill starting. You can keep working.\u202c`;
+  }
+  return `Still starting. You can keep working.`;
+}
+
+export function cardRecordDelivery(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéļîṽéŕý ~~~]`;
+    case "ar-XB":
+      return `\u202eDelivery\u202c`;
+  }
+  return `Delivery`;
+}
+
+export function cardRecordRunsOn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕûñš öñ ~~~]`;
+    case "ar-XB":
+      return `\u202eRuns on\u202c`;
+  }
+  return `Runs on`;
+}
+
+export function cardRecordBodyTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ŕéçöŕð ƀöðý ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTask record body\u202c`;
+  }
+  return `Task record body`;
+}
+
+export function cardRecordSpend(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šþéñð ~~]`;
+    case "ar-XB":
+      return `\u202eSpend\u202c`;
+  }
+  return `Spend`;
+}
+
+export function cardRecordWhy(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵĥý ~]`;
+    case "ar-XB":
+      return `\u202eWhy\u202c`;
+  }
+  return `Why`;
+}
+
+export function cardRecordNoReason(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö ŕéášöñ ŵáš ŕéçöŕðéð. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo reason was recorded.\u202c`;
+  }
+  return `No reason was recorded.`;
+}
+
+export function cardRecordVerdict(input: { verdict: string }): string {
+  const verdict = input.verdict;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé: ${verdict} ~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate: \u202c${verdict}`;
+  }
+  return `First mate: ${verdict}`;
+}
+
+export function cardRecordNoVerdict(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĥáš ñöţ šáîð ýéţ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate has not said yet.\u202c`;
+  }
+  return `Your first mate has not said yet.`;
+}
+
+export function cardRecordPartOf(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáŕţ öƒ ~~~]`;
+    case "ar-XB":
+      return `\u202ePart of\u202c`;
+  }
+  return `Part of`;
+}
+
+export function cardRecordWaitsOn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵáîţš öñ ~~~]`;
+    case "ar-XB":
+      return `\u202eWaits on\u202c`;
+  }
+  return `Waits on`;
+}
+
+export function cardRecordHoldsUp(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĥöļðš ûþ ~~~]`;
+    case "ar-XB":
+      return `\u202eHolds up\u202c`;
+  }
+  return `Holds up`;
+}
+
+export function cardRecordParts(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáŕţš ~~]`;
+    case "ar-XB":
+      return `\u202eParts\u202c`;
+  }
+  return `Parts`;
+}
+
+export function cardRecordChildrenClosed(input: { closed: string; total: string }): string {
+  const closed = input.closed;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${closed} öƒ ${total} çļöšéð ~~~~]`;
+    case "ar-XB":
+      return `${closed}\u202e of \u202c${total}\u202e closed\u202c`;
+  }
+  return `${closed} of ${total} closed`;
+}
+
+export function cardRecordFiledWhy(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵĥý îţ ŵáš ƒîļéð ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhy it was filed\u202c`;
+  }
+  return `Why it was filed`;
+}
+
+export function cardRecordFoldNoPlan(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ŵĥý ţĥéŕé ŵáš ñö þļáñ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ewhy there was no plan\u202c`;
+  }
+  return `why there was no plan`;
+}
+
+export function cardRecordFoldMessages(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[ýöûŕ ${count} ɱéššáĝé ~~~~~]`;
+        default:
+          return `[ýöûŕ ${count} ɱéššáĝéš ~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eyour \u202c${count}\u202e message\u202c`;
+        default:
+          return `\u202eyour \u202c${count}\u202e messages\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `your ${count} message`;
+    default:
+      return `your ${count} messages`;
+  }
+}
+
+export function cardRecordGoal(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝöáļ ~~]`;
+    case "ar-XB":
+      return `\u202eGoal\u202c`;
+  }
+  return `Goal`;
+}
+
+export function cardRecordNoPlanWhy(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵĥý ýöûŕ ƒîŕšţ ɱáţé ƀûîļţ ŵîţĥöûţ á þļáñ ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhy your first mate built without a plan\u202c`;
+  }
+  return `Why your first mate built without a plan`;
+}
+
+export function cardRecordYouSaid(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû šáîð ~~~]`;
+    case "ar-XB":
+      return `\u202eYou said\u202c`;
+  }
+  return `You said`;
+}
+
+export function cardRecordLoading(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ļöáðîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eLoading\u202c`;
+  }
+  return `Loading`;
+}
+
+export function cardRequiredActionsLead(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åƒţéŕ ɱéŕĝîñĝ, ýöû ñééð ţö… ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAfter merging, you need to…\u202c`;
+  }
+  return `After merging, you need to…`;
+}
+
+export function cardRevisedRewritten(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéŵŕîţţéñ ${time} ~~~~]`;
+    case "ar-XB":
+      return `\u202eRewritten \u202c${time}`;
+  }
+  return `Rewritten ${time}`;
+}
+
+export function cardRevisedRevised(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéṽîšéð ${time} ~~~]`;
+    case "ar-XB":
+      return `\u202eRevised \u202c${time}`;
+  }
+  return `Revised ${time}`;
+}
+
+export function cardRevisedPartsNew(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} þáŕţ ñéŵ ~~~]`;
+        default:
+          return `[${count} þáŕţš ñéŵ ~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e part new\u202c`;
+        default:
+          return `${count}\u202e parts new\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} part new`;
+    default:
+      return `${count} parts new`;
+  }
+}
+
+export function cardRevisedRemoved(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${count} ŕéɱöṽéð ~~~]`;
+    case "ar-XB":
+      return `${count}\u202e removed\u202c`;
+  }
+  return `${count} removed`;
+}
+
+export function cardRevisedPartsRemoved(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} þáŕţ ŕéɱöṽéð ~~~~~]`;
+        default:
+          return `[${count} þáŕţš ŕéɱöṽéð ~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e part removed\u202c`;
+        default:
+          return `${count}\u202e parts removed\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} part removed`;
+    default:
+      return `${count} parts removed`;
+  }
+}
+
+export function cardRevisionLinksUnavailable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥáñĝé ļîñķš ûñáṽáîļáƀļé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChange links unavailable\u202c`;
+  }
+  return `Change links unavailable`;
+}
+
+export function cardRevisionShowFewer(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ ƒéŵéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eShow fewer\u202c`;
+  }
+  return `Show fewer`;
+}
+
+export function cardRevisionMore(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${count} ɱöŕé ~~]`;
+    case "ar-XB":
+      return `${count}\u202e more\u202c`;
+  }
+  return `${count} more`;
+}
+
+export function cardRevisionAreaGone(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš áŕéá îš ñö ļöñĝéŕ áṽáîļáƀļé îñ ţĥé çûŕŕéñţ çáŕð. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis area is no longer available in the current card.\u202c`;
+  }
+  return `This area is no longer available in the current card.`;
+}
+
+export function cardBrowserOpenFailed(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${place} çöûļð ñöţ öþéñ á ƀŕöŵšéŕ ƒöŕ ţĥîš ţášķ ŕîĝĥţ ñöŵ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${place}\u202e could not open a browser for this task right now.\u202c`;
+  }
+  return `${place} could not open a browser for this task right now.`;
+}
+
+export function cardBrowserSurface(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ƀŕöŵšéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eTask browser\u202c`;
+  }
+  return `Task browser`;
+}
+
+export function cardBrowserNone(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš ţášķ ĥáš ñö ƀŕöŵšéŕ öñ ${place}. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis task has no browser on \u202c${place}\u202e.\u202c`;
+  }
+  return `This task has no browser on ${place}.`;
+}
+
+export function cardBrowserHandFailed(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${place} çöûļð ñöţ ĥáñð ţĥé ƀŕöŵšéŕ öṽéŕ ŕîĝĥţ ñöŵ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${place}\u202e could not hand the browser over right now.\u202c`;
+  }
+  return `${place} could not hand the browser over right now.`;
+}
+
+export function cardBrowserBack(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓáçķ ~~]`;
+    case "ar-XB":
+      return `\u202eBack\u202c`;
+  }
+  return `Back`;
+}
+
+export function cardBrowserForward(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒöŕŵáŕð ~~~]`;
+    case "ar-XB":
+      return `\u202eForward\u202c`;
+  }
+  return `Forward`;
+}
+
+export function cardBrowserReload(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéļöáð ~~]`;
+    case "ar-XB":
+      return `\u202eReload\u202c`;
+  }
+  return `Reload`;
+}
+
+export function cardBrowserMore(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöŕé ~~]`;
+    case "ar-XB":
+      return `\u202eMore\u202c`;
+  }
+  return `More`;
+}
+
+export function cardBrowserActualSize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åçţûáļ šîžé ~~~~]`;
+    case "ar-XB":
+      return `\u202eActual size\u202c`;
+  }
+  return `Actual size`;
+}
+
+export function cardBrowserFit(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîţ ~]`;
+    case "ar-XB":
+      return `\u202eFit\u202c`;
+  }
+  return `Fit`;
+}
+
+export function cardBrowserStop(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţöþ ƀŕöŵšéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eStop browser\u202c`;
+  }
+  return `Stop browser`;
+}
+
+export function cardBrowserCopyAddress(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöþý þáĝé áððŕéšš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCopy page address\u202c`;
+  }
+  return `Copy page address`;
+}
+
+export function cardBrowserReport(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéþöŕţ á þŕöƀļéɱ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReport a problem\u202c`;
+  }
+  return `Report a problem`;
+}
+
+export function cardBrowserManage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁáñáĝé ~~]`;
+    case "ar-XB":
+      return `\u202eManage\u202c`;
+  }
+  return `Manage`;
+}
+
+export function cardBrowserCheckingSignIn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķîñĝ šáṽéð šîĝñ-îñ… ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChecking saved sign-in…\u202c`;
+  }
+  return `Checking saved sign-in…`;
+}
+
+export function cardBrowserSignInsUnavailable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽéð šîĝñ-îñš áŕé ûñáṽáîļáƀļé. Ŕéţûŕñ çöñţŕöļ ŵîţĥöûţ šáṽîñĝ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSaved sign-ins are unavailable. Return control without saving.\u202c`;
+  }
+  return `Saved sign-ins are unavailable. Return control without saving.`;
+}
+
+export function cardBrowserPageYours(input: { site: string }): string {
+  const site = input.site;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé þáĝé áţ ${site}, ûñðéŕ ýöûŕ çöñţŕöļ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe page at \u202c${site}\u202e, under your control\u202c`;
+  }
+  return `The page at ${site}, under your control`;
+}
+
+export function cardBrowserPageYoursOff(input: { off: string; site: string }): string {
+  const off = input.off;
+  const site = input.site;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé þáĝé áţ ${site}, ûñðéŕ ýöûŕ çöñţŕöļ · ${off} ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe page at \u202c${site}\u202e, under your control · \u202c${off}`;
+  }
+  return `The page at ${site}, under your control · ${off}`;
+}
+
+export function cardBrowserPageWatching(input: { site: string }): string {
+  const site = input.site;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé þáĝé áţ ${site}, áš ţĥé çŕéŵɱáţé'š ƀŕöŵšéŕ šĥöŵš îţ ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe page at \u202c${site}\u202e, as the crewmate's browser shows it\u202c`;
+  }
+  return `The page at ${site}, as the crewmate's browser shows it`;
+}
+
+export function cardBrowserRecord(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ŕéçöŕð ~~~~]`;
+    case "ar-XB":
+      return `\u202eTask record\u202c`;
+  }
+  return `Task record`;
+}
+
+export function cardTabStripLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ çáŕð ~~~]`;
+    case "ar-XB":
+      return `\u202eTask card\u202c`;
+  }
+  return `Task card`;
+}
+
+export function shellCommandSearchLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéáŕçĥ çöɱɱáñðš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eSearch commands\u202c`;
+  }
+  return `Search commands`;
+}
+
+export function shellCommandSearchList(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöɱɱáñðš ~~~]`;
+    case "ar-XB":
+      return `\u202eCommands\u202c`;
+  }
+  return `Commands`;
+}
+
+export function shellCommandSearchNoMatch(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñö çöɱɱáñð ɱáţçĥéš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo command matches\u202c`;
+  }
+  return `No command matches`;
+}
+
+export function shellCommandSearchHint(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åŕŕöŵ ķéýš çĥööšé · Éñţéŕ ŕûñš · Éšçáþé ĝöéš ƀáçķ ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eArrow keys choose · Enter runs · Escape goes back\u202c`;
+  }
+  return `Arrow keys choose · Enter runs · Escape goes back`;
+}
+
+export function shellTranscribeFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöûļð ñöţ ţŕáñšçŕîƀé ţĥáţ. Ýöû çáñ šţîļļ ţýþé. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not transcribe that. You can still type.\u202c`;
+  }
+  return `Could not transcribe that. You can still type.`;
+}
+
+export function shellMainMessagePickingKey(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš îš ŵáîţîñĝ ƒöŕ á ðîçţáţîöñ ķéý ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSettings is waiting for a dictation key\u202c`;
+  }
+  return `Settings is waiting for a dictation key`;
+}
+
+export function shellMainMessageRecording(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å ŕéçöŕðîñĝ îš ŕûññîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA recording is running\u202c`;
+  }
+  return `A recording is running`;
+}
+
+export function shellMainMessageConnectFirst(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöññéçţ á šûƀšçŕîþţîöñ ƒîŕšţ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eConnect a subscription first\u202c`;
+  }
+  return `Connect a subscription first`;
+}
+
+export function shellMainMessageStarting(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Îñƒîñîţáŕý îš šţîļļ šţáŕţîñĝ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary is still starting\u202c`;
+  }
+  return `Infinitary is still starting`;
+}
+
+export function shellComposerNoticeDismiss(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðîšɱîšš ñöţîçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eDismiss notice\u202c`;
+  }
+  return `Dismiss notice`;
+}
+
+export function shellDiagnosticsTurnOff(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţûŕñ öƒƒ ~~~]`;
+    case "ar-XB":
+      return `\u202eTurn off\u202c`;
+  }
+  return `Turn off`;
+}
+
+export function shellDiagnosticsOk(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ÖĶ ~]`;
+    case "ar-XB":
+      return `\u202eOK\u202c`;
+  }
+  return `OK`;
+}
+
+export function shellDiagnosticsSaving(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽîñĝ... ~~~]`;
+    case "ar-XB":
+      return `\u202eSaving...\u202c`;
+  }
+  return `Saving...`;
+}
+
+export function shellDiagnosticsRetry(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţŕý Ţûŕñ öƒƒ öŕ ÖĶ áĝáîñ ţö šáṽé ýöûŕ çĥöîçé. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTry Turn off or OK again to save your choice.\u202c`;
+  }
+  return `Try Turn off or OK again to save your choice.`;
+}
+
+export function shellGateConnecting(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöññéçţîñĝ ${name} ~~~~]`;
+    case "ar-XB":
+      return `\u202eConnecting \u202c${name}`;
+  }
+  return `Connecting ${name}`;
+}
+
+export function shellGateTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöññéçţ á šûƀšçŕîþţîöñ ţö ƀéĝîñ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eConnect a subscription to begin\u202c`;
+  }
+  return `Connect a subscription to begin`;
+}
+
+export function shellGateHomeTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵéļçöɱé áƀöáŕð Îñƒîñîţáŕý, Çáþţáîñ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWelcome aboard Infinitary, Captain\u202c`;
+  }
+  return `Welcome aboard Infinitary, Captain`;
+}
+
+export function shellGateRecoveryTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţ ûþ ýöûŕ ƒîŕšţ ɱáţé öñ ţĥîš çöɱþûţéŕ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSet up your first mate on this computer\u202c`;
+  }
+  return `Set up your first mate on this computer`;
+}
+
+export function shellGateIntro(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Î'ɱ ýöûŕ ƒîŕšţ ɱáţé. Î'ļļ ĥéļþ ýöû ɱáñáĝé ţĥé ŕéšţ öƒ ţĥé çŕéŵ. Šéţ ɱé ûþ öñ á çöɱþûţéŕ ţĥáţ šţáýš öñ áš ɱûçĥ áš þöššîƀļé. Ýöûŕ öţĥéŕ ðéṽîçéš ñééð ɱé áŵáķé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eI'm your first mate. I'll help you manage the rest of the crew. Set me up on a computer that stays on as much as possible. Your other devices need me awake.\u202c`;
+  }
+  return `I'm your first mate. I'll help you manage the rest of the crew. Set me up on a computer that stays on as much as possible. Your other devices need me awake.`;
+}
+
+export function shellGateStillNeeds(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé šţîļļ ñééðš á šûƀšçŕîþţîöñ ţĥáţ áñšŵéŕš - Çöðéẋ, Ĝŕöķ, Çļáûðé, Ķîɱî Çöðé, Çöþîļöţ, öŕ ÖþéñŔöûţéŕ ŵîţĥ áñ ÅÞÎ ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, Copilot, or OpenRouter with an API key.\u202c`;
+  }
+  return `Your first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, Copilot, or OpenRouter with an API key.`;
+}
+
+export function shellGateStaysOn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þîçķ á çöɱþûţéŕ ţĥáţ šţáýš öñ. Öţĥéŕ çöɱþûţéŕš ñééð îţ áŵáķé. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePick a computer that stays on. Other computers need it awake.\u202c`;
+  }
+  return `Pick a computer that stays on. Other computers need it awake.`;
+}
+
+export function shellGateFreshCheckTitle(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķ ${label} áĝáîñ ţö ƀéĝîñ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCheck \u202c${label}\u202e again to begin\u202c`;
+  }
+  return `Check ${label} again to begin`;
+}
+
+export function shellGateFreshCheckLine(input: { count: number; label: string }): string {
+  const count = formatNumber(input.count);
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Ýöûŕ ƒîŕšţ ɱáţé áñšŵéŕš ƒŕöɱ ${label}, áñð îţš ɱöðéļ ñééðš öñé ƒŕéšĥ çĥéçķ. Çĥéçķîñĝ ɱáý ûšé ƀîļļáƀļé ţöķéñš áñð šéñðš öñļý ţéšţ ţéẋţ, ñéṽéŕ ýöûŕ ŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[Ýöûŕ ƒîŕšţ ɱáţé áñšŵéŕš ƒŕöɱ ${label}, áñð îţš ${count} ɱöðéļš ñééð öñé ƒŕéšĥ çĥéçķ. Çĥéçķîñĝ ɱáý ûšé ƀîļļáƀļé ţöķéñš áñð šéñðš öñļý ţéšţ ţéẋţ, ñéṽéŕ ýöûŕ ŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eYour first mate answers from \u202c${label}\u202e, and its model needs one fresh check. Checking may use billable tokens and sends only test text, never your work.\u202c`;
+        default:
+          return `\u202eYour first mate answers from \u202c${label}\u202e, and its \u202c${count}\u202e models need one fresh check. Checking may use billable tokens and sends only test text, never your work.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Your first mate answers from ${label}, and its model needs one fresh check. Checking may use billable tokens and sends only test text, never your work.`;
+    default:
+      return `Your first mate answers from ${label}, and its ${count} models need one fresh check. Checking may use billable tokens and sends only test text, never your work.`;
+  }
+}
+
+export function shellGateRunLine(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöññéçţ öñé ƒöŕ ýöûŕ ƒîŕšţ ɱáţé öñ ${computer}. Îţ šîĝñš îñ ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eConnect one for your first mate on \u202c${computer}\u202e. It signs in from here.\u202c`;
+  }
+  return `Connect one for your first mate on ${computer}. It signs in from here.`;
+}
+
+export function shellGateFreshCheckAction(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķ áĝáîñ ~~~~]`;
+    case "ar-XB":
+      return `\u202eCheck again\u202c`;
+  }
+  return `Check again`;
+}
+
+export function shellGateFreshCheckPending(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eChecking...\u202c`;
+  }
+  return `Checking...`;
+}
+
+export function shellPromptTranscribing(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţŕáñšçŕîƀîñĝ ŵĥáţ ýöû šáîð ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etranscribing what you said\u202c`;
+  }
+  return `transcribing what you said`;
+}
+
+export function shellPromptTranscribingShort(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţŕáñšçŕîƀîñĝ ~~~~]`;
+    case "ar-XB":
+      return `\u202etranscribing\u202c`;
+  }
+  return `transcribing`;
+}
+
+export function shellPromptReturnToMessage(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þŕéšš ${key} ţö ŵŕîţé á ɱéššáĝé ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202epress \u202c${key}\u202e to write a message\u202c`;
+  }
+  return `press ${key} to write a message`;
+}
+
+export function shellLastTurnWorking(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵöŕķîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202eWorking…\u202c`;
+  }
+  return `Working…`;
+}
+
+export function shellLastTurnPictureOnly(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å þîçţûŕé ~~~]`;
+    case "ar-XB":
+      return `\u202eA picture\u202c`;
+  }
+  return `A picture`;
+}
+
+export function shellConversationHeading(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöñṽéŕšáţîöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202eConversation\u202c`;
+  }
+  return `Conversation`;
+}
+
+export function shellNextKeysLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñéẋţ ķéýš ~~~]`;
+    case "ar-XB":
+      return `\u202eNext keys\u202c`;
+  }
+  return `Next keys`;
+}
+
+export function shellNextKeysThen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţĥéñ ~~]`;
+    case "ar-XB":
+      return `\u202ethen\u202c`;
+  }
+  return `then`;
+}
+
+export function shellNextKeysHint(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éšç çáñçéļš · áñöţĥéŕ ķéý áçţš áš ûšûáļ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEsc cancels · another key acts as usual\u202c`;
+  }
+  return `Esc cancels · another key acts as usual`;
+}
+
+export function shellProjectPillWords(input: {
+  name: string;
+  waiting: string;
+  working: string;
+}): string {
+  const name = input.name;
+  const waiting = input.waiting;
+  const working = input.working;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${name} · ${waiting} ŵáîţîñĝ öñ ýöû · ${working} ŵöŕķîñĝ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e · \u202c${waiting}\u202e waiting on you · \u202c${working}\u202e working\u202c`;
+  }
+  return `${name} · ${waiting} waiting on you · ${working} working`;
+}
+
+export function shellProjectAll(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åļļ þŕöĵéçţš ~~~~]`;
+    case "ar-XB":
+      return `\u202eAll projects\u202c`;
+  }
+  return `All projects`;
+}
+
+export function shellProjectShowAll(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ áļļ þŕöĵéçţš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow all projects\u202c`;
+  }
+  return `Show all projects`;
+}
+
+export function shellProjectFocusRow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒöçûš öñ á þŕöĵéçţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFocus on a project\u202c`;
+  }
+  return `Focus on a project`;
+}
+
+export function shellProjectMoreCount(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ɱöŕé þŕöĵéçţš ~~~~~]`;
+        default:
+          return `[${count} ɱöŕé þŕöĵéçţš ~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e more projects\u202c`;
+        default:
+          return `${count}\u202e more projects\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} more projects`;
+    default:
+      return `${count} more projects`;
+  }
+}
+
+export function shellProjectCloseRow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöšé ţĥé þŕöĵéçţ ŕöŵ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClose the project row\u202c`;
+  }
+  return `Close the project row`;
+}
+
+export function shellProjectFocusPill(input: { words: string }): string {
+  const words = input.words;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒöçûš öñ á þŕöĵéçţ: ${words} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFocus on a project: \u202c${words}`;
+  }
+  return `Focus on a project: ${words}`;
+}
+
+export function shellProjectMoreMenu(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöŕé þŕöĵéçţš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMore projects\u202c`;
+  }
+  return `More projects`;
+}
+
+export function shellReducedMotionLabel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéðûçéð ɱöţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eReduced motion\u202c`;
+  }
+  return `Reduced motion`;
+}
+
+export function shellReducedMotionHeadline(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ çöɱþûţéŕ îš šéţ ţö ŕéðûçé ɱöţîöñ, šö ýöûŕ ƒîŕšţ ɱáţé ĥöļðš šţîļļ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour computer is set to reduce motion, so your first mate holds still.\u202c`;
+  }
+  return `Your computer is set to reduce motion, so your first mate holds still.`;
+}
+
+export function shellReducedMotionMateSubject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate\u202c`;
+  }
+  return `Your first mate`;
+}
+
+export function shellReducedMotionMateText(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[îš öñé šţîļļ þîçţûŕé. Îţ ðöéš ñöţ šĥöŵ ŵĥéñ îţ îš ļîšţéñîñĝ öŕ ŵöŕķîñĝ, ŕéáçţ, ƀļîñķ öŕ ƒöļļöŵ ýöûŕ þöîñţéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eis one still picture. It does not show when it is listening or working, react, blink or follow your pointer.\u202c`;
+  }
+  return `is one still picture. It does not show when it is listening or working, react, blink or follow your pointer.`;
+}
+
+export function shellReducedMotionCrewSubject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çŕéŵɱáţéš ~~~]`;
+    case "ar-XB":
+      return `\u202eCrewmates\u202c`;
+  }
+  return `Crewmates`;
+}
+
+export function shellReducedMotionCrewText(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[šîţ šţîļļ öñ ţĥéîŕ ŕîñĝ. Ţĥéîŕ çöļöŕ šţîļļ çĥáñĝéš, ƀûţ ýöû ŵîļļ ñöţ šéé ţĥéɱ áŕŕîṽé, ŕéþöŕţ îñ, ƒîñîšĥ öŕ ƒļîçķéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202esit still on their ring. Their color still changes, but you will not see them arrive, report in, finish or flicker.\u202c`;
+  }
+  return `sit still on their ring. Their color still changes, but you will not see them arrive, report in, finish or flicker.`;
+}
+
+export function shellReducedMotionWaveformSubject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ṽöîçé ŵáṽéƒöŕɱ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe voice waveform\u202c`;
+  }
+  return `The voice waveform`;
+}
+
+export function shellReducedMotionWaveformText(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ĥöļðš šţîļļ ŵĥîļé ýöû ţáļķ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eholds still while you talk.\u202c`;
+  }
+  return `holds still while you talk.`;
+}
+
+export function shellReducedMotionInterfaceSubject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáŕðš, þáñéļš áñð Šéţţîñĝš ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCards, panels and Settings\u202c`;
+  }
+  return `Cards, panels and Settings`;
+}
+
+export function shellReducedMotionInterfaceText(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áþþéáŕ áţ öñçé îñšţéáð öƒ šļîðîñĝ öŕ ƒáðîñĝ. Å ƒéŵ šĥöŕţ ƒáðéš ŕéɱáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eappear at once instead of sliding or fading. A few short fades remain.\u202c`;
+  }
+  return `appear at once instead of sliding or fading. A few short fades remain.`;
+}
+
+export function shellReducedMotionChangeMac(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţö çĥáñĝé îţ, öþéñ Šýšţéɱ Šéţţîñĝš › Åççéššîƀîļîţý › Ðîšþļáý › Ŕéðûçé ɱöţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo change it, open System Settings › Accessibility › Display › Reduce motion.\u202c`;
+  }
+  return `To change it, open System Settings › Accessibility › Display › Reduce motion.`;
+}
+
+export function shellReducedMotionChangeLinux(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţö çĥáñĝé îţ, ţûŕñ áñîɱáţîöñš ƀáçķ öñ îñ ýöûŕ ðéšķţöþ'š áççéššîƀîļîţý šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo change it, turn animations back on in your desktop's accessibility settings.\u202c`;
+  }
+  return `To change it, turn animations back on in your desktop's accessibility settings.`;
+}
+
+export function shellReplyNoteYou(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû ~]`;
+    case "ar-XB":
+      return `\u202eYou\u202c`;
+  }
+  return `You`;
+}
+
+export function shellReplyNoteFirstMate(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate\u202c`;
+  }
+  return `First mate`;
+}
+
+export function shellCardShowPanels(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šĥöŵ þáñéļš ~~~~]`;
+    case "ar-XB":
+      return `\u202eShow panels\u202c`;
+  }
+  return `Show panels`;
+}
+
+export function shellCardResize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšîžé çáŕð ~~~~]`;
+    case "ar-XB":
+      return `\u202eResize card\u202c`;
+  }
+  return `Resize card`;
+}
+
+export function shellCardTaskRecord(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ŕéçöŕð ~~~~]`;
+    case "ar-XB":
+      return `\u202eTask record\u202c`;
+  }
+  return `Task record`;
+}
+
+export function shellCardNotesFirst(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéñð ţĥé ñöţéš áš á ŕéþļý ƒîŕšţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSend the notes as a reply first\u202c`;
+  }
+  return `Send the notes as a reply first`;
+}
+
+export function shellCardMateAnswering(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé îš áñšŵéŕîñĝ öñ ţĥîš çáŕð ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate is answering on this card\u202c`;
+  }
+  return `Your first mate is answering on this card`;
+}
+
+export function shellTopBarMinimize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁîñîɱîžé ~~~]`;
+    case "ar-XB":
+      return `\u202eMinimize\u202c`;
+  }
+  return `Minimize`;
+}
+
+export function shellTopBarRestore(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšţöŕé ~~~]`;
+    case "ar-XB":
+      return `\u202eRestore\u202c`;
+  }
+  return `Restore`;
+}
+
+export function shellTopBarMaximize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁáẋîɱîžé ~~~]`;
+    case "ar-XB":
+      return `\u202eMaximize\u202c`;
+  }
+  return `Maximize`;
+}
+
+export function shellTopBarCloseWindow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöšé ŵîñðöŵ ~~~~]`;
+    case "ar-XB":
+      return `\u202eClose window\u202c`;
+  }
+  return `Close window`;
+}
+
+export function shellTopBarBack(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓáçķ ~~]`;
+    case "ar-XB":
+      return `\u202eBack\u202c`;
+  }
+  return `Back`;
+}
+
+export function shellTopBarSettings(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš ~~~]`;
+    case "ar-XB":
+      return `\u202eSettings\u202c`;
+  }
+  return `Settings`;
+}
+
+export function shellUpdateStable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţáƀļé ûþðáţéš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eStable updates\u202c`;
+  }
+  return `Stable updates`;
+}
+
+export function shellUpdateAlpha(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åļþĥá ûþðáţéš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eAlpha updates\u202c`;
+  }
+  return `Alpha updates`;
+}
+
+export function shellUpdateAvailable(input: { version: string }): string {
+  const version = input.version;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûþðáţé áṽáîļáƀļé: ${version} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUpdate available: \u202c${version}`;
+  }
+  return `Update available: ${version}`;
+}
+
+export function shellUpdateInstalled(input: { version: string }): string {
+  const version = input.version;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû ĥáṽé ${version} ~~~]`;
+    case "ar-XB":
+      return `\u202eYou have \u202c${version}`;
+  }
+  return `You have ${version}`;
+}
+
+export function shellUpdateInstall(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Îñšţáļļ ~~~]`;
+    case "ar-XB":
+      return `\u202eInstall\u202c`;
+  }
+  return `Install`;
+}
+
+export function shellVoiceDownloadFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ṽöîçé ɱöðéļ ðöŵñļöáð ƒáîļéð. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe voice model download failed. Try again.\u202c`;
+  }
+  return `The voice model download failed. Try again.`;
+}
+
+export function shellVoiceMicUnavailable(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ɱîçŕöþĥöñé îš ûñáṽáîļáƀļé. Ýöû çáñ šţîļļ ţýþé. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe microphone is unavailable. You can still type.\u202c`;
+  }
+  return `The microphone is unavailable. You can still type.`;
+}
+
+export function shellVoiceConsent(input: { size: string }): string {
+  const size = input.size;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṽöîçé ñééðš á öñé-ţîɱé ɱöðéļ ðöŵñļöáð (áƀöûţ ${size}). Îţ ŕûñš öñ ţĥîš ɱáçĥîñé; áûðîö ñéṽéŕ ļéáṽéš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eVoice needs a one-time model download (about \u202c${size}\u202e). It runs on this machine; audio never leaves it.\u202c`;
+  }
+  return `Voice needs a one-time model download (about ${size}). It runs on this machine; audio never leaves it.`;
+}
+
+export function shellVoiceModelSize(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[1.6 ĜƁ ~~]`;
+    case "ar-XB":
+      return `\u202e1.6 GB\u202c`;
+  }
+  return `1.6 GB`;
+}
+
+export function shellVoiceNotNow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñöţ ñöŵ ~~~]`;
+    case "ar-XB":
+      return `\u202eNot now\u202c`;
+  }
+  return `Not now`;
+}
+
+export function shellVoiceDownload(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðöŵñļöáð ~~~]`;
+    case "ar-XB":
+      return `\u202eDownload\u202c`;
+  }
+  return `Download`;
+}
+
+export function shellVoiceDownloading(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðöŵñļöáðîñĝ ṽöîçé ɱöðéļ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDownloading voice model\u202c`;
+  }
+  return `Downloading voice model`;
+}
+
+export function shellVoiceAskingMac(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ɱáçÖŠ îš ášķîñĝ ŵĥéţĥéŕ Îñƒîñîţáŕý ɱáý ûšé ţĥé ɱîçŕöþĥöñé. Ŵĥáţ ýöû šáý ƀéçöɱéš ţéẋţ öñ ţĥîš çöɱþûţéŕ áñð îš ñéṽéŕ šţöŕéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202emacOS is asking whether Infinitary may use the microphone. What you say becomes text on this computer and is never stored.\u202c`;
+  }
+  return `macOS is asking whether Infinitary may use the microphone. What you say becomes text on this computer and is never stored.`;
+}
+
+export function shellVoiceAskingDesktop(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ðéšķţöþ îš ášķîñĝ ŵĥéţĥéŕ Îñƒîñîţáŕý ɱáý ûšé ţĥé ɱîçŕöþĥöñé. Ŵĥáţ ýöû šáý ƀéçöɱéš ţéẋţ öñ ţĥîš çöɱþûţéŕ áñð îš ñéṽéŕ šţöŕéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour desktop is asking whether Infinitary may use the microphone. What you say becomes text on this computer and is never stored.\u202c`;
+  }
+  return `Your desktop is asking whether Infinitary may use the microphone. What you say becomes text on this computer and is never stored.`;
+}
+
+export function shellVoiceMicOffMac(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁîçŕöþĥöñé áççéšš îš öƒƒ ƒöŕ Îñƒîñîţáŕý. Ţûŕñ îţ öñ îñ Šýšţéɱ Šéţţîñĝš, ûñðéŕ Þŕîṽáçý & Šéçûŕîţý, Ṁîçŕöþĥöñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMicrophone access is off for Infinitary. Turn it on in System Settings, under Privacy & Security, Microphone.\u202c`;
+  }
+  return `Microphone access is off for Infinitary. Turn it on in System Settings, under Privacy & Security, Microphone.`;
+}
+
+export function shellVoiceMicOffDesktop(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁîçŕöþĥöñé áççéšš îš öƒƒ ƒöŕ Îñƒîñîţáŕý. Ţûŕñ îţ öñ îñ ýöûŕ ðéšķţöþ'š þŕîṽáçý šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMicrophone access is off for Infinitary. Turn it on in your desktop's privacy settings.\u202c`;
+  }
+  return `Microphone access is off for Infinitary. Turn it on in your desktop's privacy settings.`;
+}
+
+export function shellVoiceClose(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöšé ~~]`;
+    case "ar-XB":
+      return `\u202eClose\u202c`;
+  }
+  return `Close`;
+}
+
+export function shellVoiceOpenSettings(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Šýšţéɱ Šéţţîñĝš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen System Settings\u202c`;
+  }
+  return `Open System Settings`;
+}
+
+export function shellVoiceManaged(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé áðɱîñîšţŕáţöŕ öƒ ţĥîš çöɱþûţéŕ çöñţŕöļš ɱîçŕöþĥöñé áççéšš, šö ṽöîçé îš öƒƒ. Ýöû çáñ šţîļļ ţýþé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe administrator of this computer controls microphone access, so voice is off. You can still type.\u202c`;
+  }
+  return `The administrator of this computer controls microphone access, so voice is off. You can still type.`;
+}
+
+export function attachCancelled(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáñçéļļéð ${name} ~~~~]`;
+    case "ar-XB":
+      return `\u202eCancelled \u202c${name}`;
+  }
+  return `Cancelled ${name}`;
+}
+
+export function crewUnavailableComputer(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûñáṽáîļáƀļé çöɱþûţéŕ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUnavailable computer\u202c`;
+  }
+  return `Unavailable computer`;
+}
+
+export function crewOrbitLabel(input: { idle: string; working: string }): string {
+  const idle = input.idle;
+  const working = input.working;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çŕéŵ - ${working} ŵöŕķîñĝ, ${idle} îðļé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew - \u202c${working}\u202e working, \u202c${idle}\u202e idle\u202c`;
+  }
+  return `Crew - ${working} working, ${idle} idle`;
+}
+
+export function crewModelNames(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çŕéŵ ɱöðéļ ñáɱéš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew model names\u202c`;
+  }
+  return `Crew model names`;
+}
+
+export function crewProgramsAndParts(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕöĝŕáɱš áñð ţĥéîŕ þáŕţš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrograms and their parts\u202c`;
+  }
+  return `Programs and their parts`;
+}
+
+export function crewAPart(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å þáŕţ ~~]`;
+    case "ar-XB":
+      return `\u202eA part\u202c`;
+  }
+  return `A part`;
+}
+
+export function crewOutOfReach(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öûţ öƒ ŕéáçĥ ~~~~]`;
+    case "ar-XB":
+      return `\u202eOut of reach\u202c`;
+  }
+  return `Out of reach`;
+}
+
+export function crewWorkComputers(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵöŕķ çöɱþûţéŕš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eWork computers\u202c`;
+  }
+  return `Work computers`;
+}
+
+export function crewPreviousComputers(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéṽîöûš çöɱþûţéŕš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrevious computers\u202c`;
+  }
+  return `Previous computers`;
+}
+
+export function crewNextComputers(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñéẋţ çöɱþûţéŕš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNext computers\u202c`;
+  }
+  return `Next computers`;
+}
+
+export function crewSummaryReviewing(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéṽîéŵîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eReviewing\u202c`;
+  }
+  return `Reviewing`;
+}
+
+export function crewSummaryAnotherTask(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áñöţĥéŕ ţášķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eanother task\u202c`;
+  }
+  return `another task`;
+}
+
+export function crewSummaryPartOf(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáŕţ öƒ ~~~]`;
+    case "ar-XB":
+      return `\u202ePart of\u202c`;
+  }
+  return `Part of`;
+}
+
+export function crewSummaryParts(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáŕţš ~~]`;
+    case "ar-XB":
+      return `\u202eParts\u202c`;
+  }
+  return `Parts`;
+}
+
+export function crewSummaryRunning(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕûññîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eRunning\u202c`;
+  }
+  return `Running`;
+}
+
+export function crewSummaryBlockedBy(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓļöçķéð ƀý ~~~~]`;
+    case "ar-XB":
+      return `\u202eBlocked by\u202c`;
+  }
+  return `Blocked by`;
+}
+
+export function crewPartsCount(input: {
+  finished: string;
+  running: string;
+  waiting: string;
+}): string {
+  const finished = input.finished;
+  const running = input.running;
+  const waiting = input.waiting;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${finished} ƒîñîšĥéð, ${running} ŕûññîñĝ, ${waiting} ŵáîţîñĝ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${finished}\u202e finished, \u202c${running}\u202e running, \u202c${waiting}\u202e waiting\u202c`;
+  }
+  return `${finished} finished, ${running} running, ${waiting} waiting`;
+}
+
+export function crewStateWorking(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵöŕķîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eWorking\u202c`;
+  }
+  return `Working`;
+}
+
+export function crewStateIdle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Îðļé ~~]`;
+    case "ar-XB":
+      return `\u202eIdle\u202c`;
+  }
+  return `Idle`;
+}
+
+export function crewFirstmateLabel(input: { state: string }): string {
+  const state = input.state;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé - ${state} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate - \u202c${state}`;
+  }
+  return `First mate - ${state}`;
+}
+
+export function panelStoppedLine(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš þáñéļ šţöþþéð ðŕáŵîñĝ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis panel stopped drawing.\u202c`;
+  }
+  return `This panel stopped drawing.`;
+}
+
+export function panelBackgroundStopped(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš þáñéļ'š ƀáçķĝŕöûñð ŵöŕķ šţöþþéð ŕéšþöñðîñĝ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis panel's background work stopped responding.\u202c`;
+  }
+  return `This panel's background work stopped responding.`;
+}
+
+export function panelBackgroundExited(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš þáñéļ'š ƀáçķĝŕöûñð ŵöŕķ šţöþþéð. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis panel's background work stopped.\u202c`;
+  }
+  return `This panel's background work stopped.`;
+}
+
+export function panelRetry(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéţŕý ~~]`;
+    case "ar-XB":
+      return `\u202eRetry\u202c`;
+  }
+  return `Retry`;
+}
+
+export function panelBackgroundPaused(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš þáñéļ'š ƀáçķĝŕöûñð ŵöŕķ îš þáûšéð: îţ ŵáš ɱáðé ƒöŕ áñ éáŕļîéŕ ṽéŕšîöñ öƒ ţĥé áþþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis panel's background work is paused: it was made for an earlier version of the app.\u202c`;
+  }
+  return `This panel's background work is paused: it was made for an earlier version of the app.`;
+}
+
+export function panelBackgroundUpdate(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûþðáţé þáñéļ ~~~~]`;
+    case "ar-XB":
+      return `\u202eUpdate panel\u202c`;
+  }
+  return `Update panel`;
+}
+
+export function panelCardStopped(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš çáŕð šţöþþéð ðŕáŵîñĝ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card stopped drawing.\u202c`;
+  }
+  return `This card stopped drawing.`;
+}
+
+export function panelIntegrationAsking(input: { action: string; place: string }): string {
+  const action = input.action;
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš þáñéļ ášķš ţö ${action} öñ ${place}. Îţš áþþŕöṽáļ çáŕð îš ûþ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis panel asks to \u202c${action}\u202e on \u202c${place}\u202e. Its approval card is up.\u202c`;
+  }
+  return `This panel asks to ${action} on ${place}. Its approval card is up.`;
+}
+
+export function panelIntegrationDeclined(input: { action: string; place: string }): string {
+  const action = input.action;
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû çĥöšé Ñöţ ñöŵ ŵĥéñ ţĥîš þáñéļ ášķéð ţö ${action} öñ ${place}. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYou chose Not now when this panel asked to \u202c${action}\u202e on \u202c${place}\u202e.\u202c`;
+  }
+  return `You chose Not now when this panel asked to ${action} on ${place}.`;
+}
+
+export function panelIntegrationAskAgain(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åšķ áĝáîñ ~~~]`;
+    case "ar-XB":
+      return `\u202eAsk again\u202c`;
+  }
+  return `Ask again`;
+}
+
+export function panelSettingsGeneral(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝéñéŕáļ ~~~]`;
+    case "ar-XB":
+      return `\u202eGeneral\u202c`;
+  }
+  return `General`;
+}
+
+export function panelSettingsAppearance(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åþþéáŕáñçé ~~~~]`;
+    case "ar-XB":
+      return `\u202eAppearance\u202c`;
+  }
+  return `Appearance`;
+}
+
+export function panelSettingsPanels(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáñéļš ~~]`;
+    case "ar-XB":
+      return `\u202ePanels\u202c`;
+  }
+  return `Panels`;
+}
+
+export function panelSettingsKeyboard(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ķéýƀöáŕð ~~~]`;
+    case "ar-XB":
+      return `\u202eKeyboard\u202c`;
+  }
+  return `Keyboard`;
+}
+
+export function panelSettingsProjects(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕöĵéçţš ~~~]`;
+    case "ar-XB":
+      return `\u202eProjects\u202c`;
+  }
+  return `Projects`;
+}
+
+export function panelSettingsIntelligence(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Îñţéļļîĝéñçé ~~~~]`;
+    case "ar-XB":
+      return `\u202eIntelligence\u202c`;
+  }
+  return `Intelligence`;
+}
+
+export function panelSettingsRunbooks(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕûñƀööķš ~~~]`;
+    case "ar-XB":
+      return `\u202eRunbooks\u202c`;
+  }
+  return `Runbooks`;
+}
+
+export function panelSettingsUsage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûšáĝé ~~]`;
+    case "ar-XB":
+      return `\u202eUsage\u202c`;
+  }
+  return `Usage`;
+}
+
+export function panelSettingsAutomation(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åûţöɱáţîöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAutomation\u202c`;
+  }
+  return `Automation`;
+}
+
+export function panelSettingsIntegrations(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Îñţéĝŕáţîöñš ~~~~]`;
+    case "ar-XB":
+      return `\u202eIntegrations\u202c`;
+  }
+  return `Integrations`;
+}
+
+export function panelSettingsSecrets(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéçŕéţš ~~~]`;
+    case "ar-XB":
+      return `\u202eSecrets\u202c`;
+  }
+  return `Secrets`;
+}
+
+export function panelSettingsDevices(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéṽîçéš ~~~]`;
+    case "ar-XB":
+      return `\u202eDevices\u202c`;
+  }
+  return `Devices`;
+}
+
+export function panelSettingsObserve(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öƀšéŕṽé ~~~]`;
+    case "ar-XB":
+      return `\u202eObserve\u202c`;
+  }
+  return `Observe`;
+}
+
+export function panelHide(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĥîðé ~~]`;
+    case "ar-XB":
+      return `\u202eHide\u202c`;
+  }
+  return `Hide`;
+}
+
+export function panelUnresponsiveLine(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš þáñéļ šţöþþéð ŕéšþöñðîñĝ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis panel stopped responding.\u202c`;
+  }
+  return `This panel stopped responding.`;
+}
+
+export function panelCouldNotOpen(input: { failure: string }): string {
+  const failure = input.failure;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥîš þáñéļ çöûļð ñöţ ƀé öþéñéð. ${failure} ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis panel could not be opened. \u202c${failure}`;
+  }
+  return `This panel could not be opened. ${failure}`;
+}
+
+export function panelCommandRecording(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å ŕéçöŕðîñĝ îš ŕûññîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA recording is running\u202c`;
+  }
+  return `A recording is running`;
+}
+
+export function panelCommandGone(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Îţš þáñéļ îš ñöţ ĥéŕé ñöŵ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts panel is not here now\u202c`;
+  }
+  return `Its panel is not here now`;
+}
+
+export function panelCommandHidden(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ${title} þáñéļ îš ĥîððéñ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe \u202c${title}\u202e panel is hidden\u202c`;
+  }
+  return `The ${title} panel is hidden`;
+}
+
+export function panelCommandNothingToShow(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${title} ĥáš ñöţĥîñĝ ţö šĥöŵ ~~~~~~~]`;
+    case "ar-XB":
+      return `${title}\u202e has nothing to show\u202c`;
+  }
+  return `${title} has nothing to show`;
+}
+
+export function panelMoveNotAsked(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öñļý ýöûŕ öŵñ çļîçķ öŕ ķéý îñ ţĥîš þáñéļ ɱöṽéš á ţášķ. Ñöţĥîñĝ ŵáš ŵŕîţţéñ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOnly your own click or key in this panel moves a task. Nothing was written.\u202c`;
+  }
+  return `Only your own click or key in this panel moves a task. Nothing was written.`;
+}
+
+export function panelLineTask(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķ ~~]`;
+    case "ar-XB":
+      return `\u202eTask\u202c`;
+  }
+  return `Task`;
+}
+
+export function panelLineProject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕöĵéçţ ~~~]`;
+    case "ar-XB":
+      return `\u202eProject\u202c`;
+  }
+  return `Project`;
+}
+
+export function panelRailFolded(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáñéļš ƒöļðéð ƒöŕ ŕööɱ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePanels folded for room\u202c`;
+  }
+  return `Panels folded for room`;
+}
+
+export function panelRailMore(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${count} ɱöŕé ~~]`;
+    case "ar-XB":
+      return `${count}\u202e more\u202c`;
+  }
+  return `${count} more`;
+}
+
+export function panelSaidLineOpen(input: { panelTitle: string }): string {
+  const panelTitle = input.panelTitle;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ ${panelTitle} ~~]`;
+    case "ar-XB":
+      return `\u202eOpen \u202c${panelTitle}`;
+  }
+  return `Open ${panelTitle}`;
+}
+
+export function panelStillWorking(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţîļļ ŵöŕķîñĝ öñ ţĥîš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStill working on this\u202c`;
+  }
+  return `Still working on this`;
+}
+
+export function panelExpand(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éẋþáñð ${title} ~~~]`;
+    case "ar-XB":
+      return `\u202eExpand \u202c${title}`;
+  }
+  return `Expand ${title}`;
+}
+
+export function panelExpandFolded(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éẋþáñð ${title} · ƒöļðéð ƒöŕ ŕööɱ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eExpand \u202c${title}\u202e · folded for room\u202c`;
+  }
+  return `Expand ${title} · folded for room`;
+}
+
+export function panelCollapse(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöļļáþšé ${title} ~~~]`;
+    case "ar-XB":
+      return `\u202eCollapse \u202c${title}`;
+  }
+  return `Collapse ${title}`;
+}
+
+export function commandRegionsLeft(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ öñ ţĥé ļéƒţ ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the part of the window on the left\u202c`;
+  }
+  return `Go to the part of the window on the left`;
+}
+
+export function commandRegionsLeftWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þáñé, þáñéļ, ļéƒţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202epane, panel, left\u202c`;
+  }
+  return `pane, panel, left`;
+}
+
+export function commandRegionsDown(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ ƀéļöŵ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the part of the window below\u202c`;
+  }
+  return `Go to the part of the window below`;
+}
+
+export function commandRegionsDownWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þáñé, þáñéļ, ðöŵñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202epane, panel, down\u202c`;
+  }
+  return `pane, panel, down`;
+}
+
+export function commandRegionsUp(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ áƀöṽé ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the part of the window above\u202c`;
+  }
+  return `Go to the part of the window above`;
+}
+
+export function commandRegionsUpWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þáñé, þáñéļ, ûþ ~~~~~]`;
+    case "ar-XB":
+      return `\u202epane, panel, up\u202c`;
+  }
+  return `pane, panel, up`;
+}
+
+export function commandRegionsRight(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ öñ ţĥé ŕîĝĥţ ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the part of the window on the right\u202c`;
+  }
+  return `Go to the part of the window on the right`;
+}
+
+export function commandRegionsRightWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þáñé, þáñéļ, ŕîĝĥţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202epane, panel, right\u202c`;
+  }
+  return `pane, panel, right`;
+}
+
+export function commandMoveLeft(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ļéƒţ ~~~]`;
+    case "ar-XB":
+      return `\u202eMove left\u202c`;
+  }
+  return `Move left`;
+}
+
+export function commandMoveLeftWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áŕŕöŵ, ļéƒţ, þŕéṽîöûš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202earrow, left, previous\u202c`;
+  }
+  return `arrow, left, previous`;
+}
+
+export function commandMoveDown(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ðöŵñ ~~~]`;
+    case "ar-XB":
+      return `\u202eMove down\u202c`;
+  }
+  return `Move down`;
+}
+
+export function commandMoveDownWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áŕŕöŵ, ðöŵñ, ñéẋţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202earrow, down, next\u202c`;
+  }
+  return `arrow, down, next`;
+}
+
+export function commandMoveUp(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ûþ ~~~]`;
+    case "ar-XB":
+      return `\u202eMove up\u202c`;
+  }
+  return `Move up`;
+}
+
+export function commandMoveUpWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áŕŕöŵ, ûþ, þŕéṽîöûš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202earrow, up, previous\u202c`;
+  }
+  return `arrow, up, previous`;
+}
+
+export function commandMoveRight(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ŕîĝĥţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eMove right\u202c`;
+  }
+  return `Move right`;
+}
+
+export function commandMoveRightWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[áŕŕöŵ, ŕîĝĥţ, ñéẋţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202earrow, right, next\u202c`;
+  }
+  return `arrow, right, next`;
+}
+
+export function commandMoveFirst(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ţö ţĥé šţáŕţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMove to the start\u202c`;
+  }
+  return `Move to the start`;
+}
+
+export function commandMoveFirstWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ĥöɱé, ţöþ, ƒîŕšţ, ƀéĝîññîñĝ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ehome, top, first, beginning\u202c`;
+  }
+  return `home, top, first, beginning`;
+}
+
+export function commandMoveLast(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ţö ţĥé éñð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMove to the end\u202c`;
+  }
+  return `Move to the end`;
+}
+
+export function commandMoveLastWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[éñð, ƀöţţöɱ, ļášţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eend, bottom, last\u202c`;
+  }
+  return `end, bottom, last`;
+}
+
+export function commandMovePageUp(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ûþ á þáĝé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMove up a page\u202c`;
+  }
+  return `Move up a page`;
+}
+
+export function commandMovePageUpWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þáĝé ûþ, šçŕöļļ ~~~~~]`;
+    case "ar-XB":
+      return `\u202epage up, scroll\u202c`;
+  }
+  return `page up, scroll`;
+}
+
+export function commandMovePageDown(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽé ðöŵñ á þáĝé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMove down a page\u202c`;
+  }
+  return `Move down a page`;
+}
+
+export function commandMovePageDownWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þáĝé ðöŵñ, šçŕöļļ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202epage down, scroll\u202c`;
+  }
+  return `page down, scroll`;
+}
+
+export function commandCancel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function commandCancelWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[éšçáþé, éšç, çļöšé, ƀáçķ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eescape, esc, close, back\u202c`;
+  }
+  return `escape, esc, close, back`;
+}
+
+export function settingsKeyboardPreset(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕéšéţ ~~]`;
+    case "ar-XB":
+      return `\u202ePreset\u202c`;
+  }
+  return `Preset`;
+}
+
+export function settingsKeyboardPresetDescription(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Å ŵĥöļé šéţ öƒ ķéýš ţö šţáŕţ ƒŕöɱ. Éáçĥ ķééþš ţĥé ķéýš ýöû çĥáñĝé îñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA whole set of keys to start from. Each keeps the keys you change in it.\u202c`;
+  }
+  return `A whole set of keys to start from. Each keeps the keys you change in it.`;
+}
+
+export function settingsModelsReset(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšéţ ţö šţáŕţîñĝ ļéṽéļš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset to starting levels\u202c`;
+  }
+  return `Reset to starting levels`;
+}
+
+export function settingsModelsResetConfirm(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöñƒîŕɱ ŕéšéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConfirm reset\u202c`;
+  }
+  return `Confirm reset`;
+}
+
+export function settingsModelsResetCancel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsModelsResetNote(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åļŵáýš ûšé çĥöîçéš áŕé ûñţöûçĥéð. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAlways use choices are untouched.\u202c`;
+  }
+  return `Always use choices are untouched.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -2023,6 +7546,527 @@ export const MESSAGES = {
   welcomeBack,
   welcomeNext,
   welcomeFigure,
+  commandCommandsSearch,
+  commandFocusMainMessage,
+  commandFocusCardReply,
+  commandFocusCardReplyWords,
+  commandFocusCardBody,
+  commandFocusCardActions,
+  commandCardsChoice1,
+  commandCardsChoice1Words,
+  commandCardsChoice2,
+  commandCardsChoice2Words,
+  commandCardsChoice3,
+  commandCardsChoice3Words,
+  commandCardsChoice4,
+  commandCardsChoice4Words,
+  commandRegionsNext,
+  commandRegionsPrevious,
+  commandComputersPrevious,
+  commandComputersNext,
+  commandProjectFocusOpen,
+  commandProjectFocusOpenWords,
+  commandProjectFocusClear,
+  commandProjectFocusClearWords,
+  commandCardsPrevious,
+  commandCardsNext,
+  commandCardsMinimize,
+  commandCardsDone,
+  commandCardsDoneWords,
+  commandCardsDecline,
+  commandCardsDeclineWords,
+  commandCardsMaximize,
+  commandCardsMaximizeWords,
+  commandCardsNextRevision,
+  commandCardsNextRevisionWords,
+  commandCardsPointAt,
+  commandCardsPointAtWords,
+  commandCardsThread,
+  commandCardsThreadWords,
+  commandCardsThreadNew,
+  commandCardsThreadNewWords,
+  commandCardsShowInfo,
+  commandCardsShowInfoWords,
+  commandCardsShowCards,
+  commandCardsShowCardsWords,
+  commandCardsShowActivity,
+  commandCardsShowActivityWords,
+  commandCardsShowCrewmate,
+  commandCardsShowCrewmateWords,
+  commandBrowserControl,
+  commandBrowserControlWords,
+  commandTaskMoveComputer,
+  commandTaskMoveComputerWords,
+  commandTaskCloseDone,
+  commandTaskCloseDoneWords,
+  commandCardsShowBrowser,
+  commandCardsShowBrowserWords,
+  commandCardsNextTab,
+  commandCardsNextTabWords,
+  commandCardsPreviousTab,
+  commandCardsPreviousTabWords,
+  commandSettingsOpen,
+  commandSettingsKeyboard,
+  commandSettingsPanels,
+  commandSettingsPanelsWords,
+  commandUpdatesShow,
+  commandUpdatesShowWords,
+  commandUpdatesLater,
+  commandUpdatesLaterWords,
+  commandUpdatesCheck,
+  commandUpdatesCheckWords,
+  commandWhatsNewShow,
+  commandWhatsNewShowWords,
+  commandFirstmateReply,
+  commandFirstmateReplyWords,
+  commandSettingsRunbooks,
+  commandSettingsRunbooksWords,
+  commandRunbooksOpenFolder,
+  commandRunbooksOpenFolderWords,
+  commandSettingsUsage,
+  commandSettingsUsageWords,
+  commandSettingsAutomation,
+  commandSettingsAutomationWords,
+  commandSettingsIntegrations,
+  commandSettingsIntegrationsWords,
+  commandSettingsSecrets,
+  commandSettingsSecretsWords,
+  commandAutomationPauseAll,
+  commandAutomationPauseAllWords,
+  commandUsageUnit,
+  commandUsageUnitWords,
+  commandAllowanceRecheck,
+  commandAllowanceRecheckWords,
+  commandDevicesTryAgainWords,
+  commandSizeLarger,
+  commandSizeSmaller,
+  commandSizeReset,
+  commandMessageDeleteToLineStart,
+  commandMessageDeleteToLineEnd,
+  commandMessageDeleteWordBefore,
+  commandMessagePutBackDeleted,
+  commandMessageRecall,
+  commandDevicesTryAgain,
+  uiCardMaximize,
+  uiCardRestore,
+  uiCardStackPrevious,
+  uiCardStackNext,
+  uiCardStackNew,
+  uiPictureViewerDemoFrom,
+  uiPictureViewerPicturesFrom,
+  uiPictureViewerClose,
+  uiPictureViewerActualSize,
+  uiPictureViewerPrevious,
+  uiPictureViewerNext,
+  uiPictureViewerReplay,
+  uiPictureViewerStop,
+  uiPictureViewerPause,
+  uiPictureViewerPlay,
+  uiPictureViewerSeek,
+  uiPictureViewerSeekValue,
+  uiPictureViewerThumb,
+  uiPictureViewerUnplayable,
+  uiPictureViewerShownAtOwnSize,
+  uiPictureViewerHintOne,
+  uiPictureViewerHintOwn,
+  uiPictureViewerHintFitted,
+  uiCardKindDecision,
+  uiCardKindNote,
+  uiCardKindAttention,
+  uiCardKindTask,
+  uiCardTaskRecord,
+  uiButtonPending,
+  uiConsentNotNow,
+  uiTaskFactsProgress,
+  uiTaskFactsPlanCount,
+  uiTaskFactsPlanSkipped,
+  uiTaskFactsFoldedDone,
+  uiTaskFactsFoldedMore,
+  uiTaskFactsPlanDotsName,
+  uiTaskFactsShowEarlier,
+  uiTaskFactsSkipped,
+  uiTaskFactsAllDone,
+  uiTaskFactsBetweenItems,
+  uiTaskFactsModel,
+  uiTaskFactsReasoning,
+  uiTaskFactsChecks,
+  uiTaskFactsReview,
+  uiTaskFactsReadJustBefore,
+  uiTaskFactsReadMinutesBefore,
+  uiTaskFactsReadHoursBefore,
+  uiTaskFactsReadDaysBefore,
+  uiTaskFactsResets,
+  uiTaskFactsTask,
+  uiTaskFactsProject,
+  uiTaskFactsNow,
+  uiTaskFactsBrowser,
+  uiTaskFactsOpen,
+  uiPercentLeft,
+  uiTaskResourceRunUnavailable,
+  uiTaskResourceUse,
+  uiTaskResourceRun,
+  uiQuotaPaceAhead,
+  uiQuotaPaceOnPace,
+  uiQuotaPaceBehind,
+  uiQuotaLow,
+  uiQuotaNoData,
+  uiQuotaMeterNameLeft,
+  uiQuotaMeterNameNotRead,
+  uiSlotPremium,
+  uiSlotHigh,
+  uiSlotMedium,
+  uiSlotLow,
+  uiSubscriptionUnpinModel,
+  uiSubscriptionPinModel,
+  uiVoiceLevel,
+  uiVoiceHint,
+  uiVoiceSubmit,
+  uiVoiceRemove,
+  uiVoiceImage,
+  uiVoiceTaskPrompt,
+  uiVoiceAbandon,
+  uiVoiceAccept,
+  refuseACardCoversTheComputers,
+  refuseARecordingIsRunning,
+  refuseCloseTheOpenDialogFirst,
+  refuseCommandSearchIsOpen,
+  refuseEveryProjectIsShown,
+  refuseInfinitaryCouldNotConfirmHowThisCopy,
+  refuseNoCardIsShown,
+  refuseNoCardThreadIsReadAboveIts,
+  refuseNoReleaseNotesYet,
+  refuseNoUpdateIsAvailable,
+  refuseNoUpdateIsSavingWorkNow,
+  refuseSecretsIsNotInThisBuild,
+  refuseSettingsIsAlreadyOpen,
+  refuseSettingsIsOpen,
+  refuseSettingsIsRecordingAKey,
+  refuseSettingsIsWaitingForADictationKey,
+  refuseShowABrowserWithControlAvailableFirst,
+  refuseShowAStartedTaskThatCanMove,
+  refuseShowAStartedTasksRecordFirst,
+  refuseThatTabIsAlreadyShown,
+  refuseThereIsNoOtherTabToGo,
+  refuseThereIsOnlyOneProject,
+  refuseTheseAreTheFirstComputers,
+  refuseTheseAreTheLastComputers,
+  refuseThisCardHasNoDoneOrGot,
+  refuseThisCardHasNoButtons,
+  refuseThisCardHasNoChangeLinks,
+  refuseThisCardHasNoSuchChoice,
+  refuseThisCardHasNoSuchTab,
+  refuseThisCardHasNoTabs,
+  refuseThisCardHasNoThreadYet,
+  refuseThisCardHasNoWayToSay,
+  refuseThisCardIsNotAboutATask,
+  refuseThisCardIsWorking,
+  refuseThisCardTakesNoReply,
+  refuseThisIsTheFirstCard,
+  refuseThisIsTheLastCard,
+  refuseYourFirstMateHasNotRepliedYet,
+  refuseTabIsOnComputer,
+  refuseSecretsTab,
+  refuseRunbooksFolderOn,
+  refuseDevicesOn,
+  cardAnnotationHint,
+  cardAnnotationKeys,
+  cardAnswersAnswered,
+  cardAnswersPicked,
+  cardAnswersChanged,
+  cardAskedYouAsked,
+  cardAskedYouSaid,
+  cardAskedYouChose,
+  cardAskedAutomation,
+  cardAskedChoseOn,
+  cardAskedThrough,
+  cardAskedFrom,
+  cardAskedShowAll,
+  cardAskedShowLess,
+  cardAskedPicture,
+  cardBodyStopped,
+  cardBodyFailed,
+  cardBodyFrameTitle,
+  cardBodyRetry,
+  cardBrowserWord,
+  cardThreadRemoveNamed,
+  cardThreadRemovePicture,
+  cardThreadReplyField,
+  cardThreadAddFiles,
+  cardThreadLabel,
+  cardThreadCollapse,
+  cardThreadNoComment,
+  cardThreadNoAnswer,
+  cardThreadSettingChanged,
+  cardThreadSettingAsProposed,
+  cardThreadSettingsSent,
+  cardThreadSettingsNote,
+  cardThreadWhoCaptain,
+  cardThreadWhoCrewmate,
+  cardThreadWhoFirstmate,
+  cardThreadWhoHost,
+  cardThreadWorking,
+  cardThreadCard,
+  cardThreadCardUpdated,
+  cardThreadSettingsCount,
+  cardThreadMessageCount,
+  cardThreadCue,
+  cardThreadCueWorking,
+  cardThreadNewCount,
+  cardThreadJumpNew,
+  cardThreadJumpLatest,
+  cardThreadCount,
+  cardThreadRevisedBy,
+  cardThreadWrittenBy,
+  cardThreadRevisedByAfterClose,
+  cardThreadWrittenByAfterClose,
+  cardThreadWrittenAfterClose,
+  cardCrewmateSendFailed,
+  cardCrewmateSurface,
+  cardCrewmateLog,
+  cardKnowledgeFindingRef,
+  cardKnowledgeConceptRef,
+  cardKnowledgeRetired,
+  cardPastMark,
+  cardPastUnreadable,
+  cardPastMeta,
+  cardRecordDeliveryDirectPr,
+  cardRecordDeliveryQueuePr,
+  cardRecordDeliveryLocalOnly,
+  cardRecordDeliveryInPlace,
+  cardRecordCare,
+  cardRecordUnreadable,
+  cardRecordChecking,
+  cardRecordStillStarting,
+  cardRecordDelivery,
+  cardRecordRunsOn,
+  cardRecordBodyTitle,
+  cardRecordSpend,
+  cardRecordWhy,
+  cardRecordNoReason,
+  cardRecordVerdict,
+  cardRecordNoVerdict,
+  cardRecordPartOf,
+  cardRecordWaitsOn,
+  cardRecordHoldsUp,
+  cardRecordParts,
+  cardRecordChildrenClosed,
+  cardRecordFiledWhy,
+  cardRecordFoldNoPlan,
+  cardRecordFoldMessages,
+  cardRecordGoal,
+  cardRecordNoPlanWhy,
+  cardRecordYouSaid,
+  cardRecordLoading,
+  cardRequiredActionsLead,
+  cardRevisedRewritten,
+  cardRevisedRevised,
+  cardRevisedPartsNew,
+  cardRevisedRemoved,
+  cardRevisedPartsRemoved,
+  cardRevisionLinksUnavailable,
+  cardRevisionShowFewer,
+  cardRevisionMore,
+  cardRevisionAreaGone,
+  cardBrowserOpenFailed,
+  cardBrowserSurface,
+  cardBrowserNone,
+  cardBrowserHandFailed,
+  cardBrowserBack,
+  cardBrowserForward,
+  cardBrowserReload,
+  cardBrowserMore,
+  cardBrowserActualSize,
+  cardBrowserFit,
+  cardBrowserStop,
+  cardBrowserCopyAddress,
+  cardBrowserReport,
+  cardBrowserManage,
+  cardBrowserCheckingSignIn,
+  cardBrowserSignInsUnavailable,
+  cardBrowserPageYours,
+  cardBrowserPageYoursOff,
+  cardBrowserPageWatching,
+  cardBrowserRecord,
+  cardTabStripLabel,
+  shellCommandSearchLabel,
+  shellCommandSearchList,
+  shellCommandSearchNoMatch,
+  shellCommandSearchHint,
+  shellTranscribeFailed,
+  shellMainMessagePickingKey,
+  shellMainMessageRecording,
+  shellMainMessageConnectFirst,
+  shellMainMessageStarting,
+  shellComposerNoticeDismiss,
+  shellDiagnosticsTurnOff,
+  shellDiagnosticsOk,
+  shellDiagnosticsSaving,
+  shellDiagnosticsRetry,
+  shellGateConnecting,
+  shellGateTitle,
+  shellGateHomeTitle,
+  shellGateRecoveryTitle,
+  shellGateIntro,
+  shellGateStillNeeds,
+  shellGateStaysOn,
+  shellGateFreshCheckTitle,
+  shellGateFreshCheckLine,
+  shellGateRunLine,
+  shellGateFreshCheckAction,
+  shellGateFreshCheckPending,
+  shellPromptTranscribing,
+  shellPromptTranscribingShort,
+  shellPromptReturnToMessage,
+  shellLastTurnWorking,
+  shellLastTurnPictureOnly,
+  shellConversationHeading,
+  shellNextKeysLabel,
+  shellNextKeysThen,
+  shellNextKeysHint,
+  shellProjectPillWords,
+  shellProjectAll,
+  shellProjectShowAll,
+  shellProjectFocusRow,
+  shellProjectMoreCount,
+  shellProjectCloseRow,
+  shellProjectFocusPill,
+  shellProjectMoreMenu,
+  shellReducedMotionLabel,
+  shellReducedMotionHeadline,
+  shellReducedMotionMateSubject,
+  shellReducedMotionMateText,
+  shellReducedMotionCrewSubject,
+  shellReducedMotionCrewText,
+  shellReducedMotionWaveformSubject,
+  shellReducedMotionWaveformText,
+  shellReducedMotionInterfaceSubject,
+  shellReducedMotionInterfaceText,
+  shellReducedMotionChangeMac,
+  shellReducedMotionChangeLinux,
+  shellReplyNoteYou,
+  shellReplyNoteFirstMate,
+  shellCardShowPanels,
+  shellCardResize,
+  shellCardTaskRecord,
+  shellCardNotesFirst,
+  shellCardMateAnswering,
+  shellTopBarMinimize,
+  shellTopBarRestore,
+  shellTopBarMaximize,
+  shellTopBarCloseWindow,
+  shellTopBarBack,
+  shellTopBarSettings,
+  shellUpdateStable,
+  shellUpdateAlpha,
+  shellUpdateAvailable,
+  shellUpdateInstalled,
+  shellUpdateInstall,
+  shellVoiceDownloadFailed,
+  shellVoiceMicUnavailable,
+  shellVoiceConsent,
+  shellVoiceModelSize,
+  shellVoiceNotNow,
+  shellVoiceDownload,
+  shellVoiceDownloading,
+  shellVoiceAskingMac,
+  shellVoiceAskingDesktop,
+  shellVoiceMicOffMac,
+  shellVoiceMicOffDesktop,
+  shellVoiceClose,
+  shellVoiceOpenSettings,
+  shellVoiceManaged,
+  attachCancelled,
+  crewUnavailableComputer,
+  crewOrbitLabel,
+  crewModelNames,
+  crewProgramsAndParts,
+  crewAPart,
+  crewOutOfReach,
+  crewWorkComputers,
+  crewPreviousComputers,
+  crewNextComputers,
+  crewSummaryReviewing,
+  crewSummaryAnotherTask,
+  crewSummaryPartOf,
+  crewSummaryParts,
+  crewSummaryRunning,
+  crewSummaryBlockedBy,
+  crewPartsCount,
+  crewStateWorking,
+  crewStateIdle,
+  crewFirstmateLabel,
+  panelStoppedLine,
+  panelBackgroundStopped,
+  panelBackgroundExited,
+  panelRetry,
+  panelBackgroundPaused,
+  panelBackgroundUpdate,
+  panelCardStopped,
+  panelIntegrationAsking,
+  panelIntegrationDeclined,
+  panelIntegrationAskAgain,
+  panelSettingsGeneral,
+  panelSettingsAppearance,
+  panelSettingsPanels,
+  panelSettingsKeyboard,
+  panelSettingsProjects,
+  panelSettingsIntelligence,
+  panelSettingsRunbooks,
+  panelSettingsUsage,
+  panelSettingsAutomation,
+  panelSettingsIntegrations,
+  panelSettingsSecrets,
+  panelSettingsDevices,
+  panelSettingsObserve,
+  panelHide,
+  panelUnresponsiveLine,
+  panelCouldNotOpen,
+  panelCommandRecording,
+  panelCommandGone,
+  panelCommandHidden,
+  panelCommandNothingToShow,
+  panelMoveNotAsked,
+  panelLineTask,
+  panelLineProject,
+  panelRailFolded,
+  panelRailMore,
+  panelSaidLineOpen,
+  panelStillWorking,
+  panelExpand,
+  panelExpandFolded,
+  panelCollapse,
+  commandRegionsLeft,
+  commandRegionsLeftWords,
+  commandRegionsDown,
+  commandRegionsDownWords,
+  commandRegionsUp,
+  commandRegionsUpWords,
+  commandRegionsRight,
+  commandRegionsRightWords,
+  commandMoveLeft,
+  commandMoveLeftWords,
+  commandMoveDown,
+  commandMoveDownWords,
+  commandMoveUp,
+  commandMoveUpWords,
+  commandMoveRight,
+  commandMoveRightWords,
+  commandMoveFirst,
+  commandMoveFirstWords,
+  commandMoveLast,
+  commandMoveLastWords,
+  commandMovePageUp,
+  commandMovePageUpWords,
+  commandMovePageDown,
+  commandMovePageDownWords,
+  commandCancel,
+  commandCancelWords,
+  settingsKeyboardPreset,
+  settingsKeyboardPresetDescription,
+  settingsModelsReset,
+  settingsModelsResetConfirm,
+  settingsModelsResetCancel,
+  settingsModelsResetNote,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -2200,4 +8244,525 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   welcomeBack: [],
   welcomeNext: [],
   welcomeFigure: [],
+  commandCommandsSearch: [],
+  commandFocusMainMessage: [],
+  commandFocusCardReply: [],
+  commandFocusCardReplyWords: [],
+  commandFocusCardBody: [],
+  commandFocusCardActions: [],
+  commandCardsChoice1: [],
+  commandCardsChoice1Words: [],
+  commandCardsChoice2: [],
+  commandCardsChoice2Words: [],
+  commandCardsChoice3: [],
+  commandCardsChoice3Words: [],
+  commandCardsChoice4: [],
+  commandCardsChoice4Words: [],
+  commandRegionsNext: [],
+  commandRegionsPrevious: [],
+  commandComputersPrevious: [],
+  commandComputersNext: [],
+  commandProjectFocusOpen: [],
+  commandProjectFocusOpenWords: [],
+  commandProjectFocusClear: [],
+  commandProjectFocusClearWords: [],
+  commandCardsPrevious: [],
+  commandCardsNext: [],
+  commandCardsMinimize: [],
+  commandCardsDone: [],
+  commandCardsDoneWords: [],
+  commandCardsDecline: [],
+  commandCardsDeclineWords: [],
+  commandCardsMaximize: [],
+  commandCardsMaximizeWords: [],
+  commandCardsNextRevision: [],
+  commandCardsNextRevisionWords: [],
+  commandCardsPointAt: [],
+  commandCardsPointAtWords: [],
+  commandCardsThread: [],
+  commandCardsThreadWords: [],
+  commandCardsThreadNew: [],
+  commandCardsThreadNewWords: [],
+  commandCardsShowInfo: [],
+  commandCardsShowInfoWords: [],
+  commandCardsShowCards: [],
+  commandCardsShowCardsWords: [],
+  commandCardsShowActivity: [],
+  commandCardsShowActivityWords: [],
+  commandCardsShowCrewmate: [],
+  commandCardsShowCrewmateWords: [],
+  commandBrowserControl: [],
+  commandBrowserControlWords: [],
+  commandTaskMoveComputer: [],
+  commandTaskMoveComputerWords: [],
+  commandTaskCloseDone: [],
+  commandTaskCloseDoneWords: [],
+  commandCardsShowBrowser: [],
+  commandCardsShowBrowserWords: [],
+  commandCardsNextTab: [],
+  commandCardsNextTabWords: [],
+  commandCardsPreviousTab: [],
+  commandCardsPreviousTabWords: [],
+  commandSettingsOpen: [],
+  commandSettingsKeyboard: [],
+  commandSettingsPanels: [],
+  commandSettingsPanelsWords: [],
+  commandUpdatesShow: [],
+  commandUpdatesShowWords: [],
+  commandUpdatesLater: [],
+  commandUpdatesLaterWords: [],
+  commandUpdatesCheck: [],
+  commandUpdatesCheckWords: [],
+  commandWhatsNewShow: [],
+  commandWhatsNewShowWords: [],
+  commandFirstmateReply: [],
+  commandFirstmateReplyWords: [],
+  commandSettingsRunbooks: [],
+  commandSettingsRunbooksWords: [],
+  commandRunbooksOpenFolder: [],
+  commandRunbooksOpenFolderWords: [],
+  commandSettingsUsage: [],
+  commandSettingsUsageWords: [],
+  commandSettingsAutomation: [],
+  commandSettingsAutomationWords: [],
+  commandSettingsIntegrations: [],
+  commandSettingsIntegrationsWords: [],
+  commandSettingsSecrets: [],
+  commandSettingsSecretsWords: [],
+  commandAutomationPauseAll: [],
+  commandAutomationPauseAllWords: [],
+  commandUsageUnit: [],
+  commandUsageUnitWords: [],
+  commandAllowanceRecheck: [],
+  commandAllowanceRecheckWords: [],
+  commandDevicesTryAgainWords: [],
+  commandSizeLarger: [],
+  commandSizeSmaller: [],
+  commandSizeReset: [],
+  commandMessageDeleteToLineStart: [],
+  commandMessageDeleteToLineEnd: [],
+  commandMessageDeleteWordBefore: [],
+  commandMessagePutBackDeleted: [],
+  commandMessageRecall: [],
+  commandDevicesTryAgain: [],
+  uiCardMaximize: [],
+  uiCardRestore: [],
+  uiCardStackPrevious: [],
+  uiCardStackNext: [],
+  uiCardStackNew: ["count"],
+  uiPictureViewerDemoFrom: ["title"],
+  uiPictureViewerPicturesFrom: ["title"],
+  uiPictureViewerClose: [],
+  uiPictureViewerActualSize: [],
+  uiPictureViewerPrevious: [],
+  uiPictureViewerNext: [],
+  uiPictureViewerReplay: [],
+  uiPictureViewerStop: [],
+  uiPictureViewerPause: [],
+  uiPictureViewerPlay: [],
+  uiPictureViewerSeek: [],
+  uiPictureViewerSeekValue: ["length", "time"],
+  uiPictureViewerThumb: ["alt", "number"],
+  uiPictureViewerUnplayable: [],
+  uiPictureViewerShownAtOwnSize: [],
+  uiPictureViewerHintOne: ["size"],
+  uiPictureViewerHintOwn: ["size"],
+  uiPictureViewerHintFitted: ["size"],
+  uiCardKindDecision: [],
+  uiCardKindNote: [],
+  uiCardKindAttention: [],
+  uiCardKindTask: [],
+  uiCardTaskRecord: [],
+  uiButtonPending: [],
+  uiConsentNotNow: [],
+  uiTaskFactsProgress: [],
+  uiTaskFactsPlanCount: ["done", "total"],
+  uiTaskFactsPlanSkipped: ["count"],
+  uiTaskFactsFoldedDone: ["count"],
+  uiTaskFactsFoldedMore: ["count"],
+  uiTaskFactsPlanDotsName: ["done", "total"],
+  uiTaskFactsShowEarlier: ["count"],
+  uiTaskFactsSkipped: [],
+  uiTaskFactsAllDone: [],
+  uiTaskFactsBetweenItems: [],
+  uiTaskFactsModel: [],
+  uiTaskFactsReasoning: [],
+  uiTaskFactsChecks: [],
+  uiTaskFactsReview: [],
+  uiTaskFactsReadJustBefore: [],
+  uiTaskFactsReadMinutesBefore: ["minutes"],
+  uiTaskFactsReadHoursBefore: ["hours"],
+  uiTaskFactsReadDaysBefore: ["days"],
+  uiTaskFactsResets: ["when"],
+  uiTaskFactsTask: [],
+  uiTaskFactsProject: [],
+  uiTaskFactsNow: [],
+  uiTaskFactsBrowser: [],
+  uiTaskFactsOpen: [],
+  uiPercentLeft: ["percent"],
+  uiTaskResourceRunUnavailable: ["computer"],
+  uiTaskResourceUse: [],
+  uiTaskResourceRun: [],
+  uiQuotaPaceAhead: [],
+  uiQuotaPaceOnPace: [],
+  uiQuotaPaceBehind: [],
+  uiQuotaLow: [],
+  uiQuotaNoData: [],
+  uiQuotaMeterNameLeft: ["label", "percent"],
+  uiQuotaMeterNameNotRead: ["label"],
+  uiSlotPremium: [],
+  uiSlotHigh: [],
+  uiSlotMedium: [],
+  uiSlotLow: [],
+  uiSubscriptionUnpinModel: [],
+  uiSubscriptionPinModel: [],
+  uiVoiceLevel: [],
+  uiVoiceHint: [],
+  uiVoiceSubmit: [],
+  uiVoiceRemove: ["name"],
+  uiVoiceImage: [],
+  uiVoiceTaskPrompt: [],
+  uiVoiceAbandon: [],
+  uiVoiceAccept: [],
+  refuseACardCoversTheComputers: [],
+  refuseARecordingIsRunning: [],
+  refuseCloseTheOpenDialogFirst: [],
+  refuseCommandSearchIsOpen: [],
+  refuseEveryProjectIsShown: [],
+  refuseInfinitaryCouldNotConfirmHowThisCopy: [],
+  refuseNoCardIsShown: [],
+  refuseNoCardThreadIsReadAboveIts: [],
+  refuseNoReleaseNotesYet: [],
+  refuseNoUpdateIsAvailable: [],
+  refuseNoUpdateIsSavingWorkNow: [],
+  refuseSecretsIsNotInThisBuild: [],
+  refuseSettingsIsAlreadyOpen: [],
+  refuseSettingsIsOpen: [],
+  refuseSettingsIsRecordingAKey: [],
+  refuseSettingsIsWaitingForADictationKey: [],
+  refuseShowABrowserWithControlAvailableFirst: [],
+  refuseShowAStartedTaskThatCanMove: [],
+  refuseShowAStartedTasksRecordFirst: [],
+  refuseThatTabIsAlreadyShown: [],
+  refuseThereIsNoOtherTabToGo: [],
+  refuseThereIsOnlyOneProject: [],
+  refuseTheseAreTheFirstComputers: [],
+  refuseTheseAreTheLastComputers: [],
+  refuseThisCardHasNoDoneOrGot: [],
+  refuseThisCardHasNoButtons: [],
+  refuseThisCardHasNoChangeLinks: [],
+  refuseThisCardHasNoSuchChoice: [],
+  refuseThisCardHasNoSuchTab: [],
+  refuseThisCardHasNoTabs: [],
+  refuseThisCardHasNoThreadYet: [],
+  refuseThisCardHasNoWayToSay: [],
+  refuseThisCardIsNotAboutATask: [],
+  refuseThisCardIsWorking: [],
+  refuseThisCardTakesNoReply: [],
+  refuseThisIsTheFirstCard: [],
+  refuseThisIsTheLastCard: [],
+  refuseYourFirstMateHasNotRepliedYet: [],
+  refuseTabIsOnComputer: ["computer", "tab"],
+  refuseSecretsTab: [],
+  refuseRunbooksFolderOn: ["computer"],
+  refuseDevicesOn: ["home"],
+  cardAnnotationHint: [],
+  cardAnnotationKeys: ["sendKey"],
+  cardAnswersAnswered: ["answered", "total"],
+  cardAnswersPicked: ["answered", "total"],
+  cardAnswersChanged: ["changed", "counted"],
+  cardAskedYouAsked: [],
+  cardAskedYouSaid: [],
+  cardAskedYouChose: [],
+  cardAskedAutomation: [],
+  cardAskedChoseOn: ["card"],
+  cardAskedThrough: ["count"],
+  cardAskedFrom: ["key"],
+  cardAskedShowAll: [],
+  cardAskedShowLess: [],
+  cardAskedPicture: [],
+  cardBodyStopped: [],
+  cardBodyFailed: [],
+  cardBodyFrameTitle: ["title"],
+  cardBodyRetry: [],
+  cardBrowserWord: [],
+  cardThreadRemoveNamed: ["name"],
+  cardThreadRemovePicture: [],
+  cardThreadReplyField: [],
+  cardThreadAddFiles: [],
+  cardThreadLabel: [],
+  cardThreadCollapse: [],
+  cardThreadNoComment: [],
+  cardThreadNoAnswer: [],
+  cardThreadSettingChanged: [],
+  cardThreadSettingAsProposed: [],
+  cardThreadSettingsSent: ["time"],
+  cardThreadSettingsNote: [],
+  cardThreadWhoCaptain: [],
+  cardThreadWhoCrewmate: [],
+  cardThreadWhoFirstmate: [],
+  cardThreadWhoHost: [],
+  cardThreadWorking: [],
+  cardThreadCard: [],
+  cardThreadCardUpdated: [],
+  cardThreadSettingsCount: ["count"],
+  cardThreadMessageCount: ["count"],
+  cardThreadCue: ["count"],
+  cardThreadCueWorking: [],
+  cardThreadNewCount: ["count"],
+  cardThreadJumpNew: ["count"],
+  cardThreadJumpLatest: [],
+  cardThreadCount: ["count"],
+  cardThreadRevisedBy: ["label"],
+  cardThreadWrittenBy: ["label"],
+  cardThreadRevisedByAfterClose: ["label"],
+  cardThreadWrittenByAfterClose: ["label"],
+  cardThreadWrittenAfterClose: [],
+  cardCrewmateSendFailed: [],
+  cardCrewmateSurface: [],
+  cardCrewmateLog: [],
+  cardKnowledgeFindingRef: ["id", "title"],
+  cardKnowledgeConceptRef: ["id", "title"],
+  cardKnowledgeRetired: [],
+  cardPastMark: [],
+  cardPastUnreadable: [],
+  cardPastMeta: [],
+  cardRecordDeliveryDirectPr: [],
+  cardRecordDeliveryQueuePr: [],
+  cardRecordDeliveryLocalOnly: [],
+  cardRecordDeliveryInPlace: [],
+  cardRecordCare: ["care"],
+  cardRecordUnreadable: [],
+  cardRecordChecking: [],
+  cardRecordStillStarting: [],
+  cardRecordDelivery: [],
+  cardRecordRunsOn: [],
+  cardRecordBodyTitle: [],
+  cardRecordSpend: [],
+  cardRecordWhy: [],
+  cardRecordNoReason: [],
+  cardRecordVerdict: ["verdict"],
+  cardRecordNoVerdict: [],
+  cardRecordPartOf: [],
+  cardRecordWaitsOn: [],
+  cardRecordHoldsUp: [],
+  cardRecordParts: [],
+  cardRecordChildrenClosed: ["closed", "total"],
+  cardRecordFiledWhy: [],
+  cardRecordFoldNoPlan: [],
+  cardRecordFoldMessages: ["count"],
+  cardRecordGoal: [],
+  cardRecordNoPlanWhy: [],
+  cardRecordYouSaid: [],
+  cardRecordLoading: [],
+  cardRequiredActionsLead: [],
+  cardRevisedRewritten: ["time"],
+  cardRevisedRevised: ["time"],
+  cardRevisedPartsNew: ["count"],
+  cardRevisedRemoved: ["count"],
+  cardRevisedPartsRemoved: ["count"],
+  cardRevisionLinksUnavailable: [],
+  cardRevisionShowFewer: [],
+  cardRevisionMore: ["count"],
+  cardRevisionAreaGone: [],
+  cardBrowserOpenFailed: ["place"],
+  cardBrowserSurface: [],
+  cardBrowserNone: ["place"],
+  cardBrowserHandFailed: ["place"],
+  cardBrowserBack: [],
+  cardBrowserForward: [],
+  cardBrowserReload: [],
+  cardBrowserMore: [],
+  cardBrowserActualSize: [],
+  cardBrowserFit: [],
+  cardBrowserStop: [],
+  cardBrowserCopyAddress: [],
+  cardBrowserReport: [],
+  cardBrowserManage: [],
+  cardBrowserCheckingSignIn: [],
+  cardBrowserSignInsUnavailable: [],
+  cardBrowserPageYours: ["site"],
+  cardBrowserPageYoursOff: ["off", "site"],
+  cardBrowserPageWatching: ["site"],
+  cardBrowserRecord: [],
+  cardTabStripLabel: [],
+  shellCommandSearchLabel: [],
+  shellCommandSearchList: [],
+  shellCommandSearchNoMatch: [],
+  shellCommandSearchHint: [],
+  shellTranscribeFailed: [],
+  shellMainMessagePickingKey: [],
+  shellMainMessageRecording: [],
+  shellMainMessageConnectFirst: [],
+  shellMainMessageStarting: [],
+  shellComposerNoticeDismiss: [],
+  shellDiagnosticsTurnOff: [],
+  shellDiagnosticsOk: [],
+  shellDiagnosticsSaving: [],
+  shellDiagnosticsRetry: [],
+  shellGateConnecting: ["name"],
+  shellGateTitle: [],
+  shellGateHomeTitle: [],
+  shellGateRecoveryTitle: [],
+  shellGateIntro: [],
+  shellGateStillNeeds: [],
+  shellGateStaysOn: [],
+  shellGateFreshCheckTitle: ["label"],
+  shellGateFreshCheckLine: ["count", "label"],
+  shellGateRunLine: ["computer"],
+  shellGateFreshCheckAction: [],
+  shellGateFreshCheckPending: [],
+  shellPromptTranscribing: [],
+  shellPromptTranscribingShort: [],
+  shellPromptReturnToMessage: ["key"],
+  shellLastTurnWorking: [],
+  shellLastTurnPictureOnly: [],
+  shellConversationHeading: [],
+  shellNextKeysLabel: [],
+  shellNextKeysThen: [],
+  shellNextKeysHint: [],
+  shellProjectPillWords: ["name", "waiting", "working"],
+  shellProjectAll: [],
+  shellProjectShowAll: [],
+  shellProjectFocusRow: [],
+  shellProjectMoreCount: ["count"],
+  shellProjectCloseRow: [],
+  shellProjectFocusPill: ["words"],
+  shellProjectMoreMenu: [],
+  shellReducedMotionLabel: [],
+  shellReducedMotionHeadline: [],
+  shellReducedMotionMateSubject: [],
+  shellReducedMotionMateText: [],
+  shellReducedMotionCrewSubject: [],
+  shellReducedMotionCrewText: [],
+  shellReducedMotionWaveformSubject: [],
+  shellReducedMotionWaveformText: [],
+  shellReducedMotionInterfaceSubject: [],
+  shellReducedMotionInterfaceText: [],
+  shellReducedMotionChangeMac: [],
+  shellReducedMotionChangeLinux: [],
+  shellReplyNoteYou: [],
+  shellReplyNoteFirstMate: [],
+  shellCardShowPanels: [],
+  shellCardResize: [],
+  shellCardTaskRecord: [],
+  shellCardNotesFirst: [],
+  shellCardMateAnswering: [],
+  shellTopBarMinimize: [],
+  shellTopBarRestore: [],
+  shellTopBarMaximize: [],
+  shellTopBarCloseWindow: [],
+  shellTopBarBack: [],
+  shellTopBarSettings: [],
+  shellUpdateStable: [],
+  shellUpdateAlpha: [],
+  shellUpdateAvailable: ["version"],
+  shellUpdateInstalled: ["version"],
+  shellUpdateInstall: [],
+  shellVoiceDownloadFailed: [],
+  shellVoiceMicUnavailable: [],
+  shellVoiceConsent: ["size"],
+  shellVoiceModelSize: [],
+  shellVoiceNotNow: [],
+  shellVoiceDownload: [],
+  shellVoiceDownloading: [],
+  shellVoiceAskingMac: [],
+  shellVoiceAskingDesktop: [],
+  shellVoiceMicOffMac: [],
+  shellVoiceMicOffDesktop: [],
+  shellVoiceClose: [],
+  shellVoiceOpenSettings: [],
+  shellVoiceManaged: [],
+  attachCancelled: ["name"],
+  crewUnavailableComputer: [],
+  crewOrbitLabel: ["idle", "working"],
+  crewModelNames: [],
+  crewProgramsAndParts: [],
+  crewAPart: [],
+  crewOutOfReach: [],
+  crewWorkComputers: [],
+  crewPreviousComputers: [],
+  crewNextComputers: [],
+  crewSummaryReviewing: [],
+  crewSummaryAnotherTask: [],
+  crewSummaryPartOf: [],
+  crewSummaryParts: [],
+  crewSummaryRunning: [],
+  crewSummaryBlockedBy: [],
+  crewPartsCount: ["finished", "running", "waiting"],
+  crewStateWorking: [],
+  crewStateIdle: [],
+  crewFirstmateLabel: ["state"],
+  panelStoppedLine: [],
+  panelBackgroundStopped: [],
+  panelBackgroundExited: [],
+  panelRetry: [],
+  panelBackgroundPaused: [],
+  panelBackgroundUpdate: [],
+  panelCardStopped: [],
+  panelIntegrationAsking: ["action", "place"],
+  panelIntegrationDeclined: ["action", "place"],
+  panelIntegrationAskAgain: [],
+  panelSettingsGeneral: [],
+  panelSettingsAppearance: [],
+  panelSettingsPanels: [],
+  panelSettingsKeyboard: [],
+  panelSettingsProjects: [],
+  panelSettingsIntelligence: [],
+  panelSettingsRunbooks: [],
+  panelSettingsUsage: [],
+  panelSettingsAutomation: [],
+  panelSettingsIntegrations: [],
+  panelSettingsSecrets: [],
+  panelSettingsDevices: [],
+  panelSettingsObserve: [],
+  panelHide: [],
+  panelUnresponsiveLine: [],
+  panelCouldNotOpen: ["failure"],
+  panelCommandRecording: [],
+  panelCommandGone: [],
+  panelCommandHidden: ["title"],
+  panelCommandNothingToShow: ["title"],
+  panelMoveNotAsked: [],
+  panelLineTask: [],
+  panelLineProject: [],
+  panelRailFolded: [],
+  panelRailMore: ["count"],
+  panelSaidLineOpen: ["panelTitle"],
+  panelStillWorking: [],
+  panelExpand: ["title"],
+  panelExpandFolded: ["title"],
+  panelCollapse: ["title"],
+  commandRegionsLeft: [],
+  commandRegionsLeftWords: [],
+  commandRegionsDown: [],
+  commandRegionsDownWords: [],
+  commandRegionsUp: [],
+  commandRegionsUpWords: [],
+  commandRegionsRight: [],
+  commandRegionsRightWords: [],
+  commandMoveLeft: [],
+  commandMoveLeftWords: [],
+  commandMoveDown: [],
+  commandMoveDownWords: [],
+  commandMoveUp: [],
+  commandMoveUpWords: [],
+  commandMoveRight: [],
+  commandMoveRightWords: [],
+  commandMoveFirst: [],
+  commandMoveFirstWords: [],
+  commandMoveLast: [],
+  commandMoveLastWords: [],
+  commandMovePageUp: [],
+  commandMovePageUpWords: [],
+  commandMovePageDown: [],
+  commandMovePageDownWords: [],
+  commandCancel: [],
+  commandCancelWords: [],
+  settingsKeyboardPreset: [],
+  settingsKeyboardPresetDescription: [],
+  settingsModelsReset: [],
+  settingsModelsResetConfirm: [],
+  settingsModelsResetCancel: [],
+  settingsModelsResetNote: [],
 };

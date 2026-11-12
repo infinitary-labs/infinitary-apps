@@ -1,5 +1,5 @@
 import { currentLanguage, languageLocale, regionalLocale } from "./current.ts";
-import { languageFormatTag } from "./languages.ts";
+import { languageFormatTag, SOURCE_LANGUAGE } from "./languages.ts";
 
 /**
  * Numbers, money, dates and plural forms in the app's language
@@ -91,4 +91,19 @@ export function pluralCategory(
     pluralRules.set(locale, rules);
   }
   return rules.select(count);
+}
+
+/**
+ * Items joined as one list in the language's own form: `a, b and c` in
+ * English, as the app has always written them (no comma before the last
+ * word), and `Intl.ListFormat`'s form in any other language. `or` joins
+ * choices: `a, b or c`.
+ */
+export function formatList(items: readonly string[], join: "and" | "or" = "and"): string {
+  if (currentLanguage() !== SOURCE_LANGUAGE) {
+    const type = join === "and" ? "conjunction" : "disjunction";
+    return new Intl.ListFormat(languageLocale(), { style: "long", type }).format(items);
+  }
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} ${join} ${items.at(-1)}`;
 }

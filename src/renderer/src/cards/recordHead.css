@@ -102,7 +102,7 @@
 }
 .fm-task-facts .delivered .basis {
   flex: none;
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--fg-3);
@@ -142,7 +142,7 @@
   width: 5px;
   height: 5px;
   margin: 0 var(--space-2) 2px 1px;
-  border-right: 1px solid currentColor;
+  border-inline-end: 1px solid currentColor;
   border-bottom: 1px solid currentColor;
   transform: rotate(-45deg);
   transition: transform var(--dur-fast) var(--ease-out);
@@ -171,8 +171,8 @@
 }
 .fm-record-fold .words {
   margin: 0;
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--line-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid var(--line-2);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

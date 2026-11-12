@@ -1,5 +1,6 @@
 import type { CenterCue, CrewedWait } from "@shared/dependencyVisual";
 import { type DeviceView, deviceRunsWork } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { Slot } from "@shared/modelSlots";
 import { HERE } from "../../../../shared/deviceNames";
 import { Spring } from "../face";
@@ -194,7 +195,7 @@ export class ComputerOrbits extends CrewOrbit {
     for (const id of this.present()) {
       const computer = this.computerOf(id);
       if (computer !== HOME_COMPUTER && !list.some((d) => d.id === computer))
-        list.push({ id: computer, name: "Unavailable computer", reachable: false });
+        list.push({ id: computer, name: m.crewUnavailableComputer(), reachable: false });
     }
     return [{ id: HOME_COMPUTER, name: this.homeName, reachable: true }, ...list];
   }

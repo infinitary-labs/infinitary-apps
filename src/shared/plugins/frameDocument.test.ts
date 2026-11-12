@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { setCurrentLanguage } from "../i18n/current";
 import { FRAME_CSP } from "./containment";
 import {
   buildFrameDocument,
+  buildPanelDocument,
   cardFrameMountRequestSchema,
   frameMountRequestSchema,
   frameTemplateSchema,
@@ -21,7 +23,7 @@ describe("the frame document", () => {
     });
     const order = [
       "<!doctype html>",
-      '<html data-theme="light">',
+      '<html lang="en" dir="ltr" data-theme="light">',
       '<meta http-equiv="Content-Security-Policy" content="',
       '<meta charset="utf-8">',
       "<title>Observe &quot;dev&quot;</title>",
@@ -44,10 +46,33 @@ describe("the frame document", () => {
   it("marks a card's page held, and no other document (FI3-871)", () => {
     const parts = { csp: FRAME_CSP, theme: "dark" as const, style: "", html: "<p>x</p>" };
     expect(buildFrameDocument({ ...parts, held: true })).toContain(
-      '<html data-theme="dark" data-inf-held>',
+      '<html lang="en" dir="ltr" data-theme="dark" data-inf-held>',
     );
-    expect(buildFrameDocument(parts)).toContain('<html data-theme="dark">');
+    expect(buildFrameDocument(parts)).toContain('<html lang="en" dir="ltr" data-theme="dark">');
     expect(buildFrameDocument(parts)).not.toMatch(/<html[^>]*data-inf-held/);
+  });
+
+  // INF-3674's approved plan: a right-to-left language ships in the first round, so a frame runs the way the window does.
+  it("is born speaking the window's language, running right to left in a right-to-left one", () => {
+    const parts = { csp: FRAME_CSP, theme: "dark" as const, style: "", html: "<p>x</p>" };
+    expect(buildFrameDocument({ ...parts, language: "ar-XB" })).toContain(
+      '<html lang="ar-XB" dir="rtl"',
+    );
+    setCurrentLanguage("ar-XB");
+    try {
+      expect(buildFrameDocument(parts)).toContain('<html lang="ar-XB" dir="rtl"');
+      expect(
+        buildPanelDocument({
+          ...parts,
+          title: "Now",
+          importMap: "{}",
+          config: { module: "x" } as never,
+          bootIntegrity: "sha384-x",
+        }),
+      ).toContain('<html lang="ar-XB" dir="rtl"');
+    } finally {
+      setCurrentLanguage("en");
+    }
   });
 
   it("refuses a template whose text would close its own element early", () => {

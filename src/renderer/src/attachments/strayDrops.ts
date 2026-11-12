@@ -5,7 +5,7 @@
  */
 export function guardStrayFileDrops(target: Window = window): () => void {
   const ignore = (event: DragEvent) => {
-    if (!Array.from(event.dataTransfer?.types ?? []).includes("Files")) return;
+    if (!Array.from(event.dataTransfer?.types ?? []).includes("Files")) return; // i18n-exempt: not shown (a drag data type)
     event.preventDefault();
     if (event.type === "dragover" && event.dataTransfer) event.dataTransfer.dropEffect = "none";
   };

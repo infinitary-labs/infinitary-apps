@@ -160,7 +160,7 @@
   background: transparent;
   padding: var(--space-1);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
 }
 .fm-integration-rule:hover {
   background: var(--bg-3);

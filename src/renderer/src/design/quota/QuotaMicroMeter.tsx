@@ -1,3 +1,5 @@
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useRestLabel } from "../core/restLabel";
 import type { QuotaPace } from "./QuotaMeter";
@@ -36,8 +38,10 @@ export type QuotaMicroMeterProps = {
  */
 export function quotaMeterName(label: string, percentRemaining?: number, resetText?: string) {
   const left =
-    typeof percentRemaining === "number" ? `${Math.round(percentRemaining)}% left` : "not read";
-  return [`${label} ${left}`, resetText].filter(Boolean).join(" · ");
+    typeof percentRemaining === "number"
+      ? m.uiQuotaMeterNameLeft({ label, percent: formatNumber(Math.round(percentRemaining)) })
+      : m.uiQuotaMeterNameNotRead({ label });
+  return [left, resetText].filter(Boolean).join(" · ");
 }
 
 const paceColors: Record<QuotaPace, string> = {

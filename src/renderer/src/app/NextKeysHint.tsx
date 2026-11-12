@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { chordLabel, commandEntry, type NextKey } from "@shared/keyboard";
 import { useEffect, useState } from "react";
 import { thisDesktop } from "../design/core/desktop";
@@ -21,7 +22,7 @@ export function NextKeysHint() {
   return (
     <div
       role="status"
-      aria-label="Next keys"
+      aria-label={m.shellNextKeysLabel()}
       data-next-keys=""
       style={{
         position: "absolute",
@@ -44,7 +45,7 @@ export function NextKeysHint() {
     >
       <span style={{ display: "inline-flex", alignItems: "baseline", gap: "var(--space-2)" }}>
         <KeyCap lit>{chordLabel(first.binding, system)}</KeyCap>
-        <span style={{ color: "var(--fg-3)" }}>then</span>
+        <span style={{ color: "var(--fg-3)" }}>{m.shellNextKeysThen()}</span>
       </span>
       {next.map(({ id, binding }) => (
         <span
@@ -58,8 +59,8 @@ export function NextKeysHint() {
           </span>
         </span>
       ))}
-      <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
-        Esc cancels · another key acts as usual
+      <span style={{ marginInlineStart: "auto", fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
+        {m.shellNextKeysHint()}
       </span>
     </div>
   );

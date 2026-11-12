@@ -1,4 +1,5 @@
 import type { WindowControl, WindowState } from "@shared/channels/shell";
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton } from "../design";
@@ -114,17 +115,17 @@ function WindowControls() {
         } as React.CSSProperties
       }
     >
-      <IconButton label="Minimize" onClick={() => control("minimize")}>
+      <IconButton label={m.shellTopBarMinimize()} onClick={() => control("minimize")}>
         {Ico.minimize}
       </IconButton>
       <IconButton
-        label={state.maximized ? "Restore" : "Maximize"}
+        label={state.maximized ? m.shellTopBarRestore() : m.shellTopBarMaximize()}
         onClick={() => control("maximize")}
       >
         {state.maximized ? Ico.restore : Ico.maximize}
       </IconButton>
       <IconButton
-        label="Close window"
+        label={m.shellTopBarCloseWindow()}
         // Ctrl+W closes the window where the app draws its own buttons (main/keyboard.ts).
         keys="Ctrl+W"
         aria-keyshortcuts="Control+W"
@@ -178,7 +179,7 @@ export function TopBar({ view, onSettings, onBack, backButtonRef }: TopBarProps)
       <div ref={startRef} style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {view === "settings" && (
           <IconButton
-            label="Back"
+            label={m.shellTopBarBack()}
             {...fixedKeys("Escape")}
             onClick={onBack}
             ref={backButtonRef}
@@ -189,7 +190,7 @@ export function TopBar({ view, onSettings, onBack, backButtonRef }: TopBarProps)
         )}
         {view === "settings" && (
           <span style={{ fontSize: "var(--text-base)", color: "var(--fg-1)", fontWeight: 500 }}>
-            Settings
+            {m.shellTopBarSettings()}
           </span>
         )}
         {/* Which Mac this app controls, when it controls another (docs/view.md). */}
@@ -205,7 +206,12 @@ export function TopBar({ view, onSettings, onBack, backButtonRef }: TopBarProps)
         <UpdateIndicator />
         {view !== "settings" && <ReducedMotionIndicator />}
         {view !== "settings" && (
-          <IconButton label="Settings" onClick={onSettings} style={noDrag} {...settingsKeys}>
+          <IconButton
+            label={m.shellTopBarSettings()}
+            onClick={onSettings}
+            style={noDrag}
+            {...settingsKeys}
+          >
             {Ico.gear}
           </IconButton>
         )}

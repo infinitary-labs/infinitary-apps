@@ -1,4 +1,6 @@
 import type { CrewWord } from "@shared/firstRun";
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { Theme } from "@shared/preferences";
 import type React from "react";
 import {
@@ -757,7 +759,10 @@ export function CrewOrbit({
           if (cue.kind === "sendoff") requestCharacterSendoff(cue.dx, cue.dy, cue.strength);
           else requestCharacterReceive();
         }
-        const label = `Crew - ${frame.working} working, ${frame.idle} idle`;
+        const label = m.crewOrbitLabel({
+          working: formatNumber(frame.working),
+          idle: formatNumber(frame.idle),
+        });
         if (label !== ariaRef.current) {
           ariaRef.current = label;
           nearRef.current?.setAttribute("aria-label", label);
@@ -952,7 +957,10 @@ export function CrewOrbit({
         if (cue.kind === "sendoff") requestCharacterSendoff(cue.dx, cue.dy, cue.strength);
         else requestCharacterReceive();
       }
-      const label = `Crew - ${frame.working} working, ${frame.idle} idle`;
+      const label = m.crewOrbitLabel({
+        working: formatNumber(frame.working),
+        idle: formatNumber(frame.idle),
+      });
       if (label !== ariaRef.current) {
         ariaRef.current = label;
         nearRef.current?.setAttribute("aria-label", label);
@@ -1081,12 +1089,12 @@ export function CrewOrbit({
           ref={nearRef}
           data-crew-layer="near"
           role="img"
-          aria-label="Crew - 0 working, 0 idle"
+          aria-label={m.crewOrbitLabel({ working: formatNumber(0), idle: formatNumber(0) })}
           style={layerStyle}
         />
         <fieldset
           className="fm-crew-model-names"
-          aria-label="Crew model names"
+          aria-label={m.crewModelNames()}
           hidden={!singleOrbit && !computers}
         >
           {Object.entries(
@@ -1126,9 +1134,9 @@ export function CrewOrbit({
           ))}
         </fieldset>
         {markIds.length > 0 && (
-          <fieldset className="fm-crew-model-names" aria-label="Programs and their parts">
+          <fieldset className="fm-crew-model-names" aria-label={m.crewProgramsAndParts()}>
             {markIds.map((id) => {
-              const name = facts?.[id]?.task.title ?? facts?.[id]?.task.key ?? "A part";
+              const name = facts?.[id]?.task.title ?? facts?.[id]?.task.key ?? m.crewAPart();
               return (
                 <div
                   className="fm-crew-model-anchor"
@@ -1174,7 +1182,9 @@ export function CrewOrbit({
             style={{ left: 0, top: 0, transform: clusterNameTransform(cluster, extent) }}
           >
             <span>{cluster.name}</span>
-            {!cluster.reachable && <span className="fm-computer-unreachable">Out of reach</span>}
+            {!cluster.reachable && (
+              <span className="fm-computer-unreachable">{m.crewOutOfReach()}</span>
+            )}
           </div>
         ))}
         <div className="fm-crew-state-words" aria-live="off">
@@ -1203,7 +1213,7 @@ export function CrewOrbit({
       {computers && computers.pages > 1 && (
         <nav
           className="fm-computer-pages"
-          aria-label="Work computers"
+          aria-label={m.crewWorkComputers()}
           style={{ top: extent / 2 + Math.min(248, (viewportHeight - CREW_FIT.reservePx) / 2) }}
         >
           <ComputerPageButton
@@ -1211,7 +1221,7 @@ export function CrewOrbit({
             disabled={computers.page === 0 || !interactive}
             onClick={() => computers.setPage(computers.page - 1)}
           >
-            Previous computers
+            {m.crewPreviousComputers()}
           </ComputerPageButton>
           <span>
             {computers.page + 1} / {computers.pages}
@@ -1221,7 +1231,7 @@ export function CrewOrbit({
             disabled={computers.page + 1 === computers.pages || !interactive}
             onClick={() => computers.setPage(computers.page + 1)}
           >
-            Next computers
+            {m.crewNextComputers()}
           </ComputerPageButton>
         </nav>
       )}

@@ -1,6 +1,7 @@
 import { cardCornerOf } from "@shared/cardLeave";
 import { isDrawingSource, withDrawingFaces } from "@shared/cardPictures";
 import { cardTakesReplies } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import type { FramePicture } from "@shared/plugins/bridge";
 import type { DefaultCardSize } from "@shared/preferences";
 import {
@@ -832,7 +833,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   ) => {
     // A held record or past card reads its title rather than carrying it on the stack entry.
     const title = card?.recordTaskId
-      ? (recordTitle ?? "Task record")
+      ? (recordTitle ?? m.shellCardTaskRecord())
       : pastRead?.state === "ready"
         ? pastRead.card.title
         : card?.title;

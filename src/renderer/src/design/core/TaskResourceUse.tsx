@@ -1,4 +1,5 @@
 import { HERE } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import { loadRunWords } from "@shared/load";
 import {
   type ComputerResourcesView,
@@ -60,7 +61,8 @@ export function TaskResourceUse({ taskId }: { taskId: string }) {
       const own = computer.load?.runs.filter((run) => run.taskId === taskId) ?? [];
       const label = computer.computerId === null ? here(HERE.this) : computer.label;
       if (!own.length) return [];
-      if (computer.load?.status !== "fresh") return [`Run status unavailable on ${label}`];
+      if (computer.load?.status !== "fresh")
+        return [m.uiTaskResourceRunUnavailable({ computer: label })];
       return own.map((run) => loadRunWords(run, label));
     }) ?? [];
   const sampled = view?.computers.some(
@@ -74,11 +76,11 @@ export function TaskResourceUse({ taskId }: { taskId: string }) {
   // load line holds for the task beside it.
   return (
     <>
-      <RecordCell label="Use" dim data-task-resource-use="">
+      <RecordCell label={m.uiTaskResourceUse()} dim data-task-resource-use="">
         {use}
       </RecordCell>
       {runs.length > 0 && (
-        <RecordCell label="Run" dim data-task-load="">
+        <RecordCell label={m.uiTaskResourceRun()} dim data-task-load="">
           {runs.join("; ")}
         </RecordCell>
       )}

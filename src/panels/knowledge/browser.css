@@ -36,7 +36,7 @@
 }
 
 .fm-kb-find {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex: 0 1 280px;
   min-width: 160px;
 }
@@ -139,13 +139,13 @@
 }
 
 .fm-kb-inspector {
-  border-left: 1px solid var(--line-1);
+  border-inline-start: 1px solid var(--line-1);
   background: var(--bg-1);
   overflow-x: hidden;
 }
 
 .fm-kb[data-narrow] .fm-kb-inspector {
-  border-left: none;
+  border-inline-start: none;
 }
 
 .fm-kb-pane-head {
@@ -239,7 +239,7 @@
 .fm-kg-empty {
   position: absolute;
   top: var(--space-4);
-  left: var(--space-4);
+  inset-inline-start: var(--space-4);
 }
 
 .fm-kg-drawing {
@@ -453,7 +453,7 @@
   align-items: flex-end;
   gap: 2px;
   flex-shrink: 0;
-  text-align: right;
+  text-align: end;
 }
 
 .fm-kb-chip {
@@ -530,7 +530,7 @@
 .fm-kb-label {
   font-size: var(--text-xs);
   color: var(--fg-3);
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
 }
 
 .fm-kb-linkrow {
@@ -547,7 +547,7 @@
   background: transparent;
   color: var(--fg-1);
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -589,7 +589,7 @@
   max-height: 240px;
   overflow: auto;
   padding: var(--space-2);
-  border-left: 2px solid var(--line-2);
+  border-inline-start: 2px solid var(--line-2);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--fg-2);

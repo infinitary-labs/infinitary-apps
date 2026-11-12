@@ -60,7 +60,7 @@
 }
 
 .reply-note-words {
-  padding-left: calc(var(--text-base) + var(--space-2));
+  padding-inline-start: calc(var(--text-base) + var(--space-2));
   font-size: var(--text-base);
   font-weight: 400;
   line-height: var(--leading-body);

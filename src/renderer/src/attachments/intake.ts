@@ -10,6 +10,7 @@ import {
   sniffImageType,
 } from "@shared/attachments";
 import { type ComposerNotice, FILE_WORDS } from "@shared/composer";
+import * as m from "@shared/i18n/messages.generated";
 import { create } from "zustand";
 import type { ImageAttachment } from "../design/core/ComposerField";
 
@@ -197,7 +198,7 @@ export function cancelPending(key: string, id: string): void {
   cancelled.add(id);
   const name = useIntakeStore.getState().pending[key]?.find((file) => file.id === id)?.name;
   setPending(key, (held) => held.filter((file) => file.id !== id));
-  if (name) say(key, `Cancelled ${name}`);
+  if (name) say(key, m.attachCancelled({ name }));
 }
 
 /** Whether any file is still being prepared for this destination. */

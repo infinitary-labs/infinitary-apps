@@ -574,7 +574,7 @@ function ProjectRow({
           background: "transparent",
           border: "none",
           cursor: "pointer",
-          textAlign: "left",
+          textAlign: "start",
           color: "inherit",
           font: "inherit",
         }}
@@ -894,7 +894,7 @@ function QueueHowTo({ kind }: { kind: ForgeKind | undefined }) {
             <ol
               style={{
                 margin: 0,
-                paddingLeft: "var(--space-4)",
+                paddingInlineStart: "var(--space-4)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "var(--space-1)",

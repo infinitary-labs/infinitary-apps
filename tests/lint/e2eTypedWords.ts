@@ -55,10 +55,17 @@ const WAIVER = /e2e-typed-words:\s*\S/;
  */
 const FRAME_PROGRAM_SPECS = /tests\/e2e\/observe-frame\.spec\.ts$/;
 
-/** The product's typed words: every multi-word string, template part and JSX text under src/. */
+/**
+ * The product's typed words: every multi-word string, template part and JSX
+ * text under src/, and every English message of the catalog
+ * (src/shared/i18n/messages/en.json, docs/i18n.md), where the window's words
+ * now live.
+ */
 export function productWords(src: string): string[] {
   const words = new Set<string>();
   if (!existsSync(src)) return [];
+  for (const phrase of catalogWords(join(src, "shared/i18n/messages/en.json")))
+    if (wordCount(phrase) >= MIN_WORDS) words.add(phrase);
   const files = readdirSync(src, { recursive: true, encoding: "utf8" }).filter(
     (file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file),
   );
@@ -78,6 +85,22 @@ export function productWords(src: string): string[] {
     visit(source);
   }
   return [...words];
+}
+
+/** Each English message's typed runs, split at its placeholders: `Cancel preparing {name}` gives `Cancel preparing`. */
+function catalogWords(path: string): string[] {
+  const text = existsSync(path) ? ts.sys.readFile(path) : undefined;
+  if (text === undefined) return [];
+  const forms = Object.values(
+    JSON.parse(text) as Record<string, string | Record<string, string>>,
+  ).flatMap((message) =>
+    typeof message === "string"
+      ? [message]
+      : Object.entries(message)
+          .filter(([key]) => key !== "plural")
+          .map(([, form]) => form),
+  );
+  return forms.flatMap((form) => form.split(/\{[A-Za-z0-9]+\}/).map(trimPhrase));
 }
 
 /** A stand-in's exported words: the phrase, the constant that owns it and its file. */

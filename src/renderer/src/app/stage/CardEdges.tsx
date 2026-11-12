@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { useRef, useState } from "react";
 import { CARD_DRAG_MIN } from "../../cards/cardGeometry";
 import { useRestLabel } from "../../design";
@@ -33,13 +34,14 @@ export function FoldedRailTabs({
  */
 function RailTab({ side, onShow }: { side: "left" | "right"; onShow: () => void }) {
   const { keys, "aria-keyshortcuts": ariaKeys } = useCommandKeys("cards.thread");
-  const rest = useRestLabel(SHOW_PANELS, { keys });
+  const showPanels = m.shellCardShowPanels();
+  const rest = useRestLabel(showPanels, { keys });
   return (
     <button
       {...rest}
       type="button"
       data-rail-tab={side}
-      aria-label={SHOW_PANELS}
+      aria-label={showPanels}
       aria-keyshortcuts={ariaKeys}
       onClick={onShow}
       style={{
@@ -59,8 +61,6 @@ function RailTab({ side, onShow }: { side: "left" | "right"; onShow: () => void 
     />
   );
 }
-
-const SHOW_PANELS = "Show panels";
 
 /**
  * One end of a maximized card's Tab round: focus that reaches it goes on to
@@ -128,7 +128,7 @@ export function CardEdges({
         key={side}
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize card"
+        aria-label={m.shellCardResize()}
         aria-valuemin={CARD_DRAG_MIN}
         aria-valuemax={max}
         aria-valuenow={Math.round(width)}

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { Slot } from "@shared/modelSlots";
 import type React from "react";
 
@@ -20,11 +21,35 @@ export type BucketBadgeProps = {
  * for it, so it takes the hot family's lava end - an opt-in choice should
  * not look like a routed one.
  */
-const slotMeta: Record<Slot, { label: string; color: string; bars: number }> = {
-  premium: { label: "Premium", color: "var(--slot-premium)", bars: 4 },
-  high: { label: "High", color: "var(--slot-high)", bars: 3 },
-  medium: { label: "Med", color: "var(--slot-medium)", bars: 2 },
-  low: { label: "Low", color: "var(--slot-low)", bars: 1 },
+const slotMeta: Record<Slot, { readonly label: string; color: string; bars: number }> = {
+  premium: {
+    get label() {
+      return m.uiSlotPremium();
+    },
+    color: "var(--slot-premium)",
+    bars: 4,
+  },
+  high: {
+    get label() {
+      return m.uiSlotHigh();
+    },
+    color: "var(--slot-high)",
+    bars: 3,
+  },
+  medium: {
+    get label() {
+      return m.uiSlotMedium();
+    },
+    color: "var(--slot-medium)",
+    bars: 2,
+  },
+  low: {
+    get label() {
+      return m.uiSlotLow();
+    },
+    color: "var(--slot-low)",
+    bars: 1,
+  },
 };
 
 export function SlotBadge({ slot = "medium", style }: SlotBadgeProps) {

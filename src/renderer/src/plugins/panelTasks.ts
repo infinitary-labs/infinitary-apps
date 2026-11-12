@@ -1,4 +1,5 @@
 import { dropTaskReviewSchema, taskLifecycleOpSchema } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import type { PanelMoveResult, PanelTasks } from "@shared/personal/contracts";
 import { z } from "zod";
 
@@ -23,9 +24,12 @@ import { z } from "zod";
 /** The id a panel's or a card's frame moves a task through (`inf.action`). */
 export const PANEL_TASKS_ACTIONS = ["tasks.run", "tasks.pin"] as const;
 
-/** Why a move made without the captain's click or key wrote nothing. */
-export const MOVE_NOT_ASKED =
-  "Only your own click or key in this panel moves a task. Nothing was written.";
+/**
+ * Why a move made without the captain's click or key wrote nothing: worded
+ * when it is answered, as `m.panelMoveNotAsked()`; this is those words as the
+ * process speaks them when the module loads, for the tests that read them.
+ */
+export const MOVE_NOT_ASKED = m.panelMoveNotAsked();
 
 const pinSchema = z.strictObject({
   taskId: z.string().min(1).max(64),
@@ -81,7 +85,7 @@ export function panelTasks(
         const issue = parsed.error.issues[0];
         throw new Error(`tasks.pin: ${issue?.path.join(".") || "pin"}: ${issue?.message}`);
       }
-      if (!(await gate())) return { ok: false, text: MOVE_NOT_ASKED };
+      if (!(await gate())) return { ok: false, text: m.panelMoveNotAsked() };
       try {
         return await pin(
           parsed.data.taskId,
@@ -102,7 +106,7 @@ export function panelTasks(
         const issue = parsed.error.issues[0];
         throw new Error(`tasks.run: ${issue?.path.join(".") || "move"}: ${issue?.message}`);
       }
-      if (!(await gate())) return { ok: false, text: MOVE_NOT_ASKED };
+      if (!(await gate())) return { ok: false, text: m.panelMoveNotAsked() };
       try {
         return await run(
           parsed.data.taskId,

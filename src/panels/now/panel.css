@@ -152,7 +152,7 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: default;
 }
 [data-now-group-header][aria-expanded] {
@@ -174,7 +174,7 @@
   color: var(--fg-3);
 }
 .caret {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: inline-flex;
   align-items: center;
 }
@@ -187,14 +187,14 @@
   box-sizing: border-box;
   margin: 0;
   padding: 5px 6px;
-  padding-left: calc(6px + var(--depth, 0) * 12px);
+  padding-inline-start: calc(6px + var(--depth, 0) * 12px);
   border: none;
   border-radius: var(--radius-s);
   background: transparent;
   color: inherit;
   font: inherit;
   font-weight: 400;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
 }
@@ -322,7 +322,7 @@
   position: absolute;
   /* Centred on the row's first line, so a row with a wait line under its title keeps it clear. */
   top: 5px;
-  right: 4px;
+  inset-inline-end: 4px;
   font-size: var(--text-sm);
   line-height: var(--leading-body);
   height: 1lh;

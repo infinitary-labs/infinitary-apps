@@ -1,5 +1,6 @@
 import type { AccountView } from "@shared/accounts";
 import type { FreshCheck } from "@shared/firstRun";
+import * as m from "@shared/i18n/messages.generated";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import { catalogEntry } from "@shared/providers";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -27,9 +28,9 @@ import {
   freshCheckFailure,
   freshCheckLine,
   freshCheckTitle,
-  GATE_HOME_TITLE,
   GATE_STILL_NEEDS,
   GATE_TITLE,
+  gateHomeTitle,
   gateIntro,
   gateRecoveryTitle,
   gateRunLine,
@@ -265,10 +266,10 @@ export function FirstRunGate() {
           {fresh
             ? freshCheckTitle(fresh.label)
             : view
-              ? GATE_TITLE
+              ? GATE_TITLE()
               : accounts.length > 0
                 ? gateRecoveryTitle()
-                : GATE_HOME_TITLE}
+                : gateHomeTitle()}
         </p>
         {!connecting && view && !fresh && (
           <p className="fm-gate-sub" data-run-line="">
@@ -289,10 +290,10 @@ export function FirstRunGate() {
             <Button
               variant="primary"
               pending={checking}
-              pendingLabel={FRESH_CHECK_PENDING}
+              pendingLabel={FRESH_CHECK_PENDING()}
               onClick={() => checkAgain(fresh)}
             >
-              {FRESH_CHECK_ACTION}
+              {FRESH_CHECK_ACTION()}
             </Button>
           </div>
         )}
@@ -300,7 +301,7 @@ export function FirstRunGate() {
           <p className="fm-gate-sub" data-mac-choice="">
             {accounts.length > 0 ? (
               <>
-                {GATE_STILL_NEEDS}
+                {GATE_STILL_NEEDS()}
                 <br />
                 {gateStaysOn()}
               </>
@@ -332,7 +333,7 @@ export function FirstRunGate() {
         )}
         {connecting && connectingName && !methodChoice && !prompt && !notice && !expired && (
           <p className="fm-gate-sub" data-connecting={connectingName}>
-            Connecting {connectingName}
+            {m.shellGateConnecting({ name: connectingName })}
           </p>
         )}
         {error && (

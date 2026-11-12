@@ -5,6 +5,7 @@ import {
   type PastedText,
   pasteRefusal,
 } from "@shared/composer";
+import * as m from "@shared/i18n/messages.generated";
 import { isPreparing, MAIN_FILES_KEY, whenPrepared } from "../attachments/intake";
 import type { ImageAttachment } from "../design";
 import { changesOff } from "../devices/viewWords";
@@ -14,8 +15,12 @@ import { heldProjectFocus } from "./projectFocus";
 import { isHeldEntry, shownEntry } from "./stack";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 
-/** The voice notice when a recording cannot be turned into words. */
-export const TRANSCRIBE_FAILED = "Could not transcribe that. You can still type.";
+/**
+ * The voice notice when a recording cannot be turned into words, worded as
+ * the module loads (English, before any language is set) for a spec; the
+ * notice itself is worded when it goes up.
+ */
+export const TRANSCRIBE_FAILED = m.shellTranscribeFailed();
 
 /** The main message: what the captain is writing to the Firstmate, and its send (docs/composer.md). */
 export type ComposerSlice = {
@@ -115,10 +120,10 @@ export function mainInputHeld(s: Pick<ShellState, "firstRun" | "firstRunSettled"
 export function mainMessageRefusal(
   s: Pick<ShellState, "recording" | "pickingDictationKey" | "firstRun" | "firstRunSettled">,
 ): string | null {
-  if (s.pickingDictationKey) return "Settings is waiting for a dictation key";
-  if (s.recording) return "A recording is running";
-  if (s.firstRun?.gateOpen === true) return "Connect a subscription first";
-  if (mainInputHeld(s)) return "Infinitary is still starting";
+  if (s.pickingDictationKey) return m.shellMainMessagePickingKey();
+  if (s.recording) return m.shellMainMessageRecording();
+  if (s.firstRun?.gateOpen === true) return m.shellMainMessageConnectFirst();
+  if (mainInputHeld(s)) return m.shellMainMessageStarting();
   return null;
 }
 
@@ -148,7 +153,7 @@ export function transcribeRecording(
     .catch(() => {
       if (!get().dictation?.enabled || !current()) return;
       set({
-        voiceNotice: { kind: "error", message: TRANSCRIBE_FAILED },
+        voiceNotice: { kind: "error", message: m.shellTranscribeFailed() },
       });
     })
     .finally(() => {

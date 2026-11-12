@@ -1,4 +1,5 @@
 import { type TaskCostView, taskCostWords } from "@shared/costLimit";
+import * as m from "@shared/i18n/messages.generated";
 import { useRestLabel } from "../design/core/restLabel";
 import { RecordCell } from "../design/core/TaskFacts";
 
@@ -12,7 +13,7 @@ export function RecordCost({ cost }: { cost: TaskCostView }) {
   const words = taskCostWords(cost);
   const rest = useRestLabel(words.detail, { fact: true });
   return (
-    <RecordCell label="Spend">
+    <RecordCell label={m.cardRecordSpend()}>
       <span
         data-record-cost=""
         role="img"

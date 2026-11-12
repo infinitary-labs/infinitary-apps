@@ -1,5 +1,6 @@
 import { answerDoneRest, DECLINE_LABEL } from "@shared/cardLeave";
 import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import {
   computerMoveLine,
   MOVE_LABELS,
@@ -114,7 +115,7 @@ export function RecordPaneChrome({
         >
           <Badge tone={pillTone} dot={false}>
             {reading && <TaskStatusMark reading={reading} nativeTitle={false} />}
-            {reading?.word ?? "Loading"}
+            {reading?.word ?? m.cardRecordLoading()}
           </Badge>
         </span>
         {reading?.reason && (
@@ -142,7 +143,7 @@ export function RecordPaneChrome({
         )}
         {/* One wrapper whether or not the pin shows, so the corner's Hide is
             never remounted when the record's facts load and a press holds. */}
-        <span style={{ display: "inline-flex", alignItems: "center", marginLeft: "auto" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", marginInlineStart: "auto" }}>
           {pin && taskKey ? (
             <IconButton
               label={pinActionLabel(pin.pinned, taskKey)}

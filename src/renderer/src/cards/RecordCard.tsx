@@ -1,4 +1,5 @@
 import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { isSafeCardHref } from "@shared/linkify";
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import { recordBarOf } from "@shared/recordBar";
@@ -83,10 +84,18 @@ function recordWords(detail: TaskDetail | null, parentKey: string | undefined): 
 const WORDS_SECTION = "words";
 
 const DELIVERY_WORDS: Record<string, string> = {
-  "direct-pr": "Pull request",
-  "queue-pr": "Batched pull request",
-  "local-only": "Local merge",
-  "in-place": "Built in place",
+  get "direct-pr"() {
+    return m.cardRecordDeliveryDirectPr();
+  },
+  get "queue-pr"() {
+    return m.cardRecordDeliveryQueuePr();
+  },
+  get "local-only"() {
+    return m.cardRecordDeliveryLocalOnly();
+  },
+  get "in-place"() {
+    return m.cardRecordDeliveryInPlace();
+  },
 };
 
 /**
@@ -100,7 +109,7 @@ function deliveryWordsOf(detail: TaskDetail): string {
   const care = detail.policies?.rigor.value ?? detail.rigor;
   return [
     ...(mode ? [DELIVERY_WORDS[mode] ?? mode] : []),
-    ...(care ? [`${CARE_WORDS[care] ?? care} care`] : []),
+    ...(care ? [m.cardRecordCare({ care: CARE_WORDS[care] ?? care })] : []),
   ].join(" · ");
 }
 
@@ -260,7 +269,7 @@ export function RecordCard({
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [shown?.startAttempt?.phase, shown?.activity, shown?.answerNoteId]);
-  const meta = shown ? shown.key : unreadable ? "this record could not be read" : "";
+  const meta = shown ? shown.key : unreadable ? m.cardRecordUnreadable() : "";
   // The crew summary's projection of the same read, so both say the same.
   const facts = useMemo(() => {
     if (!shown) return null;
@@ -273,11 +282,11 @@ export function RecordCard({
       shown.startAttempt?.since ?? (shown.activity === "starting" ? shown.startedAt : null);
     const reason =
       shown.startAttempt?.phase === "checking"
-        ? "Checking whether it started"
+        ? m.cardRecordChecking()
         : since != null &&
             clock - since >= 15_000 &&
             (shown.startAttempt?.phase === "preparing" || shown.activity === "starting")
-          ? "Still starting. You can keep working."
+          ? m.cardRecordStillStarting()
           : // Could not start is said beside Try again, in the bar.
             shown.startNotice
             ? ""
@@ -398,12 +407,12 @@ export function RecordCard({
                 more={
                   <>
                     {deliveryWordsOf(shown) && (
-                      <RecordCell label="Delivery" data-record-cell="delivery">
+                      <RecordCell label={m.cardRecordDelivery()} data-record-cell="delivery">
                         {deliveryWordsOf(shown)}
                       </RecordCell>
                     )}
                     {shown.runsOn && (
-                      <RecordCell label="Runs on" data-record-cell="runs-on">
+                      <RecordCell label={m.cardRecordRunsOn()} data-record-cell="runs-on">
                         {shown.runsOn.label}
                       </RecordCell>
                     )}
@@ -426,7 +435,7 @@ export function RecordCard({
               setUnreadable(true);
               onDrawn();
             }}
-            title="Task record body"
+            title={m.cardRecordBodyTitle()}
             template={template}
             spec={{
               pluginId: BUILTIN_PLUGIN_ID,

@@ -299,7 +299,7 @@ function EventCatalog() {
               <div
                 key={field}
                 data-sharing-catalog-field={field}
-                style={{ ...viewerNote, fontFamily: "var(--font-mono)", paddingLeft: 12 }}
+                style={{ ...viewerNote, fontFamily: "var(--font-mono)", paddingInlineStart: 12 }}
               >
                 {field}: {fieldSpec.type === "enum" ? fieldSpec.values.join(" | ") : fieldSpec.type}
               </div>

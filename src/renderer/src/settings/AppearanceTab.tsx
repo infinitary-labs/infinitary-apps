@@ -157,9 +157,7 @@ export function AppearanceTab() {
                   onChange={(event) => setWashStrength(Number(event.target.value))}
                   style={{ accentColor: "var(--accent)" }}
                 />
-                <span
-                  style={{ minWidth: "3ch", textAlign: "right", fontFamily: "var(--font-mono)" }}
-                >
+                <span style={{ minWidth: "3ch", textAlign: "end", fontFamily: "var(--font-mono)" }}>
                   {washStrength}%
                 </span>
               </label>

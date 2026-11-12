@@ -44,7 +44,7 @@ describe("FrameMountRegistry", () => {
     const bridgeAt = body.indexOf(`<script>${FRAME_BRIDGE_SCRIPT}</script>`);
     expect(bridgeAt).toBeGreaterThan(-1);
     expect(body.indexOf("<main data-probe>")).toBeGreaterThan(bridgeAt);
-    expect(served?.body).toContain('<html data-theme="dark">');
+    expect(served?.body).toContain('<html lang="en" dir="ltr" data-theme="dark">');
     expect(served?.body).toContain("<title>Probe</title>");
     // The document's own meta carries the same policy as the header will.
     expect(served?.body).toContain(`content="${served?.csp.replaceAll('"', "&quot;")}"`);
@@ -123,7 +123,9 @@ describe("FrameMountRegistry", () => {
     expect(mounts.cardDocument("c1")?.csp).toBe(frameCsp([scriptHash(script)]));
     expect(mounts.cardDocument("c1")?.body).toContain(`<script>${script}</script>`);
     // Its page is born held: its own script waits until the card is shown (FI3-871).
-    expect(mounts.cardDocument("c1")?.body).toContain('<html data-theme="dark" data-inf-held>');
+    expect(mounts.cardDocument("c1")?.body).toContain(
+      '<html lang="en" dir="ltr" data-theme="dark" data-inf-held>',
+    );
     // The bridge is the only script the host adds.
     expect(mounts.cardDocument("c1")?.body.match(/<script>/g)).toHaveLength(2);
     // A card id never answers as a template, nor a template id as a card.

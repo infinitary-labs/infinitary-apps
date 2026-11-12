@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { Theme } from "@shared/preferences";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
@@ -1548,7 +1549,7 @@ export function Firstmate({
     };
     drawnRef.current = drawn;
     // The state name stays current while faded: it is the signal, not the paint.
-    const label = `First mate - ${snap.state}`;
+    const label = m.crewFirstmateLabel({ state: snap.state });
     if (canvas.getAttribute("aria-label") !== label) canvas.setAttribute("aria-label", label);
     // Faded behind the card stack: keep the machine, skip the canvas drawing.
     if (skipHiddenPaint(pictureRef.current)) return;
@@ -1625,7 +1626,7 @@ export function Firstmate({
     <canvas
       ref={ref}
       role="img"
-      aria-label="First mate - idle"
+      aria-label={m.crewFirstmateLabel({ state: "idle" })}
       style={{ width: size, height: size, display: "block", ...style }}
     />
   );

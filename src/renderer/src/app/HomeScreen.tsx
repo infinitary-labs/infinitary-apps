@@ -19,7 +19,7 @@ export const HomeScreen = memo(function HomeScreen() {
   if (showCards && !layerUp) setLayerUp(true);
   const emptied = useCallback(() => setLayerUp(false), []);
   const listening = useListening();
-  const screenLabel = showCards ? "Working" : listening ? "Listening" : "Null state";
+  const screenLabel = showCards ? "Working" : listening ? "Listening" : "Null state"; // i18n-exempt: not shown, screen name for the design tools
   return (
     <div
       data-screen-label={screenLabel}

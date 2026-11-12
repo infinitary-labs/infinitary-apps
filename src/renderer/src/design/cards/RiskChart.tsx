@@ -251,7 +251,7 @@ export function RiskChart({ risk }: { risk: RiskAssessment }) {
             fontSize: "var(--text-sm)",
             lineHeight: 1.35,
             color: "var(--fg-2)",
-            textAlign: "left",
+            textAlign: "start",
             whiteSpace: "normal",
             letterSpacing: "normal",
             fontWeight: 400,

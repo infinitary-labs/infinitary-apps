@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { Badge, type BadgeTone } from "../core/Badge";
 import { QuotaMeter, type QuotaPace } from "./QuotaMeter";
@@ -104,9 +105,9 @@ export function SubscriptionCard({
             paddingTop: 12,
           }}
         >
-          {models.map((m) => (
+          {models.map((model) => (
             <div
-              key={m.label}
+              key={model.label}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -117,8 +118,8 @@ export function SubscriptionCard({
               {onToggleModel ? (
                 <button
                   type="button"
-                  onClick={() => onToggleModel(m.label)}
-                  title={m.override ? "Unpin model" : "Pin model"}
+                  onClick={() => onToggleModel(model.label)}
+                  title={model.override ? m.uiSubscriptionUnpinModel() : m.uiSubscriptionPinModel()}
                   style={{
                     background: "transparent",
                     border: "none",
@@ -126,25 +127,25 @@ export function SubscriptionCard({
                     cursor: "pointer",
                     fontFamily: "var(--font-mono)",
                     fontSize: "var(--text-sm)",
-                    color: m.override ? "var(--accent)" : "var(--fg-2)",
+                    color: model.override ? "var(--accent)" : "var(--fg-2)",
                   }}
                 >
-                  {m.label}
-                  {m.override ? " ✱" : ""}
+                  {model.label}
+                  {model.override ? " ✱" : ""}
                 </button>
               ) : (
                 <span
                   style={{
                     fontFamily: "var(--font-mono)",
                     fontSize: "var(--text-sm)",
-                    color: m.override ? "var(--accent)" : "var(--fg-2)",
+                    color: model.override ? "var(--accent)" : "var(--fg-2)",
                   }}
                 >
-                  {m.label}
-                  {m.override ? " ✱" : ""}
+                  {model.label}
+                  {model.override ? " ✱" : ""}
                 </span>
               )}
-              <SlotBadge slot={m.slot} />
+              <SlotBadge slot={model.slot} />
             </div>
           ))}
         </div>

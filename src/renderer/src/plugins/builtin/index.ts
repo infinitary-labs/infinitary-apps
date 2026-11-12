@@ -280,6 +280,7 @@ function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
  */
 export function startGatedPanels(host: PluginHost): () => void {
   let stopped = false;
+  // i18n-exempt: not shown (names a panel in a console line)
   const knowledgeGate = gateHolder(host, "knowledge", "Knowledge");
   let asking = false;
   let again = false;
@@ -329,6 +330,7 @@ export function startGatedPanels(host: PluginHost): () => void {
       ask();
   });
 
+  // i18n-exempt: not shown (names a panel in a console line)
   const automationGate = gateHolder(host, "automation", "Automation");
   const offRules = appReadExecutor().subscribe(
     "automation.list",

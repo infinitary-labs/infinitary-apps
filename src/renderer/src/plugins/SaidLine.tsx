@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { PanelSummaryLine } from "@shared/personal/contracts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FeedLine } from "../design";
@@ -196,7 +197,7 @@ function Row({
       type="button"
       // Named for what it does, so it never collides with a control that
       // shares a word with the line; the line itself is its description.
-      aria-label={leaving ? undefined : `Open ${panelTitle}`}
+      aria-label={leaving ? undefined : m.panelSaidLineOpen({ panelTitle: String(panelTitle) })}
       aria-description={leaving ? undefined : words}
       aria-hidden={leaving || undefined}
       tabIndex={leaving ? -1 : undefined}
@@ -240,7 +241,7 @@ function Row({
         padding: 0,
         font: "inherit",
         color: "inherit",
-        textAlign: "left",
+        textAlign: "start",
         cursor: "pointer",
         display: "block",
         width: "100%",

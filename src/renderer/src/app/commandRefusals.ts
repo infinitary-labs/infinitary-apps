@@ -1,4 +1,5 @@
 import { cardTakesReplies } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import {
   type CARD_CHOICE_COMMANDS,
   isPanelCommandId,
@@ -89,16 +90,10 @@ export type WindowFacts = {
   panelCommand?: (id: PanelCommandId, recording: boolean) => string | null;
 };
 
-const NO_CARD = "No card is shown";
-const IN_SETTINGS = "Settings is open";
-const RECORDING = "A recording is running";
-
 function cardRefusal(s: RefusalState): string | null {
-  if (s.view !== "home") return IN_SETTINGS;
-  return shownEntry(s) ? null : NO_CARD;
+  if (s.view !== "home") return m.refuseSettingsIsOpen();
+  return shownEntry(s) ? null : m.refuseNoCardIsShown();
 }
-
-const NOT_ABOUT_A_TASK = "This card is not about a task";
 
 /**
  * Show Info, Show Cards, Show Activity, Show Crewmate or Show Browser on a
@@ -112,10 +107,10 @@ const NOT_ABOUT_A_TASK = "This card is not about a task";
  */
 function cardTabRefusal(entry: StackEntry, command: TabCommand): string {
   const wanted = tabKindOf(command);
-  if (!wanted) return "This card has no tabs";
+  if (!wanted) return m.refuseThisCardHasNoTabs();
   const task = cardTaskOf(entry);
-  if (!task) return NOT_ABOUT_A_TASK;
-  if (wanted === "crewmate" && !hasCrewmateTab(task)) return "This card has no such tab";
+  if (!task) return m.refuseThisCardIsNotAboutATask();
+  if (wanted === "crewmate" && !hasCrewmateTab(task)) return m.refuseThisCardHasNoSuchTab();
   return "";
 }
 
@@ -128,18 +123,19 @@ function tabRefusal(s: RefusalState, command: TabCommand): string | null {
   const taskId = entry && tabTaskOf(entry);
   const kind = entry && tabShownOf(entry);
   const handle = taskId && kind ? shownTaskTabs(taskId, kind) : undefined;
-  if (!handle) return "This card has no tabs";
+  if (!handle) return m.refuseThisCardHasNoTabs();
   if (tabTargetOf(command, handle) !== null) return null;
   const wanted = tabKindOf(command);
-  if (!wanted) return "There is no other tab to go to";
+  if (!wanted) return m.refuseThereIsNoOtherTabToGo();
   return handle.tabs.some((tab) => tab.kind === wanted)
-    ? "That tab is already shown"
-    : "This card has no such tab";
+    ? m.refuseThatTabIsAlreadyShown()
+    : m.refuseThisCardHasNoSuchTab();
 }
 
 /** A tab that is the other computer's alone. */
-function refusedOnAView(tab: string): (s: RefusalState) => string | null {
-  return (s) => (isView(s.thisMac) ? `${tab} is on ${s.thisMac.name}` : null);
+function refusedOnAView(tab: () => string): (s: RefusalState) => string | null {
+  return (s) =>
+    isView(s.thisMac) ? m.refuseTabIsOnComputer({ tab: tab(), computer: s.thisMac.name }) : null;
 }
 
 /** What a first mate on an older version cannot answer from here. */
@@ -153,22 +149,22 @@ function pageRefusal(s: RefusalState, dir: 1 | -1): string | null {
   if (refused) return refused;
   const count = stackOf(s).length;
   const index = Math.min(Math.max(0, s.cardIndex), count - 1);
-  if (dir === -1 && index <= 0) return "This is the first card";
-  if (dir === 1 && index >= count - 1) return "This is the last card";
+  if (dir === -1 && index <= 0) return m.refuseThisIsTheFirstCard();
+  if (dir === 1 && index >= count - 1) return m.refuseThisIsTheLastCard();
   return null;
 }
 
 /** Why a shown-card choice key cannot press its button now. */
 function choiceRefusal(s: RefusalState, index: number): string | null {
-  if (s.view !== "home") return IN_SETTINGS;
-  if (s.recording) return RECORDING;
+  if (s.view !== "home") return m.refuseSettingsIsOpen();
+  if (s.recording) return m.refuseARecordingIsRunning();
   const entry = shownEntry(s);
-  if (!entry) return NO_CARD;
+  if (!entry) return m.refuseNoCardIsShown();
   // A live note's one button counts as its only choice (INF-2794).
   const choices = entry.actions.length || ("noteDone" in entry && entry.noteDone ? 1 : 0);
-  if (isHeldEntry(entry) || choices === 0) return "This card has no buttons";
-  if (index >= choices) return "This card has no such choice";
-  if (s.pendingCardActions[entry.id]) return "This card is working";
+  if (isHeldEntry(entry) || choices === 0) return m.refuseThisCardHasNoButtons();
+  if (index >= choices) return m.refuseThisCardHasNoSuchChoice();
+  if (s.pendingCardActions[entry.id]) return m.refuseThisCardIsWorking();
   if (changesOff(s.thisMac) && isView(s.thisMac)) return changesOffWords(s.thisMac);
   return null;
 }
@@ -194,79 +190,81 @@ const REFUSALS: Readonly<
   "commands.search": () => null,
   "focus.main-message": mainMessageRefusal,
   "focus.card-reply": (s) => {
-    if (s.recording) return RECORDING;
+    if (s.recording) return m.refuseARecordingIsRunning();
     const entry = shownEntry(s);
-    if (!entry) return NO_CARD;
-    return isHeldEntry(entry) || !cardTakesReplies(entry) ? "This card takes no reply" : null;
+    if (!entry) return m.refuseNoCardIsShown();
+    return isHeldEntry(entry) || !cardTakesReplies(entry) ? m.refuseThisCardTakesNoReply() : null;
   },
   // The shown entry's body: a card's, a task's record or a past card.
   "focus.card-body": (s) => {
-    if (s.recording) return RECORDING;
-    return shownEntry(s) ? null : NO_CARD;
+    if (s.recording) return m.refuseARecordingIsRunning();
+    return shownEntry(s) ? null : m.refuseNoCardIsShown();
   },
   // Only a live card has buttons, and none while it is still being written.
   "focus.card-actions": (s, facts) => {
-    if (s.recording) return RECORDING;
+    if (s.recording) return m.refuseARecordingIsRunning();
     if (facts.answerDoneReady) return null;
     const entry = shownEntry(s);
-    if (!entry) return NO_CARD;
-    if (isHeldEntry(entry) || entry.actions.length === 0) return "This card has no buttons";
+    if (!entry) return m.refuseNoCardIsShown();
+    if (isHeldEntry(entry) || entry.actions.length === 0) return m.refuseThisCardHasNoButtons();
     return null;
   },
   // The shown card's choices: the default, then right to left. A press is the button's click.
   ...choiceRefusals(),
   // Moving between the window's parts changes nothing but focus; a
   // recording keeps it where its words will go.
-  "regions.next": (s) => (s.recording ? RECORDING : null),
-  "regions.previous": (s) => (s.recording ? RECORDING : null),
-  "regions.left": (s) => (s.recording ? RECORDING : null),
-  "regions.down": (s) => (s.recording ? RECORDING : null),
-  "regions.up": (s) => (s.recording ? RECORDING : null),
-  "regions.right": (s) => (s.recording ? RECORDING : null),
+  "regions.next": (s) => (s.recording ? m.refuseARecordingIsRunning() : null),
+  "regions.previous": (s) => (s.recording ? m.refuseARecordingIsRunning() : null),
+  "regions.left": (s) => (s.recording ? m.refuseARecordingIsRunning() : null),
+  "regions.down": (s) => (s.recording ? m.refuseARecordingIsRunning() : null),
+  "regions.up": (s) => (s.recording ? m.refuseARecordingIsRunning() : null),
+  "regions.right": (s) => (s.recording ? m.refuseARecordingIsRunning() : null),
   "computers.previous": (s, facts) =>
     s.view !== "home"
-      ? IN_SETTINGS
+      ? m.refuseSettingsIsOpen()
       : shownEntry(s)
-        ? "A card covers the computers"
+        ? m.refuseACardCoversTheComputers()
         : !facts.computers || facts.computers.page === 0
-          ? "These are the first computers"
+          ? m.refuseTheseAreTheFirstComputers()
           : null,
   "computers.next": (s, facts) =>
     s.view !== "home"
-      ? IN_SETTINGS
+      ? m.refuseSettingsIsOpen()
       : shownEntry(s)
-        ? "A card covers the computers"
+        ? m.refuseACardCoversTheComputers()
         : !facts.computers || facts.computers.page + 1 >= facts.computers.pages
-          ? "These are the last computers"
+          ? m.refuseTheseAreTheLastComputers()
           : null,
   "project-focus.open": (s, facts) =>
     s.view !== "home"
-      ? IN_SETTINGS
+      ? m.refuseSettingsIsOpen()
       : !facts.projectFocus?.shown
-        ? "There is only one project"
+        ? m.refuseThereIsOnlyOneProject()
         : null,
   "project-focus.clear": (_s, facts) =>
-    facts.projectFocus?.focus ? null : "Every project is shown",
+    facts.projectFocus?.focus ? null : m.refuseEveryProjectIsShown(),
   "cards.previous": (s) => pageRefusal(s, -1),
   "cards.next": (s) => pageRefusal(s, 1),
   "cards.minimize": cardRefusal,
   "cards.done": (s, facts) =>
-    cardRefusal(s) ?? (facts.answerDoneReady ? null : "This card has no Done or Got it"),
+    cardRefusal(s) ?? (facts.answerDoneReady ? null : m.refuseThisCardHasNoDoneOrGot()),
   "cards.decline": (s, facts) =>
-    cardRefusal(s) ?? (facts.declineReady ? null : "This card has no way to say no"),
+    cardRefusal(s) ?? (facts.declineReady ? null : m.refuseThisCardHasNoWayToSay()),
   "cards.maximize": cardRefusal,
   // A thread exists once its first message is sent; a recording keeps focus
   // where its words will go.
   "cards.next-revision": (s) => {
     const refused = cardRefusal(s);
     if (refused) return refused;
-    if (s.recording) return RECORDING;
+    if (s.recording) return m.refuseARecordingIsRunning();
     const entry = shownEntry(s);
     return entry &&
       !isHeldEntry(entry) &&
-      s.threads[entry.id]?.some((m) => m.revision?.released && m.revision.targets.length)
+      s.threads[entry.id]?.some(
+        (message) => message.revision?.released && message.revision.targets.length,
+      )
       ? null
-      : "This card has no change links";
+      : m.refuseThisCardHasNoChangeLinks();
   },
   "cards.show-info": (s) => tabRefusal(s, "cards.show-info"),
   "cards.show-cards": (s) => tabRefusal(s, "cards.show-cards"),
@@ -276,14 +274,14 @@ const REFUSALS: Readonly<
   // off for the same reason as every other button there.
   "browser.control": (s, facts) =>
     !facts.browserControl
-      ? "Show a browser with control available first"
+      ? m.refuseShowABrowserWithControlAvailableFirst()
       : changesOff(s.thisMac) && isView(s.thisMac)
         ? changesOffWords(s.thisMac)
         : null,
   "task.move-computer": (_s, facts) =>
-    facts.taskMove ? null : "Show a started task that can move to another computer first",
+    facts.taskMove ? null : m.refuseShowAStartedTaskThatCanMove(),
   "task.close-done": (_s, facts) =>
-    facts.taskCloseDone ? null : "Show a started task's record first",
+    facts.taskCloseDone ? null : m.refuseShowAStartedTasksRecordFirst(),
   "cards.show-browser": (s) => tabRefusal(s, "cards.show-browser"),
   "cards.next-tab": (s) => tabRefusal(s, "cards.next-tab"),
   "cards.previous-tab": (s) => tabRefusal(s, "cards.previous-tab"),
@@ -292,43 +290,45 @@ const REFUSALS: Readonly<
     if (refused) return refused;
     const entry = shownEntry(s);
     return !entry || isHeldEntry(entry) || !cardTakesReplies(entry)
-      ? "This card takes no reply"
+      ? m.refuseThisCardTakesNoReply()
       : null;
   },
   "cards.thread": (s) => {
     const refused = cardRefusal(s);
     if (refused) return refused;
-    if (s.recording) return RECORDING;
+    if (s.recording) return m.refuseARecordingIsRunning();
     const entry = shownEntry(s);
-    if (!entry || isHeldEntry(entry) || !cardTakesReplies(entry)) return "This card takes no reply";
+    if (!entry || isHeldEntry(entry) || !cardTakesReplies(entry))
+      return m.refuseThisCardTakesNoReply();
     return (s.threads[entry.id]?.length ?? 0) + (s.replyNotes?.[entry.id]?.length ?? 0) > 0
       ? null
-      : "This card has no thread yet";
+      : m.refuseThisCardHasNoThreadYet();
   },
   "cards.thread-new": (s, facts) => {
     const refused = cardRefusal(s);
     if (refused) return refused;
-    return facts.threadJump ? null : "No card thread is read above its latest message";
+    return facts.threadJump ? null : m.refuseNoCardThreadIsReadAboveIts();
   },
-  "settings.open": (s) => (s.view === "settings" ? "Settings is already open" : null),
+  "settings.open": (s) => (s.view === "settings" ? m.refuseSettingsIsAlreadyOpen() : null),
   // From anywhere, Settings included: it goes to the Keyboard tab.
   "settings.keyboard": () => null,
   // On a Mac that controls another, its own arrangement (docs/view.md).
   "settings.panels": () => null,
   // From anywhere, Settings included: it goes home to the note.
-  "updates.show": (_s, facts) => (facts.updateAvailable ? null : "No update is available"),
+  "updates.show": (_s, facts) => (facts.updateAvailable ? null : m.refuseNoUpdateIsAvailable()),
   // Only while an update saves work: once the copy is replaced, it cannot wait.
-  "updates.later": (_s, facts) => (facts.savingForUpdate ? null : "No update is saving work now"),
+  "updates.later": (_s, facts) =>
+    facts.savingForUpdate ? null : m.refuseNoUpdateIsSavingWorkNow(),
   // From anywhere, Settings included: it goes to General and checks there.
   "updates.check": (_s, facts) =>
-    facts.checksUpdates ? null : "Infinitary could not confirm how this copy was installed",
+    facts.checksUpdates ? null : m.refuseInfinitaryCouldNotConfirmHowThisCopy(),
   "whats-new.show": (s) =>
-    s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : "No release notes yet",
+    s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : m.refuseNoReleaseNotesYet(),
   // From anywhere, Settings included: it goes home to the note.
-  "firstmate.reply": (s) => (s.lastTurn?.reply ? null : "Your first mate has not replied yet"),
+  "firstmate.reply": (s) => (s.lastTurn?.reply ? null : m.refuseYourFirstMateHasNotRepliedYet()),
   "settings.runbooks": () => null,
   "runbooks.open-folder": (s) =>
-    isView(s.thisMac) ? `Your runbooks folder is on ${s.thisMac.name}` : null,
+    isView(s.thisMac) ? m.refuseRunbooksFolderOn({ computer: s.thisMac.name }) : null,
   // Usage is the record of the Mac Firstmate lives on (docs/usage.md).
   "settings.usage": () => null,
   // Automation is the home's, like Usage, and a view shows it (docs/automation.md).
@@ -338,13 +338,14 @@ const REFUSALS: Readonly<
   // Secrets stay the home's own (docs/secrets.md), and a build without
   // protected storage has no Secrets at all.
   "settings.secrets": (s) =>
-    refusedOnAView("Secrets")(s) ?? (s.secretsShown ? null : "Secrets is not in this build"),
+    refusedOnAView(m.refuseSecretsTab)(s) ??
+    (s.secretsShown ? null : m.refuseSecretsIsNotInThisBuild()),
   "automation.pause-all": () => null,
   "usage.unit": refusedUntilUpdate,
   // The allowance is read where the first mate lives, from any Mac.
   "allowance.recheck": refusedUntilUpdate,
   // The first mate's devices, from its window or a view of it (docs/devices.md).
-  "devices.try-again": (s) => (s.devicesShown ? null : `Devices is on ${HOME.the}`),
+  "devices.try-again": (s) => (s.devicesShown ? null : m.refuseDevicesOn({ home: HOME.the })),
 };
 
 /**
@@ -359,10 +360,10 @@ export function commandRefusal(
   facts: WindowFacts,
 ): string | null {
   if (!isPanelCommandId(id) && !isShellCommand(id)) return null;
-  if (s.pickingDictationKey) return "Settings is waiting for a dictation key";
-  if (s.recordingKeys) return "Settings is recording a key";
-  if (id !== "commands.search" && s.commandSearchOpen) return "Command search is open";
-  if (!s.commandSearchOpen && facts.dialogOpen) return "Close the open dialog first";
+  if (s.pickingDictationKey) return m.refuseSettingsIsWaitingForADictationKey();
+  if (s.recordingKeys) return m.refuseSettingsIsRecordingAKey();
+  if (id !== "commands.search" && s.commandSearchOpen) return m.refuseCommandSearchIsOpen();
+  if (!s.commandSearchOpen && facts.dialogOpen) return m.refuseCloseTheOpenDialogFirst();
   if (isPanelCommandId(id)) return facts.panelCommand?.(id, s.recording) ?? null;
   return REFUSALS[id](s, facts);
 }

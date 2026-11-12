@@ -116,6 +116,7 @@ export function cardBodyMarkup(
   const drawn = bars
     .map((n) => `<i data-inf-bar="" style="position-anchor:--fm-new-${n}"></i>`)
     .join("");
+  // i18n-exempt: not shown (markup)
   return {
     html: `${marked}<style>${anchors}</style><div data-inf-bars="" aria-hidden="true">${drawn}</div>`,
     marked: true,

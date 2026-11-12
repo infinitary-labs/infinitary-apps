@@ -1,4 +1,5 @@
 import { CREWMATE_TAB_LABEL } from "@shared/crewTranscript";
+import * as m from "@shared/i18n/messages.generated";
 import {
   ACTIVITY_TAB_LABEL,
   browserTabLabel,
@@ -77,7 +78,8 @@ export function taskTabsOf(
   if (facts.activity) head.push(ACTIVITY_TAB);
   if (facts.crewmate) head.push(CREWMATE_TAB);
   if (!browser) return head.length > 1 ? head : [];
-  if (browser.state === "stopped") return [...head, { kind: "browser", label: "Browser", page: 1 }];
+  if (browser.state === "stopped")
+    return [...head, { kind: "browser", label: m.cardBrowserWord(), page: 1 }];
   const pages = browser.pages && browser.pages.length > 1 ? browser.pages : null;
   if (!pages) return [...head, { kind: "browser", label: browserTabLabel(browser.title), page: 1 }];
   return [

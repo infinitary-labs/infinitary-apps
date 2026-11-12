@@ -244,7 +244,7 @@ export function AddProject({
             display: "flex",
             alignItems: "center",
             gap: "var(--space-2)",
-            marginLeft: "auto",
+            marginInlineStart: "auto",
             color: "var(--fg-2)",
           }}
         >

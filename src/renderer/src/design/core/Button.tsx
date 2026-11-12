@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useState } from "react";
 import { useRestLabelWith } from "./restLabel";
@@ -5,8 +6,11 @@ import { useRestLabelWith } from "./restLabel";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
-/** What a pending-capable button reads while its click is in flight. */
-export const PENDING_LABEL = "Working...";
+/**
+ * What a pending-capable button reads while its click is in flight, in
+ * English for the tests; the button calls the message when it draws.
+ */
+export const PENDING_LABEL = m.uiButtonPending();
 
 export type ButtonProps = {
   variant?: ButtonVariant;
@@ -118,7 +122,7 @@ export function Button({
   size = "md",
   disabled,
   pending,
-  pendingLabel = PENDING_LABEL,
+  pendingLabel = m.uiButtonPending(),
   icon,
   children,
   style,

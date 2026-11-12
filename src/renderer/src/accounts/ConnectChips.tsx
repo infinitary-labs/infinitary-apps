@@ -514,7 +514,7 @@ export function AuthAside({
                 background: "var(--bg-3)",
                 borderRadius: "var(--radius-s)",
                 padding: "2px 8px",
-                marginLeft: 8,
+                marginInlineStart: 8,
               }}
             >
               {notice.userCode}
@@ -663,7 +663,7 @@ function CodeStep({
           <Button
             variant="ghost"
             size="sm"
-            style={{ marginLeft: "auto" }}
+            style={{ marginInlineStart: "auto" }}
             onClick={() => (enterprise.host ? enterprise.onUse(null) : setEnterpriseOpen(true))}
           >
             {enterprise.host ? CODE_STEP_WORDS.useGitHubCom : CODE_STEP_WORDS.useEnterprise}

@@ -30,4 +30,5 @@ export function panelStepOf(press: {
 }
 
 /** The same keys as `aria-keyshortcuts` names them. */
+// i18n-exempt: not shown (key names)
 export const PANEL_MOVE_KEYS = "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight";

@@ -315,7 +315,7 @@
   border-color: var(--warn);
 }
 .fm-custom-acts {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: flex;
   gap: var(--space-1);
 }
@@ -368,7 +368,7 @@
   border-top: 1px solid var(--line-1);
 }
 .fm-custom-disconnect .fm-custom-acts {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 
 .fm-custom-overlay {
@@ -386,7 +386,7 @@
   width: min(600px, 100%);
   max-height: calc(100dvh - 2 * var(--space-4));
   overflow-y: auto;
-  text-align: left;
+  text-align: start;
   border-radius: var(--radius-m);
 }
 .fm-custom-dialog > .fm-custom-api {

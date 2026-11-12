@@ -61,12 +61,14 @@ export async function bootPanel(
   const root = createRoot(host);
   let Panel: unknown;
   let config: PanelDocumentConfig | null = null;
+  // i18n-exempt: served to the crew (a stopped body's why)
   let why = "its module has no default export to draw";
   try {
     config = readPanelConfig(doc);
     Panel = ((await load(config.module)) as { default?: unknown } | null)?.default;
   } catch (error) {
     console.warn("panel module did not load:", error);
+    // i18n-exempt: served to the crew (a stopped body's why)
     why = `its module would not import: ${stoppedWhy(error)}`;
   }
   if (!config || typeof Panel !== "function") {

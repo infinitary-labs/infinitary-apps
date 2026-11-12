@@ -132,7 +132,7 @@ function show(
     const key = doc.createElement("span");
     key.setAttribute("data-icon-label-keys", "");
     Object.assign(key.style, {
-      marginLeft: "var(--space-2)",
+      marginInlineStart: "var(--space-2)",
       fontFamily: "var(--font-mono)",
       color: "var(--fg-3)",
     } satisfies Partial<CSSStyleDeclaration>);

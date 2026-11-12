@@ -1,3 +1,5 @@
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import type { RailSide } from "@shared/plugins/manifest";
 import {
@@ -148,8 +150,8 @@ export function Rail({
       {hidden.length > 0 && (
         <div data-rail-more="" data-window-region="panel">
           <RowMenu
-            label="Panels folded for room"
-            word={`${hidden.length} more`}
+            label={m.panelRailFolded()}
+            word={m.panelRailMore({ count: formatNumber(hidden.length) })}
             items={hidden.map((panel) => ({
               id: panel.id,
               label: panel.title,
@@ -178,7 +180,7 @@ export function Rail({
             fill="none"
             stroke="currentColor"
             strokeWidth="1.5"
-            style={{ flexShrink: 0, marginLeft: "auto", color: "var(--fg-3)" }}
+            style={{ flexShrink: 0, marginInlineStart: "auto", color: "var(--fg-3)" }}
           >
             <path d="m9 6 6 6-6 6" />
           </svg>

@@ -20,6 +20,7 @@ export function noteDroppedLinkMessage(data: unknown, why: string): void {
     return;
   const href = "href" in data ? data.href : undefined;
   const shown = typeof href === "string" ? href.slice(0, 2_048) : JSON.stringify(href ?? null);
+  // i18n-exempt: not shown (a console line)
   noteFrameLink(shown, `not opened, ${why}`);
 }
 
@@ -43,24 +44,29 @@ export type FrameLinkSteps = {
  */
 export function openFrameLink(href: string, steps: FrameLinkSteps): void {
   if (!isSafeCardHref(href)) {
+    // i18n-exempt: not shown (a console line)
     noteFrameLink(href, "not opened, it is not an address a card may open");
     return;
   }
   if (!steps.admitted()) {
+    // i18n-exempt: not shown (a console line)
     noteFrameLink(href, "not opened, its card is not the one on screen");
     return;
   }
   steps.whenFocused(
     () => {
+      // i18n-exempt: not shown (a console line)
       noteFrameLink(href, "opening it in the browser");
       steps.open(href).catch((caught: unknown) => {
         const reason = caught instanceof Error ? caught.message : String(caught);
+        // i18n-exempt: not shown (a console line)
         noteFrameLink(href, `not opened, the system could not open it: ${reason}`);
       });
     },
     () =>
       noteFrameLink(
         href,
+        // i18n-exempt: not shown (a console line)
         `not opened, its frame did not hold the window's focus (focus was on ${steps.focusedOn()})`,
       ),
   );

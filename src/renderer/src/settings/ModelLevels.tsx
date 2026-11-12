@@ -429,7 +429,7 @@ export function ModelLevels({
           display: "flex",
           gap: 10,
           padding: "var(--space-2)",
-          textAlign: "left",
+          textAlign: "start",
         }}
       >
         <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)", width: 64 }}>

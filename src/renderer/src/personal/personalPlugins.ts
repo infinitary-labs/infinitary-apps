@@ -191,6 +191,7 @@ export class PersonalPlugins {
         },
       });
     } catch (error) {
+      // i18n-exempt: not shown (console text)
       this.warn(`personal panel "${view.id}" was not mounted: ${String(error)}`);
       const kind = mountKindOf(view.source);
       this.refused.set(view.id, kind);

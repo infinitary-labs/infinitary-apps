@@ -15,7 +15,7 @@ export function fixedKeys(key: FixedKey): {
   const system = thisDesktop().keys;
   const keys =
     key === "Escape"
-      ? "Esc"
+      ? "Esc" // i18n-exempt: key name
       : key === "Enter"
         ? system === "mac"
           ? "↩"

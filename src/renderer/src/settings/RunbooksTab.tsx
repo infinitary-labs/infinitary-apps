@@ -122,7 +122,7 @@ export function RunbooksTab() {
           <ul
             style={{
               margin: 0,
-              paddingLeft: "var(--space-5)",
+              paddingInlineStart: "var(--space-5)",
               color: "var(--fg-2)",
               fontSize: "var(--text-sm)",
               display: "grid",

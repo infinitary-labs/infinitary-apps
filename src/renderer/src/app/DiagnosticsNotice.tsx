@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { DIAGNOSTICS_NOTICE_TEXT, type SharingView } from "@shared/sharing";
 import { useState } from "react";
 import { Button } from "../design";
@@ -58,20 +59,20 @@ export function DiagnosticsNoticeView({
           size="sm"
           disabled={pending !== null}
           pending={pending === "off"}
-          pendingLabel="Saving..."
+          pendingLabel={m.shellDiagnosticsSaving()}
           onClick={onTurnOff}
         >
-          Turn off
+          {m.shellDiagnosticsTurnOff()}
         </Button>
         <Button
           variant="primary"
           size="sm"
           disabled={pending !== null}
           pending={pending === "ok"}
-          pendingLabel="Saving..."
+          pendingLabel={m.shellDiagnosticsSaving()}
           onClick={onOk}
         >
-          OK
+          {m.shellDiagnosticsOk()}
         </Button>
       </div>
     </NoticeStrip>
@@ -79,7 +80,7 @@ export function DiagnosticsNoticeView({
 }
 
 export function DiagnosticsNotice({ width }: { width: string }) {
-  const save = useSharingSave("Try Turn off or OK again to save your choice.");
+  const save = useSharingSave(m.shellDiagnosticsRetry());
   const [action, setAction] = useState<"off" | "ok">("off");
   const view = save.value;
   // A refusal remains visible even if a partial write made the notice no

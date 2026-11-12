@@ -32,7 +32,7 @@
 }
 .fm-computer-pages {
   position: absolute;
-  left: 50%;
+  left: 50%; /* physical: centred with translateX(-50%), which mirrors to itself */
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -51,7 +51,7 @@
   cursor: pointer;
 }
 .fm-computer-pages-key {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
   font-family: var(--font-mono);
   color: var(--fg-3);
 }

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { KEYBOARD_COMMANDS } from "@shared/keyboard";
 import type { LastRound, LastTurn as Turn } from "@shared/lastTurn";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -44,10 +45,14 @@ import "./lastTurn.css";
  * leaving, and the working words leaving before the reply rises in.
  */
 
-/** The working words beside the spinning mark: the captain's own word. */
-export const WORKING_WORDS = "Working…";
+/**
+ * The working words beside the spinning mark: the captain's own word. This
+ * and `PICTURE_ONLY_WORDS` are worded as the module loads (English, before
+ * any language is set) for a spec; the rounds word them when shown.
+ */
+export const WORKING_WORDS = m.shellLastTurnWorking();
 /** A message that was only pictures. */
-export const PICTURE_ONLY_WORDS = "A picture";
+export const PICTURE_ONLY_WORDS = m.shellLastTurnPictureOnly();
 /** A leaving round or set of words is gone after --dur-fast. */
 const LEAVE_MS = 160;
 /** One whole turn of the working mark: INF-2483's chosen steady turn at 2.0 s. */
@@ -170,7 +175,7 @@ function MateLine({
   }, [key]);
 
   const reply = shown?.kind === "reply" ? shown : null;
-  const mateWords = reply ? reply.text : WORKING_WORDS;
+  const mateWords = reply ? reply.text : m.shellLastTurnWorking();
   const mateFit = useOverflowTitle(shown ? mateWords : undefined);
   const openReplyNote = useShellStore((s) => s.openReplyNote);
   // A reply is a button that opens it whole; the working words are not.
@@ -252,7 +257,7 @@ export function LastTurnRound({
   announce?: boolean;
 }) {
   const said = round.you.trim();
-  const you = said || PICTURE_ONLY_WORDS;
+  const you = said || m.shellLastTurnPictureOnly();
   const youFit = useOverflowTitle(leaving ? undefined : you);
   return (
     <div

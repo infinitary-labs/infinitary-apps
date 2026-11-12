@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { KeySystem } from "@shared/platform";
 import {
   attachmentStanding,
@@ -760,7 +761,7 @@ export function TaskBrowserView({
         const result = await window.infinitary.browser.reopen(taskId);
         if (!result.ok) setRefusal(result.text);
       } catch {
-        setRefusal(`${place.This} could not open a browser for this task right now.`);
+        setRefusal(m.cardBrowserOpenFailed({ place: place.This }));
       } finally {
         setOpening(false);
       }
@@ -772,7 +773,7 @@ export function TaskBrowserView({
         data-browser-state={
           there !== null ? "there" : refusal ? "unavailable" : stopped ? "stopped" : "none"
         }
-        aria-label="Task browser"
+        aria-label={m.cardBrowserSurface()}
         style={SURFACE}
       >
         {top}
@@ -793,7 +794,7 @@ export function TaskBrowserView({
           <div style={{ color: "var(--fg-1)", fontSize: "var(--text-base)", fontWeight: 500 }}>
             {refusal ??
               words?.lead ??
-              (detail || unreadable ? `This task has no browser on ${place.this}.` : "")}
+              (detail || unreadable ? m.cardBrowserNone({ place: place.this }) : "")}
           </div>
           {words && !refusal && (
             <div style={{ color: "var(--fg-2)", fontSize: "var(--text-sm)" }}>{words.detail}</div>
@@ -851,7 +852,7 @@ export function TaskBrowserView({
       if (!result.ok) setRefusal(result.text);
       else if (result.warning) setSaveWarning(result.warning);
     } catch {
-      setRefusal(`${place.This} could not hand the browser over right now.`);
+      setRefusal(m.cardBrowserHandFailed({ place: place.This }));
     } finally {
       setMoving(null);
     }
@@ -940,7 +941,7 @@ export function TaskBrowserView({
       ref={room}
       data-task-browser={taskId}
       data-browser-state={driver === "crewmate" ? "watching" : driver}
-      aria-label="Task browser"
+      aria-label={m.cardBrowserSurface()}
       style={SURFACE}
     >
       {top}
@@ -949,9 +950,9 @@ export function TaskBrowserView({
         data-browser-control={driver}
         style={{ ...ROW, ...(ROW_TINT[driver] ? { background: ROW_TINT[driver] } : {}) }}
       >
-        {navigation("Back", "back", BACK)}
-        {navigation("Forward", "forward", FORWARD)}
-        {navigation("Reload", "reload", RELOAD)}
+        {navigation(m.cardBrowserBack(), "back", BACK)}
+        {navigation(m.cardBrowserForward(), "forward", FORWARD)}
+        {navigation(m.cardBrowserReload(), "reload", RELOAD)}
         <div
           data-browser-status=""
           data-browser-driver={driver}
@@ -1001,20 +1002,24 @@ export function TaskBrowserView({
           {control}
         </span>
         <RowMenu
-          label="More"
-          word="More"
+          label={m.cardBrowserMore()}
+          word={m.cardBrowserMore()}
           items={[
-            { id: "fit", label: fit ? "Actual size" : "Fit", onSelect: () => setFit(!fit) },
+            {
+              id: "fit",
+              label: fit ? m.cardBrowserActualSize() : m.cardBrowserFit(),
+              onSelect: () => setFit(!fit),
+            },
             {
               id: "stop",
-              label: "Stop browser",
+              label: m.cardBrowserStop(),
               onSelect: () => void stop(),
               ...(offWords ? { disabled: true, detail: offWords } : {}),
             },
-            { id: "copy", label: "Copy page address", onSelect: copyAddress },
+            { id: "copy", label: m.cardBrowserCopyAddress(), onSelect: copyAddress },
             {
               id: "report",
-              label: "Report a problem",
+              label: m.cardBrowserReport(),
               onSelect: () => useShellStore.getState().beginDraft(REPORT_PROBLEM_DRAFT),
             },
           ]}
@@ -1060,14 +1065,12 @@ export function TaskBrowserView({
                   useShellStore.setState({ view: "settings", settingsSection: "general" })
                 }
               >
-                Manage
+                {m.cardBrowserManage()}
               </Button>
             </div>
           ) : !savedRead || savedState?.unavailable ? (
             <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-2)" }}>
-              {!savedRead
-                ? "Checking saved sign-in…"
-                : "Saved sign-ins are unavailable. Return control without saving."}
+              {!savedRead ? m.cardBrowserCheckingSignIn() : m.cardBrowserSignInsUnavailable()}
             </span>
           ) : (
             <label
@@ -1125,8 +1128,10 @@ export function TaskBrowserView({
           data-browser-fit={fit ? "fit" : "actual"}
           aria-label={
             captain
-              ? `The page at ${fact.site}, under your control${offWords ? ` · ${offWords}` : ""}`
-              : `The page at ${fact.site}, as the crewmate's browser shows it`
+              ? offWords
+                ? m.cardBrowserPageYoursOff({ site: fact.site, off: offWords })
+                : m.cardBrowserPageYours({ site: fact.site })
+              : m.cardBrowserPageWatching({ site: fact.site })
           }
           role="img"
           style={
@@ -1169,7 +1174,7 @@ export function TaskBrowserView({
         </span>
         <span style={{ ...LINE, flex: 1, color: "var(--fg-2)" }}>{detail?.title}</span>
         <button type="button" style={LINK} data-browser-record="" onClick={openRecord}>
-          Task record
+          {m.cardBrowserRecord()}
         </button>
         <span data-browser-sign-ins="" style={{ color: "var(--fg-3)", whiteSpace: "nowrap" }}>
           · {signInCaption(fact, captain, place)}

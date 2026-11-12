@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { useEffect, useMemo, useRef } from "react";
 import { available } from "../app/focusRecovery";
@@ -139,7 +140,7 @@ export function TaskTabStrip({
     <div
       ref={list}
       role="tablist"
-      aria-label="Task card"
+      aria-label={m.cardTabStripLabel()}
       data-task-tabs=""
       onKeyDown={onKeyDown}
       style={{
@@ -252,7 +253,7 @@ function StripTab({
         <span
           data-task-tab-count=""
           style={{
-            marginLeft: "var(--space-1)",
+            marginInlineStart: "var(--space-1)",
             fontFamily: "var(--font-mono)",
             fontSize: "var(--text-xs)",
             color: "var(--fg-3)",

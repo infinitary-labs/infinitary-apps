@@ -66,9 +66,12 @@ function versionOf(view: PersonalExtensionView | undefined): string | null {
 
 /** Why a registered panel has nothing on its rail: its compile, or its presence rule. */
 function emptyWhy(view: PersonalExtensionView | undefined): string {
+  // i18n-exempt: served to the crew (why a panel is not drawn)
   if (!view) return "it has nothing to show right now";
   if (view.error) return view.error.message;
+  // i18n-exempt: served to the crew (why a panel is not drawn)
   if (!view.panel && !view.frame) return "it has no compiled panel";
+  // i18n-exempt: served to the crew (why a panel is not drawn)
   return "its presence rule finds nothing to show (no data in the store key it names)";
 }
 
@@ -94,6 +97,7 @@ function mountOf(panel: SidePanelContribution, facts: MountFacts): PanelMount {
   if (panel.source.get() === null) return { ...base, state: "off", why: cut(emptyWhy(view)) };
   const said = facts.said(panel.id);
   if (panel.rail?.decides === true && said.shown !== true) {
+    // i18n-exempt: served to the crew (why a panel is not drawn)
     const why =
       said.shown === false
         ? `its own code has it off its rail${said.why ? `: ${said.why}` : ""}`
@@ -138,6 +142,7 @@ export function readPanelMounts(facts: MountFacts): PanelMount[] {
       version: versionOf(view),
       state: "refused",
       rail: effectivePlacement(facts.layout, view.id, view.placement).x,
+      // i18n-exempt: served to the crew (why a panel is not drawn)
       why: cut(facts.refusals.get(key)?.why ?? "the window did not mount it"),
     });
   }
@@ -177,12 +182,15 @@ function slotNow(layout: Layout): MountFacts["slot"] {
   if (showsCreatePanelSlot({ thirdCrewmateDoneAt, panelsOn, ownPanel, hidden })) {
     return { shows: true };
   }
+  // i18n-exempt: served to the crew (why a panel is not drawn)
   if (!panelsOn) return { shows: false, why: "the captain's own panels are switched off" };
   if (ownPanel !== false)
     return {
       shows: false,
+      // i18n-exempt: served to the crew (why a panel is not drawn)
       why: "it shows only until the captain has a panel of their own",
     };
+  // i18n-exempt: served to the crew (why a panel is not drawn)
   return { shows: false, why: "it shows once their third task has finished" };
 }
 

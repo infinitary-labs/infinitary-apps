@@ -7,7 +7,7 @@
    take a second line. Read-only, so it never takes the pointer. */
 .fm-crew-summary-layer {
   position: absolute;
-  left: 50%;
+  left: 50%; /* physical: the stage centre the orbit is measured from */
   top: 50%;
   width: 0;
   height: 0;
@@ -23,7 +23,7 @@
 }
 :is(.fm-crew-summary-layer, .fm-row-summary-layer) > * {
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
 }
 :is(.fm-crew-summary-layer, .fm-row-summary-layer):not([data-placed]) {
@@ -37,22 +37,22 @@
   border: 0 solid var(--fg-3);
 }
 .fm-crew-target i:nth-child(1) {
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
   border-width: 1px 0 0 1px;
 }
 .fm-crew-target i:nth-child(2) {
-  right: 0;
+  inset-inline-end: 0;
   top: 0;
   border-width: 1px 1px 0 0;
 }
 .fm-crew-target i:nth-child(3) {
-  left: 0;
+  inset-inline-start: 0;
   bottom: 0;
   border-width: 0 0 1px 1px;
 }
 .fm-crew-target i:nth-child(4) {
-  right: 0;
+  inset-inline-end: 0;
   bottom: 0;
   border-width: 0 1px 1px 0;
 }

@@ -1,6 +1,6 @@
+import * as m from "@shared/i18n/messages.generated";
 import { useState } from "react";
 import { Button } from "../design";
-import { BACKGROUND_PAUSED_LINE, BACKGROUND_UPDATE } from "./panelBoundaryWords";
 
 /**
  * The host's own status for a panel whose background work the app refused
@@ -24,7 +24,7 @@ export function BackgroundPaused({ id, asked }: { id: string; asked: boolean }) 
       }}
     >
       <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
-        {BACKGROUND_PAUSED_LINE}
+        {m.panelBackgroundPaused()}
       </p>
       <Button
         variant="secondary"
@@ -35,7 +35,7 @@ export function BackgroundPaused({ id, asked }: { id: string; asked: boolean }) 
           void window.infinitary.plugins.personal.update(id).finally(() => setAsking(false));
         }}
       >
-        {BACKGROUND_UPDATE}
+        {m.panelBackgroundUpdate()}
       </Button>
     </div>
   );

@@ -17,6 +17,7 @@ import {
 } from "@shared/composer";
 import { ENDED_CLOSE_CARD_LABEL } from "@shared/endedCard";
 import { formatTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { hasNotTypingKeys } from "@shared/keyboard";
 import {
   type CSSProperties,
@@ -57,9 +58,7 @@ import {
   contributorWords,
   messageCountWords,
   settingsCountWords,
-  THREAD_CARD,
   THREAD_WHO_LABELS,
-  THREAD_WORKING,
   threadCountWords,
   threadCueLabel,
   threadJumpLabel,
@@ -89,11 +88,31 @@ const NO_REPLY_IMAGES: ImageAttachment[] = [];
 
 /** Who wrote it, in the words the thread shows and the color it uses. */
 const WHO: Record<CardMessageWho, { label: string; color: string }> = {
-  captain: { label: THREAD_WHO_LABELS.captain, color: "var(--captain)" },
-  crewmate: { label: THREAD_WHO_LABELS.crewmate, color: "var(--accent)" },
-  firstmate: { label: THREAD_WHO_LABELS.firstmate, color: "var(--accent)" },
+  captain: {
+    get label() {
+      return THREAD_WHO_LABELS.captain;
+    },
+    color: "var(--captain)",
+  },
+  crewmate: {
+    get label() {
+      return THREAD_WHO_LABELS.crewmate;
+    },
+    color: "var(--accent)",
+  },
+  firstmate: {
+    get label() {
+      return THREAD_WHO_LABELS.firstmate;
+    },
+    color: "var(--accent)",
+  },
   // The host is not a party to the conversation: no accent, the whole row quiet.
-  host: { label: THREAD_WHO_LABELS.host, color: "var(--fg-3)" },
+  host: {
+    get label() {
+      return THREAD_WHO_LABELS.host;
+    },
+    color: "var(--fg-3)",
+  },
 };
 
 function timeOf(at: number): string {
@@ -378,7 +397,11 @@ export function ReplyRow({
                 </span>
               )}
               <IconButton
-                label={image.name ? `Remove ${image.name}` : "Remove picture"}
+                label={
+                  image.name
+                    ? m.cardThreadRemoveNamed({ name: image.name })
+                    : m.cardThreadRemovePicture()
+                }
                 size={20}
                 disabled={sending}
                 onClick={() => removeReplyImage(cardId, image.id)}
@@ -430,7 +453,7 @@ export function ReplyRow({
                 // so the key shares the placeholder's baseline: the pill's padding,
                 // then the field's own 2px.
                 top: "calc(var(--space-2) + 2px)",
-                right: "var(--space-3)",
+                insetInlineEnd: "var(--space-3)",
                 fontFamily: "var(--font-ui)",
                 fontSize: "var(--text-sm)",
                 lineHeight: "var(--leading-body)",
@@ -438,12 +461,16 @@ export function ReplyRow({
                 pointerEvents: "none",
               }}
             >
-              <span style={{ fontFamily: "var(--font-mono)" }}>{replyKeys.keys}</span>
+              <span
+                style={{ fontFamily: "var(--font-mono)", direction: "ltr", unicodeBidi: "isolate" }}
+              >
+                {replyKeys.keys}
+              </span>
             </span>
           )}
           <ComposerField
             fieldRef={field}
-            aria-label="Reply to this card"
+            aria-label={m.cardThreadReplyField()}
             aria-keyshortcuts={replyKeys["aria-keyshortcuts"]}
             messageField="reply"
             placeholder={placeholder}
@@ -488,7 +515,7 @@ export function ReplyRow({
             height: "var(--reply-line)",
           }}
         >
-          {files && <AddFilesButton intake={files} size={28} label="Add files to this reply" />}
+          {files && <AddFilesButton intake={files} size={28} label={m.cardThreadAddFiles()} />}
           {inThread && (
             <ChatButton
               cardId={cardId}
@@ -565,7 +592,7 @@ export function CardThread({
         flexDirection: "column",
         minHeight: 0,
         minWidth: 0,
-        borderLeft: "1px solid var(--line-2)",
+        borderInlineStart: "1px solid var(--line-2)",
         ...style,
       }}
     >
@@ -579,15 +606,15 @@ export function CardThread({
           padding: "14px 8px 8px 16px",
         }}
       >
-        <MicroLabel>Thread</MicroLabel>
+        <MicroLabel>{m.cardThreadLabel()}</MicroLabel>
         {onCollapse && (
           <IconButton
-            label="Collapse thread"
+            label={m.cardThreadCollapse()}
             {...keys}
             size={28}
             data-thread-collapse=""
             onClick={(event) => onCollapse(byKey(event))}
-            style={{ marginLeft: "auto" }}
+            style={{ marginInlineStart: "auto" }}
           >
             {collapseIcon}
           </IconButton>
@@ -689,7 +716,7 @@ export function LatestLine({
       >
         {waitingText ?? last.text}
       </span>
-      <span data-thread-cue-state="">{working ? THREAD_WORKING : count}</span>
+      <span data-thread-cue-state="">{working ? m.cardThreadWorking() : count}</span>
       {openIcon}
     </button>
   );
@@ -770,7 +797,7 @@ function EndedLine({ card }: { card: Pick<Card, "id" | "ended" | "lifecycleId" |
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "var(--text-xs)",
-              marginLeft: 6,
+              marginInlineStart: 6,
               whiteSpace: "nowrap",
             }}
           >
@@ -842,8 +869,9 @@ export function MessageList({
   const waitingText = working ? undefined : waiting?.text;
   // The list's live tail: the working row with what it names, or the
   // waiting line.
-  const tail = working ? `working ${doing ?? ""}` : ended ? "ended" : waitingText;
-  const split = ended && endedAt !== undefined ? messages.findIndex((m) => m.at > endedAt) : -1;
+  const tail = working ? `working ${doing ?? ""}` : ended ? "ended" : waitingText; // i18n-exempt: not shown (a scroll trigger key)
+  const split =
+    ended && endedAt !== undefined ? messages.findIndex((message) => message.at > endedAt) : -1;
   const earlier = split < 0 ? messages : messages.slice(0, split);
   const later = split < 0 ? [] : messages.slice(split);
   // Whether the reader is at the foot, as the list last measured it: a
@@ -1058,7 +1086,7 @@ function WorkingRow({ entrance, doing }: { entrance: boolean; doing?: string | u
         color: "var(--fg-3)",
       }}
     >
-      <span style={{ fontFamily: "var(--font-mono)", flex: "none" }}>{THREAD_WORKING}</span>
+      <span style={{ fontFamily: "var(--font-mono)", flex: "none" }}>{m.cardThreadWorking()}</span>
       {doing && (
         <span
           data-thread-doing=""
@@ -1127,7 +1155,7 @@ function Message({ message, own }: { message: CardMessage; own: string | undefin
               fontFamily: "var(--font-mono)",
               fontSize: "var(--text-xs)",
               color: "var(--fg-3)",
-              marginLeft: 6,
+              marginInlineStart: 6,
               whiteSpace: "nowrap",
             }}
           >
@@ -1149,7 +1177,7 @@ function Message({ message, own }: { message: CardMessage; own: string | undefin
         {message.notes?.map((note) => (
           <div key={JSON.stringify([note.key, note.start, note.span])} className="inf-sent-note">
             <NoteAnchor cardId={message.cardId} note={note} />
-            <span>{note.comment || "No comment"}</span>
+            <span>{note.comment || m.cardThreadNoComment()}</span>
           </div>
         ))}
         {message.who === "host" && <RevisionLinks message={message} />}
@@ -1178,8 +1206,8 @@ export function settingsRows(answers: readonly CardAnswer[]): SettingsRow[] {
       if (answer.written !== undefined) picked.push(`“${answer.written}”`);
       rows.push({
         key: answer.name,
-        value: picked.length === 0 ? "no answer" : picked.join(", "),
-        state: answer.changed ? "changed" : "as proposed",
+        value: picked.length === 0 ? m.cardThreadNoAnswer() : picked.join(", "),
+        state: answer.changed ? "changed" : "as proposed", // i18n-exempt: not shown (a state, worded by SETTING_STATE_WORDS)
       });
       continue;
     }
@@ -1252,7 +1280,7 @@ function ReplySettings({ answers, at }: { answers: readonly CardAnswer[]; at: nu
         <section
           ref={panelRef}
           id={panelId}
-          aria-label={`Settings sent with your reply at ${timeOf(at)}`}
+          aria-label={m.cardThreadSettingsSent({ time: timeOf(at) })}
           data-thread-settings=""
         >
           {/* biome-ignore lint/a11y/noNoninteractiveTabindex: a scrolling region is reached by keyboard. */}
@@ -1264,14 +1292,18 @@ function ReplySettings({ answers, at }: { answers: readonly CardAnswer[]; at: nu
               ))}
             </dl>
           </div>
-          <div data-thread-settings-note="">
-            Sent to the author as context. A reply never approves building.
-          </div>
+          <div data-thread-settings-note="">{m.cardThreadSettingsNote()}</div>
         </section>
       )}
     </>
   );
 }
+
+/** A settings row's state, worded when shown. */
+const SETTING_STATE_WORDS: Record<NonNullable<SettingsRow["state"]>, () => string> = {
+  changed: m.cardThreadSettingChanged,
+  "as proposed": m.cardThreadSettingAsProposed,
+};
 
 function SettingsRowView({ row }: { row: SettingsRow }) {
   return (
@@ -1279,7 +1311,9 @@ function SettingsRowView({ row }: { row: SettingsRow }) {
       <dt>{row.key}</dt>
       <dd>
         {row.value}
-        {row.state && <span data-thread-settings-state=""> · {row.state}</span>}
+        {row.state && (
+          <span data-thread-settings-state=""> · {SETTING_STATE_WORDS[row.state]()}</span>
+        )}
       </dd>
     </>
   );
@@ -1300,7 +1334,7 @@ export function ThreadSegments({
   onShow: (which: "card" | "thread") => void;
 }) {
   const options: { key: "card" | "thread"; label: string }[] = [
-    { key: "card", label: THREAD_CARD },
+    { key: "card", label: m.cardThreadCard() },
     { key: "thread", label: threadCountWords(count) },
   ];
   return (

@@ -39,8 +39,10 @@ export function onLanguageChange(listener: (tag: string) => void): () => void {
 /**
  * Words `word` in `tag` and answers it, the process's own language left as
  * it was: the English a saved fact keeps beside it is worded this way
- * whatever the process speaks (docs/i18n.md, "Saved facts"). Nothing hears
- * the change, since it never outlives the call.
+ * whatever the process speaks (docs/i18n.md, "Saved facts"), and command
+ * search matches a command's English words as well as its words in the
+ * chosen language (docs/keyboard.md). Nothing hears the change, since it
+ * never outlives the call.
  */
 export function inLanguage<T>(tag: string, word: () => T): T {
   const spoken = language;

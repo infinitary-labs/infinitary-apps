@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { APP_FRAME_SCHEME } from "../csp";
+import { currentLanguage } from "../i18n/current";
+import { textDirection } from "../i18n/languages";
 import { PANEL_READ_NAMES, personalIdSchema } from "../personal/manifest";
 import { sqlViewNameSchema } from "../sql";
 import { BUILTIN_FRAME_PANELS, FRAME_LIB_BOOT, frameLibUrl } from "./frameLib";
@@ -242,14 +244,25 @@ export type FrameDocumentParts = {
    * wait for the host's `activate` (bridge.ts). A panel's never is.
    */
   held?: boolean;
+  /** The language the document speaks, the app's own unless named (docs/i18n.md, "The language fact"). */
+  language?: string;
 };
 
-/** Assembles one frame document. Pure; the same text on every host. */
+/**
+ * The `lang` and `dir` a frame's document is born with: the app's language
+ * and the way its text runs, so a frame's own words and its layout follow
+ * the window's (docs/i18n.md, "The language fact").
+ */
+function languageAttributes(language = currentLanguage()): string {
+  return `lang="${escapeAttribute(language)}" dir="${textDirection(language)}"`;
+}
+
+/** Assembles one frame document. Pure for a given language; the same text on every host. */
 export function buildFrameDocument(parts: FrameDocumentParts): string {
   const theme = escapeAttribute(parts.theme);
   return [
     "<!doctype html>",
-    `<html data-theme="${theme}"${parts.held ? " data-inf-held" : ""}>`,
+    `<html ${languageAttributes(parts.language)} data-theme="${theme}"${parts.held ? " data-inf-held" : ""}>`,
     "<head>",
     `<meta http-equiv="Content-Security-Policy" content="${escapeAttribute(parts.csp)}">`,
     '<meta charset="utf-8">',
@@ -283,6 +296,8 @@ export type PanelDocumentParts = {
   config: PanelDocumentConfig;
   /** The boot module's own pin, for its script element's `integrity`. */
   bootIntegrity: string;
+  /** The language the document speaks, the app's own unless named. */
+  language?: string;
 };
 
 /** JSON text safe inside a `<script>` element: nothing in it can close the element. */
@@ -304,7 +319,7 @@ export function buildPanelDocument(parts: PanelDocumentParts): string {
   const theme = escapeAttribute(parts.theme);
   return [
     "<!doctype html>",
-    `<html data-theme="${theme}">`,
+    `<html ${languageAttributes(parts.language)} data-theme="${theme}">`,
     "<head>",
     `<meta http-equiv="Content-Security-Policy" content="${escapeAttribute(parts.csp)}">`,
     '<meta charset="utf-8">',

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { SidePanelSize } from "@shared/plugins/manifest";
 import type React from "react";
 import { IconButton, PanelExpandChevron, StatusDot } from "../design";
@@ -140,7 +141,7 @@ export function SidePanelChrome({
         {!collapsed && headerAction}
         {running && (
           <span data-side-panel-running="" style={{ display: "inline-flex", flexShrink: 0 }}>
-            <StatusDot tone="busy" label="Still working on this" focusable />
+            <StatusDot tone="busy" label={m.panelStillWorking()} focusable />
           </span>
         )}
         {attribution !== null && (
@@ -185,7 +186,7 @@ export function SidePanelChrome({
                     textOverflow: "ellipsis",
                     minWidth: 0,
                     flex: 1,
-                    textAlign: "right",
+                    textAlign: "end",
                   }
             }
           >
@@ -195,7 +196,11 @@ export function SidePanelChrome({
         {headerTool}
         <IconButton
           label={
-            collapsed ? `Expand ${title}${folded ? " · folded for room" : ""}` : `Collapse ${title}`
+            collapsed
+              ? folded
+                ? m.panelExpandFolded({ title })
+                : m.panelExpand({ title })
+              : m.panelCollapse({ title })
           }
           size={24}
           aria-expanded={!collapsed}

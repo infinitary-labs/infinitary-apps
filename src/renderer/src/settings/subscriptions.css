@@ -181,7 +181,7 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   font-family: var(--font-ui);
   color: var(--fg-1);
 }
@@ -198,7 +198,7 @@
 }
 
 .fm-subs-chevron {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--fg-3);
   display: inline-flex;
   transition: transform var(--dur-med) var(--ease-out);

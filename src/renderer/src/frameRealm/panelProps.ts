@@ -423,8 +423,10 @@ function frameReads(
     listener: (value: unknown) => void,
   ): (() => void) => {
     const subscription = bridge.subscribe(name, args, listener, (error) =>
+      // i18n-exempt: not shown (console text)
       warn(`panel read "${name}" failed:`, error),
     );
+    // i18n-exempt: not shown (console text)
     subscription.ready.catch((error: unknown) => warn(`panel read "${name}" refused:`, error));
     return () => {
       void subscription.unsubscribe().catch(() => {});

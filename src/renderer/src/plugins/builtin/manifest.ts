@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { type PluginManifest, parsePluginManifest } from "@shared/plugins/manifest";
 import {
   APP_PANEL_FOLDERS,
@@ -84,71 +85,103 @@ function readsOf(folders: readonly AppPanelFolder[]): string[] {
   return [...new Set(folders.flatMap((folder) => folder.manifest.reads ?? []))];
 }
 
-export const builtinManifest: PluginManifest = parsePluginManifest({
-  id: BUILTIN_PLUGIN_ID,
-  name: "Infinitary",
-  // Versions with the app; the field earns its keep on installed plugins,
-  // where a capability diff between versions re-runs consent.
-  version: "1.0.0",
-  contributes: {
-    cardKinds: [
-      { kind: "decision", chrome: "decision", body: { streaming: "html" } },
-      { kind: "note", chrome: "note", body: { streaming: "html" } },
-      { kind: "attention", chrome: "attention", body: { streaming: "html" } },
-      { kind: "task-record", chrome: "record", body: { streaming: "html" } },
-    ],
-    settingsSections: [
-      { id: "general", label: "General", order: 10, width: "wide" },
-      { id: "appearance", label: "Appearance", order: 12, width: "wide" },
-      // Where each panel sits on the rails, in order (INF-2344; docs/ui-plugins.md).
-      { id: "panels", label: "Panels", order: 13, width: "wide" },
-      // Every command's keys, and the way to change them (docs/keyboard.md).
-      { id: "keyboard", label: "Keyboard", order: 14, width: "wide" },
-      { id: "projects", label: "Projects", order: 15, width: "wide" },
-      // "Intelligence", not "Subscriptions" (the captain's Q1 note, S7):
-      // the tab holds the accounts, the model board and the Decisions
-      // group, and only some of that is a subscription. The id, the
-      // `open subscriptions` card effect and the e2e ids are unchanged.
-      { id: "subscriptions", label: "Intelligence", order: 20, width: "wide" },
-      { id: "runbooks", label: "Runbooks", order: 21, width: "wide" },
-      // Recorded model usage across the fleet, in tokens or estimated
-      // dollars (docs/usage.md). This Mac's own: a Mac that controls it has none.
-      { id: "usage", label: "Usage", order: 22, width: "wide" },
-      // The schedules Firstmate runs, as rules (docs/automation.md). A Mac
-      // that controls it reads and changes the same rules.
-      { id: "automation", label: "Automation", order: 23, width: "wide" },
-      // What the first mate and the crew reach outside the projects, signed
-      // in as the person (docs/integrations.md); GitHub's sign-in lives here.
-      { id: "integrations", label: "Integrations", order: 24, width: "wide" },
-      { id: "secrets", label: "Secrets", order: 25, width: "wide" },
-      // Your devices (docs/devices.md): what was added, each with Remove,
-      // the link that adds a Mac, and the address a link sends it to.
-      { id: "devices", label: "Devices", order: 26, width: "wide" },
-      // Development and alpha builds (docs/dev-observe.md); the binding's gate decides.
-      { id: "observe", label: "Observe", order: 30, width: "wide" },
-    ],
-    // Declared once for the renderer and the core alike (src/shared/
-    // surfaces.ts): the Firstmate's "your surfaces" section and its
-    // `personalize` tool name these panels by the same ids.
-    sidePanels: sidePanelsOf(UNGATED_FOLDERS),
-  },
-  capabilities: {
-    reads: [
-      "observe.sessions",
-      "observe.session",
-      "observe.live",
-      // Observe's fourth kind (Step 5): the personal mounts, and whether
-      // the host-owned switch has them off at all.
-      "personal.mounts",
-      "shell.preferences",
-      // What a task's work declared it used, which the record reads only
-      // where the window has knowledge (docs/knowledge.md).
-      "knowledge.uses",
-      // What the app's own panels read, as their folders declare it.
-      ...readsOf(UNGATED_FOLDERS),
-    ],
-  },
-});
+/**
+ * Each settings section's tab words, from the catalog (docs/i18n.md). The
+ * manifest's parse needs a label, so it holds the words as they read when
+ * this module loads, and `wordSectionLabels` then words each one when the
+ * tab draws it, so a language change is followed.
+ */
+const SECTION_LABELS = {
+  general: m.panelSettingsGeneral,
+  appearance: m.panelSettingsAppearance,
+  panels: m.panelSettingsPanels,
+  keyboard: m.panelSettingsKeyboard,
+  projects: m.panelSettingsProjects,
+  subscriptions: m.panelSettingsIntelligence,
+  runbooks: m.panelSettingsRunbooks,
+  usage: m.panelSettingsUsage,
+  automation: m.panelSettingsAutomation,
+  integrations: m.panelSettingsIntegrations,
+  secrets: m.panelSettingsSecrets,
+  devices: m.panelSettingsDevices,
+  observe: m.panelSettingsObserve,
+} satisfies Record<string, () => string>;
+
+function wordSectionLabels(manifest: PluginManifest): PluginManifest {
+  for (const section of manifest.contributes.settingsSections) {
+    const word = (SECTION_LABELS as Record<string, (() => string) | undefined>)[section.id];
+    if (word) Object.defineProperty(section, "label", { get: word, enumerable: true });
+  }
+  return manifest;
+}
+
+export const builtinManifest: PluginManifest = wordSectionLabels(
+  parsePluginManifest({
+    id: BUILTIN_PLUGIN_ID,
+    name: "Infinitary",
+    // Versions with the app; the field earns its keep on installed plugins,
+    // where a capability diff between versions re-runs consent.
+    version: "1.0.0",
+    contributes: {
+      cardKinds: [
+        { kind: "decision", chrome: "decision", body: { streaming: "html" } },
+        { kind: "note", chrome: "note", body: { streaming: "html" } },
+        { kind: "attention", chrome: "attention", body: { streaming: "html" } },
+        { kind: "task-record", chrome: "record", body: { streaming: "html" } },
+      ],
+      settingsSections: [
+        { id: "general", label: SECTION_LABELS.general(), order: 10, width: "wide" },
+        { id: "appearance", label: SECTION_LABELS.appearance(), order: 12, width: "wide" },
+        // Where each panel sits on the rails, in order (INF-2344; docs/ui-plugins.md).
+        { id: "panels", label: SECTION_LABELS.panels(), order: 13, width: "wide" },
+        // Every command's keys, and the way to change them (docs/keyboard.md).
+        { id: "keyboard", label: SECTION_LABELS.keyboard(), order: 14, width: "wide" },
+        { id: "projects", label: SECTION_LABELS.projects(), order: 15, width: "wide" },
+        // "Intelligence", not "Subscriptions" (the captain's Q1 note, S7):
+        // the tab holds the accounts, the model board and the Decisions
+        // group, and only some of that is a subscription. The id, the
+        // `open subscriptions` card effect and the e2e ids are unchanged.
+        { id: "subscriptions", label: SECTION_LABELS.subscriptions(), order: 20, width: "wide" },
+        { id: "runbooks", label: SECTION_LABELS.runbooks(), order: 21, width: "wide" },
+        // Recorded model usage across the fleet, in tokens or estimated
+        // dollars (docs/usage.md). This Mac's own: a Mac that controls it has none.
+        { id: "usage", label: SECTION_LABELS.usage(), order: 22, width: "wide" },
+        // The schedules Firstmate runs, as rules (docs/automation.md). A Mac
+        // that controls it reads and changes the same rules.
+        { id: "automation", label: SECTION_LABELS.automation(), order: 23, width: "wide" },
+        // What the first mate and the crew reach outside the projects, signed
+        // in as the person (docs/integrations.md); GitHub's sign-in lives here.
+        { id: "integrations", label: SECTION_LABELS.integrations(), order: 24, width: "wide" },
+        { id: "secrets", label: SECTION_LABELS.secrets(), order: 25, width: "wide" },
+        // Your devices (docs/devices.md): what was added, each with Remove,
+        // the link that adds a Mac, and the address a link sends it to.
+        { id: "devices", label: SECTION_LABELS.devices(), order: 26, width: "wide" },
+        // Development and alpha builds (docs/dev-observe.md); the binding's gate decides.
+        { id: "observe", label: SECTION_LABELS.observe(), order: 30, width: "wide" },
+      ],
+      // Declared once for the renderer and the core alike (src/shared/
+      // surfaces.ts): the Firstmate's "your surfaces" section and its
+      // `personalize` tool name these panels by the same ids.
+      sidePanels: sidePanelsOf(UNGATED_FOLDERS),
+    },
+    capabilities: {
+      reads: [
+        "observe.sessions",
+        "observe.session",
+        "observe.live",
+        // Observe's fourth kind (Step 5): the personal mounts, and whether
+        // the host-owned switch has them off at all.
+        "personal.mounts",
+        "shell.preferences",
+        // What a task's work declared it used, which the record reads only
+        // where the window has knowledge (docs/knowledge.md).
+        "knowledge.uses",
+        // What the app's own panels read, as their folders declare it.
+        ...readsOf(UNGATED_FOLDERS),
+      ],
+    },
+  }),
+);
 
 /** The folders waiting on one gate, as one first-party plugin; null when none waits on it. */
 export function gatedManifest(gate: AppPanelGate): PluginManifest | null {

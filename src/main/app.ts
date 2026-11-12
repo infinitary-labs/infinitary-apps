@@ -23,7 +23,7 @@ import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import { currentLanguage } from "@shared/i18n/current";
 import { languageArgument } from "@shared/i18n/languages";
-import { startLanguage } from "@shared/i18n/start";
+import { languageOverride, startLanguage } from "@shared/i18n/start";
 import { platformArgument } from "@shared/platform";
 import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
@@ -496,7 +496,10 @@ export async function startApp(
     const starting = app.whenReady().then(async () => {
       // The language this process speaks, from the computer's own languages,
       // before anything is worded or any window opens (docs/i18n.md).
-      startLanguage(app.getPreferredSystemLanguages());
+      startLanguage(
+        app.getPreferredSystemLanguages(),
+        languageOverride(process.env, app.isPackaged),
+      );
       // An installed Linux app with no git, or with its sandbox off (an
       // AppImage promises neither), asks before it opens (./linuxStartup.ts).
       // A run has nobody to ask: with no git it says so and exits, and with

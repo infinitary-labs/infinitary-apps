@@ -2,6 +2,7 @@ import { cardNavigationParts } from "@shared/cardParts";
 import { demoSources, playableDemoKind, viewablePictures } from "@shared/cardPictures";
 import type { CardWidth } from "@shared/cards";
 import { isPreviewBody, REVISION_TARGETS_MAX } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { wordSaidBody } from "@shared/i18n/said";
 import type { FrameAnswers, FramePicture } from "@shared/plugins/bridge";
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
@@ -263,7 +264,7 @@ export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
   const given: BodyProps = navigation?.offerId
     ? {
         ...input,
-        body: `${cardBodyHtml(input.body)}<i hidden data-inf-revision-offer="${navigation.offerId}"></i>`,
+        body: `${cardBodyHtml(input.body)}<i hidden data-inf-revision-offer="${navigation.offerId}"></i>`, // i18n-exempt: not shown (markup)
         revision: {
           offerId: navigation.offerId,
           body: navigation.body,
@@ -309,7 +310,7 @@ export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
       ref={wrapperRef}
       style={{
         paddingBlock: "var(--space-1)",
-        ...(marked ? { marginLeft: -CHANGE_GUTTER_PX } : {}),
+        ...(marked ? { marginInlineStart: -CHANGE_GUTTER_PX } : {}),
       }}
     >
       {mounted ? (
@@ -723,7 +724,7 @@ function SrcdocCardBody(props: SrcdocProps) {
     <iframe
       ref={frameRef}
       name={frameName}
-      title={props.frameTitle ?? `${title} body`}
+      title={props.frameTitle ?? m.cardBodyFrameTitle({ title })}
       sandbox={FRAME_SANDBOX}
       allow={FRAME_ALLOW}
       scrolling="no"
@@ -883,7 +884,7 @@ function ScriptedCardBody(props: SrcdocProps) {
           {state.phase === "stopped" ? CARD_BODY_WORDS.stopped : CARD_BODY_WORDS.failed}
         </p>
         <Button variant="secondary" size="sm" onClick={() => setAttempt((n) => n + 1)}>
-          Retry
+          {m.cardBodyRetry()}
         </Button>
       </div>
     );
@@ -893,7 +894,7 @@ function ScriptedCardBody(props: SrcdocProps) {
     <iframe
       ref={frameRef}
       name={frameName}
-      title={`${title} body`}
+      title={m.cardBodyFrameTitle({ title })}
       sandbox={FRAME_SANDBOX}
       allow={FRAME_ALLOW}
       scrolling="no"

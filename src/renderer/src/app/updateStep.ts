@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { feedRelativeAge } from "@shared/relativeAge";
 import { checksUpdates, type UpdateStatus } from "@shared/update";
 import {
@@ -88,7 +89,7 @@ export function updateStep(
   if (!checksUpdates(status))
     return { state: "unknown", line: status.problem ?? null, problem: true, primary: releasesPage };
   const install = status.install;
-  const installLabel = install?.restarts ? UPDATE_WORDS.restart : "Install";
+  const installLabel = install?.restarts ? UPDATE_WORDS.restart : m.shellUpdateInstall();
   if (status.work?.state === "saving")
     return {
       state: "saving",
@@ -178,7 +179,7 @@ function offeredStep(
   read: { reading: boolean; checked: string | null; problem: string | null },
 ): UpdateStep {
   const install = status.install;
-  const installLabel = install?.restarts ? UPDATE_WORDS.restart : "Install";
+  const installLabel = install?.restarts ? UPDATE_WORDS.restart : m.shellUpdateInstall();
   const checkFailed = status.problem === UPDATE_PROBLEMS.checkFailed;
   // A failed check is the line's to say; only an install's problem changes the next step.
   const problem = pressed.problem ?? (checkFailed ? null : read.problem);

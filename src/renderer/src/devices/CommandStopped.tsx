@@ -76,7 +76,7 @@ export function CommandStopped({
           borderRadius: "var(--radius-l)",
           boxShadow: "var(--shadow-2)",
           padding: "var(--space-5)",
-          textAlign: "left",
+          textAlign: "start",
           fontFamily: "var(--font-ui)",
         }}
       >

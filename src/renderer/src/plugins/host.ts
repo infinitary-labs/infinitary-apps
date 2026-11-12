@@ -38,6 +38,7 @@ export class PluginCapabilityError extends Error {
     readonly pluginId: string,
     readonly refused: readonly string[],
   ) {
+    // i18n-exempt: not shown (error text)
     super(`plugin "${pluginId}" asks for ${refused.join(", ")}, which this host does not serve`);
     this.name = "PluginCapabilityError";
   }
@@ -137,7 +138,13 @@ export class PluginHost {
       for (const entry of contributes.settingsSections) {
         const binding = bindings.settingsSections?.[entry.id];
         if (!binding) continue;
-        undo.push(this.settingsSections.register({ ...entry, ...binding, pluginId }));
+        // The entry's own getters stay getters: the app's tab words are worded
+        // when the tab draws them (./builtin/manifest.ts).
+        const section: typeof entry = Object.defineProperties(
+          {} as typeof entry,
+          Object.getOwnPropertyDescriptors(entry),
+        );
+        undo.push(this.settingsSections.register(Object.assign(section, binding, { pluginId })));
       }
       for (const entry of contributes.sidePanels) {
         const binding = bindings.sidePanels?.[entry.id];

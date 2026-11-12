@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { UpdateStatus } from "@shared/update";
 import type React from "react";
 import { useEffect, useRef } from "react";
@@ -10,9 +11,9 @@ import { UpdateStepButtons, UpdateStepText } from "./UpdateStepView";
 import { refreshUpdateStatus, setUpdateNoticeOpen as setOpen, useUpdateState } from "./updateState";
 import { type UpdateStepAction, type UpdateStepPresses, updateStep } from "./updateStep";
 
-const CHANNEL_LABEL: Record<UpdateStatus["channel"], string> = {
-  stable: "Stable updates",
-  alpha: "Alpha updates",
+const CHANNEL_LABEL: Record<UpdateStatus["channel"], () => string> = {
+  stable: () => m.shellUpdateStable(),
+  alpha: () => m.shellUpdateAlpha(),
 };
 
 /**
@@ -89,7 +90,7 @@ export function UpdateIndicator() {
     <div ref={rootRef} style={{ position: "relative", ...noDrag }}>
       <IconButton
         ref={buttonRef}
-        label={`Update available: ${status.latestVersion ?? ""}`}
+        label={m.shellUpdateAvailable({ version: status.latestVersion ?? "" })}
         tone="accent"
         {...updateKeys}
         onClick={() => setOpen((value) => !value)}
@@ -171,10 +172,10 @@ export function UpdatePanel({
         zIndex: 20,
       }}
     >
-      <MicroLabel>{CHANNEL_LABEL[status.channel]}</MicroLabel>
+      <MicroLabel>{CHANNEL_LABEL[status.channel]()}</MicroLabel>
       {step && <UpdateStepText step={step} strong {...(onAction ? { onAction } : {})} />}
       <div data-update-installed style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-        You have {status.currentVersion}
+        {m.shellUpdateInstalled({ version: status.currentVersion })}
       </div>
       {step && <UpdateStepButtons step={step} {...(onAction ? { onAction } : {})} />}
     </div>

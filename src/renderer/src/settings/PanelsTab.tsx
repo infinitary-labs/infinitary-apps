@@ -362,14 +362,14 @@ export function PanelsTab() {
                           <span
                             data-panels-state-words=""
                             style={{
-                              marginLeft: "auto",
+                              marginInlineStart: "auto",
                               fontSize: "var(--text-sm)",
                               color: "var(--fg-3)",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               minWidth: 0,
-                              textAlign: "right",
+                              textAlign: "end",
                             }}
                           >
                             {PANEL_STATE_WORDS[state]}

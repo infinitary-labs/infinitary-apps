@@ -105,7 +105,7 @@ export function FeedLine({
             fontSize: "var(--text-xs)",
             lineHeight: "var(--leading-body)",
             textBox: "trim-both ex alphabetic",
-            textAlign: "right",
+            textAlign: "end",
           }}
         >
           {time}

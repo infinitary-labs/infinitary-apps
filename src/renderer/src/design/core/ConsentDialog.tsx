@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { type ReactNode, useId, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motionEase, motionToken } from "../motion";
@@ -81,7 +82,7 @@ export function ConsentDialog({
           borderRadius: "var(--radius-l)",
           boxShadow: "var(--shadow-2)",
           padding: "var(--space-5)",
-          textAlign: "left",
+          textAlign: "start",
         }}
       >
         <form
@@ -144,7 +145,7 @@ export function ConsentDialog({
           {children}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
             <Button variant="ghost" size="sm" onClick={onClose}>
-              Not now
+              {m.uiConsentNotNow()}
             </Button>
             <Button type="submit" variant="primary" size="sm" disabled={actDisabled}>
               {act}

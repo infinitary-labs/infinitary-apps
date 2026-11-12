@@ -469,15 +469,18 @@ export class FrameController {
    */
   receive(data: unknown): void {
     if (this.disposed) {
+      // i18n-exempt: not shown (a console line, or an error for the panel's code)
       noteDroppedLinkMessage(data, "its frame is gone");
       return;
     }
     const parsed = frameMessageSchema.safeParse(data);
     if (!parsed.success) {
+      // i18n-exempt: not shown (a console line, or an error for the panel's code)
       noteDroppedLinkMessage(data, "its message is not one the bridge sends");
       return;
     }
     const message = parsed.data;
+    // i18n-exempt: not shown (a console line, or an error for the panel's code)
     if (message.type === "link") noteFrameLink(message.href, "heard from its frame");
     if (
       message.type !== "ready" &&
@@ -489,6 +492,7 @@ export class FrameController {
       if (message.type === "link")
         noteFrameLink(
           message.href,
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
           "not opened, it came from a document the frame no longer shows",
         );
       return;
@@ -650,6 +654,7 @@ export class FrameController {
         const asker: Asker = { id, document: this.documentId, birth: this.births };
         const request = frameRequestSchema.safeParse(rest);
         if (!request.success) {
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
           this.refuse(asker, "bad_request", "malformed request");
           return;
         }
@@ -985,6 +990,7 @@ export class FrameController {
       case "unsubscribe": {
         const stop = this.subscriptions.get(request.sub);
         if (!stop) {
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
           this.refuse(asker, "subscription_unknown", `no subscription ${request.sub}`);
           return;
         }
@@ -1008,6 +1014,7 @@ export class FrameController {
   private async storeRequest(asker: Asker, request: Extract<FrameRequest, { verb: "store" }>) {
     const slice = this.spec.store;
     if (!slice || !this.deps.store) {
+      // i18n-exempt: not shown (a console line, or an error for the panel's code)
       this.refuse(asker, "capability_not_granted", "this frame has no store");
       return;
     }
@@ -1023,6 +1030,7 @@ export class FrameController {
       this.refuse(
         asker,
         "bad_request",
+        // i18n-exempt: not shown (a console line, or an error for the panel's code)
         parsed.error.issues[0]?.message ?? "malformed store request",
       );
       return;
@@ -1042,11 +1050,13 @@ export class FrameController {
       this.refuse(
         asker,
         "read_not_declared",
+        // i18n-exempt: not shown (a console line, or an error for the panel's code)
         `plugin "${this.spec.pluginId}" does not declare the read "${request.read}"`,
       );
       return;
     }
     if (this.subscriptions.has(request.sub)) {
+      // i18n-exempt: not shown (a console line, or an error for the panel's code)
       this.refuse(asker, "bad_request", `subscription ${request.sub} already exists`);
       return;
     }
@@ -1054,6 +1064,7 @@ export class FrameController {
       this.refuse(
         asker,
         "too_many_subscriptions",
+        // i18n-exempt: not shown (a console line, or an error for the panel's code)
         `a frame may hold ${FRAME_MAX_SUBSCRIPTIONS} subscriptions`,
       );
       return;
@@ -1096,6 +1107,7 @@ export class FrameController {
 
   private async action(asker: Asker, request: Extract<FrameRequest, { verb: "action" }>) {
     if (!this.spec.actions.includes(request.action)) {
+      // i18n-exempt: not shown (a console line, or an error for the panel's code)
       this.refuse(asker, "action_not_declared", `"${request.action}" is not a declared action`);
       return;
     }
@@ -1106,6 +1118,7 @@ export class FrameController {
         ? PERSONAL_STORE_VALUE_MAX_BYTES
         : ACTION_VALUE_MAX_BYTES;
     if (request.value !== undefined && byteLength(request.value) > most) {
+      // i18n-exempt: not shown (a console line, or an error for the panel's code)
       this.refuse(asker, "value_too_large", `an action value may be ${most} bytes`);
       return;
     }
@@ -1144,6 +1157,7 @@ export class FrameController {
   /** Counts one async request in, refusing past the cap. */
   private admit(asker: Asker): boolean {
     if (this.inFlight >= FRAME_MAX_IN_FLIGHT) {
+      // i18n-exempt: not shown (a console line, or an error for the panel's code)
       this.refuse(asker, "too_many_in_flight", `a frame may await ${FRAME_MAX_IN_FLIGHT} requests`);
       return false;
     }

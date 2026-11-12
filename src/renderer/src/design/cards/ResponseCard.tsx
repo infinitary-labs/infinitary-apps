@@ -1,5 +1,6 @@
 import { REVIEW_FINDING_LABEL } from "@shared/cards";
 import { ENDED_CHIP_LABEL } from "@shared/endedCard";
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { Badge, type BadgeTone } from "../core/Badge";
 import { ModelChip } from "../core/ModelChip";
@@ -132,12 +133,33 @@ export type ResponseCardProps = {
   bodyRef?: React.Ref<HTMLDivElement>;
 };
 
-const cardKinds: Record<ResponseCardKind, { label: string; tone: BadgeTone }> = {
-  decision: { label: "Decision", tone: "accent" },
-  note: { label: "Note", tone: "neutral" },
-  attention: { label: "Attention", tone: "danger" },
+/** Each kind's chip, its word read when it is drawn so it follows a language change. */
+const cardKinds: Record<ResponseCardKind, { readonly label: string; tone: BadgeTone }> = {
+  decision: {
+    get label() {
+      return m.uiCardKindDecision();
+    },
+    tone: "accent",
+  },
+  note: {
+    get label() {
+      return m.uiCardKindNote();
+    },
+    tone: "neutral",
+  },
+  attention: {
+    get label() {
+      return m.uiCardKindAttention();
+    },
+    tone: "danger",
+  },
   /** A task's record (task-system P4): never any card actions; its footer is the host's. */
-  record: { label: "Task", tone: "neutral" },
+  record: {
+    get label() {
+      return m.uiCardKindTask();
+    },
+    tone: "neutral",
+  },
   /** Its author ended it; nothing on it waits (INF-3071). */
   ended: { label: ENDED_CHIP_LABEL, tone: "neutral" },
 };
@@ -210,7 +232,7 @@ export function ResponseCard({
     <section
       data-response-card=""
       data-task-record={recordTaskId}
-      aria-label={recordTaskId ? "Task record" : title}
+      aria-label={recordTaskId ? m.uiCardTaskRecord() : title}
       style={{
         width,
         // The floor gives way to the cap (CARD_MAX_HEIGHT) when a tall
@@ -325,7 +347,7 @@ export function ResponseCard({
                   {model && <ModelChip label={model} />}
                 </span>
               )}
-              <CardCorner style={{ marginLeft: "auto" }} buttonRef={closeRef} />
+              <CardCorner style={{ marginInlineStart: "auto" }} buttonRef={closeRef} />
             </div>
           ))}
       <div
@@ -398,7 +420,11 @@ export function ResponseCard({
         {!bare && !chrome && asked && (
           <div
             data-card-asked-row=""
-            style={{ order: 1, padding: `var(--space-2) ${asideRoom} 0 20px`, flexShrink: 0 }}
+            style={{
+              order: 1,
+              padding: `var(--space-2) ${asideRoom} 0 20px`,
+              flexShrink: 0,
+            }}
           >
             {asked}
           </div>

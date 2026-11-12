@@ -1,3 +1,5 @@
+import { setCurrentLanguage } from "@shared/i18n/current";
+import * as m from "@shared/i18n/messages.generated";
 import {
   APP_PANEL_COMMANDS_BEFORE,
   COMMAND_IDS,
@@ -75,6 +77,22 @@ describe("command search's list", () => {
       expect(commandRows(typed, () => null, DEFAULT_BINDINGS).map((row) => row.id)).toContain(
         "whats-new.show",
       );
+  });
+
+  // INF-3674's approved plan: command search also matches a command's English words.
+  it("finds a command by its English words in another language, and lists it in that language", () => {
+    setCurrentLanguage("en-XA");
+    try {
+      const rows = commandRows("release notes", () => null, DEFAULT_BINDINGS);
+      expect(rows.map((row) => row.id)).toEqual(["whats-new.show"]);
+      expect(rows[0]?.label).toBe(m.commandWhatsNewShow());
+      expect(rows[0]?.label).not.toBe("Show what's new");
+      expect(
+        commandRows("show what's new", () => null, DEFAULT_BINDINGS).map((row) => row.id),
+      ).toEqual(["whats-new.show"]);
+    } finally {
+      setCurrentLanguage("en");
+    }
   });
 
   it("gives each row its key and its reason, read as the rows are drawn", () => {

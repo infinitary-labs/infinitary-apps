@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   type AnyCommandId,
   allCommandIds,
@@ -221,11 +222,11 @@ export function KeyboardTab() {
       <div style={{ marginBottom: ROW_GAP }}>
         <SettingRow
           id="keyboard-preset"
-          title="Preset"
-          description="A whole set of keys to start from. Each keeps the keys you change in it."
+          title={m.settingsKeyboardPreset()}
+          description={m.settingsKeyboardPresetDescription()}
           control={
             <GroupedPills<PresetId>
-              name="Preset"
+              name={m.settingsKeyboardPreset()}
               htmlName="keyboard-preset"
               value={snapshot.saved.preset}
               // Not while saving: a disabled pill drops the focus an arrow just moved.

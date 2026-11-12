@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   type KeyBinding,
   type PanelCommand,
@@ -76,8 +77,6 @@ function resolve(host: PluginHost, id: PanelCommandId) {
   return panel && command ? { panel, command } : null;
 }
 
-const RECORDING = "A recording is running";
-
 /**
  * Why a panel's command cannot run now, beyond what holds every key: one
  * that presses a button needs its panel on a rail with something to show -
@@ -90,15 +89,18 @@ export function panelCommandRefusal(
   recording: boolean,
 ): string | null {
   const found = resolve(host, id);
-  if (!found) return "Its panel is not here now";
-  if (recording) return RECORDING;
+  if (!found) return m.panelCommandGone();
+  if (recording) return m.panelCommandRecording();
   if (found.command.presses === undefined) return null;
-  if (railStore.isHidden(found.panel.id)) return `The ${found.panel.title} panel is hidden`;
-  if (found.panel.source.get() === null) return `${found.panel.title} has nothing to show`;
+  if (railStore.isHidden(found.panel.id)) return m.panelCommandHidden({ title: found.panel.title });
+  if (found.panel.source.get() === null)
+    return m.panelCommandNothingToShow({ title: found.panel.title });
   if (found.panel.rail?.decides !== true) return null;
   // Off its rail by its own word: why, in its own words when it said them.
   const said = panelRail.get(found.panel.id);
-  return said.shown === true ? null : (said.why ?? `${found.panel.title} has nothing to show`);
+  return said.shown === true
+    ? null
+    : (said.why ?? m.panelCommandNothingToShow({ title: found.panel.title }));
 }
 
 /**

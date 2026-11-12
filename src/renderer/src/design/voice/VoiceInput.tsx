@@ -11,6 +11,7 @@ import {
   PASTED_TEXT_WORDS,
   type PastedText,
 } from "@shared/composer";
+import * as m from "@shared/i18n/messages.generated";
 import { cutText } from "@shared/textCut";
 import type React from "react";
 import { useCallback, useId, useRef, useState } from "react";
@@ -109,7 +110,7 @@ function Waveform({ level = 0.6, height = 28 }: { level?: number; height?: numbe
     <canvas
       ref={ref}
       role="img"
-      aria-label="Live voice level"
+      aria-label={m.uiVoiceLevel()}
       style={{ width: "100%", height, display: "block" }}
     />
   );
@@ -245,7 +246,7 @@ export function PastedTextChip({ paste, onRemove }: { paste: PastedText; onRemov
           background: "transparent",
           color: "inherit",
           font: "inherit",
-          textAlign: "left",
+          textAlign: "start",
           cursor: "default",
         }}
       >
@@ -304,7 +305,7 @@ export function PastedTextChip({ paste, onRemove }: { paste: PastedText; onRemov
  */
 export function VoiceInput({
   mode = "idle",
-  keybindHint = "type, or press/hold right ⌥ to talk",
+  keybindHint = m.uiVoiceHint(),
   disabled = false,
   value,
   onChange,
@@ -375,7 +376,7 @@ export function VoiceInput({
 
   const send = (
     <IconButton
-      label="Submit"
+      label={m.uiVoiceSubmit()}
       tone="accent"
       {...fixedKeys("Enter")}
       aria-disabled={over || undefined}
@@ -440,7 +441,7 @@ export function VoiceInput({
           }}
         >
           {attachments.map((att) => {
-            const name = att.name || "image";
+            const name = att.name || m.uiVoiceImage();
             return (
               <div key={att.id} data-voice-input-attachment="" style={chipStyle}>
                 <img
@@ -463,7 +464,10 @@ export function VoiceInput({
                 >
                   {name}
                 </span>
-                <IconButton label={`Remove ${name}`} onClick={() => onRemoveAttachment?.(att.id)}>
+                <IconButton
+                  label={m.uiVoiceRemove({ name })}
+                  onClick={() => onRemoveAttachment?.(att.id)}
+                >
                   {VIco.x}
                 </IconButton>
               </div>
@@ -499,7 +503,7 @@ export function VoiceInput({
           fieldRef={setField}
           id={inputId}
           name="task-prompt"
-          aria-label="Task prompt"
+          aria-label={m.uiVoiceTaskPrompt()}
           aria-describedby={foot && !recording ? hintId : undefined}
           messageField="main-message"
           disabled={disabled}
@@ -562,7 +566,7 @@ export function VoiceInput({
           {recording ? (
             <>
               <IconButton
-                label="Abandon"
+                label={m.uiVoiceAbandon()}
                 tone="danger"
                 {...fixedKeys("Escape")}
                 onClick={onAbandon}
@@ -572,11 +576,11 @@ export function VoiceInput({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Waveform level={level} />
               </div>
-              <IconButton label="Accept" tone="ok" onClick={onAccept}>
+              <IconButton label={m.uiVoiceAccept()} tone="ok" onClick={onAccept}>
                 {VIco.check}
               </IconButton>
               <IconButton
-                label="Submit"
+                label={m.uiVoiceSubmit()}
                 tone="accent"
                 onClick={onSubmit}
                 style={{ background: "var(--accent-dim)" }}

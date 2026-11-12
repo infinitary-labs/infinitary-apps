@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Input, KeyCap } from "../design";
@@ -168,7 +169,7 @@ function SearchPanel({
       ref={panel}
       role="dialog"
       aria-modal="true"
-      aria-label="Search commands"
+      aria-label={m.shellCommandSearchLabel()}
       data-command-search=""
       style={{
         position: "absolute",
@@ -194,12 +195,12 @@ function SearchPanel({
         <Input
           size="lg"
           role="combobox"
-          aria-label="Search commands"
+          aria-label={m.shellCommandSearchLabel()}
           aria-expanded="true"
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={at >= 0 ? optionId(at) : undefined}
-          placeholder="Search commands"
+          placeholder={m.shellCommandSearchLabel()}
           autoComplete="off"
           spellCheck={false}
           value={query}
@@ -212,7 +213,7 @@ function SearchPanel({
       <div
         id={listId}
         role="listbox"
-        aria-label="Commands"
+        aria-label={m.shellCommandSearchList()}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -304,7 +305,7 @@ function SearchPanel({
               color: "var(--fg-3)",
             }}
           >
-            No command matches
+            {m.shellCommandSearchNoMatch()}
           </p>
         )}
       </div>
@@ -317,7 +318,7 @@ function SearchPanel({
           color: "var(--fg-3)",
         }}
       >
-        Arrow keys choose · Enter runs · Escape goes back
+        {m.shellCommandSearchHint()}
       </p>
       {chosen?.refusal && (
         <span role="status" style={VISUALLY_HIDDEN}>

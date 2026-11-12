@@ -1,3 +1,5 @@
+import * as m from "@shared/i18n/messages.generated";
+
 /** The Models section's header summary words (`ModelsSection.tsx`). */
 export const STARTING_LEVELS_SUMMARY = "no levels chosen - using the starting levels";
 export const NOT_IN_USE = "not in use";
@@ -8,10 +10,10 @@ export const NOT_IN_USE = "not in use";
  * Subscriptions offers.
  */
 export const STARTING_LEVELS_RESET = {
-  reset: "Reset to starting levels",
-  confirm: "Confirm reset",
-  cancel: "Cancel",
-  note: "Always use choices are untouched.",
+  reset: m.settingsModelsReset(),
+  confirm: m.settingsModelsResetConfirm(),
+  cancel: m.settingsModelsResetCancel(),
+  note: m.settingsModelsResetNote(),
 } as const;
 
 /** The Decisions row's menu item that opens the OpenRouter picker, offered while OpenRouter has models. */

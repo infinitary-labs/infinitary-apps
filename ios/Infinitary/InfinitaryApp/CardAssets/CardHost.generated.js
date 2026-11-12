@@ -4886,6 +4886,40 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "stop-at-cost",
     "secrets-decision"
   ];
+  const SOURCE_LANGUAGE = "en";
+  const RIGHT_TO_LEFT_SCRIPTS = /* @__PURE__ */ new Set([
+    "Arab",
+    "Hebr",
+    "Thaa",
+    "Syrc",
+    "Nkoo",
+    "Adlm",
+    "Rohg",
+    "Mand",
+    "Samr"
+  ]);
+  function textDirection(tag) {
+    const script = likelySubtags(tag)?.script;
+    return script && RIGHT_TO_LEFT_SCRIPTS.has(script) ? "rtl" : "ltr";
+  }
+  function likelySubtags(tag) {
+    try {
+      const named = new Intl.Locale(tag);
+      const likely = named.maximize();
+      return {
+        language: likely.language,
+        script: likely.script,
+        region: likely.region,
+        namedRegion: named.region
+      };
+    } catch {
+      return void 0;
+    }
+  }
+  let language = SOURCE_LANGUAGE;
+  function currentLanguage() {
+    return language;
+  }
   const SERVED_LOCALE = "en-US";
   function servedNumber(value) {
     return value.toLocaleString(SERVED_LOCALE);
@@ -8476,13 +8510,1158 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     message: string()
   });
   union([sqlRefusalSchema, sqlRowsSchema]);
-  const COMPUTER = {
-    many: "computers"
-  };
+  function commandCommandsSearch() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šéáŕçĥ çöɱɱáñðš ~~~~~]`;
+      case "ar-XB":
+        return `‮Search commands‬`;
+    }
+    return `Search commands`;
+  }
+  function commandFocusMainMessage() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé ɱáîñ ɱéššáĝé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the main message‬`;
+    }
+    return `Go to the main message`;
+  }
+  function commandFocusCardReply() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé çáŕð'š ŕéþļý ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the card's reply‬`;
+    }
+    return `Go to the card's reply`;
+  }
+  function commandFocusCardReplyWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[áñýţĥîñĝ ţö áðð, çöɱɱéñţ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮anything to add, comment‬`;
+    }
+    return `anything to add, comment`;
+  }
+  function commandFocusCardBody() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé çáŕð'š ƀöðý ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the card's body‬`;
+    }
+    return `Go to the card's body`;
+  }
+  function commandFocusCardActions() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé çáŕð'š ƀûţţöñš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the card's buttons‬`;
+    }
+    return `Go to the card's buttons`;
+  }
+  function commandCardsChoice1() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þŕéšš ţĥé ŕéçöɱɱéñðéð çĥöîçé ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Press the recommended choice‬`;
+    }
+    return `Press the recommended choice`;
+  }
+  function commandCardsChoice1Words() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çáŕð, ƀûţţöñ, ðéƒáûļţ, ƒîŕšţ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮card, button, default, first‬`;
+    }
+    return `card, button, default, first`;
+  }
+  function commandCardsChoice2() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þŕéšš ţĥé šéçöñð çĥöîçé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Press the second choice‬`;
+    }
+    return `Press the second choice`;
+  }
+  function commandCardsChoice2Words() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çáŕð, ƀûţţöñ ~~~~]`;
+      case "ar-XB":
+        return `‮card, button‬`;
+    }
+    return `card, button`;
+  }
+  function commandCardsChoice3() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þŕéšš ţĥé ţĥîŕð çĥöîçé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Press the third choice‬`;
+    }
+    return `Press the third choice`;
+  }
+  function commandCardsChoice3Words() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çáŕð, ƀûţţöñ ~~~~]`;
+      case "ar-XB":
+        return `‮card, button‬`;
+    }
+    return `card, button`;
+  }
+  function commandCardsChoice4() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þŕéšš ţĥé ƒöûŕţĥ çĥöîçé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Press the fourth choice‬`;
+    }
+    return `Press the fourth choice`;
+  }
+  function commandCardsChoice4Words() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çáŕð, ƀûţţöñ ~~~~]`;
+      case "ar-XB":
+        return `‮card, button‬`;
+    }
+    return `card, button`;
+  }
+  function commandRegionsNext() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé ñéẋţ þáŕţ öƒ ţĥé ŵîñðöŵ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the next part of the window‬`;
+    }
+    return `Go to the next part of the window`;
+  }
+  function commandRegionsPrevious() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé þŕéṽîöûš þáŕţ öƒ ţĥé ŵîñðöŵ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the previous part of the window‬`;
+    }
+    return `Go to the previous part of the window`;
+  }
+  function commandComputersPrevious() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þŕéṽîöûš ŵöŕķ çöɱþûţéŕš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Previous work computers‬`;
+    }
+    return `Previous work computers`;
+  }
+  function commandComputersNext() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ñéẋţ ŵöŕķ çöɱþûţéŕš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Next work computers‬`;
+    }
+    return `Next work computers`;
+  }
+  function commandProjectFocusOpen() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ƒöçûš öñ á þŕöĵéçţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Focus on a project‬`;
+    }
+    return `Focus on a project`;
+  }
+  function commandProjectFocusOpenWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ƒîļţéŕ, þŕöĵéçţ, þîļļ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮filter, project, pill‬`;
+    }
+    return `filter, project, pill`;
+  }
+  function commandProjectFocusClear() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ áļļ þŕöĵéçţš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show all projects‬`;
+    }
+    return `Show all projects`;
+  }
+  function commandProjectFocusClearWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ƒîļţéŕ, ƒöçûš, þŕöĵéçţ, çļéáŕ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮filter, focus, project, clear‬`;
+    }
+    return `filter, focus, project, clear`;
+  }
+  function commandCardsPrevious() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ ţĥé þŕéṽîöûš çáŕð ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Show the previous card‬`;
+    }
+    return `Show the previous card`;
+  }
+  function commandCardsNext() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ ţĥé ñéẋţ çáŕð ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show the next card‬`;
+    }
+    return `Show the next card`;
+  }
+  function commandCardsMinimize() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þûţ çáŕð ášîðé ~~~~~]`;
+      case "ar-XB":
+        return `‮Put card aside‬`;
+    }
+    return `Put card aside`;
+  }
+  function commandCardsDone() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þŕéšš ţĥé ñöţé'š Ðöñé öŕ Ĝöţ îţ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Press the note's Done or Got it‬`;
+    }
+    return `Press the note's Done or Got it`;
+  }
+  function commandCardsDoneWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çáŕð, ñöţé, áñšŵéŕ, ðöñé, ĝöţ îţ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮card, note, answer, done, got it‬`;
+    }
+    return `card, note, answer, done, got it`;
+  }
+  function commandCardsDecline() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ðéçļîñé éṽéŕý çĥöîçé öñ ţĥé çáŕð ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Decline every choice on the card‬`;
+    }
+    return `Decline every choice on the card`;
+  }
+  function commandCardsDeclineWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çáŕð, ðéçļîñé, ñö, ñöţ ñöŵ, ñöñé, ŕéĵéçţ ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮card, decline, no, not now, none, reject‬`;
+    }
+    return `card, decline, no, not now, none, reject`;
+  }
+  function commandCardsMaximize() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁáẋîɱîžé öŕ ŕéšţöŕé çáŕð ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Maximize or restore card‬`;
+    }
+    return `Maximize or restore card`;
+  }
+  function commandCardsMaximizeWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ƒûļļ, šçŕééñ, éñļáŕĝé, éẋþáñð, ƀîĝĝéŕ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮full, screen, enlarge, expand, bigger‬`;
+    }
+    return `full, screen, enlarge, expand, bigger`;
+  }
+  function commandCardsNextRevision() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé ñéẋţ ŕéṽîšéð áŕéá ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the next revised area‬`;
+    }
+    return `Go to the next revised area`;
+  }
+  function commandCardsNextRevisionWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çĥáñĝéš, ŕéṽîšîöñ, ļîñķš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮changes, revision, links‬`;
+    }
+    return `changes, revision, links`;
+  }
+  function commandCardsPointAt() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þöîñţ áţ á þáŕţ öƒ ţĥé çáŕð ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Point at a part of the card‬`;
+    }
+    return `Point at a part of the card`;
+  }
+  function commandCardsPointAtWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[áññöţáţé, çöɱɱéñţ, šéļéçţ, ñöţé ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮annotate, comment, select, note‬`;
+    }
+    return `annotate, comment, select, note`;
+  }
+  function commandCardsThread() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ öŕ ĥîðé ţĥé çáŕð'š ţĥŕéáð ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Show or hide the card's thread‬`;
+    }
+    return `Show or hide the card's thread`;
+  }
+  function commandCardsThreadWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çöļļáþšé, éẋþáñð, çĥáţ, ŕéþļîéš, ɱéššáĝéš ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮collapse, expand, chat, replies, messages‬`;
+    }
+    return `collapse, expand, chat, replies, messages`;
+  }
+  function commandCardsThreadNew() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé ţĥŕéáð'š ñéŵ ɱéššáĝéš ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the thread's new messages‬`;
+    }
+    return `Go to the thread's new messages`;
+  }
+  function commandCardsThreadNewWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ĵûɱþ, ðöŵñ, ļáţéšţ, ƀöţţöɱ, ûñŕéáð, ŕéþļîéš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮jump, down, latest, bottom, unread, replies‬`;
+    }
+    return `jump, down, latest, bottom, unread, replies`;
+  }
+  function commandCardsShowInfo() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ Îñƒö ~~~]`;
+      case "ar-XB":
+        return `‮Show Info‬`;
+    }
+    return `Show Info`;
+  }
+  function commandCardsShowInfoWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţášķ, ŕéçöŕð, ţáƀ, öþéñ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮task, record, tab, open‬`;
+    }
+    return `task, record, tab, open`;
+  }
+  function commandCardsShowCards() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ Çáŕðš ~~~~]`;
+      case "ar-XB":
+        return `‮Show Cards‬`;
+    }
+    return `Show Cards`;
+  }
+  function commandCardsShowCardsWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţášķ, ŕéçöŕð, ţáƀ, ðéçîšîöñš, ñöţéš ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮task, record, tab, decisions, notes‬`;
+    }
+    return `task, record, tab, decisions, notes`;
+  }
+  function commandCardsShowActivity() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ Åçţîṽîţý ~~~~~]`;
+      case "ar-XB":
+        return `‮Show Activity‬`;
+    }
+    return `Show Activity`;
+  }
+  function commandCardsShowActivityWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţášķ, ŕéçöŕð, ţáƀ, ţîɱéļîñé, ĥîšţöŕý ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮task, record, tab, timeline, history‬`;
+    }
+    return `task, record, tab, timeline, history`;
+  }
+  function commandCardsShowCrewmate() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ Çŕéŵɱáţé ~~~~~]`;
+      case "ar-XB":
+        return `‮Show Crewmate‬`;
+    }
+    return `Show Crewmate`;
+  }
+  function commandCardsShowCrewmateWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţášķ, šéššîöñ, ţŕáñšçŕîþţ, ţáƀ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮task, session, transcript, tab‬`;
+    }
+    return `task, session, transcript, tab`;
+  }
+  function commandBrowserControl() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ţáķé öŕ ŕéţûŕñ ƀŕöŵšéŕ çöñţŕöļ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Take or return browser control‬`;
+    }
+    return `Take or return browser control`;
+  }
+  function commandBrowserControlWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ĥáñðƀáçķ, ţáķé, ŕéţûŕñ, ƀŕöŵšéŕ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮handback, take, return, browser‬`;
+    }
+    return `handback, take, return, browser`;
+  }
+  function commandTaskMoveComputer() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ţĥé ţášķ ţö áñöţĥéŕ çöɱþûţéŕ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Move the task to another computer‬`;
+    }
+    return `Move the task to another computer`;
+  }
+  function commandTaskMoveComputerWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[çöɱþûţéŕ, ɱáç, ɱáçĥîñé, ɱöṽé, ðéṽîçé, ŕéçöŕð ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮computer, mac, machine, move, device, record‬`;
+    }
+    return `computer, mac, machine, move, device, record`;
+  }
+  function commandTaskCloseDone() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Çļöšé ţĥé ţášķ áš ðöñé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Close the task as done‬`;
+    }
+    return `Close the task as done`;
+  }
+  function commandTaskCloseDoneWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ðöñé, ƒîñîšĥ, ƒîñîšĥéð, çöɱþļéţé, çļöšé, ŕéçöŕð, ţášķ ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮done, finish, finished, complete, close, record, task‬`;
+    }
+    return `done, finish, finished, complete, close, record, task`;
+  }
+  function commandCardsShowBrowser() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ Ɓŕöŵšéŕ ~~~~]`;
+      case "ar-XB":
+        return `‮Show Browser‬`;
+    }
+    return `Show Browser`;
+  }
+  function commandCardsShowBrowserWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţášķ, þáĝé, ţáƀ ~~~~~]`;
+      case "ar-XB":
+        return `‮task, page, tab‬`;
+    }
+    return `task, page, tab`;
+  }
+  function commandCardsNextTab() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ñéẋţ ţáƀ ~~~]`;
+      case "ar-XB":
+        return `‮Next tab‬`;
+    }
+    return `Next tab`;
+  }
+  function commandCardsNextTabWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţášķ, ţáƀ ~~~]`;
+      case "ar-XB":
+        return `‮task, tab‬`;
+    }
+    return `task, tab`;
+  }
+  function commandCardsPreviousTab() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þŕéṽîöûš ţáƀ ~~~~]`;
+      case "ar-XB":
+        return `‮Previous tab‬`;
+    }
+    return `Previous tab`;
+  }
+  function commandCardsPreviousTabWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţášķ, ţáƀ ~~~]`;
+      case "ar-XB":
+        return `‮task, tab‬`;
+    }
+    return `task, tab`;
+  }
+  function commandSettingsOpen() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ Šéţţîñĝš ~~~~~]`;
+      case "ar-XB":
+        return `‮Open Settings‬`;
+    }
+    return `Open Settings`;
+  }
+  function commandSettingsKeyboard() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ Ķéýƀöáŕð šéţţîñĝš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Keyboard settings‬`;
+    }
+    return `Open Keyboard settings`;
+  }
+  function commandSettingsPanels() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Åŕŕáñĝé þáñéļš ~~~~~]`;
+      case "ar-XB":
+        return `‮Arrange panels‬`;
+    }
+    return `Arrange panels`;
+  }
+  function commandSettingsPanelsWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ŕáîļš, ļáýöûţ, öŕðéŕ, ɱöṽé, ĥîðé, šĥöŵ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮rails, layout, order, move, hide, show‬`;
+    }
+    return `rails, layout, order, move, hide, show`;
+  }
+  function commandUpdatesShow() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ áṽáîļáƀļé ûþðáţé ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Show available update‬`;
+    }
+    return `Show available update`;
+  }
+  function commandUpdatesShowWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ûþðáţé, ŕéšţáŕţ, šţáƀļé, áļþĥá ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮update, restart, stable, alpha‬`;
+    }
+    return `update, restart, stable, alpha`;
+  }
+  function commandUpdatesLater() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ûþðáţé ļáţéŕ ~~~~]`;
+      case "ar-XB":
+        return `‮Update later‬`;
+    }
+    return `Update later`;
+  }
+  function commandUpdatesLaterWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ûþðáţé, ļáţéŕ, çáñçéļ, šáṽîñĝ, ŵöŕķ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮update, later, cancel, saving, work‬`;
+    }
+    return `update, later, cancel, saving, work`;
+  }
+  function commandUpdatesCheck() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Çĥéçķ ƒöŕ ûþðáţéš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Check for updates‬`;
+    }
+    return `Check for updates`;
+  }
+  function commandUpdatesCheckWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ûþðáţé, ṽéŕšîöñ, ŕéļéášé, ñéŵ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮update, version, release, new‬`;
+    }
+    return `update, version, release, new`;
+  }
+  function commandWhatsNewShow() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šĥöŵ ŵĥáţ'š ñéŵ ~~~~~]`;
+      case "ar-XB":
+        return `‮Show what's new‬`;
+    }
+    return `Show what's new`;
+  }
+  function commandWhatsNewShowWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ŕéļéášé, ñöţéš, çĥáñĝéš, ṽéŕšîöñ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮release, notes, changes, version‬`;
+    }
+    return `release, notes, changes, version`;
+  }
+  function commandFirstmateReply() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ ţĥé ƒîŕšţ ɱáţé'š ŕéþļý ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open the first mate's reply‬`;
+    }
+    return `Open the first mate's reply`;
+  }
+  function commandFirstmateReplyWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[áñšŵéŕ, ɱéššáĝé, ñöţé, ļášţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮answer, message, note, last‬`;
+    }
+    return `answer, message, note, last`;
+  }
+  function commandSettingsRunbooks() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ Ŕûñƀööķš ~~~~~]`;
+      case "ar-XB":
+        return `‮Open Runbooks‬`;
+    }
+    return `Open Runbooks`;
+  }
+  function commandSettingsRunbooksWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ĝûîðáñçé, šķîļļš, îñšţŕûçţîöñš ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮guidance, skills, instructions‬`;
+    }
+    return `guidance, skills, instructions`;
+  }
+  function commandRunbooksOpenFolder() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ ýöûŕ ŕûñƀööķš ƒöļðéŕ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open your runbooks folder‬`;
+    }
+    return `Open your runbooks folder`;
+  }
+  function commandRunbooksOpenFolderWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ðîŕéçţöŕý, ĝûîðáñçé, çûšţöɱîžé ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮directory, guidance, customize‬`;
+    }
+    return `directory, guidance, customize`;
+  }
+  function commandSettingsUsage() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ Ûšáĝé ~~~~]`;
+      case "ar-XB":
+        return `‮Open Usage‬`;
+    }
+    return `Open Usage`;
+  }
+  function commandSettingsUsageWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţöķéñš, ɱöðéļš, çöšţ, ðöļļáŕš ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮tokens, models, cost, dollars‬`;
+    }
+    return `tokens, models, cost, dollars`;
+  }
+  function commandSettingsAutomation() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ Åûţöɱáţîöñ ~~~~~]`;
+      case "ar-XB":
+        return `‮Open Automation‬`;
+    }
+    return `Open Automation`;
+  }
+  function commandSettingsAutomationWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[šçĥéðûļé, šçĥéðûļéð, ŕéçûŕŕîñĝ, ŕéɱîñðéŕ, þáûšé ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮schedule, scheduled, recurring, reminder, pause‬`;
+    }
+    return `schedule, scheduled, recurring, reminder, pause`;
+  }
+  function commandSettingsIntegrations() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations‬`;
+    }
+    return `Open Integrations`;
+  }
+  function commandSettingsIntegrationsWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ĝîţĥûƀ, çöññéçţîöñ, çöññéçţ, šîĝñ îñ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮github, connection, connect, sign in‬`;
+    }
+    return `github, connection, connect, sign in`;
+  }
+  function commandSettingsSecrets() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Öþéñ Šéçŕéţš ~~~~]`;
+      case "ar-XB":
+        return `‮Open Secrets‬`;
+    }
+    return `Open Secrets`;
+  }
+  function commandSettingsSecretsWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[šéçŕéţ, ķéý, áþþŕöṽáļ, ŕéçöṽéŕý ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮secret, key, approval, recovery‬`;
+    }
+    return `secret, key, approval, recovery`;
+  }
+  function commandAutomationPauseAll() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þáûšé áļļ áûţöɱáţîöñš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Pause all automations‬`;
+    }
+    return `Pause all automations`;
+  }
+  function commandAutomationPauseAllWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[šçĥéðûļé, šçĥéðûļéð, ŕéçûŕŕîñĝ, šţöþ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮schedule, scheduled, recurring, stop‬`;
+    }
+    return `schedule, scheduled, recurring, stop`;
+  }
+  function commandUsageUnit() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Šŵîţçĥ Ûšáĝé ûñîţš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Switch Usage units‬`;
+    }
+    return `Switch Usage units`;
+  }
+  function commandUsageUnitWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ţöķéñš, çöšţ, ðöļļáŕš, éšţîɱáţé ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮tokens, cost, dollars, estimate‬`;
+    }
+    return `tokens, cost, dollars, estimate`;
+  }
+  function commandAllowanceRecheck() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ŕéçĥéçķ áļļöŵáñçé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Recheck allowance‬`;
+    }
+    return `Recheck allowance`;
+  }
+  function commandAllowanceRecheckWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ǫûöţá, ŕéƒŕéšĥ, ûšáĝé, ļîɱîţ, áççöûñţ, šŵîţçĥ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮quota, refresh, usage, limit, account, switch‬`;
+    }
+    return `quota, refresh, usage, limit, account, switch`;
+  }
+  function commandDevicesTryAgainWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ðéṽîçéš, ššĥ, ŕéçöññéçţ, çöññéçţ, ɱáçš ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮devices, ssh, reconnect, connect, macs‬`;
+    }
+    return `devices, ssh, reconnect, connect, macs`;
+  }
+  function commandSizeLarger() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁáķé éṽéŕýţĥîñĝ ļáŕĝéŕ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make everything larger‬`;
+    }
+    return `Make everything larger`;
+  }
+  function commandSizeSmaller() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁáķé éṽéŕýţĥîñĝ šɱáļļéŕ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make everything smaller‬`;
+    }
+    return `Make everything smaller`;
+  }
+  function commandSizeReset() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ŕéţûŕñ ţö ţĥé ûšûáļ šîžé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Return to the usual size‬`;
+    }
+    return `Return to the usual size`;
+  }
+  function commandMessageDeleteToLineStart() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ðéļéţé ƀáçķ ţö ţĥé šţáŕţ öƒ ţĥé ļîñé ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Delete back to the start of the line‬`;
+    }
+    return `Delete back to the start of the line`;
+  }
+  function commandMessageDeleteToLineEnd() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ðéļéţé ţö ţĥé éñð öƒ ţĥé ļîñé ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Delete to the end of the line‬`;
+    }
+    return `Delete to the end of the line`;
+  }
+  function commandMessageDeleteWordBefore() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ðéļéţé ţĥé ŵöŕð ƀéƒöŕé ţĥé çûŕšöŕ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Delete the word before the cursor‬`;
+    }
+    return `Delete the word before the cursor`;
+  }
+  function commandMessagePutBackDeleted() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Þûţ ƀáçķ ŵĥáţ ŵáš ļášţ ðéļéţéð ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Put back what was last deleted‬`;
+    }
+    return `Put back what was last deleted`;
+  }
+  function commandMessageRecall() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ɓŕîñĝ ƀáçķ ţĥé ļášţ ɱéššáĝé šéñţ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Bring back the last message sent‬`;
+    }
+    return `Bring back the last message sent`;
+  }
+  function commandDevicesTryAgain() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ţŕý áĝáîñ ţö ŕéáçĥ ýöûŕ çöɱþûţéŕš ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Try again to reach your computers‬`;
+    }
+    return `Try again to reach your computers`;
+  }
+  function commandRegionsLeft() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ öñ ţĥé ļéƒţ ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the part of the window on the left‬`;
+    }
+    return `Go to the part of the window on the left`;
+  }
+  function commandRegionsLeftWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[þáñé, þáñéļ, ļéƒţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮pane, panel, left‬`;
+    }
+    return `pane, panel, left`;
+  }
+  function commandRegionsDown() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ ƀéļöŵ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the part of the window below‬`;
+    }
+    return `Go to the part of the window below`;
+  }
+  function commandRegionsDownWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[þáñé, þáñéļ, ðöŵñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮pane, panel, down‬`;
+    }
+    return `pane, panel, down`;
+  }
+  function commandRegionsUp() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ áƀöṽé ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the part of the window above‬`;
+    }
+    return `Go to the part of the window above`;
+  }
+  function commandRegionsUpWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[þáñé, þáñéļ, ûþ ~~~~~]`;
+      case "ar-XB":
+        return `‮pane, panel, up‬`;
+    }
+    return `pane, panel, up`;
+  }
+  function commandRegionsRight() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ĝö ţö ţĥé þáŕţ öƒ ţĥé ŵîñðöŵ öñ ţĥé ŕîĝĥţ ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the part of the window on the right‬`;
+    }
+    return `Go to the part of the window on the right`;
+  }
+  function commandRegionsRightWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[þáñé, þáñéļ, ŕîĝĥţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮pane, panel, right‬`;
+    }
+    return `pane, panel, right`;
+  }
+  function commandMoveLeft() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ļéƒţ ~~~]`;
+      case "ar-XB":
+        return `‮Move left‬`;
+    }
+    return `Move left`;
+  }
+  function commandMoveLeftWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[áŕŕöŵ, ļéƒţ, þŕéṽîöûš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮arrow, left, previous‬`;
+    }
+    return `arrow, left, previous`;
+  }
+  function commandMoveDown() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ðöŵñ ~~~]`;
+      case "ar-XB":
+        return `‮Move down‬`;
+    }
+    return `Move down`;
+  }
+  function commandMoveDownWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[áŕŕöŵ, ðöŵñ, ñéẋţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮arrow, down, next‬`;
+    }
+    return `arrow, down, next`;
+  }
+  function commandMoveUp() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ûþ ~~~]`;
+      case "ar-XB":
+        return `‮Move up‬`;
+    }
+    return `Move up`;
+  }
+  function commandMoveUpWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[áŕŕöŵ, ûþ, þŕéṽîöûš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮arrow, up, previous‬`;
+    }
+    return `arrow, up, previous`;
+  }
+  function commandMoveRight() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ŕîĝĥţ ~~~~]`;
+      case "ar-XB":
+        return `‮Move right‬`;
+    }
+    return `Move right`;
+  }
+  function commandMoveRightWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[áŕŕöŵ, ŕîĝĥţ, ñéẋţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮arrow, right, next‬`;
+    }
+    return `arrow, right, next`;
+  }
+  function commandMoveFirst() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ţö ţĥé šţáŕţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Move to the start‬`;
+    }
+    return `Move to the start`;
+  }
+  function commandMoveFirstWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[ĥöɱé, ţöþ, ƒîŕšţ, ƀéĝîññîñĝ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮home, top, first, beginning‬`;
+    }
+    return `home, top, first, beginning`;
+  }
+  function commandMoveLast() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ţö ţĥé éñð ~~~~~]`;
+      case "ar-XB":
+        return `‮Move to the end‬`;
+    }
+    return `Move to the end`;
+  }
+  function commandMoveLastWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[éñð, ƀöţţöɱ, ļášţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮end, bottom, last‬`;
+    }
+    return `end, bottom, last`;
+  }
+  function commandMovePageUp() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ûþ á þáĝé ~~~~~]`;
+      case "ar-XB":
+        return `‮Move up a page‬`;
+    }
+    return `Move up a page`;
+  }
+  function commandMovePageUpWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[þáĝé ûþ, šçŕöļļ ~~~~~]`;
+      case "ar-XB":
+        return `‮page up, scroll‬`;
+    }
+    return `page up, scroll`;
+  }
+  function commandMovePageDown() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Ṁöṽé ðöŵñ á þáĝé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Move down a page‬`;
+    }
+    return `Move down a page`;
+  }
+  function commandMovePageDownWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[þáĝé ðöŵñ, šçŕöļļ ~~~~~~]`;
+      case "ar-XB":
+        return `‮page down, scroll‬`;
+    }
+    return `page down, scroll`;
+  }
+  function commandCancel() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[Çáñçéļ ~~]`;
+      case "ar-XB":
+        return `‮Cancel‬`;
+    }
+    return `Cancel`;
+  }
+  function commandCancelWords() {
+    switch (currentLanguage()) {
+      case "en-XA":
+        return `[éšçáþé, éšç, çļöšé, ƀáçķ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮escape, esc, close, back‬`;
+    }
+    return `escape, esc, close, back`;
+  }
+  function searchWords(words) {
+    return words.split(/[,、，]/).map((word) => word.trim()).filter(Boolean);
+  }
   const KEYBOARD_COMMANDS = {
     // The window's own commands, in the order command search lists them.
     "commands.search": {
-      label: "Search commands",
+      get label() {
+        return commandCommandsSearch();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8491,7 +9670,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     },
     // The way back from wherever focus is, a card's or a panel's frame included.
     "focus.main-message": {
-      label: "Go to the main message",
+      get label() {
+        return commandFocusMainMessage();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8500,19 +9681,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     },
     // The card's one field (INF-924): a reply, or words for a choice.
     "focus.card-reply": {
-      label: "Go to the card's reply",
+      get label() {
+        return commandFocusCardReply();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [{ key: "l", meta: true, shift: true }],
-      searchWords: ["anything to add", "comment"]
+      get searchWords() {
+        return searchWords(commandFocusCardReplyWords());
+      }
     },
     // The shown card's own places (docs/keyboard.md, "Cards and frames"):
     // its body to read and answer, and its buttons. No key of their own yet:
     // chosen by name, and a person may give them one.
     "focus.card-body": {
-      label: "Go to the card's body",
+      get label() {
+        return commandFocusCardBody();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8521,7 +9708,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     },
     // Focus only: a button is pressed by its own key, through the click's checks.
     "focus.card-actions": {
-      label: "Go to the card's buttons",
+      get label() {
+        return commandFocusCardActions();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8535,46 +9724,64 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // unanswered question is not sent, and a pending or disabled button does
     // not run.
     "cards.choice-1": {
-      label: "Press the recommended choice",
+      get label() {
+        return commandCardsChoice1();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "close",
       keys: [{ key: "1", meta: true }],
-      searchWords: ["card", "button", "default", "first"]
+      get searchWords() {
+        return searchWords(commandCardsChoice1Words());
+      }
     },
     "cards.choice-2": {
-      label: "Press the second choice",
+      get label() {
+        return commandCardsChoice2();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "close",
       keys: [{ key: "2", meta: true }],
-      searchWords: ["card", "button"]
+      get searchWords() {
+        return searchWords(commandCardsChoice2Words());
+      }
     },
     "cards.choice-3": {
-      label: "Press the third choice",
+      get label() {
+        return commandCardsChoice3();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "close",
       keys: [{ key: "3", meta: true }],
-      searchWords: ["card", "button"]
+      get searchWords() {
+        return searchWords(commandCardsChoice3Words());
+      }
     },
     "cards.choice-4": {
-      label: "Press the fourth choice",
+      get label() {
+        return commandCardsChoice4();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "close",
       keys: [{ key: "4", meta: true }],
-      searchWords: ["card", "button"]
+      get searchWords() {
+        return searchWords(commandCardsChoice4Words());
+      }
     },
     // The window's parts in turn (docs/keyboard.md, "Parts of the window"):
     // F6 as other desktop apps move between their panes. A function key needs
     // no modifier; on a Mac it may need Fn, so it can be changed like any key.
     "regions.next": {
-      label: "Go to the next part of the window",
+      get label() {
+        return commandRegionsNext();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8582,7 +9789,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       keys: [{ key: "F6" }]
     },
     "regions.previous": {
-      label: "Go to the previous part of the window",
+      get label() {
+        return commandRegionsPrevious();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8593,40 +9802,56 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // (docs/keyboard.md, "Parts of the window"), read from where each part is
     // drawn now. No key of their own: chosen by name, or given one.
     "regions.left": {
-      label: "Go to the part of the window on the left",
+      get label() {
+        return commandRegionsLeft();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["pane", "panel", "left"]
+      get searchWords() {
+        return searchWords(commandRegionsLeftWords());
+      }
     },
     "regions.down": {
-      label: "Go to the part of the window below",
+      get label() {
+        return commandRegionsDown();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["pane", "panel", "down"]
+      get searchWords() {
+        return searchWords(commandRegionsDownWords());
+      }
     },
     "regions.up": {
-      label: "Go to the part of the window above",
+      get label() {
+        return commandRegionsUp();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["pane", "panel", "up"]
+      get searchWords() {
+        return searchWords(commandRegionsUpWords());
+      }
     },
     "regions.right": {
-      label: "Go to the part of the window on the right",
+      get label() {
+        return commandRegionsRight();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["pane", "panel", "right"]
+      get searchWords() {
+        return searchWords(commandRegionsRightWords());
+      }
     },
     // A key of a person's own for the arrows, Home, End, the page keys and
     // Escape (docs/keyboard.md, "Moving by a key of your own"): each presses
@@ -8634,88 +9859,126 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // process runs them, because only it can press a real key in the window's
     // page. No key of their own: given one, or chosen by name.
     "move.left": {
-      label: "Move left",
+      get label() {
+        return commandMoveLeft();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
       risk: "navigate",
       keys: [],
-      searchWords: ["arrow", "left", "previous"]
+      get searchWords() {
+        return searchWords(commandMoveLeftWords());
+      }
     },
     "move.down": {
-      label: "Move down",
+      get label() {
+        return commandMoveDown();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
       risk: "navigate",
       keys: [],
-      searchWords: ["arrow", "down", "next"]
+      get searchWords() {
+        return searchWords(commandMoveDownWords());
+      }
     },
     "move.up": {
-      label: "Move up",
+      get label() {
+        return commandMoveUp();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
       risk: "navigate",
       keys: [],
-      searchWords: ["arrow", "up", "previous"]
+      get searchWords() {
+        return searchWords(commandMoveUpWords());
+      }
     },
     "move.right": {
-      label: "Move right",
+      get label() {
+        return commandMoveRight();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
       risk: "navigate",
       keys: [],
-      searchWords: ["arrow", "right", "next"]
+      get searchWords() {
+        return searchWords(commandMoveRightWords());
+      }
     },
     "move.first": {
-      label: "Move to the start",
+      get label() {
+        return commandMoveFirst();
+      },
       scope: "window",
       runs: "main",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["home", "top", "first", "beginning"]
+      get searchWords() {
+        return searchWords(commandMoveFirstWords());
+      }
     },
     "move.last": {
-      label: "Move to the end",
+      get label() {
+        return commandMoveLast();
+      },
       scope: "window",
       runs: "main",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["end", "bottom", "last"]
+      get searchWords() {
+        return searchWords(commandMoveLastWords());
+      }
     },
     "move.page-up": {
-      label: "Move up a page",
+      get label() {
+        return commandMovePageUp();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
       risk: "navigate",
       keys: [],
-      searchWords: ["page up", "scroll"]
+      get searchWords() {
+        return searchWords(commandMovePageUpWords());
+      }
     },
     "move.page-down": {
-      label: "Move down a page",
+      get label() {
+        return commandMovePageDown();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
       risk: "navigate",
       keys: [],
-      searchWords: ["page down", "scroll"]
+      get searchWords() {
+        return searchWords(commandMovePageDownWords());
+      }
     },
     cancel: {
-      label: "Cancel",
+      get label() {
+        return commandCancel();
+      },
       scope: "window",
       runs: "main",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["escape", "esc", "close", "back"]
+      get searchWords() {
+        return searchWords(commandCancelWords());
+      }
     },
     "computers.previous": {
-      label: "Previous work computers",
+      get label() {
+        return commandComputersPrevious();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8723,7 +9986,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       keys: []
     },
     "computers.next": {
-      label: "Next work computers",
+      get label() {
+        return commandComputersNext();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8733,27 +9998,37 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // The top bar's project pill (docs/project-focus.md): its row opens with
     // focus on the pills, and focus leaves by name.
     "project-focus.open": {
-      label: "Focus on a project",
+      get label() {
+        return commandProjectFocusOpen();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "view",
       keys: [{ key: "p", meta: true, shift: true }],
-      searchWords: ["filter", "project", "pill"]
+      get searchWords() {
+        return searchWords(commandProjectFocusOpenWords());
+      }
     },
     "project-focus.clear": {
-      label: "Show all projects",
+      get label() {
+        return commandProjectFocusClear();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "view",
       keys: [],
-      searchWords: ["filter", "focus", "project", "clear"]
+      get searchWords() {
+        return searchWords(commandProjectFocusClearWords());
+      }
     },
     // ⇧⌘[ as a Mac reports it while ⌘ is down (`[` with Shift), and as the
     // shifted character other input reports (`{` with Shift).
     "cards.previous": {
-      label: "Show the previous card",
+      get label() {
+        return commandCardsPrevious();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8764,7 +10039,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       ]
     },
     "cards.next": {
-      label: "Show the next card",
+      get label() {
+        return commandCardsNext();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8775,7 +10052,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       ]
     },
     "cards.minimize": {
-      label: "Put card aside",
+      get label() {
+        return commandCardsMinimize();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8783,8 +10062,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       keys: [{ key: "m", meta: true, shift: true }]
     },
     "cards.done": {
-      label: "Press the note's Done or Got it",
-      searchWords: ["card", "note", "answer", "done", "got it"],
+      get label() {
+        return commandCardsDone();
+      },
+      get searchWords() {
+        return searchWords(commandCardsDoneWords());
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8794,8 +10077,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // INF-3108: the shown decision's way to say no, the app's Decline or the
     // author's own, chosen by name; ⌘1-⌘4 also reach it by its place.
     "cards.decline": {
-      label: "Decline every choice on the card",
-      searchWords: ["card", "decline", "no", "not now", "none", "reject"],
+      get label() {
+        return commandCardsDecline();
+      },
+      get searchWords() {
+        return searchWords(commandCardsDeclineWords());
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8803,154 +10090,216 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       keys: []
     },
     "cards.maximize": {
-      label: "Maximize or restore card",
+      get label() {
+        return commandCardsMaximize();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "view",
       keys: [],
-      searchWords: ["full", "screen", "enlarge", "expand", "bigger"]
+      get searchWords() {
+        return searchWords(commandCardsMaximizeWords());
+      }
     },
     "cards.next-revision": {
-      label: "Go to the next revised area",
+      get label() {
+        return commandCardsNextRevision();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["changes", "revision", "links"]
+      get searchWords() {
+        return searchWords(commandCardsNextRevisionWords());
+      }
     },
     // The shown card's thread folded into the card's foot, or beside it again
     // (docs/card-threads.md, "The shell"): ⌘\ as a sidebar is shown or hidden.
     "cards.point-at": {
-      label: "Point at a part of the card",
+      get label() {
+        return commandCardsPointAt();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [{ key: "a", meta: true, shift: true }],
-      searchWords: ["annotate", "comment", "select", "note"]
+      get searchWords() {
+        return searchWords(commandCardsPointAtWords());
+      }
     },
     "cards.thread": {
-      label: "Show or hide the card's thread",
+      get label() {
+        return commandCardsThread();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [{ key: "\\", meta: true }],
-      searchWords: ["collapse", "expand", "chat", "replies", "messages"]
+      get searchWords() {
+        return searchWords(commandCardsThreadWords());
+      }
     },
     // The shown card's jump down in its thread, while the captain reads above
     // its foot (docs/card-threads.md, "Keeping your place"): chosen by name.
     "cards.thread-new": {
-      label: "Go to the thread's new messages",
+      get label() {
+        return commandCardsThreadNew();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["jump", "down", "latest", "bottom", "unread", "replies"]
+      get searchWords() {
+        return searchWords(commandCardsThreadNewWords());
+      }
     },
     // The shown task card's tabs (docs/task-card-tabs.md): Info, Cards,
     // Activity (INF-2261), the crewmate's session and the browser's pages,
     // and on a card about a task its way to them (INF-358). No key of their
     // own yet: chosen by name.
     "cards.show-info": {
-      label: "Show Info",
+      get label() {
+        return commandCardsShowInfo();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["task", "record", "tab", "open"]
+      get searchWords() {
+        return searchWords(commandCardsShowInfoWords());
+      }
     },
     "cards.show-cards": {
-      label: "Show Cards",
+      get label() {
+        return commandCardsShowCards();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["task", "record", "tab", "decisions", "notes"]
+      get searchWords() {
+        return searchWords(commandCardsShowCardsWords());
+      }
     },
     "cards.show-activity": {
-      label: "Show Activity",
+      get label() {
+        return commandCardsShowActivity();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["task", "record", "tab", "timeline", "history"]
+      get searchWords() {
+        return searchWords(commandCardsShowActivityWords());
+      }
     },
     "cards.show-crewmate": {
-      label: "Show Crewmate",
+      get label() {
+        return commandCardsShowCrewmate();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["task", "session", "transcript", "tab"]
+      get searchWords() {
+        return searchWords(commandCardsShowCrewmateWords());
+      }
     },
     "browser.control": {
-      label: "Take or return browser control",
+      get label() {
+        return commandBrowserControl();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["handback", "take", "return", "browser"]
+      get searchWords() {
+        return searchWords(commandBrowserControlWords());
+      }
     },
     // The shown task record's Move to a computer (docs/helper.md, "Moving a
     // started task"): opens its picker, which saves nothing until Move.
     "task.move-computer": {
-      label: "Move the task to another computer",
+      get label() {
+        return commandTaskMoveComputer();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["computer", "mac", "machine", "move", "device", "record"]
+      get searchWords() {
+        return searchWords(commandTaskMoveComputerWords());
+      }
     },
     // The shown task record's Close as done (INF-3169's plan, piece 3): opens
     // its one confirm, which closes nothing until its own Close as done.
     "task.close-done": {
-      label: "Close the task as done",
+      get label() {
+        return commandTaskCloseDone();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["done", "finish", "finished", "complete", "close", "record", "task"]
+      get searchWords() {
+        return searchWords(commandTaskCloseDoneWords());
+      }
     },
     "cards.show-browser": {
-      label: "Show Browser",
+      get label() {
+        return commandCardsShowBrowser();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["task", "page", "tab"]
+      get searchWords() {
+        return searchWords(commandCardsShowBrowserWords());
+      }
     },
     "cards.next-tab": {
-      label: "Next tab",
+      get label() {
+        return commandCardsNextTab();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["task", "tab"]
+      get searchWords() {
+        return searchWords(commandCardsNextTabWords());
+      }
     },
     "cards.previous-tab": {
-      label: "Previous tab",
+      get label() {
+        return commandCardsPreviousTab();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["task", "tab"]
+      get searchWords() {
+        return searchWords(commandCardsPreviousTabWords());
+      }
     },
     "settings.open": {
-      label: "Open Settings",
+      get label() {
+        return commandSettingsOpen();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8960,7 +10309,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // Chosen by name, and from the app menu's Keyboard Settings…, which no
     // change of keys can take away.
     "settings.keyboard": {
-      label: "Open Keyboard settings",
+      get label() {
+        return commandSettingsKeyboard();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
@@ -8969,177 +10320,243 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     },
     // Settings → Panels (INF-2344), chosen by name: no default key.
     "settings.panels": {
-      label: "Arrange panels",
+      get label() {
+        return commandSettingsPanels();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["rails", "layout", "order", "move", "hide", "show"]
+      get searchWords() {
+        return searchWords(commandSettingsPanelsWords());
+      }
     },
     // The update notice is also reached by name; opening it grants no installation consent.
     "updates.show": {
-      label: "Show available update",
+      get label() {
+        return commandUpdatesShow();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["update", "restart", "stable", "alpha"]
+      get searchWords() {
+        return searchWords(commandUpdatesShowWords());
+      }
     },
     // INF-2245: the update notice's Update later, chosen by name while an
     // update saves the crew's work; a person may give it a key.
     "updates.later": {
-      label: "Update later",
+      get label() {
+        return commandUpdatesLater();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["update", "later", "cancel", "saving", "work"]
+      get searchWords() {
+        return searchWords(commandUpdatesLaterWords());
+      }
     },
     // INF-2073: Settings → General's Check for updates, chosen by name; a person may give it a key.
     "updates.check": {
-      label: "Check for updates",
+      get label() {
+        return commandUpdatesCheck();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["update", "version", "release", "new"]
+      get searchWords() {
+        return searchWords(commandUpdatesCheckWords());
+      }
     },
     // The newest release note again (docs/release-notes.md "Reading a note
     // again"): chosen by name, and from the Help menu's What's New, like
     // Keyboard settings; a person may give it a key.
     "whats-new.show": {
-      label: "Show what's new",
+      get label() {
+        return commandWhatsNewShow();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["release", "notes", "changes", "version"]
+      get searchWords() {
+        return searchWords(commandWhatsNewShowWords());
+      }
     },
     // The first mate's newest reply, whole, as a note at the front
     // (docs/composer.md "The reply note"): chosen by name, so it opens after
     // the line above the input has faded too.
     "firstmate.reply": {
-      label: "Open the first mate's reply",
+      get label() {
+        return commandFirstmateReply();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["answer", "message", "note", "last"]
+      get searchWords() {
+        return searchWords(commandFirstmateReplyWords());
+      }
     },
     "settings.runbooks": {
-      label: "Open Runbooks",
+      get label() {
+        return commandSettingsRunbooks();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["guidance", "skills", "instructions"]
+      get searchWords() {
+        return searchWords(commandSettingsRunbooksWords());
+      }
     },
     "runbooks.open-folder": {
-      label: "Open your runbooks folder",
+      get label() {
+        return commandRunbooksOpenFolder();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["directory", "guidance", "customize"]
+      get searchWords() {
+        return searchWords(commandRunbooksOpenFolderWords());
+      }
     },
     // Settings → Usage (docs/usage.md), chosen by name: it has no default key.
     "settings.usage": {
-      label: "Open Usage",
+      get label() {
+        return commandSettingsUsage();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["tokens", "models", "cost", "dollars"]
+      get searchWords() {
+        return searchWords(commandSettingsUsageWords());
+      }
     },
     // Settings → Automation (docs/automation.md), chosen by name: no default key.
     "settings.automation": {
-      label: "Open Automation",
+      get label() {
+        return commandSettingsAutomation();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["schedule", "scheduled", "recurring", "reminder", "pause"]
+      get searchWords() {
+        return searchWords(commandSettingsAutomationWords());
+      }
     },
     // Settings → Integrations (docs/integrations.md), chosen by name: no default key.
     "settings.integrations": {
-      label: "Open Integrations",
+      get label() {
+        return commandSettingsIntegrations();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["github", "connection", "connect", "sign in"]
+      get searchWords() {
+        return searchWords(commandSettingsIntegrationsWords());
+      }
     },
     "settings.secrets": {
-      label: "Open Secrets",
+      get label() {
+        return commandSettingsSecrets();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["secret", "key", "approval", "recovery"],
+      get searchWords() {
+        return searchWords(commandSettingsSecretsWords());
+      },
       section: "secrets"
     },
     // Every running automation paused at once, as Settings → Automation's
     // Pause all does; it opens Automation so the change is seen. No default key.
     "automation.pause-all": {
-      label: "Pause all automations",
+      get label() {
+        return commandAutomationPauseAll();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["schedule", "scheduled", "recurring", "stop"]
+      get searchWords() {
+        return searchWords(commandAutomationPauseAllWords());
+      }
     },
     // Tokens or estimated dollars, everywhere in Usage at once; it opens
     // Usage, so the switch is seen, and the core remembers the choice.
     "usage.unit": {
-      label: "Switch Usage units",
+      get label() {
+        return commandUsageUnit();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "view",
       keys: [],
-      searchWords: ["tokens", "cost", "dollars", "estimate"]
+      get searchWords() {
+        return searchWords(commandUsageUnitWords());
+      }
     },
     // Every account's allowance read again, as the spent-allowance card's
     // Recheck allowance and Subscriptions' Refresh do: a login switched
     // elsewhere is read first (docs/quota.md "A changed login"). No default key.
     "allowance.recheck": {
-      label: "Recheck allowance",
+      get label() {
+        return commandAllowanceRecheck();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "view",
       keys: [],
-      searchWords: ["quota", "refresh", "usage", "limit", "account", "switch"]
+      get searchWords() {
+        return searchWords(commandAllowanceRecheckWords());
+      }
     },
     // This Mac's own SSH connections to the Macs it added by their address,
     // each it stopped trying tried once more (docs/devices.md, "Through the
     // home's SSH"); chosen by name, and only where Devices shows.
     "devices.try-again": {
-      label: `Try again to reach your ${COMPUTER.many}`,
+      get label() {
+        return commandDevicesTryAgain();
+      },
       scope: "window",
       runs: "shell",
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["devices", "ssh", "reconnect", "connect", "macs"],
+      get searchWords() {
+        return searchWords(commandDevicesTryAgainWords());
+      },
       section: "devices"
     },
     // Control too, as the window always took it; the menu shows the first.
     "size.larger": {
-      label: "Make everything larger",
+      get label() {
+        return commandSizeLarger();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
@@ -9152,7 +10569,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       ]
     },
     "size.smaller": {
-      label: "Make everything smaller",
+      get label() {
+        return commandSizeSmaller();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
@@ -9163,7 +10582,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       ]
     },
     "size.reset": {
-      label: "Return to the usual size",
+      get label() {
+        return commandSizeReset();
+      },
       scope: "window",
       runs: "main",
       repeat: true,
@@ -9174,35 +10595,45 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       ]
     },
     "message.delete-to-line-start": {
-      label: "Delete back to the start of the line",
+      get label() {
+        return commandMessageDeleteToLineStart();
+      },
       scope: "message-field",
       repeat: true,
       risk: "edit",
       keys: [{ key: "u", ctrl: true }]
     },
     "message.delete-to-line-end": {
-      label: "Delete to the end of the line",
+      get label() {
+        return commandMessageDeleteToLineEnd();
+      },
       scope: "message-field",
       repeat: true,
       risk: "edit",
       keys: [{ key: "k", ctrl: true }]
     },
     "message.delete-word-before": {
-      label: "Delete the word before the cursor",
+      get label() {
+        return commandMessageDeleteWordBefore();
+      },
       scope: "message-field",
       repeat: true,
       risk: "edit",
       keys: [{ key: "w", ctrl: true }]
     },
     "message.put-back-deleted": {
-      label: "Put back what was last deleted",
+      get label() {
+        return commandMessagePutBackDeleted();
+      },
       scope: "message-field",
       repeat: true,
       risk: "edit",
       keys: [{ key: "y", ctrl: true }]
     },
     "message.recall": {
-      label: "Bring back the last message sent",
+      get label() {
+        return commandMessageRecall();
+      },
       scope: "main-message",
       repeat: false,
       risk: "edit",
@@ -9880,11 +11311,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function escapeAttribute(text) {
     return text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
   }
+  function languageAttributes(language2 = currentLanguage()) {
+    return `lang="${escapeAttribute(language2)}" dir="${textDirection(language2)}"`;
+  }
   function buildFrameDocument(parts) {
     const theme = escapeAttribute(parts.theme);
     return [
       "<!doctype html>",
-      `<html data-theme="${theme}"${parts.held ? " data-inf-held" : ""}>`,
+      `<html ${languageAttributes(parts.language)} data-theme="${theme}"${parts.held ? " data-inf-held" : ""}>`,
       "<head>",
       `<meta http-equiv="Content-Security-Policy" content="${escapeAttribute(parts.csp)}">`,
       '<meta charset="utf-8">',

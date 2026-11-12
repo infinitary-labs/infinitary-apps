@@ -138,6 +138,19 @@ html {
   --occupied-rail-left: var(--rail-docked-left);
   --occupied-rail-right: var(--rail-docked-right);
 }
+/* The rails stay where a person docked them in a right-to-left language
+   too: the left rail on the left, the right rail on the right, though the
+   stage between them runs right to left (docs/i18n.md, "Right to left"). */
+[dir="rtl"] [data-rail-row] {
+  flex-direction: row-reverse;
+}
+/* A key's chord reads in the order it is pressed, ⌘ then L, in either
+   direction. */
+[dir="rtl"] kbd,
+[dir="rtl"] [data-button-key] > span {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
 /* Expanded panels reserve card clearance. Collapsed headers stay on their
    rail, but do not narrow the window-centered card or thread pair. The
    create-your-own-panel slot reserves it as an expanded panel does, so a
@@ -260,7 +273,7 @@ html[data-card-maximized] [data-prompt-notices] {
 [data-panel-draft] {
   position: fixed;
   top: 0;
-  right: 100%;
+  inset-inline-end: 100%;
   box-sizing: border-box;
   width: var(--rail-width);
   height: 100vh;
@@ -313,7 +326,7 @@ html[data-card-maximized] [data-prompt-notices] {
 [data-create-panel-slot-hide] {
   position: absolute;
   top: var(--space-1);
-  right: var(--space-1);
+  inset-inline-end: var(--space-1);
   display: flex;
 }
 
@@ -463,7 +476,7 @@ html[data-panel-dragging] iframe {
 [data-panel-drag-ghost] {
   position: fixed;
   top: 0;
-  left: 0;
+  inset-inline-start: 0;
   z-index: 1000;
   box-sizing: border-box;
   display: flex;

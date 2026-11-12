@@ -13,6 +13,7 @@ import {
   MERGE_CLOSES_MARK,
   splitMergeClosesLine,
 } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import type { FrameAnswers } from "@shared/plugins/bridge";
 import type { Theme } from "@shared/preferences";
@@ -167,7 +168,7 @@ export function StackedCard({
   // A file, picture or queued note goes only as a reply: the choices wait until it has.
   const noteCount = useShellStore((s) => s.replyNotes[card.id]?.length ?? 0);
   const notesFirst = noteCount > 0;
-  const pendingReplyWords = notesFirst ? "Send the notes as a reply first" : CARD_FILES_FIRST;
+  const pendingReplyWords = notesFirst ? m.shellCardNotesFirst() : CARD_FILES_FIRST;
   const filesFirst = useShellStore(
     (s) =>
       notesFirst ||
@@ -246,9 +247,9 @@ export function StackedCard({
             {...{ [MERGE_CLOSES_MARK]: "" }}
             style={{
               alignSelf: "center",
-              marginRight: "auto",
+              marginInlineEnd: "auto",
               // Level with the strip's words, which stand one step inside their frame.
-              paddingLeft: "var(--space-1)",
+              paddingInlineStart: "var(--space-1)",
               fontSize: "var(--text-sm)",
               color: "var(--fg-2)",
             }}
@@ -268,7 +269,7 @@ export function StackedCard({
             style={{
               alignSelf: "center",
               // The note that a file goes first follows it, at the left.
-              marginRight: filesFirst ? undefined : "auto",
+              marginInlineEnd: filesFirst ? undefined : "auto",
               fontFamily: "var(--font-mono)",
               fontSize: "var(--text-xs)",
               color: "var(--fg-3)",
@@ -284,7 +285,7 @@ export function StackedCard({
             role="status"
             style={{
               alignSelf: "center",
-              marginRight: "auto",
+              marginInlineEnd: "auto",
               fontSize: "var(--text-xs)",
               color: "var(--fg-3)",
             }}
@@ -317,9 +318,7 @@ export function StackedCard({
                   action.effect?.kind === "host" &&
                   action.effect.op === "confirm-required-action" &&
                   card.awaiting === "answer";
-                const actionOff = answering
-                  ? "Your first mate is answering on this card"
-                  : offWords;
+                const actionOff = answering ? m.shellCardMateAnswering() : offWords;
                 return (
                   <Button
                     key={action.id}

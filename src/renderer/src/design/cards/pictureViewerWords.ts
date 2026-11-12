@@ -1,8 +1,17 @@
-/** What the picture viewer's player reads in place of its time when a recording cannot play (`PictureViewer.tsx`). */
-export const RECORDING_UNPLAYABLE = "This recording could not be played.";
+import * as m from "@shared/i18n/messages.generated";
+/**
+ * What the picture viewer's player reads in place of its time when a
+ * recording cannot play (`PictureViewer.tsx`), in English for the tests; the
+ * viewer calls the message when it draws.
+ */
+export const RECORDING_UNPLAYABLE = m.uiPictureViewerUnplayable();
 
-/** Why a picture that fits at its own size has no Actual size to go to (`PictureViewer.tsx`). */
-export const SHOWN_AT_OWN_SIZE = "Shown at its own size";
+/**
+ * Why a picture that fits at its own size has no Actual size to go to
+ * (`PictureViewer.tsx`), in English for the tests; the viewer calls the
+ * message when it draws.
+ */
+export const SHOWN_AT_OWN_SIZE = m.uiPictureViewerShownAtOwnSize();
 
 /** A picture's own size, "1600 × 400". */
 export function pictureSize(size: { width: number; height: number }): string {
@@ -15,7 +24,7 @@ export function pictureHint(
   shown: "one" | "own" | "fitted",
 ): string {
   const dims = pictureSize(size);
-  if (shown === "one") return `${dims} · 1:1 · drag or scroll to move`;
-  if (shown === "own") return `${dims} · shown at its own size`;
-  return `${dims} · fitted · click or Z for 1:1`;
+  if (shown === "one") return m.uiPictureViewerHintOne({ size: dims });
+  if (shown === "own") return m.uiPictureViewerHintOwn({ size: dims });
+  return m.uiPictureViewerHintFitted({ size: dims });
 }

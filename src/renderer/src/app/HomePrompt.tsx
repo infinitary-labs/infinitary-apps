@@ -14,6 +14,7 @@ import {
   STANDARD_PLACEHOLDER_SHORTEST,
   withDictationKey,
 } from "@shared/firstRun";
+import * as m from "@shared/i18n/messages.generated";
 import { hasNotTypingKeys } from "@shared/keyboard";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { mainDestination } from "../attachments/destinations";
@@ -50,10 +51,11 @@ export function inputPlaceholder(input: {
   transcribing: boolean;
   returnToMessageKey?: string;
 }): readonly string[] {
-  if (input.transcribing) return ["transcribing what you said", "transcribing"];
+  if (input.transcribing) return [m.shellPromptTranscribing(), m.shellPromptTranscribingShort()];
   if (input.firstRun?.gateOpen)
     return [input.firstRun.freshCheck ? GATED_CHECK_PLACEHOLDER : GATED_PLACEHOLDER];
-  if (input.returnToMessageKey) return [`press ${input.returnToMessageKey} to write a message`];
+  if (input.returnToMessageKey)
+    return [m.shellPromptReturnToMessage({ key: input.returnToMessageKey })];
   const noVoice =
     input.voiceSupported === false ||
     input.dictation === null ||

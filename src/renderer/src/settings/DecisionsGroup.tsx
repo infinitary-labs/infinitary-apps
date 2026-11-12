@@ -430,7 +430,7 @@ export function DecisionsGroup({
                 display: "flex",
                 gap: 10,
                 padding: "7px 8px",
-                textAlign: "left",
+                textAlign: "start",
               }}
             >
               <span style={{ ...LABEL_STYLE, textTransform: "none", letterSpacing: 0, width: 64 }}>

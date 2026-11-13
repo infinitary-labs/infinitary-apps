@@ -306,6 +306,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   `scripts/build-mac-dmg.sh` packages the prebuilt app without re-signing or rebuilding it.
   The workflow signs the container with the existing Developer ID identity, notarizes it, and staples it before computing its checksum.
   `scripts/verify-mac-dmg.sh` checks notarization and Gatekeeper, mounts read-only, checks the Applications shortcut and saved Finder layout, compares the app with the ZIP, and launches a copied installation.
+  Every release check that mounts a disk image detaches it through `scripts/detach-disk-image.sh`: a moment's hold by one of macOS's own background scans, which runs as the system and answers the unmount with "Resource busy", gets the read-only image detached by force, and only a forced detach that also fails fails the check.
   The unauthenticated fetch-back repeats the ZIP and disk-image gates against the actual public downloads before a channel advances.
 - **One atomic feed snapshot** (`scripts/publish-feeds.sh`).
   After every public download passes fetch-back, `scripts/release-feeds.ts` writes the moved channels' standard updater metadata, targets, builds, and immutable per-version manifest into one immutable R2 snapshot.

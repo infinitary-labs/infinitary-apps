@@ -8,7 +8,7 @@ import { join, resolve } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { userDataFolderOf } from "../src/shared/userDataFolders.ts";
-import { runInstallerCommand } from "./installer-command.ts";
+import { detachDiskImage, runInstallerCommand } from "./installer-command.ts";
 import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.ts";
 import { answeredHere, resolverAnswers, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
 import { virtualMacSwitches } from "../tests/e2e/virtualMac.ts";
@@ -194,7 +194,7 @@ try {
   mounted = join(work, "image"); mkdirSync(mounted, { recursive: true });
   run("/usr/bin/hdiutil", ["attach", "-readonly", "-nobrowse", "-mountpoint", mounted, dmg], { timeout: 300_000 });
   run("/usr/bin/ditto", [join(mounted, "Infinitary.app"), installed], { timeout: 300_000 });
-  run("/usr/bin/hdiutil", ["detach", mounted]); mounted = undefined;
+  detachDiskImage(mounted, appEnv); mounted = undefined;
   bundleId = run("/usr/bin/plutil", ["-extract", "CFBundleIdentifier", "raw", "-o", "-", join(installed, "Contents/Info.plist")]);
   assert.equal(run("/usr/bin/xattr", ["-p", ownership.attribute, join(installed, ownership.path)]), ownership.direct);
   mkdirSync(join(data, "personal-workspace"), { recursive: true });
@@ -269,7 +269,7 @@ try {
     }
   }
   await cleanup("Stopping the app", () => stopApp());
-  await cleanup("Detaching the disk image", () => { if (mounted) run("/usr/bin/hdiutil", ["detach", mounted]); });
+  await cleanup("Detaching the disk image", () => { if (mounted) detachDiskImage(mounted, appEnv); });
   await cleanup("Stopping the feed server", async () => {
     if (server && server.exitCode === null && server.signalCode === null) {
       const exited = once(server, "exit");

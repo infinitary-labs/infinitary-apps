@@ -464,6 +464,7 @@
         "!tests/cask-consumers.test.ts",
         "!tests/installed-update-fixtures.test.ts",
         "!tests/installer-packaging.test.ts",
+        "!tests/detach-disk-image.test.ts",
         "!tests/installer-reuse.test.ts",
         "!tests/e2e-contract-lint.test.ts",
         "!tests/e2e-lanes.test.ts",

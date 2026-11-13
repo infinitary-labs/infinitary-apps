@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "busy-disk-image-detach",
+      "reason": "Internal release work: the release checks that mount a finished disk image now detach it by force when one of macOS's own background scans holds a file on it for a moment, so a passed installer check no longer fails the alpha on its cleanup; the app is unchanged."
+    }
+  ]
+}

@@ -8,7 +8,7 @@ import { chromium, expect } from "@playwright/test";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { userDataFolderOf } from "../src/shared/userDataFolders.ts";
 import { checkInstalledHomebrew } from "./check-installed-homebrew.mjs";
-import { runInstallerCommand } from "./installer-command.ts";
+import { detachDiskImage, runInstallerCommand } from "./installer-command.ts";
 import { installerHomebrewEnvironment, prepareInstallerHomebrew } from "./installer-homebrew.ts";
 import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.ts";
 import { answeredHere, resolverAnswers, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
@@ -139,7 +139,7 @@ async function fresh(version, channel, legacyData = false) {
   run("/usr/bin/ditto", [join(mounted, "Infinitary.app"), installed]);
   bundleId ??= run("/usr/bin/plutil", ["-extract", "CFBundleIdentifier", "raw", "-o", "-", join(installed, "Contents/Info.plist")]);
   assert.equal(run("/usr/bin/xattr", ["-p", ownership.attribute, join(installed, ownership.path)]), ownership.direct);
-  run("/usr/bin/hdiutil", ["detach", mounted]); mounted = undefined;
+  detachDiskImage(mounted, appEnv); mounted = undefined;
   const page = await launch();
   const initial = await status(page);
   assert.equal(initial.problem, undefined, "The installed app must trust and read the fixture feed before preparing active work");
@@ -329,7 +329,7 @@ try {
   const readOnly = await install(page);
   assert.equal(readOnly.ok, false); assert.match(readOnly.problem, /Applications/);
   await stopApp();
-  run("/usr/bin/hdiutil", ["detach", mounted]); mounted = undefined;
+  detachDiskImage(mounted, appEnv); mounted = undefined;
   record("Read-only disk image", "The running image refused an update and asked for an Applications installation.");
   // Homebrew returns only after the native path has proved it works without Homebrew.
   for (const { path, backup } of disabledBrew) run("/usr/bin/sudo", ["/bin/mv", backup, path]);
@@ -354,7 +354,7 @@ try {
   }
   await cleanup("Recording cleanup", () => checkpoint("Cleaning up the disposable proof"));
   await cleanup("Stopping the app", () => stopApp());
-  await cleanup("Detaching the disk image", () => { if (mounted) run("/usr/bin/hdiutil", ["detach", mounted]); });
+  await cleanup("Detaching the disk image", () => { if (mounted) detachDiskImage(mounted, appEnv); });
   await cleanup("Stopping the fixture server", async () => {
     if (server && server.exitCode === null && server.signalCode === null) {
       // The HTTPS server was started through sudo; signal that exact disposable child

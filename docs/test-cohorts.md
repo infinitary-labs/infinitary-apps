@@ -163,6 +163,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/cask-consumers.test.ts` | a scratch clone of the installed Homebrew (macOS only, skipped without it), git, ditto, the publication CLI | 340 s |
 | `tests/installed-update-fixtures.test.ts` | real ASAR archives, SQLite, scratch saved-work moves, child-command failures and ZIP ticket-byte comparisons; no signing | 5 s default |
 | `tests/installer-packaging.test.ts` | actual packaging commands with a stopping packager stand-in and the executable environment guard; no signing | 5 s default |
+| `tests/detach-disk-image.test.ts` | `scripts/detach-disk-image.sh` with stand-in `hdiutil` and `lsof` replaying a busy unmount | 5 s default |
 | `tests/installer-reuse.test.ts` | scratch git histories and ZIP extraction, recorded forge metadata and streamed artifact-integrity checks; no network or signing | 5 s default |
 | `src/core/hostEnv.test.ts` | stub login shells; real git for the variables it lists and a child's answer | 10 s on the hang test |
 | `tests/export-tasks.test.ts` | node, pnpm | 60 s |

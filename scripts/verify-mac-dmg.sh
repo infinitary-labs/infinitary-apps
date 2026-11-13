@@ -10,7 +10,7 @@ MOUNT="$WORK/mount"
 MOUNTED=false
 cleanup() {
   if [[ "$MOUNTED" == true ]]; then
-    hdiutil detach "$MOUNT" || return
+    "$SCRIPTS/detach-disk-image.sh" "$MOUNT" || return
   fi
   rm -rf "$WORK"
 }

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "map-full-screen",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A project map on a card opens full screen and keeps working",
+      "body": "Full screen, or F, now opens the project map itself over the whole window, where it stood on the card, with the same comparison and the same box chosen. Go in and out, choose and step through changes as on the card; scroll moves the map, and a pinch or Command with scroll zooms. Close or Esc brings you back to the card, which now stands where you left the full-screen map.",
+      "picture": {
+        "dark": "map-full-screen-dark.webp",
+        "light": "map-full-screen-light.webp",
+        "alt": "A project map full screen over the window: a state machine with added and changed states, its trail, comparison buttons, zoom buttons and the step through 13 changes along the bottom"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,4 +1,4 @@
-import { cardBodyMarkup } from "@shared/cardBodyMarkup";
+import { cardBodyMarkup, escapeHtml } from "@shared/cardBodyMarkup";
 import { cardTypefaceNames } from "@shared/cardPictures";
 import { SRCDOC_FRAME_CSP } from "@shared/plugins/containment";
 import {
@@ -179,3 +179,19 @@ export function cardStylesheet(): string {
 export const REVISION_HIGHLIGHT_STYLE = `
   [data-inf-revision-highlight] { background-color: var(--accent-dim); box-shadow: var(--focus-ring-inset); }
 `;
+
+/**
+ * The stamp a part's full-screen copy opens with, before the body so the
+ * part's own script reads it as it starts (`inf.expanded`). A state the copy
+ * cannot read opens the part as the body has it.
+ */
+export function expandedStamp(index: number, state: string): string {
+  let opened: unknown = null;
+  try {
+    opened = JSON.parse(state);
+  } catch {
+    opened = null;
+  }
+  // i18n-exempt: not shown (markup)
+  return `<i hidden data-inf-expanded="${escapeHtml(JSON.stringify({ index, state: opened }))}"></i>`;
+}

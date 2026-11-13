@@ -153,6 +153,9 @@ export function useFrameController(
         ...(specRef.current.onQuestioned
           ? { onQuestioned: (where) => specRef.current.onQuestioned?.(where) }
           : {}),
+        ...(specRef.current.onExpand
+          ? { onExpand: (index, state) => specRef.current.onExpand?.(index, state) }
+          : {}),
         ...(specRef.current.onUnresponsive
           ? { onUnresponsive: () => specRef.current.onUnresponsive?.() }
           : {}),

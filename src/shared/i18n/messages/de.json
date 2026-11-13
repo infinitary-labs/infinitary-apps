@@ -320,6 +320,7 @@
   },
   "uiPictureViewerDemoFrom": "Demo aus {title}",
   "uiPictureViewerPicturesFrom": "Bilder aus {title}",
+  "uiPictureViewerPartFrom": "{title}, Vollbild",
   "uiPictureViewerClose": "Betrachter schließen",
   "uiLogReaderFrom": "Log aus {title}",
   "uiLogReaderClose": "Log schließen",

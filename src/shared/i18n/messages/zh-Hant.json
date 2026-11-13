@@ -316,6 +316,7 @@
   },
   "uiPictureViewerDemoFrom": "來自 {title} 的示範",
   "uiPictureViewerPicturesFrom": "來自 {title} 的圖片",
+  "uiPictureViewerPartFrom": "{title}（全螢幕）",
   "uiPictureViewerClose": "關閉檢視器",
   "uiLogReaderFrom": "來自 {title} 的日誌",
   "uiLogReaderClose": "關閉日誌",

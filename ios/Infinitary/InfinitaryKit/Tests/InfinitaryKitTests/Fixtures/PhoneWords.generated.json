@@ -316,6 +316,7 @@
   {"said":{"m":"uiCardStackNew","a":{"count":1234}},"words":"1,234 new"},
   {"said":{"m":"uiPictureViewerDemoFrom","a":{"title":"‹title›"}},"words":"Demo from ‹title›"},
   {"said":{"m":"uiPictureViewerPicturesFrom","a":{"title":"‹title›"}},"words":"Pictures from ‹title›"},
+  {"said":{"m":"uiPictureViewerPartFrom","a":{"title":"‹title›"}},"words":"‹title›, full screen"},
   {"said":{"m":"uiPictureViewerClose"},"words":"Close the viewer"},
   {"said":{"m":"uiLogReaderFrom","a":{"title":"‹title›"}},"words":"Log from ‹title›"},
   {"said":{"m":"uiLogReaderClose"},"words":"Close the log"},

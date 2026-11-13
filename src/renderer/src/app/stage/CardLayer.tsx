@@ -21,7 +21,10 @@ import {
   readingAnchor,
 } from "../../cards/cardMaximize";
 import { useCardPresentation } from "../../cards/cardPresentation";
+import { ExpandedPart } from "../../cards/ExpandedPart";
+import { ExpandPartContext } from "../../cards/expandPart";
 import { usePastCard } from "../../cards/PastCard";
+import type { ExpandRequest } from "../../cards/PrototypeBody";
 import { StageEntry } from "../../cards/SurfaceReveal";
 import {
   markStage,
@@ -212,6 +215,8 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   // The picture viewer (card pictures, phase 3) belongs to the card that
   // opened it: renderer-only, and gone with that card from the stage.
   const [viewer, setViewer] = useState<OpenPictures | null>(null);
+  // A part of the shown card's body full screen (docs/card-authoring.md, "A part full screen").
+  const [expanded, setExpanded] = useState<OpenPart | null>(null);
 
   const records = useShellStore((s) => s.records);
   const closeRecord = useShellStore((s) => s.closeRecord);
@@ -719,6 +724,10 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   useEffect(() => {
     if (viewer && viewer.cardId !== cardId) setViewer(null);
   }, [viewer, cardId]);
+  const expanding = expanded !== null && expanded.cardId === cardId ? expanded : null;
+  useEffect(() => {
+    if (expanded && expanded.cardId !== cardId) setExpanded(null);
+  }, [expanded, cardId]);
 
   // The arrows and the close, lent to the window's card commands (../cardStage).
   const lentStage = useRef<CardStage | null>(null);
@@ -838,17 +847,23 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const onCardAction: StackedCardProps["onAction"] = (actionId, source, value, collect, mounted) =>
     cardId ? actOnCard(cardId, actionId, source, value, collect, mounted) : Promise.resolve();
 
+  // A held record or past card reads its title rather than carrying it on the stack entry.
+  const shownTitle = (recordTitle?: string) =>
+    card?.recordTaskId
+      ? (recordTitle ?? m.shellCardTaskRecord())
+      : pastRead?.state === "ready"
+        ? pastRead.card.title
+        : card?.title;
+  const openPart = (open: ExpandRequest, opener: HTMLIFrameElement | null) => {
+    if (!card || !cardId) return;
+    setExpanded({ cardId, title: shownTitle() ?? "", ...open, opener });
+  };
   const openPictures = (
     set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo; log?: ViewerLog },
     opener: HTMLIFrameElement | null,
     recordTitle?: string,
   ) => {
-    // A held record or past card reads its title rather than carrying it on the stack entry.
-    const title = card?.recordTaskId
-      ? (recordTitle ?? m.shellCardTaskRecord())
-      : pastRead?.state === "ready"
-        ? pastRead.card.title
-        : card?.title;
+    const title = shownTitle(recordTitle);
     if (!card || !cardId) return;
     if (!set.pictures.some((picture) => isDrawingSource(picture.src))) {
       setViewer({ cardId, title: title ?? "", ...set, opener });
@@ -1050,24 +1065,28 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
                   />
                   {/* Always provided, so a prepared entry promoted in place keeps its tree. */}
                   <CardSizeContext.Provider value={isShown ? cardSize : null}>
-                    <EntrySurface
-                      entry={entry}
-                      view={at}
-                      role={role}
-                      active={isShown}
-                      theme={theme}
-                      slot={key}
-                      drawKey={drawKey(entry, at)}
-                      onDrawn={markDrawn}
-                      onHeld={markHeld}
-                      onBorn={markBorn}
-                      onInteraction={isShown ? presentation.cancelGeometry : undefined}
-                      onClose={isShown ? closeRecord : noop}
-                      onAction={isShown ? onCardAction : noAction}
-                      onPicture={isShown ? openPictures : undefined}
-                      onThread={isShown ? showThread : undefined}
-                      working={working(entry)}
-                    />
+                    {/* Offered to every entry, so a prepared entry promoted in place
+                      offers full screen from birth; only a shown card opens it. */}
+                    <ExpandPartContext.Provider value={isShown ? openPart : noop}>
+                      <EntrySurface
+                        entry={entry}
+                        view={at}
+                        role={role}
+                        active={isShown}
+                        theme={theme}
+                        slot={key}
+                        drawKey={drawKey(entry, at)}
+                        onDrawn={markDrawn}
+                        onHeld={markHeld}
+                        onBorn={markBorn}
+                        onInteraction={isShown ? presentation.cancelGeometry : undefined}
+                        onClose={isShown ? closeRecord : noop}
+                        onAction={isShown ? onCardAction : noAction}
+                        onPicture={isShown ? openPictures : undefined}
+                        onThread={isShown ? showThread : undefined}
+                        working={working(entry)}
+                      />
+                    </ExpandPartContext.Provider>
                   </CardSizeContext.Provider>
                 </StageEntry>
               );
@@ -1115,6 +1134,21 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           }}
         />
       )}
+      {expanding && (
+        <ExpandedPart
+          title={expanding.title}
+          body={expanding.body}
+          index={expanding.index}
+          state={expanding.state}
+          theme={theme}
+          onClose={(state) => {
+            setExpanded(null);
+            // The part in the card goes where the copy was, and focus back to it.
+            expanding.handBack(state);
+            giveFocusBack(expanding.opener);
+          }}
+        />
+      )}
       {viewing && !viewing.log && (
         <PictureViewer
           title={viewing.title}
@@ -1131,6 +1165,9 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     </>
   );
 }
+
+/** A part open full screen: the card it came from, the part's request, and the frame to return focus to. */
+type OpenPart = ExpandRequest & { cardId: string; title: string; opener: HTMLIFrameElement | null };
 
 /** An open picture viewer: the card it came from, its set, and the frame to return focus to. */
 type OpenPictures = {

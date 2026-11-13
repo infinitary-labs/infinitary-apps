@@ -6,7 +6,8 @@ import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 
 /**
- * The overlay the picture viewer and the log reader share (INF-3887): the
+ * The overlay the picture viewer, the log reader and a card part opened
+ * full screen (`../../cards/ExpandedPart`) share (INF-3887): the
  * dialog over the whole window, its header with the close button, the fade in
  * and out, and the Tab ring. Each viewer keeps only what it shows and its own
  * keys. Every rule here is the design skill's

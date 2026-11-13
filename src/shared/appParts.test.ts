@@ -14,9 +14,11 @@ describe("a card body naming the app's map part", () => {
   it("is read with the app's own style and script in place of the reference, the rest as written", () => {
     const html = withAppParts(BODY);
     expect(html).toBe(
+      // A replacer function: the minified code may hold "$&", which a
+      // replacement string would read as the matched text.
       BODY.replace(
         REFERENCE,
-        `<style>${sources.map.style}</style><script>${sources.map.script}</script>`,
+        () => `<style>${sources.map.style}</style><script>${sources.map.script}</script>`,
       ),
     );
     expect(appPartProblem(BODY)).toBeUndefined();

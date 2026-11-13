@@ -309,6 +309,7 @@ public enum PhoneMessages {
     public static func `uiCardStackNew`(`count`: Int) -> String { PhoneWords.format("uiCardStackNew", [`count`]) }
     public static func `uiPictureViewerDemoFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerDemoFrom", [`title`]) }
     public static func `uiPictureViewerPicturesFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerPicturesFrom", [`title`]) }
+    public static func `uiPictureViewerPartFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerPartFrom", [`title`]) }
     public static func `uiPictureViewerClose`() -> String { PhoneWords.format("uiPictureViewerClose", []) }
     public static func `uiLogReaderFrom`(`title`: String) -> String { PhoneWords.format("uiLogReaderFrom", [`title`]) }
     public static func `uiLogReaderClose`() -> String { PhoneWords.format("uiLogReaderClose", []) }
@@ -2502,6 +2503,7 @@ extension PhoneWords {
         "uiCardStackNew": ["count"],
         "uiPictureViewerDemoFrom": ["title"],
         "uiPictureViewerPicturesFrom": ["title"],
+        "uiPictureViewerPartFrom": ["title"],
         "uiPictureViewerClose": [],
         "uiLogReaderFrom": ["title"],
         "uiLogReaderClose": [],

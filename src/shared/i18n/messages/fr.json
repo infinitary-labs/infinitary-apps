@@ -324,6 +324,7 @@
   },
   "uiPictureViewerDemoFrom": "Démo de {title}",
   "uiPictureViewerPicturesFrom": "Images de {title}",
+  "uiPictureViewerPartFrom": "{title}, plein écran",
   "uiPictureViewerClose": "Fermer la visionneuse",
   "uiLogReaderFrom": "Journal de {title}",
   "uiLogReaderClose": "Fermer le journal",

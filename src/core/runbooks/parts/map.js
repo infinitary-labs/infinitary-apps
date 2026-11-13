@@ -12,9 +12,15 @@
   const stepEl = $("[data-step]");
   const posEl = $("[data-pos]");
   const openBtn = $("[data-open]");
+  const fsBtn = $("[data-fs]");
   // a touch screen draws the diagram as a fitted picture: one finger scrolls the card past it, a tap opens it
   const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
   root.classList.toggle("touch", touch);
+  // full screen: the app opened this body again over its window, at the state the card's map stood at
+  const opened = window.inf?.expanded?.(root) || null;
+  const full = !!opened && typeof opened === "object";
+  // the card's bridge shows only the map, filling the window, and hands a pinch over as ⌘-scroll
+  root.classList.toggle("full", full);
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const NS = "http://www.w3.org/2000/svg";
   const fmt = (x) => x.toLocaleString("en-US");
@@ -1309,6 +1315,8 @@
     if (sel && (at < 0 || items[at].n !== sel)) at = items.findIndex((it) => it.n === sel && !it.e);
     if (!any) at = -1;
     counter();
+    // the full-screen copy says where it stands, which the app hands back to the card's map on close
+    if (full) window.inf?.expand?.(root, stateNow());
   }
 
   // ---- words
@@ -1526,7 +1534,7 @@
   function fit() {
     const [x0, y0, x1, y1] = bounds();
     // on a touch screen the diagram is as tall as the drawing fitted to the card's width
-    if (touch) {
+    if (touch && !full) {
       const kw = Math.min(1.25, (W() - 32) / (x1 - x0));
       svg.style.height = `${Math.max(150, Math.min(290, (y1 - y0) * kw + 64))}px`;
     }
@@ -1612,6 +1620,11 @@
   let downOn = null;
   svg.addEventListener("pointerdown", (ev) => {
     if (ev.button) return;
+    // a second finger is a pinch, which the card's bridge hands over as ⌘-scroll: no drag, no tap
+    if (drag?.finger && ev.pointerType === "touch") {
+      drag = null;
+      return;
+    }
     // the box is read on the way down: once the pointer is captured, the release lands on the map
     downOn = hit(ev);
     const finger = ev.pointerType === "touch";
@@ -1626,7 +1639,7 @@
       n: downOn,
       m: hitM(ev),
     };
-    // a finger is never captured, so it scrolls the card; a mouse drags the map
+    // in a card a finger is never captured, so it scrolls the card; a mouse drags the map
     if (!finger) svg.setPointerCapture(ev.pointerId);
   });
   svg.addEventListener("pointermove", (ev) => {
@@ -1634,7 +1647,7 @@
     const dx = ev.clientX - drag.x;
     const dy = ev.clientY - drag.y;
     if (Math.abs(dx) + Math.abs(dy) > (drag.finger ? 8 : 3)) drag.moved = true;
-    if (!drag.moved || drag.finger) return;
+    if (!drag.moved || (drag.finger && !full)) return;
     cam.x = drag.cx - dx / cam.k;
     cam.y = drag.cy - dy / cam.k;
     apply();
@@ -1646,9 +1659,11 @@
     const d = drag;
     drag = null;
     if (!d || d.moved) return;
-    // on a touch screen the diagram is a picture: a tap opens it full screen
-    if (d.finger) still();
+    // in a card on a touch screen the diagram is a picture: a tap opens it full screen
+    if (d.finger && !full) fullScreen();
     else if (d.m) go(pathTo(d.m));
+    // full screen, a tap on the chosen box goes in, as a double-click does
+    else if (d.finger && d.n && d.n === sel && opens(d.n)) enter(d.n);
     else {
       sel = d.n;
       mark();
@@ -1664,8 +1679,14 @@
   svg.addEventListener(
     "wheel",
     (ev) => {
-      if (!ev.ctrlKey && !ev.metaKey) return;
+      // full screen there is no card to scroll: a plain scroll moves the map
+      if (!ev.ctrlKey && !ev.metaKey && !full) return;
       ev.preventDefault();
+      if (!ev.ctrlKey && !ev.metaKey) {
+        cam.x += ev.deltaX / cam.k;
+        cam.y += ev.deltaY / cam.k;
+        return apply();
+      }
       const r = svg.getBoundingClientRect();
       zoom(
         Math.exp(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.002)),
@@ -1677,7 +1698,7 @@
   );
   // bring the chosen box or link into view, and closer when the map is drawn too small to read
   function reveal(target) {
-    if (!target || touch) return;
+    if (!target || (touch && !full)) return;
     const n = target._n;
     const b = n
       ? { x: n.x - n.w / 2, y: n.y - n.h / 2, width: n.w, height: n.h }
@@ -1729,9 +1750,19 @@
     svg.setAttribute("viewBox", was[0]);
     svg.setAttribute("aria-label", was[1]);
   }
+  // Full screen: the app opens this body again over its window, the map live in it at this state;
+  // a host that opens none gets the still picture
+  function fullScreen() {
+    if (full) return;
+    // focus comes back to Full screen when the full-screen map closes
+    if (!touch) fsBtn.focus({ preventScroll: true });
+    if (!window.inf?.expand?.(root, stateNow())) still();
+  }
   svg.addEventListener("keydown", (ev) => {
     const k = ev.key;
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    // full screen, Escape is the app's: it closes the full-screen map at once
+    if (full && k === "Escape") return;
     const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     if (arrows[k]) {
       step(...arrows[k]);
@@ -1749,7 +1780,7 @@
     } else if (k === "+" || k === "=") zoom(1.25);
     else if (k === "-") zoom(0.8);
     else if (k === "0") fit();
-    else if (k === "f" || k === "F") still();
+    else if ((k === "f" || k === "F") && !full) fullScreen();
     else if (k === "]" && cmp >= 0) stepTo(at + 1);
     else if (k === "[" && cmp >= 0) stepTo(at < 0 ? -1 : at - 1);
     else return;
@@ -1762,7 +1793,7 @@
   press("[data-fit]", fit);
   press("[data-zo]", () => zoom(0.8));
   press("[data-zi]", () => zoom(1.25));
-  press("[data-fs]", still);
+  press("[data-fs]", fullScreen);
   press("[data-open]", () => enter(sel));
   press("[data-next]", () => stepTo(at + 1));
   press("[data-prev]", () => stepTo(at < 0 ? -1 : at - 1));
@@ -1770,9 +1801,9 @@
     moreEl.hidden = !moreEl.hidden;
     moreBtn.setAttribute("aria-expanded", String(!moreEl.hidden));
   });
-  if (!touch)
-    $("[data-keys]").textContent =
-      "Click or arrows choose · Enter goes in · Esc back · [ ] step through changes · ⌘-scroll zooms · F full screen";
+  $("[data-keys]").textContent = touch
+    ? ""
+    : `Click or arrows choose · Enter goes in · ${full ? "Backspace up · [ ] step through changes · scroll moves · ⌘-scroll zooms · Esc closes" : "Esc back · [ ] step through changes · ⌘-scroll zooms · F full screen"}`;
   // a comparison opens at the deepest level that still holds every change
   const where = () => {
     let P = null;
@@ -1823,11 +1854,13 @@
     while (path.length > 1 && gone(path[path.length - 1])) path = path.slice(0, -1);
     go(path);
   }
-  // a narrow card puts the comparison buttons under More
+  // a narrow card puts the comparison buttons under More; full screen, a new height refits too
   let wide = 0;
+  let tall = 0;
   new ResizeObserver(() => {
-    if (root.clientWidth === wide) return;
+    if (root.clientWidth === wide && (!full || root.clientHeight === tall)) return;
     wide = root.clientWidth;
+    tall = root.clientHeight;
     const narrow = wide < 560;
     root.classList.toggle("narrow", narrow);
     (narrow ? $("[data-mcmp]") : $(".bar")).insertBefore(cmpEl, narrow ? null : $(".zoom"));
@@ -1875,5 +1908,49 @@
     for (const t of listed.slice(0, 8)) mk("li", t, ul);
     if (listed.length > 8) mk("li", `and ${listed.length - 8} more`, ul);
   }
-  go(startAt ? pathTo(startAt) : cmp >= 0 ? where() : [top]);
+  // where the map stands, as keys that name each place on the way down, for the full-screen map and back
+  function keyOf(x) {
+    if (x.kind === "lvl") return `L:${x.folder}`;
+    if (x.kind === "grp") return `G:${x.lvl.folder}/${x.name}`;
+    return x.kind === "part" ? `P:${x.path}` : `M:${x.name}`;
+  }
+  function byKey(k) {
+    const walk = (L) =>
+      [L, ...L.groups, ...partsOf(L), ...L.machs, ...(cmp < 0 ? [] : L.gm)].find(
+        (x) => keyOf(x) === k,
+      ) || L.parts.reduce((y, P) => y || (P.sub && walk(P.sub)), null);
+    return typeof k === "string" ? walk(top) : null;
+  }
+  function stateNow() {
+    return { place: stack.map(keyOf), changes: cmp, chosen: sel ? sel.key : null, step: at };
+  }
+  // goes where a state says: its comparison, its place, its chosen box and the change the arrows stood at
+  function goToState(t) {
+    if (!t || typeof t !== "object") return;
+    const c = Number.isInteger(t.changes) && CMP[t.changes] ? t.changes : -1;
+    if (c !== cmp) {
+      compare(c);
+      pressed();
+    }
+    const path = Array.isArray(t.place) ? t.place.map(byKey) : [];
+    const last = path.filter(Boolean).pop();
+    go(
+      path.length && path.every(Boolean) ? path : last ? pathTo(last) : cmp >= 0 ? where() : [top],
+    );
+    if (Number.isInteger(t.step) && t.step >= 0 && items[t.step]) stepTo(t.step);
+    else {
+      sel = V.nodes.find((n) => n.key === t.chosen) || null;
+      mark();
+      if (sel) reveal(sel.el);
+    }
+  }
+  // the full-screen map closed: this one goes where it was left
+  root.addEventListener("inf-expanded", (ev) => goToState(ev.detail));
+  if (full) {
+    goToState(opened);
+    const keys = () =>
+      document.activeElement === document.body && svg.focus({ preventScroll: true });
+    keys();
+    window.addEventListener("focus", keys);
+  } else go(startAt ? pathTo(startAt) : cmp >= 0 ? where() : [top]);
 })();

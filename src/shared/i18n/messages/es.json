@@ -324,6 +324,7 @@
   },
   "uiPictureViewerDemoFrom": "Demo de {title}",
   "uiPictureViewerPicturesFrom": "Imágenes de {title}",
+  "uiPictureViewerPartFrom": "{title}, pantalla completa",
   "uiPictureViewerClose": "Cerrar el visor",
   "uiLogReaderFrom": "Log de {title}",
   "uiLogReaderClose": "Cerrar el log",

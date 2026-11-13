@@ -77,6 +77,14 @@ Your computer may no longer keep it."
 `Esc`, Close or a click on the backdrop leaves, focus returning to the line that opened it; the motion and theme are the viewer's.
 On the phone the log opens in a sheet with the line's words as its title, its size, the text selectable, and Done.
 
+**A part full screen.**
+A part of a card's body that asks to open full screen - the map part's Full screen button or `F` - opens on the same surface: the same header, named "<card title>, full screen", with no count, and Close.
+Under it the body opens again, live, in a frame of its own filling the rest of the window, `--space-4` from its sides and foot, `--radius-m`, `--shadow-2`; the part fills that frame and the rest of the body stays out of sight.
+It opens where the part in the card stood - the map's place, comparison and choice - and focus goes into it once it is drawn.
+The part's own keys and gestures work in it; Tab moves between Close and the copy; `Esc`, from the copy or the surface, or Close closes it at once.
+On close the part in the card goes where the copy was left, and focus returns to its Full screen button.
+It fades in and out as the viewer does, and the card leaving the stage closes it with it.
+
 **Motion.**
 A `--dur-med` (360 ms) `--ease-drift` fade in and out; none at all under reduced motion; never a slide, and nothing moves between pictures.
 

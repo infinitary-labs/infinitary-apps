@@ -8966,6 +8966,35 @@ export function uiPictureViewerPicturesFrom(input: { title: string }): string {
   return `Pictures from ${title}`;
 }
 
+export function uiPictureViewerPartFrom(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${title}، ملء الشاشة`;
+    case "de":
+      return `${title}, Vollbild`;
+    case "es":
+      return `${title}, pantalla completa`;
+    case "fr":
+      return `${title}, plein écran`;
+    case "ja":
+      return `${title}（全画面）`;
+    case "ko":
+      return `${title}, 전체 화면`;
+    case "pt-BR":
+      return `${title}, tela cheia`;
+    case "zh-Hans":
+      return `${title}（全屏）`;
+    case "zh-Hant":
+      return `${title}（全螢幕）`;
+    case "en-XA":
+      return `[${title}, ƒûļļ šçŕééñ ~~~~~]`;
+    case "ar-XB":
+      return `${title}\u202e, full screen\u202c`;
+  }
+  return `${title}, full screen`;
+}
+
 export function uiPictureViewerClose(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -48226,6 +48255,7 @@ export const MESSAGES = {
   uiCardStackNew,
   uiPictureViewerDemoFrom,
   uiPictureViewerPicturesFrom,
+  uiPictureViewerPartFrom,
   uiPictureViewerClose,
   uiLogReaderFrom,
   uiLogReaderClose,
@@ -49847,6 +49877,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   uiCardStackNew: ["count"],
   uiPictureViewerDemoFrom: ["title"],
   uiPictureViewerPicturesFrom: ["title"],
+  uiPictureViewerPartFrom: ["title"],
   uiPictureViewerClose: [],
   uiLogReaderFrom: ["title"],
   uiLogReaderClose: [],

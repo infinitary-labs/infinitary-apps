@@ -336,6 +336,7 @@
   },
   "uiPictureViewerDemoFrom": "عرض توضيحي من {title}",
   "uiPictureViewerPicturesFrom": "صور من {title}",
+  "uiPictureViewerPartFrom": "{title}، ملء الشاشة",
   "uiPictureViewerClose": "إغلاق العارض",
   "uiLogReaderFrom": "سجل التشغيل من {title}",
   "uiLogReaderClose": "إغلاق سجل التشغيل",

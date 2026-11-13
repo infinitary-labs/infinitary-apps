@@ -395,3 +395,29 @@
     display: none;
   }
 }
+/* full screen: the card's bridge fixes the map to the window; the diagram fills it above its two rows */
+.mz.full {
+  display: flex;
+  flex-direction: column;
+  > svg {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+  [data-fs] {
+    display: none;
+  }
+  .more {
+    max-height: 40vh;
+    overflow: auto;
+  }
+}
+/* full screen on a touch screen: a finger moves the map, and the zoom buttons come back */
+.mz.full.touch {
+  .zoom {
+    display: flex;
+  }
+  &::after {
+    content: none;
+  }
+}

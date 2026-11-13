@@ -300,6 +300,7 @@
 "uiCardNextQuestion" = "Next question";
 "uiPictureViewerDemoFrom" = "Demo from %1$@";
 "uiPictureViewerPicturesFrom" = "Pictures from %1$@";
+"uiPictureViewerPartFrom" = "%1$@, full screen";
 "uiPictureViewerClose" = "Close the viewer";
 "uiLogReaderFrom" = "Log from %1$@";
 "uiLogReaderClose" = "Close the log";

@@ -16,6 +16,7 @@ import {
   PICTURE_STRIP_SHOWN,
 } from "./bridge";
 import { FRAME_ANNOTATION_SCRIPT } from "./frameAnnotationScript";
+import { FRAME_EXPAND_SCRIPT } from "./frameExpandScript";
 import { FRAME_QUESTION_SCRIPT } from "./frameQuestionScript";
 import { READ_VALUE_DECODER } from "./readTransfer";
 
@@ -66,6 +67,11 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  *   `inf.birthState` keeps the state the host pushed at the document's
  *   birth, which later pushes never replace, so a page that starts reading
  *   late can still tell what the host pushed after it was born.
+ * - `inf.expand(element, state)` - a part marked `data-inf-expand` asks to
+ *   open full screen with its state (at most FRAME_EXPAND_STATE_MAX bytes of
+ *   JSON), false where the host opens none; `inf.expanded(element)` reads the
+ *   state back in the copy, and the part hears the last one as an
+ *   `inf-expanded` event (docs/card-authoring.md, "A part full screen").
  * - `inf.stage(name, value)` - a JSON snapshot staged under a name beside the
  *   body's own form (inline decisions, contract 4.22). It is local: it joins
  *   the form's answers and leaves the card only with them.
@@ -262,7 +268,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
   var entries = { known: null };
-  var caps = { pictures: false, escape: false };
+  var caps = { pictures: false, escape: false, expand: false };
   var held = { element: null, start: null, end: null, direction: null };
   var listen = EventTarget.prototype.addEventListener;
   // A hook in another spelling of the app's code names - Firstmate 3000's
@@ -474,6 +480,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     next.innerHTML = html;
     morphChildren(document.body, next.content);
   }
+${FRAME_EXPAND_SCRIPT}
   document.addEventListener("DOMContentLoaded", function () {
     if (pendingMarkup === undefined) return;
     var html = pendingMarkup;
@@ -639,8 +646,14 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     } else if (data.type === "keys") {
       caps.pictures = data.pictures === true;
       caps.escape = data.escape === true;
+      caps.expand = data.expand === true;
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tagPictures, { once: true });
       else tagPictures();
+    } else if (data.type === "expanded") {
+      var back = expandable()[data.index];
+      var detail;
+      try { detail = back && JSON.parse(data.state); } catch (e) { return; }
+      if (back) back.dispatchEvent(new CustomEvent("inf-expanded", { detail: detail }));
     } else if (data.type === "focus") {
       returnFocus();
     } else if (data.type === "move") {
@@ -767,6 +780,9 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       if (!caps.pictures || !drawing || drawing.localName !== "svg") return;
       post({ type: "image", index: 0, pictures: [drawingPicture(drawing)], asked: true });
     },
+    // A part full screen, and its state in the copy (FRAME_EXPAND_SCRIPT).
+    expand: expandPart,
+    expanded: expandedState,
     stage: function (name, value) {
       var json = value === undefined ? undefined : JSON.stringify(value);
       if (json === undefined) delete form.staged[String(name)];
@@ -1975,4 +1991,4 @@ ${FRAME_QUESTION_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-0F+/b0HIETB69o0S4s33LQ6EIOfpZm5t1h+oB3x3kEk=";
+export const FRAME_BRIDGE_SHA256 = "sha256-2anC044I9XLGV1G3S44JL5UVUWbNktH5BKRYSHKnS5o=";

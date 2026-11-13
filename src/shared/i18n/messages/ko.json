@@ -316,6 +316,7 @@
   },
   "uiPictureViewerDemoFrom": "{title}의 데모",
   "uiPictureViewerPicturesFrom": "{title}의 사진",
+  "uiPictureViewerPartFrom": "{title}, 전체 화면",
   "uiPictureViewerClose": "보기 닫기",
   "uiLogReaderFrom": "{title}의 로그",
   "uiLogReaderClose": "로그 닫기",

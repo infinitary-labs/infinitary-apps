@@ -483,6 +483,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FRAME_MAX_PICTURES: physical("none yet: the image message is dropped; the picture does not open"),
     FRAME_PICTURE_SRC_MAX: physical("none yet: the image message is dropped; the picture does not open"),
     FRAME_PICTURE_ALT_MAX: physical("none yet: the image message is dropped; the picture does not open"),
+    FRAME_EXPAND_STATE_MAX: physical("inf.expand returns false and posts nothing; the part opens its still picture"),
     FRAME_DEMO_SRC_MAX: record("none needed: every name the host serves fits; others are dropped"),
     FRAME_DEMO_CAPTION_MAX: physical("clipped for the player; the card body keeps the whole caption"),
     FRAME_LOG_SRC_MAX: record("none needed: every log name the host serves fits; others are dropped"),

@@ -4,7 +4,11 @@ import { buildFrameDocument, type FrameTheme } from "@shared/plugins/frameDocume
 import { expect, test } from "vitest";
 import { commands, page } from "vitest/browser";
 import part from "../../resources/runbooks/architecture/skills/advanced-architecture/parts/map.html?raw";
-import { cardBodyMarkup, cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
+import {
+  cardBodyMarkup,
+  cardStylesheet,
+  expandedStamp,
+} from "../../src/renderer/src/cards/prototypeSrcdoc";
 import { fillMapPart, MAP_DATA, mapPartNaming } from "../helpers/architectureMap";
 
 /**
@@ -206,6 +210,8 @@ type Heard = {
   answers?: { name: string }[];
   pictures?: { src: string; alt: string; width: number; height: number }[];
   asked?: boolean;
+  index?: number;
+  state?: string;
 };
 
 async function mounted(
@@ -224,6 +230,12 @@ async function mounted(
      * refuses it as it does a file the home cannot hand over.
      */
     file?: "answered" | "refused";
+    /** The host opens a part full screen when it asks (the frame controller's "keys"). */
+    expand?: boolean;
+    /** The body is a part's full-screen copy, stamped as the window stamps it, at this state. */
+    expanded?: object;
+    /** The frame's height in pixels. */
+    height?: number;
   } = {},
 ): Promise<Heard[]> {
   const data = options.data ?? MAP_DATA;
@@ -233,7 +245,10 @@ async function mounted(
   const body = options.file
     ? mapPartNaming(part, DATA_SRC)
     : fillMapPart(part, options.pack ? await packed(block) : block, options.pack ?? false);
-  const html = cardBodyMarkup(body).html;
+  const filled = cardBodyMarkup(body).html;
+  const html = options.expanded
+    ? `${expandedStamp(0, JSON.stringify(options.expanded))}${filled}`
+    : filled;
   const scripts = [...new DOMParser().parseFromString(html, "text/html").querySelectorAll("script")]
     .filter((script) => !script.src && script.textContent)
     .map((script) => script.textContent ?? "");
@@ -241,7 +256,7 @@ async function mounted(
   const frame = document.createElement("iframe");
   frame.name = FRAME;
   frame.setAttribute("sandbox", "allow-scripts");
-  frame.style.cssText = `width:${options.width ?? 800}px;height:900px;border:0`;
+  frame.style.cssText = `width:${options.width ?? 800}px;height:${options.height ?? 900}px;border:0`;
   addEventListener("message", (event) => {
     if (event.source !== frame.contentWindow) return;
     const data = event.data as Heard & { document?: unknown };
@@ -256,7 +271,12 @@ async function mounted(
       post({ type: "response", document: data.document, id: data.id, ...answer });
     }
     if (data.type === "ready") {
-      post({ type: "keys", pictures: true, escape: true });
+      post({
+        type: "keys",
+        pictures: true,
+        escape: true,
+        ...(options.expand ? { expand: true } : {}),
+      });
       if (options.form) post({ type: "form", fill: null });
       post({ type: "initialize", document: data.document });
     }
@@ -939,4 +959,188 @@ test("a click anywhere inside a dashed box chooses it", async () => {
   }, outside?.label);
   expect(under).toBe(outside?.label);
   await expect.poll(async () => (await read()).live).toMatch(new RegExp(`^${outside?.label}`));
+});
+
+// The approved plan's piece 2: Full screen opens the live map over the whole window, at the card's
+// place, comparison and choice, and hands them back on close; a host that opens none gets the still.
+test("Full screen asks the app for the live map at the card's place, comparison and choice", async () => {
+  const machine = Object.keys((MAP_DATA.compare[0] as { names: object }).names)[0] as string;
+  const heard = await mounted("dark", { expand: true, open: { at: machine, changes: 0 } });
+  expect(await call("key", "ArrowRight")).toBe(true);
+  const card = await read();
+  await inFrame(
+    () => (document.querySelector("#map [data-fs]") as HTMLButtonElement).click(),
+    null,
+  );
+  await expect.poll(() => heard.filter((message) => message.type === "expand").length).toBe(1);
+  const asked = heard.find((message) => message.type === "expand");
+  expect(asked?.index).toBe(0);
+  const state = JSON.parse(asked?.state ?? "null");
+  expect(state.place.at(-1)).toBe(`M:${machine}`);
+  expect(state.changes).toBe(0);
+  expect(state.chosen).toEqual(expect.any(String));
+  // the live map opens instead of the still picture, and the card's map stays where it was
+  expect(heard.some((message) => message.type === "image")).toBe(false);
+  expect((await read()).live).toBe(card.live);
+  expect(await inFrame(() => document.activeElement?.getAttribute("aria-label"), null)).toBe(
+    "Full screen",
+  );
+  expect(await call("key", "f")).toBe(true);
+  await expect.poll(() => heard.filter((message) => message.type === "expand").length).toBe(2);
+});
+
+test("the full-screen map opens at the state it was given, fills its window, and says where it goes", async () => {
+  const machine = Object.keys((MAP_DATA.compare[0] as { names: object }).names)[0] as string;
+  // the state the card's map asked with, read from a card first
+  const asking = await mounted("dark", { expand: true, open: { at: machine, changes: 0 } });
+  await call("key", "ArrowRight");
+  const card = await read();
+  await call("key", "f");
+  await expect.poll(() => asking.some((message) => message.type === "expand")).toBe(true);
+  const given = JSON.parse(asking.find((message) => message.type === "expand")?.state ?? "{}");
+
+  const heard = await mounted("dark", { expand: true, expanded: given, width: 1000, height: 700 });
+  const states = () =>
+    heard
+      .filter((message) => message.type === "expand")
+      .map((message) => JSON.parse(message.state ?? "null"));
+  const copy = await read();
+  expect(copy.crumbs).toBe(card.crumbs);
+  expect(copy.live).toBe(card.live);
+  expect(copy.changes).not.toBe("");
+  // the map fills the window, and Full screen is not offered inside it
+  const filled = await inFrame(() => {
+    const map = (document.querySelector("#map") as HTMLElement).getBoundingClientRect();
+    const svg = (document.querySelector("#map svg") as SVGSVGElement).getBoundingClientRect();
+    const fs = document.querySelector("#map [data-fs]") as HTMLElement;
+    return {
+      map: [map.left, map.top, map.width, map.height],
+      svg: svg.height,
+      footer: map.bottom - svg.bottom,
+      fs: getComputedStyle(fs).display,
+    };
+  }, null);
+  expect(filled.map).toEqual([0, 0, 1000, 700]);
+  expect(filled.svg).toBeGreaterThan(700 - 100);
+  expect(filled.fs).toBe("none");
+  // a plain scroll moves the map, and ⌘-scroll still zooms
+  const wheel = (init: WheelEventInit) => {
+    const svg = document.querySelector("#map svg") as SVGSVGElement;
+    const box = svg.getBoundingClientRect();
+    const before = svg.getAttribute("viewBox");
+    const event = new WheelEvent("wheel", {
+      deltaY: 120,
+      clientX: box.left + box.width / 2,
+      clientY: box.top + box.height / 2,
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    });
+    svg.dispatchEvent(event);
+    const [x, y, w] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+    const [x0, y0, w0] = (before ?? "").split(" ").map(Number);
+    return { cancelled: event.defaultPrevented, moved: y !== y0 || x !== x0, zoomed: w !== w0 };
+  };
+  expect(await inFrame(wheel, {})).toEqual({ cancelled: true, moved: true, zoomed: false });
+  expect((await inFrame(wheel, { metaKey: true, deltaY: -120 })).zoomed).toBe(true);
+  // the arrows choose and the copy says so; Backspace goes up and the copy says that too
+  const said = states().length;
+  expect(await call("key", "ArrowDown")).toBe(true);
+  await expect.poll(() => states().length).toBeGreaterThan(said);
+  expect(await call("key", "Backspace")).toBe(true);
+  expect(await call("key", "Backspace")).toBe(true);
+  await expect.poll(() => states().at(-1)?.place.length).toBe(given.place.length - 1);
+  // Escape is the app's, which closes the full-screen map at once
+  expect(await call("key", "Escape")).toBe(false);
+  await expect.poll(() => heard.some((message) => message.type === "escape")).toBe(true);
+});
+
+test("on a touch screen the full-screen map moves under a finger, pinches, and chooses on a tap", async () => {
+  const heard = await mounted("dark", {
+    expand: true,
+    expanded: { place: ["L:"], changes: -1, chosen: null, step: -1 },
+    width: 390,
+    height: 700,
+  });
+  const viewBox = () =>
+    (document.querySelector("#map svg")?.getAttribute("viewBox") ?? "").split(" ").map(Number);
+  const touches = (moves: { id: number; from: number[]; to: number[] }[]) => {
+    const svg = document.querySelector("#map svg") as SVGSVGElement;
+    // a press lands on what lies under it, as a finger's does; the map follows the finger after that
+    const fire = (type: string, id: number, [x, y]: number[]) =>
+      (type === "pointerdown"
+        ? (document.elementFromPoint(x as number, y as number) ?? svg)
+        : svg
+      ).dispatchEvent(
+        new PointerEvent(type, {
+          clientX: x,
+          clientY: y,
+          pointerId: id,
+          pointerType: "touch",
+          bubbles: true,
+        }),
+      );
+    for (const m of moves) fire("pointerdown", m.id, m.from);
+    for (let step = 1; step <= 4; step++)
+      for (const m of moves)
+        fire("pointermove", m.id, [
+          (m.from[0] as number) + (((m.to[0] as number) - (m.from[0] as number)) * step) / 4,
+          (m.from[1] as number) + (((m.to[1] as number) - (m.from[1] as number)) * step) / 4,
+        ]);
+    for (const m of moves) fire("pointerup", m.id, m.to);
+  };
+  const start = await inFrame(viewBox, null);
+  // one finger moves the map, and the size stays
+  await inFrame(touches, [{ id: 1, from: [200, 300], to: [140, 240] }]);
+  const moved = await inFrame(viewBox, null);
+  expect(moved[0]).toBeCloseTo((start[0] as number) + 60 / (390 / (start[2] as number)), 0);
+  expect(moved[2]).toBeCloseTo(start[2] as number, 3);
+  // two fingers pinching apart zoom in around their middle
+  await inFrame(touches, [
+    { id: 2, from: [180, 300], to: [120, 300] },
+    { id: 3, from: [220, 300], to: [280, 300] },
+  ]);
+  const pinched = await inFrame(viewBox, null);
+  expect(pinched[2]).toBeLessThan((moved[2] as number) / 2);
+  // a tap chooses a box; a tap on the chosen box goes in when it opens
+  const box = await inFrame(() => {
+    (document.querySelector("#map [data-fit]") as HTMLButtonElement).click();
+    const opening = document.querySelector("#map [data-box].open") as Element;
+    const r = opening.getBoundingClientRect();
+    return {
+      label: opening.getAttribute("data-box") ?? "",
+      at: [r.left + r.width / 2, r.top + r.height / 2],
+    };
+  }, null);
+  await inFrame(touches, [{ id: 4, from: box.at, to: box.at }]);
+  await expect.poll(async () => (await read()).live).toMatch(new RegExp(`^${box.label}`));
+  const places = () =>
+    heard
+      .filter((message) => message.type === "expand")
+      .map((message) => JSON.parse(message.state ?? "null").place.length);
+  await inFrame(touches, [{ id: 5, from: box.at, to: box.at }]);
+  await expect.poll(() => places().at(-1)).toBeGreaterThan(1);
+});
+
+test("the map in the card goes where the full-screen map was left", async () => {
+  const machine = Object.keys((MAP_DATA.compare[0] as { names: object }).names)[0] as string;
+  // where a reader left the full-screen map: in a machine, with the comparison on and a state chosen
+  const asked = await mounted("dark", { expand: true, open: { at: machine, changes: 0 } });
+  await call("key", "ArrowRight");
+  const left = await read();
+  await call("key", "f");
+  await expect.poll(() => asked.some((message) => message.type === "expand")).toBe(true);
+  const state = asked.find((message) => message.type === "expand")?.state ?? "";
+
+  // a card's map at its top, with no comparison on, takes that state back
+  await mounted("dark", { expand: true });
+  expect((await read()).crumbs).not.toBe(left.crumbs);
+  const frame = document.querySelector("iframe") as HTMLIFrameElement;
+  frame.contentWindow?.postMessage(
+    { fm: FRAME_BRIDGE_VERSION, type: "expanded", index: 0, state },
+    "*",
+  );
+  await expect.poll(async () => (await read()).crumbs).toBe(left.crumbs);
+  expect((await read()).live).toBe(left.live);
+  expect((await read()).changes).not.toBe("");
 });

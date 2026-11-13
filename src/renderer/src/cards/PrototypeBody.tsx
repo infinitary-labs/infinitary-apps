@@ -15,7 +15,15 @@ import type { FrameAnswers, FramePicture, FrameQuestioned } from "@shared/plugin
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
 import { type FrameMount, type FrameTheme, frameTitle } from "@shared/plugins/frameDocument";
 import { appBodyOf } from "@shared/welcome";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { available } from "../app/focusRecovery";
 import { fontFrameStyle, useFontsDrawn } from "../app/fonts";
 import { Button } from "../design";
@@ -34,6 +42,7 @@ import { describeFocus, openFrameLink } from "../plugins/frames/frameLink";
 import { dismissEmptyAnnotation, syncAnnotation, useAnnotationBridge } from "./annotationBridge";
 import { CARD_BODY_WORDS } from "./cardBodyWords";
 import { DrawnAtWidth } from "./drawnAtWidth";
+import { ExpandPartContext } from "./expandPart";
 import {
   type KnowledgeLinks,
   knowledgeReferenceGesture,
@@ -47,12 +56,38 @@ import {
   cardBodyVehicle,
   cardStylesheet,
   escapeHtml,
+  expandedStamp,
   INSET_SPACER,
 } from "./prototypeSrcdoc";
 import { type RevealBody, revealInCard, useRevisionNavigation } from "./RevisionNavigation";
 import { type TaskLinks, taskKeyGesture, useTaskLinks } from "./taskLinks";
 
 const MIN_BODY_HEIGHT = 48;
+
+/**
+ * A part of a body asked to open full screen (`inf.expand`;
+ * docs/card-authoring.md, "A part full screen"): which `[data-inf-expand]`
+ * part, its state as JSON, the body it is a part of, and the way to hand the
+ * part its state back when the full-screen copy closes.
+ */
+export type ExpandRequest = {
+  index: number;
+  state: string;
+  body: string;
+  handBack: (state: string) => void;
+};
+
+/**
+ * This body is a part's full-screen copy (`ExpandedPart`): the part and the
+ * state it opens at, stamped on the body, each state the copy says it stands
+ * at, and its Escape, which closes it.
+ */
+export type ExpandedCopy = {
+  index: number;
+  state: string;
+  onState: (state: string) => void;
+  onEscape: () => void;
+};
 
 /**
  * Let the frame grow to its full document height. ResponseCard owns the
@@ -100,6 +135,10 @@ type BodyProps = {
     opener: HTMLIFrameElement | null,
     title?: string,
   ) => void;
+  /** A part of the body asked to open full screen; absent, the part opens what it would without. */
+  onExpand?: (open: Omit<ExpandRequest, "body">, opener: HTMLIFrameElement | null) => void;
+  /** The body is a part's full-screen copy: it fills what holds it and takes no actions. */
+  expanded?: ExpandedCopy;
   /**
    * The body's own form (inline decisions, contract 4.22): the draft each
    * new document gets back by name, and every reading the bridge posts.
@@ -270,7 +309,7 @@ function landed(
   return "moved";
 }
 
-const frameStyle = (height: number): React.CSSProperties => ({
+const frameStyle = (height: number | "100%"): React.CSSProperties => ({
   width: "100%",
   height,
   border: "none",
@@ -294,8 +333,22 @@ const frameStyle = (height: number): React.CSSProperties => ({
  */
 export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
   const navigation = useRevisionNavigation();
-  const authored = useWordedBody(saved);
-  const input = lead ? leadBody(authored, lead) : authored;
+  // A shown card's part opens full screen where the stage offers it.
+  const offered = useContext(ExpandPartContext);
+  const worded = useWordedBody(saved);
+  const led = lead ? leadBody(worded, lead) : worded;
+  const input: BodyProps = led.expanded
+    ? {
+        ...led,
+        body: `${expandedStamp(led.expanded.index, led.expanded.state)}${cardBodyHtml(led.body)}`,
+      }
+    : offered
+      ? {
+          ...led,
+          // The part opens in a copy of the body as its author wrote it.
+          onExpand: (open, opener) => offered({ ...open, body: worded.body }, opener),
+        }
+      : led;
   const given: BodyProps = navigation?.offerId
     ? {
         ...input,
@@ -350,10 +403,14 @@ export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
   return (
     <div
       ref={wrapperRef}
-      style={{
-        paddingBlock: "var(--space-1)",
-        ...(marked ? { marginInlineStart: -CHANGE_GUTTER_PX } : {}),
-      }}
+      style={
+        props.expanded
+          ? { height: "100%" }
+          : {
+              paddingBlock: "var(--space-1)",
+              ...(marked ? { marginInlineStart: -CHANGE_GUTTER_PX } : {}),
+            }
+      }
     >
       {vehicle === "mount" ? (
         <ScriptedCardBody {...props} links={links} knowledge={knowledge} />
@@ -439,6 +496,7 @@ function cardFrameSpec(
   drawing: DrawnAtWidth,
   onUnresponsive?: () => void,
   onDrawn?: (held: boolean) => void,
+  controller?: () => FrameController | null,
 ): FrameMountSpec {
   const admitted = () => props.admit?.() ?? true;
   const interaction = () => {
@@ -524,15 +582,37 @@ function cardFrameSpec(
         return;
       fromCaptain(() => props.onPicture?.({ index: 0, pictures: [], log }, frameRef.current));
     },
+    // A part full screen (docs/card-authoring.md, "A part full screen"): a
+    // card's part opens only on the captain's own press; the copy says where
+    // it stands as it moves, and its Escape closes it.
+    ...(props.expanded
+      ? { onExpand: (_index: number, state: string) => props.expanded?.onState(state) }
+      : props.onExpand
+        ? {
+            onExpand: (index: number, state: string) =>
+              fromCaptain(() =>
+                props.onExpand?.(
+                  {
+                    index,
+                    state,
+                    handBack: (back) => controller?.()?.expanded(index, back),
+                  },
+                  frameRef.current,
+                ),
+              ),
+          }
+        : {}),
     // An Escape the body did not use leaves it for its card, ringed, from
     // where the reading keys scroll it and Tab goes back in.
     onEscape: () =>
-      fromCaptain(() => {
-        if (dismissEmptyAnnotation(props.cardId)) return;
-        if (props.revision?.returnFocus()) return;
-        const card = frameRef.current?.closest<HTMLElement>('[data-window-region="card"]');
-        if (card && available(card)) focusWithRing(card, { preventScroll: true });
-      }),
+      props.expanded
+        ? props.expanded.onEscape()
+        : fromCaptain(() => {
+            if (dismissEmptyAnnotation(props.cardId)) return;
+            if (props.revision?.returnFocus()) return;
+            const card = frameRef.current?.closest<HTMLElement>('[data-window-region="card"]');
+            if (card && available(card)) focusWithRing(card, { preventScroll: true });
+          }),
     ...(props.revision
       ? {
           revision: {
@@ -785,12 +865,20 @@ function SrcdocCardBody(props: SrcdocProps) {
   const controllerRef = useFrameController(
     frameRef,
     {
-      ...cardFrameSpec(props, frameRef, setHeight, drawing, undefined, () => {
-        setDrawnDocument(shown);
-        // A first document drawn while the body has already moved on is not
-        // the body the card is presenting; one refreshed in place is.
-        if (shown === srcdoc || props.inPlace) props.onDrawn?.();
-      }),
+      ...cardFrameSpec(
+        props,
+        frameRef,
+        setHeight,
+        drawing,
+        undefined,
+        () => {
+          setDrawnDocument(shown);
+          // A first document drawn while the body has already moved on is not
+          // the body the card is presenting; one refreshed in place is.
+          if (shown === srcdoc || props.inPlace) props.onDrawn?.();
+        },
+        () => controllerRef.current,
+      ),
       ...(markup !== undefined ? { markup } : {}),
     },
     theme,
@@ -823,7 +911,10 @@ function SrcdocCardBody(props: SrcdocProps) {
       onLoad={() => setLoaded(true)}
       data-frame-drawn={drawn ? "" : undefined}
       data-frame-reveal={fade ? "" : undefined}
-      style={{ ...frameStyle(height), opacity: drawn || !fade ? undefined : 0 }}
+      style={{
+        ...frameStyle(props.expanded ? "100%" : height),
+        opacity: drawn || !fade ? undefined : 0,
+      }}
     />
   );
 }
@@ -948,6 +1039,7 @@ function ScriptedCardBody(props: SrcdocProps) {
         setDrawn(true);
         props.onDrawn?.();
       },
+      () => controllerRef.current,
     ),
     theme,
     documentKey,
@@ -1001,7 +1093,7 @@ function ScriptedCardBody(props: SrcdocProps) {
       data-frame-held={heldDrawn && !drawn ? "" : undefined}
       data-frame-reveal={reveal && revealDocument.current === state.mount.mountId ? "" : undefined}
       style={{
-        ...frameStyle(height),
+        ...frameStyle(props.expanded ? "100%" : height),
         opacity: drawn || !reveal || revealDocument.current !== null ? undefined : 0,
       }}
     />

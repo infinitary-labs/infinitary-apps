@@ -23,7 +23,7 @@ const TOKENS = ["colors", "effects", "spacing", "typography"];
 const PAGE_STYLE = "body{margin:0;padding:24px;background:var(--bg-2);color:var(--fg-2)}";
 
 const minified = async (text: string, name: string, loader: "css" | "js") =>
-  (await transformWithEsbuild(text, name, { loader, minify: true, target: "es2022" })).code.trim();
+  (await transformWithEsbuild(text, name, { loader, minify: true, target: "es2022", charset: "utf8" })).code.trim();
 
 const APP_PARTS = "../src/shared/appParts.generated.json";
 

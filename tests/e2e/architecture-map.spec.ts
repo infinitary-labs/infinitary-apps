@@ -5,14 +5,15 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { Card } from "../../src/shared/cards";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { MAP_DATA, mapPartNaming } from "../helpers/architectureMap";
 import { scratchDir } from "../helpers/scratchDirs";
 import { keepCardData } from "./cardFixtures";
-import { cardBody } from "./frames";
+import { bodyIn, cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { showCard } from "./stack";
-import { pressKey, runFromSearch } from "./windowKeys";
+import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
 /**
  * The Advanced architecture runbook's map on a card, from the keyboard alone
@@ -124,9 +125,6 @@ async function choose(map: Locator, body: FrameLocator, label: string): Promise<
   throw new Error(`the arrows never chose ${label}; the map says: ${await said(body)}`);
 }
 
-/** Words read as themselves inside a pattern. */
-const escaped = (words: string) => words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 /** Chooses each box of `labels` in turn and goes into it with Enter. */
 async function goIn(map: Locator, body: FrameLocator, labels: string[]): Promise<void> {
   for (const label of labels) {
@@ -186,19 +184,51 @@ test("the map on a card goes in by keys, opens a state machine and turns on a co
         );
     });
 
-    // The captain: "the diagram part needs the ability to full screen like picture views". A card
-    // with the map is a playable preview, whose drawings a press opens nothing from, so the map asks.
-    await test.step("F opens the machine whole in the picture viewer, and Escape closes it", async () => {
-      await pressKey(map, "f");
-      const viewer = page.getByRole("dialog", { name: /^Pictures from / });
+    // The captain: "the diagram part needs the ability to full screen like picture views"; the
+    // approved plan: the live map over the whole window, at the card's place, comparison and choice,
+    // handed back on close.
+    await test.step("Tab reaches Full screen, and Enter opens the live map at the card's place", async () => {
+      const full = body.getByRole("button", { name: "Full screen" });
+      await choose(map, body, added[0] as string);
+      const chosen = await said(body);
+      const onFull = () => full.evaluate((button) => button === document.activeElement);
+      for (let press = 0; press < 30 && !(await onFull()); press++)
+        await page.keyboard.press("Tab");
+      await untilFocused(full);
+      await page.keyboard.press("Enter");
+      const viewer = page.getByRole("dialog", {
+        name: m.uiPictureViewerPartFrom({ title: TITLE }),
+      });
       await expect(viewer).toBeVisible();
-      // The viewer shows the still picture's words as its caption.
-      await expect(viewer).toContainText(
-        new RegExp(`${escaped(machine.name)}, with ${escaped(rebuild.label)}`),
-      );
+      const copy = bodyIn(viewer);
+      await expect(here(copy)).toHaveText(machine.name);
+      await expect(copy.locator("[data-live]")).toHaveText(chosen);
+      await expect(
+        copy.locator("[data-cmps]").getByRole("button", { name: rebuild.label }),
+      ).toHaveAttribute("aria-pressed", "true");
+      // focus is in the copy's map once it is drawn, where its own keys work
+      await expect(copy.getByRole("application")).toBeFocused();
+    });
+
+    await test.step("arrows, Backspace and Enter move the full-screen map, and Escape hands its place to the card", async () => {
+      const viewer = page.getByRole("dialog", {
+        name: m.uiPictureViewerPartFrom({ title: TITLE }),
+      });
+      const copy = bodyIn(viewer);
+      const inCopy = copy.getByRole("application");
+      // Backspace lets go of the choice, then climbs to the part that holds the machine
+      await page.keyboard.press("Backspace");
+      await page.keyboard.press("Backspace");
+      await expect(here(copy)).toHaveText(holder.name);
+      await choose(inCopy, copy, machine.name);
+      await page.keyboard.press("ArrowRight");
+      const left = await said(copy);
       await page.keyboard.press("Escape");
       await expect(viewer).toHaveCount(0);
-      await expect(here(body)).toHaveText(machine.name);
+      // the card's map stands where the full-screen map was left, and Full screen has focus again
+      await expect(here(body)).toHaveText(holder.name);
+      await expect(body.locator("[data-live]")).toHaveText(left);
+      await expect(body.getByRole("button", { name: "Full screen" })).toBeFocused();
     });
   } finally {
     await launched.close();

@@ -41,6 +41,11 @@ export const FRAME_PICTURE_SRC_MAX = 16 * 1024 * 1024;
 /** A picture's alt in an `image` message. */
 export const FRAME_PICTURE_ALT_MAX = 4_096;
 /**
+ * How much state one part of a body hands over when it opens full screen
+ * (`inf.expand`), as JSON in UTF-8 bytes: a place and a choice, never data.
+ */
+export const FRAME_EXPAND_STATE_MAX = 4_096;
+/**
  * Where a verified demo recording is served (`CARD_MEDIA_HOST` of the frame
  * scheme, `@shared/cardPictures`), written out because `../csp` imports this
  * module; `bridge.test.ts` holds the two equal.
@@ -380,6 +385,19 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
      */
     asked: z.literal(true).optional(),
   }),
+  /**
+   * A part of the body asked to open full screen (`inf.expand`), or, in the
+   * full-screen copy, said where it stands now: which `[data-inf-expand]`
+   * element it is, and its own state as JSON, handed back on close.
+   */
+  z.object({
+    fm: fmMarker,
+    type: z.literal("expand"),
+    index: z.number().int().nonnegative(),
+    state: z
+      .string()
+      .refine((text) => new TextEncoder().encode(text).length <= FRAME_EXPAND_STATE_MAX),
+  }),
   z.object({
     fm: fmMarker,
     type: z.literal("demo"),
@@ -551,8 +569,19 @@ export type HostMessage =
       restart: boolean;
       keyboard: boolean;
     }
-  /** The keys the host hears from this document: its pictures, and an Escape that leaves it. */
-  | { fm: typeof FRAME_BRIDGE_VERSION; type: "keys"; pictures: boolean; escape: boolean }
+  /**
+   * The keys the host hears from this document: its pictures, and an Escape that leaves it.
+   * `expand`: the host opens a part full screen when the part asks (`inf.expand`).
+   */
+  | {
+      fm: typeof FRAME_BRIDGE_VERSION;
+      type: "keys";
+      pictures: boolean;
+      escape: boolean;
+      expand?: true;
+    }
+  /** A part that opened full screen is back: its state as the full-screen copy left it, as JSON. */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "expanded"; index: number; state: string }
   /** The host just gave the frame focus back: the element that last had it takes it again. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "focus" }
   /**

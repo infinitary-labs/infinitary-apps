@@ -5,7 +5,7 @@
       "kind": "improvement",
       "area": "cards",
       "title": "A project map on a card is easier to read and opens full screen",
-      "body": "The bar under a project map on a card is now two short rows: where you are with the zoom buttons, then what is chosen with the number of changes and two arrows that step through each one. The totals, the list of changes and the keys sit behind More. Scrolling over the map scrolls the card; zoom with the buttons, the keys, a pinch or by holding Command while you scroll. Full screen, or F, opens the map in the picture viewer. On a phone the map shows as a picture that a tap opens.",
+      "body": "The bar under a project map on a card is now two short rows: where you are with the zoom buttons, then what is chosen with the number of changes and two arrows that step through each one. The totals, the list of changes and the keys sit behind More. Scrolling over the map scrolls the card; zoom with the buttons, the keys, a pinch or by holding Command while you scroll. Full screen, or F, opens the map over the whole window. On a phone the map shows as a picture that a tap opens.",
       "picture": {
         "dark": "map-view-polish-dark.webp",
         "light": "map-view-polish-light.webp",

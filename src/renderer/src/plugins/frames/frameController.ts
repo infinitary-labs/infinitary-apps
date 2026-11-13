@@ -192,6 +192,12 @@ export type FrameMountSpec = {
    * (docs/keyboard.md, "Moving between a card's questions"): where it went.
    */
   onQuestioned?: (where: FrameQuestioned) => void;
+  /**
+   * A part of the body asked to open full screen (`inf.expand`), or, in the
+   * full-screen copy, said where it stands: which `[data-inf-expand]` part,
+   * and its state as JSON. Only a mount that offers it tells the frame so.
+   */
+  onExpand?: (index: number, state: string) => void;
   /** An unused key offered by the document; the mount checks focus before forwarding it. */
   onKey?: (press: import("@shared/keyboard").KeyPress) => void;
   /**
@@ -436,6 +442,11 @@ export class FrameController {
     if (this.ready) this.port.post({ fm: V, type: "theme", theme });
   }
 
+  /** Hands a part back its state from the full-screen copy (`inf-expanded`). */
+  expanded(index: number, state: string): void {
+    if (this.ready) this.port.post({ fm: V, type: "expanded", index, state });
+  }
+
   /**
    * Pushes the host's view state. A document not yet born gets it on its
    * `ready` instead, the way the theme does, so a frame never has to ask
@@ -569,12 +580,13 @@ export class FrameController {
         }
         // The keys the host hears from this document: a picture's, for a
         // mount that opens pictures, and an Escape that leaves it.
-        if (this.spec.onImage || this.spec.onEscape) {
+        if (this.spec.onImage || this.spec.onEscape || this.spec.onExpand) {
           this.port.post({
             fm: V,
             type: "keys",
             pictures: this.spec.onImage !== undefined,
             escape: this.spec.onEscape !== undefined,
+            ...(this.spec.onExpand ? { expand: true as const } : {}),
           });
         }
         if (message.document)
@@ -662,6 +674,9 @@ export class FrameController {
         return;
       case "key":
         if (message.document === this.documentId) this.spec.onKey?.(message.press);
+        return;
+      case "expand":
+        this.spec.onExpand?.(message.index, message.state);
         return;
       case "escape":
         if (message.document === this.documentId) this.spec.onEscape?.();

@@ -444,9 +444,18 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   A click on a group's `+N` tile opens it at the first picture the strip does not show.
   A diagram opens in the same viewer (INF-3107): a click, or `Enter` or `Space` after Tab reaches it, on the outermost inline drawing in a figure, or on one drawn the width of what holds it, posts the same message with one picture - the drawing as it stands, each element's look read off the card and written on it, with the card's faces for the families it uses, at its own size, as an SVG picture with no script or handler.
   The viewer fits it to the window, larger than its own size where there is room, and toggles its own size; a small mark beside words, a drawing in a control or a caption, and a playable preview's drawings open nothing from a press.
-  A body's own script may ask for one of its drawings with `inf.picture(svg)`, which posts the same message marked `asked`; a playable preview's drawing opens then, as the map part's Full screen does.
+  A body's own script may ask for one of its drawings with `inf.picture(svg)`, which posts the same message marked `asked`; a playable preview's drawing opens then, as the map part's Full screen does where the app opens no part full screen.
   A picture inside a link, a button, a `summary`, a `label` or a `data-inf-action` element is that control's, and a body script that handles the click first (`preventDefault`) keeps it.
   The host shows only its own `images` copies, `data:` raster pictures and the bridge's own diagrams (`isDrawingSource`); any other source opens nothing.
+- **A part full screen.**
+  An element of the body marked `data-inf-expand`, such as the map part's own box, may ask to open full screen with `inf.expand(element, state)`, its state any JSON of at most 4,096 bytes (`FRAME_EXPAND_STATE_MAX`); the bridge posts one `expand` message with the element's place among the body's `[data-inf-expand]` elements and the state.
+  It returns false, posting nothing, when the host offers no full screen there (the `keys` message's `expand`), so the part does what it did before; the map part then opens its still picture with `inf.picture`.
+  On a card the captain is in, the card layer opens the same body again, live, on the picture viewer's surface over the whole window (`ExpandedPart`), in a frame of its own with the card's policy, sandbox and no actions, stamped before the body with `<i hidden data-inf-expanded>` holding the part's place and state, which `inf.expanded(element)` returns to that part as its script starts, and null anywhere else.
+  When the part reads its state back, the bridge fixes it to the window edge to edge and keeps the rest of the body out of sight and out of the Tab order.
+  On a touch screen the part takes every finger, and the bridge hands two fingers to it as a trackpad pinch arrives: Ctrl-scroll at their middle, and their moving together as a plain scroll.
+  The part calls `inf.expand` again as it moves; the host keeps the last state.
+  Close, Escape on the surface, or an Escape the copy did not use closes it; the host sends the card's frame `expanded` with that state, which the bridge hands the part as an `inf-expanded` event, and focus returns to the frame, where the part's Full screen button takes it.
+  A card off the stage, a record and a phone that offers none answer false.
 - **Demo recordings.**
   A crewmate may attach a demo to any card - an answer, plan, decision or note, not only a merge card - when behavior over time makes the answer clearer; use a still figure when motion adds nothing.
   A demo shows behavior a still cannot - a drag, a keyboard journey, motion, progress, recovery from an error: `<figure data-inf-demo="<path to the recording>">` holding exactly one `<img>`, its poster (a frame of the recording, the same shape), and a `<figcaption>` naming the action and its result.

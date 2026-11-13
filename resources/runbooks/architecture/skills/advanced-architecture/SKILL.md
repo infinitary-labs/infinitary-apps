@@ -109,7 +109,7 @@ Name the file as you name a picture, by its path in your working copy or in your
 If the map part lists problems under the drawing, fix the map files and draw it again before the card goes up.
 The reader clicks a box for its links or a pill for its state machine, goes in with a double-click or Enter, goes back with Esc, chooses with the arrows, drags the map, and zooms with the − and + buttons, the +, − and 0 keys, a pinch or ⌘-scroll; a plain scroll scrolls the card past the map.
 With a comparison on, the arrows under the drawing, or [ and ], step through each change on the level, and More lists every change and the keys.
-Full screen, or F, opens the drawing whole in the app's picture viewer; on a touch screen the drawing is a fitted picture that one finger scrolls past and a tap opens full screen.
+Full screen, or F, opens the map live over the app's whole window, at the same place, comparison and choice; there a plain scroll moves the map, a pinch or ⌘-scroll zooms, Backspace goes up a level and Esc closes, and the card's map goes where it was left. Where the app offers no full screen, it opens the drawing whole in the picture viewer instead. On a touch screen the drawing in a card is a fitted picture that one finger scrolls past and a tap opens full screen, where a finger moves the map, two pinch it and a tap chooses.
 For a picture of it, put the data itself in the block of `parts/map-page.html` instead, since only a card reads a data file: it is the part in a page with the app's colors, which a bare part has only inside a card.
 Serve its folder on this computer, for example with `python3 -m http.server --bind 127.0.0.1`, open the page in your task's browser, photograph it and look at the picture before using it; then stop the server.
 

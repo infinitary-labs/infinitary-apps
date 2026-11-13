@@ -316,6 +316,7 @@
   },
   "uiPictureViewerDemoFrom": "{title} のデモ",
   "uiPictureViewerPicturesFrom": "{title} の画像",
+  "uiPictureViewerPartFrom": "{title}（全画面）",
   "uiPictureViewerClose": "ビューアを閉じる",
   "uiLogReaderFrom": "{title} のログ",
   "uiLogReaderClose": "ログを閉じる",

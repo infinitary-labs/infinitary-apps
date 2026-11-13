@@ -320,6 +320,7 @@
   },
   "uiPictureViewerDemoFrom": "Demo from {title}",
   "uiPictureViewerPicturesFrom": "Pictures from {title}",
+  "uiPictureViewerPartFrom": "{title}, full screen",
   "uiPictureViewerClose": "Close the viewer",
   "uiLogReaderFrom": "Log from {title}",
   "uiLogReaderClose": "Close the log",

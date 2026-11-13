@@ -147,7 +147,7 @@ These keys are not commands and keep their own owners:
 - Tab and Shift+Tab, which move focus the platform's way;
 - the Mac's own editing keys (Cmd+C, Option+Delete, Ctrl+A, ...);
 - the dictation key, a lone right-hand modifier with its own tap-or-hold rules, which leave a shortcut held with right ⌘ or right ⌃ to that shortcut (`dictationKey.ts`; `docs/composer.md`, "Voice"; Settings → General → Dictation);
-- Escape, which closes the one topmost thing that is open (`App.tsx`; on the task board, in its own page, a move that asks before its Find's words, and its Find's words before the board; in the Tasks search, its words before the search; in the top bar's open project row, its menu before the row; a maximized card restores before a record or a panel's card hides, "Cards and frames"), and the keys a menu, the picture viewer (a demo's play control and seek slider included), a slider or a card's own controls use inside themselves; in a card's body, an Escape nothing there used leaves the body for its card ("Cards and frames");
+- Escape, which closes the one topmost thing that is open (`App.tsx`; a part full screen before the card under it; on the task board, in its own page, a move that asks before its Find's words, and its Find's words before the board; in the Tasks search, its words before the search; in the top bar's open project row, its menu before the row; a maximized card restores before a record or a panel's card hides, "Cards and frames"), and the keys a menu, the picture viewer (a demo's play control and seek slider included), a slider or a card's own controls use inside themselves; in a card's body, an Escape nothing there used leaves the body for its card ("Cards and frames");
 - the arrows, Home and End in a list or Settings' tabs ("Lists and Settings"), which belong to the list that has focus.
 
 ## A panel's commands
@@ -477,6 +477,8 @@ Inside a card's body the bridge completes the keyboard (`src/shared/plugins/fram
 Focus that leaves a frame for an overlay comes back into it.
 The bridge keeps the element that last had focus in its document, and a text field's caret, until a press elsewhere in the body.
 A page whose process has not yet been told it holds the window's focus moves focus inside itself without a `focusin`, which Chromium sends only once the page is told, so the bridge also keeps the element focus leaves, unless a press in the body moved it.
+A part of a body opened full screen (`docs/card-authoring.md`, "A part full screen") takes the keyboard in its own frame on the picture viewer's surface: focus goes into the copy once it is drawn, the part's own keys work there (the map's arrows, `Enter`, `Backspace` up a level, `[` `]`, `+` `−` `0`), Tab moves between Close and the copy, and `Esc` closes it at once, from the copy or the surface.
+On close the card's map goes where the copy was left and its Full screen button has focus again.
 When command search or the picture viewer closes and the frame had focus, `giveFocusBack` focuses the frame and sends its bridge `focus`, and that element takes focus again with its caret where it was, a card's or a panel's frame alike, unless focus has moved on from the frame by then.
 
 Focus the window's own page takes from a frame comes back into it too.

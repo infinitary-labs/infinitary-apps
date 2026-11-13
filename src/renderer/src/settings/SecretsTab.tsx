@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime, formatTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { needsReference, secretName } from "@shared/secretNames";
 import {
   decisionWords,
@@ -34,10 +35,18 @@ type Area = (typeof SECRETS_AREAS)[number]["value"];
 type Act = (action: SecretAction) => Promise<void>;
 /** A badge only when something is wrong; a working store says nothing about itself. */
 const PROBLEM: Partial<Record<SecretsView["availability"], string>> = {
-  locked: "Storage locked",
-  unavailable: "Storage unavailable",
-  lost: "Recovery needed",
-  tampered: "Permissions need recovery",
+  get locked() {
+    return m.settingsSecretsStorageLocked();
+  },
+  get unavailable() {
+    return m.settingsSecretsStorageUnavailable();
+  },
+  get lost() {
+    return m.settingsSecretsRecoveryNeeded();
+  },
+  get tampered() {
+    return m.settingsSecretsPermissionsRecovery();
+  },
 };
 
 /** Trusted application chrome only. No value is rendered back, copied, or passed to an agent frame. */
@@ -130,7 +139,7 @@ export function SecretsTab() {
   const entryNote = !canWrite
     ? SECRETS_WORDS.unavailable
     : editing
-      ? "Finish the open secret form first."
+      ? m.settingsSecretsFinishForm()
       : undefined;
   const waiting = (view?.uses ?? []).filter((use) => use.state === "waiting");
   return (
@@ -160,7 +169,7 @@ export function SecretsTab() {
           <p role="status">{SECRETS_WORDS.disabled}</p>
         </div>
       ) : !view ? (
-        <p role="status">Reading Secrets…</p>
+        <p role="status">{m.settingsSecretsReading()}</p>
       ) : (
         <>
           {view.message && <p role="status">{view.message}</p>}
@@ -187,13 +196,13 @@ export function SecretsTab() {
           ) : (
             !canWrite && (
               <div className="fm-secrets-notice">
-                <p>Unlock or check storage to use your secrets. Approval requests keep waiting.</p>
+                <p>{m.settingsSecretsUnlockToUse()}</p>
                 <Button
                   variant="secondary"
                   onClick={() => void act({ kind: "unlock" })}
                   pending={busy}
                 >
-                  Unlock or check again
+                  {m.settingsSecretsUnlockAgain()}
                 </Button>
               </div>
             )
@@ -379,7 +388,7 @@ function SecretRow({
                 !canWrite
                   ? SECRETS_WORDS.unavailable
                   : busy
-                    ? "Wait for the current change to finish."
+                    ? m.settingsSecretsWaitForChange()
                     : undefined
               }
               onClick={() => void act({ kind: "forget", ref: entry.ref })}
@@ -550,7 +559,7 @@ function SecureEntry({
           value={label}
           disabled={busy}
           onChange={(event) => setLabel(event.target.value)}
-          placeholder="For example, Website deployment"
+          placeholder={m.settingsSecretsNamePlaceholder()}
         />
       </label>
       <label htmlFor={`${prefix}-value`}>
@@ -579,20 +588,20 @@ function SecureEntry({
       </label>
       <SettingError error={error} surface="secret-entry" />
       <div className="fm-secrets-actions">
-        <Button type="submit" pending={busy} pendingLabel="Saving…">
+        <Button type="submit" pending={busy} pendingLabel={m.settingsSecretsSaving()}>
           {SECRETS_WORDS.save}
         </Button>
         <Button
           type="button"
           variant="ghost"
           off={busy}
-          note={busy ? "Wait for saving to finish." : undefined}
+          note={busy ? m.settingsSecretsWaitForSaving() : undefined}
           onClick={() => {
             setValue("");
             onCancel();
           }}
         >
-          Cancel
+          {m.settingsSecretsCancel()}
         </Button>
       </div>
     </form>
@@ -610,7 +619,9 @@ function ApprovalDevices({ view, act, busy }: { view: SecretsView; act: Act; bus
           <div key={device.device} className="fm-secrets-row">
             <div>
               <strong>{device.label}</strong>
-              <p className="fm-secrets-muted">Code {device.code}</p>
+              <p className="fm-secrets-muted">
+                {m.settingsSecretsDeviceCode({ code: device.code })}
+              </p>
             </div>
             <Button
               variant="ghost"
@@ -648,22 +659,26 @@ function History({
           onClick={() => {
             void window.infinitary.secrets
               .exportHistory()
-              .then((result) => setMessage(result.saved ? "History exported." : "No export saved."))
-              .catch(() => setMessage("History could not be exported."));
+              .then((result) =>
+                setMessage(
+                  result.saved ? m.settingsSecretsHistoryExported() : m.settingsSecretsNoExport(),
+                ),
+              )
+              .catch(() => setMessage(m.settingsSecretsExportFailed()));
           }}
         >
-          Export history
+          {m.settingsSecretsExportHistory()}
         </Button>
         <Button variant="ghost" pending={busy} onClick={() => void act({ kind: "delete-history" })}>
-          Delete history
+          {m.settingsSecretsDeleteHistory()}
         </Button>
         <Button variant="ghost" onClick={() => void refresh()}>
-          Refresh
+          {m.settingsSecretsRefresh()}
         </Button>
       </div>
       {message && <p role="status">{message}</p>}
       {view.history.length === 0 ? (
-        <p>No history recorded.</p>
+        <p>{m.settingsSecretsNoHistory()}</p>
       ) : (
         [...view.history].reverse().map((item) => (
           <div className="fm-secrets-history" key={item.request}>
@@ -677,8 +692,12 @@ function History({
             {item.recoveredFrom && (
               <details>
                 <summary>{SECRETS_RECOVERY_WORDS.recoveredHistory}</summary>
-                <p className="fm-secrets-mono">Source: {item.recoveredFrom}</p>
-                <p className="fm-secrets-mono">Recovered: {dateOf(item.recoveredAt ?? null)}</p>
+                <p className="fm-secrets-mono">
+                  {m.settingsSecretsRecoveredSource({ source: item.recoveredFrom })}
+                </p>
+                <p className="fm-secrets-mono">
+                  {m.settingsSecretsRecoveredAt({ at: dateOf(item.recoveredAt ?? null) })}
+                </p>
               </details>
             )}
             <p className="fm-secrets-muted">
@@ -698,16 +717,13 @@ function History({
 function Recovery({ view, act, busy }: { view: SecretsView; act: Act; busy: boolean }) {
   const ready = view.recoveryAvailable && view.availability === "available";
   const restoreReady = view.recoveryAvailable && view.availability !== "locked";
-  const waiting = "Finish the open secret form or current change first.";
+  const waiting = m.settingsSecretsFinishFormOrChange();
   return (
     <section className="fm-secrets-area" aria-label={SECRETS_RECOVERY_WORDS.region}>
       {!view.recoveryAvailable && <p role="status">{SECRETS_RECOVERY_WORDS.unavailable}</p>}
       <div className="fm-secrets-recovery-choice">
         <div>
-          <p>
-            Save an encrypted copy and a separate recovery key. Keep them apart: anyone with both
-            can read the saved values. There is no key reset.
-          </p>
+          <p>{m.settingsSecretsBackupNote()}</p>
         </div>
         <Button
           variant="secondary"
@@ -728,10 +744,7 @@ function Recovery({ view, act, busy }: { view: SecretsView; act: Act; busy: bool
       </div>
       <div className="fm-secrets-recovery-choice">
         <div>
-          <p>
-            Restoring replaces stored values and clears saved decisions, phone approvals and
-            temporary access. History stays, and it never allows a use.
-          </p>
+          <p>{m.settingsSecretsRestoreNote()}</p>
         </div>
         <Button
           variant="secondary"
@@ -742,7 +755,7 @@ function Recovery({ view, act, busy }: { view: SecretsView; act: Act; busy: bool
               : !view.recoveryAvailable
                 ? SECRETS_RECOVERY_WORDS.unavailable
                 : !restoreReady
-                  ? "Unlock protected storage before restoring."
+                  ? m.settingsSecretsUnlockBeforeRestore()
                   : undefined
           }
           onClick={() => void act({ kind: "restore-recovery" })}
@@ -750,10 +763,7 @@ function Recovery({ view, act, busy }: { view: SecretsView; act: Act; busy: bool
           {SECRETS_RECOVERY_WORDS.restoreButton}
         </Button>
       </div>
-      <p className="fm-secrets-muted">
-        Choose the files, then confirm with your computer. Cancelling changes nothing. Never put the
-        recovery key in a card or conversation.
-      </p>
+      <p className="fm-secrets-muted">{m.settingsSecretsRecoveryFiles()}</p>
     </section>
   );
 }
@@ -787,5 +797,5 @@ function sizeOf(bytes: number): string {
 }
 
 function dateOf(at: number | null): string {
-  return at === null ? "Not requested yet" : formatDateTime(at);
+  return at === null ? m.settingsSecretsNotRequested() : formatDateTime(at);
 }

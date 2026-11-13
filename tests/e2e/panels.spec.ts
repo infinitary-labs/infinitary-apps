@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { ACTIONS } from "@shared/actions";
-import { CONFIRM_RESET_PANELS } from "../../src/renderer/src/settings/panelsWords";
+import { PANELS_WORDS } from "../../src/renderer/src/settings/panelsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { savedArrangement } from "./panelLayout";
@@ -147,7 +147,7 @@ test("panels arrange from Settings → Panels by keys and from their headers on 
     await test.step("Reset to defaults asks once more, then puts every panel back on the rails and keeps the collapse", async () => {
       const reset = page.locator("[data-panels-reset]");
       await pressKey(reset, "Enter");
-      await expect(reset).toHaveText(CONFIRM_RESET_PANELS);
+      await expect(reset).toHaveText(PANELS_WORDS.confirmReset);
       await pressKey(reset, "Enter");
       await expect
         .poll(() => savedClocks(page, "left", "top"))

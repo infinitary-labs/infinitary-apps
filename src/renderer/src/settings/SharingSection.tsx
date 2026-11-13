@@ -4,6 +4,7 @@ import {
   type DiagnosticEventSpec,
 } from "@shared/diagnostics";
 import { formatDate, formatTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import {
   DIAGNOSTICS_NOTHING_WAITING,
   DIAGNOSTICS_SUMMARY,
@@ -49,17 +50,20 @@ const CHANNELS: readonly SharingChannel[] = ["diagnostics", "contribution"];
 
 /** The install ID's promise, said wherever the ID is. */
 export function installIdNote(place: { this: string }): string {
-  return `The install ID is random, tied to nothing about you or ${place.this}, and replaced with a new one whenever Diagnostics is turned off and back on.`;
+  return m.settingsSharingInstallIdNote({ place: place.this });
 }
 
 /** The rows' words: one function, so a build's honesty is a fact of the view, not the copy. */
 export function sharingRowDescription(view: SharingView, channel: SharingChannel): string {
   if (channel === "diagnostics") {
     return view.diagnosticsDestination
-      ? `${DIAGNOSTICS_SUMMARY} Sent to ${view.diagnosticsDestination}. Never a conversation, code or a card.`
-      : `${DIAGNOSTICS_SUMMARY} This build has nowhere to send them, so nothing leaves either way.`;
+      ? m.settingsSharingDiagnosticsSent({
+          summary: DIAGNOSTICS_SUMMARY,
+          destination: view.diagnosticsDestination,
+        })
+      : m.settingsSharingDiagnosticsNowhere({ summary: DIAGNOSTICS_SUMMARY });
   }
-  return "Redacted records of your first mate's own decisions, so the next model learns from them. Shown in full before anything is sent.";
+  return m.settingsSharingContributionDescription();
 }
 
 /** A channel the person turned on and has not yet seen the payload of. */
@@ -105,12 +109,12 @@ export function SharingSectionView({
     : undefined;
   return (
     <div data-sharing-section style={{ marginTop: SECTION_GAP }}>
-      <SectionLabel>Sharing</SectionLabel>
+      <SectionLabel>{m.settingsSharingHeading()}</SectionLabel>
       <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
         <SettingRow
           id="diagnostics"
           error={refusal?.channel === "diagnostics" ? refusal.message : null}
-          title="Diagnostics"
+          title={m.settingsSharingDiagnostics()}
           description={view ? sharingRowDescription(view, "diagnostics") : DIAGNOSTICS_SUMMARY}
           control={
             <Switch
@@ -124,7 +128,7 @@ export function SharingSectionView({
           <SettingRow
             id="contribution"
             error={refusal?.channel === "contribution" ? refusal.message : null}
-            title="Contribution"
+            title={m.settingsSharingContribution()}
             description={sharingRowDescription(view, "contribution")}
             control={
               <Switch
@@ -137,7 +141,7 @@ export function SharingSectionView({
         ) : null}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "0 -6px 0" }}>
           <Disclosure
-            label={`What would leave ${place.this}`}
+            label={m.settingsSharingWhatWouldLeave({ place: place.this })}
             count={pendingCount}
             open={viewerOpen}
             onToggle={onViewer}
@@ -146,7 +150,7 @@ export function SharingSectionView({
           </Disclosure>
           {view?.termsPublished ? (
             <Disclosure
-              label="The terms"
+              label={m.settingsSharingTerms()}
               count={view.termsVersion}
               open={termsOpen}
               onToggle={onTerms}
@@ -171,7 +175,7 @@ function PayloadViewer({
   if (!preview) {
     return (
       <div data-sharing-viewer style={{ padding: "6px 6px 2px" }}>
-        <Empty>Reading...</Empty>
+        <Empty>{m.settingsSharingReading()}</Empty>
       </div>
     );
   }
@@ -183,7 +187,7 @@ function PayloadViewer({
     >
       <InstallId installId={view?.diagnostics.installId ?? null} />
       <RecordList
-        title="Diagnostics waiting to send"
+        title={m.settingsSharingDiagnosticsWaiting()}
         kind="diagnostics-pending"
         records={preview.diagnostics.pending.map((record) => ({
           key: `${record.at}-${record.name}`,
@@ -195,7 +199,7 @@ function PayloadViewer({
       />
       {preview.diagnostics.sent.length > 0 ? (
         <RecordList
-          title="Diagnostics sent"
+          title={m.settingsSharingDiagnosticsSentTitle()}
           kind="diagnostics-sent"
           records={preview.diagnostics.sent.map((record) => ({
             key: `${record.at}-${record.name}`,
@@ -211,8 +215,11 @@ function PayloadViewer({
         <RecordList
           title={
             preview.contribution.pendingCount > preview.contribution.pending.length
-              ? `Decision records waiting to send (newest ${preview.contribution.pending.length} of ${preview.contribution.pendingCount})`
-              : "Decision records waiting to send"
+              ? m.settingsSharingRecordsWaitingNewest({
+                  shown: String(preview.contribution.pending.length),
+                  total: String(preview.contribution.pendingCount),
+                })
+              : m.settingsSharingRecordsWaiting()
           }
           kind="contribution-pending"
           records={preview.contribution.pending.map((record, index) => ({
@@ -221,7 +228,7 @@ function PayloadViewer({
             at: typeof record.at === "number" ? record.at : null,
             body: record,
           }))}
-          empty="No decision records yet."
+          empty={m.settingsSharingNoRecords()}
         />
       ) : null}
     </div>
@@ -245,7 +252,7 @@ function InstallId({ installId }: { installId: string | null }) {
   const place = useFirstMatePlace();
   return (
     <div data-sharing-install-id style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <div style={viewerHeading}>Anonymous install ID</div>
+      <div style={viewerHeading}>{m.settingsSharingInstallId()}</div>
       <code
         style={{
           fontFamily: "var(--font-mono)",
@@ -254,7 +261,7 @@ function InstallId({ installId }: { installId: string | null }) {
           wordBreak: "break-all",
         }}
       >
-        {installId ?? "none while Diagnostics is off"}
+        {installId ?? m.settingsSharingNoInstallId()}
       </code>
       <div style={viewerNote}>{installIdNote(place)}</div>
     </div>
@@ -269,11 +276,8 @@ function InstallId({ installId }: { installId: string | null }) {
 function EventCatalog() {
   return (
     <div data-sharing-catalog style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={viewerHeading}>Everything Diagnostics can send</div>
-      <div style={viewerNote}>
-        Each event also carries the app version and the install ID, and nothing else: no text you
-        wrote, no names, no paths.
-      </div>
+      <div style={viewerHeading}>{m.settingsSharingCatalog()}</div>
+      <div style={viewerNote}>{m.settingsSharingCatalogNote()}</div>
       {DIAGNOSTIC_EVENT_NAMES.map((name) => {
         const spec: DiagnosticEventSpec = DIAGNOSTIC_EVENTS[name];
         const fields = Object.entries(spec.fields);
@@ -583,18 +587,16 @@ export function SharingAskView({
     >
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: "var(--text-base)", color: "var(--fg-1)", fontWeight: 500 }}>
-          Help the next model learn?
+          {m.settingsSharingAskTitle()}
         </div>
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-          The local model was trained on decision records people chose to share. Your first mate can
-          send redacted records of its own, shown in full before anything leaves. The model works
-          the same either way, and this is the only time the app asks.
+          {m.settingsSharingAskBody()}
         </div>
         <SettingError error={error} surface="sharing-ask" />
       </div>
       <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
         <Button variant="secondary" size="sm" disabled={saving} onClick={() => onAnswer("not-now")}>
-          Not now
+          {m.settingsSharingAskNotNow()}
         </Button>
         <Button
           variant="primary"
@@ -602,7 +604,7 @@ export function SharingAskView({
           disabled={saving}
           onClick={() => onAnswer("contribute")}
         >
-          Contribute
+          {m.settingsSharingAskContribute()}
         </Button>
       </div>
     </div>

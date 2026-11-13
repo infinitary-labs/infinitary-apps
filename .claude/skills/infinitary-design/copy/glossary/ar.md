@@ -87,6 +87,10 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Observe | المراقبة | |
 | preset (keyboard) | الإعداد المسبق | |
 | demo / its recording | عرض توضيحي / التسجيل | Never "فيديو". |
+| purge (task data) | محو | Stronger than "حذف", for removing every task at once; "مُحيت" for "purged". |
+| Diagnostics / Contribution (Sharing) | التشخيص / المساهمة | The two Sharing switches. |
+| decision records | سجلات القرارات | What Contribution sends; "redacted" is "منقّحة". |
+| action (an integration action) | إجراء | Plural "إجراءات". |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | Knowledge (panel) | المعرفة | "فتح المعرفة" for Open Knowledge. |
 | concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |

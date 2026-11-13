@@ -89,6 +89,10 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | app | app | Short and common in Brazil; "o app". |
 | Got it / Done | Entendi / Concluído | |
 | Not now | Agora não | |
+| purge (task data) | excluir | "Excluir dados das tarefas", "{count} tarefas excluídas"; plainer than "purgar". |
+| Diagnostics (Sharing) | Diagnóstico | The Sharing switch's name, also inside sentences: "enquanto Diagnóstico estiver desligado". |
+| decision record | registro de decisões | What Contribution sends; "anonimizados" for redacted. |
+| window wash | véu da janela | The theme color laid over the blurred background. |
 | Infinitary | Infinitary | Never translated; masculine article: "o Infinitary". |
 | repo (avoided) | projeto | |
 | worktree (avoided) | cópia de trabalho | |

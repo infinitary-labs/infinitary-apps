@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { RunbookView } from "@shared/runbooks";
 import { RUNBOOK_EXAMPLES, RUNBOOK_VIEW_NOTE } from "@shared/runbookWords";
 import { useEffect, useState } from "react";
@@ -26,7 +27,7 @@ export function RunbooksTab() {
       if (id) await window.infinitary.settings.viewRunbook(id);
       else await window.infinitary.settings.openRunbooksFolder();
     } catch {
-      setError("Could not open this folder. Please try again.");
+      setError(m.settingsRunbooksOpenFailed());
     } finally {
       setOpening(null);
     }
@@ -46,12 +47,12 @@ export function RunbooksTab() {
                 size="sm"
                 variant="secondary"
                 note={RUNBOOK_VIEW_NOTE}
-                aria-label={`View ${book.name}`}
+                aria-label={m.settingsRunbooksViewLabel({ name: book.name })}
                 pending={opening === book.id}
                 disabled={opening !== null}
                 onClick={() => void open(book.id)}
               >
-                View
+                {m.settingsRunbooksView()}
               </Button>
             )}
             <Switch
@@ -71,34 +72,38 @@ export function RunbooksTab() {
   const yours = (saved.value ?? []).filter((book) => book.source !== "builtin");
   return (
     <div data-runbooks>
-      <section aria-label="Built in">
-        <SectionLabel>Built in</SectionLabel>
+      <section aria-label={m.settingsRunbooksBuiltIn()}>
+        <SectionLabel>{m.settingsRunbooksBuiltIn()}</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
           {builtins.map(row)}
         </div>
       </section>
-      <section data-runbooks-group="yours" aria-label="Yours" style={{ marginTop: SECTION_GAP }}>
-        <SectionLabel>Yours</SectionLabel>
+      <section
+        data-runbooks-group="yours"
+        aria-label={m.settingsRunbooksYours()}
+        style={{ marginTop: SECTION_GAP }}
+      >
+        <SectionLabel>{m.settingsRunbooksYours()}</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
           {yours.length ? (
             yours.map(row)
           ) : (
             <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
-              Runbooks you add or make with the first mate appear here.
+              {m.settingsRunbooksYoursEmpty()}
             </p>
           )}
         </div>
       </section>
-      <section aria-label="Make your own" style={{ marginTop: SECTION_GAP }}>
-        <SectionLabel>Make your own</SectionLabel>
+      <section aria-label={m.settingsRunbooksMakeYourOwn()} style={{ marginTop: SECTION_GAP }}>
+        <SectionLabel>{m.settingsRunbooksMakeYourOwn()}</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
           <SettingRow
             id="runbooks-folder"
-            title="Your runbooks folder"
+            title={m.settingsRunbooksFolder()}
             description={
               remote
-                ? `Your runbooks folder is on ${thisMac.name}. Open and view runbooks there.`
-                : "Runbooks the first mate makes or copies for you live here."
+                ? m.settingsRunbooksFolderRemote({ computer: thisMac.name })
+                : m.settingsRunbooksFolderHere()
             }
             control={
               remote ? null : (
@@ -111,13 +116,13 @@ export function RunbooksTab() {
                   disabled={opening !== null}
                   onClick={() => void open()}
                 >
-                  Open folder
+                  {m.settingsRunbooksOpenFolder()}
                 </Button>
               )
             }
           />
           <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "var(--text-sm)" }}>
-            Ask the first mate, in your own words. For example:
+            {m.settingsRunbooksAsk()}
           </p>
           <ul
             style={{

@@ -118,3 +118,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | pin (a task) | 釘選 | Taiwan's word, as for a pinned model. |
 | hold (on a task) | 暫緩 | 暫緩結束 for a hold ending. |
 | task board | 任務看板 | 看板 alone for the Board view. |
+| purge (task data) | 清除 | Settings → General's button and its confirm; distinct from 移除 for a device. |
+| restore (Secrets from a backup) | 還原 | Kept apart from 復原, which the recovery key and recovery states use. |
+| Diagnostics (Settings → Sharing) | 診斷 | |
+| redacted (decision records) | 去識別化 | Taiwan's word for records with personal details stripped. |

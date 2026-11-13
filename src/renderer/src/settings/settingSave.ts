@@ -1,3 +1,5 @@
+import * as m from "@shared/i18n/messages.generated";
+
 export type SettingSaveState<T> = {
   value: T | null;
   error: string | null;
@@ -14,7 +16,7 @@ export class SettingSave<T> {
   constructor(
     private readonly read: () => Promise<T>,
     private readonly publish: (state: SettingSaveState<T>) => void,
-    private readonly recoveryHint = "Close and reopen Settings to try again.",
+    private readonly recoveryHint = m.settingsSaveRecoveryHint(),
   ) {}
 
   private update(change: Partial<SettingSaveState<T>>) {
@@ -34,7 +36,7 @@ export class SettingSave<T> {
     } catch (caught) {
       if (throwOnFailure) throw caught;
       if (revision === this.revision && this.state.value === null) {
-        this.update({ error: "Could not load this setting. Please try again." });
+        this.update({ error: m.settingsSaveLoadFailed() });
       }
     }
   };
@@ -60,17 +62,14 @@ export class SettingSave<T> {
         this.update({ value: await write() });
         return true;
       } catch (caught) {
-        const message =
-          caught instanceof Error
-            ? caught.message
-            : "Could not save this setting. Please try again.";
+        const message = caught instanceof Error ? caught.message : m.settingsSaveFailed();
         this.update({ error: message });
         try {
           this.update({ value: await this.read() });
         } catch {
           // Do not pretend a failed recovery confirmed the old value.
           this.update({
-            error: `${message} Could not reload the saved value. ${this.recoveryHint}`,
+            error: m.settingsSaveReloadFailed({ message, hint: this.recoveryHint }),
           });
         }
         return false;

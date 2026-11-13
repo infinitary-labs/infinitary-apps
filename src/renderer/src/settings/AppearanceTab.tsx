@@ -126,10 +126,12 @@ export function LanguageRow({ computer, view }: { computer: string; view: boolea
  * keyboard's words, or nothing when neither has one (docs/keyboard.md,
  * "Key hints").
  */
-function sizeKeysWords(larger: string | undefined, smaller: string | undefined): string {
-  if (larger && smaller) return ` ${larger} and ${smaller} change the same size.`;
+function sizeDescription(larger: string | undefined, smaller: string | undefined): string {
+  if (larger && smaller) return m.settingsAppearanceSizeDescriptionKeys({ larger, smaller });
   const one = larger ?? smaller;
-  return one ? ` ${one} changes the same size.` : "";
+  return one
+    ? m.settingsAppearanceSizeDescriptionKey({ key: one })
+    : m.settingsAppearanceSizeDescription();
 }
 
 export function AppearanceTab() {
@@ -160,24 +162,24 @@ export function AppearanceTab() {
   }, []);
   return (
     <div>
-      <SectionLabel>Appearance</SectionLabel>
+      <SectionLabel>{m.settingsAppearanceHeading()}</SectionLabel>
       {isView(thisMac) && (
         <p
           data-own-look=""
           style={{ margin: "-4px 0 12px", fontSize: "var(--text-sm)", color: "var(--fg-2)" }}
         >
-          Set on {HERE.this} only. {thisMac.name} keeps its own.
+          {m.settingsAppearanceOwnLook({ place: HERE.this, computer: thisMac.name })}
         </p>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
         <SettingRow
           id="size"
           error={errorFor("size")}
-          title="Size"
-          description={`Make text and everything around it larger.${sizeKeysWords(largerKeys.keys, smallerKeys.keys)}`}
+          title={m.settingsAppearanceSize()}
+          description={sizeDescription(largerKeys.keys, smallerKeys.keys)}
           control={
             <GroupedPills
-              name="Size"
+              name={m.settingsAppearanceSize()}
               htmlName="appearance-size"
               value={String(size)}
               options={UI_SIZES.map((value) => ({
@@ -191,18 +193,18 @@ export function AppearanceTab() {
         <SettingRow
           id="default-card-size"
           error={errorFor("defaultCardSize")}
-          title="Default card size"
-          description="Choose how cards open. You can still resize each card."
+          title={m.settingsAppearanceCardSize()}
+          description={m.settingsAppearanceCardSizeDescription()}
           control={
             <GroupedPills
-              name="Default card size"
+              name={m.settingsAppearanceCardSize()}
               htmlName="default-card-size"
               value={defaultCardSize}
               options={[
-                { value: "usual", label: "Usual" },
-                { value: "wide", label: "Wide" },
-                { value: "full", label: "Full" },
-                { value: "maximized", label: "Maximized" },
+                { value: "usual", label: m.settingsAppearanceCardUsual() },
+                { value: "wide", label: m.settingsAppearanceCardWide() },
+                { value: "full", label: m.settingsAppearanceCardFull() },
+                { value: "maximized", label: m.settingsAppearanceCardMaximized() },
               ]}
               onChange={setDefaultCardSize}
             />
@@ -211,12 +213,12 @@ export function AppearanceTab() {
         <SettingRow
           id="keep-cards-maximized"
           error={errorFor("keepCardsMaximized")}
-          title="Keep cards maximized"
-          description="After you maximize a card, every card stays maximized until you restore one."
+          title={m.settingsAppearanceKeepMaximized()}
+          description={m.settingsAppearanceKeepMaximizedDescription()}
           control={
             <Switch
               checked={keepCardsMaximized}
-              aria-label="Keep cards maximized"
+              aria-label={m.settingsAppearanceKeepMaximized()}
               onChange={setKeepCardsMaximized}
             />
           }
@@ -224,16 +226,16 @@ export function AppearanceTab() {
         <SettingRow
           id="theme"
           error={errorFor("theme")}
-          title="Theme"
-          description="Deep-space dark, or daylight light."
+          title={m.settingsAppearanceTheme()}
+          description={m.settingsAppearanceThemeDescription()}
           control={
             <GroupedPills
-              name="Theme"
+              name={m.settingsAppearanceTheme()}
               htmlName="appearance-theme"
               value={theme}
               options={[
-                { value: "dark", label: "Dark" },
-                { value: "light", label: "Light" },
+                { value: "dark", label: m.settingsAppearanceThemeDark() },
+                { value: "light", label: m.settingsAppearanceThemeLight() },
               ]}
               onChange={setTheme}
             />
@@ -244,8 +246,8 @@ export function AppearanceTab() {
           <SettingRow
             id="window-wash"
             error={errorFor("washStrength")}
-            title="Window wash"
-            description="How much of the theme color covers the blurred background. 0% is the default."
+            title={m.settingsAppearanceWash()}
+            description={m.settingsAppearanceWashDescription()}
             control={
               <label
                 style={{
@@ -263,8 +265,8 @@ export function AppearanceTab() {
                   max={100}
                   step={1}
                   value={washStrength}
-                  aria-label="Window wash"
-                  aria-valuetext={`${washStrength}% opacity`}
+                  aria-label={m.settingsAppearanceWash()}
+                  aria-valuetext={m.settingsAppearanceWashValue({ percent: String(washStrength) })}
                   onChange={(event) => setWashStrength(Number(event.target.value))}
                   style={{ accentColor: "var(--accent)" }}
                 />
@@ -278,12 +280,12 @@ export function AppearanceTab() {
         <SettingRow
           id="crew-model-names"
           error={errorFor("showCrewModelNames")}
-          title="Crew model names"
-          description="Show model names while crewmates use only one orbit."
+          title={m.settingsAppearanceCrewModelNames()}
+          description={m.settingsAppearanceCrewModelNamesDescription()}
           control={
             <Switch
               checked={showCrewModelNames}
-              aria-label="Crew model names"
+              aria-label={m.settingsAppearanceCrewModelNames()}
               onChange={setShowCrewModelNames}
             />
           }

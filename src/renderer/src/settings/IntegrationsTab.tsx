@@ -1,6 +1,7 @@
 import type { AutomationList, AutomationRule } from "@shared/automation";
 import { FORGE_CLI_WORDS, FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
 import { formatDateTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import {
   INBOX_WORDS,
   INTEGRATION_EFFECT_WORDS,
@@ -642,10 +643,12 @@ function ReturnPaste({ mac, id, name }: { mac: ViewMac; id: string; name: string
  */
 export function integrationRowSub(integration: IntegrationView, way?: "cli"): string {
   const on = integration.actions.filter((action) => action.enabled).length;
-  const actions = on === 1 ? "1 action" : `${on} actions`;
-  const who = integration.account ? `as ${integration.account}` : null;
+  const actions = m.settingsIntegrationsActionCount({ count: on });
+  const who = integration.account
+    ? m.settingsIntegrationsAs({ account: integration.account })
+    : null;
   return [
-    integration.paused ? "paused" : null,
+    integration.paused ? m.settingsIntegrationsPaused() : null,
     integration.host && integration.host !== "gitlab.com"
       ? INTEGRATION_KIND_NAMES[integration.kind]
       : null,
@@ -673,7 +676,7 @@ function integrationRowView(
     const row = forgeRowView({ name: integration.name, state: integration.health });
     return {
       ...row,
-      badge: "signed in",
+      badge: m.settingsIntegrationsSignedIn(),
       problem: row.reauth
         ? way === "cli"
           ? FORGE_CLI_WORDS.reauth
@@ -681,7 +684,7 @@ function integrationRowView(
         : null,
     };
   }
-  const problem = integration.health === "unavailable" ? "could not reach it" : null;
+  const problem = integration.health === "unavailable" ? m.settingsIntegrationsUnreachable() : null;
   return {
     tone:
       integration.health === "ok" ? "ok" : integration.health === "unavailable" ? "danger" : "ring",
@@ -731,7 +734,7 @@ function IntegrationRow({
       <span className="fm-forges-dot">
         <StatusDot
           tone={integration.paused ? "idle" : row.tone}
-          label={integration.paused ? "paused" : row.label}
+          label={integration.paused ? m.settingsIntegrationsPaused() : row.label}
           nativeTitle={row.label !== row.badge && !row.reauth && row.problem === null}
           focusable
         />
@@ -741,7 +744,11 @@ function IntegrationRow({
         className="fm-integrations-toggle"
         data-integration-toggle={integration.id}
         aria-expanded={open}
-        aria-label={`${integration.name}, ${open ? "expanded" : "collapsed"}`}
+        aria-label={
+          open
+            ? m.settingsIntegrationsRowExpanded({ name: integration.name })
+            : m.settingsIntegrationsRowCollapsed({ name: integration.name })
+        }
         onClick={onToggle}
       >
         <span className="fm-forges-name">{integration.name}</span>
@@ -766,7 +773,7 @@ function IntegrationRow({
             {row.problem}
           </span>
         ) : integration.paused ? (
-          <Badge tone="outline">paused</Badge>
+          <Badge tone="outline">{m.settingsIntegrationsPaused()}</Badge>
         ) : (
           <Badge tone="ok">{row.badge}</Badge>
         )}
@@ -775,7 +782,7 @@ function IntegrationRow({
       <span className="fm-forges-action">
         {row.reauth && way === "cli" && (
           <Button variant="primary" size="sm" onClick={onCheck}>
-            Check now
+            {m.settingsIntegrationsCheckNow()}
           </Button>
         )}
         {row.reauth && way !== "cli" && (
@@ -783,31 +790,37 @@ function IntegrationRow({
             variant="primary"
             size="sm"
             pending={busy}
-            pendingLabel="Starting..."
+            pendingLabel={m.settingsIntegrationsStarting()}
             onClick={onSignIn}
           >
-            Sign in again
+            {m.settingsIntegrationsSignInAgain()}
           </Button>
         )}
       </span>
       <span className="fm-forges-menu">
         <RowMenu
-          label={`${integration.name} actions`}
+          label={m.settingsIntegrationsActionsLabel({ name: integration.name })}
           items={[
-            { id: "check", label: "Check now", onSelect: onCheck },
+            { id: "check", label: m.settingsIntegrationsCheckNow(), onSelect: onCheck },
             integration.paused
-              ? { id: "resume", label: "Resume", onSelect: () => onPause(false) }
+              ? {
+                  id: "resume",
+                  label: m.settingsIntegrationsResume(),
+                  onSelect: () => onPause(false),
+                }
               : {
                   id: "pause",
-                  label: "Pause",
-                  detail: "Nobody reaches it until you resume it",
+                  label: m.settingsIntegrationsPause(),
+                  detail: m.settingsIntegrationsPauseDetail(),
                   onSelect: () => onPause(true),
                 },
             { separator: true },
             {
               id: "remove",
               label:
-                integration.kind === "mcp" ? INTEGRATIONS_MCP_WORDS.remove : "Sign out and remove",
+                integration.kind === "mcp"
+                  ? INTEGRATIONS_MCP_WORDS.remove
+                  : m.settingsIntegrationsSignOutRemove(),
               tone: "danger",
               onSelect: onRemove,
             },
@@ -835,7 +848,7 @@ function IntegrationActions({
   return (
     <ul
       className="fm-integrations-actions"
-      aria-label={`${integration.name} actions`}
+      aria-label={m.settingsIntegrationsActionsLabel({ name: integration.name })}
       data-integration-actions={integration.id}
     >
       {integration.actions.map((action) => (
@@ -850,9 +863,7 @@ function IntegrationActions({
             aria-label={`${action.label}: ${INTEGRATION_RULE_WORDS[action.rule]}`}
             off={!action.enabled}
             note={
-              action.enabled
-                ? "Choose Asks you or Always allowed"
-                : "Turn the action on to change its approval"
+              action.enabled ? m.settingsIntegrationsRuleNote() : m.settingsIntegrationsRuleOff()
             }
             onClick={() => action.enabled && onRule(action.name, action.rule !== "allow")}
           >
@@ -968,7 +979,7 @@ function InboxDoorPanel({
             variant="secondary"
             size="sm"
             pending={state === "copying"}
-            pendingLabel="Copying..."
+            pendingLabel={m.settingsIntegrationsCopying()}
             onClick={() => void copy()}
           >
             {INBOX_WORDS.copy}

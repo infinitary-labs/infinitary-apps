@@ -1,4 +1,5 @@
 import { formatDate } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { ReleaseNotesView, ShownReleaseNote } from "@shared/releaseTracking";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -63,7 +64,9 @@ function NoteRow({
       >
         <span>
           {capitalized(note.name)}
-          {!note.listed && <span className="fm-version-note-quiet"> · no new changes</span>}
+          {!note.listed && (
+            <span className="fm-version-note-quiet"> {m.settingsVersionNoNewChanges()}</span>
+          )}
         </span>
         <span className="fm-version-note-date">{shownOn(note.shownAt)}</span>
       </button>
@@ -116,15 +119,13 @@ export function VersionRowView({
   return (
     <SettingRow
       id="version"
-      title="Version"
+      title={m.settingsVersionTitle()}
       description={
         releaseNotes
-          ? `${capitalized(releaseNotes.name)}. ${
-              notes.length > 0
-                ? "Each release note you were shown opens again as you saw it."
-                : "No release notes yet."
-            }`
-          : "Reading the version…"
+          ? notes.length > 0
+            ? m.settingsVersionNotes({ name: capitalized(releaseNotes.name) })
+            : m.settingsVersionNoNotes({ name: capitalized(releaseNotes.name) })
+          : m.settingsVersionReading()
       }
       detail={
         <>
@@ -134,7 +135,7 @@ export function VersionRowView({
               <ul
                 id={listId}
                 ref={list}
-                aria-label="Release notes"
+                aria-label={m.settingsVersionReleaseNotes()}
                 className="fm-version-notes"
                 onKeyDown={onKeyDown}
               >
@@ -160,7 +161,7 @@ export function VersionRowView({
                     setExpanded(true);
                   }}
                 >
-                  Show more
+                  {m.settingsVersionShowMore()}
                 </Button>
               )}
             </>

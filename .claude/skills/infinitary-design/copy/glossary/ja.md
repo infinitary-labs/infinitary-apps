@@ -119,3 +119,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | pin (a task) | 固定 | 「タスクの先頭に固定」, as for a pinned model. |
 | hold (on a task) | 保留 | 「保留が解ける」 for a hold ending. |
 | task board | タスクボード | The Tasks panel's board; 列 for its columns. |
+| purge (task data) | 消去 | Settings → General's button and its confirm; distinct from 削除 for a device. |
+| Diagnostics (Settings → Sharing) | 診断 | |
+| redacted (decision records) | 個人情報を伏せた | Plain phrase; 墨消し and リダクト read as jargon. |
+| Dictation | 音声入力 | macOS Japanese names the feature 音声入力. |

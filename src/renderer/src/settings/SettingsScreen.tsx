@@ -1,4 +1,5 @@
 import type { ThisMac } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { CommandId } from "@shared/keyboard";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useCommandKeys } from "../app/keyHints";
@@ -163,7 +164,7 @@ export function SettingsScreen() {
           <div
             ref={tabList}
             role="tablist"
-            aria-label="Settings sections"
+            aria-label={m.settingsScreenSections()}
             aria-orientation="vertical"
             // One of the window's parts F6 moves between (app/regions.ts).
             data-window-region="settings-tabs"

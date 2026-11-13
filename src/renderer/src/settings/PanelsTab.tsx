@@ -25,16 +25,14 @@ import { panelRail } from "../plugins/panelRail";
 import { railFolds } from "../plugins/railFolds";
 import { railStore, useRailLayout } from "../plugins/railStore";
 import {
-  CONFIRM_RESET_PANELS,
   GROUP_WORDS,
-  NO_PANELS,
+  groupLabel,
   PANEL_STATE_WORDS,
-  PANELS_INTRO,
+  PANELS_WORDS,
   type PanelRowFacts,
   panelGroups,
   panelRowState,
   RAIL_WORDS,
-  RESET_PANELS,
   rowStep,
 } from "./panelsWords";
 import { ROW_GAP, SECTION_GAP, SectionLabel } from "./settingRows";
@@ -225,7 +223,7 @@ export function PanelsTab() {
 
   return (
     <div data-panels-settings="">
-      <SectionLabel>Panels</SectionLabel>
+      <SectionLabel>{PANELS_WORDS.heading}</SectionLabel>
       <p
         style={{
           margin: `0 0 ${ROW_GAP}`,
@@ -233,7 +231,7 @@ export function PanelsTab() {
           color: "var(--fg-3)",
         }}
       >
-        {PANELS_INTRO}
+        {PANELS_WORDS.intro}
       </p>
       <div
         data-panels-rails=""
@@ -263,7 +261,7 @@ export function PanelsTab() {
                   </span>
                   <ul
                     data-panels-group={`${side}:${y}`}
-                    aria-label={`${RAIL_WORDS[side]}, ${GROUP_WORDS[y].toLowerCase()}`}
+                    aria-label={groupLabel(side, y)}
                     style={{
                       listStyle: "none",
                       margin: 0,
@@ -285,7 +283,7 @@ export function PanelsTab() {
                           color: "var(--fg-3)",
                         }}
                       >
-                        {NO_PANELS}
+                        {PANELS_WORDS.noPanels}
                       </li>
                     )}
                     {ids.map((id) => {
@@ -377,7 +375,7 @@ export function PanelsTab() {
                           <Switch
                             tabIndex={-1}
                             checked={!hidden}
-                            aria-label={`Show ${title}`}
+                            aria-label={PANELS_WORDS.show(title)}
                             onChange={(show) => (show ? railStore.show(id) : railStore.hide(id))}
                           />
                         </li>
@@ -404,14 +402,14 @@ export function PanelsTab() {
       >
         <KeyCap>{alt("ArrowUp")}</KeyCap>
         <KeyCap>{alt("ArrowDown")}</KeyCap>
-        <span>move ·</span>
+        <span>{PANELS_WORDS.keys.move}</span>
         <KeyCap>{alt("ArrowLeft")}</KeyCap>
         <KeyCap>{alt("ArrowRight")}</KeyCap>
-        <span>other rail ·</span>
+        <span>{PANELS_WORDS.keys.otherRail}</span>
         <KeyCap>{chordLabel({ key: " " }, keys)}</KeyCap>
-        <span>show or hide ·</span>
+        <span>{PANELS_WORDS.keys.showOrHide}</span>
         <KeyCap>{chordLabel({ key: "Enter" }, keys)}</KeyCap>
-        <span>open or collapse</span>
+        <span>{PANELS_WORDS.keys.openOrCollapse}</span>
       </p>
       <div style={{ marginTop: SECTION_GAP }}>
         <Button
@@ -429,7 +427,7 @@ export function PanelsTab() {
           }}
           onBlur={() => setResetArmed(false)}
         >
-          {resetArmed ? CONFIRM_RESET_PANELS : RESET_PANELS}
+          {resetArmed ? PANELS_WORDS.confirmReset : PANELS_WORDS.reset}
         </Button>
       </div>
     </div>

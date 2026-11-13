@@ -259,5 +259,37 @@
       <string>%1$ld more projects</string>
     </dict>
   </dict>
+  <key>settingsGeneralTasksPurged</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld task purged.</string>
+      <key>other</key>
+      <string>%1$ld tasks purged.</string>
+    </dict>
+  </dict>
+  <key>settingsIntegrationsActionCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld action</string>
+      <key>other</key>
+      <string>%1$ld actions</string>
+    </dict>
+  </dict>
 </dict>
 </plist>

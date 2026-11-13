@@ -88,6 +88,10 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Reasoning | Raisonnement | |
 | Intelligence | Intelligence | |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difficile / Normale / Simple, Difficulté | How hard the task is, never a reasoning word. |
+| purge (task data) | effacer | "Effacer les données des tâches", "{count} tâches effacées"; plainer than "purger". |
+| Diagnostics (Sharing) | Diagnostics | The Sharing switch's name, kept as one word inside sentences. |
+| decision record | fiche de décision | What Contribution sends, as "fiche" already names a record; "anonymisées" for redacted. |
+| window wash | voile de la fenêtre | The theme color laid over the blurred background. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
 | repo (never said) | projet | "dépôt" only where a sentence points at GitHub. |
 | worktree (never said) | copie de travail | |

@@ -106,3 +106,6 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | pin (a task) | 固定 | As for a pinned model. |
 | hold (on a task) | 暂缓 | 暂缓结束 for a hold ending. |
 | task board | 任务看板 | 看板 alone for the Board view. |
+| purge (task data) | 清除 | Settings → General's button and its confirm; distinct from 移除 for a device. |
+| Diagnostics (Settings → Sharing) | 诊断 | |
+| redacted (decision records) | 脱敏 | The mainland word for records with personal details stripped. |

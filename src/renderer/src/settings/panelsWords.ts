@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { RAIL_SLOTS } from "@shared/panelArrangement";
 import type { RailSide, RailY, SidePanelPlacement } from "@shared/plugins/manifest";
 import type { PanelArrangement } from "@shared/preferences";
@@ -8,12 +9,63 @@ import type { PanelArrangement } from "@shared/preferences";
  * rails, in order, and whether it shows.
  */
 
-export const PANELS_INTRO = "Where each panel sits on your rails, in order.";
-export const RAIL_WORDS: Record<RailSide, string> = { left: "Left rail", right: "Right rail" };
-export const GROUP_WORDS: Record<RailY, string> = { top: "Top", bottom: "Bottom" };
-export const NO_PANELS = "No panels";
-export const RESET_PANELS = "Reset to defaults";
-export const CONFIRM_RESET_PANELS = "Confirm reset";
+export const PANELS_WORDS = {
+  get heading() {
+    return m.settingsPanelsHeading();
+  },
+  get intro() {
+    return m.settingsPanelsIntro();
+  },
+  get noPanels() {
+    return m.settingsPanelsNone();
+  },
+  get reset() {
+    return m.settingsPanelsReset();
+  },
+  get confirmReset() {
+    return m.settingsPanelsResetConfirm();
+  },
+  /** A row's Show switch, naming its panel. */
+  show: (title: string) => m.settingsPanelsShow({ title }),
+  /** The key legend under the rails, one piece after each key pair. */
+  keys: {
+    get move() {
+      return m.settingsPanelsKeysMove();
+    },
+    get otherRail() {
+      return m.settingsPanelsKeysOtherRail();
+    },
+    get showOrHide() {
+      return m.settingsPanelsKeysShowOrHide();
+    },
+    get openOrCollapse() {
+      return m.settingsPanelsKeysOpenOrCollapse();
+    },
+  },
+} as const;
+export const RAIL_WORDS: Record<RailSide, string> = {
+  get left() {
+    return m.settingsPanelsLeftRail();
+  },
+  get right() {
+    return m.settingsPanelsRightRail();
+  },
+};
+export const GROUP_WORDS: Record<RailY, string> = {
+  get top() {
+    return m.settingsPanelsTop();
+  },
+  get bottom() {
+    return m.settingsPanelsBottom();
+  },
+};
+
+/** A group's list name: its rail, then its end. */
+export function groupLabel(side: RailSide, y: RailY): string {
+  if (side === "left")
+    return y === "top" ? m.settingsPanelsLeftTop() : m.settingsPanelsLeftBottom();
+  return y === "top" ? m.settingsPanelsRightTop() : m.settingsPanelsRightBottom();
+}
 
 /** What a row says about its panel. */
 export type PanelRowState =
@@ -26,13 +78,27 @@ export type PanelRowState =
   | "waits-for-knowledge";
 
 export const PANEL_STATE_WORDS: Record<PanelRowState, string> = {
-  shown: "Shown",
-  collapsed: "Collapsed",
-  hidden: "Hidden",
-  nothing: "Nothing to show right now",
-  more: "In the More row",
-  "waits-for-rule": "Shows when a rule is saved",
-  "waits-for-knowledge": "Shows once there is knowledge",
+  get shown() {
+    return m.settingsPanelsShown();
+  },
+  get collapsed() {
+    return m.settingsPanelsCollapsed();
+  },
+  get hidden() {
+    return m.settingsPanelsHidden();
+  },
+  get nothing() {
+    return m.settingsPanelsNothing();
+  },
+  get more() {
+    return m.settingsPanelsMore();
+  },
+  get "waits-for-rule"() {
+    return m.settingsPanelsWaitsForRule();
+  },
+  get "waits-for-knowledge"() {
+    return m.settingsPanelsWaitsForKnowledge();
+  },
 };
 
 /** What the window knows of one panel, for its row. */

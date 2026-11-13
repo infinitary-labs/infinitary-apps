@@ -754,6 +754,211 @@ public enum PhoneMessages {
     public static func `settingsCommandStopFailed`() -> String { PhoneWords.format("settingsCommandStopFailed", []) }
     public static func `settingsCommandStartAtLogin`() -> String { PhoneWords.format("settingsCommandStartAtLogin", []) }
     public static func `settingsWebsiteSignInsStorage`() -> String { PhoneWords.format("settingsWebsiteSignInsStorage", []) }
+    public static func `settingsKeyboardSaveFailed`() -> String { PhoneWords.format("settingsKeyboardSaveFailed", []) }
+    public static func `settingsKeyboardHeading`() -> String { PhoneWords.format("settingsKeyboardHeading", []) }
+    public static func `settingsKeyboardSearch`() -> String { PhoneWords.format("settingsKeyboardSearch", []) }
+    public static func `settingsKeyboardResetAll`() -> String { PhoneWords.format("settingsKeyboardResetAll", []) }
+    public static func `settingsKeyboardResetAllConfirm`() -> String { PhoneWords.format("settingsKeyboardResetAllConfirm", []) }
+    public static func `settingsKeyboardUnreadable`() -> String { PhoneWords.format("settingsKeyboardUnreadable", []) }
+    public static func `settingsKeyboardNoMatch`() -> String { PhoneWords.format("settingsKeyboardNoMatch", []) }
+    public static func `settingsKeyboardUnknownCommand`() -> String { PhoneWords.format("settingsKeyboardUnknownCommand", []) }
+    public static func `settingsKeyboardChanged`() -> String { PhoneWords.format("settingsKeyboardChanged", []) }
+    public static func `settingsKeyboardRecordLabel`(`command`: String) -> String { PhoneWords.format("settingsKeyboardRecordLabel", [`command`]) }
+    public static func `settingsKeyboardRecord`() -> String { PhoneWords.format("settingsKeyboardRecord", []) }
+    public static func `settingsKeyboardRemoveLabel`(`command`: String) -> String { PhoneWords.format("settingsKeyboardRemoveLabel", [`command`]) }
+    public static func `settingsKeyboardRemove`() -> String { PhoneWords.format("settingsKeyboardRemove", []) }
+    public static func `settingsKeyboardResetLabel`(`command`: String) -> String { PhoneWords.format("settingsKeyboardResetLabel", [`command`]) }
+    public static func `settingsKeyboardReset`() -> String { PhoneWords.format("settingsKeyboardReset", []) }
+    public static func `settingsKeyboardNoKey`() -> String { PhoneWords.format("settingsKeyboardNoKey", []) }
+    public static func `settingsKeyboardWhereLabel`(`command`: String, `key`: String) -> String { PhoneWords.format("settingsKeyboardWhereLabel", [`command`, `key`]) }
+    public static func `settingsKeyboardAnywhere`() -> String { PhoneWords.format("settingsKeyboardAnywhere", []) }
+    public static func `settingsKeyboardNotTyping`() -> String { PhoneWords.format("settingsKeyboardNotTyping", []) }
+    public static func `settingsKeyboardPress`() -> String { PhoneWords.format("settingsKeyboardPress", []) }
+    public static func `settingsKeyboardOwn`() -> String { PhoneWords.format("settingsKeyboardOwn", []) }
+    public static func `settingsKeyboardFree`() -> String { PhoneWords.format("settingsKeyboardFree", []) }
+    public static func `settingsKeyboardRecorderKeys`(`addKey`: String) -> String { PhoneWords.format("settingsKeyboardRecorderKeys", [`addKey`]) }
+    public static func `settingsKeyboardRecorderKeysSecond`(`addKey`: String) -> String { PhoneWords.format("settingsKeyboardRecorderKeysSecond", [`addKey`]) }
+    public static func `settingsKeyboardRecordingLabel`(`command`: String) -> String { PhoneWords.format("settingsKeyboardRecordingLabel", [`command`]) }
+    public static func `settingsKeyboardRecordingWait`() -> String { PhoneWords.format("settingsKeyboardRecordingWait", []) }
+    public static func `settingsKeyboardSaving`() -> String { PhoneWords.format("settingsKeyboardSaving", []) }
+    public static func `settingsKeyboardSave`() -> String { PhoneWords.format("settingsKeyboardSave", []) }
+    public static func `settingsKeyboardAddBeside`() -> String { PhoneWords.format("settingsKeyboardAddBeside", []) }
+    public static func `settingsKeyboardCancel`() -> String { PhoneWords.format("settingsKeyboardCancel", []) }
+    public static func `settingsKeyboardClashMovesNoKey`(`clash`: String, `command`: String) -> String { PhoneWords.format("settingsKeyboardClashMovesNoKey", [`clash`, `command`]) }
+    public static func `settingsKeyboardClashMovesKeeps`(`clash`: String, `command`: String) -> String { PhoneWords.format("settingsKeyboardClashMovesKeeps", [`clash`, `command`]) }
+    public static func `settingsGeneralTasksPurged`(`count`: Int) -> String { PhoneWords.format("settingsGeneralTasksPurged", [`count`]) }
+    public static func `settingsGeneralYourPanels`() -> String { PhoneWords.format("settingsGeneralYourPanels", []) }
+    public static func `settingsGeneralYourPanelsOn`() -> String { PhoneWords.format("settingsGeneralYourPanelsOn", []) }
+    public static func `settingsGeneralYourPanelsSafeMode`() -> String { PhoneWords.format("settingsGeneralYourPanelsSafeMode", []) }
+    public static func `settingsPanelsHeading`() -> String { PhoneWords.format("settingsPanelsHeading", []) }
+    public static func `settingsPanelsIntro`() -> String { PhoneWords.format("settingsPanelsIntro", []) }
+    public static func `settingsPanelsNone`() -> String { PhoneWords.format("settingsPanelsNone", []) }
+    public static func `settingsPanelsReset`() -> String { PhoneWords.format("settingsPanelsReset", []) }
+    public static func `settingsPanelsResetConfirm`() -> String { PhoneWords.format("settingsPanelsResetConfirm", []) }
+    public static func `settingsPanelsShow`(`title`: String) -> String { PhoneWords.format("settingsPanelsShow", [`title`]) }
+    public static func `settingsPanelsKeysMove`() -> String { PhoneWords.format("settingsPanelsKeysMove", []) }
+    public static func `settingsPanelsKeysOtherRail`() -> String { PhoneWords.format("settingsPanelsKeysOtherRail", []) }
+    public static func `settingsPanelsKeysShowOrHide`() -> String { PhoneWords.format("settingsPanelsKeysShowOrHide", []) }
+    public static func `settingsPanelsKeysOpenOrCollapse`() -> String { PhoneWords.format("settingsPanelsKeysOpenOrCollapse", []) }
+    public static func `settingsPanelsLeftRail`() -> String { PhoneWords.format("settingsPanelsLeftRail", []) }
+    public static func `settingsPanelsRightRail`() -> String { PhoneWords.format("settingsPanelsRightRail", []) }
+    public static func `settingsPanelsTop`() -> String { PhoneWords.format("settingsPanelsTop", []) }
+    public static func `settingsPanelsBottom`() -> String { PhoneWords.format("settingsPanelsBottom", []) }
+    public static func `settingsPanelsLeftTop`() -> String { PhoneWords.format("settingsPanelsLeftTop", []) }
+    public static func `settingsPanelsLeftBottom`() -> String { PhoneWords.format("settingsPanelsLeftBottom", []) }
+    public static func `settingsPanelsRightTop`() -> String { PhoneWords.format("settingsPanelsRightTop", []) }
+    public static func `settingsPanelsRightBottom`() -> String { PhoneWords.format("settingsPanelsRightBottom", []) }
+    public static func `settingsPanelsShown`() -> String { PhoneWords.format("settingsPanelsShown", []) }
+    public static func `settingsPanelsCollapsed`() -> String { PhoneWords.format("settingsPanelsCollapsed", []) }
+    public static func `settingsPanelsHidden`() -> String { PhoneWords.format("settingsPanelsHidden", []) }
+    public static func `settingsPanelsNothing`() -> String { PhoneWords.format("settingsPanelsNothing", []) }
+    public static func `settingsPanelsMore`() -> String { PhoneWords.format("settingsPanelsMore", []) }
+    public static func `settingsPanelsWaitsForRule`() -> String { PhoneWords.format("settingsPanelsWaitsForRule", []) }
+    public static func `settingsPanelsWaitsForKnowledge`() -> String { PhoneWords.format("settingsPanelsWaitsForKnowledge", []) }
+    public static func `settingsSaveRecoveryHint`() -> String { PhoneWords.format("settingsSaveRecoveryHint", []) }
+    public static func `settingsSaveLoadFailed`() -> String { PhoneWords.format("settingsSaveLoadFailed", []) }
+    public static func `settingsSaveFailed`() -> String { PhoneWords.format("settingsSaveFailed", []) }
+    public static func `settingsSaveReloadFailed`(`hint`: String, `message`: String) -> String { PhoneWords.format("settingsSaveReloadFailed", [`hint`, `message`]) }
+    public static func `settingsScreenSections`() -> String { PhoneWords.format("settingsScreenSections", []) }
+    public static func `settingsVersionNoNewChanges`() -> String { PhoneWords.format("settingsVersionNoNewChanges", []) }
+    public static func `settingsVersionTitle`() -> String { PhoneWords.format("settingsVersionTitle", []) }
+    public static func `settingsVersionNotes`(`name`: String) -> String { PhoneWords.format("settingsVersionNotes", [`name`]) }
+    public static func `settingsVersionNoNotes`(`name`: String) -> String { PhoneWords.format("settingsVersionNoNotes", [`name`]) }
+    public static func `settingsVersionReading`() -> String { PhoneWords.format("settingsVersionReading", []) }
+    public static func `settingsVersionReleaseNotes`() -> String { PhoneWords.format("settingsVersionReleaseNotes", []) }
+    public static func `settingsVersionShowMore`() -> String { PhoneWords.format("settingsVersionShowMore", []) }
+    public static func `settingsRunbooksOpenFailed`() -> String { PhoneWords.format("settingsRunbooksOpenFailed", []) }
+    public static func `settingsRunbooksViewLabel`(`name`: String) -> String { PhoneWords.format("settingsRunbooksViewLabel", [`name`]) }
+    public static func `settingsRunbooksView`() -> String { PhoneWords.format("settingsRunbooksView", []) }
+    public static func `settingsRunbooksBuiltIn`() -> String { PhoneWords.format("settingsRunbooksBuiltIn", []) }
+    public static func `settingsRunbooksYours`() -> String { PhoneWords.format("settingsRunbooksYours", []) }
+    public static func `settingsRunbooksYoursEmpty`() -> String { PhoneWords.format("settingsRunbooksYoursEmpty", []) }
+    public static func `settingsRunbooksMakeYourOwn`() -> String { PhoneWords.format("settingsRunbooksMakeYourOwn", []) }
+    public static func `settingsRunbooksFolder`() -> String { PhoneWords.format("settingsRunbooksFolder", []) }
+    public static func `settingsRunbooksFolderRemote`(`computer`: String) -> String { PhoneWords.format("settingsRunbooksFolderRemote", [`computer`]) }
+    public static func `settingsRunbooksFolderHere`() -> String { PhoneWords.format("settingsRunbooksFolderHere", []) }
+    public static func `settingsRunbooksOpenFolder`() -> String { PhoneWords.format("settingsRunbooksOpenFolder", []) }
+    public static func `settingsRunbooksAsk`() -> String { PhoneWords.format("settingsRunbooksAsk", []) }
+    public static func `settingsSecretsStorageLocked`() -> String { PhoneWords.format("settingsSecretsStorageLocked", []) }
+    public static func `settingsSecretsStorageUnavailable`() -> String { PhoneWords.format("settingsSecretsStorageUnavailable", []) }
+    public static func `settingsSecretsRecoveryNeeded`() -> String { PhoneWords.format("settingsSecretsRecoveryNeeded", []) }
+    public static func `settingsSecretsPermissionsRecovery`() -> String { PhoneWords.format("settingsSecretsPermissionsRecovery", []) }
+    public static func `settingsSecretsFinishForm`() -> String { PhoneWords.format("settingsSecretsFinishForm", []) }
+    public static func `settingsSecretsReading`() -> String { PhoneWords.format("settingsSecretsReading", []) }
+    public static func `settingsSecretsUnlockToUse`() -> String { PhoneWords.format("settingsSecretsUnlockToUse", []) }
+    public static func `settingsSecretsUnlockAgain`() -> String { PhoneWords.format("settingsSecretsUnlockAgain", []) }
+    public static func `settingsSecretsWaitForChange`() -> String { PhoneWords.format("settingsSecretsWaitForChange", []) }
+    public static func `settingsSecretsNamePlaceholder`() -> String { PhoneWords.format("settingsSecretsNamePlaceholder", []) }
+    public static func `settingsSecretsSaving`() -> String { PhoneWords.format("settingsSecretsSaving", []) }
+    public static func `settingsSecretsWaitForSaving`() -> String { PhoneWords.format("settingsSecretsWaitForSaving", []) }
+    public static func `settingsSecretsCancel`() -> String { PhoneWords.format("settingsSecretsCancel", []) }
+    public static func `settingsSecretsDeviceCode`(`code`: String) -> String { PhoneWords.format("settingsSecretsDeviceCode", [`code`]) }
+    public static func `settingsSecretsHistoryExported`() -> String { PhoneWords.format("settingsSecretsHistoryExported", []) }
+    public static func `settingsSecretsNoExport`() -> String { PhoneWords.format("settingsSecretsNoExport", []) }
+    public static func `settingsSecretsExportFailed`() -> String { PhoneWords.format("settingsSecretsExportFailed", []) }
+    public static func `settingsSecretsExportHistory`() -> String { PhoneWords.format("settingsSecretsExportHistory", []) }
+    public static func `settingsSecretsDeleteHistory`() -> String { PhoneWords.format("settingsSecretsDeleteHistory", []) }
+    public static func `settingsSecretsRefresh`() -> String { PhoneWords.format("settingsSecretsRefresh", []) }
+    public static func `settingsSecretsNoHistory`() -> String { PhoneWords.format("settingsSecretsNoHistory", []) }
+    public static func `settingsSecretsRecoveredSource`(`source`: String) -> String { PhoneWords.format("settingsSecretsRecoveredSource", [`source`]) }
+    public static func `settingsSecretsRecoveredAt`(`at`: String) -> String { PhoneWords.format("settingsSecretsRecoveredAt", [`at`]) }
+    public static func `settingsSecretsFinishFormOrChange`() -> String { PhoneWords.format("settingsSecretsFinishFormOrChange", []) }
+    public static func `settingsSecretsBackupNote`() -> String { PhoneWords.format("settingsSecretsBackupNote", []) }
+    public static func `settingsSecretsRestoreNote`() -> String { PhoneWords.format("settingsSecretsRestoreNote", []) }
+    public static func `settingsSecretsUnlockBeforeRestore`() -> String { PhoneWords.format("settingsSecretsUnlockBeforeRestore", []) }
+    public static func `settingsSecretsRecoveryFiles`() -> String { PhoneWords.format("settingsSecretsRecoveryFiles", []) }
+    public static func `settingsSecretsNotRequested`() -> String { PhoneWords.format("settingsSecretsNotRequested", []) }
+    public static func `settingsSharingInstallIdNote`(`place`: String) -> String { PhoneWords.format("settingsSharingInstallIdNote", [`place`]) }
+    public static func `settingsSharingDiagnosticsSent`(`destination`: String, `summary`: String) -> String { PhoneWords.format("settingsSharingDiagnosticsSent", [`destination`, `summary`]) }
+    public static func `settingsSharingDiagnosticsNowhere`(`summary`: String) -> String { PhoneWords.format("settingsSharingDiagnosticsNowhere", [`summary`]) }
+    public static func `settingsSharingContributionDescription`() -> String { PhoneWords.format("settingsSharingContributionDescription", []) }
+    public static func `settingsSharingHeading`() -> String { PhoneWords.format("settingsSharingHeading", []) }
+    public static func `settingsSharingDiagnostics`() -> String { PhoneWords.format("settingsSharingDiagnostics", []) }
+    public static func `settingsSharingContribution`() -> String { PhoneWords.format("settingsSharingContribution", []) }
+    public static func `settingsSharingWhatWouldLeave`(`place`: String) -> String { PhoneWords.format("settingsSharingWhatWouldLeave", [`place`]) }
+    public static func `settingsSharingTerms`() -> String { PhoneWords.format("settingsSharingTerms", []) }
+    public static func `settingsSharingReading`() -> String { PhoneWords.format("settingsSharingReading", []) }
+    public static func `settingsSharingDiagnosticsWaiting`() -> String { PhoneWords.format("settingsSharingDiagnosticsWaiting", []) }
+    public static func `settingsSharingDiagnosticsSentTitle`() -> String { PhoneWords.format("settingsSharingDiagnosticsSentTitle", []) }
+    public static func `settingsSharingRecordsWaitingNewest`(`shown`: String, `total`: String) -> String { PhoneWords.format("settingsSharingRecordsWaitingNewest", [`shown`, `total`]) }
+    public static func `settingsSharingRecordsWaiting`() -> String { PhoneWords.format("settingsSharingRecordsWaiting", []) }
+    public static func `settingsSharingNoRecords`() -> String { PhoneWords.format("settingsSharingNoRecords", []) }
+    public static func `settingsSharingInstallId`() -> String { PhoneWords.format("settingsSharingInstallId", []) }
+    public static func `settingsSharingNoInstallId`() -> String { PhoneWords.format("settingsSharingNoInstallId", []) }
+    public static func `settingsSharingCatalog`() -> String { PhoneWords.format("settingsSharingCatalog", []) }
+    public static func `settingsSharingCatalogNote`() -> String { PhoneWords.format("settingsSharingCatalogNote", []) }
+    public static func `settingsSharingAskTitle`() -> String { PhoneWords.format("settingsSharingAskTitle", []) }
+    public static func `settingsSharingAskBody`() -> String { PhoneWords.format("settingsSharingAskBody", []) }
+    public static func `settingsSharingAskNotNow`() -> String { PhoneWords.format("settingsSharingAskNotNow", []) }
+    public static func `settingsSharingAskContribute`() -> String { PhoneWords.format("settingsSharingAskContribute", []) }
+    public static func `settingsGeneralCustomApi`() -> String { PhoneWords.format("settingsGeneralCustomApi", []) }
+    public static func `settingsGeneralModelByNameLabel`() -> String { PhoneWords.format("settingsGeneralModelByNameLabel", []) }
+    public static func `settingsGeneralFirstMateModel`() -> String { PhoneWords.format("settingsGeneralFirstMateModel", []) }
+    public static func `settingsGeneralFirstMateModelAccount`() -> String { PhoneWords.format("settingsGeneralFirstMateModelAccount", []) }
+    public static func `settingsGeneralModelAuto`() -> String { PhoneWords.format("settingsGeneralModelAuto", []) }
+    public static func `settingsGeneralModelStranded`(`model`: String) -> String { PhoneWords.format("settingsGeneralModelStranded", [`model`]) }
+    public static func `settingsGeneralModelByName`() -> String { PhoneWords.format("settingsGeneralModelByName", []) }
+    public static func `settingsGeneralModelAccountDescription`(`provider`: String) -> String { PhoneWords.format("settingsGeneralModelAccountDescription", [`provider`]) }
+    public static func `settingsGeneralModelDescription`() -> String { PhoneWords.format("settingsGeneralModelDescription", []) }
+    public static func `settingsGeneralDictation`() -> String { PhoneWords.format("settingsGeneralDictation", []) }
+    public static func `settingsGeneralDictationPicking`(`choices`: String, `key`: String) -> String { PhoneWords.format("settingsGeneralDictationPicking", [`choices`, `key`]) }
+    public static func `settingsGeneralDictationDescription`(`place`: String) -> String { PhoneWords.format("settingsGeneralDictationDescription", [`place`]) }
+    public static func `settingsGeneralDictationKey`() -> String { PhoneWords.format("settingsGeneralDictationKey", []) }
+    public static func `settingsGeneralDictationRight`() -> String { PhoneWords.format("settingsGeneralDictationRight", []) }
+    public static func `settingsGeneralHeading`() -> String { PhoneWords.format("settingsGeneralHeading", []) }
+    public static func `settingsGeneralStartAtLogin`() -> String { PhoneWords.format("settingsGeneralStartAtLogin", []) }
+    public static func `settingsGeneralStartAtLoginDescription`() -> String { PhoneWords.format("settingsGeneralStartAtLoginDescription", []) }
+    public static func `settingsGeneralShowInDock`() -> String { PhoneWords.format("settingsGeneralShowInDock", []) }
+    public static func `settingsGeneralShowInDockDescription`() -> String { PhoneWords.format("settingsGeneralShowInDockDescription", []) }
+    public static func `settingsGeneralNotify`() -> String { PhoneWords.format("settingsGeneralNotify", []) }
+    public static func `settingsGeneralNotifyDescription`() -> String { PhoneWords.format("settingsGeneralNotifyDescription", []) }
+    public static func `settingsGeneralPurge`() -> String { PhoneWords.format("settingsGeneralPurge", []) }
+    public static func `settingsGeneralPurgeDescriptionKnowledge`() -> String { PhoneWords.format("settingsGeneralPurgeDescriptionKnowledge", []) }
+    public static func `settingsGeneralPurgeDescription`() -> String { PhoneWords.format("settingsGeneralPurgeDescription", []) }
+    public static func `settingsGeneralPurging`() -> String { PhoneWords.format("settingsGeneralPurging", []) }
+    public static func `settingsGeneralPurgeConfirm`() -> String { PhoneWords.format("settingsGeneralPurgeConfirm", []) }
+    public static func `settingsGeneralPurgeButton`() -> String { PhoneWords.format("settingsGeneralPurgeButton", []) }
+    public static func `settingsAppearanceSizeDescription`() -> String { PhoneWords.format("settingsAppearanceSizeDescription", []) }
+    public static func `settingsAppearanceSizeDescriptionKeys`(`larger`: String, `smaller`: String) -> String { PhoneWords.format("settingsAppearanceSizeDescriptionKeys", [`larger`, `smaller`]) }
+    public static func `settingsAppearanceSizeDescriptionKey`(`key`: String) -> String { PhoneWords.format("settingsAppearanceSizeDescriptionKey", [`key`]) }
+    public static func `settingsAppearanceHeading`() -> String { PhoneWords.format("settingsAppearanceHeading", []) }
+    public static func `settingsAppearanceOwnLook`(`computer`: String, `place`: String) -> String { PhoneWords.format("settingsAppearanceOwnLook", [`computer`, `place`]) }
+    public static func `settingsAppearanceSize`() -> String { PhoneWords.format("settingsAppearanceSize", []) }
+    public static func `settingsAppearanceCardSize`() -> String { PhoneWords.format("settingsAppearanceCardSize", []) }
+    public static func `settingsAppearanceCardSizeDescription`() -> String { PhoneWords.format("settingsAppearanceCardSizeDescription", []) }
+    public static func `settingsAppearanceCardUsual`() -> String { PhoneWords.format("settingsAppearanceCardUsual", []) }
+    public static func `settingsAppearanceCardWide`() -> String { PhoneWords.format("settingsAppearanceCardWide", []) }
+    public static func `settingsAppearanceCardFull`() -> String { PhoneWords.format("settingsAppearanceCardFull", []) }
+    public static func `settingsAppearanceCardMaximized`() -> String { PhoneWords.format("settingsAppearanceCardMaximized", []) }
+    public static func `settingsAppearanceKeepMaximized`() -> String { PhoneWords.format("settingsAppearanceKeepMaximized", []) }
+    public static func `settingsAppearanceKeepMaximizedDescription`() -> String { PhoneWords.format("settingsAppearanceKeepMaximizedDescription", []) }
+    public static func `settingsAppearanceTheme`() -> String { PhoneWords.format("settingsAppearanceTheme", []) }
+    public static func `settingsAppearanceThemeDescription`() -> String { PhoneWords.format("settingsAppearanceThemeDescription", []) }
+    public static func `settingsAppearanceThemeDark`() -> String { PhoneWords.format("settingsAppearanceThemeDark", []) }
+    public static func `settingsAppearanceThemeLight`() -> String { PhoneWords.format("settingsAppearanceThemeLight", []) }
+    public static func `settingsAppearanceWash`() -> String { PhoneWords.format("settingsAppearanceWash", []) }
+    public static func `settingsAppearanceWashDescription`() -> String { PhoneWords.format("settingsAppearanceWashDescription", []) }
+    public static func `settingsAppearanceWashValue`(`percent`: String) -> String { PhoneWords.format("settingsAppearanceWashValue", [`percent`]) }
+    public static func `settingsAppearanceCrewModelNames`() -> String { PhoneWords.format("settingsAppearanceCrewModelNames", []) }
+    public static func `settingsAppearanceCrewModelNamesDescription`() -> String { PhoneWords.format("settingsAppearanceCrewModelNamesDescription", []) }
+    public static func `settingsIntegrationsActionCount`(`count`: Int) -> String { PhoneWords.format("settingsIntegrationsActionCount", [`count`]) }
+    public static func `settingsIntegrationsAs`(`account`: String) -> String { PhoneWords.format("settingsIntegrationsAs", [`account`]) }
+    public static func `settingsIntegrationsPaused`() -> String { PhoneWords.format("settingsIntegrationsPaused", []) }
+    public static func `settingsIntegrationsSignedIn`() -> String { PhoneWords.format("settingsIntegrationsSignedIn", []) }
+    public static func `settingsIntegrationsUnreachable`() -> String { PhoneWords.format("settingsIntegrationsUnreachable", []) }
+    public static func `settingsIntegrationsRowExpanded`(`name`: String) -> String { PhoneWords.format("settingsIntegrationsRowExpanded", [`name`]) }
+    public static func `settingsIntegrationsRowCollapsed`(`name`: String) -> String { PhoneWords.format("settingsIntegrationsRowCollapsed", [`name`]) }
+    public static func `settingsIntegrationsCheckNow`() -> String { PhoneWords.format("settingsIntegrationsCheckNow", []) }
+    public static func `settingsIntegrationsStarting`() -> String { PhoneWords.format("settingsIntegrationsStarting", []) }
+    public static func `settingsIntegrationsSignInAgain`() -> String { PhoneWords.format("settingsIntegrationsSignInAgain", []) }
+    public static func `settingsIntegrationsActionsLabel`(`name`: String) -> String { PhoneWords.format("settingsIntegrationsActionsLabel", [`name`]) }
+    public static func `settingsIntegrationsResume`() -> String { PhoneWords.format("settingsIntegrationsResume", []) }
+    public static func `settingsIntegrationsPause`() -> String { PhoneWords.format("settingsIntegrationsPause", []) }
+    public static func `settingsIntegrationsPauseDetail`() -> String { PhoneWords.format("settingsIntegrationsPauseDetail", []) }
+    public static func `settingsIntegrationsSignOutRemove`() -> String { PhoneWords.format("settingsIntegrationsSignOutRemove", []) }
+    public static func `settingsIntegrationsRuleNote`() -> String { PhoneWords.format("settingsIntegrationsRuleNote", []) }
+    public static func `settingsIntegrationsRuleOff`() -> String { PhoneWords.format("settingsIntegrationsRuleOff", []) }
+    public static func `settingsIntegrationsCopying`() -> String { PhoneWords.format("settingsIntegrationsCopying", []) }
 }
 
 extension PhoneWords {
@@ -1509,6 +1714,211 @@ extension PhoneWords {
         "settingsCommandStopFailed": [],
         "settingsCommandStartAtLogin": [],
         "settingsWebsiteSignInsStorage": [],
+        "settingsKeyboardSaveFailed": [],
+        "settingsKeyboardHeading": [],
+        "settingsKeyboardSearch": [],
+        "settingsKeyboardResetAll": [],
+        "settingsKeyboardResetAllConfirm": [],
+        "settingsKeyboardUnreadable": [],
+        "settingsKeyboardNoMatch": [],
+        "settingsKeyboardUnknownCommand": [],
+        "settingsKeyboardChanged": [],
+        "settingsKeyboardRecordLabel": ["command"],
+        "settingsKeyboardRecord": [],
+        "settingsKeyboardRemoveLabel": ["command"],
+        "settingsKeyboardRemove": [],
+        "settingsKeyboardResetLabel": ["command"],
+        "settingsKeyboardReset": [],
+        "settingsKeyboardNoKey": [],
+        "settingsKeyboardWhereLabel": ["command", "key"],
+        "settingsKeyboardAnywhere": [],
+        "settingsKeyboardNotTyping": [],
+        "settingsKeyboardPress": [],
+        "settingsKeyboardOwn": [],
+        "settingsKeyboardFree": [],
+        "settingsKeyboardRecorderKeys": ["addKey"],
+        "settingsKeyboardRecorderKeysSecond": ["addKey"],
+        "settingsKeyboardRecordingLabel": ["command"],
+        "settingsKeyboardRecordingWait": [],
+        "settingsKeyboardSaving": [],
+        "settingsKeyboardSave": [],
+        "settingsKeyboardAddBeside": [],
+        "settingsKeyboardCancel": [],
+        "settingsKeyboardClashMovesNoKey": ["clash", "command"],
+        "settingsKeyboardClashMovesKeeps": ["clash", "command"],
+        "settingsGeneralTasksPurged": ["count"],
+        "settingsGeneralYourPanels": [],
+        "settingsGeneralYourPanelsOn": [],
+        "settingsGeneralYourPanelsSafeMode": [],
+        "settingsPanelsHeading": [],
+        "settingsPanelsIntro": [],
+        "settingsPanelsNone": [],
+        "settingsPanelsReset": [],
+        "settingsPanelsResetConfirm": [],
+        "settingsPanelsShow": ["title"],
+        "settingsPanelsKeysMove": [],
+        "settingsPanelsKeysOtherRail": [],
+        "settingsPanelsKeysShowOrHide": [],
+        "settingsPanelsKeysOpenOrCollapse": [],
+        "settingsPanelsLeftRail": [],
+        "settingsPanelsRightRail": [],
+        "settingsPanelsTop": [],
+        "settingsPanelsBottom": [],
+        "settingsPanelsLeftTop": [],
+        "settingsPanelsLeftBottom": [],
+        "settingsPanelsRightTop": [],
+        "settingsPanelsRightBottom": [],
+        "settingsPanelsShown": [],
+        "settingsPanelsCollapsed": [],
+        "settingsPanelsHidden": [],
+        "settingsPanelsNothing": [],
+        "settingsPanelsMore": [],
+        "settingsPanelsWaitsForRule": [],
+        "settingsPanelsWaitsForKnowledge": [],
+        "settingsSaveRecoveryHint": [],
+        "settingsSaveLoadFailed": [],
+        "settingsSaveFailed": [],
+        "settingsSaveReloadFailed": ["hint", "message"],
+        "settingsScreenSections": [],
+        "settingsVersionNoNewChanges": [],
+        "settingsVersionTitle": [],
+        "settingsVersionNotes": ["name"],
+        "settingsVersionNoNotes": ["name"],
+        "settingsVersionReading": [],
+        "settingsVersionReleaseNotes": [],
+        "settingsVersionShowMore": [],
+        "settingsRunbooksOpenFailed": [],
+        "settingsRunbooksViewLabel": ["name"],
+        "settingsRunbooksView": [],
+        "settingsRunbooksBuiltIn": [],
+        "settingsRunbooksYours": [],
+        "settingsRunbooksYoursEmpty": [],
+        "settingsRunbooksMakeYourOwn": [],
+        "settingsRunbooksFolder": [],
+        "settingsRunbooksFolderRemote": ["computer"],
+        "settingsRunbooksFolderHere": [],
+        "settingsRunbooksOpenFolder": [],
+        "settingsRunbooksAsk": [],
+        "settingsSecretsStorageLocked": [],
+        "settingsSecretsStorageUnavailable": [],
+        "settingsSecretsRecoveryNeeded": [],
+        "settingsSecretsPermissionsRecovery": [],
+        "settingsSecretsFinishForm": [],
+        "settingsSecretsReading": [],
+        "settingsSecretsUnlockToUse": [],
+        "settingsSecretsUnlockAgain": [],
+        "settingsSecretsWaitForChange": [],
+        "settingsSecretsNamePlaceholder": [],
+        "settingsSecretsSaving": [],
+        "settingsSecretsWaitForSaving": [],
+        "settingsSecretsCancel": [],
+        "settingsSecretsDeviceCode": ["code"],
+        "settingsSecretsHistoryExported": [],
+        "settingsSecretsNoExport": [],
+        "settingsSecretsExportFailed": [],
+        "settingsSecretsExportHistory": [],
+        "settingsSecretsDeleteHistory": [],
+        "settingsSecretsRefresh": [],
+        "settingsSecretsNoHistory": [],
+        "settingsSecretsRecoveredSource": ["source"],
+        "settingsSecretsRecoveredAt": ["at"],
+        "settingsSecretsFinishFormOrChange": [],
+        "settingsSecretsBackupNote": [],
+        "settingsSecretsRestoreNote": [],
+        "settingsSecretsUnlockBeforeRestore": [],
+        "settingsSecretsRecoveryFiles": [],
+        "settingsSecretsNotRequested": [],
+        "settingsSharingInstallIdNote": ["place"],
+        "settingsSharingDiagnosticsSent": ["destination", "summary"],
+        "settingsSharingDiagnosticsNowhere": ["summary"],
+        "settingsSharingContributionDescription": [],
+        "settingsSharingHeading": [],
+        "settingsSharingDiagnostics": [],
+        "settingsSharingContribution": [],
+        "settingsSharingWhatWouldLeave": ["place"],
+        "settingsSharingTerms": [],
+        "settingsSharingReading": [],
+        "settingsSharingDiagnosticsWaiting": [],
+        "settingsSharingDiagnosticsSentTitle": [],
+        "settingsSharingRecordsWaitingNewest": ["shown", "total"],
+        "settingsSharingRecordsWaiting": [],
+        "settingsSharingNoRecords": [],
+        "settingsSharingInstallId": [],
+        "settingsSharingNoInstallId": [],
+        "settingsSharingCatalog": [],
+        "settingsSharingCatalogNote": [],
+        "settingsSharingAskTitle": [],
+        "settingsSharingAskBody": [],
+        "settingsSharingAskNotNow": [],
+        "settingsSharingAskContribute": [],
+        "settingsGeneralCustomApi": [],
+        "settingsGeneralModelByNameLabel": [],
+        "settingsGeneralFirstMateModel": [],
+        "settingsGeneralFirstMateModelAccount": [],
+        "settingsGeneralModelAuto": [],
+        "settingsGeneralModelStranded": ["model"],
+        "settingsGeneralModelByName": [],
+        "settingsGeneralModelAccountDescription": ["provider"],
+        "settingsGeneralModelDescription": [],
+        "settingsGeneralDictation": [],
+        "settingsGeneralDictationPicking": ["choices", "key"],
+        "settingsGeneralDictationDescription": ["place"],
+        "settingsGeneralDictationKey": [],
+        "settingsGeneralDictationRight": [],
+        "settingsGeneralHeading": [],
+        "settingsGeneralStartAtLogin": [],
+        "settingsGeneralStartAtLoginDescription": [],
+        "settingsGeneralShowInDock": [],
+        "settingsGeneralShowInDockDescription": [],
+        "settingsGeneralNotify": [],
+        "settingsGeneralNotifyDescription": [],
+        "settingsGeneralPurge": [],
+        "settingsGeneralPurgeDescriptionKnowledge": [],
+        "settingsGeneralPurgeDescription": [],
+        "settingsGeneralPurging": [],
+        "settingsGeneralPurgeConfirm": [],
+        "settingsGeneralPurgeButton": [],
+        "settingsAppearanceSizeDescription": [],
+        "settingsAppearanceSizeDescriptionKeys": ["larger", "smaller"],
+        "settingsAppearanceSizeDescriptionKey": ["key"],
+        "settingsAppearanceHeading": [],
+        "settingsAppearanceOwnLook": ["computer", "place"],
+        "settingsAppearanceSize": [],
+        "settingsAppearanceCardSize": [],
+        "settingsAppearanceCardSizeDescription": [],
+        "settingsAppearanceCardUsual": [],
+        "settingsAppearanceCardWide": [],
+        "settingsAppearanceCardFull": [],
+        "settingsAppearanceCardMaximized": [],
+        "settingsAppearanceKeepMaximized": [],
+        "settingsAppearanceKeepMaximizedDescription": [],
+        "settingsAppearanceTheme": [],
+        "settingsAppearanceThemeDescription": [],
+        "settingsAppearanceThemeDark": [],
+        "settingsAppearanceThemeLight": [],
+        "settingsAppearanceWash": [],
+        "settingsAppearanceWashDescription": [],
+        "settingsAppearanceWashValue": ["percent"],
+        "settingsAppearanceCrewModelNames": [],
+        "settingsAppearanceCrewModelNamesDescription": [],
+        "settingsIntegrationsActionCount": ["count"],
+        "settingsIntegrationsAs": ["account"],
+        "settingsIntegrationsPaused": [],
+        "settingsIntegrationsSignedIn": [],
+        "settingsIntegrationsUnreachable": [],
+        "settingsIntegrationsRowExpanded": ["name"],
+        "settingsIntegrationsRowCollapsed": ["name"],
+        "settingsIntegrationsCheckNow": [],
+        "settingsIntegrationsStarting": [],
+        "settingsIntegrationsSignInAgain": [],
+        "settingsIntegrationsActionsLabel": ["name"],
+        "settingsIntegrationsResume": [],
+        "settingsIntegrationsPause": [],
+        "settingsIntegrationsPauseDetail": [],
+        "settingsIntegrationsSignOutRemove": [],
+        "settingsIntegrationsRuleNote": [],
+        "settingsIntegrationsRuleOff": [],
+        "settingsIntegrationsCopying": [],
     ]
 
     /// The fill whose count picks each plural message's form.
@@ -1529,5 +1939,7 @@ extension PhoneWords {
         "cardRevisedPartsRemoved": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",
+        "settingsGeneralTasksPurged": "count",
+        "settingsIntegrationsActionCount": "count",
     ]
 }

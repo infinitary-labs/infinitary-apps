@@ -94,7 +94,7 @@ export function firstmateModelKey(model: PiModelRefView): string {
 /** Provider catalog name and model id; never the raw provider id. */
 export function firstmateModelOptionLabel(model: PiModelRefView): string {
   const name = isCustomApiProvider(model.provider)
-    ? "Custom API"
+    ? m.settingsGeneralCustomApi()
     : (catalogEntry(model.provider)?.name ?? model.provider);
   return `${name} · ${model.id}`;
 }
@@ -203,7 +203,8 @@ export function FirstmateModelSelect({
         <Input
           mono
           autoFocus
-          aria-label="First mate model by name"
+          aria-label={m.settingsGeneralModelByNameLabel()}
+          // i18n-exempt: a code sample of a model key
           placeholder="provider/model-id"
           list="fm-firstmate-by-name"
           value={draft}
@@ -239,7 +240,7 @@ export function FirstmateModelSelect({
   }
   return (
     <select
-      aria-label="First mate model"
+      aria-label={m.settingsGeneralFirstMateModel()}
       disabled={disabled}
       value={chosen ? firstmateModelKey(chosen) : ""}
       onChange={(event) => {
@@ -251,10 +252,10 @@ export function FirstmateModelSelect({
       }}
       style={FIRSTMATE_SELECT_STYLE}
     >
-      <option value="">Auto (from subscriptions)</option>
+      <option value="">{m.settingsGeneralModelAuto()}</option>
       {stranded && chosen && !namedPin ? (
         <option value={firstmateModelKey(chosen)}>
-          {firstmateModelOptionLabel(chosen)} — cannot run your first mate
+          {m.settingsGeneralModelStranded({ model: firstmateModelOptionLabel(chosen) })}
         </option>
       ) : null}
       {namedPin && chosen ? (
@@ -268,7 +269,9 @@ export function FirstmateModelSelect({
           {firstmateModelOptionLabel(model)}
         </option>
       ))}
-      {nameable.length > 0 ? <option value={BY_NAME_VALUE}>Another model by name…</option> : null}
+      {nameable.length > 0 ? (
+        <option value={BY_NAME_VALUE}>{m.settingsGeneralModelByName()}</option>
+      ) : null}
     </select>
   );
 }
@@ -287,8 +290,8 @@ export type FirstmateAccountSlot = {
 /** What the Firstmate model row says, with or without the account beside it. */
 export function firstmateSeatDescription(providerName?: string): string {
   return providerName
-    ? `The model your first mate itself answers with, and the ${providerName} account it answers on; crew work keeps its own preferred account. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.`
-    : "The model your first mate itself answers with. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.";
+    ? m.settingsGeneralModelAccountDescription({ provider: providerName })
+    : m.settingsGeneralModelDescription();
 }
 
 /**
@@ -352,7 +355,7 @@ export function FirstmateModelRow({ account }: { account?: FirstmateAccountSlot 
   return (
     <SettingRow
       id="firstmate-model"
-      title={account ? "First mate model and account" : "First mate model"}
+      title={account ? m.settingsGeneralFirstMateModelAccount() : m.settingsGeneralFirstMateModel()}
       description={firstmateSeatDescription(account?.providerName)}
       error={error || null}
       control={
@@ -417,12 +420,15 @@ function DictationRow() {
   return (
     <SettingRow
       id="dictation"
-      title="Dictation"
+      title={m.settingsGeneralDictation()}
       error={save.error}
       description={
         picking
-          ? `Press ${dictationKeyChoices(desktop.keys)} to hold for dictation. Esc keeps ${dictationKeyLabel(key, desktop.keys)}.`
-          : `Press or hold the key to talk instead of typing, transcribed on ${HERE.this}. Off leaves the key and the microphone to other apps.`
+          ? m.settingsGeneralDictationPicking({
+              choices: dictationKeyChoices(desktop.keys),
+              key: dictationKeyLabel(key, desktop.keys),
+            })
+          : m.settingsGeneralDictationDescription({ place: HERE.this })
       }
       control={
         <div
@@ -431,7 +437,7 @@ function DictationRow() {
           <Button
             variant="secondary"
             size="sm"
-            aria-label="Dictation key"
+            aria-label={m.settingsGeneralDictationKey()}
             disabled={!dictation?.enabled || save.saving}
             onClick={() => useShellStore.setState({ pickingDictationKey: true })}
           >
@@ -439,12 +445,13 @@ function DictationRow() {
               DICTATION_KEY_PICKING
             ) : (
               <>
-                right <KeyCap size="sm">{dictationKeyCap(key, desktop.keys)}</KeyCap>
+                {m.settingsGeneralDictationRight()}{" "}
+                <KeyCap size="sm">{dictationKeyCap(key, desktop.keys)}</KeyCap>
               </>
             )}
           </Button>
           <Switch
-            aria-label="Dictation"
+            aria-label={m.settingsGeneralDictation()}
             checked={dictation?.enabled ?? true}
             disabled={!dictation || save.saving}
             onChange={(enabled) => dictation && write({ ...dictation, enabled })}
@@ -581,15 +588,17 @@ export function GeneralTab() {
 
   return (
     <div>
-      <SectionLabel>General</SectionLabel>
+      <SectionLabel>{m.settingsGeneralHeading()}</SectionLabel>
       <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
         {!remote && (
           <SettingRow
             id="start-at-login"
             error={presenceField === "startAtLogin" ? presenceSave.error : null}
-            title="Start at login"
+            title={m.settingsGeneralStartAtLogin()}
             description={
-              byCommand ? m.settingsCommandStartAtLogin() : "Launch Infinitary when you sign in."
+              byCommand
+                ? m.settingsCommandStartAtLogin()
+                : m.settingsGeneralStartAtLoginDescription()
             }
             control={
               <Switch
@@ -607,8 +616,8 @@ export function GeneralTab() {
           <SettingRow
             id="show-in-dock"
             error={presenceField === "showInDock" ? presenceSave.error : null}
-            title="Show in dock"
-            description="Off hides the dock icon while the window stays."
+            title={m.settingsGeneralShowInDock()}
+            description={m.settingsGeneralShowInDockDescription()}
             control={
               <Switch
                 checked={presence?.showInDock ?? true}
@@ -623,8 +632,8 @@ export function GeneralTab() {
         <SettingRow
           id="notifications"
           error={notificationSave.error}
-          title="Notify me when my first mate needs me"
-          description="A quiet notification for decisions and reports while the window is in the background."
+          title={m.settingsGeneralNotify()}
+          description={m.settingsGeneralNotifyDescription()}
           control={
             <Switch
               checked={notifications ?? true}
@@ -638,12 +647,12 @@ export function GeneralTab() {
         {!remote && <YourPanelsRow />}
         <SettingRow
           id="purge-task-data"
-          title="Purge task data"
+          title={m.settingsGeneralPurge()}
           description={
             purgedNote ??
             (purgesKnowledge
-              ? "Removes every task, with its working copy, its notes and its cards, and all the knowledge the crew recorded."
-              : "Removes every task, with its working copy, its notes and its cards.")
+              ? m.settingsGeneralPurgeDescriptionKnowledge()
+              : m.settingsGeneralPurgeDescription())
           }
           control={
             <Button
@@ -651,9 +660,9 @@ export function GeneralTab() {
               size="sm"
               onClick={purge}
               pending={purging}
-              pendingLabel="Purging..."
+              pendingLabel={m.settingsGeneralPurging()}
             >
-              {purgeArmed ? "Confirm purge" : "Purge"}
+              {purgeArmed ? m.settingsGeneralPurgeConfirm() : m.settingsGeneralPurgeButton()}
             </Button>
           }
         />

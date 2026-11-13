@@ -151,7 +151,7 @@ export function KeyboardTab() {
       .catch((caught: unknown) => {
         setError({
           at,
-          text: caught instanceof Error ? caught.message : "Could not save these keys.",
+          text: caught instanceof Error ? caught.message : m.settingsKeyboardSaveFailed(),
         });
       })
       .finally(() => setSaving(false));
@@ -267,7 +267,7 @@ export function KeyboardTab() {
 
   return (
     <div data-keyboard-settings="">
-      <SectionLabel>Keyboard</SectionLabel>
+      <SectionLabel>{m.settingsKeyboardHeading()}</SectionLabel>
       <div style={{ marginBottom: ROW_GAP }}>
         <SettingRow
           id="keyboard-preset"
@@ -322,8 +322,8 @@ export function KeyboardTab() {
       >
         <div data-keyboard-search="" style={{ flex: 1, minWidth: 0 }}>
           <Input
-            aria-label="Search keys"
-            placeholder="Search keys"
+            aria-label={m.settingsKeyboardSearch()}
+            placeholder={m.settingsKeyboardSearch()}
             autoComplete="off"
             spellCheck={false}
             value={query}
@@ -345,7 +345,7 @@ export function KeyboardTab() {
           }}
           onBlur={() => setResetArmed(false)}
         >
-          {resetArmed ? "Confirm reset" : "Reset all keys"}
+          {resetArmed ? m.settingsKeyboardResetAllConfirm() : m.settingsKeyboardResetAll()}
         </Button>
       </div>
       {snapshot.unreadable && (
@@ -353,8 +353,7 @@ export function KeyboardTab() {
           data-keyboard-unreadable=""
           style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-sm)", color: "var(--warn)" }}
         >
-          Your saved keys could not be read, so Infinitary's own keys are in use. Changing a key
-          saves over them.
+          {m.settingsKeyboardUnreadable()}
         </p>
       )}
       {error?.at === "all" && <SettingError error={error.text} surface="keyboard" />}
@@ -412,7 +411,7 @@ export function KeyboardTab() {
           <li
             style={{ ...ROW, borderTop: "none", color: "var(--fg-3)", fontSize: "var(--text-sm)" }}
           >
-            No command matches
+            {m.settingsKeyboardNoMatch()}
           </li>
         )}
       </ul>
@@ -431,8 +430,7 @@ export function KeyboardTab() {
                   {id}
                 </div>
                 <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-                  Not in this version of Infinitary. Its keys stay saved for the version that has
-                  it, and run nothing here.
+                  {m.settingsKeyboardUnknownCommand()}
                 </div>
               </div>
               <Keys keys={snapshot.saved.keys[id] ?? []} />
@@ -505,7 +503,7 @@ function CommandRow({
           <span style={{ fontSize: "var(--text-base)", color: "var(--fg-1)", fontWeight: 500 }}>
             {label}
           </span>
-          {changed && <Badge>Changed</Badge>}
+          {changed && <Badge>{m.settingsKeyboardChanged()}</Badge>}
         </div>
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
           {whereOf(id, snapshot.panels)}
@@ -528,30 +526,30 @@ function CommandRow({
         <Button
           variant="secondary"
           size="sm"
-          aria-label={`Record a key for ${label}`}
+          aria-label={m.settingsKeyboardRecordLabel({ command: label })}
           aria-pressed={recording !== null}
           disabled={busy}
           onClick={recording ? onCancel : onRecord}
         >
-          Record
+          {m.settingsKeyboardRecord()}
         </Button>
         <Button
           variant="ghost"
           size="sm"
-          aria-label={`Remove the keys of ${label}`}
+          aria-label={m.settingsKeyboardRemoveLabel({ command: label })}
           disabled={busy || keys.length === 0}
           onClick={onRemove}
         >
-          Remove
+          {m.settingsKeyboardRemove()}
         </Button>
         <Button
           variant="ghost"
           size="sm"
-          aria-label={`Reset ${label} to its own keys`}
+          aria-label={m.settingsKeyboardResetLabel({ command: label })}
           disabled={busy || !changed}
           onClick={onReset}
         >
-          Reset
+          {m.settingsKeyboardReset()}
         </Button>
       </div>
       {recording && (
@@ -581,7 +579,7 @@ function Keys({ keys, place }: { keys: readonly KeyBinding[]; place?: PlaceContr
   if (keys.length === 0)
     return (
       <span data-keyboard-keys="" style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-        No key
+        {m.settingsKeyboardNoKey()}
       </span>
     );
   return (
@@ -602,7 +600,10 @@ function Keys({ keys, place }: { keys: readonly KeyBinding[]; place?: PlaceContr
           <BindingCaps binding={binding} />
           {place && (binding.meta || binding.ctrl || binding.alt || /^F\d+$/.test(binding.key)) && (
             <select
-              aria-label={`Where ${bindingLabel(binding, thisDesktop().keys)} for ${place.label} works`}
+              aria-label={m.settingsKeyboardWhereLabel({
+                key: bindingLabel(binding, thisDesktop().keys),
+                command: place.label,
+              })}
               value={binding.when ?? "anywhere"}
               disabled={place.busy}
               onChange={(event) =>
@@ -621,8 +622,8 @@ function Keys({ keys, place }: { keys: readonly KeyBinding[]; place?: PlaceContr
                 padding: "var(--space-1)",
               }}
             >
-              <option value="anywhere">Anywhere</option>
-              <option value="not-typing">When not typing</option>
+              <option value="anywhere">{m.settingsKeyboardAnywhere()}</option>
+              <option value="not-typing">{m.settingsKeyboardNotTyping()}</option>
             </select>
           )}
         </span>
@@ -641,7 +642,9 @@ function BindingCaps({ binding }: { binding: KeyBinding }) {
       <KeyCap>{chordLabel(binding, keys)}</KeyCap>
       {binding.second && <KeyCap>{chordLabel(binding.second, keys)}</KeyCap>}
       {binding.when === "not-typing" && (
-        <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>When not typing</span>
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
+          {m.settingsKeyboardNotTyping()}
+        </span>
       )}
     </span>
   );
@@ -676,29 +679,26 @@ function Recorder({
   const verdict = recorderVerdict(id, keys, bindings, panels, system, prefix);
   const words =
     verdict.kind === "empty"
-      ? "Press the keys you want."
+      ? m.settingsKeyboardPress()
       : verdict.kind === "refused"
         ? verdict.reason
         : verdict.kind === "own"
-          ? "That is already its key."
+          ? m.settingsKeyboardOwn()
           : verdict.kind === "moves"
             ? verdict.words
-            : "No other command uses it.";
+            : m.settingsKeyboardFree();
   const canSave = verdict.kind === "free" || verdict.kind === "moves" || verdict.kind === "own";
   const canAdd = verdict.kind === "free" || verdict.kind === "moves";
   const warning = keys && canSave ? bindingWarning(keys, id, panels, system, typed) : null;
-  const hint = [
-    "Enter saves",
-    `${system === "mac" ? "⇧Enter" : "Shift+Enter"} adds it beside the other keys`,
-    "Esc cancels",
-    ...(takesSecondKey(id, keys, panels, system, prefix)
-      ? ["Another key now makes it two keys"]
-      : []),
-  ].join(" · ");
+  // i18n-exempt: key names
+  const addKey = system === "mac" ? "⇧Enter" : "Shift+Enter";
+  const hint = takesSecondKey(id, keys, panels, system, prefix)
+    ? m.settingsKeyboardRecorderKeysSecond({ addKey })
+    : m.settingsKeyboardRecorderKeys({ addKey });
   return (
     <fieldset
       data-keyboard-recorder=""
-      aria-label={`Recording a key for ${labelOf(id, panels)}`}
+      aria-label={m.settingsKeyboardRecordingLabel({ command: labelOf(id, panels) })}
       style={{
         margin: 0,
         minWidth: 0,
@@ -716,7 +716,9 @@ function Recorder({
         {keys ? (
           <BindingCaps binding={keys} />
         ) : (
-          <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>Recording…</span>
+          <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
+            {m.settingsKeyboardRecordingWait()}
+          </span>
         )}
       </div>
       <div
@@ -744,10 +746,10 @@ function Recorder({
           size="sm"
           disabled={!canSave || busy}
           pending={busy}
-          pendingLabel="Saving..."
+          pendingLabel={m.settingsKeyboardSaving()}
           onClick={() => onSave("replace")}
         >
-          Save
+          {m.settingsKeyboardSave()}
         </Button>
         <Button
           variant="secondary"
@@ -755,10 +757,10 @@ function Recorder({
           disabled={!canAdd || busy}
           onClick={() => onSave("add")}
         >
-          Add beside the others
+          {m.settingsKeyboardAddBeside()}
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {m.settingsKeyboardCancel()}
         </Button>
       </div>
     </fieldset>

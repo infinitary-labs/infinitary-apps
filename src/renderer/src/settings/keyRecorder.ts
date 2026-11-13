@@ -131,9 +131,10 @@ export function recorderVerdict(
     .map((clash) => {
       const left = keysOf(bindings, clash.id).filter((kept) => !sameBinding(kept, clash.binding));
       const label = commandEntry(clash.id, panels)?.label ?? clash.id;
-      return `${clashWords(id, clash, panels, system)}. Saving moves it here, and “${label}” ${
-        left.length === 0 ? "will have no key" : "keeps its other keys"
-      }.`;
+      const words = { clash: clashWords(id, clash, panels, system), command: label };
+      return left.length === 0
+        ? m.settingsKeyboardClashMovesNoKey(words)
+        : m.settingsKeyboardClashMovesKeeps(words);
     })
     .join(" ");
   return { kind: "moves", clashes, words };

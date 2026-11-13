@@ -1,8 +1,10 @@
+import * as m from "@shared/i18n/messages.generated";
+
 /** Settings → General's words (`GeneralTab.tsx`). */
 
 /** What the purge row says once a purge went through: how many tasks it removed. */
 export function purgedTasksText(count: number): string {
-  return count === 1 ? "1 task purged." : `${count} tasks purged.`;
+  return m.settingsGeneralTasksPurged({ count });
 }
 
 /**
@@ -10,8 +12,13 @@ export function purgedTasksText(count: number): string {
  * captain's panels may run, and why they are off after a safe-mode boot.
  */
 export const YOUR_PANELS_WORDS = {
-  title: "Your panels",
-  on: "The panels your first mate built for you and the ones you added. Off takes them all down until you turn them back on.",
-  safeMode:
-    "Turned off after the app closed twice just after starting. Turn them back on when you are ready.",
+  get title() {
+    return m.settingsGeneralYourPanels();
+  },
+  get on() {
+    return m.settingsGeneralYourPanelsOn();
+  },
+  get safeMode() {
+    return m.settingsGeneralYourPanelsSafeMode();
+  },
 } as const;

@@ -22,9 +22,9 @@ describe("the required tsrs check", () => {
 
   it("checks a referenced real module through fresh, broken, repaired and changed-import builds", () => {
     const cwd = scratchDir("infinitary-typecheck-");
-    const source = join(cwd, "generalWords.ts");
-    const original = readFileSync(join(root, "src/renderer/src/settings/generalWords.ts"), "utf8");
-    copyFileSync(join(root, "src/renderer/src/settings/generalWords.ts"), source);
+    const source = join(cwd, "runbookWords.ts");
+    const original = readFileSync(join(root, "src/core/runbooks/words.ts"), "utf8");
+    copyFileSync(join(root, "src/core/runbooks/words.ts"), source);
     writeFileSync(
       join(cwd, "tsconfig.json"),
       JSON.stringify({ files: [], references: [{ path: "./tsconfig.words.json" }] }),
@@ -55,21 +55,33 @@ describe("the required tsrs check", () => {
     };
     clean();
     clean();
-    writeFileSync(source, original.replace('"1 task purged."', "count"));
-    broken("generalWords.ts", "TS2322");
-    broken("generalWords.ts", "TS2322");
+    writeFileSync(source, original.replace("`Add ${name}?`", "name.length"));
+    broken("runbookWords.ts", "TS2322");
+    broken("runbookWords.ts", "TS2322");
     writeFileSync(source, original);
     clean();
     const consumer = join(cwd, "consumer.ts");
     writeFileSync(
       consumer,
-      'import { purgedTasksText } from "./generalWords";\nexport const text: string = purgedTasksText(1);\n',
+      'import { runbookConsentTitle } from "./runbookWords";\nexport const text: string = runbookConsentTitle("a runbook");\n',
     );
     clean();
-    writeFileSync(source, original.replace("count: number", "count: string | number"));
+    writeFileSync(
+      source,
+      original.replace(
+        "runbookConsentTitle(name: string)",
+        "runbookConsentTitle(name: string | number)",
+      ),
+    );
     clean();
     // A changed imported return type must invalidate the already-checked consumer.
-    writeFileSync(source, original.replace("): string", "): string | undefined"));
+    writeFileSync(
+      source,
+      original.replace(
+        "runbookConsentTitle(name: string): string",
+        "runbookConsentTitle(name: string): string | undefined",
+      ),
+    );
     broken("consumer.ts", "TS2322");
     rmSync(source);
     broken("consumer.ts", "TS2307");

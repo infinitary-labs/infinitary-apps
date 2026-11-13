@@ -21479,7 +21479,7 @@ export function settingsKeyboardPrefixRecordLabel(): string {
     case "es":
       return `Grabar una tecla para el prefijo`;
     case "fr":
-      return `Enregistrer une touche pour le préfixe`;
+      return `Capturer une touche pour le préfixe`;
     case "ja":
       return `プレフィックスのキーを記録`;
     case "ko":
@@ -21507,7 +21507,7 @@ export function settingsKeyboardPrefixRecord(): string {
     case "es":
       return `Grabar`;
     case "fr":
-      return `Enregistrer`;
+      return `Capturer`;
     case "ja":
       return `記録`;
     case "ko":
@@ -21591,7 +21591,7 @@ export function settingsKeyboardPrefixRecording(): string {
     case "es":
       return `Grabando una tecla para el prefijo`;
     case "fr":
-      return `Enregistrement d'une touche pour le préfixe`;
+      return `Capture d’une touche pour le préfixe`;
     case "ja":
       return `プレフィックスのキーを記録中`;
     case "ko":
@@ -21619,7 +21619,7 @@ export function settingsKeyboardPrefixRecordingWait(): string {
     case "es":
       return `Grabando…`;
     case "fr":
-      return `Enregistrement…`;
+      return `Capture…`;
     case "ja":
       return `記録中…`;
     case "ko":
@@ -22337,6 +22337,5933 @@ export function settingsWebsiteSignInsStorage(): string {
       return `\u202eThey stay on this computer in their own storage, not in protected storage.\u202c`;
   }
   return `They stay on this computer in their own storage, not in protected storage.`;
+}
+
+export function settingsKeyboardSaveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر حفظ هذه المفاتيح.`;
+    case "de":
+      return `Diese Tasten konnten nicht gespeichert werden.`;
+    case "es":
+      return `No se pudieron guardar estas teclas.`;
+    case "fr":
+      return `Impossible d’enregistrer ces raccourcis.`;
+    case "ja":
+      return `これらのキーを保存できませんでした。`;
+    case "ko":
+      return `이 키를 저장할 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível salvar estas teclas.`;
+    case "zh-Hans":
+      return `无法保存这些按键。`;
+    case "zh-Hant":
+      return `無法儲存這些按鍵。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ šáṽé ţĥéšé ķéýš. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not save these keys.\u202c`;
+  }
+  return `Could not save these keys.`;
+}
+
+export function settingsKeyboardHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لوحة المفاتيح`;
+    case "de":
+      return `Tastatur`;
+    case "es":
+      return `Teclado`;
+    case "fr":
+      return `Clavier`;
+    case "ja":
+      return `キーボード`;
+    case "ko":
+      return `키보드`;
+    case "pt-BR":
+      return `Teclado`;
+    case "zh-Hans":
+      return `键盘`;
+    case "zh-Hant":
+      return `鍵盤`;
+    case "en-XA":
+      return `[Ķéýƀöáŕð ~~~]`;
+    case "ar-XB":
+      return `\u202eKeyboard\u202c`;
+  }
+  return `Keyboard`;
+}
+
+export function settingsKeyboardSearch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البحث في المفاتيح`;
+    case "de":
+      return `Tasten suchen`;
+    case "es":
+      return `Buscar teclas`;
+    case "fr":
+      return `Rechercher des raccourcis`;
+    case "ja":
+      return `キーを検索`;
+    case "ko":
+      return `키 검색`;
+    case "pt-BR":
+      return `Buscar teclas`;
+    case "zh-Hans":
+      return `搜索按键`;
+    case "zh-Hant":
+      return `搜尋按鍵`;
+    case "en-XA":
+      return `[Šéáŕçĥ ķéýš ~~~~]`;
+    case "ar-XB":
+      return `\u202eSearch keys\u202c`;
+  }
+  return `Search keys`;
+}
+
+export function settingsKeyboardResetAll(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة تعيين كل المفاتيح`;
+    case "de":
+      return `Alle Tasten zurücksetzen`;
+    case "es":
+      return `Restablecer todas las teclas`;
+    case "fr":
+      return `Réinitialiser tous les raccourcis`;
+    case "ja":
+      return `すべてのキーをリセット`;
+    case "ko":
+      return `모든 키 재설정`;
+    case "pt-BR":
+      return `Redefinir todas as teclas`;
+    case "zh-Hans":
+      return `重置所有按键`;
+    case "zh-Hant":
+      return `重設所有按鍵`;
+    case "en-XA":
+      return `[Ŕéšéţ áļļ ķéýš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset all keys\u202c`;
+  }
+  return `Reset all keys`;
+}
+
+export function settingsKeyboardResetAllConfirm(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تأكيد إعادة التعيين`;
+    case "de":
+      return `Zurücksetzen bestätigen`;
+    case "es":
+      return `Confirmar el restablecimiento`;
+    case "fr":
+      return `Confirmer la réinitialisation`;
+    case "ja":
+      return `リセットを確定`;
+    case "ko":
+      return `재설정 확인`;
+    case "pt-BR":
+      return `Confirmar redefinição`;
+    case "zh-Hans":
+      return `确认重置`;
+    case "zh-Hant":
+      return `確認重設`;
+    case "en-XA":
+      return `[Çöñƒîŕɱ ŕéšéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConfirm reset\u202c`;
+  }
+  return `Confirm reset`;
+}
+
+export function settingsKeyboardUnreadable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة مفاتيحك المحفوظة، لذا تُستخدم مفاتيح Infinitary الأصلية. تغيير أي مفتاح يحفظ فوقها.`;
+    case "de":
+      return `Deine gespeicherten Tasten ließen sich nicht lesen, deshalb gelten die Tasten von Infinitary. Änderst du eine Taste, werden sie überschrieben.`;
+    case "es":
+      return `No se pudieron leer tus teclas guardadas, así que se usan las teclas propias de Infinitary. Cambiar una tecla las sobrescribe.`;
+    case "fr":
+      return `Vos raccourcis enregistrés n’ont pas pu être lus, donc ceux d’Infinitary sont utilisés. Modifier un raccourci les remplace.`;
+    case "ja":
+      return `保存したキーを読み取れなかったため、Infinitary 本来のキーを使っています。キーを変更すると、保存内容が上書きされます。`;
+    case "ko":
+      return `저장한 키를 읽을 수 없어서 Infinitary의 기본 키를 쓰고 있어요. 키를 바꾸면 그 위에 새로 저장돼요.`;
+    case "pt-BR":
+      return `Não foi possível ler suas teclas salvas, então as teclas do próprio Infinitary estão em uso. Mudar uma tecla grava por cima delas.`;
+    case "zh-Hans":
+      return `无法读取你保存的按键，所以现在使用的是 Infinitary 自带的按键。更改任一按键都会覆盖它们。`;
+    case "zh-Hant":
+      return `無法讀取你儲存的按鍵，所以目前使用 Infinitary 本身的按鍵。變更任何一個按鍵，都會覆寫它們。`;
+    case "en-XA":
+      return `[Ýöûŕ šáṽéð ķéýš çöûļð ñöţ ƀé ŕéáð, šö Îñƒîñîţáŕý'š öŵñ ķéýš áŕé îñ ûšé. Çĥáñĝîñĝ á ķéý šáṽéš öṽéŕ ţĥéɱ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour saved keys could not be read, so Infinitary's own keys are in use. Changing a key saves over them.\u202c`;
+  }
+  return `Your saved keys could not be read, so Infinitary's own keys are in use. Changing a key saves over them.`;
+}
+
+export function settingsKeyboardNoMatch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يطابق أي أمر`;
+    case "de":
+      return `Kein Befehl passt`;
+    case "es":
+      return `Ningún comando coincide`;
+    case "fr":
+      return `Aucune commande ne correspond`;
+    case "ja":
+      return `一致するコマンドはありません`;
+    case "ko":
+      return `일치하는 명령이 없어요`;
+    case "pt-BR":
+      return `Nenhum comando corresponde`;
+    case "zh-Hans":
+      return `没有匹配的命令`;
+    case "zh-Hant":
+      return `沒有符合的指令`;
+    case "en-XA":
+      return `[Ñö çöɱɱáñð ɱáţçĥéš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo command matches\u202c`;
+  }
+  return `No command matches`;
+}
+
+export function settingsKeyboardUnknownCommand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير موجود في هذا الإصدار من Infinitary. تبقى مفاتيحه محفوظة للإصدار الذي يتضمنه، ولا تشغّل شيئًا هنا.`;
+    case "de":
+      return `Nicht in dieser Version von Infinitary. Seine Tasten bleiben für die Version gespeichert, die ihn kennt, und lösen hier nichts aus.`;
+    case "es":
+      return `No está en esta versión de Infinitary. Sus teclas siguen guardadas para la versión que lo tiene y aquí no ejecutan nada.`;
+    case "fr":
+      return `Absente de cette version d’Infinitary. Ses raccourcis restent enregistrés pour la version qui la contient, et n’exécutent rien ici.`;
+    case "ja":
+      return `このバージョンの Infinitary にはないコマンドです。キーは対応するバージョンのために保存されたままで、ここでは何も実行しません。`;
+    case "ko":
+      return `이 버전의 Infinitary에는 없는 명령이에요. 키는 이 명령이 있는 버전을 위해 저장된 채로 남고, 여기서는 아무것도 실행하지 않아요.`;
+    case "pt-BR":
+      return `Não está nesta versão do Infinitary. As teclas dele continuam salvas para a versão que o tem e não fazem nada aqui.`;
+    case "zh-Hans":
+      return `这个版本的 Infinitary 中没有此命令。它的按键会为有它的版本保留，在这里不会执行任何操作。`;
+    case "zh-Hant":
+      return `這個版本的 Infinitary 沒有這個指令。它的按鍵會為有它的版本保留，在這裡不會執行任何動作。`;
+    case "en-XA":
+      return `[Ñöţ îñ ţĥîš ṽéŕšîöñ öƒ Îñƒîñîţáŕý. Îţš ķéýš šţáý šáṽéð ƒöŕ ţĥé ṽéŕšîöñ ţĥáţ ĥáš îţ, áñð ŕûñ ñöţĥîñĝ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot in this version of Infinitary. Its keys stay saved for the version that has it, and run nothing here.\u202c`;
+  }
+  return `Not in this version of Infinitary. Its keys stay saved for the version that has it, and run nothing here.`;
+}
+
+export function settingsKeyboardChanged(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مُغيَّر`;
+    case "de":
+      return `Geändert`;
+    case "es":
+      return `Cambiado`;
+    case "fr":
+      return `Modifié`;
+    case "ja":
+      return `変更済み`;
+    case "ko":
+      return `변경됨`;
+    case "pt-BR":
+      return `Alterado`;
+    case "zh-Hans":
+      return `已更改`;
+    case "zh-Hant":
+      return `已變更`;
+    case "en-XA":
+      return `[Çĥáñĝéð ~~~]`;
+    case "ar-XB":
+      return `\u202eChanged\u202c`;
+  }
+  return `Changed`;
+}
+
+export function settingsKeyboardRecordLabel(input: { command: string }): string {
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل مفتاح لـ ${command}`;
+    case "de":
+      return `Eine Taste für ${command} aufnehmen`;
+    case "es":
+      return `Grabar una tecla para ${command}`;
+    case "fr":
+      return `Capturer une touche pour ${command}`;
+    case "ja":
+      return `${command} のキーを記録`;
+    case "ko":
+      return `${command}에 쓸 키 기록`;
+    case "pt-BR":
+      return `Gravar uma tecla para ${command}`;
+    case "zh-Hans":
+      return `为 ${command} 录制一个按键`;
+    case "zh-Hant":
+      return `為 ${command} 錄製一個按鍵`;
+    case "en-XA":
+      return `[Ŕéçöŕð á ķéý ƒöŕ ${command} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecord a key for \u202c${command}`;
+  }
+  return `Record a key for ${command}`;
+}
+
+export function settingsKeyboardRecord(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل`;
+    case "de":
+      return `Aufnehmen`;
+    case "es":
+      return `Grabar`;
+    case "fr":
+      return `Capturer`;
+    case "ja":
+      return `記録`;
+    case "ko":
+      return `기록`;
+    case "pt-BR":
+      return `Gravar`;
+    case "zh-Hans":
+      return `录制`;
+    case "zh-Hant":
+      return `錄製`;
+    case "en-XA":
+      return `[Ŕéçöŕð ~~]`;
+    case "ar-XB":
+      return `\u202eRecord\u202c`;
+  }
+  return `Record`;
+}
+
+export function settingsKeyboardRemoveLabel(input: { command: string }): string {
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة مفاتيح ${command}`;
+    case "de":
+      return `Die Tasten von ${command} entfernen`;
+    case "es":
+      return `Quitar las teclas de ${command}`;
+    case "fr":
+      return `Retirer les raccourcis de ${command}`;
+    case "ja":
+      return `${command} のキーを削除`;
+    case "ko":
+      return `${command}의 키 제거`;
+    case "pt-BR":
+      return `Remover as teclas de ${command}`;
+    case "zh-Hans":
+      return `移除 ${command} 的按键`;
+    case "zh-Hant":
+      return `移除 ${command} 的按鍵`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ţĥé ķéýš öƒ ${command} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove the keys of \u202c${command}`;
+  }
+  return `Remove the keys of ${command}`;
+}
+
+export function settingsKeyboardRemove(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة`;
+    case "de":
+      return `Entfernen`;
+    case "es":
+      return `Quitar`;
+    case "fr":
+      return `Retirer`;
+    case "ja":
+      return `削除`;
+    case "ko":
+      return `제거`;
+    case "pt-BR":
+      return `Remover`;
+    case "zh-Hans":
+      return `移除`;
+    case "zh-Hant":
+      return `移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ~~]`;
+    case "ar-XB":
+      return `\u202eRemove\u202c`;
+  }
+  return `Remove`;
+}
+
+export function settingsKeyboardResetLabel(input: { command: string }): string {
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة ${command} إلى مفاتيحه الأصلية`;
+    case "de":
+      return `${command} auf seine eigenen Tasten zurücksetzen`;
+    case "es":
+      return `Restablecer las teclas propias de ${command}`;
+    case "fr":
+      return `Rétablir les raccourcis d’origine de ${command}`;
+    case "ja":
+      return `${command} を元のキーに戻す`;
+    case "ko":
+      return `${command}의 키를 원래 키로 재설정`;
+    case "pt-BR":
+      return `Redefinir ${command} para as próprias teclas`;
+    case "zh-Hans":
+      return `将 ${command} 恢复为它自己的按键`;
+    case "zh-Hant":
+      return `將 ${command} 恢復為它自己的按鍵`;
+    case "en-XA":
+      return `[Ŕéšéţ ${command} ţö îţš öŵñ ķéýš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset \u202c${command}\u202e to its own keys\u202c`;
+  }
+  return `Reset ${command} to its own keys`;
+}
+
+export function settingsKeyboardReset(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة تعيين`;
+    case "de":
+      return `Zurücksetzen`;
+    case "es":
+      return `Restablecer`;
+    case "fr":
+      return `Réinitialiser`;
+    case "ja":
+      return `リセット`;
+    case "ko":
+      return `재설정`;
+    case "pt-BR":
+      return `Redefinir`;
+    case "zh-Hans":
+      return `重置`;
+    case "zh-Hant":
+      return `重設`;
+    case "en-XA":
+      return `[Ŕéšéţ ~~]`;
+    case "ar-XB":
+      return `\u202eReset\u202c`;
+  }
+  return `Reset`;
+}
+
+export function settingsKeyboardNoKey(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلا مفتاح`;
+    case "de":
+      return `Keine Taste`;
+    case "es":
+      return `Sin tecla`;
+    case "fr":
+      return `Aucun raccourci`;
+    case "ja":
+      return `キーなし`;
+    case "ko":
+      return `키 없음`;
+    case "pt-BR":
+      return `Sem tecla`;
+    case "zh-Hans":
+      return `无按键`;
+    case "zh-Hant":
+      return `沒有按鍵`;
+    case "en-XA":
+      return `[Ñö ķéý ~~]`;
+    case "ar-XB":
+      return `\u202eNo key\u202c`;
+  }
+  return `No key`;
+}
+
+export function settingsKeyboardWhereLabel(input: { command: string; key: string }): string {
+  const command = input.command;
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أين يعمل ${key} لـ ${command}`;
+    case "de":
+      return `Wo ${key} für ${command} wirkt`;
+    case "es":
+      return `Dónde funciona ${key} para ${command}`;
+    case "fr":
+      return `Où ${key} fonctionne pour ${command}`;
+    case "ja":
+      return `${command} の ${key} が使える場所`;
+    case "ko":
+      return `${command}의 ${key} 키가 작동하는 곳`;
+    case "pt-BR":
+      return `Onde ${key} funciona para ${command}`;
+    case "zh-Hans":
+      return `${command} 的 ${key} 在哪里生效`;
+    case "zh-Hant":
+      return `${command} 的 ${key} 在哪裡有效`;
+    case "en-XA":
+      return `[Ŵĥéŕé ${key} ƒöŕ ${command} ŵöŕķš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhere \u202c${key}\u202e for \u202c${command}\u202e works\u202c`;
+  }
+  return `Where ${key} for ${command} works`;
+}
+
+export function settingsKeyboardAnywhere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في أي مكان`;
+    case "de":
+      return `Überall`;
+    case "es":
+      return `En cualquier lugar`;
+    case "fr":
+      return `Partout`;
+    case "ja":
+      return `どこでも`;
+    case "ko":
+      return `어디서나`;
+    case "pt-BR":
+      return `Em qualquer lugar`;
+    case "zh-Hans":
+      return `任何地方`;
+    case "zh-Hant":
+      return `任何地方`;
+    case "en-XA":
+      return `[Åñýŵĥéŕé ~~~]`;
+    case "ar-XB":
+      return `\u202eAnywhere\u202c`;
+  }
+  return `Anywhere`;
+}
+
+export function settingsKeyboardNotTyping(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في غير أثناء الكتابة`;
+    case "de":
+      return `Außer beim Tippen`;
+    case "es":
+      return `Cuando no escribes`;
+    case "fr":
+      return `Hors saisie`;
+    case "ja":
+      return `入力中以外`;
+    case "ko":
+      return `입력 중이 아닐 때`;
+    case "pt-BR":
+      return `Quando não estiver digitando`;
+    case "zh-Hans":
+      return `不在打字时`;
+    case "zh-Hant":
+      return `沒在打字時`;
+    case "en-XA":
+      return `[Ŵĥéñ ñöţ ţýþîñĝ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhen not typing\u202c`;
+  }
+  return `When not typing`;
+}
+
+export function settingsKeyboardPress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اضغط المفاتيح التي تريدها.`;
+    case "de":
+      return `Drück die gewünschten Tasten.`;
+    case "es":
+      return `Presiona las teclas que quieras.`;
+    case "fr":
+      return `Appuyez sur les touches voulues.`;
+    case "ja":
+      return `使いたいキーを押してください。`;
+    case "ko":
+      return `원하는 키를 누르세요.`;
+    case "pt-BR":
+      return `Pressione as teclas que você quer.`;
+    case "zh-Hans":
+      return `按下你想要的按键。`;
+    case "zh-Hant":
+      return `按下你想要的按鍵。`;
+    case "en-XA":
+      return `[Þŕéšš ţĥé ķéýš ýöû ŵáñţ. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress the keys you want.\u202c`;
+  }
+  return `Press the keys you want.`;
+}
+
+export function settingsKeyboardOwn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا مفتاحه بالفعل.`;
+    case "de":
+      return `Das ist bereits seine Taste.`;
+    case "es":
+      return `Esa ya es su tecla.`;
+    case "fr":
+      return `C’est déjà son raccourci.`;
+    case "ja":
+      return `すでにこのコマンドのキーです。`;
+    case "ko":
+      return `이미 이 명령의 키예요.`;
+    case "pt-BR":
+      return `Essa já é a tecla dele.`;
+    case "zh-Hans":
+      return `这已经是它的按键。`;
+    case "zh-Hant":
+      return `這已經是它的按鍵。`;
+    case "en-XA":
+      return `[Ţĥáţ îš áļŕéáðý îţš ķéý. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThat is already its key.\u202c`;
+  }
+  return `That is already its key.`;
+}
+
+export function settingsKeyboardFree(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يستخدمه أي أمر آخر.`;
+    case "de":
+      return `Kein anderer Befehl nutzt sie.`;
+    case "es":
+      return `Ningún otro comando la usa.`;
+    case "fr":
+      return `Aucune autre commande ne l’utilise.`;
+    case "ja":
+      return `ほかのコマンドでは使われていません。`;
+    case "ko":
+      return `다른 명령이 쓰지 않는 키예요.`;
+    case "pt-BR":
+      return `Nenhum outro comando a usa.`;
+    case "zh-Hans":
+      return `没有其他命令使用它。`;
+    case "zh-Hant":
+      return `沒有其他指令使用它。`;
+    case "en-XA":
+      return `[Ñö öţĥéŕ çöɱɱáñð ûšéš îţ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo other command uses it.\u202c`;
+  }
+  return `No other command uses it.`;
+}
+
+export function settingsKeyboardRecorderKeys(input: { addKey: string }): string {
+  const addKey = input.addKey;
+  switch (currentLanguage()) {
+    case "ar":
+      return `Enter للحفظ · ${addKey} لإضافته بجانب المفاتيح الأخرى · Esc للإلغاء`;
+    case "de":
+      return `Enter speichert · ${addKey} fügt sie neben den anderen Tasten hinzu · Esc bricht ab`;
+    case "es":
+      return `Enter guarda · ${addKey} la agrega junto a las demás teclas · Esc cancela`;
+    case "fr":
+      return `Enter enregistre · ${addKey} l’ajoute à côté des autres raccourcis · Esc annule`;
+    case "ja":
+      return `Enter で保存 · ${addKey} でほかのキーに追加 · Esc でキャンセル`;
+    case "ko":
+      return `Enter 저장 · ${addKey} 다른 키 옆에 추가 · Esc 취소`;
+    case "pt-BR":
+      return `Enter salva · ${addKey} adiciona ao lado das outras teclas · Esc cancela`;
+    case "zh-Hans":
+      return `Enter 保存 · ${addKey} 添加到其他按键旁 · Esc 取消`;
+    case "zh-Hant":
+      return `Enter 儲存 · ${addKey} 加在其他按鍵旁 · Esc 取消`;
+    case "en-XA":
+      return `[Éñţéŕ šáṽéš · ${addKey} áððš îţ ƀéšîðé ţĥé öţĥéŕ ķéýš · Éšç çáñçéļš ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter saves · \u202c${addKey}\u202e adds it beside the other keys · Esc cancels\u202c`;
+  }
+  return `Enter saves · ${addKey} adds it beside the other keys · Esc cancels`;
+}
+
+export function settingsKeyboardRecorderKeysSecond(input: { addKey: string }): string {
+  const addKey = input.addKey;
+  switch (currentLanguage()) {
+    case "ar":
+      return `Enter للحفظ · ${addKey} لإضافته بجانب المفاتيح الأخرى · Esc للإلغاء · مفتاح آخر الآن يجعله مفتاحين متتاليين`;
+    case "de":
+      return `Enter speichert · ${addKey} fügt sie neben den anderen Tasten hinzu · Esc bricht ab · Eine weitere Taste jetzt macht daraus eine Folge aus zwei Tasten`;
+    case "es":
+      return `Enter guarda · ${addKey} la agrega junto a las demás teclas · Esc cancela · Otra tecla ahora forma una secuencia de dos teclas`;
+    case "fr":
+      return `Enter enregistre · ${addKey} l’ajoute à côté des autres raccourcis · Esc annule · Une autre touche maintenant en fait un raccourci à deux touches`;
+    case "ja":
+      return `Enter で保存 · ${addKey} でほかのキーに追加 · Esc でキャンセル · 続けて別のキーを押すと2つのキーの連続になります`;
+    case "ko":
+      return `Enter 저장 · ${addKey} 다른 키 옆에 추가 · Esc 취소 · 지금 다른 키를 누르면 두 키를 이어 누르는 키가 돼요`;
+    case "pt-BR":
+      return `Enter salva · ${addKey} adiciona ao lado das outras teclas · Esc cancela · Outra tecla agora forma uma sequência de duas teclas`;
+    case "zh-Hans":
+      return `Enter 保存 · ${addKey} 添加到其他按键旁 · Esc 取消 · 现在再按一个键会组成连续两个按键`;
+    case "zh-Hant":
+      return `Enter 儲存 · ${addKey} 加在其他按鍵旁 · Esc 取消 · 現在再按一個鍵，就會變成連續兩個按鍵`;
+    case "en-XA":
+      return `[Éñţéŕ šáṽéš · ${addKey} áððš îţ ƀéšîðé ţĥé öţĥéŕ ķéýš · Éšç çáñçéļš · Åñöţĥéŕ ķéý ñöŵ ɱáķéš îţ ţŵö ķéýš ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter saves · \u202c${addKey}\u202e adds it beside the other keys · Esc cancels · Another key now makes it two keys\u202c`;
+  }
+  return `Enter saves · ${addKey} adds it beside the other keys · Esc cancels · Another key now makes it two keys`;
+}
+
+export function settingsKeyboardRecordingLabel(input: { command: string }): string {
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ تسجيل مفتاح لـ ${command}`;
+    case "de":
+      return `Eine Taste für ${command} wird aufgenommen`;
+    case "es":
+      return `Grabando una tecla para ${command}`;
+    case "fr":
+      return `Capture d’une touche pour ${command}`;
+    case "ja":
+      return `${command} のキーを記録中`;
+    case "ko":
+      return `${command}에 쓸 키를 기록하는 중`;
+    case "pt-BR":
+      return `Gravando uma tecla para ${command}`;
+    case "zh-Hans":
+      return `正在为 ${command} 录制按键`;
+    case "zh-Hant":
+      return `正在為 ${command} 錄製按鍵`;
+    case "en-XA":
+      return `[Ŕéçöŕðîñĝ á ķéý ƒöŕ ${command} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecording a key for \u202c${command}`;
+  }
+  return `Recording a key for ${command}`;
+}
+
+export function settingsKeyboardRecordingWait(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ التسجيل…`;
+    case "de":
+      return `Wird aufgenommen …`;
+    case "es":
+      return `Grabando…`;
+    case "fr":
+      return `Capture…`;
+    case "ja":
+      return `記録中…`;
+    case "ko":
+      return `기록 중…`;
+    case "pt-BR":
+      return `Gravando…`;
+    case "zh-Hans":
+      return `正在录制…`;
+    case "zh-Hant":
+      return `錄製中…`;
+    case "en-XA":
+      return `[Ŕéçöŕðîñĝ… ~~~~]`;
+    case "ar-XB":
+      return `\u202eRecording…\u202c`;
+  }
+  return `Recording…`;
+}
+
+export function settingsKeyboardSaving(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الحفظ...`;
+    case "de":
+      return `Wird gespeichert ...`;
+    case "es":
+      return `Guardando...`;
+    case "fr":
+      return `Enregistrement...`;
+    case "ja":
+      return `保存中...`;
+    case "ko":
+      return `저장 중...`;
+    case "pt-BR":
+      return `Salvando...`;
+    case "zh-Hans":
+      return `正在保存...`;
+    case "zh-Hant":
+      return `儲存中…`;
+    case "en-XA":
+      return `[Šáṽîñĝ... ~~~]`;
+    case "ar-XB":
+      return `\u202eSaving...\u202c`;
+  }
+  return `Saving...`;
+}
+
+export function settingsKeyboardSave(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حفظ`;
+    case "de":
+      return `Speichern`;
+    case "es":
+      return `Guardar`;
+    case "fr":
+      return `Enregistrer`;
+    case "ja":
+      return `保存`;
+    case "ko":
+      return `저장`;
+    case "pt-BR":
+      return `Salvar`;
+    case "zh-Hans":
+      return `保存`;
+    case "zh-Hant":
+      return `儲存`;
+    case "en-XA":
+      return `[Šáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eSave\u202c`;
+  }
+  return `Save`;
+}
+
+export function settingsKeyboardAddBeside(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة بجانب المفاتيح الأخرى`;
+    case "de":
+      return `Neben den anderen hinzufügen`;
+    case "es":
+      return `Agregar junto a las demás`;
+    case "fr":
+      return `Ajouter à côté des autres`;
+    case "ja":
+      return `ほかのキーに追加`;
+    case "ko":
+      return `다른 키 옆에 추가`;
+    case "pt-BR":
+      return `Adicionar ao lado das outras`;
+    case "zh-Hans":
+      return `添加到其他按键旁`;
+    case "zh-Hant":
+      return `加在其他按鍵旁`;
+    case "en-XA":
+      return `[Åðð ƀéšîðé ţĥé öţĥéŕš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd beside the others\u202c`;
+  }
+  return `Add beside the others`;
+}
+
+export function settingsKeyboardCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsKeyboardClashMovesNoKey(input: { clash: string; command: string }): string {
+  const clash = input.clash;
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${clash}. الحفظ ينقله إلى هنا، ولن يبقى لـ «${command}» أي مفتاح.`;
+    case "de":
+      return `${clash}. Beim Speichern wandert sie hierher, und „${command}“ hat dann keine Taste mehr.`;
+    case "es":
+      return `${clash}. Al guardar, pasa aquí y «${command}» se queda sin tecla.`;
+    case "fr":
+      return `${clash}. L’enregistrement le déplace ici, et « ${command} » n’aura plus de raccourci.`;
+    case "ja":
+      return `${clash}。保存するとこちらに移り、「${command}」にはキーがなくなります。`;
+    case "ko":
+      return `${clash}. 저장하면 이 키가 여기로 옮겨지고, “${command}”에는 키가 없게 돼요.`;
+    case "pt-BR":
+      return `${clash}. Salvar move a tecla para cá, e “${command}” fica sem tecla.`;
+    case "zh-Hans":
+      return `${clash}。保存后它会移到这里，“${command}”将没有按键。`;
+    case "zh-Hant":
+      return `${clash}。儲存後它會移到這裡，「${command}」將沒有按鍵。`;
+    case "en-XA":
+      return `[${clash}. Šáṽîñĝ ɱöṽéš îţ ĥéŕé, áñð “${command}” ŵîļļ ĥáṽé ñö ķéý. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${clash}\u202e. Saving moves it here, and “\u202c${command}\u202e” will have no key.\u202c`;
+  }
+  return `${clash}. Saving moves it here, and “${command}” will have no key.`;
+}
+
+export function settingsKeyboardClashMovesKeeps(input: { clash: string; command: string }): string {
+  const clash = input.clash;
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${clash}. الحفظ ينقله إلى هنا، ويحتفظ «${command}» بمفاتيحه الأخرى.`;
+    case "de":
+      return `${clash}. Beim Speichern wandert sie hierher, und „${command}“ behält seine anderen Tasten.`;
+    case "es":
+      return `${clash}. Al guardar, pasa aquí y «${command}» conserva sus otras teclas.`;
+    case "fr":
+      return `${clash}. L’enregistrement le déplace ici, et « ${command} » garde ses autres raccourcis.`;
+    case "ja":
+      return `${clash}。保存するとこちらに移り、「${command}」はほかのキーをそのまま使います。`;
+    case "ko":
+      return `${clash}. 저장하면 이 키가 여기로 옮겨지고, “${command}”의 다른 키는 그대로 남아요.`;
+    case "pt-BR":
+      return `${clash}. Salvar move a tecla para cá, e “${command}” mantém as outras teclas.`;
+    case "zh-Hans":
+      return `${clash}。保存后它会移到这里，“${command}”会保留它的其他按键。`;
+    case "zh-Hant":
+      return `${clash}。儲存後它會移到這裡，「${command}」會保留它的其他按鍵。`;
+    case "en-XA":
+      return `[${clash}. Šáṽîñĝ ɱöṽéš îţ ĥéŕé, áñð “${command}” ķééþš îţš öţĥéŕ ķéýš. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${clash}\u202e. Saving moves it here, and “\u202c${command}\u202e” keeps its other keys.\u202c`;
+  }
+  return `${clash}. Saving moves it here, and “${command}” keeps its other keys.`;
+}
+
+export function settingsGeneralTasksPurged(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `مُحيت ${count} مهمة.`;
+        case "one":
+          return `مُحيت ${count} مهمة.`;
+        case "two":
+          return `مُحيت ${count} مهمتان.`;
+        case "few":
+          return `مُحيت ${count} مهام.`;
+        case "many":
+          return `مُحيت ${count} مهمةً.`;
+        default:
+          return `مُحيت ${count} مهمة.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Aufgabe endgültig gelöscht.`;
+        default:
+          return `${count} Aufgaben endgültig gelöscht.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} tarea eliminada.`;
+        case "many":
+          return `${count} de tareas eliminadas.`;
+        default:
+          return `${count} tareas eliminadas.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} tâche effacée.`;
+        case "many":
+          return `${count} tâches effacées.`;
+        default:
+          return `${count} tâches effacées.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件のタスクを消去しました。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `작업 ${count}개를 완전히 삭제했어요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} tarefa excluída.`;
+        case "many":
+          return `${count} tarefas excluídas.`;
+        default:
+          return `${count} tarefas excluídas.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `已清除 ${count} 个任务。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `已清除 ${count} 項任務。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ţášķ þûŕĝéð. ~~~~~]`;
+        default:
+          return `[${count} ţášķš þûŕĝéð. ~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e task purged.\u202c`;
+        default:
+          return `${count}\u202e tasks purged.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} task purged.`;
+    default:
+      return `${count} tasks purged.`;
+  }
+}
+
+export function settingsGeneralYourPanels(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لوحاتك`;
+    case "de":
+      return `Deine Panels`;
+    case "es":
+      return `Tus paneles`;
+    case "fr":
+      return `Vos panneaux`;
+    case "ja":
+      return `あなたのパネル`;
+    case "ko":
+      return `내 패널`;
+    case "pt-BR":
+      return `Seus painéis`;
+    case "zh-Hans":
+      return `你的面板`;
+    case "zh-Hant":
+      return `你的面板`;
+    case "en-XA":
+      return `[Ýöûŕ þáñéļš ~~~~]`;
+    case "ar-XB":
+      return `\u202eYour panels\u202c`;
+  }
+  return `Your panels`;
+}
+
+export function settingsGeneralYourPanelsOn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اللوحات التي صنعها لك نائب القبطان والتي أضفتها بنفسك. الإيقاف يزيلها كلها حتى تعيد تشغيلها.`;
+    case "de":
+      return `Die Panels, die dein erster Offizier für dich gebaut hat, und die, die du hinzugefügt hast. Aus blendet sie alle aus, bis du sie wieder einschaltest.`;
+    case "es":
+      return `Los paneles que tu primer oficial creó para ti y los que agregaste. Desactivado los quita todos hasta que vuelvas a activarlos.`;
+    case "fr":
+      return `Les panneaux que votre second a créés pour vous et ceux que vous avez ajoutés. Désactivé, ils sont tous retirés jusqu’à ce que vous les réactiviez.`;
+    case "ja":
+      return `一等航海士があなたのために作ったパネルと、あなたが追加したパネルです。オフにすると、オンに戻すまですべて取り下げられます。`;
+    case "ko":
+      return `일등항해사가 만들어 준 패널과 직접 추가한 패널이에요. 끄면 다시 켤 때까지 모두 내려가요.`;
+    case "pt-BR":
+      return `Os painéis que seu imediato criou para você e os que você adicionou. Desligado, todos saem até você ligá-los de novo.`;
+    case "zh-Hans":
+      return `你的大副为你制作的面板，以及你添加的面板。关闭后会把它们全部撤下，直到你重新打开。`;
+    case "zh-Hant":
+      return `你的大副為你製作的面板，以及你加入的面板。關閉後會把它們全部撤下，直到你重新開啟。`;
+    case "en-XA":
+      return `[Ţĥé þáñéļš ýöûŕ ƒîŕšţ ɱáţé ƀûîļţ ƒöŕ ýöû áñð ţĥé öñéš ýöû áððéð. Öƒƒ ţáķéš ţĥéɱ áļļ ðöŵñ ûñţîļ ýöû ţûŕñ ţĥéɱ ƀáçķ öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe panels your first mate built for you and the ones you added. Off takes them all down until you turn them back on.\u202c`;
+  }
+  return `The panels your first mate built for you and the ones you added. Off takes them all down until you turn them back on.`;
+}
+
+export function settingsGeneralYourPanelsSafeMode(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُوقفت بعد أن أُغلق التطبيق مرتين بُعيد بدئه. أعد تشغيلها عندما تكون مستعدًا.`;
+    case "de":
+      return `Ausgeschaltet, weil die App zweimal direkt nach dem Start geschlossen wurde. Schalte sie wieder ein, wenn du so weit bist.`;
+    case "es":
+      return `Se desactivaron porque la app se cerró dos veces justo después de iniciarse. Vuelve a activarlos cuando quieras.`;
+    case "fr":
+      return `Désactivés car l’app s’est fermée deux fois juste après son démarrage. Réactivez-les quand vous le souhaitez.`;
+    case "ja":
+      return `起動直後にアプリが2回閉じたため、オフにしました。準備ができたらオンに戻してください。`;
+    case "ko":
+      return `앱이 시작 직후 두 번 닫혀서 꺼졌어요. 준비되면 다시 켜세요.`;
+    case "pt-BR":
+      return `Desligados porque o app fechou duas vezes logo depois de abrir. Ligue-os de novo quando quiser.`;
+    case "zh-Hans":
+      return `应用两次在启动后不久就关闭，因此已将它们关闭。准备好后再重新打开。`;
+    case "zh-Hant":
+      return `程式兩次在啟動後不久就關閉，所以已將它們關閉。準備好時再重新開啟。`;
+    case "en-XA":
+      return `[Ţûŕñéð öƒƒ áƒţéŕ ţĥé áþþ çļöšéð ţŵîçé ĵûšţ áƒţéŕ šţáŕţîñĝ. Ţûŕñ ţĥéɱ ƀáçķ öñ ŵĥéñ ýöû áŕé ŕéáðý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurned off after the app closed twice just after starting. Turn them back on when you are ready.\u202c`;
+  }
+  return `Turned off after the app closed twice just after starting. Turn them back on when you are ready.`;
+}
+
+export function settingsPanelsHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اللوحات`;
+    case "de":
+      return `Panels`;
+    case "es":
+      return `Paneles`;
+    case "fr":
+      return `Panneaux`;
+    case "ja":
+      return `パネル`;
+    case "ko":
+      return `패널`;
+    case "pt-BR":
+      return `Painéis`;
+    case "zh-Hans":
+      return `面板`;
+    case "zh-Hant":
+      return `面板`;
+    case "en-XA":
+      return `[Þáñéļš ~~]`;
+    case "ar-XB":
+      return `\u202ePanels\u202c`;
+  }
+  return `Panels`;
+}
+
+export function settingsPanelsIntro(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `موضع كل لوحة على أشرطتك، بالترتيب.`;
+    case "de":
+      return `Wo jedes Panel auf deinen Leisten sitzt, der Reihe nach.`;
+    case "es":
+      return `Dónde está cada panel en tus barras, en orden.`;
+    case "fr":
+      return `L’emplacement de chaque panneau dans vos colonnes, dans l’ordre.`;
+    case "ja":
+      return `各パネルがパネル列のどこにあるかを、順番に示します。`;
+    case "ko":
+      return `각 패널이 레일의 어디에 어떤 순서로 놓이는지예요.`;
+    case "pt-BR":
+      return `Onde cada painel fica nas suas barras laterais, em ordem.`;
+    case "zh-Hans":
+      return `每个面板在侧栏上的位置，按顺序排列。`;
+    case "zh-Hant":
+      return `每個面板在側欄上的位置，依順序排列。`;
+    case "en-XA":
+      return `[Ŵĥéŕé éáçĥ þáñéļ šîţš öñ ýöûŕ ŕáîļš, îñ öŕðéŕ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhere each panel sits on your rails, in order.\u202c`;
+  }
+  return `Where each panel sits on your rails, in order.`;
+}
+
+export function settingsPanelsNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا توجد لوحات`;
+    case "de":
+      return `Keine Panels`;
+    case "es":
+      return `Sin paneles`;
+    case "fr":
+      return `Aucun panneau`;
+    case "ja":
+      return `パネルなし`;
+    case "ko":
+      return `패널 없음`;
+    case "pt-BR":
+      return `Nenhum painel`;
+    case "zh-Hans":
+      return `没有面板`;
+    case "zh-Hant":
+      return `沒有面板`;
+    case "en-XA":
+      return `[Ñö þáñéļš ~~~]`;
+    case "ar-XB":
+      return `\u202eNo panels\u202c`;
+  }
+  return `No panels`;
+}
+
+export function settingsPanelsReset(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة التعيين إلى الافتراضي`;
+    case "de":
+      return `Auf Standard zurücksetzen`;
+    case "es":
+      return `Restablecer los valores predeterminados`;
+    case "fr":
+      return `Rétablir les valeurs par défaut`;
+    case "ja":
+      return `初期設定に戻す`;
+    case "ko":
+      return `기본값으로 재설정`;
+    case "pt-BR":
+      return `Redefinir para o padrão`;
+    case "zh-Hans":
+      return `恢复默认`;
+    case "zh-Hant":
+      return `重設為預設值`;
+    case "en-XA":
+      return `[Ŕéšéţ ţö ðéƒáûļţš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset to defaults\u202c`;
+  }
+  return `Reset to defaults`;
+}
+
+export function settingsPanelsResetConfirm(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تأكيد إعادة التعيين`;
+    case "de":
+      return `Zurücksetzen bestätigen`;
+    case "es":
+      return `Confirmar el restablecimiento`;
+    case "fr":
+      return `Confirmer la réinitialisation`;
+    case "ja":
+      return `リセットを確定`;
+    case "ko":
+      return `재설정 확인`;
+    case "pt-BR":
+      return `Confirmar redefinição`;
+    case "zh-Hans":
+      return `确认重置`;
+    case "zh-Hant":
+      return `確認重設`;
+    case "en-XA":
+      return `[Çöñƒîŕɱ ŕéšéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConfirm reset\u202c`;
+  }
+  return `Confirm reset`;
+}
+
+export function settingsPanelsShow(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إظهار ${title}`;
+    case "de":
+      return `${title} anzeigen`;
+    case "es":
+      return `Mostrar ${title}`;
+    case "fr":
+      return `Afficher ${title}`;
+    case "ja":
+      return `${title} を表示`;
+    case "ko":
+      return `${title} 표시`;
+    case "pt-BR":
+      return `Mostrar ${title}`;
+    case "zh-Hans":
+      return `显示 ${title}`;
+    case "zh-Hant":
+      return `顯示 ${title}`;
+    case "en-XA":
+      return `[Šĥöŵ ${title} ~~]`;
+    case "ar-XB":
+      return `\u202eShow \u202c${title}`;
+  }
+  return `Show ${title}`;
+}
+
+export function settingsPanelsKeysMove(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نقل ·`;
+    case "de":
+      return `verschieben ·`;
+    case "es":
+      return `mover ·`;
+    case "fr":
+      return `déplacer ·`;
+    case "ja":
+      return `移動 ·`;
+    case "ko":
+      return `이동 ·`;
+    case "pt-BR":
+      return `mover ·`;
+    case "zh-Hans":
+      return `移动 ·`;
+    case "zh-Hant":
+      return `移動 ·`;
+    case "en-XA":
+      return `[ɱöṽé · ~~]`;
+    case "ar-XB":
+      return `\u202emove ·\u202c`;
+  }
+  return `move ·`;
+}
+
+export function settingsPanelsKeysOtherRail(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشريط الآخر ·`;
+    case "de":
+      return `andere Leiste ·`;
+    case "es":
+      return `otra barra ·`;
+    case "fr":
+      return `autre colonne ·`;
+    case "ja":
+      return `反対のパネル列 ·`;
+    case "ko":
+      return `다른 레일 ·`;
+    case "pt-BR":
+      return `outra barra ·`;
+    case "zh-Hans":
+      return `另一侧栏 ·`;
+    case "zh-Hant":
+      return `另一側欄 ·`;
+    case "en-XA":
+      return `[öţĥéŕ ŕáîļ · ~~~~]`;
+    case "ar-XB":
+      return `\u202eother rail ·\u202c`;
+  }
+  return `other rail ·`;
+}
+
+export function settingsPanelsKeysShowOrHide(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إظهار أو إخفاء ·`;
+    case "de":
+      return `anzeigen oder ausblenden ·`;
+    case "es":
+      return `mostrar u ocultar ·`;
+    case "fr":
+      return `afficher ou masquer ·`;
+    case "ja":
+      return `表示/非表示 ·`;
+    case "ko":
+      return `표시 또는 숨기기 ·`;
+    case "pt-BR":
+      return `mostrar ou ocultar ·`;
+    case "zh-Hans":
+      return `显示或隐藏 ·`;
+    case "zh-Hant":
+      return `顯示或隱藏 ·`;
+    case "en-XA":
+      return `[šĥöŵ öŕ ĥîðé · ~~~~~]`;
+    case "ar-XB":
+      return `\u202eshow or hide ·\u202c`;
+  }
+  return `show or hide ·`;
+}
+
+export function settingsPanelsKeysOpenOrCollapse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح أو طي`;
+    case "de":
+      return `aufklappen oder einklappen`;
+    case "es":
+      return `abrir o contraer`;
+    case "fr":
+      return `ouvrir ou replier`;
+    case "ja":
+      return `開く/折りたたむ`;
+    case "ko":
+      return `펼치기 또는 접기`;
+    case "pt-BR":
+      return `abrir ou recolher`;
+    case "zh-Hans":
+      return `展开或折叠`;
+    case "zh-Hant":
+      return `展開或收合`;
+    case "en-XA":
+      return `[öþéñ öŕ çöļļáþšé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eopen or collapse\u202c`;
+  }
+  return `open or collapse`;
+}
+
+export function settingsPanelsLeftRail(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشريط الأيسر`;
+    case "de":
+      return `Linke Leiste`;
+    case "es":
+      return `Barra izquierda`;
+    case "fr":
+      return `Colonne de gauche`;
+    case "ja":
+      return `左のパネル列`;
+    case "ko":
+      return `왼쪽 레일`;
+    case "pt-BR":
+      return `Barra lateral esquerda`;
+    case "zh-Hans":
+      return `左侧栏`;
+    case "zh-Hant":
+      return `左側欄`;
+    case "en-XA":
+      return `[Ļéƒţ ŕáîļ ~~~]`;
+    case "ar-XB":
+      return `\u202eLeft rail\u202c`;
+  }
+  return `Left rail`;
+}
+
+export function settingsPanelsRightRail(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشريط الأيمن`;
+    case "de":
+      return `Rechte Leiste`;
+    case "es":
+      return `Barra derecha`;
+    case "fr":
+      return `Colonne de droite`;
+    case "ja":
+      return `右のパネル列`;
+    case "ko":
+      return `오른쪽 레일`;
+    case "pt-BR":
+      return `Barra lateral direita`;
+    case "zh-Hans":
+      return `右侧栏`;
+    case "zh-Hant":
+      return `右側欄`;
+    case "en-XA":
+      return `[Ŕîĝĥţ ŕáîļ ~~~~]`;
+    case "ar-XB":
+      return `\u202eRight rail\u202c`;
+  }
+  return `Right rail`;
+}
+
+export function settingsPanelsTop(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أعلى`;
+    case "de":
+      return `Oben`;
+    case "es":
+      return `Arriba`;
+    case "fr":
+      return `Haut`;
+    case "ja":
+      return `上`;
+    case "ko":
+      return `위`;
+    case "pt-BR":
+      return `Em cima`;
+    case "zh-Hans":
+      return `顶部`;
+    case "zh-Hant":
+      return `上方`;
+    case "en-XA":
+      return `[Ţöþ ~]`;
+    case "ar-XB":
+      return `\u202eTop\u202c`;
+  }
+  return `Top`;
+}
+
+export function settingsPanelsBottom(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أسفل`;
+    case "de":
+      return `Unten`;
+    case "es":
+      return `Abajo`;
+    case "fr":
+      return `Bas`;
+    case "ja":
+      return `下`;
+    case "ko":
+      return `아래`;
+    case "pt-BR":
+      return `Embaixo`;
+    case "zh-Hans":
+      return `底部`;
+    case "zh-Hant":
+      return `下方`;
+    case "en-XA":
+      return `[Ɓöţţöɱ ~~]`;
+    case "ar-XB":
+      return `\u202eBottom\u202c`;
+  }
+  return `Bottom`;
+}
+
+export function settingsPanelsLeftTop(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشريط الأيسر، أعلى`;
+    case "de":
+      return `Linke Leiste, oben`;
+    case "es":
+      return `Barra izquierda, arriba`;
+    case "fr":
+      return `Colonne de gauche, haut`;
+    case "ja":
+      return `左のパネル列、上`;
+    case "ko":
+      return `왼쪽 레일, 위`;
+    case "pt-BR":
+      return `Barra lateral esquerda, em cima`;
+    case "zh-Hans":
+      return `左侧栏，顶部`;
+    case "zh-Hant":
+      return `左側欄，上方`;
+    case "en-XA":
+      return `[Ļéƒţ ŕáîļ, ţöþ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eLeft rail, top\u202c`;
+  }
+  return `Left rail, top`;
+}
+
+export function settingsPanelsLeftBottom(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشريط الأيسر، أسفل`;
+    case "de":
+      return `Linke Leiste, unten`;
+    case "es":
+      return `Barra izquierda, abajo`;
+    case "fr":
+      return `Colonne de gauche, bas`;
+    case "ja":
+      return `左のパネル列、下`;
+    case "ko":
+      return `왼쪽 레일, 아래`;
+    case "pt-BR":
+      return `Barra lateral esquerda, embaixo`;
+    case "zh-Hans":
+      return `左侧栏，底部`;
+    case "zh-Hant":
+      return `左側欄，下方`;
+    case "en-XA":
+      return `[Ļéƒţ ŕáîļ, ƀöţţöɱ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLeft rail, bottom\u202c`;
+  }
+  return `Left rail, bottom`;
+}
+
+export function settingsPanelsRightTop(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشريط الأيمن، أعلى`;
+    case "de":
+      return `Rechte Leiste, oben`;
+    case "es":
+      return `Barra derecha, arriba`;
+    case "fr":
+      return `Colonne de droite, haut`;
+    case "ja":
+      return `右のパネル列、上`;
+    case "ko":
+      return `오른쪽 레일, 위`;
+    case "pt-BR":
+      return `Barra lateral direita, em cima`;
+    case "zh-Hans":
+      return `右侧栏，顶部`;
+    case "zh-Hant":
+      return `右側欄，上方`;
+    case "en-XA":
+      return `[Ŕîĝĥţ ŕáîļ, ţöþ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRight rail, top\u202c`;
+  }
+  return `Right rail, top`;
+}
+
+export function settingsPanelsRightBottom(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشريط الأيمن، أسفل`;
+    case "de":
+      return `Rechte Leiste, unten`;
+    case "es":
+      return `Barra derecha, abajo`;
+    case "fr":
+      return `Colonne de droite, bas`;
+    case "ja":
+      return `右のパネル列、下`;
+    case "ko":
+      return `오른쪽 레일, 아래`;
+    case "pt-BR":
+      return `Barra lateral direita, embaixo`;
+    case "zh-Hans":
+      return `右侧栏，底部`;
+    case "zh-Hant":
+      return `右側欄，下方`;
+    case "en-XA":
+      return `[Ŕîĝĥţ ŕáîļ, ƀöţţöɱ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRight rail, bottom\u202c`;
+  }
+  return `Right rail, bottom`;
+}
+
+export function settingsPanelsShown(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ظاهرة`;
+    case "de":
+      return `Angezeigt`;
+    case "es":
+      return `Visible`;
+    case "fr":
+      return `Affiché`;
+    case "ja":
+      return `表示`;
+    case "ko":
+      return `표시됨`;
+    case "pt-BR":
+      return `Visível`;
+    case "zh-Hans":
+      return `已显示`;
+    case "zh-Hant":
+      return `已顯示`;
+    case "en-XA":
+      return `[Šĥöŵñ ~~]`;
+    case "ar-XB":
+      return `\u202eShown\u202c`;
+  }
+  return `Shown`;
+}
+
+export function settingsPanelsCollapsed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مطوية`;
+    case "de":
+      return `Eingeklappt`;
+    case "es":
+      return `Contraído`;
+    case "fr":
+      return `Replié`;
+    case "ja":
+      return `折りたたみ`;
+    case "ko":
+      return `접힘`;
+    case "pt-BR":
+      return `Recolhido`;
+    case "zh-Hans":
+      return `已折叠`;
+    case "zh-Hant":
+      return `已收合`;
+    case "en-XA":
+      return `[Çöļļáþšéð ~~~]`;
+    case "ar-XB":
+      return `\u202eCollapsed\u202c`;
+  }
+  return `Collapsed`;
+}
+
+export function settingsPanelsHidden(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مخفية`;
+    case "de":
+      return `Ausgeblendet`;
+    case "es":
+      return `Oculto`;
+    case "fr":
+      return `Masqué`;
+    case "ja":
+      return `非表示`;
+    case "ko":
+      return `숨겨짐`;
+    case "pt-BR":
+      return `Oculto`;
+    case "zh-Hans":
+      return `已隐藏`;
+    case "zh-Hant":
+      return `已隱藏`;
+    case "en-XA":
+      return `[Ĥîððéñ ~~]`;
+    case "ar-XB":
+      return `\u202eHidden\u202c`;
+  }
+  return `Hidden`;
+}
+
+export function settingsPanelsNothing(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء لعرضه الآن`;
+    case "de":
+      return `Gerade nichts anzuzeigen`;
+    case "es":
+      return `Nada que mostrar por ahora`;
+    case "fr":
+      return `Rien à afficher pour l’instant`;
+    case "ja":
+      return `今は表示するものがありません`;
+    case "ko":
+      return `지금은 보여 줄 것이 없어요`;
+    case "pt-BR":
+      return `Nada para mostrar agora`;
+    case "zh-Hans":
+      return `目前没有可显示的内容`;
+    case "zh-Hant":
+      return `目前沒有可顯示的內容`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ ţö šĥöŵ ŕîĝĥţ ñöŵ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing to show right now\u202c`;
+  }
+  return `Nothing to show right now`;
+}
+
+export function settingsPanelsMore(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في صف «المزيد»`;
+    case "de":
+      return `In der Zeile „Mehr“`;
+    case "es":
+      return `En la fila Más`;
+    case "fr":
+      return `Dans la ligne Plus`;
+    case "ja":
+      return `「その他」の行にあります`;
+    case "ko":
+      return `‘더 보기’ 줄에 있음`;
+    case "pt-BR":
+      return `Na linha Mais`;
+    case "zh-Hans":
+      return `在“更多”一行中`;
+    case "zh-Hant":
+      return `在「更多」那一列`;
+    case "en-XA":
+      return `[Îñ ţĥé Ṁöŕé ŕöŵ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eIn the More row\u202c`;
+  }
+  return `In the More row`;
+}
+
+export function settingsPanelsWaitsForRule(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تظهر عند حفظ قاعدة`;
+    case "de":
+      return `Erscheint, sobald eine Regel gespeichert ist`;
+    case "es":
+      return `Aparece cuando se guarda una regla`;
+    case "fr":
+      return `S’affiche quand une règle est enregistrée`;
+    case "ja":
+      return `ルールが保存されると表示されます`;
+    case "ko":
+      return `규칙을 저장하면 나타나요`;
+    case "pt-BR":
+      return `Aparece quando uma regra é salva`;
+    case "zh-Hans":
+      return `保存规则后显示`;
+    case "zh-Hant":
+      return `儲存規則後顯示`;
+    case "en-XA":
+      return `[Šĥöŵš ŵĥéñ á ŕûļé îš šáṽéð ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShows when a rule is saved\u202c`;
+  }
+  return `Shows when a rule is saved`;
+}
+
+export function settingsPanelsWaitsForKnowledge(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تظهر عند وجود معرفة`;
+    case "de":
+      return `Erscheint, sobald es Wissen gibt`;
+    case "es":
+      return `Aparece cuando haya conocimiento`;
+    case "fr":
+      return `S’affiche dès qu’il y a des connaissances`;
+    case "ja":
+      return `ナレッジができると表示されます`;
+    case "ko":
+      return `지식이 생기면 나타나요`;
+    case "pt-BR":
+      return `Aparece quando houver conhecimento`;
+    case "zh-Hans":
+      return `有知识后显示`;
+    case "zh-Hant":
+      return `有知識後顯示`;
+    case "en-XA":
+      return `[Šĥöŵš öñçé ţĥéŕé îš ķñöŵļéðĝé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShows once there is knowledge\u202c`;
+  }
+  return `Shows once there is knowledge`;
+}
+
+export function settingsSaveRecoveryHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أغلق الإعدادات وافتحها من جديد للمحاولة مرة أخرى.`;
+    case "de":
+      return `Schließ die Einstellungen und öffne sie erneut, um es noch einmal zu versuchen.`;
+    case "es":
+      return `Cierra y vuelve a abrir Configuración para intentarlo de nuevo.`;
+    case "fr":
+      return `Fermez puis rouvrez les Réglages pour réessayer.`;
+    case "ja":
+      return `設定を閉じて開き直してから、もう一度お試しください。`;
+    case "ko":
+      return `설정을 닫았다가 다시 열어 다시 시도하세요.`;
+    case "pt-BR":
+      return `Feche e abra os Ajustes de novo para tentar outra vez.`;
+    case "zh-Hans":
+      return `关闭并重新打开设置后再试一次。`;
+    case "zh-Hant":
+      return `關閉並重新開啟設定，再試一次。`;
+    case "en-XA":
+      return `[Çļöšé áñð ŕéöþéñ Šéţţîñĝš ţö ţŕý áĝáîñ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClose and reopen Settings to try again.\u202c`;
+  }
+  return `Close and reopen Settings to try again.`;
+}
+
+export function settingsSaveLoadFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر تحميل هذا الإعداد. حاول مرة أخرى.`;
+    case "de":
+      return `Diese Einstellung konnte nicht geladen werden. Bitte versuch es noch einmal.`;
+    case "es":
+      return `No se pudo cargar este ajuste. Inténtalo de nuevo.`;
+    case "fr":
+      return `Impossible de charger ce réglage. Veuillez réessayer.`;
+    case "ja":
+      return `この設定を読み込めませんでした。もう一度お試しください。`;
+    case "ko":
+      return `이 설정을 불러올 수 없었어요. 다시 시도해 주세요.`;
+    case "pt-BR":
+      return `Não foi possível carregar este ajuste. Tente de novo.`;
+    case "zh-Hans":
+      return `无法载入此设置。请再试一次。`;
+    case "zh-Hant":
+      return `無法載入這項設定。請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ļöáð ţĥîš šéţţîñĝ. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not load this setting. Please try again.\u202c`;
+  }
+  return `Could not load this setting. Please try again.`;
+}
+
+export function settingsSaveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر حفظ هذا الإعداد. حاول مرة أخرى.`;
+    case "de":
+      return `Diese Einstellung konnte nicht gespeichert werden. Bitte versuch es noch einmal.`;
+    case "es":
+      return `No se pudo guardar este ajuste. Inténtalo de nuevo.`;
+    case "fr":
+      return `Impossible d’enregistrer ce réglage. Veuillez réessayer.`;
+    case "ja":
+      return `この設定を保存できませんでした。もう一度お試しください。`;
+    case "ko":
+      return `이 설정을 저장할 수 없었어요. 다시 시도해 주세요.`;
+    case "pt-BR":
+      return `Não foi possível salvar este ajuste. Tente de novo.`;
+    case "zh-Hans":
+      return `无法保存此设置。请再试一次。`;
+    case "zh-Hant":
+      return `無法儲存這項設定。請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ šáṽé ţĥîš šéţţîñĝ. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not save this setting. Please try again.\u202c`;
+  }
+  return `Could not save this setting. Please try again.`;
+}
+
+export function settingsSaveReloadFailed(input: { hint: string; message: string }): string {
+  const hint = input.hint;
+  const message = input.message;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${message} تعذّرت إعادة تحميل القيمة المحفوظة. ${hint}`;
+    case "de":
+      return `${message} Der gespeicherte Wert konnte nicht neu geladen werden. ${hint}`;
+    case "es":
+      return `${message} No se pudo volver a cargar el valor guardado. ${hint}`;
+    case "fr":
+      return `${message} Impossible de recharger la valeur enregistrée. ${hint}`;
+    case "ja":
+      return `${message} 保存された値を再読み込みできませんでした。${hint}`;
+    case "ko":
+      return `${message} 저장된 값을 다시 불러올 수 없었어요. ${hint}`;
+    case "pt-BR":
+      return `${message} Não foi possível recarregar o valor salvo. ${hint}`;
+    case "zh-Hans":
+      return `${message} 无法重新载入已保存的值。${hint}`;
+    case "zh-Hant":
+      return `${message} 無法重新載入已儲存的值。${hint}`;
+    case "en-XA":
+      return `[${message} Çöûļð ñöţ ŕéļöáð ţĥé šáṽéð ṽáļûé. ${hint} ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${message}\u202e Could not reload the saved value. \u202c${hint}`;
+  }
+  return `${message} Could not reload the saved value. ${hint}`;
+}
+
+export function settingsScreenSections(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أقسام الإعدادات`;
+    case "de":
+      return `Bereiche der Einstellungen`;
+    case "es":
+      return `Secciones de Configuración`;
+    case "fr":
+      return `Sections des Réglages`;
+    case "ja":
+      return `設定のセクション`;
+    case "ko":
+      return `설정 섹션`;
+    case "pt-BR":
+      return `Seções dos Ajustes`;
+    case "zh-Hans":
+      return `设置分区`;
+    case "zh-Hant":
+      return `設定區塊`;
+    case "en-XA":
+      return `[Šéţţîñĝš šéçţîöñš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSettings sections\u202c`;
+  }
+  return `Settings sections`;
+}
+
+export function settingsVersionNoNewChanges(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `· لا تغييرات جديدة`;
+    case "de":
+      return `· keine neuen Änderungen`;
+    case "es":
+      return `· sin cambios nuevos`;
+    case "fr":
+      return `· aucune nouveauté`;
+    case "ja":
+      return `· 新しい変更はありません`;
+    case "ko":
+      return `· 새로운 변경 없음`;
+    case "pt-BR":
+      return `· sem novidades`;
+    case "zh-Hans":
+      return `· 没有新变化`;
+    case "zh-Hant":
+      return `· 沒有新的變更`;
+    case "en-XA":
+      return `[· ñö ñéŵ çĥáñĝéš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202e· no new changes\u202c`;
+  }
+  return `· no new changes`;
+}
+
+export function settingsVersionTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإصدار`;
+    case "de":
+      return `Version`;
+    case "es":
+      return `Versión`;
+    case "fr":
+      return `Version`;
+    case "ja":
+      return `バージョン`;
+    case "ko":
+      return `버전`;
+    case "pt-BR":
+      return `Versão`;
+    case "zh-Hans":
+      return `版本`;
+    case "zh-Hant":
+      return `版本`;
+    case "en-XA":
+      return `[Ṽéŕšîöñ ~~~]`;
+    case "ar-XB":
+      return `\u202eVersion\u202c`;
+  }
+  return `Version`;
+}
+
+export function settingsVersionNotes(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name}. كل ملاحظة إصدار عُرضت عليك تُفتح من جديد كما رأيتها.`;
+    case "de":
+      return `${name}. Jeder Versionshinweis, der dir gezeigt wurde, öffnet sich wieder so, wie du ihn gesehen hast.`;
+    case "es":
+      return `${name}. Cada nota de la versión que se te mostró se vuelve a abrir tal como la viste.`;
+    case "fr":
+      return `${name}. Chaque note de version qui vous a été montrée se rouvre telle que vous l’avez vue.`;
+    case "ja":
+      return `${name}。表示されたリリースノートは、どれも表示されたときのまま再び開けます。`;
+    case "ko":
+      return `${name}. 전에 본 릴리스 노트는 각각 그때 본 모습 그대로 다시 열려요.`;
+    case "pt-BR":
+      return `${name}. Cada nota de versão que você viu abre de novo do jeito que apareceu para você.`;
+    case "zh-Hans":
+      return `${name}。你看过的每条发布说明都会按你当时看到的样子再次打开。`;
+    case "zh-Hant":
+      return `${name}。你看過的每則版本說明，都會以你當時看到的樣子再次開啟。`;
+    case "en-XA":
+      return `[${name}. Éáçĥ ŕéļéášé ñöţé ýöû ŵéŕé šĥöŵñ öþéñš áĝáîñ áš ýöû šáŵ îţ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e. Each release note you were shown opens again as you saw it.\u202c`;
+  }
+  return `${name}. Each release note you were shown opens again as you saw it.`;
+}
+
+export function settingsVersionNoNotes(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name}. لا توجد ملاحظات إصدار بعد.`;
+    case "de":
+      return `${name}. Noch keine Versionshinweise.`;
+    case "es":
+      return `${name}. Aún no hay notas de la versión.`;
+    case "fr":
+      return `${name}. Pas encore de notes de version.`;
+    case "ja":
+      return `${name}。リリースノートはまだありません。`;
+    case "ko":
+      return `${name}. 아직 릴리스 노트가 없어요.`;
+    case "pt-BR":
+      return `${name}. Ainda não há notas de versão.`;
+    case "zh-Hans":
+      return `${name}。还没有发布说明。`;
+    case "zh-Hant":
+      return `${name}。還沒有版本說明。`;
+    case "en-XA":
+      return `[${name}. Ñö ŕéļéášé ñöţéš ýéţ. ~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e. No release notes yet.\u202c`;
+  }
+  return `${name}. No release notes yet.`;
+}
+
+export function settingsVersionReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ قراءة الإصدار…`;
+    case "de":
+      return `Version wird gelesen …`;
+    case "es":
+      return `Leyendo la versión…`;
+    case "fr":
+      return `Lecture de la version…`;
+    case "ja":
+      return `バージョンを読み込み中…`;
+    case "ko":
+      return `버전을 읽는 중…`;
+    case "pt-BR":
+      return `Lendo a versão…`;
+    case "zh-Hans":
+      return `正在读取版本…`;
+    case "zh-Hant":
+      return `正在讀取版本…`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ ţĥé ṽéŕšîöñ… ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReading the version…\u202c`;
+  }
+  return `Reading the version…`;
+}
+
+export function settingsVersionReleaseNotes(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ملاحظات الإصدار`;
+    case "de":
+      return `Versionshinweise`;
+    case "es":
+      return `Notas de la versión`;
+    case "fr":
+      return `Notes de version`;
+    case "ja":
+      return `リリースノート`;
+    case "ko":
+      return `릴리스 노트`;
+    case "pt-BR":
+      return `Notas de versão`;
+    case "zh-Hans":
+      return `发布说明`;
+    case "zh-Hant":
+      return `版本說明`;
+    case "en-XA":
+      return `[Ŕéļéášé ñöţéš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRelease notes\u202c`;
+  }
+  return `Release notes`;
+}
+
+export function settingsVersionShowMore(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض المزيد`;
+    case "de":
+      return `Mehr anzeigen`;
+    case "es":
+      return `Mostrar más`;
+    case "fr":
+      return `Afficher plus`;
+    case "ja":
+      return `さらに表示`;
+    case "ko":
+      return `더 보기`;
+    case "pt-BR":
+      return `Mostrar mais`;
+    case "zh-Hans":
+      return `显示更多`;
+    case "zh-Hant":
+      return `顯示更多`;
+    case "en-XA":
+      return `[Šĥöŵ ɱöŕé ~~~]`;
+    case "ar-XB":
+      return `\u202eShow more\u202c`;
+  }
+  return `Show more`;
+}
+
+export function settingsRunbooksOpenFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر فتح هذا المجلد. حاول مرة أخرى.`;
+    case "de":
+      return `Dieser Ordner konnte nicht geöffnet werden. Bitte versuch es noch einmal.`;
+    case "es":
+      return `No se pudo abrir esta carpeta. Inténtalo de nuevo.`;
+    case "fr":
+      return `Impossible d’ouvrir ce dossier. Veuillez réessayer.`;
+    case "ja":
+      return `このフォルダを開けませんでした。もう一度お試しください。`;
+    case "ko":
+      return `이 폴더를 열 수 없었어요. 다시 시도해 주세요.`;
+    case "pt-BR":
+      return `Não foi possível abrir esta pasta. Tente de novo.`;
+    case "zh-Hans":
+      return `无法打开这个文件夹。请再试一次。`;
+    case "zh-Hant":
+      return `無法開啟這個資料夾。請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ öþéñ ţĥîš ƒöļðéŕ. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not open this folder. Please try again.\u202c`;
+  }
+  return `Could not open this folder. Please try again.`;
+}
+
+export function settingsRunbooksViewLabel(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض ${name}`;
+    case "de":
+      return `${name} ansehen`;
+    case "es":
+      return `Ver ${name}`;
+    case "fr":
+      return `Voir ${name}`;
+    case "ja":
+      return `${name} を表示`;
+    case "ko":
+      return `${name} 보기`;
+    case "pt-BR":
+      return `Ver ${name}`;
+    case "zh-Hans":
+      return `查看 ${name}`;
+    case "zh-Hant":
+      return `檢視 ${name}`;
+    case "en-XA":
+      return `[Ṽîéŵ ${name} ~~]`;
+    case "ar-XB":
+      return `\u202eView \u202c${name}`;
+  }
+  return `View ${name}`;
+}
+
+export function settingsRunbooksView(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض`;
+    case "de":
+      return `Ansehen`;
+    case "es":
+      return `Ver`;
+    case "fr":
+      return `Voir`;
+    case "ja":
+      return `表示`;
+    case "ko":
+      return `보기`;
+    case "pt-BR":
+      return `Ver`;
+    case "zh-Hans":
+      return `查看`;
+    case "zh-Hant":
+      return `檢視`;
+    case "en-XA":
+      return `[Ṽîéŵ ~~]`;
+    case "ar-XB":
+      return `\u202eView\u202c`;
+  }
+  return `View`;
+}
+
+export function settingsRunbooksBuiltIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مدمجة`;
+    case "de":
+      return `Mitgeliefert`;
+    case "es":
+      return `Incluidos`;
+    case "fr":
+      return `Intégrées`;
+    case "ja":
+      return `組み込み`;
+    case "ko":
+      return `기본 제공`;
+    case "pt-BR":
+      return `Incluídos`;
+    case "zh-Hans":
+      return `内置`;
+    case "zh-Hant":
+      return `內建`;
+    case "en-XA":
+      return `[Ɓûîļţ îñ ~~~]`;
+    case "ar-XB":
+      return `\u202eBuilt in\u202c`;
+  }
+  return `Built in`;
+}
+
+export function settingsRunbooksYours(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدلتك`;
+    case "de":
+      return `Deine`;
+    case "es":
+      return `Tuyos`;
+    case "fr":
+      return `Les vôtres`;
+    case "ja":
+      return `あなたのランブック`;
+    case "ko":
+      return `내 런북`;
+    case "pt-BR":
+      return `Seus`;
+    case "zh-Hans":
+      return `你的`;
+    case "zh-Hant":
+      return `你的`;
+    case "en-XA":
+      return `[Ýöûŕš ~~]`;
+    case "ar-XB":
+      return `\u202eYours\u202c`;
+  }
+  return `Yours`;
+}
+
+export function settingsRunbooksYoursEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تظهر هنا أدلة التشغيل التي تضيفها أو تصنعها مع نائب القبطان.`;
+    case "de":
+      return `Leitfäden, die du hinzufügst oder mit deinem ersten Offizier erstellst, erscheinen hier.`;
+    case "es":
+      return `Aquí aparecen los manuales que agregues o crees con el primer oficial.`;
+    case "fr":
+      return `Les procédures que vous ajoutez ou créez avec le second apparaissent ici.`;
+    case "ja":
+      return `追加したランブックや、一等航海士と作ったランブックがここに表示されます。`;
+    case "ko":
+      return `직접 추가하거나 일등항해사와 함께 만든 런북이 여기에 나타나요.`;
+    case "pt-BR":
+      return `Os manuais que você adicionar ou criar com o imediato aparecem aqui.`;
+    case "zh-Hans":
+      return `你添加的或与大副一起制作的操作手册会显示在这里。`;
+    case "zh-Hant":
+      return `你加入的或和大副一起製作的作業手冊會顯示在這裡。`;
+    case "en-XA":
+      return `[Ŕûñƀööķš ýöû áðð öŕ ɱáķé ŵîţĥ ţĥé ƒîŕšţ ɱáţé áþþéáŕ ĥéŕé. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRunbooks you add or make with the first mate appear here.\u202c`;
+  }
+  return `Runbooks you add or make with the first mate appear here.`;
+}
+
+export function settingsRunbooksMakeYourOwn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اصنع دليلك`;
+    case "de":
+      return `Eigenen erstellen`;
+    case "es":
+      return `Crea los tuyos`;
+    case "fr":
+      return `Créer les vôtres`;
+    case "ja":
+      return `自分で作る`;
+    case "ko":
+      return `직접 만들기`;
+    case "pt-BR":
+      return `Crie os seus`;
+    case "zh-Hans":
+      return `自己制作`;
+    case "zh-Hant":
+      return `自己製作`;
+    case "en-XA":
+      return `[Ṁáķé ýöûŕ öŵñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake your own\u202c`;
+  }
+  return `Make your own`;
+}
+
+export function settingsRunbooksFolder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مجلد أدلة التشغيل الخاص بك`;
+    case "de":
+      return `Dein Leitfäden-Ordner`;
+    case "es":
+      return `Tu carpeta de manuales`;
+    case "fr":
+      return `Votre dossier de procédures`;
+    case "ja":
+      return `ランブックのフォルダ`;
+    case "ko":
+      return `내 런북 폴더`;
+    case "pt-BR":
+      return `Sua pasta de manuais`;
+    case "zh-Hans":
+      return `你的操作手册文件夹`;
+    case "zh-Hant":
+      return `你的作業手冊資料夾`;
+    case "en-XA":
+      return `[Ýöûŕ ŕûñƀööķš ƒöļðéŕ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour runbooks folder\u202c`;
+  }
+  return `Your runbooks folder`;
+}
+
+export function settingsRunbooksFolderRemote(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مجلد أدلة التشغيل الخاص بك موجود على ${computer}. افتح أدلة التشغيل واعرضها هناك.`;
+    case "de":
+      return `Dein Leitfäden-Ordner liegt auf ${computer}. Öffne und lies die Leitfäden dort.`;
+    case "es":
+      return `Tu carpeta de manuales está en ${computer}. Abre y consulta los manuales allí.`;
+    case "fr":
+      return `Votre dossier de procédures est sur ${computer}. Ouvrez et consultez les procédures là-bas.`;
+    case "ja":
+      return `ランブックのフォルダは ${computer} にあります。ランブックはそちらで開いて表示してください。`;
+    case "ko":
+      return `런북 폴더는 ${computer}에 있어요. 런북은 그곳에서 열어 보세요.`;
+    case "pt-BR":
+      return `Sua pasta de manuais está em ${computer}. Abra e veja os manuais lá.`;
+    case "zh-Hans":
+      return `你的操作手册文件夹在 ${computer} 上。请在那里打开和查看操作手册。`;
+    case "zh-Hant":
+      return `你的作業手冊資料夾在 ${computer} 上。請在那裡開啟和檢視作業手冊。`;
+    case "en-XA":
+      return `[Ýöûŕ ŕûñƀööķš ƒöļðéŕ îš öñ ${computer}. Öþéñ áñð ṽîéŵ ŕûñƀööķš ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour runbooks folder is on \u202c${computer}\u202e. Open and view runbooks there.\u202c`;
+  }
+  return `Your runbooks folder is on ${computer}. Open and view runbooks there.`;
+}
+
+export function settingsRunbooksFolderHere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هنا توجد أدلة التشغيل التي يصنعها لك نائب القبطان أو ينسخها لك.`;
+    case "de":
+      return `Hier liegen die Leitfäden, die dein erster Offizier für dich erstellt oder kopiert.`;
+    case "es":
+      return `Aquí se guardan los manuales que el primer oficial crea o copia para ti.`;
+    case "fr":
+      return `Les procédures que le second crée ou copie pour vous se trouvent ici.`;
+    case "ja":
+      return `一等航海士が作成またはコピーしたランブックはここに保存されます。`;
+    case "ko":
+      return `일등항해사가 만들거나 복사해 준 런북이 여기에 있어요.`;
+    case "pt-BR":
+      return `Os manuais que o imediato cria ou copia para você ficam aqui.`;
+    case "zh-Hans":
+      return `大副为你制作或复制的操作手册存放在这里。`;
+    case "zh-Hant":
+      return `大副為你製作或複製的作業手冊都放在這裡。`;
+    case "en-XA":
+      return `[Ŕûñƀööķš ţĥé ƒîŕšţ ɱáţé ɱáķéš öŕ çöþîéš ƒöŕ ýöû ļîṽé ĥéŕé. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRunbooks the first mate makes or copies for you live here.\u202c`;
+  }
+  return `Runbooks the first mate makes or copies for you live here.`;
+}
+
+export function settingsRunbooksOpenFolder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح المجلد`;
+    case "de":
+      return `Ordner öffnen`;
+    case "es":
+      return `Abrir carpeta`;
+    case "fr":
+      return `Ouvrir le dossier`;
+    case "ja":
+      return `フォルダを開く`;
+    case "ko":
+      return `폴더 열기`;
+    case "pt-BR":
+      return `Abrir pasta`;
+    case "zh-Hans":
+      return `打开文件夹`;
+    case "zh-Hant":
+      return `開啟資料夾`;
+    case "en-XA":
+      return `[Öþéñ ƒöļðéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen folder\u202c`;
+  }
+  return `Open folder`;
+}
+
+export function settingsRunbooksAsk(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اطلب من نائب القبطان بكلماتك الخاصة. مثلًا:`;
+    case "de":
+      return `Frag deinen ersten Offizier, in deinen eigenen Worten. Zum Beispiel:`;
+    case "es":
+      return `Pídeselo al primer oficial con tus propias palabras. Por ejemplo:`;
+    case "fr":
+      return `Demandez au second, avec vos propres mots. Par exemple :`;
+    case "ja":
+      return `一等航海士に自分の言葉で頼んでください。たとえば：`;
+    case "ko":
+      return `일등항해사에게 평소 말투로 부탁하세요. 예를 들어:`;
+    case "pt-BR":
+      return `Peça ao imediato, com suas próprias palavras. Por exemplo:`;
+    case "zh-Hans":
+      return `用你自己的话问大副。例如：`;
+    case "zh-Hant":
+      return `用你自己的話問大副。例如：`;
+    case "en-XA":
+      return `[Åšķ ţĥé ƒîŕšţ ɱáţé, îñ ýöûŕ öŵñ ŵöŕðš. Ƒöŕ éẋáɱþļé: ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAsk the first mate, in your own words. For example:\u202c`;
+  }
+  return `Ask the first mate, in your own words. For example:`;
+}
+
+export function settingsSecretsStorageLocked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التخزين مقفل`;
+    case "de":
+      return `Speicher gesperrt`;
+    case "es":
+      return `Almacenamiento bloqueado`;
+    case "fr":
+      return `Stockage verrouillé`;
+    case "ja":
+      return `ストレージはロック中`;
+    case "ko":
+      return `저장소 잠김`;
+    case "pt-BR":
+      return `Armazenamento bloqueado`;
+    case "zh-Hans":
+      return `存储已锁定`;
+    case "zh-Hant":
+      return `儲存空間已鎖定`;
+    case "en-XA":
+      return `[Šţöŕáĝé ļöçķéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eStorage locked\u202c`;
+  }
+  return `Storage locked`;
+}
+
+export function settingsSecretsStorageUnavailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التخزين غير متاح`;
+    case "de":
+      return `Speicher nicht verfügbar`;
+    case "es":
+      return `Almacenamiento no disponible`;
+    case "fr":
+      return `Stockage indisponible`;
+    case "ja":
+      return `ストレージを利用できません`;
+    case "ko":
+      return `저장소 사용 불가`;
+    case "pt-BR":
+      return `Armazenamento indisponível`;
+    case "zh-Hans":
+      return `存储不可用`;
+    case "zh-Hant":
+      return `無法使用儲存空間`;
+    case "en-XA":
+      return `[Šţöŕáĝé ûñáṽáîļáƀļé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStorage unavailable\u202c`;
+  }
+  return `Storage unavailable`;
+}
+
+export function settingsSecretsRecoveryNeeded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يلزم الاسترداد`;
+    case "de":
+      return `Wiederherstellung nötig`;
+    case "es":
+      return `Se necesita recuperación`;
+    case "fr":
+      return `Récupération nécessaire`;
+    case "ja":
+      return `復元が必要です`;
+    case "ko":
+      return `복구 필요`;
+    case "pt-BR":
+      return `Recuperação necessária`;
+    case "zh-Hans":
+      return `需要恢复`;
+    case "zh-Hant":
+      return `需要復原`;
+    case "en-XA":
+      return `[Ŕéçöṽéŕý ñééðéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecovery needed\u202c`;
+  }
+  return `Recovery needed`;
+}
+
+export function settingsSecretsPermissionsRecovery(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الأذونات تحتاج إلى استرداد`;
+    case "de":
+      return `Berechtigungen brauchen eine Wiederherstellung`;
+    case "es":
+      return `Los permisos necesitan recuperación`;
+    case "fr":
+      return `Autorisations à récupérer`;
+    case "ja":
+      return `権限の復元が必要です`;
+    case "ko":
+      return `권한 복구 필요`;
+    case "pt-BR":
+      return `As permissões precisam de recuperação`;
+    case "zh-Hans":
+      return `权限需要恢复`;
+    case "zh-Hant":
+      return `權限需要復原`;
+    case "en-XA":
+      return `[Þéŕɱîššîöñš ñééð ŕéçöṽéŕý ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePermissions need recovery\u202c`;
+  }
+  return `Permissions need recovery`;
+}
+
+export function settingsSecretsFinishForm(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أكمل نموذج السر المفتوح أولًا.`;
+    case "de":
+      return `Schließ zuerst das offene Formular für das Geheimnis ab.`;
+    case "es":
+      return `Primero termina el formulario de secreto abierto.`;
+    case "fr":
+      return `Terminez d’abord le formulaire de secret ouvert.`;
+    case "ja":
+      return `開いているシークレットのフォームを先に完了してください。`;
+    case "ko":
+      return `열려 있는 비밀 정보 양식을 먼저 마치세요.`;
+    case "pt-BR":
+      return `Termine primeiro o formulário de segredo aberto.`;
+    case "zh-Hans":
+      return `请先完成打开的机密表单。`;
+    case "zh-Hant":
+      return `請先完成開啟中的機密表單。`;
+    case "en-XA":
+      return `[Ƒîñîšĥ ţĥé öþéñ šéçŕéţ ƒöŕɱ ƒîŕšţ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFinish the open secret form first.\u202c`;
+  }
+  return `Finish the open secret form first.`;
+}
+
+export function settingsSecretsReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ قراءة الأسرار…`;
+    case "de":
+      return `Geheimnisse werden gelesen …`;
+    case "es":
+      return `Leyendo Secretos…`;
+    case "fr":
+      return `Lecture des Secrets…`;
+    case "ja":
+      return `シークレットを読み込み中…`;
+    case "ko":
+      return `비밀 정보를 읽는 중…`;
+    case "pt-BR":
+      return `Lendo Segredos…`;
+    case "zh-Hans":
+      return `正在读取机密…`;
+    case "zh-Hant":
+      return `正在讀取機密…`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ Šéçŕéţš… ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReading Secrets…\u202c`;
+  }
+  return `Reading Secrets…`;
+}
+
+export function settingsSecretsUnlockToUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح قفل التخزين أو تحقّق منه لاستخدام أسرارك. تبقى طلبات الموافقة في الانتظار.`;
+    case "de":
+      return `Entsperre den Speicher oder prüfe ihn, um deine Geheimnisse zu nutzen. Freigabeanfragen warten weiter.`;
+    case "es":
+      return `Desbloquea o revisa el almacenamiento para usar tus secretos. Las solicitudes de aprobación siguen esperando.`;
+    case "fr":
+      return `Déverrouillez ou vérifiez le stockage pour utiliser vos secrets. Les demandes d’approbation restent en attente.`;
+    case "ja":
+      return `シークレットを使うには、ストレージのロックを解除するか確認してください。承認リクエストは待機したままです。`;
+    case "ko":
+      return `비밀 정보를 쓰려면 저장소를 잠금 해제하거나 확인하세요. 승인 요청은 계속 기다려요.`;
+    case "pt-BR":
+      return `Desbloqueie ou verifique o armazenamento para usar seus segredos. Os pedidos de aprovação continuam aguardando.`;
+    case "zh-Hans":
+      return `请解锁或检查存储后再使用你的机密。批准请求会继续等待。`;
+    case "zh-Hant":
+      return `請解鎖或檢查儲存空間，才能使用你的機密。核准請求會繼續等待。`;
+    case "en-XA":
+      return `[Ûñļöçķ öŕ çĥéçķ šţöŕáĝé ţö ûšé ýöûŕ šéçŕéţš. Åþþŕöṽáļ ŕéǫûéšţš ķééþ ŵáîţîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUnlock or check storage to use your secrets. Approval requests keep waiting.\u202c`;
+  }
+  return `Unlock or check storage to use your secrets. Approval requests keep waiting.`;
+}
+
+export function settingsSecretsUnlockAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح القفل أو التحقق مجددًا`;
+    case "de":
+      return `Entsperren oder erneut prüfen`;
+    case "es":
+      return `Desbloquear o volver a revisar`;
+    case "fr":
+      return `Déverrouiller ou revérifier`;
+    case "ja":
+      return `ロック解除または再確認`;
+    case "ko":
+      return `잠금 해제 또는 다시 확인`;
+    case "pt-BR":
+      return `Desbloquear ou verificar de novo`;
+    case "zh-Hans":
+      return `解锁或重新检查`;
+    case "zh-Hant":
+      return `解鎖或再檢查一次`;
+    case "en-XA":
+      return `[Ûñļöçķ öŕ çĥéçķ áĝáîñ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUnlock or check again\u202c`;
+  }
+  return `Unlock or check again`;
+}
+
+export function settingsSecretsWaitForChange(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتظر حتى ينتهي التغيير الجاري.`;
+    case "de":
+      return `Warte, bis die laufende Änderung fertig ist.`;
+    case "es":
+      return `Espera a que termine el cambio actual.`;
+    case "fr":
+      return `Attendez la fin de la modification en cours.`;
+    case "ja":
+      return `現在の変更が終わるまでお待ちください。`;
+    case "ko":
+      return `진행 중인 변경이 끝날 때까지 기다리세요.`;
+    case "pt-BR":
+      return `Espere a alteração atual terminar.`;
+    case "zh-Hans":
+      return `请等待当前更改完成。`;
+    case "zh-Hant":
+      return `請等目前的變更完成。`;
+    case "en-XA":
+      return `[Ŵáîţ ƒöŕ ţĥé çûŕŕéñţ çĥáñĝé ţö ƒîñîšĥ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWait for the current change to finish.\u202c`;
+  }
+  return `Wait for the current change to finish.`;
+}
+
+export function settingsSecretsNamePlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مثلًا، نشر الموقع الإلكتروني`;
+    case "de":
+      return `Zum Beispiel: Website-Veröffentlichung`;
+    case "es":
+      return `Por ejemplo, Publicación del sitio web`;
+    case "fr":
+      return `Par exemple, Déploiement du site web`;
+    case "ja":
+      return `例：Web サイトのデプロイ`;
+    case "ko":
+      return `예: 웹사이트 배포`;
+    case "pt-BR":
+      return `Por exemplo, Publicação do site`;
+    case "zh-Hans":
+      return `例如：网站部署`;
+    case "zh-Hant":
+      return `例如：網站部署`;
+    case "en-XA":
+      return `[Ƒöŕ éẋáɱþļé, Ŵéƀšîţé ðéþļöýɱéñţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFor example, Website deployment\u202c`;
+  }
+  return `For example, Website deployment`;
+}
+
+export function settingsSecretsSaving(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الحفظ…`;
+    case "de":
+      return `Wird gespeichert …`;
+    case "es":
+      return `Guardando…`;
+    case "fr":
+      return `Enregistrement…`;
+    case "ja":
+      return `保存中…`;
+    case "ko":
+      return `저장 중…`;
+    case "pt-BR":
+      return `Salvando…`;
+    case "zh-Hans":
+      return `正在保存…`;
+    case "zh-Hant":
+      return `儲存中…`;
+    case "en-XA":
+      return `[Šáṽîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202eSaving…\u202c`;
+  }
+  return `Saving…`;
+}
+
+export function settingsSecretsWaitForSaving(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتظر حتى ينتهي الحفظ.`;
+    case "de":
+      return `Warte, bis das Speichern fertig ist.`;
+    case "es":
+      return `Espera a que termine de guardarse.`;
+    case "fr":
+      return `Attendez la fin de l’enregistrement.`;
+    case "ja":
+      return `保存が終わるまでお待ちください。`;
+    case "ko":
+      return `저장이 끝날 때까지 기다리세요.`;
+    case "pt-BR":
+      return `Espere terminar de salvar.`;
+    case "zh-Hans":
+      return `请等待保存完成。`;
+    case "zh-Hant":
+      return `請等儲存完成。`;
+    case "en-XA":
+      return `[Ŵáîţ ƒöŕ šáṽîñĝ ţö ƒîñîšĥ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWait for saving to finish.\u202c`;
+  }
+  return `Wait for saving to finish.`;
+}
+
+export function settingsSecretsCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsSecretsDeviceCode(input: { code: string }): string {
+  const code = input.code;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الرمز ${code}`;
+    case "de":
+      return `Code ${code}`;
+    case "es":
+      return `Código ${code}`;
+    case "fr":
+      return `Code ${code}`;
+    case "ja":
+      return `コード ${code}`;
+    case "ko":
+      return `코드 ${code}`;
+    case "pt-BR":
+      return `Código ${code}`;
+    case "zh-Hans":
+      return `代码 ${code}`;
+    case "zh-Hant":
+      return `代碼 ${code}`;
+    case "en-XA":
+      return `[Çöðé ${code} ~~]`;
+    case "ar-XB":
+      return `\u202eCode \u202c${code}`;
+  }
+  return `Code ${code}`;
+}
+
+export function settingsSecretsHistoryExported(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `صُدِّر السجل.`;
+    case "de":
+      return `Verlauf exportiert.`;
+    case "es":
+      return `Historial exportado.`;
+    case "fr":
+      return `Historique exporté.`;
+    case "ja":
+      return `履歴を書き出しました。`;
+    case "ko":
+      return `기록을 내보냈어요.`;
+    case "pt-BR":
+      return `Histórico exportado.`;
+    case "zh-Hans":
+      return `历史记录已导出。`;
+    case "zh-Hant":
+      return `已匯出歷史紀錄。`;
+    case "en-XA":
+      return `[Ĥîšţöŕý éẋþöŕţéð. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHistory exported.\u202c`;
+  }
+  return `History exported.`;
+}
+
+export function settingsSecretsNoExport(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُحفظ أي تصدير.`;
+    case "de":
+      return `Kein Export gespeichert.`;
+    case "es":
+      return `No se guardó ninguna exportación.`;
+    case "fr":
+      return `Aucune exportation enregistrée.`;
+    case "ja":
+      return `書き出したファイルは保存されませんでした。`;
+    case "ko":
+      return `내보낸 파일을 저장하지 않았어요.`;
+    case "pt-BR":
+      return `Nenhuma exportação salva.`;
+    case "zh-Hans":
+      return `未保存导出文件。`;
+    case "zh-Hant":
+      return `沒有儲存匯出檔案。`;
+    case "en-XA":
+      return `[Ñö éẋþöŕţ šáṽéð. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo export saved.\u202c`;
+  }
+  return `No export saved.`;
+}
+
+export function settingsSecretsExportFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر تصدير السجل.`;
+    case "de":
+      return `Der Verlauf konnte nicht exportiert werden.`;
+    case "es":
+      return `No se pudo exportar el historial.`;
+    case "fr":
+      return `L’historique n’a pas pu être exporté.`;
+    case "ja":
+      return `履歴を書き出せませんでした。`;
+    case "ko":
+      return `기록을 내보낼 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível exportar o histórico.`;
+    case "zh-Hans":
+      return `无法导出历史记录。`;
+    case "zh-Hant":
+      return `無法匯出歷史紀錄。`;
+    case "en-XA":
+      return `[Ĥîšţöŕý çöûļð ñöţ ƀé éẋþöŕţéð. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHistory could not be exported.\u202c`;
+  }
+  return `History could not be exported.`;
+}
+
+export function settingsSecretsExportHistory(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تصدير السجل`;
+    case "de":
+      return `Verlauf exportieren`;
+    case "es":
+      return `Exportar historial`;
+    case "fr":
+      return `Exporter l’historique`;
+    case "ja":
+      return `履歴を書き出す`;
+    case "ko":
+      return `기록 내보내기`;
+    case "pt-BR":
+      return `Exportar histórico`;
+    case "zh-Hans":
+      return `导出历史记录`;
+    case "zh-Hant":
+      return `匯出歷史紀錄`;
+    case "en-XA":
+      return `[Éẋþöŕţ ĥîšţöŕý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eExport history\u202c`;
+  }
+  return `Export history`;
+}
+
+export function settingsSecretsDeleteHistory(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حذف السجل`;
+    case "de":
+      return `Verlauf löschen`;
+    case "es":
+      return `Eliminar historial`;
+    case "fr":
+      return `Supprimer l’historique`;
+    case "ja":
+      return `履歴を削除`;
+    case "ko":
+      return `기록 삭제`;
+    case "pt-BR":
+      return `Excluir histórico`;
+    case "zh-Hans":
+      return `删除历史记录`;
+    case "zh-Hant":
+      return `刪除歷史紀錄`;
+    case "en-XA":
+      return `[Ðéļéţé ĥîšţöŕý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eDelete history\u202c`;
+  }
+  return `Delete history`;
+}
+
+export function settingsSecretsRefresh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تحديث`;
+    case "de":
+      return `Aktualisieren`;
+    case "es":
+      return `Actualizar`;
+    case "fr":
+      return `Actualiser`;
+    case "ja":
+      return `更新`;
+    case "ko":
+      return `새로 고침`;
+    case "pt-BR":
+      return `Atualizar`;
+    case "zh-Hans":
+      return `刷新`;
+    case "zh-Hant":
+      return `重新整理`;
+    case "en-XA":
+      return `[Ŕéƒŕéšĥ ~~~]`;
+    case "ar-XB":
+      return `\u202eRefresh\u202c`;
+  }
+  return `Refresh`;
+}
+
+export function settingsSecretsNoHistory(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوجد سجل مدوَّن.`;
+    case "de":
+      return `Kein Verlauf aufgezeichnet.`;
+    case "es":
+      return `No hay historial registrado.`;
+    case "fr":
+      return `Aucun historique enregistré.`;
+    case "ja":
+      return `記録された履歴はありません。`;
+    case "ko":
+      return `기록된 내용이 없어요.`;
+    case "pt-BR":
+      return `Nenhum histórico registrado.`;
+    case "zh-Hans":
+      return `没有历史记录。`;
+    case "zh-Hant":
+      return `沒有歷史紀錄。`;
+    case "en-XA":
+      return `[Ñö ĥîšţöŕý ŕéçöŕðéð. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo history recorded.\u202c`;
+  }
+  return `No history recorded.`;
+}
+
+export function settingsSecretsRecoveredSource(input: { source: string }): string {
+  const source = input.source;
+  switch (currentLanguage()) {
+    case "ar":
+      return `المصدر: ${source}`;
+    case "de":
+      return `Quelle: ${source}`;
+    case "es":
+      return `Origen: ${source}`;
+    case "fr":
+      return `Source : ${source}`;
+    case "ja":
+      return `取得元：${source}`;
+    case "ko":
+      return `출처: ${source}`;
+    case "pt-BR":
+      return `Origem: ${source}`;
+    case "zh-Hans":
+      return `来源：${source}`;
+    case "zh-Hant":
+      return `來源：${source}`;
+    case "en-XA":
+      return `[Šöûŕçé: ${source} ~~~]`;
+    case "ar-XB":
+      return `\u202eSource: \u202c${source}`;
+  }
+  return `Source: ${source}`;
+}
+
+export function settingsSecretsRecoveredAt(input: { at: string }): string {
+  const at = input.at;
+  switch (currentLanguage()) {
+    case "ar":
+      return `وقت الاسترداد: ${at}`;
+    case "de":
+      return `Wiederhergestellt: ${at}`;
+    case "es":
+      return `Recuperado: ${at}`;
+    case "fr":
+      return `Récupéré : ${at}`;
+    case "ja":
+      return `復元日時：${at}`;
+    case "ko":
+      return `복구 시각: ${at}`;
+    case "pt-BR":
+      return `Recuperado: ${at}`;
+    case "zh-Hans":
+      return `恢复时间：${at}`;
+    case "zh-Hant":
+      return `復原時間：${at}`;
+    case "en-XA":
+      return `[Ŕéçöṽéŕéð: ${at} ~~~~]`;
+    case "ar-XB":
+      return `\u202eRecovered: \u202c${at}`;
+  }
+  return `Recovered: ${at}`;
+}
+
+export function settingsSecretsFinishFormOrChange(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أكمل نموذج السر المفتوح أو التغيير الجاري أولًا.`;
+    case "de":
+      return `Schließ zuerst das offene Formular für das Geheimnis oder die laufende Änderung ab.`;
+    case "es":
+      return `Primero termina el formulario de secreto abierto o el cambio actual.`;
+    case "fr":
+      return `Terminez d’abord le formulaire de secret ouvert ou la modification en cours.`;
+    case "ja":
+      return `開いているシークレットのフォームか、現在の変更を先に完了してください。`;
+    case "ko":
+      return `열려 있는 비밀 정보 양식이나 진행 중인 변경을 먼저 마치세요.`;
+    case "pt-BR":
+      return `Termine primeiro o formulário de segredo aberto ou a alteração atual.`;
+    case "zh-Hans":
+      return `请先完成打开的机密表单或当前更改。`;
+    case "zh-Hant":
+      return `請先完成開啟中的機密表單或目前的變更。`;
+    case "en-XA":
+      return `[Ƒîñîšĥ ţĥé öþéñ šéçŕéţ ƒöŕɱ öŕ çûŕŕéñţ çĥáñĝé ƒîŕšţ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFinish the open secret form or current change first.\u202c`;
+  }
+  return `Finish the open secret form or current change first.`;
+}
+
+export function settingsSecretsBackupNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `احفظ نسخة مشفّرة ومفتاح استرداد منفصلًا. أبقهما منفصلين: يستطيع أي شخص يملكهما معًا قراءة القيم المحفوظة. لا يمكن إعادة تعيين المفتاح.`;
+    case "de":
+      return `Sichere eine verschlüsselte Kopie und einen separaten Wiederherstellungsschlüssel. Bewahre sie getrennt auf: Wer beides hat, kann die gespeicherten Werte lesen. Der Schlüssel lässt sich nicht zurücksetzen.`;
+    case "es":
+      return `Guarda una copia cifrada y una clave de recuperación aparte. Guárdalas por separado: quien tenga ambas puede leer los valores guardados. La clave no se puede restablecer.`;
+    case "fr":
+      return `Enregistrez une copie chiffrée et une clé de récupération séparée. Conservez-les à l’écart l’une de l’autre : quiconque possède les deux peut lire les valeurs enregistrées. Cette clé ne peut pas être réinitialisée.`;
+    case "ja":
+      return `暗号化したコピーと、それとは別の復元キーを保存します。2つは別々に保管してください：両方を持つ人は誰でも保存された値を読めます。キーのリセットはできません。`;
+    case "ko":
+      return `암호화된 사본과 별도의 복구 키를 저장하세요. 둘은 따로 보관하세요: 둘 다 가진 사람은 저장된 값을 읽을 수 있어요. 키를 재설정하는 방법은 없어요.`;
+    case "pt-BR":
+      return `Salve uma cópia criptografada e uma chave de recuperação separada. Guarde as duas em lugares diferentes: quem tiver ambas pode ler os valores salvos. Não há como redefinir a chave.`;
+    case "zh-Hans":
+      return `保存一份加密副本和一个单独的恢复密钥。请将它们分开保管：同时拥有两者的人都能读取已保存的值。密钥无法重置。`;
+    case "zh-Hant":
+      return `儲存一份加密副本和另外存放的復原金鑰。請把兩者分開保管：同時擁有兩者的人就能讀取儲存的值。金鑰無法重設。`;
+    case "en-XA":
+      return `[Šáṽé áñ éñçŕýþţéð çöþý áñð á šéþáŕáţé ŕéçöṽéŕý ķéý. Ķééþ ţĥéɱ áþáŕţ: áñýöñé ŵîţĥ ƀöţĥ çáñ ŕéáð ţĥé šáṽéð ṽáļûéš. Ţĥéŕé îš ñö ķéý ŕéšéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave an encrypted copy and a separate recovery key. Keep them apart: anyone with both can read the saved values. There is no key reset.\u202c`;
+  }
+  return `Save an encrypted copy and a separate recovery key. Keep them apart: anyone with both can read the saved values. There is no key reset.`;
+}
+
+export function settingsSecretsRestoreNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاستعادة تستبدل القيم المخزّنة وتمسح القرارات المحفوظة وموافقات الهاتف والوصول المؤقت. يبقى السجل، ولا يسمح أبدًا بأي استخدام.`;
+    case "de":
+      return `Wiederherstellen ersetzt die gespeicherten Werte und löscht gespeicherte Entscheidungen, Freigaben per Telefon und befristeten Zugriff. Der Verlauf bleibt und erlaubt nie eine Nutzung.`;
+    case "es":
+      return `Restaurar reemplaza los valores guardados y borra las decisiones guardadas, las aprobaciones desde el teléfono y los accesos temporales. El historial se conserva y nunca permite un uso.`;
+    case "fr":
+      return `La restauration remplace les valeurs stockées et efface les décisions enregistrées, les approbations par téléphone et les accès temporaires. L’historique reste, et il n’autorise jamais une utilisation.`;
+    case "ja":
+      return `復元すると、保存された値が置き換えられ、保存済みの判断、スマートフォンでの承認、一時的なアクセスが消去されます。履歴は残りますが、履歴によって使用が許可されることはありません。`;
+    case "ko":
+      return `복원하면 저장된 값이 바뀌고, 저장된 결정, 휴대폰 승인, 임시 접근이 지워져요. 기록은 남지만, 기록으로 사용이 허용되지는 않아요.`;
+    case "pt-BR":
+      return `Restaurar substitui os valores guardados e apaga as decisões salvas, as aprovações pelo celular e os acessos temporários. O histórico continua, e ele nunca permite um uso.`;
+    case "zh-Hans":
+      return `恢复会替换已存储的值，并清除已保存的决定、手机批准和临时访问权限。历史记录会保留，但它永远不会允许任何使用。`;
+    case "zh-Hant":
+      return `還原會取代儲存的值，並清除已儲存的決定、手機核准和暫時存取權。歷史紀錄會保留，但它絕不會允許任何使用。`;
+    case "en-XA":
+      return `[Ŕéšţöŕîñĝ ŕéþļáçéš šţöŕéð ṽáļûéš áñð çļéáŕš šáṽéð ðéçîšîöñš, þĥöñé áþþŕöṽáļš áñð ţéɱþöŕáŕý áççéšš. Ĥîšţöŕý šţáýš, áñð îţ ñéṽéŕ áļļöŵš á ûšé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRestoring replaces stored values and clears saved decisions, phone approvals and temporary access. History stays, and it never allows a use.\u202c`;
+  }
+  return `Restoring replaces stored values and clears saved decisions, phone approvals and temporary access. History stays, and it never allows a use.`;
+}
+
+export function settingsSecretsUnlockBeforeRestore(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح قفل التخزين المحمي قبل الاستعادة.`;
+    case "de":
+      return `Entsperre den geschützten Speicher vor dem Wiederherstellen.`;
+    case "es":
+      return `Desbloquea el almacenamiento protegido antes de restaurar.`;
+    case "fr":
+      return `Déverrouillez le stockage protégé avant de restaurer.`;
+    case "ja":
+      return `復元する前に、保護されたストレージのロックを解除してください。`;
+    case "ko":
+      return `복원하기 전에 보호된 저장소를 잠금 해제하세요.`;
+    case "pt-BR":
+      return `Desbloqueie o armazenamento protegido antes de restaurar.`;
+    case "zh-Hans":
+      return `恢复前请先解锁受保护的存储。`;
+    case "zh-Hant":
+      return `還原前請先解鎖受保護的儲存空間。`;
+    case "en-XA":
+      return `[Ûñļöçķ þŕöţéçţéð šţöŕáĝé ƀéƒöŕé ŕéšţöŕîñĝ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUnlock protected storage before restoring.\u202c`;
+  }
+  return `Unlock protected storage before restoring.`;
+}
+
+export function settingsSecretsRecoveryFiles(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر الملفات، ثم أكّد عبر حاسوبك. الإلغاء لا يغيّر شيئًا. لا تضع مفتاح الاسترداد أبدًا في بطاقة أو محادثة.`;
+    case "de":
+      return `Wähle die Dateien und bestätige dann an deinem Computer. Abbrechen ändert nichts. Gib den Wiederherstellungsschlüssel nie in eine Karte oder Unterhaltung ein.`;
+    case "es":
+      return `Elige los archivos y luego confirma con tu computadora. Cancelar no cambia nada. Nunca pongas la clave de recuperación en una tarjeta ni en una conversación.`;
+    case "fr":
+      return `Choisissez les fichiers, puis confirmez avec votre ordinateur. Annuler ne change rien. Ne mettez jamais la clé de récupération dans une carte ou une conversation.`;
+    case "ja":
+      return `ファイルを選んでから、コンピューターで確認してください。キャンセルしても何も変わりません。復元キーは決してカードや会話に入れないでください。`;
+    case "ko":
+      return `파일을 고른 뒤 컴퓨터에서 확인하세요. 취소하면 아무것도 바뀌지 않아요. 복구 키는 절대 카드나 대화에 넣지 마세요.`;
+    case "pt-BR":
+      return `Escolha os arquivos e depois confirme com seu computador. Cancelar não muda nada. Nunca coloque a chave de recuperação em um cartão ou conversa.`;
+    case "zh-Hans":
+      return `选择文件，然后在你的电脑上确认。取消不会改变任何内容。切勿把恢复密钥放进卡片或对话中。`;
+    case "zh-Hant":
+      return `選擇檔案，然後在你的電腦上確認。取消不會變更任何內容。絕對不要把復原金鑰放進卡片或對話裡。`;
+    case "en-XA":
+      return `[Çĥööšé ţĥé ƒîļéš, ţĥéñ çöñƒîŕɱ ŵîţĥ ýöûŕ çöɱþûţéŕ. Çáñçéļļîñĝ çĥáñĝéš ñöţĥîñĝ. Ñéṽéŕ þûţ ţĥé ŕéçöṽéŕý ķéý îñ á çáŕð öŕ çöñṽéŕšáţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose the files, then confirm with your computer. Cancelling changes nothing. Never put the recovery key in a card or conversation.\u202c`;
+  }
+  return `Choose the files, then confirm with your computer. Cancelling changes nothing. Never put the recovery key in a card or conversation.`;
+}
+
+export function settingsSecretsNotRequested(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُطلب بعد`;
+    case "de":
+      return `Noch nicht angefragt`;
+    case "es":
+      return `Aún no solicitado`;
+    case "fr":
+      return `Pas encore demandé`;
+    case "ja":
+      return `まだリクエストされていません`;
+    case "ko":
+      return `아직 요청 안 함`;
+    case "pt-BR":
+      return `Ainda não solicitado`;
+    case "zh-Hans":
+      return `尚未请求`;
+    case "zh-Hant":
+      return `尚未請求`;
+    case "en-XA":
+      return `[Ñöţ ŕéǫûéšţéð ýéţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot requested yet\u202c`;
+  }
+  return `Not requested yet`;
+}
+
+export function settingsSharingInstallIdNote(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `معرّف التثبيت عشوائي، لا يرتبط بأي شيء عنك أو عن ${place}، ويُستبدل بمعرّف جديد كلما أُوقف التشخيص ثم شُغّل من جديد.`;
+    case "de":
+      return `Die Installations-ID ist zufällig, mit nichts über dich oder ${place} verknüpft und wird jedes Mal durch eine neue ersetzt, wenn Diagnose aus- und wieder eingeschaltet wird.`;
+    case "es":
+      return `El ID de instalación es aleatorio, no está ligado a nada sobre ti ni sobre ${place}, y se reemplaza por uno nuevo cada vez que Diagnósticos se desactiva y se vuelve a activar.`;
+    case "fr":
+      return `L’identifiant d’installation est aléatoire, n’est lié à rien qui vous concerne ni à ${place}, et il est remplacé par un nouveau chaque fois que Diagnostics est désactivé puis réactivé.`;
+    case "ja":
+      return `インストール ID はランダムで、あなたや ${place} に関する情報とは結び付いていません。診断をオフにしてからオンに戻すたびに、新しい ID に置き換わります。`;
+    case "ko":
+      return `설치 ID는 무작위로 만들어지고, 여러분이나 ${place}에 관한 어떤 정보와도 연결되지 않아요. 진단을 껐다가 다시 켤 때마다 새 ID로 바뀌어요.`;
+    case "pt-BR":
+      return `O ID de instalação é aleatório, não está ligado a nada sobre você nem sobre ${place} e é trocado por um novo sempre que Diagnóstico é desligado e ligado de novo.`;
+    case "zh-Hans":
+      return `安装 ID 是随机生成的，与你或 ${place} 的任何信息都无关，并且每次关闭再打开诊断时都会换成新的。`;
+    case "zh-Hant":
+      return `安裝 ID 是隨機產生的，和你或 ${place} 的任何資訊都無關，而且每次關閉再開啟診斷時，都會換成新的 ID。`;
+    case "en-XA":
+      return `[Ţĥé îñšţáļļ ÎÐ îš ŕáñðöɱ, ţîéð ţö ñöţĥîñĝ áƀöûţ ýöû öŕ ${place}, áñð ŕéþļáçéð ŵîţĥ á ñéŵ öñé ŵĥéñéṽéŕ Ðîáĝñöšţîçš îš ţûŕñéð öƒƒ áñð ƀáçķ öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe install ID is random, tied to nothing about you or \u202c${place}\u202e, and replaced with a new one whenever Diagnostics is turned off and back on.\u202c`;
+  }
+  return `The install ID is random, tied to nothing about you or ${place}, and replaced with a new one whenever Diagnostics is turned off and back on.`;
+}
+
+export function settingsSharingDiagnosticsSent(input: {
+  destination: string;
+  summary: string;
+}): string {
+  const destination = input.destination;
+  const summary = input.summary;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${summary} تُرسل إلى ${destination}. لا تُرسل أبدًا محادثة أو شيفرة أو بطاقة.`;
+    case "de":
+      return `${summary} Gesendet an ${destination}. Nie eine Unterhaltung, Code oder eine Karte.`;
+    case "es":
+      return `${summary} Se envían a ${destination}. Nunca una conversación, código ni una tarjeta.`;
+    case "fr":
+      return `${summary} Envoyés à ${destination}. Jamais une conversation, du code ou une carte.`;
+    case "ja":
+      return `${summary} 送信先は ${destination} です。会話、コード、カードは決して送信されません。`;
+    case "ko":
+      return `${summary} ${destination}(으)로 보내요. 대화, 코드, 카드는 절대 보내지 않아요.`;
+    case "pt-BR":
+      return `${summary} Enviados para ${destination}. Nunca uma conversa, código ou cartão.`;
+    case "zh-Hans":
+      return `${summary} 发送至 ${destination}。绝不包含对话、代码或卡片。`;
+    case "zh-Hant":
+      return `${summary} 會傳送到 ${destination}。絕不包含對話、程式碼或卡片。`;
+    case "en-XA":
+      return `[${summary} Šéñţ ţö ${destination}. Ñéṽéŕ á çöñṽéŕšáţîöñ, çöðé öŕ á çáŕð. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${summary}\u202e Sent to \u202c${destination}\u202e. Never a conversation, code or a card.\u202c`;
+  }
+  return `${summary} Sent to ${destination}. Never a conversation, code or a card.`;
+}
+
+export function settingsSharingDiagnosticsNowhere(input: { summary: string }): string {
+  const summary = input.summary;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${summary} ليس لهذه النسخة من التطبيق وجهة ترسلها إليها، لذا لا يخرج شيء في الحالتين.`;
+    case "de":
+      return `${summary} Dieser Build hat kein Ziel dafür, also geht so oder so nichts hinaus.`;
+    case "es":
+      return `${summary} Esta compilación no tiene adónde enviarlos, así que no sale nada en ningún caso.`;
+    case "fr":
+      return `${summary} Cette version n’a nulle part où les envoyer, donc rien ne part de toute façon.`;
+    case "ja":
+      return `${summary} このビルドには送信先がないため、どちらにしても何も外に出ません。`;
+    case "ko":
+      return `${summary} 이 빌드에는 보낼 곳이 없어서, 어느 쪽이든 아무것도 나가지 않아요.`;
+    case "pt-BR":
+      return `${summary} Esta versão não tem para onde enviá-los, então nada sai de qualquer forma.`;
+    case "zh-Hans":
+      return `${summary} 这个版本没有可以发送的目的地，所以无论开关与否都不会有任何内容离开。`;
+    case "zh-Hant":
+      return `${summary} 這個版本沒有可以傳送的地方，所以無論開或關，都不會有任何內容離開。`;
+    case "en-XA":
+      return `[${summary} Ţĥîš ƀûîļð ĥáš ñöŵĥéŕé ţö šéñð ţĥéɱ, šö ñöţĥîñĝ ļéáṽéš éîţĥéŕ ŵáý. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${summary}\u202e This build has nowhere to send them, so nothing leaves either way.\u202c`;
+  }
+  return `${summary} This build has nowhere to send them, so nothing leaves either way.`;
+}
+
+export function settingsSharingContributionDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجلات منقّحة لقرارات نائب القبطان نفسه، ليتعلم منها النموذج التالي. تُعرض كاملة قبل إرسال أي شيء.`;
+    case "de":
+      return `Geschwärzte Aufzeichnungen der eigenen Entscheidungen deines ersten Offiziers, damit das nächste Modell daraus lernt. Vor dem Senden vollständig angezeigt.`;
+    case "es":
+      return `Registros anonimizados de las propias decisiones de tu primer oficial, para que el próximo modelo aprenda de ellos. Se muestran completos antes de enviar nada.`;
+    case "fr":
+      return `Des fiches anonymisées des décisions de votre second, pour que le prochain modèle en tire des leçons. Affichées en entier avant tout envoi.`;
+    case "ja":
+      return `一等航海士自身の判断の記録を、個人情報を伏せたうえで提供し、次のモデルの学習に役立てます。送信前にすべて表示されます。`;
+    case "ko":
+      return `일등항해사가 직접 내린 결정의 기록에서 민감한 내용을 가린 것으로, 다음 모델이 이를 보고 배워요. 무엇이든 보내기 전에 전체를 먼저 보여 드려요.`;
+    case "pt-BR":
+      return `Registros anonimizados das próprias decisões do seu imediato, para que o próximo modelo aprenda com eles. Mostrados por completo antes de qualquer envio.`;
+    case "zh-Hans":
+      return `你的大副自身决定的脱敏记录，供下一个模型从中学习。发送前会完整展示。`;
+    case "zh-Hant":
+      return `你的大副自己所做決定的去識別化紀錄，讓下一個模型從中學習。傳送前會完整顯示。`;
+    case "en-XA":
+      return `[Ŕéðáçţéð ŕéçöŕðš öƒ ýöûŕ ƒîŕšţ ɱáţé'š öŵñ ðéçîšîöñš, šö ţĥé ñéẋţ ɱöðéļ ļéáŕñš ƒŕöɱ ţĥéɱ. Šĥöŵñ îñ ƒûļļ ƀéƒöŕé áñýţĥîñĝ îš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRedacted records of your first mate's own decisions, so the next model learns from them. Shown in full before anything is sent.\u202c`;
+  }
+  return `Redacted records of your first mate's own decisions, so the next model learns from them. Shown in full before anything is sent.`;
+}
+
+export function settingsSharingHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المشاركة`;
+    case "de":
+      return `Teilen`;
+    case "es":
+      return `Compartir`;
+    case "fr":
+      return `Partage`;
+    case "ja":
+      return `共有`;
+    case "ko":
+      return `공유`;
+    case "pt-BR":
+      return `Compartilhamento`;
+    case "zh-Hans":
+      return `共享`;
+    case "zh-Hant":
+      return `分享`;
+    case "en-XA":
+      return `[Šĥáŕîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eSharing\u202c`;
+  }
+  return `Sharing`;
+}
+
+export function settingsSharingDiagnostics(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التشخيص`;
+    case "de":
+      return `Diagnose`;
+    case "es":
+      return `Diagnósticos`;
+    case "fr":
+      return `Diagnostics`;
+    case "ja":
+      return `診断`;
+    case "ko":
+      return `진단`;
+    case "pt-BR":
+      return `Diagnóstico`;
+    case "zh-Hans":
+      return `诊断`;
+    case "zh-Hant":
+      return `診斷`;
+    case "en-XA":
+      return `[Ðîáĝñöšţîçš ~~~~]`;
+    case "ar-XB":
+      return `\u202eDiagnostics\u202c`;
+  }
+  return `Diagnostics`;
+}
+
+export function settingsSharingContribution(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المساهمة`;
+    case "de":
+      return `Beitrag`;
+    case "es":
+      return `Contribución`;
+    case "fr":
+      return `Contribution`;
+    case "ja":
+      return `提供`;
+    case "ko":
+      return `기여`;
+    case "pt-BR":
+      return `Contribuição`;
+    case "zh-Hans":
+      return `贡献`;
+    case "zh-Hant":
+      return `貢獻`;
+    case "en-XA":
+      return `[Çöñţŕîƀûţîöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202eContribution\u202c`;
+  }
+  return `Contribution`;
+}
+
+export function settingsSharingWhatWouldLeave(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما الذي سيخرج من ${place}`;
+    case "de":
+      return `Was ${place} verlassen würde`;
+    case "es":
+      return `Lo que saldría de ${place}`;
+    case "fr":
+      return `Ce qui quitterait ${place}`;
+    case "ja":
+      return `${place} から送られる内容`;
+    case "ko":
+      return `${place}에서 나가게 될 내용`;
+    case "pt-BR":
+      return `O que sairia de ${place}`;
+    case "zh-Hans":
+      return `会离开 ${place} 的内容`;
+    case "zh-Hant":
+      return `會離開 ${place} 的內容`;
+    case "en-XA":
+      return `[Ŵĥáţ ŵöûļð ļéáṽé ${place} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat would leave \u202c${place}`;
+  }
+  return `What would leave ${place}`;
+}
+
+export function settingsSharingTerms(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشروط`;
+    case "de":
+      return `Die Bedingungen`;
+    case "es":
+      return `Las condiciones`;
+    case "fr":
+      return `Les conditions`;
+    case "ja":
+      return `規約`;
+    case "ko":
+      return `약관`;
+    case "pt-BR":
+      return `Os termos`;
+    case "zh-Hans":
+      return `条款`;
+    case "zh-Hant":
+      return `條款`;
+    case "en-XA":
+      return `[Ţĥé ţéŕɱš ~~~]`;
+    case "ar-XB":
+      return `\u202eThe terms\u202c`;
+  }
+  return `The terms`;
+}
+
+export function settingsSharingReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ القراءة...`;
+    case "de":
+      return `Wird gelesen ...`;
+    case "es":
+      return `Leyendo...`;
+    case "fr":
+      return `Lecture...`;
+    case "ja":
+      return `読み込み中...`;
+    case "ko":
+      return `읽는 중...`;
+    case "pt-BR":
+      return `Lendo...`;
+    case "zh-Hans":
+      return `正在读取...`;
+    case "zh-Hant":
+      return `讀取中…`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eReading...\u202c`;
+  }
+  return `Reading...`;
+}
+
+export function settingsSharingDiagnosticsWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تشخيصات بانتظار الإرسال`;
+    case "de":
+      return `Diagnosedaten, die auf das Senden warten`;
+    case "es":
+      return `Diagnósticos pendientes de envío`;
+    case "fr":
+      return `Diagnostics en attente d’envoi`;
+    case "ja":
+      return `送信待ちの診断`;
+    case "ko":
+      return `보내기를 기다리는 진단`;
+    case "pt-BR":
+      return `Diagnósticos aguardando envio`;
+    case "zh-Hans":
+      return `等待发送的诊断`;
+    case "zh-Hant":
+      return `等待傳送的診斷`;
+    case "en-XA":
+      return `[Ðîáĝñöšţîçš ŵáîţîñĝ ţö šéñð ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDiagnostics waiting to send\u202c`;
+  }
+  return `Diagnostics waiting to send`;
+}
+
+export function settingsSharingDiagnosticsSentTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التشخيصات المُرسلة`;
+    case "de":
+      return `Gesendete Diagnosedaten`;
+    case "es":
+      return `Diagnósticos enviados`;
+    case "fr":
+      return `Diagnostics envoyés`;
+    case "ja":
+      return `送信済みの診断`;
+    case "ko":
+      return `보낸 진단`;
+    case "pt-BR":
+      return `Diagnósticos enviados`;
+    case "zh-Hans":
+      return `已发送的诊断`;
+    case "zh-Hant":
+      return `已傳送的診斷`;
+    case "en-XA":
+      return `[Ðîáĝñöšţîçš šéñţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDiagnostics sent\u202c`;
+  }
+  return `Diagnostics sent`;
+}
+
+export function settingsSharingRecordsWaitingNewest(input: {
+  shown: string;
+  total: string;
+}): string {
+  const shown = input.shown;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجلات القرارات بانتظار الإرسال (أحدث ${shown} من ${total})`;
+    case "de":
+      return `Entscheidungsaufzeichnungen, die auf das Senden warten (die neuesten ${shown} von ${total})`;
+    case "es":
+      return `Registros de decisiones pendientes de envío (los ${shown} más recientes de ${total})`;
+    case "fr":
+      return `Fiches de décision en attente d’envoi (${shown} plus récentes sur ${total})`;
+    case "ja":
+      return `送信待ちの判断記録（${total}件中、最新の${shown}件）`;
+    case "ko":
+      return `보내기를 기다리는 결정 기록(전체 ${total}개 중 최근 ${shown}개)`;
+    case "pt-BR":
+      return `Registros de decisões aguardando envio (os ${shown} mais recentes de ${total})`;
+    case "zh-Hans":
+      return `等待发送的决定记录（最新 ${shown} 条，共 ${total} 条）`;
+    case "zh-Hant":
+      return `等待傳送的決定紀錄（共 ${total} 筆，顯示最新 ${shown} 筆）`;
+    case "en-XA":
+      return `[Ðéçîšîöñ ŕéçöŕðš ŵáîţîñĝ ţö šéñð (ñéŵéšţ ${shown} öƒ ${total}) ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDecision records waiting to send (newest \u202c${shown}\u202e of \u202c${total}\u202e)\u202c`;
+  }
+  return `Decision records waiting to send (newest ${shown} of ${total})`;
+}
+
+export function settingsSharingRecordsWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجلات القرارات بانتظار الإرسال`;
+    case "de":
+      return `Entscheidungsaufzeichnungen, die auf das Senden warten`;
+    case "es":
+      return `Registros de decisiones pendientes de envío`;
+    case "fr":
+      return `Fiches de décision en attente d’envoi`;
+    case "ja":
+      return `送信待ちの判断記録`;
+    case "ko":
+      return `보내기를 기다리는 결정 기록`;
+    case "pt-BR":
+      return `Registros de decisões aguardando envio`;
+    case "zh-Hans":
+      return `等待发送的决定记录`;
+    case "zh-Hant":
+      return `等待傳送的決定紀錄`;
+    case "en-XA":
+      return `[Ðéçîšîöñ ŕéçöŕðš ŵáîţîñĝ ţö šéñð ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDecision records waiting to send\u202c`;
+  }
+  return `Decision records waiting to send`;
+}
+
+export function settingsSharingNoRecords(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا توجد سجلات قرارات بعد.`;
+    case "de":
+      return `Noch keine Entscheidungsaufzeichnungen.`;
+    case "es":
+      return `Aún no hay registros de decisiones.`;
+    case "fr":
+      return `Pas encore de fiches de décision.`;
+    case "ja":
+      return `判断記録はまだありません。`;
+    case "ko":
+      return `아직 결정 기록이 없어요.`;
+    case "pt-BR":
+      return `Ainda não há registros de decisões.`;
+    case "zh-Hans":
+      return `还没有决定记录。`;
+    case "zh-Hant":
+      return `還沒有決定紀錄。`;
+    case "en-XA":
+      return `[Ñö ðéçîšîöñ ŕéçöŕðš ýéţ. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo decision records yet.\u202c`;
+  }
+  return `No decision records yet.`;
+}
+
+export function settingsSharingInstallId(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معرّف تثبيت مجهول الهوية`;
+    case "de":
+      return `Anonyme Installations-ID`;
+    case "es":
+      return `ID de instalación anónimo`;
+    case "fr":
+      return `Identifiant d’installation anonyme`;
+    case "ja":
+      return `匿名のインストール ID`;
+    case "ko":
+      return `익명 설치 ID`;
+    case "pt-BR":
+      return `ID de instalação anônimo`;
+    case "zh-Hans":
+      return `匿名安装 ID`;
+    case "zh-Hant":
+      return `匿名安裝 ID`;
+    case "en-XA":
+      return `[Åñöñýɱöûš îñšţáļļ ÎÐ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAnonymous install ID\u202c`;
+  }
+  return `Anonymous install ID`;
+}
+
+export function settingsSharingNoInstallId(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوجد ما دام التشخيص متوقفًا`;
+    case "de":
+      return `keine, solange Diagnose aus ist`;
+    case "es":
+      return `ninguno mientras Diagnósticos está desactivado`;
+    case "fr":
+      return `aucun tant que Diagnostics est désactivé`;
+    case "ja":
+      return `診断がオフの間はなし`;
+    case "ko":
+      return `진단이 꺼져 있는 동안은 없음`;
+    case "pt-BR":
+      return `nenhum enquanto Diagnóstico estiver desligado`;
+    case "zh-Hans":
+      return `诊断关闭时没有`;
+    case "zh-Hant":
+      return `診斷關閉時沒有`;
+    case "en-XA":
+      return `[ñöñé ŵĥîļé Ðîáĝñöšţîçš îš öƒƒ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202enone while Diagnostics is off\u202c`;
+  }
+  return `none while Diagnostics is off`;
+}
+
+export function settingsSharingCatalog(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل ما يمكن أن يرسله التشخيص`;
+    case "de":
+      return `Alles, was Diagnose senden kann`;
+    case "es":
+      return `Todo lo que Diagnósticos puede enviar`;
+    case "fr":
+      return `Tout ce que Diagnostics peut envoyer`;
+    case "ja":
+      return `診断が送信できるすべての内容`;
+    case "ko":
+      return `진단이 보낼 수 있는 모든 것`;
+    case "pt-BR":
+      return `Tudo o que Diagnóstico pode enviar`;
+    case "zh-Hans":
+      return `诊断可能发送的全部内容`;
+    case "zh-Hant":
+      return `診斷可能傳送的所有內容`;
+    case "en-XA":
+      return `[Éṽéŕýţĥîñĝ Ðîáĝñöšţîçš çáñ šéñð ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEverything Diagnostics can send\u202c`;
+  }
+  return `Everything Diagnostics can send`;
+}
+
+export function settingsSharingCatalogNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحمل كل حدث أيضًا إصدار التطبيق ومعرّف التثبيت، ولا شيء غيرهما: لا نص كتبته، ولا أسماء، ولا مسارات.`;
+    case "de":
+      return `Jedes Ereignis enthält außerdem die App-Version und die Installations-ID und sonst nichts: keinen Text, den du geschrieben hast, keine Namen, keine Pfade.`;
+    case "es":
+      return `Cada evento también lleva la versión de la app y el ID de instalación, y nada más: ningún texto que hayas escrito, ningún nombre, ninguna ruta.`;
+    case "fr":
+      return `Chaque événement transporte aussi la version de l’app et l’identifiant d’installation, et rien d’autre : aucun texte que vous avez écrit, aucun nom, aucun chemin.`;
+    case "ja":
+      return `各イベントにはアプリのバージョンとインストール ID も含まれますが、それ以外は含まれません：あなたが書いたテキスト、名前、パスは含まれません。`;
+    case "ko":
+      return `각 이벤트에는 앱 버전과 설치 ID도 함께 담기고, 그 밖에는 아무것도 없어요: 직접 쓴 글도, 이름도, 경로도 없어요.`;
+    case "pt-BR":
+      return `Cada evento também leva a versão do app e o ID de instalação, e mais nada: nenhum texto que você escreveu, nenhum nome, nenhum caminho.`;
+    case "zh-Hans":
+      return `每个事件还会附带应用版本和安装 ID，除此之外没有别的：没有你写的文字，没有名称，也没有路径。`;
+    case "zh-Hant":
+      return `每個事件還會附上程式版本和安裝 ID，除此之外什麼都沒有：沒有你寫的文字、沒有名稱、沒有路徑。`;
+    case "en-XA":
+      return `[Éáçĥ éṽéñţ áļšö çáŕŕîéš ţĥé áþþ ṽéŕšîöñ áñð ţĥé îñšţáļļ ÎÐ, áñð ñöţĥîñĝ éļšé: ñö ţéẋţ ýöû ŵŕöţé, ñö ñáɱéš, ñö þáţĥš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEach event also carries the app version and the install ID, and nothing else: no text you wrote, no names, no paths.\u202c`;
+  }
+  return `Each event also carries the app version and the install ID, and nothing else: no text you wrote, no names, no paths.`;
+}
+
+export function settingsSharingAskTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هل تساعد النموذج التالي على التعلّم؟`;
+    case "de":
+      return `Dem nächsten Modell beim Lernen helfen?`;
+    case "es":
+      return `¿Ayudar a que aprenda el próximo modelo?`;
+    case "fr":
+      return `Aider le prochain modèle à apprendre ?`;
+    case "ja":
+      return `次のモデルの学習に協力しますか？`;
+    case "ko":
+      return `다음 모델이 배우도록 도와줄까요?`;
+    case "pt-BR":
+      return `Ajudar o próximo modelo a aprender?`;
+    case "zh-Hans":
+      return `帮助下一个模型学习？`;
+    case "zh-Hant":
+      return `要幫助下一個模型學習嗎？`;
+    case "en-XA":
+      return `[Ĥéļþ ţĥé ñéẋţ ɱöðéļ ļéáŕñ? ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHelp the next model learn?\u202c`;
+  }
+  return `Help the next model learn?`;
+}
+
+export function settingsSharingAskBody(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دُرّب النموذج المحلي على سجلات قرارات اختار أصحابها مشاركتها. يستطيع نائب القبطان إرسال سجلات منقّحة من قراراته، تُعرض كاملة قبل خروج أي شيء. يعمل النموذج بالطريقة نفسها في الحالتين، وهذه هي المرة الوحيدة التي يسأل فيها التطبيق.`;
+    case "de":
+      return `Das lokale Modell wurde mit Entscheidungsaufzeichnungen trainiert, die Menschen teilen wollten. Dein erster Offizier kann geschwärzte Aufzeichnungen seiner eigenen senden, vollständig angezeigt, bevor etwas hinausgeht. Das Modell funktioniert so oder so gleich, und die App fragt nur dieses eine Mal.`;
+    case "es":
+      return `El modelo local se entrenó con registros de decisiones que otras personas decidieron compartir. Tu primer oficial puede enviar registros anonimizados de las suyas, que se muestran completos antes de que salga nada. El modelo funciona igual en ambos casos, y esta es la única vez que la app lo pregunta.`;
+    case "fr":
+      return `Le modèle local a été entraîné sur des fiches de décision que des personnes ont choisi de partager. Votre second peut envoyer des fiches anonymisées des siennes, affichées en entier avant tout envoi. Le modèle fonctionne de la même façon dans les deux cas, et c’est la seule fois où l’app pose la question.`;
+    case "ja":
+      return `ローカルモデルは、共有を選んだ人々の判断記録で学習しています。一等航海士は自身の記録を、個人情報を伏せたうえで送信でき、外に出る前にすべて表示されます。どちらを選んでもモデルの動作は変わらず、アプリがこれを尋ねるのは今回だけです。`;
+    case "ko":
+      return `로컬 모델은 사람들이 공유하기로 한 결정 기록으로 학습했어요. 일등항해사도 자기 결정 기록을 민감한 내용을 가려서 보낼 수 있고, 무엇이든 나가기 전에 전체를 보여 드려요. 어느 쪽이든 모델은 똑같이 작동하고, 앱이 묻는 건 이번 한 번뿐이에요.`;
+    case "pt-BR":
+      return `O modelo local foi treinado com registros de decisões que pessoas escolheram compartilhar. Seu imediato pode enviar registros anonimizados das próprias decisões, mostrados por completo antes de qualquer coisa sair. O modelo funciona igual de qualquer forma, e esta é a única vez que o app pergunta.`;
+    case "zh-Hans":
+      return `本地模型是用人们选择共享的决定记录训练的。你的大副可以发送它自己的脱敏记录，在任何内容离开前都会完整展示。无论选择哪种，模型的工作方式都一样，而且应用只会询问这一次。`;
+    case "zh-Hant":
+      return `本機模型是用大家選擇分享的決定紀錄訓練出來的。你的大副可以傳送自己去識別化的紀錄，在任何內容離開前都會完整顯示。不論怎麼選，模型的運作都一樣，而且程式只會問這一次。`;
+    case "en-XA":
+      return `[Ţĥé ļöçáļ ɱöðéļ ŵáš ţŕáîñéð öñ ðéçîšîöñ ŕéçöŕðš þéöþļé çĥöšé ţö šĥáŕé. Ýöûŕ ƒîŕšţ ɱáţé çáñ šéñð ŕéðáçţéð ŕéçöŕðš öƒ îţš öŵñ, šĥöŵñ îñ ƒûļļ ƀéƒöŕé áñýţĥîñĝ ļéáṽéš. Ţĥé ɱöðéļ ŵöŕķš ţĥé šáɱé éîţĥéŕ ŵáý, áñð ţĥîš îš ţĥé öñļý ţîɱé ţĥé áþþ ášķš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe local model was trained on decision records people chose to share. Your first mate can send redacted records of its own, shown in full before anything leaves. The model works the same either way, and this is the only time the app asks.\u202c`;
+  }
+  return `The local model was trained on decision records people chose to share. Your first mate can send redacted records of its own, shown in full before anything leaves. The model works the same either way, and this is the only time the app asks.`;
+}
+
+export function settingsSharingAskNotNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ليس الآن`;
+    case "de":
+      return `Nicht jetzt`;
+    case "es":
+      return `Ahora no`;
+    case "fr":
+      return `Pas maintenant`;
+    case "ja":
+      return `今はしない`;
+    case "ko":
+      return `나중에`;
+    case "pt-BR":
+      return `Agora não`;
+    case "zh-Hans":
+      return `暂不`;
+    case "zh-Hant":
+      return `暫時不要`;
+    case "en-XA":
+      return `[Ñöţ ñöŵ ~~~]`;
+    case "ar-XB":
+      return `\u202eNot now\u202c`;
+  }
+  return `Not now`;
+}
+
+export function settingsSharingAskContribute(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المساهمة`;
+    case "de":
+      return `Beitragen`;
+    case "es":
+      return `Contribuir`;
+    case "fr":
+      return `Contribuer`;
+    case "ja":
+      return `提供する`;
+    case "ko":
+      return `기여하기`;
+    case "pt-BR":
+      return `Contribuir`;
+    case "zh-Hans":
+      return `贡献`;
+    case "zh-Hant":
+      return `貢獻`;
+    case "en-XA":
+      return `[Çöñţŕîƀûţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eContribute\u202c`;
+  }
+  return `Contribute`;
+}
+
+export function settingsGeneralCustomApi(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `واجهة API مخصصة`;
+    case "de":
+      return `Eigene API`;
+    case "es":
+      return `API personalizada`;
+    case "fr":
+      return `API personnalisée`;
+    case "ja":
+      return `カスタム API`;
+    case "ko":
+      return `사용자 지정 API`;
+    case "pt-BR":
+      return `API personalizada`;
+    case "zh-Hans":
+      return `自定义 API`;
+    case "zh-Hant":
+      return `自訂 API`;
+    case "en-XA":
+      return `[Çûšţöɱ ÅÞÎ ~~~~]`;
+    case "ar-XB":
+      return `\u202eCustom API\u202c`;
+  }
+  return `Custom API`;
+}
+
+export function settingsGeneralModelByNameLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نموذج نائب القبطان بالاسم`;
+    case "de":
+      return `Modell des ersten Offiziers nach Name`;
+    case "es":
+      return `Modelo del primer oficial por nombre`;
+    case "fr":
+      return `Modèle du second par nom`;
+    case "ja":
+      return `一等航海士のモデルを名前で指定`;
+    case "ko":
+      return `이름으로 지정한 일등항해사 모델`;
+    case "pt-BR":
+      return `Modelo do imediato pelo nome`;
+    case "zh-Hans":
+      return `按名称指定大副模型`;
+    case "zh-Hant":
+      return `依名稱指定大副的模型`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ɱöðéļ ƀý ñáɱé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate model by name\u202c`;
+  }
+  return `First mate model by name`;
+}
+
+export function settingsGeneralFirstMateModel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نموذج نائب القبطان`;
+    case "de":
+      return `Modell des ersten Offiziers`;
+    case "es":
+      return `Modelo del primer oficial`;
+    case "fr":
+      return `Modèle du second`;
+    case "ja":
+      return `一等航海士のモデル`;
+    case "ko":
+      return `일등항해사 모델`;
+    case "pt-BR":
+      return `Modelo do imediato`;
+    case "zh-Hans":
+      return `大副模型`;
+    case "zh-Hant":
+      return `大副的模型`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ɱöðéļ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate model\u202c`;
+  }
+  return `First mate model`;
+}
+
+export function settingsGeneralFirstMateModelAccount(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نموذج نائب القبطان وحسابه`;
+    case "de":
+      return `Modell und Konto des ersten Offiziers`;
+    case "es":
+      return `Modelo y cuenta del primer oficial`;
+    case "fr":
+      return `Modèle et compte du second`;
+    case "ja":
+      return `一等航海士のモデルとアカウント`;
+    case "ko":
+      return `일등항해사 모델과 계정`;
+    case "pt-BR":
+      return `Modelo e conta do imediato`;
+    case "zh-Hans":
+      return `大副模型和账户`;
+    case "zh-Hant":
+      return `大副的模型和帳號`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ɱöðéļ áñð áççöûñţ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate model and account\u202c`;
+  }
+  return `First mate model and account`;
+}
+
+export function settingsGeneralModelAuto(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تلقائي (من الاشتراكات)`;
+    case "de":
+      return `Automatisch (aus den Abos)`;
+    case "es":
+      return `Automático (según las suscripciones)`;
+    case "fr":
+      return `Auto (selon les abonnements)`;
+    case "ja":
+      return `自動（サブスクリプションから）`;
+    case "ko":
+      return `자동(구독에서 선택)`;
+    case "pt-BR":
+      return `Automático (pelas assinaturas)`;
+    case "zh-Hans":
+      return `自动（根据订阅）`;
+    case "zh-Hant":
+      return `自動（依訂閱方案）`;
+    case "en-XA":
+      return `[Åûţö (ƒŕöɱ šûƀšçŕîþţîöñš) ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAuto (from subscriptions)\u202c`;
+  }
+  return `Auto (from subscriptions)`;
+}
+
+export function settingsGeneralModelStranded(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${model} — لا يمكنه تشغيل نائب القبطان`;
+    case "de":
+      return `${model} – kann deinen ersten Offizier nicht ausführen`;
+    case "es":
+      return `${model} — no puede ejecutar a tu primer oficial`;
+    case "fr":
+      return `${model} – ne peut pas faire fonctionner votre second`;
+    case "ja":
+      return `${model} — 一等航海士を実行できません`;
+    case "ko":
+      return `${model} — 일등항해사를 실행할 수 없어요`;
+    case "pt-BR":
+      return `${model} — não consegue rodar seu imediato`;
+    case "zh-Hans":
+      return `${model}——无法运行你的大副`;
+    case "zh-Hant":
+      return `${model}：無法執行你的大副`;
+    case "en-XA":
+      return `[${model} — çáññöţ ŕûñ ýöûŕ ƒîŕšţ ɱáţé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${model}\u202e — cannot run your first mate\u202c`;
+  }
+  return `${model} — cannot run your first mate`;
+}
+
+export function settingsGeneralModelByName(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نموذج آخر بالاسم…`;
+    case "de":
+      return `Anderes Modell nach Name …`;
+    case "es":
+      return `Otro modelo por nombre…`;
+    case "fr":
+      return `Un autre modèle par nom…`;
+    case "ja":
+      return `ほかのモデルを名前で指定…`;
+    case "ko":
+      return `다른 모델을 이름으로 지정…`;
+    case "pt-BR":
+      return `Outro modelo pelo nome…`;
+    case "zh-Hans":
+      return `按名称指定其他模型…`;
+    case "zh-Hant":
+      return `依名稱指定其他模型…`;
+    case "en-XA":
+      return `[Åñöţĥéŕ ɱöðéļ ƀý ñáɱé… ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAnother model by name…\u202c`;
+  }
+  return `Another model by name…`;
+}
+
+export function settingsGeneralModelAccountDescription(input: { provider: string }): string {
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج الذي يجيب به نائب القبطان نفسه، وحساب ${provider} الذي يجيب عبره؛ ويحتفظ عمل الطاقم بحسابه المفضّل. يجرّب الوضع التلقائي نماذجك للمهام الصعبة ثم العادية ثم الممتازة ثم البسيطة عبر اشتراكاتك؛ ويسري التغيير في لحظة الخمول التالية.`;
+    case "de":
+      return `Das Modell, mit dem dein erster Offizier selbst antwortet, und das Konto bei ${provider}, über das er antwortet; die Arbeit der Crew behält ihr eigenes bevorzugtes Konto. Automatisch versucht deine Modelle für schwere Aufgaben, dann normale, Premium und dann einfache, über deine Abos hinweg; eine Änderung gilt ab dem nächsten ruhigen Moment.`;
+    case "es":
+      return `El modelo con el que responde tu primer oficial y la cuenta de ${provider} en la que responde; el trabajo de la tripulación conserva su propia cuenta preferida. Automático prueba tus modelos para tareas difíciles, luego normales, Premium y luego simples, en tus suscripciones; un cambio se aplica en el siguiente momento de reposo.`;
+    case "fr":
+      return `Le modèle avec lequel votre second répond lui-même, et le compte ${provider} sur lequel il répond ; le travail de l’équipage garde son propre compte préféré. Auto essaie vos modèles pour les tâches difficiles, puis normales, Premium, puis simples, parmi vos abonnements ; un changement s’applique au prochain moment de repos.`;
+    case "ja":
+      return `一等航海士自身が応答に使うモデルと、応答に使う ${provider} のアカウントです。乗組員の作業はそれぞれ優先のアカウントを使います。「自動」はサブスクリプション全体で、難しいタスク向け、普通、プレミアム、簡単の順にモデルを試します。変更は次に手が空いたときに反映されます。`;
+    case "ko":
+      return `일등항해사가 직접 답할 때 쓰는 모델과, 답할 때 쓰는 ${provider} 계정이에요. 선원들의 작업은 각자 선호하는 계정을 그대로 써요. 자동은 구독 전체에서 어려운 작업용 모델부터 보통, 프리미엄, 간단 순으로 시도해요. 변경은 다음에 한가해질 때 적용돼요.`;
+    case "pt-BR":
+      return `O modelo com que o próprio imediato responde e a conta do ${provider} em que ele responde; o trabalho da tripulação mantém a própria conta preferida. Automático tenta seus modelos para tarefas difíceis, depois normais, Premium e depois simples, nas suas assinaturas; uma mudança vale no próximo momento ocioso.`;
+    case "zh-Hans":
+      return `你的大副自己回答时使用的模型，以及它所用的 ${provider} 账户；船员的工作仍使用各自偏好的账户。“自动”会在你的订阅中依次尝试用于困难任务的模型，然后是普通、顶级，最后是简单；更改会在下一次空闲时生效。`;
+    case "zh-Hant":
+      return `你的大副自己回覆時使用的模型，以及它使用的 ${provider} 帳號；船員的工作仍使用各自偏好的帳號。「自動」會在你的訂閱方案中依序嘗試用於困難任務的模型，接著是普通、頂級，最後是簡單；變更會在下一次閒置時生效。`;
+    case "en-XA":
+      return `[Ţĥé ɱöðéļ ýöûŕ ƒîŕšţ ɱáţé îţšéļƒ áñšŵéŕš ŵîţĥ, áñð ţĥé ${provider} áççöûñţ îţ áñšŵéŕš öñ; çŕéŵ ŵöŕķ ķééþš îţš öŵñ þŕéƒéŕŕéð áççöûñţ. Åûţö ţŕîéš ýöûŕ ɱöðéļš ƒöŕ ĥáŕð ţášķš, ţĥéñ ñöŕɱáļ, þŕéɱîûɱ, ţĥéñ šîɱþļé, áçŕöšš ýöûŕ šûƀšçŕîþţîöñš; á çĥáñĝé áþþļîéš áţ ţĥé ñéẋţ îðļé ɱöɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe model your first mate itself answers with, and the \u202c${provider}\u202e account it answers on; crew work keeps its own preferred account. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.\u202c`;
+  }
+  return `The model your first mate itself answers with, and the ${provider} account it answers on; crew work keeps its own preferred account. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.`;
+}
+
+export function settingsGeneralModelDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج الذي يجيب به نائب القبطان نفسه. يجرّب الوضع التلقائي نماذجك للمهام الصعبة ثم العادية ثم الممتازة ثم البسيطة عبر اشتراكاتك؛ ويسري التغيير في لحظة الخمول التالية.`;
+    case "de":
+      return `Das Modell, mit dem dein erster Offizier selbst antwortet. Automatisch versucht deine Modelle für schwere Aufgaben, dann normale, Premium und dann einfache, über deine Abos hinweg; eine Änderung gilt ab dem nächsten ruhigen Moment.`;
+    case "es":
+      return `El modelo con el que responde tu primer oficial. Automático prueba tus modelos para tareas difíciles, luego normales, Premium y luego simples, en tus suscripciones; un cambio se aplica en el siguiente momento de reposo.`;
+    case "fr":
+      return `Le modèle avec lequel votre second répond lui-même. Auto essaie vos modèles pour les tâches difficiles, puis normales, Premium, puis simples, parmi vos abonnements ; un changement s’applique au prochain moment de repos.`;
+    case "ja":
+      return `一等航海士自身が応答に使うモデルです。「自動」はサブスクリプション全体で、難しいタスク向け、普通、プレミアム、簡単の順にモデルを試します。変更は次に手が空いたときに反映されます。`;
+    case "ko":
+      return `일등항해사가 직접 답할 때 쓰는 모델이에요. 자동은 구독 전체에서 어려운 작업용 모델부터 보통, 프리미엄, 간단 순으로 시도해요. 변경은 다음에 한가해질 때 적용돼요.`;
+    case "pt-BR":
+      return `O modelo com que o próprio imediato responde. Automático tenta seus modelos para tarefas difíceis, depois normais, Premium e depois simples, nas suas assinaturas; uma mudança vale no próximo momento ocioso.`;
+    case "zh-Hans":
+      return `你的大副自己回答时使用的模型。“自动”会在你的订阅中依次尝试用于困难任务的模型，然后是普通、顶级，最后是简单；更改会在下一次空闲时生效。`;
+    case "zh-Hant":
+      return `你的大副自己回覆時使用的模型。「自動」會在你的訂閱方案中依序嘗試用於困難任務的模型，接著是普通、頂級，最後是簡單；變更會在下一次閒置時生效。`;
+    case "en-XA":
+      return `[Ţĥé ɱöðéļ ýöûŕ ƒîŕšţ ɱáţé îţšéļƒ áñšŵéŕš ŵîţĥ. Åûţö ţŕîéš ýöûŕ ɱöðéļš ƒöŕ ĥáŕð ţášķš, ţĥéñ ñöŕɱáļ, þŕéɱîûɱ, ţĥéñ šîɱþļé, áçŕöšš ýöûŕ šûƀšçŕîþţîöñš; á çĥáñĝé áþþļîéš áţ ţĥé ñéẋţ îðļé ɱöɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe model your first mate itself answers with. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.\u202c`;
+  }
+  return `The model your first mate itself answers with. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.`;
+}
+
+export function settingsGeneralDictation(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإملاء`;
+    case "de":
+      return `Diktat`;
+    case "es":
+      return `Dictado`;
+    case "fr":
+      return `Dictée`;
+    case "ja":
+      return `音声入力`;
+    case "ko":
+      return `받아쓰기`;
+    case "pt-BR":
+      return `Ditado`;
+    case "zh-Hans":
+      return `听写`;
+    case "zh-Hant":
+      return `聽寫`;
+    case "en-XA":
+      return `[Ðîçţáţîöñ ~~~]`;
+    case "ar-XB":
+      return `\u202eDictation\u202c`;
+  }
+  return `Dictation`;
+}
+
+export function settingsGeneralDictationPicking(input: { choices: string; key: string }): string {
+  const choices = input.choices;
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اضغط ${choices} ليصبح المفتاح الذي تضغط عليه مطولًا للإملاء. Esc يُبقي ${key}.`;
+    case "de":
+      return `Drück ${choices} als Taste, die du fürs Diktat hältst. Esc behält ${key}.`;
+    case "es":
+      return `Presiona ${choices} para elegir la tecla que mantendrás para dictar. Esc conserva ${key}.`;
+    case "fr":
+      return `Appuyez sur ${choices} pour choisir la touche à maintenir pendant la dictée. Esc conserve ${key}.`;
+    case "ja":
+      return `${choices} を押して、音声入力で押し続けるキーにします。Esc で ${key} のままにします。`;
+    case "ko":
+      return `받아쓰기 때 누르고 있을 키로 ${choices} 중 하나를 누르세요. Esc를 누르면 ${key} 키를 그대로 써요.`;
+    case "pt-BR":
+      return `Pressione ${choices} para escolher a tecla a segurar no ditado. Esc mantém ${key}.`;
+    case "zh-Hans":
+      return `按 ${choices} 设为按住听写的键。按 Esc 保留 ${key}。`;
+    case "zh-Hant":
+      return `按下 ${choices} 設為按住聽寫的鍵。按 Esc 保留 ${key}。`;
+    case "en-XA":
+      return `[Þŕéšš ${choices} ţö ĥöļð ƒöŕ ðîçţáţîöñ. Éšç ķééþš ${key}. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress \u202c${choices}\u202e to hold for dictation. Esc keeps \u202c${key}\u202e.\u202c`;
+  }
+  return `Press ${choices} to hold for dictation. Esc keeps ${key}.`;
+}
+
+export function settingsGeneralDictationDescription(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اضغط المفتاح أو اضغط عليه مطولًا لتتحدث بدل الكتابة، ويُحوَّل كلامك إلى نص على ${place}. الإيقاف يترك المفتاح والميكروفون للتطبيقات الأخرى.`;
+    case "de":
+      return `Drück oder halte die Taste, um zu sprechen statt zu tippen, transkribiert auf ${place}. Aus überlässt die Taste und das Mikrofon anderen Apps.`;
+    case "es":
+      return `Presiona o mantén la tecla para hablar en lugar de escribir; se transcribe en ${place}. Desactivado deja la tecla y el micrófono a otras apps.`;
+    case "fr":
+      return `Appuyez sur la touche ou maintenez-la pour parler au lieu d’écrire, avec une transcription sur ${place}. Désactivé, la touche et le micro restent aux autres apps.`;
+    case "ja":
+      return `キーを押すか押し続けると、入力する代わりに話せます。文字起こしは ${place} で行われます。オフにすると、キーとマイクはほかのアプリが使えます。`;
+    case "ko":
+      return `타이핑 대신 말하려면 키를 누르거나 누르고 있으세요. 받아쓰기는 ${place}에서 처리돼요. 끄면 키와 마이크를 다른 앱이 쓸 수 있어요.`;
+    case "pt-BR":
+      return `Pressione ou segure a tecla para falar em vez de digitar, com transcrição em ${place}. Desligado deixa a tecla e o microfone para outros apps.`;
+    case "zh-Hans":
+      return `按下或按住这个键即可用说话代替打字，在 ${place} 上转写。关闭后，这个键和麦克风会留给其他应用。`;
+    case "zh-Hant":
+      return `按下或按住這個鍵，就能用說的代替打字，在 ${place} 上轉成文字。關閉後，這個鍵和麥克風會留給其他 App 使用。`;
+    case "en-XA":
+      return `[Þŕéšš öŕ ĥöļð ţĥé ķéý ţö ţáļķ îñšţéáð öƒ ţýþîñĝ, ţŕáñšçŕîƀéð öñ ${place}. Öƒƒ ļéáṽéš ţĥé ķéý áñð ţĥé ɱîçŕöþĥöñé ţö öţĥéŕ áþþš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePress or hold the key to talk instead of typing, transcribed on \u202c${place}\u202e. Off leaves the key and the microphone to other apps.\u202c`;
+  }
+  return `Press or hold the key to talk instead of typing, transcribed on ${place}. Off leaves the key and the microphone to other apps.`;
+}
+
+export function settingsGeneralDictationKey(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاح الإملاء`;
+    case "de":
+      return `Diktiertaste`;
+    case "es":
+      return `Tecla de dictado`;
+    case "fr":
+      return `Touche de dictée`;
+    case "ja":
+      return `音声入力のキー`;
+    case "ko":
+      return `받아쓰기 키`;
+    case "pt-BR":
+      return `Tecla de ditado`;
+    case "zh-Hans":
+      return `听写键`;
+    case "zh-Hant":
+      return `聽寫鍵`;
+    case "en-XA":
+      return `[Ðîçţáţîöñ ķéý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eDictation key\u202c`;
+  }
+  return `Dictation key`;
+}
+
+export function settingsGeneralDictationRight(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الأيمن`;
+    case "de":
+      return `rechts`;
+    case "es":
+      return `derecha`;
+    case "fr":
+      return `droite`;
+    case "ja":
+      return `右`;
+    case "ko":
+      return `오른쪽`;
+    case "pt-BR":
+      return `direita`;
+    case "zh-Hans":
+      return `右侧`;
+    case "zh-Hant":
+      return `右側`;
+    case "en-XA":
+      return `[ŕîĝĥţ ~~]`;
+    case "ar-XB":
+      return `\u202eright\u202c`;
+  }
+  return `right`;
+}
+
+export function settingsGeneralHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عام`;
+    case "de":
+      return `Allgemein`;
+    case "es":
+      return `General`;
+    case "fr":
+      return `Général`;
+    case "ja":
+      return `一般`;
+    case "ko":
+      return `일반`;
+    case "pt-BR":
+      return `Geral`;
+    case "zh-Hans":
+      return `通用`;
+    case "zh-Hant":
+      return `一般`;
+    case "en-XA":
+      return `[Ĝéñéŕáļ ~~~]`;
+    case "ar-XB":
+      return `\u202eGeneral\u202c`;
+  }
+  return `General`;
+}
+
+export function settingsGeneralStartAtLogin(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البدء عند تسجيل الدخول`;
+    case "de":
+      return `Bei Anmeldung starten`;
+    case "es":
+      return `Abrir al iniciar sesión`;
+    case "fr":
+      return `Ouvrir à la connexion`;
+    case "ja":
+      return `サインイン時に起動`;
+    case "ko":
+      return `로그인 시 시작`;
+    case "pt-BR":
+      return `Abrir ao fazer login`;
+    case "zh-Hans":
+      return `登录时启动`;
+    case "zh-Hant":
+      return `登入時啟動`;
+    case "en-XA":
+      return `[Šţáŕţ áţ ļöĝîñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eStart at login\u202c`;
+  }
+  return `Start at login`;
+}
+
+export function settingsGeneralStartAtLoginDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تشغيل Infinitary عند تسجيل دخولك.`;
+    case "de":
+      return `Infinitary öffnen, wenn du dich anmeldest.`;
+    case "es":
+      return `Abre Infinitary cuando inicias sesión.`;
+    case "fr":
+      return `Lancer Infinitary quand vous vous connectez.`;
+    case "ja":
+      return `サインインしたときに Infinitary を起動します。`;
+    case "ko":
+      return `로그인하면 Infinitary를 실행해요.`;
+    case "pt-BR":
+      return `Abre o Infinitary quando você faz login.`;
+    case "zh-Hans":
+      return `登录时启动 Infinitary。`;
+    case "zh-Hant":
+      return `登入時啟動 Infinitary。`;
+    case "en-XA":
+      return `[Ļáûñçĥ Îñƒîñîţáŕý ŵĥéñ ýöû šîĝñ îñ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLaunch Infinitary when you sign in.\u202c`;
+  }
+  return `Launch Infinitary when you sign in.`;
+}
+
+export function settingsGeneralShowInDock(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإظهار في Dock`;
+    case "de":
+      return `Im Dock anzeigen`;
+    case "es":
+      return `Mostrar en el Dock`;
+    case "fr":
+      return `Afficher dans le Dock`;
+    case "ja":
+      return `Dock に表示`;
+    case "ko":
+      return `Dock에 표시`;
+    case "pt-BR":
+      return `Mostrar no Dock`;
+    case "zh-Hans":
+      return `在程序坞中显示`;
+    case "zh-Hant":
+      return `在 Dock 中顯示`;
+    case "en-XA":
+      return `[Šĥöŵ îñ ðöçķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eShow in dock\u202c`;
+  }
+  return `Show in dock`;
+}
+
+export function settingsGeneralShowInDockDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإيقاف يخفي أيقونة Dock مع بقاء النافذة.`;
+    case "de":
+      return `Aus blendet das Dock-Symbol aus, das Fenster bleibt.`;
+    case "es":
+      return `Desactivado oculta el icono del Dock y la ventana sigue abierta.`;
+    case "fr":
+      return `Désactivé, l’icône du Dock est masquée et la fenêtre reste.`;
+    case "ja":
+      return `オフにすると、ウインドウはそのままで Dock のアイコンが非表示になります。`;
+    case "ko":
+      return `끄면 창은 그대로 두고 Dock 아이콘만 숨겨요.`;
+    case "pt-BR":
+      return `Desligado oculta o ícone do Dock, e a janela continua.`;
+    case "zh-Hans":
+      return `关闭后会隐藏程序坞图标，窗口仍会保留。`;
+    case "zh-Hant":
+      return `關閉後會隱藏 Dock 圖像，視窗仍會保留。`;
+    case "en-XA":
+      return `[Öƒƒ ĥîðéš ţĥé ðöçķ îçöñ ŵĥîļé ţĥé ŵîñðöŵ šţáýš. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOff hides the dock icon while the window stays.\u202c`;
+  }
+  return `Off hides the dock icon while the window stays.`;
+}
+
+export function settingsGeneralNotify(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إشعاري عندما يحتاج إليّ نائب القبطان`;
+    case "de":
+      return `Benachrichtigen, wenn mein erster Offizier mich braucht`;
+    case "es":
+      return `Avisarme cuando mi primer oficial me necesite`;
+    case "fr":
+      return `M’avertir quand mon second a besoin de moi`;
+    case "ja":
+      return `一等航海士が呼んでいるときに通知`;
+    case "ko":
+      return `일등항해사가 나를 필요로 할 때 알림`;
+    case "pt-BR":
+      return `Avisar quando meu imediato precisar de mim`;
+    case "zh-Hans":
+      return `大副需要我时通知我`;
+    case "zh-Hant":
+      return `大副需要我時通知我`;
+    case "en-XA":
+      return `[Ñöţîƒý ɱé ŵĥéñ ɱý ƒîŕšţ ɱáţé ñééðš ɱé ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNotify me when my first mate needs me\u202c`;
+  }
+  return `Notify me when my first mate needs me`;
+}
+
+export function settingsGeneralNotifyDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إشعار هادئ للقرارات والتقارير عندما تكون النافذة في الخلفية.`;
+    case "de":
+      return `Eine leise Mitteilung für Entscheidungen und Berichte, während das Fenster im Hintergrund ist.`;
+    case "es":
+      return `Una notificación discreta para decisiones e informes mientras la ventana está en segundo plano.`;
+    case "fr":
+      return `Une notification discrète pour les décisions et les rapports quand la fenêtre est en arrière-plan.`;
+    case "ja":
+      return `ウインドウがバックグラウンドにあるとき、判断と報告を控えめな通知で知らせます。`;
+    case "ko":
+      return `창이 뒤에 있을 때 결정과 보고를 조용히 알려 줘요.`;
+    case "pt-BR":
+      return `Uma notificação discreta para decisões e relatórios enquanto a janela está em segundo plano.`;
+    case "zh-Hans":
+      return `窗口在后台时，为决定和汇报发送一条安静的通知。`;
+    case "zh-Hant":
+      return `視窗在背景時，以安靜的通知告訴你有決定和回報。`;
+    case "en-XA":
+      return `[Å ǫûîéţ ñöţîƒîçáţîöñ ƒöŕ ðéçîšîöñš áñð ŕéþöŕţš ŵĥîļé ţĥé ŵîñðöŵ îš îñ ţĥé ƀáçķĝŕöûñð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA quiet notification for decisions and reports while the window is in the background.\u202c`;
+  }
+  return `A quiet notification for decisions and reports while the window is in the background.`;
+}
+
+export function settingsGeneralPurge(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `محو بيانات المهام`;
+    case "de":
+      return `Aufgabendaten endgültig löschen`;
+    case "es":
+      return `Eliminar los datos de las tareas`;
+    case "fr":
+      return `Effacer les données des tâches`;
+    case "ja":
+      return `タスクのデータを消去`;
+    case "ko":
+      return `작업 데이터 완전 삭제`;
+    case "pt-BR":
+      return `Excluir dados das tarefas`;
+    case "zh-Hans":
+      return `清除任务数据`;
+    case "zh-Hant":
+      return `清除任務資料`;
+    case "en-XA":
+      return `[Þûŕĝé ţášķ ðáţá ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePurge task data\u202c`;
+  }
+  return `Purge task data`;
+}
+
+export function settingsGeneralPurgeDescriptionKnowledge(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يزيل كل مهمة مع نسخة العمل الخاصة بها وملاحظاتها وبطاقاتها، وكل المعرفة التي دوّنها الطاقم.`;
+    case "de":
+      return `Entfernt jede Aufgabe samt Arbeitskopie, Notizen und Karten sowie das gesamte Wissen, das die Crew festgehalten hat.`;
+    case "es":
+      return `Elimina todas las tareas, con su copia de trabajo, sus notas y sus tarjetas, y todo el conocimiento que registró la tripulación.`;
+    case "fr":
+      return `Efface toutes les tâches, avec leur copie de travail, leurs notes et leurs cartes, ainsi que toutes les connaissances enregistrées par l’équipage.`;
+    case "ja":
+      return `すべてのタスクを、その作業コピー、メモ、カードとともに削除し、乗組員が記録したナレッジもすべて削除します。`;
+    case "ko":
+      return `모든 작업을 작업 사본, 메모, 카드와 함께 지우고, 선원들이 기록한 지식도 모두 지워요.`;
+    case "pt-BR":
+      return `Remove todas as tarefas, com a cópia de trabalho, as notas e os cartões de cada uma, e todo o conhecimento que a tripulação registrou.`;
+    case "zh-Hans":
+      return `移除每个任务及其工作副本、笔记和卡片，以及船员们记录的所有知识。`;
+    case "zh-Hant":
+      return `移除每一項任務，連同它的工作副本、筆記和卡片，以及船員記錄的所有知識。`;
+    case "en-XA":
+      return `[Ŕéɱöṽéš éṽéŕý ţášķ, ŵîţĥ îţš ŵöŕķîñĝ çöþý, îţš ñöţéš áñð îţš çáŕðš, áñð áļļ ţĥé ķñöŵļéðĝé ţĥé çŕéŵ ŕéçöŕðéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemoves every task, with its working copy, its notes and its cards, and all the knowledge the crew recorded.\u202c`;
+  }
+  return `Removes every task, with its working copy, its notes and its cards, and all the knowledge the crew recorded.`;
+}
+
+export function settingsGeneralPurgeDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يزيل كل مهمة مع نسخة العمل الخاصة بها وملاحظاتها وبطاقاتها.`;
+    case "de":
+      return `Entfernt jede Aufgabe samt Arbeitskopie, Notizen und Karten.`;
+    case "es":
+      return `Elimina todas las tareas, con su copia de trabajo, sus notas y sus tarjetas.`;
+    case "fr":
+      return `Efface toutes les tâches, avec leur copie de travail, leurs notes et leurs cartes.`;
+    case "ja":
+      return `すべてのタスクを、その作業コピー、メモ、カードとともに削除します。`;
+    case "ko":
+      return `모든 작업을 작업 사본, 메모, 카드와 함께 지워요.`;
+    case "pt-BR":
+      return `Remove todas as tarefas, com a cópia de trabalho, as notas e os cartões de cada uma.`;
+    case "zh-Hans":
+      return `移除每个任务及其工作副本、笔记和卡片。`;
+    case "zh-Hant":
+      return `移除每一項任務，連同它的工作副本、筆記和卡片。`;
+    case "en-XA":
+      return `[Ŕéɱöṽéš éṽéŕý ţášķ, ŵîţĥ îţš ŵöŕķîñĝ çöþý, îţš ñöţéš áñð îţš çáŕðš. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemoves every task, with its working copy, its notes and its cards.\u202c`;
+  }
+  return `Removes every task, with its working copy, its notes and its cards.`;
+}
+
+export function settingsGeneralPurging(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ المحو...`;
+    case "de":
+      return `Wird gelöscht ...`;
+    case "es":
+      return `Eliminando...`;
+    case "fr":
+      return `Effacement...`;
+    case "ja":
+      return `消去中...`;
+    case "ko":
+      return `삭제 중...`;
+    case "pt-BR":
+      return `Excluindo...`;
+    case "zh-Hans":
+      return `正在清除...`;
+    case "zh-Hant":
+      return `清除中…`;
+    case "en-XA":
+      return `[Þûŕĝîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202ePurging...\u202c`;
+  }
+  return `Purging...`;
+}
+
+export function settingsGeneralPurgeConfirm(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تأكيد المحو`;
+    case "de":
+      return `Löschen bestätigen`;
+    case "es":
+      return `Confirmar la eliminación`;
+    case "fr":
+      return `Confirmer l’effacement`;
+    case "ja":
+      return `消去を確定`;
+    case "ko":
+      return `삭제 확인`;
+    case "pt-BR":
+      return `Confirmar exclusão`;
+    case "zh-Hans":
+      return `确认清除`;
+    case "zh-Hant":
+      return `確認清除`;
+    case "en-XA":
+      return `[Çöñƒîŕɱ þûŕĝé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConfirm purge\u202c`;
+  }
+  return `Confirm purge`;
+}
+
+export function settingsGeneralPurgeButton(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `محو`;
+    case "de":
+      return `Endgültig löschen`;
+    case "es":
+      return `Eliminar`;
+    case "fr":
+      return `Effacer`;
+    case "ja":
+      return `消去`;
+    case "ko":
+      return `완전 삭제`;
+    case "pt-BR":
+      return `Excluir`;
+    case "zh-Hans":
+      return `清除`;
+    case "zh-Hant":
+      return `清除`;
+    case "en-XA":
+      return `[Þûŕĝé ~~]`;
+    case "ar-XB":
+      return `\u202ePurge\u202c`;
+  }
+  return `Purge`;
+}
+
+export function settingsAppearanceSizeDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تكبير النص وكل ما حوله.`;
+    case "de":
+      return `Text und alles drumherum größer machen.`;
+    case "es":
+      return `Agranda el texto y todo lo que lo rodea.`;
+    case "fr":
+      return `Agrandir le texte et tout ce qui l’entoure.`;
+    case "ja":
+      return `テキストとその周りのすべてを大きくします。`;
+    case "ko":
+      return `글자와 그 주변의 모든 것을 크게 해요.`;
+    case "pt-BR":
+      return `Aumente o texto e tudo ao redor dele.`;
+    case "zh-Hans":
+      return `放大文字及其周围的一切。`;
+    case "zh-Hant":
+      return `放大文字和它周圍的一切。`;
+    case "en-XA":
+      return `[Ṁáķé ţéẋţ áñð éṽéŕýţĥîñĝ áŕöûñð îţ ļáŕĝéŕ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake text and everything around it larger.\u202c`;
+  }
+  return `Make text and everything around it larger.`;
+}
+
+export function settingsAppearanceSizeDescriptionKeys(input: {
+  larger: string;
+  smaller: string;
+}): string {
+  const larger = input.larger;
+  const smaller = input.smaller;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تكبير النص وكل ما حوله. ${larger} و${smaller} يغيّران الحجم نفسه.`;
+    case "de":
+      return `Text und alles drumherum größer machen. ${larger} und ${smaller} ändern dieselbe Größe.`;
+    case "es":
+      return `Agranda el texto y todo lo que lo rodea. ${larger} y ${smaller} cambian el mismo tamaño.`;
+    case "fr":
+      return `Agrandir le texte et tout ce qui l’entoure. ${larger} et ${smaller} modifient la même taille.`;
+    case "ja":
+      return `テキストとその周りのすべてを大きくします。${larger} と ${smaller} でも同じサイズを変更できます。`;
+    case "ko":
+      return `글자와 그 주변의 모든 것을 크게 해요. ${larger}, ${smaller} 키로도 같은 크기를 바꿀 수 있어요.`;
+    case "pt-BR":
+      return `Aumente o texto e tudo ao redor dele. ${larger} e ${smaller} mudam o mesmo tamanho.`;
+    case "zh-Hans":
+      return `放大文字及其周围的一切。${larger} 和 ${smaller} 调整的是同一个大小。`;
+    case "zh-Hant":
+      return `放大文字和它周圍的一切。${larger} 和 ${smaller} 調整的是同一個大小。`;
+    case "en-XA":
+      return `[Ṁáķé ţéẋţ áñð éṽéŕýţĥîñĝ áŕöûñð îţ ļáŕĝéŕ. ${larger} áñð ${smaller} çĥáñĝé ţĥé šáɱé šîžé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake text and everything around it larger. \u202c${larger}\u202e and \u202c${smaller}\u202e change the same size.\u202c`;
+  }
+  return `Make text and everything around it larger. ${larger} and ${smaller} change the same size.`;
+}
+
+export function settingsAppearanceSizeDescriptionKey(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تكبير النص وكل ما حوله. ${key} يغيّر الحجم نفسه.`;
+    case "de":
+      return `Text und alles drumherum größer machen. ${key} ändert dieselbe Größe.`;
+    case "es":
+      return `Agranda el texto y todo lo que lo rodea. ${key} cambia el mismo tamaño.`;
+    case "fr":
+      return `Agrandir le texte et tout ce qui l’entoure. ${key} modifie la même taille.`;
+    case "ja":
+      return `テキストとその周りのすべてを大きくします。${key} でも同じサイズを変更できます。`;
+    case "ko":
+      return `글자와 그 주변의 모든 것을 크게 해요. ${key} 키로도 같은 크기를 바꿀 수 있어요.`;
+    case "pt-BR":
+      return `Aumente o texto e tudo ao redor dele. ${key} muda o mesmo tamanho.`;
+    case "zh-Hans":
+      return `放大文字及其周围的一切。${key} 调整的是同一个大小。`;
+    case "zh-Hant":
+      return `放大文字和它周圍的一切。${key} 調整的是同一個大小。`;
+    case "en-XA":
+      return `[Ṁáķé ţéẋţ áñð éṽéŕýţĥîñĝ áŕöûñð îţ ļáŕĝéŕ. ${key} çĥáñĝéš ţĥé šáɱé šîžé. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake text and everything around it larger. \u202c${key}\u202e changes the same size.\u202c`;
+  }
+  return `Make text and everything around it larger. ${key} changes the same size.`;
+}
+
+export function settingsAppearanceHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المظهر`;
+    case "de":
+      return `Erscheinungsbild`;
+    case "es":
+      return `Apariencia`;
+    case "fr":
+      return `Apparence`;
+    case "ja":
+      return `外観`;
+    case "ko":
+      return `모양`;
+    case "pt-BR":
+      return `Aparência`;
+    case "zh-Hans":
+      return `外观`;
+    case "zh-Hant":
+      return `外觀`;
+    case "en-XA":
+      return `[Åþþéáŕáñçé ~~~~]`;
+    case "ar-XB":
+      return `\u202eAppearance\u202c`;
+  }
+  return `Appearance`;
+}
+
+export function settingsAppearanceOwnLook(input: { computer: string; place: string }): string {
+  const computer = input.computer;
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مضبوط على ${place} فقط. يحتفظ ${computer} بإعداده الخاص.`;
+    case "de":
+      return `Nur auf ${place} eingestellt. ${computer} behält seine eigene Einstellung.`;
+    case "es":
+      return `Solo se aplica en ${place}. ${computer} conserva el suyo.`;
+    case "fr":
+      return `Réglé sur ${place} seulement. ${computer} garde le sien.`;
+    case "ja":
+      return `${place} だけの設定です。${computer} は独自の設定を保ちます。`;
+    case "ko":
+      return `${place}에만 적용돼요. ${computer}의 설정은 그대로예요.`;
+    case "pt-BR":
+      return `Definido só em ${place}. ${computer} mantém o próprio.`;
+    case "zh-Hans":
+      return `仅在 ${place} 上设置。${computer} 保留自己的设置。`;
+    case "zh-Hant":
+      return `只在 ${place} 上設定。${computer} 保留自己的設定。`;
+    case "en-XA":
+      return `[Šéţ öñ ${place} öñļý. ${computer} ķééþš îţš öŵñ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSet on \u202c${place}\u202e only. \u202c${computer}\u202e keeps its own.\u202c`;
+  }
+  return `Set on ${place} only. ${computer} keeps its own.`;
+}
+
+export function settingsAppearanceSize(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحجم`;
+    case "de":
+      return `Größe`;
+    case "es":
+      return `Tamaño`;
+    case "fr":
+      return `Taille`;
+    case "ja":
+      return `サイズ`;
+    case "ko":
+      return `크기`;
+    case "pt-BR":
+      return `Tamanho`;
+    case "zh-Hans":
+      return `大小`;
+    case "zh-Hant":
+      return `大小`;
+    case "en-XA":
+      return `[Šîžé ~~]`;
+    case "ar-XB":
+      return `\u202eSize\u202c`;
+  }
+  return `Size`;
+}
+
+export function settingsAppearanceCardSize(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حجم البطاقة الافتراضي`;
+    case "de":
+      return `Standardgröße der Karten`;
+    case "es":
+      return `Tamaño predeterminado de las tarjetas`;
+    case "fr":
+      return `Taille des cartes par défaut`;
+    case "ja":
+      return `カードの標準サイズ`;
+    case "ko":
+      return `기본 카드 크기`;
+    case "pt-BR":
+      return `Tamanho padrão dos cartões`;
+    case "zh-Hans":
+      return `默认卡片大小`;
+    case "zh-Hant":
+      return `預設卡片大小`;
+    case "en-XA":
+      return `[Ðéƒáûļţ çáŕð šîžé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDefault card size\u202c`;
+  }
+  return `Default card size`;
+}
+
+export function settingsAppearanceCardSizeDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر كيف تُفتح البطاقات. يظل بإمكانك تغيير حجم كل بطاقة.`;
+    case "de":
+      return `Wähle, wie Karten sich öffnen. Du kannst die Größe jeder Karte trotzdem ändern.`;
+    case "es":
+      return `Elige cómo se abren las tarjetas. Igual puedes cambiar el tamaño de cada una.`;
+    case "fr":
+      return `Choisissez comment les cartes s’ouvrent. Vous pouvez toujours redimensionner chaque carte.`;
+    case "ja":
+      return `カードを開くときの大きさを選びます。各カードのサイズはあとから変更できます。`;
+    case "ko":
+      return `카드가 열릴 때의 크기를 골라요. 카드마다 크기를 따로 바꿀 수도 있어요.`;
+    case "pt-BR":
+      return `Escolha como os cartões abrem. Você ainda pode redimensionar cada cartão.`;
+    case "zh-Hans":
+      return `选择卡片打开时的大小。你仍可以单独调整每张卡片的大小。`;
+    case "zh-Hant":
+      return `選擇卡片開啟時的大小。你仍然可以調整每張卡片的大小。`;
+    case "en-XA":
+      return `[Çĥööšé ĥöŵ çáŕðš öþéñ. Ýöû çáñ šţîļļ ŕéšîžé éáçĥ çáŕð. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose how cards open. You can still resize each card.\u202c`;
+  }
+  return `Choose how cards open. You can still resize each card.`;
+}
+
+export function settingsAppearanceCardUsual(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عادي`;
+    case "de":
+      return `Normal`;
+    case "es":
+      return `Habitual`;
+    case "fr":
+      return `Habituelle`;
+    case "ja":
+      return `通常`;
+    case "ko":
+      return `보통`;
+    case "pt-BR":
+      return `Normal`;
+    case "zh-Hans":
+      return `常规`;
+    case "zh-Hant":
+      return `一般`;
+    case "en-XA":
+      return `[Ûšûáļ ~~]`;
+    case "ar-XB":
+      return `\u202eUsual\u202c`;
+  }
+  return `Usual`;
+}
+
+export function settingsAppearanceCardWide(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عريض`;
+    case "de":
+      return `Breit`;
+    case "es":
+      return `Ancha`;
+    case "fr":
+      return `Large`;
+    case "ja":
+      return `ワイド`;
+    case "ko":
+      return `넓게`;
+    case "pt-BR":
+      return `Largo`;
+    case "zh-Hans":
+      return `宽`;
+    case "zh-Hant":
+      return `寬`;
+    case "en-XA":
+      return `[Ŵîðé ~~]`;
+    case "ar-XB":
+      return `\u202eWide\u202c`;
+  }
+  return `Wide`;
+}
+
+export function settingsAppearanceCardFull(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كامل`;
+    case "de":
+      return `Voll`;
+    case "es":
+      return `Completa`;
+    case "fr":
+      return `Pleine`;
+    case "ja":
+      return `フル`;
+    case "ko":
+      return `전체`;
+    case "pt-BR":
+      return `Completo`;
+    case "zh-Hans":
+      return `全宽`;
+    case "zh-Hant":
+      return `全寬`;
+    case "en-XA":
+      return `[Ƒûļļ ~~]`;
+    case "ar-XB":
+      return `\u202eFull\u202c`;
+  }
+  return `Full`;
+}
+
+export function settingsAppearanceCardMaximized(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مكبّر`;
+    case "de":
+      return `Maximiert`;
+    case "es":
+      return `Maximizada`;
+    case "fr":
+      return `Agrandie`;
+    case "ja":
+      return `最大化`;
+    case "ko":
+      return `최대화`;
+    case "pt-BR":
+      return `Maximizado`;
+    case "zh-Hans":
+      return `最大化`;
+    case "zh-Hant":
+      return `最大化`;
+    case "en-XA":
+      return `[Ṁáẋîɱîžéð ~~~]`;
+    case "ar-XB":
+      return `\u202eMaximized\u202c`;
+  }
+  return `Maximized`;
+}
+
+export function settingsAppearanceKeepMaximized(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إبقاء البطاقات مكبّرة`;
+    case "de":
+      return `Karten maximiert lassen`;
+    case "es":
+      return `Mantener las tarjetas maximizadas`;
+    case "fr":
+      return `Garder les cartes agrandies`;
+    case "ja":
+      return `カードを最大化したままにする`;
+    case "ko":
+      return `카드 최대화 유지`;
+    case "pt-BR":
+      return `Manter os cartões maximizados`;
+    case "zh-Hans":
+      return `保持卡片最大化`;
+    case "zh-Hant":
+      return `讓卡片保持最大化`;
+    case "en-XA":
+      return `[Ķééþ çáŕðš ɱáẋîɱîžéð ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eKeep cards maximized\u202c`;
+  }
+  return `Keep cards maximized`;
+}
+
+export function settingsAppearanceKeepMaximizedDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بعد تكبير بطاقة، تبقى كل البطاقات مكبّرة حتى تعيد إحداها إلى حجمها.`;
+    case "de":
+      return `Nachdem du eine Karte maximiert hast, bleibt jede Karte maximiert, bis du eine wiederherstellst.`;
+    case "es":
+      return `Después de maximizar una tarjeta, todas siguen maximizadas hasta que restaures una.`;
+    case "fr":
+      return `Après avoir agrandi une carte, toutes les cartes restent agrandies jusqu’à ce que vous en restauriez une.`;
+    case "ja":
+      return `カードを最大化すると、どれかを元に戻すまで、すべてのカードが最大化されたままになります。`;
+    case "ko":
+      return `카드를 최대화하면, 카드 하나를 원래 크기로 되돌릴 때까지 모든 카드가 최대화된 채로 있어요.`;
+    case "pt-BR":
+      return `Depois que você maximiza um cartão, todos ficam maximizados até você restaurar um.`;
+    case "zh-Hans":
+      return `最大化一张卡片后，所有卡片都会保持最大化，直到你还原其中一张。`;
+    case "zh-Hant":
+      return `最大化一張卡片後，所有卡片都會保持最大化，直到你還原其中一張。`;
+    case "en-XA":
+      return `[Åƒţéŕ ýöû ɱáẋîɱîžé á çáŕð, éṽéŕý çáŕð šţáýš ɱáẋîɱîžéð ûñţîļ ýöû ŕéšţöŕé öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAfter you maximize a card, every card stays maximized until you restore one.\u202c`;
+  }
+  return `After you maximize a card, every card stays maximized until you restore one.`;
+}
+
+export function settingsAppearanceTheme(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السمة`;
+    case "de":
+      return `Design`;
+    case "es":
+      return `Tema`;
+    case "fr":
+      return `Thème`;
+    case "ja":
+      return `テーマ`;
+    case "ko":
+      return `테마`;
+    case "pt-BR":
+      return `Tema`;
+    case "zh-Hans":
+      return `主题`;
+    case "zh-Hant":
+      return `主題`;
+    case "en-XA":
+      return `[Ţĥéɱé ~~]`;
+    case "ar-XB":
+      return `\u202eTheme\u202c`;
+  }
+  return `Theme`;
+}
+
+export function settingsAppearanceThemeDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `داكنة كالفضاء العميق، أو فاتحة كضوء النهار.`;
+    case "de":
+      return `Dunkel wie der tiefe Weltraum oder hell wie das Tageslicht.`;
+    case "es":
+      return `Oscuro como el espacio profundo o claro como la luz del día.`;
+    case "fr":
+      return `Sombre comme l’espace lointain, ou clair comme le jour.`;
+    case "ja":
+      return `深宇宙のダーク、または日中のライト。`;
+    case "ko":
+      return `깊은 우주 같은 다크, 또는 한낮 같은 라이트.`;
+    case "pt-BR":
+      return `Escuro como o espaço profundo ou claro como a luz do dia.`;
+    case "zh-Hans":
+      return `深空般的深色，或日光般的浅色。`;
+    case "zh-Hant":
+      return `深空般的深色，或日光般的淺色。`;
+    case "en-XA":
+      return `[Ðééþ-šþáçé ðáŕķ, öŕ ðáýļîĝĥţ ļîĝĥţ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDeep-space dark, or daylight light.\u202c`;
+  }
+  return `Deep-space dark, or daylight light.`;
+}
+
+export function settingsAppearanceThemeDark(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `داكنة`;
+    case "de":
+      return `Dunkel`;
+    case "es":
+      return `Oscuro`;
+    case "fr":
+      return `Sombre`;
+    case "ja":
+      return `ダーク`;
+    case "ko":
+      return `다크`;
+    case "pt-BR":
+      return `Escuro`;
+    case "zh-Hans":
+      return `深色`;
+    case "zh-Hant":
+      return `深色`;
+    case "en-XA":
+      return `[Ðáŕķ ~~]`;
+    case "ar-XB":
+      return `\u202eDark\u202c`;
+  }
+  return `Dark`;
+}
+
+export function settingsAppearanceThemeLight(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فاتحة`;
+    case "de":
+      return `Hell`;
+    case "es":
+      return `Claro`;
+    case "fr":
+      return `Clair`;
+    case "ja":
+      return `ライト`;
+    case "ko":
+      return `라이트`;
+    case "pt-BR":
+      return `Claro`;
+    case "zh-Hans":
+      return `浅色`;
+    case "zh-Hant":
+      return `淺色`;
+    case "en-XA":
+      return `[Ļîĝĥţ ~~]`;
+    case "ar-XB":
+      return `\u202eLight\u202c`;
+  }
+  return `Light`;
+}
+
+export function settingsAppearanceWash(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تلوين النافذة`;
+    case "de":
+      return `Fenstertönung`;
+    case "es":
+      return `Velo de la ventana`;
+    case "fr":
+      return `Voile de la fenêtre`;
+    case "ja":
+      return `ウインドウの色合い`;
+    case "ko":
+      return `창 색조`;
+    case "pt-BR":
+      return `Véu da janela`;
+    case "zh-Hans":
+      return `窗口底色`;
+    case "zh-Hant":
+      return `視窗底色`;
+    case "en-XA":
+      return `[Ŵîñðöŵ ŵášĥ ~~~~]`;
+    case "ar-XB":
+      return `\u202eWindow wash\u202c`;
+  }
+  return `Window wash`;
+}
+
+export function settingsAppearanceWashDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مقدار ما يغطيه لون السمة من الخلفية المموّهة. القيمة الافتراضية 0%.`;
+    case "de":
+      return `Wie stark die Designfarbe den unscharfen Hintergrund überdeckt. 0 % ist der Standard.`;
+    case "es":
+      return `Cuánto del color del tema cubre el fondo desenfocado. 0 % es el valor predeterminado.`;
+    case "fr":
+      return `La part de la couleur du thème qui couvre l’arrière-plan flou. 0 % est la valeur par défaut.`;
+    case "ja":
+      return `ぼかした背景をテーマの色がどれだけ覆うかを設定します。標準は0%です。`;
+    case "ko":
+      return `흐린 배경 위에 테마 색을 얼마나 덮을지 정해요. 기본값은 0%예요.`;
+    case "pt-BR":
+      return `Quanto da cor do tema cobre o fundo desfocado. 0% é o padrão.`;
+    case "zh-Hans":
+      return `主题颜色覆盖模糊背景的程度。默认为 0%。`;
+    case "zh-Hant":
+      return `主題顏色覆蓋模糊背景的程度。預設為 0%。`;
+    case "en-XA":
+      return `[Ĥöŵ ɱûçĥ öƒ ţĥé ţĥéɱé çöļöŕ çöṽéŕš ţĥé ƀļûŕŕéð ƀáçķĝŕöûñð. 0% îš ţĥé ðéƒáûļţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHow much of the theme color covers the blurred background. 0% is the default.\u202c`;
+  }
+  return `How much of the theme color covers the blurred background. 0% is the default.`;
+}
+
+export function settingsAppearanceWashValue(input: { percent: string }): string {
+  const percent = input.percent;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عتامة ${percent}%`;
+    case "de":
+      return `${percent} % Deckkraft`;
+    case "es":
+      return `${percent} % de opacidad`;
+    case "fr":
+      return `${percent} % d’opacité`;
+    case "ja":
+      return `不透明度${percent}%`;
+    case "ko":
+      return `불투명도 ${percent}%`;
+    case "pt-BR":
+      return `${percent}% de opacidade`;
+    case "zh-Hans":
+      return `${percent}% 不透明度`;
+    case "zh-Hant":
+      return `${percent}% 不透明度`;
+    case "en-XA":
+      return `[${percent}% öþáçîţý ~~~]`;
+    case "ar-XB":
+      return `${percent}\u202e% opacity\u202c`;
+  }
+  return `${percent}% opacity`;
+}
+
+export function settingsAppearanceCrewModelNames(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أسماء نماذج الطاقم`;
+    case "de":
+      return `Modellnamen der Crew`;
+    case "es":
+      return `Nombres de modelo de la tripulación`;
+    case "fr":
+      return `Noms des modèles de l’équipage`;
+    case "ja":
+      return `乗組員のモデル名`;
+    case "ko":
+      return `선원 모델 이름`;
+    case "pt-BR":
+      return `Nomes dos modelos da tripulação`;
+    case "zh-Hans":
+      return `船员模型名称`;
+    case "zh-Hant":
+      return `船員模型名稱`;
+    case "en-XA":
+      return `[Çŕéŵ ɱöðéļ ñáɱéš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew model names\u202c`;
+  }
+  return `Crew model names`;
+}
+
+export function settingsAppearanceCrewModelNamesDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إظهار أسماء النماذج ما دام أفراد الطاقم يشغلون مدارًا واحدًا فقط.`;
+    case "de":
+      return `Modellnamen zeigen, solange die Crewmitglieder nur eine Umlaufbahn belegen.`;
+    case "es":
+      return `Muestra los nombres de los modelos mientras los tripulantes usan una sola órbita.`;
+    case "fr":
+      return `Afficher les noms des modèles tant que les équipiers n’occupent qu’une seule orbite.`;
+    case "ja":
+      return `乗組員が1つの軌道だけを使うとき、モデル名を表示します。`;
+    case "ko":
+      return `선원들이 궤도 하나만 쓸 때 모델 이름을 보여 줘요.`;
+    case "pt-BR":
+      return `Mostra os nomes dos modelos enquanto os tripulantes usam só uma órbita.`;
+    case "zh-Hans":
+      return `船员只使用一个轨道时显示模型名称。`;
+    case "zh-Hant":
+      return `船員只使用一個軌道時，顯示模型名稱。`;
+    case "en-XA":
+      return `[Šĥöŵ ɱöðéļ ñáɱéš ŵĥîļé çŕéŵɱáţéš ûšé öñļý öñé öŕƀîţ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow model names while crewmates use only one orbit.\u202c`;
+  }
+  return `Show model names while crewmates use only one orbit.`;
+}
+
+export function settingsIntegrationsActionCount(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `${count} إجراء`;
+        case "one":
+          return `${count} إجراء`;
+        case "two":
+          return `${count} إجراءان`;
+        case "few":
+          return `${count} إجراءات`;
+        case "many":
+          return `${count} إجراءً`;
+        default:
+          return `${count} إجراء`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Aktion`;
+        default:
+          return `${count} Aktionen`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} acción`;
+        case "many":
+          return `${count} de acciones`;
+        default:
+          return `${count} acciones`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} action`;
+        case "many":
+          return `${count} actions`;
+        default:
+          return `${count} actions`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件の操作`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `동작 ${count}개`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} ação`;
+        case "many":
+          return `${count} ações`;
+        default:
+          return `${count} ações`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 个操作`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 個動作`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} áçţîöñ ~~~]`;
+        default:
+          return `[${count} áçţîöñš ~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e action\u202c`;
+        default:
+          return `${count}\u202e actions\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} action`;
+    default:
+      return `${count} actions`;
+  }
+}
+
+export function settingsIntegrationsAs(input: { account: string }): string {
+  const account = input.account;
+  switch (currentLanguage()) {
+    case "ar":
+      return `باسم ${account}`;
+    case "de":
+      return `als ${account}`;
+    case "es":
+      return `como ${account}`;
+    case "fr":
+      return `en tant que ${account}`;
+    case "ja":
+      return `${account} として`;
+    case "ko":
+      return `${account} 계정으로`;
+    case "pt-BR":
+      return `como ${account}`;
+    case "zh-Hans":
+      return `以 ${account} 身份`;
+    case "zh-Hant":
+      return `以 ${account} 身分`;
+    case "en-XA":
+      return `[áš ${account} ~]`;
+    case "ar-XB":
+      return `\u202eas \u202c${account}`;
+  }
+  return `as ${account}`;
+}
+
+export function settingsIntegrationsPaused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف مؤقتًا`;
+    case "de":
+      return `pausiert`;
+    case "es":
+      return `en pausa`;
+    case "fr":
+      return `en pause`;
+    case "ja":
+      return `一時停止中`;
+    case "ko":
+      return `일시 정지됨`;
+    case "pt-BR":
+      return `pausada`;
+    case "zh-Hans":
+      return `已暂停`;
+    case "zh-Hant":
+      return `已暫停`;
+    case "en-XA":
+      return `[þáûšéð ~~]`;
+    case "ar-XB":
+      return `\u202epaused\u202c`;
+  }
+  return `paused`;
+}
+
+export function settingsIntegrationsSignedIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مسجّل الدخول`;
+    case "de":
+      return `angemeldet`;
+    case "es":
+      return `con sesión iniciada`;
+    case "fr":
+      return `connecté`;
+    case "ja":
+      return `サインイン済み`;
+    case "ko":
+      return `로그인됨`;
+    case "pt-BR":
+      return `com login feito`;
+    case "zh-Hans":
+      return `已登录`;
+    case "zh-Hant":
+      return `已登入`;
+    case "en-XA":
+      return `[šîĝñéð îñ ~~~]`;
+    case "ar-XB":
+      return `\u202esigned in\u202c`;
+  }
+  return `signed in`;
+}
+
+export function settingsIntegrationsUnreachable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر الوصول إليه`;
+    case "de":
+      return `nicht erreichbar`;
+    case "es":
+      return `no se pudo contactar`;
+    case "fr":
+      return `injoignable`;
+    case "ja":
+      return `接続できませんでした`;
+    case "ko":
+      return `연락이 닿지 않았음`;
+    case "pt-BR":
+      return `não foi possível contatar`;
+    case "zh-Hans":
+      return `无法连接到它`;
+    case "zh-Hant":
+      return `連不上它`;
+    case "en-XA":
+      return `[çöûļð ñöţ ŕéáçĥ îţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ecould not reach it\u202c`;
+  }
+  return `could not reach it`;
+}
+
+export function settingsIntegrationsRowExpanded(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name}، موسَّع`;
+    case "de":
+      return `${name}, ausgeklappt`;
+    case "es":
+      return `${name}, expandido`;
+    case "fr":
+      return `${name}, développé`;
+    case "ja":
+      return `${name}、展開`;
+    case "ko":
+      return `${name}, 펼쳐짐`;
+    case "pt-BR":
+      return `${name}, expandido`;
+    case "zh-Hans":
+      return `${name}，已展开`;
+    case "zh-Hant":
+      return `${name}，已展開`;
+    case "en-XA":
+      return `[${name}, éẋþáñðéð ~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e, expanded\u202c`;
+  }
+  return `${name}, expanded`;
+}
+
+export function settingsIntegrationsRowCollapsed(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name}، مطوي`;
+    case "de":
+      return `${name}, eingeklappt`;
+    case "es":
+      return `${name}, contraído`;
+    case "fr":
+      return `${name}, replié`;
+    case "ja":
+      return `${name}、折りたたみ`;
+    case "ko":
+      return `${name}, 접힘`;
+    case "pt-BR":
+      return `${name}, recolhido`;
+    case "zh-Hans":
+      return `${name}，已折叠`;
+    case "zh-Hant":
+      return `${name}，已收合`;
+    case "en-XA":
+      return `[${name}, çöļļáþšéð ~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e, collapsed\u202c`;
+  }
+  return `${name}, collapsed`;
+}
+
+export function settingsIntegrationsCheckNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التحقق الآن`;
+    case "de":
+      return `Jetzt prüfen`;
+    case "es":
+      return `Comprobar ahora`;
+    case "fr":
+      return `Vérifier maintenant`;
+    case "ja":
+      return `今すぐ確認`;
+    case "ko":
+      return `지금 확인`;
+    case "pt-BR":
+      return `Verificar agora`;
+    case "zh-Hans":
+      return `立即检查`;
+    case "zh-Hant":
+      return `立即檢查`;
+    case "en-XA":
+      return `[Çĥéçķ ñöŵ ~~~]`;
+    case "ar-XB":
+      return `\u202eCheck now\u202c`;
+  }
+  return `Check now`;
+}
+
+export function settingsIntegrationsStarting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ البدء...`;
+    case "de":
+      return `Wird gestartet ...`;
+    case "es":
+      return `Iniciando...`;
+    case "fr":
+      return `Démarrage...`;
+    case "ja":
+      return `開始中...`;
+    case "ko":
+      return `시작하는 중...`;
+    case "pt-BR":
+      return `Iniciando...`;
+    case "zh-Hans":
+      return `正在启动...`;
+    case "zh-Hant":
+      return `啟動中…`;
+    case "en-XA":
+      return `[Šţáŕţîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eStarting...\u202c`;
+  }
+  return `Starting...`;
+}
+
+export function settingsIntegrationsSignInAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول مجددًا`;
+    case "de":
+      return `Erneut anmelden`;
+    case "es":
+      return `Volver a iniciar sesión`;
+    case "fr":
+      return `Se reconnecter`;
+    case "ja":
+      return `もう一度サインイン`;
+    case "ko":
+      return `다시 로그인`;
+    case "pt-BR":
+      return `Fazer login de novo`;
+    case "zh-Hans":
+      return `重新登录`;
+    case "zh-Hant":
+      return `重新登入`;
+    case "en-XA":
+      return `[Šîĝñ îñ áĝáîñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in again\u202c`;
+  }
+  return `Sign in again`;
+}
+
+export function settingsIntegrationsActionsLabel(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إجراءات ${name}`;
+    case "de":
+      return `Aktionen von ${name}`;
+    case "es":
+      return `Acciones de ${name}`;
+    case "fr":
+      return `Actions de ${name}`;
+    case "ja":
+      return `${name} の操作`;
+    case "ko":
+      return `${name} 동작`;
+    case "pt-BR":
+      return `Ações de ${name}`;
+    case "zh-Hans":
+      return `${name} 的操作`;
+    case "zh-Hant":
+      return `${name} 的動作`;
+    case "en-XA":
+      return `[${name} áçţîöñš ~~~]`;
+    case "ar-XB":
+      return `${name}\u202e actions\u202c`;
+  }
+  return `${name} actions`;
+}
+
+export function settingsIntegrationsResume(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استئناف`;
+    case "de":
+      return `Fortsetzen`;
+    case "es":
+      return `Reanudar`;
+    case "fr":
+      return `Reprendre`;
+    case "ja":
+      return `再開`;
+    case "ko":
+      return `다시 시작`;
+    case "pt-BR":
+      return `Retomar`;
+    case "zh-Hans":
+      return `继续`;
+    case "zh-Hant":
+      return `繼續`;
+    case "en-XA":
+      return `[Ŕéšûɱé ~~]`;
+    case "ar-XB":
+      return `\u202eResume\u202c`;
+  }
+  return `Resume`;
+}
+
+export function settingsIntegrationsPause(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف مؤقت`;
+    case "de":
+      return `Pausieren`;
+    case "es":
+      return `Pausar`;
+    case "fr":
+      return `Mettre en pause`;
+    case "ja":
+      return `一時停止`;
+    case "ko":
+      return `일시 정지`;
+    case "pt-BR":
+      return `Pausar`;
+    case "zh-Hans":
+      return `暂停`;
+    case "zh-Hant":
+      return `暫停`;
+    case "en-XA":
+      return `[Þáûšé ~~]`;
+    case "ar-XB":
+      return `\u202ePause\u202c`;
+  }
+  return `Pause`;
+}
+
+export function settingsIntegrationsPauseDetail(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يصل إليه أحد حتى تستأنفه`;
+    case "de":
+      return `Niemand erreicht es, bis du es fortsetzt`;
+    case "es":
+      return `Nadie accede hasta que la reanudes`;
+    case "fr":
+      return `Personne n’y accède tant que vous ne la reprenez pas`;
+    case "ja":
+      return `再開するまで誰もアクセスできません`;
+    case "ko":
+      return `다시 시작할 때까지 아무도 쓸 수 없어요`;
+    case "pt-BR":
+      return `Ninguém acessa até você retomar`;
+    case "zh-Hans":
+      return `在你继续之前，谁都无法使用它`;
+    case "zh-Hant":
+      return `在你繼續之前，誰都無法使用它`;
+    case "en-XA":
+      return `[Ñöƀöðý ŕéáçĥéš îţ ûñţîļ ýöû ŕéšûɱé îţ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNobody reaches it until you resume it\u202c`;
+  }
+  return `Nobody reaches it until you resume it`;
+}
+
+export function settingsIntegrationsSignOutRemove(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الخروج والإزالة`;
+    case "de":
+      return `Abmelden und entfernen`;
+    case "es":
+      return `Cerrar sesión y quitar`;
+    case "fr":
+      return `Se déconnecter et retirer`;
+    case "ja":
+      return `サインアウトして削除`;
+    case "ko":
+      return `로그아웃하고 제거`;
+    case "pt-BR":
+      return `Sair e remover`;
+    case "zh-Hans":
+      return `退出登录并移除`;
+    case "zh-Hant":
+      return `登出並移除`;
+    case "en-XA":
+      return `[Šîĝñ öûţ áñð ŕéɱöṽé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign out and remove\u202c`;
+  }
+  return `Sign out and remove`;
+}
+
+export function settingsIntegrationsRuleNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر «يسألك» أو «مسموح دائمًا»`;
+    case "de":
+      return `Wähle „Fragt dich“ oder „Immer erlaubt“`;
+    case "es":
+      return `Elige «Te pregunta» o «Siempre permitida»`;
+    case "fr":
+      return `Choisissez « Vous demande » ou « Toujours autorisée »`;
+    case "ja":
+      return `「確認する」か「常に許可」を選択`;
+    case "ko":
+      return `“매번 물어봄” 또는 “항상 허용” 중에서 고르세요`;
+    case "pt-BR":
+      return `Escolha “Pergunta a você” ou “Sempre permitida”`;
+    case "zh-Hans":
+      return `选择“询问你”或“始终允许”`;
+    case "zh-Hant":
+      return `選擇「詢問你」或「一律允許」`;
+    case "en-XA":
+      return `[Çĥööšé Åšķš ýöû öŕ Åļŵáýš áļļöŵéð ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose Asks you or Always allowed\u202c`;
+  }
+  return `Choose Asks you or Always allowed`;
+}
+
+export function settingsIntegrationsRuleOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `شغّل الإجراء لتغيير موافقته`;
+    case "de":
+      return `Schalte die Aktion ein, um ihre Freigabe zu ändern`;
+    case "es":
+      return `Activa la acción para cambiar su aprobación`;
+    case "fr":
+      return `Activez l’action pour modifier son approbation`;
+    case "ja":
+      return `承認方法を変更するには、操作をオンにしてください`;
+    case "ko":
+      return `승인 방식을 바꾸려면 동작을 켜세요`;
+    case "pt-BR":
+      return `Ative a ação para mudar a aprovação dela`;
+    case "zh-Hans":
+      return `打开此操作后才能更改它的批准方式`;
+    case "zh-Hant":
+      return `開啟這個動作後才能變更它的核准方式`;
+    case "en-XA":
+      return `[Ţûŕñ ţĥé áçţîöñ öñ ţö çĥáñĝé îţš áþþŕöṽáļ ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurn the action on to change its approval\u202c`;
+  }
+  return `Turn the action on to change its approval`;
+}
+
+export function settingsIntegrationsCopying(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ النسخ...`;
+    case "de":
+      return `Wird kopiert ...`;
+    case "es":
+      return `Copiando...`;
+    case "fr":
+      return `Copie...`;
+    case "ja":
+      return `コピー中...`;
+    case "ko":
+      return `복사 중...`;
+    case "pt-BR":
+      return `Copiando...`;
+    case "zh-Hans":
+      return `正在复制...`;
+    case "zh-Hant":
+      return `複製中…`;
+    case "en-XA":
+      return `[Çöþýîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eCopying...\u202c`;
+  }
+  return `Copying...`;
 }
 
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
@@ -23091,6 +29018,211 @@ export const MESSAGES = {
   settingsCommandStopFailed,
   settingsCommandStartAtLogin,
   settingsWebsiteSignInsStorage,
+  settingsKeyboardSaveFailed,
+  settingsKeyboardHeading,
+  settingsKeyboardSearch,
+  settingsKeyboardResetAll,
+  settingsKeyboardResetAllConfirm,
+  settingsKeyboardUnreadable,
+  settingsKeyboardNoMatch,
+  settingsKeyboardUnknownCommand,
+  settingsKeyboardChanged,
+  settingsKeyboardRecordLabel,
+  settingsKeyboardRecord,
+  settingsKeyboardRemoveLabel,
+  settingsKeyboardRemove,
+  settingsKeyboardResetLabel,
+  settingsKeyboardReset,
+  settingsKeyboardNoKey,
+  settingsKeyboardWhereLabel,
+  settingsKeyboardAnywhere,
+  settingsKeyboardNotTyping,
+  settingsKeyboardPress,
+  settingsKeyboardOwn,
+  settingsKeyboardFree,
+  settingsKeyboardRecorderKeys,
+  settingsKeyboardRecorderKeysSecond,
+  settingsKeyboardRecordingLabel,
+  settingsKeyboardRecordingWait,
+  settingsKeyboardSaving,
+  settingsKeyboardSave,
+  settingsKeyboardAddBeside,
+  settingsKeyboardCancel,
+  settingsKeyboardClashMovesNoKey,
+  settingsKeyboardClashMovesKeeps,
+  settingsGeneralTasksPurged,
+  settingsGeneralYourPanels,
+  settingsGeneralYourPanelsOn,
+  settingsGeneralYourPanelsSafeMode,
+  settingsPanelsHeading,
+  settingsPanelsIntro,
+  settingsPanelsNone,
+  settingsPanelsReset,
+  settingsPanelsResetConfirm,
+  settingsPanelsShow,
+  settingsPanelsKeysMove,
+  settingsPanelsKeysOtherRail,
+  settingsPanelsKeysShowOrHide,
+  settingsPanelsKeysOpenOrCollapse,
+  settingsPanelsLeftRail,
+  settingsPanelsRightRail,
+  settingsPanelsTop,
+  settingsPanelsBottom,
+  settingsPanelsLeftTop,
+  settingsPanelsLeftBottom,
+  settingsPanelsRightTop,
+  settingsPanelsRightBottom,
+  settingsPanelsShown,
+  settingsPanelsCollapsed,
+  settingsPanelsHidden,
+  settingsPanelsNothing,
+  settingsPanelsMore,
+  settingsPanelsWaitsForRule,
+  settingsPanelsWaitsForKnowledge,
+  settingsSaveRecoveryHint,
+  settingsSaveLoadFailed,
+  settingsSaveFailed,
+  settingsSaveReloadFailed,
+  settingsScreenSections,
+  settingsVersionNoNewChanges,
+  settingsVersionTitle,
+  settingsVersionNotes,
+  settingsVersionNoNotes,
+  settingsVersionReading,
+  settingsVersionReleaseNotes,
+  settingsVersionShowMore,
+  settingsRunbooksOpenFailed,
+  settingsRunbooksViewLabel,
+  settingsRunbooksView,
+  settingsRunbooksBuiltIn,
+  settingsRunbooksYours,
+  settingsRunbooksYoursEmpty,
+  settingsRunbooksMakeYourOwn,
+  settingsRunbooksFolder,
+  settingsRunbooksFolderRemote,
+  settingsRunbooksFolderHere,
+  settingsRunbooksOpenFolder,
+  settingsRunbooksAsk,
+  settingsSecretsStorageLocked,
+  settingsSecretsStorageUnavailable,
+  settingsSecretsRecoveryNeeded,
+  settingsSecretsPermissionsRecovery,
+  settingsSecretsFinishForm,
+  settingsSecretsReading,
+  settingsSecretsUnlockToUse,
+  settingsSecretsUnlockAgain,
+  settingsSecretsWaitForChange,
+  settingsSecretsNamePlaceholder,
+  settingsSecretsSaving,
+  settingsSecretsWaitForSaving,
+  settingsSecretsCancel,
+  settingsSecretsDeviceCode,
+  settingsSecretsHistoryExported,
+  settingsSecretsNoExport,
+  settingsSecretsExportFailed,
+  settingsSecretsExportHistory,
+  settingsSecretsDeleteHistory,
+  settingsSecretsRefresh,
+  settingsSecretsNoHistory,
+  settingsSecretsRecoveredSource,
+  settingsSecretsRecoveredAt,
+  settingsSecretsFinishFormOrChange,
+  settingsSecretsBackupNote,
+  settingsSecretsRestoreNote,
+  settingsSecretsUnlockBeforeRestore,
+  settingsSecretsRecoveryFiles,
+  settingsSecretsNotRequested,
+  settingsSharingInstallIdNote,
+  settingsSharingDiagnosticsSent,
+  settingsSharingDiagnosticsNowhere,
+  settingsSharingContributionDescription,
+  settingsSharingHeading,
+  settingsSharingDiagnostics,
+  settingsSharingContribution,
+  settingsSharingWhatWouldLeave,
+  settingsSharingTerms,
+  settingsSharingReading,
+  settingsSharingDiagnosticsWaiting,
+  settingsSharingDiagnosticsSentTitle,
+  settingsSharingRecordsWaitingNewest,
+  settingsSharingRecordsWaiting,
+  settingsSharingNoRecords,
+  settingsSharingInstallId,
+  settingsSharingNoInstallId,
+  settingsSharingCatalog,
+  settingsSharingCatalogNote,
+  settingsSharingAskTitle,
+  settingsSharingAskBody,
+  settingsSharingAskNotNow,
+  settingsSharingAskContribute,
+  settingsGeneralCustomApi,
+  settingsGeneralModelByNameLabel,
+  settingsGeneralFirstMateModel,
+  settingsGeneralFirstMateModelAccount,
+  settingsGeneralModelAuto,
+  settingsGeneralModelStranded,
+  settingsGeneralModelByName,
+  settingsGeneralModelAccountDescription,
+  settingsGeneralModelDescription,
+  settingsGeneralDictation,
+  settingsGeneralDictationPicking,
+  settingsGeneralDictationDescription,
+  settingsGeneralDictationKey,
+  settingsGeneralDictationRight,
+  settingsGeneralHeading,
+  settingsGeneralStartAtLogin,
+  settingsGeneralStartAtLoginDescription,
+  settingsGeneralShowInDock,
+  settingsGeneralShowInDockDescription,
+  settingsGeneralNotify,
+  settingsGeneralNotifyDescription,
+  settingsGeneralPurge,
+  settingsGeneralPurgeDescriptionKnowledge,
+  settingsGeneralPurgeDescription,
+  settingsGeneralPurging,
+  settingsGeneralPurgeConfirm,
+  settingsGeneralPurgeButton,
+  settingsAppearanceSizeDescription,
+  settingsAppearanceSizeDescriptionKeys,
+  settingsAppearanceSizeDescriptionKey,
+  settingsAppearanceHeading,
+  settingsAppearanceOwnLook,
+  settingsAppearanceSize,
+  settingsAppearanceCardSize,
+  settingsAppearanceCardSizeDescription,
+  settingsAppearanceCardUsual,
+  settingsAppearanceCardWide,
+  settingsAppearanceCardFull,
+  settingsAppearanceCardMaximized,
+  settingsAppearanceKeepMaximized,
+  settingsAppearanceKeepMaximizedDescription,
+  settingsAppearanceTheme,
+  settingsAppearanceThemeDescription,
+  settingsAppearanceThemeDark,
+  settingsAppearanceThemeLight,
+  settingsAppearanceWash,
+  settingsAppearanceWashDescription,
+  settingsAppearanceWashValue,
+  settingsAppearanceCrewModelNames,
+  settingsAppearanceCrewModelNamesDescription,
+  settingsIntegrationsActionCount,
+  settingsIntegrationsAs,
+  settingsIntegrationsPaused,
+  settingsIntegrationsSignedIn,
+  settingsIntegrationsUnreachable,
+  settingsIntegrationsRowExpanded,
+  settingsIntegrationsRowCollapsed,
+  settingsIntegrationsCheckNow,
+  settingsIntegrationsStarting,
+  settingsIntegrationsSignInAgain,
+  settingsIntegrationsActionsLabel,
+  settingsIntegrationsResume,
+  settingsIntegrationsPause,
+  settingsIntegrationsPauseDetail,
+  settingsIntegrationsSignOutRemove,
+  settingsIntegrationsRuleNote,
+  settingsIntegrationsRuleOff,
+  settingsIntegrationsCopying,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -23848,4 +29980,209 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsCommandStopFailed: [],
   settingsCommandStartAtLogin: [],
   settingsWebsiteSignInsStorage: [],
+  settingsKeyboardSaveFailed: [],
+  settingsKeyboardHeading: [],
+  settingsKeyboardSearch: [],
+  settingsKeyboardResetAll: [],
+  settingsKeyboardResetAllConfirm: [],
+  settingsKeyboardUnreadable: [],
+  settingsKeyboardNoMatch: [],
+  settingsKeyboardUnknownCommand: [],
+  settingsKeyboardChanged: [],
+  settingsKeyboardRecordLabel: ["command"],
+  settingsKeyboardRecord: [],
+  settingsKeyboardRemoveLabel: ["command"],
+  settingsKeyboardRemove: [],
+  settingsKeyboardResetLabel: ["command"],
+  settingsKeyboardReset: [],
+  settingsKeyboardNoKey: [],
+  settingsKeyboardWhereLabel: ["command", "key"],
+  settingsKeyboardAnywhere: [],
+  settingsKeyboardNotTyping: [],
+  settingsKeyboardPress: [],
+  settingsKeyboardOwn: [],
+  settingsKeyboardFree: [],
+  settingsKeyboardRecorderKeys: ["addKey"],
+  settingsKeyboardRecorderKeysSecond: ["addKey"],
+  settingsKeyboardRecordingLabel: ["command"],
+  settingsKeyboardRecordingWait: [],
+  settingsKeyboardSaving: [],
+  settingsKeyboardSave: [],
+  settingsKeyboardAddBeside: [],
+  settingsKeyboardCancel: [],
+  settingsKeyboardClashMovesNoKey: ["clash", "command"],
+  settingsKeyboardClashMovesKeeps: ["clash", "command"],
+  settingsGeneralTasksPurged: ["count"],
+  settingsGeneralYourPanels: [],
+  settingsGeneralYourPanelsOn: [],
+  settingsGeneralYourPanelsSafeMode: [],
+  settingsPanelsHeading: [],
+  settingsPanelsIntro: [],
+  settingsPanelsNone: [],
+  settingsPanelsReset: [],
+  settingsPanelsResetConfirm: [],
+  settingsPanelsShow: ["title"],
+  settingsPanelsKeysMove: [],
+  settingsPanelsKeysOtherRail: [],
+  settingsPanelsKeysShowOrHide: [],
+  settingsPanelsKeysOpenOrCollapse: [],
+  settingsPanelsLeftRail: [],
+  settingsPanelsRightRail: [],
+  settingsPanelsTop: [],
+  settingsPanelsBottom: [],
+  settingsPanelsLeftTop: [],
+  settingsPanelsLeftBottom: [],
+  settingsPanelsRightTop: [],
+  settingsPanelsRightBottom: [],
+  settingsPanelsShown: [],
+  settingsPanelsCollapsed: [],
+  settingsPanelsHidden: [],
+  settingsPanelsNothing: [],
+  settingsPanelsMore: [],
+  settingsPanelsWaitsForRule: [],
+  settingsPanelsWaitsForKnowledge: [],
+  settingsSaveRecoveryHint: [],
+  settingsSaveLoadFailed: [],
+  settingsSaveFailed: [],
+  settingsSaveReloadFailed: ["hint", "message"],
+  settingsScreenSections: [],
+  settingsVersionNoNewChanges: [],
+  settingsVersionTitle: [],
+  settingsVersionNotes: ["name"],
+  settingsVersionNoNotes: ["name"],
+  settingsVersionReading: [],
+  settingsVersionReleaseNotes: [],
+  settingsVersionShowMore: [],
+  settingsRunbooksOpenFailed: [],
+  settingsRunbooksViewLabel: ["name"],
+  settingsRunbooksView: [],
+  settingsRunbooksBuiltIn: [],
+  settingsRunbooksYours: [],
+  settingsRunbooksYoursEmpty: [],
+  settingsRunbooksMakeYourOwn: [],
+  settingsRunbooksFolder: [],
+  settingsRunbooksFolderRemote: ["computer"],
+  settingsRunbooksFolderHere: [],
+  settingsRunbooksOpenFolder: [],
+  settingsRunbooksAsk: [],
+  settingsSecretsStorageLocked: [],
+  settingsSecretsStorageUnavailable: [],
+  settingsSecretsRecoveryNeeded: [],
+  settingsSecretsPermissionsRecovery: [],
+  settingsSecretsFinishForm: [],
+  settingsSecretsReading: [],
+  settingsSecretsUnlockToUse: [],
+  settingsSecretsUnlockAgain: [],
+  settingsSecretsWaitForChange: [],
+  settingsSecretsNamePlaceholder: [],
+  settingsSecretsSaving: [],
+  settingsSecretsWaitForSaving: [],
+  settingsSecretsCancel: [],
+  settingsSecretsDeviceCode: ["code"],
+  settingsSecretsHistoryExported: [],
+  settingsSecretsNoExport: [],
+  settingsSecretsExportFailed: [],
+  settingsSecretsExportHistory: [],
+  settingsSecretsDeleteHistory: [],
+  settingsSecretsRefresh: [],
+  settingsSecretsNoHistory: [],
+  settingsSecretsRecoveredSource: ["source"],
+  settingsSecretsRecoveredAt: ["at"],
+  settingsSecretsFinishFormOrChange: [],
+  settingsSecretsBackupNote: [],
+  settingsSecretsRestoreNote: [],
+  settingsSecretsUnlockBeforeRestore: [],
+  settingsSecretsRecoveryFiles: [],
+  settingsSecretsNotRequested: [],
+  settingsSharingInstallIdNote: ["place"],
+  settingsSharingDiagnosticsSent: ["destination", "summary"],
+  settingsSharingDiagnosticsNowhere: ["summary"],
+  settingsSharingContributionDescription: [],
+  settingsSharingHeading: [],
+  settingsSharingDiagnostics: [],
+  settingsSharingContribution: [],
+  settingsSharingWhatWouldLeave: ["place"],
+  settingsSharingTerms: [],
+  settingsSharingReading: [],
+  settingsSharingDiagnosticsWaiting: [],
+  settingsSharingDiagnosticsSentTitle: [],
+  settingsSharingRecordsWaitingNewest: ["shown", "total"],
+  settingsSharingRecordsWaiting: [],
+  settingsSharingNoRecords: [],
+  settingsSharingInstallId: [],
+  settingsSharingNoInstallId: [],
+  settingsSharingCatalog: [],
+  settingsSharingCatalogNote: [],
+  settingsSharingAskTitle: [],
+  settingsSharingAskBody: [],
+  settingsSharingAskNotNow: [],
+  settingsSharingAskContribute: [],
+  settingsGeneralCustomApi: [],
+  settingsGeneralModelByNameLabel: [],
+  settingsGeneralFirstMateModel: [],
+  settingsGeneralFirstMateModelAccount: [],
+  settingsGeneralModelAuto: [],
+  settingsGeneralModelStranded: ["model"],
+  settingsGeneralModelByName: [],
+  settingsGeneralModelAccountDescription: ["provider"],
+  settingsGeneralModelDescription: [],
+  settingsGeneralDictation: [],
+  settingsGeneralDictationPicking: ["choices", "key"],
+  settingsGeneralDictationDescription: ["place"],
+  settingsGeneralDictationKey: [],
+  settingsGeneralDictationRight: [],
+  settingsGeneralHeading: [],
+  settingsGeneralStartAtLogin: [],
+  settingsGeneralStartAtLoginDescription: [],
+  settingsGeneralShowInDock: [],
+  settingsGeneralShowInDockDescription: [],
+  settingsGeneralNotify: [],
+  settingsGeneralNotifyDescription: [],
+  settingsGeneralPurge: [],
+  settingsGeneralPurgeDescriptionKnowledge: [],
+  settingsGeneralPurgeDescription: [],
+  settingsGeneralPurging: [],
+  settingsGeneralPurgeConfirm: [],
+  settingsGeneralPurgeButton: [],
+  settingsAppearanceSizeDescription: [],
+  settingsAppearanceSizeDescriptionKeys: ["larger", "smaller"],
+  settingsAppearanceSizeDescriptionKey: ["key"],
+  settingsAppearanceHeading: [],
+  settingsAppearanceOwnLook: ["computer", "place"],
+  settingsAppearanceSize: [],
+  settingsAppearanceCardSize: [],
+  settingsAppearanceCardSizeDescription: [],
+  settingsAppearanceCardUsual: [],
+  settingsAppearanceCardWide: [],
+  settingsAppearanceCardFull: [],
+  settingsAppearanceCardMaximized: [],
+  settingsAppearanceKeepMaximized: [],
+  settingsAppearanceKeepMaximizedDescription: [],
+  settingsAppearanceTheme: [],
+  settingsAppearanceThemeDescription: [],
+  settingsAppearanceThemeDark: [],
+  settingsAppearanceThemeLight: [],
+  settingsAppearanceWash: [],
+  settingsAppearanceWashDescription: [],
+  settingsAppearanceWashValue: ["percent"],
+  settingsAppearanceCrewModelNames: [],
+  settingsAppearanceCrewModelNamesDescription: [],
+  settingsIntegrationsActionCount: ["count"],
+  settingsIntegrationsAs: ["account"],
+  settingsIntegrationsPaused: [],
+  settingsIntegrationsSignedIn: [],
+  settingsIntegrationsUnreachable: [],
+  settingsIntegrationsRowExpanded: ["name"],
+  settingsIntegrationsRowCollapsed: ["name"],
+  settingsIntegrationsCheckNow: [],
+  settingsIntegrationsStarting: [],
+  settingsIntegrationsSignInAgain: [],
+  settingsIntegrationsActionsLabel: ["name"],
+  settingsIntegrationsResume: [],
+  settingsIntegrationsPause: [],
+  settingsIntegrationsPauseDetail: [],
+  settingsIntegrationsSignOutRemove: [],
+  settingsIntegrationsRuleNote: [],
+  settingsIntegrationsRuleOff: [],
+  settingsIntegrationsCopying: [],
 };

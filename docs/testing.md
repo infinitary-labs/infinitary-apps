@@ -601,6 +601,10 @@ Beside it, the `critical-path` job runs the critical path on the same composed c
 The `startup` job runs the Linux automatic startup fixtures, `linux-startup.yml`, on the same composed commit on GitHub's hosted Ubuntu, so they run before a merge (the captain's pick on INF-3052, "In the batch check, beside the critical-path journey").
 Every job composes the batch with the shipped compose script, `.github/actions/infinitary-batch/compose.sh apply`, in its own checkout, and fails if its tree differs from the one the queue composed.
 The last job, `Merge batch · Batch passed (tree T; base B)`, passes only once all three did and names the tree they built and the main version B the batch composed onto.
+The batch stops at its first code-check failure (the captain's pick on INF-3925): its `watch` job reads the run until the sweep's `Code checks and build (Linux)` job ends, and when that job failed, its `stop` job enters the concurrency group of every other sweep job (`verify.yml`'s lanes and test groups and `source-journeys.yml`'s journey groups, each its own) with cancel-in-progress, which cancels each one, queued or running (`scripts/batch-stop.mjs`).
+Each stop job then fails, so the batch ends failed minutes in; its failed code checks name no test file, so nothing is confirmed, and the queue pauses.
+The stop cancels single jobs, never a whole called check, and its jobs fail rather than pass: GitHub ends a batch cancelled when a called check was cancelled, or when jobs were cancelled and none of its own jobs failed, and the queue reads cancelled as no verdict and runs the batch again.
+The critical path and the startup fixtures end within a few minutes and run on, and the watch never fails a batch itself.
 When they fail, the queue's confirm calls the same file again with the failed jobs and files, and only its `confirm` job runs: each failed test file three rounds with no retries, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did, while the sweep, the critical path and the startup fixtures skip (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
 When the confirm fails, it keeps everything under `test-results/` on the run as `confirm-failures-mac` or `confirm-failures-linux` for 7 days: each failed journey's error context, trace and screenshot, as `e2e-failures-<lane>` keeps the sweep's ("A red verify's evidence"), so a failure that shows only in the confirm can still be read.
 The last job then passes once the confirm did, and names the same tree and base.
@@ -614,7 +618,7 @@ When main's newest files are already batch N's, or another change of batch N is 
 A batch run from before its last job named the base is landing on an open change of it alone.
 Anything else gets the full check: files no batch built, such as a merge outside the queue, a batch merged in an order that changed its files, or a batch composed onto an older main than the one its changes merged onto.
 The alpha's proof follows a covered run to its queue run and reads its batch checks, and the tree their last job names in the batch's run or its confirm; after a passed confirm it counts each failed job of the checks as passed, since the confirm ran its failed files again (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
-The fleet never cancels a running batch or a running main check unless the captain asks.
+The fleet never cancels a running batch or a running main check unless the captain asks; a batch's own stop at failed code checks is the batch's, not the fleet's.
 `tests/batch.test.ts` holds the batch checks, their compose step and main's sort.
 
 ## A paused batch's repair
@@ -634,6 +638,7 @@ A newer version of the pull request cancels the run of the older one.
 
 That job calls `batch-checks.yml` on the pull request's version, which runs what the shipped queue's batch runs with nothing composed, since the branch already holds its changes.
 Its `sweep`, `critical-path` and `startup` jobs make the same calls as `infinitary-batch-checks.yml` with that version as `ref` and no batch to compose.
+It stops at its first code-check failure the same way, with the same `watch` and `stop` jobs.
 When one of them fails, its `failures` job reads each failed job's log for the test files it names as failed, with the shipped queue's own reader (`scripts/batch-failures.mjs`), and its `confirm` job runs those files three rounds with no retries on the same version, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did (`scripts/batch-confirm.ts`).
 A failed confirm keeps the same evidence the queue's confirm keeps ("The swept batch").
 A failed job whose log names no test file failed for something no rerun of a test answers, so nothing runs again.

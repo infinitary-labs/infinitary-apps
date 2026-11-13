@@ -19,6 +19,13 @@ name: Infinitary batch checks
 # confirm step"), but the last job, which names the tree once the confirm
 # passed.
 #
+# The batch stops at its first code-check failure (the captain's pick on
+# INF-3925): the watch job reads this run until the sweep's code checks end,
+# and when they failed, a stop job per sweep job enters that job's own
+# concurrency group with cancel-in-progress and cancels it, so the batch ends
+# failed minutes in (scripts/batch-stop.mjs). The critical path and the
+# startup fixtures end in a few minutes and run on.
+#
 # Its jobs lead with the Merge batch trigger (scripts/ci-job-names.mjs); the
 # queue names its own jobs.
 
@@ -102,6 +109,76 @@ jobs:
       ref: ${{ inputs.base }}
       batch: ${{ inputs.batch }}
       batch_tree: ${{ inputs.tree }}
+
+  # Reads this run until the sweep's code checks end, and names their
+  # outcome. It never fails the batch itself: a watch that cannot read the
+  # run leaves the batch to run on.
+  watch:
+    if: inputs.failed_jobs == ''
+    name: Merge batch · Watch the code checks
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    outputs:
+      code_checks: ${{ steps.watch.outputs.code_checks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          sparse-checkout: scripts/batch-stop.mjs
+          sparse-checkout-cone-mode: false
+      - id: watch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {watch} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-stop.mjs`).href);
+            await watch({github, context, core});
+
+  # After failed code checks: each sweep job's own concurrency group
+  # (verify.yml's lanes and test groups, source-journeys.yml's journey
+  # groups), entered with cancel-in-progress, which cancels that job, queued
+  # or running. Each stop then fails, which ends the batch failed: with
+  # every stop passing, GitHub ends a batch whose jobs were cancelled
+  # cancelled, as it does when a whole called check is cancelled, and the
+  # queue reads cancelled as no verdict.
+  stop:
+    needs: watch
+    if: ${{ !cancelled() && needs.watch.outputs.code_checks == 'failure' }}
+    name: ${{ format('Merge batch · Stop after failed code checks ({0})', matrix.job) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - verify-lane-mac
+          - verify-lane-parallel
+          - verify-lane-desktop
+          - verify-tests-Unit tests-1
+          - verify-tests-Unit tests-2
+          - verify-tests-Unit tests-3
+          - verify-tests-Integration tests-1
+          - verify-tests-Integration tests-2
+          - verify-tests-Environment checks-1
+          - verify-tests-Environment checks-2
+          - verify-tests-Browser tests-1
+          - journeys-full-source-parallel-1
+          - journeys-full-source-parallel-2
+          - journeys-full-source-parallel-3
+          - journeys-full-source-parallel-4
+          - journeys-full-source-parallel-5
+          - journeys-full-source-parallel-6
+          - journeys-full-source-desktop-1
+          - journeys-full-source-desktop-2
+          - journeys-full-source-desktop-3
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.job) }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          JOB: ${{ matrix.job }}
+        run: |
+          echo "::error::The code checks failed, so this batch stopped its $JOB job."
+          exit 1
 
   # Passes once the sweep, the critical path and the startup fixtures all
   # passed, or, in the confirm, once the confirm passed, and names the tree

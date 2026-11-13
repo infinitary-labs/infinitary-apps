@@ -9,6 +9,7 @@ import {
   typedFailureOf,
 } from "@shared/plainProblem";
 import { type SteerEventData, TASK_CARD_VIA } from "@shared/provenance";
+import type { KeptPutOff } from "@shared/putOff";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { withoutDigest, workWaitSchema } from "@shared/recovery";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
@@ -272,6 +273,11 @@ export type IdleLadderHost = {
   putOffAwaits?: (taskId: string) => TaskRecord[];
   /** Whether this closed card is put off, so the row its click left stays open. */
   cardPutOff?: (cardId: string) => boolean;
+  /**
+   * Every put-off that belongs to a task, in one read (`PutOffs.onTasks`):
+   * the next-move check reads it once a pass. Absent = none is kept.
+   */
+  putOffsOnTasks?: () => (KeptPutOff & { task: string })[];
 };
 
 export class IdleLadder {

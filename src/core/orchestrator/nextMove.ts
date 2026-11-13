@@ -15,7 +15,8 @@ import type { TypedWake } from "./wakes";
  * next-move check"): the idle ladder's pass widened to the parts of begun
  * work it never read - open work waiting on request, and started work back
  * in the backlog. Each such part is moving, waiting on the captain with a
- * card up, or stopped by the captain; otherwise nothing will ever move it.
+ * card up or put off until a moment, or stopped by the captain; otherwise
+ * nothing will ever move it.
  *
  * A part standing that way, after the ladder's first settle time, gets one
  * typed wake to the first mate per stay in that state. Once the first mate
@@ -49,8 +50,25 @@ type Standing = {
   since: number;
 };
 
-/** What one pass reads once: whether the captain stopped a task. */
-type Pass = { stopped: Map<string, boolean> };
+/**
+ * The captain's put-offs as one pass reads them (`putOffsOnTasks`): the
+ * tasks with a put-off of their own, and for each task a close put-off
+ * waits for, the tasks waiting and when each put-off was kept.
+ */
+type PutOffIndex = {
+  held: Set<string>;
+  awaitedBy: Map<string, { task: string; at: number }[]>;
+};
+
+/**
+ * What one pass reads once: whether the captain stopped a task, whether a
+ * put-off of theirs holds it, and every put-off, read on first need.
+ */
+type Pass = {
+  stopped: Map<string, boolean>;
+  putOff: Map<string, boolean>;
+  putOffs?: PutOffIndex;
+};
 
 export class NextMove {
   /**
@@ -65,7 +83,7 @@ export class NextMove {
   /** One pass over every live part that waits for a start; runs inside the ladder's projection. */
   reconcile(now: number): void {
     const tasks = this.host.tasks;
-    const pass: Pass = { stopped: new Map() };
+    const pass: Pass = { stopped: new Map(), putOff: new Map() };
     const standing = new Set<string>();
     const candidates = [
       ...tasks.listOpen().filter((record) => record.startPolicy === "on-request"),
@@ -105,7 +123,7 @@ export class NextMove {
     ) {
       return undefined;
     }
-    if (this.captainHolds(record)) return undefined;
+    if (this.captainHolds(record, pass)) return undefined;
     if (this.stopped(record, pass)) return undefined;
     const found = open
       ? this.begunOf(record, pass, new Set([record.id]))
@@ -146,13 +164,14 @@ export class NextMove {
   /**
    * Why an open part counts as begun work, and since when: at each level
    * from it up through its live parents, a parent or another part under it
-   * started building, or started work waits on that level - directly, or
-   * through open work that is begun itself. Work the captain stopped is no
-   * reason, and a task that delivers an answer is not building work and
-   * ends the walk, so ideas filed for later stay exempt. The part and its
-   * parents are already known not stopped and cached for the pass, so a part
-   * beside them costs one stop read a pass, and a done part, which no stop
-   * can hold, is read as one earliest start.
+   * started building, or started work waits on that level, through a blocks
+   * link or a put-off until it closes - directly, or through open work that
+   * is begun itself. Work the captain stopped is no reason, and a task that
+   * delivers an answer is not building work and ends the walk, so ideas
+   * filed for later stay exempt. The part and its parents are already known
+   * not stopped and cached for the pass, so a part beside them costs one
+   * stop read a pass, and a done part, which no stop can hold, is read as
+   * one earliest start.
    */
   private begunOf(
     record: TaskRecord,
@@ -161,7 +180,13 @@ export class NextMove {
   ): { begun: NextMoveBegun; at: number } | undefined {
     const tasks = this.host.tasks;
     const waited = (node: TaskRecord): { begun: NextMoveBegun; at: number } | undefined => {
-      for (const waiter of tasks.graph.liveWaiters(node.id)) {
+      // A blocks link from this level, or a put-off of the captain's until
+      // it closes, which begins its wait only when it was kept.
+      const waiters = [
+        ...tasks.graph.liveWaiters(node.id).map((waiter) => ({ waiter, kept: 0 })),
+        ...this.putOffWaiters(node.id, pass),
+      ];
+      for (const { waiter, kept } of waiters) {
         if (seen.has(waiter.id)) continue;
         seen.add(waiter.id);
         if (this.stopped(waiter, pass)) continue;
@@ -171,11 +196,11 @@ export class NextMove {
           ...(node.id === record.id ? {} : { via: named(node) }),
         };
         if (waiter.status === "active" && startedBuilding(waiter)) {
-          return { begun, at: waiter.startedAt ?? 0 };
+          return { begun, at: Math.max(waiter.startedAt ?? 0, kept) };
         }
         if (waiter.status === "open") {
           const inner = this.begunOf(waiter, pass, seen);
-          if (inner) return { begun, at: inner.at };
+          if (inner) return { begun, at: Math.max(inner.at, kept) };
         }
       }
       return undefined;
@@ -209,8 +234,12 @@ export class NextMove {
     return undefined;
   }
 
-  /** The captain holds it: a card of it asks them something, or their hands hold its browser. */
-  private captainHolds(record: TaskRecord): boolean {
+  /**
+   * The captain holds it: a card of it asks them something, they put off a
+   * card of it or of a parent above it, or their hands hold its browser.
+   */
+  private captainHolds(record: TaskRecord, pass: Pass): boolean {
+    if (this.putOff(record, pass)) return true;
     const own = nextMoveCardId(record.id);
     let anyCard = false;
     for (const card of this.host.openCards()) {
@@ -221,6 +250,50 @@ export class NextMove {
     if (this.host.answerNoteForTask?.(record.id) !== undefined) return true;
     if (record.delivery?.captainWait && anyCard) return true;
     return this.host.browserWithCaptain?.(record.id) === true;
+  }
+
+  /**
+   * The captain put off a card of this work, or of a parent above it, with a
+   * Not until choice (INF-3846 piece 3, docs/card-authoring.md "Not until"):
+   * the host raises the same card again at its moment, so nothing here asks
+   * about the work before then. Each task is read once a pass.
+   */
+  private putOff(record: TaskRecord, pass: Pass): boolean {
+    const known = pass.putOff.get(record.id);
+    if (known !== undefined) return known;
+    // A broken chain that loops back reads as not put off, never forever.
+    pass.putOff.set(record.id, false);
+    const parent = record.parentId ? this.host.tasks.get(record.parentId) : undefined;
+    const held =
+      this.putOffIndex(pass).held.has(record.id) ||
+      (parent !== undefined && this.putOff(parent, pass));
+    pass.putOff.set(record.id, held);
+    return held;
+  }
+
+  /** The live tasks whose close put-off waits for this one, and when each was kept. */
+  private putOffWaiters(taskId: string, pass: Pass): { waiter: TaskRecord; kept: number }[] {
+    return (this.putOffIndex(pass).awaitedBy.get(taskId) ?? []).flatMap(({ task, at }) => {
+      const waiter = this.host.tasks.get(task);
+      return waiter && !TaskService.isClosed(waiter) ? [{ waiter, kept: at }] : [];
+    });
+  }
+
+  /** Every put-off on a task, read once a pass on first need. */
+  private putOffIndex(pass: Pass): PutOffIndex {
+    if (pass.putOffs) return pass.putOffs;
+    const index: PutOffIndex = { held: new Set(), awaitedBy: new Map() };
+    for (const putOff of this.host.putOffsOnTasks?.() ?? []) {
+      index.held.add(putOff.task);
+      if (putOff.until.kind !== "close") continue;
+      const awaited = this.host.tasks.resolve(putOff.until.task);
+      if (!awaited) continue;
+      const waiting = index.awaitedBy.get(awaited.id) ?? [];
+      waiting.push({ task: putOff.task, at: putOff.at });
+      index.awaitedBy.set(awaited.id, waiting);
+    }
+    pass.putOffs = index;
+    return index;
   }
 
   /** The wake once the part has settled, then the card once that news was handled. */

@@ -132,8 +132,10 @@ A time is a one-time rule, a task's close is an event rule on the app's own "A t
 The rule is turned on at once, since the click that saved it was the captain's, lists in Automation like any rule, and its making and its deletion each write the feed line any rule's do.
 A put-off never closes an answer task and never closes the decision row its click left open.
 The task counts as stopped by the captain: the whose-turn sort and the idle ladder read the `putOff` witness, so it raises no nudge, wake or stall card (`docs/report-sort.md`).
+The next-move check counts the task and every part under it as held by the captain, so no standing-still wake or card follows a put-off (`docs/report-sort.md`, "The next-move check").
 Its posture reads the same witness: a put-off a rule raises reads as waiting on another task's work (`dependency`), and one only the captain's word brings back as waiting on the captain.
 A close put-off's awaited task counts among the task's waits: while nobody has started it, the task waits on unstarted work, which wakes the first mate to start it as any wait on unstarted work does.
+The next-move check reads that awaited task as begun work through the task that waits, from the moment the put-off was kept, so it is not left on request unseen.
 
 When the rule runs, it raises the card instead of waking the first mate: the same card, under its own id, with its body and actions, back on top of the stack and placing the captain gate again; the rule then finishes and leaves Automation.
 The put-off has no timer or sweep of its own: the moment is whatever Automation can wait for, the captain's ruling that Automation's events are the moments.

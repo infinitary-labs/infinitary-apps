@@ -9,6 +9,7 @@
  * tasks and reads what the first mate was served, the cards and the record.
  */
 
+import type { PutOffUntil } from "@shared/putOff";
 import { describe, expect, it } from "vitest";
 import { fakeCrewmate, fakeCrewTimersEachTest } from "../../../tests/helpers/crewHarness";
 import {
@@ -69,6 +70,25 @@ describe("the next-move check (INF-3846 piece 2)", () => {
       createdAt: h.start,
     });
     return { main, part };
+  }
+
+  /**
+   * A first mate card about the task with a plain choice and a Not until
+   * choice (INF-3846 piece 3), and the captain's click on Not until.
+   */
+  function putOff(h: ReturnType<typeof harness>, taskId: string, until: PutOffUntil): string {
+    const asked = h.supervisor.cards.addFirstmateCard({
+      taskId,
+      title: `Go on with ${h.tasks.get(taskId)?.title}?`,
+      body: "<p>It can wait for its moment.</p>",
+      actions: [
+        { id: "wait", label: "Leave it waiting", default: true },
+        { id: "later", label: "Not until then", until },
+      ],
+    });
+    h.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+    h.supervisor.cardActions.act(asked, "later");
+    return asked;
   }
 
   it("tells the first mate once after the settle time, then shows the captain one card, which comes down when the part starts", async () => {
@@ -485,5 +505,75 @@ describe("the next-move check (INF-3846 piece 2)", () => {
     await h.at(STALL_WAKE_MS);
     expect(h.told(plan.id)).toHaveLength(1);
     expect(h.told(idea.id)).toEqual([]);
+  });
+  // INF-3928: a put-off (Not until…) is the captain holding the work, so no
+  // standing-still wake or card follows one.
+  it("leaves alone a part the captain put off, and started work in the backlog they put off, until the card is back and answered", async () => {
+    const h = harness();
+    const { part } = workstream(h);
+    seedTask(h.tasks, { id: "parked", title: "Parked work", status: "idle", createdAt: h.start });
+    h.supervisor.hostOps.moveToBacklog("parked", {
+      actor: "firstmate",
+      via: "tool",
+      decision: null,
+    });
+    await settle();
+    const asked = putOff(h, part.id, { kind: "word" });
+    putOff(h, "parked", { kind: "date", at: h.start + minutes(60 * 24) });
+    await settle();
+    expect(h.supervisor.cards.putOffs.forTask(part.id)).toHaveLength(1);
+    expect(h.supervisor.cards.putOffs.forTask("parked")).toHaveLength(1);
+    for (const later of [10, 60, 600]) await h.at(minutes(later));
+    expect(h.told(part.id)).toEqual([]);
+    expect(h.told("parked")).toEqual([]);
+    expect(h.card(part.id)).toBeUndefined();
+    expect(h.card("parked")).toBeUndefined();
+
+    // The captain's word brings the same card back, and their answer on it
+    // ends the hold: the part stands again and the first mate hears once.
+    expect(h.supervisor.cards.putOffs.raiseForTask(part.id)).toBe(1);
+    await h.at(minutes(601));
+    expect(h.told(part.id)).toEqual([]);
+    h.supervisor.cardActions.act(asked, "wait");
+    await settle();
+    await h.at(minutes(601) + STALL_WAKE_MS);
+    expect(h.told(part.id)).toHaveLength(1);
+  });
+
+  it("leaves alone the parts of a main task the captain put off", async () => {
+    const h = harness();
+    const { main, part } = workstream(h);
+    putOff(h, main.id, { kind: "date", at: h.start + minutes(60 * 24) });
+    await settle();
+    for (const later of [10, 60, 600]) await h.at(minutes(later));
+    expect(h.told(part.id)).toEqual([]);
+    expect(h.card(part.id)).toBeUndefined();
+  });
+
+  it("reads the task a close put-off waits for as begun through it, from when the put-off was kept", async () => {
+    const h = harness();
+    const { part } = workstream(h);
+    // On its own, on-request work is an idea for later.
+    const settings = seedTask(h.tasks, {
+      id: "settings",
+      title: "Turn protected storage on",
+      status: "queued",
+      startPolicy: "on-request",
+      createdAt: h.start,
+    });
+    await h.at(minutes(5));
+    putOff(h, part.id, { kind: "close", task: settings.key });
+    await settle();
+    await h.at(minutes(5) + STALL_WAKE_MS - minutes(1));
+    expect(h.told(settings.id)).toEqual([]);
+    await h.at(minutes(5) + STALL_WAKE_MS);
+    expect(h.told(part.id)).toEqual([]);
+    expect(h.told(settings.id)).toHaveLength(1);
+    expect(h.told(settings.id)[0]).toContain(
+      `started work waits on it: ${part.key} "Read secrets through the owner"`,
+    );
+    await h.at(minutes(6) + STALL_WAKE_MS);
+    expect(h.card(settings.id)?.title).toBe(nextMoveCardTitle("Turn protected storage on"));
+    expect(h.card(part.id)).toBeUndefined();
   });
 });

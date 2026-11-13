@@ -137,7 +137,7 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
   "SELECT * FROM cards WHERE put_off_json IS NOT NULL ORDER BY created_at": {
     walks: ["SCAN cards USING INDEX cards_put_off"],
     reason:
-      "walks only the partial cards_put_off index, which holds the closed cards the captain put off until a task's close, a time, an event or their word; read when a put-off's rule runs, the captain raises one, a task closes, or a task's witnesses are gathered (PutOffs, INF-3846 piece 3)",
+      "walks only the partial cards_put_off index, which holds the closed cards the captain put off until a task's close, a time, an event or their word; read when a put-off's rule runs, the captain raises one, a task closes, a task's witnesses are gathered, or once a next-move pass that has a part to read (PutOffs, INF-3846 piece 3)",
   },
   "SELECT task_id FROM task_execution WHERE json_extract(placement_json, '$.reservation') = 'pending'":
     {

@@ -366,7 +366,7 @@ A delivery step, a review task and a parent whose parts do the work are not read
 Such a part is begun work when, at its own level or at any level of its live parents above it:
 
 - that parent or another part under it started building work (a task that delivers an answer, `shape.deliverable` `answer`, is not building work, and a dropped part does not count), so a part under a sub-task of begun work is begun too;
-- started work waits on that level through a `blocks` link, directly or through open work that is begun itself; or
+- started work waits on that level through a `blocks` link, or through a put-off of the captain's until that level closes (`docs/card-authoring.md`, "Not until"), directly or through open work that is begun itself; or
 - it started itself and went back to the backlog.
 
 Work the captain stopped is never the reason: a started part or a waiter they parked, or one under a parent they stopped, makes nothing begun.
@@ -377,10 +377,12 @@ Begun work is always in one of three states, and a part in none of them stands s
 
 1. Moving: open work when-ready, open work held at a gate (a wait for a time, a quota reset or a computer starts it by itself, and a gate on the captain is theirs), or started work out of the backlog.
 2. Waiting on the captain with a card up: a decision card of the task's that is not the check's own, a marked saved answer, a declared wait on the captain with a card of the task up, or its browser in the captain's hands.
+   A card of the task's, or of a parent above it, that the captain put off with a Not until choice counts too (`putOffsOnTasks`, `PutOffs.onTasks`): the host raises the same card again at its moment, so no wake or card about the work comes before then.
+   A put-off is not a stop: work put off is still a reason other work is begun, and the task a close put-off waits for is read as begun through it, as a `blocks` link's is.
 3. Stopped by the captain (`TaskStarts.stoppedByCaptain`): the newest line that stopped or started it is the captain's own move to the backlog or to on-request, or the first mate's record that the captain asked for the wait (`update_task` `captain_stop`, `TaskStarts.declareCaptainStop`); a started task's line counts only from its current stay in the backlog, and a later line that sets its start policy, whoever wrote it, ends the stop.
    A part under a parent the captain stopped is stopped too.
 
-A standing part's stay begins at the newest typed fact that left it standing, read from the record and never stored: its creation, its newest line that stopped or started it (a board move, an edit of its start policy, the first mate's record of a captain stop, or a failed start that put it back on request), its move to the backlog, the close of the last work it waited on, the start of the work that made it begun, and the end of another card about it.
+A standing part's stay begins at the newest typed fact that left it standing, read from the record and never stored: its creation, its newest line that stopped or started it (a board move, an edit of its start policy, the first mate's record of a captain stop, or a failed start that put it back on request), its move to the backlog, the close of the last work it waited on, the start of the work that made it begun or the moment a put-off that made it begun was kept, and the end of another card about it.
 Once it has stood for `STALL_WAKE_MS` and no news about it waits on the first mate's lane, the first mate gets one typed `next-move` wake (`rule:next-move-wake`), once per stay (`docs/inbox.md`, "Once per fact"), naming why it is begun, telling it to read the task's history for a pause the captain asked for and record that stop, and otherwise the ways to give it a next move: a start, a card to the captain or a drop.
 When the first mate has finished a turn on that news and the part still stands, the host raises one card, `card-next-move-<task>` (`rule:next-move-card`): Start it starts the task (host op `start-task`), Leave it only closes the card, and a reply goes to the first mate.
 The card's raised line on the task's timeline keeps it to one per stay, so Leave it does not bring it back until a new stay begins.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "next-move-put-off-hold",
+      "reason": "The next-move check now counts a card the captain put off with a Not until choice as the captain holding that work and the parts under it, and reads the task a close put-off waits for as begun work. No published release carries the put-off yet, so nobody saw a standing-still card follow one; this keeps the put-off's own note, that the app holds the work without nudging anyone, true when it ships."
+    }
+  ]
+}

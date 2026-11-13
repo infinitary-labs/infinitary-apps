@@ -122,6 +122,17 @@ export class PutOffs {
   }
 
   /**
+   * Every put-off that belongs to a task, in one read, as the next-move
+   * check reads them once a pass: which tasks the captain holds this way,
+   * and which tasks their close put-offs wait for.
+   */
+  onTasks(): (KeptPutOff & { task: string })[] {
+    return this.host.cardStore
+      .listPutOff()
+      .flatMap(({ putOff }) => (putOff.task ? [{ ...putOff, task: putOff.task }] : []));
+  }
+
+  /**
    * How the task's put-offs wait, as its witness reads it: `word` when only
    * the captain's word brings each back, `wait` when a rule raises one.
    */

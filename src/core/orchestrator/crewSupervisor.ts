@@ -640,6 +640,7 @@ export class CrewSupervisor {
       putOff: (taskId) => this.cards.putOffs.witness(taskId),
       putOffAwaits: (taskId) => this.cards.putOffs.awaits(taskId),
       cardPutOff: (cardId) => this.cards.putOffs.kept(cardId) !== undefined,
+      putOffsOnTasks: () => this.cards.putOffs.onTasks(),
       ...(options.readCheckWatch || options.readRunWatch
         ? {
             checksWatched: (record: TaskRecord) =>

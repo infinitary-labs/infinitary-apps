@@ -44,6 +44,7 @@ import {
   startMockProvider,
 } from "../e2e/mockProvider";
 import { encodePng } from "../e2e/pictureFixtures";
+import { fillMapPart, MAP_DATA } from "./architectureMap";
 import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budgets";
 import { claimedPort } from "./claimedPort";
 import { disposableCustody } from "./disposableCustody";
@@ -63,6 +64,14 @@ import { seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { type SshServer, startSshServer } from "./sshServer";
 
+/** INF-3881: the map part as the Advanced architecture runbook ships it, which a card copies whole. */
+const MAP_PART = readFileSync(
+  new URL(
+    "../../resources/runbooks/architecture/skills/advanced-architecture/parts/map.html",
+    import.meta.url,
+  ),
+  "utf8",
+);
 /**
  * The captain's message the asked card is about (INF-1610): long and in
  * paragraphs, as a real message can be, so the phone shows its start and
@@ -1810,6 +1819,47 @@ export async function startPhoneHome(
             ],
           });
           result = { title };
+          break;
+        }
+        // INF-3881: a card holding the Advanced architecture map part, filled with this project's own map files, with words
+        // under it so the card is taller than the screen and a finger on the diagram has a card to scroll.
+        case "POST map-card": {
+          // The map card is the one card on the stage, so it is the one shown.
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const title = "How the project fits together";
+          // Enough words that the card is taller than an iPad's screen too, so a drag can scroll it.
+          const words = Array.from(
+            { length: 24 },
+            (_, line) =>
+              `<p>Part ${line + 1} of the walk-through: each box is a part of the project, and each arrow says what one part uses another for.</p>`,
+          ).join("");
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-map",
+            title,
+            body: `<p>The map of the project, at its top.</p>${fillMapPart(
+              MAP_PART,
+              JSON.stringify({
+                maps: MAP_DATA.maps,
+                counts: MAP_DATA.counts,
+                compare: MAP_DATA.compare,
+              }),
+            )}${words}`,
+            actions: [{ id: "seen", label: "Got it", default: true }],
+          });
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
+          // The box the journey chooses and goes into: the top shows its groups, so the first group's box.
+          result = {
+            title,
+            top: MAP_DATA.maps[""].name,
+            part: MAP_DATA.maps[""].groups[0]?.name ?? "",
+          };
           break;
         }
         // INF-944 item 4: an Activity list longer than the screen, so scrolling it makes the tabs recede.

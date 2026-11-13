@@ -60,6 +60,8 @@ export const PHONE_PARTS = [
   { name: "cards-place", test: "testThreadKeepsItsPlace", photos: false },
   // INF-3296: notes on a card's parts and selected words, queued and sent as one reply.
   { name: "cards-notes", test: "testCardNotes", photos: false },
+  // INF-3881: a card's map opens live in a cover of its own; a finger on the map in the card scrolls the card.
+  { name: "cards-diagram", test: "testCardDiagramCover", photos: false },
   // INF-2568: the message box and a card's reply with the keyboard up; each launches fresh and the merge fixture runs once a home.
   { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false },
   { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false },

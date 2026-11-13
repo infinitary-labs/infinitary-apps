@@ -15,6 +15,10 @@ import SwiftUI
     var failure: String?
     var reading: PhoneJSON = .object(["answers": .array([])])
     var presentation: PhoneJSON?
+    /// INF-3881: a part of the body, such as the map, asked to open live in a cover of its own: its index and where it stood.
+    var expansion: PhoneJSON?
+    /// In a cover, where its part last said it stands, which Done hands back to the card.
+    private(set) var place: PhoneJSON?
     var notice: String?
     /// A field in the body holds the keyboard.
     var typing = false
@@ -36,8 +40,10 @@ import SwiftUI
     private let fill: PhoneJSON
     private let heightLag: TimeInterval
     /// INF-1524: a settle card draws its fact strip in a second, read-only host pinned above its choices, as the Mac does.
-    enum Part { case body, facts }
+    /// INF-3881: a cover draws one part of the same body live and read-only, filling the screen (`covering`).
+    enum Part { case body, facts, cover }
     private let part: Part
+    private let covering: PhoneJSON?
     private let keys: [String]
     /// The body's own fact strip, once the page has split it off; nil when the card takes none.
     var facts: String?
@@ -62,9 +68,9 @@ import SwiftUI
     var kept = false
 
     init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, part: Part = .body, keys: [String] = [],
-         heightLag: TimeInterval = 0) {
+         heightLag: TimeInterval = 0, covering: PhoneJSON? = nil) {
         self.card = card; self.session = session; self.fill = fill; self.part = part; self.keys = keys
-        self.heightLag = heightLag
+        self.heightLag = heightLag; self.covering = part == .cover ? covering : nil
     }
 
     /// INF-1574: the isolated phone gate's stand-in for a loaded computer, where a retried body's drawn height reaches
@@ -113,7 +119,7 @@ import SwiftUI
         view.scrollView.contentInsetAdjustmentBehavior = .never
         view.scrollView.minimumZoomScale = 1; view.scrollView.maximumZoomScale = 1
         view.scrollView.pinchGestureRecognizer?.isEnabled = false
-        view.accessibilityIdentifier = part == .facts ? "card-facts" : "card-body"
+        view.accessibilityIdentifier = identifier
         // INF-1263 / INF-1651: until the reveal, the body is one closed accessibility element that takes no taps.
         // WebKit ignores the hidden-children flag, and hiding the frame inside the page sticks on iOS 27.0.
         view.isAccessibilityElement = true; view.isUserInteractionEnabled = false
@@ -195,11 +201,14 @@ import SwiftUI
     }
     private func applyReach() {
         guard let view else { return }
-        view.accessibilityIdentifier = aside ? nil : part == .facts ? "card-facts" : "card-body"
+        view.accessibilityIdentifier = aside ? nil : identifier
         view.isAccessibilityElement = aside || !revealed
     }
+    private var identifier: String { part == .facts ? "card-facts" : part == .cover ? "card-diagram" : "card-body" }
     private var isShown: Bool {
         guard drawn, !revealed, let view else { return false }
+        // A cover's frame fills the cover, whatever height its body drew at.
+        if part == .cover { return view.bounds.height > 0 }
         return abs(view.bounds.height - bodyHeight) < 0.5
     }
 
@@ -249,6 +258,12 @@ import SwiftUI
         if let current { state["current"] = current }
         guard let argument = try? PhoneJSON.object(state).foundation else { return }
         view.callAsyncJavaScript("window.phoneCard.annotate(state)", arguments: ["state": argument], in: nil, in: .page, completionHandler: nil)
+    }
+    /// INF-3881: where the part stood when its cover closed, so the card's own part goes there too.
+    func handBack(_ place: PhoneJSON) {
+        guard drawn, failure == nil, part == .body, let index = place["index"].numeric, let state = place["state"].text else { return }
+        view?.callAsyncJavaScript("window.phoneCard.expanded(index, state)", arguments: ["index": index, "state": state],
+                                  in: nil, in: .page, completionHandler: nil)
     }
     /// The selection menu's Annotate: the frame reads the words selected now.
     func annotateSelection() {
@@ -307,14 +322,20 @@ import SwiftUI
         let actions = card.actions.compactMap { action -> PhoneJSON? in
             guard let id = action["id"].text, !effectIDs.contains(id) else { return nil }; return .string(id)
         }
-        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "language": .string(PhoneWords.language), "readOnly": .bool(card.isPast || part == .facts),
-            "fill": fill, "actions": .array(part == .facts ? [] : actions), "width": card.value["width"] == .null ? .string("wide") : card.value["width"],
+        // A cover answers nothing (it carries no actions), but its map's own buttons, Fit among them, stay pressable: a
+        // read-only body locks every button in it.
+        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "language": .string(PhoneWords.language), "readOnly": .bool(part == .facts || (part == .body && card.isPast)),
+            "fill": fill, "actions": .array(part != .body ? [] : actions), "width": card.value["width"] == .null ? .string("wide") : card.value["width"],
             "keys": .array(keys.map(PhoneJSON.string))])
         if part == .body, case .object(var fields) = input {
             var facts: [String: PhoneJSON] = ["actions": .array(card.actions)]
             for key in ["reviewTaskId", "risk"] where card.value[key] != .null { facts[key] = card.value[key] }
             fields["card"] = .object(facts)
             fields["marks"] = card.value["changes"]["marks"] == .null ? .array([]) : card.value["changes"]["marks"]
+            input = .object(fields)
+        }
+        if let covering, case .object(var fields) = input {
+            fields["expanded"] = .object(["index": covering["index"], "state": covering["state"]])
             input = .object(fields)
         }
         do {
@@ -373,6 +394,12 @@ import SwiftUI
         case "image", "demo", "log": presentation = payload; replyHandler(true, nil)
         case "questioned":
             if part == .body { onQuestioned?(Self.questionStep(payload["where"])) }
+            replyHandler(true, nil)
+        case "expand":
+            // INF-3881: the part's place is its own small JSON; a card opens its cover, a cover keeps it for Done.
+            guard part != .facts, let index = payload["index"].numeric, index >= 0, index == index.rounded(),
+                  let state = payload["state"].text, state.utf8.count <= 4_096 else { replyHandler(nil, PhoneMessages.phoneCardWebCannotDo()); return }
+            if part == .cover { place = payload } else { expansion = payload }
             replyHandler(true, nil)
         case "annotate":
             let box = payload["box"]

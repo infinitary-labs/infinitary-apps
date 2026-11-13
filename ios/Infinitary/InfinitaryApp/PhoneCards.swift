@@ -712,6 +712,10 @@ private struct PhoneCardPane: View {
                                               set: { if !$0 { host.presentation = nil } })) {
             if let presentation = host.presentation { CardMediaView(presentation: presentation, session: session) }
         }
+        // INF-3881: a part that opens live, such as the map, opens in a cover of its own, which hands its place back on Done.
+        .fullScreenCover(isPresented: Binding(get: { host.expansion != nil }, set: { if !$0 { host.expansion = nil } })) {
+            if let request = host.expansion { CardDiagramCover(host: host, request: request, session: session) }
+        }
         .photosPicker(isPresented: $libraryOpen, selection: $photoSelection,
                       maxSelectionCount: max(1, PhoneLimits.images - photos.count), matching: .images)
         .task(id: photoSelection) { await loadPhotos() }

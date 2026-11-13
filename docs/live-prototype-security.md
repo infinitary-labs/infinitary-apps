@@ -171,10 +171,11 @@ Navigation delegates refuse every destination except the initial parent and its 
 
 WebKit exposes registered message handlers to child frames too, so `frameInfo.isMainFrame` is a mandatory native admission check.
 The parent accepts only its iframe’s window, binds its first bridge document and parses the existing shared message and request schemas.
-Its native vocabulary is closed: hashes, drawing, form readings, watchdog replies, effect-free card actions, read-only presentation requests, a data file the body names, a link, a draft and a task key, never an IPC channel or a caller-chosen action source.
+Its native vocabulary is closed: hashes, drawing, form readings, watchdog replies, effect-free card actions, read-only presentation requests, a data file the body names, a part's place of at most 4,096 bytes, a link, a draft and a task key, never an IPC channel or a caller-chosen action source.
 A link, a draft and a picture leave only on the captain's own press in the body; a link must pass `isSafeCardHref` in the parent and a web scheme in native code, and then opens in the device's default browser, never inside the card.
 A draft only fills the message box, which sends nothing until the captain does, and a task key opens a record only when it names a task the phone was given.
 A settle card's fact strip is drawn by a second host of the same kind, read-only and with no actions.
+A part opened live in its cover, such as the map, is drawn by another host of the same kind with no actions, so it answers nothing while its own controls still work; the only thing it hands back to the card is the part's place, which the card's part reads as its own data.
 Native code checks an action against the mounted card again and stamps it `frame`; it cannot become a footer click even if the body writes `chrome` in its message.
 The core’s dispatch-time effect check remains independent.
 No sign-in, invitation, pinned address, key or filesystem path enters either document.

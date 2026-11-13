@@ -284,3 +284,32 @@ private struct CardRecordingPlayer: UIViewControllerRepresentable {
         controller.player?.pause(); controller.player = nil
     }
 }
+
+/// INF-3881: one of a card's parts, such as the map, live and filling the screen: the same body read-only, opened where the
+/// part stood in the card. A drag moves it, a pinch zooms and a tap chooses, all the part's own; Done hands back where it
+/// stands now, so the card's part follows.
+struct CardDiagramCover: View {
+    let host: CardWebHost
+    @State private var cover: CardWebHost
+    @Environment(\.dismiss) private var dismiss
+    init(host: CardWebHost, request: PhoneJSON, session: ReadOnlySession) {
+        self.host = host
+        _cover = State(initialValue: CardWebHost(card: host.card, session: session, fill: .array([]), part: .cover, covering: request))
+    }
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let failure = cover.failure { Text(failure).foregroundStyle(PhoneTheme.warning).padding() }
+                else { CardWebView(host: cover) }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(PhoneTheme.background)
+            .phoneTitle(PhoneMessages.phoneMediaTitleDiagram())
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(PhoneMessages.phoneCommonDone()) { close() } } }
+        }
+    }
+    private func close() {
+        if let place = cover.place { host.handBack(place) }
+        dismiss()
+    }
+}

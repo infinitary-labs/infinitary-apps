@@ -5,7 +5,7 @@ import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment
 import { buildFrameDocument, type FrameTheme } from "../../../src/shared/plugins/frameDocument";
 import { isSafeCardHref } from "../../../src/shared/linkify";
 import { taskKeysIn } from "../../../src/shared/taskKeys";
-import { cardBodyHtml, cardBodyMarkup, cardStylesheet } from "../../../src/renderer/src/cards/prototypeSrcdoc";
+import { cardBodyHtml, cardBodyMarkup, cardStylesheet, expandedStamp } from "../../../src/renderer/src/cards/prototypeSrcdoc";
 import { type CardNote, cardNoteSchema, cardNotesSchema } from "../../../src/shared/cardNotes";
 import { noteTarget, pickedNote } from "../../../src/shared/cardNoteTargets";
 import { cardNavigationParts, type NavigationPart } from "../../../src/shared/cardParts";
@@ -22,6 +22,7 @@ declare global {
       mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void;
       annotate(state: Annotation): void; annotateSelection(): void; reveal(note: unknown): Promise<Revealed>;
       question(ask: QuestionAsk): Promise<Questioned>; questionKey(key: string, shift: boolean): void;
+      expanded(index: number, state: string): void;
     };
   }
 }
@@ -34,6 +35,11 @@ type Input = {
   language?: string;
   body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";
   marks?: number[]; keys?: string[]; card?: Pick<Card, "actions" | "reviewTaskId" | "risk">;
+  /**
+   * INF-3881: this page is the full-screen cover of one of the body's parts (the map), drawn live. The same body is
+   * mounted read-only with the part's index and where it stood stamped on it, and the frame fills the cover.
+   */
+  expanded?: { index: number; state: string };
 };
 /**
  * INF-3296's phone piece: what the native chrome holds about the card's notes. The frame hears only targets and
@@ -87,7 +93,9 @@ window.addEventListener("message", (event: MessageEvent) => {
     // INF-1338: the body can answer a ping from here on, so the native watchdog starts counting its own answers.
     void native({ type: "ready" }).catch(() => {});
     send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly });
-    send({ type: "keys", pictures: true, escape: false });
+    // INF-3881: a part such as the map opens live in a cover of its own (`inf.expand`); inside the cover the same call
+    // only tells the phone where the part now stands.
+    send({ type: "keys", pictures: true, escape: false, expand: true });
     send({ type: "width", width: input.width });
     if (linked.length > 0) send({ type: "tasks", keys: linked });
     // INF-1562: a picture comes over the connection and waits while the computer is out of reach, so the body draws
@@ -109,7 +117,9 @@ window.addEventListener("message", (event: MessageEvent) => {
       break;
     }
     case "resize":
-      // The phone owns one scrolling WebView. The iframe grows within it, not a second scroller.
+      // The phone owns one scrolling WebView. The iframe grows within it, not a second scroller. A cover's frame fills
+      // the cover instead, so its drawn height only says it drew.
+      if (input.expanded) { if (message.initialized) void native({ type: "drawn", height: message.height }).catch(() => {}); break; }
       frame.style.height = `${Math.max(48, Math.min(1_000_000, message.height))}px`;
       if (message.initialized) void native({ type: "drawn", height: message.height }).catch(() => {});
       break;
@@ -143,6 +153,12 @@ window.addEventListener("message", (event: MessageEvent) => {
       if (set) void native({ type: "image", ...set }).catch(() => {});
       break;
     }
+    case "expand":
+      // INF-3881: in a card, a press on the part opens its cover; in the cover, the part says where it now stands, which
+      // goes back to the card on Done. Neither carries more than the part's own place.
+      if (!input.expanded && !pressed()) return;
+      void native({ type: "expand", index: message.index, state: message.state }).catch(() => {});
+      break;
     case "demo":
       if (document.hasFocus() && navigator.userActivation.isActive && demoSources(input.body).has(message.src) && viewablePictures(0, [message.poster]))
         void native({ type: "demo", src: message.src, poster: message.poster, caption: message.caption, play: message.play }).catch(() => {});
@@ -210,13 +226,15 @@ window.phoneCard = {
     // INF-3296: the body carries the stamp the bridge's reveal asks for, as the Mac's revision navigation writes it,
     // after every part, so no part's offset moves. A plain-words body is drawn as the Mac draws it, its paragraphs parts.
     const shown = split?.body ?? value.body;
-    const drawn = `${cardBodyHtml(shown)}<i hidden data-inf-revision-offer="${OFFER}"></i>`;
+    // INF-3881: a cover's copy opens with its part's stamp before the body, so the part reads it as it starts.
+    const cover = value.expanded ? expandedStamp(value.expanded.index, value.expanded.state) : "";
+    const drawn = `${cover}${cardBodyHtml(shown)}<i hidden data-inf-revision-offer="${OFFER}"></i>`;
     const toRendered = (start: number) => (split && start > split.at ? start - split.facts.length : start);
     notes = { parts: cardNavigationParts(drawn), source: cardBodyHtml(value.body), toRendered, queued: [] };
     pointing = false;
     selectionAsked = false;
     // DOMParser is inert. Hash the script text the browser actually parses, never an event attribute.
-    const body = cardBodyMarkup(drawn, cardBodyHtml(shown) === shown ? marks : []).html;
+    const body = cardBodyMarkup(drawn, cardBodyHtml(shown) === shown && !cover ? marks : []).html;
     const parsed = new DOMParser().parseFromString(body, "text/html");
     const scripts = Array.from(parsed.querySelectorAll("script:not([src])"), (script) => script.textContent ?? "");
     const hashes = await native({ type: "hash", scripts }) as string[];
@@ -225,7 +243,8 @@ window.phoneCard = {
     frame = window.document.createElement("iframe");
     frame.title = "Card body";
     frame.setAttribute("sandbox", FRAME_SANDBOX);
-    frame.style.cssText = "display:block;width:100%;height:48px;border:0";
+    frame.style.cssText = value.expanded ? "display:block;width:100%;height:100%;border:0" : "display:block;width:100%;height:48px;border:0";
+    if (value.expanded) window.document.documentElement.style.height = window.document.body.style.height = "100%";
     // INF-1263 / INF-1651: native code keeps the web view out of reach and out of accessibility until it holds the
     // drawn body's height. Hiding the frame here would stick on iOS 27.0, which never exposes the body again.
     frame.srcdoc = document;
@@ -276,6 +295,9 @@ window.phoneCard = {
   questionKey(key, shift) {
     if (!documentID || !frame || !/^([1-9]|Enter)$/.test(key)) return;
     send({ type: "question-key", key, shift: shift === true });
+  },
+  expanded(index, state) {
+    if (documentID && !input.expanded && typeof state === "string") send({ type: "expanded", document: documentID, index, state });
   },
   reveal(value) {
     const note = cardNoteSchema.safeParse(value);

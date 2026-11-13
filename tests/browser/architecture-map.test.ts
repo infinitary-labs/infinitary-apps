@@ -874,6 +874,9 @@ test("Full screen, F and a tap on a touch screen send the whole diagram to the p
     if (moveBy)
       svg.dispatchEvent(new PointerEvent("pointermove", { ...at, clientY: at.clientY + moveBy }));
     svg.dispatchEvent(new PointerEvent("pointerup", { ...at, clientY: at.clientY + moveBy }));
+    // a tap ends in the click a phone's browser makes of it; a drag that scrolled makes none
+    if (!moveBy)
+      svg.dispatchEvent(new MouseEvent("click", { ...at, bubbles: true, cancelable: true }));
     return svg.getAttribute("viewBox");
   };
   expect(await inFrame(finger, 60)).toBe(before);

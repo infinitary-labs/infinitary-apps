@@ -1618,6 +1618,8 @@
   };
   let drag = null;
   let downOn = null;
+  // a finger's tap on the map in a card, waiting for its click to open full screen
+  let tapped = false;
   svg.addEventListener("pointerdown", (ev) => {
     if (ev.button) return;
     // a second finger is a pinch, which the card's bridge hands over as ⌘-scroll: no drag, no tap
@@ -1659,9 +1661,11 @@
     const d = drag;
     drag = null;
     if (!d || d.moved) return;
-    // in a card on a touch screen the diagram is a picture: a tap opens it full screen
-    if (d.finger && !full) fullScreen();
-    else if (d.m) go(pathTo(d.m));
+    // in a card on a touch screen the diagram is a picture: a tap opens it full screen, on the click
+    // the tap makes, since a phone's browser hands its frame the focus and the press only by then
+    tapped = d.finger && !full;
+    if (tapped) return;
+    if (d.m) go(pathTo(d.m));
     // full screen, a tap on the chosen box goes in, as a double-click does
     else if (d.finger && d.n && d.n === sel && opens(d.n)) enter(d.n);
     else {
@@ -1669,8 +1673,12 @@
       mark();
     }
   });
-  // the map takes its own presses: a card opens it as a still picture only when Full screen asks
-  svg.addEventListener("click", (ev) => ev.preventDefault());
+  // the map takes its own presses, and opens full screen on a finger's tap in a card
+  svg.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    if (tapped && !full) fullScreen();
+    tapped = false;
+  });
   // the double-click lands on the map too, so it opens the box the second press went down on
   svg.addEventListener("dblclick", (ev) => {
     if (!touch) enter(hit(ev) || downOn);

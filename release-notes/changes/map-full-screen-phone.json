@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "map-full-screen-phone",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "On a phone, a project map opens full screen and stays live",
+      "body": "A tap on a project map in a card, or on its Full screen button, opens the map over the whole screen. There you drag to move it, pinch to zoom, tap a box to choose it and tap it again to go inside. Done brings you back to the card, which shows the map where you left it. In the card, a finger on the map scrolls the card.",
+      "picture": {
+        "dark": "map-full-screen-phone-dark.webp",
+        "light": "map-full-screen-phone-light.webp",
+        "alt": "A phone on its side showing the project map full screen under the title Card diagram with Done: inside Desktop app, its parts core, main, preload, renderer and shared with their links, and the map's bar with Fit and zoom below"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

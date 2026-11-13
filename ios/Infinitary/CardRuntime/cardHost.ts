@@ -1,5 +1,5 @@
 import { type Card, cardAnswersSchema, cardQuestionsSchema, isPreviewBody, splitSettleFacts, takesTaskFacts } from "../../../src/shared/cards";
-import { cardDataName, cardDataNames, demoSources, viewablePictures } from "../../../src/shared/cardPictures";
+import { cardDataName, cardDataNames, demoSources, isReadableLogSource, logSources, viewablePictures } from "../../../src/shared/cardPictures";
 import { ACTION_VALUE_MAX_BYTES, frameMessageSchema, frameRequestSchema, type FrameAnswers } from "../../../src/shared/plugins/bridge";
 import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment";
 import { buildFrameDocument, type FrameTheme } from "../../../src/shared/plugins/frameDocument";
@@ -130,6 +130,11 @@ window.addEventListener("message", (event: MessageEvent) => {
     case "demo":
       if (document.hasFocus() && navigator.userActivation.isActive && demoSources(input.body).has(message.src) && viewablePictures(0, [message.poster]))
         void native({ type: "demo", src: message.src, poster: message.poster, caption: message.caption, play: message.play }).catch(() => {});
+      break;
+    // INF-3887: a merge card's proof log opens in the phone's log reader, only a log the card names.
+    case "log":
+      if (pressed() && isReadableLogSource(message.src) && logSources(input.body).has(message.src))
+        void native({ type: "log", src: message.src, name: message.name, bytes: message.bytes }).catch(() => {});
       break;
     // INF-1524: a link opens in the phone's own browser, a draft goes to the message box and a key opens its record.
     case "link":

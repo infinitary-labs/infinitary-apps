@@ -1,6 +1,6 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { subscribe, unsubscribe } from "node:diagnostics_channel";
-import { appendFileSync, copyFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { createConnection, createServer as createTCPServer, type Socket } from "node:net";
 import { join } from "node:path";
@@ -16,6 +16,7 @@ import { httpSecretBroker } from "@core/secrets/httpBroker";
 import { seedTask } from "@core/tasks/seedTask";
 import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { CARD_LEAVE } from "@shared/cardLeave";
+import { cardLogUrl } from "@shared/cardPictures";
 import { ANYTHING_ELSE_ANSWER, type CardMessage, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import { SCENE_OBSERVATIONS_SINCE } from "@shared/contractFeatures";
 import { isPhone } from "@shared/devices";
@@ -1233,6 +1234,17 @@ export async function startPhoneHome(
             join(import.meta.dirname, "../fixtures/demo/moving-box.mp4"),
             join(directory, recording),
           );
+          // INF-3887: a kept proof log the card names by one line, a large one - half a megabyte of a real
+          // crewmate session the replay corpus keeps - which the phone's log reader opens.
+          const session = readFileSync(
+            join(
+              import.meta.dirname,
+              "../fixtures/replay/sep14-real/crewmates/59f43063/sessions/2026-09-14T02-11-24-528Z_01a09dae-f6f0-7b9c-b1a3-76412d9ff08d.jsonl",
+            ),
+          );
+          const logBytes = session.subarray(0, session.lastIndexOf(10, 512 * 1024) + 1);
+          const log = `${task.id}-${createHash("sha256").update(logBytes).digest("hex")}.txt`;
+          writeFileSync(join(directory, log), logBytes);
           const address = `http://127.0.0.1:${(control.address() as { port: number }).port}/${token}/leaked`;
           cardIDs.choice = core.services.supervisor.addFirstmateCard({
             id: "phone-choice",
@@ -1293,6 +1305,7 @@ export async function startPhoneHome(
             body: `<p>The survey is ready for your reply.</p><img src="app-frame://images/${picture}" alt="Blue harbour survey">
             <figure><svg viewBox="0 0 750 120" width="100%" role="img" aria-label="Harbour approach in three legs"><rect x="20" y="30" width="200" height="60" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"/><text x="120" y="66" text-anchor="middle" fill="var(--fg-1)">Outer buoy</text><rect x="275" y="30" width="200" height="60" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"/><text x="375" y="66" text-anchor="middle" fill="var(--fg-1)">North entrance</text><rect x="530" y="30" width="200" height="60" rx="8" fill="var(--accent-dim)" stroke="var(--accent)"/><text x="630" y="66" text-anchor="middle" fill="var(--fg-1)">Inner quay</text></svg><figcaption>The approach in three legs</figcaption></figure>
             <figure data-inf-demo="app-frame://media/${recording}" data-inf-duration="5000"><img src="app-frame://images/${picture}" alt="The moving harbour marker"><figcaption>Move the harbour marker.</figcaption></figure>
+            <p><button type="button" data-inf-log="${cardLogUrl(log)}" data-inf-log-bytes="${logBytes.length}">The harbour survey log</button></p>
             <button data-inf-action="body">Choose from the body</button>`,
             actions: [
               { id: "body", label: "Keep this chart", default: true },
@@ -1315,6 +1328,7 @@ export async function startPhoneHome(
             choice: "Choose the harbour",
             conversation: "Read the harbour chart",
             note: "The tide note",
+            log: "The harbour survey log",
             replyAnswer: MOCK_FM_CHAT_TEXT,
           };
           break;

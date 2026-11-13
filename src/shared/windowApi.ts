@@ -491,6 +491,12 @@ export type FirstmateApi = {
      * refusal in words thrown as an error.
      */
     saveFile: (cardId: string, fileId: string) => Promise<CardFileSaved>;
+    /**
+     * A proof log a merge card names, by its kept file name, for the log
+     * reader: its kind and its text as base64 (docs/card-authoring.md "Proof
+     * logs"). A view asks the home for it.
+     */
+    log: (fileName: string) => Promise<{ contentType: string; data: string }>;
     /** The captain's reply, verbatim; the core routes it to the card's author. */
     reply: (
       cardId: string,

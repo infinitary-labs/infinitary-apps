@@ -18,6 +18,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | task | 작업 | |
 | card | 카드 | |
 | the record (a task's record) | 기록, 작업 기록 | |
+| log (a check's kept output) | 로그 | Plain loanword, distinct from the record, 기록. |
 | panel | 패널 | |
 | rail | 레일 | Only in command search words |
 | project | 프로젝트 | |

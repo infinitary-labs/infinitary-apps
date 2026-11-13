@@ -1,4 +1,5 @@
 import type { CardFile } from "@shared/cardFiles";
+import { cardSizeRefusal } from "@shared/cardSize";
 import {
   type AgentEffect,
   type CardMutation,
@@ -884,6 +885,9 @@ async function emitCard(
   if (sourceBody.length > MAX_CARD_BODY_LENGTH) {
     throw new Error("Card body too large (64KB max); emit a smaller card.");
   }
+  // Measured as the window will receive it, against the window's own limit (INF-3887).
+  const tooLarge = cardSizeRefusal(sourceBody);
+  if (tooLarge) throw new Error(tooLarge);
   // keeps_open is retired (contract 4.65, FI3-642): dropping it would turn
   // a revise button into a closing choice, so a leftover is refused instead.
   const keptOpen = (params.actions ?? []).find((action) => Object.hasOwn(action, "keeps_open"));

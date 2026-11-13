@@ -49,6 +49,7 @@ public enum PhoneCardRequest: String, Sendable {
     case `typeface` = "inf:cards:typeface"
     case `media` = "inf:cards:media"
     case `data` = "inf:cards:data"
+    case `log` = "inf:cards:log"
     case `minimize` = "inf:cards:minimize"
     case `noteDone` = "inf:cards:note-done"
     public var changes: Bool {

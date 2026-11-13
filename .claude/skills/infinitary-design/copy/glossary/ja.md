@@ -20,6 +20,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | decision (card kind) | 判断 | Short label for a card with choices. |
 | note (card kind) | お知らせ | A note card carries a fact for the person; メモ is kept for a crewmate's own notes and first mate's noted lines. |
 | the record (a task's record) | 記録 | 「タスクの記録」 for the pane's title. |
+| log (a check's kept output) | ログ | Plain loanword, distinct from the record, 記録. |
 | panel | パネル | Plain loanword. |
 | rail | パネル列 | The column of panels; レール would be opaque. |
 | project | プロジェクト | Standard. |

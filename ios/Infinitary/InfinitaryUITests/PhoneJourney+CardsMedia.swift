@@ -1,3 +1,4 @@
+import CoreImage
 import XCTest
 
 /// The cards-media part (scripts/phone-test-plan.ts): its test and the steps only it takes.
@@ -75,6 +76,22 @@ extension PhoneJourney {
                       "A second double-tap fits it again: \(across.label)")
         viewer.swipeDown()
         XCTAssertTrue(viewer.waitForAbsence(timeout: 10), "A swipe down while fitted closes the viewer")
+        // INF-3887 (the captain's pick: "Open the log on the phone too"): a proof log the card names by one line opens
+        // in the phone's log reader, its text read from the computer, never written into the card.
+        let logName = try XCTUnwrap(fixture["log"] as? String)
+        let logLine = app.webViews.buttons[logName].firstMatch
+        XCTAssertTrue(logLine.waitForPresence(timeout: 10), app.debugDescription)
+        reveal(logLine); tapOnPhone(logLine)
+        let logText = app.descendants(matching: .any).matching(identifier: "card-log-text").firstMatch
+        XCTAssertTrue(logText.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.navigationBars[logName].exists, app.debugDescription)
+        // The log's text draws, not only its place: a whole half-megabyte log in one Text once left the reader blank.
+        let firstBlock = app.descendants(matching: .any).matching(identifier: "card-log-block").firstMatch
+        XCTAssertTrue(firstBlock.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(drawsInk(firstBlock.screenshot().image), "The log reader's first block draws its text")
+        picture("log-reader")
+        tapOnPhone(app.buttons["Done"])
+        XCTAssertTrue(logText.waitForAbsence(timeout: 10), "Done closes the log reader")
         // The home measures the recording and owns its duration label.
         let play = app.webViews.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Play the demo,")).firstMatch
         reveal(play)
@@ -339,4 +356,20 @@ extension PhoneJourney {
         XCTAssertEqual(largeChoice.label, "Use this entrance")
         picture("card-large-type")
     }
+}
+
+/// True when the picture holds both a light and a dark area, as drawn text on its surface does in either appearance;
+/// a blank surface is one shade. The half-way gap separates ink from its surface, not a pixel golden.
+private func drawsInk(_ image: UIImage) -> Bool {
+    guard let pixels = image.cgImage else { return false }
+    let picture = CIImage(cgImage: pixels)
+    let context = CIContext()
+    func shade(_ filter: String) -> Double {
+        var rgba = [UInt8](repeating: 0, count: 4)
+        let reduced = picture.applyingFilter(filter, parameters: [kCIInputExtentKey: CIVector(cgRect: picture.extent)])
+        context.render(reduced, toBitmap: &rgba, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                       format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+        return rgba.prefix(3).reduce(0.0) { $0 + Double($1) } / (3 * Double(UInt8.max))
+    }
+    return shade("CIAreaMaximum") - shade("CIAreaMinimum") > 0.5
 }

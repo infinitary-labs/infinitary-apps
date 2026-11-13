@@ -18,6 +18,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | task | tâche | Feminine, so feed lines about a task agree ("Terminée", "Écartée"). |
 | card | carte | Feminine. |
 | the record (a task's record) | la fiche (de la tâche) | "Fiche de la tâche" as a label; "dossier" would collide with a folder. |
+| log (a check's kept output) | le journal | Distinct from the task's record, "la fiche". |
 | panel | panneau | |
 | rail | colonne | Only in search words ("colonnes"); a plain word for the side column of panels. |
 | project | projet | |

@@ -11,6 +11,7 @@ import {
   FRAME_BRIDGE_VERSION,
   FRAME_DEMO_CAPTION_MAX,
   FRAME_DEMO_SOURCE,
+  FRAME_LOG_NAME_MAX,
   FRAME_PICTURE_ALT_MAX,
   PICTURE_STRIP_SHOWN,
 } from "./bridge";
@@ -120,7 +121,12 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  * click on it - or on the poster, which opens it paused - posts the
  * recording's served name, the poster, the caption and whether to play, so
  * the host plays it in the picture viewer. The body itself never loads the
- * recording: its policy loads no media. `draft` is the link's sibling for
+ * recording: its policy loads no media. `log` is the demo's sibling for a
+ * kept proof log (docs/card-authoring.md "Proof logs"): a click on a
+ * `data-inf-log` control - or Enter or Space on it, since it is a button -
+ * posts the log's served name, the control's words and the size the host
+ * wrote, so the host opens it in its log reader over the card; the body never
+ * holds the log's text. `draft` is the link's sibling for
  * the app's own message box (FI3-1164): a click on a `data-inf-draft`
  * control - a starter on the welcome - posts its words, one line, which the
  * host puts at the start of the message box, caret after them, sending
@@ -1022,6 +1028,17 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     if (draft) {
       event.preventDefault();
       post({ type: "draft", text: draft.getAttribute("data-inf-draft") });
+      return;
+    }
+    var log = target && target.closest ? target.closest("[data-inf-log]") : null;
+    if (log) {
+      event.preventDefault();
+      post({
+        type: "log",
+        src: log.getAttribute("data-inf-log") || "",
+        name: (log.textContent || "").replace(/\\s+/g, " ").trim().slice(0, ${FRAME_LOG_NAME_MAX}),
+        bytes: Math.max(0, Math.round(Number(log.getAttribute("data-inf-log-bytes"))) || 0)
+      });
       return;
     }
     var task = keyLink(target);
@@ -1958,4 +1975,4 @@ ${FRAME_QUESTION_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-RZdSBLHr3hi75NirdAUaUUoCdpdcQCTPUHk/lxQLjNA=";
+export const FRAME_BRIDGE_SHA256 = "sha256-0F+/b0HIETB69o0S4s33LQ6EIOfpZm5t1h+oB3x3kEk=";

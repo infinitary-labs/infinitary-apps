@@ -19,6 +19,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | task | Aufgabe | Feminine. |
 | card | Karte | |
 | the record (a task's record) | das Protokoll, Aufgabenprotokoll | A record of every task. |
+| log (a check's kept output) | das Log | "Protokoll" already names the task's record. |
 | thread (a card's replies) | Verlauf | |
 | panel | Panel | Neuter, plural "Panels"; common in German software. |
 | a panel by <name> | ein Panel von <Name> | |

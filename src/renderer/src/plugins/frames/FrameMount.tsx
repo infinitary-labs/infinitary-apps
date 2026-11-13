@@ -143,6 +143,9 @@ export function useFrameController(
         ...(specRef.current.onDemo
           ? { onDemo: (demo) => specRef.current.onDemo?.(demo, frameRef.current) }
           : {}),
+        ...(specRef.current.onLog
+          ? { onLog: (log) => specRef.current.onLog?.(log, frameRef.current) }
+          : {}),
         onTask: (gesture, key, box) =>
           specRef.current.onTask?.(gesture, key, box, frameRef.current),
         onEntry: (id) => specRef.current.onEntry?.(id),

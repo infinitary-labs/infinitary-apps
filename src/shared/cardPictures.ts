@@ -84,6 +84,25 @@ export const CARD_DATA_HOST = "data";
 /** The type a card's data file is, and the one extension its copy is stored under. */
 export const CARD_DATA_TYPE = "application/json";
 
+/**
+ * The host of a kept proof log's address (docs/card-authoring.md, "Proof
+ * logs"): a text transcript a live validation run kept, which a merge card
+ * names by one line and the log reader shows over the card. Its file is named
+ * by its own SHA-256 under the task's folder beside the pictures, so the name
+ * locates it as a picture's does. The address is a name, not a place any
+ * frame loads: the window's reader and the phone's ask the core for it by
+ * that name (`inf:cards:log`), and the frame scheme serves nothing there.
+ */
+export const CARD_LOG_HOST = "logs";
+
+/** The formats a kept proof log may be, by its extension. Every one is read as text. */
+export const CARD_LOG_TYPES = {
+  txt: "text/plain; charset=utf-8",
+  log: "text/plain; charset=utf-8",
+  json: "application/json; charset=utf-8",
+} as const;
+export type CardLogExtension = keyof typeof CARD_LOG_TYPES;
+
 /** The formats a card picture may be, by the extension its copy is stored under. */
 export const CARD_PICTURE_TYPES = {
   png: "image/png",
@@ -105,6 +124,7 @@ const FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(png|jpg|webp)$/;
 const MEDIA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(mp4|gif)$/;
 const TYPEFACE_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(woff2|woff|ttf|otf)$/;
 const DATA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.json$/;
+const LOG_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{64})\.(txt|log|json)$/;
 
 /** Whether a task id can name a picture (it becomes part of a file and a URL). */
 export function isPictureTaskId(taskId: string): boolean {
@@ -211,6 +231,53 @@ export function parseCardTypefaceFileName(name: string):
     kind,
     contentType: CARD_TYPEFACE_TYPES[kind],
   };
+}
+
+/** The URL a merge card names a kept proof log by: its kept file's own name at the `logs` host. */
+export function cardLogUrl(fileName: string): string {
+  return `${APP_FRAME_SCHEME}://${CARD_LOG_HOST}/${fileName}`;
+}
+
+/**
+ * Parses a log address's one segment, as
+ * `parseCardPictureFileName` does for pictures: anything not exactly a kept
+ * log's name (`<taskId>-<sha256>.<txt|log|json>`) is `undefined`.
+ */
+export function parseCardLogFileName(name: string):
+  | {
+      taskId: string;
+      fileName: string;
+      contentType: (typeof CARD_LOG_TYPES)[CardLogExtension];
+    }
+  | undefined {
+  const match = LOG_FILE_NAME.exec(name);
+  if (!match) return undefined;
+  const [, taskId, , extension] = match;
+  if (!taskId || !extension) return undefined;
+  return { taskId, fileName: name, contentType: CARD_LOG_TYPES[extension as CardLogExtension] };
+}
+
+/** Whether the log reader may open a log a frame named: one kept log's URL, exactly. */
+export function isReadableLogSource(src: string): boolean {
+  const prefix = `${APP_FRAME_SCHEME}://${CARD_LOG_HOST}/`;
+  return src.startsWith(prefix) && parseCardLogFileName(src.slice(prefix.length)) !== undefined;
+}
+
+/** A `data-inf-log` the host wrote, or one in another spelling (`@shared/codeNames`). */
+const LOG_SOURCE = new RegExp(`data-(?:${SPELLINGS.join("|")})-log="([^"]*)"`, "g");
+
+/**
+ * The proof logs a card body opens: each `data-inf-log` it names, as kept. A
+ * frame's `log` message opens only one of these, so a body's own script
+ * cannot open a log its card does not name.
+ */
+export function logSources(body: string): Set<string> {
+  const found = new Set<string>();
+  for (const match of body.matchAll(LOG_SOURCE)) {
+    const src = match[1] ?? "";
+    if (isReadableLogSource(src)) found.add(src);
+  }
+  return found;
 }
 
 /**

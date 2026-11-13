@@ -8938,6 +8938,231 @@ export function uiPictureViewerClose(): string {
   return `Close the viewer`;
 }
 
+export function uiLogReaderFrom(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجل التشغيل من ${title}`;
+    case "de":
+      return `Log aus ${title}`;
+    case "es":
+      return `Log de ${title}`;
+    case "fr":
+      return `Journal de ${title}`;
+    case "ja":
+      return `${title} のログ`;
+    case "ko":
+      return `${title}의 로그`;
+    case "pt-BR":
+      return `Log de ${title}`;
+    case "zh-Hans":
+      return `来自 ${title} 的日志`;
+    case "zh-Hant":
+      return `來自 ${title} 的日誌`;
+    case "en-XA":
+      return `[Ļöĝ ƒŕöɱ ${title} ~~~]`;
+    case "ar-XB":
+      return `\u202eLog from \u202c${title}`;
+  }
+  return `Log from ${title}`;
+}
+
+export function uiLogReaderClose(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إغلاق سجل التشغيل`;
+    case "de":
+      return `Log schließen`;
+    case "es":
+      return `Cerrar el log`;
+    case "fr":
+      return `Fermer le journal`;
+    case "ja":
+      return `ログを閉じる`;
+    case "ko":
+      return `로그 닫기`;
+    case "pt-BR":
+      return `Fechar o log`;
+    case "zh-Hans":
+      return `关闭日志`;
+    case "zh-Hant":
+      return `關閉日誌`;
+    case "en-XA":
+      return `[Çļöšé ţĥé ļöĝ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eClose the log\u202c`;
+  }
+  return `Close the log`;
+}
+
+export function uiLogReaderReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ قراءة سجل التشغيل…`;
+    case "de":
+      return `Log wird gelesen…`;
+    case "es":
+      return `Leyendo el log…`;
+    case "fr":
+      return `Lecture du journal…`;
+    case "ja":
+      return `ログを読み込み中…`;
+    case "ko":
+      return `로그를 읽는 중…`;
+    case "pt-BR":
+      return `Lendo o log…`;
+    case "zh-Hans":
+      return `正在读取日志…`;
+    case "zh-Hant":
+      return `正在讀取日誌…`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ ţĥé ļöĝ… ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReading the log…\u202c`;
+  }
+  return `Reading the log…`;
+}
+
+export function uiLogReaderUnreadable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة سجل التشغيل هذا. ربما لم يعد حاسوبك يحتفظ به.`;
+    case "de":
+      return `Dieses Log konnte nicht gelesen werden. Dein Computer bewahrt es möglicherweise nicht mehr auf.`;
+    case "es":
+      return `No se pudo leer este log. Es posible que tu computadora ya no lo conserve.`;
+    case "fr":
+      return `Impossible de lire ce journal. Votre ordinateur ne le conserve peut-être plus.`;
+    case "ja":
+      return `このログを読み込めませんでした。お使いのコンピューターにもう保存されていない可能性があります。`;
+    case "ko":
+      return `이 로그를 읽을 수 없어요. 컴퓨터에 더 이상 남아 있지 않을 수 있어요.`;
+    case "pt-BR":
+      return `Não foi possível ler este log. Talvez seu computador não o guarde mais.`;
+    case "zh-Hans":
+      return `无法读取此日志。你的电脑可能已不再保留它。`;
+    case "zh-Hant":
+      return `無法讀取此日誌。你的電腦可能已不再保留它。`;
+    case "en-XA":
+      return `[Ţĥîš ļöĝ çöûļð ñöţ ƀé ŕéáð. Ýöûŕ çöɱþûţéŕ ɱáý ñö ļöñĝéŕ ķééþ îţ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis log could not be read. Your computer may no longer keep it.\u202c`;
+  }
+  return `This log could not be read. Your computer may no longer keep it.`;
+}
+
+export function uiLogReaderRetry(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة المحاولة`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Reintentar`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `再試行`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `重試`;
+    case "en-XA":
+      return `[Ŕéţŕý ~~]`;
+    case "ar-XB":
+      return `\u202eRetry\u202c`;
+  }
+  return `Retry`;
+}
+
+export function uiLogReaderDone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تم`;
+    case "de":
+      return `Fertig`;
+    case "es":
+      return `Listo`;
+    case "fr":
+      return `Terminé`;
+    case "ja":
+      return `完了`;
+    case "ko":
+      return `완료`;
+    case "pt-BR":
+      return `Concluído`;
+    case "zh-Hans":
+      return `完成`;
+    case "zh-Hant":
+      return `完成`;
+    case "en-XA":
+      return `[Ðöñé ~~]`;
+    case "ar-XB":
+      return `\u202eDone\u202c`;
+  }
+  return `Done`;
+}
+
+export function uiLogReaderUntitled(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجل تشغيل البطاقة`;
+    case "de":
+      return `Karten-Log`;
+    case "es":
+      return `Log de la tarjeta`;
+    case "fr":
+      return `Journal de la carte`;
+    case "ja":
+      return `カードのログ`;
+    case "ko":
+      return `카드 로그`;
+    case "pt-BR":
+      return `Log do cartão`;
+    case "zh-Hans":
+      return `卡片日志`;
+    case "zh-Hant":
+      return `卡片日誌`;
+    case "en-XA":
+      return `[Çáŕð ļöĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eCard log\u202c`;
+  }
+  return `Card log`;
+}
+
+export function uiLogReaderUnreachable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة سجل التشغيل هذا. حاول مرة أخرى عندما يكون حاسوبك في المتناول.`;
+    case "de":
+      return `Dieses Log konnte nicht gelesen werden. Versuche es erneut, wenn dein Computer erreichbar ist.`;
+    case "es":
+      return `No se pudo leer este log. Inténtalo de nuevo cuando tu computadora esté al alcance.`;
+    case "fr":
+      return `Impossible de lire ce journal. Réessayez quand votre ordinateur sera joignable.`;
+    case "ja":
+      return `このログを読み込めませんでした。コンピューターに接続できるときにもう一度お試しください。`;
+    case "ko":
+      return `이 로그를 읽을 수 없었어요. 컴퓨터에 연결할 수 있을 때 다시 시도해 주세요.`;
+    case "pt-BR":
+      return `Não foi possível ler este log. Tente de novo quando seu computador estiver ao alcance.`;
+    case "zh-Hans":
+      return `无法读取此日志。请在可以连接到你的电脑时重试。`;
+    case "zh-Hant":
+      return `無法讀取此日誌。請在可以連線到你的電腦時重試。`;
+    case "en-XA":
+      return `[Ţĥîš ļöĝ çöûļð ñöţ ƀé ŕéáð. Ţŕý áĝáîñ ŵĥéñ ýöûŕ çöɱþûţéŕ îš îñ ŕéáçĥ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis log could not be read. Try again when your computer is in reach.\u202c`;
+  }
+  return `This log could not be read. Try again when your computer is in reach.`;
+}
+
 export function uiPictureViewerActualSize(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -31547,6 +31772,14 @@ export const MESSAGES = {
   uiPictureViewerDemoFrom,
   uiPictureViewerPicturesFrom,
   uiPictureViewerClose,
+  uiLogReaderFrom,
+  uiLogReaderClose,
+  uiLogReaderReading,
+  uiLogReaderUnreadable,
+  uiLogReaderRetry,
+  uiLogReaderDone,
+  uiLogReaderUntitled,
+  uiLogReaderUnreachable,
   uiPictureViewerActualSize,
   uiPictureViewerPrevious,
   uiPictureViewerNext,
@@ -32598,6 +32831,14 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   uiPictureViewerDemoFrom: ["title"],
   uiPictureViewerPicturesFrom: ["title"],
   uiPictureViewerClose: [],
+  uiLogReaderFrom: ["title"],
+  uiLogReaderClose: [],
+  uiLogReaderReading: [],
+  uiLogReaderUnreadable: [],
+  uiLogReaderRetry: [],
+  uiLogReaderDone: [],
+  uiLogReaderUntitled: [],
+  uiLogReaderUnreachable: [],
   uiPictureViewerActualSize: [],
   uiPictureViewerPrevious: [],
   uiPictureViewerNext: [],

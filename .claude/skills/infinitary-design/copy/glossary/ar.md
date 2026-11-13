@@ -18,6 +18,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | task | مهمة | Feminine, plural "مهام"; feed lines about a task agree in the feminine. |
 | card | بطاقة | Feminine. |
 | the record (a task's record) | سجل المهمة | |
+| log (a check's kept output) | سجل التشغيل | Never "سجل" alone, which reads as the task's record ("سجل المهمة"). |
 | panel | لوحة | Plural "لوحات"; "لوحة المفاتيح" stays the keyboard. |
 | rail | شريط | Only in search words ("أشرطة"), for the side column of panels. |
 | project | مشروع | Plural "مشاريع". |

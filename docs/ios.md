@@ -293,11 +293,12 @@ Its pings go to the body, which can answer only once its frame's bridge says rea
 So a body still loading on a busy device is never counted, while one whose script loops as it loads stops its page answering too, since the frame runs on its page's thread.
 It also counts only once the page has run something, the card's mount or an answer, since a loaded page can still wait seconds for WebKit's own processes to start before it runs anything; the mount tells the host before it builds the body, so a body that loops from its first moment is still counted (INF-2076).
 A native collection timeout also releases a waiting footer or reply when the web process cannot run its own timer.
-`CardAssets` serves bundled fonts and minted picture, project-font and recording names through the pinned connection; it never opens an arbitrary URL or filesystem path.
+`CardAssets` serves bundled fonts and minted picture, project-font, recording and proof-log names through the pinned connection; it never opens an arbitrary URL or filesystem path.
 It asks through `ReadOnlySession.read`, which waits until the computer is in reach and asks again after a reconnect, so a card drawn from the first cards read, before the other first reads answer, still gets its pictures.
 A separate script-free, nonpersistent web view shows pictures and GIFs, with no native message handler.
 A tap on a picture or a diagram opens it full screen (INF-3107): fitted, with pinch from fitted to eight times fitted, a double-tap to its own size centred where tapped and back, a drag to pan, a refit when the device turns, and Done or a swipe down while fitted to close; a recording keeps its sheet.
 The viewer's page draws its own background in the theme's color, since while zoomed WebKit keeps a copy of the page drawn at the fitted size under the sharp tiles, and a page with no background lets that stretched copy show through as a blurred second edge (`CardDiagramZoomTests`).
+A tap on a proof log's line on a merge card opens the log's text in a sheet of its own (`CardLogView`, INF-3887): the line's words as its title, its size, the text in the mono face and selectable, and Done to close; it reads the log from the computer by its kept name (`inf:cards:log`, `docs/card-authoring.md`, "Proof logs").
 A diagram arrives as the SVG picture the bridge wrote out of the card, and native code puts the bundled faces it names inside it, since a picture loads nothing.
 Both web views disable system link previews as well as refusing navigation.
 A body's link leaves only on the captain's own press, when the parent's `isSafeCardHref` admits it, and native code checks its scheme again before the system opens it.

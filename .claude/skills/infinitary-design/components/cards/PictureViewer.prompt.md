@@ -66,6 +66,17 @@ Once its length has played the animation is taken away, the poster returns and t
 The window hidden stops it the same way, and only a press plays it again.
 Focus, Tab, `Space`, `Enter`, `Esc`, reduced motion and a recording that cannot be played are as for any demo; a GIF that cannot be played says so on the press that tried.
 
+**A proof log.**
+A merge card names each log a live validation run kept by one line in its table: the log's words as a button, its size beside it in mono `--text-xs` / `--fg-3` (`24 KB`); the card never holds the log's text.
+A press on the line, by click, `Enter` or `Space`, opens the log reader, the viewer's twin for text, over the whole window on the same surface; it is named "Log from <card title>".
+Its header is the viewer's: the line's words in `--fg-1` at `--text-base`, one line with an ellipsis, the size in mono `--text-xs` / `--fg-3`, and an `IconButton` "Close the log".
+The rest of the height is the log: mono `--text-xs` at 1.6 line height in `--fg-1`, on `--bg-1` with `--radius-s` and `--shadow-2`, at most 120ch wide and centred, `--space-8` from the window's sides and foot, wrapping long lines and scrolling inside itself.
+It takes focus once its text is there, so the reading keys scroll it at once; it is the one Tab stop besides Close, with the focus ring.
+While it reads it says "Reading the log…" in `--text-sm` / `--fg-2` where the text will be, and a log the computer no longer keeps says "This log could not be read.
+Your computer may no longer keep it."
+`Esc`, Close or a click on the backdrop leaves, focus returning to the line that opened it; the motion and theme are the viewer's.
+On the phone the log opens in a sheet with the line's words as its title, its size, the text selectable, and Done.
+
 **Motion.**
 A `--dur-med` (360 ms) `--ease-drift` fade in and out; none at all under reduced motion; never a slide, and nothing moves between pictures.
 
@@ -76,3 +87,4 @@ In the app this is `src/renderer/src/design/cards/PictureViewer.tsx`, opened by 
 The viewer shows only what the host accepts (`viewablePictures` in `src/shared/cardPictures.ts`): the host's own `app-frame://images/` copies, `data:` PNG, JPEG, GIF or WebP pictures, and a diagram the bridge wrote out as an SVG picture (`isDrawingSource`), nothing else.
 A diagram's typefaces go inside it before it opens (`withDrawingFaces`), since a picture loads nothing.
 It plays only the host's own `app-frame://media/` copy of a recording the card's body names (`isPlayableDemoSource`), opened from the bridge's `demo` message; the copy's kind (`playableDemoKind`) picks the MP4 player or the GIF one.
+It opens the log reader (`src/renderer/src/design/cards/LogReader.tsx`) only for a kept log's `app-frame://logs/` address that the card's body names (`isReadableLogSource`, `logSources`), from the bridge's `log` message.

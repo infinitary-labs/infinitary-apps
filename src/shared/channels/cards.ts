@@ -3,6 +3,7 @@ import { cardFilePieceSchema, cardFileSavedSchema } from "../cardFiles";
 import { cardNotesSchema } from "../cardNotes";
 import {
   CARD_DATA_TYPE,
+  CARD_LOG_TYPES,
   CARD_MEDIA_PIECE_BYTES,
   CARD_MEDIA_TYPES,
   CARD_TYPEFACE_TYPES,
@@ -156,6 +157,21 @@ export const cardChannels = {
     response: z.object({
       contentType: z.literal(CARD_DATA_TYPE),
       /** The file's text, as the host checked and kept it. */
+      data: z.string(),
+    }),
+  },
+  // A kept proof log's text by its file name (docs/view.md, docs/ios.md): how
+  // a view or a phone opens the home's own copy of a log a merge card names
+  // in its log reader (docs/card-authoring.md "Proof logs"). Only a kept
+  // log's name (`@shared/cardPictures`); anything else is refused.
+  "inf:cards:log": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(160)]),
+    response: z.object({
+      contentType: z.enum([CARD_LOG_TYPES.txt, CARD_LOG_TYPES.json]),
+      /** The file, base64. */
       data: z.string(),
     }),
   },

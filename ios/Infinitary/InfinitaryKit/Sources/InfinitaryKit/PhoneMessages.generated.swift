@@ -308,6 +308,14 @@ public enum PhoneMessages {
     public static func `uiPictureViewerDemoFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerDemoFrom", [`title`]) }
     public static func `uiPictureViewerPicturesFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerPicturesFrom", [`title`]) }
     public static func `uiPictureViewerClose`() -> String { PhoneWords.format("uiPictureViewerClose", []) }
+    public static func `uiLogReaderFrom`(`title`: String) -> String { PhoneWords.format("uiLogReaderFrom", [`title`]) }
+    public static func `uiLogReaderClose`() -> String { PhoneWords.format("uiLogReaderClose", []) }
+    public static func `uiLogReaderReading`() -> String { PhoneWords.format("uiLogReaderReading", []) }
+    public static func `uiLogReaderUnreadable`() -> String { PhoneWords.format("uiLogReaderUnreadable", []) }
+    public static func `uiLogReaderRetry`() -> String { PhoneWords.format("uiLogReaderRetry", []) }
+    public static func `uiLogReaderDone`() -> String { PhoneWords.format("uiLogReaderDone", []) }
+    public static func `uiLogReaderUntitled`() -> String { PhoneWords.format("uiLogReaderUntitled", []) }
+    public static func `uiLogReaderUnreachable`() -> String { PhoneWords.format("uiLogReaderUnreachable", []) }
     public static func `uiPictureViewerActualSize`() -> String { PhoneWords.format("uiPictureViewerActualSize", []) }
     public static func `uiPictureViewerPrevious`() -> String { PhoneWords.format("uiPictureViewerPrevious", []) }
     public static func `uiPictureViewerNext`() -> String { PhoneWords.format("uiPictureViewerNext", []) }
@@ -1931,6 +1939,14 @@ extension PhoneWords {
         "uiPictureViewerDemoFrom": ["title"],
         "uiPictureViewerPicturesFrom": ["title"],
         "uiPictureViewerClose": [],
+        "uiLogReaderFrom": ["title"],
+        "uiLogReaderClose": [],
+        "uiLogReaderReading": [],
+        "uiLogReaderUnreadable": [],
+        "uiLogReaderRetry": [],
+        "uiLogReaderDone": [],
+        "uiLogReaderUntitled": [],
+        "uiLogReaderUnreachable": [],
         "uiPictureViewerActualSize": [],
         "uiPictureViewerPrevious": [],
         "uiPictureViewerNext": [],

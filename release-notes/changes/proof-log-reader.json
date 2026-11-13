@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "proof-log-reader",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merge cards with long proof logs open again",
+      "body": "A merge card now names each kept proof log on one line, with its size. Press the line to read the log over the card, the way a picture opens, on your Mac or your iPhone. A card too large to open is sent back to the crewmate to make smaller, so you never see one that cannot open.",
+      "picture": {
+        "dark": "proof-log-reader-dark.webp",
+        "light": "proof-log-reader-light.webp",
+        "alt": "A proof log open in the log reader, its name and size above its text in the mono face."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

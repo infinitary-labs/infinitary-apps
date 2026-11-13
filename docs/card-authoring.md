@@ -282,6 +282,26 @@ Notes, the first mate's own cards and answer cards, previews included, are not c
 On every crewmate card, at every care level, the check refuses a `data-inf-new` mark on an element that cannot draw the New tag (`untaggedNewMarkRefusal`): `img`, `svg`, `video`, `canvas`, `iframe`, `object`, `embed` and `input` generate no `::before` box in the card frame, so a picture marked itself would show no tag and read as a missing Before picture.
 The refusal names the fix, the figure that holds it.
 
+## Proof logs
+
+A merge card's live validation table names each transcript a live validation run kept by one line: its words, a button, and its size beside it (`validationCard`, `src/core/forge/presentationValidation.ts`).
+The button carries `data-inf-log`, the log's address, `app-frame://logs/` and its kept name (`cardLogUrl`, `src/shared/cardPictures.ts`), and `data-inf-log-bytes`, its size; the log's text never rides the card (INF-3887: a card that pasted 37 transcripts was 1,383,135 characters long and could not open).
+A press on the button, by pointer or key, asks the frame bridge to open the log (the `log` message, `src/shared/plugins/frameScript.ts`), and the window opens it only when the card's own body names that address (`logSources`).
+The log reader opens over the whole window, the way a picture opens in the picture viewer (`LogReader`, `src/renderer/src/design/cards/LogReader.tsx`; the design skill's `components/cards/PictureViewer.prompt.md`, "A proof log"): the line's words and the size in its header, the log's text below in the mono face, Esc or its close button to leave.
+The address is a name, not a place any frame loads: the frame scheme serves nothing there, and the window's policy lets nothing connect to it.
+The reader asks the core for the log by its kept name, `<taskId>-<its sha256>.txt` (or `.log`, `.json`), which the core reads from that task's `cards` folder and answers as base64 (`inf:cards:log`, `src/core/dispatcher/cardMedia.ts`); a name of any other shape is refused.
+A paired view's reader asks the home the same read (`docs/view.md`), and the phone asks it too and shows the text in a sheet of its own (`CardLogView`, `ios/Infinitary/InfinitaryApp/CardLogView.swift`).
+Pictures and recordings in the table keep their disclosure and open in the picture viewer, as before.
+
+## The size check
+
+The window refuses a card frame whose markup is longer than `FRAME_TEMPLATE_MAX_BYTES` (524,288 characters, `src/shared/plugins/frameDocument.ts`), so the host measures every card against that limit before it is shown (`cardSizeRefusal`, `src/shared/cardSize.ts`).
+The measure reads the same markup the window receives (`cardBodyMarkup`, `src/shared/cardBodyMarkup.ts`) with every change bar the card could carry, so a later revision that marks its new parts cannot pass the check and then fail to open.
+A card past the limit is refused to its author with its size, the limit and its largest top-level parts by size, named by the host's mark (the live validation table, the architecture map) or by their first words and the heading above them.
+`emit_card` measures an agent's own body after its 65,536-character check too: a body within 65,536 characters still passes the window's limit when it holds thousands of small parts, since the markup the window receives grows with each part.
+A saved story's merge card is measured when the story is prepared and again when the card is built, since a story's card carries parts the host adds: the live validation table and the map part ("Saved change stories", `docs/forge.md`).
+A card that still reaches the window over the limit, such as one whose strips the host adds after the check carry it past, opens with its words only (`cardBodyVehicle`, below).
+
 ## The shape lint
 
 Both boundaries - the crewmate's `emit_card` (Pi or Claude) and the first mate's - run the shape rules in `src/core/pi/cardLint.ts`, reading the body with htmlparser2.

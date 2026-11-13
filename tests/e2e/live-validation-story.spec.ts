@@ -5,14 +5,12 @@ import { presentationMarkdown } from "../../src/core/forge/presentation";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
 import { appPathsFor, crewmateCardPicturesDir } from "../../src/core/paths";
 import { stageChangePresentation } from "../../src/core/pi/changePresentation";
-import {
-  keepValidationEvidence,
-  readKeptValidationEvidence,
-} from "../../src/core/pi/validationEvidence";
+import { keepValidationEvidence } from "../../src/core/pi/validationEvidence";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { fileSizeWords } from "../../src/shared/attachments";
 import { liveValidationLine } from "../../src/shared/liveValidationSummary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
@@ -20,17 +18,21 @@ import { cardBody } from "./frames";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { heroShot, regionShot } from "./pictures";
+import { heroShot, regionShot, windowShot } from "./pictures";
 import { expandDock, openGroup, pressRow, recordFrame } from "./rails";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
 import { expectNoCard, noteDone, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
+/** The words this journey gives its kept log, which name its line and the reader. */
+const READING_LOG = "The reopened task reading";
+
 /** Accepted live-validation view plan: real saved note readings feed the real evidence keeper,
  * story preparer and completion renderer. The reviewer is a typed stand-in, not an independent
  * judgment of this change. No account, shared service, keychain or running program is borrowed.
  * Completion is the same recorded count on the card, both description formats and task record,
- * with a keyboard-opened transcript containing the actual reopened note reading.
+ * with a keyboard-opened transcript containing the actual reopened note reading: on the card it
+ * opens in the log reader from a name-and-size line, never inside the card (INF-3887).
  */
 test("a saved story shows its recorded scenarios and opens their kept evidence", async () => {
   const userDataDir = scratchDir("infinitary-validation-story-");
@@ -102,7 +104,7 @@ test("a saved story shows its recorded scenarios and opens their kept evidence",
           },
         ],
         evidence: [
-          { id: "readings", path: "saved-readings.json", description: "The reopened task reading" },
+          { id: "readings", path: "saved-readings.json", description: READING_LOG },
           {
             id: "picture",
             path: "earlier-view.webp",
@@ -139,7 +141,6 @@ test("a saved story shows its recorded scenarios and opens their kept evidence",
     tasks,
     mediaDir: () => media,
     head: async () => head,
-    validationEvidence: (_, evidence) => readKeptValidationEvidence(evidence, media, id),
   });
   const staged = await stageChangePresentation(
     {
@@ -201,15 +202,35 @@ test("a saved story shows its recorded scenarios and opens their kept evidence",
     const table = frame.locator("[data-live-validation]");
     await expect(table).toContainText(line);
     await expect(table.getByRole("columnheader")).toHaveText(["Scenario", "Result", "Evidence"]);
-    const transcriptControl = table.getByText("The reopened task reading", { exact: true });
+    // INF-3887: a kept log is one line, its name and size, and its text never
+    // rides the card; Enter on it opens the log reader over the card.
+    const transcriptControl = table.getByRole("button", { name: READING_LOG });
+    const kept = readFileSync(transcript);
+    await expect(transcriptControl.locator("xpath=..")).toContainText(fileSizeWords(kept.length));
+    await expect(table.locator("pre")).toHaveCount(0);
+    // The note is the row's own evidence sentence too; the kept log's copy of it is not on the card.
+    expect(completion.body.split(note)).toHaveLength(2);
     await pressKey(transcriptControl, "Enter");
-    await expect(table.locator("pre")).toContainText(note);
+    const reader = page.locator("[data-log-reader]");
+    await expect(reader).toBeVisible();
+    await expect(reader.locator("[data-log-name]")).toHaveText(READING_LOG);
+    await expect(reader.locator("[data-log-text]")).toContainText(note);
     expect(
-      JSON.parse(readFileSync(transcript, "utf8")).some(
-        (event: { text: string }) => event.text === note,
-      ),
+      JSON.parse(kept.toString("utf8")).some((event: { text: string }) => event.text === note),
     ).toBe(true);
-    await pressKey(transcriptControl, "Enter");
+    const evidenceDir = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+    if (evidenceDir) {
+      // The pictures wait for the reader's fade in to end.
+      await expect(reader).toHaveCSS("opacity", "1");
+      await windowShot(page, join(evidenceDir, "log-reader-after.png"));
+      await heroShot(launched.app, page, {
+        region: reader.locator("[data-log-text]"),
+        anchors: [reader.locator("[data-log-name]")],
+        name: "proof-log-reader",
+      });
+    }
+    await page.keyboard.press("Escape");
+    await expect(reader).toBeHidden();
     const pictureControl = table
       .getByText("An earlier app view, not proof of the saved reading", { exact: true })
       .first();

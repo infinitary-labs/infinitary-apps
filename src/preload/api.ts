@@ -347,6 +347,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       showPast: (cardId) => invoke("inf:cards:show-past", cardId),
       openPage: (cardId) => invoke("inf:cards:open-page", cardId),
       data: (name) => invoke("inf:cards:data", name),
+      log: (fileName) => invoke("inf:cards:log", fileName),
       saveFile: (cardId, fileId) =>
         readableRequest("inf:cards:save-file", () => invoke("inf:cards:save-file", cardId, fileId)),
       reply: (cardId, payload, submission) =>

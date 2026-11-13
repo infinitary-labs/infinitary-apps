@@ -23,6 +23,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | decision (a card kind) | 决定 | |
 | thread (on a card) | 讨论 | Short and plain, used for a card's replies. |
 | the record (a task's record) | 记录 / 任务记录 | |
+| log (a check's kept output) | 日志 | Distinct from the record, 记录. |
 | panel | 面板 | |
 | rail | 侧栏 | |
 | project | 项目 | Mainland term. |

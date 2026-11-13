@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { open, readFile, realpath, rm } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { cardSizeRefusal } from "@shared/cardSize";
 import {
   type ChangePresentation,
   type ChangePresentationRecord,
@@ -13,7 +14,7 @@ import {
   type StoryAround,
 } from "@shared/changePresentation";
 import { servedNumber } from "@shared/i18n/format";
-import { acceptedValidation, type ValidationEvidence } from "@shared/liveValidation";
+import { acceptedValidation } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
 import {
   hostedPresentation,
@@ -117,6 +118,32 @@ async function storyDestination(target: PresentationTarget): Promise<Presentatio
   throw new Error("The story's destination cannot be read.");
 }
 
+/**
+ * The story as its merge card shows it: each validation row names the kept
+ * proof the record holds for it. Each log is named on the card, never read
+ * into it: the log reader opens its kept file (`validationCard`).
+ */
+function withKeptEvidence(
+  story: ChangePresentation,
+  current: ReturnType<typeof liveValidationSummary>,
+): ChangePresentation {
+  if (!story.liveValidation) return story;
+  return {
+    ...story,
+    liveValidation: {
+      ...story.liveValidation,
+      rows: story.liveValidation.rows.map((row) => ({
+        ...row,
+        evidence: current?.rows.find((item) => item.id === row.id)?.evidence ?? [],
+      })),
+    },
+  };
+}
+
+/** How a crewmate makes a story's merge card small enough to open (`cardSizeRefusal`). */
+const STORY_SHRINK =
+  "Make the story's largest parts smaller - its words, its own What changed part or its map views - then prepare the story again and show the merge card from the new revision.";
+
 /** Serialization, retained receipts and the all-files-first barrier; never merge authority. */
 export class ChangePresentations {
   private readonly active = new Map<string, ReadonlySet<string>>();
@@ -125,7 +152,6 @@ export class ChangePresentations {
     private readonly options: {
       /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
       namingRule?: () => NamingRule | null;
-      validationEvidence?: (taskId: string, evidence: ValidationEvidence[]) => ValidationEvidence[];
       /** Changed unpublished merge words suspend their queue approval before prepare returns. */
       onPrepared?: (taskId: string, head: string, branch?: string) => Promise<void>;
       tasks: PresentationLedger;
@@ -207,6 +233,25 @@ export class ChangePresentations {
           if (how.reuseSame && prior && prior.head === story.head && sameStoryWords(prior, story))
             return prior.revision;
           await this.checkRetained(story);
+          // Its merge card is measured now, with the log lines showing it adds,
+          // so a story too large to open is refused before it is saved.
+          const tooLarge = cardSizeRefusal(
+            presentationCardBody(
+              withKeptEvidence(
+                story,
+                liveValidationSummary(
+                  this.options.tasks.get(taskId)?.delivery?.liveValidation,
+                  story.head,
+                  false,
+                ),
+              ),
+              story.views.some((view) => view.map !== undefined)
+                ? await this.options.mapPart?.()
+                : undefined,
+            ),
+            STORY_SHRINK,
+          );
+          if (tooLarge) throw new Error(tooLarge);
           // Before media for a surviving view stays the original comparison, never silently refreshed.
           for (const view of prior?.views ?? []) {
             const next = story.views.find((candidate) => candidate.id === view.id);
@@ -693,24 +738,7 @@ export class ChangePresentations {
           return copy;
         };
         const cardStory: ChangePresentation = {
-          ...story,
-          ...(story.liveValidation
-            ? {
-                liveValidation: {
-                  ...story.liveValidation,
-                  rows: story.liveValidation.rows.map((row) => ({
-                    ...row,
-                    evidence:
-                      this.options.validationEvidence?.(
-                        taskId,
-                        currentValidation?.rows.find((item) => item.id === row.id)?.evidence ?? [],
-                      ) ??
-                      currentValidation?.rows.find((item) => item.id === row.id)?.evidence ??
-                      [],
-                  })),
-                },
-              }
-            : {}),
+          ...withKeptEvidence(story, currentValidation),
           assets: copies,
           views: story.views.map((view) => {
             const media = (entries: typeof view.before) =>
@@ -736,14 +764,19 @@ export class ChangePresentations {
             ...(picture.demo ? { demo: { ...picture.demo, id: copiedId(picture.demo.id) } } : {}),
           })),
         };
+        const body = presentationCardBody(
+          cardStory,
+          cardStory.views.some((view) => view.map !== undefined)
+            ? await this.options.mapPart?.()
+            : undefined,
+        );
+        // Measured as the window will receive it (INF-3887): a merge card too
+        // large to open goes back to its crewmate, never to the captain.
+        const tooLarge = cardSizeRefusal(body, STORY_SHRINK);
+        if (tooLarge) throw new Error(tooLarge);
         return {
           title: story.title,
-          body: presentationCardBody(
-            cardStory,
-            cardStory.views.some((view) => view.map !== undefined)
-              ? await this.options.mapPart?.()
-              : undefined,
-          ),
+          body,
           pictures: cardStory.pictures,
           riskDeclaration: story.risk,
           requiredActions: story.requiredActions,

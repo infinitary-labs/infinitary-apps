@@ -794,8 +794,6 @@ export async function createServices(
   const presentations: ChangePresentations = new ChangePresentations({
     onPrepared: (taskId, head, branch) =>
       supervisor.settling.approvals.storyPrepared(taskId, head, branch),
-    validationEvidence: (taskId, evidence) =>
-      readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
     namingRule,
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),

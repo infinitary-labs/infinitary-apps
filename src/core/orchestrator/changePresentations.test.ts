@@ -14,6 +14,7 @@ import {
   type ChangePresentationDraft,
   presentationRecoverySchema,
 } from "@shared/changePresentation";
+import type { LiveValidation } from "@shared/liveValidation";
 import { RISK_DIMENSIONS } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING, GIF_DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
@@ -40,6 +41,7 @@ import {
 } from "../forge";
 import { presentationMarkdownText } from "../forge/presentation";
 import { stageChangePresentation } from "../pi/changePresentation";
+import { recordValidation } from "../tasks/liveValidation";
 import { GITHUB_STORY_BODY_LIMIT } from "./changePresentations";
 
 const sha256 = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
@@ -1790,4 +1792,128 @@ it("persists the new unpublished revision before awaiting its queue suspension",
   await expect(at.service.prepare(TASK, at.staged, at.forge)).rejects.toThrow("not yet confirmed");
   expect(suspended).toHaveBeenCalledWith(TASK, HEAD, undefined);
   expect(at.tasks.delivery.changePresentation(TASK)?.published).toBeUndefined();
+});
+
+// INF-3887 (captain: "prevent cards from being too large in the first
+// place"): a story whose merge card the window could not open goes back to its
+// crewmate with the card's size, the limit and its largest parts, both when it
+// is prepared and when its card is shown. The proof is a validation record at
+// its limits - a hundred scenarios, each naming the run's thirty-two kept logs -
+// so the card's lines naming the logs, and nothing the story wrote, outgrow it.
+describe("a story too large for its merge card to open", () => {
+  const refused =
+    /^Card refused: the window would receive it at [\d,]+ characters, over its limit of [\d,]+, so it could not open\. Its parts by size, in characters: live validation table under "[^"]+": [\d,]+;.+Make the story's largest parts smaller/;
+  const ids = Array.from({ length: 100 }, (_, n) => `scenario-${n + 1}`);
+
+  function crowdedProof(named = 32): LiveValidation {
+    const logs = Array.from({ length: 32 }, (_, n) => {
+      const digest = sha256(Buffer.from(`run ${n + 1}`));
+      return {
+        id: `log-${n + 1}`,
+        description: `The reopened task's record, read after run ${n + 1}`,
+        digest,
+        bytes: 30_000 + n,
+        file: `${TASK}-${digest}.txt`,
+      };
+    });
+    let proof = recordValidation(
+      undefined,
+      {
+        kind: "plan",
+        previousRevision: 0,
+        reason: "Each scenario reopens the task and reads its record.",
+        scenarios: ids.map((id) => ({
+          id,
+          source: "The record survives a reopened task.",
+          importance: "required" as const,
+          action: `Reopen the task and read its record (${id}).`,
+          expected: "The record reads as it was saved.",
+          adverse: "A reading is lost.",
+          environment: "The app with a scripted model.",
+          signal: "The record's readings.",
+          boundary: "The task record",
+        })),
+      },
+      { head: HEAD, deviceId: null, at: 1 },
+    );
+    proof = recordValidation(
+      proof,
+      {
+        kind: "run",
+        id: "reopen",
+        head: HEAD,
+        scenarioRevision: 1,
+        completion: "complete",
+        verdict: "go",
+        reason: "Every scenario read its record back.",
+        observations: ids.map((scenario) => ({
+          scenario,
+          result: "pass" as const,
+          live: true,
+          actual: "The record read as saved.",
+          evidence: logs.slice(0, named).map((log) => log.id),
+          standIns: [],
+          unproven: [],
+          attempted: [],
+        })),
+        evidence: logs,
+      },
+      { head: HEAD, deviceId: null, at: 2 },
+    );
+    const revision = proof.runs.at(-1)?.revision ?? 0;
+    return recordValidation(
+      proof,
+      {
+        kind: "review",
+        head: HEAD,
+        revision,
+        code: "clear",
+        coverage: "complete",
+        coverageReason: "The scenarios cover the record.",
+        effects: [],
+        omitted: [],
+        verdict: "go",
+        reason: "Read the change and the kept logs.",
+      },
+      {
+        head: HEAD,
+        deviceId: null,
+        at: 3,
+        reviewer: "reviewer",
+        assignment: { head: HEAD, revision, scenarioRevision: 1, effects: [] },
+      },
+    );
+  }
+
+  const rows = ids.map((id) => ({
+    id,
+    scenario: `Reopen the task and read its record (${id})`,
+    evidence: "The record read as saved.",
+  }));
+
+  it("refuses to prepare it and saves no revision", async () => {
+    const at = await arrange();
+    seedDelivery(at.tasks, TASK, { liveValidation: crowdedProof() });
+    const staged = await stageChangePresentation(
+      { ...at.draft, validationRows: rows },
+      { taskId: TASK, worktree: at.worktree, dir: at.media },
+    );
+    await expect(at.service.prepare(TASK, staged, at.forge)).rejects.toThrow(refused);
+    expect(at.tasks.delivery.changePresentation(TASK)?.revisions ?? []).toEqual([]);
+  });
+
+  it("refuses to show the card of a story prepared before its logs were counted", async () => {
+    const at = await arrange();
+    // Prepared while each scenario named one log, as an earlier version measured no log lines at all.
+    seedDelivery(at.tasks, TASK, { liveValidation: crowdedProof(1) });
+    const staged = await stageChangePresentation(
+      { ...at.draft, validationRows: rows },
+      { taskId: TASK, worktree: at.worktree, dir: at.media },
+    );
+    const revision = await at.service.prepare(TASK, staged, at.forge);
+    await at.publish(revision);
+    expect((await at.service.completion(TASK, revision, HEAD)).body).toContain("data-inf-log=");
+    seedDelivery(at.tasks, TASK, { liveValidation: crowdedProof() });
+    await expect(at.service.completion(TASK, revision, HEAD)).rejects.toThrow(refused);
+  });
 });

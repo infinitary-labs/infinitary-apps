@@ -50,6 +50,10 @@ export const FRAME_DEMO_SOURCE = "app-frame://media/";
 export const FRAME_DEMO_SRC_MAX = 256;
 /** A demo's caption in a `demo` message. */
 export const FRAME_DEMO_CAPTION_MAX = 4_096;
+/** A kept proof log's served name in a `log` message: `app-frame://logs/<64-char task>-<64 hex>.json` fits. */
+export const FRAME_LOG_SRC_MAX = 256;
+/** A proof log's name in a `log` message: the words of the line that opened it, which the bridge clips. */
+export const FRAME_LOG_NAME_MAX = 512;
 /**
  * How a diagram travels in an `image` message (INF-3107): the frame writes
  * the drawing as it stands into one SVG picture of its own, which the host
@@ -224,6 +228,9 @@ export type FrameDemo = {
   play: boolean;
 };
 
+/** What a `log` message carries to the host: a kept proof log the log reader opens. */
+export type FrameLog = { src: string; name: string; bytes: number };
+
 const answerCount = z.number().int().nonnegative().max(CARD_MAX_ANSWERS);
 
 /**
@@ -384,6 +391,16 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
     durationMs: z.number().int().nonnegative(),
     /** The Play button (true) or the poster (false), which opens it paused. */
     play: z.boolean(),
+  }),
+  /** A press on a `data-inf-log` line: a kept proof log, for the log reader (docs/card-authoring.md "Proof logs"). */
+  z.object({
+    fm: fmMarker,
+    type: z.literal("log"),
+    /** The log's served name, as the body's `data-inf-log` writes it. */
+    src: z.string().min(1).max(FRAME_LOG_SRC_MAX),
+    name: z.string().max(FRAME_LOG_NAME_MAX),
+    /** The size the host wrote on the line; the reader shows what it reads. */
+    bytes: z.number().int().nonnegative(),
   }),
   z.object({ fm: fmMarker, type: z.literal("interaction"), document: z.string() }),
   /** The frame's own window gained or lost the window's focus. */

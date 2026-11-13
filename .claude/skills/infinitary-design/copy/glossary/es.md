@@ -19,6 +19,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | task | tarea | Feminine, so feed lines agree: "Iniciada", "Terminada", "Fusionada". |
 | card | tarjeta | Feminine: "Revisada", "Escrita". |
 | the record (a task's record) | el registro, registro de la tarea | |
+| log (a check's kept output) | el log | "Registro" already names the task's record. |
 | panel | panel | |
 | rail | barra | The column of panels at a window's side; "barras" in command search words. |
 | project | proyecto | |

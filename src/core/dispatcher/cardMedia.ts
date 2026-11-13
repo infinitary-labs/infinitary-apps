@@ -2,7 +2,9 @@ import { type FileHandle, open, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   CARD_DATA_TYPE,
+  CARD_LOG_TYPES,
   parseCardDataFileName,
+  parseCardLogFileName,
   parseCardMediaFileName,
   parseCardPictureFileName,
   parseCardTypefaceFileName,
@@ -15,7 +17,8 @@ type MediaChannel =
   | "inf:cards:picture"
   | "inf:cards:typeface"
   | "inf:cards:media"
-  | "inf:cards:data";
+  | "inf:cards:data"
+  | "inf:cards:log";
 type MediaHandlers = {
   [C in MediaChannel]: (...args: InvokeRequest<C>) => Promise<InvokeResponse<C>>;
 };
@@ -74,6 +77,27 @@ export function cardMediaHandlers(services: CoreServices): MediaHandlers {
         throw new Error("No card data file has that name.");
       }
       return { contentType: CARD_DATA_TYPE, data: text };
+    },
+
+    // The home's own copy of a proof log a merge card names, for a view's or
+    // a phone's log reader (docs/card-authoring.md "Proof logs"), located
+    // from the kept name alone as a picture is; a refusal names no path.
+    "inf:cards:log": async (name) => {
+      const log = parseCardLogFileName(name);
+      if (!log) throw new Error("That is not the name of a proof log.");
+      let bytes: Buffer;
+      try {
+        bytes = await readFile(
+          join(crewmateCardPicturesDir(services.paths, log.taskId), log.fileName),
+        );
+      } catch {
+        throw new Error("No proof log has that name.");
+      }
+      return {
+        contentType:
+          log.contentType === CARD_LOG_TYPES.json ? CARD_LOG_TYPES.json : CARD_LOG_TYPES.txt,
+        data: bytes.toString("base64"),
+      };
     },
 
     // A piece of the home's own copy of a card's demo recording, for a

@@ -26,6 +26,7 @@ import {
   type FrameDemo,
   type FrameEntryRef,
   type FrameError,
+  type FrameLog,
   type FramePicture,
   type FrameQuestioned,
   type FrameRequest,
@@ -137,6 +138,12 @@ export type FrameMountSpec = {
    * the caller's call (the card's own, `isPlayableDemoSource`).
    */
   onDemo?: (demo: FrameDemo, frame?: HTMLIFrameElement | null) => void;
+  /**
+   * A press on a kept proof log's line (docs/card-authoring.md "Proof logs"):
+   * its served name, the line's words and the size the host wrote. Which logs
+   * may open is the caller's call (the card's own, `logSources`).
+   */
+  onLog?: (log: FrameLog, frame?: HTMLIFrameElement | null) => void;
   /**
    * The task keys a card body or a task's record writes that name recorded
    * tasks (FI3-594, FI3-1271): pushed to every document after its `ready`
@@ -684,6 +691,11 @@ export class FrameController {
       case "demo": {
         const { src, poster, caption, durationMs, play } = message;
         this.spec.onDemo?.({ src, poster, caption, durationMs, play });
+        return;
+      }
+      case "log": {
+        const { src, name, bytes } = message;
+        this.spec.onLog?.({ src, name, bytes });
         return;
       }
       case "answers": {

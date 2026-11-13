@@ -334,7 +334,7 @@ import SwiftUI
         case "task":
             guard let key = payload["key"].text, keys.contains(key) else { replyHandler(nil, PhoneMessages.phoneCardWebCannotDo()); return }
             onTask?(key); replyHandler(true, nil)
-        case "image", "demo": presentation = payload; replyHandler(true, nil)
+        case "image", "demo", "log": presentation = payload; replyHandler(true, nil)
         case "annotate":
             let box = payload["box"]
             guard annotates, part == .body, payload["note"]["key"].text != nil,
@@ -711,9 +711,12 @@ struct CardWatchdog {
             case "images": kind = .picture; extensions = "png|jpg|webp"
             case "typefaces": kind = .typeface; extensions = "woff2|woff|ttf|otf"
             case "media": kind = .media; extensions = "mp4|gif"
+            // INF-3887: a proof log is named by its own SHA-256, so its name carries 64 hex digits.
+            case "logs": kind = .log; extensions = "txt|log|json"
             default: throw PhoneError.invalidReply
             }
-            guard name.range(of: "^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}\\.(\(extensions))$", options: .regularExpression) != nil else { throw PhoneError.invalidReply }
+            let digits = kind == .log ? 64 : 32
+            guard name.range(of: "^[A-Za-z0-9_-]{1,64}-[0-9a-f]{\(digits)}\\.(\(extensions))$", options: .regularExpression) != nil else { throw PhoneError.invalidReply }
             var bytes = Data()
             var contentType = ""
             if kind == .media {

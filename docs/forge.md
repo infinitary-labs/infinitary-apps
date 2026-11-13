@@ -1176,7 +1176,9 @@ When a live validation record exists, the author supplies `validationRows`: one 
 Preparation fills the recorded order, results and live counts from `liveValidationSummary`, never from those public words, and refuses missing, repeated or unknown scenario ids.
 The open Live validation table starts Checked on both the merge card and the Markdown description, with Scenario, Result and Evidence columns; live is part of Result.
 Checked facts cover only checks and review outside those scenarios.
-A merge card's Evidence cell opens the existing retained pictures and transcripts, but the public description contains only the author's evidence sentence and uploads none of those files.
+A merge card's Evidence cell opens the retained pictures in the picture viewer, and names each retained transcript by one line, its name and size, that opens it in the log reader over the card (`validationCard`, `src/core/forge/presentationValidation.ts`; `docs/card-authoring.md`, "Proof logs"): a transcript's text never rides the card.
+The public description contains only the author's evidence sentence and uploads none of those files.
+Preparing a story and completing its merge card both measure the card as the window will receive it (`cardSizeRefusal`, `docs/card-authoring.md`, "The size check"), and a card past the window's limit is refused to the author with its size, the limit and each part's size, before anything is saved or shown.
 Awaiting live validation and No running surface show their line without a table; no-surface includes the reviewer's reason.
 A story prepared before acceptance must be prepared again before its merge card can show, while older-format stories and changes with no record keep their existing presentation.
 `verification` keeps commands, file names and counts behind How it was checked on both surfaces; nonempty unfinished work folds under Not done.

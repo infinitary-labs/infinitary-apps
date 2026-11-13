@@ -18,6 +18,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | task | tarefa | Feminine, so feed lines agree: "Iniciada", "Concluída", "Mesclada". |
 | card | cartão | |
 | the record (a task's record) | o registro, registro da tarefa | |
+| log (a check's kept output) | o log | "Registro" already names the task's record. |
 | panel | painel | |
 | rail | barra lateral | The column of panels at a window's side. |
 | project | projeto | |

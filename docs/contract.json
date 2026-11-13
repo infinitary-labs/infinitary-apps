@@ -12985,6 +12985,41 @@
         ]
       }
     },
+    "inf:cards:log": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "text/plain; charset=utf-8",
+              "application/json; charset=utf-8"
+            ]
+          },
+          "data": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contentType",
+          "data"
+        ]
+      }
+    },
     "inf:cards:media": {
       "effect": "read",
       "reach": "views",

@@ -6380,6 +6380,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const FRAME_DEMO_SOURCE = "app-frame://media/";
   const FRAME_DEMO_SRC_MAX = 256;
   const FRAME_DEMO_CAPTION_MAX = 4096;
+  const FRAME_LOG_SRC_MAX = 256;
+  const FRAME_LOG_NAME_MAX = 512;
   const DRAWING_SOURCE_PREFIX = "data:image/svg+xml;charset=utf-8,";
   const DRAWING_LOOK = [
     "fill",
@@ -6611,6 +6613,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       durationMs: number().int().nonnegative(),
       /** The Play button (true) or the poster (false), which opens it paused. */
       play: boolean()
+    }),
+    /** A press on a `data-inf-log` line: a kept proof log, for the log reader (docs/card-authoring.md "Proof logs"). */
+    object({
+      fm: fmMarker,
+      type: literal("log"),
+      /** The log's served name, as the body's `data-inf-log` writes it. */
+      src: string().min(1).max(FRAME_LOG_SRC_MAX),
+      name: string().max(FRAME_LOG_NAME_MAX),
+      /** The size the host wrote on the line; the reader shows what it reads. */
+      bytes: number().int().nonnegative()
     }),
     object({ fm: fmMarker, type: literal("interaction"), document: string() }),
     /** The frame's own window gained or lost the window's focus. */
@@ -7722,6 +7734,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       post({ type: "draft", text: draft.getAttribute("data-inf-draft") });
       return;
     }
+    var log = target && target.closest ? target.closest("[data-inf-log]") : null;
+    if (log) {
+      event.preventDefault();
+      post({
+        type: "log",
+        src: log.getAttribute("data-inf-log") || "",
+        name: (log.textContent || "").replace(/\\s+/g, " ").trim().slice(0, ${FRAME_LOG_NAME_MAX}),
+        bytes: Math.max(0, Math.round(Number(log.getAttribute("data-inf-log-bytes"))) || 0)
+      });
+      return;
+    }
     var task = keyLink(target);
     if (task) {
       event.preventDefault();
@@ -8650,7 +8673,7 @@ ${FRAME_QUESTION_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-RZdSBLHr3hi75NirdAUaUUoCdpdcQCTPUHk/lxQLjNA=";
+  const FRAME_BRIDGE_SHA256 = "sha256-0F+/b0HIETB69o0S4s33LQ6EIOfpZm5t1h+oB3x3kEk=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -8659,6 +8682,12 @@ ${FRAME_QUESTION_SCRIPT}
     gif: "image/gif"
   };
   const CARD_DATA_HOST = "data";
+  const CARD_LOG_HOST = "logs";
+  const CARD_LOG_TYPES = {
+    txt: "text/plain; charset=utf-8",
+    log: "text/plain; charset=utf-8",
+    json: "application/json; charset=utf-8"
+  };
   const CARD_PICTURE_TYPES = {
     png: "image/png",
     jpg: "image/jpeg",
@@ -8667,6 +8696,7 @@ ${FRAME_QUESTION_SCRIPT}
   const FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(png|jpg|webp)$/;
   const MEDIA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(mp4|gif)$/;
   const DATA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.json$/;
+  const LOG_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{64})\.(txt|log|json)$/;
   function parseCardPictureFileName(name) {
     const match = FILE_NAME.exec(name);
     if (!match) return void 0;
@@ -8685,6 +8715,26 @@ ${FRAME_QUESTION_SCRIPT}
     if (!taskId || !extension) return void 0;
     const kind = extension;
     return { taskId, fileName: name, kind, contentType: CARD_MEDIA_TYPES[kind] };
+  }
+  function parseCardLogFileName(name) {
+    const match = LOG_FILE_NAME.exec(name);
+    if (!match) return void 0;
+    const [, taskId, , extension] = match;
+    if (!taskId || !extension) return void 0;
+    return { taskId, fileName: name, contentType: CARD_LOG_TYPES[extension] };
+  }
+  function isReadableLogSource(src) {
+    const prefix = `${APP_FRAME_SCHEME}://${CARD_LOG_HOST}/`;
+    return src.startsWith(prefix) && parseCardLogFileName(src.slice(prefix.length)) !== void 0;
+  }
+  const LOG_SOURCE = new RegExp(`data-(?:${SPELLINGS.join("|")})-log="([^"]*)"`, "g");
+  function logSources(body) {
+    const found = /* @__PURE__ */ new Set();
+    for (const match of body.matchAll(LOG_SOURCE)) {
+      const src = match[1] ?? "";
+      if (isReadableLogSource(src)) found.add(src);
+    }
+    return found;
   }
   function parseCardDataFileName(name) {
     const match = DATA_FILE_NAME.exec(name);
@@ -16713,6 +16763,44 @@ ${FRAME_QUESTION_SCRIPT}
     walk(document2.children);
     return result;
   }
+  function cardBodyHtml(body) {
+    return /<[a-z][\s\S]*>/i.test(body) ? body : plainTextBody(body);
+  }
+  function escapeHtml(text) {
+    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+  }
+  function plainTextBody(text) {
+    const linked2 = splitCardBodyUrls(text).map((part) => {
+      const escaped = escapeHtml(part.value);
+      return part.type === "url" && isSafeCardHref(part.value) ? `<a href="${escaped}">${escaped}</a>` : escaped;
+    }).join("");
+    return linked2.split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replaceAll("\n", "<br>")}</p>`).join("");
+  }
+  function cardBodyMarkup(body, marks = []) {
+    const html = cardBodyHtml(body);
+    if (html !== body) return { html, marked: false };
+    const parts = cardNavigationParts(body);
+    const targets = parts.length <= REVISION_TARGETS_MAX ? parts.map((p) => p.start) : [];
+    const starts = [.../* @__PURE__ */ new Set([...marks, ...targets])].sort((a, b) => b - a);
+    let marked = html;
+    const bars = [];
+    for (const start of starts) {
+      const tag = /^<[a-z][^\s/>]*/i.exec(marked.slice(start, start + 64));
+      if (!tag) continue;
+      const at = start + tag[0].length;
+      const n = bars.length;
+      const changed = marks.includes(start);
+      marked = `${marked.slice(0, at)}${targets.includes(start) ? ` data-inf-target="${start}"` : ""}${changed ? ` data-inf-changed="${n}"` : ""}${marked.slice(at)}`;
+      if (changed) bars.push(n);
+    }
+    if (bars.length === 0) return { html: withAppParts(marked), marked: false };
+    const anchors = bars.map((n) => `[data-inf-changed="${n}"]{anchor-name:--fm-new-${n}}`).join("");
+    const drawn = bars.map((n) => `<i data-inf-bar="" style="position-anchor:--fm-new-${n}"></i>`).join("");
+    return {
+      html: `${withAppParts(marked)}<style>${anchors}</style><div data-inf-bars="" aria-hidden="true">${drawn}</div>`,
+      marked: true
+    };
+  }
   const revealsCss = `/* Shared by the shell and frame documents; no geometry or close choreography. */
 [data-in-place-reveal="drift"] {
   animation: in-place-reveal var(--dur-fast) var(--ease-out);
@@ -17294,45 +17382,7 @@ a:hover {
     ].join("\n");
     return cached;
   }
-  function cardBodyHtml(body) {
-    return /<[a-z][\s\S]*>/i.test(body) ? body : plainTextBody(body);
-  }
-  function escapeHtml(text) {
-    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
-  }
-  function plainTextBody(text) {
-    const linked2 = splitCardBodyUrls(text).map((part) => {
-      const escaped = escapeHtml(part.value);
-      return part.type === "url" && isSafeCardHref(part.value) ? `<a href="${escaped}">${escaped}</a>` : escaped;
-    }).join("");
-    return linked2.split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replaceAll("\n", "<br>")}</p>`).join("");
-  }
   const CHANGE_GUTTER_PX = 8;
-  function cardBodyMarkup(body, marks = []) {
-    const html = cardBodyHtml(body);
-    if (html !== body) return { html, marked: false };
-    const parts = cardNavigationParts(body);
-    const targets = parts.length <= REVISION_TARGETS_MAX ? parts.map((p) => p.start) : [];
-    const starts = [.../* @__PURE__ */ new Set([...marks, ...targets])].sort((a, b) => b - a);
-    let marked = html;
-    const bars = [];
-    for (const start of starts) {
-      const tag = /^<[a-z][^\s/>]*/i.exec(marked.slice(start, start + 64));
-      if (!tag) continue;
-      const at = start + tag[0].length;
-      const n = bars.length;
-      const changed = marks.includes(start);
-      marked = `${marked.slice(0, at)}${targets.includes(start) ? ` data-inf-target="${start}"` : ""}${changed ? ` data-inf-changed="${n}"` : ""}${marked.slice(at)}`;
-      if (changed) bars.push(n);
-    }
-    if (bars.length === 0) return { html: withAppParts(marked), marked: false };
-    const anchors = bars.map((n) => `[data-inf-changed="${n}"]{anchor-name:--fm-new-${n}}`).join("");
-    const drawn = bars.map((n) => `<i data-inf-bar="" style="position-anchor:--fm-new-${n}"></i>`).join("");
-    return {
-      html: `${withAppParts(marked)}<style>${anchors}</style><div data-inf-bars="" aria-hidden="true">${drawn}</div>`,
-      marked: true
-    };
-  }
   const CARD_MEASURE_STYLE = `
   /* HtmlCardBody owns the vertical inset outside this auto-sized viewport.
      flow-root keeps child margins in the measured body without padding. */
@@ -17535,6 +17585,12 @@ ${REVISION_HIGHLIGHT_STYLE}`;
       case "demo":
         if (document.hasFocus() && navigator.userActivation.isActive && demoSources(input.body).has(message.src) && viewablePictures(0, [message.poster]))
           void native({ type: "demo", src: message.src, poster: message.poster, caption: message.caption, play: message.play }).catch(() => {
+          });
+        break;
+      // INF-3887: a merge card's proof log opens in the phone's log reader, only a log the card names.
+      case "log":
+        if (pressed() && isReadableLogSource(message.src) && logSources(input.body).has(message.src))
+          void native({ type: "log", src: message.src, name: message.name, bytes: message.bytes }).catch(() => {
           });
         break;
       // INF-1524: a link opens in the phone's own browser, a draft goes to the message box and a key opens its record.

@@ -3,12 +3,20 @@ import { formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { thisDesktop, WINDOW_CONTROLS_CLEARANCE } from "../core/desktop";
 import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 import { useRestLabel } from "../core/restLabel";
 import { pictureHint, pictureSize } from "./pictureViewerWords";
+import {
+  HEADING_STYLE,
+  META_STYLE,
+  NO_DRAG,
+  reducedMotion,
+  tabRing,
+  useViewerFade,
+  VIEWER_ICON,
+  ViewerShell,
+} from "./ViewerShell";
 
 /**
  * Where a card's picture is read (card pictures, phase 3 of the locked
@@ -66,8 +74,6 @@ export type PictureViewerProps = {
 
 type Size = { width: number; height: number };
 
-/** The header: the top bar's height, which the viewer covers. */
-const HEADER_HEIGHT = 52;
 /** The picture's inset from the row's sides, where the arrows sit. */
 const SIDE_GUTTER = 64;
 const NAV_SIZE = 36;
@@ -87,19 +93,7 @@ const DRAWING_GROUND: React.CSSProperties = {
   borderRadius: "var(--radius-s)",
 };
 
-const icon = {
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.5,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-} as const;
-
-function reducedMotion(): boolean {
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
-
-const FOCUSABLE = "button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])";
+const icon = VIEWER_ICON;
 
 /** A demo's time as the player shows it: `0:04`. */
 function clock(seconds: number): string {
@@ -127,16 +121,14 @@ export function PictureViewer({
   const [index, setIndex] = useState(() => Math.min(Math.max(first, 0), pictures.length - 1));
   const [zoomed, setZoomed] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [shown, setShown] = useState(false);
-  const [leaving, setLeaving] = useState(false);
   const [row, setRow] = useState<Size | null>(null);
   // What each picture decoded to here: the truth, over the frame's report.
   const [decoded, setDecoded] = useState<Record<string, Size>>({});
   const dialogRef = useRef<HTMLDivElement>(null);
+  const { shown, leaving, open, close } = useViewerFade(dialogRef, onClose);
   const rowRef = useRef<HTMLDivElement>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
-  const fadeOut = useRef<number | undefined>(undefined);
   const dragged = useRef(false);
   const captionId = useId();
   // A demo's player: what its recording is doing now, as the element says.
@@ -232,12 +224,7 @@ export function PictureViewer({
     (demo ? playRef.current : dialogRef.current)?.focus();
     // A GIF opened from its Play button plays at once, as a video's autoplay does.
     if (gif && demo?.play) startGif();
-    if (reducedMotion()) {
-      setShown(true);
-      return;
-    }
-    void dialogRef.current?.getBoundingClientRect();
-    setShown(true);
+    open();
   }, []);
 
   useLayoutEffect(() => {
@@ -290,25 +277,6 @@ export function PictureViewer({
     video.currentTime = at;
     setTime(at);
   }, []);
-
-  // Out over the same fade, timed from the transition itself: an animation
-  // event is not a clock the viewer can count on in every window.
-  const close = useCallback(() => {
-    if (leaving) return;
-    setLeaving(true);
-    const dialog = dialogRef.current;
-    const fade =
-      dialog && !reducedMotion()
-        ? parseFloat(getComputedStyle(dialog).transitionDuration) * 1000
-        : 0;
-    if (!(fade > 0)) {
-      onClose();
-      return;
-    }
-    setShown(false);
-    fadeOut.current = window.setTimeout(onClose, fade);
-  }, [leaving, onClose]);
-  useEffect(() => () => window.clearTimeout(fadeOut.current), []);
 
   const go = useCallback(
     (next: number) => {
@@ -368,24 +336,9 @@ export function PictureViewer({
           if (onControl) return;
           toggle();
           break;
-        case "Tab": {
-          const dialog = dialogRef.current;
-          if (!dialog) return;
-          const stops = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)];
-          const firstStop = stops[0];
-          const lastStop = stops.at(-1);
-          if (!firstStop || !lastStop) break;
-          const active = document.activeElement;
-          const inside = active instanceof Node && dialog.contains(active);
-          if (event.shiftKey && (!inside || active === firstStop || active === dialog)) {
-            lastStop.focus();
-          } else if (!event.shiftKey && (!inside || active === lastStop)) {
-            firstStop.focus();
-          } else {
-            return;
-          }
+        case "Tab":
+          if (!tabRing(event, dialogRef.current)) return;
           break;
-        }
         default:
           handled = false;
       }
@@ -437,88 +390,24 @@ export function PictureViewer({
           }
         : { left: SIDE_GUTTER, top: 0, right: SIDE_GUTTER, bottom: 0 };
 
-  const noDrag = { WebkitAppRegion: "no-drag" } as React.CSSProperties;
+  const noDrag = NO_DRAG;
 
-  return createPortal(
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label={
-        demo ? m.uiPictureViewerDemoFrom({ title }) : m.uiPictureViewerPicturesFrom({ title })
-      }
-      tabIndex={-1}
-      data-picture-viewer=""
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 30,
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "var(--font-ui)",
-        background: "color-mix(in srgb, var(--bg-0) 80%, transparent)",
-        backdropFilter: "var(--blur-overlay)",
-        WebkitBackdropFilter: "var(--blur-overlay)",
-        opacity: shown ? 1 : 0,
-        transition: reducedMotion() ? "none" : "opacity var(--dur-med) var(--ease-drift)",
-        outline: "none",
-        pointerEvents: leaving ? "none" : "auto",
-      }}
-    >
-      <div
-        style={
-          {
-            height: HEADER_HEIGHT,
-            flex: "none",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-            // Clear of the window controls, as the top bar is: the Mac's at
-            // the left, or the app's own at the right.
-            padding:
-              thisDesktop().windowControls === "app"
-                ? `0 ${WINDOW_CONTROLS_CLEARANCE}px 0 var(--space-4)`
-                : "0 var(--space-4) 0 calc(var(--space-8) + var(--space-4))",
-            WebkitAppRegion: "drag",
-          } as React.CSSProperties
-        }
-      >
-        <span
-          style={{
-            flex: 1,
-            minWidth: 0,
-            color: "var(--fg-1)",
-            fontSize: "var(--text-base)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {title}
-        </span>
-        <span
-          data-picture-count=""
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "var(--text-xs)",
-            color: "var(--fg-3)",
-            whiteSpace: "nowrap",
-          }}
-        >
+  return (
+    <ViewerShell
+      dialogRef={dialogRef}
+      label={demo ? m.uiPictureViewerDemoFrom({ title }) : m.uiPictureViewerPicturesFrom({ title })}
+      marker="data-picture-viewer"
+      shown={shown}
+      leaving={leaving}
+      heading={<span style={HEADING_STYLE}>{title}</span>}
+      meta={
+        <span data-picture-count="" style={META_STYLE}>
           {count}
         </span>
-        <IconButton
-          label={m.uiPictureViewerClose()}
-          {...fixedKeys("Escape")}
-          onClick={close}
-          style={noDrag}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" {...icon} aria-hidden="true">
-            <path d="M18 6 6 18M6 6l12 12" />
-          </svg>
-        </IconButton>
-      </div>
-
+      }
+      closeLabel={m.uiPictureViewerClose()}
+      close={close}
+    >
       {/* The backdrop's click is the pointer's twin of Esc, which the window
           listener above already gives the keyboard. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: the backdrop, see above */}
@@ -946,8 +835,7 @@ export function PictureViewer({
           </div>
         )}
       </div>
-    </div>,
-    document.body,
+    </ViewerShell>
   );
 }
 

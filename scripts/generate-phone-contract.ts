@@ -38,6 +38,8 @@ const cardRequests = {
   act: "inf:cards:act", close: "inf:cards:close", seen: "inf:cards:seen", seenUpdate: "inf:cards:seen-update",
   thread: "inf:cards:thread", past: "inf:cards:past", reply: "inf:cards:reply",
   picture: "inf:cards:picture", typeface: "inf:cards:typeface", media: "inf:cards:media", data: "inf:cards:data",
+  // INF-3887: a merge card's proof log opens in the phone's log reader.
+  log: "inf:cards:log",
   // INF-944 item 3: opening a minimized card on the phone brings it back on the Mac too.
   minimize: "inf:cards:minimize",
   // INF-2794: every live note's one button, Done or Got it.

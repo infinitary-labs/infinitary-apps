@@ -51,6 +51,7 @@ import { CardStack } from "../../design";
 import { type CardSize, CardSizeContext } from "../../design/cards/CardSize";
 import { CardPeeks } from "../../design/cards/CardStack";
 import { cardFace } from "../../design/cards/drawingFaces";
+import { LogReader, type ViewerLog } from "../../design/cards/LogReader";
 import { PictureViewer, type ViewerDemo } from "../../design/cards/PictureViewer";
 import { CARD_MAX_HEIGHT } from "../../design/cards/ResponseCard";
 import { focusWithRing } from "../../design/focus";
@@ -838,7 +839,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     cardId ? actOnCard(cardId, actionId, source, value, collect, mounted) : Promise.resolve();
 
   const openPictures = (
-    set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo },
+    set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo; log?: ViewerLog },
     opener: HTMLIFrameElement | null,
     recordTitle?: string,
   ) => {
@@ -1103,7 +1104,18 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
         </CardStack>
         {maximized && <FocusEdge onFocus={() => focusRound("first")} />}
       </div>
-      {viewing && (
+      {viewing?.log && (
+        <LogReader
+          title={viewing.title}
+          log={viewing.log}
+          onClose={() => {
+            setViewer(null);
+            // Back to the log's line inside the frame that opened it.
+            giveFocusBack(viewing.opener);
+          }}
+        />
+      )}
+      {viewing && !viewing.log && (
         <PictureViewer
           title={viewing.title}
           pictures={viewing.pictures}
@@ -1128,5 +1140,7 @@ type OpenPictures = {
   pictures: FramePicture[];
   /** A demo the viewer plays over its poster, the set's one picture. */
   demo?: ViewerDemo;
+  /** A proof log, read in the log reader instead of the viewer; the set has no pictures. */
+  log?: ViewerLog;
   opener: HTMLIFrameElement | null;
 };

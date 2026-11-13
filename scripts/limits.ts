@@ -485,11 +485,15 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FRAME_PICTURE_ALT_MAX: physical("none yet: the image message is dropped; the picture does not open"),
     FRAME_DEMO_SRC_MAX: record("none needed: every name the host serves fits; others are dropped"),
     FRAME_DEMO_CAPTION_MAX: physical("clipped for the player; the card body keeps the whole caption"),
+    FRAME_LOG_SRC_MAX: record("none needed: every log name the host serves fits; others are dropped"),
+    FRAME_LOG_NAME_MAX: physical("clipped by the bridge; the card body keeps the whole line"),
     FRAME_STORE_KEY_MAX: physical("refused as a malformed request (bad_request); the bound is unnamed"),
     FRAME_DATA_SRC_MAX: record("none needed: every data address the host mints fits; others are refused"),
   },
   "src/shared/plugins/frameDocument.ts": {
-    FRAME_TEMPLATE_MAX_BYTES: physical("a card body over it opens words only, its scripts off; others refused"),
+    FRAME_TEMPLATE_MAX_BYTES: physical(
+      "every card is measured against it before it is shown and handed back to its author with each part's size (cardSizeRefusal); a card body over it still opens words only, its scripts off",
+    ),
     FRAME_TITLE_MAX: physical("a longer card title is shortened with an ellipsis before the mount"),
   },
   "src/shared/plugins/manifest.ts": {

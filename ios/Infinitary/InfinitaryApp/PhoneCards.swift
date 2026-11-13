@@ -700,10 +700,15 @@ private struct PhoneCardPane: View {
             turn(to: back)
         }
         // INF-3107: a picture or diagram opens full screen, where it can be read at its own size; a recording keeps its sheet.
-        .sheet(isPresented: Binding(get: { host.presentation?["type"].text == "demo" }, set: { if !$0 { host.presentation = nil } })) {
-            if let presentation = host.presentation { CardMediaView(presentation: presentation, session: session) }
+        // INF-3887: a proof log opens in its reader, a sheet as a recording's is.
+        .sheet(isPresented: Binding(get: { ["demo", "log"].contains(host.presentation?["type"].text ?? "") },
+                                    set: { if !$0 { host.presentation = nil } })) {
+            if let presentation = host.presentation {
+                if presentation["type"].text == "log" { CardLogView(presentation: presentation, session: session) }
+                else { CardMediaView(presentation: presentation, session: session) }
+            }
         }
-        .fullScreenCover(isPresented: Binding(get: { host.presentation.map { $0["type"].text != "demo" } ?? false },
+        .fullScreenCover(isPresented: Binding(get: { host.presentation.map { !["demo", "log"].contains($0["type"].text ?? "") } ?? false },
                                               set: { if !$0 { host.presentation = nil } })) {
             if let presentation = host.presentation { CardMediaView(presentation: presentation, session: session) }
         }

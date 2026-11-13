@@ -2,6 +2,8 @@ import { cardNavigationParts } from "@shared/cardParts";
 import {
   cardDataNames,
   demoSources,
+  isReadableLogSource,
+  logSources,
   playableDemoKind,
   viewablePictures,
 } from "@shared/cardPictures";
@@ -17,6 +19,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { available } from "../app/focusRecovery";
 import { fontFrameStyle, useFontsDrawn } from "../app/fonts";
 import { Button } from "../design";
+import type { ViewerLog } from "../design/cards/LogReader";
 import type { ViewerDemo } from "../design/cards/PictureViewer";
 import { focusWithRing } from "../design/focus";
 import { useFrameController } from "../plugins/frames/FrameMount";
@@ -93,7 +96,7 @@ type BodyProps = {
    * them, where focus returns when the viewer closes.
    */
   onPicture?: (
-    set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo },
+    set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo; log?: ViewerLog },
     opener: HTMLIFrameElement | null,
     title?: string,
   ) => void;
@@ -513,6 +516,13 @@ function cardFrameSpec(
           frameRef.current,
         ),
       );
+    },
+    // A proof log opens in the log reader over the card, as a picture opens
+    // in the viewer: only a log this card's body names (INF-3887).
+    onLog: (log) => {
+      if (!admitted() || !isReadableLogSource(log.src) || !logSources(props.body).has(log.src))
+        return;
+      fromCaptain(() => props.onPicture?.({ index: 0, pictures: [], log }, frameRef.current));
     },
     // An Escape the body did not use leaves it for its card, ringed, from
     // where the reading keys scroll it and Tab goes back in.

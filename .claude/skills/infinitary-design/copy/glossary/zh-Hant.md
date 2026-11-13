@@ -18,6 +18,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | task | 任務 | Counter 項, as in 另一項任務. |
 | card | 卡片 | Counter 張. |
 | the record (a task's record) | 紀錄 / 任務紀錄 | Taiwan writes 紀錄 for a kept record, not 記錄. |
+| log (a check's kept output) | 日誌 | Distinct from the record, 紀錄. |
 | panel | 面板 | Counter 個. |
 | rail | 側欄 | Used in command search words. |
 | project | 專案 | Taiwan's word; 項目 is the mainland form and is avoided. |

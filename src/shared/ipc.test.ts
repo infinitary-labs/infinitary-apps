@@ -371,6 +371,7 @@ describe("ipc contract", () => {
       "inf:cards:data",
       "inf:cards:file",
       "inf:cards:list",
+      "inf:cards:log",
       "inf:cards:media",
       "inf:cards:minimize",
       "inf:cards:note-done",

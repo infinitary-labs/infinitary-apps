@@ -5,8 +5,9 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { Card } from "../../src/shared/cards";
-import { fillMapPart, MAP_DATA } from "../helpers/architectureMap";
+import { MAP_DATA, mapPartNaming } from "../helpers/architectureMap";
 import { scratchDir } from "../helpers/scratchDirs";
+import { keepCardData } from "./cardFixtures";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
@@ -18,9 +19,10 @@ import { pressKey, runFromSearch } from "./windowKeys";
  * (the approved plan's "What done looks like": a journey goes in by keys,
  * opens a state machine and turns on a comparison; the captain's 2026-10-04
  * rule that every feature works from the keyboard). The card body is the part
- * the runbook ships, filled as its skill says with this project's own map
- * files and a comparison read from its history, in the window's own card
- * frame. A key inside a card's frame goes through Playwright's keyboard: the
+ * the runbook ships, its data block naming a data file as its skill says
+ * (the captain: "the actual data should live in a file, and the renderer
+ * loads from the file"), the file holding this project's own map files and a
+ * comparison read from its history, in the window's own card frame. A key inside a card's frame goes through Playwright's keyboard: the
  * window's own input path reaches the main process, not a hidden window's frames.
  */
 
@@ -55,33 +57,47 @@ const renamed = new Set(Object.keys(rebuild.names?.[machineName] ?? {}));
 const added = machine.states.filter((state) => !was.states.includes(state) && !renamed.has(state));
 const kept = machine.states.filter((state) => was.states.includes(state));
 
-function mapCard(): Card {
-  return {
+const TASK = "architecture-map";
+/**
+ * The map's data, as the skill has a crewmate write it to a file and name it
+ * in the card's data block. The host keeps a copy when the card goes up, the
+ * card names the kept copy, and its script reads it through the card's bridge.
+ */
+const DATA = JSON.stringify({
+  maps: MAP_DATA.maps,
+  counts: MAP_DATA.counts,
+  compare: MAP_DATA.compare,
+});
+const DATA_FILE = "map-data.json";
+
+async function seed(userDataDir: string): Promise<void> {
+  const body = await keepCardData(
+    userDataDir,
+    TASK,
+    mapPartNaming(PART, DATA_FILE),
+    DATA_FILE,
+    DATA,
+  );
+  const card: Card = {
     id: "card-fm-architecture-map",
     author: "firstmate",
     meta: "firstmate",
     priority: 20,
     title: TITLE,
-    body: fillMapPart(
-      PART,
-      JSON.stringify({ maps: MAP_DATA.maps, counts: MAP_DATA.counts, compare: MAP_DATA.compare }),
-    ),
+    body,
     status: "ready",
     createdAt: Date.now(),
     actions: [],
   };
-}
-
-function seed(userDataDir: string): void {
   const db = openDatabase(userDataDir);
   try {
     seedTask(new TaskService({ db, strict: true }), {
-      id: "architecture-map",
+      id: TASK,
       title: "Show the project's map",
       status: "queued",
       startPolicy: "on-request",
     });
-    new CardStore(db).upsert(mapCard());
+    new CardStore(db).upsert(card);
   } finally {
     db.close();
   }
@@ -123,7 +139,7 @@ async function goIn(map: Locator, body: FrameLocator, labels: string[]): Promise
 test("the map on a card goes in by keys, opens a state machine and turns on a comparison", async () => {
   test.setTimeout(120_000);
   const userDataDir = scratchDir("infinitary-architecture-map-");
-  seed(userDataDir);
+  await seed(userDataDir);
   const launched = await launchApp({ userDataDir, withMockProvider: true });
   try {
     const { app, page } = launched;

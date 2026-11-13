@@ -162,6 +162,8 @@ const fmMarker = z.literal(FRAME_BRIDGE_VERSION);
 export const FRAME_STORE_OPS = ["get", "set", "delete", "list"] as const;
 /** The longest key (and prefix) a store request may carry, as the store itself bounds it. */
 export const FRAME_STORE_KEY_MAX = 128;
+/** The longest data address a `data` request may carry: a minted name's address fits well inside. */
+export const FRAME_DATA_SRC_MAX = 256;
 
 /**
  * The verbs a frame may ask of the host. Each is answered by exactly one
@@ -194,6 +196,9 @@ export const frameRequestSchema = z.discriminatedUnion("verb", [
     value: z.unknown().optional(),
     prefix: z.string().max(FRAME_STORE_KEY_MAX).optional(),
   }),
+  // A card's own data file by the address its body names
+  // (docs/card-authoring.md, "Data by reference"): the host answers its text.
+  z.object({ verb: z.literal("data"), src: z.string().min(1).max(FRAME_DATA_SRC_MAX) }),
 ]);
 export type FrameRequest = z.infer<typeof frameRequestSchema>;
 
@@ -426,6 +431,7 @@ export const FRAME_ERROR_CODES = [
   "read_failed",
   "fetch_failed",
   "store_failed",
+  "data_failed",
 ] as const;
 export type FrameErrorCode = (typeof FRAME_ERROR_CODES)[number];
 

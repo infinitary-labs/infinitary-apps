@@ -139,6 +139,7 @@ Inside the frame it exposes `window.inf` and nothing more:
 | `inf.fetch(alias, request)` | kept for older pages: a request of the page's own | forwarded to `inf:plugins:fetch`, which refuses every call; a panel calls its integrations through the `integrations` action instead |
 | `inf.theme` / `inf.onTheme(cb)` | theme as data; the bridge applies `data-theme` itself | - |
 | `inf.store(request)` / `inf.onStore(cb)` | the mount's own store slice (a panel in the frame realm's `PanelProps.store`): get, set, delete, list by key; `onStore` hears its keys change | the slice the HOST bound to the mount (`FrameMountSpec.store`); refused on a mount bound to none |
+| `inf.data(src)` | the text of a data file a card's body names by `src` (`docs/card-authoring.md`, "Data by reference") | the names the HOST read from the card's body (`FrameMountSpec.data`); refused on a mount with none and for any other address |
 | `inf.stage(name, value)` | a JSON snapshot staged under a name beside a card body's form; local, it leaves with a footer click or author-directed reply | the answers' 64 KiB bound at submission |
 | `inf.picture(svg)` | one of the body's own drawings in the picture viewer, as a press on a diagram sends it, marked as asked; one-way, nothing comes back | a mount that opens pictures; the host's own gesture and focus rules, as for a press |
 

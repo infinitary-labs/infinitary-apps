@@ -480,6 +480,12 @@ export type FirstmateApi = {
      */
     openPage: (cardId: string) => Promise<{ refusal?: string; browser?: TaskBrowserHandle }>;
     /**
+     * A card's kept data file by its minted name, the text its frame asks
+     * the bridge for (docs/card-authoring.md, "Data by reference"); a name
+     * the home did not mint is refused.
+     */
+    data: (name: string) => Promise<{ contentType: "application/json"; data: string }>;
+    /**
      * Save a file the card carries into this computer's Downloads, on the
      * captain's click: the name it took there and its full path, or a
      * refusal in words thrown as an error.

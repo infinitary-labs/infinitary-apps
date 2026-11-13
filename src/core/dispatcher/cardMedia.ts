@@ -1,6 +1,8 @@
 import { type FileHandle, open, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  CARD_DATA_TYPE,
+  parseCardDataFileName,
   parseCardMediaFileName,
   parseCardPictureFileName,
   parseCardTypefaceFileName,
@@ -9,7 +11,11 @@ import type { InvokeRequest, InvokeResponse } from "@shared/ipc";
 import type { CoreServices } from "../coreServices";
 import { crewmateCardPicturesDir } from "../paths";
 
-type MediaChannel = "inf:cards:picture" | "inf:cards:typeface" | "inf:cards:media";
+type MediaChannel =
+  | "inf:cards:picture"
+  | "inf:cards:typeface"
+  | "inf:cards:media"
+  | "inf:cards:data";
 type MediaHandlers = {
   [C in MediaChannel]: (...args: InvokeRequest<C>) => Promise<InvokeResponse<C>>;
 };
@@ -49,6 +55,25 @@ export function cardMediaHandlers(services: CoreServices): MediaHandlers {
         throw new Error("No card font has that name.");
       }
       return { contentType: typeface.contentType, data: bytes.toString("base64") };
+    },
+
+    // The home's own copy of a card's data file, for the frame that asks
+    // the bridge for it (docs/card-authoring.md, "Data by reference") in a
+    // window, a view or a phone: located from the minted name alone, as a
+    // picture is; a refusal names no path.
+    "inf:cards:data": async (name) => {
+      const data = parseCardDataFileName(name);
+      if (!data) throw new Error("That is not the name of a card's data file.");
+      let text: string;
+      try {
+        text = await readFile(
+          join(crewmateCardPicturesDir(services.paths, data.taskId), data.fileName),
+          "utf8",
+        );
+      } catch {
+        throw new Error("No card data file has that name.");
+      }
+      return { contentType: CARD_DATA_TYPE, data: text };
     },
 
     // A piece of the home's own copy of a card's demo recording, for a

@@ -14,11 +14,14 @@ import {
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
+  CARD_DATA_TYPE,
   CARD_MEDIA_TYPES,
   CARD_TYPEFACE_TYPES,
   type CardMediaExtension,
   type CardPictureExtension,
   type CardTypefaceExtension,
+  cardDataFileName,
+  cardDataUrl,
   cardMediaFileName,
   cardMediaUrl,
   cardPictureFileName,
@@ -75,6 +78,15 @@ import { fontFaceUrls } from "./fontFaces";
  * own bytes give it, and rewrites only that `url()` (to the frame scheme's
  * `typefaces` host). A font named by a URL is left as written, as a
  * picture is: the frame loads none.
+ *
+ * A card's data file (docs/card-authoring.md "Data by reference") is markup
+ * too: a `<script type="application/json" src="<path>">` names a JSON file,
+ * such as the map part's data. The host checks it is UTF-8 JSON within
+ * `MAX_DATA_FILE_BYTES`, copies it beside the pictures under a name its own
+ * bytes give it, and rewrites only that `src` (to `cardDataUrl`). No host of
+ * the frame scheme serves it and a frame loads nothing by it: the body's own
+ * script asks the bridge for the text (`inf.data`). One named by a URL is
+ * left as written.
  */
 
 export const MAX_PICTURE_BYTES = 8 * 1024 * 1024;
@@ -135,6 +147,9 @@ export type TypefaceProbe = (
     contentType: (typeof CARD_TYPEFACE_TYPES)[CardTypefaceExtension];
   }[],
 ) => Promise<TypefaceProbeResult[]>;
+
+/** The largest data file a card may name; it counts toward the card's total with its pictures. */
+export const MAX_DATA_FILE_BYTES = 8 * 1024 * 1024;
 
 /** The class that makes a figure one group of pictures (the frame stylesheet lays it out). */
 export const PICTURE_GROUP_CLASS = "inf-pictures";
@@ -238,11 +253,25 @@ type Found = {
   nested: boolean;
   /** Each `<style>` element's sheet: the byte range of its text in the body. */
   styles: { start: number; end: number }[];
+  /** Each `<script type="application/json">` that names its data by `src`. */
+  data: FoundTag[];
 };
+
+/** Whether a script element holds data rather than code: its type is JSON. */
+function isDataScript(attribs: Record<string, string>): boolean {
+  return (attribs.type ?? "").trim().toLowerCase() === CARD_DATA_TYPE;
+}
 
 /** Every `<img>` in the body, in order, each tagged with its group, and every demo figure. */
 function findImages(body: string): Found {
-  const found: Found = { images: [], demos: [], misplaced: [], nested: false, styles: [] };
+  const found: Found = {
+    images: [],
+    demos: [],
+    misplaced: [],
+    nested: false,
+    styles: [],
+    data: [],
+  };
   // Open figures, innermost last: whether each is a group, where it starts, and its demo.
   const figures: { group: boolean; start: number; demo?: FoundDemo }[] = [];
   // The sheet of the style element open now; its text arrives raw, maybe in pieces.
@@ -257,6 +286,15 @@ function findImages(body: string): Found {
       onopentag(name, attribs) {
         if (name === "style") {
           sheet = { start: parser.endIndex + 1, end: parser.endIndex + 1 };
+          return;
+        }
+        if (name === "script") {
+          if (isDataScript(attribs) && attribs.src !== undefined)
+            found.data.push({
+              start: parser.startIndex,
+              end: parser.endIndex + 1,
+              attribs: Object.entries(attribs),
+            });
           return;
         }
         const isDemo = hasHook(attribs, "demo");
@@ -516,6 +554,42 @@ async function loadTypefaces(
   });
 }
 
+/** A card's data file, read once: the spelling it was first named by, its real file and its bytes. */
+type VerifiedData = { src: string; file: string; bytes: Buffer };
+
+const DATA_REFUSED = "Card data refused";
+
+/**
+ * One data file, checked as its own file: a contained regular file within
+ * `MAX_DATA_FILE_BYTES` holding UTF-8 JSON. The bytes read here are the ones
+ * counted and copied, so a file changed after the check is never what a
+ * frame reads.
+ */
+async function readDataFile(src: string, file: string): Promise<VerifiedData> {
+  const tooLarge = () =>
+    new Error(
+      `${DATA_REFUSED}: ${src} must be a regular file no larger than ${MAX_DATA_FILE_BYTES / 1024 / 1024}MB; leave out what the card does not draw.`,
+    );
+  const info = await stat(file);
+  if (!info.isFile() || info.size > MAX_DATA_FILE_BYTES) throw tooLarge();
+  const bytes = await readFile(file);
+  if (bytes.length > MAX_DATA_FILE_BYTES) throw tooLarge();
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(`${DATA_REFUSED}: ${src} is not UTF-8 text.`);
+  }
+  try {
+    JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `${DATA_REFUSED}: ${src} is not JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  return { src, file, bytes };
+}
+
 /**
  * Keeps `bytes` at `file`, a name drawn from those bytes: a file there that
  * already holds exactly them is left alone, and anything else is replaced
@@ -592,12 +666,12 @@ export function restoreKeptCopy(
 }
 
 /**
- * The name a font's copy is kept under: the task, then 32 hex of the bytes'
- * own SHA-256, as `keepPictureFile` names a picture - so the same font keeps
- * one name in every version of a card, and a revision that leaves it alone
- * leaves its style sheet's text alone too.
+ * The name a font's or a data file's copy is kept under: the task, then 32
+ * hex of the bytes' own SHA-256, as `keepPictureFile` names a picture - so
+ * the same file keeps one name in every version of a card, and a revision
+ * that leaves it alone leaves its markup alone too.
  */
-function typefaceId(taskId: string, bytes: Buffer): string {
+function contentId(taskId: string, bytes: Buffer): string {
   return `${taskId}-${createHash("sha256").update(bytes).digest("hex").slice(0, 32)}`;
 }
 
@@ -704,19 +778,27 @@ export async function verifyCardImages(
       })),
     )
     .filter(({ src }) => src !== "" && !isUrl(src));
-  if (named.length === 0 && fonts.length === 0) return { body, pictures: [] };
+  // Each data script that names its file by a path.
+  const data = found.data
+    .map((tag) => ({ tag, src: attribute(tag, "src")?.trim() ?? "" }))
+    .filter(({ src }) => src !== "" && !isUrl(src));
+  if (named.length === 0 && fonts.length === 0 && data.length === 0) return { body, pictures: [] };
   if (!root) {
     throw new Error(
       named.length > 0
         ? "Card picture refused: there is no working copy here to name a picture from; draw the figure in the body instead."
-        : "Card font refused: there is no working copy here to name a font file from; draw the body in the app's own typefaces.",
+        : fonts.length > 0
+          ? "Card font refused: there is no working copy here to name a font file from; draw the body in the app's own typefaces."
+          : `${DATA_REFUSED}: there is no working copy here to name a data file from; put the data in the body instead.`,
     );
   }
   if (!isPictureTaskId(root.taskId)) {
     throw new Error(
       named.length > 0
         ? "Card picture refused: this task cannot keep pictures."
-        : "Card font refused: this task cannot keep font files.",
+        : fonts.length > 0
+          ? "Card font refused: this task cannot keep font files."
+          : `${DATA_REFUSED}: this task cannot keep data files.`,
     );
   }
 
@@ -728,7 +810,7 @@ export async function verifyCardImages(
   const homes: PictureHomes = { worktree, ...(evidence ? { evidence } : {}) };
   const tooMuch = () =>
     new Error(
-      `Card picture refused: a card's pictures, recordings and fonts may total at most ${MAX_CARD_PICTURE_BYTES / 1024 / 1024}MB; show fewer or smaller ones.`,
+      `Card picture refused: a card's pictures, recordings, fonts and data files may total at most ${MAX_CARD_PICTURE_BYTES / 1024 / 1024}MB; show fewer or smaller ones.`,
     );
   const verified = new Map<number, Verified>();
   let total = 0;
@@ -771,6 +853,21 @@ export async function verifyCardImages(
     typefaces.set(src, typeface);
   }
   await loadTypefaces([...files.values()], root.typefaceProbe);
+  // Each data file once, however many scripts name it and however its path is spelled.
+  const dataFiles = new Map<string, VerifiedData>();
+  const dataByFile = new Map<string, VerifiedData>();
+  for (const { src } of data) {
+    if (dataFiles.has(src)) continue;
+    const file = await containedFile(src, homes, DATA_REFUSED);
+    let read = dataByFile.get(file);
+    if (!read) {
+      read = await readDataFile(src, file);
+      dataByFile.set(file, read);
+      total += read.bytes.length;
+      if (total > MAX_CARD_PICTURE_BYTES) throw tooMuch();
+    }
+    dataFiles.set(src, read);
+  }
 
   await mkdir(root.dir, { recursive: true });
   const mint = () => `${root.taskId}-${randomBytes(16).toString("hex")}`;
@@ -846,12 +943,28 @@ export async function verifyCardImages(
     const typeface = typefaces.get(font.src) as VerifiedTypeface;
     let url = typefaceCopies.get(typeface.file);
     if (!url) {
-      const id = typefaceId(root.taskId, typeface.bytes);
+      const id = contentId(root.taskId, typeface.bytes);
       keepContentFile(join(root.dir, cardTypefaceFileName(id, typeface.kind)), typeface.bytes);
       url = cardTypefaceUrl(id, typeface.kind);
       typefaceCopies.set(typeface.file, url);
     }
     edits.push({ start: font.start, end: font.end, text: `url("${url}")` });
+  }
+  const dataCopies = new Map<string, string>();
+  for (const { tag, src } of data) {
+    const read = dataFiles.get(src) as VerifiedData;
+    let url = dataCopies.get(read.file);
+    if (!url) {
+      const id = contentId(root.taskId, read.bytes);
+      keepContentFile(join(root.dir, cardDataFileName(id)), read.bytes);
+      url = cardDataUrl(id);
+      dataCopies.set(read.file, url);
+    }
+    edits.push({
+      start: tag.start,
+      end: tag.end,
+      text: rewrittenStartTag("script", tag, new Map([["src", url]])),
+    });
   }
   edits.sort((a, b) => a.start - b.start);
   let rewritten = "";

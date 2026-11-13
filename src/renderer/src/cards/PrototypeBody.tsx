@@ -1,5 +1,10 @@
 import { cardNavigationParts } from "@shared/cardParts";
-import { demoSources, playableDemoKind, viewablePictures } from "@shared/cardPictures";
+import {
+  cardDataNames,
+  demoSources,
+  playableDemoKind,
+  viewablePictures,
+} from "@shared/cardPictures";
 import type { CardWidth } from "@shared/cards";
 import { isPreviewBody, REVISION_TARGETS_MAX } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
@@ -420,6 +425,8 @@ function cardFrameSpec(
     pluginId: "host",
     reads: [],
     actions: props.declaredActionIds,
+    // Only the data files this body names, as the host kept them.
+    data: new Set(cardDataNames(props.body)),
     ...(props.width ? { width: props.width } : {}),
     ...(props.frameInset ? { inset: props.frameInset } : {}),
     // The action's own outcome goes back to the frame; a body the captain

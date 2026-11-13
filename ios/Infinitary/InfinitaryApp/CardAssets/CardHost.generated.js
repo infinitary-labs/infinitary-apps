@@ -6458,6 +6458,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const fmMarker = literal(FRAME_BRIDGE_VERSION);
   const FRAME_STORE_OPS = ["get", "set", "delete", "list"];
   const FRAME_STORE_KEY_MAX = 128;
+  const FRAME_DATA_SRC_MAX = 256;
   const frameRequestSchema = discriminatedUnion("verb", [
     object({
       verb: literal("subscribe"),
@@ -6482,7 +6483,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       key: string().min(1).max(FRAME_STORE_KEY_MAX).optional(),
       value: unknown().optional(),
       prefix: string().max(FRAME_STORE_KEY_MAX).optional()
-    })
+    }),
+    // A card's own data file by the address its body names
+    // (docs/card-authoring.md, "Data by reference"): the host answers its text.
+    object({ verb: literal("data"), src: string().min(1).max(FRAME_DATA_SRC_MAX) })
   ]);
   const framePictureSchema = object({
     src: string().min(1).max(FRAME_PICTURE_SRC_MAX),
@@ -7281,6 +7285,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     },
     store: function (req) {
       return request("store", req);
+    },
+    // A data file the card's own body names by \`src\` (docs/card-authoring.md,
+    // "Data by reference"): the host answers its text, never another file.
+    data: function (src) {
+      return request("data", { src: String(src) });
     },
     onStore: function (listener) {
       storeListeners.push(listener);
@@ -8484,7 +8493,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-gkdHJ/BYEqZJ65wWk9SrdDWB4nBQ4V5m5DvtTcSlahE=";
+  const FRAME_BRIDGE_SHA256 = "sha256-cZ1cbkq4+2pYAbd9QoBpJSILsfmjikMInStlh39Reto=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -8492,6 +8501,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     mp4: "video/mp4",
     gif: "image/gif"
   };
+  const CARD_DATA_HOST = "data";
   const CARD_PICTURE_TYPES = {
     png: "image/png",
     jpg: "image/jpeg",
@@ -8499,6 +8509,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   };
   const FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(png|jpg|webp)$/;
   const MEDIA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(mp4|gif)$/;
+  const DATA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.json$/;
   function parseCardPictureFileName(name) {
     const match = FILE_NAME.exec(name);
     if (!match) return void 0;
@@ -8517,6 +8528,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (!taskId || !extension) return void 0;
     const kind = extension;
     return { taskId, fileName: name, kind, contentType: CARD_MEDIA_TYPES[kind] };
+  }
+  function parseCardDataFileName(name) {
+    const match = DATA_FILE_NAME.exec(name);
+    if (!match) return void 0;
+    const [, taskId, hex] = match;
+    if (!taskId || !hex) return void 0;
+    return { taskId, id: `${taskId}-${hex}`, fileName: name };
+  }
+  function cardDataName(src) {
+    const prefix = `${APP_FRAME_SCHEME}://${CARD_DATA_HOST}/`;
+    if (!src.startsWith(prefix)) return void 0;
+    const name = src.slice(prefix.length);
+    return parseCardDataFileName(name) ? name : void 0;
+  }
+  function cardDataNames(body) {
+    const prefix = `${APP_FRAME_SCHEME}://${CARD_DATA_HOST}/`;
+    const names = [];
+    for (const part of body.split(prefix).slice(1)) {
+      const name = /^[^"'\s>);]+/.exec(part)?.[0] ?? "";
+      if (parseCardDataFileName(name) && !names.includes(name)) names.push(name);
+    }
+    return names;
   }
   function playableDemoKind(src) {
     const prefix = `${APP_FRAME_SCHEME}://${CARD_MEDIA_HOST}/`;
@@ -17148,6 +17181,15 @@ ${REVISION_HIGHLIGHT_STYLE}`;
           id: message.id,
           ...ok ? { ok, result: value2 } : { ok, error: { code: "refused", message: String(value2) } }
         });
+        if (request.success && request.data.verb === "data") {
+          const name = cardDataName(request.data.src);
+          if (!name || !cardDataNames(input.body).includes(name)) {
+            reply(false, "This card names no such data file.");
+            return;
+          }
+          void native({ type: "data", name }).then((text) => reply(true, text), (error) => reply(false, error));
+          break;
+        }
         if (!request.success || request.data.verb !== "action" || input.readOnly || !input.actions.includes(request.data.action)) {
           reply(false, "This card cannot do that.");
           return;

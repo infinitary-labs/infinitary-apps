@@ -128,6 +128,22 @@ The test load catches a file whose structure is sound and whose data is not, suc
 A crewmate on a computer that runs work has the check and the test load run there, by that computer's own probe, and sends each kept copy home before the card (`inf:work:typeface`), which the home keeps only under that task's own id; a paired view asks the home for a font by its minted name (`inf:cards:typeface`), and its own frame scheme serves the answer, never a path.
 The home keeps what that computer sends as it keeps its pictures, trusting the check the paired computer ran; the frame's sanitizer and its process of its own still stand between those bytes and the home's own window.
 
+## Data files for a card's script (INF-3989)
+
+The captain asked for the architecture map's data to live in a file the map loads, instead of riding the card body ("the actual data should live in a file, and the renderer loads from the file").
+A body names a JSON file in a `<script type="application/json" src>` block; the host checks and keeps it, and the body's script asks the bridge for its text (`docs/card-authoring.md`, "Data by reference").
+The frame's policy is unchanged: `connect-src` stays at none, no host of the frame scheme serves a data file, and a JSON block is never fetched or run.
+
+**Layers.**
+
+- The host's check at `emit_card`: a contained regular file of at most 8 MB, UTF-8 text that parses as JSON, its bytes the ones counted and copied, named by those bytes under that task's own id.
+- The bridge's `data` request carries an address, never a path; the window answers only a minted name (`<taskId>-<32 hex>.json`, parsed by `@shared/cardPictures`) that the card's own body carries (`FrameMountSpec.data`), counted against `FRAME_MAX_IN_FLIGHT`, and refuses anything else.
+- The `inf:cards:data` read answers a minted name from `crewmates/<taskId>/cards/` alone: no path segments, no listing.
+- The answer is text handed to the card's own script, which runs in its sandboxed frame as it would with the same data in its body; nothing in the text is run by the host.
+- A copied address reaches only data the captain already has, as with pictures.
+- A computer that runs work checks the file there and sends it home before the card as a card's media, only to a home that lists the `card-data` change; the phone asks its Mac for the text the same way, from its trusted parent page alone (`ios/Infinitary/CardRuntime/cardHost.ts`).
+- The bridge gained one request verb, `data`, and one refusal code, `data_failed`; `FRAME_BRIDGE_SHA256` moved with it.
+
 ## Phone cards
 
 Both native WebKit views set `allowsLinkPreview = false`, so system long-press previews cannot load a link outside the card’s script policy.
@@ -142,7 +158,7 @@ Navigation delegates refuse every destination except the initial parent and its 
 
 WebKit exposes registered message handlers to child frames too, so `frameInfo.isMainFrame` is a mandatory native admission check.
 The parent accepts only its iframe’s window, binds its first bridge document and parses the existing shared message and request schemas.
-Its native vocabulary is closed: hashes, drawing, form readings, watchdog replies, effect-free card actions, read-only presentation requests, a link, a draft and a task key, never an IPC channel or a caller-chosen action source.
+Its native vocabulary is closed: hashes, drawing, form readings, watchdog replies, effect-free card actions, read-only presentation requests, a data file the body names, a link, a draft and a task key, never an IPC channel or a caller-chosen action source.
 A link, a draft and a picture leave only on the captain's own press in the body; a link must pass `isSafeCardHref` in the parent and a web scheme in native code, and then opens in the device's default browser, never inside the card.
 A draft only fills the message box, which sends nothing until the captain does, and a task key opens a record only when it names a task the phone was given.
 A settle card's fact strip is drawn by a second host of the same kind, read-only and with no actions.

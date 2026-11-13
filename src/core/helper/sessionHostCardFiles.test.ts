@@ -5,6 +5,7 @@ import { CARD_MEDIA_PIECE_BYTES } from "@shared/cardPictures";
 import type { CardPicture } from "@shared/cards";
 import { placedTaskFolders } from "@shared/work";
 import { describe, expect, it } from "vitest";
+import { MAP_DATA } from "../../../tests/helpers/architectureMap";
 import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { gif } from "../../../tests/helpers/gifFixture";
@@ -251,6 +252,68 @@ describe("a conversation held on a computer that runs work", () => {
       "runs an older Infinitary that cannot show a project's fonts",
     );
   });
+
+  // The captain, on the map grown too large for a card: "the actual data
+  // should live in a file, and the renderer loads from the file". A card's
+  // data file goes home before the card, so the home holds it when the
+  // card's script asks; a home that cannot hand one over gets none of it.
+  it.each([
+    { homeChanges: ["card-data"], sent: true },
+    { homeChanges: [], sent: false },
+  ])(
+    "sends a card's data file before the card only to a home that lists its change ($homeChanges)",
+    async ({ homeChanges, sent }) => {
+      const at = await placed({ homeChanges });
+      await at.open();
+      const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+      const mapJson = JSON.stringify(MAP_DATA);
+      writeFileSync(join(folders.evidence, "map-data.json"), mapJson);
+      writeFileSync(join(folders.evidence, "after.png"), png());
+      model([
+        {
+          tools: [
+            {
+              name: "emit_card",
+              args: {
+                title: "The core's map from another Mac",
+                // A picture beside the data: refused first, it never crosses either.
+                body: `<p>The core's parts.</p><script type="application/json" data-map src="${join(folders.evidence, "map-data.json")}"></script><img src="${join(folders.evidence, "after.png")}" alt="The map">`,
+              },
+            },
+          ],
+        },
+        { text: "Done." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:data", task: TASK, text: "Show it." },
+      ]);
+      await at.ended(1);
+
+      const toolEnd = at.home.events.find(
+        (record) => record.event.type === "tool_end" && record.event.toolName === "emit_card",
+      );
+      if (!sent) {
+        expect(at.home.effects.map((effect) => effect.channel)).toEqual([]);
+        expect(toolEnd?.event).toMatchObject({ isError: true });
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+          "runs an older Infinitary that cannot hand a card its data file",
+        );
+        return;
+      }
+      expect(toolEnd?.event).toMatchObject({ isError: false });
+      expect(at.home.effects.map((effect) => effect.channel)).toEqual([
+        "inf:work:media",
+        "inf:work:picture",
+        "inf:work:card",
+      ]);
+      const [data, , card] = at.home.effects;
+      expect(data?.request).toMatchObject({ extension: "json", offset: 0, size: mapJson.length });
+      expect(String(at.home.recordings.get(String(data?.request.id)))).toBe(mapJson);
+      expect(String((card?.request.card as { body?: string } | undefined)?.body)).toContain(
+        `src="app-frame://data/${data?.request.id}.json"`,
+      );
+    },
+  );
 
   // INF-3715: an older home would drop the summary and show the merge card
   // without it, so the computer sends nothing and tells its crewmate why.

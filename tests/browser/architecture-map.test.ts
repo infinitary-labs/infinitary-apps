@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { commands, page } from "vitest/browser";
 import part from "../../resources/runbooks/architecture/skills/advanced-architecture/parts/map.html?raw";
 import { cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
-import { fillMapPart, MAP_DATA } from "../helpers/architectureMap";
+import { fillMapPart, MAP_DATA, mapPartNaming } from "../helpers/architectureMap";
 
 /**
  * The Advanced architecture runbook's map part (the approved plan's "What
@@ -191,8 +191,15 @@ const call = <K extends keyof Reader>(name: K, ...args: Parameters<Reader[K]>) =
   ) as Promise<ReturnType<Reader[K]>>;
 const read = () => call("read");
 
+/** The address a card names its kept data file by, once the host keeps it. */
+const DATA_SRC = `app-frame://data/t1-${"a".repeat(32)}.json`;
+const DATA_REFUSED = "No card data file has that name.";
+
 type Heard = {
   type: string;
+  id?: number;
+  verb?: string;
+  src?: string;
   of?: number;
   answers?: { name: string }[];
   pictures?: { src: string; alt: string; width: number; height: number }[];
@@ -209,11 +216,19 @@ async function mounted(
     form?: boolean;
     /** The card body's width in pixels. */
     width?: number;
+    /**
+     * The data block names a kept data file instead, as the host leaves it,
+     * and the window answers the bridge's ask for it with the data, or
+     * refuses it as it does a file the home cannot hand over.
+     */
+    file?: "answered" | "refused";
   } = {},
 ): Promise<Heard[]> {
   const data = options.data ?? MAP_DATA;
   const block = JSON.stringify(options.open ? { ...data, open: options.open } : data);
-  const html = fillMapPart(part, options.pack ? await packed(block) : block, options.pack ?? false);
+  const html = options.file
+    ? mapPartNaming(part, DATA_SRC)
+    : fillMapPart(part, options.pack ? await packed(block) : block, options.pack ?? false);
   const scripts = [...new DOMParser().parseFromString(html, "text/html").querySelectorAll("script")]
     .filter((script) => !script.src && script.textContent)
     .map((script) => script.textContent ?? "");
@@ -226,9 +241,16 @@ async function mounted(
     if (event.source !== frame.contentWindow) return;
     const data = event.data as Heard & { document?: unknown };
     heard.push(data);
+    const post = (message: object) =>
+      frame.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, ...message }, "*");
+    if (data.type === "request" && data.verb === "data") {
+      const answer =
+        options.file === "answered" && data.src === DATA_SRC
+          ? { ok: true, result: block }
+          : { ok: false, error: { code: "data_failed", message: DATA_REFUSED } };
+      post({ type: "response", document: data.document, id: data.id, ...answer });
+    }
     if (data.type === "ready") {
-      const post = (message: object) =>
-        frame.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, ...message }, "*");
       post({ type: "keys", pictures: true, escape: true });
       if (options.form) post({ type: "form", fill: null });
       post({ type: "initialize", document: data.document });
@@ -241,8 +263,10 @@ async function mounted(
     html,
   });
   document.body.replaceChildren(frame);
+  // A map whose data could not be read draws no boxes, only the problem it lists.
+  const drawn = options.file === "refused" ? "#map [data-bad]:not([hidden])" : "#map [data-box]";
   await expect
-    .poll(() => inFrame(() => document.querySelectorAll("#map [data-box]").length, null))
+    .poll(() => inFrame((selector) => document.querySelectorAll(selector).length, drawn))
     .toBeGreaterThan(0);
   await inFrame(install, null);
   return heard;
@@ -375,6 +399,27 @@ test("a packed data block draws the same map", async () => {
   expect(fromPacked.problems).toBe("");
   expect(fromPacked.boxes.map((box) => box.label)).toEqual(plain.boxes.map((box) => box.label));
   expect(fromPacked.edges).toEqual(plain.edges);
+});
+
+// The captain, on the map grown too large for a card: "the actual data should
+// live in a file, and the renderer loads from the file". The part asks the
+// card's bridge for the file its block names and draws what it answers.
+test("a data block naming its file draws the same map from the bridge's answer, and lists a problem when it cannot be read", async () => {
+  await mounted("dark");
+  const plain = await read();
+  const heard = await mounted("dark", { file: "answered" });
+  const fromFile = await read();
+  expect(heard.filter((message) => message.type === "request")).toMatchObject([
+    { verb: "data", src: DATA_SRC },
+  ]);
+  expect(fromFile.problems).toBe("");
+  expect(fromFile.boxes.map((box) => box.label)).toEqual(plain.boxes.map((box) => box.label));
+  expect(fromFile.edges).toEqual(plain.edges);
+
+  await mounted("dark", { file: "refused" });
+  const refused = await read();
+  expect(refused.problems).toContain(`The map data could not be read: ${DATA_REFUSED}`);
+  expect(refused.boxes).toEqual([]);
 });
 
 type Change = { label: string; files: [string, string, number, number][] };

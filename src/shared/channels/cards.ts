@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { cardFilePieceSchema, cardFileSavedSchema } from "../cardFiles";
 import { cardNotesSchema } from "../cardNotes";
-import { CARD_MEDIA_PIECE_BYTES, CARD_MEDIA_TYPES, CARD_TYPEFACE_TYPES } from "../cardPictures";
+import {
+  CARD_DATA_TYPE,
+  CARD_MEDIA_PIECE_BYTES,
+  CARD_MEDIA_TYPES,
+  CARD_TYPEFACE_TYPES,
+} from "../cardPictures";
 import {
   CARD_REPLY_MAX_CHARS,
   cardActionSourceSchema,
@@ -135,6 +140,22 @@ export const cardChannels = {
         CARD_TYPEFACE_TYPES.otf,
       ]),
       /** The file, base64. */
+      data: z.string(),
+    }),
+  },
+  // A card's data file by its file name (docs/card-authoring.md, "Data by
+  // reference"): how a window, a view or a phone hands a card's frame the
+  // text its script asks the bridge for (`inf.data`), from the home's own
+  // copy. Only a minted data name (`@shared/cardPictures`); anything else is
+  // refused.
+  "inf:cards:data": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(128)]),
+    response: z.object({
+      contentType: z.literal(CARD_DATA_TYPE),
+      /** The file's text, as the host checked and kept it. */
       data: z.string(),
     }),
   },

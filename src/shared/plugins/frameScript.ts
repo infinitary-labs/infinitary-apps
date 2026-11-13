@@ -739,6 +739,11 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     store: function (req) {
       return request("store", req);
     },
+    // A data file the card's own body names by \`src\` (docs/card-authoring.md,
+    // "Data by reference"): the host answers its text, never another file.
+    data: function (src) {
+      return request("data", { src: String(src) });
+    },
     onStore: function (listener) {
       storeListeners.push(listener);
       return function () {
@@ -1948,4 +1953,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-gkdHJ/BYEqZJ65wWk9SrdDWB4nBQ4V5m5DvtTcSlahE=";
+export const FRAME_BRIDGE_SHA256 = "sha256-cZ1cbkq4+2pYAbd9QoBpJSILsfmjikMInStlh39Reto=";

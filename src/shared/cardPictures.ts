@@ -71,6 +71,19 @@ export const CARD_TYPEFACE_KINDS = [
   "otf",
 ] as const satisfies readonly CardTypefaceExtension[];
 
+/**
+ * Where a card's data files are named (docs/card-authoring.md, "Data by
+ * reference"): a `<script type="application/json" src>` names a JSON file in
+ * the working copy, and the host keeps its copy beside the pictures under
+ * the same self-locating names. No host of the frame scheme serves it: a
+ * frame loads nothing by it, and its script asks the bridge for the text
+ * (`inf.data`), which the window reads with `inf:cards:data`.
+ */
+export const CARD_DATA_HOST = "data";
+
+/** The type a card's data file is, and the one extension its copy is stored under. */
+export const CARD_DATA_TYPE = "application/json";
+
 /** The formats a card picture may be, by the extension its copy is stored under. */
 export const CARD_PICTURE_TYPES = {
   png: "image/png",
@@ -91,6 +104,7 @@ export const RELEASE_NOTES_PICTURE_OWNER = "release-notes";
 const FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(png|jpg|webp)$/;
 const MEDIA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(mp4|gif)$/;
 const TYPEFACE_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(woff2|woff|ttf|otf)$/;
+const DATA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.json$/;
 
 /** Whether a task id can name a picture (it becomes part of a file and a URL). */
 export function isPictureTaskId(taskId: string): boolean {
@@ -211,6 +225,53 @@ export function cardTypefaceNames(body: string): string[] {
   for (const part of body.split(prefix).slice(1)) {
     const name = /^[^"'\s>);]+/.exec(part)?.[0] ?? "";
     if (parseCardTypefaceFileName(name) && !names.includes(name)) names.push(name);
+  }
+  return names;
+}
+
+/** The file name a card data file's copy is stored under, and the name its body gives it. */
+export function cardDataFileName(id: string): string {
+  return `${id}.json`;
+}
+
+/** The address a card body names a kept data file by, in its `<script type="application/json">`'s `src`. */
+export function cardDataUrl(id: string): string {
+  return `${APP_FRAME_SCHEME}://${CARD_DATA_HOST}/${cardDataFileName(id)}`;
+}
+
+/**
+ * Parses a kept data file's name, as `parseCardPictureFileName` does for
+ * pictures: anything not exactly a minted data name is `undefined`.
+ */
+export function parseCardDataFileName(
+  name: string,
+): { taskId: string; id: string; fileName: string } | undefined {
+  const match = DATA_FILE_NAME.exec(name);
+  if (!match) return undefined;
+  const [, taskId, hex] = match;
+  if (!taskId || !hex) return undefined;
+  return { taskId, id: `${taskId}-${hex}`, fileName: name };
+}
+
+/** The kept data file an address names, when it is one exactly as minted (`cardDataUrl`). */
+export function cardDataName(src: string): string | undefined {
+  const prefix = `${APP_FRAME_SCHEME}://${CARD_DATA_HOST}/`;
+  if (!src.startsWith(prefix)) return undefined;
+  const name = src.slice(prefix.length);
+  return parseCardDataFileName(name) ? name : undefined;
+}
+
+/**
+ * The kept data files a card body names, each once, by file name: the only
+ * ones its frame may ask the bridge for (`inf.data`), and the ones a computer
+ * that runs work sends its home before the card (docs/helper.md).
+ */
+export function cardDataNames(body: string): string[] {
+  const prefix = `${APP_FRAME_SCHEME}://${CARD_DATA_HOST}/`;
+  const names: string[] = [];
+  for (const part of body.split(prefix).slice(1)) {
+    const name = /^[^"'\s>);]+/.exec(part)?.[0] ?? "";
+    if (parseCardDataFileName(name) && !names.includes(name)) names.push(name);
   }
   return names;
 }

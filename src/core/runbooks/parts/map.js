@@ -24,8 +24,13 @@
   let D = {};
   try {
     const block = $("script[data-map]");
+    const src = block.getAttribute("src");
     let text = block.textContent;
-    if (block.hasAttribute("data-packed")) {
+    if (src) {
+      // a card names its data in a file, as it names a picture: the card's bridge hands the app's copy over
+      if (!window.inf?.data) throw new Error("only a card can read its data file");
+      text = await window.inf.data(src);
+    } else if (block.hasAttribute("data-packed")) {
       const bin = Uint8Array.from(atob(text.trim()), (c) => c.charCodeAt(0));
       text = await new Response(
         new Blob([bin]).stream().pipeThrough(new DecompressionStream("deflate-raw")),

@@ -164,6 +164,7 @@ export function useFrameController(
         executor: appReadExecutor(),
         fetch: (call) => window.infinitary.plugins.fetch(call),
         store: window.infinitary.plugins.db,
+        data: async (name) => (await window.infinitary.cards.data(name)).data,
         paused: () => frameWatchPaused(frameRef.current),
         askMain: () => window.infinitary.plugins.mainAlive(),
       },
@@ -208,6 +209,14 @@ export function useFrameController(
       grant: { sql: viewsKey ? viewsKey.split(",") : [] },
     });
   }, [readsKey, viewsKey, spec.actions]);
+
+  // A revised body may name other data files: compared by content.
+  const dataKey = spec.data ? [...spec.data].join(",") : undefined;
+  useEffect(() => {
+    controllerRef.current?.update({
+      data: dataKey === undefined ? undefined : new Set(dataKey ? dataKey.split(",") : []),
+    });
+  }, [dataKey]);
 
   useEffect(() => {
     controllerRef.current?.setTheme(theme);

@@ -1,5 +1,5 @@
 import { type Card, cardAnswersSchema, cardQuestionsSchema, isPreviewBody, splitSettleFacts, takesTaskFacts } from "../../../src/shared/cards";
-import { demoSources, viewablePictures } from "../../../src/shared/cardPictures";
+import { cardDataName, cardDataNames, demoSources, viewablePictures } from "../../../src/shared/cardPictures";
 import { ACTION_VALUE_MAX_BYTES, frameMessageSchema, frameRequestSchema, type FrameAnswers } from "../../../src/shared/plugins/bridge";
 import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment";
 import { buildFrameDocument, type FrameTheme } from "../../../src/shared/plugins/frameDocument";
@@ -102,6 +102,13 @@ window.addEventListener("message", (event: MessageEvent) => {
       const request = frameRequestSchema.safeParse(message);
       const reply = (ok: boolean, value: unknown) => send({ type: "response", document: documentID, id: message.id,
         ...(ok ? { ok, result: value } : { ok, error: { code: "refused", message: String(value) } }) });
+      // A data file the body names (docs/card-authoring.md, "Data by reference"): its text, read from the Mac's copy.
+      if (request.success && request.data.verb === "data") {
+        const name = cardDataName(request.data.src);
+        if (!name || !cardDataNames(input.body).includes(name)) { reply(false, "This card names no such data file."); return; }
+        void native({ type: "data", name }).then((text) => reply(true, text), (error) => reply(false, error));
+        break;
+      }
       if (!request.success || request.data.verb !== "action" || input.readOnly || !input.actions.includes(request.data.action)) {
         reply(false, "This card cannot do that."); return;
       }

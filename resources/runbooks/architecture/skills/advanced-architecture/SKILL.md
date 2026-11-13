@@ -102,13 +102,13 @@ Copy `parts/map.html` into a card body whole and fill in only its JSON block:
 - `compare`: the comparisons, one button each.
 - `open`: where the card opens, a part's folder or a machine's name, including one that comparison removed, and which comparison is on.
 
-A card body holds at most 65,536 characters, and the part takes about 47,000 of them.
-When the data does not fit, pack it: deflate it raw, encode it in base64, put that in the block and add `data-packed` to it, for example with `node -e "process.stdout.write(require('zlib').deflateRawSync(require('fs').readFileSync(0)).toString('base64'))" < map-data.json`.
+A card body holds at most 65,536 characters, and the part takes about 47,000 of them, so write the data as a JSON file and name it in the block, which stays empty: `<script type="application/json" data-map src="map-data.json"></script>`.
+Name the file as you name a picture, by its path in your working copy or in your evidence folder; the app keeps a copy of it, at most 8MB, and the map reads it through the card.
 If the map part lists problems under the drawing, fix the map files and draw it again before the card goes up.
 The reader clicks a box for its links or a pill for its state machine, goes in with a double-click or Enter, goes back with Esc, chooses with the arrows, drags the map, and zooms with the − and + buttons, the +, − and 0 keys, a pinch or ⌘-scroll; a plain scroll scrolls the card past the map.
 With a comparison on, the arrows under the drawing, or [ and ], step through each change on the level, and More lists every change and the keys.
 Full screen, or F, opens the drawing whole in the app's picture viewer; on a touch screen the drawing is a fitted picture that one finger scrolls past and a tap opens full screen.
-For a picture of it, fill `parts/map-page.html` the same way instead: it is the part in a page with the app's colors, which a bare part has only inside a card.
+For a picture of it, put the data itself in the block of `parts/map-page.html` instead, since only a card reads a data file: it is the part in a page with the app's colors, which a bare part has only inside a card.
 Serve its folder on this computer, for example with `python3 -m http.server --bind 127.0.0.1`, open the page in your task's browser, photograph it and look at the picture before using it; then stop the server.
 
 ## In a change's story

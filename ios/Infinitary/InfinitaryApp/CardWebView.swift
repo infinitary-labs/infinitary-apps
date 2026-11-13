@@ -368,6 +368,21 @@ import SwiftUI
                     replyHandler(nil, error.localizedDescription)
                 }
             }
+        case "data":
+            // A data file the card's body names, its text from the Mac's copy (docs/card-authoring.md, "Data by reference").
+            guard let name = payload["name"].text,
+                  name.range(of: "^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}\\.json$", options: .regularExpression) != nil else {
+                replyHandler(nil, "This card names no such data file."); return
+            }
+            Task {
+                do {
+                    let file = try await session.read(.data, [.string(name)])
+                    guard let text = file["data"].text else { replyHandler(nil, "This card’s data file could not be read."); return }
+                    replyHandler(text, nil)
+                } catch {
+                    replyHandler(nil, error.localizedDescription)
+                }
+            }
         default: replyHandler(nil, "This card cannot do that.")
         }
     }

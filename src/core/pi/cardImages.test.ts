@@ -3,15 +3,18 @@ import { mkdir, readdir, readFile, stat, symlink, writeFile } from "node:fs/prom
 import { join } from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 import {
+  cardDataNames,
   cardTypefaceNames,
   demoSources,
   isPlayableDemoSource,
   isViewablePictureSource,
+  parseCardDataFileName,
   parseCardMediaFileName,
   parseCardPictureFileName,
   parseCardTypefaceFileName,
 } from "@shared/cardPictures";
 import { describe, expect, it } from "vitest";
+import { MAP_DATA } from "../../../tests/helpers/architectureMap";
 import {
   collection,
   projectFontBytes,
@@ -30,6 +33,7 @@ import {
   keepContentFile,
   keepPictureFile,
   MAX_CARD_PICTURE_BYTES,
+  MAX_DATA_FILE_BYTES,
   MAX_DEMO_BYTES,
   MAX_TYPEFACE_BYTES,
   type MediaProbe,
@@ -608,7 +612,7 @@ describe("verifyCardImages: demo recordings", () => {
     await writeFile(join(at.worktree, "shots", "demo.mp4"), padded);
     const before = (await copies(at)).length;
     await expect(verifyCardImages(pictures.join("") + demo("shots/demo.mp4"), at)).rejects.toThrow(
-      /pictures, recordings and fonts may total at most 64MB/,
+      /pictures, recordings, fonts and data files may total at most 64MB/,
     );
     expect(await copies(at)).toHaveLength(before);
 
@@ -901,11 +905,110 @@ describe("verifyCardImages: project fonts", () => {
     const before = (await copies(at)).length;
     await expect(
       verifyCardImages(pictures.join("") + preview(face("face.otf")), at),
-    ).rejects.toThrow(/pictures, recordings and fonts may total at most 64MB/);
+    ).rejects.toThrow(/pictures, recordings, fonts and data files may total at most 64MB/);
     expect(await copies(at)).toHaveLength(before);
 
     await expect(verifyCardImages(preview(face("face.otf")), undefined)).rejects.toThrow(
       /Card font refused: there is no working copy here to name a font file from/,
+    );
+  });
+});
+
+// The captain, on the architecture map that grew too large for a card: "the
+// actual data should live in a file, and the renderer loads from the file".
+// A card's data block names a JSON file as a picture is named, and the host
+// checks it, keeps its own copy and names that copy in the body.
+describe("verifyCardImages: data files", () => {
+  const mapCard = (src: string) =>
+    `<p>The core's parts.</p><script type="application/json" data-map src="${src}"></script>`;
+  const mapJson = JSON.stringify(MAP_DATA);
+
+  it("keeps the map data file a card's data block names and rewrites only that src, once however it is named", async () => {
+    const at = await root();
+    await writeFile(join(at.worktree, "shots", "map-data.json"), mapJson);
+
+    const { body, pictures } = await verifyCardImages(
+      mapCard("shots/map-data.json") + mapCard("./shots/../shots/map-data.json"),
+      at,
+    );
+
+    const names = cardDataNames(body);
+    expect(names).toHaveLength(1);
+    const [name] = names as [string];
+    expect(parseCardDataFileName(name)).toMatchObject({ taskId: "t1" });
+    // Only src changes; the start tag's other attributes stay, written out whole.
+    const kept = `<p>The core's parts.</p><script type="application/json" data-map="" src="app-frame://data/${name}"></script>`;
+    expect(body).toBe(kept + kept);
+    expect(pictures).toEqual([]);
+    expect(await copies(at)).toEqual([name]);
+    expect(JSON.parse(await readFile(join(at.dir, name), "utf8"))).toEqual(MAP_DATA);
+  });
+
+  it("names a data file's copy by its own bytes, so a revision keeps it and changed data gets another", async () => {
+    const at = await root();
+    const file = join(at.worktree, "shots", "map-data.json");
+    await writeFile(file, mapJson);
+    const first = cardDataNames((await verifyCardImages(mapCard("shots/map-data.json"), at)).body);
+    const again = cardDataNames((await verifyCardImages(mapCard("shots/map-data.json"), at)).body);
+    await writeFile(file, JSON.stringify({ ...MAP_DATA, open: { at: "" } }));
+    const changed = cardDataNames(
+      (await verifyCardImages(mapCard("shots/map-data.json"), at)).body,
+    );
+    expect(again).toEqual(first);
+    expect(changed).not.toEqual(first);
+    expect(await copies(at)).toEqual([...first, ...changed].sort());
+  });
+
+  it("takes a data file from the evidence folder by absolute path, and leaves one named by a URL as written", async () => {
+    const at = await root();
+    const evidenceDir = join(at.worktree, "..", "crewmates", "t1", "evidence");
+    await mkdir(evidenceDir, { recursive: true });
+    const kept = join(evidenceDir, "map-data.json");
+    await writeFile(kept, mapJson);
+    const named = mapCard("app-frame://data/t0-0123456789abcdef0123456789abcdef.json");
+
+    const { body } = await verifyCardImages(mapCard(kept) + named, { ...at, evidenceDir });
+
+    expect(body).not.toContain(evidenceDir);
+    expect(body).toContain(named);
+    expect(await copies(at)).toHaveLength(1);
+    // A body whose data is all named by address needs no working copy.
+    await expect(verifyCardImages(named, undefined)).resolves.toEqual({
+      body: named,
+      pictures: [],
+    });
+  });
+
+  it("refuses a data file outside its homes, missing, too large, not UTF-8 or not JSON, naming why, and keeps none of the card", async () => {
+    const at = await root();
+    await writeFile(join(at.worktree, "shots", "good.json"), mapJson);
+    const outside = scratchDir("fm-card-outside-");
+    await writeFile(join(outside, "outside.json"), mapJson);
+    await symlink(join(outside, "outside.json"), join(at.worktree, "linked.json"));
+    await mkdir(join(at.worktree, "folder.json"));
+    await writeFile(join(at.worktree, "big.json"), `"${"x".repeat(MAX_DATA_FILE_BYTES)}"`);
+    await writeFile(join(at.worktree, "latin.json"), Buffer.from('{"name":"caf\xe9"}', "latin1"));
+    await writeFile(join(at.worktree, "cut.json"), mapJson.slice(0, -1));
+
+    const cases: [string, RegExp][] = [
+      [join(outside, "outside.json"), /Card data refused: src must be a path relative/],
+      ["../../outside.json", /Card data refused: (file not found|path must stay inside)/],
+      ["linked.json", /Card data refused: path must stay inside the task's working copy/],
+      ["missing.json", /Card data refused: file not found: missing.json/],
+      ["folder.json", /folder.json must be a regular file no larger than 8MB/],
+      ["big.json", /big.json must be a regular file no larger than 8MB/],
+      ["latin.json", /latin.json is not UTF-8 text/],
+      ["cut.json", /cut.json is not JSON: /],
+    ];
+    for (const [src, refusal] of cases) {
+      await expect(
+        verifyCardImages(mapCard("shots/good.json") + mapCard(src), at),
+        src,
+      ).rejects.toThrow(refusal);
+    }
+    expect(await copies(at)).toEqual([]);
+    await expect(verifyCardImages(mapCard("shots/good.json"), undefined)).rejects.toThrow(
+      /Card data refused: there is no working copy here to name a data file from/,
     );
   });
 });

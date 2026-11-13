@@ -14,6 +14,7 @@ import {
   ANNOTATION_RANGE,
   ANNOTATION_RANGE_END,
 } from "../../../../../tests/fixtures/cardAnnotations";
+import { MAP_DATA } from "../../../../../tests/helpers/architectureMap";
 import { COALESCE_MS, type ReadApi, ReadExecutor } from "../reads/executor";
 import {
   FRAME_WATCHDOG_INTERVAL_MS,
@@ -1001,6 +1002,83 @@ describe("FrameController", () => {
       controller.receive(bad);
     }
     expect(onDemo).not.toHaveBeenCalled();
+  });
+});
+
+// The captain, on the architecture map too large for a card: "the actual
+// data should live in a file, and the renderer loads from the file". A card's
+// script asks the bridge for a data file its own body names, and the window
+// reads the home's copy by its minted name.
+describe("the data verb (a card's data file)", () => {
+  const named = `t1-${"a".repeat(32)}.json`;
+  const other = `t1-${"b".repeat(32)}.json`;
+  const at = (name: string) => `app-frame://data/${name}`;
+  const mapJson = JSON.stringify(MAP_DATA);
+
+  function dataHarness(data: ReadonlySet<string> | undefined, read = async (_: string) => mapJson) {
+    const posted: HostMessage[] = [];
+    const asked: string[] = [];
+    const controller = new FrameController(
+      { pluginId: "host", reads: [], actions: [], onAction: vi.fn(), ...(data ? { data } : {}) },
+      "dark",
+      {
+        executor: new ReadExecutor(fakeApi()),
+        fetch: vi.fn(),
+        data: (name) => {
+          asked.push(name);
+          return read(name);
+        },
+      },
+      { post: (message) => posted.push(message) },
+    );
+    controller.receive({ fm: 2, type: "ready" });
+    const responses = () => posted.filter((message) => message.type === "response");
+    return { controller, asked, responses };
+  }
+
+  it("answers a data file the body names with its text, read by its minted name", async () => {
+    const { controller, asked, responses } = dataHarness(new Set([named]));
+    controller.receive({ fm: 2, type: "request", id: 1, verb: "data", src: at(named) });
+    await flush();
+    expect(asked).toEqual([named]);
+    expect(responses()).toEqual([{ fm: 2, type: "response", id: 1, ok: true, result: mapJson }]);
+  });
+
+  it("refuses a file the body does not name, a path, and a mount that names none, reading nothing", async () => {
+    const card = dataHarness(new Set([named]));
+    for (const [id, src] of [
+      [1, at(other)],
+      [2, named],
+      [3, "map-data.json"],
+      [4, `${at(named)}?again`],
+    ] as const)
+      card.controller.receive({ fm: 2, type: "request", id, verb: "data", src });
+    const panel = dataHarness(undefined);
+    panel.controller.receive({ fm: 2, type: "request", id: 5, verb: "data", src: at(named) });
+    await flush();
+    expect(card.asked).toEqual([]);
+    expect(panel.asked).toEqual([]);
+    for (const response of [...card.responses(), ...panel.responses()])
+      expect(response).toMatchObject({ ok: false, error: { code: "capability_not_granted" } });
+    expect(card.responses()).toHaveLength(4);
+    expect(panel.responses()).toHaveLength(1);
+  });
+
+  it("refuses with data_failed and the read's own words when the home cannot hand the file over", async () => {
+    const { controller, responses } = dataHarness(new Set([named]), async () => {
+      throw new Error("No card data file has that name.");
+    });
+    controller.receive({ fm: 2, type: "request", id: 1, verb: "data", src: at(named) });
+    await flush();
+    expect(responses()).toEqual([
+      {
+        fm: 2,
+        type: "response",
+        id: 1,
+        ok: false,
+        error: { code: "data_failed", message: "No card data file has that name." },
+      },
+    ]);
   });
 });
 

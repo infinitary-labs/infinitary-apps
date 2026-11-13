@@ -1,3 +1,4 @@
+import { cardDataName } from "@shared/cardPictures";
 import {
   CARD_QUESTIONS_MAX_BYTES,
   type CardAnswer,
@@ -217,6 +218,13 @@ export type FrameMountSpec = {
    */
   store?: { extensionId: string; draft?: true };
   /**
+   * The data files the mount's own body names (docs/card-authoring.md, "Data
+   * by reference"): the minted names its `<script type="application/json"
+   * src>` blocks carry, read from the body the host checked. The `data` verb
+   * answers only these; absent, it is refused.
+   */
+  data?: ReadonlySet<string>;
+  /**
    * Arms the frame watchdog (WI-16): from `expectDocument` or `ready` on, the
    * controller ticks every FRAME_WATCHDOG_INTERVAL_MS, and a frame that is
    * not born or leaves FRAME_WATCHDOG_MISSES pings in a row unanswered - its
@@ -291,6 +299,8 @@ export type FrameControllerDeps = {
   fetch: (call: MediatedFetchCall) => Promise<MediatedFetchResult>;
   /** Absent, every store request is refused whatever the mount was bound to. */
   store?: FrameStoreDeps;
+  /** A card's kept data file's text by its minted name; absent, every data request is refused. */
+  data?: (name: string) => Promise<string>;
   /** The watchdog's clock; tests drive a fake one. */
   timers?: WatchdogTimers;
   /**
@@ -1026,6 +1036,31 @@ export class FrameController {
       case "store":
         void this.storeRequest(asker, request);
         return;
+      case "data":
+        void this.dataRequest(asker, request);
+        return;
+    }
+  }
+
+  /** A data file the body names, by the address it names it with; never another. */
+  private async dataRequest(asker: Asker, request: Extract<FrameRequest, { verb: "data" }>) {
+    const name = cardDataName(request.src);
+    if (!name || !this.spec.data?.has(name) || !this.deps.data) {
+      this.refuse(
+        asker,
+        "capability_not_granted",
+        // i18n-exempt: not shown (a console line, or an error for the card's code)
+        `this frame's body names no data file at "${request.src}"`,
+      );
+      return;
+    }
+    if (!this.admit(asker)) return;
+    try {
+      this.respond(asker, await this.deps.data(name));
+    } catch (caught) {
+      this.refuse(asker, "data_failed", caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      this.inFlight -= 1;
     }
   }
 

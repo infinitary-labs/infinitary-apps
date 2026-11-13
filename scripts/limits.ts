@@ -256,6 +256,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     MAX_DEMO_BYTES: physical("refused in words naming 16MB; shorten it or lower its quality"),
     MAX_CARD_PICTURE_BYTES: physical("refused in words naming 64MB; show fewer or smaller ones"),
     MAX_TYPEFACE_BYTES: physical("refused in words naming 8MB; name a smaller subset of the font"),
+    MAX_DATA_FILE_BYTES: physical("refused in words naming 8MB; leave out what the card does not draw"),
   },
   "src/core/pi/cardLint.ts": {
     DECISION_ACTIONS_MIN: record("refused in words naming the count; add the other choice or send a note"),
@@ -485,6 +486,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FRAME_DEMO_SRC_MAX: record("none needed: every name the host serves fits; others are dropped"),
     FRAME_DEMO_CAPTION_MAX: physical("clipped for the player; the card body keeps the whole caption"),
     FRAME_STORE_KEY_MAX: physical("refused as a malformed request (bad_request); the bound is unnamed"),
+    FRAME_DATA_SRC_MAX: record("none needed: every data address the host mints fits; others are refused"),
   },
   "src/shared/plugins/frameDocument.ts": {
     FRAME_TEMPLATE_MAX_BYTES: physical("a card body over it opens words only, its scripts off; others refused"),

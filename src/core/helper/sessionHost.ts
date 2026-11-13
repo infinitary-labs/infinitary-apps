@@ -88,7 +88,7 @@ import { HANDOVER_IN_DIR_NAME, HANDOVER_OUT_DIR_NAME } from "../tasks/handoverFi
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { MovedFolders } from "../workspace/workMove";
-import { carryStory, type PlacedMedia, sendPictures } from "./placedStoryMedia";
+import { carryStory, type PlacedMedia, sendCardData, sendPictures } from "./placedStoryMedia";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
@@ -1388,6 +1388,9 @@ export class SessionHost {
               throw new Error(
                 `until refused: ${HOME.the} runs an older Infinitary that cannot keep a put-off choice; nothing was sent. Offer the choice without until, and set your own reminder until ${HOME.the} is updated.`,
               );
+            // Each data file its script reads, refused here before anything is
+            // sent when the home cannot hand one over.
+            await sendCardData(media, card.body, signal);
             // Each picture's bytes first, so the home holds them when it shows the card.
             await sendPictures(media, card.pictures ?? [], signal);
             // Each project font its preview names, before the card too.

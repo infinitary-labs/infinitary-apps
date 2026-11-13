@@ -12937,6 +12937,38 @@
         ]
       }
     },
+    "inf:cards:data": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "const": "application/json"
+          },
+          "data": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contentType",
+          "data"
+        ]
+      }
+    },
     "inf:cards:media": {
       "effect": "read",
       "reach": "views",

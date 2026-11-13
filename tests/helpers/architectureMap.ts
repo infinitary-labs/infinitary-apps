@@ -1,6 +1,7 @@
+import { fillMapPart } from "../../src/shared/mapPart";
 import fixture from "./architectureMap.json" with { type: "json" };
 
-export { fillMapPart } from "../../src/shared/mapPart";
+export { fillMapPart };
 
 /**
  * A map part's data block, as the Advanced architecture skill has a crewmate
@@ -13,3 +14,15 @@ export { fillMapPart } from "../../src/shared/mapPart";
 export const MAP_DATA = fixture;
 
 export type MapData = typeof MAP_DATA;
+
+/**
+ * The map part whose data block names its data file by `src` and holds
+ * nothing, as the skill has a crewmate write it on a card: a path before the
+ * host keeps the file, the kept copy's address after.
+ */
+export function mapPartNaming(part: string, src: string): string {
+  return fillMapPart(part, "").replace(
+    '<script type="application/json" data-map>',
+    `<script type="application/json" data-map src="${src}">`,
+  );
+}

@@ -394,7 +394,7 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
 - **No network.**
   The frame CSP is `default-src 'none'`.
   No external image, font, stylesheet, media, frame, worker, `fetch`, websocket or beacon resolves, whatever the markup says.
-  A project's own font reaches a preview only by reference (Fonts by reference, below).
+  A project's own font reaches a preview only by reference (Fonts by reference, below), and a script's data file only through the bridge (Data by reference, below).
   An `<img src="https://...">` simply never loads.
 - **No identity, no parent.**
   The frame has an opaque origin: no storage, no cookies, and the app window and its bridge are unreachable.
@@ -461,6 +461,17 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   The first mate has no working copy, so a path in one of its cards is refused.
   A crewmate on a computer that runs work has its fonts checked and loaded there, and each kept copy goes home before the card (`inf:work:typeface`, `docs/helper.md`), to a home on protocol 8.9 or later; a paired view asks the home for one by name (`inf:cards:typeface`, `docs/view.md`).
   A system typeface a project names but does not ship (Apple's rounded face, say) is not a file, so a preview cannot load it.
+- **Data by reference.**
+  A body's script reads data too large to carry in the body from a file, as the architecture map part reads its maps: `<script type="application/json" src="<path>"></script>` names a JSON file, a path relative to the working copy or absolute inside the task's evidence folder, as a picture is named.
+  A JSON block is never run or fetched, so the frame loads nothing by it; the script asks the bridge for the file's text with `inf.data(src)`, passing the block's own `src`.
+  At the `emit_card` boundary `verifyCardImages` refuses a path outside its homes (symlinks included), a missing file or one that is not a regular file, one over 8 MB (`MAX_DATA_FILE_BYTES`), one that is not UTF-8 text or not JSON, and data files that with the card's pictures, recordings and fonts total more than 64 MB; one failure refuses the whole card and nothing is copied.
+  The host keeps each file once, as fonts are kept, at `userData/crewmates/<taskId>/cards/<taskId>-<32 hex>.json` named by its own bytes (`keepContentFile`), and rewrites only that tag's `src` (to `app-frame://data/<that name>`).
+  No host of the frame scheme serves that address: the window answers the bridge's `data` request only for a name the card's own body carries (`FrameMountSpec.data`), reading the home's copy by its name (`inf:cards:data`), and refuses anything else with `capability_not_granted`, or a file the home cannot hand over with `data_failed`.
+  A JSON block named by a URL, such as another card's `app-frame://data/` address, is left as written, and the bridge answers it as a name the body carries, as with pictures.
+  The copies never ride the body, SQLite or the `inf:cards` push; they stay beside the task's pictures until the Settings purge.
+  The first mate has no working copy, so a path in one of its cards is refused.
+  A crewmate on a computer that runs work has each file checked there and sent home before the card as a card's media (`inf:work:media`), only to a home that lists the `card-data` change; to an older home it refuses the card itself, in words saying to put the data in the body until it is updated.
+  A paired view and the phone read the home's copy by name (`inf:cards:data`, `docs/view.md`, `docs/ios.md`); a view or phone too old to know the verb draws the card with its script unable to read the file.
 - **The host's own actions stay the host's.**
   A `data-inf-action` button or an `inf.action(id)` call raises one of the card's declared actions - EXCEPT any action carrying an effect (`settle`, `open`, or the app's own `host` op).
   Those are run by the host from the footer button the captain clicks, are never declared to the frame, and are checked again against the current card when dispatched; a body that raises one is refused.
@@ -487,6 +498,7 @@ The vocabulary beyond plain text:
   A `data:` picture the body carries itself also renders.
 - Fonts: a preview's `@font-face` naming a WOFF2, WOFF, TTF or OTF file in the working copy or the evidence folder, which the host checks, loads and serves (Fonts by reference, above).
   Nothing else loads.
+- Data: a `<script type="application/json" src>` naming a JSON file in the working copy or the evidence folder, which the host checks and keeps and the body's script reads through the bridge (Data by reference, above).
 - Sizing: whatever units the body needs; relative ones follow the card.
 
 Links open through the app's safe external opener: https anywhere, plus http to loopback (`localhost`, `127.0.0.1`, `[::1]`) and to genuine `.localhost` subdomains, single-level or nested (`http://app.localhost:1355`, `http://task-1.soapbox.localhost:1355`).
@@ -509,7 +521,7 @@ A script is for behavior - drawing a `<canvas>`, toggling a view, wiring a contr
 - Scripts run when the card is first shown, after its whole markup is read, as if each were `defer`.
   The app may load a card's page before it is shown and holds its scripts and its CSS and SVG animations until then, so nothing of the card's own plays unseen.
   A `DOMContentLoaded` or `load` listener a script adds still runs once; `document.write` does not work.
-- The bridge is `window.inf`: `inf.action(id, value?)` raises a declared action (the same ids as the card's `actions`; anything else is refused, and a value may be 4KB); `inf.theme` is the current theme and `inf.onTheme(listener)` fires when it changes - read token colors from `getComputedStyle(document.body)` again then.
+- The bridge is `window.inf`: `inf.action(id, value?)` raises a declared action (the same ids as the card's `actions`; anything else is refused, and a value may be 4KB); `inf.theme` is the current theme and `inf.onTheme(listener)` fires when it changes - read token colors from `getComputedStyle(document.body)` again then; `inf.data(src)` answers the text of a data file the body names (Data by reference, above).
   A button that starts the captain's message needs no script: `data-inf-draft` (above) is the bridge's own.
   Height follows the document on its own; there is nothing to call to resize.
   There is no drawing helper: a script that wants a figure writes the SVG itself.

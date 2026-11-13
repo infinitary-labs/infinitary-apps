@@ -34,6 +34,7 @@ import {
   startMockProvider,
 } from "../../tests/e2e/mockProvider";
 import { projectSetup } from "../../tests/e2e/scenarios/projectSetup";
+import { MAP_DATA } from "../../tests/helpers/architectureMap";
 import {
   AT_FIRST_LAUNCH,
   fakeHost,
@@ -297,7 +298,7 @@ describe("the connection serves the core to paired devices", () => {
     void removing;
   });
 
-  it("shows a view a card's picture, recording and font by name, and says in the feed when a view leaves", async () => {
+  it("shows a view a card's picture, recording, font and data file by name, and says in the feed when a view leaves", async () => {
     const { grant } = await pairDevice("view", "Mac D");
     const view = await connectClient(grant);
     // The home's own copy, where the card picture host keeps it.
@@ -341,6 +342,16 @@ describe("the connection serves the core to paired devices", () => {
     });
     for (const asked of [name, `task-pic-${"f".repeat(32)}.woff2`, "../task-pic/cards/x.woff2"])
       await expect(view.invoke("inf:cards:typeface", [asked])).rejects.toThrow(/card('s)? font/);
+    // A card's data file, the map's data a card's script reads (INF-3989), as text by its minted name alone.
+    const dataFile = `task-pic-${"9".repeat(32)}.json`;
+    const mapJson = JSON.stringify(MAP_DATA);
+    writeFileSync(join(core.paths.crewmatesDir, "task-pic", "cards", dataFile), mapJson);
+    expect(await view.invoke("inf:cards:data", [dataFile])).toEqual({
+      contentType: "application/json",
+      data: mapJson,
+    });
+    for (const asked of [typeface, `task-pic-${"8".repeat(32)}.json`, "../task-pic/cards/x.json"])
+      await expect(view.invoke("inf:cards:data", [asked])).rejects.toThrow(/data file/);
 
     // Leave: the view comes off the list, cut as for a Remove, named in the feed.
     view.sendRaw(JSON.stringify({ t: "leave" }));

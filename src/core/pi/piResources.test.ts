@@ -1895,9 +1895,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-3674's approved plan writes to the captain in their language and keeps the project's for commits.
   // The prompt-budget trim says the same card rules in fewer words.
   // INF-3749's approved plan (Picture first) gives each figure its numbers and folds the rest under a named expand.
+  // A later prompt-budget trim says the prose tokens, the copy rule and the fact strip in fewer words.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "e87ef1321912986081a80c8fc24e4c62f7a15fddbe6d0662cf2b66ceecef2d67",
+    "5493297585491e8e824f6fe180e0ecf4b6d0debf11edc2167259882551474255",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

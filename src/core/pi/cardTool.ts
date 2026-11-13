@@ -521,7 +521,7 @@ export const SAVED_STORY_RULE = [
   "The saved-story rule, said once: every branch and local-only change uses prepare_change's story. show_merge_card prepares, publishes and shows it; the rest applies where it is not served.",
   "Pass the current revision as presentation here and to open_change, with its saved title and one merge action, no body, body_file, risk or required_actions; autonomy on merges from it. A host-identified upstream contribution shows its published presentation as a note without actions; maintainers merge it.",
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses it after checks pass.",
-  "Public GitHub and GitLab upload inspected media unless the host marks it card-only; other hosts publish text with media on the card. Plain Git keeps the story on the card. Never downgrade a failed upload.",
+  "Public GitHub and GitLab upload inspected media unless the host marks it card-only; other hosts publish text with media on the card.",
   "After a push, show the same presentation; the host republishes the pull request story at that version. Changed words or a later local-only or plain-branch commit need a revision with the same base, title and updated verification; publish it where needed before the card.",
   "After the merge click, a same-version story revision keeps approval: publish it without another merge card; only another commit needs one.",
 ].join(" ");
@@ -532,7 +532,7 @@ export const SAVED_STORY_RULE = [
  */
 export const CARD_FILES_PARAM = [
   "Files for the captain to open, edit, attach or send: absolute or working-copy-relative paths, at most 1 GB each.",
-  "The app keeps copies where you run, with a Save row per file the captain's click moves to Downloads.",
+  "The app keeps copies; the captain's Save moves each to Downloads.",
   "Never give a path instead, especially on another computer or in temporary or evidence folders. Revisions pass files again; the list replaces the card's.",
 ].join(" ");
 

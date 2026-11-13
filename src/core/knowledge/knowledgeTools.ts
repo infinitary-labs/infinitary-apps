@@ -39,10 +39,9 @@ export const KNOWLEDGE_TOOL_DESCRIPTION = [
 
 export const RECORD_KNOWLEDGE_TOOL_DESCRIPTION = [
   "Record only user-owned knowledge: personal context or a source the captain asked to save. Project facts stay in the project; investigations stay on the task.",
-  "The first mate records a personal statement only on the captain's words, never an import.",
   "Standing directions use the first mate's app_change direction. A direction is an imperative directive, not an observation. Revise an existing direction, never duplicate it. Skip trivia, raw dumps, task progress and TODOs. Intentions belong in schedule_prompt or a queued task.",
-  "Crewmates write facts: sources on request, personal context only from the captain's words. They cannot change directions or retire.",
-  "publish a concept (title, aliases, text) or finding (text, basis, about, conditions, sources). Article: {url, title, excerpt, author, published}; short excerpt, reuse the url's concept.",
+  "Personal context comes only from the captain's words, never an import. Crewmates write facts and requested sources, never directions or retirements.",
+  "publish a concept (title, aliases, text) or finding (text, basis, about, conditions, sources); an article keeps a short excerpt and reuses its url's concept.",
   "revise your finding or any writable concept (expected_revision); assess or relate to disagree. Grants no permission.",
 ].join(" ");
 

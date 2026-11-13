@@ -25,7 +25,7 @@ const ATTRIBUTING_TOOLS = new Set([
 const ASK_ID = Type.Optional(
   Type.String({
     description:
-      "The open message (open_asks id) this answers, from a card click or report. Empty if unrelated; omit: latest.",
+      "open_asks id this answers, from a card click or report; empty if unrelated; omit: latest.",
   }),
 );
 

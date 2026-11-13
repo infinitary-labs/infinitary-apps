@@ -100,11 +100,11 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly(
     'A picture from a working copy is an <img> whose src is the file\'s path relative to that working copy - a PNG, JPEG or WebP - and whose alt says what it proves, placed beside the sentence it illustrates; the host keeps its own copy and shows it fitted and whole, never cropped. Several pictures inside one <figure class="inf-pictures"> are a group: the first large, the rest small thumbnails, a <figcaption> as the caption. A card holds as many pictures and groups as it needs, up to 64 MB in all; never encode a picture into the body yourself or name one by URL.',
   ),
-  "For prose, use design-token CSS variables (--fg-1, --fg-2, --fg-3, --accent, --line-1, --bg-1, --font-mono, ...) and the inf-mono, inf-muted, inf-row, inf-grid, and inf-panel classes; <details> takes a <summary>, <mark> holds the one thing to notice, <kbd> a key.",
+  "Prose uses the theme tokens, --font-mono and the inf-mono, inf-muted, inf-row, inf-grid and inf-panel classes; <details> takes a <summary>, <mark> holds the one thing to notice, <kbd> a key.",
   crewOnly(
     "A preview or a drawing of a project's screens takes that project's own look, read from its source (colors, type, spacing, controls; for Infinitary, the design system above). It may bring its own <style> sheet, classes, CSS lengths and colors, and data-* hooks its script reads, and restyles every element it draws, since the app stylesheet dresses whatever it leaves bare. A preview loads a project's font file only by path: an @font-face src url() naming a WOFF2, WOFF, TTF or OTF file by its path in the working copy or absolute path in the evidence folder, which the host checks, keeps and serves like a picture; nothing else loads.",
   ),
-  "Card copy is sentence case, factual, self-contained and free of exclamation points and emoji. Title and body stand alone and name the work plainly, not only a PR number or SHA.",
+  "Card copy is sentence case, factual and free of exclamation points and emoji; title and body each stand alone and name the work plainly, not only a PR number or SHA.",
   "A card sentence holds one fact in at most 25 words. One thing keeps one name, and takes its full name wherever two things share a number: stable 1.4 and alpha 1.4-alpha.2, never 1.4 for both. A sentence names who or what did the work: I updated three tests, never three tests were updated. Speak literally, without figures of speech. Number three or more actions in a row.",
   "Card copy is written for someone who has never opened a terminal, in the words they use about their own project: say your project (repository only when pointing at GitHub); a pull request, or PR #N in mono (the pushed branch on a plain host); the checks passed or failed (CI, green or red may sit beside them); a branch, a working copy, never git branch or worktree; merge, never land or put it in; file for the backlog, start for now or with its moment (starts once INF-12 merges), offering both for each proposed task; a commit, never a save point; push, never sent up; lint, never tidy-up; bring up to date, never rebase or conflict; your plan's allowance, never quota; your sign-in or your GitHub sign-in (OAuth app or token one click deeper); where the project lives, naming the host when known (remote or origin one click deeper); the version, never a SHA or head in the sentence; clone, never copy, for a project; the code, never device code; a stronger model, never escalation; what happened and what to do, never an error code or a stack; and never name a CLI, a tool, gh, a binary or the search path - say what could not be done. A technical name appears only where the person chose it (a model, a provider, a plan), as the thing itself in mono (a PR number, a key, a file path), or inside <details>; the sentence around it never needs it to be understood.",
   // INF-2326 piece 2: the two card-word rules, measured by the replay gate's
@@ -123,7 +123,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "Commits, pull requests, change stories, code and its comments, and the project's documents keep the project's own language: the one its existing commits and documents use.",
   ),
-  "On a card carrying a merge or settle effect the host writes the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it has placed on the task - as its own strip, after the body. Those facts are never the body's to repeat or to get wrong.",
+  "On a card carrying a merge or settle effect the host writes its own strip after the body: the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it placed on the task. The body never repeats them.",
 ];
 
 /** Full authoring contract, unchanged for both crewmate runtimes. */
@@ -311,9 +311,9 @@ export const CLAUDE_TOOL_DESCRIPTION_CAP = 2_048;
  * notes read (`RISK_WORDS`). Only a crewmate's schema carries it.
  */
 const RISK_PARAM = [
-  `Required on your own change's merge card, allowed on a merge card naming a reviewed pull request, nowhere else: your assessment of the change's risk, drawn as a radar at the card's top right and kept on the task.`,
+  `Required on your own change's merge card, allowed on one naming a reviewed pull request, nowhere else: your assessment of the change's risk, drawn as a radar on the card and kept on the task.`,
   `Give each of the seven dimensions a level - low, medium or high, rating the change itself, never how careful you were - and why: one plain line of at most ${RISK_WHY_MAX} characters naming the concrete reason.`,
-  "All seven levels and notes are yours alone; the app adds no measurements. The body never draws or repeats the assessment, and a revision of the card replaces it.",
+  "The app adds no measurements; the body never repeats the assessment, and a revision of the card replaces it.",
   ...RISK_DIMENSIONS.map((dimension) => {
     const { label, ask, levels } = RISK_WORDS[dimension];
     return `${dimension} (${label}, ${ask}): low ${levels.low}; medium ${levels.medium}; high ${levels.high}.`;

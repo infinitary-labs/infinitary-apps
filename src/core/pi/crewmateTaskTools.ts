@@ -125,19 +125,17 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   FOLLOWUP_AFTER_MERGE_RULE,
   "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
   "Set blocks_me only for a real dependency your task cannot merge without; it stops your task closing.",
-  "Give a sentence-case title, a one-sentence goal describing done, and why, plainly.",
   "For a test failure, pass test_failure true and test_path: the host refuses a missing path and returns an existing key instead of filing a duplicate.",
   "Never file progress, captain questions (emit a card), or work you are about to do yourself.",
 ].join(" ");
 
 export const NOTE_PROGRESS_TOOL_DESCRIPTION = [
   "Put one line on your task's own timeline - a milestone reached, a decision you made, what you are doing next.",
-  "It is never shown as a card or a feed line; the captain can read it on the task's record.",
-  "Call it as soon as a plan item finishes or the work moves on, mid-turn: the captain watches the plan move while you work, and a note held to the end leaves it standing still.",
-  "Use it at real milestones, never instead of your final report.",
+  "It is never a card or a feed line; the captain reads it on the task's record.",
+  "Call it at real milestones, as soon as a plan item finishes or the work moves on, mid-turn, never held to the end or instead of your final report.",
   "Pass plan to show where the work stands: the whole list of what the task takes, each item with a label, a word or two for its dot, and its state - done, current, next or skipped.",
   "The captain sees dots and a list: under eight items, one current at a time.",
-  "Send the first list with your brief, send the whole list with every later note, unchanged if nothing moved, and fold finished items into one item to make room; the final report leaves every item done or skipped.",
+  "Send the first list with your brief and the whole list with every later note, unchanged if nothing moved; fold finished items into one to make room; the final report leaves every item done or skipped.",
 ].join(" ");
 
 export const FILE_FOLLOWUP_TOOL = crewmateTool({
@@ -308,7 +306,7 @@ export const REPORT_TOOL = crewmateTool({
           ),
         },
         {
-          description: `Pass when only the captain can unblock you and no work remains. ${ORDINARY_NOTE_READ_ACK} Saved answers await Done; aside is not acknowledgement. With neither card nor saved answer, the first mate asks them. Never while work remains.`,
+          description: `Pass when only the captain can unblock you and no work remains. ${ORDINARY_NOTE_READ_ACK} With neither card nor saved answer, the first mate asks them.`,
         },
       ),
     ),
@@ -324,12 +322,12 @@ export const REPORT_TOOL = crewmateTool({
     waits_on: Type.Optional(
       Type.Array(Type.String(), {
         description:
-          "Keys of open tasks whose close gives what your work needs; each wait holds start and merge until its close steers you. Unstarted work goes to the first mate. If only part gives it, name that part with needs_firstmate. A replaced task's wait goes to its carrier; unknown, closed or circular keys refuse the report. Never with finished.",
+          "Keys of open tasks whose close gives what your work needs; each wait holds start and merge until its close steers you. Unstarted work goes to the first mate. If only part gives it, name that part with needs_firstmate. A replaced task's wait goes to its carrier.",
       }),
     ),
     finished: Type.Optional(
       Type.Boolean({
-        description: `True after the captain acknowledges your outcome and nothing remains; the first mate is woken to close it. ${ORDINARY_NOTE_READ_ACK} Aside is not acknowledgement. Saved answers await Done; use waiting_on_captain. Never with waiting_on_captain.`,
+        description: `True after the captain acknowledges your outcome and nothing remains; the first mate is woken to close it. ${ORDINARY_NOTE_READ_ACK} Aside is not acknowledgement; saved answers await Done: use waiting_on_captain.`,
       }),
     ),
     responses: Type.Optional(
@@ -467,8 +465,7 @@ export const NOTE_PROGRESS_TOOL = crewmateTool({
           state: stringEnum(["done", "current", "next", "skipped"]),
         }),
         {
-          description:
-            "The whole list of what the task takes, in order, replacing the last one; under eight items is the aim, and the line folds what it cannot hold",
+          description: "In order, replacing the last list; the line folds what it cannot hold",
         },
       ),
     ),

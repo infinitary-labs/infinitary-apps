@@ -540,16 +540,12 @@ struct PhoneActivity: View {
     }
 
     static func exactTime(_ at: Double) -> String {
-        Date(timeIntervalSince1970: at / 1000).formatted(date: .abbreviated, time: .shortened)
+        PhoneFormats.dateTime(Date(timeIntervalSince1970: at / 1000))
     }
 
     // The same units as the desktop's feedRelativeAge; wording still comes from the computer.
     static func age(_ at: Double, now: Date) -> String {
-        let seconds = max(0, Int(now.timeIntervalSince1970 - at / 1000))
-        if seconds < 60 { return "now" }
-        if seconds < 3600 { return "\(seconds / 60)m" }
-        if seconds < 86400 { return "\(seconds / 3600)h" }
-        return "\(seconds / 86400)d"
+        PhoneFormats.relativeAge(at, now: now.timeIntervalSince1970 * 1000)
     }
 
     static func tone(_ kind: String) -> Color {

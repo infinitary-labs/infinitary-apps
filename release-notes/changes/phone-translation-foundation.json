@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-translation-foundation",
+      "reason": "The phone app gains the catalog's English Apple string files, typed messages, one formats module, a raw-words check and English-pinned journeys; it still ships English alone and every word, date and age it shows stays the same."
+    }
+  ]
+}

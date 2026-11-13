@@ -87,13 +87,7 @@ public struct PhoneTaskFacts: Sendable {
     static let atProviderWords = ["retrying": "Retrying at its provider", "stuck": "Stuck at its provider"]
 
     /// The Mac's `formatDurationShort` (src/shared/quotaSignals.ts): whole minutes as 2d 3h, 1h 35m or 4m.
-    static func durationShort(_ ms: Double) -> String {
-        let total = max(0, Int((ms / 60_000).rounded(.toNearestOrAwayFromZero)))
-        let days = total / (60 * 24), hours = (total % (60 * 24)) / 60, minutes = total % 60
-        if days > 0 { return hours > 0 ? "\(days)d \(hours)h" : "\(days)d" }
-        if hours > 0 { return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h" }
-        return "\(minutes)m"
-    }
+    static func durationShort(_ ms: Double) -> String { PhoneFormats.durationShort(ms) }
 
     public static func status(_ task: PhoneTask, now: Double = Date().timeIntervalSince1970 * 1000) -> Status {
         func reading(_ mark: String, _ reason: String, outOfReach: Bool = false, wait: String? = nil,
@@ -322,12 +316,7 @@ public struct PhoneTaskFacts: Sendable {
     }
 
     /// `under 1m`, `15m`, `1h 05m`.
-    public static func checksDuration(_ ms: Double) -> String {
-        let minutes = Int((max(0, ms) / 60_000).rounded(.down))
-        if minutes < 1 { return "under 1m" }
-        if minutes < 60 { return "\(minutes)m" }
-        return "\(minutes / 60)h \(String(format: "%02d", minutes % 60))m"
-    }
+    public static func checksDuration(_ ms: Double) -> String { PhoneFormats.checksDuration(ms) }
 
     /// `just now` or `5m ago`, after the checks' duration.
     public static func checksFinishedAgo(_ finishedAt: Double, now: Double) -> String {
@@ -336,14 +325,7 @@ public struct PhoneTaskFacts: Sendable {
     }
 
     /// A short age beside a fact, as the feed writes it: `now`, `5m`, `2h`, `3d`.
-    public static func relativeAge(_ at: Double, now: Double) -> String {
-        let seconds = Int((max(0, now - at) / 1000).rounded(.down))
-        if seconds < 60 { return "now" }
-        let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes)m" }
-        let hours = minutes / 60
-        return hours < 24 ? "\(hours)h" : "\(hours / 24)d"
-    }
+    public static func relativeAge(_ at: Double, now: Double) -> String { PhoneFormats.relativeAge(at, now: now) }
 
     // MARK: Model
 

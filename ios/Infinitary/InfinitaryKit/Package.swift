@@ -3,6 +3,8 @@ import PackageDescription
 
 let package = Package(
     name: "InfinitaryKit",
+    // The phone's words come from the catalog's Apple string files, English first (docs/i18n.md, "On the phone").
+    defaultLocalization: "en",
     platforms: [.iOS(.v18), .macOS(.v15)],
     products: [.library(name: "InfinitaryKit", targets: ["InfinitaryKit"])],
     dependencies: [
@@ -17,7 +19,7 @@ let package = Package(
             .product(name: "NIOSSH", package: "swift-nio-ssh"),
             .product(name: "NIOCore", package: "swift-nio"),
             .product(name: "NIOPosix", package: "swift-nio"),
-        ]),
+        ], resources: [.process("Resources")]),
         .testTarget(name: "InfinitaryKitTests", dependencies: ["InfinitaryKit", .product(name: "NIOSSH", package: "swift-nio-ssh"), .product(name: "NIOCore", package: "swift-nio"), .product(name: "NIOPosix", package: "swift-nio")], resources: [.copy("Fixtures")]),
     ]
 )

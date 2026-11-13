@@ -372,7 +372,11 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
 };
 
 /** Each problem with the files' raw words against the ledger, as one line. */
-export function ledgerProblems(counts: Record<string, number>, ledger: Readonly<Record<string, number>>): string[] {
+export function ledgerProblems(
+  counts: Record<string, number>,
+  ledger: Readonly<Record<string, number>>,
+  script = "scripts/raw-words.ts",
+): string[] {
   const problems: string[] = [];
   for (const [path, count] of Object.entries(counts)) {
     const listed = ledger[path];
@@ -386,11 +390,11 @@ export function ledgerProblems(counts: Record<string, number>, ledger: Readonly<
         `${path}: ${count} run(s) of raw words, more than the ledger's ${listed}; put the new words in the catalog (docs/i18n.md), the ledger only shrinks`,
       );
     else if (count < listed)
-      problems.push(`scripts/raw-words.ts: ${path} now holds ${count} run(s) of raw words; lower its entry to ${count}`);
+      problems.push(`${script}: ${path} now holds ${count} run(s) of raw words; lower its entry to ${count}`);
   }
   for (const path of Object.keys(ledger)) {
     if (!counts[path])
-      problems.push(`scripts/raw-words.ts: ${path} holds no raw words now; remove its entry, and the ledger shrinks`);
+      problems.push(`${script}: ${path} holds no raw words now; remove its entry, and the ledger shrinks`);
   }
   return problems;
 }

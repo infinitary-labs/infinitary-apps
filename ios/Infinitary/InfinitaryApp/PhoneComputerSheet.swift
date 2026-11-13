@@ -31,7 +31,7 @@ extension ReadOnlySession {
     /// When the computer was last heard, shown only while it is out of reach; reaching it again needs no time.
     var reachTime: String? {
         guard reach != "in-reach", reach != "reaching", let heardAt else { return nil }
-        return heardAt.formatted(date: .omitted, time: .shortened)
+        return PhoneFormats.time(heardAt)
     }
 
     /// INF-1062: the computer button in the top bar says the reach to VoiceOver, with its time while out of reach.

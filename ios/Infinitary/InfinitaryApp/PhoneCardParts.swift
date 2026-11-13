@@ -369,7 +369,7 @@ private struct PhoneThreadMessage: View {
     private var color: Color { PhoneCardThread.color(who) }
     private var time: String {
         guard let at = message["at"].numeric else { return "" }
-        return Date(timeIntervalSince1970: at / 1000).formatted(date: .omitted, time: .shortened)
+        return PhoneFormats.time(Date(timeIntervalSince1970: at / 1000))
     }
 
     var body: some View {

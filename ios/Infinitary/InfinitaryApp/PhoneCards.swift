@@ -1050,7 +1050,7 @@ private struct PhoneCardPane: View {
         let changes = card.value["changes"]
         guard !card.isPast, changes != .null, let at = changes["at"].numeric else { return nil }
         let date = Date(timeIntervalSince1970: at / 1000)
-        let time = date.formatted(date: Calendar.current.isDateInToday(date) ? .omitted : .abbreviated, time: .shortened)
+        let time = Calendar.current.isDateInToday(date) ? PhoneFormats.time(date) : PhoneFormats.dateTime(date)
         return PhoneCardWords.revisedLine(time: time, added: Int(changes["added"].numeric ?? 0),
                                           removed: Int(changes["removed"].numeric ?? 0), rewritten: changes["rewritten"].flag)
     }
@@ -1355,7 +1355,7 @@ private struct PhoneCardPane: View {
         let end = card.endingForWords
         let words = PhonePastEnding.words(end)
         guard let at = end["at"].numeric else { return words }
-        return "\(words) · \(Date(timeIntervalSince1970: at / 1000).formatted(date: .abbreviated, time: .shortened))"
+        return "\(words) · \(PhoneFormats.dateTime(Date(timeIntervalSince1970: at / 1000)))"
     }
     /// The words a past card's choice carried from its field (the Mac's anythingElseOf).
     private var sentWords: String? {

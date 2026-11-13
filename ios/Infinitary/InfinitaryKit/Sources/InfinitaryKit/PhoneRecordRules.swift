@@ -136,16 +136,7 @@ public enum PhoneRecord {
     }
 
     /// The time of day with its zone, and the date in front when it is not today, as the Mac's clock writes it.
-    static func clock(_ at: Double, now: Double, zone: TimeZone) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = zone
-        let date = Date(timeIntervalSince1970: at / 1000)
-        let formatter = DateFormatter()
-        formatter.timeZone = zone
-        formatter.setLocalizedDateFormatFromTemplate(
-            calendar.isDate(date, inSameDayAs: Date(timeIntervalSince1970: now / 1000)) ? "jmmz" : "MMMdjmmz")
-        return formatter.string(from: date)
-    }
+    static func clock(_ at: Double, now: Double, zone: TimeZone) -> String { PhoneFormats.clock(at, now: now, zone: zone) }
 
     // MARK: The tabs
 

@@ -97,9 +97,8 @@ public struct PhoneAsked: Equatable, Sendable {
         case .automation: name = "Run by an automation"
         default: name = "You asked"
         }
-        let time = at.formatted(date: .omitted, time: .shortened)
-        let when = calendar.isDate(at, inSameDayAs: now)
-            ? time : "\(at.formatted(.dateTime.month(.abbreviated).day())), \(time)"
+        let time = PhoneFormats.time(at)
+        let when = calendar.isDate(at, inSameDayAs: now) ? time : "\(PhoneFormats.monthDay(at)), \(time)"
         let tail = through.map { " · through \($0) \($0 == 1 ? "task" : "tasks")" } ?? ""
         return "\(name) · \(when)\(tail)"
     }

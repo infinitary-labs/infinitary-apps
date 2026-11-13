@@ -16,8 +16,14 @@ import XCTest
     let generation = try XCTUnwrap(observer["generation"] as? Int)
     XCTAssertGreaterThan(generation, 0)
     print("Keyboard observer started before launch: \(generation)")
+    if !app.launchArguments.contains("-AppleLanguages") { app.launchArguments += englishPhone }
     app.launch()
 }
+
+/// The phone's languages (docs/i18n.md, "On the phone"): a journey finds the app's controls by their English words, so
+/// every launch runs the app in English with US forms, whatever the simulator's own language and region. A launch in
+/// another language names its own `-AppleLanguages` first.
+let englishPhone = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
 
 /// INF-355: backboardd's registration of the chord for the current app process is the readiness witness.
 /// UIKit publishes an app's key commands only while a hardware keyboard is attached when its deferred update

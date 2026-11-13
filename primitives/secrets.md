@@ -86,6 +86,7 @@ The private archive, native file choices, history-preserving restore coordinator
 Restore requires fresh native confirmation, drains pending work without starting an effect, refuses running uses or uncollected results, and syncs a fresh sealed home before one native activation.
 It resets permissions and approval-device trust, keeps local history and marks archive history as recovered metadata rather than live authority.
 Unknown activation retains its stage for reconciliation and never repeats the write; previous history is removed only by explicit deletion.
+Where storage reads lost or tampered and no backup exists, Start over takes the same path with no archive under its own fresh confirmation: an empty store with reset permissions and kept history ([`../docs/secrets.md`](../docs/secrets.md), "Starting over").
 No automatic scan or import of unrelated user files is permitted.
 
 ## Uses

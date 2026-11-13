@@ -196,6 +196,8 @@ export const secretActionSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("delete-history") }),
   z.strictObject({ kind: z.literal("backup-recovery") }),
   z.strictObject({ kind: z.literal("restore-recovery") }),
+  // Only where storage reads lost or tampered: a fresh, empty store under fresh confirmation.
+  z.strictObject({ kind: z.literal("start-over") }),
   z.strictObject({ kind: z.literal("forget-device"), device: z.string() }),
   // Settings -> Devices' switch on a paired phone: ask it to offer its key, or stop asking.
   z.strictObject({ kind: z.literal("ask-phone"), paired: z.string().min(1).max(64) }),
@@ -397,6 +399,27 @@ export const SECRETS_RECOVERY_WORDS = {
   reconciledAfterRestart: "checked after restart",
   saveButton: "Save encrypted backup",
   restoreButton: "Restore from backup",
+  /** The notice where storage reads lost or tampered, such as a data folder removed beside its custody. */
+  needed:
+    "Infinitary can no longer read the secrets and saved decisions kept on this computer, so no use is allowed. Restore them from a backup, or start over with an empty list.",
+  options: "Recovery options",
+  startOverButton: "Start over",
+  /** Beside Start over: what it resets, since a platform's own confirmation may not say. */
+  startOverNote:
+    "Start over clears your stored secrets, saved decisions, phone approvals and temporary access, and it cannot be undone.",
+  startOver: {
+    started:
+      "Secrets started over with an empty list. Add each secret again; every use asks you first. History was kept.",
+    unneeded: "Secrets can already be used, so nothing changed.",
+    refused: "Secrets did not start over. Confirmation was not accepted.",
+    busy: "Wait for running secret uses and their results to finish before starting over.",
+    changed:
+      "Protected storage changed while starting over, so Secrets did not start over. Check what Secrets shows before trying again.",
+    locked: "Protected storage is locked. Unlock it before starting over.",
+    unavailable: "Secrets did not start over. Nothing changed.",
+    unknown:
+      "Whether Secrets started over is unknown. Check what Secrets shows before doing anything else, and do not start over again until then.",
+  },
   unavailable:
     "Recovery files are available only in this computer's native app when Secrets is enabled.",
   choosing: "Finish the open recovery dialog first.",

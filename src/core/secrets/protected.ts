@@ -127,6 +127,21 @@ export type RecoveryRestore =
   | "locked"
   | "unavailable"
   | "unknown";
+/** A start-over's outcome; `unneeded` when storage does not read lost or tampered. */
+export type SecretsStartOver =
+  | "started"
+  | "unneeded"
+  | "refused"
+  | "busy"
+  | "changed"
+  | "locked"
+  | "unavailable"
+  | "unknown";
+
+const RESTORE_REASON =
+  "Restore the selected Secrets archive, replace this computer's stored values and reset all saved permissions and approval devices.";
+const START_OVER_REASON =
+  "Start Secrets over with no stored values, leave the values it can no longer read unreadable for good and reset all saved permissions and approval devices.";
 
 /**
  * The protected Secrets backend (docs/secrets.md): native root custody, a
@@ -985,56 +1000,93 @@ export class ProtectedSecrets implements SecretsBackend {
     const key = Buffer.from(files.key);
     return this.change(async () => {
       let contents: RecoveryContents | undefined;
-      let stage: StagedRecovery | undefined;
-      let resume: (() => void) | undefined;
       try {
         if (this.retired) return "unavailable";
         if (this.brokerResults.size > 0) return "busy";
         contents = openRecovery(archive, key);
         if (!contents) return "invalid";
-        const expected = await observeSecretHome(this.options.custody);
-        if (typeof expected === "string") return expected === "lost" ? "unavailable" : expected;
-        let confirmed = false;
-        try {
-          confirmed =
-            (await this.options.authentication?.confirm(
-              "Restore the selected Secrets archive, replace this computer's stored values and reset all saved permissions and approval devices.",
-            )) === true;
-        } catch {
-          /* No fresh confirmation means no restore. */
-        }
-        if (!confirmed) return "refused";
-        resume = await pause();
-        if (!resume || this.brokerResults.size > 0) return "busy";
-        this.recovering = true;
-        this.materialEpoch += 1;
-        this.endReadAccess();
-        const history = await this.recoveryHistory();
-        if (typeof history === "string") return history;
-        stage = await stageRecovery(this.options.dir, contents, history, this.now());
-        const result = await stage.commit(this.options.custody, expected);
-        if (result === "committed" || result === "unknown") {
-          this.retired = true;
-          this.ready?.keys.destroy();
-          this.described.clear();
-          this.brokered.clear();
-        }
-        return result === "committed" ? "restored" : result;
+        return await this.replaceHome(RESTORE_REASON, contents, pause);
       } catch {
         return "unavailable";
       } finally {
-        try {
-          await stage?.dispose();
-        } catch {
-          /* An unused encrypted stage may remain; never claim erasure. */
-        }
-        this.recovering = false;
-        resume?.();
         if (contents) clearRecovery(contents);
         archive.fill(0);
         key.fill(0);
       }
     });
+  }
+
+  /**
+   * Start over where storage needs recovery (docs/secrets.md, "Starting over"):
+   * a fresh root and empty authority, activated by the one native write a
+   * restore makes, with no archive. A removed data folder beside its custody
+   * items reads as tampered, as a rolled-back record does; the owner cannot tell
+   * them apart, so only the captain's confirmed choice replaces that custody.
+   * Values sealed under the old root are left unreadable and history is kept.
+   */
+  startOver(pause: () => Promise<(() => void) | undefined>): Promise<SecretsStartOver> {
+    return this.change(async () => {
+      try {
+        if (this.retired) return "unavailable";
+        const reading = await this.status();
+        if (reading === "available" || reading === "uninitialized") return "unneeded";
+        if (reading === "locked" || reading === "unavailable") return reading;
+        const result = await this.replaceHome(START_OVER_REASON, undefined, pause);
+        return result === "restored" ? "started" : result === "invalid" ? "unavailable" : result;
+      } catch {
+        return "unavailable";
+      }
+    });
+  }
+
+  /**
+   * Restore's and start-over's shared activation: fresh native confirmation of
+   * `reason`, a paused coordinator, a synced stage, then one native write over
+   * the custody observed before confirmation. The caller serializes it.
+   */
+  private async replaceHome(
+    reason: string,
+    contents: RecoveryContents | undefined,
+    pause: () => Promise<(() => void) | undefined>,
+  ): Promise<RecoveryRestore> {
+    let stage: StagedRecovery | undefined;
+    let resume: (() => void) | undefined;
+    try {
+      if (this.brokerResults.size > 0) return "busy";
+      const expected = await observeSecretHome(this.options.custody);
+      if (typeof expected === "string") return expected === "lost" ? "unavailable" : expected;
+      let confirmed = false;
+      try {
+        confirmed = (await this.options.authentication?.confirm(reason)) === true;
+      } catch {
+        /* No fresh confirmation means no replacement. */
+      }
+      if (!confirmed) return "refused";
+      resume = await pause();
+      if (!resume || this.brokerResults.size > 0) return "busy";
+      this.recovering = true;
+      this.materialEpoch += 1;
+      this.endReadAccess();
+      const history = await this.recoveryHistory();
+      if (typeof history === "string") return history;
+      stage = await stageRecovery(this.options.dir, contents, history, this.now());
+      const result = await stage.commit(this.options.custody, expected);
+      if (result === "committed" || result === "unknown") {
+        this.retired = true;
+        this.ready?.keys.destroy();
+        this.described.clear();
+        this.brokered.clear();
+      }
+      return result === "committed" ? "restored" : result;
+    } finally {
+      try {
+        await stage?.dispose();
+      } catch {
+        /* An unused encrypted stage may remain; never claim erasure. */
+      }
+      this.recovering = false;
+      resume?.();
+    }
   }
 
   /** Authority may be damaged while the root still authenticates the local journal. */

@@ -93,7 +93,7 @@ The app composes Linux custody with this boundary ("In the app").
 
 The root opens once per owner start and is read again at every use, so a locked or replaced root stops a use that was already approved.
 Only the trusted controller's first Add creates a root, and only where nothing was ever sealed.
-A missing root beside sealed records is `lost`, never silently replaced.
+A missing root beside sealed records is `lost`, never silently replaced; only a restore or the captain's Start over replaces it ("Starting over").
 
 ### In the app
 
@@ -115,7 +115,7 @@ On Linux it composes the Secret Service custody, polkit and the custody's own un
 Where the platform's native store cannot load (no Security framework, or no libsecret), the app supplies no capability rather than a tab that cannot open.
 The custody opens the login keychain by its path under the home folder the account's user record names, never the default keychain, because a run outside the logged-in session, such as a system job, can get the Mac's System Keychain as its default.
 That path ignores `HOME`, so a check that injects this composition reaches the account's real login keychain even under a throwaway home folder; only the data-folder rule above keeps end-to-end launches off it, and a check names a scratch keychain file instead.
-A data folder removed while its flavor's custody items remain opens as `tampered`, the same reading as a rolled-back rules record, and offers only a restore from recovery files.
+A data folder removed while its flavor's custody items remain opens as `tampered`, the same reading as a rolled-back rules record, and offers a restore from recovery files or Start over ("Starting over").
 
 ## The vault
 
@@ -139,7 +139,7 @@ This binds an edit or use to its record; it does not turn the value files into a
 
 The authority record (`<userData>/secrets/authority.json`) holds the rules, the enrolled approval devices and the home they bind to, under a revision number.
 Its check is keyed by the root, and its head (revision and digest) lives in custody, so an agent-written, edited or older valid record is refused.
-A refused record makes the rules `tampered`, and every use answers unavailable until the captain saves a new revision with fresh authentication.
+A refused record makes the rules `tampered`, and every use answers unavailable until the captain restores a recovery backup or starts over ("Starting over"), each under fresh authentication.
 Saving needs a fresh local confirmation of that exact revision; it writes the next record, moves the head in custody, then renames, so an interruption leaves one record that matches the head.
 A rejected native write keeps its pending record and retires the live owner; reopening reconciles a matching head without repeating the write.
 An old or absent head beside a pending record remains unavailable while the process that attempted its native write is still running, even after reopening the owner.
@@ -158,6 +158,8 @@ The core dispatcher composes its routes from `src/core/secrets/handlers.ts`, ret
 Home-only channels serve its metadata and captain controls; the native export dialog writes metadata history through the private-file owner.
 Settings → Secrets is built around keeping a secret; deciding a use happens on the exact-use card.
 Its first line counts the secrets kept on this computer, and a badge appears only when storage is locked, unavailable or needs recovery.
+Where storage needs recovery, the notice says Infinitary can no longer read what this computer keeps and offers Recovery options, which opens Keep a copy, and Start over ("Starting over").
+A line under its buttons says what Start over clears and that it cannot be undone, because a platform's own confirmation may not say: Linux's polkit shows only the installed policy's message.
 A waiting request shows as one line naming its secrets, with Review request, which opens the exact-use card.
 Searchable rows lead with each secret's name and its place (the optional environment) as a tag, and say which task last asked for it and when, or that it is waiting, in use or not used yet.
 The view's `lastTask` carries that task's title: the controller reads it from the task its own coordinator saw, or from the task a crewmate's intent names in the history (`taskIntent`), so it survives a restart; a request no task made, or by a task the home no longer knows, names only when.
@@ -424,6 +426,17 @@ Storage use counts those retained files; deletion removes history across generat
 Deletion shares the journal's append writer and refuses while any request is pending or running, so it cannot erase the identity a later outcome still needs.
 If deletion fails partway, new journal writes refuse until deletion completes or the owner reopens, rather than extending an uncertain on-disk chain.
 Mutable working buffers are cleared, but immutable JavaScript strings remain subject to garbage collection rather than a claimed secure erase.
+
+### Starting over
+
+A data folder removed while its flavor's custody items remain opens as `tampered`, the same reading as a rolled-back rules record: the owner cannot tell a removed folder from an agent hiding one, so it never treats leftover items as a fresh start.
+A root missing beside sealed records opens as `lost`, and a damaged rules record as `tampered`, with the same way out.
+`ProtectedSecrets.startOver` is that way out when no recovery backup exists: Settings → Secrets offers Start over only where storage reads `lost` or `tampered`, and an available, uninitialized, locked or unavailable store is left as it is without asking anything.
+An owner that opened without its records keeps that opening's reading, so the Settings controller opens the store again before asking, as Unlock does: a data folder or root item that came back while the app ran is used, never replaced.
+It asks for fresh native confirmation with its own reason, then runs restore's path with no archive: the same pause of the request coordinator, a fresh root and empty authority in a new generation, the readable history re-keyed, and one native activation that replaces the leftover custody.
+The values the old root sealed stay where they were, unreadable for good; nothing is imported and no history row is marked recovered.
+Refused confirmation, running uses or uncollected results change nothing, and a changed or unknown activation is never repeated.
+A started or unknown outcome retires the old owner and invalidates earlier Settings offers, exactly as a restore does.
 
 ## Migration and recovery
 

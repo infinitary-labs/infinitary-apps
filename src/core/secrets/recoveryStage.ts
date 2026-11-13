@@ -26,11 +26,13 @@ async function sync(path: string): Promise<void> {
 /**
  * Build and verify a fresh sealed generation before touching native custody.
  * This in-memory key holder is staging only, never a live fallback: the stage
- * becomes usable only when native custody atomically selects it.
+ * becomes usable only when native custody atomically selects it. Starting over
+ * stages no archive: no values and no imported history, only the local history
+ * re-keyed beside a fresh root and empty authority.
  */
 export async function stageRecovery(
   base: string,
-  contents: RecoveryContents,
+  contents: RecoveryContents | undefined,
   history: JournalSnapshot,
   now: number,
 ): Promise<StagedRecovery> {
@@ -70,7 +72,7 @@ export async function stageRecovery(
     const authority = await ProtectedAuthority.load(dir, keys, staging);
     if (typeof authority === "string") throw new Error("Recovery staging unavailable.");
     const vault = new SecretVault(dir, keys, () => now);
-    for (const entry of contents.values) {
+    for (const entry of contents?.values ?? []) {
       const bytes = Buffer.from(entry.value, "base64");
       try {
         await vault.put(entry.ref, entry.label, bytes, {
@@ -88,20 +90,25 @@ export async function stageRecovery(
         bytes.fill(0);
       }
     }
-    await UseJournal.restore(dir, keys, history, {
-      id: randomUUID(),
-      home: contents.sourceHome,
-      at: now,
-      uses: contents.history.map((item) => ({
-        ...item,
-        ...(item.state === "waiting"
-          ? { state: "invalidated" as const, reconciled: true as const }
-          : item.state === "executing"
-            ? { state: "unknown" as const, reconciled: true as const }
-            : {}),
-      })),
-    });
-    if (contents.values.length > 0) await sync(join(dir, "values"));
+    await UseJournal.restore(
+      dir,
+      keys,
+      history,
+      contents && {
+        id: randomUUID(),
+        home: contents.sourceHome,
+        at: now,
+        uses: contents.history.map((item) => ({
+          ...item,
+          ...(item.state === "waiting"
+            ? { state: "invalidated" as const, reconciled: true as const }
+            : item.state === "executing"
+              ? { state: "unknown" as const, reconciled: true as const }
+              : {}),
+        })),
+      },
+    );
+    if ((contents?.values.length ?? 0) > 0) await sync(join(dir, "values"));
     await sync(dir);
     await sync(parent);
     await sync(base);

@@ -355,6 +355,9 @@ export class SecretsSettings {
       case "restore-recovery":
         await this.recoveryAction(owner, action.kind);
         break;
+      case "start-over":
+        await this.startOver(owner);
+        break;
       case "unlock":
         if (this.options.unlock) await this.options.unlock();
         if (owner.protected.availability !== "available") this.owner = undefined;
@@ -498,22 +501,7 @@ export class SecretsSettings {
           owner.requests.pauseForRecovery(),
         );
         this.message = SECRETS_RECOVERY_WORDS.restore[result];
-        if (result === "restored" || result === "unknown") {
-          const groups = new Set([...this.offers.values()].map((offer) => offer.group));
-          this.offers.clear();
-          this.offeredCard = null;
-          this.owner = undefined;
-          for (const group of groups) {
-            try {
-              this.options.withdraw(
-                `card-secrets-${group}`,
-                "Recovery changed protected storage. This earlier choice no longer applies.",
-              );
-            } catch {
-              /* A failed presentation update cannot restore the retired authority. */
-            }
-          }
-        }
+        if (result === "restored" || result === "unknown") this.homeReplaced();
       }
     } catch {
       this.message =
@@ -526,6 +514,56 @@ export class SecretsSettings {
       selected?.archive.fill(0);
       selected?.key.fill(0);
       this.choosingRecovery = false;
+    }
+  }
+
+  /**
+   * Start over where storage needs recovery (docs/secrets.md, "Starting over").
+   * It stays on the home, and the owner asks the system to confirm, so no card,
+   * crewmate or phone can start over by itself.
+   */
+  private async startOver(owner: Owner): Promise<void> {
+    if (this.choosingRecovery) {
+      this.message = SECRETS_RECOVERY_WORDS.choosing;
+      return;
+    }
+    this.choosingRecovery = true;
+    try {
+      // An owner that opened without its records keeps the reading it opened
+      // with. Open again first, as Unlock does, so a data folder or root item
+      // that came back is read now, and used rather than replaced.
+      const opened = owner.protected.availability === "available";
+      if (!opened && this.owner === owner) this.owner = undefined;
+      const current = opened ? owner : await this.ready();
+      if (!current) {
+        this.message = SECRETS_RECOVERY_WORDS.startOver.unavailable;
+        return;
+      }
+      const result = await current.protected.startOver(() => current.requests.pauseForRecovery());
+      this.message = SECRETS_RECOVERY_WORDS.startOver[result];
+      if (result === "started" || result === "unknown") this.homeReplaced();
+    } catch {
+      this.message = SECRETS_RECOVERY_WORDS.startOver.unknown;
+    } finally {
+      this.choosingRecovery = false;
+    }
+  }
+
+  /** A restore or start-over replaced the home: earlier offers no longer apply, and the next read reopens. */
+  private homeReplaced(): void {
+    const groups = new Set([...this.offers.values()].map((offer) => offer.group));
+    this.offers.clear();
+    this.offeredCard = null;
+    this.owner = undefined;
+    for (const group of groups) {
+      try {
+        this.options.withdraw(
+          `card-secrets-${group}`,
+          "Recovery changed protected storage. This earlier choice no longer applies.",
+        );
+      } catch {
+        /* A failed presentation update cannot restore the retired authority. */
+      }
     }
   }
 

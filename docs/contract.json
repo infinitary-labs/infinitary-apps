@@ -46789,6 +46789,19 @@
                 "properties": {
                   "kind": {
                     "type": "string",
+                    "const": "start-over"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
                     "const": "forget-device"
                   },
                   "device": {

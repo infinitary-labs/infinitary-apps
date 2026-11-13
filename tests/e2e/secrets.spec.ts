@@ -11,6 +11,7 @@ import { hostEnv } from "../../src/core/hostEnv";
 import { runWords } from "../../src/core/secrets/approvalCard";
 import { approvalCode } from "../../src/core/secrets/approvals";
 import { SECRETS_CHECK_WORDS } from "../../src/core/secrets/commandWords";
+import { ProtectedSecrets } from "../../src/core/secrets/protected";
 import { SECRETS_COMMAND, type UseCheck, type UseReceipt } from "../../src/core/secrets/requests";
 import { newReference } from "../../src/core/secrets/settings";
 import { secretName } from "../../src/shared/secretNames";
@@ -28,6 +29,7 @@ import {
   secretsNamed,
 } from "../../src/shared/secrets";
 import { connectClient } from "../helpers/connectionClient";
+import { disposableCustody } from "../helpers/disposableCustody";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
@@ -741,6 +743,83 @@ test("recovery controls keep files private and restore without replaying history
     await expect(section.getByRole("region", { name: SECRETS_WORDS.historyRegion })).toContainText(
       SECRETS_RECOVERY_WORDS.recoveredHistory,
     );
+  } finally {
+    await launched.close();
+  }
+});
+
+// Intent: INF-3865, filed from INF-1659's live Linux check. A data folder
+// removed while the computer's Keychain or Secret Service still held that
+// flavor's items opened Secrets as needing recovery, offering only a restore
+// from recovery files. Promised result: the notice offers Recovery options and
+// Start over by keys; a refused confirmation changes nothing, and an accepted
+// one leaves an empty list that takes a new secret. Data: a first life saves
+// one secret under its own disposable custody in this process, and the app
+// starts with that custody's items beside a fresh data folder. Completion: the
+// status says Secrets started over and Add saves. Prerequisites: Electron and
+// the built renderer. Native custody and confirmation stand in; no native
+// store, account or network is shared.
+test("items a removed data folder left in custody start Secrets over by keys after one confirmation", async () => {
+  const custody = disposableCustody();
+  const first = await ProtectedSecrets.open({
+    dir: join(scratchDir("secrets-first-life-"), "secrets"),
+    custody,
+    environment: () => ({}),
+    initialize: true,
+  });
+  await first.putSecret(REFERENCE, LABEL, Buffer.from(TOKEN));
+  const launched = await launchSecrets({ leftCustody: custody.slots });
+  const { app, page } = launched;
+  const section = settingsSection(page, "secrets");
+  const confirm = (value: boolean) =>
+    app.evaluate((_electron, value) => {
+      (globalThis as SecretsJourneyGlobal).secretsJourney.confirmation = value;
+    }, value);
+  const confirmations = () =>
+    app.evaluate(() => (globalThis as SecretsJourneyGlobal).secretsJourney.confirmations);
+  try {
+    await runFromSearch(app, page, "settings.secrets");
+    await expect(section.getByText(SECRETS_RECOVERY_WORDS.needed, { exact: true })).toBeVisible();
+    const options = section.getByRole("button", {
+      name: SECRETS_RECOVERY_WORDS.options,
+      exact: true,
+    });
+    const startOver = section.getByRole("button", {
+      name: SECRETS_RECOVERY_WORDS.startOverButton,
+      exact: true,
+    });
+    await pressKey(options, "Enter");
+    await expect(
+      section.getByRole("region", { name: SECRETS_RECOVERY_WORDS.region, exact: true }),
+    ).toBeVisible();
+    await pressKey(options, "Tab");
+    await expect(startOver).toBeFocused();
+    // The captain's answer on the review: one sentence beside Start over says
+    // what it clears and that it cannot be undone.
+    await expect(startOver).toHaveAccessibleDescription(SECRETS_RECOVERY_WORDS.startOverNote);
+
+    await confirm(false);
+    await pressKey(startOver, "Enter");
+    await expect(section.getByRole("status")).toHaveText(SECRETS_RECOVERY_WORDS.startOver.refused);
+    await expect(section.getByText(SECRETS_RECOVERY_WORDS.needed, { exact: true })).toBeVisible();
+    expect(await confirmations()).toBe(1);
+
+    await confirm(true);
+    await pressKey(startOver, "Enter");
+    await expect(section.getByRole("status")).toHaveText(SECRETS_RECOVERY_WORDS.startOver.started);
+    await expect(startOver).toHaveCount(0);
+    expect(await confirmations()).toBe(2);
+    expect(
+      await app.evaluate(async () =>
+        (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.view(),
+      ),
+    ).toMatchObject({ availability: "available", entries: [], rules: [], devices: [] });
+
+    await pressKey(section.getByRole("button", { name: SECRETS_WORDS.add, exact: true }), "Enter");
+    await section.getByLabel(SECRETS_WORDS.name, { exact: true }).fill(LABEL);
+    await section.getByLabel(SECRETS_WORDS.value, { exact: true }).fill(TOKEN);
+    await pressKey(section.getByRole("button", { name: SECRETS_WORDS.save, exact: true }), "Enter");
+    await expect(section.getByRole("status")).toHaveText(SECRETS_WORDS.saved);
   } finally {
     await launched.close();
   }

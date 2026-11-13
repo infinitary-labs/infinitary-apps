@@ -71,9 +71,9 @@ const pendingWrites = new Set<string>();
  * keyed by custody and its head - revision and digest - lives in custody too,
  * so an agent-written file, an edited one or an older valid one is refused:
  * rules then answer `tampered` and every use is unavailable until the captain
- * saves a new revision with fresh authentication. Saving writes the next record,
- * moves the head, then renames, so an interruption leaves one record that
- * matches the head.
+ * restores a backup or starts over, each under fresh authentication (owned by
+ * ProtectedSecrets). Saving writes the next record, moves the head, then
+ * renames, so an interruption leaves one record that matches the head.
  */
 export class ProtectedAuthority {
   /** A lost reply or failed rename needs reopening, never another save over the pending record. */

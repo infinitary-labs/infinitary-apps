@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { expect, type Page } from "@playwright/test";
 import type { Core } from "../../src/core";
+import type { CustodySlot } from "../../src/core/secrets/custody";
 import type { httpSecretBroker } from "../../src/core/secrets/httpBroker";
 import { SECRETS_AREAS } from "../../src/shared/secrets";
 import type { DisposableCustody } from "../helpers/disposableCustody";
@@ -48,8 +49,16 @@ export type SecretsJourneyGlobal = typeof globalThis & { secretsJourney: Secrets
  * through the app's host seam. No production setting, native store, credential
  * or extra IPC is involved. The ordinary hermetic launcher still owns HOME,
  * userData, provider isolation, the hidden window and cleanup.
+ * `leftCustody` fills the stand-in custody before the app starts, as the items
+ * an earlier data folder left in the computer's Keychain or Secret Service.
  */
-export async function launchSecrets(options: Omit<LaunchOptions, "entry" | "packaged"> = {}) {
+export async function launchSecrets({
+  leftCustody,
+  ...options
+}: Omit<LaunchOptions, "entry" | "packaged"> & {
+  leftCustody?: ReadonlyMap<CustodySlot, Buffer>;
+} = {}) {
+  const left = [...(leftCustody ?? [])].map(([slot, bytes]) => [slot, bytes.toString("base64")]);
   const dir = scratchDir("infinitary-secrets-entry-");
   const root = process.cwd();
   const require = createRequire(import.meta.url);
@@ -72,6 +81,7 @@ export async function launchSecrets(options: Omit<LaunchOptions, "entry" | "pack
         const fixture = { custody: disposableCustody(), confirmation: true, confirmations: 0, core: null, httpBroker: httpSecretBroker,
           recovery: { archive: ${JSON.stringify(join(dir, "fixture-archive"))}, key: ${JSON.stringify(join(dir, "fixture-key"))}, cancel: false }
         };
+        for (const [slot, bytes] of ${JSON.stringify(left)}) fixture.custody.slots.set(slot, Buffer.from(bytes, 'base64'));
         globalThis.secretsJourney = fixture;
         startApp(${JSON.stringify(resolve(root, "out/main"))}, null, {
           secrets: {

@@ -359,7 +359,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/renderer/src/settings/RemoveProject.tsx": 7,
   "src/renderer/src/settings/RunbooksTab.tsx": 12,
   "src/renderer/src/settings/RunsOn.tsx": 7,
-  "src/renderer/src/settings/SecretsTab.tsx": 27,
+  "src/renderer/src/settings/SecretsTab.tsx": 25,
   "src/renderer/src/settings/SettingsScreen.tsx": 1,
   "src/renderer/src/settings/SharingSection.tsx": 22,
   "src/renderer/src/settings/SpeedControl.tsx": 6,

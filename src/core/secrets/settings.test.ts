@@ -1,5 +1,5 @@
 import { generateKeyPairSync, type KeyObject, sign } from "node:crypto";
-import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { cp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
 import { secretName } from "@shared/secretNames";
@@ -312,6 +312,59 @@ describe("trusted Secrets settings", () => {
     expect(cancelled.message).toBe(SECRETS_RECOVERY_WORDS.cancelled);
     expect(cancelled.entries).toEqual(original.entries);
     expect(cancelled.home).toBe(original.home);
+  });
+
+  it("Start over turns a removed data folder's leftover custody into an empty list the captain can add to", async () => {
+    // INF-3865: a data folder removed while custody kept its items opened as
+    // tampered, with only a restore from recovery files. Starting over asks the
+    // system once, says what happened and reopens; a usable store asks nothing.
+    const f = fixture();
+    await f.settings.put(INPUT);
+    await rm(f.dir, { recursive: true });
+    const settings = f.make();
+    expect((await settings.view()).availability).toBe("tampered");
+    const asked = f.confirms();
+
+    f.confirmation(false);
+    const refused = await settings.action({ kind: "start-over" });
+    expect(refused.message).toBe(SECRETS_RECOVERY_WORDS.startOver.refused);
+    expect(refused.availability).toBe("tampered");
+    f.confirmation(true);
+    const started = await settings.action({ kind: "start-over" });
+    expect(started.message).toBe(SECRETS_RECOVERY_WORDS.startOver.started);
+    expect(started.availability).toBe("available");
+    expect(started.entries).toEqual([]);
+    expect(started.rules).toEqual([]);
+    expect(secretsViewSchema.safeParse(started).success).toBe(true);
+    expect(f.confirms()).toBe(asked + 2);
+
+    expect((await settings.action({ kind: "start-over" })).message).toBe(
+      SECRETS_RECOVERY_WORDS.startOver.unneeded,
+    );
+    expect(f.confirms()).toBe(asked + 2);
+    expect((await settings.put(INPUT)).entries.map((entry) => entry.label)).toEqual([INPUT.label]);
+  });
+
+  it("a data folder that comes back while Settings is open is used, never started over", async () => {
+    // INF-3865's careful review: the controller kept the owner that opened
+    // without its records, so Start over acted on that old tampered reading and
+    // replaced custody the returned folder could still read.
+    const f = fixture();
+    await f.settings.put(INPUT);
+    const kept = join(scratchDir("secrets-kept-folder-"), "secrets");
+    await cp(f.dir, kept, { recursive: true });
+    await rm(f.dir, { recursive: true });
+    const settings = f.make();
+    expect((await settings.view()).availability).toBe("tampered");
+    await rm(f.dir, { recursive: true, force: true });
+    await cp(kept, f.dir, { recursive: true });
+    const asked = f.confirms();
+
+    const answer = await settings.action({ kind: "start-over" });
+    expect(answer.message).toBe(SECRETS_RECOVERY_WORDS.startOver.unneeded);
+    expect(answer.availability).toBe("available");
+    expect(answer.entries.map((entry) => entry.label)).toEqual([INPUT.label]);
+    expect(f.confirms()).toBe(asked);
   });
 
   it("a core consumer can register after storage opens, but cannot replace a registered adapter", async () => {

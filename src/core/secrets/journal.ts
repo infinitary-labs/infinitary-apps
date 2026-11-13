@@ -118,16 +118,23 @@ export class UseJournal {
     });
   }
 
-  /** Re-key local history without replaying it; archive history remains a separate read-only collection. */
+  /**
+   * Re-key local history without replaying it; archive history remains a
+   * separate read-only collection. Starting over imports no archive, so it
+   * adds no collection and keeps only the ones already recovered.
+   */
   static async restore(
     dir: string,
     keys: RootKeys,
     snapshot: JournalSnapshot,
-    recovered: RecoveredHistory,
+    recovered?: RecoveredHistory,
   ): Promise<void> {
     const journal = new UseJournal(join(dir, "history.jsonl"), keys, Date.now);
     for (const { at, entry } of snapshot.entries) await journal.appendAt(entry, at);
-    const collections = recoveredSchema.parse([...snapshot.recovered, recovered]);
+    const collections = recoveredSchema.parse(
+      recovered ? [...snapshot.recovered, recovered] : snapshot.recovered,
+    );
+    if (collections.length === 0) return;
     await writePrivateFile(
       join(dir, "history.recovered.json"),
       JSON.stringify({

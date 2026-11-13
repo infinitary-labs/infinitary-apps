@@ -164,23 +164,39 @@ export function SecretsTab() {
       ) : (
         <>
           {view.message && <p role="status">{view.message}</p>}
-          {!canWrite && (
+          {recoveryNeeded ? (
             <div className="fm-secrets-notice">
-              <p>
-                {recoveryNeeded
-                  ? "Stored values or permissions need recovery. No access was granted."
-                  : "Unlock or check storage to use your secrets. Approval requests keep waiting."}
+              <p>{SECRETS_RECOVERY_WORDS.needed}</p>
+              <div className="fm-secrets-actions">
+                <Button variant="secondary" onClick={() => toggleArea("copy", true)}>
+                  {SECRETS_RECOVERY_WORDS.options}
+                </Button>
+                <Button
+                  variant="secondary"
+                  pending={busy}
+                  aria-description={SECRETS_RECOVERY_WORDS.startOverNote}
+                  onClick={() => void act({ kind: "start-over" })}
+                >
+                  {SECRETS_RECOVERY_WORDS.startOverButton}
+                </Button>
+              </div>
+              <p className="fm-secrets-muted fm-secrets-consequence">
+                {SECRETS_RECOVERY_WORDS.startOverNote}
               </p>
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  recoveryNeeded ? toggleArea("copy", true) : void act({ kind: "unlock" })
-                }
-                pending={busy}
-              >
-                {recoveryNeeded ? "Recovery options" : "Unlock or check again"}
-              </Button>
             </div>
+          ) : (
+            !canWrite && (
+              <div className="fm-secrets-notice">
+                <p>Unlock or check storage to use your secrets. Approval requests keep waiting.</p>
+                <Button
+                  variant="secondary"
+                  onClick={() => void act({ kind: "unlock" })}
+                  pending={busy}
+                >
+                  Unlock or check again
+                </Button>
+              </div>
+            )
           )}
           {waiting.map((use) => (
             <div key={use.request} className="fm-secrets-notice" data-secret-waiting="">

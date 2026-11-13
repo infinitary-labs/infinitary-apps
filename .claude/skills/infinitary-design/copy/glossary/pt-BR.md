@@ -120,3 +120,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | Steer (button) | Orientar |  |
 | Theme: Device / Dark / Light | Tema: Dispositivo / Escuro / Claro |  |
 | live validation | validação ao vivo | Trying the change for real; kept apart from the checks. |
+| unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
+| reach (another computer) | alcançar | "Não foi possível alcançar o {host}", matching "fora de alcance". |
+| issue (where the project lives) | issue | As GitHub's Portuguese docs keep it; feminine: "Abrir a issue". |
+| cost limit | limite de custo | A project's estimated-dollar cap, never the plan's allowance ("franquia"). |

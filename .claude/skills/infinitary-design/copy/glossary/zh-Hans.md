@@ -121,3 +121,8 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Steer (button) | 引导 |  |
 | Theme: Device / Dark / Light | 主题：跟随设备 / 深色 / 浅色 |  |
 | live validation | 实测验证 | Trying the change for real; kept apart from the checks. |
+| link (to add a device) | 链接 | The one-time link that adds a computer or phone. |
+| command (run in Terminal) | 命令 | The one-time command run in “终端”, macOS's own name for Terminal. |
+| address (of a computer) | 地址 | The address used with SSH; also a browser page's address. |
+| private network | 私有网络 | A network that joins computers wherever they are. |
+| task key | 任务编号前缀 | The letters tasks are numbered with, such as {key}-1; 键 alone would read as a keyboard key. |

@@ -134,3 +134,9 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Steer (button) | 伝える | 指示 is the Instruction kind. |
 | Theme: Device / Dark / Light | テーマ: デバイスに合わせる / ダーク / ライト |  |
 | live validation | 実地検証 | Trying the change for real; kept apart from チェック. |
+| link (to add a device) | リンク | The one-time link that adds a computer or phone. |
+| command (run in Terminal) | コマンド | Run in 「ターミナル」, macOS's own Japanese name for Terminal. |
+| address (of a computer) | アドレス | A computer's SSH address, and a browser page's address. |
+| private network | プライベートネットワーク | A network that joins computers wherever they are. |
+| task key | タスクキー | The letters tasks are numbered with, such as {key}-1, as Japanese project tools say. |
+| log in (to a computer's user account) | ログイン | Kept apart from サインイン, which is for services. |

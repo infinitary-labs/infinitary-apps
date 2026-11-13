@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   REPO_REMOVAL_LINE,
   type RepoView,
@@ -32,7 +33,7 @@ export function RemoveProject({ repo, onRemoved }: { repo: RepoView; onRemoved: 
         } else setPhase({ kind: "asking" });
       },
       () => {
-        setNotice("Could not check this project. Please try again.");
+        setNotice(m.settingsProjectsRemoveCheckFailed());
         setPhase({ kind: "rest" });
       },
     );
@@ -41,7 +42,7 @@ export function RemoveProject({ repo, onRemoved }: { repo: RepoView; onRemoved: 
   const remove = () => {
     setPhase({ kind: "removing" });
     window.infinitary.repos.remove(repo.id).then(onRemoved, (caught: unknown) => {
-      setNotice(caught instanceof Error ? caught.message : "Could not remove this project.");
+      setNotice(caught instanceof Error ? caught.message : m.settingsProjectsRemoveFailed());
       setPhase({ kind: "rest" });
     });
   };
@@ -68,7 +69,7 @@ export function RemoveProject({ repo, onRemoved }: { repo: RepoView; onRemoved: 
         ) : (
           <>
             <div style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--fg-1)" }}>
-              Remove project
+              {m.settingsProjectsRemoveTitle()}
             </div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
               {REPO_REMOVAL_LINE}
@@ -94,16 +95,16 @@ export function RemoveProject({ repo, onRemoved }: { repo: RepoView; onRemoved: 
             disabled={phase.kind === "removing"}
             onClick={() => setPhase({ kind: "rest" })}
           >
-            Cancel
+            {m.settingsProjectsRemoveCancel()}
           </Button>
           <Button
             variant="danger"
             size="sm"
             pending={phase.kind === "removing"}
-            pendingLabel="Removing..."
+            pendingLabel={m.settingsProjectsRemoving()}
             onClick={remove}
           >
-            Remove
+            {m.settingsProjectsRemoveConfirm()}
           </Button>
         </span>
       ) : (
@@ -112,9 +113,9 @@ export function RemoveProject({ repo, onRemoved }: { repo: RepoView; onRemoved: 
           size="sm"
           disabled={phase.kind === "checking"}
           onClick={begin}
-          aria-label={`Remove ${repo.name}`}
+          aria-label={m.settingsProjectsRemoveNamed({ name: repo.name })}
         >
-          Remove
+          {m.settingsProjectsRemoveConfirm()}
         </Button>
       )}
     </div>

@@ -3,8 +3,8 @@ import { type RepoView, runsHereOnly } from "@shared/repos";
 import { type DeviceSignIns, devicePlace, signInPlace } from "@shared/signIns";
 import { useEffect, useState } from "react";
 import "./devices.css";
-import { COMPUTER, HERE } from "@shared/deviceNames";
 import { awayWord } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 
 /**
@@ -46,14 +46,15 @@ export function useWorkComputers(): DeviceSignIns[] | null {
 /** Why a computer cannot take work now, after a middle dot, or nothing. */
 function notNow(computer: DeviceSignIns): string {
   if (!(computer.reach === "in-reach")) return ` · ${awayWord(computer.reach === "connecting")}`;
-  if (computer.signIns && computer.signIns.accounts.length === 0) return " · no sign-ins yet";
+  if (computer.signIns && computer.signIns.accounts.length === 0)
+    return ` · ${m.settingsRunsOnNoSignIns()}`;
   return "";
 }
 
 /** How the row and its badge place a project's computer: "on Mac mini", "as Builder". */
 export function runsOnWhere(repo: RepoView, computers: readonly DeviceSignIns[]): string | null {
   if (!repo.runsOn) return null;
-  if (repo.runsOn === AUTOMATIC_COMPUTER) return "automatically";
+  if (repo.runsOn === AUTOMATIC_COMPUTER) return m.settingsRunsOnAutomatically();
   return devicePlace(
     computers.map((computer) => ({ ...computer, id: computer.deviceId })),
     repo.runsOn,
@@ -87,28 +88,26 @@ export function RunsOnControl({
   );
   return (
     <select
-      aria-label="Runs on"
+      aria-label={m.settingsRunsOnLabel()}
       className="fm-runs-on"
       value={repo.runsOn ?? ""}
       onChange={(event) => onChoose(event.target.value || null)}
     >
       <option value={AUTOMATIC_COMPUTER}>{AUTOMATIC_WORD}</option>
       <option value="">{place.This}</option>
-      {macs.length > 0 && <optgroup label={`Your ${COMPUTER.many}`}>{macs.map(option)}</optgroup>}
-      {users.length > 0 && <optgroup label="As another user">{users.map(option)}</optgroup>}
-      {gone && repo.runsOn && (
-        <option value={repo.runsOn}>The other {COMPUTER.one} · removed</option>
+      {macs.length > 0 && (
+        <optgroup label={m.settingsRunsOnYourComputers()}>{macs.map(option)}</optgroup>
       )}
+      {users.length > 0 && (
+        <optgroup label={m.settingsRunsOnAnotherUser()}>{users.map(option)}</optgroup>
+      )}
+      {gone && repo.runsOn && <option value={repo.runsOn}>{m.settingsRunsOnRemoved()}</option>}
     </select>
   );
 }
 
 /** The row's description, in the design's words. */
 export function runsOnDescription(repo: RepoView): string {
-  if (repo.runsOn === AUTOMATIC_COMPUTER)
-    return "Choose a compatible computer with room for each new task. A started task stays there.";
-  return (
-    runsHereOnly(repo) ??
-    `Where its tasks run. While that ${COMPUTER.one} is out of reach they wait, and never run on ${HERE.this} instead.`
-  );
+  if (repo.runsOn === AUTOMATIC_COMPUTER) return m.settingsRunsOnAutomaticDescription();
+  return runsHereOnly(repo) ?? m.settingsRunsOnDescription();
 }

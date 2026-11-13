@@ -14,6 +14,7 @@ import {
   GITHUB_ENTERPRISE,
   GITLAB,
 } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import {
   INTEGRATIONS_SIGN_IN_HOST,
   INTEGRATIONS_WORDS,
@@ -60,13 +61,17 @@ export function forgeRowView(signIn: Pick<ForgeSignInView, "state" | "name">): {
 } {
   switch (signIn.state) {
     case "ok":
-      return { tone: "ok", label: "signed in", reauth: false };
+      return { tone: "ok", label: m.settingsForgeSignedIn(), reauth: false };
     case "needs_reauth":
-      return { tone: "danger", label: "sign in again", reauth: true };
+      return { tone: "danger", label: m.settingsForgeSignInAgainState(), reauth: true };
     case "unavailable":
-      return { tone: "ring", label: `signed in · could not reach ${signIn.name}`, reauth: false };
+      return {
+        tone: "ring",
+        label: m.settingsForgeSignedInUnreachable({ host: signIn.name }),
+        reauth: false,
+      };
     default:
-      return { tone: "ring", label: "signed in · checking", reauth: false };
+      return { tone: "ring", label: m.settingsForgeSignedInChecking(), reauth: false };
   }
 }
 
@@ -278,13 +283,13 @@ export function HostChip({
       type="button"
       className="fm-connect-chip"
       data-forge-chip={host.host || host.name}
-      aria-label={`Sign in to ${host.name}`}
-      title={`Sign in to ${host.name}`}
+      aria-label={m.settingsForgeSignInTo({ host: host.name })}
+      title={m.settingsForgeSignInTo({ host: host.name })}
       disabled={busy}
       onClick={onConnect}
     >
       {plusIcon}
-      <span>{busy ? "Connecting..." : host.name}</span>
+      <span>{busy ? m.settingsForgeConnecting() : host.name}</span>
     </button>
   );
 }
@@ -341,7 +346,7 @@ function KeyAside({
     <form
       className="fm-connect-aside fm-forges-aside"
       data-forge-key-form={form.host || form.server.kind}
-      aria-label={`Sign in to ${form.host || form.server.name}`}
+      aria-label={m.settingsForgeSignInTo({ host: form.host || form.server.name })}
       onSubmit={(event) => void submit(event)}
     >
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
@@ -368,7 +373,7 @@ function KeyAside({
             host && void window.infinitary.app.openExternal(forgeKeyPage(form.server.kind, host))
           }
         >
-          Make a key on {host ?? form.server.name}
+          {m.settingsForgeMakeKey({ host: host ?? form.server.name })}
         </Button>
       </div>
       <div className="fm-forges-field">
@@ -398,10 +403,10 @@ function KeyAside({
           variant="primary"
           size="sm"
           pending={checking}
-          pendingLabel="Checking..."
+          pendingLabel={m.settingsForgeChecking()}
           disabled={!host || !key.trim()}
         >
-          Sign in
+          {m.settingsForgeSignIn()}
         </Button>
         {onBrowser && (
           <Button
@@ -414,7 +419,7 @@ function KeyAside({
           </Button>
         )}
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {m.settingsForgeCancel()}
         </Button>
       </div>
       {githubCli && host && <GitHubCliLine address={host} onDone={onDone} />}
@@ -447,7 +452,7 @@ export function SignInAside({
     return (
       <div className="fm-connect-aside fm-forges-aside" data-forge-flow={flow.host}>
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
-          Enter this code on {name(flow.host)}:
+          {m.settingsForgeEnterCode({ host: name(flow.host) })}
           <span className="fm-forges-code" data-forge-code="">
             {flow.userCode}
           </span>
@@ -459,10 +464,10 @@ export function SignInAside({
             size="sm"
             onClick={() => void window.infinitary.app.openExternal(flow.verificationUri)}
           >
-            Open {name(flow.host)}
+            {m.settingsForgeOpenHost({ host: name(flow.host) })}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => void window.infinitary.forges.cancel()}>
-            Cancel
+            {m.settingsForgeCancel()}
           </Button>
         </div>
         {githubCli && <GitHubCliLine address={flow.host} />}
@@ -475,12 +480,12 @@ export function SignInAside({
     <div className="fm-connect-aside fm-forges-aside" data-forge-ended={ended.end}>
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
         {ended.end === "expired"
-          ? "The code expired."
-          : `Could not reach ${name(ended.host)} - try again.`}
+          ? m.settingsForgeCodeExpired()
+          : m.settingsForgeUnreachable({ host: name(ended.host) })}
       </div>
       <div className="fm-forges-aside-actions">
         <Button variant="secondary" size="sm" onClick={() => onRetry(ended.host)}>
-          {ended.end === "expired" ? "Get a new code" : "Try again"}
+          {ended.end === "expired" ? m.settingsForgeNewCode() : m.settingsForgeTryAgain()}
         </Button>
       </div>
     </div>

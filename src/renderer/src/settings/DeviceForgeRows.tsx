@@ -1,6 +1,7 @@
 import { awayWord } from "@shared/devices";
 import { kindByName } from "@shared/forge";
 import { FORGE_CLI_WORDS } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import type { ComputerForges, DeviceSignIns } from "@shared/signIns";
 import { REMOTE_SIGN_IN_UPDATE_NOTE, signInPlace } from "@shared/signIns";
 import { useCallback, useEffect } from "react";
@@ -8,7 +9,7 @@ import { useShellStore } from "../app/store";
 import { Badge, Button, RowMenu, StatusDot, type StatusDotTone } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { DeviceSignInAside, type Flow, SignInNeedsUpdate } from "./DeviceSignIns";
-import { DEVICE_FORGE_ROLE } from "./deviceForgeWords";
+import { DEVICE_FORGE_WORDS } from "./deviceForgeWords";
 import { GitHubCliLine } from "./GitHubCliLine";
 import { useDeviceSignIns } from "./useDeviceSignIns";
 
@@ -71,29 +72,35 @@ export function deviceForgeRowView(row: DeviceForgeRow): {
   if (!row.signIn)
     return {
       tone: "idle",
-      label: `not signed in to ${row.hostName}`,
+      label: m.settingsForgeNotSignedIn({ host: row.hostName }),
       title: row.place.label,
-      line: `not signed in to ${row.hostName}${away}`,
+      line: `${m.settingsForgeNotSignedIn({ host: row.hostName })}${away}`,
       reauth: false,
     };
   const title = row.signIn.login ? `${row.hostName} · ${row.signIn.login}` : row.hostName;
   const through = row.signIn.way === "cli" ? ` · ${FORGE_CLI_WORDS.through}` : "";
-  const line = `${row.place.label}${through} · ${DEVICE_FORGE_ROLE}${away}`;
+  const line = `${row.place.label}${through} · ${DEVICE_FORGE_WORDS.deviceRole}${away}`;
   switch (row.signIn.state) {
     case "ok":
-      return { tone: "ok", label: "signed in", title, line, reauth: false };
+      return { tone: "ok", label: m.settingsForgeSignedIn(), title, line, reauth: false };
     case "needs_reauth":
-      return { tone: "danger", label: "sign in again", title, line, reauth: true };
+      return {
+        tone: "danger",
+        label: m.settingsForgeSignInAgainState(),
+        title,
+        line,
+        reauth: true,
+      };
     case "unavailable":
       return {
         tone: "ring",
-        label: `signed in · could not reach ${row.hostName}`,
+        label: m.settingsForgeSignedInUnreachable({ host: row.hostName }),
         title,
         line,
         reauth: false,
       };
     default:
-      return { tone: "ring", label: "signed in · checking", title, line, reauth: false };
+      return { tone: "ring", label: m.settingsForgeSignedInChecking(), title, line, reauth: false };
   }
 }
 
@@ -204,11 +211,12 @@ function DeviceForgeRowLine({
   signInOff?: string;
 }) {
   const view = deviceForgeRowView(row);
-  const notSignedIn = view.label.startsWith("not signed in to ");
+  const notSignedIn = !row.signIn;
   const lineFit = useOverflowTitle(notSignedIn ? view.line : undefined);
+  // Signed in, or asked to sign in again, the dot's word is drawn beside it.
   const nativeTitle =
-    view.label !== "signed in" &&
-    view.label !== "sign in again" &&
+    row.signIn?.state !== "ok" &&
+    row.signIn?.state !== "needs_reauth" &&
     !(notSignedIn && view.line.startsWith(view.label) && !lineFit.hidden);
   return (
     <div
@@ -225,10 +233,10 @@ function DeviceForgeRowLine({
         {row.signIn &&
           (view.reauth ? (
             <span className="fm-forges-state" data-tone="danger">
-              Sign in again.
+              {m.settingsForgeSignInAgainSay()}
             </span>
           ) : (
-            <Badge tone="ok">signed in</Badge>
+            <Badge tone="ok">{m.settingsForgeSignedIn()}</Badge>
           ))}
         <span className="fm-forges-sub" ref={notSignedIn ? lineFit.ref : undefined}>
           {view.line}
@@ -240,21 +248,28 @@ function DeviceForgeRowLine({
             variant={view.reauth ? "primary" : "secondary"}
             size="sm"
             pending={starting}
-            pendingLabel="Starting..."
+            pendingLabel={m.settingsForgeStarting()}
             disabled={!row.inReach || open}
             off={Boolean(signInOff)}
             note={signInOff}
             onClick={onSignIn}
           >
-            {view.reauth ? "Sign in again" : "Sign in"}
+            {view.reauth ? m.settingsForgeSignInAgain() : m.settingsForgeSignIn()}
           </Button>
         )}
       </span>
       <span className="fm-forges-menu">
         {row.signIn && (
           <RowMenu
-            label={`${row.hostName} ${row.place.where} actions`}
-            items={[{ id: "sign-out", label: "Sign out", tone: "danger", onSelect: onSignOut }]}
+            label={m.settingsForgeRowActions({ host: row.hostName, where: row.place.where })}
+            items={[
+              {
+                id: "sign-out",
+                label: m.settingsForgeSignOut(),
+                tone: "danger",
+                onSelect: onSignOut,
+              },
+            ]}
           />
         )}
       </span>

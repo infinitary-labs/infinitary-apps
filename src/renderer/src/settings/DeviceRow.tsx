@@ -1,4 +1,3 @@
-import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
   automaticStartupOf,
   automaticStartupWords,
@@ -9,6 +8,7 @@ import {
   deviceWords,
   isPhone,
 } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { runsForAnotherFirstmate, sshConnectionWords } from "@shared/sshConnection";
 import { useState } from "react";
@@ -71,10 +71,10 @@ export function DeviceRow({
         <Button
           variant="secondary"
           size="sm"
-          aria-label={`Remove ${label}`}
+          aria-label={m.settingsDevicesRemoveNamed({ device: label })}
           onClick={() => onAskRemove(device.id)}
         >
-          Remove
+          {m.settingsDevicesRemoveButton()}
         </Button>
       </div>
     );
@@ -191,55 +191,55 @@ export function DeviceRow({
         <Button
           variant="secondary"
           size="sm"
-          aria-label={`Add ${label} by its address`}
+          aria-label={m.settingsDevicesAddByAddressNamed({ device: label })}
           onClick={() => onAskChangeAddress(device.id)}
         >
-          Add it by its address
+          {m.settingsDevicesAddByAddress()}
         </Button>
       )}
       {stopped && !left && (
         <Button
           variant="secondary"
           size="sm"
-          aria-label={`Try again to reach ${label}`}
+          aria-label={m.settingsDevicesTryAgainNamed({ device: label })}
           onClick={() => onTryAgain(device.id)}
         >
-          Try again
+          {m.settingsDevicesTryAgain()}
         </Button>
       )}
       {device.ssh && device.remoteLogin && !settling && !left && (
         <Button
           variant="ghost"
           size="sm"
-          aria-label={`Change the address of ${label}`}
+          aria-label={m.settingsDevicesChangeAddressNamed({ device: label })}
           onClick={() => onAskChangeAddress(device.id)}
         >
-          Change address
+          {m.settingsDevicesChangeAddress()}
         </Button>
       )}
       {other && !settling && device.removal !== "when-back" && (
         <Button
           variant="secondary"
           size="sm"
-          aria-label={`Update ${label}`}
+          aria-label={m.settingsDevicesUpdateNamed({ device: label })}
           disabled={busy === "link"}
           onClick={() => onUpdate(device)}
         >
-          Update
+          {m.settingsDevicesUpdate()}
         </Button>
       )}
       {device.removal === "when-back" ? (
         <Button variant="ghost" size="sm" onClick={() => onKeep(device.id)}>
-          Keep it
+          {m.settingsDevicesKeepIt()}
         </Button>
       ) : settling ? null : (
         <Button
           variant="secondary"
           size="sm"
-          aria-label={`Remove ${label}`}
+          aria-label={m.settingsDevicesRemoveNamed({ device: label })}
           onClick={() => onAskRemove(device.id)}
         >
-          Remove
+          {m.settingsDevicesRemoveButton()}
         </Button>
       )}
     </div>
@@ -285,12 +285,10 @@ export function AddressChange({
       </label>
       <div className="fm-devices-aside-say">
         {!adding
-          ? here(
-              `The address you use with SSH for it now. ${HERE.This} checks it is the same ${COMPUTER.one} first.`,
-            )
+          ? here(m.settingsDevicesAddressChangeSay())
           : device.user
-            ? `The address you use with SSH for it, as ${device.user}. ${sshMustBeOn()}`
-            : `The address you use with SSH for it. ${sshMustBeOn()}`}
+            ? m.settingsDevicesAddressAddSayAs({ user: device.user, sshOn: sshMustBeOn() })
+            : m.settingsDevicesAddressAddSay({ sshOn: sshMustBeOn() })}
       </div>
       <div className="fm-devices-aside-actions">
         <Input
@@ -305,10 +303,10 @@ export function AddressChange({
           style={{ flex: 1, minWidth: 220, width: "auto" }}
         />
         <Button type="submit" size="sm" disabled={!typed || unchanged}>
-          {adding ? "Add it" : "Change it"}
+          {adding ? m.settingsDevicesAddIt() : m.settingsDevicesAddressChange()}
         </Button>
         <Button variant="ghost" size="sm" type="button" onClick={() => onAskChangeAddress(null)}>
-          Cancel
+          {m.settingsDevicesCancel()}
         </Button>
       </div>
     </form>
@@ -336,7 +334,7 @@ export function RemoveQuestion({
       disabled={busy === "remove"}
       onClick={() => onAskRemove(null)}
     >
-      Keep it
+      {m.settingsDevicesKeepIt()}
     </Button>
   );
   const lines = removeLines(device).map(here);
@@ -361,7 +359,9 @@ export function RemoveQuestion({
               disabled={busy === "remove"}
               onClick={() => onRemove(device.id, "when-back")}
             >
-              {device.otherVersion ? "Remove once it is updated" : "Remove when it is back"}
+              {device.otherVersion
+                ? m.settingsDevicesRemoveOnceUpdated()
+                : m.settingsDevicesRemoveWhenBack()}
             </Button>
           )}
           <Button
@@ -370,7 +370,7 @@ export function RemoveQuestion({
             disabled={busy === "remove"}
             onClick={() => onRemove(device.id, "now")}
           >
-            Remove now
+            {m.settingsDevicesRemoveNow()}
           </Button>
         </>
       ) : (
@@ -378,10 +378,10 @@ export function RemoveQuestion({
           variant="danger"
           size="sm"
           pending={busy === "remove"}
-          pendingLabel="Removing..."
+          pendingLabel={m.settingsDevicesRemoving()}
           onClick={() => onRemove(device.id)}
         >
-          Remove
+          {m.settingsDevicesRemoveButton()}
         </Button>
       )}
     </div>

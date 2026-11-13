@@ -1,5 +1,6 @@
 import { forgeOf } from "@shared/forge";
 import type { ForgeProject, ForgesView } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import type { RepoSetupSpec, RepoView } from "@shared/repos";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
@@ -7,12 +8,10 @@ import { Button, Input } from "../design";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { isView } from "../devices/viewWords";
 import {
-  FOLDER_HERE_WORDS,
+  ADD_PROJECT_WORDS,
   FOLDER_THERE_WORDS,
   newProjectWords,
-  OTHER_HOST_WORDS,
   projectSignInWords,
-  STARTED_GIT_WORDS,
   TASK_KEY_WORDS,
   taskKeyTyped,
 } from "./addProjectWords";
@@ -116,10 +115,10 @@ export function AddProject({
       if (result.created) setTaskKey("");
       setStatus(
         result.initializedGit
-          ? `Added ${result.repo.name}. ${STARTED_GIT_WORDS}`
+          ? m.settingsAddProjectAddedGit({ name: result.repo.name })
           : result.created
-            ? `Added ${result.repo.name}.`
-            : `${result.repo.name} is already added. Its row is open.`,
+            ? m.settingsAddProjectAdded({ name: result.repo.name })
+            : m.settingsAddProjectAlreadyAdded({ name: result.repo.name }),
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -135,7 +134,7 @@ export function AddProject({
       const path = await window.infinitary.app.chooseFolder();
       if (path) await add({ kind: "adopt", path }, "folder");
     } catch {
-      setError("Could not open the folder picker. Please try again.");
+      setError(m.settingsProjectsFolderPickerFailed());
     } finally {
       setBusy(null);
     }
@@ -143,14 +142,14 @@ export function AddProject({
   const addLink = () => {
     if (!host) return;
     if (forgeOf(link.trim()).host !== host.host) {
-      setError(`Paste a ${host.name} project link. ${OTHER_HOST_WORDS}`);
+      setError(m.settingsAddProjectWrongHost({ host: host.name }));
       return;
     }
     void add({ kind: "clone", origin: link.trim() }, "link");
   };
   return (
     <section
-      aria-label="Add project"
+      aria-label={m.settingsAddProjectLabel()}
       data-add-project
       style={{
         padding: "var(--space-4) var(--space-4) var(--space-3)",
@@ -169,7 +168,7 @@ export function AddProject({
             textTransform: "uppercase",
           }}
         >
-          Add project
+          {m.settingsAddProjectLabel()}
         </span>
         <Button
           variant="secondary"
@@ -192,7 +191,7 @@ export function AddProject({
           >
             <path d="M5 12h14M12 5v14" />
           </svg>
-          {there ? FOLDER_THERE_WORDS.button(there) : FOLDER_HERE_WORDS}
+          {there ? FOLDER_THERE_WORDS.button(there) : ADD_PROJECT_WORDS.folderHere}
         </Button>
         {forges?.hosts.map((entry) => (
           <Button
@@ -215,7 +214,7 @@ export function AddProject({
             >
               <path d="M5 12h14M12 5v14" />
             </svg>
-            {entry.name} repo
+            {m.settingsAddProjectHostRepo({ host: entry.name })}
           </Button>
         ))}
         <Button
@@ -237,7 +236,7 @@ export function AddProject({
           >
             <path d="M5 12h14M12 5v14" />
           </svg>
-          New project
+          {m.settingsAddProjectNew()}
         </Button>
         <div
           style={{
@@ -301,7 +300,7 @@ export function AddProject({
                   mono
                 />
                 <Button type="submit" size="sm" disabled={!!busy || !folderPath.trim()}>
-                  {busy === "folder" ? "Adding..." : FOLDER_THERE_WORDS.add}
+                  {busy === "folder" ? m.settingsAddProjectAdding() : FOLDER_THERE_WORDS.add}
                 </Button>
               </div>
             </form>
@@ -312,7 +311,7 @@ export function AddProject({
                 void add({ kind: "init", name: name.trim() }, "new");
               }}
             >
-              <label htmlFor="new-project-name">Name</label>
+              <label htmlFor="new-project-name">{m.settingsAddProjectName()}</label>
               <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
                 <Input
                   id="new-project-name"
@@ -323,7 +322,7 @@ export function AddProject({
                   mono
                 />
                 <Button type="submit" size="sm" disabled={!!busy || !name.trim()}>
-                  {busy === "new" ? "Adding..." : "Start project"}
+                  {busy === "new" ? m.settingsAddProjectAdding() : m.settingsAddProjectStart()}
                 </Button>
               </div>
               <p style={{ color: "var(--fg-3)" }}>{newProjectWords(folder, place)}</p>
@@ -347,14 +346,14 @@ export function AddProject({
                 )}
                 {signedIn && (
                   <div>
-                    <p>Your {host.name} repos</p>
+                    <p>{m.settingsAddProjectYourRepos({ host: host.name })}</p>
                     <Input
-                      aria-label="Find a repo"
-                      placeholder="Find a repo"
+                      aria-label={m.settingsAddProjectFind()}
+                      placeholder={m.settingsAddProjectFind()}
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
                     />
-                    {loading && <p role="status">Reading your repos...</p>}
+                    {loading && <p role="status">{m.settingsAddProjectReading()}</p>}
                     {projects
                       .filter((project) =>
                         project.fullName.toLowerCase().includes(search.toLowerCase()),
@@ -388,12 +387,14 @@ export function AddProject({
                                   style={{ color: "var(--fg-3)", fontFamily: "var(--font-ui)" }}
                                 >
                                   {" "}
-                                  · private
+                                  {m.settingsAddProjectPrivate()}
                                 </span>
                               )}
                             </span>
                             {added ? (
-                              <span style={{ color: "var(--fg-3)" }}>added</span>
+                              <span style={{ color: "var(--fg-3)" }}>
+                                {m.settingsAddProjectAddedMark()}
+                              </span>
                             ) : (
                               <Button
                                 variant="secondary"
@@ -406,7 +407,9 @@ export function AddProject({
                                   )
                                 }
                               >
-                                {busy === project.fullName ? "Adding..." : "Add"}
+                                {busy === project.fullName
+                                  ? m.settingsAddProjectAdding()
+                                  : m.settingsAddProjectAdd()}
                               </Button>
                             )}
                           </div>
@@ -422,7 +425,9 @@ export function AddProject({
                   style={{ marginTop: "var(--space-3)" }}
                 >
                   <label htmlFor="project-link">
-                    {signedIn ? "Or paste a" : "Paste a"} {host.name} link
+                    {signedIn
+                      ? m.settingsAddProjectOrPasteLink({ host: host.name })
+                      : m.settingsAddProjectPasteLink({ host: host.name })}
                   </label>
                   <div
                     style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}
@@ -437,16 +442,16 @@ export function AddProject({
                       required
                     />
                     <Button type="submit" size="sm" disabled={!!busy || !link.trim()}>
-                      {busy === "link" ? "Adding..." : "Add"}
+                      {busy === "link" ? m.settingsAddProjectAdding() : m.settingsAddProjectAdd()}
                     </Button>
                   </div>
-                  <p style={{ color: "var(--fg-3)" }}>Goes into your projects folder, {folder}.</p>
+                  <p style={{ color: "var(--fg-3)" }}>{m.settingsAddProjectGoesInto({ folder })}</p>
                 </form>
               </>
             )
           )}
           <Button variant="ghost" size="sm" onClick={() => chooseMode(null)}>
-            Close
+            {m.settingsAddProjectClose()}
           </Button>
         </div>
       )}
@@ -458,7 +463,7 @@ export function AddProject({
           marginTop: error || status || busy === "folder" ? "var(--space-2)" : 0,
         }}
       >
-        {error ?? status ?? (busy === "folder" ? "Adding..." : null)}
+        {error ?? status ?? (busy === "folder" ? m.settingsAddProjectAdding() : null)}
       </div>
     </section>
   );

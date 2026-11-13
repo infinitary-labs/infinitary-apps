@@ -1,5 +1,6 @@
 import { forgePlace } from "@shared/forge";
 import { formatDate } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { QueueCredential, RepoView } from "@shared/repos";
 import { useEffect, useState } from "react";
 import { Button } from "../design";
@@ -59,7 +60,9 @@ export function QueueKeyPanel({ repo }: { repo: Pick<RepoView, "id" | "host"> })
     >
       <div role="status">
         {credential.state === "ready"
-          ? QUEUE_KEY_WORDS.ready(endsOn(credential.expiresAt))
+          ? QUEUE_KEY_WORDS.ready(
+              endsOn(credential.expiresAt) ?? m.settingsProjectsQueueKeyEndsUnknown(),
+            )
           : credential.state === "unreadable"
             ? QUEUE_KEY_WORDS.unreadable(place)
             : QUEUE_KEY_WORDS.missing(place)}
@@ -80,9 +83,9 @@ export function QueueKeyPanel({ repo }: { repo: Pick<RepoView, "id" | "host"> })
 }
 
 /** The day the key ends, as a person reads a date; GitLab names it `2027-11-06`. */
-function endsOn(expiresAt: string | undefined): string {
+function endsOn(expiresAt: string | undefined): string | null {
   const day = expiresAt ? new Date(`${expiresAt.slice(0, 10)}T00:00:00`) : null;
   return day && !Number.isNaN(day.getTime())
     ? formatDate(day, { year: "numeric", month: "long", day: "numeric" })
-    : "it ends";
+    : null;
 }

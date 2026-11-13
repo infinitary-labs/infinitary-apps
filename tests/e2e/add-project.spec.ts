@@ -4,10 +4,8 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { projectKeyInUseWords } from "../../src/core/tasks/projectKey";
 import {
-  FOLDER_HERE_WORDS,
+  ADD_PROJECT_WORDS,
   newProjectWords,
-  OTHER_HOST_WORDS,
-  STARTED_GIT_WORDS,
   TASK_KEY_WORDS,
 } from "../../src/renderer/src/settings/addProjectWords";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -42,8 +40,8 @@ test("adds folders and new projects in Settings without waking Firstmate, opens 
     await app.evaluate(({ dialog }, path) => {
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, folder);
-    await add.getByRole("button", { name: FOLDER_HERE_WORDS }).click();
-    await expect(add.getByRole("status")).toContainText(STARTED_GIT_WORDS);
+    await add.getByRole("button", { name: ADD_PROJECT_WORDS.folderHere }).click();
+    await expect(add.getByRole("status")).toContainText(ADD_PROJECT_WORDS.startedGit);
     let repos = await page.evaluate(() => window.infinitary.repos.list());
     const adopted = repos.find((repo) => repo.path === folder);
     if (!adopted) throw new Error("Folder not added");
@@ -53,7 +51,7 @@ test("adds folders and new projects in Settings without waking Firstmate, opens 
     expect(execFileSync("git", ["-C", folder, "status", "--short"], { encoding: "utf8" })).toBe(
       "?? notes.txt\n",
     );
-    await add.getByRole("button", { name: FOLDER_HERE_WORDS }).click();
+    await add.getByRole("button", { name: ADD_PROJECT_WORDS.folderHere }).click();
     await expect(add.getByRole("status")).toContainText("already added");
     expect(
       (await page.evaluate(() => window.infinitary.repos.list())).filter(
@@ -119,7 +117,7 @@ test("adds folders and new projects in Settings without waking Firstmate, opens 
     await expect(add.getByRole("button", { name: "Sign in to GitHub", exact: true })).toBeVisible();
     await add.getByLabel("Paste a GitHub link").fill("https://gitlab.com/octo/notes");
     await add.getByRole("button", { name: "Add", exact: true }).click();
-    await expect(add.getByRole("status")).toContainText(OTHER_HOST_WORDS);
+    await expect(add.getByRole("status")).toContainText(ADD_PROJECT_WORDS.otherHost);
     await add.getByLabel("Paste a GitHub link").fill("https://github.com/octo/private-notes.git");
     await add.getByRole("button", { name: "Add", exact: true }).click();
     await assertReadableSettingsFeedback(

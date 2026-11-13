@@ -1,10 +1,11 @@
-import { anotherUserHere, COMPUTER, HERE } from "@shared/deviceNames";
+import { anotherUserHere, HERE } from "@shared/deviceNames";
 import {
   type DeviceAddresses,
   type DeviceRemoveWhen,
   type DeviceView,
   deviceRunsWork,
 } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { NEARBY_OFF, NEARBY_RENEW_MS, type NearbyMacsView } from "@shared/nearbyMacs";
 import {
   addressParts,
@@ -278,7 +279,7 @@ function HomeDevicesTab() {
         }
         show(invite, what, copy);
       } catch (caught) {
-        setProblem(caught instanceof Error ? caught.message : "Could not make it.");
+        setProblem(caught instanceof Error ? caught.message : m.settingsDevicesMakeFailed());
       } finally {
         setBusy(null);
       }
@@ -294,7 +295,7 @@ function HomeDevicesTab() {
       try {
         await window.infinitary.devices.remove(deviceId, when);
       } catch (caught) {
-        setProblem(caught instanceof Error ? caught.message : "Could not remove this device.");
+        setProblem(caught instanceof Error ? caught.message : m.settingsDevicesRemoveFailed());
       } finally {
         setBusy(null);
         refresh();
@@ -357,11 +358,10 @@ function HomeDevicesTab() {
         setAddressRefusal(null);
       } catch (caught) {
         if (mine !== addressTry.current) return;
-        const message =
-          caught instanceof Error ? caught.message : `Could not add this ${COMPUTER.one}.`;
+        const message = caught instanceof Error ? caught.message : m.settingsDevicesAddFailed();
         const lines = remoteLoginRefusalLines(message);
         keepTyped(address);
-        setAddressRefusal(lines.length > 0 ? lines : [`Could not add this ${COMPUTER.one}.`]);
+        setAddressRefusal(lines.length > 0 ? lines : [m.settingsDevicesAddFailed()]);
         setAskingAddress(true);
       } finally {
         useSetups.getState().addDone(address);
@@ -390,7 +390,7 @@ function HomeDevicesTab() {
           return;
         }
       } catch (caught) {
-        setProblem(caught instanceof Error ? caught.message : "Could not update Infinitary there.");
+        setProblem(caught instanceof Error ? caught.message : m.settingsDevicesUpdateFailed());
       } finally {
         useSetups.getState().updateDone(deviceId);
       }
@@ -404,7 +404,7 @@ function HomeDevicesTab() {
     try {
       await window.infinitary.devices.tryAgain(deviceId);
     } catch (caught) {
-      setProblem(caught instanceof Error ? caught.message : "Could not try again.");
+      setProblem(caught instanceof Error ? caught.message : m.settingsDevicesTryAgainFailed());
     }
   }, []);
 
@@ -421,9 +421,7 @@ function HomeDevicesTab() {
         if ("refused" in answer) refused(deviceId, answer, address);
       } catch (caught) {
         setProblem(
-          caught instanceof Error
-            ? caught.message
-            : `Could not change where this ${COMPUTER.one} is reached.`,
+          caught instanceof Error ? caught.message : m.settingsDevicesChangeAddressFailed(),
         );
       } finally {
         useSetups.getState().moveDone(deviceId);
@@ -438,7 +436,7 @@ function HomeDevicesTab() {
       try {
         await window.infinitary.devices.keep(deviceId);
       } catch (caught) {
-        setProblem(caught instanceof Error ? caught.message : "Could not keep this device.");
+        setProblem(caught instanceof Error ? caught.message : m.settingsDevicesKeepFailed());
       } finally {
         refresh();
       }
@@ -593,7 +591,7 @@ export function DevicesTabView(props: DevicesTabViewProps) {
           <SettingError error={here(problem)} surface="devices" />
         </div>
       )}
-      <SectionLabel>Your devices</SectionLabel>
+      <SectionLabel>{m.settingsDevicesLabel()}</SectionLabel>
       <div className="fm-devices-say">{here(devicesIntro(fromAView))}</div>
       <div className="fm-devices-box" data-devices-list="" style={{ marginBottom: SECTION_GAP }}>
         <div className="fm-devices-row" data-device-row="this-mac">
@@ -601,7 +599,7 @@ export function DevicesTabView(props: DevicesTabViewProps) {
           <span className="fm-devices-text">
             <span className="fm-devices-name">{here(HERE.This)}</span>
             <span className="fm-devices-detail">
-              Your first mate lives {fromAView ? "there" : "here"}
+              {fromAView ? m.settingsDevicesLivesThere() : m.settingsDevicesLivesHere()}
             </span>
           </span>
         </div>
@@ -620,7 +618,7 @@ export function DevicesTabView(props: DevicesTabViewProps) {
             <AddingRow key={mac.address} mac={mac} />
           ))}
         <div className="fm-devices-foot">
-          <span className="fm-devices-foot-label">Add</span>
+          <span className="fm-devices-foot-label">{m.settingsDevicesAdd()}</span>
           <button
             type="button"
             className="fm-connect-chip"
@@ -630,7 +628,7 @@ export function DevicesTabView(props: DevicesTabViewProps) {
             onClick={props.onAddMac}
           >
             {plusIcon}
-            <span>A {COMPUTER.one}</span>
+            <span>{m.settingsDevicesAddComputer()}</span>
           </button>
           <button
             type="button"
@@ -640,7 +638,7 @@ export function DevicesTabView(props: DevicesTabViewProps) {
             onClick={() => props.onMake("phone")}
           >
             {plusIcon}
-            <span>A phone</span>
+            <span>{m.settingsDevicesAddPhone()}</span>
           </button>
           <button
             type="button"
@@ -650,7 +648,7 @@ export function DevicesTabView(props: DevicesTabViewProps) {
             onClick={() => props.onMake("user-command")}
           >
             {plusIcon}
-            <span>Running as another user</span>
+            <span>{m.settingsDevicesAddUser()}</span>
           </button>
         </div>
         {props.choosing && <AddChooser {...props} />}
@@ -677,7 +675,7 @@ function devicesIntro(fromAView: boolean): string {
   const reads = fromAView
     ? anotherUserHere("linux").reads
     : anotherUserHere(thisDesktop().mac ? "darwin" : "linux").readsHere;
-  return `Your first mate lives on ${HERE.this}. Its tasks and conversation stay ${fromAView ? "there" : "here"}. From any ${COMPUTER.one} you add you can control it, and any ${COMPUTER.one} you add can run a project's work. Running as another user on ${HERE.this} only runs work. ${reads}`;
+  return fromAView ? m.settingsDevicesIntroThere({ reads }) : m.settingsDevicesIntroHere({ reads });
 }
 
 /**

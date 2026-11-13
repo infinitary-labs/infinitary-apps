@@ -1,4 +1,4 @@
-import { COMPUTER } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import {
   addressAtPort,
   type RemoteLoginConfirmQuestion,
@@ -28,10 +28,8 @@ import { type AddingMac, addingWords } from "./devicesWords";
 export function AddChooser({ busy, onMake, onCancelChoose, onAskAddress }: DevicesTabViewProps) {
   return (
     <div className="fm-devices-aside" data-device-chooser="">
-      <div className="fm-devices-question">How do you want to add it?</div>
-      <div className="fm-devices-aside-say">
-        Each way adds the same kind of {COMPUTER.one}. Pick the one that suits it.
-      </div>
+      <div className="fm-devices-question">{m.settingsDevicesAddHow()}</div>
+      <div className="fm-devices-aside-say">{m.settingsDevicesAddEachWay()}</div>
       <div className="fm-devices-aside-actions">
         <Button
           variant="secondary"
@@ -39,7 +37,7 @@ export function AddChooser({ busy, onMake, onCancelChoose, onAskAddress }: Devic
           disabled={busy === "link"}
           onClick={() => onMake("link")}
         >
-          Paste a link into Infinitary there
+          {m.settingsDevicesAddByLink()}
         </Button>
         <Button
           variant="secondary"
@@ -47,13 +45,13 @@ export function AddChooser({ busy, onMake, onCancelChoose, onAskAddress }: Devic
           disabled={busy === "link"}
           onClick={() => onMake("command")}
         >
-          Run a command there
+          {m.settingsDevicesAddByCommand()}
         </Button>
         <Button variant="secondary" size="sm" disabled={busy === "link"} onClick={onAskAddress}>
-          By its address
+          {m.settingsDevicesAddByItsAddress()}
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancelChoose}>
-          Cancel
+          {m.settingsDevicesCancel()}
         </Button>
       </div>
     </div>
@@ -107,9 +105,11 @@ export function AddressQuestion({
       }}
     >
       <label className="fm-devices-question" htmlFor="device-remote-login">
-        The other {COMPUTER.one}'s address
+        {m.settingsDevicesAddressLabel()}
       </label>
-      <div className="fm-devices-aside-say">The one you use with SSH. {sshMustBeOn()}</div>
+      <div className="fm-devices-aside-say">
+        {m.settingsDevicesAddressSay({ sshOn: sshMustBeOn() })}
+      </div>
       {addressRefusal && (
         <div role="alert">
           {addressRefusal.map((line) => (
@@ -131,6 +131,7 @@ export function AddressQuestion({
           autoFocus
           autoComplete="off"
           spellCheck={false}
+          // i18n-exempt: a sample SSH address, a code sample
           placeholder="you@mini.local"
           value={addressDraft}
           onChange={(event) => onAddressDraft(event.target.value)}
@@ -147,10 +148,10 @@ export function AddressQuestion({
         />
         <PortField id="device-remote-login-port" value={portDraft} onChange={onPortDraft} />
         <Button type="submit" size="sm" disabled={!typed || trying}>
-          {addressRefusal ? "Try again" : "Add it"}
+          {addressRefusal ? m.settingsDevicesTryAgain() : m.settingsDevicesAddIt()}
         </Button>
         <Button variant="ghost" size="sm" type="button" onClick={onCancelAddress}>
-          Cancel
+          {m.settingsDevicesCancel()}
         </Button>
       </div>
       <NearbyList
@@ -192,10 +193,10 @@ export function ConfirmQuestion({
       </div>
       <div className="fm-devices-aside-actions">
         <Button size="sm" onClick={() => onConfirm(question)}>
-          This is the {COMPUTER.one}
+          {m.settingsDevicesConfirmThis()}
         </Button>
         <Button variant="ghost" size="sm" autoFocus onClick={onCancelConfirm}>
-          Cancel
+          {m.settingsDevicesCancel()}
         </Button>
       </div>
     </div>
@@ -266,10 +267,10 @@ export function PasswordQuestion({
           style={{ flex: 1, minWidth: 220, width: "auto" }}
         />
         <Button type="submit" size="sm" disabled={!typed}>
-          {question.for === "update" ? "Update" : "Add it"}
+          {question.for === "update" ? m.settingsDevicesUpdate() : m.settingsDevicesAddIt()}
         </Button>
         <Button variant="ghost" size="sm" type="button" onClick={onCancelPassword}>
-          Cancel
+          {m.settingsDevicesCancel()}
         </Button>
       </div>
     </form>
@@ -298,10 +299,10 @@ export function LeaveQuestion({
       ))}
       <div className="fm-devices-aside-actions">
         <Button variant="danger" size="sm" onClick={() => onLeaveAndAdd(question.address)}>
-          Leave it and add
+          {m.settingsDevicesLeaveAndAdd()}
         </Button>
         <Button variant="ghost" size="sm" autoFocus onClick={onCancelLeave}>
-          Cancel
+          {m.settingsDevicesCancel()}
         </Button>
       </div>
     </div>
@@ -322,7 +323,7 @@ export function AddingRow({ mac }: { mac: AddingMac }) {
       <span className="fm-devices-text">
         <span className="fm-devices-name">{mac.name ?? mac.address}</span>
         <span className="fm-devices-detail">
-          a {COMPUTER.one} · {mac.address}
+          {m.settingsDevicesAddingDetail({ address: mac.address })}
         </span>
         <span className="fm-devices-summary">
           {here(addingWords(mac, mac.name ?? mac.address))}

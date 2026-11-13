@@ -93,6 +93,8 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | decision records | سجلات القرارات | What Contribution sends; "redacted" is "منقّحة". |
 | action (an integration action) | إجراء | Plural "إجراءات". |
 | font (Settings → Appearance) | خط | |
+| task key (a project's task numbering, "INF") | رمز المهام | "رمزه" for a project's own; kept apart from "مفتاح", which unlocks something. |
+| batch / batch run (the queue's) | دفعة / تشغيل الدفعة | Matches "طلب سحب مجمّع" and "فحص الدفعة". |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | Knowledge (panel) | المعرفة | "فتح المعرفة" for Open Knowledge. |
 | concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |

@@ -99,6 +99,8 @@ Particles after a filled value are avoided by word order, or written in the pair
 | decision records | 결정 기록 | What Contribution sends; "redacted" is 민감한 내용을 가린 |
 | action (an integration action) | 동작 | Kept apart from 작업 (task) |
 | font (Settings → Appearance) | 글꼴 | |
+| task key (a project's task numbering, "INF") | 작업 키 | The project's own key is 프로젝트의 키 |
+| batch / batch run (the queue's) | 일괄 실행 | Matches 일괄 끌어오기 요청 and 일괄 검사 |
 | Infinitary | Infinitary | Never translated |
 | Knowledge (panel) | 지식 | "Open Knowledge" is 지식 열기 |
 | concept / finding | 개념 / 발견 | As the card references already say |

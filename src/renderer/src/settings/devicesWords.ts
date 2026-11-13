@@ -1,6 +1,7 @@
 import { formatDate, formatTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { DeviceMake } from "../../../shared/cards";
-import { aDevice, COMPUTER, chipWords, HERE } from "../../../shared/deviceNames";
+import { aDevice, chipWords } from "../../../shared/deviceNames";
 import {
   automaticStartupOf,
   automaticStartupWords,
@@ -26,29 +27,64 @@ import { runsForAnotherFirstmate, sshConnectionWords } from "../../../shared/ssh
 
 /** How other devices find this computer. */
 export const WAYS_WORDS = {
-  label: `How other devices find ${HERE.this}`,
-  local: "On this network",
-  localLine: "Computers on the same Wi-Fi or cable network.",
-  localOff: "Not on a Wi-Fi or cable network right now.",
-  private: "On your private network",
-  privateOffTitle: "On a private network",
-  privateLine: "Computers on the same private network, wherever they are.",
-  privateOff:
-    "Not on one. Put both computers on the same private network to connect from somewhere else.",
-  internet: "Over the internet",
-  internetLine: `Never. Infinitary does not open ${HERE.this} to the internet. A private network covers that.`,
-  foot: "A link or command carries every way at once. The other computer uses whichever one answers, so there is nothing to choose here.",
-  copyLink: "Copy a link",
-  copyCommand: "Copy a command",
-  ready: "ready",
-  off: "off",
-  reachedLocal: "reached on this network",
-  reachedPrivate: "reached on your private network",
-  noNetwork: `${HERE.This} is on no network right now, so a link works only on ${HERE.this}.`,
+  get label() {
+    return m.settingsDevicesWaysLabel();
+  },
+  get local() {
+    return m.settingsDevicesWaysLocal();
+  },
+  get localLine() {
+    return m.settingsDevicesWaysLocalLine();
+  },
+  get localOff() {
+    return m.settingsDevicesWaysLocalOff();
+  },
+  get private() {
+    return m.settingsDevicesWaysPrivate();
+  },
+  get privateOffTitle() {
+    return m.settingsDevicesWaysPrivateOffTitle();
+  },
+  get privateLine() {
+    return m.settingsDevicesWaysPrivateLine();
+  },
+  get privateOff() {
+    return m.settingsDevicesWaysPrivateOff();
+  },
+  get internet() {
+    return m.settingsDevicesWaysInternet();
+  },
+  get internetLine() {
+    return m.settingsDevicesWaysInternetLine();
+  },
+  get foot() {
+    return m.settingsDevicesWaysFoot();
+  },
+  get copyLink() {
+    return m.settingsDevicesWaysCopyLink();
+  },
+  get copyCommand() {
+    return m.settingsDevicesWaysCopyCommand();
+  },
+  get ready() {
+    return m.settingsDevicesWaysReady();
+  },
+  get off() {
+    return m.settingsDevicesWaysOff();
+  },
+  get reachedLocal() {
+    return m.settingsDevicesWaysReachedLocal();
+  },
+  get reachedPrivate() {
+    return m.settingsDevicesWaysReachedPrivate();
+  },
+  get noNetwork() {
+    return m.settingsDevicesWaysNoNetwork();
+  },
 } as const;
 
 export function wayCount(count: number): string {
-  return count === 1 ? "1 computer" : `${count} computers`;
+  return m.settingsDevicesWayCount({ count });
 }
 
 /** The phone panel uses the same Mac link; its presentation stays local to Settings. */
@@ -60,97 +96,141 @@ export const PANEL_WORDS: Record<
   { label: string; say: [string, ...string[]]; copy: string; thing: "link" | "command" }
 > = {
   link: {
-    label: "New link",
+    get label() {
+      return m.settingsDevicesPanelLinkLabel();
+    },
     say: [...LINK_SAY.computer],
-    copy: "Copy link",
+    get copy() {
+      return m.settingsDevicesPanelCopyLink();
+    },
     thing: "link",
   },
   phone: {
-    label: "New link · a phone",
+    get label() {
+      return m.settingsDevicesPanelPhoneLabel();
+    },
     say: [...LINK_SAY.phone],
-    copy: "Copy link",
+    get copy() {
+      return m.settingsDevicesPanelCopyLink();
+    },
     thing: "link",
   },
   command: {
-    label: `New command · another ${COMPUTER.one}`,
-    say: [
-      `Run this once in Terminal on the other ${COMPUTER.one}, as the user who should run its work.`,
-      `It gets Infinitary from ${HERE.this}, so both need the same network.`,
-    ],
-    copy: "Copy command",
+    get label() {
+      return m.settingsDevicesPanelCommandLabel();
+    },
+    get say(): [string, ...string[]] {
+      return [m.settingsDevicesPanelCommandRun(), m.settingsDevicesPanelCommandNetwork()];
+    },
+    get copy() {
+      return m.settingsDevicesPanelCopyCommand();
+    },
     thing: "command",
   },
   "user-command": {
-    label: "New command · running as another user",
-    say: [
-      "Log in as the user who should run the work, and run this once in Terminal.",
-      "Switch back when it says it joined.",
-    ],
-    copy: "Copy command",
+    get label() {
+      return m.settingsDevicesPanelUserCommandLabel();
+    },
+    get say(): [string, ...string[]] {
+      return [
+        m.settingsDevicesPanelUserCommandLogIn(),
+        m.settingsDevicesPanelUserCommandSwitchBack(),
+      ];
+    },
+    get copy() {
+      return m.settingsDevicesPanelCopyCommand();
+    },
     thing: "command",
   },
 };
 
 /** Whether a device answers now, or since when it has not: the end of its mono line. */
 export const SEEN_WORDS = {
-  now: "seen just now",
+  get now() {
+    return m.settingsDevicesSeenNow();
+  },
   /** The two words a computer not in reach reads as have one home, `awayWord`. */
-  outOfReach: awayWord(false),
+  get outOfReach() {
+    return awayWord(false);
+  },
   /** The state on a row's right, and the mono line, of a computer whose connection is being made. */
-  connecting: awayWord(true),
+  get connecting() {
+    return awayWord(true);
+  },
   /** Followed by when it was last in reach: "out of reach since 14:02". */
-  since: `${awayWord(false)} since`,
-  removedWhenBack: `${awayWord(false)} · removed when it is back`,
-  removedWhenBackConnecting: `${awayWord(true)} · removed when it is back`,
-  removedOnceUpdated: "takes no new work · removed once it is updated",
-  restarted: `not logged in since ${HERE.this} restarted`,
+  get since() {
+    return m.settingsDevicesSeenSince();
+  },
+  get removedWhenBack() {
+    return m.settingsDevicesSeenRemovedWhenBack();
+  },
+  get removedWhenBackConnecting() {
+    return m.settingsDevicesSeenRemovedWhenBackConnecting();
+  },
+  get removedOnceUpdated() {
+    return m.settingsDevicesSeenRemovedOnceUpdated();
+  },
+  get restarted() {
+    return m.settingsDevicesSeenRestarted();
+  },
 };
 
-/** What a Mac's summary leads with while Firstmate is open on it, controlling this one. */
-export const CONTROLLING_NOW = "Controlling your first mate now";
-
-/** A computer's summary while no project runs on it. */
-export const RUNS_NO_PROJECT = "Runs no project yet";
-
-/** The mono state on the right of a computer that takes no new work. */
-export const NO_NEW_WORK = "no new work";
+/** The fixed words of a device's row. */
+export const DEVICE_ROW_WORDS = {
+  /** What a Mac's summary leads with while Firstmate is open on it, controlling this one. */
+  get controllingNow() {
+    return m.settingsDevicesControllingNow();
+  },
+  /** A computer's summary while no project runs on it. */
+  get runsNoProject() {
+    return m.settingsDevicesRunsNoProject();
+  },
+  /** The mono state on the right of a computer that takes no new work. */
+  get noNewWork() {
+    return m.settingsDevicesNoNewWork();
+  },
+} as const;
 
 /** The words of Remove's question (design skill `components/devices/DevicesTab`, "Remove"). */
 export function removeLines(device: DeviceView): [string, ...string[]] {
   const label = deviceLabel(device);
   if (!deviceRunsWork(device.kind))
-    return [`Remove ${label}? It is cut off at once.`, "To come back, it needs a new link."];
+    return [m.settingsDevicesRemoveCutOff({ device: label }), m.settingsDevicesRemoveNewLink()];
   const runs = device.runs ?? [];
-  const work = `Its unmerged work${runs.length > 0 ? ` on ${namesInWords(runs)}` : ""}`;
+  const projects = runs.length > 0 ? namesInWords(runs) : null;
   // Its Firstmate runs work for another one now, so its work never comes here.
   if (runsForAnotherFirstmate(device.ssh))
     return [
-      `Remove ${label}? It runs work for another first mate now.`,
-      `${work} stays there. Nothing changes there for the other first mate.`,
+      m.settingsDevicesRemoveOtherFirstmate({ device: label }),
+      projects
+        ? m.settingsDevicesRemoveStaysThereOn({ projects })
+        : m.settingsDevicesRemoveStaysThere(),
     ];
   // Connected on another version that takes no new work, its work cannot
   // come here until it is updated.
   if (!device.inReach && device.otherVersion)
     return [
-      `Remove ${label}? It takes no new work.`,
-      `${work} is still there. Update it, and its work comes to ${HERE.this} before ${label} is removed.`,
+      m.settingsDevicesRemoveNoNewWork({ device: label }),
+      projects
+        ? m.settingsDevicesRemoveUpdateItOn({ projects, device: label })
+        : m.settingsDevicesRemoveUpdateIt({ device: label }),
     ];
   if (!device.inReach)
     return [
-      `Remove ${label}? It is ${awayWord(deviceConnecting(device))}.`,
-      `${work} is still there. Wait, and it comes to ${HERE.this} before ${label} is removed.`,
+      m.settingsDevicesRemoveAway({ device: label, state: awayWord(deviceConnecting(device)) }),
+      projects
+        ? m.settingsDevicesRemoveWaitOn({ projects, device: label })
+        : m.settingsDevicesRemoveWait({ device: label }),
     ];
   const tasks = device.tasks ?? 0;
-  const stops =
-    tasks === 0
-      ? ""
-      : `${tasks === 1 ? "Its task" : `Its ${tasks} tasks`}${runs.length > 0 ? ` on ${namesInWords(runs)}` : ""} ${tasks === 1 ? "stops" : "stop"}. `;
   return [
-    `Remove ${label}? Its unmerged work comes to ${HERE.this} first.`,
-    `${stops}Infinitary then removes what it set up there, with its sign-ins.`,
-    ...(runs.length > 0
-      ? [`${namesInWords(runs)} ${runs.length === 1 ? "runs" : "run"} on ${HERE.this} after.`]
-      : []),
+    m.settingsDevicesRemoveComesFirst({ device: label }),
+    tasks === 0
+      ? m.settingsDevicesRemoveCleansUp()
+      : projects
+        ? m.settingsDevicesRemoveTasksStopOn({ count: tasks, projects })
+        : m.settingsDevicesRemoveTasksStop({ count: tasks }),
+    ...(projects ? [m.settingsDevicesRemoveRunsAfter({ count: runs.length, projects })] : []),
   ];
 }
 
@@ -165,9 +245,9 @@ export function joinedWhen(at: number, now: number): string {
   const date = new Date(at);
   const time = formatTime(date, { hour: "2-digit", minute: "2-digit" });
   const day = new Date(now);
-  if (date.toDateString() === day.toDateString()) return `today ${time}`;
+  if (date.toDateString() === day.toDateString()) return m.settingsDevicesJoinedToday({ time });
   day.setDate(day.getDate() - 1);
-  if (date.toDateString() === day.toDateString()) return `yesterday ${time}`;
+  if (date.toDateString() === day.toDateString()) return m.settingsDevicesJoinedYesterday({ time });
   return `${formatDate(date, { month: "short", day: "numeric" })} ${time}`;
 }
 
@@ -192,7 +272,7 @@ function seenWords(device: DeviceView, now: number): string {
   if (device.restartedSince) return SEEN_WORDS.restarted;
   return device.seenAt === undefined
     ? SEEN_WORDS.outOfReach
-    : `${SEEN_WORDS.since} ${sinceWhen(device.seenAt, now)}`;
+    : m.settingsDevicesSeenSinceWhen({ when: sinceWhen(device.seenAt, now) });
 }
 
 /**
@@ -210,11 +290,11 @@ function whatDevice(device: DeviceView): string {
 export function deviceDetail(device: DeviceView, now: number): string {
   const startup = automaticStartupOf(device);
   if (startup === "unavailable" || startup === "unknown")
-    return `${whatDevice(device)} · ${device.remoteLogin ?? (device.user ? `running as ${device.user}` : seenWords(device, now))} · ${automaticStartupWords[startup]}`;
+    return `${whatDevice(device)} · ${device.remoteLogin ?? (device.user ? m.settingsDevicesRunningAs({ user: device.user }) : seenWords(device, now))} · ${automaticStartupWords[startup]}`;
   // Reached over this Mac's own SSH, it is named by its address and that connection.
   if (device.remoteLogin && device.ssh) {
     const what =
-      device.onThisMac && device.user ? `another user on ${HERE.this}` : whatDevice(device);
+      device.onThisMac && device.user ? m.settingsDevicesAnotherUserHere() : whatDevice(device);
     const where =
       device.removal === "when-back" || device.ssh.state === "stopped"
         ? seenWords(device, now)
@@ -223,7 +303,7 @@ export function deviceDetail(device: DeviceView, now: number): string {
   }
   if (device.onThisMac && device.user) {
     const who = userDisplayName(device.user);
-    return `another user on ${HERE.this} · runs work only, while ${who} is logged in · ${seenWords(device, now)}`;
+    return `${m.settingsDevicesAnotherUserHere()} · ${m.settingsDevicesRunsWhileLoggedIn({ user: who })} · ${seenWords(device, now)}`;
   }
   // A Mac added by its address is named by it (components/devices/DevicesTab).
   if (device.remoteLogin)
@@ -234,7 +314,8 @@ export function deviceDetail(device: DeviceView, now: number): string {
       : device.reachedOn === "private"
         ? WAYS_WORDS.reachedPrivate
         : null;
-  return `${whatDevice(device)} · joined ${joinedWhen(device.pairedAt, now)}${reached ? ` · ${reached}` : ""} · ${seenWords(device, now)}`;
+  const joined = m.settingsDevicesJoined({ when: joinedWhen(device.pairedAt, now) });
+  return `${whatDevice(device)} · ${joined}${reached ? ` · ${reached}` : ""} · ${seenWords(device, now)}`;
 }
 
 /** The names of what a computer is signed in to: its subscriptions, then where projects live. */
@@ -255,19 +336,30 @@ function signedInNames(signIns: DeviceSignIns | undefined): string[] | null {
  * else (design skill `components/devices/DevicesTab`).
  */
 export function deviceSummary(device: DeviceView, signIns: DeviceSignIns | undefined): string {
-  const controlling = device.controlling ? [CONTROLLING_NOW] : [];
+  const controlling = device.controlling ? [DEVICE_ROW_WORDS.controllingNow] : [];
   if (!deviceRunsWork(device.kind)) return controlling.join("");
   const runs = device.runs ?? [];
   if (device.removal === "bringing-work")
     return runs.length > 0
-      ? `Bringing ${namesInWords(runs)}'s unmerged work to ${HERE.this}…`
-      : `Bringing its unmerged work to ${HERE.this}…`;
+      ? m.settingsDevicesBringingWorkOf({ projects: namesInWords(runs) })
+      : m.settingsDevicesBringingWork();
   if (device.removal === "cleaning-up")
-    return `Removing what Infinitary set up ${signInPlace({ ...device, onThisMac: device.onThisMac ?? false }).where}…`;
-  const parts = [...controlling, runs.length > 0 ? `Runs ${namesInWords(runs)}` : RUNS_NO_PROJECT];
+    return m.settingsDevicesRemovingSetUp({
+      where: signInPlace({ ...device, onThisMac: device.onThisMac ?? false }).where,
+    });
+  const parts = [
+    ...controlling,
+    runs.length > 0
+      ? m.settingsDevicesRuns({ projects: namesInWords(runs) })
+      : DEVICE_ROW_WORDS.runsNoProject,
+  ];
   const names = signedInNames(signIns);
   if (names)
-    parts.push(names.length > 0 ? `Signed in to ${namesInWords(names)}` : "No sign-ins yet");
+    parts.push(
+      names.length > 0
+        ? m.settingsDevicesSignedInTo({ names: namesInWords(names) })
+        : m.settingsDevicesNoSignIns(),
+    );
   return parts.join(" · ");
 }
 
@@ -278,14 +370,15 @@ export function deviceSummary(device: DeviceView, signIns: DeviceSignIns | undef
  * whose connection stopped, failed or dropped.
  */
 export function deviceState(device: DeviceView): { text: string; tone: "busy" | "idle" | "warn" } {
-  if (device.otherVersion?.takesWork === false) return { text: NO_NEW_WORK, tone: "warn" };
+  if (device.otherVersion?.takesWork === false)
+    return { text: DEVICE_ROW_WORDS.noNewWork, tone: "warn" };
   if (!device.inReach) {
     const connecting = deviceConnecting(device);
     return { text: awayWord(connecting), tone: connecting ? "idle" : "warn" };
   }
   const tasks = device.tasks ?? 0;
-  if (tasks > 0) return { text: tasks === 1 ? "1 task" : `${tasks} tasks`, tone: "busy" };
-  return { text: "idle", tone: "idle" };
+  if (tasks > 0) return { text: m.settingsDevicesTasks({ count: tasks }), tone: "busy" };
+  return { text: m.settingsDevicesIdle(), tone: "idle" };
 }
 
 /**
@@ -303,12 +396,11 @@ export function strandedLine(device: DeviceView): string | null {
     !device.addressChanged
   )
     return null;
-  const said = `It still looks for ${HERE.this} at its old address.`;
   // Reached over this Mac's own SSH, it follows this Mac wherever it listens.
   if (device.remoteLogin) return null;
   if (device.onThisMac && device.user)
-    return `${said} A new command run as ${userDisplayName(device.user)} brings it back.`;
-  return `${said} A new command run there brings it back.`;
+    return m.settingsDevicesStrandedAsUser({ user: userDisplayName(device.user) });
+  return m.settingsDevicesStrandedThere();
 }
 
 /**
@@ -319,7 +411,10 @@ export function strandedLine(device: DeviceView): string | null {
 export function wayBack(device: DeviceView): { label: string; does: DeviceMake } | null {
   if (!deviceRunsWork(device.kind) || device.inReach || device.otherVersion) return null;
   if (device.remoteLogin || !device.addressChanged) return null;
-  return { label: "Make a command", does: device.onThisMac ? "user-command" : "command" };
+  return {
+    label: m.settingsDevicesMakeCommand(),
+    does: device.onThisMac ? "user-command" : "command",
+  };
 }
 
 /**
@@ -332,11 +427,7 @@ export function wayBack(device: DeviceView): { label: string; does: DeviceMake }
 export function heldLine(device: DeviceView): string | null {
   if (!deviceRunsWork(device.kind) || device.inReach || device.otherVersion) return null;
   if (!device.heldOnLocalNetwork) return null;
-  return [
-    `It has not reached ${HERE.this} since it joined.`,
-    `macOS lets Infinitary on ${deviceLabel(device)} use your local network only once someone there allows it.`,
-    `Added by its address, ${HERE.this} reaches it with your SSH key instead.`,
-  ].join(" ");
+  return m.settingsDevicesHeldLine({ device: deviceLabel(device) });
 }
 
 /**

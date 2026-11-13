@@ -1056,6 +1056,343 @@ public enum PhoneMessages {
     public static func `recordLabelKnowledgeUsed`() -> String { PhoneWords.format("recordLabelKnowledgeUsed", []) }
     public static func `recordLabelMore`() -> String { PhoneWords.format("recordLabelMore", []) }
     public static func `recordKnowledgeUsedNote`() -> String { PhoneWords.format("recordKnowledgeUsedNote", []) }
+    public static func `settingsDevicesWaysLabel`() -> String { PhoneWords.format("settingsDevicesWaysLabel", []) }
+    public static func `settingsDevicesWaysLocal`() -> String { PhoneWords.format("settingsDevicesWaysLocal", []) }
+    public static func `settingsDevicesWaysLocalLine`() -> String { PhoneWords.format("settingsDevicesWaysLocalLine", []) }
+    public static func `settingsDevicesWaysLocalOff`() -> String { PhoneWords.format("settingsDevicesWaysLocalOff", []) }
+    public static func `settingsDevicesWaysPrivate`() -> String { PhoneWords.format("settingsDevicesWaysPrivate", []) }
+    public static func `settingsDevicesWaysPrivateOffTitle`() -> String { PhoneWords.format("settingsDevicesWaysPrivateOffTitle", []) }
+    public static func `settingsDevicesWaysPrivateLine`() -> String { PhoneWords.format("settingsDevicesWaysPrivateLine", []) }
+    public static func `settingsDevicesWaysPrivateOff`() -> String { PhoneWords.format("settingsDevicesWaysPrivateOff", []) }
+    public static func `settingsDevicesWaysInternet`() -> String { PhoneWords.format("settingsDevicesWaysInternet", []) }
+    public static func `settingsDevicesWaysInternetLine`() -> String { PhoneWords.format("settingsDevicesWaysInternetLine", []) }
+    public static func `settingsDevicesWaysFoot`() -> String { PhoneWords.format("settingsDevicesWaysFoot", []) }
+    public static func `settingsDevicesWaysCopyLink`() -> String { PhoneWords.format("settingsDevicesWaysCopyLink", []) }
+    public static func `settingsDevicesWaysCopyCommand`() -> String { PhoneWords.format("settingsDevicesWaysCopyCommand", []) }
+    public static func `settingsDevicesWaysReady`() -> String { PhoneWords.format("settingsDevicesWaysReady", []) }
+    public static func `settingsDevicesWaysOff`() -> String { PhoneWords.format("settingsDevicesWaysOff", []) }
+    public static func `settingsDevicesWaysReachedLocal`() -> String { PhoneWords.format("settingsDevicesWaysReachedLocal", []) }
+    public static func `settingsDevicesWaysReachedPrivate`() -> String { PhoneWords.format("settingsDevicesWaysReachedPrivate", []) }
+    public static func `settingsDevicesWaysNoNetwork`() -> String { PhoneWords.format("settingsDevicesWaysNoNetwork", []) }
+    public static func `settingsDevicesWayCount`(`count`: Int) -> String { PhoneWords.format("settingsDevicesWayCount", [`count`]) }
+    public static func `settingsDevicesPanelLinkLabel`() -> String { PhoneWords.format("settingsDevicesPanelLinkLabel", []) }
+    public static func `settingsDevicesPanelPhoneLabel`() -> String { PhoneWords.format("settingsDevicesPanelPhoneLabel", []) }
+    public static func `settingsDevicesPanelCopyLink`() -> String { PhoneWords.format("settingsDevicesPanelCopyLink", []) }
+    public static func `settingsDevicesPanelCommandLabel`() -> String { PhoneWords.format("settingsDevicesPanelCommandLabel", []) }
+    public static func `settingsDevicesPanelCommandRun`() -> String { PhoneWords.format("settingsDevicesPanelCommandRun", []) }
+    public static func `settingsDevicesPanelCommandNetwork`() -> String { PhoneWords.format("settingsDevicesPanelCommandNetwork", []) }
+    public static func `settingsDevicesPanelCopyCommand`() -> String { PhoneWords.format("settingsDevicesPanelCopyCommand", []) }
+    public static func `settingsDevicesPanelUserCommandLabel`() -> String { PhoneWords.format("settingsDevicesPanelUserCommandLabel", []) }
+    public static func `settingsDevicesPanelUserCommandLogIn`() -> String { PhoneWords.format("settingsDevicesPanelUserCommandLogIn", []) }
+    public static func `settingsDevicesPanelUserCommandSwitchBack`() -> String { PhoneWords.format("settingsDevicesPanelUserCommandSwitchBack", []) }
+    public static func `settingsDevicesSeenNow`() -> String { PhoneWords.format("settingsDevicesSeenNow", []) }
+    public static func `settingsDevicesSeenSince`() -> String { PhoneWords.format("settingsDevicesSeenSince", []) }
+    public static func `settingsDevicesSeenSinceWhen`(`when`: String) -> String { PhoneWords.format("settingsDevicesSeenSinceWhen", [`when`]) }
+    public static func `settingsDevicesSeenRemovedWhenBack`() -> String { PhoneWords.format("settingsDevicesSeenRemovedWhenBack", []) }
+    public static func `settingsDevicesSeenRemovedWhenBackConnecting`() -> String { PhoneWords.format("settingsDevicesSeenRemovedWhenBackConnecting", []) }
+    public static func `settingsDevicesSeenRemovedOnceUpdated`() -> String { PhoneWords.format("settingsDevicesSeenRemovedOnceUpdated", []) }
+    public static func `settingsDevicesSeenRestarted`() -> String { PhoneWords.format("settingsDevicesSeenRestarted", []) }
+    public static func `settingsDevicesControllingNow`() -> String { PhoneWords.format("settingsDevicesControllingNow", []) }
+    public static func `settingsDevicesRunsNoProject`() -> String { PhoneWords.format("settingsDevicesRunsNoProject", []) }
+    public static func `settingsDevicesNoNewWork`() -> String { PhoneWords.format("settingsDevicesNoNewWork", []) }
+    public static func `settingsDevicesRemoveCutOff`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveCutOff", [`device`]) }
+    public static func `settingsDevicesRemoveNewLink`() -> String { PhoneWords.format("settingsDevicesRemoveNewLink", []) }
+    public static func `settingsDevicesRemoveOtherFirstmate`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveOtherFirstmate", [`device`]) }
+    public static func `settingsDevicesRemoveStaysThere`() -> String { PhoneWords.format("settingsDevicesRemoveStaysThere", []) }
+    public static func `settingsDevicesRemoveStaysThereOn`(`projects`: String) -> String { PhoneWords.format("settingsDevicesRemoveStaysThereOn", [`projects`]) }
+    public static func `settingsDevicesRemoveNoNewWork`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveNoNewWork", [`device`]) }
+    public static func `settingsDevicesRemoveUpdateIt`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveUpdateIt", [`device`]) }
+    public static func `settingsDevicesRemoveUpdateItOn`(`device`: String, `projects`: String) -> String { PhoneWords.format("settingsDevicesRemoveUpdateItOn", [`device`, `projects`]) }
+    public static func `settingsDevicesRemoveAway`(`device`: String, `state`: String) -> String { PhoneWords.format("settingsDevicesRemoveAway", [`device`, `state`]) }
+    public static func `settingsDevicesRemoveWait`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveWait", [`device`]) }
+    public static func `settingsDevicesRemoveWaitOn`(`device`: String, `projects`: String) -> String { PhoneWords.format("settingsDevicesRemoveWaitOn", [`device`, `projects`]) }
+    public static func `settingsDevicesRemoveComesFirst`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveComesFirst", [`device`]) }
+    public static func `settingsDevicesRemoveCleansUp`() -> String { PhoneWords.format("settingsDevicesRemoveCleansUp", []) }
+    public static func `settingsDevicesRemoveTasksStop`(`count`: Int) -> String { PhoneWords.format("settingsDevicesRemoveTasksStop", [`count`]) }
+    public static func `settingsDevicesRemoveTasksStopOn`(`count`: Int, `projects`: String) -> String { PhoneWords.format("settingsDevicesRemoveTasksStopOn", [`count`, `projects`]) }
+    public static func `settingsDevicesRemoveRunsAfter`(`count`: Int, `projects`: String) -> String { PhoneWords.format("settingsDevicesRemoveRunsAfter", [`count`, `projects`]) }
+    public static func `settingsDevicesJoinedToday`(`time`: String) -> String { PhoneWords.format("settingsDevicesJoinedToday", [`time`]) }
+    public static func `settingsDevicesJoinedYesterday`(`time`: String) -> String { PhoneWords.format("settingsDevicesJoinedYesterday", [`time`]) }
+    public static func `settingsDevicesJoined`(`when`: String) -> String { PhoneWords.format("settingsDevicesJoined", [`when`]) }
+    public static func `settingsDevicesRunningAs`(`user`: String) -> String { PhoneWords.format("settingsDevicesRunningAs", [`user`]) }
+    public static func `settingsDevicesAnotherUserHere`() -> String { PhoneWords.format("settingsDevicesAnotherUserHere", []) }
+    public static func `settingsDevicesRunsWhileLoggedIn`(`user`: String) -> String { PhoneWords.format("settingsDevicesRunsWhileLoggedIn", [`user`]) }
+    public static func `settingsDevicesBringingWorkOf`(`projects`: String) -> String { PhoneWords.format("settingsDevicesBringingWorkOf", [`projects`]) }
+    public static func `settingsDevicesBringingWork`() -> String { PhoneWords.format("settingsDevicesBringingWork", []) }
+    public static func `settingsDevicesRemovingSetUp`(`where`: String) -> String { PhoneWords.format("settingsDevicesRemovingSetUp", [`where`]) }
+    public static func `settingsDevicesRuns`(`projects`: String) -> String { PhoneWords.format("settingsDevicesRuns", [`projects`]) }
+    public static func `settingsDevicesSignedInTo`(`names`: String) -> String { PhoneWords.format("settingsDevicesSignedInTo", [`names`]) }
+    public static func `settingsDevicesNoSignIns`() -> String { PhoneWords.format("settingsDevicesNoSignIns", []) }
+    public static func `settingsDevicesTasks`(`count`: Int) -> String { PhoneWords.format("settingsDevicesTasks", [`count`]) }
+    public static func `settingsDevicesIdle`() -> String { PhoneWords.format("settingsDevicesIdle", []) }
+    public static func `settingsDevicesStrandedAsUser`(`user`: String) -> String { PhoneWords.format("settingsDevicesStrandedAsUser", [`user`]) }
+    public static func `settingsDevicesStrandedThere`() -> String { PhoneWords.format("settingsDevicesStrandedThere", []) }
+    public static func `settingsDevicesMakeCommand`() -> String { PhoneWords.format("settingsDevicesMakeCommand", []) }
+    public static func `settingsDevicesHeldLine`(`device`: String) -> String { PhoneWords.format("settingsDevicesHeldLine", [`device`]) }
+    public static func `settingsProjectsDelivery`() -> String { PhoneWords.format("settingsProjectsDelivery", []) }
+    public static func `settingsProjectsQueueNeeds`() -> String { PhoneWords.format("settingsProjectsQueueNeeds", []) }
+    public static func `settingsProjectsQueueHowToLabel`() -> String { PhoneWords.format("settingsProjectsQueueHowToLabel", []) }
+    public static func `settingsProjectsQueueStepAsk`() -> String { PhoneWords.format("settingsProjectsQueueStepAsk", []) }
+    public static func `settingsProjectsQueueStepWorkflow`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepWorkflow", [`status`]) }
+    public static func `settingsProjectsQueueStepSet`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepSet", [`status`]) }
+    public static func `settingsProjectsQueueFirstMate`() -> String { PhoneWords.format("settingsProjectsQueueFirstMate", []) }
+    public static func `settingsProjectsQueueGuideGithub`() -> String { PhoneWords.format("settingsProjectsQueueGuideGithub", []) }
+    public static func `settingsProjectsQueueStepPipelineGitlab`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepPipelineGitlab", [`status`]) }
+    public static func `settingsProjectsQueueStepSetGitlab`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepSetGitlab", [`status`]) }
+    public static func `settingsProjectsQueueGuideGitlab`() -> String { PhoneWords.format("settingsProjectsQueueGuideGitlab", []) }
+    public static func `settingsProjectsQueueKeyTitle`() -> String { PhoneWords.format("settingsProjectsQueueKeyTitle", []) }
+    public static func `settingsProjectsQueueKeyMissing`(`place`: String) -> String { PhoneWords.format("settingsProjectsQueueKeyMissing", [`place`]) }
+    public static func `settingsProjectsQueueKeyReady`(`date`: String) -> String { PhoneWords.format("settingsProjectsQueueKeyReady", [`date`]) }
+    public static func `settingsProjectsQueueKeyUnreadable`(`place`: String) -> String { PhoneWords.format("settingsProjectsQueueKeyUnreadable", [`place`]) }
+    public static func `settingsProjectsQueueKeyMake`() -> String { PhoneWords.format("settingsProjectsQueueKeyMake", []) }
+    public static func `settingsProjectsQueueKeyRemake`() -> String { PhoneWords.format("settingsProjectsQueueKeyRemake", []) }
+    public static func `settingsProjectsQueueKeyMade`() -> String { PhoneWords.format("settingsProjectsQueueKeyMade", []) }
+    public static func `settingsProjectsQueueShipped`(`version`: String) -> String { PhoneWords.format("settingsProjectsQueueShipped", [`version`]) }
+    public static func `settingsProjectsPauseTitle`() -> String { PhoneWords.format("settingsProjectsPauseTitle", []) }
+    public static func `settingsProjectsPauseSummary`(`changes`: String, `count`: Int, `run`: String, `since`: String) -> String { PhoneWords.format("settingsProjectsPauseSummary", [`changes`, `count`, `run`, `since`]) }
+    public static func `settingsProjectsPauseClaimed`(`who`: String) -> String { PhoneWords.format("settingsProjectsPauseClaimed", [`who`]) }
+    public static func `settingsProjectsPauseUnclaimed`() -> String { PhoneWords.format("settingsProjectsPauseUnclaimed", []) }
+    public static func `settingsProjectsPauseUnread`() -> String { PhoneWords.format("settingsProjectsPauseUnread", []) }
+    public static func `settingsProjectsPauseIssue`() -> String { PhoneWords.format("settingsProjectsPauseIssue", []) }
+    public static func `settingsProjectsPauseRun`() -> String { PhoneWords.format("settingsProjectsPauseRun", []) }
+    public static func `settingsProjectsPauseReason`() -> String { PhoneWords.format("settingsProjectsPauseReason", []) }
+    public static func `settingsProjectsPauseResume`() -> String { PhoneWords.format("settingsProjectsPauseResume", []) }
+    public static func `settingsProjectsPauseSendBack`() -> String { PhoneWords.format("settingsProjectsPauseSendBack", []) }
+    public static func `settingsProjectsPauseSendBackWhich`() -> String { PhoneWords.format("settingsProjectsPauseSendBackWhich", []) }
+    public static func `settingsProjectsPauseNeedsReason`() -> String { PhoneWords.format("settingsProjectsPauseNeedsReason", []) }
+    public static func `settingsProjectsPauseSent`() -> String { PhoneWords.format("settingsProjectsPauseSent", []) }
+    public static func `settingsProjectsQueueNoHost`() -> String { PhoneWords.format("settingsProjectsQueueNoHost", []) }
+    public static func `settingsProjectsQueueWaiting`(`delivery`: String) -> String { PhoneWords.format("settingsProjectsQueueWaiting", [`delivery`]) }
+    public static func `settingsProjectsRowPersonal`() -> String { PhoneWords.format("settingsProjectsRowPersonal", []) }
+    public static func `settingsProjectsRowLinked`() -> String { PhoneWords.format("settingsProjectsRowLinked", []) }
+    public static func `settingsProjectsRowCare`(`care`: String) -> String { PhoneWords.format("settingsProjectsRowCare", [`care`]) }
+    public static func `settingsProjectsRowRuns`(`where`: String) -> String { PhoneWords.format("settingsProjectsRowRuns", [`where`]) }
+    public static func `settingsProjectsCostTitle`() -> String { PhoneWords.format("settingsProjectsCostTitle", []) }
+    public static func `settingsProjectsCostDescription`() -> String { PhoneWords.format("settingsProjectsCostDescription", []) }
+    public static func `settingsProjectsCostFollow`() -> String { PhoneWords.format("settingsProjectsCostFollow", []) }
+    public static func `settingsProjectsCostOwn`() -> String { PhoneWords.format("settingsProjectsCostOwn", []) }
+    public static func `settingsProjectsCostNone`() -> String { PhoneWords.format("settingsProjectsCostNone", []) }
+    public static func `settingsProjectsCostAmount`() -> String { PhoneWords.format("settingsProjectsCostAmount", []) }
+    public static func `settingsForgeThisMacRole`() -> String { PhoneWords.format("settingsForgeThisMacRole", []) }
+    public static func `settingsForgeDeviceRole`() -> String { PhoneWords.format("settingsForgeDeviceRole", []) }
+    public static func `settingsAddProjectStartedGit`() -> String { PhoneWords.format("settingsAddProjectStartedGit", []) }
+    public static func `settingsAddProjectFolderHere`() -> String { PhoneWords.format("settingsAddProjectFolderHere", []) }
+    public static func `settingsAddProjectOtherHost`() -> String { PhoneWords.format("settingsAddProjectOtherHost", []) }
+    public static func `settingsAddProjectNewProject`(`folder`: String, `place`: String) -> String { PhoneWords.format("settingsAddProjectNewProject", [`folder`, `place`]) }
+    public static func `settingsAddProjectFolderOn`(`computer`: String) -> String { PhoneWords.format("settingsAddProjectFolderOn", [`computer`]) }
+    public static func `settingsAddProjectFolderPathOn`(`computer`: String) -> String { PhoneWords.format("settingsAddProjectFolderPathOn", [`computer`]) }
+    public static func `settingsAddProjectAddFolder`() -> String { PhoneWords.format("settingsAddProjectAddFolder", []) }
+    public static func `settingsAddProjectTaskKey`() -> String { PhoneWords.format("settingsAddProjectTaskKey", []) }
+    public static func `settingsAddProjectTaskKeyPlaceholder`() -> String { PhoneWords.format("settingsAddProjectTaskKeyPlaceholder", []) }
+    public static func `settingsAddProjectTaskKeyNext`(`key`: String) -> String { PhoneWords.format("settingsAddProjectTaskKeyNext", [`key`]) }
+    public static func `settingsAddProjectSignIn`(`host`: String) -> String { PhoneWords.format("settingsAddProjectSignIn", [`host`]) }
+    public static func `settingsDevicesPhoneCodeLabel`() -> String { PhoneWords.format("settingsDevicesPhoneCodeLabel", []) }
+    public static func `settingsProjectsQueueKeyEndsUnknown`() -> String { PhoneWords.format("settingsProjectsQueueKeyEndsUnknown", []) }
+    public static func `settingsRunsOnNoSignIns`() -> String { PhoneWords.format("settingsRunsOnNoSignIns", []) }
+    public static func `settingsRunsOnAutomatically`() -> String { PhoneWords.format("settingsRunsOnAutomatically", []) }
+    public static func `settingsRunsOnLabel`() -> String { PhoneWords.format("settingsRunsOnLabel", []) }
+    public static func `settingsRunsOnYourComputers`() -> String { PhoneWords.format("settingsRunsOnYourComputers", []) }
+    public static func `settingsRunsOnAnotherUser`() -> String { PhoneWords.format("settingsRunsOnAnotherUser", []) }
+    public static func `settingsRunsOnRemoved`() -> String { PhoneWords.format("settingsRunsOnRemoved", []) }
+    public static func `settingsRunsOnAutomaticDescription`() -> String { PhoneWords.format("settingsRunsOnAutomaticDescription", []) }
+    public static func `settingsRunsOnDescription`() -> String { PhoneWords.format("settingsRunsOnDescription", []) }
+    public static func `settingsProjectsRemoveCheckFailed`() -> String { PhoneWords.format("settingsProjectsRemoveCheckFailed", []) }
+    public static func `settingsProjectsRemoveFailed`() -> String { PhoneWords.format("settingsProjectsRemoveFailed", []) }
+    public static func `settingsProjectsRemoveTitle`() -> String { PhoneWords.format("settingsProjectsRemoveTitle", []) }
+    public static func `settingsProjectsRemoveCancel`() -> String { PhoneWords.format("settingsProjectsRemoveCancel", []) }
+    public static func `settingsProjectsRemoving`() -> String { PhoneWords.format("settingsProjectsRemoving", []) }
+    public static func `settingsProjectsRemoveConfirm`() -> String { PhoneWords.format("settingsProjectsRemoveConfirm", []) }
+    public static func `settingsProjectsRemoveNamed`(`name`: String) -> String { PhoneWords.format("settingsProjectsRemoveNamed", [`name`]) }
+    public static func `settingsControllingLabel`() -> String { PhoneWords.format("settingsControllingLabel", []) }
+    public static func `settingsControllingSay`(`name`: String) -> String { PhoneWords.format("settingsControllingSay", [`name`]) }
+    public static func `settingsControllingLeaveRunsWork`(`name`: String) -> String { PhoneWords.format("settingsControllingLeaveRunsWork", [`name`]) }
+    public static func `settingsControllingLeave`(`name`: String) -> String { PhoneWords.format("settingsControllingLeave", [`name`]) }
+    public static func `settingsControllingWorkGoes`(`name`: String) -> String { PhoneWords.format("settingsControllingWorkGoes", [`name`]) }
+    public static func `settingsControllingAway`(`name`: String) -> String { PhoneWords.format("settingsControllingAway", [`name`]) }
+    public static func `settingsControllingNewLink`() -> String { PhoneWords.format("settingsControllingNewLink", []) }
+    public static func `settingsControllingStay`() -> String { PhoneWords.format("settingsControllingStay", []) }
+    public static func `settingsControllingLeaving`() -> String { PhoneWords.format("settingsControllingLeaving", []) }
+    public static func `settingsControllingLeaveButton`() -> String { PhoneWords.format("settingsControllingLeaveButton", []) }
+    public static func `settingsControllingJoined`(`address`: String, `when`: String) -> String { PhoneWords.format("settingsControllingJoined", [`address`, `when`]) }
+    public static func `settingsControllingLeaveNamed`(`name`: String) -> String { PhoneWords.format("settingsControllingLeaveNamed", [`name`]) }
+    public static func `settingsProjectsLabel`() -> String { PhoneWords.format("settingsProjectsLabel", []) }
+    public static func `settingsProjectsIntro`() -> String { PhoneWords.format("settingsProjectsIntro", []) }
+    public static func `settingsProjectsEmpty`() -> String { PhoneWords.format("settingsProjectsEmpty", []) }
+    public static func `settingsProjectsFolderPickerFailed`() -> String { PhoneWords.format("settingsProjectsFolderPickerFailed", []) }
+    public static func `settingsProjectsFolderSave`() -> String { PhoneWords.format("settingsProjectsFolderSave", []) }
+    public static func `settingsProjectsFolderCancel`() -> String { PhoneWords.format("settingsProjectsFolderCancel", []) }
+    public static func `settingsProjectsFolderLine`() -> String { PhoneWords.format("settingsProjectsFolderLine", []) }
+    public static func `settingsProjectsFolderDefault`() -> String { PhoneWords.format("settingsProjectsFolderDefault", []) }
+    public static func `settingsProjectsFolderChoosing`() -> String { PhoneWords.format("settingsProjectsFolderChoosing", []) }
+    public static func `settingsProjectsFolderChoose`() -> String { PhoneWords.format("settingsProjectsFolderChoose", []) }
+    public static func `settingsProjectsFolderUseDefault`() -> String { PhoneWords.format("settingsProjectsFolderUseDefault", []) }
+    public static func `settingsProjectsName`() -> String { PhoneWords.format("settingsProjectsName", []) }
+    public static func `settingsProjectsNameDescription`() -> String { PhoneWords.format("settingsProjectsNameDescription", []) }
+    public static func `settingsProjectsNameLabel`() -> String { PhoneWords.format("settingsProjectsNameLabel", []) }
+    public static func `settingsProjectsScope`() -> String { PhoneWords.format("settingsProjectsScope", []) }
+    public static func `settingsProjectsScopeDescription`() -> String { PhoneWords.format("settingsProjectsScopeDescription", []) }
+    public static func `settingsProjectsFolder`() -> String { PhoneWords.format("settingsProjectsFolder", []) }
+    public static func `settingsProjectsFolderDescription`() -> String { PhoneWords.format("settingsProjectsFolderDescription", []) }
+    public static func `settingsProjectsFolderLabel`() -> String { PhoneWords.format("settingsProjectsFolderLabel", []) }
+    public static func `settingsProjectsOrigin`() -> String { PhoneWords.format("settingsProjectsOrigin", []) }
+    public static func `settingsProjectsOriginDescription`(`place`: String) -> String { PhoneWords.format("settingsProjectsOriginDescription", [`place`]) }
+    public static func `settingsProjectsOriginLabel`() -> String { PhoneWords.format("settingsProjectsOriginLabel", []) }
+    public static func `settingsProjectsSaveDetails`() -> String { PhoneWords.format("settingsProjectsSaveDetails", []) }
+    public static func `settingsProjectsRowExpanded`(`name`: String) -> String { PhoneWords.format("settingsProjectsRowExpanded", [`name`]) }
+    public static func `settingsProjectsRowCollapsed`(`name`: String) -> String { PhoneWords.format("settingsProjectsRowCollapsed", [`name`]) }
+    public static func `settingsProjectsWorkspace`() -> String { PhoneWords.format("settingsProjectsWorkspace", []) }
+    public static func `settingsProjectsDeliveryTitle`() -> String { PhoneWords.format("settingsProjectsDeliveryTitle", []) }
+    public static func `settingsProjectsWorkspaceDescription`() -> String { PhoneWords.format("settingsProjectsWorkspaceDescription", []) }
+    public static func `settingsProjectsAutonomyPersonal`() -> String { PhoneWords.format("settingsProjectsAutonomyPersonal", []) }
+    public static func `settingsProjectsAutonomyOn`() -> String { PhoneWords.format("settingsProjectsAutonomyOn", []) }
+    public static func `settingsProjectsAutonomyOff`() -> String { PhoneWords.format("settingsProjectsAutonomyOff", []) }
+    public static func `settingsProjectsCare`() -> String { PhoneWords.format("settingsProjectsCare", []) }
+    public static func `settingsProjectsCarePersonal`() -> String { PhoneWords.format("settingsProjectsCarePersonal", []) }
+    public static func `settingsProjectsRigorDescription`() -> String { PhoneWords.format("settingsProjectsRigorDescription", []) }
+    public static func `settingsProjectsCareNone`() -> String { PhoneWords.format("settingsProjectsCareNone", []) }
+    public static func `settingsProjectsLocalCareful`() -> String { PhoneWords.format("settingsProjectsLocalCareful", []) }
+    public static func `settingsAddProjectAddedGit`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAddedGit", [`name`]) }
+    public static func `settingsAddProjectAdded`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAdded", [`name`]) }
+    public static func `settingsAddProjectAlreadyAdded`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAlreadyAdded", [`name`]) }
+    public static func `settingsAddProjectWrongHost`(`host`: String) -> String { PhoneWords.format("settingsAddProjectWrongHost", [`host`]) }
+    public static func `settingsAddProjectLabel`() -> String { PhoneWords.format("settingsAddProjectLabel", []) }
+    public static func `settingsAddProjectHostRepo`(`host`: String) -> String { PhoneWords.format("settingsAddProjectHostRepo", [`host`]) }
+    public static func `settingsAddProjectNew`() -> String { PhoneWords.format("settingsAddProjectNew", []) }
+    public static func `settingsAddProjectAdding`() -> String { PhoneWords.format("settingsAddProjectAdding", []) }
+    public static func `settingsAddProjectName`() -> String { PhoneWords.format("settingsAddProjectName", []) }
+    public static func `settingsAddProjectStart`() -> String { PhoneWords.format("settingsAddProjectStart", []) }
+    public static func `settingsAddProjectYourRepos`(`host`: String) -> String { PhoneWords.format("settingsAddProjectYourRepos", [`host`]) }
+    public static func `settingsAddProjectFind`() -> String { PhoneWords.format("settingsAddProjectFind", []) }
+    public static func `settingsAddProjectReading`() -> String { PhoneWords.format("settingsAddProjectReading", []) }
+    public static func `settingsAddProjectPrivate`() -> String { PhoneWords.format("settingsAddProjectPrivate", []) }
+    public static func `settingsAddProjectAddedMark`() -> String { PhoneWords.format("settingsAddProjectAddedMark", []) }
+    public static func `settingsAddProjectAdd`() -> String { PhoneWords.format("settingsAddProjectAdd", []) }
+    public static func `settingsAddProjectOrPasteLink`(`host`: String) -> String { PhoneWords.format("settingsAddProjectOrPasteLink", [`host`]) }
+    public static func `settingsAddProjectPasteLink`(`host`: String) -> String { PhoneWords.format("settingsAddProjectPasteLink", [`host`]) }
+    public static func `settingsAddProjectGoesInto`(`folder`: String) -> String { PhoneWords.format("settingsAddProjectGoesInto", [`folder`]) }
+    public static func `settingsAddProjectClose`() -> String { PhoneWords.format("settingsAddProjectClose", []) }
+    public static func `settingsDevicesRemoveNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveNamed", [`device`]) }
+    public static func `settingsDevicesRemoveButton`() -> String { PhoneWords.format("settingsDevicesRemoveButton", []) }
+    public static func `settingsDevicesAddByAddressNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesAddByAddressNamed", [`device`]) }
+    public static func `settingsDevicesAddByAddress`() -> String { PhoneWords.format("settingsDevicesAddByAddress", []) }
+    public static func `settingsDevicesTryAgainNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesTryAgainNamed", [`device`]) }
+    public static func `settingsDevicesTryAgain`() -> String { PhoneWords.format("settingsDevicesTryAgain", []) }
+    public static func `settingsDevicesChangeAddressNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesChangeAddressNamed", [`device`]) }
+    public static func `settingsDevicesChangeAddress`() -> String { PhoneWords.format("settingsDevicesChangeAddress", []) }
+    public static func `settingsDevicesUpdateNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesUpdateNamed", [`device`]) }
+    public static func `settingsDevicesUpdate`() -> String { PhoneWords.format("settingsDevicesUpdate", []) }
+    public static func `settingsDevicesKeepIt`() -> String { PhoneWords.format("settingsDevicesKeepIt", []) }
+    public static func `settingsDevicesAddressChangeSay`() -> String { PhoneWords.format("settingsDevicesAddressChangeSay", []) }
+    public static func `settingsDevicesAddressAddSayAs`(`sshOn`: String, `user`: String) -> String { PhoneWords.format("settingsDevicesAddressAddSayAs", [`sshOn`, `user`]) }
+    public static func `settingsDevicesAddressAddSay`(`sshOn`: String) -> String { PhoneWords.format("settingsDevicesAddressAddSay", [`sshOn`]) }
+    public static func `settingsDevicesAddIt`() -> String { PhoneWords.format("settingsDevicesAddIt", []) }
+    public static func `settingsDevicesAddressChange`() -> String { PhoneWords.format("settingsDevicesAddressChange", []) }
+    public static func `settingsDevicesCancel`() -> String { PhoneWords.format("settingsDevicesCancel", []) }
+    public static func `settingsDevicesRemoveOnceUpdated`() -> String { PhoneWords.format("settingsDevicesRemoveOnceUpdated", []) }
+    public static func `settingsDevicesRemoveWhenBack`() -> String { PhoneWords.format("settingsDevicesRemoveWhenBack", []) }
+    public static func `settingsDevicesRemoveNow`() -> String { PhoneWords.format("settingsDevicesRemoveNow", []) }
+    public static func `settingsDevicesRemoving`() -> String { PhoneWords.format("settingsDevicesRemoving", []) }
+    public static func `settingsDevicesMakeFailed`() -> String { PhoneWords.format("settingsDevicesMakeFailed", []) }
+    public static func `settingsDevicesRemoveFailed`() -> String { PhoneWords.format("settingsDevicesRemoveFailed", []) }
+    public static func `settingsDevicesAddFailed`() -> String { PhoneWords.format("settingsDevicesAddFailed", []) }
+    public static func `settingsDevicesUpdateFailed`() -> String { PhoneWords.format("settingsDevicesUpdateFailed", []) }
+    public static func `settingsDevicesTryAgainFailed`() -> String { PhoneWords.format("settingsDevicesTryAgainFailed", []) }
+    public static func `settingsDevicesChangeAddressFailed`() -> String { PhoneWords.format("settingsDevicesChangeAddressFailed", []) }
+    public static func `settingsDevicesKeepFailed`() -> String { PhoneWords.format("settingsDevicesKeepFailed", []) }
+    public static func `settingsDevicesLabel`() -> String { PhoneWords.format("settingsDevicesLabel", []) }
+    public static func `settingsDevicesLivesThere`() -> String { PhoneWords.format("settingsDevicesLivesThere", []) }
+    public static func `settingsDevicesLivesHere`() -> String { PhoneWords.format("settingsDevicesLivesHere", []) }
+    public static func `settingsDevicesAdd`() -> String { PhoneWords.format("settingsDevicesAdd", []) }
+    public static func `settingsDevicesAddComputer`() -> String { PhoneWords.format("settingsDevicesAddComputer", []) }
+    public static func `settingsDevicesAddPhone`() -> String { PhoneWords.format("settingsDevicesAddPhone", []) }
+    public static func `settingsDevicesAddUser`() -> String { PhoneWords.format("settingsDevicesAddUser", []) }
+    public static func `settingsDevicesIntroThere`(`reads`: String) -> String { PhoneWords.format("settingsDevicesIntroThere", [`reads`]) }
+    public static func `settingsDevicesIntroHere`(`reads`: String) -> String { PhoneWords.format("settingsDevicesIntroHere", [`reads`]) }
+    public static func `settingsDevicesAddHow`() -> String { PhoneWords.format("settingsDevicesAddHow", []) }
+    public static func `settingsDevicesAddEachWay`() -> String { PhoneWords.format("settingsDevicesAddEachWay", []) }
+    public static func `settingsDevicesAddByLink`() -> String { PhoneWords.format("settingsDevicesAddByLink", []) }
+    public static func `settingsDevicesAddByCommand`() -> String { PhoneWords.format("settingsDevicesAddByCommand", []) }
+    public static func `settingsDevicesAddByItsAddress`() -> String { PhoneWords.format("settingsDevicesAddByItsAddress", []) }
+    public static func `settingsDevicesAddressLabel`() -> String { PhoneWords.format("settingsDevicesAddressLabel", []) }
+    public static func `settingsDevicesAddressSay`(`sshOn`: String) -> String { PhoneWords.format("settingsDevicesAddressSay", [`sshOn`]) }
+    public static func `settingsDevicesConfirmThis`() -> String { PhoneWords.format("settingsDevicesConfirmThis", []) }
+    public static func `settingsDevicesLeaveAndAdd`() -> String { PhoneWords.format("settingsDevicesLeaveAndAdd", []) }
+    public static func `settingsDevicesAddingDetail`(`address`: String) -> String { PhoneWords.format("settingsDevicesAddingDetail", [`address`]) }
+    public static func `settingsDevicesAddressTitle`() -> String { PhoneWords.format("settingsDevicesAddressTitle", []) }
+    public static func `settingsDevicesAddressOnly`(`place`: String) -> String { PhoneWords.format("settingsDevicesAddressOnly", [`place`]) }
+    public static func `settingsDevicesAddressOnlyHere`() -> String { PhoneWords.format("settingsDevicesAddressOnlyHere", []) }
+    public static func `settingsDevicesJoinedGiveProject`() -> String { PhoneWords.format("settingsDevicesJoinedGiveProject", []) }
+    public static func `settingsDevicesDone`() -> String { PhoneWords.format("settingsDevicesDone", []) }
+    public static func `settingsDevicesExpiredLink`() -> String { PhoneWords.format("settingsDevicesExpiredLink", []) }
+    public static func `settingsDevicesExpiredPhone`() -> String { PhoneWords.format("settingsDevicesExpiredPhone", []) }
+    public static func `settingsDevicesExpiredCommand`() -> String { PhoneWords.format("settingsDevicesExpiredCommand", []) }
+    public static func `settingsDevicesExpiredPhoneReady`() -> String { PhoneWords.format("settingsDevicesExpiredPhoneReady", []) }
+    public static func `settingsDevicesExpiredComputerReady`() -> String { PhoneWords.format("settingsDevicesExpiredComputerReady", []) }
+    public static func `settingsDevicesMakeNewOne`() -> String { PhoneWords.format("settingsDevicesMakeNewOne", []) }
+    public static func `settingsDevicesCopied`() -> String { PhoneWords.format("settingsDevicesCopied", []) }
+    public static func `settingsDevicesWorksOnce`(`left`: String) -> String { PhoneWords.format("settingsDevicesWorksOnce", [`left`]) }
+    public static func `settingsDevicesStopIt`() -> String { PhoneWords.format("settingsDevicesStopIt", []) }
+    public static func `settingsDevicesCopyLinkFailed`() -> String { PhoneWords.format("settingsDevicesCopyLinkFailed", []) }
+    public static func `settingsDevicesCopyCommandFailed`() -> String { PhoneWords.format("settingsDevicesCopyCommandFailed", []) }
+    public static func `settingsForgeSignedIn`() -> String { PhoneWords.format("settingsForgeSignedIn", []) }
+    public static func `settingsForgeSignInAgainState`() -> String { PhoneWords.format("settingsForgeSignInAgainState", []) }
+    public static func `settingsForgeSignedInUnreachable`(`host`: String) -> String { PhoneWords.format("settingsForgeSignedInUnreachable", [`host`]) }
+    public static func `settingsForgeSignedInChecking`() -> String { PhoneWords.format("settingsForgeSignedInChecking", []) }
+    public static func `settingsForgeSignInTo`(`host`: String) -> String { PhoneWords.format("settingsForgeSignInTo", [`host`]) }
+    public static func `settingsForgeConnecting`() -> String { PhoneWords.format("settingsForgeConnecting", []) }
+    public static func `settingsForgeMakeKey`(`host`: String) -> String { PhoneWords.format("settingsForgeMakeKey", [`host`]) }
+    public static func `settingsForgeChecking`() -> String { PhoneWords.format("settingsForgeChecking", []) }
+    public static func `settingsForgeSignIn`() -> String { PhoneWords.format("settingsForgeSignIn", []) }
+    public static func `settingsForgeCancel`() -> String { PhoneWords.format("settingsForgeCancel", []) }
+    public static func `settingsForgeEnterCode`(`host`: String) -> String { PhoneWords.format("settingsForgeEnterCode", [`host`]) }
+    public static func `settingsForgeOpenHost`(`host`: String) -> String { PhoneWords.format("settingsForgeOpenHost", [`host`]) }
+    public static func `settingsForgeCodeExpired`() -> String { PhoneWords.format("settingsForgeCodeExpired", []) }
+    public static func `settingsForgeUnreachable`(`host`: String) -> String { PhoneWords.format("settingsForgeUnreachable", [`host`]) }
+    public static func `settingsForgeNewCode`() -> String { PhoneWords.format("settingsForgeNewCode", []) }
+    public static func `settingsForgeTryAgain`() -> String { PhoneWords.format("settingsForgeTryAgain", []) }
+    public static func `settingsForgeNotSignedIn`(`host`: String) -> String { PhoneWords.format("settingsForgeNotSignedIn", [`host`]) }
+    public static func `settingsForgeSignInAgainSay`() -> String { PhoneWords.format("settingsForgeSignInAgainSay", []) }
+    public static func `settingsForgeStarting`() -> String { PhoneWords.format("settingsForgeStarting", []) }
+    public static func `settingsForgeSignInAgain`() -> String { PhoneWords.format("settingsForgeSignInAgain", []) }
+    public static func `settingsForgeRowActions`(`host`: String, `where`: String) -> String { PhoneWords.format("settingsForgeRowActions", [`host`, `where`]) }
+    public static func `settingsForgeSignOut`() -> String { PhoneWords.format("settingsForgeSignOut", []) }
+    public static func `settingsForgeBrowserLabel`(`host`: String) -> String { PhoneWords.format("settingsForgeBrowserLabel", [`host`]) }
+    public static func `settingsForgeBrowserIntro`(`host`: String) -> String { PhoneWords.format("settingsForgeBrowserIntro", [`host`]) }
+    public static func `settingsForgeBrowserStays`() -> String { PhoneWords.format("settingsForgeBrowserStays", []) }
+    public static func `settingsForgeBrowserStepOpen`(`add`: String, `host`: String) -> String { PhoneWords.format("settingsForgeBrowserStepOpen", [`add`, `host`]) }
+    public static func `settingsForgeBrowserStepName`(`field`: String, `name`: String, `redirect`: String) -> String { PhoneWords.format("settingsForgeBrowserStepName", [`field`, `name`, `redirect`]) }
+    public static func `settingsForgeBrowserRedirectFallback`() -> String { PhoneWords.format("settingsForgeBrowserRedirectFallback", []) }
+    public static func `settingsForgeBrowserStepScopes`(`api`: String, `confidential`: String, `write`: String) -> String { PhoneWords.format("settingsForgeBrowserStepScopes", [`api`, `confidential`, `write`]) }
+    public static func `settingsForgeBrowserStepGrant`(`grant`: String) -> String { PhoneWords.format("settingsForgeBrowserStepGrant", [`grant`]) }
+    public static func `settingsForgeBrowserStepSave`(`id`: String, `secret`: String) -> String { PhoneWords.format("settingsForgeBrowserStepSave", [`id`, `secret`]) }
+    public static func `settingsForgeBrowserOpenApplications`(`host`: String) -> String { PhoneWords.format("settingsForgeBrowserOpenApplications", [`host`]) }
+    public static func `settingsDevicesSignInsAsOf`(`time`: String) -> String { PhoneWords.format("settingsDevicesSignInsAsOf", [`time`]) }
+    public static func `settingsDevicesSignInsOwn`(`where`: String) -> String { PhoneWords.format("settingsDevicesSignInsOwn", [`where`]) }
+    public static func `settingsDevicesSignInsDisconnect`() -> String { PhoneWords.format("settingsDevicesSignInsDisconnect", []) }
+    public static func `settingsDevicesSignInsUnanswered`(`home`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsUnanswered", [`home`, `who`]) }
+    public static func `settingsDevicesSignInsNone`() -> String { PhoneWords.format("settingsDevicesSignInsNone", []) }
+    public static func `settingsDevicesSignInsAddAccount`() -> String { PhoneWords.format("settingsDevicesSignInsAddAccount", []) }
+    public static func `settingsDevicesSignInsCustomApi`(`where`: String) -> String { PhoneWords.format("settingsDevicesSignInsCustomApi", [`where`]) }
+    public static func `settingsDevicesSignInsClaudeCode`(`where`: String) -> String { PhoneWords.format("settingsDevicesSignInsClaudeCode", [`where`]) }
+    public static func `settingsDevicesSignInsFailed`(`provider`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsFailed", [`provider`, `who`]) }
+    public static func `settingsDevicesSignInsPasteKeyAn`(`provider`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsPasteKeyAn", [`provider`, `who`]) }
+    public static func `settingsDevicesSignInsPasteKeyA`(`provider`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsPasteKeyA", [`provider`, `who`]) }
+    public static func `settingsDevicesSignInsOpenLink`() -> String { PhoneWords.format("settingsDevicesSignInsOpenLink", []) }
+    public static func `settingsDevicesSignInsPasteYourKey`() -> String { PhoneWords.format("settingsDevicesSignInsPasteYourKey", []) }
+    public static func `settingsDevicesSignInsPasteAddress`() -> String { PhoneWords.format("settingsDevicesSignInsPasteAddress", []) }
+    public static func `settingsDevicesSignInsPasteCode`() -> String { PhoneWords.format("settingsDevicesSignInsPasteCode", []) }
+    public static func `settingsDevicesSignInsKeyFor`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsKeyFor", [`who`]) }
+    public static func `settingsDevicesSignInsAddressFor`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsAddressFor", [`who`]) }
+    public static func `settingsDevicesSignInsCodeFor`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsCodeFor", [`who`]) }
+    public static func `settingsDevicesSignInsSendTo`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsSendTo", [`who`]) }
+    public static func `settingsDevicesSignInsGoesOnce`(`home`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsGoesOnce", [`home`, `who`]) }
+    public static func `settingsDevicesSignInsEnterCode`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsEnterCode", [`who`]) }
+    public static func `settingsDevicesSignInsWaiting`() -> String { PhoneWords.format("settingsDevicesSignInsWaiting", []) }
+    public static func `settingsDevicesSignInsSigningIn`(`provider`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsSigningIn", [`provider`, `who`]) }
+    public static func `settingsDevicesSignInsTitle`(`provider`: String, `where`: String) -> String { PhoneWords.format("settingsDevicesSignInsTitle", [`provider`, `where`]) }
+    public static func `settingsDevicesSignInsPasteBackCode`() -> String { PhoneWords.format("settingsDevicesSignInsPasteBackCode", []) }
+    public static func `settingsDevicesSignInsPasteBackHere`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsPasteBackHere", [`who`]) }
+    public static func `settingsDevicesSignInsPasteBackAddress`() -> String { PhoneWords.format("settingsDevicesSignInsPasteBackAddress", []) }
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
@@ -2687,6 +3024,343 @@ extension PhoneWords {
         "recordLabelKnowledgeUsed": [],
         "recordLabelMore": [],
         "recordKnowledgeUsedNote": [],
+        "settingsDevicesWaysLabel": [],
+        "settingsDevicesWaysLocal": [],
+        "settingsDevicesWaysLocalLine": [],
+        "settingsDevicesWaysLocalOff": [],
+        "settingsDevicesWaysPrivate": [],
+        "settingsDevicesWaysPrivateOffTitle": [],
+        "settingsDevicesWaysPrivateLine": [],
+        "settingsDevicesWaysPrivateOff": [],
+        "settingsDevicesWaysInternet": [],
+        "settingsDevicesWaysInternetLine": [],
+        "settingsDevicesWaysFoot": [],
+        "settingsDevicesWaysCopyLink": [],
+        "settingsDevicesWaysCopyCommand": [],
+        "settingsDevicesWaysReady": [],
+        "settingsDevicesWaysOff": [],
+        "settingsDevicesWaysReachedLocal": [],
+        "settingsDevicesWaysReachedPrivate": [],
+        "settingsDevicesWaysNoNetwork": [],
+        "settingsDevicesWayCount": ["count"],
+        "settingsDevicesPanelLinkLabel": [],
+        "settingsDevicesPanelPhoneLabel": [],
+        "settingsDevicesPanelCopyLink": [],
+        "settingsDevicesPanelCommandLabel": [],
+        "settingsDevicesPanelCommandRun": [],
+        "settingsDevicesPanelCommandNetwork": [],
+        "settingsDevicesPanelCopyCommand": [],
+        "settingsDevicesPanelUserCommandLabel": [],
+        "settingsDevicesPanelUserCommandLogIn": [],
+        "settingsDevicesPanelUserCommandSwitchBack": [],
+        "settingsDevicesSeenNow": [],
+        "settingsDevicesSeenSince": [],
+        "settingsDevicesSeenSinceWhen": ["when"],
+        "settingsDevicesSeenRemovedWhenBack": [],
+        "settingsDevicesSeenRemovedWhenBackConnecting": [],
+        "settingsDevicesSeenRemovedOnceUpdated": [],
+        "settingsDevicesSeenRestarted": [],
+        "settingsDevicesControllingNow": [],
+        "settingsDevicesRunsNoProject": [],
+        "settingsDevicesNoNewWork": [],
+        "settingsDevicesRemoveCutOff": ["device"],
+        "settingsDevicesRemoveNewLink": [],
+        "settingsDevicesRemoveOtherFirstmate": ["device"],
+        "settingsDevicesRemoveStaysThere": [],
+        "settingsDevicesRemoveStaysThereOn": ["projects"],
+        "settingsDevicesRemoveNoNewWork": ["device"],
+        "settingsDevicesRemoveUpdateIt": ["device"],
+        "settingsDevicesRemoveUpdateItOn": ["device", "projects"],
+        "settingsDevicesRemoveAway": ["device", "state"],
+        "settingsDevicesRemoveWait": ["device"],
+        "settingsDevicesRemoveWaitOn": ["device", "projects"],
+        "settingsDevicesRemoveComesFirst": ["device"],
+        "settingsDevicesRemoveCleansUp": [],
+        "settingsDevicesRemoveTasksStop": ["count"],
+        "settingsDevicesRemoveTasksStopOn": ["count", "projects"],
+        "settingsDevicesRemoveRunsAfter": ["count", "projects"],
+        "settingsDevicesJoinedToday": ["time"],
+        "settingsDevicesJoinedYesterday": ["time"],
+        "settingsDevicesJoined": ["when"],
+        "settingsDevicesRunningAs": ["user"],
+        "settingsDevicesAnotherUserHere": [],
+        "settingsDevicesRunsWhileLoggedIn": ["user"],
+        "settingsDevicesBringingWorkOf": ["projects"],
+        "settingsDevicesBringingWork": [],
+        "settingsDevicesRemovingSetUp": ["where"],
+        "settingsDevicesRuns": ["projects"],
+        "settingsDevicesSignedInTo": ["names"],
+        "settingsDevicesNoSignIns": [],
+        "settingsDevicesTasks": ["count"],
+        "settingsDevicesIdle": [],
+        "settingsDevicesStrandedAsUser": ["user"],
+        "settingsDevicesStrandedThere": [],
+        "settingsDevicesMakeCommand": [],
+        "settingsDevicesHeldLine": ["device"],
+        "settingsProjectsDelivery": [],
+        "settingsProjectsQueueNeeds": [],
+        "settingsProjectsQueueHowToLabel": [],
+        "settingsProjectsQueueStepAsk": [],
+        "settingsProjectsQueueStepWorkflow": ["status"],
+        "settingsProjectsQueueStepSet": ["status"],
+        "settingsProjectsQueueFirstMate": [],
+        "settingsProjectsQueueGuideGithub": [],
+        "settingsProjectsQueueStepPipelineGitlab": ["status"],
+        "settingsProjectsQueueStepSetGitlab": ["status"],
+        "settingsProjectsQueueGuideGitlab": [],
+        "settingsProjectsQueueKeyTitle": [],
+        "settingsProjectsQueueKeyMissing": ["place"],
+        "settingsProjectsQueueKeyReady": ["date"],
+        "settingsProjectsQueueKeyUnreadable": ["place"],
+        "settingsProjectsQueueKeyMake": [],
+        "settingsProjectsQueueKeyRemake": [],
+        "settingsProjectsQueueKeyMade": [],
+        "settingsProjectsQueueShipped": ["version"],
+        "settingsProjectsPauseTitle": [],
+        "settingsProjectsPauseSummary": ["changes", "count", "run", "since"],
+        "settingsProjectsPauseClaimed": ["who"],
+        "settingsProjectsPauseUnclaimed": [],
+        "settingsProjectsPauseUnread": [],
+        "settingsProjectsPauseIssue": [],
+        "settingsProjectsPauseRun": [],
+        "settingsProjectsPauseReason": [],
+        "settingsProjectsPauseResume": [],
+        "settingsProjectsPauseSendBack": [],
+        "settingsProjectsPauseSendBackWhich": [],
+        "settingsProjectsPauseNeedsReason": [],
+        "settingsProjectsPauseSent": [],
+        "settingsProjectsQueueNoHost": [],
+        "settingsProjectsQueueWaiting": ["delivery"],
+        "settingsProjectsRowPersonal": [],
+        "settingsProjectsRowLinked": [],
+        "settingsProjectsRowCare": ["care"],
+        "settingsProjectsRowRuns": ["where"],
+        "settingsProjectsCostTitle": [],
+        "settingsProjectsCostDescription": [],
+        "settingsProjectsCostFollow": [],
+        "settingsProjectsCostOwn": [],
+        "settingsProjectsCostNone": [],
+        "settingsProjectsCostAmount": [],
+        "settingsForgeThisMacRole": [],
+        "settingsForgeDeviceRole": [],
+        "settingsAddProjectStartedGit": [],
+        "settingsAddProjectFolderHere": [],
+        "settingsAddProjectOtherHost": [],
+        "settingsAddProjectNewProject": ["folder", "place"],
+        "settingsAddProjectFolderOn": ["computer"],
+        "settingsAddProjectFolderPathOn": ["computer"],
+        "settingsAddProjectAddFolder": [],
+        "settingsAddProjectTaskKey": [],
+        "settingsAddProjectTaskKeyPlaceholder": [],
+        "settingsAddProjectTaskKeyNext": ["key"],
+        "settingsAddProjectSignIn": ["host"],
+        "settingsDevicesPhoneCodeLabel": [],
+        "settingsProjectsQueueKeyEndsUnknown": [],
+        "settingsRunsOnNoSignIns": [],
+        "settingsRunsOnAutomatically": [],
+        "settingsRunsOnLabel": [],
+        "settingsRunsOnYourComputers": [],
+        "settingsRunsOnAnotherUser": [],
+        "settingsRunsOnRemoved": [],
+        "settingsRunsOnAutomaticDescription": [],
+        "settingsRunsOnDescription": [],
+        "settingsProjectsRemoveCheckFailed": [],
+        "settingsProjectsRemoveFailed": [],
+        "settingsProjectsRemoveTitle": [],
+        "settingsProjectsRemoveCancel": [],
+        "settingsProjectsRemoving": [],
+        "settingsProjectsRemoveConfirm": [],
+        "settingsProjectsRemoveNamed": ["name"],
+        "settingsControllingLabel": [],
+        "settingsControllingSay": ["name"],
+        "settingsControllingLeaveRunsWork": ["name"],
+        "settingsControllingLeave": ["name"],
+        "settingsControllingWorkGoes": ["name"],
+        "settingsControllingAway": ["name"],
+        "settingsControllingNewLink": [],
+        "settingsControllingStay": [],
+        "settingsControllingLeaving": [],
+        "settingsControllingLeaveButton": [],
+        "settingsControllingJoined": ["address", "when"],
+        "settingsControllingLeaveNamed": ["name"],
+        "settingsProjectsLabel": [],
+        "settingsProjectsIntro": [],
+        "settingsProjectsEmpty": [],
+        "settingsProjectsFolderPickerFailed": [],
+        "settingsProjectsFolderSave": [],
+        "settingsProjectsFolderCancel": [],
+        "settingsProjectsFolderLine": [],
+        "settingsProjectsFolderDefault": [],
+        "settingsProjectsFolderChoosing": [],
+        "settingsProjectsFolderChoose": [],
+        "settingsProjectsFolderUseDefault": [],
+        "settingsProjectsName": [],
+        "settingsProjectsNameDescription": [],
+        "settingsProjectsNameLabel": [],
+        "settingsProjectsScope": [],
+        "settingsProjectsScopeDescription": [],
+        "settingsProjectsFolder": [],
+        "settingsProjectsFolderDescription": [],
+        "settingsProjectsFolderLabel": [],
+        "settingsProjectsOrigin": [],
+        "settingsProjectsOriginDescription": ["place"],
+        "settingsProjectsOriginLabel": [],
+        "settingsProjectsSaveDetails": [],
+        "settingsProjectsRowExpanded": ["name"],
+        "settingsProjectsRowCollapsed": ["name"],
+        "settingsProjectsWorkspace": [],
+        "settingsProjectsDeliveryTitle": [],
+        "settingsProjectsWorkspaceDescription": [],
+        "settingsProjectsAutonomyPersonal": [],
+        "settingsProjectsAutonomyOn": [],
+        "settingsProjectsAutonomyOff": [],
+        "settingsProjectsCare": [],
+        "settingsProjectsCarePersonal": [],
+        "settingsProjectsRigorDescription": [],
+        "settingsProjectsCareNone": [],
+        "settingsProjectsLocalCareful": [],
+        "settingsAddProjectAddedGit": ["name"],
+        "settingsAddProjectAdded": ["name"],
+        "settingsAddProjectAlreadyAdded": ["name"],
+        "settingsAddProjectWrongHost": ["host"],
+        "settingsAddProjectLabel": [],
+        "settingsAddProjectHostRepo": ["host"],
+        "settingsAddProjectNew": [],
+        "settingsAddProjectAdding": [],
+        "settingsAddProjectName": [],
+        "settingsAddProjectStart": [],
+        "settingsAddProjectYourRepos": ["host"],
+        "settingsAddProjectFind": [],
+        "settingsAddProjectReading": [],
+        "settingsAddProjectPrivate": [],
+        "settingsAddProjectAddedMark": [],
+        "settingsAddProjectAdd": [],
+        "settingsAddProjectOrPasteLink": ["host"],
+        "settingsAddProjectPasteLink": ["host"],
+        "settingsAddProjectGoesInto": ["folder"],
+        "settingsAddProjectClose": [],
+        "settingsDevicesRemoveNamed": ["device"],
+        "settingsDevicesRemoveButton": [],
+        "settingsDevicesAddByAddressNamed": ["device"],
+        "settingsDevicesAddByAddress": [],
+        "settingsDevicesTryAgainNamed": ["device"],
+        "settingsDevicesTryAgain": [],
+        "settingsDevicesChangeAddressNamed": ["device"],
+        "settingsDevicesChangeAddress": [],
+        "settingsDevicesUpdateNamed": ["device"],
+        "settingsDevicesUpdate": [],
+        "settingsDevicesKeepIt": [],
+        "settingsDevicesAddressChangeSay": [],
+        "settingsDevicesAddressAddSayAs": ["sshOn", "user"],
+        "settingsDevicesAddressAddSay": ["sshOn"],
+        "settingsDevicesAddIt": [],
+        "settingsDevicesAddressChange": [],
+        "settingsDevicesCancel": [],
+        "settingsDevicesRemoveOnceUpdated": [],
+        "settingsDevicesRemoveWhenBack": [],
+        "settingsDevicesRemoveNow": [],
+        "settingsDevicesRemoving": [],
+        "settingsDevicesMakeFailed": [],
+        "settingsDevicesRemoveFailed": [],
+        "settingsDevicesAddFailed": [],
+        "settingsDevicesUpdateFailed": [],
+        "settingsDevicesTryAgainFailed": [],
+        "settingsDevicesChangeAddressFailed": [],
+        "settingsDevicesKeepFailed": [],
+        "settingsDevicesLabel": [],
+        "settingsDevicesLivesThere": [],
+        "settingsDevicesLivesHere": [],
+        "settingsDevicesAdd": [],
+        "settingsDevicesAddComputer": [],
+        "settingsDevicesAddPhone": [],
+        "settingsDevicesAddUser": [],
+        "settingsDevicesIntroThere": ["reads"],
+        "settingsDevicesIntroHere": ["reads"],
+        "settingsDevicesAddHow": [],
+        "settingsDevicesAddEachWay": [],
+        "settingsDevicesAddByLink": [],
+        "settingsDevicesAddByCommand": [],
+        "settingsDevicesAddByItsAddress": [],
+        "settingsDevicesAddressLabel": [],
+        "settingsDevicesAddressSay": ["sshOn"],
+        "settingsDevicesConfirmThis": [],
+        "settingsDevicesLeaveAndAdd": [],
+        "settingsDevicesAddingDetail": ["address"],
+        "settingsDevicesAddressTitle": [],
+        "settingsDevicesAddressOnly": ["place"],
+        "settingsDevicesAddressOnlyHere": [],
+        "settingsDevicesJoinedGiveProject": [],
+        "settingsDevicesDone": [],
+        "settingsDevicesExpiredLink": [],
+        "settingsDevicesExpiredPhone": [],
+        "settingsDevicesExpiredCommand": [],
+        "settingsDevicesExpiredPhoneReady": [],
+        "settingsDevicesExpiredComputerReady": [],
+        "settingsDevicesMakeNewOne": [],
+        "settingsDevicesCopied": [],
+        "settingsDevicesWorksOnce": ["left"],
+        "settingsDevicesStopIt": [],
+        "settingsDevicesCopyLinkFailed": [],
+        "settingsDevicesCopyCommandFailed": [],
+        "settingsForgeSignedIn": [],
+        "settingsForgeSignInAgainState": [],
+        "settingsForgeSignedInUnreachable": ["host"],
+        "settingsForgeSignedInChecking": [],
+        "settingsForgeSignInTo": ["host"],
+        "settingsForgeConnecting": [],
+        "settingsForgeMakeKey": ["host"],
+        "settingsForgeChecking": [],
+        "settingsForgeSignIn": [],
+        "settingsForgeCancel": [],
+        "settingsForgeEnterCode": ["host"],
+        "settingsForgeOpenHost": ["host"],
+        "settingsForgeCodeExpired": [],
+        "settingsForgeUnreachable": ["host"],
+        "settingsForgeNewCode": [],
+        "settingsForgeTryAgain": [],
+        "settingsForgeNotSignedIn": ["host"],
+        "settingsForgeSignInAgainSay": [],
+        "settingsForgeStarting": [],
+        "settingsForgeSignInAgain": [],
+        "settingsForgeRowActions": ["host", "where"],
+        "settingsForgeSignOut": [],
+        "settingsForgeBrowserLabel": ["host"],
+        "settingsForgeBrowserIntro": ["host"],
+        "settingsForgeBrowserStays": [],
+        "settingsForgeBrowserStepOpen": ["add", "host"],
+        "settingsForgeBrowserStepName": ["field", "name", "redirect"],
+        "settingsForgeBrowserRedirectFallback": [],
+        "settingsForgeBrowserStepScopes": ["api", "confidential", "write"],
+        "settingsForgeBrowserStepGrant": ["grant"],
+        "settingsForgeBrowserStepSave": ["id", "secret"],
+        "settingsForgeBrowserOpenApplications": ["host"],
+        "settingsDevicesSignInsAsOf": ["time"],
+        "settingsDevicesSignInsOwn": ["where"],
+        "settingsDevicesSignInsDisconnect": [],
+        "settingsDevicesSignInsUnanswered": ["home", "who"],
+        "settingsDevicesSignInsNone": [],
+        "settingsDevicesSignInsAddAccount": [],
+        "settingsDevicesSignInsCustomApi": ["where"],
+        "settingsDevicesSignInsClaudeCode": ["where"],
+        "settingsDevicesSignInsFailed": ["provider", "who"],
+        "settingsDevicesSignInsPasteKeyAn": ["provider", "who"],
+        "settingsDevicesSignInsPasteKeyA": ["provider", "who"],
+        "settingsDevicesSignInsOpenLink": [],
+        "settingsDevicesSignInsPasteYourKey": [],
+        "settingsDevicesSignInsPasteAddress": [],
+        "settingsDevicesSignInsPasteCode": [],
+        "settingsDevicesSignInsKeyFor": ["who"],
+        "settingsDevicesSignInsAddressFor": ["who"],
+        "settingsDevicesSignInsCodeFor": ["who"],
+        "settingsDevicesSignInsSendTo": ["who"],
+        "settingsDevicesSignInsGoesOnce": ["home", "who"],
+        "settingsDevicesSignInsEnterCode": ["who"],
+        "settingsDevicesSignInsWaiting": [],
+        "settingsDevicesSignInsSigningIn": ["provider", "who"],
+        "settingsDevicesSignInsTitle": ["provider", "where"],
+        "settingsDevicesSignInsPasteBackCode": [],
+        "settingsDevicesSignInsPasteBackHere": ["who"],
+        "settingsDevicesSignInsPasteBackAddress": [],
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],
@@ -3290,6 +3964,12 @@ extension PhoneWords {
         "recordMoreKnowledge": "count",
         "recordShowEarlier": "count",
         "recordFoldedMore": "count",
+        "settingsDevicesWayCount": "count",
+        "settingsDevicesRemoveTasksStop": "count",
+        "settingsDevicesRemoveTasksStopOn": "count",
+        "settingsDevicesRemoveRunsAfter": "count",
+        "settingsDevicesTasks": "count",
+        "settingsProjectsPauseSummary": "count",
         "phoneMediaPicturePosition": "count",
         "phoneAddressSweeping": "count",
         "phoneSceneProgramParts": "count",

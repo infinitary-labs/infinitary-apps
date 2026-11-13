@@ -17,11 +17,10 @@ import {
 import { deviceUpdateBody, deviceUpdateCardId, deviceUpdateTitle } from "@shared/deviceUpdateNudge";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import {
+  DEVICE_ROW_WORDS,
   deviceState,
   deviceSummary,
-  NO_NEW_WORK,
   PANEL_WORDS,
-  RUNS_NO_PROJECT,
   removeLines,
   SEEN_WORDS,
 } from "../../src/renderer/src/settings/devicesWords";
@@ -124,7 +123,7 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     const row = page.locator(`[data-device-row="${deviceId}"]`);
     await expect(row).toContainText(deviceLabel(builder));
     await expect(row).toContainText(SEEN_WORDS.now);
-    await expect(row).toContainText(RUNS_NO_PROJECT);
+    await expect(row).toContainText(DEVICE_ROW_WORDS.runsNoProject);
     await expect(row).toContainText(deviceState({ ...builder, inReach: true }).text);
     const { repo } = await page.evaluate(
       (path) => window.infinitary.repos.setup({ kind: "adopt", path }),
@@ -399,7 +398,7 @@ test("a computer on another version of Firstmate: Devices says so, Update brings
         updateBy: "command",
       }),
     );
-    await expect(row).toContainText(NO_NEW_WORK);
+    await expect(row).toContainText(DEVICE_ROW_WORDS.noNewWork);
     await update.click();
     await expect(
       page.locator('[data-panel-state="open"][data-panel-holds="command"]'),

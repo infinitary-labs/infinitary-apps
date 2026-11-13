@@ -122,3 +122,6 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Steer (button) | Orientar |  |
 | Theme: Device / Dark / Light | Dispositivo / Oscuro / Claro |  |
 | live validation | validación en vivo | Trying the change for real; kept apart from the checks. |
+| unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
+| issue (where the project lives) | incidencia | The queue's pause issue: "Abrir la incidencia". |
+| cost limit | límite de costo | A project's estimated-dollar cap; kept apart from the plan's allowance, which never says "límite". |

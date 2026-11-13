@@ -12,7 +12,7 @@ import type { HostKeychain, HostKeychainQuery } from "../../src/core/host";
 import { configureGitSignIn, hostEnv } from "../../src/core/hostEnv";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
 import type { QuotaHttp } from "../../src/core/quota/http";
-import { DEVICE_FORGE_ROLE } from "../../src/renderer/src/settings/deviceForgeWords";
+import { DEVICE_FORGE_WORDS } from "../../src/renderer/src/settings/deviceForgeWords";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "../../src/shared/claudeClient";
 import { deviceSetupTitle } from "../../src/shared/deviceSetup";
 import { FORGE_CLI_WORDS, forgeCliOffer } from "../../src/shared/forges";
@@ -607,7 +607,7 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
   await expect(aside.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
   github.device.approve(COMPUTER_GITHUB);
   await expect(row).toHaveAttribute("data-forge-state", "ok");
-  await expect(row).toContainText(DEVICE_FORGE_ROLE);
+  await expect(row).toContainText(DEVICE_FORGE_WORDS.deviceRole);
   await expect(aside).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(
@@ -682,7 +682,7 @@ test("a computer signs in to GitHub through its own GitHub CLI from Settings -> 
   // The row says it signs in through GitHub CLI; the code is gone.
   await expect(row).toHaveAttribute("data-forge-state", "ok");
   await expect(row).toContainText(
-    `${PLACE.label} · ${FORGE_CLI_WORDS.through} · ${DEVICE_FORGE_ROLE}`,
+    `${PLACE.label} · ${FORGE_CLI_WORDS.through} · ${DEVICE_FORGE_WORDS.deviceRole}`,
   );
   await expect(aside).toHaveCount(0);
   await expect(line).toHaveCount(0);

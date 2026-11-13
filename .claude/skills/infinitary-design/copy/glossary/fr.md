@@ -124,3 +124,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Steer (button) | Orienter |  |
 | Theme: Device / Dark / Light | Thème : Appareil / Sombre / Clair |  |
 | live validation | validation en direct | Trying the change for real; kept apart from the checks. |
+| unmerged work | travail non fusionné | What another computer still holds when it is removed: "Son travail non fusionné vient d’abord sur cet ordinateur". |
+| reach (another computer) | joindre | "Impossible de joindre {host}", "joint sur ce réseau"; never "atteindre". |
+| issue (where the project lives) | ticket | The queue's pause issue: "Ouvrir le ticket". |
+| cost limit | plafond de coût | A project's estimated-dollar cap; "plafond" keeps it apart from the plan's allowance. |

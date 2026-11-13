@@ -1,10 +1,11 @@
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import { HERE } from "@shared/deviceNames";
 import {
   type DeviceFirewall,
   type DeviceInvite,
   firewallWords,
   phoneRouteWords,
 } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { useEffect, useState } from "react";
 import { Button } from "../design";
 import { useHereAs } from "../devices/useFirstMatePlace";
@@ -76,9 +77,16 @@ export function WaysSection({ addresses, devices, busy, onCopyWay }: DevicesTabV
       {none ? (
         <SettingRow
           id="device-address"
-          title="Address"
+          title={m.settingsDevicesAddressTitle()}
           description={here(WAYS_WORDS.noNetwork)}
-          control={<span className="fm-devices-address">{here(HERE.this)} only</span>}
+          control={
+            <span className="fm-devices-address">
+              {/* Named only from a view; here it is one worded phrase, never English glued in. */}
+              {here(HERE.this) === HERE.this
+                ? m.settingsDevicesAddressOnlyHere()
+                : m.settingsDevicesAddressOnly({ place: here(HERE.this) })}
+            </span>
+          }
         />
       ) : (
         <div className="fm-devices-box" data-device-ways="">
@@ -194,12 +202,12 @@ export function LinkPanelView({
           <div style={{ color: "var(--fg-1)" }}>{here(panel.line)}</div>
           {panel.work && (
             <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
-              Give it a project in Projects when you want it to run work.
+              {m.settingsDevicesJoinedGiveProject()}
             </div>
           )}
         </div>
         <Button variant="ghost" size="sm" onClick={onDone}>
-          Done
+          {m.settingsDevicesDone()}
         </Button>
       </div>
     );
@@ -208,12 +216,16 @@ export function LinkPanelView({
       <div className="fm-devices-panel" data-panel-state="expired" role="status">
         <div style={{ flex: 1 }}>
           <div style={{ color: "var(--fg-1)" }}>
-            The {PANEL_WORDS[panel.make].thing} expired before any{" "}
-            {panel.make === "phone" ? "phone" : COMPUTER.one} used it.
+            {panel.make === "phone"
+              ? m.settingsDevicesExpiredPhone()
+              : PANEL_WORDS[panel.make].thing === "command"
+                ? m.settingsDevicesExpiredCommand()
+                : m.settingsDevicesExpiredLink()}
           </div>
           <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
-            Make a new one when the {panel.make === "phone" ? "phone" : `other ${COMPUTER.one}`} is
-            ready.
+            {panel.make === "phone"
+              ? m.settingsDevicesExpiredPhoneReady()
+              : m.settingsDevicesExpiredComputerReady()}
           </div>
         </div>
         <Button
@@ -222,7 +234,7 @@ export function LinkPanelView({
           disabled={busy === "link"}
           onClick={() => onMake(panel.make)}
         >
-          Make a new one
+          {m.settingsDevicesMakeNewOne()}
         </Button>
       </div>
     );
@@ -290,20 +302,24 @@ function OpenLink({
           {text}
         </code>
         <Button size="sm" onClick={() => void copy()}>
-          {copied === "copied" ? "Copied" : words.copy}
+          {copied === "copied" ? m.settingsDevicesCopied() : words.copy}
         </Button>
       </div>
       <div className="fm-devices-panel-foot">
         <span className="fm-devices-count">
-          works once · {linkTimeLeft(invite.expiresAt, now)} left
+          {m.settingsDevicesWorksOnce({ left: linkTimeLeft(invite.expiresAt, now) })}
         </span>
         <Button variant="ghost" size="sm" onClick={onStop}>
-          Stop it
+          {m.settingsDevicesStopIt()}
         </Button>
       </div>
       {copied === "failed" && (
         <SettingError
-          error={`Could not copy the ${words.thing}. Select it and copy it yourself.`}
+          error={
+            words.thing === "command"
+              ? m.settingsDevicesCopyCommandFailed()
+              : m.settingsDevicesCopyLinkFailed()
+          }
         />
       )}
     </div>

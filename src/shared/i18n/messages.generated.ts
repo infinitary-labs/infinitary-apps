@@ -31466,6 +31466,9993 @@ export function recordKnowledgeUsedNote(): string {
   return `What this work declared it relied on, by the revision it used. Opening one records no use.`;
 }
 
+export function settingsDevicesWaysLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كيف تجد الأجهزة الأخرى هذا الحاسوب`;
+    case "de":
+      return `Wie andere Geräte diesen Computer finden`;
+    case "es":
+      return `Cómo encuentran esta computadora otros dispositivos`;
+    case "fr":
+      return `Comment les autres appareils trouvent cet ordinateur`;
+    case "ja":
+      return `ほかのデバイスがこのコンピューターを見つける方法`;
+    case "ko":
+      return `다른 기기가 이 컴퓨터를 찾는 방법`;
+    case "pt-BR":
+      return `Como outros dispositivos encontram este computador`;
+    case "zh-Hans":
+      return `其他设备如何找到这台电脑`;
+    case "zh-Hant":
+      return `其他裝置如何找到這台電腦`;
+    case "en-XA":
+      return `[Ĥöŵ öţĥéŕ ðéṽîçéš ƒîñð ţĥîš çöɱþûţéŕ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHow other devices find this computer\u202c`;
+  }
+  return `How other devices find this computer`;
+}
+
+export function settingsDevicesWaysLocal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `على هذه الشبكة`;
+    case "de":
+      return `In diesem Netzwerk`;
+    case "es":
+      return `En esta red`;
+    case "fr":
+      return `Sur ce réseau`;
+    case "ja":
+      return `このネットワーク上`;
+    case "ko":
+      return `이 네트워크에서`;
+    case "pt-BR":
+      return `Nesta rede`;
+    case "zh-Hans":
+      return `在此网络上`;
+    case "zh-Hant":
+      return `在這個網路上`;
+    case "en-XA":
+      return `[Öñ ţĥîš ñéţŵöŕķ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOn this network\u202c`;
+  }
+  return `On this network`;
+}
+
+export function settingsDevicesWaysLocalLine(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحواسيب المتصلة بشبكة Wi-Fi أو الشبكة السلكية نفسها.`;
+    case "de":
+      return `Computer im selben WLAN oder Kabelnetzwerk.`;
+    case "es":
+      return `Computadoras en la misma red wifi o por cable.`;
+    case "fr":
+      return `Les ordinateurs sur le même réseau Wi-Fi ou filaire.`;
+    case "ja":
+      return `同じ Wi-Fi または有線ネットワークにあるコンピューター。`;
+    case "ko":
+      return `같은 Wi-Fi나 유선 네트워크에 있는 컴퓨터예요.`;
+    case "pt-BR":
+      return `Computadores na mesma rede Wi-Fi ou cabeada.`;
+    case "zh-Hans":
+      return `连接同一 Wi-Fi 或有线网络的电脑。`;
+    case "zh-Hant":
+      return `連上同一個 Wi-Fi 或有線網路的電腦。`;
+    case "en-XA":
+      return `[Çöɱþûţéŕš öñ ţĥé šáɱé Ŵî-Ƒî öŕ çáƀļé ñéţŵöŕķ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eComputers on the same Wi-Fi or cable network.\u202c`;
+  }
+  return `Computers on the same Wi-Fi or cable network.`;
+}
+
+export function settingsDevicesWaysLocalOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير متصل بشبكة Wi-Fi أو بشبكة سلكية الآن.`;
+    case "de":
+      return `Gerade in keinem WLAN oder Kabelnetzwerk.`;
+    case "es":
+      return `Ahora mismo no está en una red wifi ni por cable.`;
+    case "fr":
+      return `Pas sur un réseau Wi-Fi ou filaire pour l’instant.`;
+    case "ja":
+      return `現在 Wi-Fi にも有線ネットワークにも接続していません。`;
+    case "ko":
+      return `지금은 Wi-Fi나 유선 네트워크에 연결되어 있지 않아요.`;
+    case "pt-BR":
+      return `Não está em uma rede Wi-Fi ou cabeada agora.`;
+    case "zh-Hans":
+      return `目前未连接 Wi-Fi 或有线网络。`;
+    case "zh-Hant":
+      return `目前沒有連上 Wi-Fi 或有線網路。`;
+    case "en-XA":
+      return `[Ñöţ öñ á Ŵî-Ƒî öŕ çáƀļé ñéţŵöŕķ ŕîĝĥţ ñöŵ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot on a Wi-Fi or cable network right now.\u202c`;
+  }
+  return `Not on a Wi-Fi or cable network right now.`;
+}
+
+export function settingsDevicesWaysPrivate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `على شبكتك الخاصة`;
+    case "de":
+      return `In deinem privaten Netzwerk`;
+    case "es":
+      return `En tu red privada`;
+    case "fr":
+      return `Sur votre réseau privé`;
+    case "ja":
+      return `プライベートネットワーク上`;
+    case "ko":
+      return `개인 네트워크에서`;
+    case "pt-BR":
+      return `Na sua rede privada`;
+    case "zh-Hans":
+      return `在你的私有网络上`;
+    case "zh-Hant":
+      return `在你的私人網路上`;
+    case "en-XA":
+      return `[Öñ ýöûŕ þŕîṽáţé ñéţŵöŕķ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOn your private network\u202c`;
+  }
+  return `On your private network`;
+}
+
+export function settingsDevicesWaysPrivateOffTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `على شبكة خاصة`;
+    case "de":
+      return `In einem privaten Netzwerk`;
+    case "es":
+      return `En una red privada`;
+    case "fr":
+      return `Sur un réseau privé`;
+    case "ja":
+      return `プライベートネットワーク上`;
+    case "ko":
+      return `개인 네트워크에서`;
+    case "pt-BR":
+      return `Em uma rede privada`;
+    case "zh-Hans":
+      return `在私有网络上`;
+    case "zh-Hant":
+      return `在私人網路上`;
+    case "en-XA":
+      return `[Öñ á þŕîṽáţé ñéţŵöŕķ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOn a private network\u202c`;
+  }
+  return `On a private network`;
+}
+
+export function settingsDevicesWaysPrivateLine(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحواسيب الموجودة على الشبكة الخاصة نفسها، أينما كانت.`;
+    case "de":
+      return `Computer im selben privaten Netzwerk, egal wo sie sind.`;
+    case "es":
+      return `Computadoras en la misma red privada, estén donde estén.`;
+    case "fr":
+      return `Les ordinateurs sur le même réseau privé, où qu’ils soient.`;
+    case "ja":
+      return `同じプライベートネットワークにあるコンピューター。場所は問いません。`;
+    case "ko":
+      return `어디에 있든 같은 개인 네트워크에 있는 컴퓨터예요.`;
+    case "pt-BR":
+      return `Computadores na mesma rede privada, onde quer que estejam.`;
+    case "zh-Hans":
+      return `在同一私有网络上的电脑，无论身在何处。`;
+    case "zh-Hant":
+      return `在同一個私人網路上的電腦，不論身在何處。`;
+    case "en-XA":
+      return `[Çöɱþûţéŕš öñ ţĥé šáɱé þŕîṽáţé ñéţŵöŕķ, ŵĥéŕéṽéŕ ţĥéý áŕé. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eComputers on the same private network, wherever they are.\u202c`;
+  }
+  return `Computers on the same private network, wherever they are.`;
+}
+
+export function settingsDevicesWaysPrivateOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ليس على أي شبكة خاصة. ضع الحاسوبين على الشبكة الخاصة نفسها للاتصال من مكان آخر.`;
+    case "de":
+      return `In keinem. Bring beide Computer ins selbe private Netzwerk, um dich von woanders zu verbinden.`;
+    case "es":
+      return `No está en ninguna. Pon las dos computadoras en la misma red privada para conectarte desde otro lugar.`;
+    case "fr":
+      return `Sur aucun. Placez les deux ordinateurs sur le même réseau privé pour vous connecter depuis ailleurs.`;
+    case "ja":
+      return `接続していません。別の場所から接続するには、両方のコンピューターを同じプライベートネットワークに参加させてください。`;
+    case "ko":
+      return `연결된 곳이 없어요. 다른 곳에서 연결하려면 두 컴퓨터를 같은 개인 네트워크에 두세요.`;
+    case "pt-BR":
+      return `Não está em nenhuma. Coloque os dois computadores na mesma rede privada para conectar de outro lugar.`;
+    case "zh-Hans":
+      return `目前不在私有网络上。把两台电脑加入同一个私有网络，就能从别处连接。`;
+    case "zh-Hant":
+      return `目前不在私人網路上。把兩台電腦加入同一個私人網路，就能從別的地方連線。`;
+    case "en-XA":
+      return `[Ñöţ öñ öñé. Þûţ ƀöţĥ çöɱþûţéŕš öñ ţĥé šáɱé þŕîṽáţé ñéţŵöŕķ ţö çöññéçţ ƒŕöɱ šöɱéŵĥéŕé éļšé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot on one. Put both computers on the same private network to connect from somewhere else.\u202c`;
+  }
+  return `Not on one. Put both computers on the same private network to connect from somewhere else.`;
+}
+
+export function settingsDevicesWaysInternet(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عبر الإنترنت`;
+    case "de":
+      return `Über das Internet`;
+    case "es":
+      return `Por internet`;
+    case "fr":
+      return `Par Internet`;
+    case "ja":
+      return `インターネット経由`;
+    case "ko":
+      return `인터넷으로`;
+    case "pt-BR":
+      return `Pela internet`;
+    case "zh-Hans":
+      return `通过互联网`;
+    case "zh-Hant":
+      return `透過網際網路`;
+    case "en-XA":
+      return `[Öṽéŕ ţĥé îñţéŕñéţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOver the internet\u202c`;
+  }
+  return `Over the internet`;
+}
+
+export function settingsDevicesWaysInternetLine(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أبدًا. لا يفتح Infinitary هذا الحاسوب على الإنترنت. الشبكة الخاصة تغني عن ذلك.`;
+    case "de":
+      return `Nie. Infinitary öffnet diesen Computer nicht für das Internet. Das übernimmt ein privates Netzwerk.`;
+    case "es":
+      return `Nunca. Infinitary no abre esta computadora a internet. Para eso está una red privada.`;
+    case "fr":
+      return `Jamais. Infinitary n’ouvre pas cet ordinateur à Internet. Un réseau privé s’en charge.`;
+    case "ja":
+      return `使いません。Infinitary はこのコンピューターをインターネットに公開しません。その役目はプライベートネットワークが担います。`;
+    case "ko":
+      return `안 해요. Infinitary는 이 컴퓨터를 인터넷에 열지 않아요. 그 역할은 개인 네트워크가 해요.`;
+    case "pt-BR":
+      return `Nunca. O Infinitary não abre este computador para a internet. Uma rede privada cuida disso.`;
+    case "zh-Hans":
+      return `从不。Infinitary 不会把这台电脑开放到互联网。私有网络可以满足这种需要。`;
+    case "zh-Hant":
+      return `永遠不會。Infinitary 不會把這台電腦開放到網際網路上。私人網路就能做到這件事。`;
+    case "en-XA":
+      return `[Ñéṽéŕ. Îñƒîñîţáŕý ðöéš ñöţ öþéñ ţĥîš çöɱþûţéŕ ţö ţĥé îñţéŕñéţ. Å þŕîṽáţé ñéţŵöŕķ çöṽéŕš ţĥáţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNever. Infinitary does not open this computer to the internet. A private network covers that.\u202c`;
+  }
+  return `Never. Infinitary does not open this computer to the internet. A private network covers that.`;
+}
+
+export function settingsDevicesWaysFoot(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحمل الرابط أو الأمر كل الطرق معًا. يستخدم الحاسوب الآخر الطريقة التي تستجيب، فلا شيء تختاره هنا.`;
+    case "de":
+      return `Ein Link oder Befehl enthält alle Wege auf einmal. Der andere Computer nimmt den, der antwortet, hier gibt es also nichts zu wählen.`;
+    case "es":
+      return `Un enlace o un comando lleva todas las vías a la vez. La otra computadora usa la que responda, así que aquí no hay nada que elegir.`;
+    case "fr":
+      return `Un lien ou une commande contient tous les moyens à la fois. L’autre ordinateur utilise celui qui répond, il n’y a donc rien à choisir ici.`;
+    case "ja":
+      return `リンクやコマンドには、すべての方法が一度に含まれます。相手のコンピューターは応答した方法を使うので、ここで選ぶ必要はありません。`;
+    case "ko":
+      return `링크나 명령에는 모든 방법이 한꺼번에 들어 있어요. 다른 컴퓨터는 응답하는 방법을 쓰므로 여기서 고를 건 없어요.`;
+    case "pt-BR":
+      return `Um link ou comando leva todos os caminhos de uma vez. O outro computador usa o que responder, então não há nada para escolher aqui.`;
+    case "zh-Hans":
+      return `一个链接或命令会同时带上所有方式。另一台电脑会使用能应答的那一种，所以这里无需选择。`;
+    case "zh-Hant":
+      return `一個連結或指令會同時帶著所有方式。另一台電腦會使用有回應的那一種，所以這裡不需要選擇。`;
+    case "en-XA":
+      return `[Å ļîñķ öŕ çöɱɱáñð çáŕŕîéš éṽéŕý ŵáý áţ öñçé. Ţĥé öţĥéŕ çöɱþûţéŕ ûšéš ŵĥîçĥéṽéŕ öñé áñšŵéŕš, šö ţĥéŕé îš ñöţĥîñĝ ţö çĥööšé ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA link or command carries every way at once. The other computer uses whichever one answers, so there is nothing to choose here.\u202c`;
+  }
+  return `A link or command carries every way at once. The other computer uses whichever one answers, so there is nothing to choose here.`;
+}
+
+export function settingsDevicesWaysCopyLink(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نسخ رابط`;
+    case "de":
+      return `Einen Link kopieren`;
+    case "es":
+      return `Copiar un enlace`;
+    case "fr":
+      return `Copier un lien`;
+    case "ja":
+      return `リンクをコピー`;
+    case "ko":
+      return `링크 복사`;
+    case "pt-BR":
+      return `Copiar um link`;
+    case "zh-Hans":
+      return `复制链接`;
+    case "zh-Hant":
+      return `複製連結`;
+    case "en-XA":
+      return `[Çöþý á ļîñķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eCopy a link\u202c`;
+  }
+  return `Copy a link`;
+}
+
+export function settingsDevicesWaysCopyCommand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نسخ أمر`;
+    case "de":
+      return `Einen Befehl kopieren`;
+    case "es":
+      return `Copiar un comando`;
+    case "fr":
+      return `Copier une commande`;
+    case "ja":
+      return `コマンドをコピー`;
+    case "ko":
+      return `명령 복사`;
+    case "pt-BR":
+      return `Copiar um comando`;
+    case "zh-Hans":
+      return `复制命令`;
+    case "zh-Hant":
+      return `複製指令`;
+    case "en-XA":
+      return `[Çöþý á çöɱɱáñð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eCopy a command\u202c`;
+  }
+  return `Copy a command`;
+}
+
+export function settingsDevicesWaysReady(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جاهز`;
+    case "de":
+      return `bereit`;
+    case "es":
+      return `disponible`;
+    case "fr":
+      return `prêt`;
+    case "ja":
+      return `準備完了`;
+    case "ko":
+      return `준비됨`;
+    case "pt-BR":
+      return `pronto`;
+    case "zh-Hans":
+      return `就绪`;
+    case "zh-Hant":
+      return `就緒`;
+    case "en-XA":
+      return `[ŕéáðý ~~]`;
+    case "ar-XB":
+      return `\u202eready\u202c`;
+  }
+  return `ready`;
+}
+
+export function settingsDevicesWaysOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف`;
+    case "de":
+      return `aus`;
+    case "es":
+      return `no disponible`;
+    case "fr":
+      return `inactif`;
+    case "ja":
+      return `オフ`;
+    case "ko":
+      return `꺼짐`;
+    case "pt-BR":
+      return `desativado`;
+    case "zh-Hans":
+      return `关闭`;
+    case "zh-Hant":
+      return `關閉`;
+    case "en-XA":
+      return `[öƒƒ ~]`;
+    case "ar-XB":
+      return `\u202eoff\u202c`;
+  }
+  return `off`;
+}
+
+export function settingsDevicesWaysReachedLocal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تم الوصول إليه على هذه الشبكة`;
+    case "de":
+      return `in diesem Netzwerk erreicht`;
+    case "es":
+      return `se conecta por esta red`;
+    case "fr":
+      return `joint sur ce réseau`;
+    case "ja":
+      return `このネットワークで接続`;
+    case "ko":
+      return `이 네트워크에서 연결됨`;
+    case "pt-BR":
+      return `alcançado nesta rede`;
+    case "zh-Hans":
+      return `通过此网络连接`;
+    case "zh-Hant":
+      return `透過這個網路連絡`;
+    case "en-XA":
+      return `[ŕéáçĥéð öñ ţĥîš ñéţŵöŕķ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ereached on this network\u202c`;
+  }
+  return `reached on this network`;
+}
+
+export function settingsDevicesWaysReachedPrivate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تم الوصول إليه على شبكتك الخاصة`;
+    case "de":
+      return `in deinem privaten Netzwerk erreicht`;
+    case "es":
+      return `se conecta por tu red privada`;
+    case "fr":
+      return `joint sur votre réseau privé`;
+    case "ja":
+      return `プライベートネットワークで接続`;
+    case "ko":
+      return `개인 네트워크에서 연결됨`;
+    case "pt-BR":
+      return `alcançado na sua rede privada`;
+    case "zh-Hans":
+      return `通过你的私有网络连接`;
+    case "zh-Hant":
+      return `透過你的私人網路連絡`;
+    case "en-XA":
+      return `[ŕéáçĥéð öñ ýöûŕ þŕîṽáţé ñéţŵöŕķ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ereached on your private network\u202c`;
+  }
+  return `reached on your private network`;
+}
+
+export function settingsDevicesWaysNoNetwork(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا الحاسوب ليس على أي شبكة الآن، لذا يعمل الرابط على هذا الحاسوب فقط.`;
+    case "de":
+      return `Dieser Computer ist gerade in keinem Netzwerk, daher funktioniert ein Link nur auf diesem Computer.`;
+    case "es":
+      return `Ahora mismo esta computadora no está en ninguna red, así que un enlace solo funciona en esta computadora.`;
+    case "fr":
+      return `Cet ordinateur n’est sur aucun réseau pour l’instant, donc un lien ne fonctionne que sur cet ordinateur.`;
+    case "ja":
+      return `このコンピューターは現在どのネットワークにも接続していないため、リンクはこのコンピューターでしか使えません。`;
+    case "ko":
+      return `지금 이 컴퓨터는 어떤 네트워크에도 연결되어 있지 않아서, 링크는 이 컴퓨터에서만 작동해요.`;
+    case "pt-BR":
+      return `Este computador não está em nenhuma rede agora, então um link só funciona neste computador.`;
+    case "zh-Hans":
+      return `这台电脑目前未连接任何网络，所以链接只能在这台电脑上使用。`;
+    case "zh-Hant":
+      return `這台電腦目前沒有連上任何網路，所以連結只能在這台電腦上使用。`;
+    case "en-XA":
+      return `[Ţĥîš çöɱþûţéŕ îš öñ ñö ñéţŵöŕķ ŕîĝĥţ ñöŵ, šö á ļîñķ ŵöŕķš öñļý öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis computer is on no network right now, so a link works only on this computer.\u202c`;
+  }
+  return `This computer is on no network right now, so a link works only on this computer.`;
+}
+
+export function settingsDevicesWayCount(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `${count} حاسوب`;
+        case "one":
+          return `${count} حاسوب`;
+        case "two":
+          return `${count} حاسوبان`;
+        case "few":
+          return `${count} حواسيب`;
+        case "many":
+          return `${count} حاسوبًا`;
+        default:
+          return `${count} حاسوب`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Computer`;
+        default:
+          return `${count} Computer`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} computadora`;
+        case "many":
+          return `${count} de computadoras`;
+        default:
+          return `${count} computadoras`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} ordinateur`;
+        case "many":
+          return `${count} ordinateurs`;
+        default:
+          return `${count} ordinateurs`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}台のコンピューター`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `컴퓨터 ${count}대`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} computador`;
+        case "many":
+          return `${count} computadores`;
+        default:
+          return `${count} computadores`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 台电脑`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 台電腦`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} çöɱþûţéŕ ~~~]`;
+        default:
+          return `[${count} çöɱþûţéŕš ~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e computer\u202c`;
+        default:
+          return `${count}\u202e computers\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} computer`;
+    default:
+      return `${count} computers`;
+  }
+}
+
+export function settingsDevicesPanelLinkLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رابط جديد`;
+    case "de":
+      return `Neuer Link`;
+    case "es":
+      return `Enlace nuevo`;
+    case "fr":
+      return `Nouveau lien`;
+    case "ja":
+      return `新しいリンク`;
+    case "ko":
+      return `새 링크`;
+    case "pt-BR":
+      return `Novo link`;
+    case "zh-Hans":
+      return `新链接`;
+    case "zh-Hant":
+      return `新連結`;
+    case "en-XA":
+      return `[Ñéŵ ļîñķ ~~~]`;
+    case "ar-XB":
+      return `\u202eNew link\u202c`;
+  }
+  return `New link`;
+}
+
+export function settingsDevicesPanelPhoneLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رابط جديد · هاتف`;
+    case "de":
+      return `Neuer Link · ein Telefon`;
+    case "es":
+      return `Enlace nuevo · un teléfono`;
+    case "fr":
+      return `Nouveau lien · un téléphone`;
+    case "ja":
+      return `新しいリンク · スマートフォン`;
+    case "ko":
+      return `새 링크 · 휴대폰`;
+    case "pt-BR":
+      return `Novo link · um celular`;
+    case "zh-Hans":
+      return `新链接 · 手机`;
+    case "zh-Hant":
+      return `新連結 · 手機`;
+    case "en-XA":
+      return `[Ñéŵ ļîñķ · á þĥöñé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew link · a phone\u202c`;
+  }
+  return `New link · a phone`;
+}
+
+export function settingsDevicesPanelCopyLink(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نسخ الرابط`;
+    case "de":
+      return `Link kopieren`;
+    case "es":
+      return `Copiar enlace`;
+    case "fr":
+      return `Copier le lien`;
+    case "ja":
+      return `リンクをコピー`;
+    case "ko":
+      return `링크 복사`;
+    case "pt-BR":
+      return `Copiar link`;
+    case "zh-Hans":
+      return `复制链接`;
+    case "zh-Hant":
+      return `複製連結`;
+    case "en-XA":
+      return `[Çöþý ļîñķ ~~~]`;
+    case "ar-XB":
+      return `\u202eCopy link\u202c`;
+  }
+  return `Copy link`;
+}
+
+export function settingsDevicesPanelCommandLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أمر جديد · حاسوب آخر`;
+    case "de":
+      return `Neuer Befehl · ein anderer Computer`;
+    case "es":
+      return `Comando nuevo · otra computadora`;
+    case "fr":
+      return `Nouvelle commande · un autre ordinateur`;
+    case "ja":
+      return `新しいコマンド · 別のコンピューター`;
+    case "ko":
+      return `새 명령 · 다른 컴퓨터`;
+    case "pt-BR":
+      return `Novo comando · outro computador`;
+    case "zh-Hans":
+      return `新命令 · 另一台电脑`;
+    case "zh-Hant":
+      return `新指令 · 另一台電腦`;
+    case "en-XA":
+      return `[Ñéŵ çöɱɱáñð · áñöţĥéŕ çöɱþûţéŕ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew command · another computer\u202c`;
+  }
+  return `New command · another computer`;
+}
+
+export function settingsDevicesPanelCommandRun(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `شغّل هذا مرة واحدة في Terminal على الحاسوب الآخر، باسم المستخدم الذي يجب أن يشغّل عمله.`;
+    case "de":
+      return `Führ dies einmal im Terminal auf dem anderen Computer aus, als der Benutzer, der dort die Arbeit ausführen soll.`;
+    case "es":
+      return `Ejecuta esto una vez en Terminal en la otra computadora, con el usuario que debe ejecutar su trabajo.`;
+    case "fr":
+      return `Exécutez-la une fois dans Terminal sur l’autre ordinateur, avec l’utilisateur qui doit exécuter son travail.`;
+    case "ja":
+      return `相手のコンピューターの「ターミナル」で、作業を実行するユーザーとして一度だけ実行してください。`;
+    case "ko":
+      return `다른 컴퓨터의 터미널에서, 그곳의 작업을 실행할 사용자로 이 명령을 한 번 실행하세요.`;
+    case "pt-BR":
+      return `Execute isto uma vez no Terminal do outro computador, como o usuário que deve rodar o trabalho dele.`;
+    case "zh-Hans":
+      return `在另一台电脑的“终端”中运行一次，并以要运行其工作的用户身份运行。`;
+    case "zh-Hant":
+      return `在另一台電腦的「終端機」中執行一次，並以要執行它工作的使用者身分執行。`;
+    case "en-XA":
+      return `[Ŕûñ ţĥîš öñçé îñ Ţéŕɱîñáļ öñ ţĥé öţĥéŕ çöɱþûţéŕ, áš ţĥé ûšéŕ ŵĥö šĥöûļð ŕûñ îţš ŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRun this once in Terminal on the other computer, as the user who should run its work.\u202c`;
+  }
+  return `Run this once in Terminal on the other computer, as the user who should run its work.`;
+}
+
+export function settingsDevicesPanelCommandNetwork(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يجلب Infinitary من هذا الحاسوب، لذا يجب أن يكون الحاسوبان على الشبكة نفسها.`;
+    case "de":
+      return `Er holt Infinitary von diesem Computer, daher brauchen beide dasselbe Netzwerk.`;
+    case "es":
+      return `Obtiene Infinitary de esta computadora, así que las dos necesitan estar en la misma red.`;
+    case "fr":
+      return `Elle récupère Infinitary depuis cet ordinateur, donc les deux doivent être sur le même réseau.`;
+    case "ja":
+      return `このコンピューターから Infinitary を取得するため、両方が同じネットワークにある必要があります。`;
+    case "ko":
+      return `이 명령은 이 컴퓨터에서 Infinitary를 받아 오므로 두 컴퓨터가 같은 네트워크에 있어야 해요.`;
+    case "pt-BR":
+      return `Ele baixa o Infinitary deste computador, então os dois precisam estar na mesma rede.`;
+    case "zh-Hans":
+      return `它会从这台电脑获取 Infinitary，所以两台电脑需要在同一网络上。`;
+    case "zh-Hant":
+      return `它會從這台電腦取得 Infinitary，所以兩台電腦需要在同一個網路上。`;
+    case "en-XA":
+      return `[Îţ ĝéţš Îñƒîñîţáŕý ƒŕöɱ ţĥîš çöɱþûţéŕ, šö ƀöţĥ ñééð ţĥé šáɱé ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt gets Infinitary from this computer, so both need the same network.\u202c`;
+  }
+  return `It gets Infinitary from this computer, so both need the same network.`;
+}
+
+export function settingsDevicesPanelCopyCommand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نسخ الأمر`;
+    case "de":
+      return `Befehl kopieren`;
+    case "es":
+      return `Copiar comando`;
+    case "fr":
+      return `Copier la commande`;
+    case "ja":
+      return `コマンドをコピー`;
+    case "ko":
+      return `명령 복사`;
+    case "pt-BR":
+      return `Copiar comando`;
+    case "zh-Hans":
+      return `复制命令`;
+    case "zh-Hant":
+      return `複製指令`;
+    case "en-XA":
+      return `[Çöþý çöɱɱáñð ~~~~]`;
+    case "ar-XB":
+      return `\u202eCopy command\u202c`;
+  }
+  return `Copy command`;
+}
+
+export function settingsDevicesPanelUserCommandLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أمر جديد · التشغيل باسم مستخدم آخر`;
+    case "de":
+      return `Neuer Befehl · als anderer Benutzer`;
+    case "es":
+      return `Comando nuevo · como otro usuario`;
+    case "fr":
+      return `Nouvelle commande · sous un autre utilisateur`;
+    case "ja":
+      return `新しいコマンド · 別のユーザーとして実行`;
+    case "ko":
+      return `새 명령 · 다른 사용자로 실행`;
+    case "pt-BR":
+      return `Novo comando · rodando como outro usuário`;
+    case "zh-Hans":
+      return `新命令 · 以另一个用户身份运行`;
+    case "zh-Hant":
+      return `新指令 · 以另一位使用者身分執行`;
+    case "en-XA":
+      return `[Ñéŵ çöɱɱáñð · ŕûññîñĝ áš áñöţĥéŕ ûšéŕ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew command · running as another user\u202c`;
+  }
+  return `New command · running as another user`;
+}
+
+export function settingsDevicesPanelUserCommandLogIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول باسم المستخدم الذي يجب أن يشغّل العمل، وشغّل هذا مرة واحدة في Terminal.`;
+    case "de":
+      return `Melde dich als der Benutzer an, der die Arbeit ausführen soll, und führ dies einmal im Terminal aus.`;
+    case "es":
+      return `Inicia sesión con el usuario que debe ejecutar el trabajo y ejecuta esto una vez en Terminal.`;
+    case "fr":
+      return `Ouvrez une session avec l’utilisateur qui doit exécuter le travail, et exécutez-la une fois dans Terminal.`;
+    case "ja":
+      return `作業を実行するユーザーでログインし、「ターミナル」でこれを一度だけ実行してください。`;
+    case "ko":
+      return `작업을 실행할 사용자로 로그인한 뒤 터미널에서 이 명령을 한 번 실행하세요.`;
+    case "pt-BR":
+      return `Faça login como o usuário que deve rodar o trabalho e execute isto uma vez no Terminal.`;
+    case "zh-Hans":
+      return `以要运行工作的用户身份登录，然后在“终端”中运行一次。`;
+    case "zh-Hant":
+      return `以要執行工作的使用者身分登入，然後在「終端機」中執行一次。`;
+    case "en-XA":
+      return `[Ļöĝ îñ áš ţĥé ûšéŕ ŵĥö šĥöûļð ŕûñ ţĥé ŵöŕķ, áñð ŕûñ ţĥîš öñçé îñ Ţéŕɱîñáļ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLog in as the user who should run the work, and run this once in Terminal.\u202c`;
+  }
+  return `Log in as the user who should run the work, and run this once in Terminal.`;
+}
+
+export function settingsDevicesPanelUserCommandSwitchBack(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عُد عندما يظهر أنه انضم.`;
+    case "de":
+      return `Wechsle zurück, sobald dort steht, dass er beigetreten ist.`;
+    case "es":
+      return `Vuelve a tu usuario cuando diga que se unió.`;
+    case "fr":
+      return `Revenez à votre session quand elle indique qu’il a rejoint.`;
+    case "ja":
+      return `参加したと表示されたら、元のユーザーに戻ってください。`;
+    case "ko":
+      return `참여했다는 메시지가 나오면 다시 돌아오세요.`;
+    case "pt-BR":
+      return `Volte para o seu usuário quando ele disser que entrou.`;
+    case "zh-Hans":
+      return `提示已加入后再切换回来。`;
+    case "zh-Hant":
+      return `等它顯示已加入後再切換回來。`;
+    case "en-XA":
+      return `[Šŵîţçĥ ƀáçķ ŵĥéñ îţ šáýš îţ ĵöîñéð. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSwitch back when it says it joined.\u202c`;
+  }
+  return `Switch back when it says it joined.`;
+}
+
+export function settingsDevicesSeenNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `شوهد للتو`;
+    case "de":
+      return `gerade eben gesehen`;
+    case "es":
+      return `visto hace un momento`;
+    case "fr":
+      return `vu à l’instant`;
+    case "ja":
+      return `たった今確認`;
+    case "ko":
+      return `방금 확인됨`;
+    case "pt-BR":
+      return `visto agora mesmo`;
+    case "zh-Hans":
+      return `刚刚还能联系`;
+    case "zh-Hant":
+      return `剛剛還連絡得上`;
+    case "en-XA":
+      return `[šééñ ĵûšţ ñöŵ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eseen just now\u202c`;
+  }
+  return `seen just now`;
+}
+
+export function settingsDevicesSeenSince(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خارج المتناول منذ`;
+    case "de":
+      return `außer Reichweite seit`;
+    case "es":
+      return `fuera de alcance desde`;
+    case "fr":
+      return `hors de portée depuis`;
+    case "ja":
+      return `連絡がつかなくなった時刻`;
+    case "ko":
+      return `연락 닿지 않음 · 마지막 연결`;
+    case "pt-BR":
+      return `fora de alcance desde`;
+    case "zh-Hans":
+      return `无法联系的起始时间`;
+    case "zh-Hant":
+      return `連絡不上的起始時間`;
+    case "en-XA":
+      return `[öûţ öƒ ŕéáçĥ šîñçé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eout of reach since\u202c`;
+  }
+  return `out of reach since`;
+}
+
+export function settingsDevicesSeenSinceWhen(input: { when: string }): string {
+  const when = input.when;
+  switch (currentLanguage()) {
+    case "ar":
+      return `خارج المتناول منذ ${when}`;
+    case "de":
+      return `außer Reichweite seit ${when}`;
+    case "es":
+      return `fuera de alcance desde ${when}`;
+    case "fr":
+      return `hors de portée depuis ${when}`;
+    case "ja":
+      return `${when} から連絡がつきません`;
+    case "ko":
+      return `${when}부터 연락 닿지 않음`;
+    case "pt-BR":
+      return `fora de alcance desde ${when}`;
+    case "zh-Hans":
+      return `自 ${when} 起无法联系`;
+    case "zh-Hant":
+      return `從 ${when} 起連絡不上`;
+    case "en-XA":
+      return `[öûţ öƒ ŕéáçĥ šîñçé ${when} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eout of reach since \u202c${when}`;
+  }
+  return `out of reach since ${when}`;
+}
+
+export function settingsDevicesSeenRemovedWhenBack(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خارج المتناول · يُزال عند عودته`;
+    case "de":
+      return `außer Reichweite · wird entfernt, sobald er zurück ist`;
+    case "es":
+      return `fuera de alcance · se quita cuando vuelva`;
+    case "fr":
+      return `hors de portée · retiré à son retour`;
+    case "ja":
+      return `連絡がつきません · 戻ったら削除`;
+    case "ko":
+      return `연락 닿지 않음 · 돌아오면 제거`;
+    case "pt-BR":
+      return `fora de alcance · removido quando voltar`;
+    case "zh-Hans":
+      return `无法联系 · 恢复联系后移除`;
+    case "zh-Hant":
+      return `連絡不上 · 恢復連絡後移除`;
+    case "en-XA":
+      return `[öûţ öƒ ŕéáçĥ · ŕéɱöṽéð ŵĥéñ îţ îš ƀáçķ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eout of reach · removed when it is back\u202c`;
+  }
+  return `out of reach · removed when it is back`;
+}
+
+export function settingsDevicesSeenRemovedWhenBackConnecting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الاتصال · يُزال عند عودته`;
+    case "de":
+      return `verbindet sich · wird entfernt, sobald er zurück ist`;
+    case "es":
+      return `conectándose · se quita cuando vuelva`;
+    case "fr":
+      return `connexion en cours · retiré à son retour`;
+    case "ja":
+      return `接続中 · 戻ったら削除`;
+    case "ko":
+      return `연결 중 · 돌아오면 제거`;
+    case "pt-BR":
+      return `conectando · removido quando voltar`;
+    case "zh-Hans":
+      return `正在连接 · 恢复联系后移除`;
+    case "zh-Hant":
+      return `連線中 · 恢復連絡後移除`;
+    case "en-XA":
+      return `[çöññéçţîñĝ · ŕéɱöṽéð ŵĥéñ îţ îš ƀáçķ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202econnecting · removed when it is back\u202c`;
+  }
+  return `connecting · removed when it is back`;
+}
+
+export function settingsDevicesSeenRemovedOnceUpdated(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يأخذ عملًا جديدًا · يُزال بعد تحديثه`;
+    case "de":
+      return `nimmt keine neue Arbeit an · wird entfernt, sobald er aktualisiert ist`;
+    case "es":
+      return `no acepta trabajo nuevo · se quita cuando se actualice`;
+    case "fr":
+      return `ne prend plus de nouveau travail · retiré une fois mis à jour`;
+    case "ja":
+      return `新しい作業は受けません · 更新後に削除`;
+    case "ko":
+      return `새 작업을 받지 않음 · 업데이트되면 제거`;
+    case "pt-BR":
+      return `não aceita trabalho novo · removido depois de atualizado`;
+    case "zh-Hans":
+      return `不再接新工作 · 更新后移除`;
+    case "zh-Hant":
+      return `不再接新工作 · 更新後移除`;
+    case "en-XA":
+      return `[ţáķéš ñö ñéŵ ŵöŕķ · ŕéɱöṽéð öñçé îţ îš ûþðáţéð ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202etakes no new work · removed once it is updated\u202c`;
+  }
+  return `takes no new work · removed once it is updated`;
+}
+
+export function settingsDevicesSeenRestarted(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُسجَّل الدخول منذ إعادة تشغيل هذا الحاسوب`;
+    case "de":
+      return `nicht angemeldet, seit dieser Computer neu gestartet wurde`;
+    case "es":
+      return `sin sesión iniciada desde que esta computadora se reinició`;
+    case "fr":
+      return `aucune session ouverte depuis le redémarrage de cet ordinateur`;
+    case "ja":
+      return `このコンピューターの再起動後、まだログインしていません`;
+    case "ko":
+      return `이 컴퓨터가 다시 시작된 뒤로 로그인하지 않음`;
+    case "pt-BR":
+      return `sem login desde que este computador reiniciou`;
+    case "zh-Hans":
+      return `这台电脑重启后尚未登录`;
+    case "zh-Hant":
+      return `這台電腦重新啟動後尚未登入`;
+    case "en-XA":
+      return `[ñöţ ļöĝĝéð îñ šîñçé ţĥîš çöɱþûţéŕ ŕéšţáŕţéð ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202enot logged in since this computer restarted\u202c`;
+  }
+  return `not logged in since this computer restarted`;
+}
+
+export function settingsDevicesControllingNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتحكم في نائب القبطان الآن`;
+    case "de":
+      return `Steuert gerade deinen ersten Offizier`;
+    case "es":
+      return `Controlando a tu primer oficial ahora`;
+    case "fr":
+      return `Contrôle votre second en ce moment`;
+    case "ja":
+      return `現在、一等航海士を操作中`;
+    case "ko":
+      return `지금 일등항해사를 제어하는 중`;
+    case "pt-BR":
+      return `Controlando seu imediato agora`;
+    case "zh-Hans":
+      return `正在控制你的大副`;
+    case "zh-Hant":
+      return `正在控制你的大副`;
+    case "en-XA":
+      return `[Çöñţŕöļļîñĝ ýöûŕ ƒîŕšţ ɱáţé ñöŵ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eControlling your first mate now\u202c`;
+  }
+  return `Controlling your first mate now`;
+}
+
+export function settingsDevicesRunsNoProject(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يشغّل أي مشروع بعد`;
+    case "de":
+      return `Führt noch kein Projekt aus`;
+    case "es":
+      return `Todavía no ejecuta ningún proyecto`;
+    case "fr":
+      return `N’exécute encore aucun projet`;
+    case "ja":
+      return `まだプロジェクトを実行していません`;
+    case "ko":
+      return `아직 실행하는 프로젝트 없음`;
+    case "pt-BR":
+      return `Ainda não roda nenhum projeto`;
+    case "zh-Hans":
+      return `尚未运行任何项目`;
+    case "zh-Hant":
+      return `還沒有執行任何專案`;
+    case "en-XA":
+      return `[Ŕûñš ñö þŕöĵéçţ ýéţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRuns no project yet\u202c`;
+  }
+  return `Runs no project yet`;
+}
+
+export function settingsDevicesNoNewWork(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا عمل جديد`;
+    case "de":
+      return `keine neue Arbeit`;
+    case "es":
+      return `sin trabajo nuevo`;
+    case "fr":
+      return `pas de nouveau travail`;
+    case "ja":
+      return `新しい作業なし`;
+    case "ko":
+      return `새 작업 없음`;
+    case "pt-BR":
+      return `sem trabalho novo`;
+    case "zh-Hans":
+      return `不接新工作`;
+    case "zh-Hant":
+      return `不接新工作`;
+    case "en-XA":
+      return `[ñö ñéŵ ŵöŕķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eno new work\u202c`;
+  }
+  return `no new work`;
+}
+
+export function settingsDevicesRemoveCutOff(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${device}؟ سيُفصل فورًا.`;
+    case "de":
+      return `${device} entfernen? Er wird sofort getrennt.`;
+    case "es":
+      return `¿Quitar ${device}? Pierde el acceso de inmediato.`;
+    case "fr":
+      return `Retirer ${device} ? Son accès est coupé immédiatement.`;
+    case "ja":
+      return `${device} を削除しますか？すぐに切断されます。`;
+    case "ko":
+      return `${device}을(를) 제거할까요? 바로 연결이 끊겨요.`;
+    case "pt-BR":
+      return `Remover ${device}? O acesso é cortado na hora.`;
+    case "zh-Hans":
+      return `移除 ${device}？它会立即被断开。`;
+    case "zh-Hant":
+      return `要移除 ${device} 嗎？它會立即被切斷。`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${device}? Îţ îš çûţ öƒƒ áţ öñçé. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${device}\u202e? It is cut off at once.\u202c`;
+  }
+  return `Remove ${device}? It is cut off at once.`;
+}
+
+export function settingsDevicesRemoveNewLink(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ليعود، يحتاج إلى رابط جديد.`;
+    case "de":
+      return `Um zurückzukommen, braucht er einen neuen Link.`;
+    case "es":
+      return `Para volver, necesita un enlace nuevo.`;
+    case "fr":
+      return `Pour revenir, il lui faut un nouveau lien.`;
+    case "ja":
+      return `戻ってくるには新しいリンクが必要です。`;
+    case "ko":
+      return `다시 연결하려면 새 링크가 필요해요.`;
+    case "pt-BR":
+      return `Para voltar, ele precisa de um novo link.`;
+    case "zh-Hans":
+      return `如需重新加入，它需要一个新链接。`;
+    case "zh-Hant":
+      return `如果要再回來，它需要一個新連結。`;
+    case "en-XA":
+      return `[Ţö çöɱé ƀáçķ, îţ ñééðš á ñéŵ ļîñķ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo come back, it needs a new link.\u202c`;
+  }
+  return `To come back, it needs a new link.`;
+}
+
+export function settingsDevicesRemoveOtherFirstmate(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${device}؟ إنه يشغّل الآن عملًا لنائب قبطان آخر.`;
+    case "de":
+      return `${device} entfernen? Er führt jetzt Arbeit für einen anderen ersten Offizier aus.`;
+    case "es":
+      return `¿Quitar ${device}? Ahora ejecuta trabajo para otro primer oficial.`;
+    case "fr":
+      return `Retirer ${device} ? Il exécute maintenant le travail d’un autre second.`;
+    case "ja":
+      return `${device} を削除しますか？現在、別の一等航海士の作業を実行しています。`;
+    case "ko":
+      return `${device}을(를) 제거할까요? 지금은 다른 일등항해사의 작업을 실행하고 있어요.`;
+    case "pt-BR":
+      return `Remover ${device}? Agora ele roda trabalho para outro imediato.`;
+    case "zh-Hans":
+      return `移除 ${device}？它现在正在为另一位大副运行工作。`;
+    case "zh-Hant":
+      return `要移除 ${device} 嗎？它現在正在為另一位大副執行工作。`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${device}? Îţ ŕûñš ŵöŕķ ƒöŕ áñöţĥéŕ ƒîŕšţ ɱáţé ñöŵ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${device}\u202e? It runs work for another first mate now.\u202c`;
+  }
+  return `Remove ${device}? It runs work for another first mate now.`;
+}
+
+export function settingsDevicesRemoveStaysThere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يبقى عمله غير المدموج هناك. لا يتغير شيء هناك بالنسبة إلى نائب القبطان الآخر.`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit bleibt dort. Für den anderen ersten Offizier ändert sich dort nichts.`;
+    case "es":
+      return `Su trabajo sin fusionar se queda allí. Allí no cambia nada para el otro primer oficial.`;
+    case "fr":
+      return `Son travail non fusionné reste là-bas. Rien n’y change pour l’autre second.`;
+    case "ja":
+      return `マージされていない作業はそちらに残ります。別の一等航海士の側では何も変わりません。`;
+    case "ko":
+      return `병합되지 않은 작업은 그곳에 남아요. 다른 일등항해사 쪽에서는 아무것도 바뀌지 않아요.`;
+    case "pt-BR":
+      return `O trabalho não mesclado dele fica lá. Nada muda lá para o outro imediato.`;
+    case "zh-Hans":
+      return `它未合并的工作会留在那里。另一位大副那边不会有任何变化。`;
+    case "zh-Hant":
+      return `它尚未合併的工作會留在那裡。另一位大副那邊不會有任何改變。`;
+    case "en-XA":
+      return `[Îţš ûñɱéŕĝéð ŵöŕķ šţáýš ţĥéŕé. Ñöţĥîñĝ çĥáñĝéš ţĥéŕé ƒöŕ ţĥé öţĥéŕ ƒîŕšţ ɱáţé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts unmerged work stays there. Nothing changes there for the other first mate.\u202c`;
+  }
+  return `Its unmerged work stays there. Nothing changes there for the other first mate.`;
+}
+
+export function settingsDevicesRemoveStaysThereOn(input: { projects: string }): string {
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يبقى عمله غير المدموج في ${projects} هناك. لا يتغير شيء هناك بالنسبة إلى نائب القبطان الآخر.`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit an ${projects} bleibt dort. Für den anderen ersten Offizier ändert sich dort nichts.`;
+    case "es":
+      return `Su trabajo sin fusionar en ${projects} se queda allí. Allí no cambia nada para el otro primer oficial.`;
+    case "fr":
+      return `Son travail non fusionné sur ${projects} reste là-bas. Rien n’y change pour l’autre second.`;
+    case "ja":
+      return `${projects} のマージされていない作業はそちらに残ります。別の一等航海士の側では何も変わりません。`;
+    case "ko":
+      return `${projects}의 병합되지 않은 작업은 그곳에 남아요. 다른 일등항해사 쪽에서는 아무것도 바뀌지 않아요.`;
+    case "pt-BR":
+      return `O trabalho não mesclado dele em ${projects} fica lá. Nada muda lá para o outro imediato.`;
+    case "zh-Hans":
+      return `它在 ${projects} 上未合并的工作会留在那里。另一位大副那边不会有任何变化。`;
+    case "zh-Hant":
+      return `它在 ${projects} 上尚未合併的工作會留在那裡。另一位大副那邊不會有任何改變。`;
+    case "en-XA":
+      return `[Îţš ûñɱéŕĝéð ŵöŕķ öñ ${projects} šţáýš ţĥéŕé. Ñöţĥîñĝ çĥáñĝéš ţĥéŕé ƒöŕ ţĥé öţĥéŕ ƒîŕšţ ɱáţé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts unmerged work on \u202c${projects}\u202e stays there. Nothing changes there for the other first mate.\u202c`;
+  }
+  return `Its unmerged work on ${projects} stays there. Nothing changes there for the other first mate.`;
+}
+
+export function settingsDevicesRemoveNoNewWork(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${device}؟ إنه لا يأخذ عملًا جديدًا.`;
+    case "de":
+      return `${device} entfernen? Er nimmt keine neue Arbeit an.`;
+    case "es":
+      return `¿Quitar ${device}? No acepta trabajo nuevo.`;
+    case "fr":
+      return `Retirer ${device} ? Il ne prend plus de nouveau travail.`;
+    case "ja":
+      return `${device} を削除しますか？新しい作業は受けません。`;
+    case "ko":
+      return `${device}을(를) 제거할까요? 새 작업을 받지 않아요.`;
+    case "pt-BR":
+      return `Remover ${device}? Ele não aceita trabalho novo.`;
+    case "zh-Hans":
+      return `移除 ${device}？它不再接新工作。`;
+    case "zh-Hant":
+      return `要移除 ${device} 嗎？它不再接新工作。`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${device}? Îţ ţáķéš ñö ñéŵ ŵöŕķ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${device}\u202e? It takes no new work.\u202c`;
+  }
+  return `Remove ${device}? It takes no new work.`;
+}
+
+export function settingsDevicesRemoveUpdateIt(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يزال عمله غير المدموج هناك. حدّثه، فينتقل عمله إلى هذا الحاسوب قبل إزالة ${device}.`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit ist noch dort. Aktualisiere ihn, dann kommt seine Arbeit auf diesen Computer, bevor ${device} entfernt wird.`;
+    case "es":
+      return `Su trabajo sin fusionar sigue allí. Actualiza Infinitary allí y su trabajo vendrá a esta computadora antes de quitar ${device}.`;
+    case "fr":
+      return `Son travail non fusionné est toujours là-bas. Mettez-le à jour, et son travail vient sur cet ordinateur avant que ${device} soit retiré.`;
+    case "ja":
+      return `マージされていない作業がまだそちらにあります。更新すると、${device} が削除される前にその作業がこのコンピューターに移ります。`;
+    case "ko":
+      return `병합되지 않은 작업이 아직 그곳에 있어요. 업데이트하면 ${device}이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.`;
+    case "pt-BR":
+      return `O trabalho não mesclado dele ainda está lá. Atualize-o, e o trabalho vem para este computador antes de ${device} ser removido.`;
+    case "zh-Hans":
+      return `它未合并的工作仍在那里。更新它，它的工作就会在 ${device} 被移除前转到这台电脑。`;
+    case "zh-Hant":
+      return `它尚未合併的工作還在那裡。更新它，它的工作就會在 ${device} 移除前移到這台電腦。`;
+    case "en-XA":
+      return `[Îţš ûñɱéŕĝéð ŵöŕķ îš šţîļļ ţĥéŕé. Ûþðáţé îţ, áñð îţš ŵöŕķ çöɱéš ţö ţĥîš çöɱþûţéŕ ƀéƒöŕé ${device} îš ŕéɱöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts unmerged work is still there. Update it, and its work comes to this computer before \u202c${device}\u202e is removed.\u202c`;
+  }
+  return `Its unmerged work is still there. Update it, and its work comes to this computer before ${device} is removed.`;
+}
+
+export function settingsDevicesRemoveUpdateItOn(input: {
+  device: string;
+  projects: string;
+}): string {
+  const device = input.device;
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يزال عمله غير المدموج في ${projects} هناك. حدّثه، فينتقل عمله إلى هذا الحاسوب قبل إزالة ${device}.`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit an ${projects} ist noch dort. Aktualisiere ihn, dann kommt seine Arbeit auf diesen Computer, bevor ${device} entfernt wird.`;
+    case "es":
+      return `Su trabajo sin fusionar en ${projects} sigue allí. Actualiza Infinitary allí y su trabajo vendrá a esta computadora antes de quitar ${device}.`;
+    case "fr":
+      return `Son travail non fusionné sur ${projects} est toujours là-bas. Mettez-le à jour, et son travail vient sur cet ordinateur avant que ${device} soit retiré.`;
+    case "ja":
+      return `${projects} のマージされていない作業がまだそちらにあります。更新すると、${device} が削除される前にその作業がこのコンピューターに移ります。`;
+    case "ko":
+      return `${projects}의 병합되지 않은 작업이 아직 그곳에 있어요. 업데이트하면 ${device}이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.`;
+    case "pt-BR":
+      return `O trabalho não mesclado dele em ${projects} ainda está lá. Atualize-o, e o trabalho vem para este computador antes de ${device} ser removido.`;
+    case "zh-Hans":
+      return `它在 ${projects} 上未合并的工作仍在那里。更新它，它的工作就会在 ${device} 被移除前转到这台电脑。`;
+    case "zh-Hant":
+      return `它在 ${projects} 上尚未合併的工作還在那裡。更新它，它的工作就會在 ${device} 移除前移到這台電腦。`;
+    case "en-XA":
+      return `[Îţš ûñɱéŕĝéð ŵöŕķ öñ ${projects} îš šţîļļ ţĥéŕé. Ûþðáţé îţ, áñð îţš ŵöŕķ çöɱéš ţö ţĥîš çöɱþûţéŕ ƀéƒöŕé ${device} îš ŕéɱöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts unmerged work on \u202c${projects}\u202e is still there. Update it, and its work comes to this computer before \u202c${device}\u202e is removed.\u202c`;
+  }
+  return `Its unmerged work on ${projects} is still there. Update it, and its work comes to this computer before ${device} is removed.`;
+}
+
+export function settingsDevicesRemoveAway(input: { device: string; state: string }): string {
+  const device = input.device;
+  const state = input.state;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${device}؟ حالته: ${state}.`;
+    case "de":
+      return `${device} entfernen? Er ist ${state}.`;
+    case "es":
+      return `¿Quitar ${device}? Está ${state}.`;
+    case "fr":
+      return `Retirer ${device} ? Il est ${state}.`;
+    case "ja":
+      return `${device} を削除しますか？現在 ${state} です。`;
+    case "ko":
+      return `${device}을(를) 제거할까요? 지금 상태: ${state}.`;
+    case "pt-BR":
+      return `Remover ${device}? Ele está ${state}.`;
+    case "zh-Hans":
+      return `移除 ${device}？它目前 ${state}。`;
+    case "zh-Hant":
+      return `要移除 ${device} 嗎？它目前 ${state}。`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${device}? Îţ îš ${state}. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${device}\u202e? It is \u202c${state}\u202e.\u202c`;
+  }
+  return `Remove ${device}? It is ${state}.`;
+}
+
+export function settingsDevicesRemoveWait(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يزال عمله غير المدموج هناك. انتظر، فينتقل إلى هذا الحاسوب قبل إزالة ${device}.`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit ist noch dort. Warte, dann kommt sie auf diesen Computer, bevor ${device} entfernt wird.`;
+    case "es":
+      return `Su trabajo sin fusionar sigue allí. Espera y vendrá a esta computadora antes de quitar ${device}.`;
+    case "fr":
+      return `Son travail non fusionné est toujours là-bas. Patientez, et il vient sur cet ordinateur avant que ${device} soit retiré.`;
+    case "ja":
+      return `マージされていない作業がまだそちらにあります。待つと、${device} が削除される前にこのコンピューターに移ります。`;
+    case "ko":
+      return `병합되지 않은 작업이 아직 그곳에 있어요. 기다리면 ${device}이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.`;
+    case "pt-BR":
+      return `O trabalho não mesclado dele ainda está lá. Espere, e ele vem para este computador antes de ${device} ser removido.`;
+    case "zh-Hans":
+      return `它未合并的工作仍在那里。稍等，这些工作会在 ${device} 被移除前转到这台电脑。`;
+    case "zh-Hant":
+      return `它尚未合併的工作還在那裡。稍等一下，這些工作會在 ${device} 移除前移到這台電腦。`;
+    case "en-XA":
+      return `[Îţš ûñɱéŕĝéð ŵöŕķ îš šţîļļ ţĥéŕé. Ŵáîţ, áñð îţ çöɱéš ţö ţĥîš çöɱþûţéŕ ƀéƒöŕé ${device} îš ŕéɱöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts unmerged work is still there. Wait, and it comes to this computer before \u202c${device}\u202e is removed.\u202c`;
+  }
+  return `Its unmerged work is still there. Wait, and it comes to this computer before ${device} is removed.`;
+}
+
+export function settingsDevicesRemoveWaitOn(input: { device: string; projects: string }): string {
+  const device = input.device;
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يزال عمله غير المدموج في ${projects} هناك. انتظر، فينتقل إلى هذا الحاسوب قبل إزالة ${device}.`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit an ${projects} ist noch dort. Warte, dann kommt sie auf diesen Computer, bevor ${device} entfernt wird.`;
+    case "es":
+      return `Su trabajo sin fusionar en ${projects} sigue allí. Espera y vendrá a esta computadora antes de quitar ${device}.`;
+    case "fr":
+      return `Son travail non fusionné sur ${projects} est toujours là-bas. Patientez, et il vient sur cet ordinateur avant que ${device} soit retiré.`;
+    case "ja":
+      return `${projects} のマージされていない作業がまだそちらにあります。待つと、${device} が削除される前にこのコンピューターに移ります。`;
+    case "ko":
+      return `${projects}의 병합되지 않은 작업이 아직 그곳에 있어요. 기다리면 ${device}이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.`;
+    case "pt-BR":
+      return `O trabalho não mesclado dele em ${projects} ainda está lá. Espere, e ele vem para este computador antes de ${device} ser removido.`;
+    case "zh-Hans":
+      return `它在 ${projects} 上未合并的工作仍在那里。稍等，这些工作会在 ${device} 被移除前转到这台电脑。`;
+    case "zh-Hant":
+      return `它在 ${projects} 上尚未合併的工作還在那裡。稍等一下，這些工作會在 ${device} 移除前移到這台電腦。`;
+    case "en-XA":
+      return `[Îţš ûñɱéŕĝéð ŵöŕķ öñ ${projects} îš šţîļļ ţĥéŕé. Ŵáîţ, áñð îţ çöɱéš ţö ţĥîš çöɱþûţéŕ ƀéƒöŕé ${device} îš ŕéɱöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts unmerged work on \u202c${projects}\u202e is still there. Wait, and it comes to this computer before \u202c${device}\u202e is removed.\u202c`;
+  }
+  return `Its unmerged work on ${projects} is still there. Wait, and it comes to this computer before ${device} is removed.`;
+}
+
+export function settingsDevicesRemoveComesFirst(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${device}؟ ينتقل عمله غير المدموج إلى هذا الحاسوب أولًا.`;
+    case "de":
+      return `${device} entfernen? Seine nicht zusammengeführte Arbeit kommt zuerst auf diesen Computer.`;
+    case "es":
+      return `¿Quitar ${device}? Su trabajo sin fusionar viene primero a esta computadora.`;
+    case "fr":
+      return `Retirer ${device} ? Son travail non fusionné vient d’abord sur cet ordinateur.`;
+    case "ja":
+      return `${device} を削除しますか？マージされていない作業が先にこのコンピューターに移ります。`;
+    case "ko":
+      return `${device}을(를) 제거할까요? 병합되지 않은 작업이 먼저 이 컴퓨터로 옮겨져요.`;
+    case "pt-BR":
+      return `Remover ${device}? O trabalho não mesclado dele vem primeiro para este computador.`;
+    case "zh-Hans":
+      return `移除 ${device}？它未合并的工作会先转到这台电脑。`;
+    case "zh-Hant":
+      return `要移除 ${device} 嗎？它尚未合併的工作會先移到這台電腦。`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${device}? Îţš ûñɱéŕĝéð ŵöŕķ çöɱéš ţö ţĥîš çöɱþûţéŕ ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${device}\u202e? Its unmerged work comes to this computer first.\u202c`;
+  }
+  return `Remove ${device}? Its unmerged work comes to this computer first.`;
+}
+
+export function settingsDevicesRemoveCleansUp(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+    case "de":
+      return `Danach entfernt Infinitary, was es dort eingerichtet hat, samt seinen Anmeldungen.`;
+    case "es":
+      return `Después, Infinitary quita lo que configuró allí, junto con sus inicios de sesión.`;
+    case "fr":
+      return `Infinitary retire ensuite ce qu’il y a installé, avec ses connexions.`;
+    case "ja":
+      return `そのあと Infinitary が、そちらで準備したものをサインインとともに削除します。`;
+    case "ko":
+      return `그다음 Infinitary가 그곳에 설정한 것을 로그인 정보와 함께 제거해요.`;
+    case "pt-BR":
+      return `Depois, o Infinitary remove o que configurou lá, junto com os logins.`;
+    case "zh-Hans":
+      return `随后 Infinitary 会移除它在那里设置的内容，包括它的登录。`;
+    case "zh-Hant":
+      return `接著 Infinitary 會移除它在那裡設定的內容，連同它的登入。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý ţĥéñ ŕéɱöṽéš ŵĥáţ îţ šéţ ûþ ţĥéŕé, ŵîţĥ îţš šîĝñ-îñš. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary then removes what it set up there, with its sign-ins.\u202c`;
+  }
+  return `Infinitary then removes what it set up there, with its sign-ins.`;
+}
+
+export function settingsDevicesRemoveTasksStop(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `تتوقف مهامه الـ${count}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "one":
+          return `تتوقف مهمته. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "two":
+          return `تتوقف مهمتاه. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "few":
+          return `تتوقف مهامه الـ${count}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "many":
+          return `تتوقف مهامه الـ${count}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        default:
+          return `تتوقف مهامه الـ${count}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Seine Aufgabe stoppt. Danach entfernt Infinitary, was es dort eingerichtet hat, samt seinen Anmeldungen.`;
+        default:
+          return `Seine ${count} Aufgaben stoppen. Danach entfernt Infinitary, was es dort eingerichtet hat, samt seinen Anmeldungen.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Su tarea se detiene. Después, Infinitary quita lo que configuró allí, junto con sus inicios de sesión.`;
+        case "many":
+          return `Sus ${count} de tareas se detienen. Después, Infinitary quita lo que configuró allí, junto con sus inicios de sesión.`;
+        default:
+          return `Sus ${count} tareas se detienen. Después, Infinitary quita lo que configuró allí, junto con sus inicios de sesión.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Sa tâche s’arrête. Infinitary retire ensuite ce qu’il y a installé, avec ses connexions.`;
+        case "many":
+          return `Ses ${count} tâches s’arrêtent. Infinitary retire ensuite ce qu’il y a installé, avec ses connexions.`;
+        default:
+          return `Ses ${count} tâches s’arrêtent. Infinitary retire ensuite ce qu’il y a installé, avec ses connexions.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件のタスクが停止します。そのあと Infinitary が、そちらで準備したものをサインインとともに削除します。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `작업 ${count}개가 중지돼요. 그다음 Infinitary가 그곳에 설정한 것을 로그인 정보와 함께 제거해요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `A tarefa dele para. Depois, o Infinitary remove o que configurou lá, junto com os logins.`;
+        case "many":
+          return `As ${count} tarefas dele param. Depois, o Infinitary remove o que configurou lá, junto com os logins.`;
+        default:
+          return `As ${count} tarefas dele param. Depois, o Infinitary remove o que configurou lá, junto com os logins.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `它的 ${count} 个任务会停止。随后 Infinitary 会移除它在那里设置的内容，包括它的登录。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `它的 ${count} 項任務會停止。接著 Infinitary 會移除它在那裡設定的內容，連同它的登入。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Îţš ţášķ šţöþš. Îñƒîñîţáŕý ţĥéñ ŕéɱöṽéš ŵĥáţ îţ šéţ ûþ ţĥéŕé, ŵîţĥ îţš šîĝñ-îñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[Îţš ${count} ţášķš šţöþ. Îñƒîñîţáŕý ţĥéñ ŕéɱöṽéš ŵĥáţ îţ šéţ ûþ ţĥéŕé, ŵîţĥ îţš šîĝñ-îñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eIts task stops. Infinitary then removes what it set up there, with its sign-ins.\u202c`;
+        default:
+          return `\u202eIts \u202c${count}\u202e tasks stop. Infinitary then removes what it set up there, with its sign-ins.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Its task stops. Infinitary then removes what it set up there, with its sign-ins.`;
+    default:
+      return `Its ${count} tasks stop. Infinitary then removes what it set up there, with its sign-ins.`;
+  }
+}
+
+export function settingsDevicesRemoveTasksStopOn(input: {
+  count: number;
+  projects: string;
+}): string {
+  const count = formatNumber(input.count);
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `تتوقف مهامه الـ${count} في ${projects}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "one":
+          return `تتوقف مهمته في ${projects}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "two":
+          return `تتوقف مهمتاه في ${projects}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "few":
+          return `تتوقف مهامه الـ${count} في ${projects}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        case "many":
+          return `تتوقف مهامه الـ${count} في ${projects}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+        default:
+          return `تتوقف مهامه الـ${count} في ${projects}. ثم يزيل Infinitary ما أعدّه هناك، مع تسجيلات الدخول.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Seine Aufgabe an ${projects} stoppt. Danach entfernt Infinitary, was es dort eingerichtet hat, samt seinen Anmeldungen.`;
+        default:
+          return `Seine ${count} Aufgaben an ${projects} stoppen. Danach entfernt Infinitary, was es dort eingerichtet hat, samt seinen Anmeldungen.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Su tarea en ${projects} se detiene. Después, Infinitary quita lo que configuró allí, junto con sus inicios de sesión.`;
+        case "many":
+          return `Sus ${count} de tareas en ${projects} se detienen. Después, Infinitary quita lo que configuró allí, junto con sus inicios de sesión.`;
+        default:
+          return `Sus ${count} tareas en ${projects} se detienen. Después, Infinitary quita lo que configuró allí, junto con sus inicios de sesión.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Sa tâche sur ${projects} s’arrête. Infinitary retire ensuite ce qu’il y a installé, avec ses connexions.`;
+        case "many":
+          return `Ses ${count} tâches sur ${projects} s’arrêtent. Infinitary retire ensuite ce qu’il y a installé, avec ses connexions.`;
+        default:
+          return `Ses ${count} tâches sur ${projects} s’arrêtent. Infinitary retire ensuite ce qu’il y a installé, avec ses connexions.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${projects} の${count}件のタスクが停止します。そのあと Infinitary が、そちらで準備したものをサインインとともに削除します。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${projects}의 작업 ${count}개가 중지돼요. 그다음 Infinitary가 그곳에 설정한 것을 로그인 정보와 함께 제거해요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `A tarefa dele em ${projects} para. Depois, o Infinitary remove o que configurou lá, junto com os logins.`;
+        case "many":
+          return `As ${count} tarefas dele em ${projects} param. Depois, o Infinitary remove o que configurou lá, junto com os logins.`;
+        default:
+          return `As ${count} tarefas dele em ${projects} param. Depois, o Infinitary remove o que configurou lá, junto com os logins.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `它在 ${projects} 上的 ${count} 个任务会停止。随后 Infinitary 会移除它在那里设置的内容，包括它的登录。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `它在 ${projects} 上的 ${count} 項任務會停止。接著 Infinitary 會移除它在那裡設定的內容，連同它的登入。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Îţš ţášķ öñ ${projects} šţöþš. Îñƒîñîţáŕý ţĥéñ ŕéɱöṽéš ŵĥáţ îţ šéţ ûþ ţĥéŕé, ŵîţĥ îţš šîĝñ-îñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[Îţš ${count} ţášķš öñ ${projects} šţöþ. Îñƒîñîţáŕý ţĥéñ ŕéɱöṽéš ŵĥáţ îţ šéţ ûþ ţĥéŕé, ŵîţĥ îţš šîĝñ-îñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eIts task on \u202c${projects}\u202e stops. Infinitary then removes what it set up there, with its sign-ins.\u202c`;
+        default:
+          return `\u202eIts \u202c${count}\u202e tasks on \u202c${projects}\u202e stop. Infinitary then removes what it set up there, with its sign-ins.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Its task on ${projects} stops. Infinitary then removes what it set up there, with its sign-ins.`;
+    default:
+      return `Its ${count} tasks on ${projects} stop. Infinitary then removes what it set up there, with its sign-ins.`;
+  }
+}
+
+export function settingsDevicesRemoveRunsAfter(input: { count: number; projects: string }): string {
+  const count = formatNumber(input.count);
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `تعمل المشاريع ${projects} على هذا الحاسوب بعد ذلك.`;
+        case "one":
+          return `يعمل ${projects} على هذا الحاسوب بعد ذلك.`;
+        case "two":
+          return `يعمل المشروعان ${projects} على هذا الحاسوب بعد ذلك.`;
+        case "few":
+          return `تعمل المشاريع ${projects} على هذا الحاسوب بعد ذلك.`;
+        case "many":
+          return `تعمل المشاريع ${projects} على هذا الحاسوب بعد ذلك.`;
+        default:
+          return `تعمل المشاريع ${projects} على هذا الحاسوب بعد ذلك.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${projects} läuft danach auf diesem Computer.`;
+        default:
+          return `${projects} laufen danach auf diesem Computer.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Después, ${projects} se ejecuta en esta computadora.`;
+        case "many":
+          return `Después, ${projects} se ejecutan en esta computadora.`;
+        default:
+          return `Después, ${projects} se ejecutan en esta computadora.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${projects} s’exécute ensuite sur cet ordinateur.`;
+        case "many":
+          return `${projects} s’exécutent ensuite sur cet ordinateur.`;
+        default:
+          return `${projects} s’exécutent ensuite sur cet ordinateur.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `以降、${projects} はこのコンピューターで実行されます。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `이후 ${projects}은(는) 이 컴퓨터에서 실행돼요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Depois, ${projects} roda neste computador.`;
+        case "many":
+          return `Depois, ${projects} rodam neste computador.`;
+        default:
+          return `Depois, ${projects} rodam neste computador.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `之后 ${projects} 会在这台电脑上运行。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `之後 ${projects} 會在這台電腦上執行。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${projects} ŕûñš öñ ţĥîš çöɱþûţéŕ áƒţéŕ. ~~~~~~~~~~]`;
+        default:
+          return `[${projects} ŕûñ öñ ţĥîš çöɱþûţéŕ áƒţéŕ. ~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${projects}\u202e runs on this computer after.\u202c`;
+        default:
+          return `${projects}\u202e run on this computer after.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${projects} runs on this computer after.`;
+    default:
+      return `${projects} run on this computer after.`;
+  }
+}
+
+export function settingsDevicesJoinedToday(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اليوم ${time}`;
+    case "de":
+      return `heute ${time}`;
+    case "es":
+      return `hoy ${time}`;
+    case "fr":
+      return `aujourd’hui ${time}`;
+    case "ja":
+      return `今日 ${time}`;
+    case "ko":
+      return `오늘 ${time}`;
+    case "pt-BR":
+      return `hoje ${time}`;
+    case "zh-Hans":
+      return `今天 ${time}`;
+    case "zh-Hant":
+      return `今天 ${time}`;
+    case "en-XA":
+      return `[ţöðáý ${time} ~~]`;
+    case "ar-XB":
+      return `\u202etoday \u202c${time}`;
+  }
+  return `today ${time}`;
+}
+
+export function settingsDevicesJoinedYesterday(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أمس ${time}`;
+    case "de":
+      return `gestern ${time}`;
+    case "es":
+      return `ayer ${time}`;
+    case "fr":
+      return `hier ${time}`;
+    case "ja":
+      return `昨日 ${time}`;
+    case "ko":
+      return `어제 ${time}`;
+    case "pt-BR":
+      return `ontem ${time}`;
+    case "zh-Hans":
+      return `昨天 ${time}`;
+    case "zh-Hant":
+      return `昨天 ${time}`;
+    case "en-XA":
+      return `[ýéšţéŕðáý ${time} ~~~~]`;
+    case "ar-XB":
+      return `\u202eyesterday \u202c${time}`;
+  }
+  return `yesterday ${time}`;
+}
+
+export function settingsDevicesJoined(input: { when: string }): string {
+  const when = input.when;
+  switch (currentLanguage()) {
+    case "ar":
+      return `انضم ${when}`;
+    case "de":
+      return `beigetreten ${when}`;
+    case "es":
+      return `se unió ${when}`;
+    case "fr":
+      return `a rejoint ${when}`;
+    case "ja":
+      return `${when} に参加`;
+    case "ko":
+      return `${when} 참여`;
+    case "pt-BR":
+      return `entrou ${when}`;
+    case "zh-Hans":
+      return `加入于 ${when}`;
+    case "zh-Hant":
+      return `${when} 加入`;
+    case "en-XA":
+      return `[ĵöîñéð ${when} ~~~]`;
+    case "ar-XB":
+      return `\u202ejoined \u202c${when}`;
+  }
+  return `joined ${when}`;
+}
+
+export function settingsDevicesRunningAs(input: { user: string }): string {
+  const user = input.user;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل باسم ${user}`;
+    case "de":
+      return `läuft als ${user}`;
+    case "es":
+      return `se ejecuta como ${user}`;
+    case "fr":
+      return `sous l’utilisateur ${user}`;
+    case "ja":
+      return `${user} として実行中`;
+    case "ko":
+      return `${user}(으)로 실행 중`;
+    case "pt-BR":
+      return `rodando como ${user}`;
+    case "zh-Hans":
+      return `以 ${user} 身份运行`;
+    case "zh-Hant":
+      return `以 ${user} 身分執行`;
+    case "en-XA":
+      return `[ŕûññîñĝ áš ${user} ~~~~]`;
+    case "ar-XB":
+      return `\u202erunning as \u202c${user}`;
+  }
+  return `running as ${user}`;
+}
+
+export function settingsDevicesAnotherUserHere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مستخدم آخر على هذا الحاسوب`;
+    case "de":
+      return `ein anderer Benutzer auf diesem Computer`;
+    case "es":
+      return `otro usuario en esta computadora`;
+    case "fr":
+      return `un autre utilisateur de cet ordinateur`;
+    case "ja":
+      return `このコンピューターの別のユーザー`;
+    case "ko":
+      return `이 컴퓨터의 다른 사용자`;
+    case "pt-BR":
+      return `outro usuário neste computador`;
+    case "zh-Hans":
+      return `这台电脑上的另一个用户`;
+    case "zh-Hant":
+      return `這台電腦上的另一位使用者`;
+    case "en-XA":
+      return `[áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eanother user on this computer\u202c`;
+  }
+  return `another user on this computer`;
+}
+
+export function settingsDevicesRunsWhileLoggedIn(input: { user: string }): string {
+  const user = input.user;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يشغّل العمل فقط، ما دام ${user} مسجّل الدخول`;
+    case "de":
+      return `führt nur Arbeit aus, solange ${user} angemeldet ist`;
+    case "es":
+      return `solo ejecuta trabajo, mientras ${user} tenga la sesión iniciada`;
+    case "fr":
+      return `exécute seulement du travail, tant que ${user} a une session ouverte`;
+    case "ja":
+      return `${user} がログインしている間、作業だけを実行`;
+    case "ko":
+      return `${user}이(가) 로그인한 동안 작업만 실행`;
+    case "pt-BR":
+      return `só roda trabalho, enquanto ${user} estiver com login feito`;
+    case "zh-Hans":
+      return `仅运行工作，在 ${user} 登录期间`;
+    case "zh-Hant":
+      return `只執行工作，在 ${user} 登入期間`;
+    case "en-XA":
+      return `[ŕûñš ŵöŕķ öñļý, ŵĥîļé ${user} îš ļöĝĝéð îñ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eruns work only, while \u202c${user}\u202e is logged in\u202c`;
+  }
+  return `runs work only, while ${user} is logged in`;
+}
+
+export function settingsDevicesBringingWorkOf(input: { projects: string }): string {
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ نقل عمل ${projects} غير المدموج إلى هذا الحاسوب…`;
+    case "de":
+      return `Die nicht zusammengeführte Arbeit von ${projects} kommt auf diesen Computer …`;
+    case "es":
+      return `Trayendo a esta computadora el trabajo sin fusionar de ${projects}…`;
+    case "fr":
+      return `Rapatriement du travail non fusionné de ${projects} sur cet ordinateur…`;
+    case "ja":
+      return `${projects} のマージされていない作業をこのコンピューターに移しています…`;
+    case "ko":
+      return `${projects}의 병합되지 않은 작업을 이 컴퓨터로 가져오는 중…`;
+    case "pt-BR":
+      return `Trazendo o trabalho não mesclado de ${projects} para este computador…`;
+    case "zh-Hans":
+      return `正在把 ${projects} 未合并的工作转到这台电脑…`;
+    case "zh-Hant":
+      return `正在把 ${projects} 尚未合併的工作移到這台電腦…`;
+    case "en-XA":
+      return `[Ɓŕîñĝîñĝ ${projects}'š ûñɱéŕĝéð ŵöŕķ ţö ţĥîš çöɱþûţéŕ… ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBringing \u202c${projects}\u202e's unmerged work to this computer…\u202c`;
+  }
+  return `Bringing ${projects}'s unmerged work to this computer…`;
+}
+
+export function settingsDevicesBringingWork(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ نقل عمله غير المدموج إلى هذا الحاسوب…`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit kommt auf diesen Computer …`;
+    case "es":
+      return `Trayendo su trabajo sin fusionar a esta computadora…`;
+    case "fr":
+      return `Rapatriement de son travail non fusionné sur cet ordinateur…`;
+    case "ja":
+      return `マージされていない作業をこのコンピューターに移しています…`;
+    case "ko":
+      return `병합되지 않은 작업을 이 컴퓨터로 가져오는 중…`;
+    case "pt-BR":
+      return `Trazendo o trabalho não mesclado dele para este computador…`;
+    case "zh-Hans":
+      return `正在把它未合并的工作转到这台电脑…`;
+    case "zh-Hant":
+      return `正在把它尚未合併的工作移到這台電腦…`;
+    case "en-XA":
+      return `[Ɓŕîñĝîñĝ îţš ûñɱéŕĝéð ŵöŕķ ţö ţĥîš çöɱþûţéŕ… ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBringing its unmerged work to this computer…\u202c`;
+  }
+  return `Bringing its unmerged work to this computer…`;
+}
+
+export function settingsDevicesRemovingSetUp(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ إزالة ما أعدّه Infinitary ${where}…`;
+    case "de":
+      return `Was Infinitary ${where} eingerichtet hat, wird entfernt …`;
+    case "es":
+      return `Quitando lo que Infinitary configuró ${where}…`;
+    case "fr":
+      return `Retrait de ce qu’Infinitary a installé ${where}…`;
+    case "ja":
+      return `Infinitary が ${where} 準備したものを削除しています…`;
+    case "ko":
+      return `Infinitary가 ${where} 설정한 것을 제거하는 중…`;
+    case "pt-BR":
+      return `Removendo o que o Infinitary configurou ${where}…`;
+    case "zh-Hans":
+      return `正在移除 Infinitary ${where} 设置的内容…`;
+    case "zh-Hant":
+      return `正在移除 Infinitary ${where} 設定的內容…`;
+    case "en-XA":
+      return `[Ŕéɱöṽîñĝ ŵĥáţ Îñƒîñîţáŕý šéţ ûþ ${where}… ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemoving what Infinitary set up \u202c${where}\u202e…\u202c`;
+  }
+  return `Removing what Infinitary set up ${where}…`;
+}
+
+export function settingsDevicesRuns(input: { projects: string }): string {
+  const projects = input.projects;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يشغّل ${projects}`;
+    case "de":
+      return `Führt ${projects} aus`;
+    case "es":
+      return `Ejecuta ${projects}`;
+    case "fr":
+      return `Exécute ${projects}`;
+    case "ja":
+      return `${projects} を実行`;
+    case "ko":
+      return `${projects} 실행`;
+    case "pt-BR":
+      return `Roda ${projects}`;
+    case "zh-Hans":
+      return `运行 ${projects}`;
+    case "zh-Hant":
+      return `執行 ${projects}`;
+    case "en-XA":
+      return `[Ŕûñš ${projects} ~~]`;
+    case "ar-XB":
+      return `\u202eRuns \u202c${projects}`;
+  }
+  return `Runs ${projects}`;
+}
+
+export function settingsDevicesSignedInTo(input: { names: string }): string {
+  const names = input.names;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مسجّل الدخول إلى ${names}`;
+    case "de":
+      return `Angemeldet bei ${names}`;
+    case "es":
+      return `Sesión iniciada en ${names}`;
+    case "fr":
+      return `Connecté à ${names}`;
+    case "ja":
+      return `${names} にサインイン済み`;
+    case "ko":
+      return `${names}에 로그인됨`;
+    case "pt-BR":
+      return `Com login em ${names}`;
+    case "zh-Hans":
+      return `已登录 ${names}`;
+    case "zh-Hant":
+      return `已登入 ${names}`;
+    case "en-XA":
+      return `[Šîĝñéð îñ ţö ${names} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eSigned in to \u202c${names}`;
+  }
+  return `Signed in to ${names}`;
+}
+
+export function settingsDevicesNoSignIns(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا تسجيلات دخول بعد`;
+    case "de":
+      return `Noch keine Anmeldungen`;
+    case "es":
+      return `Todavía sin inicios de sesión`;
+    case "fr":
+      return `Aucune connexion pour l’instant`;
+    case "ja":
+      return `サインインはまだありません`;
+    case "ko":
+      return `아직 로그인 없음`;
+    case "pt-BR":
+      return `Nenhum login ainda`;
+    case "zh-Hans":
+      return `尚无登录`;
+    case "zh-Hant":
+      return `還沒有登入`;
+    case "en-XA":
+      return `[Ñö šîĝñ-îñš ýéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo sign-ins yet\u202c`;
+  }
+  return `No sign-ins yet`;
+}
+
+export function settingsDevicesTasks(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `${count} مهمة`;
+        case "one":
+          return `${count} مهمة`;
+        case "two":
+          return `${count} مهمتان`;
+        case "few":
+          return `${count} مهام`;
+        case "many":
+          return `${count} مهمةً`;
+        default:
+          return `${count} مهمة`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Aufgabe`;
+        default:
+          return `${count} Aufgaben`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} tarea`;
+        case "many":
+          return `${count} de tareas`;
+        default:
+          return `${count} tareas`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} tâche`;
+        case "many":
+          return `${count} tâches`;
+        default:
+          return `${count} tâches`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件のタスク`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `작업 ${count}개`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} tarefa`;
+        case "many":
+          return `${count} tarefas`;
+        default:
+          return `${count} tarefas`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 个任务`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 項任務`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ţášķ ~~]`;
+        default:
+          return `[${count} ţášķš ~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e task\u202c`;
+        default:
+          return `${count}\u202e tasks\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} task`;
+    default:
+      return `${count} tasks`;
+  }
+}
+
+export function settingsDevicesIdle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خامل`;
+    case "de":
+      return `frei`;
+    case "es":
+      return `sin actividad`;
+    case "fr":
+      return `inactif`;
+    case "ja":
+      return `待機中`;
+    case "ko":
+      return `대기`;
+    case "pt-BR":
+      return `ocioso`;
+    case "zh-Hans":
+      return `空闲`;
+    case "zh-Hant":
+      return `閒置`;
+    case "en-XA":
+      return `[îðļé ~~]`;
+    case "ar-XB":
+      return `\u202eidle\u202c`;
+  }
+  return `idle`;
+}
+
+export function settingsDevicesStrandedAsUser(input: { user: string }): string {
+  const user = input.user;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يزال يبحث عن هذا الحاسوب في عنوانه القديم. أمر جديد يُشغَّل باسم ${user} يعيده.`;
+    case "de":
+      return `Er sucht diesen Computer noch unter seiner alten Adresse. Ein neuer Befehl, als ${user} ausgeführt, holt ihn zurück.`;
+    case "es":
+      return `Todavía busca esta computadora en su dirección anterior. Un comando nuevo ejecutado como ${user} lo vuelve a conectar.`;
+    case "fr":
+      return `Il cherche encore cet ordinateur à son ancienne adresse. Une nouvelle commande exécutée sous ${user} le rétablit.`;
+    case "ja":
+      return `このコンピューターを古いアドレスで探し続けています。${user} として新しいコマンドを実行すると、再び接続されます。`;
+    case "ko":
+      return `아직 예전 주소로 이 컴퓨터를 찾고 있어요. ${user}(으)로 새 명령을 실행하면 다시 연결돼요.`;
+    case "pt-BR":
+      return `Ele ainda procura este computador no endereço antigo. Um novo comando executado como ${user} o traz de volta.`;
+    case "zh-Hans":
+      return `它仍在用旧地址寻找这台电脑。以 ${user} 身份运行一条新命令，就能让它重新连上。`;
+    case "zh-Hant":
+      return `它還在用舊的位址找這台電腦。以 ${user} 身分執行一個新指令，就能讓它重新連上。`;
+    case "en-XA":
+      return `[Îţ šţîļļ ļööķš ƒöŕ ţĥîš çöɱþûţéŕ áţ îţš öļð áððŕéšš. Å ñéŵ çöɱɱáñð ŕûñ áš ${user} ƀŕîñĝš îţ ƀáçķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt still looks for this computer at its old address. A new command run as \u202c${user}\u202e brings it back.\u202c`;
+  }
+  return `It still looks for this computer at its old address. A new command run as ${user} brings it back.`;
+}
+
+export function settingsDevicesStrandedThere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يزال يبحث عن هذا الحاسوب في عنوانه القديم. أمر جديد يُشغَّل هناك يعيده.`;
+    case "de":
+      return `Er sucht diesen Computer noch unter seiner alten Adresse. Ein neuer Befehl, dort ausgeführt, holt ihn zurück.`;
+    case "es":
+      return `Todavía busca esta computadora en su dirección anterior. Un comando nuevo ejecutado allí lo vuelve a conectar.`;
+    case "fr":
+      return `Il cherche encore cet ordinateur à son ancienne adresse. Une nouvelle commande exécutée là-bas le rétablit.`;
+    case "ja":
+      return `このコンピューターを古いアドレスで探し続けています。そちらで新しいコマンドを実行すると、再び接続されます。`;
+    case "ko":
+      return `아직 예전 주소로 이 컴퓨터를 찾고 있어요. 그곳에서 새 명령을 실행하면 다시 연결돼요.`;
+    case "pt-BR":
+      return `Ele ainda procura este computador no endereço antigo. Um novo comando executado lá o traz de volta.`;
+    case "zh-Hans":
+      return `它仍在用旧地址寻找这台电脑。在那里运行一条新命令，就能让它重新连上。`;
+    case "zh-Hant":
+      return `它還在用舊的位址找這台電腦。在那裡執行一個新指令，就能讓它重新連上。`;
+    case "en-XA":
+      return `[Îţ šţîļļ ļööķš ƒöŕ ţĥîš çöɱþûţéŕ áţ îţš öļð áððŕéšš. Å ñéŵ çöɱɱáñð ŕûñ ţĥéŕé ƀŕîñĝš îţ ƀáçķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt still looks for this computer at its old address. A new command run there brings it back.\u202c`;
+  }
+  return `It still looks for this computer at its old address. A new command run there brings it back.`;
+}
+
+export function settingsDevicesMakeCommand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إنشاء أمر`;
+    case "de":
+      return `Einen Befehl erstellen`;
+    case "es":
+      return `Crear un comando`;
+    case "fr":
+      return `Créer une commande`;
+    case "ja":
+      return `コマンドを作成`;
+    case "ko":
+      return `명령 만들기`;
+    case "pt-BR":
+      return `Criar um comando`;
+    case "zh-Hans":
+      return `生成命令`;
+    case "zh-Hant":
+      return `產生指令`;
+    case "en-XA":
+      return `[Ṁáķé á çöɱɱáñð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake a command\u202c`;
+  }
+  return `Make a command`;
+}
+
+export function settingsDevicesHeldLine(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يصل إلى هذا الحاسوب منذ انضمامه. لا يسمح macOS لـInfinitary على ${device} باستخدام شبكتك المحلية إلا بعد أن يأذن بذلك شخص هناك. إذا أُضيف بعنوانه، يصل إليه هذا الحاسوب بمفتاح SSH الخاص بك بدلًا من ذلك.`;
+    case "de":
+      return `Er hat diesen Computer seit seinem Beitritt nicht erreicht. macOS lässt Infinitary auf ${device} dein lokales Netzwerk erst nutzen, wenn jemand dort es erlaubt. Fügst du ihn über seine Adresse hinzu, erreicht dieser Computer ihn stattdessen mit deinem SSH-Schlüssel.`;
+    case "es":
+      return `No ha llegado a esta computadora desde que se unió. macOS deja que Infinitary en ${device} use tu red local solo cuando alguien allí lo permite. Si agregas ${device} por su dirección, esta computadora se conecta con tu clave SSH.`;
+    case "fr":
+      return `Il n’a pas joint cet ordinateur depuis qu’il a rejoint. macOS ne laisse Infinitary sur ${device} utiliser votre réseau local qu’une fois que quelqu’un l’y autorise sur place. Ajouté par son adresse, il est joint par cet ordinateur avec votre clé SSH.`;
+    case "ja":
+      return `参加してから一度もこのコンピューターに接続していません。macOS では、${device} 側で誰かが許可するまで、そちらの Infinitary はローカルネットワークを使えません。アドレスで追加すると、このコンピューターが代わりに SSH キーで接続します。`;
+    case "ko":
+      return `참여한 뒤로 이 컴퓨터에 연결된 적이 없어요. macOS는 ${device}에서 누군가 허용해야만 그곳의 Infinitary가 로컬 네트워크를 쓰게 해요. 주소로 추가하면 이 컴퓨터가 대신 SSH 키로 연결해요.`;
+    case "pt-BR":
+      return `Ele não alcançou este computador desde que entrou. O macOS só deixa o Infinitary em ${device} usar sua rede local depois que alguém lá permitir. Adicionado pelo endereço, ele é alcançado por este computador com sua chave SSH.`;
+    case "zh-Hans":
+      return `它加入后还没有连上过这台电脑。只有当 ${device} 那边有人允许后，macOS 才会让那里的 Infinitary 使用你的本地网络。如果按地址添加，这台电脑会改用你的 SSH 密钥连接它。`;
+    case "zh-Hant":
+      return `它加入後還沒有連上過這台電腦。必須有人在 ${device} 上允許，macOS 才會讓那裡的 Infinitary 使用你的區域網路。如果用位址加入，這台電腦會改用你的 SSH 金鑰連絡它。`;
+    case "en-XA":
+      return `[Îţ ĥáš ñöţ ŕéáçĥéð ţĥîš çöɱþûţéŕ šîñçé îţ ĵöîñéð. ɱáçÖŠ ļéţš Îñƒîñîţáŕý öñ ${device} ûšé ýöûŕ ļöçáļ ñéţŵöŕķ öñļý öñçé šöɱéöñé ţĥéŕé áļļöŵš îţ. Åððéð ƀý îţš áððŕéšš, ţĥîš çöɱþûţéŕ ŕéáçĥéš îţ ŵîţĥ ýöûŕ ŠŠĤ ķéý îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt has not reached this computer since it joined. macOS lets Infinitary on \u202c${device}\u202e use your local network only once someone there allows it. Added by its address, this computer reaches it with your SSH key instead.\u202c`;
+  }
+  return `It has not reached this computer since it joined. macOS lets Infinitary on ${device} use your local network only once someone there allows it. Added by its address, this computer reaches it with your SSH key instead.`;
+}
+
+export function settingsProjectsDelivery(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُقدَّم كطلب سحب حيث يُستضاف المشروع، أو كطلب سحب مجمّع يختبره طابور مشروعك قبل دمجه، أو يُدمج محليًا دون طلب سحب.`;
+    case "de":
+      return `Als Pull Request dort angeboten, wo das Projekt liegt, als gebündelter Pull Request, den die Warteschlange deines Projekts vor dem Zusammenführen testet, oder lokal zusammengeführt ohne Pull Request.`;
+    case "es":
+      return `Se ofrece como solicitud de incorporación de cambios donde se aloja el proyecto, como solicitud de incorporación de cambios por lotes que la cola de tu proyecto prueba antes de fusionarla, o se fusiona localmente sin solicitud de incorporación de cambios.`;
+    case "fr":
+      return `Proposé en demande de tirage là où le projet est hébergé, en demande de tirage groupée que la file de votre projet teste avant de la fusionner, ou fusionné localement sans demande de tirage.`;
+    case "ja":
+      return `プロジェクトの保管先でプルリクエストとして出すか、マージ前にプロジェクトのキューがテストする一括プルリクエストとして出すか、プルリクエストなしでローカルマージします。`;
+    case "ko":
+      return `프로젝트가 있는 곳에 끌어오기 요청으로 올리거나, 병합 전에 프로젝트의 대기열이 검사하는 일괄 끌어오기 요청으로 올리거나, 끌어오기 요청 없이 로컬에서 병합해요.`;
+    case "pt-BR":
+      return `Oferecido como solicitação de pull onde o projeto fica, como solicitação de pull em lote que a fila do seu projeto testa antes de mesclar, ou mesclado localmente sem solicitação de pull.`;
+    case "zh-Hans":
+      return `在项目托管处以拉取请求提交、以你项目的队列在合并前测试的批量拉取请求提交，或不经拉取请求本地合并。`;
+    case "zh-Hant":
+      return `在專案所在處以 pull request 提出、以你專案的佇列在合併前測試的批次 pull request 提出，或不經 pull request 本機合併。`;
+    case "en-XA":
+      return `[Öƒƒéŕéð áš á þûļļ ŕéǫûéšţ ŵĥéŕé ţĥé þŕöĵéçţ ļîṽéš, áš á ƀáţçĥéð þûļļ ŕéǫûéšţ ýöûŕ þŕöĵéçţ'š öŵñ ǫûéûé ţéšţš ƀéƒöŕé îţ ɱéŕĝéš, öŕ ɱéŕĝéð ļöçáļļý ŵîţĥ ñö þûļļ ŕéǫûéšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOffered as a pull request where the project lives, as a batched pull request your project's own queue tests before it merges, or merged locally with no pull request.\u202c`;
+  }
+  return `Offered as a pull request where the project lives, as a batched pull request your project's own queue tests before it merges, or merged locally with no pull request.`;
+}
+
+export function settingsProjectsQueueNeeds(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يُدمج طلب السحب المجمّع إلا بعد أن يجيزه طابور مشروعك. وإلى أن يصبح لمشروعك طابور، ينتظر الدمج الموافق عليه.`;
+    case "de":
+      return `Ein gebündelter Pull Request wird erst zusammengeführt, wenn die Warteschlange deines Projekts ihn bestanden hat. Solange dein Projekt keine hat, wartet ein bestätigtes Zusammenführen.`;
+    case "es":
+      return `Una solicitud de incorporación de cambios por lotes solo se fusiona cuando la cola de tu proyecto la aprueba. Hasta que tu proyecto tenga una, las fusiones aprobadas esperan.`;
+    case "fr":
+      return `Une demande de tirage groupée n’est fusionnée qu’une fois validée par la file de votre projet. Tant que votre projet n’en a pas, une fusion approuvée attend.`;
+    case "ja":
+      return `一括プルリクエストは、プロジェクトのキューで合格したときだけマージされます。プロジェクトにキューができるまで、承認されたマージは待機します。`;
+    case "ko":
+      return `일괄 끌어오기 요청은 프로젝트의 대기열을 통과해야만 병합돼요. 프로젝트에 대기열이 생길 때까지 승인된 병합은 기다려요.`;
+    case "pt-BR":
+      return `Uma solicitação de pull em lote só é mesclada depois que a fila do seu projeto a aprova. Até seu projeto ter uma, uma mesclagem aprovada espera.`;
+    case "zh-Hans":
+      return `批量拉取请求只有在你项目的队列通过后才会合并。在你的项目有队列之前，已批准的合并会一直等待。`;
+    case "zh-Hant":
+      return `批次 pull request 只有在你專案的佇列通過後才會合併。在你的專案有佇列之前，已核准的合併會一直等待。`;
+    case "en-XA":
+      return `[Å ƀáţçĥéð þûļļ ŕéǫûéšţ ɱéŕĝéš öñļý öñçé ýöûŕ þŕöĵéçţ'š ǫûéûé þáššéš îţ. Ûñţîļ ýöûŕ þŕöĵéçţ ĥáš öñé, áñ áþþŕöṽéð ɱéŕĝé ŵáîţš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA batched pull request merges only once your project's queue passes it. Until your project has one, an approved merge waits.\u202c`;
+  }
+  return `A batched pull request merges only once your project's queue passes it. Until your project has one, an approved merge waits.`;
+}
+
+export function settingsProjectsQueueHowToLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كيفية إعداده`;
+    case "de":
+      return `So richtest du eine ein`;
+    case "es":
+      return `Cómo configurar una`;
+    case "fr":
+      return `Comment en mettre une en place`;
+    case "ja":
+      return `キューの準備方法`;
+    case "ko":
+      return `설정 방법`;
+    case "pt-BR":
+      return `Como configurar uma`;
+    case "zh-Hans":
+      return `如何设置队列`;
+    case "zh-Hant":
+      return `如何設定佇列`;
+    case "en-XA":
+      return `[Ĥöŵ ţö šéţ öñé ûþ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHow to set one up\u202c`;
+  }
+  return `How to set one up`;
+}
+
+export function settingsProjectsQueueStepAsk(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اطلب من نائب القبطان إعداد الطابور الذي يأتي مع Infinitary. يخطط معك لأي فحوصات مشروعك تشغّلها كل دفعة، والدفعة التي تفشل تتوقف مؤقتًا حتى الموافقة على إصلاح.`;
+    case "de":
+      return `Bitte deinen ersten Offizier, die Warteschlange einzurichten, die Infinitary mitbringt. Er plant mit dir, welche Überprüfungen deines Projekts jedes Bündel ausführt, und ein Bündel, das fehlschlägt, pausiert, bis eine Korrektur bestätigt ist.`;
+    case "es":
+      return `Pide a tu primer oficial que configure la cola que incluye Infinitary. Planifica contigo qué comprobaciones de tu proyecto ejecuta cada lote, y un lote que falla queda en pausa hasta que se apruebe una corrección.`;
+    case "fr":
+      return `Demandez à votre second de mettre en place la file fournie avec Infinitary. Il prévoit avec vous quelles vérifications de votre projet chaque lot exécute, et un lot qui échoue se met en pause jusqu’à ce qu’une correction soit approuvée.`;
+    case "ja":
+      return `Infinitary に付属するキューの準備を一等航海士に頼みます。各バッチでプロジェクトのどのチェックを実行するかを一緒に計画し、失敗したバッチは修正が承認されるまで一時停止します。`;
+    case "ko":
+      return `일등항해사에게 Infinitary가 제공하는 대기열을 설정해 달라고 하세요. 각 일괄 실행에서 프로젝트의 어떤 검사를 돌릴지 함께 계획하고, 실패한 일괄 실행은 수정이 승인될 때까지 멈춰요.`;
+    case "pt-BR":
+      return `Peça ao seu imediato para configurar a fila que vem com o Infinitary. Ele planeja com você quais verificações do seu projeto cada lote roda, e um lote que falha fica pausado até uma correção ser aprovada.`;
+    case "zh-Hans":
+      return `请你的大副设置 Infinitary 提供的队列。它会和你一起规划每个批次运行你项目的哪些检查，而未通过的批次会暂停，直到修复获得批准。`;
+    case "zh-Hant":
+      return `請你的大副設定 Infinitary 提供的佇列。它會和你一起規劃每個批次要執行你專案的哪些檢查，而未通過的批次會暫停，直到修正獲得核准。`;
+    case "en-XA":
+      return `[Åšķ ýöûŕ ƒîŕšţ ɱáţé ţö šéţ ûþ ţĥé ǫûéûé Îñƒîñîţáŕý šĥîþš. Îţ þļáñš ŵîţĥ ýöû ŵĥîçĥ öƒ ýöûŕ þŕöĵéçţ'š çĥéçķš éáçĥ ƀáţçĥ ŕûñš, áñð á ƀáţçĥ ţĥáţ ƒáîļš þáûšéš ûñţîļ á ƒîẋ îš áþþŕöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAsk your first mate to set up the queue Infinitary ships. It plans with you which of your project's checks each batch runs, and a batch that fails pauses until a fix is approved.\u202c`;
+  }
+  return `Ask your first mate to set up the queue Infinitary ships. It plans with you which of your project's checks each batch runs, and a batch that fails pauses until a fix is approved.`;
+}
+
+export function settingsProjectsQueueStepWorkflow(input: { status: string }): string {
+  const status = input.status;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أو اكتب سير عملك الخاص الذي يجد طلبات السحب التي حالة ${status} فيها معلّقة ويختبرها، معًا أو واحدًا تلو الآخر.`;
+    case "de":
+      return `Oder schreib deinen eigenen Workflow, der Pull Requests mit ausstehendem Status ${status} findet und testet, zusammen oder einzeln.`;
+    case "es":
+      return `O escribe tu propio flujo de trabajo que busque las solicitudes de incorporación de cambios cuyo estado ${status} esté pendiente y las pruebe, juntas o de una en una.`;
+    case "fr":
+      return `Ou écrivez votre propre workflow qui trouve les demandes de tirage dont le statut ${status} est en attente et les teste, ensemble ou une par une.`;
+    case "ja":
+      return `または、${status} ステータスが pending のプルリクエストを探してテストするワークフローを自分で書きます。まとめてでも、1件ずつでもかまいません。`;
+    case "ko":
+      return `또는 ${status} 상태가 대기 중인 끌어오기 요청을 찾아 함께 또는 하나씩 검사하는 워크플로를 직접 작성하세요.`;
+    case "pt-BR":
+      return `Ou escreva seu próprio workflow que encontre solicitações de pull cujo status ${status} esteja pendente e as teste, juntas ou uma de cada vez.`;
+    case "zh-Hans":
+      return `或者自己编写一个工作流，找出 ${status} 状态为 pending 的拉取请求并测试它们，可以一起测，也可以逐个测。`;
+    case "zh-Hant":
+      return `或是自己寫一個工作流程，找出 ${status} 狀態為 pending 的 pull request 並測試，可以一起測，也可以一次一個。`;
+    case "en-XA":
+      return `[Öŕ ŵŕîţé ýöûŕ öŵñ ŵöŕķƒļöŵ ţĥáţ ƒîñðš þûļļ ŕéǫûéšţš ŵĥöšé ${status} šţáţûš îš þéñðîñĝ áñð ţéšţš ţĥéɱ, ţöĝéţĥéŕ öŕ öñé áţ á ţîɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOr write your own workflow that finds pull requests whose \u202c${status}\u202e status is pending and tests them, together or one at a time.\u202c`;
+  }
+  return `Or write your own workflow that finds pull requests whose ${status} status is pending and tests them, together or one at a time.`;
+}
+
+export function settingsProjectsQueueStepSet(input: { status: string }): string {
+  const status = input.status;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اجعله يضبط ${status} على success أو failure في كل نسخة، مع السبب في وصفها. يدمج Infinitary النسخة حالما يقرأ success، دون نقرة ثانية.`;
+    case "de":
+      return `Lass ihn ${status} bei jeder Version auf success oder failure setzen, mit dem Grund in der Beschreibung. Infinitary führt eine Version zusammen, sobald dort success steht, ohne zweiten Klick.`;
+    case "es":
+      return `Haz que establezca ${status} en success o failure en cada versión, con el motivo en su descripción. Infinitary fusiona una versión en cuanto lee success, sin un segundo clic.`;
+    case "fr":
+      return `Faites-lui définir ${status} sur success ou failure pour chaque version, avec la raison dans sa description. Infinitary fusionne une version dès qu’il lit success, sans second clic.`;
+    case "ja":
+      return `各バージョンで ${status} を success か failure に設定し、理由を説明欄に書くようにします。Infinitary は success を読み取るとそのバージョンをマージします。もう一度クリックする必要はありません。`;
+    case "ko":
+      return `각 버전에서 ${status}을(를) success 또는 failure로 설정하고, 설명에 이유를 적게 하세요. Infinitary는 success를 읽으면 두 번째 클릭 없이 그 버전을 병합해요.`;
+    case "pt-BR":
+      return `Faça com que ele defina ${status} como success ou failure em cada versão, com o motivo na descrição. O Infinitary mescla uma versão assim que lê success, sem um segundo clique.`;
+    case "zh-Hans":
+      return `让它在每个版本上把 ${status} 设为 success 或 failure，并在说明中写明原因。Infinitary 一读到 success 就会合并该版本，无需再点击一次。`;
+    case "zh-Hant":
+      return `讓它在每個版本上把 ${status} 設為 success 或 failure，並在描述中寫明原因。Infinitary 一讀到 success 就會合併該版本，不需要再點一次。`;
+    case "en-XA":
+      return `[Ĥáṽé îţ šéţ ${status} ţö šûççéšš öŕ ƒáîļûŕé öñ éáçĥ ṽéŕšîöñ, ŵîţĥ ţĥé ŕéášöñ îñ îţš ðéšçŕîþţîöñ. Îñƒîñîţáŕý ɱéŕĝéš á ṽéŕšîöñ öñçé îţ ŕéáðš šûççéšš, ŵîţĥ ñö šéçöñð çļîçķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHave it set \u202c${status}\u202e to success or failure on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.\u202c`;
+  }
+  return `Have it set ${status} to success or failure on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.`;
+}
+
+export function settingsProjectsQueueFirstMate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستطيع نائب القبطان التخطيط للطابور معك: اطلب منه إعداد طابور لهذا المشروع.`;
+    case "de":
+      return `Dein erster Offizier kann die Warteschlange mit dir planen: Bitte ihn, eine Warteschlange für dieses Projekt einzurichten.`;
+    case "es":
+      return `Tu primer oficial puede planificar la cola contigo: pídele que configure una cola para este proyecto.`;
+    case "fr":
+      return `Votre second peut prévoir la file avec vous : demandez-lui de mettre en place une file pour ce projet.`;
+    case "ja":
+      return `一等航海士がキューを一緒に計画できます：このプロジェクトのキューの準備を頼んでください。`;
+    case "ko":
+      return `일등항해사가 대기열을 함께 계획할 수 있어요: 이 프로젝트에 대기열을 설정해 달라고 하세요.`;
+    case "pt-BR":
+      return `Seu imediato pode planejar a fila com você: peça a ele para configurar uma fila para este projeto.`;
+    case "zh-Hans":
+      return `你的大副可以和你一起规划队列：请它为这个项目设置队列。`;
+    case "zh-Hant":
+      return `你的大副可以和你一起規劃佇列：請它為這個專案設定佇列。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé çáñ þļáñ ţĥé ǫûéûé ŵîţĥ ýöû: ášķ îţ ţö šéţ ûþ á ǫûéûé ƒöŕ ţĥîš þŕöĵéçţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate can plan the queue with you: ask it to set up a queue for this project.\u202c`;
+  }
+  return `Your first mate can plan the queue with you: ask it to set up a queue for this project.`;
+}
+
+export function settingsProjectsQueueGuideGithub(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح دليل GitHub لحالات الإيداع`;
+    case "de":
+      return `GitHubs Anleitung zu Commit-Status öffnen`;
+    case "es":
+      return `Abrir la guía de GitHub sobre los estados de confirmación`;
+    case "fr":
+      return `Ouvrir le guide de GitHub sur les statuts de commit`;
+    case "ja":
+      return `GitHub のコミットステータスのガイドを開く`;
+    case "ko":
+      return `GitHub의 커밋 상태 안내 열기`;
+    case "pt-BR":
+      return `Abrir o guia do GitHub sobre status de commit`;
+    case "zh-Hans":
+      return `打开 GitHub 的提交状态指南`;
+    case "zh-Hant":
+      return `開啟 GitHub 的提交狀態指南`;
+    case "en-XA":
+      return `[Öþéñ ĜîţĤûƀ'š ĝûîðé ţö çöɱɱîţ šţáţûšéš ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen GitHub's guide to commit statuses\u202c`;
+  }
+  return `Open GitHub's guide to commit statuses`;
+}
+
+export function settingsProjectsQueueStepPipelineGitlab(input: { status: string }): string {
+  const status = input.status;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أو اكتب مسار CI الخاص بك الذي يجد طلبات الدمج التي تقول أحدث حالة ${status} فيها Waiting for the batch check، ويختبرها، معًا أو واحدًا تلو الآخر.`;
+    case "de":
+      return `Oder schreib deine eigene Pipeline, die Merge Requests findet, deren neuester Status ${status} Waiting for the batch check lautet, und sie testet, zusammen oder einzeln.`;
+    case "es":
+      return `O escribe tu propio pipeline que busque las solicitudes de fusión cuyo estado ${status} más reciente diga «Waiting for the batch check» y las pruebe, juntas o de una en una.`;
+    case "fr":
+      return `Ou écrivez votre propre pipeline qui trouve les merge requests dont le dernier statut ${status} indique « Waiting for the batch check », et les teste, ensemble ou une par une.`;
+    case "ja":
+      return `または、最新の ${status} ステータスが Waiting for the batch check になっているマージリクエストを探してテストするパイプラインを自分で書きます。まとめてでも、1件ずつでもかまいません。`;
+    case "ko":
+      return `또는 최신 ${status} 상태가 Waiting for the batch check인 병합 요청을 찾아 함께 또는 하나씩 검사하는 파이프라인을 직접 작성하세요.`;
+    case "pt-BR":
+      return `Ou escreva seu próprio pipeline que encontre merge requests cujo status ${status} mais recente diga “Waiting for the batch check” e as teste, juntas ou uma de cada vez.`;
+    case "zh-Hans":
+      return `或者自己编写一个流水线，找出最新 ${status} 状态显示 Waiting for the batch check 的合并请求并测试它们，可以一起测，也可以逐个测。`;
+    case "zh-Hant":
+      return `或是自己寫一個 pipeline，找出最新 ${status} 狀態顯示 Waiting for the batch check 的 merge request 並測試，可以一起測，也可以一次一個。`;
+    case "en-XA":
+      return `[Öŕ ŵŕîţé ýöûŕ öŵñ þîþéļîñé ţĥáţ ƒîñðš ɱéŕĝé ŕéǫûéšţš ŵĥöšé ñéŵéšţ ${status} šţáţûš šáýš Ŵáîţîñĝ ƒöŕ ţĥé ƀáţçĥ çĥéçķ, áñð ţéšţš ţĥéɱ, ţöĝéţĥéŕ öŕ öñé áţ á ţîɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOr write your own pipeline that finds merge requests whose newest \u202c${status}\u202e status says Waiting for the batch check, and tests them, together or one at a time.\u202c`;
+  }
+  return `Or write your own pipeline that finds merge requests whose newest ${status} status says Waiting for the batch check, and tests them, together or one at a time.`;
+}
+
+export function settingsProjectsQueueStepSetGitlab(input: { status: string }): string {
+  const status = input.status;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اجعله يضبط ${status} على success أو failed في كل نسخة، مع السبب في وصفها. يدمج Infinitary النسخة حالما يقرأ success، دون نقرة ثانية.`;
+    case "de":
+      return `Lass sie ${status} bei jeder Version auf success oder failed setzen, mit dem Grund in der Beschreibung. Infinitary führt eine Version zusammen, sobald dort success steht, ohne zweiten Klick.`;
+    case "es":
+      return `Haz que establezca ${status} en success o failed en cada versión, con el motivo en su descripción. Infinitary fusiona una versión en cuanto lee success, sin un segundo clic.`;
+    case "fr":
+      return `Faites-lui définir ${status} sur success ou failed pour chaque version, avec la raison dans sa description. Infinitary fusionne une version dès qu’il lit success, sans second clic.`;
+    case "ja":
+      return `各バージョンで ${status} を success か failed に設定し、理由を説明欄に書くようにします。Infinitary は success を読み取るとそのバージョンをマージします。もう一度クリックする必要はありません。`;
+    case "ko":
+      return `각 버전에서 ${status}을(를) success 또는 failed로 설정하고, 설명에 이유를 적게 하세요. Infinitary는 success를 읽으면 두 번째 클릭 없이 그 버전을 병합해요.`;
+    case "pt-BR":
+      return `Faça com que ele defina ${status} como success ou failed em cada versão, com o motivo na descrição. O Infinitary mescla uma versão assim que lê success, sem um segundo clique.`;
+    case "zh-Hans":
+      return `让它在每个版本上把 ${status} 设为 success 或 failed，并在说明中写明原因。Infinitary 一读到 success 就会合并该版本，无需再点击一次。`;
+    case "zh-Hant":
+      return `讓它在每個版本上把 ${status} 設為 success 或 failed，並在描述中寫明原因。Infinitary 一讀到 success 就會合併該版本，不需要再點一次。`;
+    case "en-XA":
+      return `[Ĥáṽé îţ šéţ ${status} ţö šûççéšš öŕ ƒáîļéð öñ éáçĥ ṽéŕšîöñ, ŵîţĥ ţĥé ŕéášöñ îñ îţš ðéšçŕîþţîöñ. Îñƒîñîţáŕý ɱéŕĝéš á ṽéŕšîöñ öñçé îţ ŕéáðš šûççéšš, ŵîţĥ ñö šéçöñð çļîçķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHave it set \u202c${status}\u202e to success or failed on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.\u202c`;
+  }
+  return `Have it set ${status} to success or failed on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.`;
+}
+
+export function settingsProjectsQueueGuideGitlab(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح دليل GitLab لحالات الإيداع`;
+    case "de":
+      return `GitLabs Anleitung zu Commit-Status öffnen`;
+    case "es":
+      return `Abrir la guía de GitLab sobre los estados de confirmación`;
+    case "fr":
+      return `Ouvrir le guide de GitLab sur les statuts de commit`;
+    case "ja":
+      return `GitLab のコミットステータスのガイドを開く`;
+    case "ko":
+      return `GitLab의 커밋 상태 안내 열기`;
+    case "pt-BR":
+      return `Abrir o guia do GitLab sobre status de commit`;
+    case "zh-Hans":
+      return `打开 GitLab 的提交状态指南`;
+    case "zh-Hant":
+      return `開啟 GitLab 的提交狀態指南`;
+    case "en-XA":
+      return `[Öþéñ ĜîţĻáƀ'š ĝûîðé ţö çöɱɱîţ šţáţûšéš ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen GitLab's guide to commit statuses\u202c`;
+  }
+  return `Open GitLab's guide to commit statuses`;
+}
+
+export function settingsProjectsQueueKeyTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاح الطابور`;
+    case "de":
+      return `Der Schlüssel der Warteschlange`;
+    case "es":
+      return `La clave de la cola`;
+    case "fr":
+      return `La clé de la file`;
+    case "ja":
+      return `キューのキー`;
+    case "ko":
+      return `대기열 키`;
+    case "pt-BR":
+      return `A chave da fila`;
+    case "zh-Hans":
+      return `队列的密钥`;
+    case "zh-Hant":
+      return `佇列的金鑰`;
+    case "en-XA":
+      return `[Ţĥé ǫûéûé'š ķéý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe queue's key\u202c`;
+  }
+  return `The queue's key`;
+}
+
+export function settingsProjectsQueueKeyMissing(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحتاج طابور مشروعك إلى مفتاحه الخاص على ${place} ليكتب فحص الدفعة لكل تغيير. ينشئه Infinitary بتسجيل دخولك ويحفظه في إعدادات CI للمشروع، حيث لا تقرؤه إلا مهام الطابور نفسه.`;
+    case "de":
+      return `Die Warteschlange deines Projekts braucht auf ${place} einen eigenen Schlüssel, um die Sammelprüfung jeder Änderung zu schreiben. Infinitary erstellt ihn mit deiner Anmeldung und legt ihn in den CI-Einstellungen des Projekts ab, wo nur die eigenen Jobs der Warteschlange ihn lesen können.`;
+    case "es":
+      return `La cola de tu proyecto necesita su propia clave en ${place} para escribir la comprobación del lote de cada cambio. Infinitary la crea con tu inicio de sesión y la guarda en los ajustes de CI del proyecto, donde solo pueden leerla los trabajos de la propia cola.`;
+    case "fr":
+      return `La file de votre projet a besoin de sa propre clé sur ${place} pour écrire la vérification groupée de chaque modification. Infinitary la crée avec votre connexion et la garde dans les réglages CI du projet, où seuls les jobs de la file peuvent la lire.`;
+    case "ja":
+      return `プロジェクトのキューが各変更の一括チェックを書き込むには、${place} 上に専用のキーが必要です。Infinitary がサインインを使って作成し、プロジェクトの CI 設定に保管します。読み取れるのはキュー自身のジョブだけです。`;
+    case "ko":
+      return `프로젝트의 대기열이 각 변경의 일괄 검사를 기록하려면 ${place}에 자체 키가 필요해요. Infinitary가 선장님의 로그인으로 키를 만들어 프로젝트의 CI 설정에 보관하고, 그곳에서는 대기열의 작업만 키를 읽을 수 있어요.`;
+    case "pt-BR":
+      return `A fila do seu projeto precisa de uma chave própria no ${place} para escrever a verificação em lote de cada alteração. O Infinitary a cria com o seu login e a guarda nas configurações de CI do projeto, onde só os jobs da própria fila podem lê-la.`;
+    case "zh-Hans":
+      return `你项目的队列需要在 ${place} 上有自己的密钥，才能为每项改动写入批量检查。Infinitary 会用你的登录生成它，并保存在项目的 CI 设置中，只有队列自己的作业能读取。`;
+    case "zh-Hant":
+      return `你專案的佇列需要在 ${place} 上有自己的金鑰，才能為每項變更寫入批次檢查。Infinitary 會用你的登入產生它，並存放在專案的 CI 設定中，只有佇列自己的作業能讀取。`;
+    case "en-XA":
+      return `[Ýöûŕ þŕöĵéçţ'š ǫûéûé ñééðš îţš öŵñ ķéý öñ ${place} ţö ŵŕîţé éáçĥ çĥáñĝé'š ƀáţçĥ çĥéçķ. Îñƒîñîţáŕý ɱáķéš îţ ŵîţĥ ýöûŕ šîĝñ-îñ áñð ķééþš îţ îñ ţĥé þŕöĵéçţ'š ÇÎ šéţţîñĝš, ŵĥéŕé öñļý ţĥé ǫûéûé'š öŵñ ĵöƀš çáñ ŕéáð îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour project's queue needs its own key on \u202c${place}\u202e to write each change's batch check. Infinitary makes it with your sign-in and keeps it in the project's CI settings, where only the queue's own jobs can read it.\u202c`;
+  }
+  return `Your project's queue needs its own key on ${place} to write each change's batch check. Infinitary makes it with your sign-in and keeps it in the project's CI settings, where only the queue's own jobs can read it.`;
+}
+
+export function settingsProjectsQueueKeyReady(input: { date: string }): string {
+  const date = input.date;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاح الطابور صالح حتى ${date}. إنشاء مفتاح جديد يستبدله فورًا.`;
+    case "de":
+      return `Der Schlüssel der Warteschlange gilt bis ${date}. Erstellst du einen neuen, ersetzt er ihn sofort.`;
+    case "es":
+      return `La clave de la cola está vigente hasta ${date}. Crear una nueva la reemplaza de inmediato.`;
+    case "fr":
+      return `La clé de la file est valable jusqu’à ${date}. En créer une nouvelle la remplace aussitôt.`;
+    case "ja":
+      return `キューのキーは ${date} まで有効です。新しく作成すると、すぐに置き換わります。`;
+    case "ko":
+      return `대기열 키는 ${date}까지 유효해요. 새 키를 만들면 바로 교체돼요.`;
+    case "pt-BR":
+      return `A chave da fila vale até ${date}. Criar uma nova a substitui na hora.`;
+    case "zh-Hans":
+      return `队列的密钥有效期至 ${date}。生成新密钥会立即替换它。`;
+    case "zh-Hant":
+      return `佇列的金鑰在 ${date} 前有效。產生新金鑰會立即取代它。`;
+    case "en-XA":
+      return `[Ţĥé ǫûéûé'š ķéý îš îñ þļáçé ûñţîļ ${date}. Ṁáķîñĝ á ñéŵ öñé ŕéþļáçéš îţ áţ öñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe queue's key is in place until \u202c${date}\u202e. Making a new one replaces it at once.\u202c`;
+  }
+  return `The queue's key is in place until ${date}. Making a new one replaces it at once.`;
+}
+
+export function settingsProjectsQueueKeyUnreadable(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يستطيع تسجيل دخولك قراءة مفاتيح هذا المشروع على ${place}. يتطلب إنشاء مفتاح دور Maintainer في المشروع، وعلى gitlab.com باقة Premium أو Ultimate.`;
+    case "de":
+      return `Deine Anmeldung kann die Schlüssel dieses Projekts auf ${place} nicht lesen. Zum Erstellen brauchst du die Rolle Maintainer im Projekt und auf gitlab.com einen Premium- oder Ultimate-Tarif.`;
+    case "es":
+      return `Tu inicio de sesión no puede leer las claves de este proyecto en ${place}. Para crear una hace falta el rol Maintainer en el proyecto y, en gitlab.com, un plan Premium o Ultimate.`;
+    case "fr":
+      return `Votre connexion ne peut pas lire les clés de ce projet sur ${place}. En créer une demande le rôle Maintainer sur le projet et, sur gitlab.com, un forfait Premium ou Ultimate.`;
+    case "ja":
+      return `サインインでは、${place} 上のこのプロジェクトのキーを読み取れません。作成するにはプロジェクトの Maintainer ロールが必要で、gitlab.com では Premium または Ultimate プランも必要です。`;
+    case "ko":
+      return `현재 로그인으로는 ${place}에서 이 프로젝트의 키를 읽을 수 없어요. 키를 만들려면 프로젝트의 Maintainer 역할이 필요하고, gitlab.com에서는 Premium 또는 Ultimate 요금제도 필요해요.`;
+    case "pt-BR":
+      return `Seu login não consegue ler as chaves deste projeto no ${place}. Para criar uma, é preciso ter o papel Maintainer no projeto e, no gitlab.com, um plano Premium ou Ultimate.`;
+    case "zh-Hans":
+      return `你的登录无法读取这个项目在 ${place} 上的密钥。生成密钥需要项目的 Maintainer 角色，在 gitlab.com 上还需要 Premium 或 Ultimate 套餐。`;
+    case "zh-Hant":
+      return `你的登入無法讀取這個專案在 ${place} 上的金鑰。產生金鑰需要專案的 Maintainer 角色，在 gitlab.com 上還需要 Premium 或 Ultimate 方案。`;
+    case "en-XA":
+      return `[Ýöûŕ šîĝñ-îñ çáññöţ ŕéáð ţĥîš þŕöĵéçţ'š ķéýš öñ ${place}. Ṁáķîñĝ öñé ñééðš ţĥé Ṁáîñţáîñéŕ ŕöļé öñ ţĥé þŕöĵéçţ, áñð öñ ĝîţļáƀ.çöɱ á Þŕéɱîûɱ öŕ Ûļţîɱáţé þļáñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour sign-in cannot read this project's keys on \u202c${place}\u202e. Making one needs the Maintainer role on the project, and on gitlab.com a Premium or Ultimate plan.\u202c`;
+  }
+  return `Your sign-in cannot read this project's keys on ${place}. Making one needs the Maintainer role on the project, and on gitlab.com a Premium or Ultimate plan.`;
+}
+
+export function settingsProjectsQueueKeyMake(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إنشاء مفتاح الطابور`;
+    case "de":
+      return `Schlüssel der Warteschlange erstellen`;
+    case "es":
+      return `Crear la clave de la cola`;
+    case "fr":
+      return `Créer la clé de la file`;
+    case "ja":
+      return `キューのキーを作成`;
+    case "ko":
+      return `대기열 키 만들기`;
+    case "pt-BR":
+      return `Criar a chave da fila`;
+    case "zh-Hans":
+      return `生成队列的密钥`;
+    case "zh-Hant":
+      return `產生佇列的金鑰`;
+    case "en-XA":
+      return `[Ṁáķé ţĥé ǫûéûé'š ķéý ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake the queue's key\u202c`;
+  }
+  return `Make the queue's key`;
+}
+
+export function settingsProjectsQueueKeyRemake(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إنشاء مفتاح جديد`;
+    case "de":
+      return `Neuen Schlüssel erstellen`;
+    case "es":
+      return `Crear una clave nueva`;
+    case "fr":
+      return `Créer une nouvelle clé`;
+    case "ja":
+      return `新しいキーを作成`;
+    case "ko":
+      return `새 키 만들기`;
+    case "pt-BR":
+      return `Criar uma nova chave`;
+    case "zh-Hans":
+      return `生成新密钥`;
+    case "zh-Hant":
+      return `產生新金鑰`;
+    case "en-XA":
+      return `[Ṁáķé á ñéŵ ķéý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake a new key\u202c`;
+  }
+  return `Make a new key`;
+}
+
+export function settingsProjectsQueueKeyMade(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُنشئ مفتاح الطابور. يبقى في إعدادات CI لمشروعك، ولا يكون على حواسيبك أبدًا.`;
+    case "de":
+      return `Schlüssel der Warteschlange erstellt. Er bleibt in den CI-Einstellungen deines Projekts, nie auf deinen Computern.`;
+    case "es":
+      return `Se creó la clave de la cola. Se queda en los ajustes de CI de tu proyecto, nunca en tus computadoras.`;
+    case "fr":
+      return `Clé de la file créée. Elle reste dans les réglages CI de votre projet, jamais sur vos ordinateurs.`;
+    case "ja":
+      return `キューのキーを作成しました。プロジェクトの CI 設定に保管され、コンピューターに置かれることはありません。`;
+    case "ko":
+      return `대기열 키를 만들었어요. 키는 프로젝트의 CI 설정에만 있고, 컴퓨터에는 저장되지 않아요.`;
+    case "pt-BR":
+      return `A chave da fila foi criada. Ela fica nas configurações de CI do seu projeto, nunca nos seus computadores.`;
+    case "zh-Hans":
+      return `已生成队列的密钥。它保存在你项目的 CI 设置中，从不存放在你的电脑上。`;
+    case "zh-Hant":
+      return `已產生佇列的金鑰。它存放在你專案的 CI 設定中，從不放在你的電腦上。`;
+    case "en-XA":
+      return `[Ṁáðé ţĥé ǫûéûé'š ķéý. Îţ šţáýš îñ ýöûŕ þŕöĵéçţ'š ÇÎ šéţţîñĝš, ñéṽéŕ öñ ýöûŕ çöɱþûţéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMade the queue's key. It stays in your project's CI settings, never on your computers.\u202c`;
+  }
+  return `Made the queue's key. It stays in your project's CI settings, never on your computers.`;
+}
+
+export function settingsProjectsQueueShipped(input: { version: string }): string {
+  const version = input.version;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحدده مشروعك: يشغّل طابور Infinitary (النسخة ${version})، لذا تذهب تغييراته كطلبات سحب مجمّعة لكل من يعمل عليه.`;
+    case "de":
+      return `Von deinem Projekt festgelegt: Es nutzt die Warteschlange von Infinitary (Version ${version}), daher gehen seine Änderungen für alle, die daran arbeiten, als gebündelte Pull Requests.`;
+    case "es":
+      return `Lo establece tu proyecto: ejecuta la cola de Infinitary (versión ${version}), así que sus cambios van como solicitudes de incorporación de cambios por lotes para todos los que trabajan en él.`;
+    case "fr":
+      return `Défini par votre projet : il exécute la file d’Infinitary (version ${version}), donc ses modifications passent par des demandes de tirage groupées pour tous ceux qui y travaillent.`;
+    case "ja":
+      return `プロジェクトによる設定：Infinitary のキュー（バージョン ${version}）を実行しているため、作業する全員の変更が一括プルリクエストとして出されます。`;
+    case "ko":
+      return `프로젝트에서 정한 설정이에요: Infinitary의 대기열(버전 ${version})을 실행하므로, 이 프로젝트에서 일하는 모든 사람의 변경이 일괄 끌어오기 요청으로 올라가요.`;
+    case "pt-BR":
+      return `Definido pelo seu projeto: ele roda a fila do Infinitary (versão ${version}), então as alterações dele vão como solicitações de pull em lote para todos que trabalham nele.`;
+    case "zh-Hans":
+      return `由你的项目设置：它运行 Infinitary 的队列（版本 ${version}），所以对所有参与者来说，它的改动都以批量拉取请求提交。`;
+    case "zh-Hant":
+      return `由你的專案設定：它執行 Infinitary 的佇列（版本 ${version}），所以對每位參與的人來說，它的變更都會以批次 pull request 提出。`;
+    case "en-XA":
+      return `[Šéţ ƀý ýöûŕ þŕöĵéçţ: îţ ŕûñš Îñƒîñîţáŕý'š ǫûéûé (ṽéŕšîöñ ${version}), šö îţš çĥáñĝéš ĝö áš ƀáţçĥéð þûļļ ŕéǫûéšţš ƒöŕ éṽéŕýöñé ŵöŕķîñĝ öñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSet by your project: it runs Infinitary's queue (version \u202c${version}\u202e), so its changes go as batched pull requests for everyone working on it.\u202c`;
+  }
+  return `Set by your project: it runs Infinitary's queue (version ${version}), so its changes go as batched pull requests for everyone working on it.`;
+}
+
+export function settingsProjectsPauseTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدفعة متوقفة مؤقتًا`;
+    case "de":
+      return `Bündel pausiert`;
+    case "es":
+      return `Lote en pausa`;
+    case "fr":
+      return `Lot en pause`;
+    case "ja":
+      return `バッチ一時停止中`;
+    case "ko":
+      return `일괄 실행 일시 중지됨`;
+    case "pt-BR":
+      return `Lote pausado`;
+    case "zh-Hans":
+      return `批次已暂停`;
+    case "zh-Hant":
+      return `批次已暫停`;
+    case "en-XA":
+      return `[Ɓáţçĥ þáûšéð ~~~~]`;
+    case "ar-XB":
+      return `\u202eBatch paused\u202c`;
+  }
+  return `Batch paused`;
+}
+
+export function settingsProjectsPauseSummary(input: {
+  changes: string;
+  count: number;
+  run: string;
+  since: string;
+}): string {
+  const changes = input.changes;
+  const count = formatNumber(input.count);
+  const run = input.run;
+  const since = input.since;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `متوقف مؤقتًا منذ ${since}: فشل تشغيل الدفعة ${run} في فحوصاته، لذا ينتظر ${count} تغيير موافق عليه إصلاحًا: ${changes}.`;
+        case "one":
+          return `متوقف مؤقتًا منذ ${since}: فشل تشغيل الدفعة ${run} في فحوصاته، لذا ينتظر تغيير واحد موافق عليه إصلاحًا: ${changes}.`;
+        case "two":
+          return `متوقف مؤقتًا منذ ${since}: فشل تشغيل الدفعة ${run} في فحوصاته، لذا ينتظر تغييران موافق عليهما إصلاحًا: ${changes}.`;
+        case "few":
+          return `متوقف مؤقتًا منذ ${since}: فشل تشغيل الدفعة ${run} في فحوصاته، لذا تنتظر ${count} تغييرات موافق عليها إصلاحًا: ${changes}.`;
+        case "many":
+          return `متوقف مؤقتًا منذ ${since}: فشل تشغيل الدفعة ${run} في فحوصاته، لذا ينتظر ${count} تغييرًا موافقًا عليه إصلاحًا: ${changes}.`;
+        default:
+          return `متوقف مؤقتًا منذ ${since}: فشل تشغيل الدفعة ${run} في فحوصاته، لذا ينتظر ${count} تغيير موافق عليه إصلاحًا: ${changes}.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Pausiert seit ${since}: Bündellauf ${run} hat seine Überprüfungen nicht bestanden, daher wartet eine bestätigte Änderung auf eine Korrektur: ${changes}.`;
+        default:
+          return `Pausiert seit ${since}: Bündellauf ${run} hat seine Überprüfungen nicht bestanden, daher warten ${count} bestätigte Änderungen auf eine Korrektur: ${changes}.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `En pausa desde ${since}: la ejecución del lote ${run} no superó sus comprobaciones, así que un cambio aprobado espera una corrección: ${changes}.`;
+        case "many":
+          return `En pausa desde ${since}: la ejecución del lote ${run} no superó sus comprobaciones, así que ${count} de cambios aprobados esperan una corrección: ${changes}.`;
+        default:
+          return `En pausa desde ${since}: la ejecución del lote ${run} no superó sus comprobaciones, así que ${count} cambios aprobados esperan una corrección: ${changes}.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `En pause depuis ${since} : l’exécution du lot ${run} a échoué à ses vérifications, donc une modification approuvée attend une correction : ${changes}.`;
+        case "many":
+          return `En pause depuis ${since} : l’exécution du lot ${run} a échoué à ses vérifications, donc ${count} modifications approuvées attendent une correction : ${changes}.`;
+        default:
+          return `En pause depuis ${since} : l’exécution du lot ${run} a échoué à ses vérifications, donc ${count} modifications approuvées attendent une correction : ${changes}.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${since} から一時停止中：バッチ実行 ${run} がチェックに失敗したため、承認済みの変更${count}件が修正を待っています：${changes}。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${since}부터 일시 중지됨: 일괄 실행 ${run}이(가) 검사에 실패해서 승인된 변경 ${count}개가 수정을 기다려요: ${changes}.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Pausado desde ${since}: a execução do lote ${run} falhou nas verificações, então uma alteração aprovada aguarda uma correção: ${changes}.`;
+        case "many":
+          return `Pausado desde ${since}: a execução do lote ${run} falhou nas verificações, então ${count} alterações aprovadas aguardam uma correção: ${changes}.`;
+        default:
+          return `Pausado desde ${since}: a execução do lote ${run} falhou nas verificações, então ${count} alterações aprovadas aguardam uma correção: ${changes}.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `自 ${since} 起暂停：批次运行 ${run} 的检查未通过，所以 ${count} 项已批准的改动正在等待修复：${changes}。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `從 ${since} 起暫停：批次執行 ${run} 的檢查未通過，所以 ${count} 項已核准的變更正在等待修正：${changes}。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Þáûšéð šîñçé ${since}: ƀáţçĥ ŕûñ ${run} ƒáîļéð îţš çĥéçķš, šö öñé áþþŕöṽéð çĥáñĝé ŵáîţš ƒöŕ á ƒîẋ: ${changes}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[Þáûšéð šîñçé ${since}: ƀáţçĥ ŕûñ ${run} ƒáîļéð îţš çĥéçķš, šö ${count} áþþŕöṽéð çĥáñĝéš ŵáîţ ƒöŕ á ƒîẋ: ${changes}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202ePaused since \u202c${since}\u202e: batch run \u202c${run}\u202e failed its checks, so one approved change waits for a fix: \u202c${changes}\u202e.\u202c`;
+        default:
+          return `\u202ePaused since \u202c${since}\u202e: batch run \u202c${run}\u202e failed its checks, so \u202c${count}\u202e approved changes wait for a fix: \u202c${changes}\u202e.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Paused since ${since}: batch run ${run} failed its checks, so one approved change waits for a fix: ${changes}.`;
+    default:
+      return `Paused since ${since}: batch run ${run} failed its checks, so ${count} approved changes wait for a fix: ${changes}.`;
+  }
+}
+
+export function settingsProjectsPauseClaimed(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${who} يصلحه.`;
+    case "de":
+      return `${who} repariert es.`;
+    case "es":
+      return `${who} lo está reparando.`;
+    case "fr":
+      return `${who} s’occupe de la réparation.`;
+    case "ja":
+      return `${who} が修正しています。`;
+    case "ko":
+      return `${who}이(가) 고치고 있어요.`;
+    case "pt-BR":
+      return `${who} está corrigindo.`;
+    case "zh-Hans":
+      return `${who} 正在修复。`;
+    case "zh-Hant":
+      return `${who} 正在修正。`;
+    case "en-XA":
+      return `[${who} îš ŕéþáîŕîñĝ îţ. ~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202e is repairing it.\u202c`;
+  }
+  return `${who} is repairing it.`;
+}
+
+export function settingsProjectsPauseUnclaimed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يتولَّ أحد الإصلاح بعد. يبدؤه فرد من الطاقم عندما يتوقف أحد تغييراتك مؤقتًا.`;
+    case "de":
+      return `Noch hat niemand die Reparatur übernommen. Ein Crewmitglied beginnt sie, wenn eine deiner Änderungen pausiert ist.`;
+    case "es":
+      return `Nadie se ha encargado todavía de la reparación. Un tripulante la empieza cuando uno de tus cambios queda en pausa.`;
+    case "fr":
+      return `Personne n’a encore pris la réparation. Un équipier la démarre quand l’une de vos modifications est mise en pause.`;
+    case "ja":
+      return `まだ誰も修正を引き受けていません。変更が一時停止されると、乗組員が修正を始めます。`;
+    case "ko":
+      return `아직 아무도 수정을 맡지 않았어요. 변경이 일시 중지되면 선원이 수정을 시작해요.`;
+    case "pt-BR":
+      return `Ninguém assumiu a correção ainda. Um tripulante a inicia quando uma das suas alterações é pausada.`;
+    case "zh-Hans":
+      return `还没有人接手修复。当你的某项改动被暂停时，会有一位船员开始修复。`;
+    case "zh-Hant":
+      return `還沒有人接手修正。當你的某項變更被暫停時，會有一位船員開始修正。`;
+    case "en-XA":
+      return `[Ñöƀöðý ĥáš ţáķéñ ţĥé ŕéþáîŕ ýéţ. Å çŕéŵɱáţé šţáŕţš îţ ŵĥéñ öñé öƒ ýöûŕ çĥáñĝéš îš þáûšéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNobody has taken the repair yet. A crewmate starts it when one of your changes is paused.\u202c`;
+  }
+  return `Nobody has taken the repair yet. A crewmate starts it when one of your changes is paused.`;
+}
+
+export function settingsProjectsPauseUnread(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة مشكلات هذا المشروع، لذا لا يُعرف من يصلحه، ولا تُعرض إلا التغييرات المتوقفة التي رآها هذا التطبيق.`;
+    case "de":
+      return `Die Issues dieses Projekts konnten nicht gelesen werden. Daher ist nicht bekannt, wer es repariert, und nur die pausierten Änderungen, die diese App gesehen hat, sind aufgeführt.`;
+    case "es":
+      return `No se pudieron leer las incidencias de este proyecto, así que no se sabe quién lo repara, y solo aparecen los cambios en pausa que vio esta app.`;
+    case "fr":
+      return `Les tickets de ce projet n’ont pas pu être lus : on ne sait donc pas qui s’occupe de la réparation, et seules les modifications en pause vues par cette app sont listées.`;
+    case "ja":
+      return `このプロジェクトの Issue を読み取れなかったため、誰が修正するかは不明で、このアプリが確認した一時停止中の変更だけを表示しています。`;
+    case "ko":
+      return `이 프로젝트의 이슈를 읽을 수 없어서, 누가 고치는지 알 수 없고 이 앱이 본 일시 중지된 변경만 표시돼요.`;
+    case "pt-BR":
+      return `Não foi possível ler as issues deste projeto, então não se sabe quem está corrigindo, e só aparecem as alterações pausadas que este app viu.`;
+    case "zh-Hans":
+      return `无法读取这个项目的 issue，所以不知道由谁修复，并且只列出了本应用看到的已暂停改动。`;
+    case "zh-Hant":
+      return `無法讀取這個專案的 issue，所以不知道由誰修正，而且只列出這個程式看到的已暫停變更。`;
+    case "en-XA":
+      return `[Ţĥîš þŕöĵéçţ'š îššûéš çöûļð ñöţ ƀé ŕéáð, šö ŵĥö ŕéþáîŕš îţ îš ñöţ ķñöŵñ, áñð öñļý ţĥé þáûšéð çĥáñĝéš ţĥîš áþþ šáŵ áŕé ļîšţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis project's issues could not be read, so who repairs it is not known, and only the paused changes this app saw are listed.\u202c`;
+  }
+  return `This project's issues could not be read, so who repairs it is not known, and only the paused changes this app saw are listed.`;
+}
+
+export function settingsProjectsPauseIssue(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح المشكلة`;
+    case "de":
+      return `Issue öffnen`;
+    case "es":
+      return `Abrir la incidencia`;
+    case "fr":
+      return `Ouvrir le ticket`;
+    case "ja":
+      return `Issue を開く`;
+    case "ko":
+      return `이슈 열기`;
+    case "pt-BR":
+      return `Abrir a issue`;
+    case "zh-Hans":
+      return `打开 issue`;
+    case "zh-Hant":
+      return `開啟 issue`;
+    case "en-XA":
+      return `[Öþéñ ţĥé îššûé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the issue\u202c`;
+  }
+  return `Open the issue`;
+}
+
+export function settingsProjectsPauseRun(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح تشغيل الدفعة`;
+    case "de":
+      return `Bündellauf öffnen`;
+    case "es":
+      return `Abrir la ejecución del lote`;
+    case "fr":
+      return `Ouvrir l’exécution du lot`;
+    case "ja":
+      return `バッチ実行を開く`;
+    case "ko":
+      return `일괄 실행 열기`;
+    case "pt-BR":
+      return `Abrir a execução do lote`;
+    case "zh-Hans":
+      return `打开批次运行`;
+    case "zh-Hant":
+      return `開啟批次執行`;
+    case "en-XA":
+      return `[Öþéñ ţĥé ƀáţçĥ ŕûñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the batch run\u202c`;
+  }
+  return `Open the batch run`;
+}
+
+export function settingsProjectsPauseReason(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لماذا يمكن للطابور أن يستمر`;
+    case "de":
+      return `Warum die Warteschlange weiterlaufen darf`;
+    case "es":
+      return `Por qué la cola puede continuar`;
+    case "fr":
+      return `Pourquoi la file peut continuer`;
+    case "ja":
+      return `キューを再開してよい理由`;
+    case "ko":
+      return `대기열을 계속 진행해도 되는 이유`;
+    case "pt-BR":
+      return `Por que a fila pode continuar`;
+    case "zh-Hans":
+      return `队列可以继续的理由`;
+    case "zh-Hant":
+      return `佇列可以繼續的原因`;
+    case "en-XA":
+      return `[Ŵĥý ţĥé ǫûéûé ɱáý ĝö öñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhy the queue may go on\u202c`;
+  }
+  return `Why the queue may go on`;
+}
+
+export function settingsProjectsPauseResume(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استئناف`;
+    case "de":
+      return `Fortsetzen`;
+    case "es":
+      return `Reanudar`;
+    case "fr":
+      return `Reprendre`;
+    case "ja":
+      return `再開`;
+    case "ko":
+      return `다시 시작`;
+    case "pt-BR":
+      return `Retomar`;
+    case "zh-Hans":
+      return `继续`;
+    case "zh-Hant":
+      return `繼續`;
+    case "en-XA":
+      return `[Ŕéšûɱé ~~]`;
+    case "ar-XB":
+      return `\u202eResume\u202c`;
+  }
+  return `Resume`;
+}
+
+export function settingsProjectsPauseSendBack(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة`;
+    case "de":
+      return `Zurückschicken`;
+    case "es":
+      return `Devolver`;
+    case "fr":
+      return `Renvoyer`;
+    case "ja":
+      return `差し戻す`;
+    case "ko":
+      return `되돌려 보내기`;
+    case "pt-BR":
+      return `Devolver`;
+    case "zh-Hans":
+      return `退回`;
+    case "zh-Hant":
+      return `退回`;
+    case "en-XA":
+      return `[Šéñð ƀáçķ ~~~]`;
+    case "ar-XB":
+      return `\u202eSend back\u202c`;
+  }
+  return `Send back`;
+}
+
+export function settingsProjectsPauseSendBackWhich(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التغيير المراد إعادته`;
+    case "de":
+      return `Zurückzuschickende Änderung`;
+    case "es":
+      return `Cambio que devolver`;
+    case "fr":
+      return `Modification à renvoyer`;
+    case "ja":
+      return `差し戻す変更`;
+    case "ko":
+      return `되돌려 보낼 변경`;
+    case "pt-BR":
+      return `Alteração a devolver`;
+    case "zh-Hans":
+      return `要退回的改动`;
+    case "zh-Hant":
+      return `要退回的變更`;
+    case "en-XA":
+      return `[Çĥáñĝé ţö šéñð ƀáçķ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChange to send back\u202c`;
+  }
+  return `Change to send back`;
+}
+
+export function settingsProjectsPauseNeedsReason(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اذكر أولًا لماذا يمكن للطابور أن يستمر.`;
+    case "de":
+      return `Sag zuerst, warum die Warteschlange weiterlaufen darf.`;
+    case "es":
+      return `Primero di por qué la cola puede continuar.`;
+    case "fr":
+      return `Indiquez d’abord pourquoi la file peut continuer.`;
+    case "ja":
+      return `先にキューを再開してよい理由を書いてください。`;
+    case "ko":
+      return `먼저 대기열을 계속 진행해도 되는 이유를 적어 주세요.`;
+    case "pt-BR":
+      return `Diga primeiro por que a fila pode continuar.`;
+    case "zh-Hans":
+      return `请先说明队列可以继续的理由。`;
+    case "zh-Hant":
+      return `請先說明佇列可以繼續的原因。`;
+    case "en-XA":
+      return `[Šáý ŵĥý ţĥé ǫûéûé ɱáý ĝö öñ ƒîŕšţ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSay why the queue may go on first.\u202c`;
+  }
+  return `Say why the queue may go on first.`;
+}
+
+export function settingsProjectsPauseSent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `طُلب من الطابور أن يستمر. ينتهي التوقف المؤقت حالما تبدأ دفعته التالية.`;
+    case "de":
+      return `Die Warteschlange wurde gebeten weiterzulaufen. Die Pause endet, sobald ihr nächstes Bündel startet.`;
+    case "es":
+      return `Se pidió a la cola que continúe. La pausa termina cuando empiece su siguiente lote.`;
+    case "fr":
+      return `La file a été invitée à continuer. La pause prend fin dès que son prochain lot démarre.`;
+    case "ja":
+      return `キューに再開を依頼しました。次のバッチが始まると一時停止は終わります。`;
+    case "ko":
+      return `대기열에 계속 진행하라고 요청했어요. 다음 일괄 실행이 시작되면 일시 중지가 끝나요.`;
+    case "pt-BR":
+      return `A fila foi avisada para continuar. A pausa termina assim que o próximo lote começar.`;
+    case "zh-Hans":
+      return `已请求队列继续。下一个批次开始后，暂停即结束。`;
+    case "zh-Hant":
+      return `已要求佇列繼續。下一個批次開始後，暫停就會結束。`;
+    case "en-XA":
+      return `[Åšķéð ţĥé ǫûéûé ţö ĝö öñ. Ţĥé þáûšé éñðš öñçé îţš ñéẋţ ƀáţçĥ šţáŕţš. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAsked the queue to go on. The pause ends once its next batch starts.\u202c`;
+  }
+  return `Asked the queue to go on. The pause ends once its next batch starts.`;
+}
+
+export function settingsProjectsQueueNoHost(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `طلبات السحب المجمّعة غير متاحة هنا: ليس لدى مستضيف هذا المشروع CI يستطيع تشغيل طابور Infinitary.`;
+    case "de":
+      return `Gebündelte Pull Requests gibt es hier nicht: Der Host dieses Projekts hat keine CI, die die Warteschlange von Infinitary ausführen kann.`;
+    case "es":
+      return `Aquí no se ofrecen solicitudes de incorporación de cambios por lotes: el sitio que aloja este proyecto no tiene CI que pueda ejecutar la cola de Infinitary.`;
+    case "fr":
+      return `Les demandes de tirage groupées ne sont pas proposées ici : l’hébergeur de ce projet n’a pas de CI capable d’exécuter la file d’Infinitary.`;
+    case "ja":
+      return `ここでは一括プルリクエストは使えません：このプロジェクトのホストには、Infinitary のキューを実行できる CI がありません。`;
+    case "ko":
+      return `여기서는 일괄 끌어오기 요청을 쓸 수 없어요: 이 프로젝트 호스트에는 Infinitary의 대기열을 실행할 CI가 없어요.`;
+    case "pt-BR":
+      return `Solicitações de pull em lote não são oferecidas aqui: o host deste projeto não tem CI que possa rodar a fila do Infinitary.`;
+    case "zh-Hans":
+      return `这里不提供批量拉取请求：这个项目的托管平台没有能运行 Infinitary 队列的 CI。`;
+    case "zh-Hant":
+      return `這裡不提供批次 pull request：這個專案的主機沒有能執行 Infinitary 佇列的 CI。`;
+    case "en-XA":
+      return `[Ɓáţçĥéð þûļļ ŕéǫûéšţš áŕé ñöţ öƒƒéŕéð ĥéŕé: ţĥîš þŕöĵéçţ'š ĥöšţ ĥáš ñö ÇÎ ţĥáţ çáñ ŕûñ Îñƒîñîţáŕý'š ǫûéûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBatched pull requests are not offered here: this project's host has no CI that can run Infinitary's queue.\u202c`;
+  }
+  return `Batched pull requests are not offered here: this project's host has no CI that can run Infinitary's queue.`;
+}
+
+export function settingsProjectsQueueWaiting(input: { delivery: string }): string {
+  const delivery = input.delivery;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تُفعَّل طلبات السحب المجمّعة حالما يُدمج في هذا المشروع سير عمل يذكر فحص الدفعة الخاص به. وحتى ذلك الحين، تذهب التغييرات كـ${delivery}.`;
+    case "de":
+      return `Gebündelte Pull Requests werden aktiv, sobald in diesem Projekt ein Workflow zusammengeführt ist, der seine Sammelprüfung nennt. Bis dahin gehen Änderungen als ${delivery}.`;
+    case "es":
+      return `Las solicitudes de incorporación de cambios por lotes se activan cuando se fusiona en este proyecto un flujo de trabajo que mencione su comprobación del lote. Hasta entonces, los cambios van como ${delivery}.`;
+    case "fr":
+      return `Les demandes de tirage groupées s’activent dès qu’un workflow de ce projet qui mentionne sa vérification groupée est fusionné. D’ici là, les modifications passent par ${delivery}.`;
+    case "ja":
+      return `このプロジェクトで一括チェックに触れたワークフローがマージされると、一括プルリクエストが有効になります。それまでは、変更は ${delivery} として出されます。`;
+    case "ko":
+      return `이 프로젝트에서 일괄 검사를 언급하는 워크플로가 병합되면 일괄 끌어오기 요청이 켜져요. 그전까지 변경은 ${delivery}(으)로 올라가요.`;
+    case "pt-BR":
+      return `As solicitações de pull em lote são ativadas assim que um workflow deste projeto que menciona a verificação em lote for mesclado. Até lá, as alterações vão como ${delivery}.`;
+    case "zh-Hans":
+      return `当这个项目中一个提到其批量检查的工作流合并后，批量拉取请求就会开启。在此之前，改动以 ${delivery} 提交。`;
+    case "zh-Hant":
+      return `當這個專案中一個提到批次檢查的工作流程合併後，批次 pull request 就會開啟。在那之前，變更會以 ${delivery} 提出。`;
+    case "en-XA":
+      return `[Ɓáţçĥéð þûļļ ŕéǫûéšţš ţûŕñ öñ öñçé á ŵöŕķƒļöŵ îñ ţĥîš þŕöĵéçţ ţĥáţ ɱéñţîöñš îţš ƀáţçĥ çĥéçķ ɱéŕĝéš. Ûñţîļ ţĥéñ, çĥáñĝéš ĝö áš ${delivery}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBatched pull requests turn on once a workflow in this project that mentions its batch check merges. Until then, changes go as \u202c${delivery}\u202e.\u202c`;
+  }
+  return `Batched pull requests turn on once a workflow in this project that mentions its batch check merges. Until then, changes go as ${delivery}.`;
+}
+
+export function settingsProjectsRowPersonal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُبنى في مكانه`;
+    case "de":
+      return `baut direkt im Ordner`;
+    case "es":
+      return `construido en el lugar`;
+    case "fr":
+      return `construit sur place`;
+    case "ja":
+      return `その場で作成`;
+    case "ko":
+      return `그 자리에서 만듦`;
+    case "pt-BR":
+      return `feito no local`;
+    case "zh-Hans":
+      return `就地构建`;
+    case "zh-Hant":
+      return `就地建置`;
+    case "en-XA":
+      return `[ƀûîļðš îñ þļáçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202ebuilds in place\u202c`;
+  }
+  return `builds in place`;
+}
+
+export function settingsProjectsRowLinked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مرتبط`;
+    case "de":
+      return `verknüpft`;
+    case "es":
+      return `vinculado`;
+    case "fr":
+      return `lié`;
+    case "ja":
+      return `リンク済み`;
+    case "ko":
+      return `연결됨`;
+    case "pt-BR":
+      return `vinculado`;
+    case "zh-Hans":
+      return `已关联`;
+    case "zh-Hant":
+      return `已連結`;
+    case "en-XA":
+      return `[ļîñķéð ~~]`;
+    case "ar-XB":
+      return `\u202elinked\u202c`;
+  }
+  return `linked`;
+}
+
+export function settingsProjectsRowCare(input: { care: string }): string {
+  const care = input.care;
+  switch (currentLanguage()) {
+    case "ar":
+      return `العناية: ${care}`;
+    case "de":
+      return `Sorgfalt: ${care}`;
+    case "es":
+      return `cuidado ${care}`;
+    case "fr":
+      return `soin ${care}`;
+    case "ja":
+      return `慎重さ：${care}`;
+    case "ko":
+      return `주의 수준: ${care}`;
+    case "pt-BR":
+      return `Cuidado ${care}`;
+    case "zh-Hans":
+      return `把关：${care}`;
+    case "zh-Hant":
+      return `謹慎度：${care}`;
+    case "en-XA":
+      return `[${care} ŕîĝöŕ ~~]`;
+    case "ar-XB":
+      return `${care}\u202e rigor\u202c`;
+  }
+  return `${care} rigor`;
+}
+
+export function settingsProjectsRowRuns(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل ${where}`;
+    case "de":
+      return `läuft ${where}`;
+    case "es":
+      return `se ejecuta ${where}`;
+    case "fr":
+      return `s’exécute ${where}`;
+    case "ja":
+      return `${where} 実行`;
+    case "ko":
+      return `실행 위치: ${where}`;
+    case "pt-BR":
+      return `roda ${where}`;
+    case "zh-Hans":
+      return `${where} 运行`;
+    case "zh-Hant":
+      return `${where} 執行`;
+    case "en-XA":
+      return `[ŕûñš ${where} ~~]`;
+    case "ar-XB":
+      return `\u202eruns \u202c${where}`;
+  }
+  return `runs ${where}`;
+}
+
+export function settingsProjectsCostTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حد التكلفة`;
+    case "de":
+      return `Kostengrenze`;
+    case "es":
+      return `Límite de costo`;
+    case "fr":
+      return `Plafond de coût`;
+    case "ja":
+      return `コスト上限`;
+    case "ko":
+      return `비용 한도`;
+    case "pt-BR":
+      return `Limite de custo`;
+    case "zh-Hans":
+      return `费用上限`;
+    case "zh-Hant":
+      return `費用上限`;
+    case "en-XA":
+      return `[Çöšţ ļîɱîţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eCost limit\u202c`;
+  }
+  return `Cost limit`;
+}
+
+export function settingsProjectsCostDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدولارات المقدّرة لكل مهمة وكل أجزائها. اتبع حد التطبيق في الذكاء، أو حدّد مبلغًا، أو اختر بلا حد.`;
+    case "de":
+      return `Geschätzte Dollar für jede Aufgabe samt all ihren Teilen. Folge der Grenze der App unter Intelligenz, leg einen Betrag fest oder wähl keine Grenze.`;
+    case "es":
+      return `Dólares estimados para cada tarea y todas sus partes. Sigue el límite de la app en Inteligencia, establece un importe o elige sin límite.`;
+    case "fr":
+      return `Dollars estimés pour chaque tâche et toutes ses parties. Suivez le plafond de l’app dans Intelligence, fixez un montant ou choisissez aucun plafond.`;
+    case "ja":
+      return `各タスクとそのすべてのパートにかかる推定金額（ドル）です。「インテリジェンス」のアプリの上限に従うか、金額を設定するか、上限なしを選びます。`;
+    case "ko":
+      return `각 작업과 그 모든 부분에 드는 예상 비용(달러)이에요. 지능에 있는 앱의 한도를 따르거나, 금액을 정하거나, 한도 없음을 고르세요.`;
+    case "pt-BR":
+      return `Dólares estimados para cada tarefa e todas as suas partes. Siga o limite do app em Inteligência, defina um valor ou escolha sem limite.`;
+    case "zh-Hans":
+      return `每个任务及其所有部分的预估费用（美元）。可跟随“智能”中的应用上限、设定金额，或选择不设上限。`;
+    case "zh-Hant":
+      return `每項任務及其所有部分的預估費用（美元）。可以跟隨「智慧等級」中的程式上限、設定金額，或選擇不設上限。`;
+    case "en-XA":
+      return `[Éšţîɱáţéð ðöļļáŕš ƒöŕ éáçĥ ţášķ áñð áļļ îţš þáŕţš. Ƒöļļöŵ ţĥé áþþ’š ļîɱîţ îñ Îñţéļļîĝéñçé, šéţ áñ áɱöûñţ, öŕ çĥööšé ñö ļîɱîţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimated dollars for each task and all its parts. Follow the app’s limit in Intelligence, set an amount, or choose no limit.\u202c`;
+  }
+  return `Estimated dollars for each task and all its parts. Follow the app’s limit in Intelligence, set an amount, or choose no limit.`;
+}
+
+export function settingsProjectsCostFollow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اتباع التطبيق`;
+    case "de":
+      return `Wie die App`;
+    case "es":
+      return `Seguir la app`;
+    case "fr":
+      return `Suivre l’app`;
+    case "ja":
+      return `アプリに従う`;
+    case "ko":
+      return `앱 설정 따르기`;
+    case "pt-BR":
+      return `Seguir o app`;
+    case "zh-Hans":
+      return `跟随应用`;
+    case "zh-Hant":
+      return `跟隨程式`;
+    case "en-XA":
+      return `[Ƒöļļöŵ áþþ ~~~~]`;
+    case "ar-XB":
+      return `\u202eFollow app\u202c`;
+  }
+  return `Follow app`;
+}
+
+export function settingsProjectsCostOwn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مبلغ خاص`;
+    case "de":
+      return `Eigener Betrag`;
+    case "es":
+      return `Importe propio`;
+    case "fr":
+      return `Montant propre`;
+    case "ja":
+      return `独自の金額`;
+    case "ko":
+      return `직접 정한 금액`;
+    case "pt-BR":
+      return `Valor próprio`;
+    case "zh-Hans":
+      return `自定金额`;
+    case "zh-Hant":
+      return `自訂金額`;
+    case "en-XA":
+      return `[Öŵñ áɱöûñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eOwn amount\u202c`;
+  }
+  return `Own amount`;
+}
+
+export function settingsProjectsCostNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلا حد`;
+    case "de":
+      return `Keine Grenze`;
+    case "es":
+      return `Sin límite`;
+    case "fr":
+      return `Aucun plafond`;
+    case "ja":
+      return `上限なし`;
+    case "ko":
+      return `한도 없음`;
+    case "pt-BR":
+      return `Sem limite`;
+    case "zh-Hans":
+      return `不设上限`;
+    case "zh-Hant":
+      return `不設上限`;
+    case "en-XA":
+      return `[Ñö ļîɱîţ ~~~]`;
+    case "ar-XB":
+      return `\u202eNo limit\u202c`;
+  }
+  return `No limit`;
+}
+
+export function settingsProjectsCostAmount(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حد تكلفة المشروع بالدولارات المقدّرة`;
+    case "de":
+      return `Kostengrenze des Projekts in geschätzten Dollar`;
+    case "es":
+      return `Límite de costo del proyecto en dólares estimados`;
+    case "fr":
+      return `Plafond de coût du projet en dollars estimés`;
+    case "ja":
+      return `プロジェクトのコスト上限（推定ドル）`;
+    case "ko":
+      return `프로젝트 비용 한도(예상 달러)`;
+    case "pt-BR":
+      return `Limite de custo do projeto em dólares estimados`;
+    case "zh-Hans":
+      return `项目费用上限（预估美元）`;
+    case "zh-Hant":
+      return `專案費用上限（預估美元）`;
+    case "en-XA":
+      return `[Þŕöĵéçţ çöšţ ļîɱîţ îñ éšţîɱáţéð ðöļļáŕš ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eProject cost limit in estimated dollars\u202c`;
+  }
+  return `Project cost limit in estimated dollars`;
+}
+
+export function settingsForgeThisMacRole(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا الحاسوب · يفتح طلبات السحب ويفحصها ويدمجها`;
+    case "de":
+      return `dieser Computer · öffnet, prüft und führt Pull Requests zusammen`;
+    case "es":
+      return `esta computadora · abre, comprueba y fusiona solicitudes de incorporación de cambios`;
+    case "fr":
+      return `cet ordinateur · ouvre, vérifie et fusionne les demandes de tirage`;
+    case "ja":
+      return `このコンピューター · プルリクエストの作成、チェック、マージ`;
+    case "ko":
+      return `이 컴퓨터 · 끌어오기 요청을 열고, 검사하고, 병합해요`;
+    case "pt-BR":
+      return `este computador · abre, verifica e mescla solicitações de pull`;
+    case "zh-Hans":
+      return `这台电脑 · 创建、检查和合并拉取请求`;
+    case "zh-Hant":
+      return `這台電腦 · 開啟、檢查並合併 pull request`;
+    case "en-XA":
+      return `[ţĥîš çöɱþûţéŕ · öþéñš, çĥéçķš áñð ɱéŕĝéš þûļļ ŕéǫûéšţš ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethis computer · opens, checks and merges pull requests\u202c`;
+  }
+  return `this computer · opens, checks and merges pull requests`;
+}
+
+export function settingsForgeDeviceRole(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستنسخ عمله ويدفعه بنفسه`;
+    case "de":
+      return `klont und pusht seine eigene Arbeit`;
+    case "es":
+      return `clona e inserta su propio trabajo`;
+    case "fr":
+      return `clone et pousse son propre travail`;
+    case "ja":
+      return `自分の作業をクローンしてプッシュ`;
+    case "ko":
+      return `자기 작업을 복제하고 푸시해요`;
+    case "pt-BR":
+      return `clona e faz push do próprio trabalho`;
+    case "zh-Hans":
+      return `克隆并推送自己的工作`;
+    case "zh-Hant":
+      return `複製並推送自己的工作`;
+    case "en-XA":
+      return `[çļöñéš áñð þûšĥéš îţš öŵñ ŵöŕķ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eclones and pushes its own work\u202c`;
+  }
+  return `clones and pushes its own work`;
+}
+
+export function settingsAddProjectStartedGit(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بدأ git في هذا المجلد بإيداع أول فارغ.`;
+    case "de":
+      return `Git in diesem Ordner gestartet, mit einem leeren ersten Commit.`;
+    case "es":
+      return `Se inició git en esta carpeta con una primera confirmación vacía.`;
+    case "fr":
+      return `Git initialisé dans ce dossier avec un premier commit vide.`;
+    case "ja":
+      return `このフォルダで git を開始し、空の最初のコミットを作成しました。`;
+    case "ko":
+      return `이 폴더에서 빈 첫 커밋으로 git을 시작했어요.`;
+    case "pt-BR":
+      return `O git foi iniciado nesta pasta com um primeiro commit vazio.`;
+    case "zh-Hans":
+      return `已在这个文件夹中初始化 git，并创建了一个空的首次提交。`;
+    case "zh-Hant":
+      return `已在這個資料夾中啟用 git，並建立一個空的第一次提交。`;
+    case "en-XA":
+      return `[Šţáŕţéð ĝîţ îñ ţĥîš ƒöļðéŕ ŵîţĥ áñ éɱþţý ƒîŕšţ çöɱɱîţ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStarted git in this folder with an empty first commit.\u202c`;
+  }
+  return `Started git in this folder with an empty first commit.`;
+}
+
+export function settingsAddProjectFolderHere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مجلد على هذا الحاسوب`;
+    case "de":
+      return `Ordner auf diesem Computer`;
+    case "es":
+      return `Carpeta en esta computadora`;
+    case "fr":
+      return `Dossier sur cet ordinateur`;
+    case "ja":
+      return `このコンピューターのフォルダ`;
+    case "ko":
+      return `이 컴퓨터의 폴더`;
+    case "pt-BR":
+      return `Pasta neste computador`;
+    case "zh-Hans":
+      return `这台电脑上的文件夹`;
+    case "zh-Hant":
+      return `這台電腦上的資料夾`;
+    case "en-XA":
+      return `[Ƒöļðéŕ öñ ţĥîš çöɱþûţéŕ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFolder on this computer\u202c`;
+  }
+  return `Folder on this computer`;
+}
+
+export function settingsAddProjectOtherHost(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لمستضيف آخر، اسأل نائب القبطان.`;
+    case "de":
+      return `Für einen anderen Host frag deinen ersten Offizier.`;
+    case "es":
+      return `Para otro sitio, pregúntale a tu primer oficial.`;
+    case "fr":
+      return `Pour un autre hébergeur, demandez à votre second.`;
+    case "ja":
+      return `ほかのホストについては、一等航海士に頼んでください。`;
+    case "ko":
+      return `다른 호스트는 일등항해사에게 물어보세요.`;
+    case "pt-BR":
+      return `Para outro host, pergunte ao seu imediato.`;
+    case "zh-Hans":
+      return `如需其他托管平台，请询问你的大副。`;
+    case "zh-Hant":
+      return `如果是其他主機，請問你的大副。`;
+    case "en-XA":
+      return `[Ƒöŕ áñöţĥéŕ ĥöšţ, ášķ ýöûŕ ƒîŕšţ ɱáţé. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFor another host, ask your first mate.\u202c`;
+  }
+  return `For another host, ask your first mate.`;
+}
+
+export function settingsAddProjectNewProject(input: { folder: string; place: string }): string {
+  const folder = input.folder;
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مشروع فارغ في ${folder}. تُدمج تغييراته على ${place}؛ ويمكنك تغيير ذلك في صفه.`;
+    case "de":
+      return `Ein leeres Projekt in ${folder}. Seine Änderungen werden auf ${place} zusammengeführt; das kannst du in seiner Zeile ändern.`;
+    case "es":
+      return `Un proyecto vacío en ${folder}. Sus cambios se fusionan en ${place}; puedes cambiarlo en su fila.`;
+    case "fr":
+      return `Un projet vide dans ${folder}. Ses modifications sont fusionnées sur ${place} ; vous pouvez changer cela dans sa ligne.`;
+    case "ja":
+      return `${folder} 内の空のプロジェクト。変更は ${place} でマージされます。これはプロジェクトの行で変更できます。`;
+    case "ko":
+      return `${folder}에 만드는 빈 프로젝트예요. 변경은 ${place}에서 병합되며, 프로젝트 행에서 바꿀 수 있어요.`;
+    case "pt-BR":
+      return `Um projeto vazio em ${folder}. As alterações dele são mescladas no ${place}; você pode mudar isso na linha dele.`;
+    case "zh-Hans":
+      return `${folder} 中的一个空项目。它的改动在 ${place} 上合并；你可以在它的行中更改。`;
+    case "zh-Hant":
+      return `${folder} 中的一個空專案。它的變更會在 ${place} 上合併；你可以在它的那一列中更改。`;
+    case "en-XA":
+      return `[Åñ éɱþţý þŕöĵéçţ îñ ${folder}. Îţš çĥáñĝéš ɱéŕĝé öñ ${place}; ýöû çáñ çĥáñĝé ţĥáţ îñ îţš ŕöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAn empty project in \u202c${folder}\u202e. Its changes merge on \u202c${place}\u202e; you can change that in its row.\u202c`;
+  }
+  return `An empty project in ${folder}. Its changes merge on ${place}; you can change that in its row.`;
+}
+
+export function settingsAddProjectFolderOn(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مجلد على ${computer}`;
+    case "de":
+      return `Ordner auf ${computer}`;
+    case "es":
+      return `Carpeta en ${computer}`;
+    case "fr":
+      return `Dossier sur ${computer}`;
+    case "ja":
+      return `${computer} のフォルダ`;
+    case "ko":
+      return `${computer}의 폴더`;
+    case "pt-BR":
+      return `Pasta em ${computer}`;
+    case "zh-Hans":
+      return `${computer} 上的文件夹`;
+    case "zh-Hant":
+      return `${computer} 上的資料夾`;
+    case "en-XA":
+      return `[Ƒöļðéŕ öñ ${computer} ~~~~]`;
+    case "ar-XB":
+      return `\u202eFolder on \u202c${computer}`;
+  }
+  return `Folder on ${computer}`;
+}
+
+export function settingsAddProjectFolderPathOn(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مسار المجلد على ${computer}`;
+    case "de":
+      return `Der Pfad des Ordners auf ${computer}`;
+    case "es":
+      return `La ruta de la carpeta en ${computer}`;
+    case "fr":
+      return `Le chemin du dossier sur ${computer}`;
+    case "ja":
+      return `${computer} 上のフォルダのパス`;
+    case "ko":
+      return `${computer}에 있는 폴더 경로`;
+    case "pt-BR":
+      return `O caminho da pasta em ${computer}`;
+    case "zh-Hans":
+      return `该文件夹在 ${computer} 上的路径`;
+    case "zh-Hant":
+      return `這個資料夾在 ${computer} 上的路徑`;
+    case "en-XA":
+      return `[Ţĥé ƒöļðéŕ'š þáţĥ öñ ${computer} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe folder's path on \u202c${computer}`;
+  }
+  return `The folder's path on ${computer}`;
+}
+
+export function settingsAddProjectAddFolder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة مجلد`;
+    case "de":
+      return `Ordner hinzufügen`;
+    case "es":
+      return `Agregar carpeta`;
+    case "fr":
+      return `Ajouter le dossier`;
+    case "ja":
+      return `フォルダを追加`;
+    case "ko":
+      return `폴더 추가`;
+    case "pt-BR":
+      return `Adicionar pasta`;
+    case "zh-Hans":
+      return `添加文件夹`;
+    case "zh-Hant":
+      return `加入資料夾`;
+    case "en-XA":
+      return `[Åðð ƒöļðéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd folder\u202c`;
+  }
+  return `Add folder`;
+}
+
+export function settingsAddProjectTaskKey(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رمز المهام`;
+    case "de":
+      return `Aufgabenkürzel`;
+    case "es":
+      return `Clave de tareas`;
+    case "fr":
+      return `Clé des tâches`;
+    case "ja":
+      return `タスクキー`;
+    case "ko":
+      return `작업 키`;
+    case "pt-BR":
+      return `Chave das tarefas`;
+    case "zh-Hans":
+      return `任务编号前缀`;
+    case "zh-Hant":
+      return `任務編號前綴`;
+    case "en-XA":
+      return `[Ţášķ ķéý ~~~]`;
+    case "ar-XB":
+      return `\u202eTask key\u202c`;
+  }
+  return `Task key`;
+}
+
+export function settingsAddProjectTaskKeyPlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `من اسمه`;
+    case "de":
+      return `Aus seinem Namen`;
+    case "es":
+      return `A partir de su nombre`;
+    case "fr":
+      return `D’après son nom`;
+    case "ja":
+      return `名前から作成`;
+    case "ko":
+      return `이름에서 만들기`;
+    case "pt-BR":
+      return `A partir do nome`;
+    case "zh-Hans":
+      return `取自它的名称`;
+    case "zh-Hant":
+      return `取自它的名稱`;
+    case "en-XA":
+      return `[Ƒŕöɱ îţš ñáɱé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eFrom its name\u202c`;
+  }
+  return `From its name`;
+}
+
+export function settingsAddProjectTaskKeyNext(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تُرقَّم المهام في المشروع التالي الذي تضيفه ${key}-1 و${key}-2 وهكذا.`;
+    case "de":
+      return `Aufgaben im nächsten Projekt, das du hinzufügst, werden ${key}-1, ${key}-2 und so weiter nummeriert.`;
+    case "es":
+      return `Las tareas del próximo proyecto que agregues se numeran ${key}-1, ${key}-2 y así sucesivamente.`;
+    case "fr":
+      return `Les tâches du prochain projet que vous ajoutez sont numérotées ${key}-1, ${key}-2 et ainsi de suite.`;
+    case "ja":
+      return `次に追加するプロジェクトのタスクには、${key}-1、${key}-2 のように番号が付きます。`;
+    case "ko":
+      return `다음에 추가하는 프로젝트의 작업은 ${key}-1, ${key}-2 순서로 번호가 매겨져요.`;
+    case "pt-BR":
+      return `As tarefas do próximo projeto que você adicionar são numeradas ${key}-1, ${key}-2 e assim por diante.`;
+    case "zh-Hans":
+      return `你添加的下一个项目中的任务会编号为 ${key}-1、${key}-2，以此类推。`;
+    case "zh-Hant":
+      return `你加入的下一個專案中的任務會編號為 ${key}-1、${key}-2，依此類推。`;
+    case "en-XA":
+      return `[Ţášķš îñ ţĥé ñéẋţ þŕöĵéçţ ýöû áðð áŕé ñûɱƀéŕéð ${key}-1, ${key}-2 áñð šö öñ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTasks in the next project you add are numbered \u202c${key}\u202e-1, \u202c${key}\u202e-2 and so on.\u202c`;
+  }
+  return `Tasks in the next project you add are numbered ${key}-1, ${key}-2 and so on.`;
+}
+
+export function settingsAddProjectSignIn(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول إلى ${host}`;
+    case "de":
+      return `Bei ${host} anmelden`;
+    case "es":
+      return `Iniciar sesión en ${host}`;
+    case "fr":
+      return `Se connecter à ${host}`;
+    case "ja":
+      return `${host} にサインイン`;
+    case "ko":
+      return `${host}에 로그인`;
+    case "pt-BR":
+      return `Fazer login no ${host}`;
+    case "zh-Hans":
+      return `登录 ${host}`;
+    case "zh-Hant":
+      return `登入 ${host}`;
+    case "en-XA":
+      return `[Šîĝñ îñ ţö ${host} ~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in to \u202c${host}`;
+  }
+  return `Sign in to ${host}`;
+}
+
+export function settingsDevicesPhoneCodeLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `امسح هذا الرمز داخل Infinitary على هاتفك`;
+    case "de":
+      return `Scanne diesen Code in Infinitary auf deinem Telefon`;
+    case "es":
+      return `Escanea este código dentro de Infinitary en tu teléfono`;
+    case "fr":
+      return `Scannez ce code dans Infinitary sur votre téléphone`;
+    case "ja":
+      return `スマートフォンの Infinitary でこのコードを読み取ってください`;
+    case "ko":
+      return `휴대폰의 Infinitary에서 이 코드를 스캔하세요`;
+    case "pt-BR":
+      return `Escaneie este código dentro do Infinitary no seu celular`;
+    case "zh-Hans":
+      return `在手机上的 Infinitary 中扫描此二维码`;
+    case "zh-Hant":
+      return `在手機上的 Infinitary 中掃描這個條碼`;
+    case "en-XA":
+      return `[Šçáñ ţĥîš çöðé îñšîðé Îñƒîñîţáŕý öñ ýöûŕ þĥöñé ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eScan this code inside Infinitary on your phone\u202c`;
+  }
+  return `Scan this code inside Infinitary on your phone`;
+}
+
+export function settingsProjectsQueueKeyEndsUnknown(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتهاء صلاحيته`;
+    case "de":
+      return `zu seinem Ablauf`;
+    case "es":
+      return `que caduque`;
+    case "fr":
+      return `son expiration`;
+    case "ja":
+      return `期限`;
+    case "ko":
+      return `만료될 때`;
+    case "pt-BR":
+      return `expirar`;
+    case "zh-Hans":
+      return `到期时`;
+    case "zh-Hant":
+      return `到期時`;
+    case "en-XA":
+      return `[îţ éñðš ~~~]`;
+    case "ar-XB":
+      return `\u202eit ends\u202c`;
+  }
+  return `it ends`;
+}
+
+export function settingsRunsOnNoSignIns(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا تسجيلات دخول بعد`;
+    case "de":
+      return `noch keine Anmeldungen`;
+    case "es":
+      return `todavía sin inicios de sesión`;
+    case "fr":
+      return `aucune connexion pour l’instant`;
+    case "ja":
+      return `サインインはまだありません`;
+    case "ko":
+      return `아직 로그인 없음`;
+    case "pt-BR":
+      return `nenhum login ainda`;
+    case "zh-Hans":
+      return `尚无登录`;
+    case "zh-Hant":
+      return `還沒有登入`;
+    case "en-XA":
+      return `[ñö šîĝñ-îñš ýéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eno sign-ins yet\u202c`;
+  }
+  return `no sign-ins yet`;
+}
+
+export function settingsRunsOnAutomatically(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تلقائيًا`;
+    case "de":
+      return `automatisch`;
+    case "es":
+      return `automáticamente`;
+    case "fr":
+      return `automatiquement`;
+    case "ja":
+      return `自動`;
+    case "ko":
+      return `자동`;
+    case "pt-BR":
+      return `automaticamente`;
+    case "zh-Hans":
+      return `自动`;
+    case "zh-Hant":
+      return `自動`;
+    case "en-XA":
+      return `[áûţöɱáţîçáļļý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eautomatically\u202c`;
+  }
+  return `automatically`;
+}
+
+export function settingsRunsOnLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعمل على`;
+    case "de":
+      return `Läuft auf`;
+    case "es":
+      return `Se ejecuta en`;
+    case "fr":
+      return `S’exécute sur`;
+    case "ja":
+      return `実行先`;
+    case "ko":
+      return `실행 위치`;
+    case "pt-BR":
+      return `Roda em`;
+    case "zh-Hans":
+      return `运行于`;
+    case "zh-Hant":
+      return `執行於`;
+    case "en-XA":
+      return `[Ŕûñš öñ ~~~]`;
+    case "ar-XB":
+      return `\u202eRuns on\u202c`;
+  }
+  return `Runs on`;
+}
+
+export function settingsRunsOnYourComputers(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حواسيبك`;
+    case "de":
+      return `Deine Computer`;
+    case "es":
+      return `Tus computadoras`;
+    case "fr":
+      return `Vos ordinateurs`;
+    case "ja":
+      return `あなたのコンピューター`;
+    case "ko":
+      return `내 컴퓨터`;
+    case "pt-BR":
+      return `Seus computadores`;
+    case "zh-Hans":
+      return `你的电脑`;
+    case "zh-Hant":
+      return `你的電腦`;
+    case "en-XA":
+      return `[Ýöûŕ çöɱþûţéŕš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour computers\u202c`;
+  }
+  return `Your computers`;
+}
+
+export function settingsRunsOnAnotherUser(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `باسم مستخدم آخر`;
+    case "de":
+      return `Als anderer Benutzer`;
+    case "es":
+      return `Como otro usuario`;
+    case "fr":
+      return `Sous un autre utilisateur`;
+    case "ja":
+      return `別のユーザーとして`;
+    case "ko":
+      return `다른 사용자로 실행`;
+    case "pt-BR":
+      return `Como outro usuário`;
+    case "zh-Hans":
+      return `以另一个用户身份`;
+    case "zh-Hant":
+      return `以另一位使用者身分`;
+    case "en-XA":
+      return `[Åš áñöţĥéŕ ûšéŕ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eAs another user\u202c`;
+  }
+  return `As another user`;
+}
+
+export function settingsRunsOnRemoved(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحاسوب الآخر · أُزيل`;
+    case "de":
+      return `Der andere Computer · entfernt`;
+    case "es":
+      return `La otra computadora · quitada`;
+    case "fr":
+      return `L’autre ordinateur · retiré`;
+    case "ja":
+      return `別のコンピューター · 削除済み`;
+    case "ko":
+      return `다른 컴퓨터 · 제거됨`;
+    case "pt-BR":
+      return `O outro computador · removido`;
+    case "zh-Hans":
+      return `另一台电脑 · 已移除`;
+    case "zh-Hant":
+      return `另一台電腦 · 已移除`;
+    case "en-XA":
+      return `[Ţĥé öţĥéŕ çöɱþûţéŕ · ŕéɱöṽéð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe other computer · removed\u202c`;
+  }
+  return `The other computer · removed`;
+}
+
+export function settingsRunsOnAutomaticDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختيار حاسوب متوافق فيه متسع لكل مهمة جديدة. المهمة التي بدأت تبقى هناك.`;
+    case "de":
+      return `Wähl für jede neue Aufgabe einen passenden Computer mit freiem Platz. Eine gestartete Aufgabe bleibt dort.`;
+    case "es":
+      return `Elige una computadora compatible con espacio para cada tarea nueva. Una tarea ya iniciada se queda allí.`;
+    case "fr":
+      return `Choisit un ordinateur compatible qui a de la place pour chaque nouvelle tâche. Une tâche démarrée y reste.`;
+    case "ja":
+      return `新しいタスクごとに、互換性があり余裕のあるコンピューターを選びます。開始したタスクはそこにとどまります。`;
+    case "ko":
+      return `새 작업마다 여유가 있는 호환 컴퓨터를 골라요. 시작된 작업은 그 컴퓨터에 남아요.`;
+    case "pt-BR":
+      return `Escolhe um computador compatível com espaço para cada nova tarefa. Uma tarefa iniciada continua lá.`;
+    case "zh-Hans":
+      return `为每个新任务选择一台兼容且有余量的电脑。已开始的任务会留在那里。`;
+    case "zh-Hant":
+      return `為每項新任務選一台相容且有餘裕的電腦。已開始的任務會留在那裡。`;
+    case "en-XA":
+      return `[Çĥööšé á çöɱþáţîƀļé çöɱþûţéŕ ŵîţĥ ŕööɱ ƒöŕ éáçĥ ñéŵ ţášķ. Å šţáŕţéð ţášķ šţáýš ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose a compatible computer with room for each new task. A started task stays there.\u202c`;
+  }
+  return `Choose a compatible computer with room for each new task. A started task stays there.`;
+}
+
+export function settingsRunsOnDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حيث تعمل مهامه. ما دام ذلك الحاسوب خارج المتناول تنتظر، ولا تعمل على هذا الحاسوب بدلًا منه أبدًا.`;
+    case "de":
+      return `Wo seine Aufgaben laufen. Solange dieser Computer außer Reichweite ist, warten sie und laufen nie stattdessen auf diesem Computer.`;
+    case "es":
+      return `Dónde se ejecutan sus tareas. Mientras esa computadora está fuera de alcance, esperan, y nunca se ejecutan en esta computadora en su lugar.`;
+    case "fr":
+      return `Où ses tâches s’exécutent. Tant que cet ordinateur est hors de portée, elles attendent, et ne s’exécutent jamais sur cet ordinateur-ci à la place.`;
+    case "ja":
+      return `タスクを実行する場所です。そのコンピューターと連絡がつかない間、タスクは待機し、代わりにこのコンピューターで実行されることはありません。`;
+    case "ko":
+      return `이 프로젝트의 작업이 실행되는 곳이에요. 그 컴퓨터에 연락이 닿지 않는 동안 작업은 기다리며, 대신 이 컴퓨터에서 실행되지 않아요.`;
+    case "pt-BR":
+      return `Onde as tarefas dele rodam. Enquanto aquele computador está fora de alcance, elas esperam, e nunca rodam neste computador no lugar dele.`;
+    case "zh-Hans":
+      return `它的任务运行的地方。那台电脑无法联系时，任务会等待，绝不会改在这台电脑上运行。`;
+    case "zh-Hant":
+      return `它的任務執行的地方。那台電腦連絡不上時，任務會等待，絕不會改在這台電腦上執行。`;
+    case "en-XA":
+      return `[Ŵĥéŕé îţš ţášķš ŕûñ. Ŵĥîļé ţĥáţ çöɱþûţéŕ îš öûţ öƒ ŕéáçĥ ţĥéý ŵáîţ, áñð ñéṽéŕ ŕûñ öñ ţĥîš çöɱþûţéŕ îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhere its tasks run. While that computer is out of reach they wait, and never run on this computer instead.\u202c`;
+  }
+  return `Where its tasks run. While that computer is out of reach they wait, and never run on this computer instead.`;
+}
+
+export function settingsProjectsRemoveCheckFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر فحص هذا المشروع. يُرجى المحاولة مجددًا.`;
+    case "de":
+      return `Dieses Projekt konnte nicht geprüft werden. Bitte versuch es erneut.`;
+    case "es":
+      return `No se pudo comprobar este proyecto. Vuelve a intentarlo.`;
+    case "fr":
+      return `Impossible de vérifier ce projet. Veuillez réessayer.`;
+    case "ja":
+      return `このプロジェクトを確認できませんでした。もう一度お試しください。`;
+    case "ko":
+      return `이 프로젝트를 확인할 수 없어요. 다시 시도해 주세요.`;
+    case "pt-BR":
+      return `Não foi possível verificar este projeto. Tente de novo.`;
+    case "zh-Hans":
+      return `无法检查这个项目。请重试。`;
+    case "zh-Hant":
+      return `無法檢查這個專案。請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ çĥéçķ ţĥîš þŕöĵéçţ. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not check this project. Please try again.\u202c`;
+  }
+  return `Could not check this project. Please try again.`;
+}
+
+export function settingsProjectsRemoveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت إزالة هذا المشروع.`;
+    case "de":
+      return `Dieses Projekt konnte nicht entfernt werden.`;
+    case "es":
+      return `No se pudo quitar este proyecto.`;
+    case "fr":
+      return `Impossible de retirer ce projet.`;
+    case "ja":
+      return `このプロジェクトを削除できませんでした。`;
+    case "ko":
+      return `이 프로젝트를 제거할 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível remover este projeto.`;
+    case "zh-Hans":
+      return `无法移除这个项目。`;
+    case "zh-Hant":
+      return `無法移除這個專案。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ŕéɱöṽé ţĥîš þŕöĵéçţ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not remove this project.\u202c`;
+  }
+  return `Could not remove this project.`;
+}
+
+export function settingsProjectsRemoveTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة المشروع`;
+    case "de":
+      return `Projekt entfernen`;
+    case "es":
+      return `Quitar proyecto`;
+    case "fr":
+      return `Retirer le projet`;
+    case "ja":
+      return `プロジェクトを削除`;
+    case "ko":
+      return `프로젝트 제거`;
+    case "pt-BR":
+      return `Remover projeto`;
+    case "zh-Hans":
+      return `移除项目`;
+    case "zh-Hant":
+      return `移除專案`;
+    case "en-XA":
+      return `[Ŕéɱöṽé þŕöĵéçţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove project\u202c`;
+  }
+  return `Remove project`;
+}
+
+export function settingsProjectsRemoveCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsProjectsRemoving(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الإزالة...`;
+    case "de":
+      return `Wird entfernt ...`;
+    case "es":
+      return `Quitando...`;
+    case "fr":
+      return `Retrait...`;
+    case "ja":
+      return `削除中...`;
+    case "ko":
+      return `제거 중...`;
+    case "pt-BR":
+      return `Removendo...`;
+    case "zh-Hans":
+      return `正在移除...`;
+    case "zh-Hant":
+      return `正在移除…`;
+    case "en-XA":
+      return `[Ŕéɱöṽîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eRemoving...\u202c`;
+  }
+  return `Removing...`;
+}
+
+export function settingsProjectsRemoveConfirm(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة`;
+    case "de":
+      return `Entfernen`;
+    case "es":
+      return `Quitar`;
+    case "fr":
+      return `Retirer`;
+    case "ja":
+      return `削除`;
+    case "ko":
+      return `제거`;
+    case "pt-BR":
+      return `Remover`;
+    case "zh-Hans":
+      return `移除`;
+    case "zh-Hant":
+      return `移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ~~]`;
+    case "ar-XB":
+      return `\u202eRemove\u202c`;
+  }
+  return `Remove`;
+}
+
+export function settingsProjectsRemoveNamed(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${name}`;
+    case "de":
+      return `${name} entfernen`;
+    case "es":
+      return `Quitar ${name}`;
+    case "fr":
+      return `Retirer ${name}`;
+    case "ja":
+      return `${name} を削除`;
+    case "ko":
+      return `${name} 제거`;
+    case "pt-BR":
+      return `Remover ${name}`;
+    case "zh-Hans":
+      return `移除 ${name}`;
+    case "zh-Hant":
+      return `移除 ${name}`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${name} ~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${name}`;
+  }
+  return `Remove ${name}`;
+}
+
+export function settingsControllingLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التحكم`;
+    case "de":
+      return `Steuerung`;
+    case "es":
+      return `Controlando`;
+    case "fr":
+      return `Contrôle`;
+    case "ja":
+      return `操作中`;
+    case "ko":
+      return `제어 중`;
+    case "pt-BR":
+      return `Controlando`;
+    case "zh-Hans":
+      return `正在控制`;
+    case "zh-Hant":
+      return `正在控制`;
+    case "en-XA":
+      return `[Çöñţŕöļļîñĝ ~~~~]`;
+    case "ar-XB":
+      return `\u202eControlling\u202c`;
+  }
+  return `Controlling`;
+}
+
+export function settingsControllingSay(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما تفعله هنا يحدث على ${name}. تبقى أسراره وصوته هناك.`;
+    case "de":
+      return `Was du hier tust, geschieht auf ${name}. Seine Geheimnisse und seine Stimme bleiben dort.`;
+    case "es":
+      return `Lo que haces aquí ocurre en ${name}. Sus Secretos y su voz se quedan allí.`;
+    case "fr":
+      return `Ce que vous faites ici se passe sur ${name}. Ses Secrets et sa voix restent là-bas.`;
+    case "ja":
+      return `ここでの操作は ${name} で行われます。シークレットと音声はそちらに残ります。`;
+    case "ko":
+      return `여기서 하는 일은 ${name}에서 일어나요. 그곳의 비밀 정보와 음성은 그곳에 남아요.`;
+    case "pt-BR":
+      return `O que você faz aqui acontece em ${name}. Os Segredos e a voz dele ficam lá.`;
+    case "zh-Hans":
+      return `你在这里的操作会在 ${name} 上进行。它的机密和语音留在那里。`;
+    case "zh-Hant":
+      return `你在這裡的操作會在 ${name} 上進行。它的機密和語音留在那裡。`;
+    case "en-XA":
+      return `[Ŵĥáţ ýöû ðö ĥéŕé ĥáþþéñš öñ ${name}. Îţš Šéçŕéţš áñð ṽöîçé šţáý ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat you do here happens on \u202c${name}\u202e. Its Secrets and voice stay there.\u202c`;
+  }
+  return `What you do here happens on ${name}. Its Secrets and voice stay there.`;
+}
+
+export function settingsControllingLeaveRunsWork(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مغادرة ${name}؟ يتوقف هذا الحاسوب عن التحكم فيه وعن تشغيل عمله.`;
+    case "de":
+      return `${name} verlassen? Dieser Computer hört auf, ihn zu steuern und seine Arbeit auszuführen.`;
+    case "es":
+      return `¿Salir de ${name}? Esta computadora deja de controlarlo y de ejecutar su trabajo.`;
+    case "fr":
+      return `Quitter ${name} ? Cet ordinateur cesse de le contrôler et d’exécuter son travail.`;
+    case "ja":
+      return `${name} から離脱しますか？このコンピューターはそれを操作しなくなり、その作業も実行しなくなります。`;
+    case "ko":
+      return `${name}에서 나갈까요? 이 컴퓨터는 더 이상 그곳을 제어하지 않고 작업도 실행하지 않아요.`;
+    case "pt-BR":
+      return `Sair de ${name}? Este computador deixa de controlá-lo e de rodar o trabalho dele.`;
+    case "zh-Hans":
+      return `离开 ${name}？这台电脑将停止控制它，也不再运行它的工作。`;
+    case "zh-Hant":
+      return `要退出 ${name} 嗎？這台電腦會停止控制它，也不再執行它的工作。`;
+    case "en-XA":
+      return `[Ļéáṽé ${name}? Ţĥîš çöɱþûţéŕ šţöþš çöñţŕöļļîñĝ îţ áñð ŕûññîñĝ îţš ŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLeave \u202c${name}\u202e? This computer stops controlling it and running its work.\u202c`;
+  }
+  return `Leave ${name}? This computer stops controlling it and running its work.`;
+}
+
+export function settingsControllingLeave(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مغادرة ${name}؟ يتوقف هذا الحاسوب عن التحكم فيه.`;
+    case "de":
+      return `${name} verlassen? Dieser Computer hört auf, ihn zu steuern.`;
+    case "es":
+      return `¿Salir de ${name}? Esta computadora deja de controlarlo.`;
+    case "fr":
+      return `Quitter ${name} ? Cet ordinateur cesse de le contrôler.`;
+    case "ja":
+      return `${name} から離脱しますか？このコンピューターはそれを操作しなくなります。`;
+    case "ko":
+      return `${name}에서 나갈까요? 이 컴퓨터는 더 이상 그곳을 제어하지 않아요.`;
+    case "pt-BR":
+      return `Sair de ${name}? Este computador deixa de controlá-lo.`;
+    case "zh-Hans":
+      return `离开 ${name}？这台电脑将停止控制它。`;
+    case "zh-Hant":
+      return `要退出 ${name} 嗎？這台電腦會停止控制它。`;
+    case "en-XA":
+      return `[Ļéáṽé ${name}? Ţĥîš çöɱþûţéŕ šţöþš çöñţŕöļļîñĝ îţ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLeave \u202c${name}\u202e? This computer stops controlling it.\u202c`;
+  }
+  return `Leave ${name}? This computer stops controlling it.`;
+}
+
+export function settingsControllingWorkGoes(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يذهب عمله غير المدموج إلى ${name} أولًا.`;
+    case "de":
+      return `Seine nicht zusammengeführte Arbeit geht zuerst an ${name}.`;
+    case "es":
+      return `Su trabajo sin fusionar va primero a ${name}.`;
+    case "fr":
+      return `Son travail non fusionné va d’abord sur ${name}.`;
+    case "ja":
+      return `マージされていない作業は先に ${name} に移ります。`;
+    case "ko":
+      return `병합되지 않은 작업은 먼저 ${name}(으)로 옮겨져요.`;
+    case "pt-BR":
+      return `O trabalho não mesclado dele vai primeiro para ${name}.`;
+    case "zh-Hans":
+      return `它未合并的工作会先转到 ${name}。`;
+    case "zh-Hant":
+      return `它尚未合併的工作會先移到 ${name}。`;
+    case "en-XA":
+      return `[Îţš ûñɱéŕĝéð ŵöŕķ ĝöéš ţö ${name} ƒîŕšţ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts unmerged work goes to \u202c${name}\u202e first.\u202c`;
+  }
+  return `Its unmerged work goes to ${name} first.`;
+}
+
+export function settingsControllingAway(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name} خارج المتناول، لذا يبقى هذا الحاسوب في قائمته حتى تزيله هناك.`;
+    case "de":
+      return `${name} ist außer Reichweite, daher führt er diesen Computer weiter auf, bis du ihn dort entfernst.`;
+    case "es":
+      return `${name} está fuera de alcance, así que seguirá mostrando esta computadora hasta que la quites allí.`;
+    case "fr":
+      return `${name} est hors de portée, il liste donc cet ordinateur jusqu’à ce que vous le retiriez là-bas.`;
+    case "ja":
+      return `${name} と連絡がつかないため、そちらで削除するまで、このコンピューターはそちらの一覧に残ります。`;
+    case "ko":
+      return `${name}에 연락이 닿지 않아서, 그곳에서 제거할 때까지 이 컴퓨터가 목록에 남아 있어요.`;
+    case "pt-BR":
+      return `${name} está fora de alcance, então ele continua listando este computador até você removê-lo lá.`;
+    case "zh-Hans":
+      return `${name} 无法联系，所以在你在那里移除之前，它仍会列出这台电脑。`;
+    case "zh-Hant":
+      return `${name} 連絡不上，所以在你從那裡移除之前，它仍會列出這台電腦。`;
+    case "en-XA":
+      return `[${name} îš öûţ öƒ ŕéáçĥ, šö îţ ļîšţš ţĥîš çöɱþûţéŕ ûñţîļ ýöû ŕéɱöṽé îţ ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e is out of reach, so it lists this computer until you remove it there.\u202c`;
+  }
+  return `${name} is out of reach, so it lists this computer until you remove it there.`;
+}
+
+export function settingsControllingNewLink(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `للتحكم فيه مجددًا، أنشئ رابطًا جديدًا هناك.`;
+    case "de":
+      return `Um ihn wieder zu steuern, erstell dort einen neuen Link.`;
+    case "es":
+      return `Para volver a controlarlo, crea un enlace nuevo allí.`;
+    case "fr":
+      return `Pour le contrôler à nouveau, créez un nouveau lien là-bas.`;
+    case "ja":
+      return `もう一度操作するには、そちらで新しいリンクを作成してください。`;
+    case "ko":
+      return `다시 제어하려면 그곳에서 새 링크를 만드세요.`;
+    case "pt-BR":
+      return `Para controlá-lo de novo, crie um novo link lá.`;
+    case "zh-Hans":
+      return `如需再次控制它，请在那里生成一个新链接。`;
+    case "zh-Hant":
+      return `如果要再次控制它，請在那裡產生一個新連結。`;
+    case "en-XA":
+      return `[Ţö çöñţŕöļ îţ áĝáîñ, ɱáķé á ñéŵ ļîñķ ţĥéŕé. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo control it again, make a new link there.\u202c`;
+  }
+  return `To control it again, make a new link there.`;
+}
+
+export function settingsControllingStay(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البقاء`;
+    case "de":
+      return `Bleiben`;
+    case "es":
+      return `Quedarse`;
+    case "fr":
+      return `Rester`;
+    case "ja":
+      return `とどまる`;
+    case "ko":
+      return `머무르기`;
+    case "pt-BR":
+      return `Ficar`;
+    case "zh-Hans":
+      return `留下`;
+    case "zh-Hant":
+      return `留下`;
+    case "en-XA":
+      return `[Šţáý ~~]`;
+    case "ar-XB":
+      return `\u202eStay\u202c`;
+  }
+  return `Stay`;
+}
+
+export function settingsControllingLeaving(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ المغادرة...`;
+    case "de":
+      return `Wird verlassen ...`;
+    case "es":
+      return `Saliendo...`;
+    case "fr":
+      return `Départ...`;
+    case "ja":
+      return `離脱中...`;
+    case "ko":
+      return `나가는 중...`;
+    case "pt-BR":
+      return `Saindo...`;
+    case "zh-Hans":
+      return `正在离开...`;
+    case "zh-Hant":
+      return `正在退出…`;
+    case "en-XA":
+      return `[Ļéáṽîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eLeaving...\u202c`;
+  }
+  return `Leaving...`;
+}
+
+export function settingsControllingLeaveButton(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مغادرة`;
+    case "de":
+      return `Verlassen`;
+    case "es":
+      return `Salir`;
+    case "fr":
+      return `Quitter`;
+    case "ja":
+      return `離脱`;
+    case "ko":
+      return `나가기`;
+    case "pt-BR":
+      return `Sair`;
+    case "zh-Hans":
+      return `离开`;
+    case "zh-Hant":
+      return `退出`;
+    case "en-XA":
+      return `[Ļéáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eLeave\u202c`;
+  }
+  return `Leave`;
+}
+
+export function settingsControllingJoined(input: { address: string; when: string }): string {
+  const address = input.address;
+  const when = input.when;
+  switch (currentLanguage()) {
+    case "ar":
+      return `انضم ${when} · ${address}`;
+    case "de":
+      return `beigetreten ${when} · ${address}`;
+    case "es":
+      return `se unió ${when} · ${address}`;
+    case "fr":
+      return `a rejoint ${when} · ${address}`;
+    case "ja":
+      return `${when} に参加 · ${address}`;
+    case "ko":
+      return `${when} 참여 · ${address}`;
+    case "pt-BR":
+      return `entrou ${when} · ${address}`;
+    case "zh-Hans":
+      return `加入于 ${when} · ${address}`;
+    case "zh-Hant":
+      return `${when} 加入 · ${address}`;
+    case "en-XA":
+      return `[ĵöîñéð ${when} · ${address} ~~~~]`;
+    case "ar-XB":
+      return `\u202ejoined \u202c${when}\u202e · \u202c${address}`;
+  }
+  return `joined ${when} · ${address}`;
+}
+
+export function settingsControllingLeaveNamed(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مغادرة ${name}`;
+    case "de":
+      return `${name} verlassen`;
+    case "es":
+      return `Salir de ${name}`;
+    case "fr":
+      return `Quitter ${name}`;
+    case "ja":
+      return `${name} から離脱`;
+    case "ko":
+      return `${name}에서 나가기`;
+    case "pt-BR":
+      return `Sair de ${name}`;
+    case "zh-Hans":
+      return `离开 ${name}`;
+    case "zh-Hant":
+      return `退出 ${name}`;
+    case "en-XA":
+      return `[Ļéáṽé ${name} ~~]`;
+    case "ar-XB":
+      return `\u202eLeave \u202c${name}`;
+  }
+  return `Leave ${name}`;
+}
+
+export function settingsProjectsLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المشاريع`;
+    case "de":
+      return `Projekte`;
+    case "es":
+      return `Proyectos`;
+    case "fr":
+      return `Projets`;
+    case "ja":
+      return `プロジェクト`;
+    case "ko":
+      return `프로젝트`;
+    case "pt-BR":
+      return `Projetos`;
+    case "zh-Hans":
+      return `项目`;
+    case "zh-Hant":
+      return `專案`;
+    case "en-XA":
+      return `[Þŕöĵéçţš ~~~]`;
+    case "ar-XB":
+      return `\u202eProjects\u202c`;
+  }
+  return `Projects`;
+}
+
+export function settingsProjectsIntro(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أضف مشروعًا هنا أو اطلب ذلك من نائب القبطان، وافتح مشروعًا لتغيير طريقة عمله. لا يذكر الصف إلا ما يختلف عن المشروع الجديد، الذي يُقدَّم كطلبات سحب حيث يُستضاف، وينتظر كلمتك قبل الدمج، ويأخذ العناية الافتراضية، ويعمل على حاسوب يُختار تلقائيًا.`;
+    case "de":
+      return `Füg hier ein Projekt hinzu oder frag deinen ersten Offizier, und öffne eines, um zu ändern, wie es arbeitet. Eine Zeile nennt nur, was anders eingestellt ist als bei einem neuen Projekt: Das wird als Pull Requests dort angeboten, wo es liegt, wartet vor dem Zusammenführen auf dein Wort, nutzt Sorgfalt Standard und läuft auf einem automatisch gewählten Computer.`;
+    case "es":
+      return `Agrega un proyecto aquí o pídeselo a tu primer oficial, y abre uno para cambiar cómo funciona. Una fila solo indica lo que difiere de un proyecto nuevo, que se ofrece como solicitudes de incorporación de cambios donde se aloja, espera tu palabra antes de fusionar, usa el cuidado Predeterminado y se ejecuta en una computadora elegida automáticamente.`;
+    case "fr":
+      return `Ajoutez un projet ici ou demandez-le à votre second, et ouvrez-en un pour changer son fonctionnement. Une ligne indique seulement ce qui diffère d’un nouveau projet, qui est proposé en demandes de tirage là où il est hébergé, attend votre accord avant de fusionner, prend le soin Par défaut et s’exécute sur un ordinateur choisi automatiquement.`;
+    case "ja":
+      return `ここでプロジェクトを追加するか、一等航海士に頼んでください。プロジェクトを開くと動作を変更できます。各行には、新しいプロジェクトと異なる設定だけが表示されます。新しいプロジェクトは、保管先でプルリクエストとして出され、マージ前にあなたの承認を待ち、慎重さは標準で、自動で選ばれたコンピューターで実行されます。`;
+    case "ko":
+      return `여기서 프로젝트를 추가하거나 일등항해사에게 부탁하고, 프로젝트를 열어 작동 방식을 바꾸세요. 각 행에는 새 프로젝트와 다르게 설정된 것만 표시돼요. 새 프로젝트는 프로젝트가 있는 곳에 끌어오기 요청으로 올라가고, 병합 전에 선장님의 말을 기다리고, 기본 주의 수준을 쓰며, 자동으로 고른 컴퓨터에서 실행돼요.`;
+    case "pt-BR":
+      return `Adicione um projeto aqui ou peça ao seu imediato, e abra um para mudar como ele funciona. Uma linha mostra só o que está diferente de um projeto novo, que é oferecido como solicitações de pull onde fica, espera sua palavra antes de mesclar, usa o cuidado Padrão e roda em um computador escolhido automaticamente.`;
+    case "zh-Hans":
+      return `在这里添加项目或询问你的大副，打开一个项目即可更改它的工作方式。每一行只显示与新项目不同的设置；新项目默认在项目托管处以拉取请求提交、合并前等你确认、使用默认把关，并在自动选择的电脑上运行。`;
+    case "zh-Hant":
+      return `在這裡加入專案或請你的大副加入，開啟專案就能更改它的運作方式。每一列只顯示和新專案不同的設定；新專案預設在專案所在處以 pull request 提出、合併前等你同意、使用預設謹慎度，並在自動選擇的電腦上執行。`;
+    case "en-XA":
+      return `[Åðð á þŕöĵéçţ ĥéŕé öŕ ášķ ýöûŕ ƒîŕšţ ɱáţé, áñð öþéñ öñé ţö çĥáñĝé ĥöŵ îţ ŵöŕķš. Å ŕöŵ šáýš öñļý ŵĥáţ îš šéţ ðîƒƒéŕéñţļý ƒŕöɱ á ñéŵ þŕöĵéçţ, ŵĥîçĥ îš öƒƒéŕéð áš þûļļ ŕéǫûéšţš ŵĥéŕé îţ ļîṽéš, ŵáîţš ƒöŕ ýöûŕ ŵöŕð ƀéƒöŕé ɱéŕĝîñĝ, ţáķéš Ðéƒáûļţ ŕîĝöŕ áñð ŕûñš öñ á çöɱþûţéŕ çĥöšéñ áûţöɱáţîçáļļý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd a project here or ask your first mate, and open one to change how it works. A row says only what is set differently from a new project, which is offered as pull requests where it lives, waits for your word before merging, takes Default rigor and runs on a computer chosen automatically.\u202c`;
+  }
+  return `Add a project here or ask your first mate, and open one to change how it works. A row says only what is set differently from a new project, which is offered as pull requests where it lives, waits for your word before merging, takes Default rigor and runs on a computer chosen automatically.`;
+}
+
+export function settingsProjectsEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا مشاريع بعد. أضف واحدًا أدناه، أو أخبر نائب القبطان بالمشروع الذي يعمل عليه.`;
+    case "de":
+      return `Noch keine Projekte. Füg unten eines hinzu oder sag deinem ersten Offizier, an welchem Projekt er arbeiten soll.`;
+    case "es":
+      return `Todavía no hay proyectos. Agrega uno abajo o dile a tu primer oficial en qué proyecto trabajar.`;
+    case "fr":
+      return `Aucun projet pour l’instant. Ajoutez-en un ci-dessous, ou dites à votre second sur quel projet travailler.`;
+    case "ja":
+      return `プロジェクトはまだありません。下で追加するか、どのプロジェクトで作業するかを一等航海士に伝えてください。`;
+    case "ko":
+      return `아직 프로젝트가 없어요. 아래에서 추가하거나, 일등항해사에게 어떤 프로젝트를 맡을지 알려 주세요.`;
+    case "pt-BR":
+      return `Nenhum projeto ainda. Adicione um abaixo ou diga ao seu imediato em qual projeto trabalhar.`;
+    case "zh-Hans":
+      return `还没有项目。在下方添加一个，或告诉你的大副要处理哪个项目。`;
+    case "zh-Hant":
+      return `還沒有專案。在下方加入一個，或告訴你的大副要處理哪個專案。`;
+    case "en-XA":
+      return `[Ñö þŕöĵéçţš ýéţ. Åðð öñé ƀéļöŵ, öŕ ţéļļ ýöûŕ ƒîŕšţ ɱáţé ŵĥîçĥ þŕöĵéçţ ţö ŵöŕķ öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo projects yet. Add one below, or tell your first mate which project to work on.\u202c`;
+  }
+  return `No projects yet. Add one below, or tell your first mate which project to work on.`;
+}
+
+export function settingsProjectsFolderPickerFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر فتح منتقي المجلدات. يُرجى المحاولة مجددًا.`;
+    case "de":
+      return `Die Ordnerauswahl konnte nicht geöffnet werden. Bitte versuch es erneut.`;
+    case "es":
+      return `No se pudo abrir el selector de carpetas. Vuelve a intentarlo.`;
+    case "fr":
+      return `Impossible d’ouvrir le sélecteur de dossier. Veuillez réessayer.`;
+    case "ja":
+      return `フォルダの選択画面を開けませんでした。もう一度お試しください。`;
+    case "ko":
+      return `폴더 선택 창을 열 수 없어요. 다시 시도해 주세요.`;
+    case "pt-BR":
+      return `Não foi possível abrir o seletor de pastas. Tente de novo.`;
+    case "zh-Hans":
+      return `无法打开文件夹选择器。请重试。`;
+    case "zh-Hant":
+      return `無法開啟資料夾選擇器。請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ öþéñ ţĥé ƒöļðéŕ þîçķéŕ. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not open the folder picker. Please try again.\u202c`;
+  }
+  return `Could not open the folder picker. Please try again.`;
+}
+
+export function settingsProjectsFolderSave(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حفظ`;
+    case "de":
+      return `Speichern`;
+    case "es":
+      return `Guardar`;
+    case "fr":
+      return `Enregistrer`;
+    case "ja":
+      return `保存`;
+    case "ko":
+      return `저장`;
+    case "pt-BR":
+      return `Salvar`;
+    case "zh-Hans":
+      return `保存`;
+    case "zh-Hant":
+      return `儲存`;
+    case "en-XA":
+      return `[Šáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eSave\u202c`;
+  }
+  return `Save`;
+}
+
+export function settingsProjectsFolderCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsProjectsFolderLine(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `توضع المشاريع الجديدة في`;
+    case "de":
+      return `Neue Projekte kommen in`;
+    case "es":
+      return `Los proyectos nuevos van en`;
+    case "fr":
+      return `Les nouveaux projets vont dans`;
+    case "ja":
+      return `新しいプロジェクトの保存先`;
+    case "ko":
+      return `새 프로젝트 위치`;
+    case "pt-BR":
+      return `Novos projetos vão para`;
+    case "zh-Hans":
+      return `新项目存放在`;
+    case "zh-Hant":
+      return `新專案存放在`;
+    case "en-XA":
+      return `[Ñéŵ þŕöĵéçţš ĝö îñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew projects go in\u202c`;
+  }
+  return `New projects go in`;
+}
+
+export function settingsProjectsFolderDefault(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتراضي`;
+    case "de":
+      return `Standard`;
+    case "es":
+      return `predeterminada`;
+    case "fr":
+      return `par défaut`;
+    case "ja":
+      return `既定`;
+    case "ko":
+      return `기본`;
+    case "pt-BR":
+      return `padrão`;
+    case "zh-Hans":
+      return `默认`;
+    case "zh-Hant":
+      return `預設`;
+    case "en-XA":
+      return `[ðéƒáûļţ ~~~]`;
+    case "ar-XB":
+      return `\u202edefault\u202c`;
+  }
+  return `default`;
+}
+
+export function settingsProjectsFolderChoosing(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الاختيار...`;
+    case "de":
+      return `Wird gewählt ...`;
+    case "es":
+      return `Eligiendo...`;
+    case "fr":
+      return `Choix en cours...`;
+    case "ja":
+      return `選択中...`;
+    case "ko":
+      return `선택 중...`;
+    case "pt-BR":
+      return `Escolhendo...`;
+    case "zh-Hans":
+      return `正在选择...`;
+    case "zh-Hant":
+      return `正在選擇…`;
+    case "en-XA":
+      return `[Çĥööšîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eChoosing...\u202c`;
+  }
+  return `Choosing...`;
+}
+
+export function settingsProjectsFolderChoose(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختيار مجلد`;
+    case "de":
+      return `Ordner wählen`;
+    case "es":
+      return `Elegir carpeta`;
+    case "fr":
+      return `Choisir un dossier`;
+    case "ja":
+      return `フォルダを選択`;
+    case "ko":
+      return `폴더 선택`;
+    case "pt-BR":
+      return `Escolher pasta`;
+    case "zh-Hans":
+      return `选择文件夹`;
+    case "zh-Hant":
+      return `選擇資料夾`;
+    case "en-XA":
+      return `[Çĥööšé ƒöļðéŕ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose folder\u202c`;
+  }
+  return `Choose folder`;
+}
+
+export function settingsProjectsFolderUseDefault(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام الافتراضي`;
+    case "de":
+      return `Standard verwenden`;
+    case "es":
+      return `Usar la predeterminada`;
+    case "fr":
+      return `Utiliser le dossier par défaut`;
+    case "ja":
+      return `既定を使う`;
+    case "ko":
+      return `기본값 사용`;
+    case "pt-BR":
+      return `Usar a padrão`;
+    case "zh-Hans":
+      return `使用默认`;
+    case "zh-Hant":
+      return `使用預設`;
+    case "en-XA":
+      return `[Ûšé ðéƒáûļţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eUse default\u202c`;
+  }
+  return `Use default`;
+}
+
+export function settingsProjectsName(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاسم`;
+    case "de":
+      return `Name`;
+    case "es":
+      return `Nombre`;
+    case "fr":
+      return `Nom`;
+    case "ja":
+      return `名前`;
+    case "ko":
+      return `이름`;
+    case "pt-BR":
+      return `Nome`;
+    case "zh-Hans":
+      return `名称`;
+    case "zh-Hant":
+      return `名稱`;
+    case "en-XA":
+      return `[Ñáɱé ~~]`;
+    case "ar-XB":
+      return `\u202eName\u202c`;
+  }
+  return `Name`;
+}
+
+export function settingsProjectsNameDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحتفظ مشروعك برمزه وسجله.`;
+    case "de":
+      return `Dein Projekt behält sein Kürzel und seinen Verlauf.`;
+    case "es":
+      return `Tu proyecto conserva su clave y su historial.`;
+    case "fr":
+      return `Votre projet garde sa clé et son historique.`;
+    case "ja":
+      return `プロジェクトのタスクキーと履歴はそのまま残ります。`;
+    case "ko":
+      return `프로젝트의 키와 기록은 그대로 유지돼요.`;
+    case "pt-BR":
+      return `Seu projeto mantém a chave e o histórico.`;
+    case "zh-Hans":
+      return `你的项目会保留它的任务编号前缀和历史。`;
+    case "zh-Hant":
+      return `你的專案會保留它的任務編號前綴和歷史。`;
+    case "en-XA":
+      return `[Ýöûŕ þŕöĵéçţ ķééþš îţš ķéý áñð ĥîšţöŕý. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour project keeps its key and history.\u202c`;
+  }
+  return `Your project keeps its key and history.`;
+}
+
+export function settingsProjectsNameLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اسم المشروع`;
+    case "de":
+      return `Projektname`;
+    case "es":
+      return `Nombre del proyecto`;
+    case "fr":
+      return `Nom du projet`;
+    case "ja":
+      return `プロジェクト名`;
+    case "ko":
+      return `프로젝트 이름`;
+    case "pt-BR":
+      return `Nome do projeto`;
+    case "zh-Hans":
+      return `项目名称`;
+    case "zh-Hant":
+      return `專案名稱`;
+    case "en-XA":
+      return `[Þŕöĵéçţ ñáɱé ~~~~]`;
+    case "ar-XB":
+      return `\u202eProject name\u202c`;
+  }
+  return `Project name`;
+}
+
+export function settingsProjectsScope(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النطاق`;
+    case "de":
+      return `Umfang`;
+    case "es":
+      return `Alcance`;
+    case "fr":
+      return `Périmètre`;
+    case "ja":
+      return `範囲`;
+    case "ko":
+      return `범위`;
+    case "pt-BR":
+      return `Escopo`;
+    case "zh-Hans":
+      return `范围`;
+    case "zh-Hant":
+      return `範圍`;
+    case "en-XA":
+      return `[Šçöþé ~~]`;
+    case "ar-XB":
+      return `\u202eScope\u202c`;
+  }
+  return `Scope`;
+}
+
+export function settingsProjectsScopeDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما العمل الذي ينتمي إلى هذا المشروع. يقرؤه نائب القبطان ليختار أين يذهب العمل الجديد.`;
+    case "de":
+      return `Welche Arbeit in dieses Projekt gehört. Dein erster Offizier liest das, um zu entscheiden, wohin neue Arbeit kommt.`;
+    case "es":
+      return `Qué trabajo pertenece a este proyecto. Tu primer oficial lo lee para elegir adónde va el trabajo nuevo.`;
+    case "fr":
+      return `Le travail qui relève de ce projet. Votre second le lit pour choisir où va le nouveau travail.`;
+    case "ja":
+      return `このプロジェクトに含める作業です。一等航海士はこれを読んで、新しい作業の行き先を選びます。`;
+    case "ko":
+      return `이 프로젝트에 속하는 작업이에요. 일등항해사는 이것을 읽고 새 작업을 어디에 둘지 정해요.`;
+    case "pt-BR":
+      return `Que trabalho pertence a este projeto. Seu imediato lê isso para escolher para onde vai o trabalho novo.`;
+    case "zh-Hans":
+      return `哪些工作属于这个项目。你的大副会读取它来决定新工作放在哪里。`;
+    case "zh-Hant":
+      return `哪些工作屬於這個專案。你的大副會讀它來決定新工作要放在哪裡。`;
+    case "en-XA":
+      return `[Ŵĥáţ ŵöŕķ ƀéļöñĝš îñ ţĥîš þŕöĵéçţ. Ýöûŕ ƒîŕšţ ɱáţé ŕéáðš îţ ţö çĥööšé ŵĥéŕé ñéŵ ŵöŕķ ĝöéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat work belongs in this project. Your first mate reads it to choose where new work goes.\u202c`;
+  }
+  return `What work belongs in this project. Your first mate reads it to choose where new work goes.`;
+}
+
+export function settingsProjectsFolder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المجلد`;
+    case "de":
+      return `Ordner`;
+    case "es":
+      return `Carpeta`;
+    case "fr":
+      return `Dossier`;
+    case "ja":
+      return `フォルダ`;
+    case "ko":
+      return `폴더`;
+    case "pt-BR":
+      return `Pasta`;
+    case "zh-Hans":
+      return `文件夹`;
+    case "zh-Hant":
+      return `資料夾`;
+    case "en-XA":
+      return `[Ƒöļðéŕ ~~]`;
+    case "ar-XB":
+      return `\u202eFolder\u202c`;
+  }
+  return `Folder`;
+}
+
+export function settingsProjectsFolderDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انقل المجلد أولًا، ثم أدخل موقعه الجديد. يجب أن تكون مهامه منتهية أو مُسقطة.`;
+    case "de":
+      return `Verschieb zuerst den Ordner und gib dann seinen neuen Ort ein. Seine Aufgaben müssen fertig oder aufgegeben sein.`;
+    case "es":
+      return `Primero mueve la carpeta y luego escribe su nueva ubicación. Sus tareas deben estar terminadas o abandonadas.`;
+    case "fr":
+      return `Déplacez d’abord le dossier, puis saisissez son nouvel emplacement. Ses tâches doivent être terminées ou écartées.`;
+    case "ja":
+      return `先にフォルダを移動してから、新しい場所を入力してください。タスクはすべて完了または取りやめ済みである必要があります。`;
+    case "ko":
+      return `먼저 폴더를 옮긴 다음 새 위치를 입력하세요. 이 프로젝트의 작업은 모두 끝났거나 중단된 상태여야 해요.`;
+    case "pt-BR":
+      return `Mova a pasta primeiro e depois informe o novo local. As tarefas dele precisam estar concluídas ou descartadas.`;
+    case "zh-Hans":
+      return `先移动文件夹，再输入它的新位置。它的任务必须已完成或已放弃。`;
+    case "zh-Hant":
+      return `先移動資料夾，再輸入它的新位置。它的任務必須已完成或已放棄。`;
+    case "en-XA":
+      return `[Ṁöṽé ţĥé ƒöļðéŕ ƒîŕšţ, ţĥéñ éñţéŕ îţš ñéŵ ļöçáţîöñ. Îţš ţášķš ɱûšţ ƀé ƒîñîšĥéð öŕ ðŕöþþéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMove the folder first, then enter its new location. Its tasks must be finished or dropped.\u202c`;
+  }
+  return `Move the folder first, then enter its new location. Its tasks must be finished or dropped.`;
+}
+
+export function settingsProjectsFolderLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مجلد المشروع`;
+    case "de":
+      return `Projektordner`;
+    case "es":
+      return `Carpeta del proyecto`;
+    case "fr":
+      return `Dossier du projet`;
+    case "ja":
+      return `プロジェクトのフォルダ`;
+    case "ko":
+      return `프로젝트 폴더`;
+    case "pt-BR":
+      return `Pasta do projeto`;
+    case "zh-Hans":
+      return `项目文件夹`;
+    case "zh-Hant":
+      return `專案資料夾`;
+    case "en-XA":
+      return `[Þŕöĵéçţ ƒöļðéŕ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eProject folder\u202c`;
+  }
+  return `Project folder`;
+}
+
+export function settingsProjectsOrigin(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حيث يُستضاف`;
+    case "de":
+      return `Wo es liegt`;
+    case "es":
+      return `Dónde se aloja`;
+    case "fr":
+      return `Où il est hébergé`;
+    case "ja":
+      return `保管先`;
+    case "ko":
+      return `있는 곳`;
+    case "pt-BR":
+      return `Onde fica`;
+    case "zh-Hans":
+      return `项目托管处`;
+    case "zh-Hant":
+      return `專案所在處`;
+    case "en-XA":
+      return `[Ŵĥéŕé îţ ļîṽéš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhere it lives\u202c`;
+  }
+  return `Where it lives`;
+}
+
+export function settingsProjectsOriginDescription(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل العنوان الذي يشير إليه مجلدك، أو اتركه فارغًا لـ${place}.`;
+    case "de":
+      return `Gib die Adresse ein, auf die dein Ordner verweist, oder lass das Feld leer für ${place}.`;
+    case "es":
+      return `Escribe la dirección a la que apunta tu carpeta, o déjala vacía para ${place}.`;
+    case "fr":
+      return `Saisissez l’adresse vers laquelle pointe votre dossier, ou laissez vide pour ${place}.`;
+    case "ja":
+      return `フォルダが指しているアドレスを入力するか、空のままにして ${place} を使います。`;
+    case "ko":
+      return `폴더가 가리키는 주소를 입력하거나, ${place}(으)로 두려면 비워 두세요.`;
+    case "pt-BR":
+      return `Informe o endereço para onde sua pasta aponta, ou deixe vazio para ${place}.`;
+    case "zh-Hans":
+      return `输入你的文件夹指向的地址，或留空以使用 ${place}。`;
+    case "zh-Hant":
+      return `輸入你的資料夾指向的位址，或留白以使用 ${place}。`;
+    case "en-XA":
+      return `[Éñţéŕ ţĥé áððŕéšš ýöûŕ ƒöļðéŕ þöîñţš áţ, öŕ ļéáṽé îţ éɱþţý ƒöŕ ${place}. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter the address your folder points at, or leave it empty for \u202c${place}\u202e.\u202c`;
+  }
+  return `Enter the address your folder points at, or leave it empty for ${place}.`;
+}
+
+export function settingsProjectsOriginLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حيث يُستضاف المشروع`;
+    case "de":
+      return `Wo das Projekt liegt`;
+    case "es":
+      return `Dónde se aloja el proyecto`;
+    case "fr":
+      return `Là où le projet est hébergé`;
+    case "ja":
+      return `プロジェクトの保管先`;
+    case "ko":
+      return `프로젝트가 있는 곳`;
+    case "pt-BR":
+      return `Onde o projeto fica`;
+    case "zh-Hans":
+      return `项目托管处`;
+    case "zh-Hant":
+      return `專案所在處`;
+    case "en-XA":
+      return `[Ŵĥéŕé ţĥé þŕöĵéçţ ļîṽéš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhere the project lives\u202c`;
+  }
+  return `Where the project lives`;
+}
+
+export function settingsProjectsSaveDetails(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حفظ التفاصيل`;
+    case "de":
+      return `Angaben speichern`;
+    case "es":
+      return `Guardar detalles`;
+    case "fr":
+      return `Enregistrer les détails`;
+    case "ja":
+      return `詳細を保存`;
+    case "ko":
+      return `세부 정보 저장`;
+    case "pt-BR":
+      return `Salvar detalhes`;
+    case "zh-Hans":
+      return `保存详细信息`;
+    case "zh-Hant":
+      return `儲存詳細資料`;
+    case "en-XA":
+      return `[Šáṽé ðéţáîļš ~~~~]`;
+    case "ar-XB":
+      return `\u202eSave details\u202c`;
+  }
+  return `Save details`;
+}
+
+export function settingsProjectsRowExpanded(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name}، موسّع`;
+    case "de":
+      return `${name}, aufgeklappt`;
+    case "es":
+      return `${name}, expandido`;
+    case "fr":
+      return `${name}, développé`;
+    case "ja":
+      return `${name}、展開`;
+    case "ko":
+      return `${name}, 펼쳐짐`;
+    case "pt-BR":
+      return `${name}, expandido`;
+    case "zh-Hans":
+      return `${name}，已展开`;
+    case "zh-Hant":
+      return `${name}，已展開`;
+    case "en-XA":
+      return `[${name}, éẋþáñðéð ~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e, expanded\u202c`;
+  }
+  return `${name}, expanded`;
+}
+
+export function settingsProjectsRowCollapsed(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name}، مطويّ`;
+    case "de":
+      return `${name}, zugeklappt`;
+    case "es":
+      return `${name}, contraído`;
+    case "fr":
+      return `${name}, réduit`;
+    case "ja":
+      return `${name}、折りたたみ`;
+    case "ko":
+      return `${name}, 접힘`;
+    case "pt-BR":
+      return `${name}, recolhido`;
+    case "zh-Hans":
+      return `${name}，已收起`;
+    case "zh-Hant":
+      return `${name}，已收合`;
+    case "en-XA":
+      return `[${name}, çöļļáþšéð ~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e, collapsed\u202c`;
+  }
+  return `${name}, collapsed`;
+}
+
+export function settingsProjectsWorkspace(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مساحة العمل`;
+    case "de":
+      return `Arbeitsbereich`;
+    case "es":
+      return `Espacio de trabajo`;
+    case "fr":
+      return `Espace de travail`;
+    case "ja":
+      return `ワークスペース`;
+    case "ko":
+      return `작업 공간`;
+    case "pt-BR":
+      return `Espaço de trabalho`;
+    case "zh-Hans":
+      return `工作区`;
+    case "zh-Hant":
+      return `工作區`;
+    case "en-XA":
+      return `[Ŵöŕķšþáçé ~~~]`;
+    case "ar-XB":
+      return `\u202eWorkspace\u202c`;
+  }
+  return `Workspace`;
+}
+
+export function settingsProjectsDeliveryTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلى أين تذهب التغييرات`;
+    case "de":
+      return `Wohin Änderungen gehen`;
+    case "es":
+      return `Adónde van los cambios`;
+    case "fr":
+      return `Où vont les modifications`;
+    case "ja":
+      return `変更の届け方`;
+    case "ko":
+      return `변경이 가는 곳`;
+    case "pt-BR":
+      return `Para onde vão as alterações`;
+    case "zh-Hans":
+      return `改动去向`;
+    case "zh-Hant":
+      return `變更去向`;
+    case "en-XA":
+      return `[Ŵĥéŕé çĥáñĝéš ĝö ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhere changes go\u202c`;
+  }
+  return `Where changes go`;
+}
+
+export function settingsProjectsWorkspaceDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُبنى في مكانه: لا نسخة عمل ولا طلب سحب.`;
+    case "de":
+      return `Baut direkt im Ordner: keine Arbeitskopie und kein Pull Request.`;
+    case "es":
+      return `Se construye en el lugar: sin copia de trabajo y sin solicitud de incorporación de cambios.`;
+    case "fr":
+      return `Construit sur place : pas de copie de travail ni de demande de tirage.`;
+    case "ja":
+      return `その場で作成：作業コピーもプルリクエストもありません。`;
+    case "ko":
+      return `그 자리에서 만들어요: 작업 사본도, 끌어오기 요청도 없어요.`;
+    case "pt-BR":
+      return `Feito no local: sem cópia de trabalho e sem solicitação de pull.`;
+    case "zh-Hans":
+      return `就地构建：没有工作副本，也没有拉取请求。`;
+    case "zh-Hant":
+      return `就地建置：沒有工作副本，也沒有 pull request。`;
+    case "en-XA":
+      return `[Ɓûîļðš îñ þļáçé: ñö ŵöŕķîñĝ çöþý áñð ñö þûļļ ŕéǫûéšţ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBuilds in place: no working copy and no pull request.\u202c`;
+  }
+  return `Builds in place: no working copy and no pull request.`;
+}
+
+export function settingsProjectsAutonomyPersonal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُبنى في مكانه. العمل الذي يجتاز الفحوصات يُكتب فور انتهائه.`;
+    case "de":
+      return `Baut direkt im Ordner. Arbeit, die die Überprüfungen besteht, wird geschrieben, sobald sie fertig ist.`;
+    case "es":
+      return `Se construye en el lugar. El trabajo que supera las comprobaciones se escribe en cuanto está terminado.`;
+    case "fr":
+      return `Construit sur place. Le travail qui passe les vérifications est écrit dès qu’il est terminé.`;
+    case "ja":
+      return `その場で作成。チェックに合格した作業は、終わりしだい書き込まれます。`;
+    case "ko":
+      return `그 자리에서 만들어요. 검사를 통과한 작업은 끝나는 즉시 기록돼요.`;
+    case "pt-BR":
+      return `Feito no local. O trabalho que passa nas verificações é gravado assim que fica pronto.`;
+    case "zh-Hans":
+      return `就地构建。通过检查的工作一完成就会写入。`;
+    case "zh-Hant":
+      return `就地建置。通過檢查的工作一完成就會寫入。`;
+    case "en-XA":
+      return `[Ɓûîļðš îñ þļáçé. Ŵöŕķ ţĥáţ þáššéš ţĥé çĥéçķš îš ŵŕîţţéñ áš šööñ áš îţ îš ðöñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBuilds in place. Work that passes the checks is written as soon as it is done.\u202c`;
+  }
+  return `Builds in place. Work that passes the checks is written as soon as it is done.`;
+}
+
+export function settingsProjectsAutonomyOn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العمل الذي يجتاز الفحوصات قد يُدمج دون سؤالك.`;
+    case "de":
+      return `Arbeit, die die Überprüfungen besteht, darf ohne Rückfrage zusammengeführt werden.`;
+    case "es":
+      return `El trabajo que supera las comprobaciones puede fusionarse sin preguntarte.`;
+    case "fr":
+      return `Le travail qui passe les vérifications peut être fusionné sans vous demander.`;
+    case "ja":
+      return `チェックに合格した作業は、確認なしでマージされることがあります。`;
+    case "ko":
+      return `검사를 통과한 작업은 묻지 않고 병합될 수 있어요.`;
+    case "pt-BR":
+      return `O trabalho que passa nas verificações pode ser mesclado sem perguntar a você.`;
+    case "zh-Hans":
+      return `通过检查的工作可以不经询问直接合并。`;
+    case "zh-Hant":
+      return `通過檢查的工作可以不問你就合併。`;
+    case "en-XA":
+      return `[Ŵöŕķ ţĥáţ þáššéš ţĥé çĥéçķš ɱáý ɱéŕĝé ŵîţĥöûţ ášķîñĝ ýöû. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWork that passes the checks may merge without asking you.\u202c`;
+  }
+  return `Work that passes the checks may merge without asking you.`;
+}
+
+export function settingsProjectsAutonomyOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العمل المنتهي ينتظر كلمتك.`;
+    case "de":
+      return `Fertige Arbeit wartet auf dein Wort.`;
+    case "es":
+      return `El trabajo terminado espera tu palabra.`;
+    case "fr":
+      return `Le travail terminé attend votre accord.`;
+    case "ja":
+      return `完了した作業はあなたの承認を待ちます。`;
+    case "ko":
+      return `끝난 작업은 선장님의 말을 기다려요.`;
+    case "pt-BR":
+      return `O trabalho concluído espera sua palavra.`;
+    case "zh-Hans":
+      return `完成的工作会等你确认。`;
+    case "zh-Hant":
+      return `完成的工作會等你同意。`;
+    case "en-XA":
+      return `[Ƒîñîšĥéð ŵöŕķ ŵáîţš ƒöŕ ýöûŕ ŵöŕð. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFinished work waits for your word.\u202c`;
+  }
+  return `Finished work waits for your word.`;
+}
+
+export function settingsProjectsCare(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العناية`;
+    case "de":
+      return `Sorgfalt`;
+    case "es":
+      return `Cuidado`;
+    case "fr":
+      return `Soin`;
+    case "ja":
+      return `慎重さ`;
+    case "ko":
+      return `주의 수준`;
+    case "pt-BR":
+      return `Cuidado`;
+    case "zh-Hans":
+      return `把关`;
+    case "zh-Hant":
+      return `謹慎度`;
+    case "en-XA":
+      return `[Ŕîĝöŕ ~~]`;
+    case "ar-XB":
+      return `\u202eRigor\u202c`;
+  }
+  return `Rigor`;
+}
+
+export function settingsProjectsCarePersonal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء هنا يمر عبر بوابة.`;
+    case "de":
+      return `Hier geht nichts durch eine Prüfstelle.`;
+    case "es":
+      return `Aquí nada pasa por un control.`;
+    case "fr":
+      return `Rien ici ne passe par un contrôle.`;
+    case "ja":
+      return `ここでは何も関門を通りません。`;
+    case "ko":
+      return `여기서는 어떤 관문도 거치지 않아요.`;
+    case "pt-BR":
+      return `Nada aqui passa por uma etapa de controle.`;
+    case "zh-Hans":
+      return `这里的内容不经过任何把关。`;
+    case "zh-Hant":
+      return `這裡的內容不經過任何關卡。`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ ĥéŕé þáššéš ţĥŕöûĝĥ á ĝáţé. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing here passes through a gate.\u202c`;
+  }
+  return `Nothing here passes through a gate.`;
+}
+
+export function settingsProjectsRigorDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مدى دقة فحص العمل هنا.`;
+    case "de":
+      return `Wie gründlich die Arbeit hier geprüft wird.`;
+    case "es":
+      return `Qué tan a fondo se revisa el trabajo aquí.`;
+    case "fr":
+      return `Le niveau de vérification du travail ici.`;
+    case "ja":
+      return `ここでの作業をどれだけ念入りに確認するか。`;
+    case "ko":
+      return `여기서 하는 작업을 얼마나 꼼꼼하게 확인할지 정해요.`;
+    case "pt-BR":
+      return `Com que rigor o trabalho daqui é verificado.`;
+    case "zh-Hans":
+      return `这里的工作要检查得多仔细。`;
+    case "zh-Hant":
+      return `這裡的工作要檢查得多仔細。`;
+    case "en-XA":
+      return `[Ĥöŵ ţĥöŕöûĝĥļý ŵöŕķ ĥéŕé îš çĥéçķéð. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHow thoroughly work here is checked.\u202c`;
+  }
+  return `How thoroughly work here is checked.`;
+}
+
+export function settingsProjectsCareNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء`;
+    case "de":
+      return `keine`;
+    case "es":
+      return `ninguno`;
+    case "fr":
+      return `aucun`;
+    case "ja":
+      return `なし`;
+    case "ko":
+      return `없음`;
+    case "pt-BR":
+      return `nenhum`;
+    case "zh-Hans":
+      return `无`;
+    case "zh-Hant":
+      return `無`;
+    case "en-XA":
+      return `[ñöñé ~~]`;
+    case "ar-XB":
+      return `\u202enone\u202c`;
+  }
+  return `none`;
+}
+
+export function settingsProjectsLocalCareful(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التغييرات التي تُدمج محليًا تُنجز بتأنٍّ، دون مراجعة - فلا يوجد طلب سحب للاطلاع عليه.`;
+    case "de":
+      return `Lokal zusammengeführte Änderungen werden sorgfältig erledigt, aber ohne Review – es gibt keinen Pull Request, den man ansehen könnte.`;
+    case "es":
+      return `Los cambios que se fusionan localmente se hacen con cuidado, sin revisión: no hay ninguna solicitud de incorporación de cambios que mirar.`;
+    case "fr":
+      return `Les modifications fusionnées localement sont faites avec minutie, sans revue – il n’y a pas de demande de tirage à examiner.`;
+    case "ja":
+      return `ローカルでマージされる変更は慎重に行われますが、レビューはありません。確認するプルリクエストがないためです。`;
+    case "ko":
+      return `로컬에서 병합되는 변경은 검토 없이 신중하게 처리돼요. 살펴볼 끌어오기 요청이 없기 때문이에요.`;
+    case "pt-BR":
+      return `As alterações mescladas localmente são feitas com cuidado, sem revisão - não há solicitação de pull para olhar.`;
+    case "zh-Hans":
+      return `本地合并的改动会谨慎完成，但没有审查——因为没有拉取请求可供查看。`;
+    case "zh-Hant":
+      return `本機合併的變更會謹慎完成，但沒有審查，因為沒有 pull request 可以看。`;
+    case "en-XA":
+      return `[Çĥáñĝéš ţĥáţ ɱéŕĝé ļöçáļļý áŕé ðöñé çáŕéƒûļļý, ŵîţĥöûţ á ŕéṽîéŵ - ţĥéŕé îš ñö þûļļ ŕéǫûéšţ ţö ļööķ áţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChanges that merge locally are done carefully, without a review - there is no pull request to look at.\u202c`;
+  }
+  return `Changes that merge locally are done carefully, without a review - there is no pull request to look at.`;
+}
+
+export function settingsAddProjectAddedGit(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُضيف ${name}. بدأ git في هذا المجلد بإيداع أول فارغ.`;
+    case "de":
+      return `${name} hinzugefügt. Git in diesem Ordner gestartet, mit einem leeren ersten Commit.`;
+    case "es":
+      return `Se agregó ${name}. Se inició git en esta carpeta con una primera confirmación vacía.`;
+    case "fr":
+      return `${name} ajouté. Git initialisé dans ce dossier avec un premier commit vide.`;
+    case "ja":
+      return `${name} を追加しました。このフォルダで git を開始し、空の最初のコミットを作成しました。`;
+    case "ko":
+      return `${name}을(를) 추가했어요. 이 폴더에서 빈 첫 커밋으로 git을 시작했어요.`;
+    case "pt-BR":
+      return `${name} adicionado. O git foi iniciado nesta pasta com um primeiro commit vazio.`;
+    case "zh-Hans":
+      return `已添加 ${name}。已在这个文件夹中初始化 git，并创建了一个空的首次提交。`;
+    case "zh-Hant":
+      return `已加入 ${name}。已在這個資料夾中啟用 git，並建立一個空的第一次提交。`;
+    case "en-XA":
+      return `[Åððéð ${name}. Šţáŕţéð ĝîţ îñ ţĥîš ƒöļðéŕ ŵîţĥ áñ éɱþţý ƒîŕšţ çöɱɱîţ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdded \u202c${name}\u202e. Started git in this folder with an empty first commit.\u202c`;
+  }
+  return `Added ${name}. Started git in this folder with an empty first commit.`;
+}
+
+export function settingsAddProjectAdded(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُضيف ${name}.`;
+    case "de":
+      return `${name} hinzugefügt.`;
+    case "es":
+      return `Se agregó ${name}.`;
+    case "fr":
+      return `${name} ajouté.`;
+    case "ja":
+      return `${name} を追加しました。`;
+    case "ko":
+      return `${name}을(를) 추가했어요.`;
+    case "pt-BR":
+      return `${name} adicionado.`;
+    case "zh-Hans":
+      return `已添加 ${name}。`;
+    case "zh-Hant":
+      return `已加入 ${name}。`;
+    case "en-XA":
+      return `[Åððéð ${name}. ~~~]`;
+    case "ar-XB":
+      return `\u202eAdded \u202c${name}\u202e.\u202c`;
+  }
+  return `Added ${name}.`;
+}
+
+export function settingsAddProjectAlreadyAdded(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name} مضاف بالفعل. صفه مفتوح.`;
+    case "de":
+      return `${name} ist schon hinzugefügt. Seine Zeile ist offen.`;
+    case "es":
+      return `${name} ya está agregado. Su fila está abierta.`;
+    case "fr":
+      return `${name} est déjà ajouté. Sa ligne est ouverte.`;
+    case "ja":
+      return `${name} はすでに追加されています。その行を開きました。`;
+    case "ko":
+      return `${name}은(는) 이미 추가되어 있어요. 해당 행이 열려 있어요.`;
+    case "pt-BR":
+      return `${name} já foi adicionado. A linha dele está aberta.`;
+    case "zh-Hans":
+      return `${name} 已添加过。它的行已打开。`;
+    case "zh-Hant":
+      return `${name} 已經加入過了。它的那一列已開啟。`;
+    case "en-XA":
+      return `[${name} îš áļŕéáðý áððéð. Îţš ŕöŵ îš öþéñ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e is already added. Its row is open.\u202c`;
+  }
+  return `${name} is already added. Its row is open.`;
+}
+
+export function settingsAddProjectWrongHost(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق رابط مشروع على ${host}. لمستضيف آخر، اسأل نائب القبطان.`;
+    case "de":
+      return `Füg einen Projektlink von ${host} ein. Für einen anderen Host frag deinen ersten Offizier.`;
+    case "es":
+      return `Pega el enlace de un proyecto de ${host}. Para otro sitio, pregúntale a tu primer oficial.`;
+    case "fr":
+      return `Collez le lien d’un projet ${host}. Pour un autre hébergeur, demandez à votre second.`;
+    case "ja":
+      return `${host} のプロジェクトのリンクを貼り付けてください。ほかのホストについては、一等航海士に頼んでください。`;
+    case "ko":
+      return `${host} 프로젝트 링크를 붙여 넣으세요. 다른 호스트는 일등항해사에게 물어보세요.`;
+    case "pt-BR":
+      return `Cole o link de um projeto do ${host}. Para outro host, pergunte ao seu imediato.`;
+    case "zh-Hans":
+      return `请粘贴一个 ${host} 项目链接。如需其他托管平台，请询问你的大副。`;
+    case "zh-Hant":
+      return `請貼上 ${host} 專案連結。如果是其他主機，請問你的大副。`;
+    case "en-XA":
+      return `[Þášţé á ${host} þŕöĵéçţ ļîñķ. Ƒöŕ áñöţĥéŕ ĥöšţ, ášķ ýöûŕ ƒîŕšţ ɱáţé. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste a \u202c${host}\u202e project link. For another host, ask your first mate.\u202c`;
+  }
+  return `Paste a ${host} project link. For another host, ask your first mate.`;
+}
+
+export function settingsAddProjectLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة مشروع`;
+    case "de":
+      return `Projekt hinzufügen`;
+    case "es":
+      return `Agregar proyecto`;
+    case "fr":
+      return `Ajouter un projet`;
+    case "ja":
+      return `プロジェクトを追加`;
+    case "ko":
+      return `프로젝트 추가`;
+    case "pt-BR":
+      return `Adicionar projeto`;
+    case "zh-Hans":
+      return `添加项目`;
+    case "zh-Hant":
+      return `加入專案`;
+    case "en-XA":
+      return `[Åðð þŕöĵéçţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd project\u202c`;
+  }
+  return `Add project`;
+}
+
+export function settingsAddProjectHostRepo(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مستودع على ${host}`;
+    case "de":
+      return `Projekt auf ${host}`;
+    case "es":
+      return `Repositorio de ${host}`;
+    case "fr":
+      return `Dépôt ${host}`;
+    case "ja":
+      return `${host} のリポジトリ`;
+    case "ko":
+      return `${host} 프로젝트`;
+    case "pt-BR":
+      return `Repositório do ${host}`;
+    case "zh-Hans":
+      return `${host} 仓库`;
+    case "zh-Hant":
+      return `${host} 存放庫`;
+    case "en-XA":
+      return `[${host} ŕéþö ~~]`;
+    case "ar-XB":
+      return `${host}\u202e repo\u202c`;
+  }
+  return `${host} repo`;
+}
+
+export function settingsAddProjectNew(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مشروع جديد`;
+    case "de":
+      return `Neues Projekt`;
+    case "es":
+      return `Proyecto nuevo`;
+    case "fr":
+      return `Nouveau projet`;
+    case "ja":
+      return `新しいプロジェクト`;
+    case "ko":
+      return `새 프로젝트`;
+    case "pt-BR":
+      return `Novo projeto`;
+    case "zh-Hans":
+      return `新项目`;
+    case "zh-Hant":
+      return `新專案`;
+    case "en-XA":
+      return `[Ñéŵ þŕöĵéçţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eNew project\u202c`;
+  }
+  return `New project`;
+}
+
+export function settingsAddProjectAdding(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الإضافة...`;
+    case "de":
+      return `Wird hinzugefügt ...`;
+    case "es":
+      return `Agregando...`;
+    case "fr":
+      return `Ajout...`;
+    case "ja":
+      return `追加中...`;
+    case "ko":
+      return `추가 중...`;
+    case "pt-BR":
+      return `Adicionando...`;
+    case "zh-Hans":
+      return `正在添加...`;
+    case "zh-Hant":
+      return `正在加入…`;
+    case "en-XA":
+      return `[Åððîñĝ... ~~~]`;
+    case "ar-XB":
+      return `\u202eAdding...\u202c`;
+  }
+  return `Adding...`;
+}
+
+export function settingsAddProjectName(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاسم`;
+    case "de":
+      return `Name`;
+    case "es":
+      return `Nombre`;
+    case "fr":
+      return `Nom`;
+    case "ja":
+      return `名前`;
+    case "ko":
+      return `이름`;
+    case "pt-BR":
+      return `Nome`;
+    case "zh-Hans":
+      return `名称`;
+    case "zh-Hant":
+      return `名稱`;
+    case "en-XA":
+      return `[Ñáɱé ~~]`;
+    case "ar-XB":
+      return `\u202eName\u202c`;
+  }
+  return `Name`;
+}
+
+export function settingsAddProjectStart(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بدء المشروع`;
+    case "de":
+      return `Projekt starten`;
+    case "es":
+      return `Iniciar proyecto`;
+    case "fr":
+      return `Démarrer le projet`;
+    case "ja":
+      return `プロジェクトを開始`;
+    case "ko":
+      return `프로젝트 시작`;
+    case "pt-BR":
+      return `Iniciar projeto`;
+    case "zh-Hans":
+      return `开始项目`;
+    case "zh-Hant":
+      return `開始專案`;
+    case "en-XA":
+      return `[Šţáŕţ þŕöĵéçţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eStart project\u202c`;
+  }
+  return `Start project`;
+}
+
+export function settingsAddProjectYourRepos(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مستودعاتك على ${host}`;
+    case "de":
+      return `Deine Projekte auf ${host}`;
+    case "es":
+      return `Tus repositorios de ${host}`;
+    case "fr":
+      return `Vos dépôts ${host}`;
+    case "ja":
+      return `あなたの ${host} リポジトリ`;
+    case "ko":
+      return `내 ${host} 프로젝트`;
+    case "pt-BR":
+      return `Seus repositórios do ${host}`;
+    case "zh-Hans":
+      return `你的 ${host} 仓库`;
+    case "zh-Hant":
+      return `你的 ${host} 存放庫`;
+    case "en-XA":
+      return `[Ýöûŕ ${host} ŕéþöš ~~~~]`;
+    case "ar-XB":
+      return `\u202eYour \u202c${host}\u202e repos\u202c`;
+  }
+  return `Your ${host} repos`;
+}
+
+export function settingsAddProjectFind(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البحث عن مستودع`;
+    case "de":
+      return `Projekt suchen`;
+    case "es":
+      return `Buscar un repositorio`;
+    case "fr":
+      return `Trouver un dépôt`;
+    case "ja":
+      return `リポジトリを検索`;
+    case "ko":
+      return `프로젝트 찾기`;
+    case "pt-BR":
+      return `Buscar um repositório`;
+    case "zh-Hans":
+      return `查找仓库`;
+    case "zh-Hant":
+      return `尋找存放庫`;
+    case "en-XA":
+      return `[Ƒîñð á ŕéþö ~~~~]`;
+    case "ar-XB":
+      return `\u202eFind a repo\u202c`;
+  }
+  return `Find a repo`;
+}
+
+export function settingsAddProjectReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ قراءة مستودعاتك...`;
+    case "de":
+      return `Deine Projekte werden gelesen ...`;
+    case "es":
+      return `Leyendo tus repositorios...`;
+    case "fr":
+      return `Lecture de vos dépôts...`;
+    case "ja":
+      return `リポジトリを読み込み中...`;
+    case "ko":
+      return `프로젝트를 읽는 중...`;
+    case "pt-BR":
+      return `Lendo seus repositórios...`;
+    case "zh-Hans":
+      return `正在读取你的仓库...`;
+    case "zh-Hant":
+      return `正在讀取你的存放庫…`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ ýöûŕ ŕéþöš... ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReading your repos...\u202c`;
+  }
+  return `Reading your repos...`;
+}
+
+export function settingsAddProjectPrivate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `· خاص`;
+    case "de":
+      return `· privat`;
+    case "es":
+      return `· privado`;
+    case "fr":
+      return `· privé`;
+    case "ja":
+      return `· 非公開`;
+    case "ko":
+      return `· 비공개`;
+    case "pt-BR":
+      return `· privado`;
+    case "zh-Hans":
+      return `· 私有`;
+    case "zh-Hant":
+      return `· 私人`;
+    case "en-XA":
+      return `[· þŕîṽáţé ~~~]`;
+    case "ar-XB":
+      return `\u202e· private\u202c`;
+  }
+  return `· private`;
+}
+
+export function settingsAddProjectAddedMark(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مضاف`;
+    case "de":
+      return `hinzugefügt`;
+    case "es":
+      return `agregado`;
+    case "fr":
+      return `ajouté`;
+    case "ja":
+      return `追加済み`;
+    case "ko":
+      return `추가됨`;
+    case "pt-BR":
+      return `adicionado`;
+    case "zh-Hans":
+      return `已添加`;
+    case "zh-Hant":
+      return `已加入`;
+    case "en-XA":
+      return `[áððéð ~~]`;
+    case "ar-XB":
+      return `\u202eadded\u202c`;
+  }
+  return `added`;
+}
+
+export function settingsAddProjectAdd(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة`;
+    case "de":
+      return `Hinzufügen`;
+    case "es":
+      return `Agregar`;
+    case "fr":
+      return `Ajouter`;
+    case "ja":
+      return `追加`;
+    case "ko":
+      return `추가`;
+    case "pt-BR":
+      return `Adicionar`;
+    case "zh-Hans":
+      return `添加`;
+    case "zh-Hant":
+      return `加入`;
+    case "en-XA":
+      return `[Åðð ~]`;
+    case "ar-XB":
+      return `\u202eAdd\u202c`;
+  }
+  return `Add`;
+}
+
+export function settingsAddProjectOrPasteLink(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أو الصق رابطًا من ${host}`;
+    case "de":
+      return `Oder füg einen Link von ${host} ein`;
+    case "es":
+      return `O pega un enlace de ${host}`;
+    case "fr":
+      return `Ou collez un lien ${host}`;
+    case "ja":
+      return `または ${host} のリンクを貼り付け`;
+    case "ko":
+      return `또는 ${host} 링크 붙여 넣기`;
+    case "pt-BR":
+      return `Ou cole um link do ${host}`;
+    case "zh-Hans":
+      return `或粘贴一个 ${host} 链接`;
+    case "zh-Hant":
+      return `或貼上 ${host} 連結`;
+    case "en-XA":
+      return `[Öŕ þášţé á ${host} ļîñķ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOr paste a \u202c${host}\u202e link\u202c`;
+  }
+  return `Or paste a ${host} link`;
+}
+
+export function settingsAddProjectPasteLink(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق رابطًا من ${host}`;
+    case "de":
+      return `Füg einen Link von ${host} ein`;
+    case "es":
+      return `Pega un enlace de ${host}`;
+    case "fr":
+      return `Collez un lien ${host}`;
+    case "ja":
+      return `${host} のリンクを貼り付け`;
+    case "ko":
+      return `${host} 링크 붙여 넣기`;
+    case "pt-BR":
+      return `Cole um link do ${host}`;
+    case "zh-Hans":
+      return `粘贴一个 ${host} 链接`;
+    case "zh-Hant":
+      return `貼上 ${host} 連結`;
+    case "en-XA":
+      return `[Þášţé á ${host} ļîñķ ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste a \u202c${host}\u202e link\u202c`;
+  }
+  return `Paste a ${host} link`;
+}
+
+export function settingsAddProjectGoesInto(input: { folder: string }): string {
+  const folder = input.folder;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يوضع في مجلد مشاريعك، ${folder}.`;
+    case "de":
+      return `Kommt in deinen Projektordner, ${folder}.`;
+    case "es":
+      return `Va a tu carpeta de proyectos, ${folder}.`;
+    case "fr":
+      return `Va dans votre dossier de projets, ${folder}.`;
+    case "ja":
+      return `プロジェクトのフォルダ ${folder} に入ります。`;
+    case "ko":
+      return `프로젝트 폴더 ${folder}에 들어가요.`;
+    case "pt-BR":
+      return `Vai para sua pasta de projetos, ${folder}.`;
+    case "zh-Hans":
+      return `放入你的项目文件夹 ${folder}。`;
+    case "zh-Hant":
+      return `放進你的專案資料夾 ${folder}。`;
+    case "en-XA":
+      return `[Ĝöéš îñţö ýöûŕ þŕöĵéçţš ƒöļðéŕ, ${folder}. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGoes into your projects folder, \u202c${folder}\u202e.\u202c`;
+  }
+  return `Goes into your projects folder, ${folder}.`;
+}
+
+export function settingsAddProjectClose(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إغلاق`;
+    case "de":
+      return `Schließen`;
+    case "es":
+      return `Cerrar`;
+    case "fr":
+      return `Fermer`;
+    case "ja":
+      return `閉じる`;
+    case "ko":
+      return `닫기`;
+    case "pt-BR":
+      return `Fechar`;
+    case "zh-Hans":
+      return `关闭`;
+    case "zh-Hant":
+      return `關閉`;
+    case "en-XA":
+      return `[Çļöšé ~~]`;
+    case "ar-XB":
+      return `\u202eClose\u202c`;
+  }
+  return `Close`;
+}
+
+export function settingsDevicesRemoveNamed(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${device}`;
+    case "de":
+      return `${device} entfernen`;
+    case "es":
+      return `Quitar ${device}`;
+    case "fr":
+      return `Retirer ${device}`;
+    case "ja":
+      return `${device} を削除`;
+    case "ko":
+      return `${device} 제거`;
+    case "pt-BR":
+      return `Remover ${device}`;
+    case "zh-Hans":
+      return `移除 ${device}`;
+    case "zh-Hant":
+      return `移除 ${device}`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${device} ~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${device}`;
+  }
+  return `Remove ${device}`;
+}
+
+export function settingsDevicesRemoveButton(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة`;
+    case "de":
+      return `Entfernen`;
+    case "es":
+      return `Quitar`;
+    case "fr":
+      return `Retirer`;
+    case "ja":
+      return `削除`;
+    case "ko":
+      return `제거`;
+    case "pt-BR":
+      return `Remover`;
+    case "zh-Hans":
+      return `移除`;
+    case "zh-Hant":
+      return `移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ~~]`;
+    case "ar-XB":
+      return `\u202eRemove\u202c`;
+  }
+  return `Remove`;
+}
+
+export function settingsDevicesAddByAddressNamed(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة ${device} بعنوانه`;
+    case "de":
+      return `${device} über seine Adresse hinzufügen`;
+    case "es":
+      return `Agregar ${device} por su dirección`;
+    case "fr":
+      return `Ajouter ${device} par son adresse`;
+    case "ja":
+      return `${device} をアドレスで追加`;
+    case "ko":
+      return `주소로 ${device} 추가`;
+    case "pt-BR":
+      return `Adicionar ${device} pelo endereço`;
+    case "zh-Hans":
+      return `按地址添加 ${device}`;
+    case "zh-Hant":
+      return `用位址加入 ${device}`;
+    case "en-XA":
+      return `[Åðð ${device} ƀý îţš áððŕéšš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd \u202c${device}\u202e by its address\u202c`;
+  }
+  return `Add ${device} by its address`;
+}
+
+export function settingsDevicesAddByAddress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافته بعنوانه`;
+    case "de":
+      return `Über seine Adresse hinzufügen`;
+    case "es":
+      return `Agregar por su dirección`;
+    case "fr":
+      return `L’ajouter par son adresse`;
+    case "ja":
+      return `アドレスで追加`;
+    case "ko":
+      return `주소로 추가`;
+    case "pt-BR":
+      return `Adicionar pelo endereço`;
+    case "zh-Hans":
+      return `按地址添加`;
+    case "zh-Hant":
+      return `用位址加入`;
+    case "en-XA":
+      return `[Åðð îţ ƀý îţš áððŕéšš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd it by its address\u202c`;
+  }
+  return `Add it by its address`;
+}
+
+export function settingsDevicesTryAgainNamed(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `محاولة الوصول إلى ${device} مجددًا`;
+    case "de":
+      return `Erneut versuchen, ${device} zu erreichen`;
+    case "es":
+      return `Volver a intentar conectar con ${device}`;
+    case "fr":
+      return `Réessayer de joindre ${device}`;
+    case "ja":
+      return `${device} への接続を再試行`;
+    case "ko":
+      return `${device}에 다시 연락하기`;
+    case "pt-BR":
+      return `Tentar alcançar ${device} de novo`;
+    case "zh-Hans":
+      return `再次尝试连接 ${device}`;
+    case "zh-Hant":
+      return `再次嘗試連絡 ${device}`;
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ţö ŕéáçĥ ${device} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTry again to reach \u202c${device}`;
+  }
+  return `Try again to reach ${device}`;
+}
+
+export function settingsDevicesTryAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المحاولة مجددًا`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Volver a intentar`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `再試行`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `再試一次`;
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTry again\u202c`;
+  }
+  return `Try again`;
+}
+
+export function settingsDevicesChangeAddressNamed(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تغيير عنوان ${device}`;
+    case "de":
+      return `Adresse von ${device} ändern`;
+    case "es":
+      return `Cambiar la dirección de ${device}`;
+    case "fr":
+      return `Changer l’adresse de ${device}`;
+    case "ja":
+      return `${device} のアドレスを変更`;
+    case "ko":
+      return `${device}의 주소 변경`;
+    case "pt-BR":
+      return `Mudar o endereço de ${device}`;
+    case "zh-Hans":
+      return `更改 ${device} 的地址`;
+    case "zh-Hant":
+      return `更改 ${device} 的位址`;
+    case "en-XA":
+      return `[Çĥáñĝé ţĥé áððŕéšš öƒ ${device} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChange the address of \u202c${device}`;
+  }
+  return `Change the address of ${device}`;
+}
+
+export function settingsDevicesChangeAddress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تغيير العنوان`;
+    case "de":
+      return `Adresse ändern`;
+    case "es":
+      return `Cambiar dirección`;
+    case "fr":
+      return `Changer l’adresse`;
+    case "ja":
+      return `アドレスを変更`;
+    case "ko":
+      return `주소 변경`;
+    case "pt-BR":
+      return `Mudar endereço`;
+    case "zh-Hans":
+      return `更改地址`;
+    case "zh-Hant":
+      return `更改位址`;
+    case "en-XA":
+      return `[Çĥáñĝé áððŕéšš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eChange address\u202c`;
+  }
+  return `Change address`;
+}
+
+export function settingsDevicesUpdateNamed(input: { device: string }): string {
+  const device = input.device;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تحديث ${device}`;
+    case "de":
+      return `${device} aktualisieren`;
+    case "es":
+      return `Actualizar ${device}`;
+    case "fr":
+      return `Mettre à jour ${device}`;
+    case "ja":
+      return `${device} を更新`;
+    case "ko":
+      return `${device} 업데이트`;
+    case "pt-BR":
+      return `Atualizar ${device}`;
+    case "zh-Hans":
+      return `更新 ${device}`;
+    case "zh-Hant":
+      return `更新 ${device}`;
+    case "en-XA":
+      return `[Ûþðáţé ${device} ~~~]`;
+    case "ar-XB":
+      return `\u202eUpdate \u202c${device}`;
+  }
+  return `Update ${device}`;
+}
+
+export function settingsDevicesUpdate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تحديث`;
+    case "de":
+      return `Aktualisieren`;
+    case "es":
+      return `Actualizar`;
+    case "fr":
+      return `Mettre à jour`;
+    case "ja":
+      return `更新`;
+    case "ko":
+      return `업데이트`;
+    case "pt-BR":
+      return `Atualizar`;
+    case "zh-Hans":
+      return `更新`;
+    case "zh-Hant":
+      return `更新`;
+    case "en-XA":
+      return `[Ûþðáţé ~~]`;
+    case "ar-XB":
+      return `\u202eUpdate\u202c`;
+  }
+  return `Update`;
+}
+
+export function settingsDevicesKeepIt(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإبقاء عليه`;
+    case "de":
+      return `Behalten`;
+    case "es":
+      return `Conservar`;
+    case "fr":
+      return `Le garder`;
+    case "ja":
+      return `残す`;
+    case "ko":
+      return `유지`;
+    case "pt-BR":
+      return `Manter`;
+    case "zh-Hans":
+      return `保留`;
+    case "zh-Hant":
+      return `保留`;
+    case "en-XA":
+      return `[Ķééþ îţ ~~~]`;
+    case "ar-XB":
+      return `\u202eKeep it\u202c`;
+  }
+  return `Keep it`;
+}
+
+export function settingsDevicesAddressChangeSay(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان الذي تستخدمه الآن معه عبر SSH. يتحقق هذا الحاسوب أولًا من أنه الحاسوب نفسه.`;
+    case "de":
+      return `Die Adresse, die du jetzt mit SSH für ihn nutzt. Dieser Computer prüft zuerst, ob es derselbe Computer ist.`;
+    case "es":
+      return `La dirección que usas ahora con SSH para conectarte a ella. Esta computadora comprueba primero que sea la misma computadora.`;
+    case "fr":
+      return `L’adresse que vous utilisez maintenant avec SSH pour lui. Cet ordinateur vérifie d’abord qu’il s’agit du même ordinateur.`;
+    case "ja":
+      return `現在 SSH で接続するときのアドレスです。このコンピューターが、先に同じコンピューターであることを確認します。`;
+    case "ko":
+      return `지금 그 컴퓨터에 SSH로 접속할 때 쓰는 주소예요. 이 컴퓨터가 먼저 같은 컴퓨터인지 확인해요.`;
+    case "pt-BR":
+      return `O endereço que você usa agora com SSH para ele. Este computador verifica primeiro se é o mesmo computador.`;
+    case "zh-Hans":
+      return `你现在用 SSH 连接它的地址。这台电脑会先确认它是同一台电脑。`;
+    case "zh-Hant":
+      return `你現在用 SSH 連到它的位址。這台電腦會先確認它是同一台電腦。`;
+    case "en-XA":
+      return `[Ţĥé áððŕéšš ýöû ûšé ŵîţĥ ŠŠĤ ƒöŕ îţ ñöŵ. Ţĥîš çöɱþûţéŕ çĥéçķš îţ îš ţĥé šáɱé çöɱþûţéŕ ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe address you use with SSH for it now. This computer checks it is the same computer first.\u202c`;
+  }
+  return `The address you use with SSH for it now. This computer checks it is the same computer first.`;
+}
+
+export function settingsDevicesAddressAddSayAs(input: { sshOn: string; user: string }): string {
+  const sshOn = input.sshOn;
+  const user = input.user;
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان الذي تستخدمه معه عبر SSH، باسم ${user}. ${sshOn}`;
+    case "de":
+      return `Die Adresse, die du mit SSH für ihn nutzt, als ${user}. ${sshOn}`;
+    case "es":
+      return `La dirección que usas con SSH para conectarte a ella, como ${user}. ${sshOn}`;
+    case "fr":
+      return `L’adresse que vous utilisez avec SSH pour lui, sous ${user}. ${sshOn}`;
+    case "ja":
+      return `${user} として SSH で接続するときのアドレスです。${sshOn}`;
+    case "ko":
+      return `${user}(으)로 SSH 접속할 때 쓰는 주소예요. ${sshOn}`;
+    case "pt-BR":
+      return `O endereço que você usa com SSH para ele, como ${user}. ${sshOn}`;
+    case "zh-Hans":
+      return `你用 SSH 以 ${user} 身份连接它的地址。${sshOn}`;
+    case "zh-Hant":
+      return `你以 ${user} 身分用 SSH 連到它的位址。${sshOn}`;
+    case "en-XA":
+      return `[Ţĥé áððŕéšš ýöû ûšé ŵîţĥ ŠŠĤ ƒöŕ îţ, áš ${user}. ${sshOn} ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe address you use with SSH for it, as \u202c${user}\u202e. \u202c${sshOn}`;
+  }
+  return `The address you use with SSH for it, as ${user}. ${sshOn}`;
+}
+
+export function settingsDevicesAddressAddSay(input: { sshOn: string }): string {
+  const sshOn = input.sshOn;
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان الذي تستخدمه معه عبر SSH. ${sshOn}`;
+    case "de":
+      return `Die Adresse, die du mit SSH für ihn nutzt. ${sshOn}`;
+    case "es":
+      return `La dirección que usas con SSH para conectarte a ella. ${sshOn}`;
+    case "fr":
+      return `L’adresse que vous utilisez avec SSH pour lui. ${sshOn}`;
+    case "ja":
+      return `SSH で接続するときのアドレスです。${sshOn}`;
+    case "ko":
+      return `SSH로 접속할 때 쓰는 주소예요. ${sshOn}`;
+    case "pt-BR":
+      return `O endereço que você usa com SSH para ele. ${sshOn}`;
+    case "zh-Hans":
+      return `你用 SSH 连接它的地址。${sshOn}`;
+    case "zh-Hant":
+      return `你用 SSH 連到它的位址。${sshOn}`;
+    case "en-XA":
+      return `[Ţĥé áððŕéšš ýöû ûšé ŵîţĥ ŠŠĤ ƒöŕ îţ. ${sshOn} ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe address you use with SSH for it. \u202c${sshOn}`;
+  }
+  return `The address you use with SSH for it. ${sshOn}`;
+}
+
+export function settingsDevicesAddIt(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافته`;
+    case "de":
+      return `Hinzufügen`;
+    case "es":
+      return `Agregar`;
+    case "fr":
+      return `L’ajouter`;
+    case "ja":
+      return `追加`;
+    case "ko":
+      return `추가`;
+    case "pt-BR":
+      return `Adicionar`;
+    case "zh-Hans":
+      return `添加`;
+    case "zh-Hant":
+      return `加入`;
+    case "en-XA":
+      return `[Åðð îţ ~~]`;
+    case "ar-XB":
+      return `\u202eAdd it\u202c`;
+  }
+  return `Add it`;
+}
+
+export function settingsDevicesAddressChange(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تغييره`;
+    case "de":
+      return `Ändern`;
+    case "es":
+      return `Cambiar`;
+    case "fr":
+      return `La changer`;
+    case "ja":
+      return `変更`;
+    case "ko":
+      return `변경`;
+    case "pt-BR":
+      return `Mudar`;
+    case "zh-Hans":
+      return `更改`;
+    case "zh-Hant":
+      return `更改`;
+    case "en-XA":
+      return `[Çĥáñĝé îţ ~~~]`;
+    case "ar-XB":
+      return `\u202eChange it\u202c`;
+  }
+  return `Change it`;
+}
+
+export function settingsDevicesCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsDevicesRemoveOnceUpdated(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإزالة بعد تحديثه`;
+    case "de":
+      return `Entfernen, sobald er aktualisiert ist`;
+    case "es":
+      return `Quitar cuando se actualice`;
+    case "fr":
+      return `Retirer une fois mis à jour`;
+    case "ja":
+      return `更新後に削除`;
+    case "ko":
+      return `업데이트되면 제거`;
+    case "pt-BR":
+      return `Remover depois de atualizado`;
+    case "zh-Hans":
+      return `更新后移除`;
+    case "zh-Hant":
+      return `更新後移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé öñçé îţ îš ûþðáţéð ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove once it is updated\u202c`;
+  }
+  return `Remove once it is updated`;
+}
+
+export function settingsDevicesRemoveWhenBack(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإزالة عند عودته`;
+    case "de":
+      return `Entfernen, sobald er zurück ist`;
+    case "es":
+      return `Quitar cuando vuelva`;
+    case "fr":
+      return `Retirer à son retour`;
+    case "ja":
+      return `戻ったら削除`;
+    case "ko":
+      return `돌아오면 제거`;
+    case "pt-BR":
+      return `Remover quando voltar`;
+    case "zh-Hans":
+      return `恢复联系后移除`;
+    case "zh-Hant":
+      return `恢復連絡後移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ŵĥéñ îţ îš ƀáçķ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove when it is back\u202c`;
+  }
+  return `Remove when it is back`;
+}
+
+export function settingsDevicesRemoveNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإزالة الآن`;
+    case "de":
+      return `Jetzt entfernen`;
+    case "es":
+      return `Quitar ahora`;
+    case "fr":
+      return `Retirer maintenant`;
+    case "ja":
+      return `今すぐ削除`;
+    case "ko":
+      return `지금 제거`;
+    case "pt-BR":
+      return `Remover agora`;
+    case "zh-Hans":
+      return `立即移除`;
+    case "zh-Hant":
+      return `立即移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ñöŵ ~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove now\u202c`;
+  }
+  return `Remove now`;
+}
+
+export function settingsDevicesRemoving(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الإزالة...`;
+    case "de":
+      return `Wird entfernt ...`;
+    case "es":
+      return `Quitando...`;
+    case "fr":
+      return `Retrait...`;
+    case "ja":
+      return `削除中...`;
+    case "ko":
+      return `제거 중...`;
+    case "pt-BR":
+      return `Removendo...`;
+    case "zh-Hans":
+      return `正在移除...`;
+    case "zh-Hant":
+      return `正在移除…`;
+    case "en-XA":
+      return `[Ŕéɱöṽîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eRemoving...\u202c`;
+  }
+  return `Removing...`;
+}
+
+export function settingsDevicesMakeFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر إنشاؤه.`;
+    case "de":
+      return `Konnte nicht erstellt werden.`;
+    case "es":
+      return `No se pudo crear.`;
+    case "fr":
+      return `Création impossible.`;
+    case "ja":
+      return `作成できませんでした。`;
+    case "ko":
+      return `만들 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível criar.`;
+    case "zh-Hans":
+      return `无法生成。`;
+    case "zh-Hant":
+      return `無法產生。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ɱáķé îţ. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not make it.\u202c`;
+  }
+  return `Could not make it.`;
+}
+
+export function settingsDevicesRemoveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت إزالة هذا الجهاز.`;
+    case "de":
+      return `Dieses Gerät konnte nicht entfernt werden.`;
+    case "es":
+      return `No se pudo quitar este dispositivo.`;
+    case "fr":
+      return `Impossible de retirer cet appareil.`;
+    case "ja":
+      return `このデバイスを削除できませんでした。`;
+    case "ko":
+      return `이 기기를 제거할 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível remover este dispositivo.`;
+    case "zh-Hans":
+      return `无法移除这台设备。`;
+    case "zh-Hant":
+      return `無法移除這個裝置。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ŕéɱöṽé ţĥîš ðéṽîçé. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not remove this device.\u202c`;
+  }
+  return `Could not remove this device.`;
+}
+
+export function settingsDevicesAddFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت إضافة هذا الحاسوب.`;
+    case "de":
+      return `Dieser Computer konnte nicht hinzugefügt werden.`;
+    case "es":
+      return `No se pudo agregar esta computadora.`;
+    case "fr":
+      return `Impossible d’ajouter cet ordinateur.`;
+    case "ja":
+      return `このコンピューターを追加できませんでした。`;
+    case "ko":
+      return `이 컴퓨터를 추가할 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível adicionar este computador.`;
+    case "zh-Hans":
+      return `无法添加这台电脑。`;
+    case "zh-Hant":
+      return `無法加入這台電腦。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ áðð ţĥîš çöɱþûţéŕ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not add this computer.\u202c`;
+  }
+  return `Could not add this computer.`;
+}
+
+export function settingsDevicesUpdateFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر تحديث Infinitary هناك.`;
+    case "de":
+      return `Infinitary konnte dort nicht aktualisiert werden.`;
+    case "es":
+      return `No se pudo actualizar Infinitary allí.`;
+    case "fr":
+      return `Impossible de mettre à jour Infinitary là-bas.`;
+    case "ja":
+      return `そちらの Infinitary を更新できませんでした。`;
+    case "ko":
+      return `그곳의 Infinitary를 업데이트할 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível atualizar o Infinitary lá.`;
+    case "zh-Hans":
+      return `无法更新那里的 Infinitary。`;
+    case "zh-Hant":
+      return `無法更新那裡的 Infinitary。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ûþðáţé Îñƒîñîţáŕý ţĥéŕé. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not update Infinitary there.\u202c`;
+  }
+  return `Could not update Infinitary there.`;
+}
+
+export function settingsDevicesTryAgainFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت المحاولة مجددًا.`;
+    case "de":
+      return `Erneuter Versuch nicht möglich.`;
+    case "es":
+      return `No se pudo volver a intentar.`;
+    case "fr":
+      return `Impossible de réessayer.`;
+    case "ja":
+      return `再試行できませんでした。`;
+    case "ko":
+      return `다시 시도할 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível tentar de novo.`;
+    case "zh-Hans":
+      return `无法重试。`;
+    case "zh-Hant":
+      return `無法再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ţŕý áĝáîñ. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not try again.\u202c`;
+  }
+  return `Could not try again.`;
+}
+
+export function settingsDevicesChangeAddressFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر تغيير العنوان الذي يُوصل منه إلى هذا الحاسوب.`;
+    case "de":
+      return `Konnte nicht ändern, wo dieser Computer erreicht wird.`;
+    case "es":
+      return `No se pudo cambiar la dirección con la que se llega a esta computadora.`;
+    case "fr":
+      return `Impossible de changer l’adresse où cet ordinateur est joint.`;
+    case "ja":
+      return `このコンピューターへの接続先を変更できませんでした。`;
+    case "ko":
+      return `이 컴퓨터에 연결하는 주소를 바꿀 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível mudar onde este computador é alcançado.`;
+    case "zh-Hans":
+      return `无法更改这台电脑的连接地址。`;
+    case "zh-Hant":
+      return `無法更改連絡這台電腦的位址。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ çĥáñĝé ŵĥéŕé ţĥîš çöɱþûţéŕ îš ŕéáçĥéð. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not change where this computer is reached.\u202c`;
+  }
+  return `Could not change where this computer is reached.`;
+}
+
+export function settingsDevicesKeepFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر الإبقاء على هذا الجهاز.`;
+    case "de":
+      return `Dieses Gerät konnte nicht behalten werden.`;
+    case "es":
+      return `No se pudo conservar este dispositivo.`;
+    case "fr":
+      return `Impossible de garder cet appareil.`;
+    case "ja":
+      return `このデバイスを残せませんでした。`;
+    case "ko":
+      return `이 기기를 유지할 수 없어요.`;
+    case "pt-BR":
+      return `Não foi possível manter este dispositivo.`;
+    case "zh-Hans":
+      return `无法保留这台设备。`;
+    case "zh-Hant":
+      return `無法保留這個裝置。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ķééþ ţĥîš ðéṽîçé. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not keep this device.\u202c`;
+  }
+  return `Could not keep this device.`;
+}
+
+export function settingsDevicesLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أجهزتك`;
+    case "de":
+      return `Deine Geräte`;
+    case "es":
+      return `Tus dispositivos`;
+    case "fr":
+      return `Vos appareils`;
+    case "ja":
+      return `あなたのデバイス`;
+    case "ko":
+      return `내 기기`;
+    case "pt-BR":
+      return `Seus dispositivos`;
+    case "zh-Hans":
+      return `你的设备`;
+    case "zh-Hant":
+      return `你的裝置`;
+    case "en-XA":
+      return `[Ýöûŕ ðéṽîçéš ~~~~]`;
+    case "ar-XB":
+      return `\u202eYour devices\u202c`;
+  }
+  return `Your devices`;
+}
+
+export function settingsDevicesLivesThere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يقيم نائب القبطان هناك`;
+    case "de":
+      return `Dein erster Offizier lebt dort`;
+    case "es":
+      return `Tu primer oficial vive allí`;
+    case "fr":
+      return `Votre second se trouve là-bas`;
+    case "ja":
+      return `一等航海士はそちらにいます`;
+    case "ko":
+      return `일등항해사는 그곳에 있어요`;
+    case "pt-BR":
+      return `Seu imediato mora lá`;
+    case "zh-Hans":
+      return `你的大副在那里`;
+    case "zh-Hant":
+      return `你的大副在那裡`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš ţĥéŕé ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate lives there\u202c`;
+  }
+  return `Your first mate lives there`;
+}
+
+export function settingsDevicesLivesHere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يقيم نائب القبطان هنا`;
+    case "de":
+      return `Dein erster Offizier lebt hier`;
+    case "es":
+      return `Tu primer oficial vive aquí`;
+    case "fr":
+      return `Votre second se trouve ici`;
+    case "ja":
+      return `一等航海士はここにいます`;
+    case "ko":
+      return `일등항해사는 여기에 있어요`;
+    case "pt-BR":
+      return `Seu imediato mora aqui`;
+    case "zh-Hans":
+      return `你的大副在这里`;
+    case "zh-Hant":
+      return `你的大副在這裡`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš ĥéŕé ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate lives here\u202c`;
+  }
+  return `Your first mate lives here`;
+}
+
+export function settingsDevicesAdd(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة`;
+    case "de":
+      return `Hinzufügen`;
+    case "es":
+      return `Agregar`;
+    case "fr":
+      return `Ajouter`;
+    case "ja":
+      return `追加`;
+    case "ko":
+      return `추가`;
+    case "pt-BR":
+      return `Adicionar`;
+    case "zh-Hans":
+      return `添加`;
+    case "zh-Hant":
+      return `加入`;
+    case "en-XA":
+      return `[Åðð ~]`;
+    case "ar-XB":
+      return `\u202eAdd\u202c`;
+  }
+  return `Add`;
+}
+
+export function settingsDevicesAddComputer(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حاسوب`;
+    case "de":
+      return `Einen Computer`;
+    case "es":
+      return `Una computadora`;
+    case "fr":
+      return `Un ordinateur`;
+    case "ja":
+      return `コンピューター`;
+    case "ko":
+      return `컴퓨터`;
+    case "pt-BR":
+      return `Um computador`;
+    case "zh-Hans":
+      return `一台电脑`;
+    case "zh-Hant":
+      return `一台電腦`;
+    case "en-XA":
+      return `[Å çöɱþûţéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eA computer\u202c`;
+  }
+  return `A computer`;
+}
+
+export function settingsDevicesAddPhone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هاتف`;
+    case "de":
+      return `Ein Telefon`;
+    case "es":
+      return `Un teléfono`;
+    case "fr":
+      return `Un téléphone`;
+    case "ja":
+      return `スマートフォン`;
+    case "ko":
+      return `휴대폰`;
+    case "pt-BR":
+      return `Um celular`;
+    case "zh-Hans":
+      return `一部手机`;
+    case "zh-Hant":
+      return `手機`;
+    case "en-XA":
+      return `[Å þĥöñé ~~~]`;
+    case "ar-XB":
+      return `\u202eA phone\u202c`;
+  }
+  return `A phone`;
+}
+
+export function settingsDevicesAddUser(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التشغيل باسم مستخدم آخر`;
+    case "de":
+      return `Als anderer Benutzer`;
+    case "es":
+      return `Como otro usuario`;
+    case "fr":
+      return `Sous un autre utilisateur`;
+    case "ja":
+      return `別のユーザーとして実行`;
+    case "ko":
+      return `다른 사용자로 실행`;
+    case "pt-BR":
+      return `Rodando como outro usuário`;
+    case "zh-Hans":
+      return `以另一个用户身份运行`;
+    case "zh-Hant":
+      return `以另一位使用者身分執行`;
+    case "en-XA":
+      return `[Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRunning as another user\u202c`;
+  }
+  return `Running as another user`;
+}
+
+export function settingsDevicesIntroThere(input: { reads: string }): string {
+  const reads = input.reads;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هناك. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل فقط. ${reads}`;
+    case "de":
+      return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben dort. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt nur Arbeit aus. ${reads}`;
+    case "es":
+      return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan allí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora solo ejecuta trabajo. ${reads}`;
+    case "fr":
+      return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation y restent. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute seulement du travail. ${reads}`;
+    case "ja":
+      return `一等航海士はこのコンピューターにいます。タスクと会話はそちらに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は、作業の実行だけを行います。${reads}`;
+    case "ko":
+      return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 그곳에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업만 실행해요. ${reads}`;
+    case "pt-BR":
+      return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam lá. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador só roda trabalho. ${reads}`;
+    case "zh-Hans":
+      return `你的大副在这台电脑上。它的任务和对话都留在那里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行只会运行工作。${reads}`;
+    case "zh-Hant":
+      return `你的大副在這台電腦上。它的任務和對話都留在那裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時，只會執行工作。${reads}`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ţĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ öñļý ŕûñš ŵöŕķ. ${reads} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer only runs work. \u202c${reads}`;
+  }
+  return `Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer only runs work. ${reads}`;
+}
+
+export function settingsDevicesIntroHere(input: { reads: string }): string {
+  const reads = input.reads;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هنا. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل فقط. ${reads}`;
+    case "de":
+      return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben hier. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt nur Arbeit aus. ${reads}`;
+    case "es":
+      return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan aquí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora solo ejecuta trabajo. ${reads}`;
+    case "fr":
+      return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation restent ici. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute seulement du travail. ${reads}`;
+    case "ja":
+      return `一等航海士はこのコンピューターにいます。タスクと会話はここに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は、作業の実行だけを行います。${reads}`;
+    case "ko":
+      return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 여기에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업만 실행해요. ${reads}`;
+    case "pt-BR":
+      return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam aqui. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador só roda trabalho. ${reads}`;
+    case "zh-Hans":
+      return `你的大副在这台电脑上。它的任务和对话都留在这里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行只会运行工作。${reads}`;
+    case "zh-Hant":
+      return `你的大副在這台電腦上。它的任務和對話都留在這裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時，只會執行工作。${reads}`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ öñļý ŕûñš ŵöŕķ. ${reads} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer only runs work. \u202c${reads}`;
+  }
+  return `Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer only runs work. ${reads}`;
+}
+
+export function settingsDevicesAddHow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كيف تريد إضافته؟`;
+    case "de":
+      return `Wie möchtest du ihn hinzufügen?`;
+    case "es":
+      return `¿Cómo quieres agregarla?`;
+    case "fr":
+      return `Comment voulez-vous l’ajouter ?`;
+    case "ja":
+      return `どの方法で追加しますか？`;
+    case "ko":
+      return `어떻게 추가할까요?`;
+    case "pt-BR":
+      return `Como você quer adicioná-lo?`;
+    case "zh-Hans":
+      return `你想怎样添加？`;
+    case "zh-Hant":
+      return `你想怎麼加入？`;
+    case "en-XA":
+      return `[Ĥöŵ ðö ýöû ŵáñţ ţö áðð îţ? ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHow do you want to add it?\u202c`;
+  }
+  return `How do you want to add it?`;
+}
+
+export function settingsDevicesAddEachWay(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل طريقة تضيف النوع نفسه من الحواسيب. اختر الطريقة التي تناسبه.`;
+    case "de":
+      return `Jeder Weg fügt dieselbe Art Computer hinzu. Wähl den, der passt.`;
+    case "es":
+      return `Cada forma agrega el mismo tipo de computadora. Elige la que mejor le vaya.`;
+    case "fr":
+      return `Chaque moyen ajoute le même type d’ordinateur. Choisissez celui qui lui convient.`;
+    case "ja":
+      return `どの方法でも同じ種類のコンピューターとして追加されます。合うものを選んでください。`;
+    case "ko":
+      return `어떤 방법이든 같은 종류의 컴퓨터가 추가돼요. 맞는 방법을 고르세요.`;
+    case "pt-BR":
+      return `Cada forma adiciona o mesmo tipo de computador. Escolha a que combina com ele.`;
+    case "zh-Hans":
+      return `每种方式添加的都是同一类电脑。选择适合它的那种。`;
+    case "zh-Hant":
+      return `每種方式加入的都是同一種電腦。選適合它的那一種。`;
+    case "en-XA":
+      return `[Éáçĥ ŵáý áððš ţĥé šáɱé ķîñð öƒ çöɱþûţéŕ. Þîçķ ţĥé öñé ţĥáţ šûîţš îţ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEach way adds the same kind of computer. Pick the one that suits it.\u202c`;
+  }
+  return `Each way adds the same kind of computer. Pick the one that suits it.`;
+}
+
+export function settingsDevicesAddByLink(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لصق رابط في Infinitary هناك`;
+    case "de":
+      return `Einen Link dort in Infinitary einfügen`;
+    case "es":
+      return `Pegar un enlace en Infinitary allí`;
+    case "fr":
+      return `Coller un lien dans Infinitary là-bas`;
+    case "ja":
+      return `そちらの Infinitary にリンクを貼り付ける`;
+    case "ko":
+      return `그곳의 Infinitary에 링크 붙여 넣기`;
+    case "pt-BR":
+      return `Colar um link no Infinitary de lá`;
+    case "zh-Hans":
+      return `在那里的 Infinitary 中粘贴链接`;
+    case "zh-Hant":
+      return `在那裡的 Infinitary 中貼上連結`;
+    case "en-XA":
+      return `[Þášţé á ļîñķ îñţö Îñƒîñîţáŕý ţĥéŕé ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste a link into Infinitary there\u202c`;
+  }
+  return `Paste a link into Infinitary there`;
+}
+
+export function settingsDevicesAddByCommand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تشغيل أمر هناك`;
+    case "de":
+      return `Dort einen Befehl ausführen`;
+    case "es":
+      return `Ejecutar un comando allí`;
+    case "fr":
+      return `Exécuter une commande là-bas`;
+    case "ja":
+      return `そちらでコマンドを実行する`;
+    case "ko":
+      return `그곳에서 명령 실행`;
+    case "pt-BR":
+      return `Executar um comando lá`;
+    case "zh-Hans":
+      return `在那里运行命令`;
+    case "zh-Hant":
+      return `在那裡執行指令`;
+    case "en-XA":
+      return `[Ŕûñ á çöɱɱáñð ţĥéŕé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRun a command there\u202c`;
+  }
+  return `Run a command there`;
+}
+
+export function settingsDevicesAddByItsAddress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بعنوانه`;
+    case "de":
+      return `Über seine Adresse`;
+    case "es":
+      return `Por su dirección`;
+    case "fr":
+      return `Par son adresse`;
+    case "ja":
+      return `アドレスで`;
+    case "ko":
+      return `주소로`;
+    case "pt-BR":
+      return `Pelo endereço`;
+    case "zh-Hans":
+      return `按地址`;
+    case "zh-Hant":
+      return `用位址`;
+    case "en-XA":
+      return `[Ɓý îţš áððŕéšš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eBy its address\u202c`;
+  }
+  return `By its address`;
+}
+
+export function settingsDevicesAddressLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عنوان الحاسوب الآخر`;
+    case "de":
+      return `Die Adresse des anderen Computers`;
+    case "es":
+      return `La dirección de la otra computadora`;
+    case "fr":
+      return `L’adresse de l’autre ordinateur`;
+    case "ja":
+      return `相手のコンピューターのアドレス`;
+    case "ko":
+      return `다른 컴퓨터의 주소`;
+    case "pt-BR":
+      return `O endereço do outro computador`;
+    case "zh-Hans":
+      return `另一台电脑的地址`;
+    case "zh-Hant":
+      return `另一台電腦的位址`;
+    case "en-XA":
+      return `[Ţĥé öţĥéŕ çöɱþûţéŕ'š áððŕéšš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe other computer's address\u202c`;
+  }
+  return `The other computer's address`;
+}
+
+export function settingsDevicesAddressSay(input: { sshOn: string }): string {
+  const sshOn = input.sshOn;
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان الذي تستخدمه مع SSH. ${sshOn}`;
+    case "de":
+      return `Die, die du mit SSH nutzt. ${sshOn}`;
+    case "es":
+      return `La que usas con SSH. ${sshOn}`;
+    case "fr":
+      return `Celle que vous utilisez avec SSH. ${sshOn}`;
+    case "ja":
+      return `SSH で使うアドレスです。${sshOn}`;
+    case "ko":
+      return `SSH로 접속할 때 쓰는 주소예요. ${sshOn}`;
+    case "pt-BR":
+      return `O que você usa com SSH. ${sshOn}`;
+    case "zh-Hans":
+      return `你用 SSH 连接时使用的地址。${sshOn}`;
+    case "zh-Hant":
+      return `你用 SSH 連線時使用的位址。${sshOn}`;
+    case "en-XA":
+      return `[Ţĥé öñé ýöû ûšé ŵîţĥ ŠŠĤ. ${sshOn} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe one you use with SSH. \u202c${sshOn}`;
+  }
+  return `The one you use with SSH. ${sshOn}`;
+}
+
+export function settingsDevicesConfirmThis(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا هو الحاسوب`;
+    case "de":
+      return `Das ist der Computer`;
+    case "es":
+      return `Es esta computadora`;
+    case "fr":
+      return `C’est bien cet ordinateur`;
+    case "ja":
+      return `このコンピューターです`;
+    case "ko":
+      return `이 컴퓨터가 맞아요`;
+    case "pt-BR":
+      return `Este é o computador`;
+    case "zh-Hans":
+      return `就是这台电脑`;
+    case "zh-Hant":
+      return `就是這台電腦`;
+    case "en-XA":
+      return `[Ţĥîš îš ţĥé çöɱþûţéŕ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis is the computer\u202c`;
+  }
+  return `This is the computer`;
+}
+
+export function settingsDevicesLeaveAndAdd(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المغادرة والإضافة`;
+    case "de":
+      return `Verlassen und hinzufügen`;
+    case "es":
+      return `Salir y agregarla`;
+    case "fr":
+      return `Le quitter et l’ajouter`;
+    case "ja":
+      return `離脱して追加`;
+    case "ko":
+      return `나가고 추가`;
+    case "pt-BR":
+      return `Sair dele e adicionar`;
+    case "zh-Hans":
+      return `离开它并添加`;
+    case "zh-Hant":
+      return `退出它並加入`;
+    case "en-XA":
+      return `[Ļéáṽé îţ áñð áðð ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLeave it and add\u202c`;
+  }
+  return `Leave it and add`;
+}
+
+export function settingsDevicesAddingDetail(input: { address: string }): string {
+  const address = input.address;
+  switch (currentLanguage()) {
+    case "ar":
+      return `حاسوب · ${address}`;
+    case "de":
+      return `ein Computer · ${address}`;
+    case "es":
+      return `una computadora · ${address}`;
+    case "fr":
+      return `un ordinateur · ${address}`;
+    case "ja":
+      return `コンピューター · ${address}`;
+    case "ko":
+      return `컴퓨터 · ${address}`;
+    case "pt-BR":
+      return `um computador · ${address}`;
+    case "zh-Hans":
+      return `一台电脑 · ${address}`;
+    case "zh-Hant":
+      return `一台電腦 · ${address}`;
+    case "en-XA":
+      return `[á çöɱþûţéŕ · ${address} ~~~~~]`;
+    case "ar-XB":
+      return `\u202ea computer · \u202c${address}`;
+  }
+  return `a computer · ${address}`;
+}
+
+export function settingsDevicesAddressTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان`;
+    case "de":
+      return `Adresse`;
+    case "es":
+      return `Dirección`;
+    case "fr":
+      return `Adresse`;
+    case "ja":
+      return `アドレス`;
+    case "ko":
+      return `주소`;
+    case "pt-BR":
+      return `Endereço`;
+    case "zh-Hans":
+      return `地址`;
+    case "zh-Hant":
+      return `位址`;
+    case "en-XA":
+      return `[Åððŕéšš ~~~]`;
+    case "ar-XB":
+      return `\u202eAddress\u202c`;
+  }
+  return `Address`;
+}
+
+export function settingsDevicesAddressOnly(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${place} فقط`;
+    case "de":
+      return `nur ${place}`;
+    case "es":
+      return `solo ${place}`;
+    case "fr":
+      return `${place} uniquement`;
+    case "ja":
+      return `${place} のみ`;
+    case "ko":
+      return `${place}만`;
+    case "pt-BR":
+      return `só ${place}`;
+    case "zh-Hans":
+      return `仅限 ${place}`;
+    case "zh-Hant":
+      return `僅限 ${place}`;
+    case "en-XA":
+      return `[${place} öñļý ~~]`;
+    case "ar-XB":
+      return `${place}\u202e only\u202c`;
+  }
+  return `${place} only`;
+}
+
+export function settingsDevicesAddressOnlyHere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا الحاسوب فقط`;
+    case "de":
+      return `nur dieser Computer`;
+    case "es":
+      return `solo esta computadora`;
+    case "fr":
+      return `cet ordinateur uniquement`;
+    case "ja":
+      return `このコンピューターのみ`;
+    case "ko":
+      return `이 컴퓨터만`;
+    case "pt-BR":
+      return `só este computador`;
+    case "zh-Hans":
+      return `仅限这台电脑`;
+    case "zh-Hant":
+      return `僅限這台電腦`;
+    case "en-XA":
+      return `[ţĥîš çöɱþûţéŕ öñļý ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethis computer only\u202c`;
+  }
+  return `this computer only`;
+}
+
+export function settingsDevicesJoinedGiveProject(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `امنحه مشروعًا في المشاريع عندما تريده أن يشغّل العمل.`;
+    case "de":
+      return `Gib ihm unter Projekte ein Projekt, wenn er Arbeit ausführen soll.`;
+    case "es":
+      return `Asígnale un proyecto en Proyectos cuando quieras que ejecute trabajo.`;
+    case "fr":
+      return `Attribuez-lui un projet dans Projets quand vous voulez qu’il exécute du travail.`;
+    case "ja":
+      return `作業を実行させたいときは、「プロジェクト」でプロジェクトを割り当ててください。`;
+    case "ko":
+      return `작업을 실행하게 하려면 프로젝트에서 프로젝트를 맡기세요.`;
+    case "pt-BR":
+      return `Dê a ele um projeto em Projetos quando quiser que ele rode trabalho.`;
+    case "zh-Hans":
+      return `想让它运行工作时，在“项目”中给它分配一个项目。`;
+    case "zh-Hant":
+      return `想讓它執行工作時，在「專案」中給它一個專案。`;
+    case "en-XA":
+      return `[Ĝîṽé îţ á þŕöĵéçţ îñ Þŕöĵéçţš ŵĥéñ ýöû ŵáñţ îţ ţö ŕûñ ŵöŕķ. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGive it a project in Projects when you want it to run work.\u202c`;
+  }
+  return `Give it a project in Projects when you want it to run work.`;
+}
+
+export function settingsDevicesDone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تم`;
+    case "de":
+      return `Fertig`;
+    case "es":
+      return `Hecho`;
+    case "fr":
+      return `Terminé`;
+    case "ja":
+      return `完了`;
+    case "ko":
+      return `완료`;
+    case "pt-BR":
+      return `Concluído`;
+    case "zh-Hans":
+      return `完成`;
+    case "zh-Hant":
+      return `完成`;
+    case "en-XA":
+      return `[Ðöñé ~~]`;
+    case "ar-XB":
+      return `\u202eDone\u202c`;
+  }
+  return `Done`;
+}
+
+export function settingsDevicesExpiredLink(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتهت صلاحية الرابط قبل أن يستخدمه أي حاسوب.`;
+    case "de":
+      return `Der Link ist abgelaufen, bevor ein Computer ihn genutzt hat.`;
+    case "es":
+      return `El enlace caducó antes de que alguna computadora lo usara.`;
+    case "fr":
+      return `Le lien a expiré avant qu’un ordinateur l’utilise.`;
+    case "ja":
+      return `どのコンピューターにも使われないまま、リンクの期限が切れました。`;
+    case "ko":
+      return `어떤 컴퓨터도 사용하기 전에 링크가 만료됐어요.`;
+    case "pt-BR":
+      return `O link expirou antes de algum computador usá-lo.`;
+    case "zh-Hans":
+      return `链接在任何电脑使用前就已过期。`;
+    case "zh-Hant":
+      return `連結在任何電腦使用前就過期了。`;
+    case "en-XA":
+      return `[Ţĥé ļîñķ éẋþîŕéð ƀéƒöŕé áñý çöɱþûţéŕ ûšéð îţ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe link expired before any computer used it.\u202c`;
+  }
+  return `The link expired before any computer used it.`;
+}
+
+export function settingsDevicesExpiredPhone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتهت صلاحية الرابط قبل أن يستخدمه أي هاتف.`;
+    case "de":
+      return `Der Link ist abgelaufen, bevor ein Telefon ihn genutzt hat.`;
+    case "es":
+      return `El enlace caducó antes de que algún teléfono lo usara.`;
+    case "fr":
+      return `Le lien a expiré avant qu’un téléphone l’utilise.`;
+    case "ja":
+      return `どのスマートフォンにも使われないまま、リンクの期限が切れました。`;
+    case "ko":
+      return `어떤 휴대폰도 사용하기 전에 링크가 만료됐어요.`;
+    case "pt-BR":
+      return `O link expirou antes de algum celular usá-lo.`;
+    case "zh-Hans":
+      return `链接在任何手机使用前就已过期。`;
+    case "zh-Hant":
+      return `連結在任何手機使用前就過期了。`;
+    case "en-XA":
+      return `[Ţĥé ļîñķ éẋþîŕéð ƀéƒöŕé áñý þĥöñé ûšéð îţ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe link expired before any phone used it.\u202c`;
+  }
+  return `The link expired before any phone used it.`;
+}
+
+export function settingsDevicesExpiredCommand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتهت صلاحية الأمر قبل أن يستخدمه أي حاسوب.`;
+    case "de":
+      return `Der Befehl ist abgelaufen, bevor ein Computer ihn genutzt hat.`;
+    case "es":
+      return `El comando caducó antes de que alguna computadora lo usara.`;
+    case "fr":
+      return `La commande a expiré avant qu’un ordinateur l’utilise.`;
+    case "ja":
+      return `どのコンピューターにも使われないまま、コマンドの期限が切れました。`;
+    case "ko":
+      return `어떤 컴퓨터도 사용하기 전에 명령이 만료됐어요.`;
+    case "pt-BR":
+      return `O comando expirou antes de algum computador usá-lo.`;
+    case "zh-Hans":
+      return `命令在任何电脑使用前就已过期。`;
+    case "zh-Hant":
+      return `指令在任何電腦使用前就過期了。`;
+    case "en-XA":
+      return `[Ţĥé çöɱɱáñð éẋþîŕéð ƀéƒöŕé áñý çöɱþûţéŕ ûšéð îţ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe command expired before any computer used it.\u202c`;
+  }
+  return `The command expired before any computer used it.`;
+}
+
+export function settingsDevicesExpiredPhoneReady(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أنشئ واحدًا جديدًا عندما يكون الهاتف جاهزًا.`;
+    case "de":
+      return `Erstell einen neuen, wenn das Telefon bereit ist.`;
+    case "es":
+      return `Crea uno nuevo cuando el teléfono esté listo.`;
+    case "fr":
+      return `Créez-en un nouveau quand le téléphone est prêt.`;
+    case "ja":
+      return `スマートフォンの準備ができたら、新しく作成してください。`;
+    case "ko":
+      return `휴대폰이 준비되면 새로 만드세요.`;
+    case "pt-BR":
+      return `Crie um novo quando o celular estiver pronto.`;
+    case "zh-Hans":
+      return `手机准备好后再生成一个新的。`;
+    case "zh-Hant":
+      return `等手機準備好後再產生一個新的。`;
+    case "en-XA":
+      return `[Ṁáķé á ñéŵ öñé ŵĥéñ ţĥé þĥöñé îš ŕéáðý. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake a new one when the phone is ready.\u202c`;
+  }
+  return `Make a new one when the phone is ready.`;
+}
+
+export function settingsDevicesExpiredComputerReady(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أنشئ واحدًا جديدًا عندما يكون الحاسوب الآخر جاهزًا.`;
+    case "de":
+      return `Erstell einen neuen, wenn der andere Computer bereit ist.`;
+    case "es":
+      return `Crea uno nuevo cuando la otra computadora esté lista.`;
+    case "fr":
+      return `Créez-en un nouveau quand l’autre ordinateur est prêt.`;
+    case "ja":
+      return `相手のコンピューターの準備ができたら、新しく作成してください。`;
+    case "ko":
+      return `다른 컴퓨터가 준비되면 새로 만드세요.`;
+    case "pt-BR":
+      return `Crie um novo quando o outro computador estiver pronto.`;
+    case "zh-Hans":
+      return `另一台电脑准备好后再生成一个新的。`;
+    case "zh-Hant":
+      return `等另一台電腦準備好後再產生一個新的。`;
+    case "en-XA":
+      return `[Ṁáķé á ñéŵ öñé ŵĥéñ ţĥé öţĥéŕ çöɱþûţéŕ îš ŕéáðý. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake a new one when the other computer is ready.\u202c`;
+  }
+  return `Make a new one when the other computer is ready.`;
+}
+
+export function settingsDevicesMakeNewOne(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إنشاء واحد جديد`;
+    case "de":
+      return `Einen neuen erstellen`;
+    case "es":
+      return `Crear uno nuevo`;
+    case "fr":
+      return `En créer un nouveau`;
+    case "ja":
+      return `新しく作成`;
+    case "ko":
+      return `새로 만들기`;
+    case "pt-BR":
+      return `Criar um novo`;
+    case "zh-Hans":
+      return `生成新的`;
+    case "zh-Hant":
+      return `產生新的`;
+    case "en-XA":
+      return `[Ṁáķé á ñéŵ öñé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake a new one\u202c`;
+  }
+  return `Make a new one`;
+}
+
+export function settingsDevicesCopied(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نُسخ`;
+    case "de":
+      return `Kopiert`;
+    case "es":
+      return `Copiado`;
+    case "fr":
+      return `Copié`;
+    case "ja":
+      return `コピーしました`;
+    case "ko":
+      return `복사됨`;
+    case "pt-BR":
+      return `Copiado`;
+    case "zh-Hans":
+      return `已复制`;
+    case "zh-Hant":
+      return `已複製`;
+    case "en-XA":
+      return `[Çöþîéð ~~]`;
+    case "ar-XB":
+      return `\u202eCopied\u202c`;
+  }
+  return `Copied`;
+}
+
+export function settingsDevicesWorksOnce(input: { left: string }): string {
+  const left = input.left;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل مرة واحدة · متبقٍّ ${left}`;
+    case "de":
+      return `funktioniert einmal · noch ${left}`;
+    case "es":
+      return `funciona una vez · quedan ${left}`;
+    case "fr":
+      return `fonctionne une fois · reste ${left}`;
+    case "ja":
+      return `1回だけ有効 · 残り ${left}`;
+    case "ko":
+      return `한 번만 사용 가능 · ${left} 남음`;
+    case "pt-BR":
+      return `funciona uma vez · faltam ${left}`;
+    case "zh-Hans":
+      return `仅可使用一次 · 剩余 ${left}`;
+    case "zh-Hant":
+      return `只能用一次 · 剩餘 ${left}`;
+    case "en-XA":
+      return `[ŵöŕķš öñçé · ${left} ļéƒţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eworks once · \u202c${left}\u202e left\u202c`;
+  }
+  return `works once · ${left} left`;
+}
+
+export function settingsDevicesStopIt(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقافه`;
+    case "de":
+      return `Stoppen`;
+    case "es":
+      return `Detenerlo`;
+    case "fr":
+      return `L’arrêter`;
+    case "ja":
+      return `停止`;
+    case "ko":
+      return `중지`;
+    case "pt-BR":
+      return `Parar`;
+    case "zh-Hans":
+      return `停止`;
+    case "zh-Hant":
+      return `停止`;
+    case "en-XA":
+      return `[Šţöþ îţ ~~~]`;
+    case "ar-XB":
+      return `\u202eStop it\u202c`;
+  }
+  return `Stop it`;
+}
+
+export function settingsDevicesCopyLinkFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر نسخ الرابط. حدّده وانسخه بنفسك.`;
+    case "de":
+      return `Der Link konnte nicht kopiert werden. Markier ihn und kopier ihn selbst.`;
+    case "es":
+      return `No se pudo copiar el enlace. Selecciónalo y cópialo tú.`;
+    case "fr":
+      return `Impossible de copier le lien. Sélectionnez-le et copiez-le vous-même.`;
+    case "ja":
+      return `リンクをコピーできませんでした。選択して自分でコピーしてください。`;
+    case "ko":
+      return `링크를 복사할 수 없어요. 링크를 선택해 직접 복사하세요.`;
+    case "pt-BR":
+      return `Não foi possível copiar o link. Selecione e copie você mesmo.`;
+    case "zh-Hans":
+      return `无法复制链接。请选中后自行复制。`;
+    case "zh-Hant":
+      return `無法複製連結。請選取後自行複製。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ çöþý ţĥé ļîñķ. Šéļéçţ îţ áñð çöþý îţ ýöûŕšéļƒ. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not copy the link. Select it and copy it yourself.\u202c`;
+  }
+  return `Could not copy the link. Select it and copy it yourself.`;
+}
+
+export function settingsDevicesCopyCommandFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر نسخ الأمر. حدّده وانسخه بنفسك.`;
+    case "de":
+      return `Der Befehl konnte nicht kopiert werden. Markier ihn und kopier ihn selbst.`;
+    case "es":
+      return `No se pudo copiar el comando. Selecciónalo y cópialo tú.`;
+    case "fr":
+      return `Impossible de copier la commande. Sélectionnez-la et copiez-la vous-même.`;
+    case "ja":
+      return `コマンドをコピーできませんでした。選択して自分でコピーしてください。`;
+    case "ko":
+      return `명령을 복사할 수 없어요. 명령을 선택해 직접 복사하세요.`;
+    case "pt-BR":
+      return `Não foi possível copiar o comando. Selecione e copie você mesmo.`;
+    case "zh-Hans":
+      return `无法复制命令。请选中后自行复制。`;
+    case "zh-Hant":
+      return `無法複製指令。請選取後自行複製。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ çöþý ţĥé çöɱɱáñð. Šéļéçţ îţ áñð çöþý îţ ýöûŕšéļƒ. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not copy the command. Select it and copy it yourself.\u202c`;
+  }
+  return `Could not copy the command. Select it and copy it yourself.`;
+}
+
+export function settingsForgeSignedIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مسجّل الدخول`;
+    case "de":
+      return `angemeldet`;
+    case "es":
+      return `sesión iniciada`;
+    case "fr":
+      return `connecté`;
+    case "ja":
+      return `サインイン済み`;
+    case "ko":
+      return `로그인됨`;
+    case "pt-BR":
+      return `com login`;
+    case "zh-Hans":
+      return `已登录`;
+    case "zh-Hant":
+      return `已登入`;
+    case "en-XA":
+      return `[šîĝñéð îñ ~~~]`;
+    case "ar-XB":
+      return `\u202esigned in\u202c`;
+  }
+  return `signed in`;
+}
+
+export function settingsForgeSignInAgainState(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول مجددًا`;
+    case "de":
+      return `erneut anmelden`;
+    case "es":
+      return `vuelve a iniciar sesión`;
+    case "fr":
+      return `à reconnecter`;
+    case "ja":
+      return `再サインインが必要`;
+    case "ko":
+      return `다시 로그인 필요`;
+    case "pt-BR":
+      return `faça login de novo`;
+    case "zh-Hans":
+      return `需重新登录`;
+    case "zh-Hant":
+      return `需要重新登入`;
+    case "en-XA":
+      return `[šîĝñ îñ áĝáîñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202esign in again\u202c`;
+  }
+  return `sign in again`;
+}
+
+export function settingsForgeSignedInUnreachable(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مسجّل الدخول · تعذّر الوصول إلى ${host}`;
+    case "de":
+      return `angemeldet · ${host} nicht erreichbar`;
+    case "es":
+      return `sesión iniciada · no se pudo conectar con ${host}`;
+    case "fr":
+      return `connecté · impossible de joindre ${host}`;
+    case "ja":
+      return `サインイン済み · ${host} に接続できませんでした`;
+    case "ko":
+      return `로그인됨 · ${host}에 연결할 수 없음`;
+    case "pt-BR":
+      return `com login · não foi possível alcançar o ${host}`;
+    case "zh-Hans":
+      return `已登录 · 无法连接 ${host}`;
+    case "zh-Hant":
+      return `已登入 · 無法連絡 ${host}`;
+    case "en-XA":
+      return `[šîĝñéð îñ · çöûļð ñöţ ŕéáçĥ ${host} ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202esigned in · could not reach \u202c${host}`;
+  }
+  return `signed in · could not reach ${host}`;
+}
+
+export function settingsForgeSignedInChecking(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مسجّل الدخول · جارٍ التحقق`;
+    case "de":
+      return `angemeldet · wird geprüft`;
+    case "es":
+      return `sesión iniciada · comprobando`;
+    case "fr":
+      return `connecté · vérification`;
+    case "ja":
+      return `サインイン済み · 確認中`;
+    case "ko":
+      return `로그인됨 · 확인 중`;
+    case "pt-BR":
+      return `com login · verificando`;
+    case "zh-Hans":
+      return `已登录 · 正在检查`;
+    case "zh-Hant":
+      return `已登入 · 正在檢查`;
+    case "en-XA":
+      return `[šîĝñéð îñ · çĥéçķîñĝ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202esigned in · checking\u202c`;
+  }
+  return `signed in · checking`;
+}
+
+export function settingsForgeSignInTo(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول إلى ${host}`;
+    case "de":
+      return `Bei ${host} anmelden`;
+    case "es":
+      return `Iniciar sesión en ${host}`;
+    case "fr":
+      return `Se connecter à ${host}`;
+    case "ja":
+      return `${host} にサインイン`;
+    case "ko":
+      return `${host}에 로그인`;
+    case "pt-BR":
+      return `Fazer login no ${host}`;
+    case "zh-Hans":
+      return `登录 ${host}`;
+    case "zh-Hant":
+      return `登入 ${host}`;
+    case "en-XA":
+      return `[Šîĝñ îñ ţö ${host} ~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in to \u202c${host}`;
+  }
+  return `Sign in to ${host}`;
+}
+
+export function settingsForgeConnecting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الاتصال...`;
+    case "de":
+      return `Wird verbunden ...`;
+    case "es":
+      return `Conectando...`;
+    case "fr":
+      return `Connexion...`;
+    case "ja":
+      return `接続中...`;
+    case "ko":
+      return `연결 중...`;
+    case "pt-BR":
+      return `Conectando...`;
+    case "zh-Hans":
+      return `正在连接...`;
+    case "zh-Hant":
+      return `正在連線…`;
+    case "en-XA":
+      return `[Çöññéçţîñĝ... ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConnecting...\u202c`;
+  }
+  return `Connecting...`;
+}
+
+export function settingsForgeMakeKey(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إنشاء مفتاح على ${host}`;
+    case "de":
+      return `Einen Schlüssel auf ${host} erstellen`;
+    case "es":
+      return `Crear una clave en ${host}`;
+    case "fr":
+      return `Créer une clé sur ${host}`;
+    case "ja":
+      return `${host} でキーを作成`;
+    case "ko":
+      return `${host}에서 키 만들기`;
+    case "pt-BR":
+      return `Criar uma chave no ${host}`;
+    case "zh-Hans":
+      return `在 ${host} 上生成密钥`;
+    case "zh-Hant":
+      return `在 ${host} 上產生金鑰`;
+    case "en-XA":
+      return `[Ṁáķé á ķéý öñ ${host} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake a key on \u202c${host}`;
+  }
+  return `Make a key on ${host}`;
+}
+
+export function settingsForgeChecking(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ التحقق...`;
+    case "de":
+      return `Wird geprüft ...`;
+    case "es":
+      return `Comprobando...`;
+    case "fr":
+      return `Vérification...`;
+    case "ja":
+      return `確認中...`;
+    case "ko":
+      return `확인 중...`;
+    case "pt-BR":
+      return `Verificando...`;
+    case "zh-Hans":
+      return `正在检查...`;
+    case "zh-Hant":
+      return `正在檢查…`;
+    case "en-XA":
+      return `[Çĥéçķîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eChecking...\u202c`;
+  }
+  return `Checking...`;
+}
+
+export function settingsForgeSignIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول`;
+    case "de":
+      return `Anmelden`;
+    case "es":
+      return `Iniciar sesión`;
+    case "fr":
+      return `Se connecter`;
+    case "ja":
+      return `サインイン`;
+    case "ko":
+      return `로그인`;
+    case "pt-BR":
+      return `Fazer login`;
+    case "zh-Hans":
+      return `登录`;
+    case "zh-Hant":
+      return `登入`;
+    case "en-XA":
+      return `[Šîĝñ îñ ~~~]`;
+    case "ar-XB":
+      return `\u202eSign in\u202c`;
+  }
+  return `Sign in`;
+}
+
+export function settingsForgeCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsForgeEnterCode(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل هذا الرمز على ${host}:`;
+    case "de":
+      return `Gib diesen Code auf ${host} ein:`;
+    case "es":
+      return `Escribe este código en ${host}:`;
+    case "fr":
+      return `Saisissez ce code sur ${host} :`;
+    case "ja":
+      return `${host} でこのコードを入力してください：`;
+    case "ko":
+      return `${host}에서 이 코드를 입력하세요:`;
+    case "pt-BR":
+      return `Digite este código no ${host}:`;
+    case "zh-Hans":
+      return `在 ${host} 上输入此代码：`;
+    case "zh-Hant":
+      return `在 ${host} 上輸入這組代碼：`;
+    case "en-XA":
+      return `[Éñţéŕ ţĥîš çöðé öñ ${host}: ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter this code on \u202c${host}\u202e:\u202c`;
+  }
+  return `Enter this code on ${host}:`;
+}
+
+export function settingsForgeOpenHost(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح ${host}`;
+    case "de":
+      return `${host} öffnen`;
+    case "es":
+      return `Abrir ${host}`;
+    case "fr":
+      return `Ouvrir ${host}`;
+    case "ja":
+      return `${host} を開く`;
+    case "ko":
+      return `${host} 열기`;
+    case "pt-BR":
+      return `Abrir ${host}`;
+    case "zh-Hans":
+      return `打开 ${host}`;
+    case "zh-Hant":
+      return `開啟 ${host}`;
+    case "en-XA":
+      return `[Öþéñ ${host} ~~]`;
+    case "ar-XB":
+      return `\u202eOpen \u202c${host}`;
+  }
+  return `Open ${host}`;
+}
+
+export function settingsForgeCodeExpired(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتهت صلاحية الرمز.`;
+    case "de":
+      return `Der Code ist abgelaufen.`;
+    case "es":
+      return `El código caducó.`;
+    case "fr":
+      return `Le code a expiré.`;
+    case "ja":
+      return `コードの期限が切れました。`;
+    case "ko":
+      return `코드가 만료됐어요.`;
+    case "pt-BR":
+      return `O código expirou.`;
+    case "zh-Hans":
+      return `代码已过期。`;
+    case "zh-Hant":
+      return `代碼已過期。`;
+    case "en-XA":
+      return `[Ţĥé çöðé éẋþîŕéð. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe code expired.\u202c`;
+  }
+  return `The code expired.`;
+}
+
+export function settingsForgeUnreachable(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر الوصول إلى ${host} - حاول مجددًا.`;
+    case "de":
+      return `${host} war nicht erreichbar – versuch es erneut.`;
+    case "es":
+      return `No se pudo conectar con ${host}: vuelve a intentarlo.`;
+    case "fr":
+      return `Impossible de joindre ${host} – réessayez.`;
+    case "ja":
+      return `${host} に接続できませんでした - もう一度お試しください。`;
+    case "ko":
+      return `${host}에 연결할 수 없어요. 다시 시도하세요.`;
+    case "pt-BR":
+      return `Não foi possível alcançar o ${host} - tente de novo.`;
+    case "zh-Hans":
+      return `无法连接 ${host}——请重试。`;
+    case "zh-Hant":
+      return `無法連絡 ${host}，請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ŕéáçĥ ${host} - ţŕý áĝáîñ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not reach \u202c${host}\u202e - try again.\u202c`;
+  }
+  return `Could not reach ${host} - try again.`;
+}
+
+export function settingsForgeNewCode(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحصول على رمز جديد`;
+    case "de":
+      return `Neuen Code holen`;
+    case "es":
+      return `Obtener un código nuevo`;
+    case "fr":
+      return `Obtenir un nouveau code`;
+    case "ja":
+      return `新しいコードを取得`;
+    case "ko":
+      return `새 코드 받기`;
+    case "pt-BR":
+      return `Obter um novo código`;
+    case "zh-Hans":
+      return `获取新代码`;
+    case "zh-Hant":
+      return `取得新代碼`;
+    case "en-XA":
+      return `[Ĝéţ á ñéŵ çöðé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eGet a new code\u202c`;
+  }
+  return `Get a new code`;
+}
+
+export function settingsForgeTryAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المحاولة مجددًا`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Volver a intentar`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `再試行`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `再試一次`;
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTry again\u202c`;
+  }
+  return `Try again`;
+}
+
+export function settingsForgeNotSignedIn(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير مسجّل الدخول إلى ${host}`;
+    case "de":
+      return `nicht bei ${host} angemeldet`;
+    case "es":
+      return `sin sesión iniciada en ${host}`;
+    case "fr":
+      return `non connecté à ${host}`;
+    case "ja":
+      return `${host} にサインインしていません`;
+    case "ko":
+      return `${host}에 로그인하지 않음`;
+    case "pt-BR":
+      return `sem login no ${host}`;
+    case "zh-Hans":
+      return `未登录 ${host}`;
+    case "zh-Hant":
+      return `尚未登入 ${host}`;
+    case "en-XA":
+      return `[ñöţ šîĝñéð îñ ţö ${host} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202enot signed in to \u202c${host}`;
+  }
+  return `not signed in to ${host}`;
+}
+
+export function settingsForgeSignInAgainSay(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول مجددًا.`;
+    case "de":
+      return `Melde dich erneut an.`;
+    case "es":
+      return `Vuelve a iniciar sesión.`;
+    case "fr":
+      return `Reconnectez-vous.`;
+    case "ja":
+      return `もう一度サインインしてください。`;
+    case "ko":
+      return `다시 로그인하세요.`;
+    case "pt-BR":
+      return `Faça login de novo.`;
+    case "zh-Hans":
+      return `请重新登录。`;
+    case "zh-Hant":
+      return `請重新登入。`;
+    case "en-XA":
+      return `[Šîĝñ îñ áĝáîñ. ~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in again.\u202c`;
+  }
+  return `Sign in again.`;
+}
+
+export function settingsForgeStarting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ البدء...`;
+    case "de":
+      return `Wird gestartet ...`;
+    case "es":
+      return `Iniciando...`;
+    case "fr":
+      return `Démarrage...`;
+    case "ja":
+      return `開始中...`;
+    case "ko":
+      return `시작하는 중...`;
+    case "pt-BR":
+      return `Iniciando...`;
+    case "zh-Hans":
+      return `正在开始...`;
+    case "zh-Hant":
+      return `正在開始…`;
+    case "en-XA":
+      return `[Šţáŕţîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eStarting...\u202c`;
+  }
+  return `Starting...`;
+}
+
+export function settingsForgeSignInAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول مجددًا`;
+    case "de":
+      return `Erneut anmelden`;
+    case "es":
+      return `Volver a iniciar sesión`;
+    case "fr":
+      return `Se reconnecter`;
+    case "ja":
+      return `もう一度サインイン`;
+    case "ko":
+      return `다시 로그인`;
+    case "pt-BR":
+      return `Fazer login de novo`;
+    case "zh-Hans":
+      return `重新登录`;
+    case "zh-Hant":
+      return `重新登入`;
+    case "en-XA":
+      return `[Šîĝñ îñ áĝáîñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in again\u202c`;
+  }
+  return `Sign in again`;
+}
+
+export function settingsForgeRowActions(input: { host: string; where: string }): string {
+  const host = input.host;
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إجراءات ${host} ${where}`;
+    case "de":
+      return `Aktionen für ${host} ${where}`;
+    case "es":
+      return `Acciones de ${host} ${where}`;
+    case "fr":
+      return `Actions ${host} ${where}`;
+    case "ja":
+      return `${where} の ${host} の操作`;
+    case "ko":
+      return `${host} ${where} 작업`;
+    case "pt-BR":
+      return `Ações de ${host} ${where}`;
+    case "zh-Hans":
+      return `${where} 的 ${host} 操作`;
+    case "zh-Hant":
+      return `${where} 的 ${host} 動作`;
+    case "en-XA":
+      return `[${host} ${where} áçţîöñš ~~~]`;
+    case "ar-XB":
+      return `${host}\u202e \u202c${where}\u202e actions\u202c`;
+  }
+  return `${host} ${where} actions`;
+}
+
+export function settingsForgeSignOut(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الخروج`;
+    case "de":
+      return `Abmelden`;
+    case "es":
+      return `Cerrar sesión`;
+    case "fr":
+      return `Se déconnecter`;
+    case "ja":
+      return `サインアウト`;
+    case "ko":
+      return `로그아웃`;
+    case "pt-BR":
+      return `Sair`;
+    case "zh-Hans":
+      return `退出登录`;
+    case "zh-Hant":
+      return `登出`;
+    case "en-XA":
+      return `[Šîĝñ öûţ ~~~]`;
+    case "ar-XB":
+      return `\u202eSign out\u202c`;
+  }
+  return `Sign out`;
+}
+
+export function settingsForgeBrowserLabel(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول إلى ${host} عبر المتصفح`;
+    case "de":
+      return `Anmeldung bei ${host} im Browser`;
+    case "es":
+      return `Inicio de sesión en ${host} desde el navegador`;
+    case "fr":
+      return `Connexion à ${host} dans le navigateur`;
+    case "ja":
+      return `ブラウザで ${host} にサインイン`;
+    case "ko":
+      return `브라우저로 ${host}에 로그인`;
+    case "pt-BR":
+      return `Login no ${host} pelo navegador`;
+    case "zh-Hans":
+      return `通过浏览器登录 ${host}`;
+    case "zh-Hant":
+      return `透過瀏覽器登入 ${host}`;
+    case "en-XA":
+      return `[Ɓŕöŵšéŕ šîĝñ-îñ ţö ${host} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBrowser sign-in to \u202c${host}`;
+  }
+  return `Browser sign-in to ${host}`;
+}
+
+export function settingsForgeBrowserIntro(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول إلى ${host} في متصفحك.`;
+    case "de":
+      return `Melde dich in deinem Browser auf ${host} an.`;
+    case "es":
+      return `Inicia sesión en ${host} en tu navegador.`;
+    case "fr":
+      return `Connectez-vous à ${host} dans votre navigateur.`;
+    case "ja":
+      return `ブラウザで ${host} にサインインします。`;
+    case "ko":
+      return `브라우저에서 ${host}에 로그인하세요.`;
+    case "pt-BR":
+      return `Faça login no ${host} no seu navegador.`;
+    case "zh-Hans":
+      return `在浏览器中登录 ${host}。`;
+    case "zh-Hant":
+      return `在瀏覽器中登入 ${host}。`;
+    case "en-XA":
+      return `[Šîĝñ îñ öñ ${host} îñ ýöûŕ ƀŕöŵšéŕ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in on \u202c${host}\u202e in your browser.\u202c`;
+  }
+  return `Sign in on ${host} in your browser.`;
+}
+
+export function settingsForgeBrowserStays(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يبقى تسجيل دخولك على هذا الحاسوب.`;
+    case "de":
+      return `Deine Anmeldung bleibt auf diesem Computer.`;
+    case "es":
+      return `Tu inicio de sesión se queda en esta computadora.`;
+    case "fr":
+      return `Votre connexion reste sur cet ordinateur.`;
+    case "ja":
+      return `サインインはこのコンピューターに残ります。`;
+    case "ko":
+      return `로그인 정보는 이 컴퓨터에 남아요.`;
+    case "pt-BR":
+      return `Seu login fica neste computador.`;
+    case "zh-Hans":
+      return `你的登录保留在这台电脑上。`;
+    case "zh-Hant":
+      return `你的登入會留在這台電腦上。`;
+    case "en-XA":
+      return `[Ýöûŕ šîĝñ-îñ šţáýš öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour sign-in stays on this computer.\u202c`;
+  }
+  return `Your sign-in stays on this computer.`;
+}
+
+export function settingsForgeBrowserStepOpen(input: { add: string; host: string }): string {
+  const add = input.add;
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح التطبيقات على ${host} واختر ${add}.`;
+    case "de":
+      return `Öffne die Anwendungen auf ${host} und wähl ${add}.`;
+    case "es":
+      return `Abre las aplicaciones en ${host} y elige ${add}.`;
+    case "fr":
+      return `Ouvrez les applications sur ${host} et choisissez ${add}.`;
+    case "ja":
+      return `${host} で Applications を開き、${add} を選びます。`;
+    case "ko":
+      return `${host}에서 애플리케이션을 열고 ${add}을(를) 고르세요.`;
+    case "pt-BR":
+      return `Abra os aplicativos no ${host} e escolha ${add}.`;
+    case "zh-Hans":
+      return `在 ${host} 上打开 Applications，然后选择 ${add}。`;
+    case "zh-Hant":
+      return `在 ${host} 上開啟 Applications，然後選擇 ${add}。`;
+    case "en-XA":
+      return `[Öþéñ áþþļîçáţîöñš öñ ${host} áñð çĥööšé ${add}. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen applications on \u202c${host}\u202e and choose \u202c${add}\u202e.\u202c`;
+  }
+  return `Open applications on ${host} and choose ${add}.`;
+}
+
+export function settingsForgeBrowserStepName(input: {
+  field: string;
+  name: string;
+  redirect: string;
+}): string {
+  const field = input.field;
+  const name = input.name;
+  const redirect = input.redirect;
+  switch (currentLanguage()) {
+    case "ar":
+      return `سمّه ${name}. اضبط ${field} على ${redirect}. تسجيل الدخول بالرمز هذا لا يستخدم إعادة توجيه.`;
+    case "de":
+      return `Nenn sie ${name}. Setz ${field} auf ${redirect}. Diese Code-Anmeldung nutzt keine Weiterleitung.`;
+    case "es":
+      return `Ponle el nombre ${name}. Establece ${field} en ${redirect}. Este inicio de sesión con código no usa redirección.`;
+    case "fr":
+      return `Nommez-la ${name}. Réglez ${field} sur ${redirect}. Cette connexion par code n’utilise pas de redirection.`;
+    case "ja":
+      return `名前を ${name} にします。${field} を ${redirect} に設定します。このコードによるサインインではリダイレクトは使いません。`;
+    case "ko":
+      return `이름을 ${name}(으)로 정하세요. ${field}을(를) ${redirect}(으)로 설정하세요. 이 코드 로그인은 리디렉션을 쓰지 않아요.`;
+    case "pt-BR":
+      return `Dê o nome ${name}. Defina ${field} como ${redirect}. Este login por código não usa redirecionamento.`;
+    case "zh-Hans":
+      return `将它命名为 ${name}。把 ${field} 设为 ${redirect}。这种代码登录不使用重定向。`;
+    case "zh-Hant":
+      return `將它命名為 ${name}。把 ${field} 設為 ${redirect}。這種代碼登入不會使用重新導向。`;
+    case "en-XA":
+      return `[Ñáɱé îţ ${name}. Šéţ ${field} ţö ${redirect}. Ţĥîš çöðé šîĝñ-îñ ðöéš ñöţ ûšé á ŕéðîŕéçţ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eName it \u202c${name}\u202e. Set \u202c${field}\u202e to \u202c${redirect}\u202e. This code sign-in does not use a redirect.\u202c`;
+  }
+  return `Name it ${name}. Set ${field} to ${redirect}. This code sign-in does not use a redirect.`;
+}
+
+export function settingsForgeBrowserRedirectFallback(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `صفحة /oauth/device على خادمك`;
+    case "de":
+      return `die Seite /oauth/device deines Servers`;
+    case "es":
+      return `la página /oauth/device de tu sitio`;
+    case "fr":
+      return `la page /oauth/device de votre hébergeur`;
+    case "ja":
+      return `サーバーの /oauth/device ページ`;
+    case "ko":
+      return `서버의 /oauth/device 페이지`;
+    case "pt-BR":
+      return `a página /oauth/device do seu servidor`;
+    case "zh-Hans":
+      return `你服务器的 /oauth/device 页面`;
+    case "zh-Hant":
+      return `你伺服器的 /oauth/device 頁面`;
+    case "en-XA":
+      return `[ýöûŕ šéŕṽéŕ’š /öáûţĥ/ðéṽîçé þáĝé ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eyour server’s /oauth/device page\u202c`;
+  }
+  return `your server’s /oauth/device page`;
+}
+
+export function settingsForgeBrowserStepScopes(input: {
+  api: string;
+  confidential: string;
+  write: string;
+}): string {
+  const api = input.api;
+  const confidential = input.confidential;
+  const write = input.write;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أوقف ${confidential} وحدّد ${api} و${write}. يتيح ذلك لـInfinitary قراءة مشاريعك ودفع التغييرات ودمجها.`;
+    case "de":
+      return `Schalte ${confidential} aus und wähl ${api} und ${write}. Damit kann Infinitary deine Projekte lesen und Änderungen pushen und zusammenführen.`;
+    case "es":
+      return `Desactiva ${confidential} y selecciona ${api} y ${write}. Así Infinitary puede leer tus proyectos, insertar cambios y fusionarlos.`;
+    case "fr":
+      return `Désactivez ${confidential} et sélectionnez ${api} et ${write}. Ils permettent à Infinitary de lire vos projets, de pousser et de fusionner des modifications.`;
+    case "ja":
+      return `${confidential} をオフにし、${api} と ${write} を選択します。これで Infinitary がプロジェクトを読み取り、変更をプッシュしてマージできるようになります。`;
+    case "ko":
+      return `${confidential}을(를) 끄고 ${api}와(과) ${write}을(를) 선택하세요. 그래야 Infinitary가 프로젝트를 읽고, 변경을 푸시하고 병합할 수 있어요.`;
+    case "pt-BR":
+      return `Desative ${confidential} e selecione ${api} e ${write}. Eles permitem que o Infinitary leia seus projetos, faça push e mescle alterações.`;
+    case "zh-Hans":
+      return `关闭 ${confidential}，并选择 ${api} 和 ${write}。这样 Infinitary 就能读取你的项目，推送和合并改动。`;
+    case "zh-Hant":
+      return `關閉 ${confidential}，並選取 ${api} 和 ${write}。這樣 Infinitary 才能讀取你的專案，並推送和合併變更。`;
+    case "en-XA":
+      return `[Ţûŕñ öƒƒ ${confidential} áñð šéļéçţ ${api} áñð ${write}. Ţĥéšé áļļöŵ Îñƒîñîţáŕý ţö ŕéáð ýöûŕ þŕöĵéçţš, þûšĥ áñð ɱéŕĝé çĥáñĝéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurn off \u202c${confidential}\u202e and select \u202c${api}\u202e and \u202c${write}\u202e. These allow Infinitary to read your projects, push and merge changes.\u202c`;
+  }
+  return `Turn off ${confidential} and select ${api} and ${write}. These allow Infinitary to read your projects, push and merge changes.`;
+}
+
+export function settingsForgeBrowserStepGrant(input: { grant: string }): string {
+  const grant = input.grant;
+  switch (currentLanguage()) {
+    case "ar":
+      return `فعّل ${grant}. يتيح ذلك تسجيل الدخول بالرمز.`;
+    case "de":
+      return `Schalte ${grant} ein. Das erlaubt die Code-Anmeldung.`;
+    case "es":
+      return `Activa ${grant}. Así funciona el inicio de sesión con código.`;
+    case "fr":
+      return `Activez ${grant}. Cela permet la connexion par code.`;
+    case "ja":
+      return `${grant} をオンにします。これでコードによるサインインが使えるようになります。`;
+    case "ko":
+      return `${grant}을(를) 켜세요. 그래야 코드 로그인을 쓸 수 있어요.`;
+    case "pt-BR":
+      return `Ative ${grant}. Isso permite o login por código.`;
+    case "zh-Hans":
+      return `打开 ${grant}。这样才能使用代码登录。`;
+    case "zh-Hant":
+      return `開啟 ${grant}。這樣才能使用代碼登入。`;
+    case "en-XA":
+      return `[Ţûŕñ öñ ${grant}. Ţĥîš áļļöŵš ţĥé çöðé šîĝñ-îñ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurn on \u202c${grant}\u202e. This allows the code sign-in.\u202c`;
+  }
+  return `Turn on ${grant}. This allows the code sign-in.`;
+}
+
+export function settingsForgeBrowserStepSave(input: { id: string; secret: string }): string {
+  const id = input.id;
+  const secret = input.secret;
+  switch (currentLanguage()) {
+    case "ar":
+      return `احفظ التطبيق والصق ${id} الخاص به أدناه، وليس ${secret}.`;
+    case "de":
+      return `Speichere die Anwendung und füg unten ihre ${id} ein, nicht ihr ${secret}.`;
+    case "es":
+      return `Guarda la aplicación y pega abajo su ${id}, no su ${secret}.`;
+    case "fr":
+      return `Enregistrez l’application et collez son ${id} ci-dessous, pas son ${secret}.`;
+    case "ja":
+      return `アプリケーションを保存し、${secret} ではなく ${id} を下に貼り付けます。`;
+    case "ko":
+      return `애플리케이션을 저장하고 ${secret}이(가) 아닌 ${id}을(를) 아래에 붙여 넣으세요.`;
+    case "pt-BR":
+      return `Salve o aplicativo e cole abaixo o ${id} dele, não o ${secret}.`;
+    case "zh-Hans":
+      return `保存该应用，然后把它的 ${id} 粘贴到下方，而不是它的 ${secret}。`;
+    case "zh-Hant":
+      return `儲存這個應用程式，然後把它的 ${id} 貼到下方，不是它的 ${secret}。`;
+    case "en-XA":
+      return `[Šáṽé ţĥé áþþļîçáţîöñ áñð þášţé îţš ${id} ƀéļöŵ, ñöţ îţš ${secret}. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave the application and paste its \u202c${id}\u202e below, not its \u202c${secret}\u202e.\u202c`;
+  }
+  return `Save the application and paste its ${id} below, not its ${secret}.`;
+}
+
+export function settingsForgeBrowserOpenApplications(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح التطبيقات على ${host}`;
+    case "de":
+      return `Anwendungen auf ${host} öffnen`;
+    case "es":
+      return `Abrir las aplicaciones en ${host}`;
+    case "fr":
+      return `Ouvrir les applications sur ${host}`;
+    case "ja":
+      return `${host} で Applications を開く`;
+    case "ko":
+      return `${host}에서 애플리케이션 열기`;
+    case "pt-BR":
+      return `Abrir os aplicativos no ${host}`;
+    case "zh-Hans":
+      return `在 ${host} 上打开 Applications`;
+    case "zh-Hant":
+      return `在 ${host} 上開啟 Applications`;
+    case "en-XA":
+      return `[Öþéñ áþþļîçáţîöñš öñ ${host} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen applications on \u202c${host}`;
+  }
+  return `Open applications on ${host}`;
+}
+
+export function settingsDevicesSignInsAsOf(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "ar":
+      return `حتى الساعة ${time}`;
+    case "de":
+      return `Stand ${time}`;
+    case "es":
+      return `a las ${time}`;
+    case "fr":
+      return `à ${time}`;
+    case "ja":
+      return `${time} 時点`;
+    case "ko":
+      return `${time} 기준`;
+    case "pt-BR":
+      return `às ${time}`;
+    case "zh-Hans":
+      return `截至 ${time}`;
+    case "zh-Hant":
+      return `截至 ${time}`;
+    case "en-XA":
+      return `[áš öƒ ${time} ~~]`;
+    case "ar-XB":
+      return `\u202eas of \u202c${time}`;
+  }
+  return `as of ${time}`;
+}
+
+export function settingsDevicesSignInsOwn(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيلات الدخول الخاصة به. المهمة التي تعمل ${where} تستخدم هذه فقط.`;
+    case "de":
+      return `Seine eigenen Anmeldungen. Eine Aufgabe, die ${where} läuft, nutzt nur diese.`;
+    case "es":
+      return `Sus propios inicios de sesión. Una tarea que se ejecuta ${where} solo usa estos.`;
+    case "fr":
+      return `Ses propres connexions. Une tâche qui s’exécute ${where} n’utilise que celles-ci.`;
+    case "ja":
+      return `専用のサインインです。${where} 実行するタスクはこれだけを使います。`;
+    case "ko":
+      return `이 컴퓨터만의 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
+    case "pt-BR":
+      return `Os logins próprios dele. Uma tarefa que roda ${where} usa só estes.`;
+    case "zh-Hans":
+      return `它自己的登录。${where} 运行的任务只使用这些登录。`;
+    case "zh-Hant":
+      return `它自己的登入。${where} 執行的任務只會使用這些登入。`;
+    case "en-XA":
+      return `[Îţš öŵñ šîĝñ-îñš. Å ţášķ ţĥáţ ŕûñš ${where} ûšéš öñļý ţĥéšé. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts own sign-ins. A task that runs \u202c${where}\u202e uses only these.\u202c`;
+  }
+  return `Its own sign-ins. A task that runs ${where} uses only these.`;
+}
+
+export function settingsDevicesSignInsDisconnect(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قطع الاتصال`;
+    case "de":
+      return `Trennen`;
+    case "es":
+      return `Desconectar`;
+    case "fr":
+      return `Déconnecter`;
+    case "ja":
+      return `接続を解除`;
+    case "ko":
+      return `연결 해제`;
+    case "pt-BR":
+      return `Desconectar`;
+    case "zh-Hans":
+      return `断开连接`;
+    case "zh-Hant":
+      return `中斷連結`;
+    case "en-XA":
+      return `[Ðîšçöññéçţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eDisconnect\u202c`;
+  }
+  return `Disconnect`;
+}
+
+export function settingsDevicesSignInsUnanswered(input: { home: string; who: string }): string {
+  const home = input.home;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يذكر ${who} ما هو مسجّل الدخول إليه. قد يحتاج إلى نسخة Infinitary الموجودة على ${home}.`;
+    case "de":
+      return `${who} hat nicht gesagt, wobei er angemeldet ist. Er braucht vielleicht die Infinitary-Version von ${home}.`;
+    case "es":
+      return `${who} no dijo en qué tiene la sesión iniciada. Puede que necesite la versión de Infinitary de ${home}.`;
+    case "fr":
+      return `${who} n’a pas indiqué à quoi il est connecté. Il lui faut peut-être la version d’Infinitary de ${home}.`;
+    case "ja":
+      return `${who} から、サインイン先の応答がありませんでした。${home} と同じバージョンの Infinitary が必要な可能性があります。`;
+    case "ko":
+      return `${who}이(가) 어디에 로그인되어 있는지 알려 주지 않았어요. ${home}의 Infinitary 버전이 필요할 수 있어요.`;
+    case "pt-BR":
+      return `${who} não disse em que está com login. Talvez precise da versão do Infinitary de ${home}.`;
+    case "zh-Hans":
+      return `${who} 没有说明它登录了什么。它可能需要与 ${home} 相同版本的 Infinitary。`;
+    case "zh-Hant":
+      return `${who} 沒有說明它登入了什麼。它可能需要和 ${home} 相同版本的 Infinitary。`;
+    case "en-XA":
+      return `[${who} ðîð ñöţ šáý ŵĥáţ îţ îš šîĝñéð îñ ţö. Îţ ɱáý ñééð ${home}'š ṽéŕšîöñ öƒ Îñƒîñîţáŕý. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202e did not say what it is signed in to. It may need \u202c${home}\u202e's version of Infinitary.\u202c`;
+  }
+  return `${who} did not say what it is signed in to. It may need ${home}'s version of Infinitary.`;
+}
+
+export function settingsDevicesSignInsNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا تسجيلات دخول بعد.`;
+    case "de":
+      return `Noch keine Anmeldungen.`;
+    case "es":
+      return `Todavía sin inicios de sesión.`;
+    case "fr":
+      return `Aucune connexion pour l’instant.`;
+    case "ja":
+      return `サインインはまだありません。`;
+    case "ko":
+      return `아직 로그인이 없어요.`;
+    case "pt-BR":
+      return `Nenhum login ainda.`;
+    case "zh-Hans":
+      return `尚无登录。`;
+    case "zh-Hant":
+      return `還沒有登入。`;
+    case "en-XA":
+      return `[Ñö šîĝñ-îñš ýéţ. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo sign-ins yet.\u202c`;
+  }
+  return `No sign-ins yet.`;
+}
+
+export function settingsDevicesSignInsAddAccount(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة حساب`;
+    case "de":
+      return `Konto hinzufügen`;
+    case "es":
+      return `Agregar cuenta`;
+    case "fr":
+      return `Ajouter un compte`;
+    case "ja":
+      return `アカウントを追加`;
+    case "ko":
+      return `계정 추가`;
+    case "pt-BR":
+      return `Adicionar conta`;
+    case "zh-Hans":
+      return `添加账户`;
+    case "zh-Hant":
+      return `加入帳號`;
+    case "en-XA":
+      return `[Åðð áççöûñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd account\u202c`;
+  }
+  return `Add account`;
+}
+
+export function settingsDevicesSignInsCustomApi(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة API مخصصة ${where}`;
+    case "de":
+      return `Eine eigene API ${where} hinzufügen`;
+    case "es":
+      return `Agregar una API personalizada ${where}`;
+    case "fr":
+      return `Ajouter une API personnalisée ${where}`;
+    case "ja":
+      return `${where} カスタム API を追加`;
+    case "ko":
+      return `${where} 사용자 지정 API 추가`;
+    case "pt-BR":
+      return `Adicionar uma API personalizada ${where}`;
+    case "zh-Hans":
+      return `${where} 添加自定义 API`;
+    case "zh-Hant":
+      return `${where} 加入自訂 API`;
+    case "en-XA":
+      return `[Åðð á çûšţöɱ ÅÞÎ ${where} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd a custom API \u202c${where}`;
+  }
+  return `Add a custom API ${where}`;
+}
+
+export function settingsDevicesSignInsClaudeCode(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يسجّل Claude Code الدخول ${where} بنفسه. سجّل الدخول إليه هناك مرة واحدة، وسيستخدم Infinitary تسجيل الدخول ذلك.`;
+    case "de":
+      return `Claude Code meldet sich ${where} selbst an. Melde dich dort einmal darin an, dann nutzt Infinitary diese Anmeldung.`;
+    case "es":
+      return `Claude Code inicia sesión ${where} por su cuenta. Inicia sesión en él allí una vez, e Infinitary usa esa sesión.`;
+    case "fr":
+      return `Claude Code se connecte lui-même ${where}. Connectez-vous-y une fois là-bas, et Infinitary utilise cette connexion.`;
+    case "ja":
+      return `Claude Code は ${where} 自分でサインインします。そちらで一度ログインすれば、Infinitary はそのログインを使います。`;
+    case "ko":
+      return `Claude Code는 ${where} 직접 로그인해요. 그곳에서 한 번 로그인하면 Infinitary가 그 로그인을 써요.`;
+    case "pt-BR":
+      return `O Claude Code faz o próprio login ${where}. Faça login nele lá uma vez, e o Infinitary usa esse login.`;
+    case "zh-Hans":
+      return `Claude Code 会 ${where} 自行登录。在那里登录一次，Infinitary 就会使用该登录。`;
+    case "zh-Hant":
+      return `Claude Code 會 ${where} 自行登入。在那裡登入一次，Infinitary 就會使用那個登入。`;
+    case "en-XA":
+      return `[Çļáûðé Çöðé šîĝñš îñ ${where} îţšéļƒ. Ļöĝ îñ ţö îţ ţĥéŕé öñçé, áñð Îñƒîñîţáŕý ûšéš ţĥáţ ļöĝîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClaude Code signs in \u202c${where}\u202e itself. Log in to it there once, and Infinitary uses that login.\u202c`;
+  }
+  return `Claude Code signs in ${where} itself. Log in to it there once, and Infinitary uses that login.`;
+}
+
+export function settingsDevicesSignInsFailed(input: { provider: string; who: string }): string {
+  const provider = input.provider;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر على ${who} تسجيل الدخول إلى ${provider}.`;
+    case "de":
+      return `${who} konnte sich nicht bei ${provider} anmelden.`;
+    case "es":
+      return `${who} no pudo iniciar sesión en ${provider}.`;
+    case "fr":
+      return `${who} n’a pas pu se connecter à ${provider}.`;
+    case "ja":
+      return `${who} は ${provider} にサインインできませんでした。`;
+    case "ko":
+      return `${who}이(가) ${provider}에 로그인하지 못했어요.`;
+    case "pt-BR":
+      return `${who} não conseguiu fazer login no ${provider}.`;
+    case "zh-Hans":
+      return `${who} 无法登录 ${provider}。`;
+    case "zh-Hant":
+      return `${who} 無法登入 ${provider}。`;
+    case "en-XA":
+      return `[${who} çöûļð ñöţ šîĝñ îñ ţö ${provider}. ~~~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202e could not sign in to \u202c${provider}\u202e.\u202c`;
+  }
+  return `${who} could not sign in to ${provider}.`;
+}
+
+export function settingsDevicesSignInsPasteKeyAn(input: { provider: string; who: string }): string {
+  const provider = input.provider;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق مفتاح API من ${provider} لـ${who}.`;
+    case "de":
+      return `Füg einen API-Schlüssel von ${provider} für ${who} ein.`;
+    case "es":
+      return `Pega una clave de API de ${provider} para ${who}.`;
+    case "fr":
+      return `Collez une clé API ${provider} pour ${who}.`;
+    case "ja":
+      return `${who} 用の ${provider} API キーを貼り付けてください。`;
+    case "ko":
+      return `${who}에서 쓸 ${provider} API 키를 붙여 넣으세요.`;
+    case "pt-BR":
+      return `Cole uma chave de API do ${provider} para ${who}.`;
+    case "zh-Hans":
+      return `为 ${who} 粘贴一个 ${provider} API 密钥。`;
+    case "zh-Hant":
+      return `為 ${who} 貼上 ${provider} API 金鑰。`;
+    case "en-XA":
+      return `[Þášţé áñ ${provider} ÅÞÎ ķéý ƒöŕ ${who}. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste an \u202c${provider}\u202e API key for \u202c${who}\u202e.\u202c`;
+  }
+  return `Paste an ${provider} API key for ${who}.`;
+}
+
+export function settingsDevicesSignInsPasteKeyA(input: { provider: string; who: string }): string {
+  const provider = input.provider;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق مفتاح API من ${provider} لـ${who}.`;
+    case "de":
+      return `Füg einen API-Schlüssel von ${provider} für ${who} ein.`;
+    case "es":
+      return `Pega una clave de API de ${provider} para ${who}.`;
+    case "fr":
+      return `Collez une clé API ${provider} pour ${who}.`;
+    case "ja":
+      return `${who} 用の ${provider} API キーを貼り付けてください。`;
+    case "ko":
+      return `${who}에서 쓸 ${provider} API 키를 붙여 넣으세요.`;
+    case "pt-BR":
+      return `Cole uma chave de API do ${provider} para ${who}.`;
+    case "zh-Hans":
+      return `为 ${who} 粘贴一个 ${provider} API 密钥。`;
+    case "zh-Hant":
+      return `為 ${who} 貼上 ${provider} API 金鑰。`;
+    case "en-XA":
+      return `[Þášţé á ${provider} ÅÞÎ ķéý ƒöŕ ${who}. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste a \u202c${provider}\u202e API key for \u202c${who}\u202e.\u202c`;
+  }
+  return `Paste a ${provider} API key for ${who}.`;
+}
+
+export function settingsDevicesSignInsOpenLink(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح الرابط`;
+    case "de":
+      return `Link öffnen`;
+    case "es":
+      return `Abrir el enlace`;
+    case "fr":
+      return `Ouvrir le lien`;
+    case "ja":
+      return `リンクを開く`;
+    case "ko":
+      return `링크 열기`;
+    case "pt-BR":
+      return `Abrir o link`;
+    case "zh-Hans":
+      return `打开链接`;
+    case "zh-Hant":
+      return `開啟連結`;
+    case "en-XA":
+      return `[Öþéñ ţĥé ļîñķ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the link\u202c`;
+  }
+  return `Open the link`;
+}
+
+export function settingsDevicesSignInsPasteYourKey(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق مفتاحك`;
+    case "de":
+      return `Schlüssel einfügen`;
+    case "es":
+      return `pega tu clave`;
+    case "fr":
+      return `collez votre clé`;
+    case "ja":
+      return `キーを貼り付け`;
+    case "ko":
+      return `키 붙여 넣기`;
+    case "pt-BR":
+      return `cole sua chave`;
+    case "zh-Hans":
+      return `粘贴你的密钥`;
+    case "zh-Hant":
+      return `貼上你的金鑰`;
+    case "en-XA":
+      return `[þášţé ýöûŕ ķéý ~~~~~]`;
+    case "ar-XB":
+      return `\u202epaste your key\u202c`;
+  }
+  return `paste your key`;
+}
+
+export function settingsDevicesSignInsPasteAddress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق العنوان`;
+    case "de":
+      return `Adresse einfügen`;
+    case "es":
+      return `pega la dirección`;
+    case "fr":
+      return `collez l’adresse`;
+    case "ja":
+      return `アドレスを貼り付け`;
+    case "ko":
+      return `주소 붙여 넣기`;
+    case "pt-BR":
+      return `cole o endereço`;
+    case "zh-Hans":
+      return `粘贴地址`;
+    case "zh-Hant":
+      return `貼上網址`;
+    case "en-XA":
+      return `[þášţé ţĥé áððŕéšš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202epaste the address\u202c`;
+  }
+  return `paste the address`;
+}
+
+export function settingsDevicesSignInsPasteCode(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق الرمز`;
+    case "de":
+      return `Code einfügen`;
+    case "es":
+      return `pega el código`;
+    case "fr":
+      return `collez le code`;
+    case "ja":
+      return `コードを貼り付け`;
+    case "ko":
+      return `코드 붙여 넣기`;
+    case "pt-BR":
+      return `cole o código`;
+    case "zh-Hans":
+      return `粘贴代码`;
+    case "zh-Hant":
+      return `貼上代碼`;
+    case "en-XA":
+      return `[þášţé ţĥé çöðé ~~~~~]`;
+    case "ar-XB":
+      return `\u202epaste the code\u202c`;
+  }
+  return `paste the code`;
+}
+
+export function settingsDevicesSignInsKeyFor(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `المفتاح لـ${who}`;
+    case "de":
+      return `Der Schlüssel für ${who}`;
+    case "es":
+      return `La clave para ${who}`;
+    case "fr":
+      return `La clé pour ${who}`;
+    case "ja":
+      return `${who} のキー`;
+    case "ko":
+      return `${who}에서 쓸 키`;
+    case "pt-BR":
+      return `A chave para ${who}`;
+    case "zh-Hans":
+      return `${who} 的密钥`;
+    case "zh-Hant":
+      return `${who} 的金鑰`;
+    case "en-XA":
+      return `[Ţĥé ķéý ƒöŕ ${who} ~~~~]`;
+    case "ar-XB":
+      return `\u202eThe key for \u202c${who}`;
+  }
+  return `The key for ${who}`;
+}
+
+export function settingsDevicesSignInsAddressFor(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان لـ${who}`;
+    case "de":
+      return `Die Adresse für ${who}`;
+    case "es":
+      return `La dirección para ${who}`;
+    case "fr":
+      return `L’adresse pour ${who}`;
+    case "ja":
+      return `${who} のアドレス`;
+    case "ko":
+      return `${who}에서 쓸 주소`;
+    case "pt-BR":
+      return `O endereço para ${who}`;
+    case "zh-Hans":
+      return `${who} 的地址`;
+    case "zh-Hant":
+      return `${who} 的網址`;
+    case "en-XA":
+      return `[Ţĥé áððŕéšš ƒöŕ ${who} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe address for \u202c${who}`;
+  }
+  return `The address for ${who}`;
+}
+
+export function settingsDevicesSignInsCodeFor(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الرمز لـ${who}`;
+    case "de":
+      return `Der Code für ${who}`;
+    case "es":
+      return `El código para ${who}`;
+    case "fr":
+      return `Le code pour ${who}`;
+    case "ja":
+      return `${who} のコード`;
+    case "ko":
+      return `${who}에서 쓸 코드`;
+    case "pt-BR":
+      return `O código para ${who}`;
+    case "zh-Hans":
+      return `${who} 的代码`;
+    case "zh-Hant":
+      return `${who} 的代碼`;
+    case "en-XA":
+      return `[Ţĥé çöðé ƒöŕ ${who} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe code for \u202c${who}`;
+  }
+  return `The code for ${who}`;
+}
+
+export function settingsDevicesSignInsSendTo(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إرسال إلى ${who}`;
+    case "de":
+      return `An ${who} senden`;
+    case "es":
+      return `Enviar a ${who}`;
+    case "fr":
+      return `Envoyer à ${who}`;
+    case "ja":
+      return `${who} に送信`;
+    case "ko":
+      return `${who}(으)로 보내기`;
+    case "pt-BR":
+      return `Enviar para ${who}`;
+    case "zh-Hans":
+      return `发送到 ${who}`;
+    case "zh-Hant":
+      return `傳送到 ${who}`;
+    case "en-XA":
+      return `[Šéñð ţö ${who} ~~~]`;
+    case "ar-XB":
+      return `\u202eSend to \u202c${who}`;
+  }
+  return `Send to ${who}`;
+}
+
+export function settingsDevicesSignInsGoesOnce(input: { home: string; who: string }): string {
+  const home = input.home;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُرسل إلى ${who} مرة واحدة. لا يحتفظ ${home} بنسخة منه.`;
+    case "de":
+      return `Er geht einmal an ${who}. ${home} behält keine Kopie.`;
+    case "es":
+      return `Va a ${who} una sola vez. ${home} no guarda ninguna copia.`;
+    case "fr":
+      return `Envoyé une seule fois à ${who}. ${home} n’en garde aucune copie.`;
+    case "ja":
+      return `${who} に一度だけ送られます。${home} にはコピーが残りません。`;
+    case "ko":
+      return `${who}(으)로 한 번만 보내요. ${home}에는 사본이 남지 않아요.`;
+    case "pt-BR":
+      return `Vai para ${who} uma única vez. ${home} não guarda cópia.`;
+    case "zh-Hans":
+      return `它只会发送给 ${who} 一次。${home} 不保留副本。`;
+    case "zh-Hant":
+      return `它只會傳送給 ${who} 一次。${home} 不會保留副本。`;
+    case "en-XA":
+      return `[Îţ ĝöéš ţö ${who} öñçé. ${home} ķééþš ñö çöþý. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt goes to \u202c${who}\u202e once. \u202c${home}\u202e keeps no copy.\u202c`;
+  }
+  return `It goes to ${who} once. ${home} keeps no copy.`;
+}
+
+export function settingsDevicesSignInsEnterCode(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح الرابط في متصفحك هنا وأدخل هذا الرمز. يُكمل ${who} تسجيل الدخول بنفسه.`;
+    case "de":
+      return `Öffne den Link hier in deinem Browser und gib diesen Code ein. ${who} schließt die Anmeldung selbst ab.`;
+    case "es":
+      return `Abre el enlace en tu navegador aquí y escribe este código. ${who} termina el inicio de sesión por su cuenta.`;
+    case "fr":
+      return `Ouvrez le lien dans votre navigateur ici et saisissez ce code. ${who} termine la connexion lui-même.`;
+    case "ja":
+      return `ここのブラウザでリンクを開き、このコードを入力してください。サインインは ${who} が自分で完了します。`;
+    case "ko":
+      return `여기 브라우저에서 링크를 열고 이 코드를 입력하세요. 로그인은 ${who}이(가) 직접 마무리해요.`;
+    case "pt-BR":
+      return `Abra o link no seu navegador aqui e digite este código. ${who} conclui o login sozinho.`;
+    case "zh-Hans":
+      return `在这里的浏览器中打开链接并输入此代码。${who} 会自行完成登录。`;
+    case "zh-Hant":
+      return `在這裡的瀏覽器中開啟連結並輸入這組代碼。${who} 會自行完成登入。`;
+    case "en-XA":
+      return `[Öþéñ ţĥé ļîñķ îñ ýöûŕ ƀŕöŵšéŕ ĥéŕé áñð éñţéŕ ţĥîš çöðé. ${who} ƒîñîšĥéš ţĥé šîĝñ-îñ îţšéļƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the link in your browser here and enter this code. \u202c${who}\u202e finishes the sign-in itself.\u202c`;
+  }
+  return `Open the link in your browser here and enter this code. ${who} finishes the sign-in itself.`;
+}
+
+export function settingsDevicesSignInsWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في انتظار أن تنتهي في المتصفح`;
+    case "de":
+      return `wartet darauf, dass du im Browser fertig wirst`;
+    case "es":
+      return `esperando a que termines en el navegador`;
+    case "fr":
+      return `en attente de la fin dans le navigateur`;
+    case "ja":
+      return `ブラウザでの完了を待っています`;
+    case "ko":
+      return `브라우저에서 마치기를 기다리는 중`;
+    case "pt-BR":
+      return `esperando você concluir no navegador`;
+    case "zh-Hans":
+      return `正在等你在浏览器中完成`;
+    case "zh-Hant":
+      return `正在等你在瀏覽器中完成`;
+    case "en-XA":
+      return `[ŵáîţîñĝ ƒöŕ ýöû ţö ƒîñîšĥ îñ ţĥé ƀŕöŵšéŕ ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ewaiting for you to finish in the browser\u202c`;
+  }
+  return `waiting for you to finish in the browser`;
+}
+
+export function settingsDevicesSignInsSigningIn(input: { provider: string; who: string }): string {
+  const provider = input.provider;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${who} يسجّل الدخول إلى ${provider}.`;
+    case "de":
+      return `${who} meldet sich bei ${provider} an.`;
+    case "es":
+      return `${who} está iniciando sesión en ${provider}.`;
+    case "fr":
+      return `${who} se connecte à ${provider}.`;
+    case "ja":
+      return `${who} が ${provider} にサインインしています。`;
+    case "ko":
+      return `${who}이(가) ${provider}에 로그인하는 중이에요.`;
+    case "pt-BR":
+      return `${who} está fazendo login no ${provider}.`;
+    case "zh-Hans":
+      return `${who} 正在登录 ${provider}。`;
+    case "zh-Hant":
+      return `${who} 正在登入 ${provider}。`;
+    case "en-XA":
+      return `[${who} îš šîĝñîñĝ îñ ţö ${provider}. ~~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202e is signing in to \u202c${provider}\u202e.\u202c`;
+  }
+  return `${who} is signing in to ${provider}.`;
+}
+
+export function settingsDevicesSignInsTitle(input: { provider: string; where: string }): string {
+  const provider = input.provider;
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول إلى ${provider} ${where}`;
+    case "de":
+      return `Bei ${provider} ${where} anmelden`;
+    case "es":
+      return `Iniciar sesión en ${provider} ${where}`;
+    case "fr":
+      return `Se connecter à ${provider} ${where}`;
+    case "ja":
+      return `${where} ${provider} にサインイン`;
+    case "ko":
+      return `${where} ${provider}에 로그인`;
+    case "pt-BR":
+      return `Fazer login no ${provider} ${where}`;
+    case "zh-Hans":
+      return `${where} 登录 ${provider}`;
+    case "zh-Hant":
+      return `${where} 登入 ${provider}`;
+    case "en-XA":
+      return `[Šîĝñ îñ ţö ${provider} ${where} ~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in to \u202c${provider}\u202e \u202c${where}`;
+  }
+  return `Sign in to ${provider} ${where}`;
+}
+
+export function settingsDevicesSignInsPasteBackCode(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح الرابط في متصفحك هنا وسجّل الدخول. ثم الصق الرمز الذي يظهر.`;
+    case "de":
+      return `Öffne den Link hier in deinem Browser und melde dich an. Füg dann den Code ein, den er anzeigt.`;
+    case "es":
+      return `Abre el enlace en tu navegador aquí e inicia sesión. Luego pega el código que muestra.`;
+    case "fr":
+      return `Ouvrez le lien dans votre navigateur ici et connectez-vous. Collez ensuite le code affiché.`;
+    case "ja":
+      return `ここのブラウザでリンクを開いてサインインしてください。そのあと表示されたコードを貼り付けてください。`;
+    case "ko":
+      return `여기 브라우저에서 링크를 열고 로그인하세요. 그다음 화면에 나온 코드를 붙여 넣으세요.`;
+    case "pt-BR":
+      return `Abra o link no seu navegador aqui e faça login. Depois cole o código que aparecer.`;
+    case "zh-Hans":
+      return `在这里的浏览器中打开链接并登录。然后粘贴它显示的代码。`;
+    case "zh-Hant":
+      return `在這裡的瀏覽器中開啟連結並登入。然後貼上它顯示的代碼。`;
+    case "en-XA":
+      return `[Öþéñ ţĥé ļîñķ îñ ýöûŕ ƀŕöŵšéŕ ĥéŕé áñð šîĝñ îñ. Ţĥéñ þášţé ţĥé çöðé îţ šĥöŵš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the link in your browser here and sign in. Then paste the code it shows.\u202c`;
+  }
+  return `Open the link in your browser here and sign in. Then paste the code it shows.`;
+}
+
+export function settingsDevicesSignInsPasteBackHere(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح الرابط في متصفحك هنا وسجّل الدخول. يُكمل ${who} تسجيل الدخول بنفسه عندما يعود متصفحك. إذا تعذّر الوصول إلى الصفحة التي ينتهي عندها متصفحك، فانسخ عنوانها والصقه هنا.`;
+    case "de":
+      return `Öffne den Link hier in deinem Browser und melde dich an. ${who} schließt die Anmeldung selbst ab, wenn dein Browser zurückkommt. Ist die Seite, auf der dein Browser landet, nicht erreichbar, kopier ihre Adresse und füg sie hier ein.`;
+    case "es":
+      return `Abre el enlace en tu navegador aquí e inicia sesión. ${who} termina el inicio de sesión por su cuenta cuando tu navegador vuelve. Si no se puede acceder a la página en la que termina tu navegador, copia su dirección y pégala aquí.`;
+    case "fr":
+      return `Ouvrez le lien dans votre navigateur ici et connectez-vous. ${who} termine la connexion lui-même quand votre navigateur revient. Si la page où votre navigateur arrive est inaccessible, copiez son adresse et collez-la ici.`;
+    case "ja":
+      return `ここのブラウザでリンクを開いてサインインしてください。ブラウザが戻ってくると、${who} が自分でサインインを完了します。ブラウザが最後に開いたページに接続できない場合は、そのアドレスをコピーしてここに貼り付けてください。`;
+    case "ko":
+      return `여기 브라우저에서 링크를 열고 로그인하세요. 브라우저가 돌아오면 ${who}이(가) 직접 로그인을 마무리해요. 브라우저가 마지막에 연 페이지에 연결할 수 없으면 그 주소를 복사해 여기에 붙여 넣으세요.`;
+    case "pt-BR":
+      return `Abra o link no seu navegador aqui e faça login. ${who} conclui o login sozinho quando seu navegador voltar. Se a página em que seu navegador parar não puder ser acessada, copie o endereço dela e cole aqui.`;
+    case "zh-Hans":
+      return `在这里的浏览器中打开链接并登录。浏览器返回后，${who} 会自行完成登录。如果浏览器最后打开的页面无法访问，请复制它的地址并粘贴到这里。`;
+    case "zh-Hant":
+      return `在這裡的瀏覽器中開啟連結並登入。瀏覽器返回後，${who} 會自行完成登入。如果瀏覽器最後停留的頁面無法連上，請複製它的網址並貼到這裡。`;
+    case "en-XA":
+      return `[Öþéñ ţĥé ļîñķ îñ ýöûŕ ƀŕöŵšéŕ ĥéŕé áñð šîĝñ îñ. ${who} ƒîñîšĥéš ţĥé šîĝñ-îñ îţšéļƒ ŵĥéñ ýöûŕ ƀŕöŵšéŕ çöɱéš ƀáçķ. Îƒ ţĥé þáĝé ýöûŕ ƀŕöŵšéŕ éñðš öñ çáññöţ ƀé ŕéáçĥéð, çöþý îţš áððŕéšš áñð þášţé îţ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the link in your browser here and sign in. \u202c${who}\u202e finishes the sign-in itself when your browser comes back. If the page your browser ends on cannot be reached, copy its address and paste it here.\u202c`;
+  }
+  return `Open the link in your browser here and sign in. ${who} finishes the sign-in itself when your browser comes back. If the page your browser ends on cannot be reached, copy its address and paste it here.`;
+}
+
+export function settingsDevicesSignInsPasteBackAddress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح الرابط في متصفحك هنا وسجّل الدخول. سينتهي متصفحك بعدها عند صفحة يتعذّر الوصول إليها. انسخ عنوان تلك الصفحة والصقه هنا.`;
+    case "de":
+      return `Öffne den Link hier in deinem Browser und melde dich an. Dein Browser landet dann auf einer Seite, die nicht erreichbar ist. Kopier die Adresse dieser Seite und füg sie hier ein.`;
+    case "es":
+      return `Abre el enlace en tu navegador aquí e inicia sesión. Luego tu navegador termina en una página a la que no se puede acceder. Copia la dirección de esa página y pégala aquí.`;
+    case "fr":
+      return `Ouvrez le lien dans votre navigateur ici et connectez-vous. Votre navigateur arrive alors sur une page inaccessible. Copiez l’adresse de cette page et collez-la ici.`;
+    case "ja":
+      return `ここのブラウザでリンクを開いてサインインしてください。ブラウザは最後に接続できないページを開きます。そのページのアドレスをコピーしてここに貼り付けてください。`;
+    case "ko":
+      return `여기 브라우저에서 링크를 열고 로그인하세요. 그러면 브라우저가 연결할 수 없는 페이지에서 멈춰요. 그 페이지의 주소를 복사해 여기에 붙여 넣으세요.`;
+    case "pt-BR":
+      return `Abra o link no seu navegador aqui e faça login. Seu navegador então para em uma página que não pode ser acessada. Copie o endereço dessa página e cole aqui.`;
+    case "zh-Hans":
+      return `在这里的浏览器中打开链接并登录。之后浏览器会停在一个无法访问的页面。复制该页面的地址并粘贴到这里。`;
+    case "zh-Hant":
+      return `在這裡的瀏覽器中開啟連結並登入。之後瀏覽器會停在一個無法連上的頁面。複製那個頁面的網址並貼到這裡。`;
+    case "en-XA":
+      return `[Öþéñ ţĥé ļîñķ îñ ýöûŕ ƀŕöŵšéŕ ĥéŕé áñð šîĝñ îñ. Ýöûŕ ƀŕöŵšéŕ ţĥéñ éñðš öñ á þáĝé ţĥáţ çáññöţ ƀé ŕéáçĥéð. Çöþý ţĥáţ þáĝé'š áððŕéšš áñð þášţé îţ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the link in your browser here and sign in. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.\u202c`;
+  }
+  return `Open the link in your browser here and sign in. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -32520,6 +42507,343 @@ export const MESSAGES = {
   recordLabelKnowledgeUsed,
   recordLabelMore,
   recordKnowledgeUsedNote,
+  settingsDevicesWaysLabel,
+  settingsDevicesWaysLocal,
+  settingsDevicesWaysLocalLine,
+  settingsDevicesWaysLocalOff,
+  settingsDevicesWaysPrivate,
+  settingsDevicesWaysPrivateOffTitle,
+  settingsDevicesWaysPrivateLine,
+  settingsDevicesWaysPrivateOff,
+  settingsDevicesWaysInternet,
+  settingsDevicesWaysInternetLine,
+  settingsDevicesWaysFoot,
+  settingsDevicesWaysCopyLink,
+  settingsDevicesWaysCopyCommand,
+  settingsDevicesWaysReady,
+  settingsDevicesWaysOff,
+  settingsDevicesWaysReachedLocal,
+  settingsDevicesWaysReachedPrivate,
+  settingsDevicesWaysNoNetwork,
+  settingsDevicesWayCount,
+  settingsDevicesPanelLinkLabel,
+  settingsDevicesPanelPhoneLabel,
+  settingsDevicesPanelCopyLink,
+  settingsDevicesPanelCommandLabel,
+  settingsDevicesPanelCommandRun,
+  settingsDevicesPanelCommandNetwork,
+  settingsDevicesPanelCopyCommand,
+  settingsDevicesPanelUserCommandLabel,
+  settingsDevicesPanelUserCommandLogIn,
+  settingsDevicesPanelUserCommandSwitchBack,
+  settingsDevicesSeenNow,
+  settingsDevicesSeenSince,
+  settingsDevicesSeenSinceWhen,
+  settingsDevicesSeenRemovedWhenBack,
+  settingsDevicesSeenRemovedWhenBackConnecting,
+  settingsDevicesSeenRemovedOnceUpdated,
+  settingsDevicesSeenRestarted,
+  settingsDevicesControllingNow,
+  settingsDevicesRunsNoProject,
+  settingsDevicesNoNewWork,
+  settingsDevicesRemoveCutOff,
+  settingsDevicesRemoveNewLink,
+  settingsDevicesRemoveOtherFirstmate,
+  settingsDevicesRemoveStaysThere,
+  settingsDevicesRemoveStaysThereOn,
+  settingsDevicesRemoveNoNewWork,
+  settingsDevicesRemoveUpdateIt,
+  settingsDevicesRemoveUpdateItOn,
+  settingsDevicesRemoveAway,
+  settingsDevicesRemoveWait,
+  settingsDevicesRemoveWaitOn,
+  settingsDevicesRemoveComesFirst,
+  settingsDevicesRemoveCleansUp,
+  settingsDevicesRemoveTasksStop,
+  settingsDevicesRemoveTasksStopOn,
+  settingsDevicesRemoveRunsAfter,
+  settingsDevicesJoinedToday,
+  settingsDevicesJoinedYesterday,
+  settingsDevicesJoined,
+  settingsDevicesRunningAs,
+  settingsDevicesAnotherUserHere,
+  settingsDevicesRunsWhileLoggedIn,
+  settingsDevicesBringingWorkOf,
+  settingsDevicesBringingWork,
+  settingsDevicesRemovingSetUp,
+  settingsDevicesRuns,
+  settingsDevicesSignedInTo,
+  settingsDevicesNoSignIns,
+  settingsDevicesTasks,
+  settingsDevicesIdle,
+  settingsDevicesStrandedAsUser,
+  settingsDevicesStrandedThere,
+  settingsDevicesMakeCommand,
+  settingsDevicesHeldLine,
+  settingsProjectsDelivery,
+  settingsProjectsQueueNeeds,
+  settingsProjectsQueueHowToLabel,
+  settingsProjectsQueueStepAsk,
+  settingsProjectsQueueStepWorkflow,
+  settingsProjectsQueueStepSet,
+  settingsProjectsQueueFirstMate,
+  settingsProjectsQueueGuideGithub,
+  settingsProjectsQueueStepPipelineGitlab,
+  settingsProjectsQueueStepSetGitlab,
+  settingsProjectsQueueGuideGitlab,
+  settingsProjectsQueueKeyTitle,
+  settingsProjectsQueueKeyMissing,
+  settingsProjectsQueueKeyReady,
+  settingsProjectsQueueKeyUnreadable,
+  settingsProjectsQueueKeyMake,
+  settingsProjectsQueueKeyRemake,
+  settingsProjectsQueueKeyMade,
+  settingsProjectsQueueShipped,
+  settingsProjectsPauseTitle,
+  settingsProjectsPauseSummary,
+  settingsProjectsPauseClaimed,
+  settingsProjectsPauseUnclaimed,
+  settingsProjectsPauseUnread,
+  settingsProjectsPauseIssue,
+  settingsProjectsPauseRun,
+  settingsProjectsPauseReason,
+  settingsProjectsPauseResume,
+  settingsProjectsPauseSendBack,
+  settingsProjectsPauseSendBackWhich,
+  settingsProjectsPauseNeedsReason,
+  settingsProjectsPauseSent,
+  settingsProjectsQueueNoHost,
+  settingsProjectsQueueWaiting,
+  settingsProjectsRowPersonal,
+  settingsProjectsRowLinked,
+  settingsProjectsRowCare,
+  settingsProjectsRowRuns,
+  settingsProjectsCostTitle,
+  settingsProjectsCostDescription,
+  settingsProjectsCostFollow,
+  settingsProjectsCostOwn,
+  settingsProjectsCostNone,
+  settingsProjectsCostAmount,
+  settingsForgeThisMacRole,
+  settingsForgeDeviceRole,
+  settingsAddProjectStartedGit,
+  settingsAddProjectFolderHere,
+  settingsAddProjectOtherHost,
+  settingsAddProjectNewProject,
+  settingsAddProjectFolderOn,
+  settingsAddProjectFolderPathOn,
+  settingsAddProjectAddFolder,
+  settingsAddProjectTaskKey,
+  settingsAddProjectTaskKeyPlaceholder,
+  settingsAddProjectTaskKeyNext,
+  settingsAddProjectSignIn,
+  settingsDevicesPhoneCodeLabel,
+  settingsProjectsQueueKeyEndsUnknown,
+  settingsRunsOnNoSignIns,
+  settingsRunsOnAutomatically,
+  settingsRunsOnLabel,
+  settingsRunsOnYourComputers,
+  settingsRunsOnAnotherUser,
+  settingsRunsOnRemoved,
+  settingsRunsOnAutomaticDescription,
+  settingsRunsOnDescription,
+  settingsProjectsRemoveCheckFailed,
+  settingsProjectsRemoveFailed,
+  settingsProjectsRemoveTitle,
+  settingsProjectsRemoveCancel,
+  settingsProjectsRemoving,
+  settingsProjectsRemoveConfirm,
+  settingsProjectsRemoveNamed,
+  settingsControllingLabel,
+  settingsControllingSay,
+  settingsControllingLeaveRunsWork,
+  settingsControllingLeave,
+  settingsControllingWorkGoes,
+  settingsControllingAway,
+  settingsControllingNewLink,
+  settingsControllingStay,
+  settingsControllingLeaving,
+  settingsControllingLeaveButton,
+  settingsControllingJoined,
+  settingsControllingLeaveNamed,
+  settingsProjectsLabel,
+  settingsProjectsIntro,
+  settingsProjectsEmpty,
+  settingsProjectsFolderPickerFailed,
+  settingsProjectsFolderSave,
+  settingsProjectsFolderCancel,
+  settingsProjectsFolderLine,
+  settingsProjectsFolderDefault,
+  settingsProjectsFolderChoosing,
+  settingsProjectsFolderChoose,
+  settingsProjectsFolderUseDefault,
+  settingsProjectsName,
+  settingsProjectsNameDescription,
+  settingsProjectsNameLabel,
+  settingsProjectsScope,
+  settingsProjectsScopeDescription,
+  settingsProjectsFolder,
+  settingsProjectsFolderDescription,
+  settingsProjectsFolderLabel,
+  settingsProjectsOrigin,
+  settingsProjectsOriginDescription,
+  settingsProjectsOriginLabel,
+  settingsProjectsSaveDetails,
+  settingsProjectsRowExpanded,
+  settingsProjectsRowCollapsed,
+  settingsProjectsWorkspace,
+  settingsProjectsDeliveryTitle,
+  settingsProjectsWorkspaceDescription,
+  settingsProjectsAutonomyPersonal,
+  settingsProjectsAutonomyOn,
+  settingsProjectsAutonomyOff,
+  settingsProjectsCare,
+  settingsProjectsCarePersonal,
+  settingsProjectsRigorDescription,
+  settingsProjectsCareNone,
+  settingsProjectsLocalCareful,
+  settingsAddProjectAddedGit,
+  settingsAddProjectAdded,
+  settingsAddProjectAlreadyAdded,
+  settingsAddProjectWrongHost,
+  settingsAddProjectLabel,
+  settingsAddProjectHostRepo,
+  settingsAddProjectNew,
+  settingsAddProjectAdding,
+  settingsAddProjectName,
+  settingsAddProjectStart,
+  settingsAddProjectYourRepos,
+  settingsAddProjectFind,
+  settingsAddProjectReading,
+  settingsAddProjectPrivate,
+  settingsAddProjectAddedMark,
+  settingsAddProjectAdd,
+  settingsAddProjectOrPasteLink,
+  settingsAddProjectPasteLink,
+  settingsAddProjectGoesInto,
+  settingsAddProjectClose,
+  settingsDevicesRemoveNamed,
+  settingsDevicesRemoveButton,
+  settingsDevicesAddByAddressNamed,
+  settingsDevicesAddByAddress,
+  settingsDevicesTryAgainNamed,
+  settingsDevicesTryAgain,
+  settingsDevicesChangeAddressNamed,
+  settingsDevicesChangeAddress,
+  settingsDevicesUpdateNamed,
+  settingsDevicesUpdate,
+  settingsDevicesKeepIt,
+  settingsDevicesAddressChangeSay,
+  settingsDevicesAddressAddSayAs,
+  settingsDevicesAddressAddSay,
+  settingsDevicesAddIt,
+  settingsDevicesAddressChange,
+  settingsDevicesCancel,
+  settingsDevicesRemoveOnceUpdated,
+  settingsDevicesRemoveWhenBack,
+  settingsDevicesRemoveNow,
+  settingsDevicesRemoving,
+  settingsDevicesMakeFailed,
+  settingsDevicesRemoveFailed,
+  settingsDevicesAddFailed,
+  settingsDevicesUpdateFailed,
+  settingsDevicesTryAgainFailed,
+  settingsDevicesChangeAddressFailed,
+  settingsDevicesKeepFailed,
+  settingsDevicesLabel,
+  settingsDevicesLivesThere,
+  settingsDevicesLivesHere,
+  settingsDevicesAdd,
+  settingsDevicesAddComputer,
+  settingsDevicesAddPhone,
+  settingsDevicesAddUser,
+  settingsDevicesIntroThere,
+  settingsDevicesIntroHere,
+  settingsDevicesAddHow,
+  settingsDevicesAddEachWay,
+  settingsDevicesAddByLink,
+  settingsDevicesAddByCommand,
+  settingsDevicesAddByItsAddress,
+  settingsDevicesAddressLabel,
+  settingsDevicesAddressSay,
+  settingsDevicesConfirmThis,
+  settingsDevicesLeaveAndAdd,
+  settingsDevicesAddingDetail,
+  settingsDevicesAddressTitle,
+  settingsDevicesAddressOnly,
+  settingsDevicesAddressOnlyHere,
+  settingsDevicesJoinedGiveProject,
+  settingsDevicesDone,
+  settingsDevicesExpiredLink,
+  settingsDevicesExpiredPhone,
+  settingsDevicesExpiredCommand,
+  settingsDevicesExpiredPhoneReady,
+  settingsDevicesExpiredComputerReady,
+  settingsDevicesMakeNewOne,
+  settingsDevicesCopied,
+  settingsDevicesWorksOnce,
+  settingsDevicesStopIt,
+  settingsDevicesCopyLinkFailed,
+  settingsDevicesCopyCommandFailed,
+  settingsForgeSignedIn,
+  settingsForgeSignInAgainState,
+  settingsForgeSignedInUnreachable,
+  settingsForgeSignedInChecking,
+  settingsForgeSignInTo,
+  settingsForgeConnecting,
+  settingsForgeMakeKey,
+  settingsForgeChecking,
+  settingsForgeSignIn,
+  settingsForgeCancel,
+  settingsForgeEnterCode,
+  settingsForgeOpenHost,
+  settingsForgeCodeExpired,
+  settingsForgeUnreachable,
+  settingsForgeNewCode,
+  settingsForgeTryAgain,
+  settingsForgeNotSignedIn,
+  settingsForgeSignInAgainSay,
+  settingsForgeStarting,
+  settingsForgeSignInAgain,
+  settingsForgeRowActions,
+  settingsForgeSignOut,
+  settingsForgeBrowserLabel,
+  settingsForgeBrowserIntro,
+  settingsForgeBrowserStays,
+  settingsForgeBrowserStepOpen,
+  settingsForgeBrowserStepName,
+  settingsForgeBrowserRedirectFallback,
+  settingsForgeBrowserStepScopes,
+  settingsForgeBrowserStepGrant,
+  settingsForgeBrowserStepSave,
+  settingsForgeBrowserOpenApplications,
+  settingsDevicesSignInsAsOf,
+  settingsDevicesSignInsOwn,
+  settingsDevicesSignInsDisconnect,
+  settingsDevicesSignInsUnanswered,
+  settingsDevicesSignInsNone,
+  settingsDevicesSignInsAddAccount,
+  settingsDevicesSignInsCustomApi,
+  settingsDevicesSignInsClaudeCode,
+  settingsDevicesSignInsFailed,
+  settingsDevicesSignInsPasteKeyAn,
+  settingsDevicesSignInsPasteKeyA,
+  settingsDevicesSignInsOpenLink,
+  settingsDevicesSignInsPasteYourKey,
+  settingsDevicesSignInsPasteAddress,
+  settingsDevicesSignInsPasteCode,
+  settingsDevicesSignInsKeyFor,
+  settingsDevicesSignInsAddressFor,
+  settingsDevicesSignInsCodeFor,
+  settingsDevicesSignInsSendTo,
+  settingsDevicesSignInsGoesOnce,
+  settingsDevicesSignInsEnterCode,
+  settingsDevicesSignInsWaiting,
+  settingsDevicesSignInsSigningIn,
+  settingsDevicesSignInsTitle,
+  settingsDevicesSignInsPasteBackCode,
+  settingsDevicesSignInsPasteBackHere,
+  settingsDevicesSignInsPasteBackAddress,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -33579,4 +43903,341 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   recordLabelKnowledgeUsed: [],
   recordLabelMore: [],
   recordKnowledgeUsedNote: [],
+  settingsDevicesWaysLabel: [],
+  settingsDevicesWaysLocal: [],
+  settingsDevicesWaysLocalLine: [],
+  settingsDevicesWaysLocalOff: [],
+  settingsDevicesWaysPrivate: [],
+  settingsDevicesWaysPrivateOffTitle: [],
+  settingsDevicesWaysPrivateLine: [],
+  settingsDevicesWaysPrivateOff: [],
+  settingsDevicesWaysInternet: [],
+  settingsDevicesWaysInternetLine: [],
+  settingsDevicesWaysFoot: [],
+  settingsDevicesWaysCopyLink: [],
+  settingsDevicesWaysCopyCommand: [],
+  settingsDevicesWaysReady: [],
+  settingsDevicesWaysOff: [],
+  settingsDevicesWaysReachedLocal: [],
+  settingsDevicesWaysReachedPrivate: [],
+  settingsDevicesWaysNoNetwork: [],
+  settingsDevicesWayCount: ["count"],
+  settingsDevicesPanelLinkLabel: [],
+  settingsDevicesPanelPhoneLabel: [],
+  settingsDevicesPanelCopyLink: [],
+  settingsDevicesPanelCommandLabel: [],
+  settingsDevicesPanelCommandRun: [],
+  settingsDevicesPanelCommandNetwork: [],
+  settingsDevicesPanelCopyCommand: [],
+  settingsDevicesPanelUserCommandLabel: [],
+  settingsDevicesPanelUserCommandLogIn: [],
+  settingsDevicesPanelUserCommandSwitchBack: [],
+  settingsDevicesSeenNow: [],
+  settingsDevicesSeenSince: [],
+  settingsDevicesSeenSinceWhen: ["when"],
+  settingsDevicesSeenRemovedWhenBack: [],
+  settingsDevicesSeenRemovedWhenBackConnecting: [],
+  settingsDevicesSeenRemovedOnceUpdated: [],
+  settingsDevicesSeenRestarted: [],
+  settingsDevicesControllingNow: [],
+  settingsDevicesRunsNoProject: [],
+  settingsDevicesNoNewWork: [],
+  settingsDevicesRemoveCutOff: ["device"],
+  settingsDevicesRemoveNewLink: [],
+  settingsDevicesRemoveOtherFirstmate: ["device"],
+  settingsDevicesRemoveStaysThere: [],
+  settingsDevicesRemoveStaysThereOn: ["projects"],
+  settingsDevicesRemoveNoNewWork: ["device"],
+  settingsDevicesRemoveUpdateIt: ["device"],
+  settingsDevicesRemoveUpdateItOn: ["device", "projects"],
+  settingsDevicesRemoveAway: ["device", "state"],
+  settingsDevicesRemoveWait: ["device"],
+  settingsDevicesRemoveWaitOn: ["device", "projects"],
+  settingsDevicesRemoveComesFirst: ["device"],
+  settingsDevicesRemoveCleansUp: [],
+  settingsDevicesRemoveTasksStop: ["count"],
+  settingsDevicesRemoveTasksStopOn: ["count", "projects"],
+  settingsDevicesRemoveRunsAfter: ["count", "projects"],
+  settingsDevicesJoinedToday: ["time"],
+  settingsDevicesJoinedYesterday: ["time"],
+  settingsDevicesJoined: ["when"],
+  settingsDevicesRunningAs: ["user"],
+  settingsDevicesAnotherUserHere: [],
+  settingsDevicesRunsWhileLoggedIn: ["user"],
+  settingsDevicesBringingWorkOf: ["projects"],
+  settingsDevicesBringingWork: [],
+  settingsDevicesRemovingSetUp: ["where"],
+  settingsDevicesRuns: ["projects"],
+  settingsDevicesSignedInTo: ["names"],
+  settingsDevicesNoSignIns: [],
+  settingsDevicesTasks: ["count"],
+  settingsDevicesIdle: [],
+  settingsDevicesStrandedAsUser: ["user"],
+  settingsDevicesStrandedThere: [],
+  settingsDevicesMakeCommand: [],
+  settingsDevicesHeldLine: ["device"],
+  settingsProjectsDelivery: [],
+  settingsProjectsQueueNeeds: [],
+  settingsProjectsQueueHowToLabel: [],
+  settingsProjectsQueueStepAsk: [],
+  settingsProjectsQueueStepWorkflow: ["status"],
+  settingsProjectsQueueStepSet: ["status"],
+  settingsProjectsQueueFirstMate: [],
+  settingsProjectsQueueGuideGithub: [],
+  settingsProjectsQueueStepPipelineGitlab: ["status"],
+  settingsProjectsQueueStepSetGitlab: ["status"],
+  settingsProjectsQueueGuideGitlab: [],
+  settingsProjectsQueueKeyTitle: [],
+  settingsProjectsQueueKeyMissing: ["place"],
+  settingsProjectsQueueKeyReady: ["date"],
+  settingsProjectsQueueKeyUnreadable: ["place"],
+  settingsProjectsQueueKeyMake: [],
+  settingsProjectsQueueKeyRemake: [],
+  settingsProjectsQueueKeyMade: [],
+  settingsProjectsQueueShipped: ["version"],
+  settingsProjectsPauseTitle: [],
+  settingsProjectsPauseSummary: ["changes", "count", "run", "since"],
+  settingsProjectsPauseClaimed: ["who"],
+  settingsProjectsPauseUnclaimed: [],
+  settingsProjectsPauseUnread: [],
+  settingsProjectsPauseIssue: [],
+  settingsProjectsPauseRun: [],
+  settingsProjectsPauseReason: [],
+  settingsProjectsPauseResume: [],
+  settingsProjectsPauseSendBack: [],
+  settingsProjectsPauseSendBackWhich: [],
+  settingsProjectsPauseNeedsReason: [],
+  settingsProjectsPauseSent: [],
+  settingsProjectsQueueNoHost: [],
+  settingsProjectsQueueWaiting: ["delivery"],
+  settingsProjectsRowPersonal: [],
+  settingsProjectsRowLinked: [],
+  settingsProjectsRowCare: ["care"],
+  settingsProjectsRowRuns: ["where"],
+  settingsProjectsCostTitle: [],
+  settingsProjectsCostDescription: [],
+  settingsProjectsCostFollow: [],
+  settingsProjectsCostOwn: [],
+  settingsProjectsCostNone: [],
+  settingsProjectsCostAmount: [],
+  settingsForgeThisMacRole: [],
+  settingsForgeDeviceRole: [],
+  settingsAddProjectStartedGit: [],
+  settingsAddProjectFolderHere: [],
+  settingsAddProjectOtherHost: [],
+  settingsAddProjectNewProject: ["folder", "place"],
+  settingsAddProjectFolderOn: ["computer"],
+  settingsAddProjectFolderPathOn: ["computer"],
+  settingsAddProjectAddFolder: [],
+  settingsAddProjectTaskKey: [],
+  settingsAddProjectTaskKeyPlaceholder: [],
+  settingsAddProjectTaskKeyNext: ["key"],
+  settingsAddProjectSignIn: ["host"],
+  settingsDevicesPhoneCodeLabel: [],
+  settingsProjectsQueueKeyEndsUnknown: [],
+  settingsRunsOnNoSignIns: [],
+  settingsRunsOnAutomatically: [],
+  settingsRunsOnLabel: [],
+  settingsRunsOnYourComputers: [],
+  settingsRunsOnAnotherUser: [],
+  settingsRunsOnRemoved: [],
+  settingsRunsOnAutomaticDescription: [],
+  settingsRunsOnDescription: [],
+  settingsProjectsRemoveCheckFailed: [],
+  settingsProjectsRemoveFailed: [],
+  settingsProjectsRemoveTitle: [],
+  settingsProjectsRemoveCancel: [],
+  settingsProjectsRemoving: [],
+  settingsProjectsRemoveConfirm: [],
+  settingsProjectsRemoveNamed: ["name"],
+  settingsControllingLabel: [],
+  settingsControllingSay: ["name"],
+  settingsControllingLeaveRunsWork: ["name"],
+  settingsControllingLeave: ["name"],
+  settingsControllingWorkGoes: ["name"],
+  settingsControllingAway: ["name"],
+  settingsControllingNewLink: [],
+  settingsControllingStay: [],
+  settingsControllingLeaving: [],
+  settingsControllingLeaveButton: [],
+  settingsControllingJoined: ["address", "when"],
+  settingsControllingLeaveNamed: ["name"],
+  settingsProjectsLabel: [],
+  settingsProjectsIntro: [],
+  settingsProjectsEmpty: [],
+  settingsProjectsFolderPickerFailed: [],
+  settingsProjectsFolderSave: [],
+  settingsProjectsFolderCancel: [],
+  settingsProjectsFolderLine: [],
+  settingsProjectsFolderDefault: [],
+  settingsProjectsFolderChoosing: [],
+  settingsProjectsFolderChoose: [],
+  settingsProjectsFolderUseDefault: [],
+  settingsProjectsName: [],
+  settingsProjectsNameDescription: [],
+  settingsProjectsNameLabel: [],
+  settingsProjectsScope: [],
+  settingsProjectsScopeDescription: [],
+  settingsProjectsFolder: [],
+  settingsProjectsFolderDescription: [],
+  settingsProjectsFolderLabel: [],
+  settingsProjectsOrigin: [],
+  settingsProjectsOriginDescription: ["place"],
+  settingsProjectsOriginLabel: [],
+  settingsProjectsSaveDetails: [],
+  settingsProjectsRowExpanded: ["name"],
+  settingsProjectsRowCollapsed: ["name"],
+  settingsProjectsWorkspace: [],
+  settingsProjectsDeliveryTitle: [],
+  settingsProjectsWorkspaceDescription: [],
+  settingsProjectsAutonomyPersonal: [],
+  settingsProjectsAutonomyOn: [],
+  settingsProjectsAutonomyOff: [],
+  settingsProjectsCare: [],
+  settingsProjectsCarePersonal: [],
+  settingsProjectsRigorDescription: [],
+  settingsProjectsCareNone: [],
+  settingsProjectsLocalCareful: [],
+  settingsAddProjectAddedGit: ["name"],
+  settingsAddProjectAdded: ["name"],
+  settingsAddProjectAlreadyAdded: ["name"],
+  settingsAddProjectWrongHost: ["host"],
+  settingsAddProjectLabel: [],
+  settingsAddProjectHostRepo: ["host"],
+  settingsAddProjectNew: [],
+  settingsAddProjectAdding: [],
+  settingsAddProjectName: [],
+  settingsAddProjectStart: [],
+  settingsAddProjectYourRepos: ["host"],
+  settingsAddProjectFind: [],
+  settingsAddProjectReading: [],
+  settingsAddProjectPrivate: [],
+  settingsAddProjectAddedMark: [],
+  settingsAddProjectAdd: [],
+  settingsAddProjectOrPasteLink: ["host"],
+  settingsAddProjectPasteLink: ["host"],
+  settingsAddProjectGoesInto: ["folder"],
+  settingsAddProjectClose: [],
+  settingsDevicesRemoveNamed: ["device"],
+  settingsDevicesRemoveButton: [],
+  settingsDevicesAddByAddressNamed: ["device"],
+  settingsDevicesAddByAddress: [],
+  settingsDevicesTryAgainNamed: ["device"],
+  settingsDevicesTryAgain: [],
+  settingsDevicesChangeAddressNamed: ["device"],
+  settingsDevicesChangeAddress: [],
+  settingsDevicesUpdateNamed: ["device"],
+  settingsDevicesUpdate: [],
+  settingsDevicesKeepIt: [],
+  settingsDevicesAddressChangeSay: [],
+  settingsDevicesAddressAddSayAs: ["sshOn", "user"],
+  settingsDevicesAddressAddSay: ["sshOn"],
+  settingsDevicesAddIt: [],
+  settingsDevicesAddressChange: [],
+  settingsDevicesCancel: [],
+  settingsDevicesRemoveOnceUpdated: [],
+  settingsDevicesRemoveWhenBack: [],
+  settingsDevicesRemoveNow: [],
+  settingsDevicesRemoving: [],
+  settingsDevicesMakeFailed: [],
+  settingsDevicesRemoveFailed: [],
+  settingsDevicesAddFailed: [],
+  settingsDevicesUpdateFailed: [],
+  settingsDevicesTryAgainFailed: [],
+  settingsDevicesChangeAddressFailed: [],
+  settingsDevicesKeepFailed: [],
+  settingsDevicesLabel: [],
+  settingsDevicesLivesThere: [],
+  settingsDevicesLivesHere: [],
+  settingsDevicesAdd: [],
+  settingsDevicesAddComputer: [],
+  settingsDevicesAddPhone: [],
+  settingsDevicesAddUser: [],
+  settingsDevicesIntroThere: ["reads"],
+  settingsDevicesIntroHere: ["reads"],
+  settingsDevicesAddHow: [],
+  settingsDevicesAddEachWay: [],
+  settingsDevicesAddByLink: [],
+  settingsDevicesAddByCommand: [],
+  settingsDevicesAddByItsAddress: [],
+  settingsDevicesAddressLabel: [],
+  settingsDevicesAddressSay: ["sshOn"],
+  settingsDevicesConfirmThis: [],
+  settingsDevicesLeaveAndAdd: [],
+  settingsDevicesAddingDetail: ["address"],
+  settingsDevicesAddressTitle: [],
+  settingsDevicesAddressOnly: ["place"],
+  settingsDevicesAddressOnlyHere: [],
+  settingsDevicesJoinedGiveProject: [],
+  settingsDevicesDone: [],
+  settingsDevicesExpiredLink: [],
+  settingsDevicesExpiredPhone: [],
+  settingsDevicesExpiredCommand: [],
+  settingsDevicesExpiredPhoneReady: [],
+  settingsDevicesExpiredComputerReady: [],
+  settingsDevicesMakeNewOne: [],
+  settingsDevicesCopied: [],
+  settingsDevicesWorksOnce: ["left"],
+  settingsDevicesStopIt: [],
+  settingsDevicesCopyLinkFailed: [],
+  settingsDevicesCopyCommandFailed: [],
+  settingsForgeSignedIn: [],
+  settingsForgeSignInAgainState: [],
+  settingsForgeSignedInUnreachable: ["host"],
+  settingsForgeSignedInChecking: [],
+  settingsForgeSignInTo: ["host"],
+  settingsForgeConnecting: [],
+  settingsForgeMakeKey: ["host"],
+  settingsForgeChecking: [],
+  settingsForgeSignIn: [],
+  settingsForgeCancel: [],
+  settingsForgeEnterCode: ["host"],
+  settingsForgeOpenHost: ["host"],
+  settingsForgeCodeExpired: [],
+  settingsForgeUnreachable: ["host"],
+  settingsForgeNewCode: [],
+  settingsForgeTryAgain: [],
+  settingsForgeNotSignedIn: ["host"],
+  settingsForgeSignInAgainSay: [],
+  settingsForgeStarting: [],
+  settingsForgeSignInAgain: [],
+  settingsForgeRowActions: ["host", "where"],
+  settingsForgeSignOut: [],
+  settingsForgeBrowserLabel: ["host"],
+  settingsForgeBrowserIntro: ["host"],
+  settingsForgeBrowserStays: [],
+  settingsForgeBrowserStepOpen: ["add", "host"],
+  settingsForgeBrowserStepName: ["field", "name", "redirect"],
+  settingsForgeBrowserRedirectFallback: [],
+  settingsForgeBrowserStepScopes: ["api", "confidential", "write"],
+  settingsForgeBrowserStepGrant: ["grant"],
+  settingsForgeBrowserStepSave: ["id", "secret"],
+  settingsForgeBrowserOpenApplications: ["host"],
+  settingsDevicesSignInsAsOf: ["time"],
+  settingsDevicesSignInsOwn: ["where"],
+  settingsDevicesSignInsDisconnect: [],
+  settingsDevicesSignInsUnanswered: ["home", "who"],
+  settingsDevicesSignInsNone: [],
+  settingsDevicesSignInsAddAccount: [],
+  settingsDevicesSignInsCustomApi: ["where"],
+  settingsDevicesSignInsClaudeCode: ["where"],
+  settingsDevicesSignInsFailed: ["provider", "who"],
+  settingsDevicesSignInsPasteKeyAn: ["provider", "who"],
+  settingsDevicesSignInsPasteKeyA: ["provider", "who"],
+  settingsDevicesSignInsOpenLink: [],
+  settingsDevicesSignInsPasteYourKey: [],
+  settingsDevicesSignInsPasteAddress: [],
+  settingsDevicesSignInsPasteCode: [],
+  settingsDevicesSignInsKeyFor: ["who"],
+  settingsDevicesSignInsAddressFor: ["who"],
+  settingsDevicesSignInsCodeFor: ["who"],
+  settingsDevicesSignInsSendTo: ["who"],
+  settingsDevicesSignInsGoesOnce: ["home", "who"],
+  settingsDevicesSignInsEnterCode: ["who"],
+  settingsDevicesSignInsWaiting: [],
+  settingsDevicesSignInsSigningIn: ["provider", "who"],
+  settingsDevicesSignInsTitle: ["provider", "where"],
+  settingsDevicesSignInsPasteBackCode: [],
+  settingsDevicesSignInsPasteBackHere: ["who"],
+  settingsDevicesSignInsPasteBackAddress: [],
 };

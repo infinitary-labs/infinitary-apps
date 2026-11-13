@@ -3,7 +3,7 @@ import { Button } from "../design";
 import type { ViewMac } from "../devices/viewWords";
 import { joinedWhen } from "./devicesWords";
 import "./devices.css";
-import { HERE } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import { SectionLabel } from "./settingRows";
 
 /**
@@ -51,10 +51,8 @@ export function ControllingTabView({
   const away = mac.contact === "lost" || mac.contact === "closed";
   return (
     <div data-controlling="">
-      <SectionLabel>Controlling</SectionLabel>
-      <div className="fm-devices-say">
-        What you do here happens on {mac.name}. Its Secrets and voice stay there.
-      </div>
+      <SectionLabel>{m.settingsControllingLabel()}</SectionLabel>
+      <div className="fm-devices-say">{m.settingsControllingSay({ name: mac.name })}</div>
       <div className="fm-devices-box">
         {asking ? (
           <div className="fm-devices-row" data-leaving={mac.name}>
@@ -62,18 +60,18 @@ export function ControllingTabView({
             <span className="fm-devices-text">
               <span className="fm-devices-question">
                 {mac.runsWork
-                  ? `Leave ${mac.name}? ${HERE.This} stops controlling it and running its work.`
-                  : `Leave ${mac.name}? ${HERE.This} stops controlling it.`}
+                  ? m.settingsControllingLeaveRunsWork({ name: mac.name })
+                  : m.settingsControllingLeave({ name: mac.name })}
               </span>
               {mac.runsWork && !away && (
                 <span className="fm-devices-question">
-                  Its unmerged work goes to {mac.name} first.
+                  {m.settingsControllingWorkGoes({ name: mac.name })}
                 </span>
               )}
               <span className="fm-devices-question">
                 {away
-                  ? `${mac.name} is out of reach, so it lists ${HERE.this} until you remove it there.`
-                  : "To control it again, make a new link there."}
+                  ? m.settingsControllingAway({ name: mac.name })
+                  : m.settingsControllingNewLink()}
               </span>
             </span>
             <Button
@@ -83,16 +81,16 @@ export function ControllingTabView({
               disabled={leaving}
               onClick={() => onAsk(false)}
             >
-              Stay
+              {m.settingsControllingStay()}
             </Button>
             <Button
               variant="danger"
               size="sm"
               pending={leaving}
-              pendingLabel="Leaving..."
+              pendingLabel={m.settingsControllingLeaving()}
               onClick={onLeave}
             >
-              Leave
+              {m.settingsControllingLeaveButton()}
             </Button>
           </div>
         ) : (
@@ -101,16 +99,19 @@ export function ControllingTabView({
             <span className="fm-devices-text">
               <span className="fm-devices-name">{mac.name}</span>
               <span className="fm-devices-detail">
-                joined {joinedWhen(mac.joinedAt, now)} · {mac.address}
+                {m.settingsControllingJoined({
+                  when: joinedWhen(mac.joinedAt, now),
+                  address: mac.address,
+                })}
               </span>
             </span>
             <Button
               variant="secondary"
               size="sm"
-              aria-label={`Leave ${mac.name}`}
+              aria-label={m.settingsControllingLeaveNamed({ name: mac.name })}
               onClick={() => onAsk(true)}
             >
-              Leave
+              {m.settingsControllingLeaveButton()}
             </Button>
           </div>
         )}

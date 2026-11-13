@@ -403,6 +403,102 @@
       <string>%1$ld more</string>
     </dict>
   </dict>
+  <key>settingsDevicesWayCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld computer</string>
+      <key>other</key>
+      <string>%1$ld computers</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesRemoveTasksStop</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its task stops. Infinitary then removes what it set up there, with its sign-ins.</string>
+      <key>other</key>
+      <string>Its %1$ld tasks stop. Infinitary then removes what it set up there, with its sign-ins.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesRemoveTasksStopOn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its task on %2$@ stops. Infinitary then removes what it set up there, with its sign-ins.</string>
+      <key>other</key>
+      <string>Its %1$ld tasks on %2$@ stop. Infinitary then removes what it set up there, with its sign-ins.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesRemoveRunsAfter</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ runs on this computer after.</string>
+      <key>other</key>
+      <string>%2$@ run on this computer after.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld task</string>
+      <key>other</key>
+      <string>%1$ld tasks</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsPauseSummary</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Paused since %4$@: batch run %3$@ failed its checks, so one approved change waits for a fix: %1$@.</string>
+      <key>other</key>
+      <string>Paused since %4$@: batch run %3$@ failed its checks, so %2$ld approved changes wait for a fix: %1$@.</string>
+    </dict>
+  </dict>
   <key>phoneMediaPicturePosition</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

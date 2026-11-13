@@ -103,6 +103,8 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | decision records | Entscheidungsaufzeichnungen | Kept apart from "Protokoll", the task record; "redacted" is "geschwärzt". |
 | action (an integration action) | Aktion | |
 | font (Settings → Appearance) | Schrift | |
+| task key (a project's task numbering, "INF") | Aufgabenkürzel, Kürzel | Kept apart from "Schlüssel", which is a key that unlocks something. |
+| batch / batch run (the queue's) | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
 | Infinitary | Infinitary | Never translated. |
 | Knowledge (panel) | Wissen | "Wissen öffnen" |
 | concept / finding | Begriff / Erkenntnis | As the card references already say |

@@ -1,4 +1,5 @@
 import { changeNumberLabel, type ForgeKind } from "@shared/forge";
+import * as m from "@shared/i18n/messages.generated";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { QUEUE_STATUS, type RepoView } from "@shared/repos";
 import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
@@ -10,8 +11,9 @@ import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/voc
  */
 export const PROJECT_POLICY_WORDS = {
   /** What "Where changes go" says on every project but the personal workspace. */
-  delivery:
-    "Offered as a pull request where the project lives, as a batched pull request your project's own queue tests before it merges, or merged locally with no pull request.",
+  get delivery() {
+    return m.settingsProjectsDelivery();
+  },
 } as const;
 
 /**
@@ -23,17 +25,25 @@ export const PROJECT_POLICY_WORDS = {
  * The first way is the queue Infinitary ships, planned with the first mate.
  */
 export const QUEUE_HOW_TO_WORDS = {
-  needs:
-    "A batched pull request merges only once your project's queue passes it. Until your project has one, an approved merge waits.",
-  label: "How to set one up",
-  steps: [
-    "Ask your first mate to set up the queue Infinitary ships. It plans with you which of your project's checks each batch runs, and a batch that fails pauses until a fix is approved.",
-    `Or write your own workflow that finds pull requests whose ${QUEUE_STATUS} status is pending and tests them, together or one at a time.`,
-    `Have it set ${QUEUE_STATUS} to success or failure on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.`,
-  ],
-  firstMate:
-    "Your first mate can plan the queue with you: ask it to set up a queue for this project.",
-  guide: "Open GitHub's guide to commit statuses",
+  get needs() {
+    return m.settingsProjectsQueueNeeds();
+  },
+  get label() {
+    return m.settingsProjectsQueueHowToLabel();
+  },
+  get steps(): readonly string[] {
+    return [
+      m.settingsProjectsQueueStepAsk(),
+      m.settingsProjectsQueueStepWorkflow({ status: QUEUE_STATUS }),
+      m.settingsProjectsQueueStepSet({ status: QUEUE_STATUS }),
+    ];
+  },
+  get firstMate() {
+    return m.settingsProjectsQueueFirstMate();
+  },
+  get guide() {
+    return m.settingsProjectsQueueGuideGithub();
+  },
   guideLink: "https://docs.github.com/en/rest/commits/statuses#create-a-commit-status",
   /**
    * On GitLab a waiting status cannot be set waiting again, so the waiting
@@ -41,12 +51,16 @@ export const QUEUE_HOW_TO_WORDS = {
    * (docs/forge.md, "The shipped queue on GitLab").
    */
   gitlab: {
-    steps: [
-      "Ask your first mate to set up the queue Infinitary ships. It plans with you which of your project's checks each batch runs, and a batch that fails pauses until a fix is approved.",
-      `Or write your own pipeline that finds merge requests whose newest ${QUEUE_STATUS} status says Waiting for the batch check, and tests them, together or one at a time.`,
-      `Have it set ${QUEUE_STATUS} to success or failed on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.`,
-    ],
-    guide: "Open GitLab's guide to commit statuses",
+    get steps(): readonly string[] {
+      return [
+        m.settingsProjectsQueueStepAsk(),
+        m.settingsProjectsQueueStepPipelineGitlab({ status: QUEUE_STATUS }),
+        m.settingsProjectsQueueStepSetGitlab({ status: QUEUE_STATUS }),
+      ];
+    },
+    get guide() {
+      return m.settingsProjectsQueueGuideGitlab();
+    },
     guideLink: "https://docs.gitlab.com/api/commits/#set-the-pipeline-status-of-a-commit",
   },
 } as const;
@@ -67,16 +81,21 @@ export function queueHowTo(kind: ForgeKind | undefined): {
  * write a status, so the queue keeps its own in the project's CI settings.
  */
 export const QUEUE_KEY_WORDS = {
-  title: "The queue's key",
-  missing: (place: string) =>
-    `Your project's queue needs its own key on ${place} to write each change's batch check. Infinitary makes it with your sign-in and keeps it in the project's CI settings, where only the queue's own jobs can read it.`,
-  ready: (date: string) =>
-    `The queue's key is in place until ${date}. Making a new one replaces it at once.`,
-  unreadable: (place: string) =>
-    `Your sign-in cannot read this project's keys on ${place}. Making one needs the Maintainer role on the project, and on gitlab.com a Premium or Ultimate plan.`,
-  make: "Make the queue's key",
-  remake: "Make a new key",
-  made: "Made the queue's key. It stays in your project's CI settings, never on your computers.",
+  get title() {
+    return m.settingsProjectsQueueKeyTitle();
+  },
+  missing: (place: string) => m.settingsProjectsQueueKeyMissing({ place }),
+  ready: (date: string) => m.settingsProjectsQueueKeyReady({ date }),
+  unreadable: (place: string) => m.settingsProjectsQueueKeyUnreadable({ place }),
+  get make() {
+    return m.settingsProjectsQueueKeyMake();
+  },
+  get remake() {
+    return m.settingsProjectsQueueKeyRemake();
+  },
+  get made() {
+    return m.settingsProjectsQueueKeyMade();
+  },
 } as const;
 
 /**
@@ -85,8 +104,7 @@ export const QUEUE_KEY_WORDS = {
  * everyone working on it, so the choice is fixed here.
  */
 export const QUEUE_SHIPPED_WORDS = {
-  set: (version: number) =>
-    `Set by your project: it runs Infinitary's queue (version ${version}), so its changes go as batched pull requests for everyone working on it.`,
+  set: (version: number) => m.settingsProjectsQueueShipped({ version: String(version) }),
 } as const;
 
 /**
@@ -95,27 +113,54 @@ export const QUEUE_SHIPPED_WORDS = {
  * Resume).
  */
 export const QUEUE_PAUSE_WORDS = {
-  title: "Batch paused",
+  get title() {
+    return m.settingsProjectsPauseTitle();
+  },
   summary: (run: number, changes: readonly number[], since: string, kind?: ForgeKind) =>
-    `Paused since ${since}: batch run ${run} failed its checks, so ${changes.length === 1 ? "one approved change waits" : `${changes.length} approved changes wait`} for a fix: ${changes.map((number) => changeNumberLabel(kind, number)).join(", ")}.`,
-  claimed: (who: string) => `${who} is repairing it.`,
-  unclaimed:
-    "Nobody has taken the repair yet. A crewmate starts it when one of your changes is paused.",
-  unread:
-    "This project's issues could not be read, so who repairs it is not known, and only the paused changes this app saw are listed.",
-  issue: "Open the issue",
-  run: "Open the batch run",
-  reason: "Why the queue may go on",
-  resume: "Resume",
-  sendBack: "Send back",
-  sendBackWhich: "Change to send back",
-  needsReason: "Say why the queue may go on first.",
-  sent: "Asked the queue to go on. The pause ends once its next batch starts.",
+    m.settingsProjectsPauseSummary({
+      count: changes.length,
+      since,
+      run: String(run),
+      // A plain comma join, as the summary always wrote it.
+      changes: changes.map((number) => changeNumberLabel(kind, number)).join(", "),
+    }),
+  claimed: (who: string) => m.settingsProjectsPauseClaimed({ who }),
+  get unclaimed() {
+    return m.settingsProjectsPauseUnclaimed();
+  },
+  get unread() {
+    return m.settingsProjectsPauseUnread();
+  },
+  get issue() {
+    return m.settingsProjectsPauseIssue();
+  },
+  get run() {
+    return m.settingsProjectsPauseRun();
+  },
+  get reason() {
+    return m.settingsProjectsPauseReason();
+  },
+  get resume() {
+    return m.settingsProjectsPauseResume();
+  },
+  get sendBack() {
+    return m.settingsProjectsPauseSendBack();
+  },
+  get sendBackWhich() {
+    return m.settingsProjectsPauseSendBackWhich();
+  },
+  get needsReason() {
+    return m.settingsProjectsPauseNeedsReason();
+  },
+  get sent() {
+    return m.settingsProjectsPauseSent();
+  },
 } as const;
 
 /** What "Where changes go" says on a project whose host runs no queue Infinitary can use. */
-export const QUEUE_NO_HOST_WORDS =
-  "Batched pull requests are not offered here: this project's host has no CI that can run Infinitary's queue.";
+export function queueNoHostWords(): string {
+  return m.settingsProjectsQueueNoHost();
+}
 
 /**
  * What "Where changes go" says while a project's batched choice waits for
@@ -124,7 +169,7 @@ export const QUEUE_NO_HOST_WORDS =
  * a workflow that mentions the batch check merges.
  */
 export function queueWaitingWords(delivery: RepoView["delivery"]): string {
-  return `Batched pull requests turn on once a workflow in this project that mentions its batch check merges. Until then, changes go as ${PROJECT_DELIVERY_WORDS[delivery]}.`;
+  return m.settingsProjectsQueueWaiting({ delivery: PROJECT_DELIVERY_WORDS[delivery] });
 }
 
 /**
@@ -134,13 +179,21 @@ export function queueWaitingWords(delivery: RepoView["delivery"]): string {
  * and runs on a computer chosen automatically.
  */
 export const PROJECT_ROW_WORDS = {
-  personal: "builds in place",
-  linked: "linked",
+  get personal() {
+    return m.settingsProjectsRowPersonal();
+  },
+  get linked() {
+    return m.settingsProjectsRowLinked();
+  },
   localMerge: PROJECT_DELIVERY_WORDS["local-only"],
   mergesOnItsOwn: AUTONOMY_WORDS.putsInItself.toLowerCase(),
-  quick: `${RIGOR_WORDS.quick} rigor`,
-  careful: `${RIGOR_WORDS.reviewed} rigor`,
-  runs: (where: string) => `runs ${where}`,
+  get quick() {
+    return m.settingsProjectsRowCare({ care: RIGOR_WORDS.quick });
+  },
+  get careful() {
+    return m.settingsProjectsRowCare({ care: RIGOR_WORDS.reviewed });
+  },
+  runs: (where: string) => m.settingsProjectsRowRuns({ where }),
 } as const;
 
 /** Whether `path` is the projects folder or inside it. */

@@ -2,6 +2,7 @@ import type { AccountView } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
 import { awayWord } from "@shared/devices";
 import { formatTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { ProviderView } from "@shared/providers";
 import type { QuotaProviderView } from "@shared/quota";
 import {
@@ -84,7 +85,7 @@ export function OutOfReachNote({ device }: { device: DeviceSignIns }) {
       data-device-out-of-reach={device.reach === "connecting" ? "connecting" : ""}
     >
       {awayWord(device.reach === "connecting")}
-      {device.asOf ? ` · as of ${timeOf(device.asOf)}` : ""}
+      {device.asOf ? ` · ${m.settingsDevicesSignInsAsOf({ time: timeOf(device.asOf) })}` : ""}
     </div>
   );
 }
@@ -196,7 +197,7 @@ export function DeviceSignInGroups({
           >
             <div style={LABEL_STYLE}>{place.label}</div>
             <div style={{ ...LINE_STYLE, margin: `${LABEL_GAP} 0 ${ROW_GAP}` }}>
-              Its own sign-ins. A task that runs {place.where} uses only these.
+              {m.settingsDevicesSignInsOwn({ where: place.where })}
             </div>
             <OutOfReachNote device={device} />
             <div
@@ -229,7 +230,7 @@ export function DeviceSignInGroups({
                       menu: [
                         {
                           id: "disconnect",
-                          label: "Disconnect",
+                          label: m.settingsDevicesSignInsDisconnect(),
                           tone: "danger",
                           onSelect: () =>
                             void window.infinitary.devices
@@ -267,13 +268,13 @@ export function DeviceSignInGroups({
                   }}
                 >
                   {device.unanswered
-                    ? `${place.who} did not say what it is signed in to. It may need ${home.this}'s version of Infinitary.`
-                    : "No sign-ins yet."}
+                    ? m.settingsDevicesSignInsUnanswered({ who: place.who, home: home.this })
+                    : m.settingsDevicesSignInsNone()}
                 </div>
               )}
               {device.signIns && (
                 <div className="fm-subs-add">
-                  <span style={LABEL_STYLE}>Add account</span>
+                  <span style={LABEL_STYLE}>{m.settingsDevicesSignInsAddAccount()}</span>
                   <ProviderChips
                     providers={device.reach === "in-reach" ? providers : []}
                     accounts={accounts}
@@ -304,7 +305,7 @@ export function DeviceSignInGroups({
             </div>
             {customFor === device.deviceId && (
               <CustomApiDialog
-                label={`Add a custom API ${place.where}`}
+                label={m.settingsDevicesSignInsCustomApi({ where: place.where })}
                 onClose={() => setCustomFor(null)}
               >
                 <CustomApiForm
@@ -363,17 +364,14 @@ export function DeviceSignInAside({
     : undefined;
   const stopButton = (
     <Button variant="ghost" size="sm" onClick={onStop}>
-      {ended ? "Done" : "Cancel"}
+      {ended ? m.settingsDevicesDone() : m.settingsDevicesCancel()}
     </Button>
   );
   let body: React.ReactNode;
   if (ended?.outcome === "signs-in-there") {
     body = (
       <>
-        <div style={LINE_STYLE}>
-          Claude Code signs in {place.where} itself. Log in to it there once, and Infinitary uses
-          that login.
-        </div>
+        <div style={LINE_STYLE}>{m.settingsDevicesSignInsClaudeCode({ where: place.where })}</div>
         <div style={{ display: "flex", gap: 8 }}>{stopButton}</div>
       </>
     );
@@ -381,7 +379,8 @@ export function DeviceSignInAside({
     body = (
       <>
         <div style={{ ...LINE_STYLE, color: "var(--danger)" }} role="alert">
-          {ended.error ?? `${place.who} could not sign in to ${providerName}.`}
+          {ended.error ??
+            m.settingsDevicesSignInsFailed({ who: place.who, provider: providerName })}
         </div>
         <div style={{ display: "flex", gap: 8 }}>{stopButton}</div>
       </>
@@ -413,7 +412,9 @@ export function DeviceSignInAside({
       <>
         <div style={LINE_STYLE}>
           {asked === "key"
-            ? `Paste ${article(providerName)} ${providerName} API key for ${place.who}.`
+            ? anArticle(providerName)
+              ? m.settingsDevicesSignInsPasteKeyAn({ provider: providerName, who: place.who })
+              : m.settingsDevicesSignInsPasteKeyA({ provider: providerName, who: place.who })
             : pasteBackLine(asked, place.who, onThisMac)}
         </div>
         <form
@@ -425,7 +426,7 @@ export function DeviceSignInAside({
         >
           {code && openLink && (
             <Button variant="secondary" size="sm" onClick={openLink}>
-              Open the link
+              {m.settingsDevicesSignInsOpenLink()}
             </Button>
           )}
           <div style={{ flex: 1, minWidth: 200 }}>
@@ -433,29 +434,38 @@ export function DeviceSignInAside({
               mono
               type="password"
               value={typed}
-              placeholder={asked === "key" ? "paste your key" : `paste the ${asked}`}
+              placeholder={
+                asked === "key"
+                  ? m.settingsDevicesSignInsPasteYourKey()
+                  : asked === "address"
+                    ? m.settingsDevicesSignInsPasteAddress()
+                    : m.settingsDevicesSignInsPasteCode()
+              }
               onChange={(event) => setTyped(event.target.value)}
               autoFocus
-              aria-label={`The ${asked} for ${place.who}`}
+              aria-label={
+                asked === "key"
+                  ? m.settingsDevicesSignInsKeyFor({ who: place.who })
+                  : asked === "address"
+                    ? m.settingsDevicesSignInsAddressFor({ who: place.who })
+                    : m.settingsDevicesSignInsCodeFor({ who: place.who })
+              }
             />
           </div>
           <Button variant="primary" size="sm" type="submit" disabled={!typed}>
-            Send to {place.who}
+            {m.settingsDevicesSignInsSendTo({ who: place.who })}
           </Button>
           {stopButton}
         </form>
         <div style={MONO_NOTE_STYLE}>
-          It goes to {place.who} once. {home.This} keeps no copy.
+          {m.settingsDevicesSignInsGoesOnce({ who: place.who, home: home.This })}
         </div>
       </>
     );
   } else if (notice?.kind === "device_code" && notice.userCode) {
     body = (
       <>
-        <div style={LINE_STYLE}>
-          Open the link in your browser here and enter this code. {place.who} finishes the sign-in
-          itself.
-        </div>
+        <div style={LINE_STYLE}>{m.settingsDevicesSignInsEnterCode({ who: place.who })}</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <span
             data-device-sign-in-code=""
@@ -472,19 +482,19 @@ export function DeviceSignInAside({
           </span>
           {openLink && (
             <Button variant="primary" size="sm" onClick={openLink}>
-              Open the link
+              {m.settingsDevicesSignInsOpenLink()}
             </Button>
           )}
           {stopButton}
         </div>
-        <div style={MONO_NOTE_STYLE}>waiting for you to finish in the browser</div>
+        <div style={MONO_NOTE_STYLE}>{m.settingsDevicesSignInsWaiting()}</div>
       </>
     );
   } else {
     body = (
       <>
         <div style={LINE_STYLE}>
-          {place.who} is signing in to {providerName}.
+          {m.settingsDevicesSignInsSigningIn({ who: place.who, provider: providerName })}
         </div>
         <div style={{ display: "flex", gap: 8 }}>{stopButton}</div>
       </>
@@ -503,7 +513,7 @@ export function DeviceSignInAside({
       }}
     >
       <div style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--fg-1)" }}>
-        Sign in to {providerName} {place.where}
+        {m.settingsDevicesSignInsTitle({ provider: providerName, where: place.where })}
       </div>
       {body}
     </div>
@@ -516,15 +526,15 @@ export function DeviceSignInAside({
  * reached and its address is what to paste; another user here gets it itself.
  */
 function pasteBackLine(asked: "code" | "address", who: string, onThisMac: boolean): string {
-  const open = "Open the link in your browser here and sign in.";
-  if (asked === "code") return `${open} Then paste the code it shows.`;
+  if (asked === "code") return m.settingsDevicesSignInsPasteBackCode();
   return onThisMac
-    ? `${open} ${who} finishes the sign-in itself when your browser comes back. If the page your browser ends on cannot be reached, copy its address and paste it here.`
-    : `${open} Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.`;
+    ? m.settingsDevicesSignInsPasteBackHere({ who })
+    : m.settingsDevicesSignInsPasteBackAddress();
 }
 
-function article(word: string): string {
-  return /^[aeiou]/i.test(word) ? "an" : "a";
+/** Whether English writes "an" before the provider's name. */
+function anArticle(word: string): boolean {
+  return /^[aeiou]/i.test(word);
 }
 
 function timeOf(ms: number): string {

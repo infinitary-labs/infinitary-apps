@@ -1,5 +1,6 @@
 import { CONTRIBUTION_WORDS } from "@shared/contributions";
 import type { ForgeKind } from "@shared/forge";
+import * as m from "@shared/i18n/messages.generated";
 import {
   deliveryChoices,
   hostRunsQueue,
@@ -34,9 +35,9 @@ import {
   PROJECT_ROW_WORDS,
   projectRowWords,
   QUEUE_HOW_TO_WORDS,
-  QUEUE_NO_HOST_WORDS,
   QUEUE_SHIPPED_WORDS,
   queueHowTo,
+  queueNoHostWords,
   queueWaitingWords,
 } from "./projectsWords";
 import { QueueKeyPanel } from "./QueueKeyPanel";
@@ -206,13 +207,10 @@ export function ProjectsTab() {
           marginBottom: LABEL_GAP,
         }}
       >
-        Projects
+        {m.settingsProjectsLabel()}
       </div>
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)", marginBottom: ROW_GAP }}>
-        Add a project here or ask your first mate, and open one to change how it works. A row says
-        only what is set differently from a new project, which is offered as pull requests where it
-        lives, waits for your word before merging, takes Default rigor and runs on a computer chosen
-        automatically.
+        {m.settingsProjectsIntro()}
       </div>
       <div
         style={{
@@ -231,7 +229,7 @@ export function ProjectsTab() {
               color: "var(--fg-3)",
             }}
           >
-            No projects yet. Add one below, or tell your first mate which project to work on.
+            {m.settingsProjectsEmpty()}
           </div>
         )}
         {repos.map((repo) => (
@@ -311,7 +309,7 @@ function ProjectsFolderLine({ folder }: { folder: ReturnType<typeof useProjectsF
       .chooseFolder(folder.value?.path)
       .then(
         (picked) => (picked ? save(() => window.infinitary.repos.setFolder(picked)) : false),
-        () => setPickError("Could not open the folder picker. Please try again."),
+        () => setPickError(m.settingsProjectsFolderPickerFailed()),
       )
       .finally(() => setChoosing(false));
   };
@@ -344,15 +342,17 @@ function ProjectsFolderLine({ folder }: { folder: ReturnType<typeof useProjectsF
             autoFocus
           />
           <Button type="submit" size="sm" disabled={!typed.trim() || folder.saving}>
-            Save
+            {m.settingsProjectsFolderSave()}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setTyped(null)}>
-            Cancel
+            {m.settingsProjectsFolderCancel()}
           </Button>
         </form>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0 }}>
-          <span style={{ color: "var(--fg-3)", whiteSpace: "nowrap" }}>New projects go in</span>
+          <span style={{ color: "var(--fg-3)", whiteSpace: "nowrap" }}>
+            {m.settingsProjectsFolderLine()}
+          </span>
           {folder.value && (
             <>
               <span
@@ -371,7 +371,11 @@ function ProjectsFolderLine({ folder }: { folder: ReturnType<typeof useProjectsF
                 {folder.value.path}
               </span>
               {!folder.value.custom && (
-                <span style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)" }}>default</span>
+                <span
+                  style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}
+                >
+                  {m.settingsProjectsFolderDefault()}
+                </span>
               )}
             </>
           )}
@@ -380,14 +384,14 @@ function ProjectsFolderLine({ folder }: { folder: ReturnType<typeof useProjectsF
             size="sm"
             disabled={!folder.value || folder.saving}
             pending={choosing}
-            pendingLabel="Choosing..."
+            pendingLabel={m.settingsProjectsFolderChoosing()}
             onClick={choose}
           >
-            Choose folder
+            {m.settingsProjectsFolderChoose()}
           </Button>
           {folder.value?.custom && (
             <Button variant="ghost" size="sm" disabled={busy} onClick={useDefault}>
-              Use default
+              {m.settingsProjectsFolderUseDefault()}
             </Button>
           )}
         </div>
@@ -447,11 +451,11 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
       }}
     >
       <PolicyRow
-        title="Name"
-        description="Your project keeps its key and history."
+        title={m.settingsProjectsName()}
+        description={m.settingsProjectsNameDescription()}
         control={
           <Input
-            aria-label="Project name"
+            aria-label={m.settingsProjectsNameLabel()}
             mono
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -459,11 +463,11 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
         }
       />
       <PolicyRow
-        title="Scope"
-        description="What work belongs in this project. Your first mate reads it to choose where new work goes."
+        title={m.settingsProjectsScope()}
+        description={m.settingsProjectsScopeDescription()}
         control={
           <textarea
-            aria-label="Scope"
+            aria-label={m.settingsProjectsScope()}
             value={scope}
             onChange={(event) => setScope(event.target.value)}
             rows={4}
@@ -482,11 +486,11 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
         }
       />
       <PolicyRow
-        title="Folder"
-        description="Move the folder first, then enter its new location. Its tasks must be finished or dropped."
+        title={m.settingsProjectsFolder()}
+        description={m.settingsProjectsFolderDescription()}
         control={
           <Input
-            aria-label="Project folder"
+            aria-label={m.settingsProjectsFolderLabel()}
             mono
             value={path}
             onChange={(event) => setPath(event.target.value)}
@@ -494,11 +498,11 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
         }
       />
       <PolicyRow
-        title="Where it lives"
-        description={`Enter the address your folder points at, or leave it empty for ${place.this}.`}
+        title={m.settingsProjectsOrigin()}
+        description={m.settingsProjectsOriginDescription({ place: place.this })}
         control={
           <Input
-            aria-label="Where the project lives"
+            aria-label={m.settingsProjectsOriginLabel()}
             mono
             value={origin}
             onChange={(event) => setOrigin(event.target.value)}
@@ -513,7 +517,7 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
           disabled={!changed || saving}
           pending={saving}
         >
-          Save details
+          {m.settingsProjectsSaveDetails()}
         </Button>
       </div>
       <SettingError error={error} surface="project-details" />
@@ -562,7 +566,11 @@ function ProjectRow({
       <button
         type="button"
         aria-expanded={open}
-        aria-label={`${repo.name}, ${open ? "expanded" : "collapsed"}`}
+        aria-label={
+          open
+            ? m.settingsProjectsRowExpanded({ name: repo.name })
+            : m.settingsProjectsRowCollapsed({ name: repo.name })
+        }
         onClick={onToggle}
         style={{
           display: "flex",
@@ -645,20 +653,18 @@ function ProjectRow({
             // The personal workspace is a workspace kind, not a posture, so
             // its first row is not a Delivery at all - naming it one is the
             // conflation this tab stopped making.
-            title={personal ? "Workspace" : "Where changes go"}
+            title={personal ? m.settingsProjectsWorkspace() : m.settingsProjectsDeliveryTitle()}
             description={
-              personal
-                ? "Builds in place: no working copy and no pull request."
-                : PROJECT_POLICY_WORDS.delivery
+              personal ? m.settingsProjectsWorkspaceDescription() : PROJECT_POLICY_WORDS.delivery
             }
             control={
               personal ? (
                 <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-                  builds in place
+                  {PROJECT_ROW_WORDS.personal}
                 </span>
               ) : (
                 <GroupedPills
-                  name="Where changes go"
+                  name={m.settingsProjectsDeliveryTitle()}
                   htmlName={`delivery-${repo.id}`}
                   value={repo.delivery}
                   // A project that runs the shipped queue decides for everyone on it.
@@ -710,7 +716,7 @@ function ProjectRow({
             <QueueNote words={QUEUE_SHIPPED_WORDS.set(shipped)} data="shipped" id={repo.id} />
           )}
           {!personal && repo.origin && repo.host && !hostRunsQueue(repo.host) && (
-            <QueueNote words={QUEUE_NO_HOST_WORDS} data="no-host" id={repo.id} />
+            <QueueNote words={queueNoHostWords()} data="no-host" id={repo.id} />
           )}
           {!personal && repo.queuePause && <QueuePausePanel repo={repo} pause={repo.queuePause} />}
           {!personal &&
@@ -726,10 +732,10 @@ function ProjectRow({
             title={AUTONOMY_SWITCH_NAME}
             description={
               personal
-                ? "Builds in place. Work that passes the checks is written as soon as it is done."
+                ? m.settingsProjectsAutonomyPersonal()
                 : repo.autonomy
-                  ? "Work that passes the checks may merge without asking you."
-                  : "Finished work waits for your word."
+                  ? m.settingsProjectsAutonomyOn()
+                  : m.settingsProjectsAutonomyOff()
             }
             control={
               personal ? (
@@ -748,18 +754,18 @@ function ProjectRow({
             }
           />
           <PolicyRow
-            title="Rigor"
+            title={m.settingsProjectsCare()}
             description={
-              personal
-                ? "Nothing here passes through a gate."
-                : "How thoroughly work here is checked."
+              personal ? m.settingsProjectsCarePersonal() : m.settingsProjectsRigorDescription()
             }
             control={
               personal ? (
-                <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>none</span>
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
+                  {m.settingsProjectsCareNone()}
+                </span>
               ) : (
                 <GroupedPills
-                  name="Rigor"
+                  name={m.settingsProjectsCare()}
                   htmlName={`rigor-${repo.id}`}
                   value={(repo.rigor ?? "standard") as Rigor}
                   options={RIGOR_OPTIONS}
@@ -783,7 +789,7 @@ function ProjectRow({
           )}
           {computers && (
             <PolicyRow
-              title="Runs on"
+              title={m.settingsRunsOnLabel()}
               description={here(runsOnDescription(repo))}
               control={<RunsOnControl repo={repo} computers={computers} onChoose={onRunsOn} />}
             />
@@ -798,8 +804,7 @@ function ProjectRow({
                 borderTop: "1px solid var(--line-1)",
               }}
             >
-              Changes that merge locally are done carefully, without a review - there is no pull
-              request to look at.
+              {m.settingsProjectsLocalCareful()}
             </div>
           )}
           {!personal && <RemoveProject repo={repo} onRemoved={onRemoved} />}

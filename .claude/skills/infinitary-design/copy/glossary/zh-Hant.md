@@ -133,3 +133,8 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | Steer (button) | 引導 | 指引 is a standing direction. |
 | Theme: Device / Dark / Light | 主題：跟隨裝置 / 深色 / 淺色 |  |
 | live validation | 實際驗證 | Trying the change for real; kept apart from the checks. |
+| link (to add a device) | 連結 | The one-time link that adds a computer or phone. |
+| command (run in Terminal) | 指令 | The one-time command run in「終端機」, macOS's own Taiwan name for Terminal. |
+| address (of a computer) | 位址 | A computer's SSH address; a browser page's address is 網址. |
+| private network | 私人網路 | A network that joins computers wherever they are. |
+| task key | 任務編號前綴 | The letters tasks are numbered with, such as {key}-1; 鍵 alone would read as a keyboard key. |

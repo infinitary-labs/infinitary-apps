@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { useMemo } from "react";
 import { PHONE_CODE_QUIET, phoneCodeModules } from "../../../shared/phoneCode";
 
@@ -19,7 +20,7 @@ export function PhoneCode({ link }: { link: string }) {
       className="inf-phone-code"
       viewBox={`0 0 ${size} ${size}`}
       role="img"
-      aria-label="Scan this code inside Infinitary on your phone"
+      aria-label={m.settingsDevicesPhoneCodeLabel()}
       shapeRendering="crispEdges"
     >
       <rect width={size} height={size} fill="white" />

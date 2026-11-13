@@ -1,4 +1,3 @@
-import { HERE } from "@shared/deviceNames";
 import { hostOfAddress } from "@shared/forge";
 import {
   FORGE_BROWSER_WORDS,
@@ -10,7 +9,8 @@ import {
   forgeBrowserRedirect,
   forgeStartProblemText,
 } from "@shared/forges";
-import { type FormEvent, useId, useState } from "react";
+import * as m from "@shared/i18n/messages.generated";
+import { type FormEvent, Fragment, type ReactNode, useId, useState } from "react";
 import { Button, Input } from "../design";
 import { useHereAs } from "../devices/useFirstMatePlace";
 
@@ -68,12 +68,12 @@ export function ForgeBrowserAside({
     <form
       className="fm-connect-aside fm-forges-aside"
       data-forge-browser-form=""
-      aria-label={`Browser sign-in to ${host ?? server.name}`}
+      aria-label={m.settingsForgeBrowserLabel({ host: host ?? server.name })}
       onSubmit={(event) => void submit(event)}
     >
       <div className="fm-forges-browser-intro">
-        Sign in on {host ?? server.name} in your browser.{" "}
-        {here(`Your sign-in stays on ${HERE.this}.`)}
+        {m.settingsForgeBrowserIntro({ host: host ?? server.name })}{" "}
+        {here(m.settingsForgeBrowserStays())}
       </div>
       <div className="fm-forges-field">
         <label htmlFor={`${ids}-address`}>{FORGE_SECTION_WORDS.address}</label>
@@ -100,24 +100,47 @@ export function ForgeBrowserAside({
         <summary>{FORGE_BROWSER_WORDS.register}</summary>
         <ol>
           <li>
-            Open applications on {host ?? server.name} and choose <code>Add new application</code>.
+            {withCode(m.settingsForgeBrowserStepOpen, {
+              host: host ?? server.name,
+              // i18n-exempt: GitLab's own button, as GitLab names it
+              add: <code>Add new application</code>,
+            })}
           </li>
           <li>
-            Name it <code>Infinitary</code>. Set <code>Redirect URI</code> to{" "}
-            <code>{host ? forgeBrowserRedirect(host) : "your server’s /oauth/device page"}</code>.
-            This code sign-in does not use a redirect.
+            {withCode(m.settingsForgeBrowserStepName, {
+              // i18n-exempt: the application's name, a product name
+              name: <code>Infinitary</code>,
+              // i18n-exempt: GitLab's own field, as GitLab names it
+              field: <code>Redirect URI</code>,
+              redirect: (
+                <code>
+                  {host ? forgeBrowserRedirect(host) : m.settingsForgeBrowserRedirectFallback()}
+                </code>
+              ),
+            })}
           </li>
           <li>
-            Turn off <code>Confidential</code> and select <code>api</code> and{" "}
-            <code>write_repository</code>. These allow Infinitary to read your projects, push and
-            merge changes.
+            {withCode(m.settingsForgeBrowserStepScopes, {
+              // i18n-exempt: GitLab's own setting, as GitLab names it
+              confidential: <code>Confidential</code>,
+              // i18n-exempt: GitLab's scope names, as GitLab names them
+              api: <code>api</code>,
+              // i18n-exempt: GitLab's scope names, as GitLab names them
+              write: <code>write_repository</code>,
+            })}
           </li>
           <li>
-            Turn on <code>{FORGE_BROWSER_WORDS.deviceGrant}</code>. This allows the code sign-in.
+            {withCode(m.settingsForgeBrowserStepGrant, {
+              grant: <code>{FORGE_BROWSER_WORDS.deviceGrant}</code>,
+            })}
           </li>
           <li>
-            Save the application and paste its <code>Application ID</code> below, not its{" "}
-            <code>Secret</code>.
+            {withCode(m.settingsForgeBrowserStepSave, {
+              // i18n-exempt: GitLab's own field, as GitLab names it
+              id: <code>Application ID</code>,
+              // i18n-exempt: GitLab's own field, as GitLab names it
+              secret: <code>Secret</code>,
+            })}
           </li>
         </ol>
         <Button
@@ -128,7 +151,7 @@ export function ForgeBrowserAside({
             host && void window.infinitary.app.openExternal(forgeApplicationsPage(host))
           }
         >
-          Open applications on {host ?? server.name}
+          {m.settingsForgeBrowserOpenApplications({ host: host ?? server.name })}
         </Button>
       </details>
       <div className="fm-forges-field">
@@ -159,7 +182,7 @@ export function ForgeBrowserAside({
           variant="primary"
           size="sm"
           pending={checking}
-          pendingLabel="Starting..."
+          pendingLabel={m.settingsForgeStarting()}
           disabled={!host || !applicationId.trim()}
         >
           {FORGE_BROWSER_WORDS.start}
@@ -168,9 +191,29 @@ export function ForgeBrowserAside({
           {FORGE_BROWSER_WORDS.useKey}
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {m.settingsForgeCancel()}
         </Button>
       </div>
     </form>
   );
+}
+
+/**
+ * A message whose blanks are drawn as parts of their own, such as code: each
+ * blank is filled with a marker, and the worded text is split around them.
+ */
+function withCode<K extends string>(
+  word: (fills: Record<K, string>) => string,
+  parts: Record<K, ReactNode>,
+): ReactNode[] {
+  const keys = Object.keys(parts) as K[];
+  const marks = Object.fromEntries(keys.map((key) => [key, `\u0000${key}\u0000`])) as Record<
+    K,
+    string
+  >;
+  return word(marks)
+    .split("\u0000")
+    .map((piece, index) =>
+      index % 2 === 1 ? <Fragment key={piece}>{parts[piece as K]}</Fragment> : piece,
+    );
 }

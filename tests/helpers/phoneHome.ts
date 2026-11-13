@@ -1657,6 +1657,50 @@ export async function startPhoneHome(
         case "POST show-merge-past":
           result = await core.dispatch("inf:cards:show-past", [cardIDs.merge]);
           break;
+        // The card question stepper on the phone: a decision asking three questions, each after a section of reading, so
+        // the last one starts below the room the card shows.
+        case "POST question-card": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const title = "Plan the harbour survey";
+          const questions = [
+            "Which day should the survey run?",
+            "Which boat goes out?",
+            "What should the crew measure first?",
+          ];
+          const reading = (text: string) => `<p>${text}</p>`.repeat(6);
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-question-card",
+            title,
+            body: `<p>The harbour survey needs three answers before the crew books the boat.</p>
+              ${reading("Tuesday has the calmest forecast. Thursday has the lowest tide, which shows more of the north wall.")}
+              <fieldset data-inf-options-only><legend>${questions[0]}</legend>
+              <label><input type="radio" name="day" required value="tuesday" data-inf-recommended> Tuesday</label>
+              <label><input type="radio" name="day" required value="thursday"> Thursday</label></fieldset>
+              ${reading("The pilot boat is faster. The survey launch carries the depth sounder without moving it between boats.")}
+              <fieldset data-inf-options-only><legend>${questions[1]}</legend>
+              <label><input type="radio" name="boat" required value="pilot"> The pilot boat</label>
+              <label><input type="radio" name="boat" required value="launch" data-inf-recommended> The survey launch</label></fieldset>
+              ${reading("Depth is the reading the chart needs. Silt and the wall's condition can wait for the spring survey.")}
+              <fieldset data-inf-options-only><legend>${questions[2]}</legend>
+              <label><input type="radio" name="measure" required value="depth"> Depth</label>
+              <label><input type="radio" name="measure" required value="silt"> Silt</label>
+              <label><input type="radio" name="measure" required value="wall"> The north wall</label></fieldset>`,
+            actions: [
+              { id: "book", label: "Book the survey", default: true },
+              { id: "wait", label: "Not now" },
+            ],
+          });
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
+          result = { title, questions };
+          break;
+        }
         // INF-3427: a decision whose text box sits at the end of a body longer than the room the keyboard leaves.
         case "POST field-card": {
           const title = "Pick the release window";

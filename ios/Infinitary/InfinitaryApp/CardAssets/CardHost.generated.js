@@ -70765,6 +70765,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       post(answer);
     });
   }
+  // A question's key the phone's web view did not deliver: pressed on the
+  // focused question control, where the keys below take it.
+  function pressQuestionKey(key, shift) {
+    if (typeof key !== "string" || !/^([1-9]|Enter)$/.test(key) || !document.hasFocus()) return;
+    var target = document.activeElement;
+    if (!questionAt(target) || target.hasAttribute("data-inf-write-in-field")) return;
+    var init = { key: key, code: key === "Enter" ? "Enter" : "Digit" + key, shiftKey: shift, bubbles: true, cancelable: true, composed: true };
+    target.dispatchEvent(new KeyboardEvent("keydown", init));
+    target.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
   // The question last focused or touched is the one a step starts from.
   ["focusin", "change"].forEach(function (type) {
     document.addEventListener(type, function (event) {
@@ -71289,6 +71299,8 @@ ${FRAME_EXPAND_SCRIPT}
     } else if (data.type === "question") {
       if (!Number.isSafeInteger(data.seq) || data.seq < 1) return;
       stepQuestion(data.step === -1 ? -1 : 1, data.unpicked === true, data.wrap === true, data.restart === true, data.keyboard === true, data.seq);
+    } else if (data.type === "question-key") {
+      pressQuestionKey(data.key, data.shift === true);
     } else if (data.type === "collect") {
       readForm(data.seq);
       if (data.focusUnpicked) focusUnpicked();
@@ -72575,7 +72587,7 @@ ${FRAME_QUESTION_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-2anC044I9XLGV1G3S44JL5UVUWbNktH5BKRYSHKnS5o=";
+  const FRAME_BRIDGE_SHA256 = "sha256-ldpkxKcDlFBwrWNVBk4bVp8xf2OsNH+1bkBVAvssPJE=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -78105,6 +78117,8 @@ ${startersHtml()}`;
   let pointing = false;
   let selectionAsked = false;
   const reveals = /* @__PURE__ */ new Map();
+  const questionings = /* @__PURE__ */ new Map();
+  const questioned = (message) => message.end === true ? "end" : message.top === void 0 || message.height === void 0 ? "none" : { top: message.top, height: message.height };
   const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
   let next = 0;
   const collections = /* @__PURE__ */ new Map();
@@ -78235,6 +78249,19 @@ ${startersHtml()}`;
         void native({ type: "point-exit" }).catch(() => {
         });
         break;
+      // A step's answer, or the body's own Enter or Shift+Enter on a question, which the card's scroller follows.
+      case "questioned": {
+        if (message.seq === void 0) {
+          void native({ type: "questioned", where: questioned(message) }).catch(() => {
+          });
+          break;
+        }
+        const done = questionings.get(message.seq);
+        if (!done) break;
+        questionings.delete(message.seq);
+        done(questioned(message));
+        break;
+      }
       case "revealed": {
         const done = reveals.get(message.seq);
         if (!done) break;
@@ -78321,6 +78348,35 @@ ${startersHtml()}`;
       if (!documentID) return;
       selectionAsked = true;
       send({ type: "annotate-selection", document: documentID });
+    },
+    question(ask) {
+      if (!documentID || !frame) return Promise.resolve("none");
+      if (ask.keyboard) frame.focus({ preventScroll: true });
+      const seq = ++next;
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          questionings.delete(seq);
+          resolve("none");
+        }, 3e3);
+        questionings.set(seq, (where) => {
+          clearTimeout(timer);
+          resolve(where);
+        });
+        send({
+          type: "question",
+          seq,
+          step: ask.step === -1 ? -1 : 1,
+          unpicked: ask.unpicked === true,
+          wrap: true,
+          restart: false,
+          keyboard: ask.keyboard === true
+        });
+      });
+    },
+    // A number key or Enter the web view heard but did not deliver to the body: its bridge presses it on the focused question.
+    questionKey(key, shift) {
+      if (!documentID || !frame || !/^([1-9]|Enter)$/.test(key)) return;
+      send({ type: "question-key", key, shift: shift === true });
     },
     reveal(value) {
       const note = cardNoteSchema.safeParse(value);

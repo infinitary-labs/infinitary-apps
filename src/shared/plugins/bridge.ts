@@ -16,6 +16,9 @@ import { TASK_KEY_EXACT } from "../taskKeys";
 import { mediatedFetchRequestSchema } from "./fetch";
 import type { ReadTransfer } from "./readTransfer";
 
+/** A key that takes a question's option or moves past it: the number keys 1 to 9 and Enter. */
+export type QuestionKey = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "Enter";
+
 /**
  * The messages between a plugin frame and its host (docs/ui-plugins.md):
  * what a frame may send, checked here before the host acts, and what the
@@ -590,6 +593,12 @@ export type HostMessage =
    * nothing there used it.
    */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "move"; key: MoveKey }
+  /**
+   * A question's key the phone heard but its web view did not deliver
+   * (docs/ios.md, "Cards on the phone"): pressed on the focused question
+   * control for the bridge's own question keys.
+   */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "question-key"; key: QuestionKey; shift: boolean }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "tasks"; keys: string[] }
   /** The linked key a rest elsewhere in the window lights (INF-237), or null: the bridge marks `data-inf-lit` on each link to it. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "lit"; key: string | null }

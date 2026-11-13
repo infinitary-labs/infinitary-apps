@@ -21,6 +21,7 @@ declare global {
     phoneCard: {
       mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void;
       annotate(state: Annotation): void; annotateSelection(): void; reveal(note: unknown): Promise<Revealed>;
+      question(ask: QuestionAsk): Promise<Questioned>; questionKey(key: string, shift: boolean): void;
     };
   }
 }
@@ -42,6 +43,13 @@ type Input = {
 type Annotation = { mode: boolean; queued: unknown[]; current?: unknown; clear?: boolean };
 /** Where a revealed note sits in the body, or why it cannot show. */
 type Revealed = { top: number; height: number } | "missing" | "unavailable";
+/**
+ * A step through the body's questions from the footer's stepper or a key (docs/keyboard.md, "Moving between a card's
+ * questions"): `unpicked` goes to the next question with no answer, and `keyboard` moves focus to the question.
+ */
+type QuestionAsk = { step: 1 | -1; unpicked: boolean; keyboard: boolean };
+/** Where a step went: the box of the question now marked, `end` past the last one, or `none` when the body asks none. */
+type Questioned = { top: number; height: number } | "end" | "none";
 /** The phone's own stamp, which the bridge's reveal asks for, as the Mac's revision navigation writes its offer. */
 const OFFER = "phone";
 const native = (message: unknown) => window.webkit.messageHandlers.cardHost.postMessage(message);
@@ -58,6 +66,9 @@ let notes: { parts: NavigationPart[]; source: string; toRendered: (start: number
 let pointing = false;
 let selectionAsked = false;
 const reveals = new Map<number, (revealed: Revealed) => void>();
+const questionings = new Map<number, (questioned: Questioned) => void>();
+const questioned = (message: { end?: boolean; top?: number; height?: number }): Questioned =>
+  message.end === true ? "end" : message.top === undefined || message.height === undefined ? "none" : { top: message.top, height: message.height };
 /** The captain's own press in the body, as a picture's viewer asks: only then does a link, draft or key leave it. */
 const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
 let next = 0;
@@ -163,6 +174,15 @@ window.addEventListener("message", (event: MessageEvent) => {
       break;
     }
     case "point-exit": void native({ type: "point-exit" }).catch(() => {}); break;
+    // A step's answer, or the body's own Enter or Shift+Enter on a question, which the card's scroller follows.
+    case "questioned": {
+      if (message.seq === undefined) { void native({ type: "questioned", where: questioned(message) }).catch(() => {}); break; }
+      const done = questionings.get(message.seq);
+      if (!done) break;
+      questionings.delete(message.seq);
+      done(questioned(message));
+      break;
+    }
     case "revealed": {
       const done = reveals.get(message.seq);
       if (!done) break;
@@ -238,6 +258,24 @@ window.phoneCard = {
     if (!documentID) return;
     selectionAsked = true;
     send({ type: "annotate-selection", document: documentID });
+  },
+  question(ask) {
+    if (!documentID || !frame) return Promise.resolve("none");
+    // The frame's own script cannot take focus: a key's step gives the frame focus first, and its bridge moves it on.
+    if (ask.keyboard) frame.focus({ preventScroll: true });
+    const seq = ++next;
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { questionings.delete(seq); resolve("none"); }, 3000);
+      questionings.set(seq, (where) => { clearTimeout(timer); resolve(where); });
+      // Steps go round past either end, as the Mac's stepper does: the phone's choices hold no keyboard focus to rest on.
+      send({ type: "question", seq, step: ask.step === -1 ? -1 : 1, unpicked: ask.unpicked === true,
+        wrap: true, restart: false, keyboard: ask.keyboard === true });
+    });
+  },
+  // A number key or Enter the web view heard but did not deliver to the body: its bridge presses it on the focused question.
+  questionKey(key, shift) {
+    if (!documentID || !frame || !/^([1-9]|Enter)$/.test(key)) return;
+    send({ type: "question-key", key, shift: shift === true });
   },
   reveal(value) {
     const note = cardNoteSchema.safeParse(value);

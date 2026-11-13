@@ -67,6 +67,8 @@ export const PHONE_PARTS = [
   { name: "keyboard-ways-out", test: "testKeyboardWaysOut", photos: false },
   // INF-3427: a text box inside a card body stays in view with the keyboard up.
   { name: "body-field", test: "testCardBodyFieldKeyboard", photos: false },
+  // The card question stepper: the picked count and its arrows bring each question of a decision into view.
+  { name: "card-questions", test: "testCardQuestionSteps", photos: false },
   // INF-3454: Google's row in the phone's Settings, signing in to the test home's stand-in Google and out again.
   { name: "google", test: "testGoogleSignInAndOut", photos: false },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a

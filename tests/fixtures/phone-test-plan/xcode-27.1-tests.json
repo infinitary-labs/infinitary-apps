@@ -57,6 +57,7 @@
   "InfinitaryUITests/PhoneJourney/testCardForm",
   "InfinitaryUITests/PhoneJourney/testCardMediaAndBody",
   "InfinitaryUITests/PhoneJourney/testCardNotes",
+  "InfinitaryUITests/PhoneJourney/testCardQuestionSteps",
   "InfinitaryUITests/PhoneJourney/testCharacterAndPastChoices",
   "InfinitaryUITests/PhoneJourney/testComposeAndSend",
   "InfinitaryUITests/PhoneJourney/testCrewRevealRejectsRecordedClippingEdge",

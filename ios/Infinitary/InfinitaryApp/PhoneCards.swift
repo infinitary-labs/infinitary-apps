@@ -1200,10 +1200,7 @@ private struct PhoneCardPane: View {
             } else if !card.actions.isEmpty {
                 PhoneChoiceRow {
                     if asking, let count = host.reading["of"].numeric {
-                        Text(PhoneCardWords.answersLine(answered: Int(host.reading["answered"].numeric ?? 0), of: Int(count),
-                                                        changed: Int(host.reading["changed"].numeric ?? 0), preview: host.preview))
-                            .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
-                            .layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
+                        answersCount(Int(count)).layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
                     }
                     ForEach(Array(footerOrder.enumerated()), id: \.offset) { _, action in
                         Button { choose(action) } label: {
@@ -1219,6 +1216,68 @@ private struct PhoneCardPane: View {
                     }
                 }
             }
+    }
+
+    /// The Mac's count of the picks, as a stepper through a decision's questions (docs/keyboard.md, "Moving between a
+    /// card's questions"; design skill ResponseCard footer rule): a tap on the count goes to the next question with no
+    /// answer, and from two questions on an arrow before it goes to the previous question and one after it to the next.
+    /// A step brings the question into view and marks it; ⌘J and ⇧⌘J from a keyboard also give it focus, so the body's own
+    /// keys answer it. A playable preview's count reads as its settings and steps nowhere.
+    @ViewBuilder private func answersCount(_ count: Int) -> some View {
+        let words = PhoneCardWords.answersLine(answered: Int(host.reading["answered"].numeric ?? 0), of: count,
+                                               changed: Int(host.reading["changed"].numeric ?? 0), preview: host.preview)
+        if host.preview {
+            Text(words).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
+        } else {
+            HStack(spacing: 0) {
+                if count > 1 {
+                    questionArrow(PhoneMessages.uiCardPreviousQuestion(), symbol: "chevron.left", id: "card-question-previous") {
+                        stepQuestion(-1, unpicked: false, keyboard: false)
+                    }
+                }
+                Button { stepQuestion(1, unpicked: true, keyboard: false) } label: {
+                    Text(words).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
+                        .padding(.horizontal, 4).frame(minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(PhoneMessages.commandCardsUnansweredQuestion())
+                .accessibilityIdentifier("card-answers")
+                if count > 1 {
+                    questionArrow(PhoneMessages.uiCardNextQuestion(), symbol: "chevron.right", id: "card-question-next") {
+                        stepQuestion(1, unpicked: false, keyboard: false)
+                    }
+                }
+            }
+            .disabled(!host.revealed)
+            // The keys move focus too, which a tap must not: the reply field keeps its keyboard.
+            .background {
+                if shown && !showsBack {
+                    Button { stepQuestion(1, unpicked: false, keyboard: true) } label: { EmptyView() }
+                        .keyboardShortcut("j", modifiers: .command).hidden()
+                    Button { stepQuestion(-1, unpicked: false, keyboard: true) } label: { EmptyView() }
+                        .keyboardShortcut("j", modifiers: [.command, .shift]).hidden()
+                }
+            }
+        }
+    }
+
+    private func questionArrow(_ label: String, symbol: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(label, systemImage: symbol).labelStyle(.iconOnly).font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(PhoneTheme.secondary).frame(minWidth: 36, minHeight: 44).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
+    }
+
+    /// A step through the body's questions: the card turns to its face and its scroller brings the question into view.
+    private func stepQuestion(_ step: Int, unpicked: Bool, keyboard: Bool) {
+        if showsBack { turnOver(back: false) }
+        Task { followQuestion(await host.question(step: step, unpicked: unpicked, keyboard: keyboard)) }
+    }
+
+    private func followQuestion(_ step: CardWebHost.QuestionStep) {
+        if case .moved(let top, let height) = step { host.showQuestion(top: top, height: height, animated: !reduceMotion) }
     }
 
     /// INF-1524, the captain's picks: the reply field pinned above the choices, its words also going with a choice, and
@@ -1501,6 +1560,7 @@ private struct PhoneCardPane: View {
         host.onLink = { url in openURL(url) }
         host.onDraft = onDraft
         host.onTask = onTask
+        host.onQuestioned = { step in if shown { followQuestion(step) } }
         // INF-3110: a card beside the shown one keeps its body out of accessibility, which a hidden view above it cannot do.
         host.aside = !shown; factsHost?.aside = !shown
     }

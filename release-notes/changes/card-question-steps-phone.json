@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-question-steps-phone",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Move between a card's questions on your iPhone and iPad",
+      "body": "On your iPhone and iPad, when a decision asks several questions, its picked count is now a stepper: tap the arrows beside it to bring the previous or next question into view, or tap the count to go to the next one still unanswered. With a keyboard, ⌘J and ⇧⌘J move between the questions, and Enter and the number keys answer them.",
+      "picture": {
+        "dark": "card-question-steps-phone-dark.webp",
+        "light": "card-question-steps-phone-light.webp",
+        "alt": "The foot of a decision card on an iPad, with arrows on either side of its 0 of 3 picked count, beside its choices"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

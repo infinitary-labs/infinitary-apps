@@ -81,6 +81,16 @@ export const FRAME_QUESTION_SCRIPT = `  // Moving between the body's questions (
       post(answer);
     });
   }
+  // A question's key the phone's web view did not deliver: pressed on the
+  // focused question control, where the keys below take it.
+  function pressQuestionKey(key, shift) {
+    if (typeof key !== "string" || !/^([1-9]|Enter)$/.test(key) || !document.hasFocus()) return;
+    var target = document.activeElement;
+    if (!questionAt(target) || target.hasAttribute("data-inf-write-in-field")) return;
+    var init = { key: key, code: key === "Enter" ? "Enter" : "Digit" + key, shiftKey: shift, bubbles: true, cancelable: true, composed: true };
+    target.dispatchEvent(new KeyboardEvent("keydown", init));
+    target.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
   // The question last focused or touched is the one a step starts from.
   ["focusin", "change"].forEach(function (type) {
     document.addEventListener(type, function (event) {

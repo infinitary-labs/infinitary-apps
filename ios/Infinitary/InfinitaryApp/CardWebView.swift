@@ -53,6 +53,8 @@ import SwiftUI
     var onAnnotate: ((PhoneJSON, CGRect) -> Void)?
     var onAnnotationIdle: (() -> Void)?
     var onPointExit: (() -> Void)?
+    /// The body's own Enter or Shift+Enter on a question moved to another one, which the card's scroller brings into view.
+    var onQuestioned: ((QuestionStep) -> Void)?
     /// The card takes notes, so the selection's menu offers Annotate.
     var annotates = false { didSet { (view as? CardBodyView)?.annotates = annotates } }
     /// INF-3460: the row keeps this body loaded while its card sits beside the shown one, and moves its one view between the
@@ -98,6 +100,7 @@ import SwiftUI
         let view = CardBodyView(frame: .zero, configuration: configuration)
         view.onLayout = { [weak self] in self?.revealIfShown() }
         view.onTyping = { [weak self] typing in self?.typing = typing }
+        view.onQuestionKey = { [weak self] key, shift in self?.questionKey(key, shift: shift) }
         view.annotates = annotates
         view.onAnnotateSelection = { [weak self] in self?.annotateSelection() }
         view.allowsLinkPreview = false
@@ -161,7 +164,7 @@ import SwiftUI
         watchdog?.cancel(); watchdog = nil
         if let id = collection?.id { finishCollection(id, .failure(PhoneRequestError(PhoneMessages.phoneCardWebNoAnswer()))) }
         onReading = nil; onDrawn = nil; onLink = nil; onDraft = nil; onTask = nil
-        onAnnotate = nil; onAnnotationIdle = nil; onPointExit = nil
+        onAnnotate = nil; onAnnotationIdle = nil; onPointExit = nil; onQuestioned = nil
         view?.configuration.userContentController.removeScriptMessageHandler(forName: "cardHost", contentWorld: .page)
         view?.configuration.userContentController.removeScriptMessageHandler(forName: CardClaims.handler, contentWorld: CardClaims.world)
         view?.configuration.userContentController.removeScriptMessageHandler(forName: CardFocus.handler, contentWorld: CardFocus.world)
@@ -266,6 +269,39 @@ import SwiftUI
         return .revealed(top: top, height: height)
     }
 
+    /// Where a step through the body's questions went, in the body view's points: the question it marked, past the last one,
+    /// or nowhere when the body asks none or does not answer.
+    enum QuestionStep: Equatable { case moved(top: CGFloat, height: CGFloat), end, none }
+    /// A step through the body's questions (docs/keyboard.md, "Moving between a card's questions"): `unpicked` goes to the
+    /// next question with no answer; `keyboard` gives the body focus so its bridge moves it to the question.
+    func question(step: Int, unpicked: Bool, keyboard: Bool) async -> QuestionStep {
+        guard drawn, failure == nil, let view else { return .none }
+        if keyboard { _ = view.becomeFirstResponder() }
+        let ask: [String: Any] = ["step": step < 0 ? -1 : 1, "unpicked": unpicked, "keyboard": keyboard]
+        let result = try? await view.callAsyncJavaScript("return await window.phoneCard.question(ask)", arguments: ["ask": ask],
+                                                         in: nil, contentWorld: .page)
+        return Self.questionStep(try? PhoneJSON.read(result as Any))
+    }
+    /// A number key or Return that reached the body's view: WebKit gave it no keydown in the body, though the body's frame held
+    /// the focus a question step put on a question, so the body's bridge presses it on that question's control itself.
+    private func questionKey(_ key: String, shift: Bool) {
+        guard drawn, failure == nil, revealed, let view else { return }
+        view.callAsyncJavaScript("window.phoneCard?.questionKey(key, shift)", arguments: ["key": key, "shift": shift],
+                                 in: nil, in: .page, completionHandler: nil)
+    }
+    /// Brings the question a step went to into the room the card's scroller shows, once the step's layout has run.
+    func showQuestion(top: CGFloat, height: CGFloat, animated: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            (self?.view as? CardBodyView)?.reveal(CGRect(x: 0, y: top, width: 1, height: max(1, height)), animated: animated)
+        }
+    }
+    private static func questionStep(_ value: PhoneJSON?) -> QuestionStep {
+        guard let value else { return .none }
+        if value.text == "end" { return .end }
+        guard let top = value["top"].numeric, let height = value["height"].numeric else { return .none }
+        return .moved(top: top, height: height)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         let effectIDs = Set(card.actions.filter { $0["effect"] != .null }.compactMap { $0["id"].text })
         let actions = card.actions.compactMap { action -> PhoneJSON? in
@@ -335,6 +371,9 @@ import SwiftUI
             guard let key = payload["key"].text, keys.contains(key) else { replyHandler(nil, PhoneMessages.phoneCardWebCannotDo()); return }
             onTask?(key); replyHandler(true, nil)
         case "image", "demo", "log": presentation = payload; replyHandler(true, nil)
+        case "questioned":
+            if part == .body { onQuestioned?(Self.questionStep(payload["where"])) }
+            replyHandler(true, nil)
         case "annotate":
             let box = payload["box"]
             guard annotates, part == .body, payload["note"]["key"].text != nil,
@@ -406,6 +445,21 @@ import SwiftUI
 final class CardBodyView: WKWebView {
     var onLayout: (() -> Void)?
     override func layoutSubviews() { super.layoutSubviews(); onLayout?() }
+    /// A number key 1 to 9, Return or Shift-Return that reached this view, for a question's keys (docs/ios.md).
+    var onQuestionKey: ((String, Bool) -> Void)?
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        for press in presses {
+            guard let key = press.key else { continue }
+            let flags = key.modifierFlags.subtracting([.alphaShift, .numericPad])
+            if key.keyCode == .keyboardReturnOrEnter || key.keyCode == .keypadEnter, flags.isSubset(of: .shift) {
+                onQuestionKey?("Enter", flags.contains(.shift))
+            } else if flags.isEmpty, key.charactersIgnoringModifiers.count == 1, let digit = key.charactersIgnoringModifiers.first,
+                      ("1"..."9").contains(digit) {
+                onQuestionKey?(String(digit), false)
+            }
+        }
+        super.pressesBegan(presses, with: event)
+    }
     /// INF-3296's phone piece: selected words in a card that takes notes offer Annotate beside Copy in their menu.
     var annotates = false
     var onAnnotateSelection: (() -> Void)?
@@ -529,6 +583,27 @@ final class CardBodyView: WKWebView {
         let lowest = max(-inset.top, scroller.contentSize.height + inset.bottom - scroller.bounds.height)
         let y = min(max(scroller.contentOffset.y + move, -inset.top), lowest)
         scroller.setContentOffset(CGPoint(x: scroller.contentOffset.x, y: y), animated: true)
+    }
+    /// A place in the body, in the view's points, comes to the middle of the room the card's scroller shows, or to its
+    /// top when it is taller than the room. The scroller is moved directly, as for the caret above, within the content
+    /// it really holds: a SwiftUI scroll to a marker in the body stopped short of a question near a long body's end.
+    func reveal(_ place: CGRect, animated: Bool) {
+        guard let window, let scroller = enclosingScroller() else { return }
+        let box = convert(place, to: window)
+        let frame = scroller.convert(scroller.bounds, to: window)
+        let inset = scroller.adjustedContentInset
+        let top = max(frame.minY + inset.top, window.bounds.minY)
+        var foot = frame.maxY - inset.bottom
+        if let keyboardFrame {
+            let keys = window.convert(keyboardFrame, from: window.screen.coordinateSpace)
+            if keys.minY < window.bounds.maxY - 1 { foot = min(foot, keys.minY) }
+        }
+        guard foot > top else { return }
+        let move = box.height <= foot - top ? box.midY - (top + foot) / 2 : box.minY - top
+        let lowest = max(-inset.top, scroller.contentSize.height + inset.bottom - scroller.bounds.height)
+        let y = min(max(scroller.contentOffset.y + move, -inset.top), lowest)
+        guard abs(y - scroller.contentOffset.y) > 0.5 else { return }
+        scroller.setContentOffset(CGPoint(x: scroller.contentOffset.x, y: y), animated: animated)
     }
     private func firstResponder(in view: UIView) -> UIView? {
         if view.isFirstResponder { return view }

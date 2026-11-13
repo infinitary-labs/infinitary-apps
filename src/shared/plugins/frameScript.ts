@@ -698,6 +698,8 @@ ${FRAME_EXPAND_SCRIPT}
     } else if (data.type === "question") {
       if (!Number.isSafeInteger(data.seq) || data.seq < 1) return;
       stepQuestion(data.step === -1 ? -1 : 1, data.unpicked === true, data.wrap === true, data.restart === true, data.keyboard === true, data.seq);
+    } else if (data.type === "question-key") {
+      pressQuestionKey(data.key, data.shift === true);
     } else if (data.type === "collect") {
       readForm(data.seq);
       if (data.focusUnpicked) focusUnpicked();
@@ -1991,4 +1993,4 @@ ${FRAME_QUESTION_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-2anC044I9XLGV1G3S44JL5UVUWbNktH5BKRYSHKnS5o=";
+export const FRAME_BRIDGE_SHA256 = "sha256-ldpkxKcDlFBwrWNVBk4bVp8xf2OsNH+1bkBVAvssPJE=";

@@ -535,6 +535,8 @@ A question is one named group of the body's controls, as the footer's picked cou
 
 The shell asks the shown body through `askQuestionStep` (`questionEvent.ts`), and the card takes the step through its frame's `question` message, which the bridge answers with `questioned`: the box of the question it landed on, or the end (`bridge.ts`).
 A frame's own script cannot take focus, so a step by a key gives the frame focus first and its bridge then moves focus to the question (`useQuestions` in `PrototypeBody.tsx`).
+On the iPhone and iPad the footer's count is the same stepper, drawn by the phone's own card (`PhoneCards.swift`, `docs/ios.md` "Cards on the phone"): every step goes round past either end, since the phone's choices hold no keyboard focus to rest on, and ⌘J and ⇧⌘J from a keyboard give the body focus so its bridge's keys answer the question.
+The phone asks through its card page's `question` (`ios/Infinitary/CardRuntime/cardHost.ts`), and the card's one scroller brings the question's box into view, as it does a body's own Enter or Shift+Enter.
 A question's radio and checkbox options are not typing ("Keys used when not typing"), so a digit there would reach a person's own bare digit key; the bridge takes the digit first when it names one of the question's options, and the body's key is then its own, while a digit past the last option still reaches the person's key.
 
 ## Where focus lands

@@ -56,7 +56,8 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | preset (keyboard) | preajuste | |
 | rigor levels: Quick, Default, Careful | Rápido, Predeterminado, Cuidadoso | Masculine, agreeing with "cuidado": "Cuidado: Rápido". |
 | Merges on its own / Asks first | Fusiona por su cuenta / Pregunta antes | |
-| Intelligence (a model's level) | Inteligencia | The levels are "Premium", "Alto", "Medio", "Bajo". |
+| Intelligence | Inteligencia | |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simple, Dificultad | How hard the task is, never a reasoning word. |
 | Reasoning | Razonamiento | |
 | computer | computadora | The most widely used word across Spanish-speaking countries; never "máquina", "equipo" or "servidor". |
 | this computer | esta computadora | |

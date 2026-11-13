@@ -41,7 +41,7 @@ import "./models.css";
 
 const SLOT_HINT: Record<Slot, string> = {
   premium:
-    "Crew never picks this automatically; your first mate's Auto may fall back to it after high and medium.",
+    "Crew never picks this automatically; your first mate's Auto may fall back to it after your models for hard and normal tasks.",
   high: "Plans, research, reproduction, and work without a verified basis",
   medium: "Building or fixing from a verified plan, spec, or reproduction",
   low: "Config, docs, cosmetic chores",
@@ -55,9 +55,9 @@ const SLOT_HINT: Record<Slot, string> = {
 const EMPTY_HINT: Record<Slot, string> = {
   premium:
     "Empty. Work that asks for premium waits until you add a model here or choose to run it lower.",
-  high: "Empty. This work runs on medium.",
-  medium: "Empty. This work runs on high.",
-  low: "Empty. This work runs on medium.",
+  high: "Empty. Hard tasks run on your models for normal tasks.",
+  medium: "Empty. Normal tasks run on your models for hard tasks.",
+  low: "Empty. Simple tasks run on your models for normal tasks.",
 };
 
 const SLOT_COLOR: Record<Slot, string> = {
@@ -376,7 +376,7 @@ export function ModelLevels({
         {level !== "off" && (
           <PillRemove
             className="fm-models-chip-x"
-            aria-label={`Remove ${model.label} from ${level}`}
+            aria-label={`Remove ${model.label} from ${levelList([level])}`}
             words={removeFromLevelOnly(level)}
             onClick={() => void onSetSlotMembership(key, level, false)}
           >
@@ -414,7 +414,7 @@ export function ModelLevels({
       <button
         key={offeringKey(model)}
         type="button"
-        aria-label={`Add ${model.label} to ${slot}`}
+        aria-label={`Add ${model.label} to ${levelList([slot])}`}
         onClick={() => {
           void onSetSlotMembership(offeringKey(model), slot, true);
           setAddingTo(null);
@@ -443,7 +443,7 @@ export function ModelLevels({
         </span>
         {/* Where else it sits, if anywhere. */}
         <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)", flexShrink: 0 }}>
-          {model.slots.length > 0 ? `in ${levelList(model.slots)}` : "not in use"}
+          {model.slots.length > 0 ? levelList(model.slots) : "not in use"}
         </span>
       </button>
     );
@@ -490,7 +490,7 @@ export function ModelLevels({
         {pickerOpen && (
           <fieldset
             id={`fm-slot-picker-${slot}`}
-            aria-label={`Add a model to ${slot}`}
+            aria-label={`Add a model to ${levelList([slot])}`}
             className="fm-subs-scroll"
             style={{
               border: 0,
@@ -516,7 +516,7 @@ export function ModelLevels({
               <Input
                 mono
                 autoFocus
-                aria-label={`Find a model to add to ${slot}`}
+                aria-label={`Find a model to add to ${levelList([slot])}`}
                 placeholder="Find a model by name"
                 value={pickerQuery}
                 onChange={(event) => setPickerQuery(event.target.value)}
@@ -591,7 +591,7 @@ export function ModelLevels({
                 type="button"
                 role="checkbox"
                 aria-checked={used}
-                aria-label={`Use ${model.label} at ${slot}`}
+                aria-label={`Use ${model.label} for ${levelList([slot])}`}
                 className="fm-models-check"
                 style={{ "--level": SLOT_COLOR[slot] } as React.CSSProperties}
                 onClick={() => void onSetSlotMembership(key, slot, !used)}

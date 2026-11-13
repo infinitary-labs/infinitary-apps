@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
+import { levelWord } from "../../src/shared/levelWords";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -177,7 +178,7 @@ test("the captain's rejection escalates a task one tier up as a fresh crewmate",
   // row the work goes on as.
   const escalated = taskLine(page, rejected.key, "escalated");
   await expect(escalated).toContainText(fresh.key, { timeout: 20_000 });
-  await expect(escalated).toContainText("premium");
+  await expect(escalated).toContainText(levelWord("premium"));
 });
 
 test("an escalate_from on an [fm-op] wake is refused and creates nothing", async () => {

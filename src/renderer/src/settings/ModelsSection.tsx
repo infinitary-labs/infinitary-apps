@@ -3,6 +3,7 @@ import type { DecisionModelId, DecisionsSettings, DecisionsView } from "@shared/
 import { DECISION_MODEL_CATALOG } from "@shared/decisions";
 import type { DecisionUseRequest } from "@shared/decisionUses";
 import * as m from "@shared/i18n/messages.generated";
+import { levelName } from "@shared/levelWords";
 import { modelNames } from "@shared/modelDisplayName";
 import type { ModelSlotsView, ReasoningChoice, Slot } from "@shared/modelSlots";
 import { SLOTS } from "@shared/modelSlots";
@@ -142,7 +143,7 @@ export function ModelsSection({
   const summary = slots?.usingDefaults
     ? STARTING_LEVELS_SUMMARY
     : [
-        ...SLOTS.map((slot) => (inLevel(slot) > 0 ? `${slot} ${inLevel(slot)}` : "")),
+        ...SLOTS.map((slot) => (inLevel(slot) > 0 ? `${levelName(slot)} ${inLevel(slot)}` : "")),
         notInUse > 0 ? `${notInUse} ${NOT_IN_USE}` : "",
         alwaysUse.length ? `${alwaysUse.length} always use ✱` : "",
         newCount ? `${newCount} new` : "",

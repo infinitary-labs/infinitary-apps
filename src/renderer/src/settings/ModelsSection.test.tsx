@@ -140,7 +140,7 @@ describe("ModelsSection - slot taglines", () => {
       return group as string;
     };
     expect(hint("premium")).toContain(
-      "Crew never picks this automatically; your first mate&#x27;s Auto may fall back to it after high and medium.",
+      "Crew never picks this automatically; your first mate&#x27;s Auto may fall back to it after your models for hard and normal tasks.",
     );
     expect(hint("high")).toContain(
       "Plans, research, reproduction, and work without a verified basis",
@@ -243,9 +243,9 @@ describe("ModelsSection - where a control sits says how far it reaches", () => {
 
   it("gives a pill inside a level only that level's remove, and no menu", () => {
     const html = render(slots);
-    expect(group(html, "high")).toContain('aria-label="Remove GPT-6.1 Sol from high"');
-    expect(group(html, "high")).not.toContain("from medium");
-    expect(group(html, "medium")).toContain('aria-label="Remove GPT-6.1 Sol from medium"');
+    expect(group(html, "high")).toContain('aria-label="Remove GPT-6.1 Sol from hard tasks"');
+    expect(group(html, "high")).not.toContain("from normal tasks");
+    expect(group(html, "medium")).toContain('aria-label="Remove GPT-6.1 Sol from normal tasks"');
     // A model in no level has nothing to leave.
     expect(group(html, "off")).toContain('data-model-row="openai-codex/gpt-6-luna"');
     expect(group(html, "off")).not.toContain("Remove GPT-6 Luna");
@@ -253,7 +253,7 @@ describe("ModelsSection - where a control sits says how far it reaches", () => {
   });
 
   it("counts models in no level as not in use in the header", () => {
-    expect(render(slots)).toContain("high 1 · medium 1 · 1 not in use");
+    expect(render(slots)).toContain("hard 1 · normal 1 · 1 not in use");
   });
 
   it("says all crew work goes to a model set to always use, in the order routing tries them", () => {
@@ -492,7 +492,7 @@ describe("ModelsSection - facts a pill holds", () => {
 
   it("says the × takes the model from that level only in its description", () => {
     const pill = pillOf(render(slots));
-    expect(pill).toContain('aria-label="Remove Grok 4.7 from medium"');
+    expect(pill).toContain('aria-label="Remove Grok 4.7 from normal tasks"');
     expect(pill).toContain(`aria-description="${removeFromLevelOnly("medium")}"`);
   });
 });
@@ -538,7 +538,7 @@ describe("ModelsSection - muted provider display", () => {
         `<span>${provider}</span><span class="fm-models-chip-label">${label}</span>`,
       );
     }
-    expect(html).toContain('aria-label="Remove Claude Fable 5.1 from premium"');
+    expect(html).toContain('aria-label="Remove Claude Fable 5.1 from premium tasks"');
   });
 
   it("renders a provider-only label once without empty model text and retains its pinned star", () => {

@@ -27,6 +27,7 @@ The script runs in a fresh realm with only these names beyond the language: no r
   `label` names the part; `from` names an earlier part whose last commit its working copy starts at (`null` or none starts at the default branch); `after` names earlier parts whose results it builds on.
   `intelligence` requests `low`, `medium`, `high` or `premium` for this part; omitted, the default routing chooses.
   Medium suits narrowed work; high suits open or final work.
+  To the captain a level is how hard the part is: say high as Hard, medium as Normal and low as Simple; premium stays Premium, since high, medium and low are also reasoning words.
 - `ask(prompt, schema)` is one tool-less typed question, answered as JSON that fits the schema, or `null`.
 - `log(text)` and `phase(name)` write a line on the program's own timeline; a phase also sets its plan dots.
 - `args` is the JSON you passed; a name `args` does not carry is not there.

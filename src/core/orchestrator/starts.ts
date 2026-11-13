@@ -7,6 +7,7 @@ import { COMPUTER, HERE } from "@shared/deviceNames";
 import { noSignInsStartRefusal, updateStartRefusal } from "@shared/deviceSetup";
 import { noNewWorkStartRefusal } from "@shared/deviceUpdateNudge";
 import { forgeSignInCardId } from "@shared/forges";
+import { levelModel, levelModels, levelName } from "@shared/levelWords";
 import { UNCOMPARED_WAIT } from "@shared/placement";
 import { TASK_CARD_VIA } from "@shared/provenance";
 import { catalogEntry } from "@shared/providers";
@@ -177,11 +178,13 @@ export function downgradeLine(
   served: RouteResult["bucket"],
   routed: Pick<RouteResult, "bucket" | "withheld">,
 ): string {
-  const lead = `Using a ${served} model for "${title}"`;
+  const lead = `"${title}" is a ${levelName(routed.bucket)} task on ${levelModel(served)}`;
   const withheld = routed.withheld;
-  if (!withheld) return `${lead} - ${routed.bucket} models have used up their allowance right now.`;
+  if (!withheld) {
+    return `${lead}. Your ${levelModels(routed.bucket)} have used up their allowance right now.`;
+  }
   const name = catalogEntry(withheld.provider)?.name ?? "Its provider";
-  const held = `${lead} - ${name}'s ${routed.bucket} models are paused`;
+  const held = `${lead}. ${name}'s ${levelModels(routed.bucket)} are paused`;
   if (withheld.reason === CUT_OFF_SIGNED_OUT) return `${held} until you sign in again.`;
   if (withheld.reason === CUT_OFF_REFUSED) return `${held} while ${name} refuses your sign-in.`;
   if (isClientIssueReason(withheld.reason)) return `${held}: ${name} cannot run on ${HERE.this}.`;

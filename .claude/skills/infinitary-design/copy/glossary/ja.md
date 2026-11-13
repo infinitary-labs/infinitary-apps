@@ -61,6 +61,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Asks first | 先に確認 | Merge setting. |
 | a stronger model | より強力なモデル | Replaces escalation. |
 | Intelligence | インテリジェンス | Settings section name. |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | プレミアム / 難しい / 普通 / 簡単, 難易度 | How hard the task is, never a reasoning word. |
 | Reasoning | 推論 | The fact strip's label. |
 | computer | コンピューター | Every computer alike, with the long-vowel mark. |
 | this computer | このコンピューター | Never 本機 or ホスト. |

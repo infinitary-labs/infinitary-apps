@@ -86,7 +86,8 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Not now | Pas maintenant | |
 | demo / recording | démo / enregistrement | Never "vidéo" or "clip". |
 | Reasoning | Raisonnement | |
-| Intelligence (model level) | Intelligence | Levels Premium, Élevé, Moyen, Faible. |
+| Intelligence | Intelligence | |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difficile / Normale / Simple, Difficulté | How hard the task is, never a reasoning word. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
 | repo (never said) | projet | "dépôt" only where a sentence points at GitHub. |
 | worktree (never said) | copie de travail | |

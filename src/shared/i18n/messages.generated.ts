@@ -9851,6 +9851,34 @@ export function uiTaskFactsReasoning(): string {
   return `Reasoning`;
 }
 
+export function uiTaskFactsDifficulty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصعوبة`;
+    case "de":
+      return `Schwierigkeit`;
+    case "es":
+      return `Dificultad`;
+    case "fr":
+      return `Difficulté`;
+    case "ja":
+      return `難易度`;
+    case "ko":
+      return `난이도`;
+    case "pt-BR":
+      return `Dificuldade`;
+    case "zh-Hans":
+      return `难度`;
+    case "zh-Hant":
+      return `難度`;
+    case "en-XA":
+      return `[Ðîƒƒîçûļţý ~~~~]`;
+    case "ar-XB":
+      return `\u202eDifficulty\u202c`;
+  }
+  return `Difficulty`;
+}
+
 export function uiTaskFactsChecks(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -10535,85 +10563,85 @@ export function uiSlotPremium(): string {
 export function uiSlotHigh(): string {
   switch (currentLanguage()) {
     case "ar":
-      return `عالٍ`;
+      return `صعبة`;
     case "de":
-      return `Hoch`;
+      return `Schwer`;
     case "es":
-      return `Alto`;
+      return `Difícil`;
     case "fr":
-      return `Élevé`;
+      return `Difficile`;
     case "ja":
-      return `高`;
+      return `難しい`;
     case "ko":
-      return `높음`;
+      return `어려움`;
     case "pt-BR":
-      return `Alto`;
+      return `Difícil`;
     case "zh-Hans":
-      return `高`;
+      return `困难`;
     case "zh-Hant":
-      return `高`;
+      return `困難`;
     case "en-XA":
-      return `[Ĥîĝĥ ~~]`;
+      return `[Ĥáŕð ~~]`;
     case "ar-XB":
-      return `\u202eHigh\u202c`;
+      return `\u202eHard\u202c`;
   }
-  return `High`;
+  return `Hard`;
 }
 
 export function uiSlotMedium(): string {
   switch (currentLanguage()) {
     case "ar":
-      return `متوسط`;
+      return `عادية`;
     case "de":
-      return `Mittel`;
+      return `Normal`;
     case "es":
-      return `Medio`;
+      return `Normal`;
     case "fr":
-      return `Moyen`;
+      return `Normale`;
     case "ja":
-      return `中`;
+      return `普通`;
     case "ko":
-      return `중간`;
+      return `보통`;
     case "pt-BR":
-      return `Méd`;
+      return `Normal`;
     case "zh-Hans":
-      return `中`;
+      return `普通`;
     case "zh-Hant":
-      return `中`;
+      return `普通`;
     case "en-XA":
-      return `[Ṁéð ~]`;
+      return `[Ñöŕɱáļ ~~]`;
     case "ar-XB":
-      return `\u202eMed\u202c`;
+      return `\u202eNormal\u202c`;
   }
-  return `Med`;
+  return `Normal`;
 }
 
 export function uiSlotLow(): string {
   switch (currentLanguage()) {
     case "ar":
-      return `منخفض`;
+      return `بسيطة`;
     case "de":
-      return `Niedrig`;
+      return `Einfach`;
     case "es":
-      return `Bajo`;
+      return `Simple`;
     case "fr":
-      return `Faible`;
+      return `Simple`;
     case "ja":
-      return `低`;
+      return `簡単`;
     case "ko":
-      return `낮음`;
+      return `간단`;
     case "pt-BR":
-      return `Baixo`;
+      return `Simples`;
     case "zh-Hans":
-      return `低`;
+      return `简单`;
     case "zh-Hant":
-      return `低`;
+      return `簡單`;
     case "en-XA":
-      return `[Ļöŵ ~]`;
+      return `[Šîɱþļé ~~]`;
     case "ar-XB":
-      return `\u202eLow\u202c`;
+      return `\u202eSimple\u202c`;
   }
-  return `Low`;
+  return `Simple`;
 }
 
 export function uiSubscriptionUnpinModel(): string {
@@ -22444,6 +22472,7 @@ export const MESSAGES = {
   uiTaskFactsBetweenItems,
   uiTaskFactsModel,
   uiTaskFactsReasoning,
+  uiTaskFactsDifficulty,
   uiTaskFactsChecks,
   uiTaskFactsReview,
   uiTaskFactsReadJustBefore,
@@ -23193,6 +23222,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   uiTaskFactsBetweenItems: [],
   uiTaskFactsModel: [],
   uiTaskFactsReasoning: [],
+  uiTaskFactsDifficulty: [],
   uiTaskFactsChecks: [],
   uiTaskFactsReview: [],
   uiTaskFactsReadJustBefore: [],

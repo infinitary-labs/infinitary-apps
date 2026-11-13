@@ -1,4 +1,5 @@
 import type { AccountView } from "@shared/accounts";
+import { levelList } from "@shared/levelWords";
 import { type ModelSlotsView, offeringKey, providerLabel, STARTER_SLOTS } from "@shared/modelSlots";
 import type { QuotaSnapshotView } from "@shared/quota";
 import { SMALLEST_WINDOW } from "@shared/smallestWindow";
@@ -268,7 +269,10 @@ test("a model at the bottom of the shortest window can still be taken out of use
     // And back where it was, from the bottom edge again.
     rowIn("off")?.scrollIntoView({ block: "end" });
     await userEvent.click(
-      panel.getByRole("checkbox", { name: `Use ${model.label} at low`, exact: true }),
+      panel.getByRole("checkbox", {
+        name: `Use ${model.label} for ${levelList(["low"])}`,
+        exact: true,
+      }),
     );
     await expect.poll(() => rowIn("low")).not.toBeNull();
     await userEvent.click(panel.getByRole("button", { name: `Close ${model.label}`, exact: true }));

@@ -403,16 +403,16 @@ struct PhoneFactDot: View {
     }
 }
 
-/// SlotBadge: the intelligence level as four rising bars and its word, in the level's own color.
+/// SlotBadge: the level - Premium, Hard, Normal, Simple - as four rising bars and its word, in the level's own color.
 struct PhoneSlotBadge: View {
     let slot: String
 
     var body: some View {
         let (label, color, bars): (String, Color, Int) = switch slot {
         case "premium": ("Premium", PhoneTheme.slotPremium, 4)
-        case "high": ("High", PhoneTheme.slotHigh, 3)
-        case "low": ("Low", PhoneTheme.slotLow, 1)
-        default: ("Med", PhoneTheme.slotMedium, 2)
+        case "high": ("Hard", PhoneTheme.slotHigh, 3)
+        case "low": ("Simple", PhoneTheme.slotLow, 1)
+        default: ("Normal", PhoneTheme.slotMedium, 2)
         }
         HStack(spacing: 6) {
             HStack(alignment: .bottom, spacing: 2) {

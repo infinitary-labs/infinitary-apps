@@ -201,14 +201,6 @@ export const REVIEW_WORDS: Words<"pass" | "findings" | "blocked"> = {
  */
 export const REVIEW_EARLIER_WORDS = "passed at an earlier version";
 
-/** The model tier's word in a feed line, when a line must name one. */
-export const TIER_WORDS: Record<string, string> = {
-  premium: "premium",
-  high: "high",
-  medium: "medium",
-  low: "low",
-};
-
 /**
  * What a plugin can read, in the person's words (the consent card, one
  * plugin vehicle Phase A; the design skill's vocabulary table): the app's

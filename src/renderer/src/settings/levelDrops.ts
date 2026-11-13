@@ -1,4 +1,5 @@
-import { SLOTS, type Slot, type SlotModelView } from "../../../shared/modelSlots";
+import { levelList } from "../../../shared/levelWords";
+import type { Slot, SlotModelView } from "../../../shared/modelSlots";
 
 /**
  * What a drag on the Models board means (Settings → Intelligence → Models).
@@ -20,12 +21,8 @@ export type DropPlan =
   /** Nothing to do, said out loud so the drop is not a surprise. */
   | { kind: "none"; label: string };
 
-/** The levels in board order, in words: "high", "high and medium", "premium, high and low". */
-export function levelList(slots: readonly Slot[]): string {
-  const ordered = SLOTS.filter((slot) => slots.includes(slot));
-  if (ordered.length <= 1) return ordered[0] ?? "";
-  return `${ordered.slice(0, -1).join(", ")} and ${ordered[ordered.length - 1]}`;
-}
+/** The levels in board order, as the work they take (`levelList`, the one wording). */
+export { levelList };
 
 /**
  * What dropping `model` on `to` does when it was picked up from `from`.
@@ -40,12 +37,12 @@ export function dropPlan(
 ): DropPlan | null {
   if (to === from) return null;
   if (to === "off") {
-    return { kind: "remove-all", label: `Remove from ${levelList(model.slots)}` };
+    return { kind: "remove-all", label: `Stop using for ${levelList(model.slots)}` };
   }
-  if (model.slots.includes(to)) return { kind: "none", label: `Already at ${to}` };
-  if (from === "off") return { kind: "add", to, label: `Use at ${to}` };
-  if (keepBoth) return { kind: "add", to, label: `Also use at ${to}` };
-  return { kind: "move", from, to, label: `Move to ${to}` };
+  if (model.slots.includes(to)) return { kind: "none", label: `Already takes ${levelList([to])}` };
+  if (from === "off") return { kind: "add", to, label: `Use for ${levelList([to])}` };
+  if (keepBoth) return { kind: "add", to, label: `Also use for ${levelList([to])}` };
+  return { kind: "move", from, to, label: `Move to ${levelList([to])}` };
 }
 
 /**
@@ -80,7 +77,7 @@ export const ALWAYS_USE_LEAD = "All crew work goes to";
 /** What the panel's Remove from all levels takes the model out of. */
 export function removeAllLine(model: Pick<SlotModelView, "slots">): string {
   return model.slots.length > 0
-    ? `It leaves ${levelList(model.slots)} at once.`
+    ? `It stops taking ${levelList(model.slots)} at once.`
     : "It is not in any level.";
 }
 
@@ -91,7 +88,7 @@ export function removeAllLine(model: Pick<SlotModelView, "slots">): string {
  */
 export function newModelNote(model: Pick<SlotModelView, "slots">): string {
   return model.slots.length > 0
-    ? `New here - it is used at ${levelList(model.slots)}.`
+    ? `New here - it takes ${levelList(model.slots)}.`
     : "New here - it is not in use until you give it a level.";
 }
 
@@ -99,6 +96,6 @@ export function newModelNote(model: Pick<SlotModelView, "slots">): string {
 export function usedLine(model: Pick<SlotModelView, "slots" | "isNew">): string {
   if (model.isNew) return newModelNote(model);
   return model.slots.length > 0
-    ? `Used at ${levelList(model.slots)}.`
+    ? `Takes ${levelList(model.slots)}.`
     : "Not in use. It is never picked on its own.";
 }

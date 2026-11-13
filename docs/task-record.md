@@ -601,7 +601,7 @@ The window draws its overview from the shared task facts (`TaskFactRows`, `TaskF
 4. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
    The title stays the task's one line in the chrome.
 5. Project, Now, Progress and the Browser line, as the summary draws them.
-6. One row of facts under a hairline, as the summary's footer row: the model with its intelligence badge, the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
+6. One row of facts under a hairline, as the summary's footer row: the model, the task's Difficulty badge (the level its routing asked for), the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
 7. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
 
 The words fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with both closed.

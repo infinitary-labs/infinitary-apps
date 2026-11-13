@@ -1,4 +1,5 @@
 import { formatDate, formatTime } from "./i18n/format.ts";
+import { levelModel, levelModels } from "./levelWords.ts";
 import type { Slot } from "./modelSlots";
 
 /**
@@ -39,13 +40,13 @@ export function taskHoldWords(hold: TaskHold): TaskHoldWords {
       };
     case "retry":
       return {
-        title: `Waiting for a ${hold.level} model`,
-        text: `It retries ${hold.from} on a stronger model, and no ${hold.level} model has allowance now. It starts by itself once one does. ${SOONER}`,
+        title: `Waiting for ${levelModel(hold.level)}`,
+        text: `It retries ${hold.from} on a stronger model, and none of your ${levelModels(hold.level)} has allowance now. It starts by itself once one does. ${SOONER}`,
       };
     case "level":
       return {
-        title: `Waiting for a ${hold.level} model`,
-        text: `Your first mate set it to wait until a ${hold.level} model has allowance. It starts by itself once one does.`,
+        title: `Waiting for ${levelModel(hold.level)}`,
+        text: `Your first mate set it to wait until ${levelModel(hold.level)} has allowance. It starts by itself once one does.`,
       };
     case "plan":
       return {

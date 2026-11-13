@@ -83,6 +83,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Automation | الأتمتة | |
 | Usage | الاستخدام | |
 | Intelligence | الذكاء | |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | ممتاز / صعبة / عادية / بسيطة, الصعوبة | How hard the task is, never a reasoning word. |
 | Observe | المراقبة | |
 | preset (keyboard) | الإعداد المسبق | |
 | demo / its recording | عرض توضيحي / التسجيل | Never "فيديو". |

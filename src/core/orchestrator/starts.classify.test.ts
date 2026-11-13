@@ -184,7 +184,7 @@ describe("the task graph (R1)", () => {
     expect(superseded?.feed).toBe(false);
     expect(timeline.filter((event) => event.kind === "escalated")).toHaveLength(1);
     expect(taskFeedLine(closed as TaskRecord, escalated as TaskEvent)?.text).toBe(
-      `Moved to a stronger model: high; continues as ${fresh?.key}`,
+      `Moved to a stronger model: Hard; continues as ${fresh?.key}`,
     );
     // The fresh row's own escalated event stays off the feed.
     expect(tasks.timeline(taskId).find((event) => event.kind === "escalated")).toMatchObject({
@@ -217,7 +217,7 @@ describe("the task graph (R1)", () => {
       expect(crewmate.promptCalls[0]).toContain("attempt 1 at the premium tier");
       const escalated = tasks.timeline(previous.id).find((event) => event.kind === "escalated");
       expect(taskFeedLine(tasks.get(previous.id) as TaskRecord, escalated as TaskEvent)?.text).toBe(
-        `Moved to a stronger model: premium; continues as ${fresh?.key}`,
+        `Moved to a stronger model: Premium; continues as ${fresh?.key}`,
       );
     },
   );
@@ -577,7 +577,7 @@ describe("the task graph (R1)", () => {
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(cards().find((card) => card.id === `card-highwait-${taskId}`)).toBeUndefined();
     expect(events.map((event) => ("text" in event ? event.text : "")).join(" ")).toContain(
-      "Using a medium model",
+      "is a hard task on a model for normal tasks",
     );
   });
 

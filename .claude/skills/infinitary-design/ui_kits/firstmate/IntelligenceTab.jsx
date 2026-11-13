@@ -52,7 +52,7 @@ const MODELS=[
 const START_LEVELS={premium:["fable","astra"],high:["opus","sol"],medium:["sonnet","sol","grok"],low:["haiku","luna"]};
 const LEVELS=["premium","high","medium","low"];
 const HINT={premium:"Crew never picks this automatically; your first mate's Auto may fall back to it after high and medium.",high:"Plans, research, reproduction, and work without a verified basis",medium:"Building or fixing from a verified plan, spec, or reproduction",low:"Config, docs, cosmetic chores"};
-const EMPTY={premium:"Empty. Work that asks for premium waits until you add a model here or choose to run it lower.",high:"Empty. This work runs on medium.",medium:"Empty. This work runs on high.",low:"Empty. This work runs on medium."};
+const EMPTY={premium:"Empty. Work that asks for premium waits until you add a model here or choose to run it lower.",high:"Empty. Hard tasks run on your models for normal tasks.",medium:"Empty. Normal tasks run on your models for hard tasks.",low:"Empty. Simple tasks run on your models for normal tasks."};
 const model=(id)=>MODELS.find(m=>m.id===id);
 // The provider is dropped where the label already starts with it: "Claude Opus 5.5", "Grok 4.7".
 const ModelName=({m})=><span style={{fontFamily:"var(--font-mono)",fontSize:"var(--text-sm)",whiteSpace:"nowrap"}}>
@@ -119,8 +119,8 @@ function FirstmateModelRow({accounts,chosen,onChoose}){
   const able=choices.filter(a=>a.enabled&&!a.signIn);
   const withAccount=able.length>=2;
   return <SettingRow title={withAccount?"First mate model and account":"First mate model"}
-    description={withAccount?`The model your first mate itself answers with, and the ${provider} account it answers on; crew work keeps its own preferred account. Auto tries high, medium, premium, then low across your subscriptions; a change applies at the next idle moment.`
-      :"The model your first mate itself answers with. Auto tries high, medium, premium, then low across your subscriptions; a change applies at the next idle moment."}
+    description={withAccount?`The model your first mate itself answers with, and the ${provider} account it answers on; crew work keeps its own preferred account. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.`
+      :"The model your first mate itself answers with. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment."}
     control={<span style={{display:"flex",gap:8,flexShrink:0}}>
       {byName?<span><Input mono list="mock-unlisted-models" aria-label="First mate model by name" placeholder="Find a model by name" autoFocus value={name} style={{width:220,padding:"6px 10px",fontSize:"var(--text-xs)"}}
           onChange={(e)=>setName(e.target.value)}

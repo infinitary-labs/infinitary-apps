@@ -65,10 +65,10 @@ describe("modelReasonLine", () => {
   it("says so when the model or the level asked for could not serve", () => {
     expect(modelReasonLine(reason("R0", "medium"))).toBe("The model you named was not available");
     expect(modelReasonLine({ rule: "R2", kind: "plan", asked: "high", served: "medium" })).toBe(
-      "No high model could take it",
+      "None of your models for hard tasks could take it",
     );
     expect(modelReasonLine({ rule: "R1a", asked: "premium", served: "high" })).toBe(
-      "No premium model could take it",
+      "None of your premium models could take it",
     );
   });
 

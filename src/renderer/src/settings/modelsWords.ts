@@ -1,4 +1,6 @@
 import * as m from "@shared/i18n/messages.generated";
+import { levelList } from "@shared/levelWords";
+import type { Slot } from "@shared/modelSlots";
 
 /** The Models section's header summary words (`ModelsSection.tsx`). */
 export const STARTING_LEVELS_SUMMARY = "no levels chosen - using the starting levels";
@@ -35,6 +37,6 @@ export const DECISION_USES_WORDS = {
 } as const;
 
 /** What a pill's × says on rest and in its description: it leaves the other levels alone. */
-export function removeFromLevelOnly(level: string): string {
-  return `Remove from ${level} only`;
+export function removeFromLevelOnly(level: Slot): string {
+  return `Remove from ${levelList([level])} only`;
 }

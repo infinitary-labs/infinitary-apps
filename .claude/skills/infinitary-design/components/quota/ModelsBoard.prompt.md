@@ -1,13 +1,13 @@
-The Models board (Settings → Intelligence → Models): one lane per level - premium, high, medium, low - and a Not in use lane under them, each model a pill in every level it is used at.
+The Models board (Settings → Intelligence → Models): one lane per level - Premium, Hard, Normal, Simple, each a `SlotBadge` - and a Not in use lane under them, each model a pill in every level it is used at.
 A pill reads the provider once in muted UI type (`--fg-3`), then the model name in mono with its existing model-state color, a `new` micro label on a model that arrived after this install had seen its provider, and `✱` on a model set to always use.
 A matching leading provider word is separated for display only, case-insensitively at a word boundary: "Claude Opus 5.5" displays muted Claude then mono Opus 5.5.
 Stored and accessible names stay complete; unmatched labels stay intact after the provider, and a provider-only label has no empty model text.
 OpenRouter keeps its own provider name followed by the complete model label, including its vendor.
 The same rule holds in every level, Not in use and the drag ghost; selected borders, focus rings and pinned or unused model colors stay unchanged.
 The `new` mark stays a week, through restarts, or until the person changes that model's levels (`docs/model-lists.md`, "The news").
-A pill's name is described by its provider, "new" on a new model, and that micro label's note, which also shows on rest, the pointer's or the keyboard's focus on the pill; the × says "Remove from high only" the same way (readme, "Facts shown on rest").
-The note says where the model is used wherever its pill sits: "New here - it is used at medium." for an arrival its starting levels placed, "New here - it is not in use until you give it a level." for one they did not; the model panel's line on where it is used reads the same note.
-An empty level says where its work goes instead: high and low run on medium, medium on high.
+A pill's name is described by its provider, "new" on a new model, and that micro label's note, which also shows on rest, the pointer's or the keyboard's focus on the pill; the × says "Remove from hard tasks only" the same way (readme, "Facts shown on rest").
+The note says where the model is used wherever its pill sits: "New here - it takes normal tasks." for an arrival its starting levels placed, "New here - it is not in use until you give it a level." for one they did not; the model panel's line on where it is used reads the same note.
+An empty level says where its work goes instead: hard and simple tasks run on the models for normal tasks, normal tasks on the models for hard tasks.
 An empty premium level never says its work runs lower, because an ask for premium waits: its hint says the work waits until a model is added there or the person chooses to run it lower.
 Where a control sits says how far it reaches (captain's pick from the three-way prototype review, 2026-10-02):
 
@@ -25,7 +25,7 @@ Where a control sits says how far it reaches (captain's pick from the three-way 
   Reasoning reaches only new crew conversations, never the first mate or Decisions.
 - **Dragging a pill moves it.**
   A plain drop on another lane moves the model there; ⌥ held at the drop keeps it at both; a drop on Not in use removes it from every level.
-  While a pill is over a lane the lane carries a dashed drop pill saying what the drop will do - "Move to low", "Also use at low", "Use at high", "Remove from high and medium", "Already at medium" - so nothing surprises.
+  While a pill is over a lane the lane carries a dashed drop pill saying what the drop will do - "Move to simple tasks", "Also use for simple tasks", "Use for hard tasks", "Stop using for hard and normal tasks", "Already takes normal tasks" - so nothing surprises.
   The dragged pill stays under the pointer where it was grabbed, at its own width; the pill it left dims to 35 percent until the drop.
   Escape cancels.
   Every drag has a click path: the × and Add model, or the panel.
@@ -59,7 +59,7 @@ Everything else a subscription serves is reachable by name, never as pills:
 The first mate's model picker (Settings → Intelligence) is a native `select` over the listed models plus "Another model by name…", which swaps in the same mono `Input` with a `datalist` of the unlisted models that can run the first mate; Enter or a pick sets the model, and Escape returns to the select.
 Beside it in the same row sits the first mate's account picker, a second mono `select` labeled "First mate account", 8px to its right and narrower (two `--space-9`), shown only when two or more accounts here of the provider of the first mate's model can answer (not paused, not needing a sign-in, ready); the two stay side by side at every window width, and the row's words wrap beside them.
 With it the row is titled "First mate model and account", and its description names the provider and says it is apart from crew work: "The model your first mate itself answers with, and the Codex account it answers on; crew work keeps its own preferred account.
-Auto tries high, medium, premium, then low across your subscriptions; a change applies at the next idle moment."
+Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment."
 Its options are the accounts by their labels; one that cannot run the first mate stays listed as "Old team · paused" (the row's own word) and cannot be picked, and with nothing chosen yet it opens on "Not chosen yet".
 Crew work's preferred account stays in the account row's menu, "Prefer for crew work", and its ✱ says "Crew work prefers this account" on rest and in its name, so the two choices never share a word.
 

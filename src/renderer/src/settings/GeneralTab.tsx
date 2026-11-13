@@ -287,8 +287,8 @@ export type FirstmateAccountSlot = {
 /** What the Firstmate model row says, with or without the account beside it. */
 export function firstmateSeatDescription(providerName?: string): string {
   return providerName
-    ? `The model your first mate itself answers with, and the ${providerName} account it answers on; crew work keeps its own preferred account. Auto tries high, medium, premium, then low across your subscriptions; a change applies at the next idle moment.`
-    : "The model your first mate itself answers with. Auto tries high, medium, premium, then low across your subscriptions; a change applies at the next idle moment.";
+    ? `The model your first mate itself answers with, and the ${providerName} account it answers on; crew work keeps its own preferred account. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.`
+    : "The model your first mate itself answers with. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.";
 }
 
 /**

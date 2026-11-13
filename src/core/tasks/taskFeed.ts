@@ -1,6 +1,7 @@
 import { type FeedLine, reportSummary, taskFeedKind } from "@shared/feed";
 import { formatNumber } from "@shared/i18n/format";
 import { englishOf, type Said, said, saidLine, saidPart, saidSchema } from "@shared/i18n/said";
+import { slotSchema } from "@shared/modelSlots";
 import { crewProblem, retriedProblemLine, typedFailureOf } from "@shared/plainProblem";
 import { droppedSaid } from "../orchestrator/settleWords";
 import type { ActivityStore } from "../storage/activityStore";
@@ -190,7 +191,7 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       fact = !continues
         ? said("feedUpdated", { text: event.text })
         : tier
-          ? said("feedMovedOnTier", { tier, key: continues })
+          ? said("feedMovedOnTier", { tier: tierWord(tier), key: continues })
           : said("feedMoved", { key: continues });
       break;
     }
@@ -333,4 +334,17 @@ export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: n
   // Both halves oldest first before the stable merge, so lines that share
   // a millisecond keep the order they were written in.
   return [...taskLines.reverse(), ...ownLines].sort((a, b) => a.at - b.at).slice(-limit);
+}
+
+/** The level a stronger attempt runs at, in the badge's own word (`levelWord`), worded when shown. */
+const TIER_MESSAGE = {
+  premium: "uiSlotPremium",
+  high: "uiSlotHigh",
+  medium: "uiSlotMedium",
+  low: "uiSlotLow",
+} as const;
+
+function tierWord(tier: string) {
+  const slot = slotSchema.safeParse(tier);
+  return slot.success ? saidPart(TIER_MESSAGE[slot.data]) : tier;
 }

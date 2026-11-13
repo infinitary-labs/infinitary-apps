@@ -182,7 +182,7 @@ describe("Firstmate account picker", () => {
     expect(html).not.toContain('aria-label="First mate account"');
     expect(html).not.toContain("First mate model and account");
     expect(firstmateSeatDescription()).toBe(
-      "The model your first mate itself answers with. Auto tries high, medium, premium, then low across your subscriptions; a change applies at the next idle moment.",
+      "The model your first mate itself answers with. Auto tries your models for hard tasks, then normal, premium, then simple, across your subscriptions; a change applies at the next idle moment.",
     );
   });
 

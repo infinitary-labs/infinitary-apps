@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { levelModels } from "./levelWords";
 import { slotSchema } from "./modelSlots";
 import { type Reasoning, reasoningNote } from "./reasoning";
 import { ruleIdSchema } from "./routingPolicy";
@@ -83,7 +84,8 @@ export function modelReasonLine(reason: ModelReason): string | null {
   if (reason.rule === "R0" && reason.named) return "You asked for this model";
   if (reason.pinned) return "You pinned this model in Settings";
   if (reason.rule === "R0") return "The model you named was not available";
-  if (reason.served !== reason.asked) return `No ${reason.asked} model could take it`;
+  if (reason.served !== reason.asked)
+    return `None of your ${levelModels(reason.asked)} could take it`;
   if (reason.rule === "R1a") return "You asked for premium";
   const work = workOf(reason);
   return work ? `${work.charAt(0).toUpperCase()}${work.slice(1)}` : null;

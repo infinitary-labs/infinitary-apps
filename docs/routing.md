@@ -51,6 +51,15 @@ A premium hint is never premium consent; without the captain's premium ask it fa
 The compatibility migration translates the retired `teach` kind into `ongoing: true`, `intelligence: high` and `kind: unclear` while keeping saved records and historical routing decisions.
 Lesson guidance and voice live only in the Lessons runbook (`docs/lessons.md`).
 
+## A level's words
+
+A level names how hard a task is, so a person never reads it as the reasoning, whose words are Low, Medium, High and Extra high.
+The saved values stay premium, high, medium and low; a person reads Premium, Hard, Normal and Simple (`src/shared/levelWords.ts`).
+`levelWord` is the badge's word in the app's language, `levelList` names the work a model takes ("hard and normal tasks"), and `levelModel` and `levelModels` name a level's models in a sentence ("a model for hard tasks", "premium models").
+Premium names models, since the app sorts no work into it on its own.
+The task record's Difficulty is the level the task's routing asked for, not the level that served it.
+The first mate's tools still take the saved values; its models list heads each level with both, such as `high (Hard)`, and spawn_crewmate's `intelligence` rule tells it to say the captain's word.
+
 ## Notes
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
@@ -132,8 +141,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Two facts are derived at the read because the row has no column for them: `named` (R0, and the served model is the one the shape named) and `pinned` (the served model is a current Settings pin, which outranks every slot).
   It is absent when the task never routed, when the row predates the rule column, or when the record's model is not the one the decision chose, so the line never explains a model the crewmate is not on.
   The record's model follows the model that answers: when Claude Code moves a crewmate to another model, the record names it and the routing ledger keeps the router's decision as it was made (`docs/claude-client.md`, "The model that answers").
-  `modelReasonLine` (`src/shared/modelReason.ts`) is the one wording: the captain's own choice first ("You asked for this model", "You pinned this model in Settings"), then a slot that could not serve ("No high model could take it"), then the rule's reason ("Building from the plan in FI3-419").
-  Since FI3-439 the line never leads with the level: the task record shows the served level and the reasoning as their own labeled values, and the footnote says why the reasoning is lower ("Reasoning one step lower for Quick care.", `reasoningNote`); since INF-2528 the summary shows only the level's badge beside the model.
+  `modelReasonLine` (`src/shared/modelReason.ts`) is the one wording: the captain's own choice first ("You asked for this model", "You pinned this model in Settings"), then a slot that could not serve ("None of your models for hard tasks could take it"), then the rule's reason ("Building from the plan in FI3-419").
+  Since FI3-439 the line never leads with the level: the task record shows the task's Difficulty, the level its routing asked for, and the reasoning as their own labeled values, and the footnote says why the reasoning is lower ("Reasoning one step lower for Quick care.", `reasoningNote`); the summary shows the Difficulty badge beside the model.
   The task record shows this line, and why one model won over another inside a slot (band, spend priority, recency), under its Why this model disclosure ("Why this model on the task record" below); the summary shows neither.
 
 ## Read-only computer evaluation

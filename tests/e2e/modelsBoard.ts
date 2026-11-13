@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { levelList } from "../../src/shared/levelWords";
 
 /**
  * The Models board in Settings → Intelligence, as a person works it: a lane
@@ -42,7 +43,9 @@ export function modelName(lane: Locator, label: string, pinned = false): Locator
 
 /** Takes a model out of ONE level: the × on its pill there. */
 export async function removeFromLevel(lane: Locator, label: string, level: Level) {
-  await lane.getByRole("button", { name: `Remove ${label} from ${level}`, exact: true }).click();
+  await lane
+    .getByRole("button", { name: `Remove ${label} from ${levelList([level])}`, exact: true })
+    .click();
 }
 
 /** Opens the panel for a model by clicking its name in a lane; a second call finds it open. */
@@ -67,7 +70,10 @@ export async function closeModelPanel(models: Locator) {
 
 /** Ticks or clears one level for the model the panel is open on. */
 export async function setLevelInPanel(panel: Locator, label: string, level: Level, on: boolean) {
-  const box = panel.getByRole("checkbox", { name: `Use ${label} at ${level}`, exact: true });
+  const box = panel.getByRole("checkbox", {
+    name: `Use ${label} for ${levelList([level])}`,
+    exact: true,
+  });
   if ((await box.getAttribute("aria-checked")) !== String(on)) await box.click();
 }
 

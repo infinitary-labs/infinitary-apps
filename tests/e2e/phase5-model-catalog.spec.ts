@@ -5,6 +5,7 @@ import {
   removeAllLine,
   usedLine,
 } from "../../src/renderer/src/settings/levelDrops";
+import { levelList } from "../../src/shared/levelWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
@@ -195,8 +196,12 @@ test("an off catalog model can be added directly to a routing bucket", async () 
   ).toBeVisible();
 
   await high.getByRole("button", { name: "Add model" }).click();
-  await expect(high.getByRole("group", { name: "Add a model to high" })).toBeVisible();
-  await high.getByRole("button", { name: `Add ${claudeStarter("low").name} to high` }).click();
+  await expect(
+    high.getByRole("group", { name: `Add a model to ${levelList(["high"])}` }),
+  ).toBeVisible();
+  await high
+    .getByRole("button", { name: `Add ${claudeStarter("low").name} to ${levelList(["high"])}` })
+    .click();
 
   await expect(modelName(high, claudeStarter("low").name)).toBeVisible();
   await expect(
@@ -239,10 +244,10 @@ test("a model already in a bucket can be added to another from the catalog, and 
   // each one sits now.
   await expect(opusIn(high)).toBeVisible();
   await premium.getByRole("button", { name: "Add model" }).click();
-  const picker = premium.getByRole("group", { name: "Add a model to premium" });
+  const picker = premium.getByRole("group", { name: `Add a model to ${levelList(["premium"])}` });
   await expect(picker).toBeVisible();
-  const offer = picker.getByRole("button", { name: `Add ${opus} to premium` });
-  await expect(offer).toContainText("in high");
+  const offer = picker.getByRole("button", { name: `Add ${opus} to ${levelList(["premium"])}` });
+  await expect(offer).toContainText(levelList(["high"]));
   await offer.click();
 
   // In both now: premium gained a row and high kept its own.
@@ -252,7 +257,9 @@ test("a model already in a bucket can be added to another from the catalog, and 
   await expect(picker).toHaveCount(0);
   await premium.getByRole("button", { name: "Add model" }).click();
   await expect(picker).toBeVisible();
-  await expect(picker.getByRole("button", { name: `Add ${opus} to premium` })).toHaveCount(0);
+  await expect(
+    picker.getByRole("button", { name: `Add ${opus} to ${levelList(["premium"])}` }),
+  ).toHaveCount(0);
   await premium.getByRole("button", { name: "Add model" }).click();
   await expect(picker).toHaveCount(0);
 
@@ -403,7 +410,7 @@ test("crew chip providers use muted UI type without renaming their models", asyn
   await expect(panel).toHaveCount(0);
   await pressKey(modelName(pill, model.label), "Tab");
   const remove = pill.getByRole("button", {
-    name: `Remove ${model.label} from ${level}`,
+    name: `Remove ${model.label} from ${levelList([level])}`,
     exact: true,
   });
   await expect(remove).toBeFocused();

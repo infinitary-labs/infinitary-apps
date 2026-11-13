@@ -17,7 +17,7 @@ describe("what a drop on the Models board does", () => {
       kind: "move",
       from: "high",
       to: "low",
-      label: "Move to low",
+      label: "Move to simple tasks",
     });
   });
 
@@ -25,7 +25,7 @@ describe("what a drop on the Models board does", () => {
     expect(dropPlan({ slots: ["high"] }, "high", "low", true)).toEqual({
       kind: "add",
       to: "low",
-      label: "Also use at low",
+      label: "Also use for simple tasks",
     });
   });
 
@@ -34,7 +34,7 @@ describe("what a drop on the Models board does", () => {
       expect(dropPlan({ slots: [] }, "off", "premium", keepBoth)).toEqual({
         kind: "add",
         to: "premium",
-        label: "Use at premium",
+        label: "Use for premium tasks",
       });
     }
   });
@@ -42,14 +42,14 @@ describe("what a drop on the Models board does", () => {
   it("takes a model out of every level on Not in use, and names them first", () => {
     expect(dropPlan({ slots: ["medium", "high"] }, "high", "off", false)).toEqual({
       kind: "remove-all",
-      label: "Remove from high and medium",
+      label: "Stop using for hard and normal tasks",
     });
   });
 
   it("does nothing over a level the model is already at, and says so", () => {
     expect(dropPlan({ slots: [...sol.slots] }, "high", "medium", false)).toEqual({
       kind: "none",
-      label: "Already at medium",
+      label: "Already takes normal tasks",
     });
   });
 
@@ -62,9 +62,9 @@ describe("what a drop on the Models board does", () => {
 describe("the words the Models board uses for a model", () => {
   it("lists levels strongest first, however they were stored", () => {
     expect(levelList([])).toBe("");
-    expect(levelList(["low"])).toBe("low");
-    expect(levelList(["medium", "high"])).toBe("high and medium");
-    expect(levelList(["low", "premium", "high"])).toBe("premium, high and low");
+    expect(levelList(["low"])).toBe("simple tasks");
+    expect(levelList(["medium", "high"])).toBe("hard and normal tasks");
+    expect(levelList(["low", "premium", "high"])).toBe("premium, hard and simple tasks");
   });
 
   it("names the provider on a pill only where the label does not already", () => {
@@ -77,7 +77,7 @@ describe("the words the Models board uses for a model", () => {
   });
 
   it("says where a model is used, or that it is not", () => {
-    expect(usedLine({ slots: ["medium", "high"] })).toBe("Used at high and medium.");
+    expect(usedLine({ slots: ["medium", "high"] })).toBe("Takes hard and normal tasks.");
     expect(usedLine({ slots: [] })).toBe("Not in use. It is never picked on its own.");
   });
 
@@ -85,9 +85,9 @@ describe("the words the Models board uses for a model", () => {
   // levels already use an arrival they place, so only one with no level
   // waits for one; its panel reads the same note as its pill.
   it("says where a new model is used, or that it waits for a level", () => {
-    expect(newModelNote({ slots: ["medium"] })).toBe("New here - it is used at medium.");
+    expect(newModelNote({ slots: ["medium"] })).toBe("New here - it takes normal tasks.");
     expect(newModelNote({ slots: ["medium", "high"] })).toBe(
-      "New here - it is used at high and medium.",
+      "New here - it takes hard and normal tasks.",
     );
     expect(newModelNote({ slots: [] })).toBe(
       "New here - it is not in use until you give it a level.",

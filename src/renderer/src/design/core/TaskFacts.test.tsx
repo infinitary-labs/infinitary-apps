@@ -221,7 +221,7 @@ describe("one task's facts on the crew summary and the task record", () => {
     const record = renderToStaticMarkup(<TaskFactStrip facts={facts} why />);
     const labels = (html: string) =>
       [...html.matchAll(/data-task-fact-label="">([^<]+)</g)].map((match) => match[1]);
-    // One row of two cells, then the review's own row.
+    // One row of three cells, then the review's own row.
     const doc = parseDocument(summary) as unknown as Node;
     const rows: string[][] = [];
     walk(doc, (node) => {
@@ -232,14 +232,15 @@ describe("one task's facts on the crew summary and the task record", () => {
       });
       rows.push(row);
     });
-    expect(rows).toEqual([["Model", "Pull request"], ["Review"]]);
+    expect(rows).toEqual([["Model", "Difficulty", "Pull request"], ["Review"]]);
     expect(labels(summary)).not.toContain("Intelligence");
     expect(Object.fromEntries(factsOf(summary))).toMatchObject({
       model: "Nano Banana Pro",
       change: "#57",
       checks: "running for 15m",
     });
-    expect(summary).toContain('data-slot="medium"');
+    // Difficulty is the level the task's routing asked for, not the slot that served it.
+    expect(summary).toContain('data-slot="high"');
     // The counts and each watch's next read are the task card's.
     expect(summary).not.toContain("skipped");
     expect(summary).not.toContain("next read");

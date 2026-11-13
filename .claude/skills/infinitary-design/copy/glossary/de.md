@@ -61,6 +61,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | a stronger model | ein stärkeres Modell | |
 | Reasoning | Denkaufwand | |
 | Intelligence | Intelligenz | |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Schwer / Normal / Einfach, Schwierigkeit | How hard the task is, never a reasoning word. |
 | computer | Computer | Every computer, never "Rechner" or "Mac" in a sentence. |
 | this computer | dieser Computer | |
 | phone | Telefon | |

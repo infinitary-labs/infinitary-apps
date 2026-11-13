@@ -374,7 +374,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/renderer/src/settings/devicesWords.ts": 71,
   "src/renderer/src/settings/generalWords.ts": 5,
   "src/renderer/src/settings/keyRecorder.ts": 3,
-  "src/renderer/src/settings/levelDrops.ts": 13,
+  "src/renderer/src/settings/levelDrops.ts": 12,
   "src/renderer/src/settings/modelsWords.ts": 13,
   "src/renderer/src/settings/panelsWords.ts": 12,
   "src/renderer/src/settings/projectCostWords.ts": 6,

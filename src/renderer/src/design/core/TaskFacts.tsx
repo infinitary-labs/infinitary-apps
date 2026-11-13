@@ -425,13 +425,13 @@ export function TaskFactStrip({
               <span data-task-fact="model" title={facts.model}>
                 {facts.model}
               </span>
-              {facts.tier && (
-                <span data-task-fact="intelligence" data-slot={facts.tier}>
-                  <SlotBadge slot={facts.tier} />
-                </span>
-              )}
             </div>
           </div>
+        )}
+        {facts.tier && (
+          <Cell label={m.uiTaskFactsDifficulty()} fact="intelligence" data-slot={facts.tier}>
+            <SlotBadge slot={facts.tier} />
+          </Cell>
         )}
         {facts.reasoning && (
           <Cell
@@ -536,7 +536,7 @@ export function RecordCell({
 
 /**
  * The hover preview's footer (INF-2528, the captain's direction B): one row
- * that never wraps - the model with its intelligence badge, then the change
+ * that never wraps - the model, then its Difficulty badge, then the change
  * with its checks as one state and its time (`#813 running for 11m`); a
  * long model name gives way first, ending in an ellipsis. A review's
  * verdict takes a second row. Reasoning, the footnote, the check counts, a
@@ -560,13 +560,13 @@ function SummaryStrip({ facts }: { facts: TaskFacts }) {
                 <span data-task-fact="model" title={facts.model}>
                   {facts.model}
                 </span>
-                {facts.tier && (
-                  <span data-task-fact="intelligence" data-slot={facts.tier}>
-                    <SlotBadge slot={facts.tier} />
-                  </span>
-                )}
               </div>
             </div>
+          )}
+          {facts.tier && (
+            <Cell label={m.uiTaskFactsDifficulty()} fact="intelligence" data-slot={facts.tier}>
+              <SlotBadge slot={facts.tier} />
+            </Cell>
           )}
           {(change || checks) && (
             <div className="cell">

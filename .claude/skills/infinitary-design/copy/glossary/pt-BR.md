@@ -49,6 +49,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | a stronger model | um modelo mais forte | |
 | Reasoning | Raciocínio | |
 | Intelligence | Inteligência | |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simples, Dificuldade | How hard the task is, never a reasoning word. |
 | computer | computador | For every computer, Mac, Linux or Windows. |
 | this computer | este computador | |
 | phone | celular | The Brazilian everyday word. |

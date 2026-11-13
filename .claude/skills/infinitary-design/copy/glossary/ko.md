@@ -88,6 +88,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Integrations | 연동 | |
 | Secrets | 비밀 정보 | |
 | Intelligence | 지능 | |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | 프리미엄 / 어려움 / 보통 / 간단, 난이도 | How hard the task is, never a reasoning word. |
 | Reasoning | 추론 | |
 | Observe | 관찰 | |
 | demo / recording | 데모 / 녹화본 | Replaces video and clip |

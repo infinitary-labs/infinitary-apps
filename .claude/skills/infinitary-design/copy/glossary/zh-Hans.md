@@ -90,7 +90,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | program (a script filing parts) | 程序 | |
 | part (of a program or task) | 部分 / 组成部分 | |
 | Reasoning | 推理 | Used instead of thinking level or effort. |
-| Premium / High / Med / Low (model levels) | 顶级 / 高 / 中 / 低 | |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | 顶级 / 困难 / 普通 / 简单, 难度 | How hard the task is, never a reasoning word. |
 | press (a button) / press (a key) | 点击 / 按 | |
 | Not now | 暂不 | |
 | Done / Got it | 完成 / 知道了 | |

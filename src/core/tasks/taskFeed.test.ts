@@ -61,7 +61,7 @@ describe("task feed updates", () => {
     [
       "escalated",
       { tier: "high", escalated_to: "FM3K-43" },
-      "Moved to a stronger model: high; continues as FM3K-43",
+      "Moved to a stronger model: Hard; continues as FM3K-43",
     ],
     ["escalated", null, "Updated: The update itself."],
     ["note", { ledger: "verdict" }, "First mate: The update itself."],

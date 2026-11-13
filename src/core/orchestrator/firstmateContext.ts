@@ -7,6 +7,7 @@ import {
   isPreviewBody,
 } from "@shared/cards";
 import { forgePlace } from "@shared/forge";
+import { levelForFirstmate } from "@shared/levelWords";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { catalogEntry } from "@shared/providers";
 import { PREMIUM_SLOT, SLOTS, type Slot, servedModelKey, servedProviderOf } from "@shared/quota";
@@ -381,7 +382,7 @@ export class FirstmateContext {
    * under each. An offering in no bucket (off) is not listed; it is still
    * reachable by pinning it by name. Bucket order and names are the same
    * four words the work-shape tier table and defer_until's bucket:<x>
-   * speak.
+   * speak, each with the word the captain reads for it (`levelForFirstmate`).
    */
   private modelBucketLines(): string[] {
     const available = this.options.availableModels();
@@ -406,7 +407,7 @@ export class FirstmateContext {
       const rows = byBucket.get(bucket);
       if (!rows || rows.length === 0) continue;
       lines.push(
-        `${bucket}${bucket === PREMIUM_SLOT ? " (crew: never picked automatically)" : ""}:`,
+        `${levelForFirstmate(bucket)}${bucket === PREMIUM_SLOT ? " (crew: never picked automatically)" : ""}:`,
       );
       lines.push(...rows);
     }

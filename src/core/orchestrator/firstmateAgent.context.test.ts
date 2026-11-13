@@ -253,7 +253,7 @@ describe("models by intelligence bucket (only shown on change)", () => {
     expect(first.models_by_intelligence_bucket).toContain(
       '  - openai-codex/gpt-6-astra "GPT 6 Astra" (Codex)',
     );
-    expect(first.models_by_intelligence_bucket).toContain("high:");
+    expect(first.models_by_intelligence_bucket).toContain("high (Hard):");
     expect(first.models_by_intelligence_bucket).toContain(
       '  - openai-codex/gpt-5.6-sol "GPT 5.6 Sol" (Codex)',
     );
@@ -279,7 +279,7 @@ describe("models by intelligence bucket (only shown on change)", () => {
         ref.provider === "openai-codex" && ref.id === "gpt-5.6-sol" ? [bucket] : [],
     });
     await agent.converse("what can you route to?");
-    expect(session.prompts[0]).toContain("high:");
+    expect(session.prompts[0]).toContain("high (Hard):");
     session.emitTurnEnd("Noted.");
     session.resolveNextPrompt();
     await tick();
@@ -287,7 +287,7 @@ describe("models by intelligence bucket (only shown on change)", () => {
     bucket = "medium";
     await agent.converse("and now?");
     expect(decodeContext(session.prompts[1] as string).models_by_intelligence_bucket).toContain(
-      "medium:",
+      "medium (Normal):",
     );
     session.resolveNextPrompt();
     await tick();
@@ -314,8 +314,8 @@ describe("models by intelligence bucket (only shown on change)", () => {
     });
     await agent.converse("what can you route to?");
     const first = session.prompts[0] as string;
-    expect(first).toContain("high:");
-    expect(first).toContain("medium:");
+    expect(first).toContain("high (Hard):");
+    expect(first).toContain("medium (Normal):");
     expect(first.match(/openai-codex\/gpt-5\.6-sol/g)).toHaveLength(2);
     session.resolveNextPrompt();
     await tick();

@@ -46,6 +46,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | Settings | 設定 | Taiwan's word; 設置 is mainland. |
 | Appearance | 外觀 | Standard. |
 | Intelligence (Settings tab) | 智慧等級 | 智慧 is Taiwan's word for intelligence; 等級 says it is a level, not reasoning. |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | 頂級 / 困難 / 普通 / 簡單, 難度 | How hard the task is, never a reasoning word. |
 | Reasoning | 推理 | The fact strip's label. |
 | rigor levels (Quick, Default, Careful) | 快速、預設、謹慎 | The dimension itself is 謹慎度, as in 謹慎度：快速. |
 | Merges on its own | 自行合併 | Short label. |

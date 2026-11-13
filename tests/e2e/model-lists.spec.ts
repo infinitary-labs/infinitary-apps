@@ -8,6 +8,7 @@ import {
   modelGoneLead,
   modelGoneNote,
 } from "../../src/core/routing/modelNews";
+import { levelList } from "../../src/shared/levelWords";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
@@ -201,9 +202,13 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
       // choosing it keeps it listed.
       const low = models.locator('[data-slot-group="low"]');
       await low.getByRole("button", { name: "Add model" }).click();
-      const picker = low.getByRole("group", { name: "Add a model to low" });
-      await picker.getByRole("textbox", { name: "Find a model to add to low" }).fill("opus 4.8");
-      await picker.getByRole("button", { name: "Add Claude Opus 4.8 to low" }).click();
+      const picker = low.getByRole("group", { name: `Add a model to ${levelList(["low"])}` });
+      await picker
+        .getByRole("textbox", { name: `Find a model to add to ${levelList(["low"])}` })
+        .fill("opus 4.8");
+      await picker
+        .getByRole("button", { name: `Add Claude Opus 4.8 to ${levelList(["low"])}` })
+        .click();
       await expect(low.getByRole("button", { name: "Claude Opus 4.8", exact: true })).toBeVisible();
       expect(await claudeRows(app.page)).toContain(rowKey("claude-opus-4-8"));
 

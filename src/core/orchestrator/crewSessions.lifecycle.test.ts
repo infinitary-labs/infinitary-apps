@@ -601,7 +601,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const note = events.find((event) => event.type === "firstmate_note");
     expect(note && "text" in note ? note.text : "").toBe(
-      'Using a medium model for "Big refactor" - high models have used up their allowance right now.',
+      '"Big refactor" is a hard task on a model for normal tasks. Your models for hard tasks have used up their allowance right now.',
     );
   });
 
@@ -623,7 +623,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const note = events.find((event) => event.type === "firstmate_note");
     expect(note && "text" in note ? note.text : "").toBe(
-      'Using a medium model for "Big refactor" - Claude\'s high models are paused until you sign in again.',
+      '"Big refactor" is a hard task on a model for normal tasks. Claude\'s models for hard tasks are paused until you sign in again.',
     );
   });
 

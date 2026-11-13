@@ -144,7 +144,10 @@ export type TaskFacts = {
   plan: TaskPlan | null | undefined;
   /** The model's name through the one lookup; null before assignment. */
   model: string | null;
-  /** Its intelligence level, the slot its crewmate is served on. */
+  /**
+   * How hard the task is (its Difficulty): the level its routing asked for,
+   * or the level its crewmate is served on when the record cannot say.
+   */
   tier: Slot | null;
   /** The reasoning its session opened at. */
   reasoning: Reasoning | null;
@@ -227,7 +230,7 @@ export function taskFactsOf(task: TaskFactsInput, modelName: (model: string) => 
     plan: task.activityLog === undefined ? undefined : (task.plan ?? null),
     model,
     // The readout belongs to a model: none of it stands without one.
-    tier: model ? task.tier : null,
+    tier: model ? (task.modelReason?.asked ?? task.tier) : null,
     reasoning: model ? (task.reasoning ?? null) : null,
     reason: model && task.reasoning ? reasoningNote(task.reasoning) : null,
     why: model ? modelWhyOf(task, modelName) : null,

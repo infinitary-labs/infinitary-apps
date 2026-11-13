@@ -343,7 +343,25 @@ async function expectControlsWhole(page: Page, controls: Locator[]) {
 const cardRoom = (page: Page) =>
   settled(page, async () => (await cardSurface(page).boundingBox())?.height ?? 0);
 
-test("a card in a short window at a larger size keeps its reading room and every control", async () => {
+/** The shown card's title, whole inside the scroller it shares with the body. */
+async function expectTitleWhole(page: Page) {
+  // The scroller holding the title; the card may also hold another one.
+  const middle = cardSurface(page).locator("[data-card-middle]", {
+    has: page.locator("[data-card-title]"),
+  });
+  const title = middle.locator("[data-card-title]");
+  const boxes = await settled(page, async () => ({
+    title: await title.boundingBox(),
+    middle: await middle.boundingBox(),
+  }));
+  if (!boxes.title || !boxes.middle) throw new Error("The card's title is not laid out");
+  expect(within(boxes.title, boxes.middle), "the title is cut off").toEqual([]);
+}
+
+/** The page's own height, which a larger size makes shorter than the window. */
+const pageHeight = (page: Page) => page.evaluate(() => innerHeight);
+
+test("a card in a short window keeps its reading room and every control", async () => {
   const launched = await launchApp({
     scenarios: [everyCardKind, cardWidths],
     withMockProvider: true,
@@ -359,6 +377,14 @@ test("a card in a short window at a larger size keeps its reading room and every
       card.getByRole("button", { name: MOCK_CHOICE_DEFAULT_LABEL, exact: true }),
       cardReply(page).field,
     ];
+    const roomAt = async (size: { width: number; height: number }) => {
+      await resizeWindow(app, page, size);
+      await showCard(page, DECISION_TITLE);
+      await expect(bodyFrame).toHaveAttribute("data-frame-drawn", "");
+      const room = await cardRoom(page);
+      await expectControlsWhole(page, controls);
+      return { room, page: await pageHeight(page) };
+    };
 
     // At 150% the smallest window leaves no room for the body beside the
     // card's title: the two share the space between the head and the
@@ -375,23 +401,30 @@ test("a card in a short window at a larger size keeps its reading room and every
     await expectControlsWhole(page, controls);
     await capture(launched, "smallest-150.png");
 
-    // The room a long decision has at the smallest window at 100%.
+    // A 1280 by 720 screen, common on small laptops and remote desktops: the
+    // stage's air gives way as the window comes down from 864 tall, so a 720
+    // tall window keeps the card the room it has at 864. Settings
+    // takes the home screen away, so the card's body draws again on the way
+    // back, and its room is measured only once it has.
     await chooseSize(page, 100);
-    // Settings takes the home screen away, so the card's body draws again
-    // on the way back, and its room is measured only once it has.
-    await showCard(page, DECISION_TITLE);
-    await expect(bodyFrame).toHaveAttribute("data-frame-drawn", "");
-    const smallest = await cardRoom(page);
-    await expectControlsWhole(page, controls);
+    const tall = await roomAt({ width: 1280, height: 864 });
+    const laptop = await roomAt({ width: 1280, height: 720 });
+    expect(laptop.room).toBeGreaterThanOrEqual(tall.room - 1);
+    await capture(launched, "laptop-100.png");
 
-    // At 150% a 1200 × 800 window is shorter than that smallest window; the
-    // stage's air gives way, so the card keeps the same room.
+    // What that screen leaves the window, about 650 tall: once the air is
+    // spent the card gives way only as much as the page does, and its title
+    // stays whole.
+    const screen = await roomAt({ width: 1280, height: 650 });
+    expect(screen.room).toBeGreaterThanOrEqual(laptop.room - (laptop.page - screen.page) - 1);
+    await expectTitleWhole(page);
+    await capture(launched, "screen-100.png");
+
+    // At 150% a 1200 × 800 window is shorter still to the page; the card
+    // gives way only by that difference.
     await chooseSize(page, 150);
-    await resizeWindow(app, page, { width: 1200, height: 800 });
-    await showCard(page, DECISION_TITLE);
-    await expect(bodyFrame).toHaveAttribute("data-frame-drawn", "");
-    expect(await cardRoom(page)).toBeGreaterThanOrEqual(smallest - 1);
-    await expectControlsWhole(page, controls);
+    const larger = await roomAt({ width: 1200, height: 800 });
+    expect(larger.room).toBeGreaterThanOrEqual(screen.room - (screen.page - larger.page) - 1);
     await capture(launched, "short-150.png");
 
     // A notice under the input stays whole on screen, and the card yields

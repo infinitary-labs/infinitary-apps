@@ -302,15 +302,16 @@ Window minimums and the thread's separate placement ladder are unchanged.
 
 ### Short windows
 
-A larger size makes the page shorter than the shortest window at 100%: 640px, the window's minimum height.
-At 150% a 1200 × 800 window is 533px tall to the page, and the smallest window 427px.
+A short page leaves a card little to read.
+A 1280 × 720 screen, common on small laptops and remote desktops, leaves the window about 650px, and a larger size makes the page shorter still: at 150% a 1200 × 800 window is 533px tall to the page, and the smallest window 427px.
 The stage's vertical layout is fixed pixels, so the room under them went to the card first: its body shrank to a line, and its buttons and title were cut off.
-`--stage-squeeze` (`design/styles.css`) is how far the page falls short of 640px, up to the 144px of air the stage can spare.
+`--stage-squeeze` (`design/styles.css`) is how far the page falls short of 864px, up to the 144px of air the stage can spare: 864px is the lowest page that gives a 720px page all of it.
 The air gives way in proportion, all of it together: the 46px between the top bar and the stack (`--stage-yield-top`), the 14px between the pager and the last turn (`--stage-yield-lane`), and 84 of the 96px under the input (`--prompt-floor`).
-The card's cap (`CARD_MAX_HEIGHT`), the input's foot and the stage's centre (`STAGE_TOP`) read those variables, so a card keeps the room it has in the smallest window at 100% down to a 496px page: 150% in a window about 744 tall, and 110% and 125% at every window.
-This short-window adjustment moves nothing at 640px and taller.
+The card's cap (`CARD_MAX_HEIGHT`), the input's foot and the stage's centre (`STAGE_TOP`) read those variables, so a card keeps the room it has in an 864px page down to a 720px one (a 1280 × 720 window, or 125% in a 1440 × 900 one), and below that gives way only as much as the page does.
+The input's foot sits at the same place with a card up or not, so it comes down in a short page on the home screen too.
+This short-window adjustment moves nothing at 864px and taller.
 The notices under the input publish their height (`--prompt-notices`, written by `HomePrompt`'s `usePromptFoot`, `app/promptFoot.ts`), and the input's foot never comes down past what they need, so a notice is never cut off; whenever a notice needs more than the reserved space, the input and the card make room for it.
-`promptShellMax` keeps its 640px-and-up arithmetic: the air given back only moves the input's top further from the first mate's frame, so its bound stays safe.
+`promptShellMax` keeps its own arithmetic: the air given back only moves the input's top further from the first mate's frame, so its bound stays safe.
 
 Below that, the card itself gives way, and only its reading space does.
 `ResponseCard` holds the title, the revised line and the body in one middle scroller (`data-card-middle`) between the head and the rows under it.
@@ -320,7 +321,7 @@ That matters beyond looks: Chromium does not render a sandboxed frame that is ou
 The middle's own scrollbar is hidden so it takes no width from the frame; the body's bar shows there is more.
 A card too short even for its head and the rows under it scrolls as a whole rather than cutting them off: at 150% in the smallest window, while a notice takes room or under several rows of chrome.
 `cardPresentation` counts the head, the title, the revised line and the rows as chrome and observes them, never the middle itself.
-`window-size.spec.ts` ("a card in a short window at a larger size") checks that a card first shown at 150% in the smallest window draws with its controls whole, that 150% in a 1200 × 800 window gives the card the room it has at 100% in the smallest window, and that a notice under the input stays on screen.
+`window-size.spec.ts` ("a card in a short window keeps its reading room and every control") checks that a card first shown at 150% in the smallest window draws with its controls whole, that a 1280 × 720 window gives the card the room it has at 1280 × 864, that at 1280 × 650 and at 150% in a 1200 × 800 window the card gives way only as much as the page with its title and controls whole, and that a notice under the input stays on screen.
 
 The Crewmate tab follows the same rule through `RecordPaneChrome`'s optional `data-record-middle`: its title, tabs and transcript scroll together below the pinned top row.
 The transcript shrinks to its one-line floor first, then the title and tabs give way, leaving the status line and whole message box in sight.
@@ -331,7 +332,7 @@ Its heading clips the tab underline, and keyboard focus scrolls the tabs back in
 ### Collapsed headers under the input
 
 A collapsed side panel at a rail's foot keeps its header on the rail and takes no card room, so on a narrow page the input shares columns with the Activity and Tasks headers.
-Where the input's foot comes down to their top it would be drawn over them: in a short window at a larger size (125% in the smallest window, 150% in a 1200 × 800 window), or over a stack of collapsed headers at any size.
+Where the input's foot comes down to their top it would be drawn over them: in a short page (a narrow window under 864px tall, such as 1100 × 720 or the smallest window, or a short window at a larger size), or over a stack of collapsed headers at any size.
 `usePromptFoot` (`app/promptFoot.ts`, in `HomePrompt`) measures the collapsed panels at a rail's foot that share columns with the input, each only within its rail so a folded rail counts for nothing, and publishes how high the highest reaches above the floor as `--prompt-panels`.
 A rail that already ends above the input, because it holds an expanded panel ("Expanded panels beside the input"), has no header at its foot for the input to stand on, so its collapsed panels count for nothing either.
 With no card up, `--prompt-floor` is the larger of that and `--prompt-floor-base`, the foot the window and the notices give, so the input stands on the headers, and the card's cap and the stage's centre follow it as they do for a notice.

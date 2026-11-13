@@ -104,8 +104,8 @@ The Edit menu's Redo item reaches the page only when the platform has something 
 - Multi-line means a line break, a wrap, or a chip.
   Then the foot row appears (hint, count, send).
   The text keeps the send control's column clear at every height, so it wraps at the same width in both layouts and cannot flip between them.
-- The input is pinned by its bottom, `--prompt-floor` above the floor: at least `--space-9` in a window 640 px tall or taller.
-  A page a larger size makes shorter gives back up to 84 px of it (`docs/renderer.md`, "Short windows").
+- The input is pinned by its bottom, `--prompt-floor` above the floor: at least `--space-9` in a page 864 px tall or taller.
+  A shorter page gives back up to 84 px of it, all of it at 720 px (`docs/renderer.md`, "Short windows").
   With no card up it stands on a collapsed side panel header it shares columns with rather than cover it, and while a card is up that header steps aside instead (`docs/renderer.md`, "Collapsed headers under the input").
   A `ResizeObserver` on the shell writes `--prompt-rise` (its height over one line, plus the last turn's `LAST_TURN_RISE` while a turn shows) on the document, and the height over one line alone as `--prompt-growth`, which a side rail that ends above the input follows (`docs/renderer.md`, "Expanded panels beside the input").
   It never goes through the store, so a new line never re-renders the stage: `HomeMate` and `HomeScreen` subscribe only to whether there is a draft.

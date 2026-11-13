@@ -20,11 +20,12 @@
   /* The notices' height under the input, written by HomePrompt. */
   --prompt-notices: 0px;
   --stage-lift-duration: var(--dur-fast);
-  /* How much shorter the window is than the shortest window at 100%
-     (640px), which only a larger size can make (docs/renderer.md, "Short
-     windows"). The stage's air gives way by that much, up to the 144px it
-     can spare, so a card keeps the room it has in the shortest window. */
-  --stage-squeeze: clamp(0px, 640px - 100vh, 144px);
+  /* How much shorter the page is than 864px, the lowest page that can give
+     all 144px of the stage's air back and still keep it (docs/renderer.md,
+     "Short windows"). The stage's air gives way by that much, up to the
+     144px it can spare, so a card keeps the room it has in an 864px page
+     down to a 720px one: a 1280 by 720 window, or a 1440 by 900 one at 125%. */
+  --stage-squeeze: clamp(0px, 864px - 100vh, 144px);
   /* The shares, all spent together: the 46px between the top bar and the
      stack, the 14px between the pager and the whisper, and 84 of the 96px
      under the input. */

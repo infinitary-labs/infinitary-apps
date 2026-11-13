@@ -3168,5 +3168,6 @@
   "devicesJoinPasteAnother": "لصق رابط آخر",
   "devicesJoinAddressSub": "الحساب و{computer}، كما تسجّل الدخول إليه عبر SSH. {mustBeOn}",
   "devicesJoinYourAccount": "حسابك",
-  "devicesJoinPickHint": "اكتب حسابك، ثم اختر {computer} لملء عنوانه."
+  "devicesJoinPickHint": "اكتب حسابك، ثم اختر {computer} لملء عنوانه.",
+  "automationRunFound": "ما وُجد: {words}"
 }

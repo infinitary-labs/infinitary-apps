@@ -49849,6 +49849,9 @@
                   "open"
                 ]
               }
+            },
+            "found": {
+              "type": "string"
             }
           },
           "required": [

@@ -47948,6 +47948,35 @@ export function devicesJoinPickHint(input: { computer: string }): string {
   return `Type your account, then pick your ${computer} to fill its address.`;
 }
 
+export function automationRunFound(input: { words: string }): string {
+  const words = input.words;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما وُجد: ${words}`;
+    case "de":
+      return `Gefunden: ${words}`;
+    case "es":
+      return `Encontrado: ${words}`;
+    case "fr":
+      return `Trouvé : ${words}`;
+    case "ja":
+      return `見つかったこと: ${words}`;
+    case "ko":
+      return `찾은 내용: ${words}`;
+    case "pt-BR":
+      return `Encontrado: ${words}`;
+    case "zh-Hans":
+      return `发现：${words}`;
+    case "zh-Hant":
+      return `發現：${words}`;
+    case "en-XA":
+      return `[Ƒöûñð: ${words} ~~~]`;
+    case "ar-XB":
+      return `\u202eFound: \u202c${words}`;
+  }
+  return `Found: ${words}`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -49565,6 +49594,7 @@ export const MESSAGES = {
   devicesJoinAddressSub,
   devicesJoinYourAccount,
   devicesJoinPickHint,
+  automationRunFound,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -51187,4 +51217,5 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   devicesJoinAddressSub: ["computer", "mustBeOn"],
   devicesJoinYourAccount: [],
   devicesJoinPickHint: ["computer"],
+  automationRunFound: ["words"],
 };

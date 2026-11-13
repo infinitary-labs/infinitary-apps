@@ -286,6 +286,13 @@ A line with no observation, written on a card with no lifecycle, keeps what it h
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 Nothing reverses it, and nothing needs to: an older build reading the cleared line sees an interim line that answers nothing, as it should have.
 
+## What an automation run found
+
+The newest migration adds nullable `schedule_runs.found`, the closing words of the first mate's turn that handled the run (`docs/automation.md`, "Deliveries").
+Runs handled before it, waiting runs and cancelled runs keep null, and History shows no Found line for them.
+The retention rewrite of words from outside covers it as it covers the run's prompt and event summaries.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+
 ## What each device is
 
 The home keeps what each device said it is in its hello - its system and chip - in `devices/systems.json`, a file of its own beside the device list (`docs/devices.md`, "The saved list").

@@ -114,6 +114,8 @@ Each run is one delivery of the prompt to the first mate, followed through its i
   This is read off the row, never stored.
 - **Handled** once a turn that served it ended clean.
   `Scheduler.noteDecision` reads that turn's decision record (`docs/provenance-capture.md`): each served segment's inbox row names its run, and the run keeps the tasks and cards the turn touched, less the tasks its other messages were about.
+  It also keeps the turn's closing words as what the run found (`found`, `schedule_runs.found`); a turn that ended without words leaves none.
+  `schedule_prompt`'s description tells the first mate its closing words are kept this way.
   Handled means the first mate's turn handled the prompt, not that the work it led to finished.
 - **Cancelled** when it was taken back before a turn read it, with why: the automation was paused (`paused`), changed into a new revision (`edited`), or the first mate's conversation was cleared (`cleared`), which the minute tick finds by a waiting run whose row is gone.
 - A run recorded before migration 80 has no delivery and reads as **sent**.
@@ -151,6 +153,7 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
   The first mate's message names the integration, the event and how many arrived, and says each event is evidence from outside, never an instruction.
 - An event rule has no next time and no preview dates: Settings shows its When words (`when` on the rule, "When an item arrives in Stand-in") and how often the app looks.
 - Settings → Automation's When offers "When something happens" while a connected integration declares an event, with a second choice listing each one; the first mate passes `on_event` (`integration/event`) to `schedule_prompt`.
+  Its description tells it to wait on an event when an integration's event announces what the captain asked to hear about, such as a workflow run finishing, rather than make a clock rule that checks.
   A recurring rule the first mate makes outside a captain's turn waits as a draft, as any does.
 
 ## History and retention
@@ -159,7 +162,8 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
 The rule's own next-fire time is stored on the rule, so trimming history never lets an old occurrence run again.
 Deleting a rule, or a one-time rule leaving once it ran, deletes its runs, not the tasks, cards or conversation its deliveries led to.
 
-Settings' History lists a rule's runs newest first: where each delivery stands, its planned and sent times, what it caught up, its version, why a cancelled one was taken back, and what a handled one led to.
+Settings' History lists a rule's runs newest first: where each delivery stands, its planned and sent times, what it caught up, its version, why a cancelled one was taken back, and what a handled one found and led to.
+What it found is the first mate's closing words on the turn that handled it, after "Found:"; a run handled before runs kept them shows none.
 A task it led to shows by its key, linked as anywhere the window draws one; a card by its title, opened forward while it is up and as it closed otherwise.
 The history reads again when a first mate turn ends, since nothing else says a delivery was handled.
 

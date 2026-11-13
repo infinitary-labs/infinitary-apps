@@ -2773,5 +2773,6 @@
   "devicesJoinPasteAnother": "貼上其他連結",
   "devicesJoinAddressSub": "帳號和 {computer}，照你用 SSH 登入它時的寫法輸入。{mustBeOn}",
   "devicesJoinYourAccount": "你的帳號",
-  "devicesJoinPickHint": "輸入你的帳號，再選擇你的 {computer} 來填入它的位址。"
+  "devicesJoinPickHint": "輸入你的帳號，再選擇你的 {computer} 來填入它的位址。",
+  "automationRunFound": "發現：{words}"
 }

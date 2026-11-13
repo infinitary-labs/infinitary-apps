@@ -36,7 +36,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
     name: "schedule_prompt",
     label: "Schedule prompt",
     description:
-      "Schedule [fm-op]: one of every_minutes (min 15), daily_at (HH:MM; optional days, IANA time_zone; default local), at_time (ISO 8601), on_event (integration/event; event_filter from integrations). Include all context in prompt. Runs while app does; missed runs fold into one. Use draft for open details.",
+      "Schedule [fm-op]: one of every_minutes (min 15), daily_at (HH:MM; optional days, IANA time_zone; default local), at_time (ISO 8601), on_event (integration/event; event_filter from integrations). When an integration's event announces what the captain asked to hear about, such as a workflow run finishing, use on_event, not a clock that checks. Include all context in prompt. Runs while app does; missed runs fold into one. A run's history keeps your closing words as what it found. Use draft for open details.",
     parameters: Type.Object({
       prompt: Type.String(),
       every_minutes: Type.Optional(Type.Number()),

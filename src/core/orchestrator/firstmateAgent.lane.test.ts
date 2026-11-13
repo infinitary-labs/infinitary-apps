@@ -705,6 +705,40 @@ describe("FirstmateAgent", () => {
     expect(readFileSync(join(paths.firstmateHomeDir, "keep.txt"), "utf8")).toBe("stay\n");
   });
 
+  // INF-3948: a rule's history shows what each run found, so a promise to
+  // tell the captain can be checked run by run (INF-3926's finding 1).
+  it("keeps the closing words of the turn that handled a scheduled run in its history", async () => {
+    const db = openInMemoryDatabase();
+    const inbox = new InboxStore(db);
+    const store = new ScheduleStore(db);
+    const scheduler = new Scheduler({
+      store,
+      notify: (wake, origin) => inbox.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, origin),
+      inbox,
+      broadcastEvent: () => {},
+    });
+    const { agent, session } = setup({ db, scheduler });
+    const rule = scheduler.create(
+      { kind: "every", minutes: 60 },
+      "Check whether the focus fix is in a published alpha.",
+      true,
+      "Alpha watch",
+    );
+    scheduler.tick(rule.nextFire + 1);
+    agent.pokeInbox();
+    await tick();
+    expect(session.prompts.at(-1)).toContain(
+      "Check whether the focus fix is in a published alpha.",
+    );
+    expect(scheduler.history(rule.id)[0]?.state).toBe("waiting");
+    session.emitTurnEnd("Not in a published alpha yet; the newest is alpha.552.");
+    session.resolveNextPrompt();
+    await tick();
+    const [run] = scheduler.history(rule.id);
+    expect(run?.state).toBe("handled");
+    expect(run?.found).toBe("Not in a published alpha yet; the newest is alpha.552.");
+  });
+
   // INF-751: whether the captain set a schedule is the first mate's evidence
   // to judge, and the wake it stamps; the change is not refused on it.
   it.each([true, false, undefined])(

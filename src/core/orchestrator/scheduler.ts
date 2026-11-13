@@ -608,9 +608,11 @@ export class Scheduler {
    * A turn's decision record (docs/automation.md, "Deliveries"): each
    * delivery it served and acknowledged is handled, linked to the tasks and
    * cards the turn touched - less the tasks the turn's other messages were
-   * about. A delivery released for a retry keeps waiting.
+   * about - and the turn's closing words as what the run found. A delivery
+   * released for a retry keeps waiting.
    */
-  noteDecision(record: DecisionRecord): void {
+  noteDecision(record: DecisionRecord, said?: string): void {
+    const found = said?.trim();
     if (record.disposition.inbox !== "acked" || !record.served) return;
     const segments = [
       ...record.served.prompt.segments,
@@ -626,6 +628,7 @@ export class Scheduler {
         at: record.endedAt,
         tasks: record.disposition.tasks.filter((task) => !about.has(task)),
         cards: record.disposition.cards,
+        ...(found ? { found } : {}),
       });
       const spec = this.options.store.get(run.scheduleId)?.spec;
       if (spec?.kind === "event" && run.events?.length)

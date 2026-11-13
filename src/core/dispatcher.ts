@@ -1358,6 +1358,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           const past = services.supervisor.cards.past(cardId);
           return past ? [{ id: cardId, title: past.title, open: false }] : [];
         }),
+        ...(run.found ? { found: run.found } : {}),
       }));
     },
     "inf:automation:preview": (spec) => ({ dates: services.scheduler.preview(spec) }),

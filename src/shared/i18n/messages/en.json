@@ -2852,5 +2852,6 @@
   "devicesJoinPasteAnother": "Paste another link",
   "devicesJoinAddressSub": "The account and {computer}, as you sign in to it with SSH. {mustBeOn}",
   "devicesJoinYourAccount": "Your account",
-  "devicesJoinPickHint": "Type your account, then pick your {computer} to fill its address."
+  "devicesJoinPickHint": "Type your account, then pick your {computer} to fill its address.",
+  "automationRunFound": "Found: {words}"
 }

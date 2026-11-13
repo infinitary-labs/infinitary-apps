@@ -442,6 +442,16 @@ describe("words from outside in saved conversations", () => {
     if (!saved) throw new Error("No saved rule");
     const [run] = w.scheduler.history(saved.id);
     expect(run?.events?.[0]?.summary).toContain(LENA.subject);
+    // A run the first mate handled keeps its closing words, which may quote the event.
+    const [earlier] = w.store.waiting(saved.id);
+    if (!earlier) throw new Error("No waiting run");
+    w.store.settle(earlier.id, {
+      delivery: "handled",
+      at: w.clock.now,
+      tasks: [],
+      cards: [],
+      found: `New mail: ${run?.events?.[0]?.summary}`,
+    });
     const [delivered] = w.inbox.allFor(FIRSTMATE_RECIPIENT);
     expect(delivered && renderWake(delivered)).toContain(LENA.subject);
 
@@ -467,6 +477,7 @@ describe("words from outside in saved conversations", () => {
     expect(after?.events?.[0]).toMatchObject({ id: run?.events?.[0]?.id });
     expect(after?.events?.[0]?.summary).toBe(NOTE);
     expect(after?.prompt).not.toContain(LENA.subject);
+    expect(after?.found).toBe(`New mail: ${NOTE}`);
     expect(w.store.carried(saved.id)).toEqual(new Set([run?.events?.[0]?.id]));
     // Its message, still waiting for the first mate's next turn, carries the note too.
     const [waiting] = w.inbox.allFor(FIRSTMATE_RECIPIENT);

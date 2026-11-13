@@ -1710,6 +1710,7 @@
   {"said":{"m":"devicesJoinAddressSub","a":{"computer":"‹computer›","mustBeOn":"‹mustBeOn›"}},"words":"The account and ‹computer›, as you sign in to it with SSH. ‹mustBeOn›"},
   {"said":{"m":"devicesJoinYourAccount"},"words":"Your account"},
   {"said":{"m":"devicesJoinPickHint","a":{"computer":"‹computer›"}},"words":"Type your account, then pick your ‹computer› to fill its address."},
+  {"said":{"m":"automationRunFound","a":{"words":"‹words›"}},"words":"Found: ‹words›"},
   {"said":{"m":"pastedFileRemove","a":{"lines":{"m":"fileAdd"}}},"words":"Remove file, Add files"},
   {"said":{"m":"pastedFileRemove"},"words":null},
   {"said":{"m":"notInTheCatalog"},"words":null}

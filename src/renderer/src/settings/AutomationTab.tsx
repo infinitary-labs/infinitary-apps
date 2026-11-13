@@ -21,6 +21,7 @@ import {
   automationZoneOf,
   automationZoneWords,
 } from "@shared/automationWords";
+import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationsView } from "@shared/integrations";
 import type { ProjectView } from "@shared/tasks";
 import type React from "react";
@@ -1055,6 +1056,11 @@ function HistoryRow({ run }: { run: AutomationRun }) {
           {runWords(run)} · version {run.revision}
         </div>
         {note && <div>{note}</div>}
+        {run.found && (
+          <div data-automation-run-found style={{ color: "var(--fg-2)", whiteSpace: "pre-wrap" }}>
+            {m.automationRunFound({ words: run.found })}
+          </div>
+        )}
         {(run.tasks.length > 0 || run.cards.length > 0) && (
           <div
             data-automation-run-work

@@ -2773,5 +2773,6 @@
   "devicesJoinPasteAnother": "粘贴另一个链接",
   "devicesJoinAddressSub": "账户和 {computer}，按你用 SSH 登录它时的写法填写。{mustBeOn}",
   "devicesJoinYourAccount": "你的账户",
-  "devicesJoinPickHint": "输入你的账户，然后选择你的 {computer} 来填入它的地址。"
+  "devicesJoinPickHint": "输入你的账户，然后选择你的 {computer} 来填入它的地址。",
+  "automationRunFound": "发现：{words}"
 }

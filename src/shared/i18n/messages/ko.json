@@ -2773,5 +2773,6 @@
   "devicesJoinPasteAnother": "다른 링크 붙여넣기",
   "devicesJoinAddressSub": "SSH로 로그인할 때 쓰는 계정과 {computer}예요. {mustBeOn}",
   "devicesJoinYourAccount": "내 계정",
-  "devicesJoinPickHint": "계정을 입력한 다음 {computer}을(를) 골라 주소를 채우세요."
+  "devicesJoinPickHint": "계정을 입력한 다음 {computer}을(를) 골라 주소를 채우세요.",
+  "automationRunFound": "찾은 내용: {words}"
 }

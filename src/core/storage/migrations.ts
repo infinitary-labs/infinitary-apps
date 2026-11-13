@@ -1371,6 +1371,10 @@ export const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "card_messages", "through", "TEXT");
     addColumn(db, "cards", "resolved_through", "TEXT");
   },
+  // What an automation's run found: the closing words of the first mate's
+  // turn that handled it (docs/automation.md, "History and retention").
+  // Null is a run handled before runs kept them, or one not handled.
+  (db) => addColumn(db, "schedule_runs", "found", "TEXT"),
 ];
 
 /**

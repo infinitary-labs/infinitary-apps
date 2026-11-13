@@ -2773,5 +2773,6 @@
   "devicesJoinPasteAnother": "別のリンクを貼り付ける",
   "devicesJoinAddressSub": "SSH でサインインするときと同じ形式のアカウントと {computer}。{mustBeOn}",
   "devicesJoinYourAccount": "アカウント",
-  "devicesJoinPickHint": "アカウントを入力してから {computer} を選ぶと、アドレスが入力されます。"
+  "devicesJoinPickHint": "アカウントを入力してから {computer} を選ぶと、アドレスが入力されます。",
+  "automationRunFound": "見つかったこと: {words}"
 }

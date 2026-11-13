@@ -96,6 +96,8 @@ export type RecordedRun = ScheduleRun & {
   tasks: string[];
   /** Card ids that turn showed. */
   cards: string[];
+  /** The closing words of the turn that handled it, when it ended with any. */
+  found?: string;
 };
 
 /** Where a fire leaves its rule: its next fire and state, and an event rule's cursor. */
@@ -150,6 +152,7 @@ type RunRow = {
   tasks: string | null;
   cards: string | null;
   events: string | null;
+  found: string | null;
 };
 
 function itemsOf(json: string | null): AutomationEventItem[] | undefined {
@@ -194,6 +197,7 @@ function runOf(row: RunRow): RecordedRun {
     cancelReason: row.cancel_reason,
     tasks: idsOf(row.tasks),
     cards: idsOf(row.cards),
+    ...(row.found ? { found: row.found } : {}),
   };
 }
 
@@ -388,12 +392,19 @@ export class ScheduleStore {
   settle(
     runId: number,
     outcome:
-      | { delivery: "handled"; at: number; tasks: readonly string[]; cards: readonly string[] }
+      | {
+          delivery: "handled";
+          at: number;
+          tasks: readonly string[];
+          cards: readonly string[];
+          /** The closing words of the turn that handled it. */
+          found?: string;
+        }
       | { delivery: "cancelled"; at: number; reason: RunCancelReason },
   ): void {
     this.db
       .prepare(
-        `UPDATE schedule_runs SET delivery = ?, settled_at = ?, cancel_reason = ?, tasks = ?, cards = ?
+        `UPDATE schedule_runs SET delivery = ?, settled_at = ?, cancel_reason = ?, tasks = ?, cards = ?, found = ?
          WHERE id = ? AND delivery = 'waiting'`,
       )
       .run(
@@ -402,6 +413,7 @@ export class ScheduleStore {
         outcome.delivery === "cancelled" ? outcome.reason : null,
         outcome.delivery === "handled" ? JSON.stringify(outcome.tasks) : null,
         outcome.delivery === "handled" ? JSON.stringify(outcome.cards) : null,
+        outcome.delivery === "handled" ? outcome.found || null : null,
         runId,
       );
   }
@@ -439,28 +451,29 @@ export class ScheduleStore {
   }
 
   /**
-   * Every run's prompt and event summaries written again through `scrub`,
-   * which answers the text with the words from outside it found due
-   * replaced (INF-952; docs/task-retention.md, "Words from outside"). Each
-   * event keeps its id, so an event is still delivered once. A delivery
-   * still waiting has its own message (`InboxStore.rewritePending`).
+   * Every run's prompt, event summaries and found words written again
+   * through `scrub`, which answers the text with the words from outside it
+   * found due replaced (INF-952; docs/task-retention.md, "Words from
+   * outside"). Each event keeps its id, so an event is still delivered once.
+   * A delivery still waiting has its own message (`InboxStore.rewritePending`).
    * Answers how many it replaced.
    */
   rewriteRuns(scrub: (text: string, at: number) => { value: string; replaced: number }): number {
     return this.db.transaction(() => {
       const rows = this.db
         .prepare(
-          "SELECT id, fired_at, prompt, events FROM schedule_runs WHERE instr(prompt, '[[') > 0 OR instr(COALESCE(events, ''), '[[') > 0",
+          "SELECT id, fired_at, prompt, events, found FROM schedule_runs WHERE instr(prompt, '[[') > 0 OR instr(COALESCE(events, ''), '[[') > 0 OR instr(COALESCE(found, ''), '[[') > 0",
         )
-        .all() as Pick<RunRow, "id" | "fired_at" | "prompt" | "events">[];
+        .all() as Pick<RunRow, "id" | "fired_at" | "prompt" | "events" | "found">[];
       const update = this.db.prepare(
-        "UPDATE schedule_runs SET prompt = ?, events = ? WHERE id = ?",
+        "UPDATE schedule_runs SET prompt = ?, events = ?, found = ? WHERE id = ?",
       );
       let replaced = 0;
       for (const row of rows) {
         const prompt = scrub(row.prompt, row.fired_at);
+        const found = row.found === null ? null : scrub(row.found, row.fired_at);
         let events = row.events;
-        let count = prompt.replaced;
+        let count = prompt.replaced + (found?.replaced ?? 0);
         if (row.events) {
           try {
             const items = JSON.parse(row.events) as unknown;
@@ -478,7 +491,7 @@ export class ScheduleStore {
           }
         }
         if (count === 0) continue;
-        update.run(prompt.value, events, row.id);
+        update.run(prompt.value, events, found?.value ?? null, row.id);
         replaced += count;
       }
       return replaced;

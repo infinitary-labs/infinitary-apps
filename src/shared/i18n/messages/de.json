@@ -2852,5 +2852,6 @@
   "devicesJoinPasteAnother": "Anderen Link einfügen",
   "devicesJoinAddressSub": "Das Konto und der {computer}, so wie du dich per SSH dort anmeldest. {mustBeOn}",
   "devicesJoinYourAccount": "Dein Konto",
-  "devicesJoinPickHint": "Gib dein Konto ein und wähl dann deinen {computer}, um seine Adresse einzutragen."
+  "devicesJoinPickHint": "Gib dein Konto ein und wähl dann deinen {computer}, um seine Adresse einzutragen.",
+  "automationRunFound": "Gefunden: {words}"
 }

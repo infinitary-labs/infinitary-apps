@@ -2931,5 +2931,6 @@
   "devicesJoinPasteAnother": "Colar outro link",
   "devicesJoinAddressSub": "A conta e o {computer}, do jeito que você faz login nele com SSH. {mustBeOn}",
   "devicesJoinYourAccount": "Sua conta",
-  "devicesJoinPickHint": "Digite sua conta e depois escolha seu {computer} para preencher o endereço dele."
+  "devicesJoinPickHint": "Digite sua conta e depois escolha seu {computer} para preencher o endereço dele.",
+  "automationRunFound": "Encontrado: {words}"
 }

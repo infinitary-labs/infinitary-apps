@@ -149,6 +149,12 @@ export const automationRunSchema = z.strictObject({
   tasks: z.array(z.strictObject({ id: z.string(), key: z.string(), title: z.string() })),
   /** The cards that turn showed; `open` while the card is still up. */
   cards: z.array(z.strictObject({ id: z.string(), title: z.string(), open: z.boolean() })),
+  /**
+   * What the run found: the closing words of the first mate's turn that
+   * handled it. Absent while it waits, when it was cancelled, when that turn
+   * ended without words, and on a run handled before runs kept them.
+   */
+  found: z.string().optional(),
 });
 export type AutomationRun = z.infer<typeof automationRunSchema>;
 

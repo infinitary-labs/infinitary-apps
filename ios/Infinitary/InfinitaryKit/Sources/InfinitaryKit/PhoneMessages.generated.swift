@@ -1619,6 +1619,7 @@ public enum PhoneMessages {
     public static func `devicesJoinAddressSub`(`computer`: String, `mustBeOn`: String) -> String { PhoneWords.format("devicesJoinAddressSub", [`computer`, `mustBeOn`]) }
     public static func `devicesJoinYourAccount`() -> String { PhoneWords.format("devicesJoinYourAccount", []) }
     public static func `devicesJoinPickHint`(`computer`: String) -> String { PhoneWords.format("devicesJoinPickHint", [`computer`]) }
+    public static func `automationRunFound`(`words`: String) -> String { PhoneWords.format("automationRunFound", [`words`]) }
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
@@ -3813,6 +3814,7 @@ extension PhoneWords {
         "devicesJoinAddressSub": ["computer", "mustBeOn"],
         "devicesJoinYourAccount": [],
         "devicesJoinPickHint": ["computer"],
+        "automationRunFound": ["words"],
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],

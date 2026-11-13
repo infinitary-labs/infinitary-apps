@@ -1438,11 +1438,11 @@ export class FirstmateAgent {
       inbox: inboxRows && inboxRows.length > 0 ? (failed ? "released" : "acked") : "none",
       asks,
     });
-    // A scheduled prompt this turn handled is handled in its rule's
-    // history, with the work the turn touched (docs/automation.md).
+    // A scheduled prompt this turn handled is handled in its rule's history,
+    // with the work it touched and its closing words (docs/automation.md).
     if (decision) {
       try {
-        this.options.scheduler?.noteDecision(decision);
+        this.options.scheduler?.noteDecision(decision, this.turn.closingText);
       } catch (caught) {
         console.warn("[firstmate] automation history failed at turn end:", caught);
       }

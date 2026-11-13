@@ -42,8 +42,8 @@ An alert names the computer address reached through the link, with Cancel beside
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
-Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks and Activity strip in the middle and the computer button at the right; the computer's name is in its sheet, not the bar.
-The strip is Apple's segmented control of three icons, a house for Home, a checklist for Tasks and a pulse line for Activity, with VoiceOver reading each tab's name; on iOS 26 the system draws it on glass, and it carries no unread dot.
+Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and the computer button at the right; the computer's name is in its sheet, not the bar.
+The strip is Apple's segmented control of three or four icons, a house for Home, a checklist for Tasks, a pulse line for Activity and three stacked panes for Panels, with VoiceOver reading each tab's name; on iOS 26 the system draws it on glass, and it carries no unread dot.
 The computer button is the Lucide computer glyph; a dot in the warning color sits at its corner only while the computer is out of reach, because a dot asks for attention, and VoiceOver hears the reach as its value.
 In reach the bar says nothing more.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
@@ -57,7 +57,7 @@ Sections with nothing to show stay off the list.
 Back returns to the list, with Command-[ from the keyboard, and Done closes from any page.
 The list starts focused on General, arrow keys move between its rows, and Return or Space opens one; native controls retain their keyboard focus treatment.
 Theme is Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
-Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
+Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I the computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
 Leave sits at the foot under a hairline: its sentence first, then Leave <computer> fitted at the trailing edge in the Mac's red outline, with an alert that keeps Keep it beside Leave and explains that a new link is needed to return.
 Out of reach, Forget this computer replaces Leave in the same shape, under its own sentence, asking in the same kind of alert before clearing only the local saved computer and explaining that the computer may still list this device.
@@ -65,13 +65,21 @@ Removed clears the computer's data from this device and takes the first screen's
 A protected-data read failure explains why joining cannot proceed and offers another attempt after unlocking.
 A damaged saved connection clears only the saved computer, keeps this device's identity and explains that a fresh link can join again; it never asks the person to unlock for a decoding error.
 
+## Panels
+
+Panels is the computer's own side panels, one under another in one scrolling column, in the order its rails hold them read left top, left bottom, right top, right bottom.
+Each sits under a header row: its title in micro capitals in the secondary color, its owner word, yours or the plugin's name, in the muted color, and a chevron at the trailing edge that folds it; a fold is kept on the device.
+The panel draws below in its own frame with the computer's panel stylesheet, as tall as it draws, or most of the column's height when it fills.
+A stopped panel, one that stops answering and one that could not be opened each show one callout line in the secondary color, with a secondary Retry where there is one.
+The tab shows only while the computer has a panel to draw; Computer keeps its place in the bar.
+
 ## Stage and rails
 
-The compact shell switches between Home, Tasks and Activity with the strip in the top bar; there is no bottom tab bar.
+The compact shell switches between Home, Tasks, Activity and Panels with the strip in the top bar; there is no bottom tab bar.
 Tasks joins the strip when the task reader is present, never as an inert placeholder.
-Landscape iPad uses two columns: a sidebar with Activity and, when present, Tasks as a segmented pair at its top, each scrolling alone, with the stage alongside at up to 560 points, and no strip in the bar.
+Landscape iPad uses two columns: a sidebar with Activity and, when present, Tasks and Panels as a segmented control at its top, each scrolling alone, with the stage alongside at up to 560 points, and no strip in the bar.
 Portrait and narrow multitasking return to one column with the strip; the tablet's width and height decide the layout, not its physical orientation alone.
-On any width the card with its pager, the message box, Tasks and Activity share one centred reading column of 560 points with its gutters, so the message box lines up with the card.
+On any width the card with its pager, the message box, Tasks, Activity and Panels share one centred reading column of 560 points with its gutters, so the message box lines up with the card.
 Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.
 A row has a semantic kind dot, the computer-authored words, an optional task key in micro mono inline before them, and a relative mono age.
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.

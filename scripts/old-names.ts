@@ -71,8 +71,8 @@ const ANY_TEST = /(\.test\.tsx?|\.spec\.ts)$|^tests\//;
 export const RULES: readonly Rule[] = [
   {
     class: "reader",
-    why: "the phone bundles the shared bridge that reads older cards' hooks and action names",
-    path: /^ios\/Infinitary\/InfinitaryApp\/CardAssets\/CardHost\.generated\.js$/,
+    why: "the phone bundles the shared bridge that reads older cards' hooks and action names, in its card and panel parent pages",
+    path: /^ios\/Infinitary\/InfinitaryApp\/CardAssets\/(Card|Panel)Host\.generated\.js$/,
     families: ["card-hook"],
   },
   // --- history: published or recorded, never rewritten ----------------------

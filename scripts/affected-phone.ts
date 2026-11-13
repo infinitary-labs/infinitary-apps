@@ -29,6 +29,8 @@ const INPUTS = [
   "tests/e2e/mockProvider.ts", "tests/e2e/crewScripts.ts", "tests/e2e/mockModels.ts", "tests/e2e/providerRequest.ts",
   // INF-2928 piece 3: the test home's Backlog row for a long press and a swipe.
   "tests/helpers/phoneRowMoves.ts",
+  // INF-3830 piece 2: the test home's fixture panel and the controls the Panels part asks of it.
+  "tests/helpers/phonePanels.ts", "tests/fixtures/phone-panels/phone-tally/", "tests/fixtures/phone-panels/phone-shy/",
 ] as const;
 // INF-827 (the captain's "skip changes to unused setup"): the device gates never run this
 // chooser or scripts/phone-test-home.ts, so they are not inputs. The chooser runs before the

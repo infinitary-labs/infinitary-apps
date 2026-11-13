@@ -144,6 +144,14 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneGoogle.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift",
   ] },
+  // INF-3830 piece 2: the Panels tab, its frames and the panel order.
+  { parts: family("panels"), files: [
+    "ios/Infinitary/CardRuntime/panelHost.ts",
+    "ios/Infinitary/InfinitaryApp/CardAssets/PanelHost.generated.js",
+    "ios/Infinitary/InfinitaryApp/PanelWebView.swift",
+    "ios/Infinitary/InfinitaryApp/PhonePanels.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanels.swift",
+  ] },
   { parts: family("pick"), files: [
     "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift",
   ] },
@@ -158,7 +166,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
   { parts: ALL, files: [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PinnedTransport.swift",
   ] },
-  { parts: family("cards"), files: ["scripts/generate-phone-cards.ts"] },
+  { parts: [...family("cards"), ...family("panels")], files: ["scripts/generate-phone-cards.ts"] },
   // Every native gate runs the Swift package tests before its part. One smoke part owns their inputs.
   { parts: ["join-read"], files: ["ios/Infinitary/InfinitaryKit/Tests/"] },
 ];

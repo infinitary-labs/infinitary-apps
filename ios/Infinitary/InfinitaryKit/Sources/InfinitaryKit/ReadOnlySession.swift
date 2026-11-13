@@ -144,6 +144,13 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var homeTakesSignInReturn = false
     /// INF-3764: the home reads the board without its closed rows (`board-without-closed.md`), so the first board read
     /// leaves them out; `closedRowsWanted` is set once Tasks shows Done or a search on this connection, and reads them.
+    /// INF-3830 piece 2: the computer serves its panels to a phone (`panels-on-the-phone`), said in its welcome or implied
+    /// by a newer major; an older computer shows no panel here (docs/ios.md, "Panels").
+    public private(set) var servesPanels = false
+    /// Each push a panel's page hears (`PhonePanelRequest.pushes`), live or replayed, and each welcome that reloads what
+    /// the phone held, after which every panel read runs again.
+    @ObservationIgnored public var onPanelPush: ((String, PhoneJSON) -> Void)?
+    @ObservationIgnored public var onPanelResync: (() -> Void)?
     @ObservationIgnored private var homeLeavesClosed = false
     @ObservationIgnored private var closedRowsWanted = false
     @ObservationIgnored private let phone: PhoneIdentity
@@ -248,6 +255,27 @@ public struct PhoneNotice: Equatable, Sendable {
         catch {
             if channel.changes { throw PhoneError.unconfirmed }
             throw PhoneError.invalidReply
+        }
+    }
+
+    /// INF-3830 piece 2: one of the asks a panel's page makes, on a channel the generated list allows. A read waits for
+    /// the computer to be in reach and asks again after a reconnect, so a panel out of reach keeps what it last drew; a
+    /// change is sent once and never repeated.
+    public func panelAsk(_ channel: PhonePanelRequest, _ args: [PhoneJSON]) async throws -> PhoneJSON {
+        guard servesPanels else { throw PhoneError.unavailable }
+        let ask = { () async throws -> PhoneJSON in
+            let answer = try await self.invoke(channel.rawValue, changes: channel.changes, args: args.map { try $0.foundation })
+            try Task.checkCancellation()
+            do { return try JSONDecoder().decode(PhoneJSON.self, from: answer) }
+            catch { throw channel.changes ? PhoneError.unconfirmed : PhoneError.invalidReply }
+        }
+        if channel.changes { return try await ask() }
+        var asked = -1
+        while true {
+            try await inReach(after: asked)
+            asked = reaches
+            do { return try await ask() }
+            catch PhoneError.unavailable { continue }
         }
     }
 
@@ -941,6 +969,8 @@ public struct PhoneNotice: Equatable, Sendable {
                 || (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
             homeTakesSignInReturn = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneGoogleWords.signInReturn)
             homeLeavesClosed = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
+            servesPanels = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
+            if catchUp == "reload" { onPanelResync?() }
             closedRowsWanted = false
             if !sceneObservations { computers = [] }
             sceneGeneration += 1
@@ -1040,6 +1070,10 @@ public struct PhoneNotice: Equatable, Sendable {
                 if ["task_changed", "task_event", "turn_end", "tool_execution_end"].contains(type) {
                     if holding { held?.work = true } else { workRevision += 1 }
                 }
+            }
+            if let onPanelPush, servesPanels, let channel = frame["channel"] as? String, PhonePanelRequest.pushes.contains(channel),
+               let payload = frame["payload"], let value = try? PhoneJSON.read(payload) {
+                onPanelPush(channel, value)
             }
             if frame["channel"] as? String == "inf:secrets:changed" { secretsRevision += 1 }
             // A page opens only as it is asked; an ending still ends the wait after a reconnect.

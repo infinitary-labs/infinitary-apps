@@ -1373,6 +1373,12 @@ public enum PhoneMessages {
     public static func `phonePairLinkSpent`() -> String { PhoneWords.format("phonePairLinkSpent", []) }
     public static func `phonePairRefused`() -> String { PhoneWords.format("phonePairRefused", []) }
     public static func `phonePairUpdateMac`() -> String { PhoneWords.format("phonePairUpdateMac", []) }
+    public static func `phonePanelIntegrity`() -> String { PhoneWords.format("phonePanelIntegrity", []) }
+    public static func `phonePanelNotServed`() -> String { PhoneWords.format("phonePanelNotServed", []) }
+    public static func `phonePanelUnreadable`() -> String { PhoneWords.format("phonePanelUnreadable", []) }
+    public static func `phonePanelWebCannotAsk`() -> String { PhoneWords.format("phonePanelWebCannotAsk", []) }
+    public static func `phonePanelWebCannotDo`() -> String { PhoneWords.format("phonePanelWebCannotDo", []) }
+    public static func `phonePanelWebTooLarge`() -> String { PhoneWords.format("phonePanelWebTooLarge", []) }
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
@@ -1628,6 +1634,7 @@ public enum PhoneMessages {
     public static func `phoneSshJoinWrongPassword`(`host`: String) -> String { PhoneWords.format("phoneSshJoinWrongPassword", [`host`]) }
     public static func `phoneTabActivity`() -> String { PhoneWords.format("phoneTabActivity", []) }
     public static func `phoneTabHome`() -> String { PhoneWords.format("phoneTabHome", []) }
+    public static func `phoneTabPanels`() -> String { PhoneWords.format("phoneTabPanels", []) }
     public static func `phoneTabTasks`() -> String { PhoneWords.format("phoneTabTasks", []) }
     public static func `phoneTaskChangeRefused`() -> String { PhoneWords.format("phoneTaskChangeRefused", []) }
     public static func `phoneTaskFactsAnswerReady`() -> String { PhoneWords.format("phoneTaskFactsAnswerReady", []) }
@@ -4550,6 +4557,12 @@ extension PhoneWords {
         "phonePairLinkSpent": [],
         "phonePairRefused": [],
         "phonePairUpdateMac": [],
+        "phonePanelIntegrity": [],
+        "phonePanelNotServed": [],
+        "phonePanelUnreadable": [],
+        "phonePanelWebCannotAsk": [],
+        "phonePanelWebCannotDo": [],
+        "phonePanelWebTooLarge": [],
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],
@@ -4805,6 +4818,7 @@ extension PhoneWords {
         "phoneSshJoinWrongPassword": ["host"],
         "phoneTabActivity": [],
         "phoneTabHome": [],
+        "phoneTabPanels": [],
         "phoneTabTasks": [],
         "phoneTaskChangeRefused": [],
         "phoneTaskFactsAnswerReady": [],

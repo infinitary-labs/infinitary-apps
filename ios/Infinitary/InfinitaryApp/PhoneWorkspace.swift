@@ -35,16 +35,18 @@ import Observation
     }
 }
 
-/// INF-1062, the captain's one-row bar: the three places the strip in the top bar switches between, in its order.
-/// Home holds the cards and the message box; Tasks and Activity run to the foot with nothing over them.
+/// INF-1062, the captain's one-row bar: the places the strip in the top bar switches between, in its order.
+/// Home holds the cards and the message box; Tasks, Activity and Panels run to the foot with nothing over them.
+/// INF-3830 piece 2, the captain's entry=tab: Panels is the fourth, shown only while the computer has panels to draw.
 enum PhoneTab: CaseIterable {
-    case home, tasks, activity
+    case home, tasks, activity, panels
 
     var title: String {
         switch self {
         case .home: PhoneMessages.phoneTabHome()
         case .tasks: PhoneMessages.phoneTabTasks()
         case .activity: PhoneMessages.phoneTabActivity()
+        case .panels: PhoneMessages.phoneTabPanels()
         }
     }
     var identifier: String { "tab-\(self)" }
@@ -55,14 +57,16 @@ enum PhoneTab: CaseIterable {
         case .home: "house"
         case .tasks: "checklist"
         case .activity: "waveform.path.ecg"
+        case .panels: "rectangle.3.group"
         }
     }
-    /// Command-1, Command-2 and Command-3, in the strip's order.
+    /// Command-1 to Command-4, in the strip's order.
     var key: KeyEquivalent {
         switch self {
         case .home: "1"
         case .tasks: "2"
         case .activity: "3"
+        case .panels: "4"
         }
     }
 }
@@ -87,19 +91,23 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @State private var resizing = PhoneResizing()
     @State private var messageContext = PhoneMessageContext()
     @State private var rail = Rail.tasks
+    @State private var panels: PhonePanelsModel
 
     init(session: ReadOnlySession, stage: Stage, tasks: Tasks?, composer: Composer?) {
         self.session = session; self.stage = stage; self.tasks = tasks; self.composer = composer
+        _panels = State(initialValue: PhonePanelsModel(session: session))
     }
 
     private var wide: Bool {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSize == .regular && viewport.width > viewport.height
     }
     private var sidebarWidth: CGFloat { min(320, viewport.width * 0.32) }
-    private enum Rail: Hashable { case tasks, activity }
+    private enum Rail: Hashable { case tasks, activity, panels }
     /// A landscape iPad always shows the stage with its sidebar, without losing the compact tab selection.
     private var shown: PhoneTab { wideBar || homeAhead ? .home : selection }
-    private var tabs: [PhoneTab] { tasks == nil ? [.home, .activity] : PhoneTab.allCases }
+    private var tabs: [PhoneTab] {
+        PhoneTab.allCases.filter { ($0 != .tasks || tasks != nil) && ($0 != .panels || panels.available) }
+    }
 
     var body: some View {
         // INF-1062: the system tab controller holds the tabs with its own bar hidden; the strip in the top bar is the one control.
@@ -112,6 +120,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             // INF-2764: the Tasks list kept while another tab shows reads nothing until it shows again.
             if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)).environment(\.phoneTasksShown, shown == .tasks) } }
             tab(.activity) { noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list")) }
+            if panels.available { tab(.panels) { noticed(PhonePanelsColumn(model: panels).background(PhoneTheme.background)) } }
         }
         .toolbar {
             // INF-1062: the strip sits in the bar's middle; a landscape iPad shows the stage beside its sidebar and needs none.
@@ -138,6 +147,16 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             if let probe = PhoneMenuTapProbe.shared { PhoneMenuTapProbeReading(probe: probe).id(probe.redraws) }
         }
         .task { PhoneMenuTapProbe.shared?.install(session) }
+        .task(id: session.servesPanels) { await panels.run() }
+        // A panel that decides for itself whether it shows runs out of sight until it says so.
+        .background { PhonePanelsOutOfSight(model: panels) }
+        // A folded or hidden panel keeps running; one on the screen is told so, and the tab leaves once none is left.
+        .onChange(of: shown == .panels || (wideBar && rail == .panels), initial: true) { _, visible in panels.visible = visible }
+        .onChange(of: panels.available) { _, available in
+            guard !available else { return }
+            if selection == .panels { selection = .home }
+            if rail == .panels { rail = tasks == nil ? .activity : .tasks }
+        }
         .environment(messageContext)
         // The first reading is the layout the workspace opens in, so the bar starts there.
         .onChange(of: wide, initial: true) { old, wide in if old == wide { wideBar = wide } else { settle(wide) } }
@@ -286,14 +305,18 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     // INF-944 item 6: in the tabs' order, opening on Tasks.
     private var sidebar: some View {
         VStack(spacing: 0) {
-            if tasks != nil {
+            if tasks != nil || panels.available {
                 Picker(PhoneMessages.phoneWorkspaceShow(), selection: $rail) {
-                    Text(PhoneMessages.phoneTabTasks()).tag(Rail.tasks)
+                    if tasks != nil { Text(PhoneMessages.phoneTabTasks()).tag(Rail.tasks) }
                     Text(PhoneMessages.phoneTabActivity()).tag(Rail.activity)
+                    if panels.available { Text(PhoneMessages.phoneTabPanels()).tag(Rail.panels) }
                 }.pickerStyle(.segmented).labelsHidden()
                     .padding([.horizontal, .top], PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
+                    .accessibilityIdentifier("sidebar-picker")
             }
-            if let tasks, rail == .tasks { tasks } else { activity }
+            if let tasks, rail == .tasks { tasks }
+            else if rail == .panels, panels.available { PhonePanelsColumn(model: panels) }
+            else { activity }
         }
         .frame(width: sidebarWidth).background(PhoneTheme.panel)
         .accessibilityElement(children: .contain).accessibilityIdentifier("phone-sidebar")
@@ -370,7 +393,7 @@ struct PhoneTabStrip: View {
         // The icons keep their size at every type setting, so the round width always fits between the side buttons.
         picker.frame(width: roundWidth)
         .dynamicTypeSize(...DynamicTypeSize.large)
-        // A segmented control takes no key equivalents of its own, so Command-1, -2 and -3 ride unseen buttons beside it.
+        // A segmented control takes no key equivalents of its own, so Command-1 to -4 ride unseen buttons beside it.
         .background {
             ForEach(tabs, id: \.self) { tab in
                 Button(tab.title) { selection = tab }.keyboardShortcut(tab.key, modifiers: .command)
@@ -450,7 +473,7 @@ private struct PhoneNoticeSurface: ViewModifier {
 
 extension PhoneWorkspace where Tasks == EmptyView, Composer == EmptyView {
     init(session: ReadOnlySession, @ViewBuilder stage: () -> Stage) {
-        self.session = session; self.stage = stage(); tasks = nil; composer = nil
+        self.init(session: session, stage: stage(), tasks: nil, composer: nil)
     }
 }
 

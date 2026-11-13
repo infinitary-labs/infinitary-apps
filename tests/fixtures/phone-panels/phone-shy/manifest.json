@@ -1,0 +1,6 @@
+{
+  "title": "Shy",
+  "api": 2,
+  "placement": { "x": "left", "y": "bottom" },
+  "presence": { "code": true }
+}

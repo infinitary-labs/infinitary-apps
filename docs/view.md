@@ -182,7 +182,7 @@ The first mate keeps each panel, builds it and holds its data; a window asks for
 
 The first mate answers Infinitary on iPhone and iPad everything a window on another computer asks for the captain's panels ("Panels in every window" above): the list and its push, each panel's built files, its data, its server actions, its integrations and SQL, all as the captain at another computer.
 It answers a phone a panel's files whatever the phone's own version, since a phone never carries the first mate's build.
-The phone itself shows no panel yet.
+Infinitary on iPhone and iPad draws them on its Panels tab (`docs/ios.md`, "Panels").
 
 - **The library.**
   A panel's files import the frame realm's library of the version they were built for (`PanelFiles.builtFor`), which only a window on that version serves, so the first mate also answers that library by its version (`inf:plugins:library`, `src/shared/personal/panelFiles.ts`), for a device that keeps one copy per version.

@@ -146,6 +146,9 @@
   // nowhere.
   "exclude": [
     "tests/fixtures/personal/**/*",
+    // The phone's Panels journey fixtures (tests/helpers/phonePanels.ts), kept
+    // apart from tests/fixtures/personal, which the desktop journeys copy whole.
+    "tests/fixtures/phone-panels/**/*",
     "tests/fixtures/personal-skills/**/*",
     "tests/fixtures/frame-realm/**/*",
     "tests/fixtures/personal-lint/**/*",

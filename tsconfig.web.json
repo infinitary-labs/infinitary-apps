@@ -44,6 +44,8 @@
     "tests/fixtures/oversized-card/**/*.ts",
     "tests/fixtures/personal/**/*.ts",
     "tests/fixtures/personal/**/*.tsx",
+    "tests/fixtures/phone-panels/**/*.ts",
+    "tests/fixtures/phone-panels/**/*.tsx",
     "tests/fixtures/personal-skills/**/*.ts",
     "tests/fixtures/personal-skills/**/*.tsx",
     "tests/fixtures/frame-realm/**/*.tsx",

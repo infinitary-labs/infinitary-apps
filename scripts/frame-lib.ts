@@ -77,8 +77,9 @@ export async function buildFrameLib(root: string, outDir: string): Promise<Recor
       sourcemap: false,
       modulePreload: false,
       reportCompressedSize: false,
-      // Electron 43's Chromium; the lib runs nowhere else.
-      target: "chrome140",
+      // Electron 43's Chromium, and the WebKit of Infinitary on iPhone and iPad from iOS 18, which draws the
+      // computer's panels from this same library (docs/ios.md, "Panels").
+      target: ["chrome140", "safari18"],
       rollupOptions: {
         input: Object.fromEntries(
           Object.entries(ENTRIES).map(([name, source]) => [name, resolve(root, source)]),

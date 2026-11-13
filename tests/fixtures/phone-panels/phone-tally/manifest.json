@@ -1,0 +1,6 @@
+{
+  "title": "Tally",
+  "api": 2,
+  "placement": { "x": "left", "y": "top" },
+  "reads": ["tasks.board"]
+}

@@ -71,6 +71,8 @@ export const PHONE_PARTS = [
   { name: "card-questions", test: "testCardQuestionSteps", photos: false },
   // INF-3454: Google's row in the phone's Settings, signing in to the test home's stand-in Google and out again.
   { name: "google", test: "testGoogleSignInAndOut", photos: false },
+  // INF-3830 piece 2: the computer's panels on the Panels tab, from a fixture panel on the test home's real core.
+  { name: "panels", test: "testPanelsTab", photos: false },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
   // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
   // app-hosted tests repeats only the rest part and a change to these repeats only them.

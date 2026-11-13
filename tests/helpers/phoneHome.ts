@@ -13,6 +13,7 @@ import { startCore } from "@core/index";
 import { appPathsFor } from "@core/paths";
 import { resolveFirstmateCardId } from "@core/pi/cardTool";
 import { httpSecretBroker } from "@core/secrets/httpBroker";
+import { forkChildProcess } from "@core/sql/forkChildProcess";
 import { seedTask } from "@core/tasks/seedTask";
 import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { CARD_LEAVE } from "@shared/cardLeave";
@@ -55,6 +56,7 @@ import type {
   PhonePickerPreview,
   PhoneTouchOutcome,
 } from "./phoneKeyboard";
+import { phonePanelControls } from "./phonePanels";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { seedReplyReading } from "./replyReading";
@@ -117,7 +119,15 @@ export async function startPhoneHome(
   const secretSends: string[] = [];
   let secretRequests = 0;
   let secretsReady = false;
+  // INF-3830 piece 2: the panel library this checkout builds, which the computer answers the phone as its own build's.
+  // Only the panels part asks for it, so its controls build it there, before the computer first reads it.
+  const frameLib = { dir: join(root, "frame-lib"), pins: {} as Record<string, string> };
   const core = await startCore({
+    frameLib,
+    // A panel's background work runs in the real panel process, as in the app.
+    panelProcess: forkChildProcess(
+      join(import.meta.dirname, "..", "..", "src", "core", "panels", "panelProcess.ts"),
+    ),
     app: {
       version: "0.1.0",
       platform: "test-os",
@@ -148,6 +158,7 @@ export async function startPhoneHome(
   });
   const scene = phoneSceneFixture(core, userData, () => connection.settled());
   const google = phoneGoogleControls(core);
+  const panels = phonePanelControls(core, frameLib);
   const readings = {
     cards: 0,
     feed: 0,
@@ -970,6 +981,43 @@ export async function startPhoneHome(
           break;
         case "GET google-state":
           result = await google.state();
+          break;
+        // INF-3830 piece 2's phone part: the fixture panel on the computer, its data, its stop and its library.
+        case "POST panel-seed":
+          result = await panels.seed();
+          break;
+        case "POST panel-remove":
+          result = await panels.remove();
+          break;
+        case "POST panel-shy-seed":
+          result = await panels.seedShy();
+          break;
+        case "POST panel-shy-show":
+          result = await panels.showShy(true);
+          break;
+        case "POST panel-shy-hide":
+          result = await panels.showShy(false);
+          break;
+        case "POST panel-shy-said-hidden":
+          result = await panels.shySaid(false);
+          break;
+        case "POST panel-shy-remove":
+          result = await panels.removeShy();
+          break;
+        case "POST panel-write":
+          result = await panels.write(41);
+          break;
+        case "POST panel-quit":
+          result = await panels.quit();
+          break;
+        case "POST panel-library-tamper":
+          result = await panels.tamperLibrary();
+          break;
+        case "POST panel-library-restore":
+          result = await panels.restoreLibrary();
+          break;
+        case "GET panel-state":
+          result = await panels.state();
           break;
         case "GET state":
           result = {

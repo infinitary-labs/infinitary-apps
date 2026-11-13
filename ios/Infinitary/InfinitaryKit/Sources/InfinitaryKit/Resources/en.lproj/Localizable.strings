@@ -1317,6 +1317,12 @@
 "phonePairLinkSpent" = "This link no longer works. Make a new one in Devices on your Mac.";
 "phonePairRefused" = "Your Mac could not add this phone. Make a new link in Devices and try again.";
 "phonePairUpdateMac" = "Update Infinitary on your Mac before joining this phone.";
+"phonePanelIntegrity" = "One of its files did not match what the computer said it holds, so it was not run.";
+"phonePanelNotServed" = "The computer where your first mate lives did not send its files.";
+"phonePanelUnreadable" = "Its files could not be read.";
+"phonePanelWebCannotAsk" = "A panel cannot ask that on this phone.";
+"phonePanelWebCannotDo" = "A panel cannot do that on this phone.";
+"phonePanelWebTooLarge" = "The panel is too large.";
 "phonePromptCamera" = "Infinitary scans the code you open in Devices on your computer so this phone can join it, and takes the photos you add to a reply.";
 "phonePromptFaceId" = "Infinitary asks for Face ID before each use of your secrets you allow from this device.";
 "phonePromptLocalNetwork" = "Infinitary finds your computer and reads its cards and Activity on your network, and lists the computers here with Remote Login on when you join by an address.";
@@ -1558,6 +1564,7 @@
 "phoneSshJoinWrongPassword" = "%1$@ did not take that password. Nothing was kept.";
 "phoneTabActivity" = "Activity";
 "phoneTabHome" = "Home";
+"phoneTabPanels" = "Panels";
 "phoneTabTasks" = "Tasks";
 "phoneTaskChangeRefused" = "Your computer could not make this change.";
 "phoneTaskFactsAnswerReady" = "Answer ready";

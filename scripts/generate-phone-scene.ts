@@ -89,6 +89,7 @@ try {
     neighboursOf: (ids: readonly string[], left: string) => string[];
   }>(join(REPO_ROOT, "src/renderer/src/app/stack.ts"));
   const { SCENE_REACH_PX, satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
+  const { arrangePanels, RAIL_SLOTS } = await runner.import<typeof import("../src/shared/panelArrangement.ts")>(join(REPO_ROOT, "src/shared/panelArrangement.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
       orbit: DEFAULT_ORBIT, remoteTrip: REMOTE_TRIP, program: { branchPx: CONSTELLATION.branchPx, branchDecay: CONSTELLATION.branchDecay, spreadDeg: CONSTELLATION.spreadDeg, rootMarkPx: CONSTELLATION.rootMarkPx, crewGapPx: CONSTELLATION.crewGapPx, widestSpreadDeg: CONSTELLATION.widestSpreadDeg },
@@ -113,7 +114,39 @@ try {
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskRecord.generated.json": taskRecordReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneRowMoves.generated.json": taskMoveReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneCardDeparture.generated.json": departureReadings(),
+    "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhonePanelOrder.generated.json": panelOrderReadings(),
   };
+  /** INF-3830 piece 2: the computer's rails read as one column, left top to right bottom, for the phone's panel order to replay. */
+  function panelOrderReadings() {
+    type Slot = { x: "left" | "right"; y: "top" | "bottom" };
+    const at = (x: Slot["x"], y: Slot["y"]): Slot => ({ x, y });
+    const panels = [
+      { id: "open-prs", preferred: at("left", "top"), order: 100 },
+      { id: "quota-glance", preferred: at("right", "top"), order: 20 },
+      { id: "crew-reports", preferred: at("left", "top"), order: 100 },
+      { id: "tokyo-clock", preferred: at("left", "bottom"), order: 5 },
+      { id: "token-watch", preferred: at("right", "bottom"), order: 50 },
+      { id: "token-watch-2", preferred: at("right", "bottom"), order: 50 },
+      { id: "now-playing", preferred: at("left", "bottom"), order: 7 },
+    ];
+    const layouts: Array<[string, Record<string, unknown>]> = [
+      ["no arrangement, each where it asks", {}],
+      ["no arrangement, a saved placement moves one", { placements: { "open-prs": at("right", "bottom") } }],
+      ["no arrangement, More picks rank top and bottom", { panelOrder: ["crew-reports", "now-playing", "tokyo-clock"] }],
+      ["an arrangement lists them all", { arrangement: { left: { top: ["tokyo-clock", "open-prs"], bottom: ["crew-reports"] },
+        right: { top: ["token-watch", "quota-glance"], bottom: ["now-playing", "token-watch-2"] } } }],
+      ["an arrangement, new panels land at each slot's middle", { arrangement: { left: { top: ["tasks", "open-prs"], bottom: ["activity"] },
+        right: { top: [], bottom: ["token-watch"] } } }],
+      ["an arrangement lists one panel twice", { arrangement: { left: { top: ["open-prs", "quota-glance"], bottom: ["open-prs"] },
+        right: { top: [], bottom: [] } } }],
+    ];
+    return layouts.map(([name, patch]) => {
+      const layout = { collapsedPanels: {}, hiddenPanels: {}, placements: {}, ...patch } as Parameters<typeof arrangePanels>[0];
+      const arranged = arrangePanels(layout, panels);
+      const known = new Set(panels.map((panel) => panel.id));
+      return { name, layout, panels, column: RAIL_SLOTS.flatMap((slot) => arranged[slot.x][slot.y]).filter((id) => known.has(id)) };
+    });
+  }
   /** INF-3155: the card the Mac's stack brings up when the shown card leaves, for the phone's to replay. */
   function departureReadings() {
     const stacks: Array<[string, string[], string, string[], string[]]> = [

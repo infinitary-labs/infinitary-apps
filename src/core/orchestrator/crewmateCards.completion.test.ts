@@ -1349,12 +1349,10 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       base: "main",
       readiness: "clean",
     };
-    const { supervisor, crewmate, taskId, note, specs, emitCard, checksPass } = await heldStoryNote(
-      undefined,
-      {
+    const { supervisor, crewmate, tasks, taskId, note, specs, emitCard, checksPass } =
+      await heldStoryNote(undefined, {
         readPull: async (_id, number) => (number === 1 ? pull : undefined),
-      },
-    );
+      });
     await specs[0]?.onCard?.({
       title: "Keep the old receipts?",
       body: "<p>Should old receipts stay?</p>",
@@ -1370,6 +1368,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(onStage(first)).toBe(true);
     // INF-2744: the crewmate puts up its next merge card once the checks pass.
     checksPass();
+    // INF-4018: the record still reads the pull request merged outside the
+    // app, so the app's approval of that version does not hold the card.
+    seedDelivery(tasks, taskId, { ci: "merged" });
     await emitCard.run({ title: "Ignored", presentation: 1, actions: [MERGE_ACTION] });
     crewmate.finishPrompt();
     await tick();

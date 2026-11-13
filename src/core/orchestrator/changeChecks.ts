@@ -20,6 +20,7 @@ import {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
+  QUEUE_REMOVED_WORDS,
   QUEUE_STATUS,
 } from "../forge";
 import { currentChange } from "../storage/changeProjection";
@@ -75,6 +76,27 @@ type Audience = "firstmate" | "crewmate" | "watch";
  * The checks on a task's change where the project lives: read, recorded on
  * the task's delivery facts, and said to whoever asked.
  */
+/**
+ * The checks as the task's reading counts them (INF-4018). The app's own removal
+ * of its queue mark - the queue status whose words are the removal words,
+ * written as error by the app or as failure by the queue - says the
+ * captain's approval of the version is gone or held, not that anything
+ * failed: it is kept as skipped, so it is never counted as a failed check
+ * and a merge card can ask for the approval again. The Batch check cell
+ * reads its words from the queue status the app keeps.
+ */
+export function countedChecks<T extends { items: ForgeCheck[] }>(reading: T): T {
+  const removed = (check: ForgeCheck) =>
+    check.name === QUEUE_STATUS && check.detail === QUEUE_REMOVED_WORDS;
+  if (!reading.items.some(removed)) return reading;
+  return {
+    ...reading,
+    items: reading.items.map((check) =>
+      removed(check) ? { ...check, state: "skipped" as const } : check,
+    ),
+  };
+}
+
 export class ChangeChecks {
   private readonly options: ChangeDeliveryOptions;
 
@@ -148,7 +170,7 @@ export class ChangeChecks {
         return { kind: "gone" };
       }
       change = await this.readiness.readyPrerequisite(taskId, forge, change);
-      const checks = await forge.checks(change);
+      const checks = countedChecks(await forge.checks(change));
       const main = await this.mainEvidence(record, forge, change, checks);
       this.assertCheckTarget(record);
       if (
@@ -399,7 +421,7 @@ export class ChangeChecks {
         };
       }
       change = await this.readiness.readyPrerequisite(taskId, forge, change);
-      const checks = await forge.checks(change);
+      const checks = countedChecks(await forge.checks(change));
       const main = await this.mainEvidence(record, forge, change, checks);
       const mergeability =
         change.number !== undefined && forge.pull ? await forge.pull(change.number) : undefined;

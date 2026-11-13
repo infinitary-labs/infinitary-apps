@@ -147,6 +147,15 @@ export const BATCH_CHECK_WORDS = {
     passed: "passed",
     failed: "failed",
   },
+  /**
+   * The app took the version out of the queue because the captain's merge
+   * approval is gone (INF-4018): nothing failed, and Merge on the card is
+   * the next step.
+   */
+  approval: "waiting for your approval",
+  /** The same, while the captain's newer words hold the approval for the crewmate's answer. */
+  held: "on hold",
+  heldWhy: "Your merge waits for the crewmate to say whether your newer message changes the work.",
   pause: "paused batch's issue",
   /** The link to the queue's run, after its words under the status line. */
   run: "Open the run",

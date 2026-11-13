@@ -166,6 +166,84 @@ export function candidateHead(authorization: MergeAuthorization): string {
   return authorization.lineage.at(-1)?.toHead ?? authorization.approvedHead;
 }
 
+/**
+ * Every standing approval on the task (INF-2746): the one in front and the
+ * others waiting their turn, each carrying the guidance marks the front
+ * keeps, since the captain's words hold every merge on the task.
+ */
+export function standingApprovals(delivery: TaskDelivery | null | undefined): MergeAuthorization[] {
+  const top = delivery?.mergeAuthorization;
+  if (!top) return [];
+  const others = (top.queued ?? [])
+    .filter((other) => other.status === "standing")
+    .map((other) => ({ ...other, guidance: top.guidance }));
+  return top.status === "standing" ? [top, ...others] : others;
+}
+
+/**
+ * The standing approval that covers `head` of one of the task's pull
+ * requests (INF-4018), in front or waiting its turn: the stored review a
+ * merge card names, or the task's own change when `review` is undefined,
+ * whose candidate head - the approved head or its newest accepted repair -
+ * is that version. A merge card, a check-watch wake and the status line all
+ * read this one fact.
+ */
+export function coveringApproval(
+  record: TaskRecord | undefined,
+  head: string | undefined,
+  review?: string,
+): MergeAuthorization | undefined {
+  if (!record || !head) return undefined;
+  const own =
+    review === undefined ? currentChange(record.delivery, record.branch).number : undefined;
+  return standingApprovals(record.delivery).find(
+    (kept) =>
+      kept.review?.id === review &&
+      (own === undefined || own === kept.target.prNumber) &&
+      candidateHead(kept) === head,
+  );
+}
+
+/**
+ * What failed at a version an approval covers (INF-4018): nothing, the
+ * pull request's own checks, or the project's queue batch check, which no
+ * checks override passes (INF-3208).
+ */
+export type CoveredFailure = "none" | "checks" | "batch";
+
+/**
+ * What a crewmate does instead of a merge card at a version an approval
+ * covers (INF-4018): declare the captain's newer words; clear failed checks
+ * by a declared repair, a rerun or the captain's recorded override; answer
+ * a failed batch the queue's way (FAILED_BATCH_NOTE); or nothing, since the
+ * app runs the merge once nothing holds it.
+ */
+export function coveredNextStep(kept: MergeAuthorization, failure: CoveredFailure): string {
+  if (outstandingGuidance(kept) !== undefined)
+    return "Put up no merge card: declare the impact of the captain's newer words with check_change captainGuidance instead.";
+  if (failure === "batch")
+    return "Put up no merge card: the project's queue failed or sent back this version, and no checks override passes the queue, so there is no Merge anyway. Fix the cause in a new version and declare it with check_change conflictRepair, or answer a send-back of a version that already holds the fix with check_change's answered verdict; the approval then goes ahead without a new card.";
+  if (failure === "checks")
+    return "Put up no merge card: the approval waits for these checks. Push a fix and declare it with check_change conflictRepair, record a rerun with check_change rerun, or, when it is a Merge anyway case, report it naming each failed check and your diagnosis so the first mate records the captain's override; the approval then goes ahead without a new card.";
+  return "Put up no merge card and end your turn: the app runs the merge on that approval, through the project's queue where it has one, once nothing holds it; a new merge card is only for a new version.";
+}
+
+/**
+ * The line every message to the crewmate about an approved version carries
+ * (INF-4018): its check_change reading, a check-watch wake and the merge
+ * card tool's refusal say the same words, from here.
+ */
+export function keptApprovalLine(kept: MergeAuthorization): string {
+  const mark = outstandingGuidance(kept);
+  const repairAsk =
+    kept.waiting?.on === "conflict"
+      ? " Declare a repair that brings the change up to date with conflictRepair from that head."
+      : kept.waiting?.on === "repair"
+        ? " Declare the repair with conflictRepair from that head."
+        : "";
+  return `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${repairAsk}${mark === undefined ? "" : ` Their guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`;
+}
+
 /** The approval that stands on a delivery record, if any. */
 export function standingAuthorization(
   delivery: TaskDelivery | null | undefined,

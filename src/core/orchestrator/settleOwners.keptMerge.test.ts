@@ -256,13 +256,22 @@ describe("CrewSupervisor", () => {
       await supervisor.disposeAll();
     });
 
-    it("INF-1246 a new referenced merge offer supersedes the kept approval before any new click", async () => {
+    // INF-4018: a repeat merge card at the version the captain approved
+    // would only have ended that approval, so it is refused and the
+    // approval stands, with nothing written or removed.
+    it("refuses a referenced merge offer at the version the kept approval covers, and keeps the approval", async () => {
       const h = await continued();
-      await h.emit("Read the merge again");
-      expect(h.authorization()?.status).toBe("superseded");
-      h.crewmate.finishPrompt();
-      await tick();
-      expect(h.forge.merges).toEqual([]);
+      const before = h.authorization();
+      await expect(Promise.resolve().then(() => h.emit("Read the merge again"))).rejects.toThrow(
+        `The captain's merge approval is kept and covers ${APPROVED}`,
+      );
+      expect(h.authorization()).toMatchObject({
+        status: "standing",
+        id: before?.id,
+        generation: before?.generation,
+      });
+      expect(h.authorization()?.queueRemovals).toBeUndefined();
+      expect(h.cards().some((card) => card.title === "Read the merge again")).toBe(false);
     });
 
     it("INF-1246 a project change during the last check cannot redirect the approved merge", async () => {
@@ -348,6 +357,37 @@ describe("CrewSupervisor", () => {
       });
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
     });
+
+    // The independent review of PR #1673 (INF-4018): the check watch sends
+    // no wake once every check passed at the approved version, and that
+    // wake's turn was what ran the kept merge, so the watch runs it: a click
+    // on running checks merges when they pass, or on a queue project marks
+    // the version waiting for the batch, with no turn of the crewmate's.
+    it.each([false, true])(
+      "runs the kept merge when the watch finds the checks passed at the approved version (queue: %s)",
+      async (queue) => {
+        const h = await approved({ checkWatch: true, queue });
+        h.forge.states = ["success", "pending"];
+        await h.declare({});
+        h.supervisor.cardActions.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+        await vi.waitFor(() =>
+          expect(h.supervisor.settling.locks.holder(h.taskId)).toBeUndefined(),
+        );
+        const prompts = h.crewmate.promptCalls.length;
+        h.forge.states = ["success"];
+        await h.supervisor.watch.pollCheckWatches(Date.now() + 60_000);
+        if (queue) {
+          await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("queue"));
+          expect(h.forge.merges).toEqual([]);
+        } else {
+          await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+        }
+        expect(h.crewmate.promptCalls.slice(prompts).join("\n")).not.toContain(
+          "offer its merge when ready",
+        );
+      },
+    );
 
     // INF-3623, the captain's "all non-code changes to the PR should keep my
     // approval": a merge card shows the saved story; a story revised and

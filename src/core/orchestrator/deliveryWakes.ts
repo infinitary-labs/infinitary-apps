@@ -135,6 +135,12 @@ export type DeliveryFacts =
       problem?: string;
       /** unreadable because the app is not signed in: the problem already says what to do. */
       signIn?: boolean;
+      /**
+       * The captain's standing merge approval covers this version
+       * (INF-4018): its line and what to do instead of a merge card, as the
+       * merge card refusal says them.
+       */
+      approval?: string;
     }
   | {
       /**
@@ -232,7 +238,7 @@ function renderChecksSettled(facts: ChecksSettledFacts): string {
     case "observed":
       return `${CHECK_OBSERVATIONS_LEAD} ${change}${head}: ${named}. Read current facts with check_change and follow your delivery guidance before offering a merge. This notice is not a merge offer.`;
     case "finished":
-      return `The checks on ${change} finished${head}: ${named || "no checks reported"}. Judge the work from these facts and your delivery guidance; offer its merge when ready.`;
+      return `The checks on ${change} finished${head}: ${named || "no checks reported"}. Judge the work from these facts and your delivery guidance${facts.approval ? "." : "; offer its merge when ready."}`;
     case "first-failure":
       return `The first failed check on ${change} was seen while others are still running${head}: ${named || "a check failed"}. Read its log and diagnose it. The app wakes you again when the checks finish; end your turn instead of calling check_change again.`;
     case "passed":
@@ -503,7 +509,8 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   "queue-start-failed": (facts) =>
     `The app tried twice to start your project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms until something starts it. Start it yourself through your project's API the way the queue-setup skill's queue starts it, or report what stops you.`,
   "run-watch": (facts) => renderRunWatch(facts),
-  "checks-settled": (facts) => renderChecksSettled(facts),
+  "checks-settled": (facts) =>
+    facts.approval ? `${renderChecksSettled(facts)} ${facts.approval}` : renderChecksSettled(facts),
   "main-check-observed": (facts) =>
     `The default branch reports ${facts.check ?? "finished checks"} at ${facts.sha}: ${JSON.stringify(facts.checks)}. Judge whether this clears your declared wait; these facts do not declare your change ready.`,
   "main-check-passed": (facts) => renderMainCheckPassed(facts),

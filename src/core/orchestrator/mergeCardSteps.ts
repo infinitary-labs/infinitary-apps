@@ -48,7 +48,8 @@ export type MergeCardStop = { step: MergeCardStep; missing: string; by: MergeCar
 export type MergeCardWalk = {
   did: string[];
   stop?: MergeCardStop;
-  ready?: { revision: number; title: string };
+  /** The committed version the walk verified pushed: the one the card offers (INF-4018). */
+  ready?: { revision: number; title: string; head: string };
 };
 
 /** Each supplier, in the words the call's answer names them by. */
@@ -242,7 +243,7 @@ export class MergeCardSteps {
       }
     }
     const title = newest.title;
-    if (local || !forge || !branch) return { did, ready: { revision: shown, title } };
+    if (local || !forge || !branch) return { did, ready: { revision: shown, title, head } };
 
     // 5 and 6. Pull request open, story published and read back.
     let open: ForgeChange | null;
@@ -293,6 +294,6 @@ export class MergeCardSteps {
           : `Recorded ${changeWords(forge, read)} as the change; ${forge.place ?? "where the project lives"} keeps no pull requests, so the story stays on the merge card.`,
       );
     }
-    return { did, ready: { revision: shown, title } };
+    return { did, ready: { revision: shown, title, head } };
   }
 }

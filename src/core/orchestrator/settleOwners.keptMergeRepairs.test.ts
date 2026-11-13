@@ -1064,12 +1064,18 @@ describe("CrewSupervisor", () => {
       },
     );
 
-    it("a new completion card supersedes it, and an interruption revokes it with a hold", async () => {
+    // INF-4018: only a card at another version asks again; one at the
+    // version the approval covers is refused and leaves it to merge.
+    it("refuses a completion card at the kept version, which then merges, and an interruption revokes it with a hold", async () => {
       const harness = await kept();
       await repairTurn(harness, async () => {
-        await harness.emit("Ready to merge again");
+        await expect(
+          Promise.resolve().then(() => harness.emit("Ready to merge again")),
+        ).rejects.toThrow("The captain's merge approval is kept and covers");
       });
-      expect(harness.authorization()).toMatchObject({ status: "superseded" });
+      // The approval it left standing merges the approved version once the turn ends.
+      expect(harness.authorization()).toMatchObject({ status: "consumed" });
+      expect(harness.forge.merges).toHaveLength(1);
       const again = await kept();
       await again.supervisor.steer.steerCrewmate(again.taskId, "bring it up to date");
       await again.supervisor.sessions.interruptCrewmate(again.taskId, "interrupt");

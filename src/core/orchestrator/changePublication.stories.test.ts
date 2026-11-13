@@ -1271,7 +1271,7 @@ describe("shared story delivery boundaries", () => {
       const story = { ...saved, title: "feat: share the story" };
       const first = await at.service.mergeCard.walk("ab12cd34", story);
       expect(first.stop).toBeUndefined();
-      expect(first.ready).toEqual({ revision: 1, title: story.title });
+      expect(first.ready).toEqual({ revision: 1, title: story.title, head: original });
       expect(first.did).toEqual([
         "Prepared story revision 1 at the committed version.",
         "Opened pull request #1413 https://github.com/x/y/pull/1413 with the story and read it back.",
@@ -1287,7 +1287,7 @@ describe("shared story delivery boundaries", () => {
       });
       // Called again with the same words: no revision, no second publication.
       const again = await at.service.mergeCard.walk("ab12cd34", story);
-      expect(again.ready).toEqual({ revision: 1, title: story.title });
+      expect(again.ready).toEqual({ revision: 1, title: story.title, head: original });
       expect(again.did).toEqual([
         "Story revision 1 already says these words at this version, so no revision was added.",
       ]);
@@ -1296,7 +1296,7 @@ describe("shared story delivery boundaries", () => {
       // And with no story, the newest saved one, still with nothing repeated.
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
-        ready: { revision: 1, title: story.title },
+        ready: { revision: 1, title: story.title, head: original },
       });
     });
 
@@ -1407,7 +1407,7 @@ describe("shared story delivery boundaries", () => {
       };
       seedDelivery(at.tasks, "ab12cd34", { liveValidation: noSurfaceProof(original) });
       const walk = await at.service.mergeCard.walk("ab12cd34");
-      expect(walk.ready).toEqual({ revision: 2, title: story.title });
+      expect(walk.ready).toEqual({ revision: 2, title: story.title, head: original });
       expect(walk.did).toEqual([
         "Prepared story revision 2 with the same words and the live validation accepted since.",
         "Published the story on pull request #1413 https://github.com/x/y/pull/1413 and read it back.",
@@ -1420,7 +1420,7 @@ describe("shared story delivery boundaries", () => {
       expect(ledger?.published?.revision).toBe(2);
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
-        ready: { revision: 2, title: story.title },
+        ready: { revision: 2, title: story.title, head: original },
       });
       expect(opens(at)).toBe(0);
       expect(at.update).toHaveBeenCalledTimes(1);
@@ -1446,7 +1446,7 @@ describe("shared story delivery boundaries", () => {
       const story = { ...at.story, title: "fix: share the story", destination };
       const first = await at.service.mergeCard.walk("ab12cd34", story);
       expect(first.stop).toBeUndefined();
-      expect(first.ready).toEqual({ revision: 1, title: story.title });
+      expect(first.ready).toEqual({ revision: 1, title: story.title, head: original });
       expect(first.did).toEqual([
         "Prepared story revision 1 at the committed version.",
         `Recorded the pushed branch ${phone} as the change; where the project lives keeps no pull requests, so the story stays on the merge card.`,
@@ -1455,7 +1455,7 @@ describe("shared story delivery boundaries", () => {
       // Called again, it records nothing again.
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
-        ready: { revision: 1, title: story.title },
+        ready: { revision: 1, title: story.title, head: original },
       });
     });
 

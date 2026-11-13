@@ -1,7 +1,13 @@
-import { allowanceResetOf } from "../forge";
+import { allowanceResetOf, isRedCheckState, QUEUE_STATUS } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
 import type { CiWatch, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
+import {
+  type CoveredFailure,
+  coveredNextStep,
+  coveringApproval,
+  keptApprovalLine,
+} from "./mergeAuthorization";
 import type { TypedWake, WakeFacts } from "./wakes";
 
 /**
@@ -138,9 +144,15 @@ export type CheckWatcherHost = {
   reconcileMerged?(taskId: string): Promise<boolean>;
   /** The supervisor's own steer on the task's durable lane. */
   steer(taskId: string, wake: TypedWake): Promise<unknown>;
+  /**
+   * Run the task's kept merge approval (INF-4018): the passed checks at a
+   * version it covers send the crewmate no wake, so no turn's end runs it.
+   */
+  runKept?(taskId: string): void;
 };
 
-type SettledFacts = Omit<Extract<WakeFacts, { kind: "checks-settled" }>, "kind">;
+type SettledWakeFacts = Extract<WakeFacts, { kind: "checks-settled" }>;
+type SettledFacts = Omit<SettledWakeFacts, "kind">;
 
 export class CheckWatcher {
   /** Tasks whose read is out now: a slow read is never doubled by the next tick. */
@@ -286,8 +298,48 @@ export class CheckWatcher {
       });
   }
 
+  /**
+   * A notice about a version the captain's standing approval covers
+   * (INF-4018): with every check passed nothing is left for the crewmate to
+   * do, so none goes out (undefined) and the caller runs the approval in its
+   * place; any other notice carries the approval's line and what clears it,
+   * the words its merge card refusal gives, so the crewmate never asks for
+   * a merge it already has.
+   */
+  private withApproval(taskId: string, facts: SettledWakeFacts): SettledWakeFacts | undefined {
+    const record = this.host.tasks.get(taskId);
+    const kept = coveringApproval(record, facts.head ?? record?.delivery?.headSha);
+    if (!kept) return facts;
+    const passed =
+      (facts.outcome === "finished" || facts.outcome === "observed") &&
+      (facts.checks ?? []).every(
+        (check) =>
+          check.state !== "pending" &&
+          !isRedCheckState(check.state as Parameters<typeof isRedCheckState>[0]),
+      );
+    if (passed) return undefined;
+    const red = (facts.checks ?? []).filter((check) =>
+      isRedCheckState(check.state as Parameters<typeof isRedCheckState>[0]),
+    );
+    const failure: CoveredFailure =
+      red.length === 0
+        ? "none"
+        : red.some((check) => check.name === QUEUE_STATUS)
+          ? "batch"
+          : "checks";
+    return { ...facts, approval: `${keptApprovalLine(kept)} ${coveredNextStep(kept, failure)}` };
+  }
+
   /** Persist the notice identity before enqueue; a restart reads its inbox receipt. */
-  private notifyObservation(taskId: string, wake: TypedWake, id: string | undefined): void {
+  private notifyObservation(taskId: string, given: TypedWake, id: string | undefined): void {
+    const facts =
+      given.facts?.kind === "checks-settled" ? this.withApproval(taskId, given.facts) : given.facts;
+    if (!facts) {
+      this.forwardedObservation(taskId, id);
+      this.host.runKept?.(taskId);
+      return;
+    }
+    const wake = { ...given, facts };
     const current = this.host.tasks.get(taskId)?.delivery?.ciObservation;
     if (id && current?.id === id && wake.once && current.notice !== wake.once)
       this.host.tasks.delivery.recordChangeEvidence(taskId, {
@@ -410,16 +462,14 @@ export class CheckWatcher {
     const once = checkWatchOnce(watch, "failure");
     if (!this.host.inbox.woken(taskId, once)) {
       try {
-        await this.host.steer(taskId, {
-          facts: {
-            kind: "checks-settled",
-            outcome: "first-failure",
-            change: read.change,
-            head: read.head,
-            checks: failing,
-          },
-          once,
+        const facts = this.withApproval(taskId, {
+          kind: "checks-settled",
+          outcome: "first-failure",
+          change: read.change,
+          head: read.head,
+          checks: failing,
         });
+        if (facts) await this.host.steer(taskId, { facts, once });
       } catch (caught) {
         console.warn("[crew] check watch's early steer not delivered:", caught);
       }

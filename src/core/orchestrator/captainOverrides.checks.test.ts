@@ -52,6 +52,7 @@ import {
   repairTurn,
 } from "../../../tests/helpers/crewHarnessGit";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { QUEUE_REMOVED_WORDS } from "../forge";
 import { standingBaselineChecks } from "../tasks/dependencyWaits";
 import { seedTask } from "../tasks/seedTask";
 import { CHECK_FAILS_ON_MAIN_WORDS, CHECK_VERDICT_WORDS } from "./checkVerdicts";
@@ -531,6 +532,37 @@ describe("CrewSupervisor", () => {
         await vi.waitFor(() => expect(anywayOf(h)).toBeDefined());
         expect(cell("batch")).toBeUndefined();
       });
+
+      // INF-4018: the app's removal of its own queue mark, as GitHub kept it
+      // on PR #1660 ("error") and as a queue writes it ("failure"), says the
+      // approval is gone or held, not that anything failed: the Batch check
+      // cell says what it waits for, with no red line, and the crewmate's
+      // merge card asking again goes up.
+      it.each(["error", "failure"] as const)(
+        "reads the app's removal status (%s) as waiting for the captain's approval, never a failed check (INF-4018)",
+        async (state) => {
+          const h = await approved({ queue: true });
+          const strip = () =>
+            splitSettleFacts(h.cards().find((card) => card.id === h.card.id)?.body ?? "")?.facts ??
+            "";
+          const cell = (fact: string) =>
+            new RegExp(
+              `data-fact="${fact}"[^>]*>.*?<span class="${SETTLE_FACT_VALUE_CLASS}">(.*?)</span></span>`,
+            ).exec(strip())?.[1];
+          const level = (fact: string) =>
+            new RegExp(`data-fact="${fact}" data-level="(\\w+)"`).exec(strip())?.[1];
+          const why = (fact: string) =>
+            new RegExp(`<p class="inf-foot-why" data-why="${fact}">(.*?)</p>`).exec(strip())?.[1];
+          h.forge.queue = { name: QUEUE_STATUS, state, detail: QUEUE_REMOVED_WORDS };
+          await h.declare({});
+          await vi.waitFor(() => expect(cell("batch")).toBe(BATCH_CHECK_WORDS.approval));
+          expect(level("batch")).toBe("waiting");
+          expect(why("batch")).toBeUndefined();
+          expect(cell("checks")).toBe(CHECK_WORDS.green);
+          expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("green");
+          await expect(h.emit("Ready to merge again")).resolves.toContain("card-");
+        },
+      );
 
       // Captain INF-1555 F12 replaces the separate red prerequisite; the offer carries the judgment.
       it("accepts a failed-check merge offer without a separate verdict or merge consent (INF-1555 F12)", async () => {

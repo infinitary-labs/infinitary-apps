@@ -9,9 +9,9 @@ import {
   candidateHead,
   declareMergeGuidance,
   declareMergeRepair,
+  keptApprovalLine,
   type LineageFacts,
   type LineageQuestion,
-  outstandingGuidance,
   standInFront,
   standingAuthorization,
 } from "./mergeAuthorization";
@@ -185,16 +185,7 @@ export class CheckChangeTool {
     // The approval's state rides the crewmate's reading, so the head a
     // repair starts from is never a guess.
     const kept = standingAuthorization(this.options.tasks.get(taskId.trim())?.delivery);
-    const mark = kept ? outstandingGuidance(kept) : undefined;
-    const repairAsk =
-      kept?.waiting?.on === "conflict"
-        ? " Declare a repair that brings the change up to date with conflictRepair from that head."
-        : kept?.waiting?.on === "repair"
-          ? " Declare the repair with conflictRepair from that head."
-          : "";
-    const keptLine = kept
-      ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${repairAsk}${mark === undefined ? "" : ` Their guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
-      : "";
+    const keptLine = kept ? keptApprovalLine(kept) : "";
     return [declared, reading, keptLine].filter(Boolean).join("\n");
   }
 

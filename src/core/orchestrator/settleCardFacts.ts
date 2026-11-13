@@ -42,13 +42,14 @@ import {
   RIGOR_WORDS,
   RUN_WATCH_WORDS,
 } from "@shared/vocabulary";
-import { queueKind } from "../queue/shipped/rules.mjs";
+import { REMOVED as QUEUE_REMOVED_WORDS, queueKind } from "../queue/shipped/rules.mjs";
 import type { EmittedCardInput } from "../session/tools";
 import type { RunWatch, TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
 import { checkVerdicts } from "./checkVerdicts";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import { outstandingGuidance, standingApprovals } from "./mergeAuthorization";
 import { reviewCoversHead } from "./reviewCarry";
 
 /**
@@ -613,6 +614,14 @@ function batchCheck(
   const item = reading.items.find((check) => check.name === QUEUE_STATUS);
   if (!item) return undefined;
   const kept = delivery.queueStatus?.head === reading.headSha ? delivery.queueStatus : undefined;
+  // The app's removal of its own queue mark (INF-4018) is no failure: the
+  // version waits for the captain's approval, or for the crewmate's answer
+  // to the newer words that hold it.
+  if (kept?.words === QUEUE_REMOVED_WORDS) {
+    if (standingApprovals(delivery).some((approval) => outstandingGuidance(approval) !== undefined))
+      return { dot: "idle", value: BATCH_CHECK_WORDS.held, why: BATCH_CHECK_WORDS.heldWhy };
+    return { dot: "idle", value: BATCH_CHECK_WORDS.approval };
+  }
   const state = queueKind(item.state, kept?.words ?? "");
   const dot =
     state.kind === "passed"

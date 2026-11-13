@@ -68,6 +68,12 @@ import { escapeCardText } from "./cardText";
 import type { CardCaller } from "./cardThreads";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import {
+  type CoveredFailure,
+  coveredNextStep,
+  coveringApproval,
+  keptApprovalLine,
+} from "./mergeAuthorization";
 import { type MergeCardWalk, mergeCardAnswer } from "./mergeCardSteps";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import type { SettleOwners } from "./settleOwners";
@@ -264,6 +270,10 @@ export class CrewmateCards {
       this.recordCardRefusal(task, { title, ...cardRefusalOf(refused) });
       return stop("checks", refused.message, "crewmate");
     };
+    // A version the captain's approval already covers takes no new card
+    // (INF-4018): the answer says so, and nothing is recorded as refused.
+    const covered = this.coveredMergeRefusal(task.id, undefined, walk.ready.head);
+    if (covered) return mergeCardAnswer(walk, covered);
     let stableId: string;
     try {
       stableId = parseStableCardId(request.id) ?? "";
@@ -289,8 +299,12 @@ export class CrewmateCards {
       const suffix = `-${next}`;
       id = `${stableId.slice(0, STABLE_CARD_ID_MAX - suffix.length)}${suffix}`;
     }
-    if (id !== stableId)
-      did.push(`You answered card ${stableId} already, so the merge card goes up as ${id}.`);
+    if (id !== stableId) {
+      const chose = this.host.cards.past(crewmateCardId(task.id, stableId))?.ending.label;
+      did.push(
+        `You answered card ${stableId} already${chose ? ` (the captain chose "${chose}")` : ""}, so the merge card goes up as ${id}.`,
+      );
+    }
     const merge = emittedAction({
       id: "merge",
       default: true,
@@ -360,6 +374,18 @@ export class CrewmateCards {
     presentationChecked?: { revision: number; head: string },
   ): string | Promise<string> {
     if (input.allows) allowsRefusal(input);
+    const asked = mergeOf(input.actions);
+    // The version a card shows: its saved story's, once the story is read
+    // (the call that names a presentation comes back here with it).
+    const covered =
+      asked && input.presentationRevision === undefined
+        ? this.coveredMergeRefusal(
+            task.id,
+            asked.review,
+            presentationChecked?.head ?? this.options.tasks.get(task.id)?.delivery?.headSha,
+          )
+        : undefined;
+    if (covered) throw new Error(covered);
     if (input.presentationRevision !== undefined) {
       const revision = input.presentationRevision;
       // The story is shown on the merge card of the task's own change, with
@@ -1050,6 +1076,34 @@ export class CrewmateCards {
    * (FI3-249): every action the host keeps as declared needs words of its
    * own, and one without them refuses the card (`labeledActions`).
    */
+  /**
+   * A merge card of the pull request `review` names (the task's own change
+   * when undefined) at a version the captain's standing approval already
+   * covers (INF-4018), from either issuer: the approval's own words and
+   * what to do instead. Such a card would only end that approval, so it is
+   * refused before anything is written. Undefined when no approval covers it.
+   */
+  private coveredMergeRefusal(
+    taskId: string,
+    review: string | undefined,
+    shown: string | undefined,
+  ): string | undefined {
+    const record = this.options.tasks.get(taskId);
+    const head = review ? this.mergeReviewOf(taskId, review)?.headSha : shown;
+    const kept = coveringApproval(record, head, review);
+    // A pull request merged outside the app leaves nothing for the approval
+    // to merge: its card closes the task out instead.
+    if (!kept || (!review && record?.delivery?.ci === "merged")) return undefined;
+    const reading = review ? undefined : record?.delivery;
+    const failure: CoveredFailure =
+      !reading || !head || reading.headSha !== head || currentCheckStatus(reading) !== "red"
+        ? "none"
+        : failedBatch(reading, head)
+          ? "batch"
+          : "checks";
+    return `Card refused: ${keptApprovalLine(kept)} ${coveredNextStep(kept, failure)}`;
+  }
+
   mergeReviewOf(taskId: string, reviewId: string): MergeReview | undefined {
     return this.options.tasks
       .get(taskId)

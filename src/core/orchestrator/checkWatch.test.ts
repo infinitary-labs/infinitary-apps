@@ -42,9 +42,11 @@ function setup() {
   };
   const reads: number[] = [];
   const steers: TypedWake[] = [];
+  const kept: string[] = [];
   const watcher = new CheckWatcher({
     tasks,
     inbox,
+    runKept: (taskId) => kept.push(taskId),
     read: async () => {
       reads.push(now - start);
       return typeof next === "function" ? next() : next;
@@ -59,6 +61,7 @@ function setup() {
     inbox,
     reads,
     steers,
+    kept,
     start,
     answer: (reading: WatchedReading | (() => WatchedReading)) => {
       next = reading;
@@ -327,6 +330,126 @@ describe("CheckWatcher", () => {
     expect(reads).toEqual([]);
     expect(steers).toEqual([]);
     expect(watch()).toBeUndefined();
+  });
+});
+
+/**
+ * INF-4018: the batch check passed a version the captain had already
+ * approved, and the watch's "offer its merge when ready" sent the crewmate
+ * to raise a repeat card that ended the click. A version the standing
+ * approval covers gets no such wake.
+ */
+describe("CheckWatcher at a version the captain's approval covers (INF-4018)", () => {
+  /** The approval the captain's click keeps, at HEAD of PR #7. */
+  function approve(tasks: TaskService) {
+    seedDelivery(tasks, "t1", {
+      prNumber: 7,
+      headSha: HEAD,
+      mergeAuthorization: {
+        version: 1,
+        id: "kept-1",
+        generation: 1,
+        issuer: "captain",
+        at: 1,
+        card: { id: "card-t1-merge", offerId: "offer-1", actionId: "merge" },
+        target: {
+          repoId: "meter",
+          host: "github.com",
+          owner: "octo",
+          name: "meter",
+          prNumber: 7,
+          branch: "fm/task-t1",
+          delivery: "direct-pr",
+          method: "squash",
+        },
+        approvedHead: HEAD,
+        lineage: [],
+        proceedWithOpen: false,
+        status: "standing",
+        waiting: { on: "queue", head: HEAD, at: 1 },
+      },
+    });
+  }
+
+  // The reviewer's finding on PR #1673: that wake was the turn whose end ran
+  // the kept merge, so the watch runs the approval in its place.
+  it("sends no wake when every check passed there, and runs the approval instead", async () => {
+    const { tasks, answer, at, steers, kept, watch } = setup();
+    approve(tasks);
+    answer({
+      kind: "finished",
+      head: HEAD,
+      change: "PR #7",
+      checks: [
+        { name: "typecheck-lint-build", state: "success" },
+        { name: "infinitary/queue", state: "success" },
+      ],
+    });
+    await at(minutes(1));
+    expect(steers).toEqual([]);
+    expect(kept).toEqual(["t1"]);
+    expect(watch()).toBeUndefined();
+  });
+
+  it("still wakes on a failure there, with the approval's line and no merge offer", async () => {
+    const { tasks, answer, at, steers, kept } = setup();
+    approve(tasks);
+    answer({
+      kind: "finished",
+      head: HEAD,
+      change: "PR #7",
+      checks: [
+        { name: "typecheck-lint-build", state: "failure" },
+        { name: "infinitary/queue", state: "success" },
+      ],
+    });
+    await at(minutes(1));
+    expect(steers).toHaveLength(1);
+    const words = renderWake(steers[0]!);
+    expect(words).toContain(`The captain's merge approval is kept and covers ${HEAD}`);
+    expect(words).toContain("Put up no merge card: the approval waits for these checks.");
+    expect(words).toContain("Merge anyway case");
+    expect(words).not.toContain("offer its merge when ready");
+    expect(kept).toEqual([]);
+  });
+
+  // The reviewer's finding on PR #1673 (INF-3208): a failed batch check
+  // wakes with the queue's route, which no checks override passes.
+  it("wakes on a failed batch check there with the queue's route, never Merge anyway", async () => {
+    const { tasks, answer, at, steers, kept } = setup();
+    approve(tasks);
+    answer({
+      kind: "finished",
+      head: HEAD,
+      change: "PR #7",
+      checks: [
+        { name: "typecheck-lint-build", state: "success" },
+        { name: "infinitary/queue", state: "failure" },
+      ],
+    });
+    await at(minutes(1));
+    expect(steers).toHaveLength(1);
+    const words = renderWake(steers[0]!);
+    expect(words).toContain("no checks override passes the queue");
+    expect(words).toContain("check_change's answered verdict");
+    expect(words).not.toContain("Merge anyway case");
+    expect(kept).toEqual([]);
+  });
+
+  it("offers the merge as before at a version the approval does not cover", async () => {
+    const { tasks, answer, at, steers } = setup();
+    approve(tasks);
+    const pushed = "cafe0002feedbeef";
+    seedDelivery(tasks, "t1", { headSha: pushed, ciWatch: armWatch(undefined, pushed, 1_000_000) });
+    answer({
+      kind: "finished",
+      head: pushed,
+      change: "PR #7",
+      checks: [{ name: "typecheck-lint-build", state: "success" }],
+    });
+    await at(minutes(1));
+    expect(steers).toHaveLength(1);
+    expect(renderWake(steers[0]!)).toContain("offer its merge when ready");
   });
 });
 

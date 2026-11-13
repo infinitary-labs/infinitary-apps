@@ -425,7 +425,7 @@ The captain's merge click on a merge card is an approval of that change, and a r
   Pending and partially unreadable checks hold a new offer, and failed checks hold it unless each is diagnosed or fails on the default branch too ("Check facts and declarations" above); the facts remain visible on the card and hold the merge at the click.
   A lookup that obtains no target cannot bind an exact-version offer and reports why; it cannot reuse a stale earlier reading as fresh.
   An offer that shows the same content at another head keeps no baseline.
-  A new completion or requested-merge card supersedes any standing approval: the crewmate is asking again.
+  A new completion or requested-merge card at another version supersedes that pull request's standing approval: the crewmate is asking again; one at a version an approval covers is refused ("No second card for an approved version" below).
 - **The approval.**
   The captain's chrome click mints `delivery.mergeAuthorization` (version 1) in the card resolution's own transaction (`CardService.resolve`'s `alongside`): a fresh id and a generation, the card, lifecycle, offer, action and gesture ids, the GitHub repository, pull request and branch, squash, the approved head and an empty repair lineage.
   That click also stores the approved head's change reading on the approval, so the story refresh at a repaired version compares it for the attestation without reading the branch.
@@ -500,7 +500,7 @@ The captain's merge click on a merge card is an approval of that change, and a r
   A token that outlived its answer - a quit, a timeout - is read back by the pull request's number before anything is sent again: merged spends the approval, closed ends it, open at the same head runs every gate again.
   A finishing merge, `after: close`, closes the task once; a continuing merge, `after: continue`, leaves it open and delivers its continuation once.
 - **Ends.**
-  Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke, and the first mate's too: the captain chose in INF-1272 that a stop still ends it) or the captain's own words through `update_task withdraw_merge`, or by the app when its own approval no longer passes the merge gate because the task no longer merges on its own (`KeptMerge.runFront`); invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new merge card or click; ended with its task.
+  Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke, and the first mate's too: the captain chose in INF-1272 that a stop still ends it) or the captain's own words through `update_task withdraw_merge`, or by the app when its own approval no longer passes the merge gate because the task no longer merges on its own (`KeptMerge.runFront`); invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new merge card at another version or by a click; ended with its task.
   A quit, restart or update is no interruption: the approval stands and the next launch runs it again (`KeptMerge.resumeMergeAuthorizations`), as a computer that runs work's update pause does.
   A revoked or work-changed end `holds` the task's merge for the captain, except the app's own autonomy revoke, which holds nothing: `mergeGate` refuses a first mate merge whatever the project's autonomy, until the captain's new click.
   Contract 4.66's unversioned `delivery.mergeOrder` names no approved head, so the boot retires it and says so rather than carrying it forward.
@@ -514,7 +514,16 @@ The captain's merge click on a merge card is an approval of that change, and a r
   When the approval in front ends, the next stands in its place (`KeptApproval.promoteQueued`) and leaves the task's current change as it is; a run that merges the task's own change makes it current just before the merge (`selectCovered`).
   An end that holds the task's merge for the captain ends the other approvals too, as do the task's close and a policy change (`KeptApproval.dropQueued`, `CrewSupervisor.policiesChanged`); each such end wakes the crewmate once, naming the merges that will not run, to put their merge cards up again.
   When the app's own approval ends because the task no longer merges on its own, only the other approvals the app took under autonomy end with it, and those the captain clicked still go ahead (`endsWith`).
-  A new merge card for a pull request ends that pull request's approval and leaves the others as they are.
+  A new merge card for a pull request at another version ends that pull request's approval and leaves the others as they are.
+- **No second card for an approved version (INF-4018).**
+  A merge card at a version a standing approval covers - its approved head or its newest accepted repair, from the captain's click or the app's own approval - is refused before anything is written: `show_merge_card` answers with the approval's line, and `emit_card` refuses the card with the same words (`coveringApproval`, `keptApprovalLine`, `src/core/orchestrator/mergeAuthorization.ts`).
+  The approval keeps its generation, no queue mark is removed, and nothing is posted on the pull request.
+  An approval waiting its turn behind another covers its version the same way (`standingApprovals`).
+  The version is the one the card offers: the committed version `show_merge_card` verified pushed, or the saved story's on `emit_card`, never a record a check reading has not caught up with.
+  What the refusal says to do comes from one place (`coveredNextStep`): while the captain's newer words hold that approval, declare them with `check_change captainGuidance`; while the project's queue failed or sent back that version, which no checks override passes, fix the cause in a new version declared with `conflictRepair`, or answer a send-back of a version that already holds the fix with `check_change`'s answered verdict; while the pull request's own checks failed there, push a fix and declare it with `conflictRepair`, record a rerun, or report a Merge anyway case so the first mate records the captain's override; otherwise end the turn, since the app runs the merge once nothing holds it.
+  A card after a choice other than Merge under the same id still goes up with a new id, its answer naming the earlier choice; a card after the approval ended, or for a pull request merged outside the app, goes up as before.
+  The check watch sends no wake for a version the approval covers once every check passed there, and runs the approval in its place, since that wake's turn was what ran it (`CheckWatcher.withApproval`, `runKept`); any other check-watch wake at that version carries the approval's line and the refusal's next step.
+  Closing a card, a merge card or any other, leaves an approval as it was.
   An approval still standing keeps the task open after another merge that declared it closes the task.
 
 Not built: approvals on local-only and plain Git hosts or from first mate cards.

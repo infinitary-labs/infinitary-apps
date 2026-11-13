@@ -101,6 +101,11 @@ export class CrewWatch {
             return posture.state === "idle" && posture.reason === "dependency";
           },
           steer: (taskId, wake) => this.core.steer.steerInternal(taskId, wake, SUPERVISOR_STEER),
+          runKept: (taskId) => {
+            void this.core.settling.kept.runMergeAuthorization(taskId).catch((caught: unknown) => {
+              console.warn("[crew] kept merge after passed checks failed:", caught);
+            });
+          },
         })
       : undefined;
     const readMainChecks = options.readMainChecks;

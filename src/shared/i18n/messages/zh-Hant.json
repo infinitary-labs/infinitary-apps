@@ -229,6 +229,10 @@
   "commandCardsMaximizeWords": "全螢幕, 螢幕, 放大, 展開, 變大",
   "commandCardsNextRevision": "前往下一個修改過的區域",
   "commandCardsNextRevisionWords": "變更, 修訂, 連結",
+  "commandCardsNextQuestion": "前往下一個問題",
+  "commandCardsPreviousQuestion": "前往上一個問題",
+  "commandCardsUnansweredQuestion": "前往下一個未回答的問題",
+  "commandCardsQuestionWords": "決定, 選擇, 選項, 回答, 跳轉",
   "commandCardsPointAt": "指向卡片的某個部分",
   "commandCardsPointAtWords": "標註, 留言, 選取, 筆記",
   "commandCardsThread": "顯示或隱藏卡片的討論串",
@@ -302,6 +306,8 @@
   "uiCardPutEveryCardAside": "把所有卡片放到一旁",
   "uiCardStackPrevious": "上一張卡片",
   "uiCardStackNext": "下一張卡片",
+  "uiCardPreviousQuestion": "上一個問題",
+  "uiCardNextQuestion": "下一個問題",
   "uiCardStackNew": {
     "plural": "count",
     "other": "{count} 張新的"
@@ -418,6 +424,7 @@
   "refuseThisCardHasNoDoneOrGot": "這張卡片沒有「完成」或「知道了」",
   "refuseThisCardHasNoButtons": "這張卡片沒有按鈕",
   "refuseThisCardHasNoChangeLinks": "這張卡片沒有變更連結",
+  "refuseThisCardAsksNoQuestions": "這張卡片沒有提問",
   "refuseThisCardHasNoSuchChoice": "這張卡片沒有這個選項",
   "refuseThisCardHasNoSuchTab": "這張卡片沒有這個分頁",
   "refuseThisCardHasNoTabs": "這張卡片沒有分頁",

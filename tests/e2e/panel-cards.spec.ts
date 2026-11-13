@@ -88,7 +88,7 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
     });
 
     await test.step("its command's key puts it up again, with the keyboard's focus in it", async () => {
-      await pressWindowKey(app, "j", ["meta"]);
+      await pressWindowKey(app, "e", ["meta"]);
       await expect(readerBody.locator("[data-fixture-reader]")).toBeVisible();
       await expect
         .poll(() =>
@@ -157,7 +157,7 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
       await pressWindowKey(app, "k", ["meta"]);
       await search.field.fill("reading list");
       await expect(search.row(panelCommandId(PANEL, "open"))).toContainText(
-        keyWords({ key: "j", meta: true }),
+        keyWords({ key: "e", meta: true }),
       );
       await expect(search.row(panelCommandId(PANEL, "find"))).toBeVisible();
       await expect(search.dialog.locator(`[data-command-panel="Reading list"]`)).toHaveCount(1);
@@ -180,7 +180,7 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
       await keys.search.fill("reading list");
       await expect(keys.row(panelCommandId(PANEL, "open"))).toContainText("Reading list");
       await expect(keys.keys(panelCommandId(PANEL, "open"))).toContainText(
-        keyWords({ key: "j", meta: true }),
+        keyWords({ key: "e", meta: true }),
       );
       await expect(keys.row(panelCommandId(PANEL, "find"))).toBeVisible();
     });

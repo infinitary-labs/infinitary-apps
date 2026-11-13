@@ -739,6 +739,8 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` 
 - The bridge watches the named controls only after the host's `form` message, which only a card body's mount sends.
   On every `input`, `change` and document change it posts the one-way `answers` message: `answered`, `of`, `changed`, `picked`, and the answers themselves, which are the shell's draft.
 - The footer shows the count - "2 of 3 picked · 1 changed" - as its queue group; words written under Something else count as a pick.
+  On a card whose body is not a preview the count is a stepper through the questions, in the order the body draws them: the count goes to the next unanswered question, arrows beside it go to the previous and the next, and ⌘J and ⇧⌘J, Enter, Shift+Enter and the number keys answer them from the keyboard (`docs/keyboard.md`, "Moving between a card's questions").
+  An author needs nothing more than the facts above for it: each named question is a stop, its picked or Recommended option where focus lands.
   Only the default closing button waits for required answers; it stays focusable and clicking or pressing Enter focuses the first empty required question without sending.
   Other choices send whatever is picked.
   Options marked `data-inf-recommended` get an app-drawn tag without changing their selected state; unmarked legacy cards still use their authored defaults.

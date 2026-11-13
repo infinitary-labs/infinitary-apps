@@ -87,7 +87,7 @@ describe("Keyboard settings' recorder", () => {
     expect(
       recorderVerdict("cards.next", { key: "]", meta: true, shift: true }, DEFAULT_BINDINGS),
     ).toEqual({ kind: "own" });
-    expect(recorderVerdict("cards.next", { key: "j", meta: true }, DEFAULT_BINDINGS)).toEqual({
+    expect(recorderVerdict("cards.next", { key: "e", meta: true }, DEFAULT_BINDINGS)).toEqual({
       kind: "free",
     });
     const moves = recorderVerdict("cards.next", { key: "k", meta: true }, DEFAULT_BINDINGS);

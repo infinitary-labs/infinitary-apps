@@ -229,6 +229,10 @@
   "commandCardsMaximizeWords": "全屏, 屏幕, 放大, 展开, 更大",
   "commandCardsNextRevision": "前往下一处修改过的区域",
   "commandCardsNextRevisionWords": "改动, 修订, 链接",
+  "commandCardsNextQuestion": "前往下一个问题",
+  "commandCardsPreviousQuestion": "前往上一个问题",
+  "commandCardsUnansweredQuestion": "前往下一个未回答的问题",
+  "commandCardsQuestionWords": "决定, 选择, 选项, 回答, 跳转",
   "commandCardsPointAt": "指向卡片的某个部分",
   "commandCardsPointAtWords": "标注, 评论, 选择, 批注",
   "commandCardsThread": "显示或隐藏卡片的讨论",
@@ -302,6 +306,8 @@
   "uiCardPutEveryCardAside": "把所有卡片放到一边",
   "uiCardStackPrevious": "上一张卡片",
   "uiCardStackNext": "下一张卡片",
+  "uiCardPreviousQuestion": "上一个问题",
+  "uiCardNextQuestion": "下一个问题",
   "uiCardStackNew": {
     "plural": "count",
     "other": "{count} 张新卡片"
@@ -418,6 +424,7 @@
   "refuseThisCardHasNoDoneOrGot": "这张卡片没有“完成”或“知道了”",
   "refuseThisCardHasNoButtons": "这张卡片没有按钮",
   "refuseThisCardHasNoChangeLinks": "这张卡片没有改动链接",
+  "refuseThisCardAsksNoQuestions": "这张卡片没有提问",
   "refuseThisCardHasNoSuchChoice": "这张卡片没有这个选项",
   "refuseThisCardHasNoSuchTab": "这张卡片没有这个标签页",
   "refuseThisCardHasNoTabs": "这张卡片没有标签页",

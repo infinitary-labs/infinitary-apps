@@ -280,10 +280,13 @@ test("each registered corner puts away without ending work; only Done receipts t
       await expandDock(page, "now");
       await pressRow(page, keys.decision!);
       await showCard(page, "Launch decision");
-      const footer = shownEntry(page).locator("[data-card-actions] button");
-      // The button's text also holds its pending words and key hint, so its label is read by prefix.
-      await expect(footer.first()).toHaveText(new RegExp(`^${DECLINE_LABEL}`));
-      await expect(footer.first()).toHaveAttribute("data-card-declines", "");
+      // The button's text also holds its pending words and key hint, so its label is read by
+      // prefix; the footer's answer count sits beside the choices, so Decline is found by name.
+      const decline = shownEntry(page)
+        .locator("[data-card-actions] button")
+        .filter({ hasText: new RegExp(`^${DECLINE_LABEL}`) });
+      await expect(decline).toHaveCount(1);
+      await expect(decline).toHaveAttribute("data-card-declines", "");
       await runFromSearch(app.app, page, "cards.decline");
       await expectNoCard(page, "Launch decision");
       await expect.poll(() => status("decision")).toBe("done");

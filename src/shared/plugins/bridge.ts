@@ -316,6 +316,22 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
     top: z.number().finite().nonnegative().max(1_000_000).optional(),
     height: z.number().finite().nonnegative().max(1_000_000).optional(),
   }),
+  /**
+   * Where a step through the body's questions went (docs/keyboard.md, "Moving
+   * between a card's questions"): the box of the question it landed on, or
+   * `end` when it stepped past the last one. `seq` answers the host's
+   * `question` of that number; without it, the step was the body's own
+   * Enter or Shift+Enter on a question.
+   */
+  z.object({
+    fm: fmMarker,
+    type: z.literal("questioned"),
+    document: z.string(),
+    seq: correlationId.optional(),
+    top: z.number().finite().nonnegative().max(1_000_000).optional(),
+    height: z.number().finite().nonnegative().max(1_000_000).optional(),
+    end: z.boolean().optional(),
+  }),
   z.object({
     fm: fmMarker,
     type: z.literal("ready"),
@@ -449,6 +465,16 @@ type FrameResponse = {
   document?: string;
 };
 
+/**
+ * Where a step through a card body's questions went: the box of the question
+ * it landed on in the document, `end` past the last one, or nothing when the
+ * body asks no question a step can go to.
+ */
+export type FrameQuestioned =
+  | { top: number; height: number }
+  | { end: true }
+  | Record<string, never>;
+
 export type HostMessage =
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "annotate-selection"; document: string }
   | {
@@ -492,6 +518,22 @@ export type HostMessage =
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "ping"; seq: number }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "form"; fill: CardAnswer[] | null; readOnly?: true }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "collect"; seq: number; focusUnpicked?: boolean }
+  /**
+   * A step through the body's questions (docs/keyboard.md, "Moving between a
+   * card's questions"): `step` 1 the next, -1 the previous; `unpicked` the
+   * next with no answer yet; `wrap` goes round past either end; `restart`
+   * starts outside the questions: next at the first, previous at the last. `keyboard` moves focus there.
+   */
+  | {
+      fm: typeof FRAME_BRIDGE_VERSION;
+      type: "question";
+      seq: number;
+      step: 1 | -1;
+      unpicked: boolean;
+      wrap: boolean;
+      restart: boolean;
+      keyboard: boolean;
+    }
   /** The keys the host hears from this document: its pictures, and an Escape that leaves it. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "keys"; pictures: boolean; escape: boolean }
   /** The host just gave the frame focus back: the element that last had it takes it again. */

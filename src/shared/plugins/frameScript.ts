@@ -15,6 +15,7 @@ import {
   PICTURE_STRIP_SHOWN,
 } from "./bridge";
 import { FRAME_ANNOTATION_SCRIPT } from "./frameAnnotationScript";
+import { FRAME_QUESTION_SCRIPT } from "./frameQuestionScript";
 import { READ_VALUE_DECODER } from "./readTransfer";
 
 /**
@@ -250,7 +251,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   var capped = new WeakSet();
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
-  var form = { on: false, locked: false, fill: null, filling: false, staged: {}, first: new WeakMap(), last: "", fields: new WeakMap() };
+  var form = { on: false, locked: false, fill: null, filling: false, staged: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
@@ -675,6 +676,9 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
         if (data.keyboard) { if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1"); target.focus({preventScroll: true}); }
         post({ type: "revealed", seq: data.seq, offerId: data.offerId, top: rect.top + window.scrollY, height: rect.height });
       });
+    } else if (data.type === "question") {
+      if (!Number.isSafeInteger(data.seq) || data.seq < 1) return;
+      stepQuestion(data.step === -1 ? -1 : 1, data.unpicked === true, data.wrap === true, data.restart === true, data.keyboard === true, data.seq);
     } else if (data.type === "collect") {
       readForm(data.seq);
       if (data.focusUnpicked) focusUnpicked();
@@ -1151,6 +1155,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     var control = field && !field.hidden ? field : group.controls.find(function (control) { return !control.disabled && !boxless(control); });
     if (control) { control.focus(); control.scrollIntoView({ block: "center", behavior: "smooth" }); }
   }
+${FRAME_QUESTION_SCRIPT}
   // A question that recommends rather than pre-picks: nothing is chosen
   // until the captain chooses, so any answer it has is the captain's pick.
   function tagged(group) {
@@ -1953,4 +1958,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-cZ1cbkq4+2pYAbd9QoBpJSILsfmjikMInStlh39Reto=";
+export const FRAME_BRIDGE_SHA256 = "sha256-RZdSBLHr3hi75NirdAUaUUoCdpdcQCTPUHk/lxQLjNA=";

@@ -225,6 +225,10 @@ public enum PhoneMessages {
     public static func `commandCardsMaximizeWords`() -> String { PhoneWords.format("commandCardsMaximizeWords", []) }
     public static func `commandCardsNextRevision`() -> String { PhoneWords.format("commandCardsNextRevision", []) }
     public static func `commandCardsNextRevisionWords`() -> String { PhoneWords.format("commandCardsNextRevisionWords", []) }
+    public static func `commandCardsNextQuestion`() -> String { PhoneWords.format("commandCardsNextQuestion", []) }
+    public static func `commandCardsPreviousQuestion`() -> String { PhoneWords.format("commandCardsPreviousQuestion", []) }
+    public static func `commandCardsUnansweredQuestion`() -> String { PhoneWords.format("commandCardsUnansweredQuestion", []) }
+    public static func `commandCardsQuestionWords`() -> String { PhoneWords.format("commandCardsQuestionWords", []) }
     public static func `commandCardsPointAt`() -> String { PhoneWords.format("commandCardsPointAt", []) }
     public static func `commandCardsPointAtWords`() -> String { PhoneWords.format("commandCardsPointAtWords", []) }
     public static func `commandCardsThread`() -> String { PhoneWords.format("commandCardsThread", []) }
@@ -298,6 +302,8 @@ public enum PhoneMessages {
     public static func `uiCardPutEveryCardAside`() -> String { PhoneWords.format("uiCardPutEveryCardAside", []) }
     public static func `uiCardStackPrevious`() -> String { PhoneWords.format("uiCardStackPrevious", []) }
     public static func `uiCardStackNext`() -> String { PhoneWords.format("uiCardStackNext", []) }
+    public static func `uiCardPreviousQuestion`() -> String { PhoneWords.format("uiCardPreviousQuestion", []) }
+    public static func `uiCardNextQuestion`() -> String { PhoneWords.format("uiCardNextQuestion", []) }
     public static func `uiCardStackNew`(`count`: Int) -> String { PhoneWords.format("uiCardStackNew", [`count`]) }
     public static func `uiPictureViewerDemoFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerDemoFrom", [`title`]) }
     public static func `uiPictureViewerPicturesFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerPicturesFrom", [`title`]) }
@@ -402,6 +408,7 @@ public enum PhoneMessages {
     public static func `refuseThisCardHasNoDoneOrGot`() -> String { PhoneWords.format("refuseThisCardHasNoDoneOrGot", []) }
     public static func `refuseThisCardHasNoButtons`() -> String { PhoneWords.format("refuseThisCardHasNoButtons", []) }
     public static func `refuseThisCardHasNoChangeLinks`() -> String { PhoneWords.format("refuseThisCardHasNoChangeLinks", []) }
+    public static func `refuseThisCardAsksNoQuestions`() -> String { PhoneWords.format("refuseThisCardAsksNoQuestions", []) }
     public static func `refuseThisCardHasNoSuchChoice`() -> String { PhoneWords.format("refuseThisCardHasNoSuchChoice", []) }
     public static func `refuseThisCardHasNoSuchTab`() -> String { PhoneWords.format("refuseThisCardHasNoSuchTab", []) }
     public static func `refuseThisCardHasNoTabs`() -> String { PhoneWords.format("refuseThisCardHasNoTabs", []) }
@@ -1185,6 +1192,10 @@ extension PhoneWords {
         "commandCardsMaximizeWords": [],
         "commandCardsNextRevision": [],
         "commandCardsNextRevisionWords": [],
+        "commandCardsNextQuestion": [],
+        "commandCardsPreviousQuestion": [],
+        "commandCardsUnansweredQuestion": [],
+        "commandCardsQuestionWords": [],
         "commandCardsPointAt": [],
         "commandCardsPointAtWords": [],
         "commandCardsThread": [],
@@ -1258,6 +1269,8 @@ extension PhoneWords {
         "uiCardPutEveryCardAside": [],
         "uiCardStackPrevious": [],
         "uiCardStackNext": [],
+        "uiCardPreviousQuestion": [],
+        "uiCardNextQuestion": [],
         "uiCardStackNew": ["count"],
         "uiPictureViewerDemoFrom": ["title"],
         "uiPictureViewerPicturesFrom": ["title"],
@@ -1362,6 +1375,7 @@ extension PhoneWords {
         "refuseThisCardHasNoDoneOrGot": [],
         "refuseThisCardHasNoButtons": [],
         "refuseThisCardHasNoChangeLinks": [],
+        "refuseThisCardAsksNoQuestions": [],
         "refuseThisCardHasNoSuchChoice": [],
         "refuseThisCardHasNoSuchTab": [],
         "refuseThisCardHasNoTabs": [],

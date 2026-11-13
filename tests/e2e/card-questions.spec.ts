@@ -15,6 +15,7 @@ import {
   PAST_CARD_WORDS_LEAD,
   REPLY_SETTINGS_HEAD,
 } from "../../src/shared/cards";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { AS_BUILT_WORDS } from "../../src/shared/plugins/bridge";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
@@ -52,7 +53,14 @@ import {
   shownCard,
   shownEntry,
 } from "./stack";
-import { focusOn, pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
+import {
+  focusOn,
+  pressKey,
+  pressWindowKey,
+  runFromSearch,
+  typeInto,
+  untilFocused,
+} from "./windowKeys";
 
 /**
  * Inline decisions (contract 4.22; the captain's Q1 B to Q4 A of
@@ -783,6 +791,137 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
             { value: "daily", label: "Daily", authoredDefault: false },
           ],
         },
+      ],
+    });
+  } finally {
+    recordedDb.close();
+  }
+});
+
+/**
+ * Moving between a card's questions by keys alone (INF-3963's approved plan;
+ * the captain: "a user to easily switch between decisions, and change
+ * their options all using keyboards smoothly"). ⌘J goes to the next
+ * question, landing on its Recommended option; Enter takes the option it
+ * rests on and goes on; a number key takes that option; Shift+Enter goes
+ * back; Enter past the last question lands on the card's default button,
+ * and ⌘1 sends. The footer's arrow is the pointer's: it brings the
+ * question into view and takes no focus; the keys go on from the
+ * question it showed.
+ *
+ * Promised result: every answer is given and sent from the keyboard, and
+ * the footer's count follows. Data: a first mate card with three required
+ * questions, two of them with a Recommended option. Completion signal: the
+ * card is gone and its saved action holds the three answers. Platform: the
+ * hermetic launcher; window keys go through the main process, and keys
+ * inside the body go to the option that holds focus.
+ * Shared resources: none; the test owns its userData.
+ */
+const STEPS_TITLE = "Three calls settle the weekly report";
+const STEPS_ID = "card-fm-question-steps";
+
+test("a card's questions are stepped through and answered by keys alone", async () => {
+  const userDataDir = scratchDir("infinitary-question-steps-");
+  const db = openDatabase(userDataDir);
+  new CardStore(db).upsert({
+    id: STEPS_ID,
+    title: STEPS_TITLE,
+    author: "firstmate",
+    priority: 50,
+    meta: "firstmate",
+    status: "ready",
+    createdAt: Date.now(),
+    body: `<p>Choose who sees the weekly report, what it includes and when it goes out.</p>
+      <fieldset><legend>Who can see it?</legend>
+      <label><input type="radio" name="audience" value="me" required> Only me</label>
+      <label><input type="radio" name="audience" value="project" data-inf-recommended required> The whole project</label>
+      <label><input type="radio" name="audience" value="other" data-inf-write-in required> Something else</label></fieldset>
+      <fieldset><legend>What should it include?</legend>
+      <label><input type="checkbox" name="include" value="summary" data-inf-recommended required> Summary</label>
+      <label><input type="checkbox" name="include" value="checks" required> Checks</label>
+      <label><input type="checkbox" name="include" value="other" data-inf-write-in required> Something else</label></fieldset>
+      <fieldset><legend>When should it go out?</legend>
+      <label><input type="radio" name="when" value="monday" required> Monday</label>
+      <label><input type="radio" name="when" value="friday" required> Friday</label>
+      <label><input type="radio" name="when" value="other" data-inf-write-in required> Something else</label></fieldset>`,
+    actions: [
+      { id: "defer", label: "Not now", variant: "secondary" },
+      { id: "approve", label: "Approve", default: true, variant: "primary" },
+    ],
+  });
+  db.close();
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const { app, page } = launched;
+  try {
+    await showCard(page, STEPS_TITLE);
+    const frame = cardBody(page, STEPS_TITLE);
+    const option = (value: string) => frame.locator(`input[value="${value}"]`);
+    const prompt = page.getByRole("textbox", { name: "Task prompt" });
+    await expect(answersLine(page)).toHaveText(pickedLine(0, 3));
+
+    // The pointer's arrow brings the next question into view and leaves
+    // focus in the main message.
+    await focusOn(prompt);
+    const scroller = shownEntry(page).locator("[data-card-body]");
+    const next = shownEntry(page).getByRole("button", { name: m.uiCardNextQuestion() });
+    for (let step = 0; step < 3; step++) await next.click();
+    await expect.poll(() => scroller.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
+    await expect(prompt).toBeFocused();
+
+    // The keys go on from the question the arrow showed, the last: ⇧⌘J twice
+    // is the first question, on its Recommended option, with nothing picked.
+    await pressWindowKey(app, "J", ["meta", "shift"]);
+    await untilFocused(option("summary"));
+    await pressWindowKey(app, "J", ["meta", "shift"]);
+    await untilFocused(option("project"));
+    await expect(frame.locator("input:checked")).toHaveCount(0);
+    // Enter takes it and goes on to the next question's Recommended option.
+    await pressKey(option("project"), "Enter");
+    await expect(option("project")).toBeChecked();
+    await untilFocused(option("summary"));
+    await expect(answersLine(page)).toHaveText(pickedLine(1, 3));
+    // A number key takes that option: 2 is Checks.
+    await pressKey(option("summary"), "2");
+    await expect(option("checks")).toBeChecked();
+    await expect(option("summary")).not.toBeChecked();
+    await expect(answersLine(page)).toHaveText(pickedLine(2, 3, 1));
+    // Enter on a checkbox goes on without ticking it.
+    await pressKey(option("checks"), "Enter");
+    await untilFocused(option("monday"));
+    await expect(option("checks")).toBeChecked();
+    await expect(option("summary")).not.toBeChecked();
+    await pressKey(option("monday"), "2");
+    await expect(option("friday")).toBeChecked();
+    await expect(answersLine(page)).toHaveText(pickedLine(3, 3, 2));
+    // Shift+Enter goes back to the picked option and takes nothing; ⌘J goes on again.
+    await pressKey(option("friday"), "Shift+Enter");
+    await untilFocused(option("checks"));
+    await pressWindowKey(app, "J", ["meta"]);
+    await untilFocused(option("friday"));
+    // Past the last question: the card's default button, pressed by nothing.
+    await pressKey(option("friday"), "Enter");
+    const approve = shownEntry(page).getByRole("button", { name: "Approve", exact: true });
+    await expect(approve).toBeFocused();
+    await expect(shownCard(page, STEPS_TITLE)).toBeVisible();
+    // ⇧⌘J goes back into the body, to the last question.
+    await pressWindowKey(app, "J", ["meta", "shift"]);
+    await untilFocused(option("friday"));
+    await pressWindowKey(app, "1", ["meta"]);
+    await expectNoCard(page, STEPS_TITLE);
+  } finally {
+    await launched.close();
+  }
+  const recordedDb = openDatabase(userDataDir);
+  try {
+    const actions = new CardStore(recordedDb)
+      .observations(STEPS_ID)
+      .filter((entry) => entry.kind === "action");
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.payload).toMatchObject({
+      answers: [
+        { name: "audience", values: ["project"] },
+        { name: "include", values: ["checks"] },
+        { name: "when", values: ["friday"] },
       ],
     });
   } finally {

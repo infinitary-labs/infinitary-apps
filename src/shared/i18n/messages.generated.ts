@@ -6545,6 +6545,118 @@ export function commandCardsNextRevisionWords(): string {
   return `changes, revision, links`;
 }
 
+export function commandCardsNextQuestion(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الانتقال إلى السؤال التالي`;
+    case "de":
+      return `Zur nächsten Frage gehen`;
+    case "es":
+      return `Ir a la siguiente pregunta`;
+    case "fr":
+      return `Aller à la question suivante`;
+    case "ja":
+      return `次の質問へ移動`;
+    case "ko":
+      return `다음 질문으로 이동`;
+    case "pt-BR":
+      return `Ir para a próxima pergunta`;
+    case "zh-Hans":
+      return `前往下一个问题`;
+    case "zh-Hant":
+      return `前往下一個問題`;
+    case "en-XA":
+      return `[Ĝö ţö ţĥé ñéẋţ ǫûéšţîöñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the next question\u202c`;
+  }
+  return `Go to the next question`;
+}
+
+export function commandCardsPreviousQuestion(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الانتقال إلى السؤال السابق`;
+    case "de":
+      return `Zur vorherigen Frage gehen`;
+    case "es":
+      return `Ir a la pregunta anterior`;
+    case "fr":
+      return `Aller à la question précédente`;
+    case "ja":
+      return `前の質問へ移動`;
+    case "ko":
+      return `이전 질문으로 이동`;
+    case "pt-BR":
+      return `Ir para a pergunta anterior`;
+    case "zh-Hans":
+      return `前往上一个问题`;
+    case "zh-Hant":
+      return `前往上一個問題`;
+    case "en-XA":
+      return `[Ĝö ţö ţĥé þŕéṽîöûš ǫûéšţîöñ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the previous question\u202c`;
+  }
+  return `Go to the previous question`;
+}
+
+export function commandCardsUnansweredQuestion(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الانتقال إلى السؤال التالي دون إجابة`;
+    case "de":
+      return `Zur nächsten unbeantworteten Frage gehen`;
+    case "es":
+      return `Ir a la siguiente pregunta sin responder`;
+    case "fr":
+      return `Aller à la prochaine question sans réponse`;
+    case "ja":
+      return `次の未回答の質問へ移動`;
+    case "ko":
+      return `답하지 않은 다음 질문으로 이동`;
+    case "pt-BR":
+      return `Ir para a próxima pergunta sem resposta`;
+    case "zh-Hans":
+      return `前往下一个未回答的问题`;
+    case "zh-Hant":
+      return `前往下一個未回答的問題`;
+    case "en-XA":
+      return `[Ĝö ţö ţĥé ñéẋţ ûñáñšŵéŕéð ǫûéšţîöñ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGo to the next unanswered question\u202c`;
+  }
+  return `Go to the next unanswered question`;
+}
+
+export function commandCardsQuestionWords(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قرار, اختيار, خيار, إجابة, انتقال`;
+    case "de":
+      return `Entscheidung, wählen, Option, Antwort, springen`;
+    case "es":
+      return `decisión, elegir, opción, respuesta, saltar`;
+    case "fr":
+      return `décision, choisir, option, réponse, sauter`;
+    case "ja":
+      return `判断, 選択, 選択肢, 回答, ジャンプ`;
+    case "ko":
+      return `결정, 선택, 옵션, 답, 이동`;
+    case "pt-BR":
+      return `decisão, escolher, opção, resposta, pular`;
+    case "zh-Hans":
+      return `决定, 选择, 选项, 回答, 跳转`;
+    case "zh-Hant":
+      return `決定, 選擇, 選項, 回答, 跳轉`;
+    case "en-XA":
+      return `[ðéçîšîöñ, þîçķ, öþţîöñ, áñšŵéŕ, ĵûɱþ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202edecision, pick, option, answer, jump\u202c`;
+  }
+  return `decision, pick, option, answer, jump`;
+}
+
 export function commandCardsPointAt(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -8587,6 +8699,62 @@ export function uiCardStackNext(): string {
       return `\u202eNext card\u202c`;
   }
   return `Next card`;
+}
+
+export function uiCardPreviousQuestion(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السؤال السابق`;
+    case "de":
+      return `Vorherige Frage`;
+    case "es":
+      return `Pregunta anterior`;
+    case "fr":
+      return `Question précédente`;
+    case "ja":
+      return `前の質問`;
+    case "ko":
+      return `이전 질문`;
+    case "pt-BR":
+      return `Pergunta anterior`;
+    case "zh-Hans":
+      return `上一个问题`;
+    case "zh-Hant":
+      return `上一個問題`;
+    case "en-XA":
+      return `[Þŕéṽîöûš ǫûéšţîöñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrevious question\u202c`;
+  }
+  return `Previous question`;
+}
+
+export function uiCardNextQuestion(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السؤال التالي`;
+    case "de":
+      return `Nächste Frage`;
+    case "es":
+      return `Pregunta siguiente`;
+    case "fr":
+      return `Question suivante`;
+    case "ja":
+      return `次の質問`;
+    case "ko":
+      return `다음 질문`;
+    case "pt-BR":
+      return `Próxima pergunta`;
+    case "zh-Hans":
+      return `下一个问题`;
+    case "zh-Hant":
+      return `下一個問題`;
+    case "en-XA":
+      return `[Ñéẋţ ǫûéšţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNext question\u202c`;
+  }
+  return `Next question`;
 }
 
 export function uiCardStackNew(input: { count: number }): string {
@@ -11791,6 +11959,34 @@ export function refuseThisCardHasNoChangeLinks(): string {
       return `\u202eThis card has no change links\u202c`;
   }
   return `This card has no change links`;
+}
+
+export function refuseThisCardAsksNoQuestions(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا تطرح هذه البطاقة أسئلة`;
+    case "de":
+      return `Diese Karte stellt keine Fragen`;
+    case "es":
+      return `Esta tarjeta no hace preguntas`;
+    case "fr":
+      return `Cette carte ne pose aucune question`;
+    case "ja":
+      return `このカードには質問がありません`;
+    case "ko":
+      return `이 카드에는 질문이 없어요`;
+    case "pt-BR":
+      return `Este cartão não faz perguntas`;
+    case "zh-Hans":
+      return `这张卡片没有提问`;
+    case "zh-Hant":
+      return `這張卡片沒有提問`;
+    case "en-XA":
+      return `[Ţĥîš çáŕð ášķš ñö ǫûéšţîöñš ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis card asks no questions\u202c`;
+  }
+  return `This card asks no questions`;
 }
 
 export function refuseThisCardHasNoSuchChoice(): string {
@@ -28489,6 +28685,10 @@ export const MESSAGES = {
   commandCardsMaximizeWords,
   commandCardsNextRevision,
   commandCardsNextRevisionWords,
+  commandCardsNextQuestion,
+  commandCardsPreviousQuestion,
+  commandCardsUnansweredQuestion,
+  commandCardsQuestionWords,
   commandCardsPointAt,
   commandCardsPointAtWords,
   commandCardsThread,
@@ -28562,6 +28762,8 @@ export const MESSAGES = {
   uiCardPutEveryCardAside,
   uiCardStackPrevious,
   uiCardStackNext,
+  uiCardPreviousQuestion,
+  uiCardNextQuestion,
   uiCardStackNew,
   uiPictureViewerDemoFrom,
   uiPictureViewerPicturesFrom,
@@ -28666,6 +28868,7 @@ export const MESSAGES = {
   refuseThisCardHasNoDoneOrGot,
   refuseThisCardHasNoButtons,
   refuseThisCardHasNoChangeLinks,
+  refuseThisCardAsksNoQuestions,
   refuseThisCardHasNoSuchChoice,
   refuseThisCardHasNoSuchTab,
   refuseThisCardHasNoTabs,
@@ -29451,6 +29654,10 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   commandCardsMaximizeWords: [],
   commandCardsNextRevision: [],
   commandCardsNextRevisionWords: [],
+  commandCardsNextQuestion: [],
+  commandCardsPreviousQuestion: [],
+  commandCardsUnansweredQuestion: [],
+  commandCardsQuestionWords: [],
   commandCardsPointAt: [],
   commandCardsPointAtWords: [],
   commandCardsThread: [],
@@ -29524,6 +29731,8 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   uiCardPutEveryCardAside: [],
   uiCardStackPrevious: [],
   uiCardStackNext: [],
+  uiCardPreviousQuestion: [],
+  uiCardNextQuestion: [],
   uiCardStackNew: ["count"],
   uiPictureViewerDemoFrom: ["title"],
   uiPictureViewerPicturesFrom: ["title"],
@@ -29628,6 +29837,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   refuseThisCardHasNoDoneOrGot: [],
   refuseThisCardHasNoButtons: [],
   refuseThisCardHasNoChangeLinks: [],
+  refuseThisCardAsksNoQuestions: [],
   refuseThisCardHasNoSuchChoice: [],
   refuseThisCardHasNoSuchTab: [],
   refuseThisCardHasNoTabs: [],

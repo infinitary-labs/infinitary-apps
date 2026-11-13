@@ -6547,6 +6547,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       top: number().finite().nonnegative().max(1e6).optional(),
       height: number().finite().nonnegative().max(1e6).optional()
     }),
+    /**
+     * Where a step through the body's questions went (docs/keyboard.md, "Moving
+     * between a card's questions"): the box of the question it landed on, or
+     * `end` when it stepped past the last one. `seq` answers the host's
+     * `question` of that number; without it, the step was the body's own
+     * Enter or Shift+Enter on a question.
+     */
+    object({
+      fm: fmMarker,
+      type: literal("questioned"),
+      document: string(),
+      seq: correlationId.optional(),
+      top: number().finite().nonnegative().max(1e6).optional(),
+      height: number().finite().nonnegative().max(1e6).optional(),
+      end: boolean().optional()
+    }),
     object({
       fm: fmMarker,
       type: literal("ready"),
@@ -6767,6 +6783,139 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   annotationStyle.textContent = 'body:has([data-inf-target]){padding-block:var(--space-1)}[data-inf-point-lit]{background:var(--accent-dim)!important;border-radius:var(--radius-xs);box-shadow:0 0 0 3px var(--accent-dim),0 0 0 4px var(--line-2)}[data-inf-point-queued]{position:relative}[data-inf-point-queued]::before{content:"";position:absolute;left:calc(-1 * var(--space-1));top:2px;bottom:2px;width:2px;border-radius:2px;background:var(--accent);pointer-events:none}img[data-inf-point-queued]{box-shadow:-4px 0 0 -2px var(--accent)}::highlight(inf-point),::highlight(inf-point-reveal){background:var(--accent-dim);text-decoration:underline;text-decoration-color:var(--accent)}::highlight(inf-point-queued){text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px}';
   document.head.appendChild(annotationStyle);
 `;
+  const FRAME_QUESTION_SCRIPT = `  // Moving between the body's questions (docs/keyboard.md, "Moving between a
+  // card's questions"): each question with a control a person can reach, in
+  // the order the body asks them. A preview's staged settings have none.
+  function reachable(control) {
+    return !control.disabled && kindOf(control) !== "hidden" && !boxless(control);
+  }
+  function askable() {
+    return questions().filter(function (group) { return group.controls.some(reachable); });
+  }
+  // The Something else row whose field this is, and its question.
+  function rowOfField(field) {
+    var found = null;
+    questions().forEach(function (group) {
+      writeInRows(group).forEach(function (row) { if (form.fields.get(row) === field) found = { group: group, row: row }; });
+    });
+    return found;
+  }
+  function questionAt(element) {
+    if (!element || element.nodeType !== 1 || !element.hasAttribute) return null;
+    if (element.hasAttribute("data-inf-write-in-field")) {
+      var owned = rowOfField(element);
+      return owned ? owned.group.name : null;
+    }
+    var kind = element.name ? kindOf(element) : "";
+    return kind && kind !== "hidden" ? element.name : null;
+  }
+  // A step lands on the picked option, else the Recommended one, else the
+  // question's first control; a picked Something else lands on its row.
+  // Landing picks nothing.
+  function landing(group) {
+    var reach = group.controls.filter(reachable);
+    var picked = reach.find(function (control) {
+      var kind = kindOf(control);
+      return (kind === "radio" || kind === "checkbox") && control.checked;
+    });
+    return picked || reach.find(function (control) { return control.hasAttribute("data-inf-recommended"); }) || reach[0];
+  }
+  function stepQuestion(step, unpicked, wrap, restart, keyboard, seq) {
+    var list = askable();
+    var answer = { type: "questioned" };
+    if (seq) answer.seq = seq;
+    if (!list.length) { post(answer); return; }
+    var name = restart ? null : questionAt(document.activeElement) || form.current;
+    var at = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) at = i;
+    var to;
+    if (unpicked) {
+      to = 0;
+      for (var n = 1; n <= list.length; n++) {
+        var index = (at + n + list.length) % list.length;
+        if (!hasAnswer(answerOf(list[index]))) { to = index; break; }
+      }
+    } else if (at < 0) to = step > 0 ? 0 : list.length - 1;
+    else {
+      to = at + step;
+      if (to >= list.length) {
+        if (!wrap) { answer.end = true; post(answer); return; }
+        to = 0;
+      }
+      if (to < 0) to = wrap ? list.length - 1 : 0;
+    }
+    var group = list[to];
+    form.current = group.name;
+    var control = landing(group);
+    var box = holderOf(control) || control;
+    for (var ancestor = box.parentElement; ancestor; ancestor = ancestor.parentElement) if (ancestor.tagName === "DETAILS") ancestor.open = true;
+    if (keyboard) control.focus({ preventScroll: true });
+    resize();
+    requestAnimationFrame(function () {
+      document.querySelectorAll("[data-inf-revision-highlight]").forEach(function (el) { el.removeAttribute("data-inf-revision-highlight"); });
+      box.setAttribute("data-inf-revision-highlight", "");
+      setTimeout(function () { box.removeAttribute("data-inf-revision-highlight"); }, 1000);
+      var rect = box.getBoundingClientRect();
+      answer.top = Math.max(0, rect.top + window.scrollY);
+      answer.height = rect.height;
+      post(answer);
+    });
+  }
+  // The question last focused or touched is the one a step starts from.
+  ["focusin", "change"].forEach(function (type) {
+    document.addEventListener(type, function (event) {
+      var name = questionAt(event.target);
+      if (name) form.current = name;
+    }, true);
+  });
+  // After the body's own handlers, on a question's control: Enter takes the
+  // option it rests on and goes to the next question, Shift+Enter goes back
+  // and takes nothing, 1 to 9 take that option, and the arrows move between
+  // checkboxes without ticking them. A multi-line field keeps Enter for a
+  // new line; Up from a Something else field's first line goes to its row.
+  document.addEventListener("keydown", function (event) {
+    if (event.defaultPrevented || event.isComposing || event.metaKey || event.ctrlKey || event.altKey || form.locked) return;
+    var target = event.target;
+    if (!target || target.nodeType !== 1 || !target.hasAttribute) return;
+    if (target.hasAttribute("data-inf-write-in-field")) {
+      if (event.key !== "ArrowUp" || event.shiftKey || target.selectionStart !== 0 || target.selectionEnd !== 0) return;
+      var owned = rowOfField(target);
+      if (owned && owned.row.tagName !== "OPTION" && reachable(owned.row)) { event.preventDefault(); owned.row.focus(); }
+      return;
+    }
+    var kind = target.name ? kindOf(target) : "";
+    if (!kind || kind === "hidden" || target.tagName === "TEXTAREA") return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (event.repeat) return;
+      if (!event.shiftKey && kind === "radio" && !target.checked) {
+        target.click();
+        // A Something else row waits for its words in the field it opened.
+        if (isWriteIn(target)) return;
+      }
+      stepQuestion(event.shiftKey ? -1 : 1, false, false, false, true, 0);
+      return;
+    }
+    if (event.shiftKey || (kind !== "radio" && kind !== "checkbox")) return;
+    var options = [];
+    var all = document.getElementsByName(target.name);
+    for (var i = 0; i < all.length; i++) if (kindOf(all[i]) === kind && reachable(all[i])) options.push(all[i]);
+    if (event.key.length === 1 && event.key >= "1" && event.key <= "9") {
+      var option = options[Number(event.key) - 1];
+      if (!option) return;
+      event.preventDefault();
+      if (event.repeat) return;
+      option.focus();
+      if (kind === "checkbox" || !option.checked) option.click();
+      return;
+    }
+    var moves = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+    if (kind !== "checkbox" || !Object.prototype.hasOwnProperty.call(moves, event.key)) return;
+    var from = options.indexOf(target);
+    if (from < 0 || options.length < 2) return;
+    event.preventDefault();
+    options[(from + moves[event.key] + options.length) % options.length].focus();
+  });`;
   const READ_VALUE_DECODER = `function (previous, message) {
   var value = message.value;
   (message.reuse || []).forEach(function (array) {
@@ -6801,7 +6950,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   var documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   var capped = new WeakSet();
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
-  var form = { on: false, locked: false, fill: null, filling: false, staged: {}, first: new WeakMap(), last: "", fields: new WeakMap() };
+  var form = { on: false, locked: false, fill: null, filling: false, staged: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
@@ -7226,6 +7375,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         if (data.keyboard) { if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1"); target.focus({preventScroll: true}); }
         post({ type: "revealed", seq: data.seq, offerId: data.offerId, top: rect.top + window.scrollY, height: rect.height });
       });
+    } else if (data.type === "question") {
+      if (!Number.isSafeInteger(data.seq) || data.seq < 1) return;
+      stepQuestion(data.step === -1 ? -1 : 1, data.unpicked === true, data.wrap === true, data.restart === true, data.keyboard === true, data.seq);
     } else if (data.type === "collect") {
       readForm(data.seq);
       if (data.focusUnpicked) focusUnpicked();
@@ -7701,6 +7853,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     var control = field && !field.hidden ? field : group.controls.find(function (control) { return !control.disabled && !boxless(control); });
     if (control) { control.focus(); control.scrollIntoView({ block: "center", behavior: "smooth" }); }
   }
+${FRAME_QUESTION_SCRIPT}
   // A question that recommends rather than pre-picks: nothing is chosen
   // until the captain chooses, so any answer it has is the captain's pick.
   function tagged(group) {
@@ -8497,7 +8650,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-cZ1cbkq4+2pYAbd9QoBpJSILsfmjikMInStlh39Reto=";
+  const FRAME_BRIDGE_SHA256 = "sha256-RZdSBLHr3hi75NirdAUaUUoCdpdcQCTPUHk/lxQLjNA=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -9602,6 +9755,114 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮changes, revision, links‬`;
     }
     return `changes, revision, links`;
+  }
+  function commandCardsNextQuestion() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى السؤال التالي`;
+      case "de":
+        return `Zur nächsten Frage gehen`;
+      case "es":
+        return `Ir a la siguiente pregunta`;
+      case "fr":
+        return `Aller à la question suivante`;
+      case "ja":
+        return `次の質問へ移動`;
+      case "ko":
+        return `다음 질문으로 이동`;
+      case "pt-BR":
+        return `Ir para a próxima pergunta`;
+      case "zh-Hans":
+        return `前往下一个问题`;
+      case "zh-Hant":
+        return `前往下一個問題`;
+      case "en-XA":
+        return `[Ĝö ţö ţĥé ñéẋţ ǫûéšţîöñ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the next question‬`;
+    }
+    return `Go to the next question`;
+  }
+  function commandCardsPreviousQuestion() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى السؤال السابق`;
+      case "de":
+        return `Zur vorherigen Frage gehen`;
+      case "es":
+        return `Ir a la pregunta anterior`;
+      case "fr":
+        return `Aller à la question précédente`;
+      case "ja":
+        return `前の質問へ移動`;
+      case "ko":
+        return `이전 질문으로 이동`;
+      case "pt-BR":
+        return `Ir para a pergunta anterior`;
+      case "zh-Hans":
+        return `前往上一个问题`;
+      case "zh-Hant":
+        return `前往上一個問題`;
+      case "en-XA":
+        return `[Ĝö ţö ţĥé þŕéṽîöûš ǫûéšţîöñ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the previous question‬`;
+    }
+    return `Go to the previous question`;
+  }
+  function commandCardsUnansweredQuestion() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى السؤال التالي دون إجابة`;
+      case "de":
+        return `Zur nächsten unbeantworteten Frage gehen`;
+      case "es":
+        return `Ir a la siguiente pregunta sin responder`;
+      case "fr":
+        return `Aller à la prochaine question sans réponse`;
+      case "ja":
+        return `次の未回答の質問へ移動`;
+      case "ko":
+        return `답하지 않은 다음 질문으로 이동`;
+      case "pt-BR":
+        return `Ir para a próxima pergunta sem resposta`;
+      case "zh-Hans":
+        return `前往下一个未回答的问题`;
+      case "zh-Hant":
+        return `前往下一個未回答的問題`;
+      case "en-XA":
+        return `[Ĝö ţö ţĥé ñéẋţ ûñáñšŵéŕéð ǫûéšţîöñ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Go to the next unanswered question‬`;
+    }
+    return `Go to the next unanswered question`;
+  }
+  function commandCardsQuestionWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قرار, اختيار, خيار, إجابة, انتقال`;
+      case "de":
+        return `Entscheidung, wählen, Option, Antwort, springen`;
+      case "es":
+        return `decisión, elegir, opción, respuesta, saltar`;
+      case "fr":
+        return `décision, choisir, option, réponse, sauter`;
+      case "ja":
+        return `判断, 選択, 選択肢, 回答, ジャンプ`;
+      case "ko":
+        return `결정, 선택, 옵션, 답, 이동`;
+      case "pt-BR":
+        return `decisão, escolher, opção, resposta, pular`;
+      case "zh-Hans":
+        return `决定, 选择, 选项, 回答, 跳转`;
+      case "zh-Hant":
+        return `決定, 選擇, 選項, 回答, 跳轉`;
+      case "en-XA":
+        return `[ðéçîšîöñ, þîçķ, öþţîöñ, áñšŵéŕ, ĵûɱþ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮decision, pick, option, answer, jump‬`;
+    }
+    return `decision, pick, option, answer, jump`;
   }
   function commandCardsPointAt() {
     switch (currentLanguage()) {
@@ -12617,6 +12878,47 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       keys: [],
       get searchWords() {
         return searchWords(commandCardsNextRevisionWords());
+      }
+    },
+    // Moving between the questions a card's body asks (docs/keyboard.md,
+    // "Moving between a card's questions"): the footer's stepper in keys.
+    "cards.next-question": {
+      get label() {
+        return commandCardsNextQuestion();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [{ key: "j", meta: true }],
+      get searchWords() {
+        return searchWords(commandCardsQuestionWords());
+      }
+    },
+    "cards.previous-question": {
+      get label() {
+        return commandCardsPreviousQuestion();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [{ key: "j", meta: true, shift: true }],
+      get searchWords() {
+        return searchWords(commandCardsQuestionWords());
+      }
+    },
+    "cards.unanswered-question": {
+      get label() {
+        return commandCardsUnansweredQuestion();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [],
+      get searchWords() {
+        return searchWords(commandCardsQuestionWords());
       }
     },
     // The shown card's thread folded into the card's foot, or beside it again

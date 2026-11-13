@@ -26,7 +26,7 @@ export function hintOf(id: CommandId): string {
 }
 
 /**
- * A key written as a Mac writes it, such as a panel's suggested ⌘J or one a
+ * A key written as a Mac writes it, such as a panel's suggested ⌘E or one a
  * journey presses with `pressWindowKey`, pressed on this computer: on Linux
  * Ctrl takes ⌘'s place (docs/keyboard.md, "Keys on each system").
  */

@@ -113,6 +113,9 @@ const VIM: PresetTable = {
   "cards.minimize": withLegacy("cards.minimize", bare("q"), wincmd("c")),
   "cards.maximize": [wincmd("o")],
   "cards.next-revision": [bare("]", {}, { key: "c" })],
+  // Vim's next and previous paragraph, its jump from block to block.
+  "cards.next-question": withLegacy("cards.next-question", bare("}")),
+  "cards.previous-question": withLegacy("cards.previous-question", bare("{")),
   "cards.thread": withLegacy("cards.thread", bare("z", {}, { key: "a" })),
   "cards.next-tab": [go("t"), ctrl("Tab")],
   "cards.previous-tab": [go("t", true), ctrl("Tab", true)],
@@ -155,6 +158,8 @@ const EMACS: PresetTable = {
   "cards.maximize": [ctrlX({ key: "1" })],
   "cards.previous": withLegacy("cards.previous", ctrlX({ key: "ArrowLeft" })),
   "cards.next": withLegacy("cards.next", ctrlX({ key: "ArrowRight" })),
+  "cards.next-question": withLegacy("cards.next-question", ctrlX({ key: "ArrowDown" })),
+  "cards.previous-question": withLegacy("cards.previous-question", ctrlX({ key: "ArrowUp" })),
   "cards.next-tab": [ctrl("Tab")],
   "cards.previous-tab": [ctrl("Tab", true)],
   "focus.main-message": withLegacy("focus.main-message", ctrlX({ key: "m" })),
@@ -187,6 +192,8 @@ const VSCODE: PresetTable = {
   "cards.next-tab": [ctrl("Tab")],
   "cards.previous-tab": [ctrl("Tab", true)],
   "cards.next-revision": [{ key: "F7" }],
+  "cards.next-question": withLegacy("cards.next-question", { key: "F8" }),
+  "cards.previous-question": withLegacy("cards.previous-question", { key: "F8", shift: true }),
 };
 
 /**
@@ -232,6 +239,8 @@ const EMACS_CTRL: PresetTable = {
   "cards.maximize": [linX({ key: "1" })],
   "cards.previous": [linX({ key: "ArrowLeft" }), lin("[", true), lin("{", true)],
   "cards.next": [linX({ key: "ArrowRight" }), lin("]", true), lin("}", true)],
+  "cards.next-question": [linX({ key: "ArrowDown" }), lin("j")],
+  "cards.previous-question": [linX({ key: "ArrowUp" }), lin("j", true)],
   "cards.next-tab": [lin("Tab")],
   "cards.previous-tab": [lin("Tab", true)],
   "focus.main-message": [linX({ key: "m" }), lin("l")],

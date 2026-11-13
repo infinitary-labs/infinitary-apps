@@ -1,4 +1,4 @@
-import { cardTakesReplies } from "@shared/cards";
+import { cardTakesReplies, isPreviewBody } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import {
   type CARD_CHOICE_COMMANDS,
@@ -61,7 +61,10 @@ export type RefusalState = Pick<
   | "lastTurn"
 > &
   Partial<
-    Pick<ShellState, "replyNotes" | "letThroughCardIds" | "letThroughFocus" | "goingAsideCardIds">
+    Pick<
+      ShellState,
+      "replyNotes" | "letThroughCardIds" | "letThroughFocus" | "goingAsideCardIds" | "cardAnswers"
+    >
   >;
 
 /** What a refusal reads beyond the store: the window's own facts. */
@@ -155,6 +158,23 @@ function pageRefusal(s: RefusalState, dir: 1 | -1): string | null {
   if (dir === -1 && index <= 0) return m.refuseThisIsTheFirstCard();
   if (dir === 1 && index >= count - 1) return m.refuseThisIsTheLastCard();
   return null;
+}
+
+/**
+ * Moving between the shown card's questions (docs/keyboard.md, "Moving
+ * between a card's questions"): a card whose body asks some, while no
+ * recording keeps focus where its words will go. A preview's settings are
+ * its own controls', and a card still being written has no reading yet.
+ */
+function questionRefusal(s: RefusalState): string | null {
+  const refused = cardRefusal(s);
+  if (refused) return refused;
+  if (s.recording) return m.refuseARecordingIsRunning();
+  const entry = shownEntry(s);
+  const asked = entry && !isHeldEntry(entry) ? s.cardAnswers?.[entry.id]?.of : undefined;
+  return asked && entry && !isHeldEntry(entry) && !isPreviewBody(entry.body)
+    ? null
+    : m.refuseThisCardAsksNoQuestions();
 }
 
 /** Why a shown-card choice key cannot press its button now. */
@@ -276,6 +296,9 @@ const REFUSALS: Readonly<
       ? null
       : m.refuseThisCardHasNoChangeLinks();
   },
+  "cards.next-question": questionRefusal,
+  "cards.previous-question": questionRefusal,
+  "cards.unanswered-question": questionRefusal,
   "cards.show-info": (s) => tabRefusal(s, "cards.show-info"),
   "cards.show-cards": (s) => tabRefusal(s, "cards.show-cards"),
   "cards.show-activity": (s) => tabRefusal(s, "cards.show-activity"),

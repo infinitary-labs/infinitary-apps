@@ -614,6 +614,47 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandCardsNextRevisionWords());
     },
   },
+  // Moving between the questions a card's body asks (docs/keyboard.md,
+  // "Moving between a card's questions"): the footer's stepper in keys.
+  "cards.next-question": {
+    get label() {
+      return m.commandCardsNextQuestion();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [{ key: "j", meta: true }],
+    get searchWords() {
+      return searchWords(m.commandCardsQuestionWords());
+    },
+  },
+  "cards.previous-question": {
+    get label() {
+      return m.commandCardsPreviousQuestion();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [{ key: "j", meta: true, shift: true }],
+    get searchWords() {
+      return searchWords(m.commandCardsQuestionWords());
+    },
+  },
+  "cards.unanswered-question": {
+    get label() {
+      return m.commandCardsUnansweredQuestion();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    get searchWords() {
+      return searchWords(m.commandCardsQuestionWords());
+    },
+  },
   // The shown card's thread folded into the card's foot, or beside it again
   // (docs/card-threads.md, "The shell"): ⌘\ as a sidebar is shown or hidden.
   "cards.point-at": {

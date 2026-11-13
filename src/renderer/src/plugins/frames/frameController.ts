@@ -27,6 +27,7 @@ import {
   type FrameEntryRef,
   type FrameError,
   type FramePicture,
+  type FrameQuestioned,
   type FrameRequest,
   type FrameTaskGesture,
   frameMessageSchema,
@@ -179,6 +180,11 @@ export type FrameMountSpec = {
    * whether focus moves is the host's call.
    */
   onEscape?: () => void;
+  /**
+   * The body's own Enter or Shift+Enter stepped through its questions
+   * (docs/keyboard.md, "Moving between a card's questions"): where it went.
+   */
+  onQuestioned?: (where: FrameQuestioned) => void;
   /** An unused key offered by the document; the mount checks focus before forwarding it. */
   onKey?: (press: import("@shared/keyboard").KeyPress) => void;
   /**
@@ -391,6 +397,8 @@ export class FrameController {
     resolve: (box: { top: number; height: number } | undefined) => void;
   };
   private collectSeq = 0;
+  private questionSeq = 0;
+  private questioning?: { seq: number; resolve: (where: FrameQuestioned | undefined) => void };
   private readonly collecting = new Map<number, (answers: FrameAnswers | undefined) => void>();
 
   constructor(
@@ -604,6 +612,21 @@ export class FrameController {
         );
         return;
       }
+      case "questioned": {
+        if (message.document !== this.documentId) return;
+        const where: FrameQuestioned =
+          message.end === true
+            ? { end: true }
+            : message.top !== undefined && message.height !== undefined
+              ? { top: message.top, height: message.height }
+              : {};
+        if (message.seq === undefined) {
+          this.spec.onQuestioned?.(where);
+          return;
+        }
+        if (this.questioning?.seq === message.seq) this.questioning.resolve(where);
+        return;
+      }
       case "pong":
         if (message.seq > this.answeredSeq) this.answeredSeq = message.seq;
         for (const [seq, heard] of this.hearing) if (seq <= message.seq) heard();
@@ -758,6 +781,30 @@ export class FrameController {
   }
 
   /**
+   * A step through a card body's questions (docs/keyboard.md, "Moving
+   * between a card's questions"): where it landed, `end` past the last one,
+   * an empty answer when the body asks no question it can go to, and
+   * undefined when the document is not born or does not answer.
+   */
+  question(
+    ask: Omit<Extract<HostMessage, { type: "question" }>, "fm" | "type" | "seq">,
+  ): Promise<FrameQuestioned | undefined> {
+    if (this.disposed || !this.ready || !this.spec.form) return Promise.resolve(undefined);
+    this.questioning?.resolve(undefined);
+    const seq = ++this.questionSeq;
+    return new Promise((resolve) => {
+      const finish = (where: FrameQuestioned | undefined) => {
+        globalThis.clearTimeout(timer);
+        if (this.questioning?.seq === seq) this.questioning = undefined;
+        resolve(where);
+      };
+      const timer = globalThis.setTimeout(() => finish(undefined), FRAME_COLLECT_TIMEOUT_MS);
+      this.questioning = { seq, resolve: finish };
+      this.port.post({ fm: V, type: "question", seq, ...ask });
+    });
+  }
+
+  /**
    * A fresh reading of a card body's form, for the footer click that sends
    * it: undefined when the mount watches no form, the document is not born,
    * or it does not answer within FRAME_COLLECT_TIMEOUT_MS (a wedged frame) -
@@ -825,6 +872,7 @@ export class FrameController {
     if (this.disposed) return;
     this.disposed = true;
     this.revealing?.resolve(undefined);
+    this.questioning?.resolve(undefined);
     for (const resolve of this.collecting.values()) resolve(undefined);
     this.collecting.clear();
     for (const heard of this.hearing.values()) heard();

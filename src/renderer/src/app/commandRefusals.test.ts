@@ -1,4 +1,5 @@
 import type { Card, CardMessage } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { panelCommandId } from "@shared/keyboard";
 import type { TaskView } from "@shared/tasks";
 import { describe, expect, it, vi } from "vitest";
@@ -318,6 +319,33 @@ describe("why a window command cannot run now", () => {
     expect(commandRefusal("focus.card-actions", { ...HOME, cards: [] }, CLEAR)).toBe(
       "No card is shown",
     );
+  });
+
+  // INF-3963's approved plan: the footer's stepper through a card's
+  // questions, in keys, refused where there is nothing to step through.
+  it("moves between a card's questions only on a shown card whose body asks some", () => {
+    const decision = card("d", { body: "<fieldset><legend>Who?</legend></fieldset>" });
+    // A playable preview draws with its own style: its settings are its own controls'.
+    const preview = card("p", { body: `<style>p{color:red}</style>${decision.body}` });
+    const reading = { answered: 0, picked: 0, of: 2, changed: 0, answers: [] };
+    const asking = { ...HOME, cards: [decision], cardAnswers: { d: reading } };
+    for (const id of [
+      "cards.next-question",
+      "cards.previous-question",
+      "cards.unanswered-question",
+    ] as const) {
+      expect(commandRefusal(id, asking, CLEAR)).toBeNull();
+      expect(commandRefusal(id, { ...asking, cardAnswers: {} }, CLEAR)).toBe(
+        m.refuseThisCardAsksNoQuestions(),
+      );
+      expect(
+        commandRefusal(id, { ...HOME, cards: [preview], cardAnswers: { p: reading } }, CLEAR),
+      ).toBe(m.refuseThisCardAsksNoQuestions());
+      expect(commandRefusal(id, { ...asking, recording: true }, CLEAR)).toBe(
+        m.refuseARecordingIsRunning(),
+      );
+      expect(commandRefusal(id, { ...asking, cards: [] }, CLEAR)).toBe(m.refuseNoCardIsShown());
+    }
   });
 
   it("shows or hides a thread only where the shown card has one", () => {

@@ -15,7 +15,7 @@
     { "id": "search", "icon": "search", "label": "Search the list" }
   ],
   "commands": [
-    { "id": "open", "label": "Open reading", "emits": "reader", "key": "⌘J" },
+    { "id": "open", "label": "Open reading", "emits": "reader", "key": "⌘E" },
     { "id": "find", "label": "Find a piece", "presses": "search" }
   ]
 }

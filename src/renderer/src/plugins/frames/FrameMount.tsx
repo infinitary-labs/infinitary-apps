@@ -146,6 +146,9 @@ export function useFrameController(
           specRef.current.onTask?.(gesture, key, box, frameRef.current),
         onEntry: (id) => specRef.current.onEntry?.(id),
         ...(specRef.current.onEscape ? { onEscape: () => specRef.current.onEscape?.() } : {}),
+        ...(specRef.current.onQuestioned
+          ? { onQuestioned: (where) => specRef.current.onQuestioned?.(where) }
+          : {}),
         ...(specRef.current.onUnresponsive
           ? { onUnresponsive: () => specRef.current.onUnresponsive?.() }
           : {}),

@@ -6,6 +6,7 @@ import {
   type WindowCommandId,
 } from "@shared/keyboard";
 import { cardTaskOf } from "../cards/cardTask";
+import { askQuestionStep } from "../cards/questionEvent";
 import {
   isRecordView,
   shownTaskTabs,
@@ -281,6 +282,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
     toShownPart(cardBody, (body) =>
       body.dispatchEvent(new Event("fm-next-revision", { bubbles: true })),
     ),
+  "cards.next-question": () => toShownPart(cardBody, (body) => askQuestionStep(body, 1)),
+  "cards.previous-question": () => toShownPart(cardBody, (body) => askQuestionStep(body, -1)),
+  "cards.unanswered-question": () =>
+    toShownPart(cardBody, (body) => askQuestionStep(body, 1, true)),
   "cards.point-at": () =>
     toShownPart(
       (id) => shownPart(id, `[data-card-point-at="${CSS.escape(id)}"]`),

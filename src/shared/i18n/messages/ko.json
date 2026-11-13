@@ -229,6 +229,10 @@
   "commandCardsMaximizeWords": "전체, 화면, 확대, 펼치기, 크게",
   "commandCardsNextRevision": "다음 수정된 부분으로 이동",
   "commandCardsNextRevisionWords": "변경, 수정, 링크",
+  "commandCardsNextQuestion": "다음 질문으로 이동",
+  "commandCardsPreviousQuestion": "이전 질문으로 이동",
+  "commandCardsUnansweredQuestion": "답하지 않은 다음 질문으로 이동",
+  "commandCardsQuestionWords": "결정, 선택, 옵션, 답, 이동",
   "commandCardsPointAt": "카드의 한 부분 가리키기",
   "commandCardsPointAtWords": "주석, 댓글, 선택, 메모",
   "commandCardsThread": "카드 스레드 보기 또는 숨기기",
@@ -302,6 +306,8 @@
   "uiCardPutEveryCardAside": "모든 카드 치워 두기",
   "uiCardStackPrevious": "이전 카드",
   "uiCardStackNext": "다음 카드",
+  "uiCardPreviousQuestion": "이전 질문",
+  "uiCardNextQuestion": "다음 질문",
   "uiCardStackNew": {
     "plural": "count",
     "other": "새 카드 {count}개"
@@ -418,6 +424,7 @@
   "refuseThisCardHasNoDoneOrGot": "이 카드에는 완료나 확인이 없어요",
   "refuseThisCardHasNoButtons": "이 카드에는 버튼이 없어요",
   "refuseThisCardHasNoChangeLinks": "이 카드에는 변경 링크가 없어요",
+  "refuseThisCardAsksNoQuestions": "이 카드에는 질문이 없어요",
   "refuseThisCardHasNoSuchChoice": "이 카드에는 그런 선택지가 없어요",
   "refuseThisCardHasNoSuchTab": "이 카드에는 그런 탭이 없어요",
   "refuseThisCardHasNoTabs": "이 카드에는 탭이 없어요",

@@ -84,7 +84,7 @@ describe("reading what is saved", () => {
     const before = saved({
       "tasks.board": [{ key: "k", ctrl: true, alt: true }],
       "tasks.board-find": [],
-      "tasks.find": [{ key: "j", meta: true }],
+      "tasks.find": [{ key: "u", meta: true }],
       "panel:now/find": [{ key: "g", meta: true }],
       "cards.next": [{ key: "n", meta: true }],
     });
@@ -106,10 +106,10 @@ describe("reading what is saved", () => {
   });
 
   it("keeps a command this version does not know, and runs nothing for it", () => {
-    const later = saved({ "panes.split": [{ key: "j", meta: true }] });
+    const later = saved({ "panes.split": [{ key: "u", meta: true }] });
     expect(unknownCommands(later)).toEqual(["panes.split"]);
     expect(resolveBindings(later)).toEqual(DEFAULT_BINDINGS);
-    expect(commandFor(press("j", { meta: true }), {}, resolveBindings(later))).toBeUndefined();
+    expect(commandFor(press("u", { meta: true }), {}, resolveBindings(later))).toBeUndefined();
   });
 });
 
@@ -332,15 +332,15 @@ describe("clashes", () => {
       "⌘K runs “Search commands” anywhere in the window, so it can't start two keys",
     );
     const twoKeys = resolveBindings(
-      saved({ "settings.keyboard": [{ key: "j", meta: true, second: { key: "s" } }] }),
+      saved({ "settings.keyboard": [{ key: "u", meta: true, second: { key: "s" } }] }),
     );
-    const [starts] = clashesWith(twoKeys, "commands.search", { key: "j", meta: true });
+    const [starts] = clashesWith(twoKeys, "commands.search", { key: "u", meta: true });
     expect(starts && clashWords("commands.search", starts)).toBe(
-      "⌘J S runs “Open Keyboard settings” anywhere in the window, and starts with this key",
+      "⌘U S runs “Open Keyboard settings” anywhere in the window, and starts with this key",
     );
     // Two two-key shortcuts may share their first key.
     expect(
-      clashesWith(twoKeys, "cards.maximize", { key: "j", meta: true, second: { key: "w" } }),
+      clashesWith(twoKeys, "cards.maximize", { key: "u", meta: true, second: { key: "w" } }),
     ).toEqual([]);
   });
 });
@@ -376,10 +376,10 @@ describe("the installed map", () => {
   it("gives a menu the first key it can show, never two keys, and a hint every kind", () => {
     const bindings = resolveBindings(
       saved({
-        "settings.open": [{ key: "j", meta: true, second: { key: "s" } }, { key: "F7" }],
+        "settings.open": [{ key: "u", meta: true, second: { key: "s" } }, { key: "F7" }],
       }),
     );
-    expect(keyHint("settings.open", bindings)).toBe("⌘J S");
+    expect(keyHint("settings.open", bindings)).toBe("⌘U S");
     expect(menuAccelerator("settings.open", bindings)).toBe("F7");
   });
 
@@ -415,12 +415,12 @@ describe("a change, installed whole or not at all", () => {
     expect(
       keymapRefusal(
         saved({
-          "cards.next": [{ key: "j", meta: true }],
-          "cards.previous": [{ key: "j", meta: true }],
+          "cards.next": [{ key: "u", meta: true }],
+          "cards.previous": [{ key: "u", meta: true }],
         }),
         DEFAULT_SAVED_KEYMAP,
       ),
-    ).toBe("Show the next card: ⌘J already runs “Show the previous card” anywhere in the window");
+    ).toBe("Show the next card: ⌘U already runs “Show the previous card” anywhere in the window");
   });
 
   it("installs a moved key, the command it left keeping its others", () => {
@@ -444,20 +444,20 @@ describe("a change, installed whole or not at all", () => {
       DEFAULT_SAVED_KEYMAP,
       DEFAULT_BINDINGS,
       "cards.next",
-      { key: "j", meta: true },
+      { key: "u", meta: true },
       "add",
     );
     expect(added.keys["cards.next"]?.map((binding) => bindingLabel(binding))).toEqual([
       "⇧⌘]",
       "⇧⌘}",
-      "⌘J",
+      "⌘U",
     ]);
   });
 
   it("still installs a change after a newer catalog gave away a key a person holds", () => {
     const mine = saved({ "cards.next": [{ key: "k", meta: true }] });
     expect(
-      keymapRefusal(withKeys(mine, "settings.open", [{ key: "j", meta: true }]), mine),
+      keymapRefusal(withKeys(mine, "settings.open", [{ key: "u", meta: true }]), mine),
     ).toBeNull();
   });
 
@@ -491,9 +491,9 @@ describe("changes Keyboard settings makes", () => {
   it("resets every command it knows and keeps the ones it does not", () => {
     const later = saved({
       "commands.search": [{ key: "p", meta: true }],
-      "panes.split": [{ key: "j", meta: true }],
+      "panes.split": [{ key: "u", meta: true }],
     });
-    expect(withAllCatalogKeys(later)).toEqual(saved({ "panes.split": [{ key: "j", meta: true }] }));
+    expect(withAllCatalogKeys(later)).toEqual(saved({ "panes.split": [{ key: "u", meta: true }] }));
   });
 
   it("saves only a key's own fields", () => {
@@ -513,7 +513,7 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
     id: panelCommandId("reading-list", "open"),
     label: "Open reading",
     panel: "Reading list",
-    keys: [{ key: "j", meta: true }],
+    keys: [{ key: "u", meta: true }],
   } as const;
   const greedy = {
     id: panelCommandId("notes", "new"),
@@ -526,19 +526,19 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
     id: panelCommandId("notes", "open"),
     label: "Open notes",
     panel: "Notes",
-    keys: [{ key: "j", meta: true }],
+    keys: [{ key: "u", meta: true }],
   } as const;
 
   it("gives a suggested key only where no other command already uses it", () => {
     const bindings = resolveBindings(DEFAULT_SAVED_KEYMAP, [open, greedy]);
-    expect(keysOf(bindings, open.id)).toEqual([{ key: "j", meta: true }]);
+    expect(keysOf(bindings, open.id)).toEqual([{ key: "u", meta: true }]);
     expect(keysOf(bindings, greedy.id)).toEqual([]);
     expect(bindings["focus.main-message"]).toEqual(DEFAULT_BINDINGS["focus.main-message"]);
     // The panel added first keeps the key both asked for.
     const both = resolveBindings(DEFAULT_SAVED_KEYMAP, [open, later]);
-    expect(keysOf(both, open.id)).toEqual([{ key: "j", meta: true }]);
+    expect(keysOf(both, open.id)).toEqual([{ key: "u", meta: true }]);
     expect(keysOf(both, later.id)).toEqual([]);
-    expect(panelCommandFor(press("j", { meta: true }), both, [open, later])).toBe(open.id);
+    expect(panelCommandFor(press("u", { meta: true }), both, [open, later])).toBe(open.id);
   });
 
   it("takes a key of a person's own, which wins over a catalog key it moved", () => {
@@ -560,7 +560,7 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
 
   it("names a clash with a panel's command by its words", () => {
     const bindings = resolveBindings(DEFAULT_SAVED_KEYMAP, [open]);
-    const [clash] = clashesWith(bindings, "settings.open", { key: "j", meta: true }, [open]);
+    const [clash] = clashesWith(bindings, "settings.open", { key: "u", meta: true }, [open]);
     expect(clash).toMatchObject({ id: open.id, kind: "same" });
     expect(clashWords("settings.open", clash as never, [open])).toContain("Open reading");
   });
@@ -578,7 +578,7 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
   it("installs the panels' commands with the snapshot, so every reader lists them", () => {
     const snapshot = keymapSnapshot({ saved: DEFAULT_SAVED_KEYMAP, unreadable: false }, 2, [open]);
     expect(snapshot.panels).toEqual([open]);
-    expect(keyHint(open.id, snapshot.bindings)).toBe("⌘J");
+    expect(keyHint(open.id, snapshot.bindings)).toBe("⌘U");
   });
 });
 
@@ -723,8 +723,8 @@ describe("tmux's prefix", () => {
   });
 
   it("refuses a prefix whose keys another command's own key would take", () => {
-    // ⌘J is a person's key for Go to the main message, so it cannot start the layer.
-    const own = withKeys(tmux, "focus.main-message", [{ key: "j", meta: true }]);
-    expect(keymapRefusal(withPrefix(own, { key: "j", meta: true }), own)).not.toBeNull();
+    // ⌘U is a person's key for Go to the main message, so it cannot start the layer.
+    const own = withKeys(tmux, "focus.main-message", [{ key: "u", meta: true }]);
+    expect(keymapRefusal(withPrefix(own, { key: "u", meta: true }), own)).not.toBeNull();
   });
 });

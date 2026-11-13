@@ -203,7 +203,7 @@ describe("a panel's commands in command search (docs/keyboard.md, \"A panel's co
     id: panelCommandId("reading", "open"),
     label: "Open reading",
     panel: "Reading list",
-    keys: [{ key: "j", meta: true }],
+    keys: [{ key: "e", meta: true }],
   } as const;
   const find = {
     id: panelCommandId("reading", "find"),
@@ -217,7 +217,7 @@ describe("a panel's commands in command search (docs/keyboard.md, \"A panel's co
     const refused = (id: string) => (id === find.id ? "Reading list has nothing to show" : null);
     const rows = commandRows("", refused, bindings, { devices: false }, [open, find]);
     expect(rows.slice(-2)).toEqual([
-      { id: open.id, label: "Open reading", panel: "Reading list", keys: "⌘J", refusal: null },
+      { id: open.id, label: "Open reading", panel: "Reading list", keys: "⌘E", refusal: null },
       {
         id: find.id,
         label: "Find a piece",

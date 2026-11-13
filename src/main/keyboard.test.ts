@@ -157,7 +157,7 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
     id: panelCommandId("reading-list", "open"),
     label: "Open reading",
     panel: "Reading list",
-    keys: [{ key: "j", meta: true }],
+    keys: [{ key: "e", meta: true }],
   } as const;
   const keys = {
     bindings: () => resolveBindings(DEFAULT_SAVED_KEYMAP, [open]),
@@ -169,8 +169,8 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
     const { ran, handlers } = recordingHandlers();
     const told: string[] = [];
     followWindowCommands(win, handlers, keys, (id) => told.push(id));
-    expect(type({ key: "j", code: "KeyJ", meta: true })).toBe(true);
-    expect(type({ key: "j", code: "KeyJ", meta: true, isAutoRepeat: true })).toBe(true);
+    expect(type({ key: "e", code: "KeyE", meta: true })).toBe(true);
+    expect(type({ key: "e", code: "KeyE", meta: true, isAutoRepeat: true })).toBe(true);
     expect(told).toEqual([open.id]);
     expect(ran).toEqual([]);
     // The catalog's keys stay the catalog's.
@@ -473,17 +473,17 @@ describe("InstalledKeymap", () => {
       id: panelCommandId("reading-list", "open"),
       label: "Open reading",
       panel: "Reading list",
-      keys: [{ key: "j", meta: true }],
+      keys: [{ key: "e", meta: true }],
     } as const;
     const snapshot = keymap.setPanels([open]);
     expect(snapshot.version).toBe(2);
     expect(snapshot.panels).toEqual([open]);
-    expect(keysOf(snapshot.bindings, open.id)).toEqual([{ key: "j", meta: true }]);
+    expect(keysOf(snapshot.bindings, open.id)).toEqual([{ key: "e", meta: true }]);
     expect(keymap.setPanels([open]).version).toBe(2);
     // A person's change keeps the panels'.
     keymap.save({ ...DEFAULT_SAVED_KEYMAP, keys: { "settings.open": [] } });
     expect(keymap.panels()).toEqual([open]);
-    expect(keysOf(keymap.bindings(), open.id)).toEqual([{ key: "j", meta: true }]);
+    expect(keysOf(keymap.bindings(), open.id)).toEqual([{ key: "e", meta: true }]);
   });
 
   it("installs again when what it follows switches, and not for an unchanged read", () => {

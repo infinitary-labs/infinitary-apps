@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-question-steps",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Move between a card's questions from the keyboard",
+      "body": "When a decision asks several questions, its picked count is now a stepper: the arrows beside it bring the previous or next question into view, and a click on the count goes to the next one still unanswered. From the keyboard, ⌘J and ⇧⌘J move between the questions, Enter takes the option you are on and goes on, Shift+Enter goes back, and the number keys 1 to 9 pick an option directly. After the last question, Enter lands on the card's main button, so ⌘1 or Enter sends your answers.",
+      "picture": {
+        "dark": "card-question-steps-dark.webp",
+        "light": "card-question-steps-light.webp",
+        "alt": "A decision card with three questions, the first one answered, and small arrows on either side of the 1 of 3 picked count in its footer."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

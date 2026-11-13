@@ -1465,6 +1465,58 @@ describe("a card body's form (inline decisions, contract 4.22)", () => {
   });
 });
 
+// INF-3963's approved plan: a key or the footer's stepper steps through the
+// questions the body asks, and the body's own Enter steps on by itself.
+describe("stepping through a card body's questions", () => {
+  const ask = { step: 1, unpicked: false, wrap: false, restart: false, keyboard: true } as const;
+  function stepHarness() {
+    const onQuestioned = vi.fn();
+    const form = { fill: () => undefined, onAnswers: vi.fn() };
+    return { onQuestioned, ...harness({ form, onQuestioned }) };
+  }
+
+  it("asks the shown document to step and hands back where it went", async () => {
+    vi.useFakeTimers();
+    try {
+      const { controller, posted } = stepHarness();
+      await expect(controller.question(ask)).resolves.toBeUndefined();
+      controller.receive({ fm: 2, type: "ready", document: "shown" });
+      const landed = controller.question(ask);
+      expect(posted.at(-1)).toEqual({ fm: 2, type: "question", seq: 1, ...ask });
+      // Another document's answer is not this step's.
+      controller.receive({ fm: 2, type: "questioned", document: "old", seq: 1, end: true });
+      controller.receive({
+        fm: 2,
+        type: "questioned",
+        document: "shown",
+        seq: 1,
+        top: 40,
+        height: 90,
+      });
+      await expect(landed).resolves.toEqual({ top: 40, height: 90 });
+      const past = controller.question(ask);
+      controller.receive({ fm: 2, type: "questioned", document: "shown", seq: 2, end: true });
+      await expect(past).resolves.toEqual({ end: true });
+      const none = controller.question(ask);
+      controller.receive({ fm: 2, type: "questioned", document: "shown", seq: 3 });
+      await expect(none).resolves.toEqual({});
+      const wedged = controller.question(ask);
+      vi.advanceTimersByTime(1_000);
+      await expect(wedged).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tells the mount where the body's own Enter went", () => {
+    const { controller, onQuestioned } = stepHarness();
+    controller.receive({ fm: 2, type: "ready", document: "shown" });
+    controller.receive({ fm: 2, type: "questioned", document: "shown", top: 12, height: 30 });
+    controller.receive({ fm: 2, type: "questioned", document: "shown", end: true });
+    expect(onQuestioned.mock.calls).toEqual([[{ top: 12, height: 30 }], [{ end: true }]]);
+  });
+});
+
 describe("a collect's question definitions (docs/card-evidence.md)", () => {
   const reading = {
     answered: 1,

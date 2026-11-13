@@ -82,6 +82,7 @@ describe("the command catalog", () => {
       "cards.decline",
       "cards.maximize",
       "cards.next-revision",
+      "cards.unanswered-question", // INF-3963's plan: chosen by name.
       "cards.thread-new",
       "cards.show-info",
       "cards.show-cards",
@@ -167,6 +168,10 @@ describe("the command catalog", () => {
       "cards.decline",
       "cards.maximize",
       "cards.next-revision",
+      // INF-3963's approved plan: the footer's stepper through a card's questions.
+      "cards.next-question",
+      "cards.previous-question",
+      "cards.unanswered-question",
       // The approved annotation plan adds Point at to the shell's command catalog.
       "cards.point-at",
       "cards.thread",

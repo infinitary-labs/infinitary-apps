@@ -9,7 +9,7 @@ import type { CardWidth } from "@shared/cards";
 import { isPreviewBody, REVISION_TARGETS_MAX } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { wordSaidBody } from "@shared/i18n/said";
-import type { FrameAnswers, FramePicture } from "@shared/plugins/bridge";
+import type { FrameAnswers, FramePicture, FrameQuestioned } from "@shared/plugins/bridge";
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
 import { type FrameMount, type FrameTheme, frameTitle } from "@shared/plugins/frameDocument";
 import { appBodyOf } from "@shared/welcome";
@@ -106,6 +106,10 @@ type BodyProps = {
    * that sends it; undefined when the frame cannot give one.
    */
   collectRef?: React.MutableRefObject<CollectAnswers | null>;
+  /** Filled with a way to step through the body's questions while it is mounted. */
+  questionRef?: React.MutableRefObject<StepQuestions | null>;
+  /** The body's own Enter stepped past its last question: focus goes to the card's buttons. */
+  onQuestionEnd?: () => void;
   /**
    * Initialized drawing (or a usable error surface), for replacement
    * presentation: a page whose scripts have started, or that has none.
@@ -235,6 +239,32 @@ type SrcdocProps = Omit<BodyProps, "inset"> & {
  * also puts focus on that question.
  */
 export type CollectAnswers = (focusUnpicked?: boolean) => Promise<FrameAnswers | undefined>;
+
+/**
+ * A step through the questions the body asks (docs/keyboard.md, "Moving
+ * between a card's questions"), from a key or the footer's stepper: `moved`
+ * to a question, now in view; `end` past the last one; `none` when the
+ * body asks none or does not answer.
+ */
+export type StepQuestions = (ask: {
+  step: 1 | -1;
+  unpicked: boolean;
+  wrap: boolean;
+  restart: boolean;
+  keyboard: boolean;
+}) => Promise<"moved" | "end" | "none">;
+
+/** Brings the question a step landed on into the card's view. */
+function landed(
+  frame: HTMLIFrameElement | null,
+  where: FrameQuestioned | undefined,
+): "moved" | "end" | "none" {
+  if (!where) return "none";
+  if ("end" in where) return "end";
+  if (!("top" in where) || !frame) return "none";
+  revealInCard(frame, where.top);
+  return "moved";
+}
 
 const frameStyle = (height: number): React.CSSProperties => ({
   width: "100%",
@@ -503,6 +533,13 @@ function cardFrameSpec(
         }
       : {}),
     ...(props.form ? { form: props.form } : {}),
+    // The body's own Enter or Shift+Enter on a question moved its focus: the
+    // card brings that question into view, or past the last one goes on
+    // to the card's buttons.
+    onQuestioned: (where) => {
+      if (!admitted()) return;
+      if (landed(frameRef.current, where) === "end") props.onQuestionEnd?.();
+    },
     ...(props.links
       ? {
           taskKeys: props.links.keys,
@@ -583,6 +620,29 @@ function useCollect(
       if (collectRef.current === collect) collectRef.current = null;
     };
   }, [collectRef, controllerRef, frameRef]);
+}
+
+/** Points the card's question handle at this frame's controller while it is mounted. */
+function useQuestions(
+  questionRef: BodyProps["questionRef"],
+  controllerRef: React.RefObject<FrameController | null>,
+  frameRef: React.RefObject<HTMLIFrameElement | null>,
+): void {
+  useEffect(() => {
+    if (!questionRef) return;
+    const step: StepQuestions = async (ask) => {
+      const controller = controllerRef.current;
+      if (!controller) return "none";
+      // A frame's own script cannot take focus (FRAME_ALLOW): a key's step
+      // gives the frame focus first, and its bridge moves it to the question.
+      if (ask.keyboard) frameRef.current?.focus({ preventScroll: true });
+      return landed(frameRef.current, await controller.question(ask));
+    };
+    questionRef.current = step;
+    return () => {
+      if (questionRef.current === step) questionRef.current = null;
+    };
+  }, [questionRef, controllerRef, frameRef]);
 }
 
 /** A link can be pressed while the frame is still drawing its initial document. */
@@ -724,6 +784,7 @@ function SrcdocCardBody(props: SrcdocProps) {
     shown,
   );
   useCollect(props.collectRef, controllerRef, frameRef);
+  useQuestions(props.questionRef, controllerRef, frameRef);
   useBodyReveal(props, controllerRef, frameRef);
   useAnnotationBridge(
     props.cardId,
@@ -877,6 +938,7 @@ function ScriptedCardBody(props: SrcdocProps) {
     documentKey,
   );
   useCollect(props.collectRef, controllerRef, frameRef);
+  useQuestions(props.questionRef, controllerRef, frameRef);
   useBodyReveal(props, controllerRef, frameRef);
   useAnnotationBridge(
     props.cardId,

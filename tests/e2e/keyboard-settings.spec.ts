@@ -114,7 +114,7 @@ test("a person changes keys, moves one on purpose, and keeps them across a resta
 
     await test.step("records a two-key shortcut that opens Keyboard settings", async () => {
       await startRecording(page, "settings.keyboard");
-      await pressWindowKey(app, "j", ["control"]);
+      await pressWindowKey(app, "r", ["control"]);
       await pressWindowKey(app, "s");
       await expect(keyboard.verdict("settings.keyboard")).toHaveAttribute(
         "data-keyboard-verdict",
@@ -122,12 +122,12 @@ test("a person changes keys, moves one on purpose, and keeps them across a resta
       );
       await endRecording(app, page, "Enter");
       await expect(keyboard.keys("settings.keyboard").locator("kbd")).toHaveText([
-        keyWords({ key: "j", ctrl: true }),
+        keyWords({ key: "r", ctrl: true }),
         keyWords({ key: "s" }),
       ]);
       await page.getByRole("button", { name: "Back", exact: true }).click();
       await expect(keyboard.section).toHaveCount(0);
-      await pressWindowKey(app, "j", ["control"]);
+      await pressWindowKey(app, "r", ["control"]);
       await pressWindowKey(app, "s");
       await expect(keyboard.search).toBeFocused();
     });

@@ -21,7 +21,7 @@ const panels = [
   command("panel:now/board-find"),
   command("panel:now/board-backlog"),
   command("panel:now/board-move"),
-  command("panel:notes/find", [{ key: "j", meta: true }]),
+  command("panel:notes/find", [{ key: "e", meta: true }]),
 ];
 
 function keymapWith(keys: Record<string, KeyBinding[]>) {
@@ -41,7 +41,7 @@ describe("a panel's keys", () => {
       "board-backlog": { keys: "F8", "aria-keyshortcuts": "F8" },
     });
     expect(panelKeys("notes", keymap)).toEqual({
-      find: { keys: "⌘J", "aria-keyshortcuts": "Meta+J" },
+      find: { keys: "⌘E", "aria-keyshortcuts": "Meta+E" },
     });
     expect(panelKeys("activity", keymap)).toEqual({});
   });

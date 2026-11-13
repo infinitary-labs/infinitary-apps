@@ -18,7 +18,15 @@ import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import type { FrameAnswers } from "@shared/plugins/bridge";
 import type { Theme } from "@shared/preferences";
 import { wordedTitle } from "@shared/welcome";
-import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { AskedLine } from "../../cards/AskedLine";
 import { afterMergeStrip } from "../../cards/afterMergeStrip";
@@ -30,13 +38,21 @@ import { ChatButton, LiveMessageList, ThreadSegments } from "../../cards/CardThr
 import { useCardReadingPlace } from "../../cards/cardReadingPlace";
 import { useCardTask } from "../../cards/cardTask";
 import { choiceOrder, footerGroups, footerVariant } from "../../cards/footerGroups";
-import { CardFactsFrame, type CollectAnswers, HtmlCardBody } from "../../cards/PrototypeBody";
+import {
+  CardFactsFrame,
+  type CollectAnswers,
+  HtmlCardBody,
+  type StepQuestions,
+} from "../../cards/PrototypeBody";
+import { QuestionStepper } from "../../cards/QuestionStepper";
+import { QUESTION_EVENT } from "../../cards/questionEvent";
 import { revisedLine } from "../../cards/revisedLine";
 import { useBodyEntrance } from "../../cards/SurfaceReveal";
 import { CardTaskKey, KeyedText } from "../../cards/TaskKey";
 import { Button, ResponseCard } from "../../design";
 import { RiskChart, riskBodyInset, riskChartBox } from "../../design/cards/RiskChart";
 import { RISK_CHART_GAP } from "../../design/cards/riskRadar";
+import { focusWithRing } from "../../design/focus";
 import { useConnectionNoticeCovers } from "../../devices/RemoteControl";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../../devices/viewWords";
 import type { CardKindContribution } from "../../plugins/contributions";
@@ -136,8 +152,6 @@ export function StackedCard({
   onInteraction,
   style,
 }: StackedCardProps) {
-  // Only the shown copy keeps the reading place; a prepared one is bare.
-  const bodyRef = useCardReadingPlace(card.id, active);
   const pending = useShellStore((s) => s.pendingCardActions[card.id]);
   const error = useShellStore((s) => s.cardActionErrors[card.id]);
   // On a Mac controlling another, its buttons are off while that Mac is
@@ -227,6 +241,61 @@ export function StackedCard({
   // answer (the captain's Q2 A); a non-closing one sends what there is.
   const unanswered = asking && answers.answered < answers.of;
   const closeRef = useRef<HTMLButtonElement>(null);
+  // Moving between the body's questions (docs/keyboard.md, "Moving between
+  // a card's questions"): a preview's settings are its own controls', so
+  // only a decision's questions are stepped through.
+  const stepping = !isPreviewBody(card.body);
+  const questionRef = useRef<StepQuestions | null>(null);
+  const bodyElement = useRef<HTMLDivElement | null>(null);
+  const placeRef = useCardReadingPlace(card.id, active);
+  const bodyRef = useCallback(
+    (body: HTMLDivElement | null) => {
+      bodyElement.current = body;
+      return placeRef(body);
+    },
+    [placeRef],
+  );
+  // Past the last question a key goes on to the card's buttons: its
+  // default, else its first that can be pressed. It presses nothing.
+  const toButtons = useCallback(() => {
+    const within = choicesIn ?? bodyElement.current?.closest("[data-response-card]");
+    const button =
+      within?.querySelector<HTMLElement>(
+        "[data-card-actions] button[data-card-action-default]:enabled",
+      ) ?? within?.querySelector<HTMLElement>("[data-card-actions] button:enabled");
+    if (button) focusWithRing(button);
+  }, [choicesIn]);
+  const stepQuestions = useCallback(
+    async (ask: Parameters<StepQuestions>[0]) => {
+      if (!admitted.current) return;
+      if ((await questionRef.current?.(ask)) === "end" && ask.keyboard) toButtons();
+    },
+    [toButtons],
+  );
+  // The window's commands ask through the shown body (`shellCommands.ts`).
+  useEffect(() => {
+    const body = bodyElement.current;
+    if (!body || !stepping) return;
+    const heard = (event: Event) => {
+      const detail = (event as CustomEvent<{ step: 1 | -1; unpicked: boolean }>).detail;
+      // From the card's own buttons the steps start again: next at the first
+      // question, previous at the last.
+      const fromButtons =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement.closest("[data-card-actions]") !== null &&
+        (choicesIn?.contains(document.activeElement) ||
+          body.closest("[data-response-card]")?.contains(document.activeElement));
+      void stepQuestions({
+        step: detail.step,
+        unpicked: detail.unpicked,
+        wrap: false,
+        restart: Boolean(fromButtons),
+        keyboard: true,
+      });
+    };
+    body.addEventListener(QUESTION_EVENT, heard);
+    return () => body.removeEventListener(QUESTION_EVENT, heard);
+  });
   // The task the card is about leads its head as the card's door to the
   // task's record (INF-358); a card about no task draws no key. A first mate
   // card is its own (INF-2714): its head says first mate. Every task key in
@@ -262,7 +331,25 @@ export function StackedCard({
             {queuedNotesWords(noteCount)}
           </span>
         )}
-        {asking && (
+        {asking && stepping && (
+          <span
+            style={{
+              alignSelf: "center",
+              marginInlineEnd: filesFirst ? undefined : "auto",
+              // The count's words stay level with the choices' text.
+              marginBlock: "calc(-1 * var(--space-1))",
+            }}
+          >
+            <QuestionStepper
+              words={footerAnswers(answers, false)}
+              questions={answers.of}
+              onStep={(step, unpicked) =>
+                void stepQuestions({ step, unpicked, wrap: true, restart: false, keyboard: false })
+              }
+            />
+          </span>
+        )}
+        {asking && !stepping && (
           <span
             data-card-answers=""
             aria-live="polite"
@@ -525,6 +612,8 @@ export function StackedCard({
               },
             }}
             collectRef={collectRef}
+            questionRef={questionRef}
+            onQuestionEnd={toButtons}
           />
         )}
       </ResponseCard>

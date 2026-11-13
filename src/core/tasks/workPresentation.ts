@@ -32,6 +32,8 @@ export class WorkPresentation {
       /** The event seam; the counts it announces come back through `heard`. */
       broadcastEvent: (event: FmEvent) => void;
       measured?: (durationMs: number) => void;
+      /** Mark and time each refresh for the freeze recorder (`PassSteps.run`). */
+      step?: <T>(name: string, run: () => T) => T;
     },
   ) {
     this.detach = options.tasks.onChange((change) => {
@@ -51,7 +53,8 @@ export class WorkPresentation {
       this.queued = false;
       const started = performance.now();
       try {
-        this.run();
+        if (this.options.step) this.options.step("presentation-refresh", () => this.run());
+        else this.run();
       } finally {
         this.options.measured?.(performance.now() - started);
       }

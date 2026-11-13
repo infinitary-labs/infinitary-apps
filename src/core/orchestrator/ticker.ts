@@ -24,6 +24,7 @@
  */
 
 import { settingFrom } from "@shared/envSettings";
+import type { PassSteps } from "../freeze/passSteps";
 
 /** Reads the current time in epoch milliseconds. */
 export type Clock = () => number;
@@ -58,7 +59,8 @@ type Registration = {
   every: number;
   /** Ticks until it next runs. */
   due: number;
-  run: (now: number) => void;
+  /** A pass that starts async work may return its promise, which only the steps follow. */
+  run: (now: number) => unknown;
 };
 
 export type TickerOptions = {
@@ -76,6 +78,11 @@ export type TickerOptions = {
   betweenPasses?: () => Promise<void>;
   /** Hold derived presentation across a sweep; release even on stop or failure. */
   sweep?: () => () => void;
+  /**
+   * Mark and time each pass and the sweep's release for the freeze recorder
+   * (`../freeze/passSteps.ts`); it changes nothing a pass does.
+   */
+  steps?: Pick<PassSteps, "passStarted" | "run">;
 };
 
 export class Ticker {
@@ -87,6 +94,7 @@ export class Ticker {
   private readonly measured: TickerOptions["measured"];
   private readonly betweenPasses: TickerOptions["betweenPasses"];
   private readonly sweep: TickerOptions["sweep"];
+  private readonly steps: TickerOptions["steps"];
   private running = false;
   private generation = 0;
   private handle: unknown;
@@ -95,6 +103,7 @@ export class Ticker {
     this.measured = options.measured;
     this.betweenPasses = options.betweenPasses;
     this.sweep = options.sweep;
+    this.steps = options.steps;
     const now = options.now;
     this.now = now ? () => now() : () => Date.now();
     this.periodMs = options.periodMs ?? TICK_PERIOD_MS;
@@ -109,7 +118,7 @@ export class Ticker {
    * registers, then once per cadence. Refuses a duplicate name and a cadence that is not a
    * positive whole number of the design's periods. Returns the unregistration.
    */
-  register(name: string, cadenceMs: number, run: (now: number) => void): () => void {
+  register(name: string, cadenceMs: number, run: (now: number) => unknown): () => void {
     if (this.registrations.some((entry) => entry.name === name)) {
       throw new Error(`The ticker already runs "${name}".`);
     }
@@ -153,6 +162,7 @@ export class Ticker {
   tick(): void {
     const now = this.now();
     const failures: PassFailure[] = [];
+    this.steps?.passStarted();
     for (const entry of this.due()) this.run(entry, now, failures);
     raiseFailures(failures);
   }
@@ -166,6 +176,7 @@ export class Ticker {
     const failures: PassFailure[] = [];
     let release: (() => void) | undefined;
     try {
+      this.steps?.passStarted();
       release = this.sweep?.();
       for (const entry of this.due()) {
         await this.betweenPasses?.();
@@ -176,7 +187,11 @@ export class Ticker {
       raiseFailures(failures);
     } finally {
       try {
-        release?.();
+        if (release) {
+          const held = release;
+          if (this.steps) this.steps.run("sweep-release", held);
+          else held();
+        }
       } finally {
         this.running = false;
       }
@@ -195,7 +210,8 @@ export class Ticker {
   private run(entry: Registration, now: number, failures: PassFailure[]): void {
     const started = performance.now();
     try {
-      entry.run(now);
+      if (this.steps) this.steps.run(entry.name, () => entry.run(now));
+      else entry.run(now);
     } catch (error) {
       failures.push({ name: entry.name, error });
     } finally {

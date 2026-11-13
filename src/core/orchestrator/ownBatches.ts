@@ -124,6 +124,6 @@ export function createOwnBatches(owners: {
     taskNote: (taskId, text) => tasks.note(taskId, text, { news: true }),
     ...owners.git,
   });
-  owners.ticker.register("batches", TICK_PERIOD_MS, () => void batches.sweep());
+  owners.ticker.register("batches", TICK_PERIOD_MS, () => batches.sweep());
   return batches;
 }

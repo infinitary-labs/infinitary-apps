@@ -89,6 +89,11 @@ let beatCpu = null;
 let beatProbe = null;
 let fastestProbe = null;
 let windowState = null;
+// The minute pass's step running and the steps whose work is unsettled, as
+// the main thread last said (./passSteps.ts), and its pass record.
+let stepMark = null;
+let passLines = null;
+let passWriting = Promise.resolve();
 let tickAt = performance.now();
 let stall = null;
 let capturing = null;
@@ -99,6 +104,7 @@ const cpuOf = (usage) => usage.user + usage.system;
 // just before a stall, and the speed in the heartbeat that ended it.
 function noteContext(line, target) {
   if (target.window) line.window = target.window;
+  if (target.step) line.step = target.step;
   if (target.probeBefore !== undefined && fastestProbe !== null) {
     line.speed = { beforeNs: target.probeBefore, fastestNs: fastestProbe };
     if (target.probeAfter !== undefined) line.speed.afterNs = target.probeAfter;
@@ -118,6 +124,28 @@ function persist(line) {
     fs.writeFileSync(record.path + ".next", lines.join("\n") + "\n", { mode: 0o600 });
     fs.renameSync(record.path + ".next", record.path);
   } catch {}
+}
+
+// The pass record is written off this thread's timer, in turn, so a large
+// file never holds the watch long enough to look like the computer slept.
+function writePass(pass) {
+  const line = { at: pass.at, steps: pass.steps };
+  if (record.build) line.build = record.build;
+  passWriting = passWriting.then(async () => {
+    if (passLines === null) {
+      try {
+        passLines = (await fs.promises.readFile(record.passPath, "utf8")).split("\n").filter(Boolean);
+      } catch {
+        passLines = [];
+      }
+    }
+    passLines.push(JSON.stringify(line));
+    passLines = passLines.slice(-record.passMaxLines);
+    try {
+      await fs.promises.writeFile(record.passPath + ".next", passLines.join("\n") + "\n", { mode: 0o600 });
+      await fs.promises.rename(record.passPath + ".next", record.passPath);
+    } catch {}
+  });
 }
 
 function write(done) {
@@ -196,6 +224,15 @@ parentPort.on("message", (message) => {
     parentPort.postMessage({ recovered: true });
     return;
   }
+  // A step mark or a finished pass is not a heartbeat.
+  if (message.steps) {
+    stepMark = message.steps;
+    return;
+  }
+  if (message.pass) {
+    if (record && record.passPath) writePass(message.pass);
+    return;
+  }
   const now = performance.now();
   if (message.window) windowState = message.window;
   const probe = typeof message.probeNs === "number" ? Math.round(message.probeNs) : null;
@@ -229,6 +266,11 @@ setInterval(() => {
   stall = { incidentId: randomUUID(), at: new Date(beatWall).toISOString(), startedAt: beatAt, cpuBefore: beatCpu };
   if (windowState) stall.window = windowState;
   if (beatProbe !== null) stall.probeBefore = beatProbe;
+  if (stepMark && (stepMark.running || stepMark.unsettled.length)) {
+    stall.step = {};
+    if (stepMark.running) stall.step.running = stepMark.running;
+    if (stepMark.unsettled.length) stall.step.unsettled = [...stepMark.unsettled];
+  }
   // This write must precede the inspector request: native waits may never
   // answer it, and the whole process may end before another heartbeat.
   persistStarted(stall);

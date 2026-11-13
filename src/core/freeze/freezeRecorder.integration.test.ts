@@ -20,6 +20,7 @@ import {
 } from "./freezeRecorder";
 import { FreezeTally, type VersionSummary } from "./freezeTally";
 import { readMemoryRecord } from "./memoryRecorder";
+import { PassSteps, type PassTiming } from "./passSteps";
 import { armWatchdog } from "./watchdog";
 
 // INF-2066, INF-2061's approved plan: "A test holds the main thread in a
@@ -60,7 +61,15 @@ afterEach(() => {
 async function recordStall(
   recordPath: string,
   hold: () => void,
-  { arm = true, windowState }: { arm?: boolean; windowState?: () => WindowState } = {},
+  {
+    arm = true,
+    windowState,
+    steps,
+  }: {
+    arm?: boolean;
+    windowState?: () => WindowState;
+    steps?: { source: PassSteps; recordPath: string };
+  } = {},
 ): Promise<FreezeLine> {
   const lines: FreezeLine[] = [];
   const waiters: (() => void)[] = [];
@@ -74,6 +83,7 @@ async function recordStall(
       mutable: true,
     },
     ...(windowState ? { windowState } : {}),
+    ...(steps ? { steps } : {}),
     onFreeze: (line) => {
       if ("wallMs" in line) lines.push(line);
       for (const wake of waiters.splice(0)) wake();
@@ -139,6 +149,51 @@ describe("the freeze recorder", () => {
     expect(speed?.fastestNs).toBeLessThanOrEqual(speed?.afterNs ?? 0);
     const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
     expect(written).toMatchObject({ window: "hidden", speed });
+  });
+
+  // The captain's pick on INF-4076: "Start timing each minute-pass step",
+  // tagging each stall with the step that was running.
+  it("tags a stall with the minute pass's step running and the work still unsettled, and keeps each pass's timing", async () => {
+    const dir = scratchDir("infinitary-freeze-steps-");
+    const recordPath = join(dir, "freezes.jsonl");
+    const passPath = join(dir, "minute-passes.jsonl");
+    const steps = new PassSteps();
+    let finishReads: () => void = () => {};
+    const seen = await recordStall(
+      recordPath,
+      () => {
+        steps.passStarted();
+        void steps.run(
+          "check-watch",
+          () =>
+            new Promise<void>((done) => {
+              finishReads = done;
+            }),
+        );
+        steps.run("gate-sweep", () => walkEveryRow(FREEZE_THRESHOLD_MS * 8));
+      },
+      { steps: { source: steps, recordPath: passPath } },
+    );
+
+    expect(seen.step).toEqual({ running: "gate-sweep", unsettled: ["check-watch"] });
+    const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
+    expect(written?.step).toEqual(seen.step);
+
+    finishReads();
+    await new Promise((resolve) => setImmediate(resolve));
+    steps.passStarted();
+    const passes = await vi.waitFor(() => {
+      const lines = readFileSync(passPath, "utf8").split("\n").filter(Boolean);
+      expect(lines).toHaveLength(1);
+      return lines.map((line) => JSON.parse(line) as PassTiming & { build?: unknown });
+    });
+    const [pass] = passes;
+    expect(pass?.build).toMatchObject({ computer: "disposable recorder process" });
+    expect(pass?.steps.map((step) => step.name)).toEqual(["check-watch", "gate-sweep"]);
+    const [reads, sweep] = pass?.steps ?? [];
+    expect(reads?.workMs).toBeGreaterThanOrEqual(sweep?.syncMs ?? Number.POSITIVE_INFINITY);
+    expect(sweep?.syncMs).toBeGreaterThanOrEqual(FREEZE_THRESHOLD_MS);
+    expect(sweep?.cpuMs).toBeGreaterThan(0);
   });
 
   it("records a main thread stall with the function that held it, innermost first", async () => {

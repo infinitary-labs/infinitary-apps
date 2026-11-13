@@ -71,6 +71,28 @@ A stall spent inside one long built-in call, such as one JSON parse, is named at
 Every stack is a captured location, not a cause or a duration for any named function, even when processor use is high and capture precedes the ending heartbeat.
 The absence of a `waited` or `late` mark establishes no cause.
 
+## The minute pass's steps
+
+Most recorded stalls began in the seconds right after the once-a-minute pass over open tasks, and their call paths were spread over hundreds of places, so the record could not say which step of the pass crossed the line (INF-4076).
+The recorder now times each step and tags each stall with the step that was running (`src/core/freeze/passSteps.ts`, `PassSteps`).
+A step is one pass the ticker runs (`src/core/orchestrator/ticker.ts`), named as it registered, such as `idle-ladder`, `gate-sweep` or `check-watch`, and three pieces of work the passes set off that run in turns of their own: `sweep-release`, which lets the held board and presentation updates go, `board-push`, the task board's push, and `presentation-refresh`, each row's posture and place.
+A pass that starts async work returns its promise to the ticker, which awaits nothing; only the steps follow it, to see when it settles.
+With no recorder, which is every build but an alpha, a step only runs; with one, the step's result, its thrown error and a rejection left unhandled are the same as before.
+
+Each stall's line, started or completed, carries `step` when the main thread was inside a step or a step's promised work was outstanding:
+
+- `running`: the step whose synchronous work the main thread was in when the stall began.
+- `unsettled`: the steps whose promises had not settled yet.
+
+The main thread tells the watchdog each time the running step or the unsettled set changes, as a message apart from the heartbeat, so the tag is what the main thread said just before it stopped.
+Unsettled work says only that the stall fell while it was outstanding, not that it ran then: several steps' work can be outstanding at once.
+
+The pass record is `minute-passes.jsonl` in the app's data folder (`AppPaths.passRecordPath`), written only by the watchdog, off its watching timer so a large file never looks like the computer slept.
+It keeps the newest day of passes (`PASS_RECORD_MAX_LINES`) and drops older ones.
+Each line is one pass: when it began, the build identity, and every step run from its start to the next pass's start, board pushes and refreshes the crew set off included, each with when it started after the pass began (`startMs`), its synchronous time (`syncMs`), the main thread's own processor time in that (`cpuMs`) and, for a step that returned a promise, when it settled after the step started (`workMs`), or `unsettled` when it had not by the next pass.
+A pass's line is written when the next pass starts, so a run's last pass is never written.
+Joining the two records by time shows which step was running at each stall and how long the same step took in minutes without one.
+
 ## The memory reading
 
 Beside the stalls, the recorder reads the main process's own memory at its start and every five minutes after (`MEMORY_READING_MS`, `src/core/freeze/memoryRecorder.ts`), INF-2392's plan after it found the main process holding 9 GB and could not tell from outside the app what held it.

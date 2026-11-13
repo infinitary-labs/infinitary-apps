@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import type { FreezeLine } from "../../src/core/freeze/freezeRecorder";
 import { appPathsFor } from "../../src/core/paths";
 import { git } from "../../src/core/workspace/git";
-import { readFreezes } from "../helpers/freezeRecord";
+import { readFreezes, readPasses } from "../helpers/freezeRecord";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedCaptainSizedRecord } from "./captainSizedRecord";
 import { waitForFirstmateIdle } from "./crew";
@@ -69,12 +69,21 @@ type Step = { at: number; doing: string };
 const described = (line: FreezeLine, steps: readonly Step[]) =>
   `${line.cpuMs} ms of processor time in ${line.wallMs} ms, ${
     steps.findLast((step) => step.at <= Date.parse(line.at))?.doing ?? "before the launch"
-  }: ${
+  }${passStep(line)}: ${
     line.frames
       .slice(0, 8)
       .map((frame) => `${frame.name} (${frame.file}:${frame.line})`)
       .join(" <- ") || "no call path"
   }`;
+
+/** The minute pass's step the stall fell in, as the recorder tagged it (docs/freeze-recorder.md). */
+const passStep = (line: FreezeLine) => {
+  const running = line.step?.running ? ` in step ${line.step.running}` : "";
+  const unsettled = line.step?.unsettled?.length
+    ? ` with ${line.step.unsettled.join(", ")} unsettled`
+    : "";
+  return running + unsettled;
+};
 
 test("the main thread never spends 250 ms of its own processor time at once on a record the captain's size", async () => {
   // Seeding 160,094 events through the one writer takes most of a minute on
@@ -105,6 +114,7 @@ test("the main thread never spends 250 ms of its own processor time at once on a
   // A seed that never gives the loop a turn holds every statement again.
   expect(turns).toBeGreaterThan(0);
   const recordPath = appPathsFor(userDataDir).freezeRecordPath;
+  const passRecordPath = appPathsFor(userDataDir).passRecordPath;
   const steps: Step[] = [];
   const step = (doing: string) => steps.push({ at: Date.now(), doing });
   step("while the app started");
@@ -256,6 +266,27 @@ test("the main thread never spends 250 ms of its own processor time at once on a
     // The minute's passes name themselves, which a stall the recorder could
     // not name needs (docs/architecture.md, "[ticker] <name>").
     for (const pass of slowPasses) console.log(`[freeze journey] ${pass}`);
+    // The captain's pick on INF-4076, "Start timing each minute-pass step":
+    // each pass's steps are timed, the work they set off included, and the
+    // record holds a line for every pass but the one still collecting.
+    await expect
+      .poll(() => readPasses(passRecordPath).length)
+      .toBeGreaterThanOrEqual(MINUTE_PASSES - 1);
+    const timed = readPasses(passRecordPath);
+    for (const pass of timed) {
+      const names = pass.steps.map((each) => each.name);
+      expect(names).toEqual(expect.arrayContaining(["idle-ladder", "sweep-release"]));
+      console.log(
+        `[freeze journey] pass ${pass.at}: ${pass.steps
+          .map(
+            (each) =>
+              `${each.name} +${each.startMs} ${each.syncMs} ms (${each.cpuMs} cpu)${
+                each.workMs === undefined ? "" : `, work ${each.workMs} ms`
+              }`,
+          )
+          .join("; ")}`,
+      );
+    }
     const frozen = record.filter((line) => line.cpuMs >= FREEZE_LINE_CPU_MS);
     expect(frozen.map((line) => described(line, steps))).toEqual([]);
   } finally {

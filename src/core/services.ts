@@ -52,9 +52,8 @@ import { homeCardFileReads } from "./files/cardFileReads";
 import { startHomeFiles } from "./files/homeFiles";
 import { startFirstLaunch } from "./firstLaunch";
 import { startHomeForges } from "./forge/homeForges";
-import { FreezeRecorder, freezeWake, infinitaryProject } from "./freeze/freezeRecorder";
-import { FreezeTally } from "./freeze/freezeTally";
-import { isFreezeRecorderEnabled } from "./freeze/watchdog";
+import { startHomeFreezeRecorder } from "./freeze/homeRecorder";
+import { PassSteps } from "./freeze/passSteps";
 import { startHomeProjects } from "./homeProjects";
 import { startHomeQueue } from "./homeQueue";
 import type { HostCapabilities } from "./host";
@@ -296,11 +295,16 @@ export async function createServices(
   let holdUpdates = (): (() => void) => () => {};
   const measurePass = (name: string, durationMs: number) =>
     console.info(`[ticker] ${name}: ${durationMs.toFixed(3)} ms synchronous`);
+  // The freeze recorder times each pass and the work it sets off as steps
+  // (docs/freeze-recorder.md, "The minute pass's steps").
+  const passSteps = new PassSteps();
+  const step = <T>(name: string, run: () => T): T => passSteps.run(name, run);
   const ticker = new Ticker({
     periodMs: tickPeriodFor(host.app.packaged, process.env),
     betweenPasses: () => new Promise((resolve) => setImmediate(resolve)),
     sweep: () => holdUpdates(),
     measured: measurePass,
+    steps: passSteps,
   });
   // The one task writer (task-system P0): records, keys, timeline. The
   // dev boot assertion is strict off a packaged build.
@@ -457,6 +461,7 @@ export async function createServices(
       forTask: (taskId, extraIds) => cardStore.forTask(taskId, extraIds),
     },
     beforePush: () => cardStack?.cards.flushBroadcast(),
+    step,
     workPosture: (record) =>
       readWorkPosture?.(record) ?? { state: "unknown", reason: "unobserved" },
     waitFacts: (record) => readWorkWaitFacts?.(record) ?? { job: false, timerOwned: false },
@@ -1234,6 +1239,7 @@ export async function createServices(
     protocol: taskProtocol,
     broadcastEvent: (event) => broadcastEvent(event),
     measured: (durationMs) => measurePass("presentation-refresh", durationMs),
+    step,
   });
   holdUpdates = () => {
     const presentation = workPresentation.hold();
@@ -1594,40 +1600,15 @@ export async function createServices(
     notify: (wake) => notifyFirstmate(wake, "scheduled"),
     broadcast: broadcastEvent,
   });
-  // The freeze recorder (docs/freeze-recorder.md), in alpha builds only: each
-  // main thread stall goes to its record and to the per-version tally, and
-  // when the app first starts on a new version each earlier version's whole
-  // tally goes to the first mate, only when the captain's projects hold
-  // Infinitary's own source, where a fix goes (INF-3044).
-  const freezeBuild = isFreezeRecorderEnabled({
-    packaged: host.app.packaged,
-    version: host.app.version,
-    env: process.env,
-  })
-    ? sourceIdentity(source())
-    : undefined;
-  const freezeRecorder = freezeBuild
-    ? new FreezeRecorder({
-        recordPath: paths.freezeRecordPath,
-        build: freezeBuild,
-        memory: {
-          recordPath: paths.memoryRecordPath,
-          ...(host.processFootprint ? { footprint: host.processFootprint } : {}),
-        },
-        ...(host.windowState ? { windowState: host.windowState } : {}),
-        onFreeze: () => {},
-        tally: new FreezeTally(paths.freezeTallyPath, host.app.version, freezeBuild),
-        // One summary per ended version (the inbox's once-identity); a
-        // version that ends with no such project is never summarized.
-        onVersionsEnded: (summaries) => {
-          const project = infinitaryProject(repos.list());
-          if (!project) return;
-          for (const summary of summaries)
-            notifyFirstmate(freezeWake(summary, project), "scheduled");
-        },
-      })
-    : null;
-  freezeRecorder?.start();
+  // The freeze recorder, in alpha builds only (docs/freeze-recorder.md).
+  const freezeRecorder = startHomeFreezeRecorder({
+    host,
+    paths,
+    build: () => sourceIdentity(source()),
+    steps: passSteps,
+    projects: () => repos.list(),
+    notify: (wake) => notifyFirstmate(wake, "scheduled"),
+  });
   holdSeat = (accountId) => firstmate.holdSeatFor(accountId);
   scheduler.start(ticker);
   // Words from outside go from saved conversations once past their days,
@@ -1667,7 +1648,7 @@ export async function createServices(
     now: ticker.now,
     log: (line) => console.warn(`[infinitary] ${line}`),
   });
-  ticker.register("outside-data", TICK_PERIOD_MS, () => void savedOutsideData.sweep());
+  ticker.register("outside-data", TICK_PERIOD_MS, () => savedOutsideData.sweep());
   ticker.start();
   // R2 wakes: a job exit reaches its owner - the agent through the durable
   // inbox, a crewmate as its next turn. Jobs interrupted by the last quit

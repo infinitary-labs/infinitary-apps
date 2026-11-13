@@ -195,6 +195,8 @@ export type TaskProtocolOptions = {
   };
   /** Deliver the focusable stack before any board shortcuts to it. */
   beforePush?: () => void;
+  /** Mark and time each board push for the freeze recorder (`PassSteps.run`). */
+  step?: <T>(name: string, run: () => T) => T;
   /**
    * The slot each work task's crewmate is served on (`TaskView.tier`),
    * read for the rows a view shows; absent means every tier reads null.
@@ -866,7 +868,8 @@ export class TaskProtocol {
     this.pushTimer = setTimeout(() => {
       this.pushTimer = undefined;
       this.pushQueued = false;
-      this.push();
+      if (this.options.step) this.options.step("board-push", () => this.push());
+      else this.push();
     }, this.coalesceMs);
   }
 

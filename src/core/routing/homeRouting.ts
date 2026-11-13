@@ -166,7 +166,7 @@ export function startHomeRouting(options: {
     now: ticker.now,
   });
   void servedStarters.refresh();
-  ticker.register("served-starters", 60 * 60 * 1000, () => void servedStarters.refresh());
+  ticker.register("served-starters", 60 * 60 * 1000, () => servedStarters.refresh());
   /**
    * The routing boundary: the sign-in gate, then the slot record, with the
    * starter-map fallback behind it. Every automatic selection reads THIS;

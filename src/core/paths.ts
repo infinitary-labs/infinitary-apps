@@ -57,6 +57,12 @@ export type AppPaths = {
    */
   freezeTallyPath: string;
   /**
+   * The freeze recorder's minute pass record (docs/freeze-recorder.md, "The
+   * minute pass's steps"): one JSON line per pass with each step's timing,
+   * written only by its watchdog thread.
+   */
+  passRecordPath: string;
+  /**
    * The freeze recorder's memory reading (docs/freeze-recorder.md, "The
    * memory reading"): one JSON line per reading of the main process's memory.
    */
@@ -173,6 +179,7 @@ export function appPathsFor(userData: string): AppPaths {
     privateSitesFile: join(userData, "private-sites.json"),
     freezeRecordPath: join(userData, "freezes.jsonl"),
     freezeTallyPath: join(userData, "freeze-tally.json"),
+    passRecordPath: join(userData, "minute-passes.jsonl"),
     memoryRecordPath: join(userData, "memory.jsonl"),
     panelLogPath: join(userData, "logs", "panels.log"),
     taskChannelDir: join(userData, "task-channel"),

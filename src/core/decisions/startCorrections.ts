@@ -115,8 +115,10 @@ export function startCorrections(options: {
   let stopped = false;
   ticker.register("correction-work", TICK_PERIOD_MS, () => {
     if (stopped) return;
-    void consumer.drain();
+    // The drain's promise goes to the ticker, so the freeze recorder can follow its work.
+    const drained = consumer.drain();
     cases.sweep();
+    return drained;
   });
   void consumer.drain();
   return {

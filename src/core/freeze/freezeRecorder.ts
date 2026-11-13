@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { TypedWake } from "../orchestrator/wakes";
 import type { VersionSummary } from "./freezeTally";
 import { MemoryRecorder } from "./memoryRecorder";
+import type { PassSteps } from "./passSteps";
 import { takeWatchdog } from "./watchdog";
 
 /**
@@ -30,6 +31,8 @@ export const HEARTBEAT_MS = 10;
 export const FREEZE_THRESHOLD_MS = 50;
 /** The record keeps the newest lines; older ones drop, so it never grows past this. */
 export const RECORD_MAX_LINES = 500;
+/** The minute pass record keeps a day of passes, one a minute; older ones drop. */
+export const PASS_RECORD_MAX_LINES = 1_440;
 
 /**
  * The speed probe's fixed work: about 6 microseconds on a Mac's fast core,
@@ -54,6 +57,17 @@ const speedSchema = z.object({
   beforeNs: z.number().int().nonnegative(),
   afterNs: z.number().int().nonnegative().optional(),
   fastestNs: z.number().int().nonnegative(),
+});
+
+/**
+ * The minute pass's step the main thread was running when a stall began, and
+ * the steps whose promised work had not settled yet (`./passSteps.ts`).
+ * Unsettled work only says the stall fell while it was outstanding, not that
+ * it ran then.
+ */
+const stepSchema = z.object({
+  running: z.string().optional(),
+  unsettled: z.array(z.string()).optional(),
 });
 
 const frameSchema = z.object({
@@ -86,6 +100,8 @@ export const freezeLineSchema = z.object({
   // Optional for old records and processes with no windows to read.
   window: windowStateSchema.optional(),
   speed: speedSchema.optional(),
+  // Optional for old records and stalls outside every step.
+  step: stepSchema.optional(),
 });
 export type FreezeLine = z.infer<typeof freezeLineSchema>;
 
@@ -102,6 +118,7 @@ export const freezeIncidentSchema = z.union([
     capturedAt: z.string().optional(),
     window: windowStateSchema.optional(),
     speed: speedSchema.optional(),
+    step: stepSchema.optional(),
   }),
 ]);
 export type FreezeIncident = z.infer<typeof freezeIncidentSchema>;
@@ -183,6 +200,7 @@ export class FreezeRecorder {
   private worker: Worker | undefined;
   private beat: ReturnType<typeof setInterval> | undefined;
   private write: ReturnType<typeof setInterval> | undefined;
+  private stopSteps: (() => void) | undefined;
   /** When the run's awake time was last added to the tally, on the monotonic clock. */
   private ranUntil = 0;
   private readonly memory: MemoryRecorder | undefined;
@@ -203,6 +221,11 @@ export class FreezeRecorder {
       tally?: TallyKeeper;
       onVersionsEnded?: (summaries: VersionSummary[]) => void;
       thresholdMs?: number;
+      /**
+       * The minute pass's steps: each stall is tagged with the step running
+       * and the work unsettled, and each pass's timing goes to `recordPath`.
+       */
+      steps?: { source: Pick<PassSteps, "listen">; recordPath: string };
       memory?: { recordPath: string; footprint?: () => Promise<number | null> };
     },
   ) {
@@ -259,7 +282,13 @@ export class FreezeRecorder {
         build: this.options.build,
         thresholdMs: this.options.thresholdMs ?? FREEZE_THRESHOLD_MS,
         maxLines: RECORD_MAX_LINES,
+        passPath: this.options.steps?.recordPath,
+        passMaxLines: PASS_RECORD_MAX_LINES,
       },
+    });
+    this.stopSteps = this.options.steps?.source.listen({
+      mark: (steps) => worker.postMessage({ steps }),
+      pass: (pass) => worker.postMessage({ pass }),
     });
     // Each heartbeat carries the speed probe's time and, when it changed, the
     // windows' state, read every WINDOW_READ_BEATS; the watchdog notes both
@@ -310,6 +339,8 @@ export class FreezeRecorder {
 
   stop(): void {
     this.memory?.stop();
+    this.stopSteps?.();
+    this.stopSteps = undefined;
     if (this.beat) clearInterval(this.beat);
     this.beat = undefined;
     if (this.write) {

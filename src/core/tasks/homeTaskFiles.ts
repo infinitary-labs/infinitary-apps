@@ -40,7 +40,7 @@ export function startHomeTaskFiles({
   workDevices.onWorkDevice((contact) => {
     if (contact.contact === "in-reach") void closedTaskFiles.sweep();
   });
-  ticker.register("closed-task-files", 60 * 60 * 1000, () => void closedTaskFiles.sweep());
+  ticker.register("closed-task-files", 60 * 60 * 1000, () => closedTaskFiles.sweep());
   // A provisioned temporary folder goes at the close, not after a week, and
   // a removal that could not finish is tried again on the same clocks.
   const taskTempFiles = new TaskTempFiles({
@@ -67,5 +67,5 @@ export function startHomeTaskFiles({
   workDevices.onWorkDevice((contact) => {
     if (contact.contact === "in-reach") void taskTempFiles.sweep();
   });
-  ticker.register("task-temp-files", 60 * 60 * 1000, () => void taskTempFiles.sweep());
+  ticker.register("task-temp-files", 60 * 60 * 1000, () => taskTempFiles.sweep());
 }

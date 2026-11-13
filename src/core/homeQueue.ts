@@ -65,7 +65,7 @@ export function startHomeQueue({
     now: ticker.now,
   });
   queue.onState((reading) => queuePauses.observed(reading));
-  ticker.register("queue-pauses", TICK_PERIOD_MS, () => void queuePauses.sweep());
+  ticker.register("queue-pauses", TICK_PERIOD_MS, () => queuePauses.sweep());
   supervisor.hostOps.setQueueChoice({
     plan: (repoId) => queueChoice.plan(repoId),
     keep: (repoId) => queueChoice.keep(repoId),

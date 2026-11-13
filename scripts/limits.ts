@@ -114,6 +114,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     RECORD_MAX_LINES: physical(
       "the oldest lines drop so the file on disk stays small; the newest stalls are kept",
     ),
+    PASS_RECORD_MAX_LINES: physical(
+      "the oldest passes drop so the file on disk stays small; the newest day is kept",
+    ),
   },
   "src/core/freeze/memoryRecorder.ts": {
     MEMORY_RECORD_MAX_LINES: physical(

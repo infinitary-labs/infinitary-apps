@@ -308,17 +308,15 @@ export class CrewWatch {
       ticker.register("firstmate-quiet", WATCHDOG_TICK_MS, (now) =>
         this.core.hooks().checkQuiet?.(now),
       ),
-      ticker.register("gate-sweep", WATCHDOG_TICK_MS, (now) => void this.sweepGates(now)),
-      ticker.register(
-        "in-place-folders",
-        WATCHDOG_TICK_MS,
-        () => void this.core.inPlaceWork.closeCurrentFolders(),
+      ticker.register("gate-sweep", WATCHDOG_TICK_MS, (now) => this.sweepGates(now)),
+      ticker.register("in-place-folders", WATCHDOG_TICK_MS, () =>
+        this.core.inPlaceWork.closeCurrentFolders(),
       ),
-      ticker.register("check-watch", WATCHDOG_TICK_MS, (now) => void this.pollCheckWatches(now)),
+      ticker.register("check-watch", WATCHDOG_TICK_MS, (now) => this.pollCheckWatches(now)),
       ticker.register("kept-merges", WATCHDOG_TICK_MS, (now) =>
         this.core.settling.kept.reconcileMergeAuthorizations(now),
       ),
-      ticker.register("inbox-sweep", WATCHDOG_TICK_MS, (now) => void this.sweepInbox(now)),
+      ticker.register("inbox-sweep", WATCHDOG_TICK_MS, (now) => this.sweepInbox(now)),
       ticker.register("firstmate-inbox", WATCHDOG_TICK_MS, () => this.core.hooks().pokeInbox?.()),
       ticker.register("watchdog-riders", WATCHDOG_TICK_MS, (now) =>
         this.core.options.onWatchdogTick?.(now),

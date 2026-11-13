@@ -18,13 +18,10 @@ export const KNOWLEDGE_LIMITS = {
   readBytes: 32 * 1024,
   /** One write, everything it carries included. */
   writeBytes: 16 * 1024,
-  /** The words a search or an automatic lookup reads. */
+  /** The words a search reads. */
   queryBytes: 1024,
   /** Entries one get reads at once. */
   getIds: 5,
-  /** The automatic candidates a turn or a brief carries, and their bytes. */
-  shortlistHits: 5,
-  shortlistBytes: 2 * 1024,
 } as const;
 
 /** Text field bounds, in characters. */

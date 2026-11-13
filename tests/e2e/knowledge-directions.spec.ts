@@ -202,8 +202,9 @@ test("directions stay distinct from personal facts in the browser and in Firstma
         expect(context?.directions).toContain(`Standing project direction ${i}: `.padEnd(99, "x"));
       }
 
-      expect(context?.knowledge).toBeDefined();
-      expect(JSON.stringify(context?.knowledge)).not.toContain(PERSONAL.text);
+      // INF-4008: no saved entry rides the input; the agent reads it by a tool call.
+      expect(context?.knowledge).toBeUndefined();
+      expect(firstRequest).not.toContain(PERSONAL.text);
       const results = requests
         .flatMap((body) => providerMessages(body))
         .filter((message) => message.role === "tool")

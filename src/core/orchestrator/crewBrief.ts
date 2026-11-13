@@ -8,12 +8,7 @@ import type { RunbookFacts } from "@shared/runbooks";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import { attachmentPath, loadImages } from "../attachments";
 import { CONTRIBUTION_DELIVERY_WORDS } from "../forge";
-import { PRIVATE_SCOPE } from "../knowledge/access";
-import {
-  knowledgeShortlist,
-  renderBriefKnowledge,
-  renderReferenceImport,
-} from "../knowledge/context";
+import { renderBriefKnowledge, renderReferenceImport, savedKnowledge } from "../knowledge/context";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
 import type { MessageFile } from "../overflow";
 import { crewmateSourceCardsDir } from "../paths";
@@ -287,13 +282,10 @@ export class CrewBrief {
     }
     const knowledge = this.host.knowledgeFor(taskId);
     if (knowledge) {
-      const words = [record?.title ?? "", record?.goal ?? ""].join("\n");
-      sections.push([
-        renderBriefKnowledge(
-          knowledgeShortlist(knowledge, [PRIVATE_SCOPE], words),
-          (repoId ? this.options.repos.get(repoId)?.name : undefined) ?? "this task",
-        ),
-      ]);
+      // Only how much is saved, never a saved word (docs/knowledge.md,
+      // "Knowledge as needed"): the crewmate searches when its work needs it.
+      const line = renderBriefKnowledge(savedKnowledge(knowledge));
+      if (line) sections.push([line]);
       sections.push([renderReferenceImport()]);
     }
     return joinParts([[base], ...sections], "\n\n");

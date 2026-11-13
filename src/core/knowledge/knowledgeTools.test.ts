@@ -5,7 +5,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { piToolsOf } from "../pi/toolSpec";
 import { bindTools } from "../session/tools";
 import type { KnowledgeActor } from "./access";
-import { contextKnowledge, knowledgeShortlist, renderBriefKnowledge } from "./context";
+import { contextSavedKnowledge, renderBriefKnowledge, savedKnowledge } from "./context";
 import { type KnowledgeDeps, KnowledgeService } from "./knowledgeService";
 import { KNOWLEDGE_TOOLS, knowledgeBinding } from "./knowledgeTools";
 
@@ -60,7 +60,7 @@ function harness(pinned: Pick<KnowledgeDeps, "now" | "newId"> = {}) {
 }
 
 describe("the knowledge pair", () => {
-  it("measures candidate context and entry reads through the tool interface", async () => {
+  it("measures the saved-knowledge line and entry reads through the tool interface", async () => {
     const h = harness();
     const concept = await h.crew.record({
       action: "publish",
@@ -84,32 +84,20 @@ describe("the knowledge pair", () => {
       ],
     });
     const findingId = /f-[a-z0-9]{6}/.exec(finding)?.[0] as string;
-    const queries = [
-      "promote latest alpha to stable release btw",
-      "line",
-      "32",
-      "unrelated galaxies",
-    ];
-    const contexts = queries.map((query) => {
-      const shortlist = knowledgeShortlist(h.service, ["captain"], query);
-      return {
-        query,
-        context: contextKnowledge(shortlist),
-        brief: renderBriefKnowledge(shortlist, "shop"),
-      };
-    });
+    const saved = savedKnowledge(h.service);
+    const context = contextSavedKnowledge(saved) ?? "";
+    const brief = renderBriefKnowledge(saved) ?? "";
     const read = await h.crew.read({ action: "get", ids: [findingId] });
     const sourceId = /s-[a-z0-9]{6}/.exec(read)?.[0] as string;
     const source = await h.crew.read({ action: "get", ids: [sourceId] });
     expect(source).toContain("Kept evidence line.");
     expect(read).toContain("statement: The reply line");
     expect(read).not.toContain("Kept evidence line.");
-    expect(contexts[0]?.context?.candidates).toHaveLength(1);
-    expect(contexts[0]?.brief).toContain(conceptId);
-    expect(contexts[0]?.brief).not.toContain(findingId);
-    for (const item of contexts.slice(1)) {
-      expect(item.context?.found).toBe("nothing matched these words");
-      expect(item.brief).not.toContain(findingId);
+    for (const line of [context, brief]) {
+      expect(line).toContain("1 saved source with 1 finding");
+      expect(line).not.toContain(conceptId);
+      expect(line).not.toContain(findingId);
+      expect(line).not.toContain("Alpha-to-stable");
     }
     if (process.env.INFINITARY_KNOWLEDGE_EVIDENCE) {
       writeFileSync(
@@ -117,9 +105,10 @@ describe("the knowledge pair", () => {
         JSON.stringify(
           {
             fixture: "Synthetic audit-shaped entries, not the captain's collection",
-            contexts,
-            contextBytes: Buffer.byteLength(JSON.stringify(contexts.map((item) => item.context))),
-            briefBytes: contexts.reduce((total, item) => total + Buffer.byteLength(item.brief), 0),
+            context,
+            contextBytes: Buffer.byteLength(context),
+            brief,
+            briefBytes: Buffer.byteLength(brief),
             read,
             readBytes: Buffer.byteLength(read),
             source,

@@ -171,9 +171,8 @@ export type FirstmateAgentOptions = {
   /** The one task writer: asks, the filed kinds, the index (task-system P1). */
   tasks: TaskService;
   /**
-   * Knowledge (docs/knowledge.md): present in every build. Present, the Firstmate holds the knowledge pair, its turns carry
-   * the knowledge their words match, and notes keep preferences in view;
-   * absent, its tools and context are exactly as before.
+   * Knowledge (docs/knowledge.md): present in every build. Present, the Firstmate holds the knowledge pair and its context
+   * says how much is saved, never a saved word; absent, its tools and context are exactly as before.
    */
   knowledge?: KnowledgeService;
   /** The cron-prompt scheduler (R3); absent = no scheduling tools. */
@@ -744,14 +743,7 @@ export class FirstmateAgent {
     // session and renewed instructions may start it over, and either makes
     // the next context complete.
     const contextNow = () =>
-      this.context.forTurn(
-        visibleCardId,
-        hintTaskId,
-        aboutCardId,
-        pastCardId,
-        trimmed,
-        sourceFacts,
-      );
+      this.context.forTurn(visibleCardId, hintTaskId, aboutCardId, pastCardId, sourceFacts);
     const userBody = renderWake(captainTurn(trimmed, false, undefined, undefined, ask.through));
     const userSegment: ServedSegmentInput = { kind: "user", body: userBody, origin: "captain" };
     const captainOnly = (context: string): ServedInput => ({
@@ -1244,7 +1236,6 @@ export class FirstmateAgent {
     hintTaskId?: string,
     aboutCardId?: string,
     pastCardId?: string,
-    words?: string,
     focusedProjectId?: string,
   ): string {
     return this.context.buildContextBlock(
@@ -1252,7 +1243,6 @@ export class FirstmateAgent {
       hintTaskId,
       aboutCardId,
       pastCardId,
-      words,
       focusedProjectId,
     );
   }
@@ -1771,14 +1761,7 @@ export class FirstmateAgent {
     }
     this.directionsBlocked = false;
     const input = this.servedTurn(
-      this.context.forTurn(
-        undefined,
-        undefined,
-        aboutCardId,
-        undefined,
-        captainWordsOf(batch).join("\n"),
-        sourceFacts,
-      ),
+      this.context.forTurn(undefined, undefined, aboutCardId, undefined, sourceFacts),
       batch,
     );
     this.options.inbox.markDelivered(batch.map((row) => row.id));

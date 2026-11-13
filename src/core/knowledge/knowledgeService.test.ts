@@ -619,11 +619,6 @@ describe("KnowledgeService", () => {
     expect(ids("32 galaxies")).not.toContain(findingId);
     expect(ids("32")).toEqual([]);
     expect(ids(findingId)).toContain(findingId);
-    expect(f.service.shortlist([ALPHA.id], "32")).toEqual([]);
-    expect(f.service.shortlist([ALPHA.id], "galaxies")).toEqual([]);
-    expect(f.service.shortlist([PRIVATE_SCOPE], "galaxies nebulae").map((hit) => hit.id)).toEqual([
-      findingId,
-    ]);
   });
 
   it("removes conditions from existing indexes without changing saved entries or sources", async () => {
@@ -677,26 +672,6 @@ describe("KnowledgeService", () => {
       sources: after.prepare("SELECT * FROM sources").all(),
     }).toEqual(before);
     after.close();
-  });
-
-  it("offers a short list of candidates without what any finding says", async () => {
-    const f = fixture();
-    const { writer, inboxId } = await seedConcepts(f);
-    for (let index = 0; index < 8; index += 1) {
-      await f.record(writer, {
-        action: "publish",
-        kind: "finding",
-        statement: `Inbox detail number ${index} about delivery.`,
-        basis: "inference",
-        about: [inboxId],
-        conditions: "main",
-      });
-    }
-    const listed = f.service.shortlist([PRIVATE_SCOPE], "how does inbox delivery work");
-    expect(listed).toHaveLength(5);
-    expect(listed[0]?.id).toBe(inboxId);
-    expect(f.service.shortlist([BETA.id], "inbox delivery")).toEqual([]);
-    expect(f.service.shortlist([ALPHA.id], "?? !!")).toEqual([]);
   });
 });
 

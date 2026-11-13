@@ -28,9 +28,9 @@ vi.mock("../utilityQos", async (importOriginal) =>
 fakeClockEachTest();
 
 /**
- * Knowledge first (docs/knowledge.md): a turn carries the facts its words
- * match and standing directions separately, and only a write that changed
- * the collection is the turn's action.
+ * Knowledge as needed (docs/knowledge.md): a conversation is told how much is
+ * saved and carries standing directions separately, and only a write that
+ * changed the collection is the turn's action.
  */
 describe("FirstmateAgent with knowledge", () => {
   const finish = async (f: ReturnType<typeof setup>, text = "Noted.") => {
@@ -39,7 +39,9 @@ describe("FirstmateAgent with knowledge", () => {
     await tick();
   };
 
-  it("leads a turn with matching Knowledge and carries standing directions separately", async () => {
+  // INF-4008, the captain: "saved knowledge should be discoverable by the
+  // agent but not automatically injected".
+  it("tells a conversation how much is saved, never a saved word, and carries standing directions separately", async () => {
     const f = setup({ knowledge: true });
     f.knowledge?.directions.change({
       op: "add",
@@ -59,25 +61,26 @@ describe("FirstmateAgent with knowledge", () => {
       },
     );
     const id = recorded?.ids[0] as string;
-    await f.agent.converse("why does the wake queue retry?");
-    const context = decodeContext(f.session.prompts[0] ?? "");
-    const knowledge = context.knowledge as { searched: string; candidates: string[] };
-    expect(knowledge.searched).toBe("private");
-    expect(knowledge.candidates).toHaveLength(1);
-    expect(knowledge.candidates[0]).toContain(id);
-    expect(knowledge.candidates[0]).toContain('"Inbox delivery"');
+    // Words that match the saved entry exactly still bring none of it in.
+    await f.agent.converse("why does the wake queue retry? inbox delivery");
+    const served = f.session.prompts[0] ?? "";
+    const context = decodeContext(served);
+    expect(context.knowledge).toBeUndefined();
+    expect(context.saved_knowledge).toContain("1 personal entry");
+    for (const word of [id, "Inbox delivery", "durable row"]) expect(served).not.toContain(word);
     const notes = context.directions as string;
     expect(notes).toContain("squash-merges");
     expect(notes).not.toContain("office-wifi");
 
-    // Words with nothing to search for carry no lookup at all.
-    expect(decodeContext(f.agent.buildContextBlock()).knowledge).toBeUndefined();
-    // Words that match nothing say so, apart from an unavailable collection.
-    expect(
-      decodeContext(
-        f.agent.buildContextBlock(undefined, undefined, undefined, undefined, "quarterly taxes"),
-      ).knowledge,
-    ).toEqual({ searched: "private", found: "nothing matched these words" });
+    // Sent once per conversation: the next message, with nothing new saved, does not repeat it.
+    await finish(f);
+    await f.agent.converse("and the wake queue again?");
+    expect(decodeContext(f.session.prompts[1] ?? "").saved_knowledge).toBeUndefined();
+  });
+
+  it("leaves the count out while nothing is saved", () => {
+    const f = setup({ knowledge: true });
+    expect(decodeContext(f.agent.buildContextBlock()).saved_knowledge).toBeUndefined();
   });
 
   it("keeps a write that changed knowledge as the turn's fact, and still asks for the card that answers the message", async () => {

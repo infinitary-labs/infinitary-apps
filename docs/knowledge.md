@@ -126,9 +126,9 @@ Recording edits no project file, commits nothing and grants no permission.
 
 A crewmate on a computer that runs work (`docs/helper.md`, "Holding a conversation") holds the same pair, bound by this Mac to the same actor: its task and its project, without a saving grant.
 That computer serves both tools and asks this Mac to run each call (`inf:work:knowledge`, `inf:work:record-knowledge`); this Mac answers with that binding and keeps the answer, so a call asked again after a drop is answered from what it kept.
-Its brief carries the same knowledge lines, written here.
+Its brief carries the same saved-knowledge line, written here.
 Its working copy there is no folder of this Mac's, so its actor names none: a kept file source reads against the project's own folder here, as the first mate's reads do, and a new file citation is refused there as it is here.
-A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/contractFeatures.ts`) is given neither the tool pair nor the factual candidate lines; applicable directions still ride its served turns.
+A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/contractFeatures.ts`) is given neither the tool pair nor the saved-knowledge line; applicable directions still ride its served turns.
 
 | Bound | Size |
 | --- | --- |
@@ -136,8 +136,7 @@ A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/contrac
 | A whole-entry read or history page | 32 KB |
 | One write, everything it carries | 16 KB |
 | One kept source | 32 KB |
-| The words an automatic lookup reads | 1 KB |
-| An automatic shortlist | 5 entries within 2 KB |
+| The words a search reads | 1 KB |
 
 ### Directions are the first mate's to keep
 
@@ -166,22 +165,25 @@ Knowledge is the only source for personal context, saved references and standing
 - Rendering never truncates directions to a character budget or a search page.
 - Captain-origin directions are instructions, other origins are labeled advice, and neither grants permission beyond the task.
   A captain-origin direction that a step needs no consent is that consent, so a crewmate does not ask again for it.
-- The first mate's `knowledge` shortlist contains topical personal entries matched from the captain's words; operational wakes carry none.
-- Every crewmate's brief offers topical factual candidates, including tasks without projects, and the same conditional saving guidance.
+- Nothing saved enters an agent's instructions on its own: no entry, title or id is matched to a message or a task and put in front of the agent (INF-4008, the captain: "saved knowledge should be discoverable by the agent but not automatically injected").
+  The agent searches with the `knowledge` tool when its work may depend on the captain's situation or a source they saved, and its description says so.
+- The first mate's context carries `saved_knowledge`: how many personal entries, saved sources and their findings the captain's collection holds (`KnowledgeService.savedCounts`), sent once per conversation and again when a count changes.
+  It is absent while nothing is saved, and says the collection cannot be read, with the reason, when it cannot.
+- Every crewmate's brief, including a task without a project, carries the same counts as one line, or nothing while nothing is saved, and the same conditional saving guidance.
   The common system instructions carry that policy on both runtimes, including resumed conversations, and explicitly supersede older grant or read-first requirements in saved briefs.
   Consult saved context or prior findings when useful; otherwise proceed without a lookup.
   Read a finding and its sources before relying on them.
   When asked to save a page, extract reusable concepts and sourced findings, keep short excerpts and metadata, reuse concepts, and preserve disagreements and earlier evidence.
   An understanding request alone is not a saving request; keep secrets, progress, raw dumps and incidental details out.
-- Candidates carry identifiers and summaries, never a finding's statement or evidence; deliberate reading remains `get` and is not a declared use.
+- Reading remains a deliberate `search` or `get`, and is not a declared use.
 - Natural requests to remember or forget use `record_knowledge`; the old tools and active store are gone.
 
-Search and automatic candidates require a title or alias word hit, or at least two distinct query words in the body; words match whole stemmed terms, never loose prefixes.
+Search requires a title or alias word hit, or at least two distinct query words in the body; words match whole stemmed terms, never loose prefixes.
 Conditions are kept and read but not indexed, and bare numbers are not search terms.
-The query keeps up to sixteen distinct non-stopwords; below the matching bar the shortlist says nothing matched.
+The query keeps up to sixteen distinct non-stopwords; below the matching bar a search finds nothing.
 
-The lookup runs where a turn or a brief is assembled and nowhere else: no background job, model call or embedding.
-It cannot make a model reason well; it offers knowledge when useful, without requiring a lookup before work.
+The counts are one aggregate over the collection's index, read where a context or a brief is assembled: no background job, model call or embedding.
+A task started before this rule keeps the candidate list its saved brief was written with, if that brief is served again.
 
 ## Keeping and clearing it
 
@@ -314,7 +316,7 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 
 ## Tests
 
-- `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist; a direction's add, revise and retire through `StandingDirections.change`, its kept reasons and a stale revision refused, and `record_knowledge` refusing one.
+- `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data and purge; a direction's add, revise and retire through `StandingDirections.change`, its kept reasons and a stale revision refused, and `record_knowledge` refusing one.
 - `src/core/core.settings.test.ts` ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line, its reason in the history, and `app_state` listing it.
 - `src/core/knowledge/knowledgeTools.test.ts` and `knowledgeContext.test.ts`: what the tools and the context say.
 - `src/core/knowledge/knowledgeSources.integration.test.ts`: evidence from a real git working copy.

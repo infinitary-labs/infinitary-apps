@@ -198,7 +198,9 @@ test("stable and alpha share Knowledge reads, tools, citations and purge", async
       expect(tools).not.toContain("remember");
       expect(tools).not.toContain("forget");
       expect(tools).toEqual(expect.arrayContaining(["knowledge", "record_knowledge"]));
-      expect(latestContext(requests[0] ?? "")).toHaveProperty("knowledge");
+      // INF-4008: no saved entry rides the input; the context says only how much is saved.
+      expect(latestContext(requests[0] ?? "")).not.toHaveProperty("knowledge");
+      expect(latestContext(requests[0] ?? "")).toHaveProperty("saved_knowledge");
       expect(await purgeScope(stable.page)).toEqual(PURGE_SCOPE);
       expect(await knowledgeOn(stable.page)).toEqual({ enabled: true, held: true });
       expect(await offersOpenKnowledge(stable)).toBe(true);
@@ -212,8 +214,8 @@ test("stable and alpha share Knowledge reads, tools, citations and purge", async
       await stable.close();
     }
 
-    // The next alpha finds what the first one kept, from the captain's words,
-    // and links it where an answer cites it.
+    // The next alpha is told what the first one kept is there - its count,
+    // never its words (INF-4008) - and links it where an answer cites it.
     const againKey = seedAnswer(userDataDir, deployDay);
     const again = await launch(userDataDir, ALPHA, mockProvider);
     try {
@@ -224,11 +226,12 @@ test("stable and alpha share Knowledge reads, tools, citations and purge", async
       });
       const requests = await say(again, "what do we know about deploy day?");
       const context = latestContext(requests[0] ?? "") as unknown as {
-        knowledge?: { candidates?: string[] };
+        knowledge?: unknown;
+        saved_knowledge?: string;
       };
-      expect(context.knowledge?.candidates?.join("\n")).toMatch(
-        /c-[a-z0-9]{6} concept "Deploy day"/,
-      );
+      expect(context.knowledge).toBeUndefined();
+      expect(context.saved_knowledge).toContain("1 personal entry");
+      expect(requests[0]).not.toMatch(/concept \\?"Deploy day/);
       // Its purge, which says so beforehand, clears the collection.
       await again.page.evaluate(() => window.infinitary.retention.purge());
       expect(folder(knowledgeDir)).toBeNull();

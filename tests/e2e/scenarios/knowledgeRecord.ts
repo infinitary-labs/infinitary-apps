@@ -1,5 +1,5 @@
 import type { Scenario } from "../mockProvider";
-import { calledTool } from "../providerRequest";
+import { calledTool, toolCallCount } from "../providerRequest";
 
 /**
  * Knowledge (docs/knowledge.md, knowledge.spec.ts). A crewmate whose task
@@ -7,8 +7,8 @@ import { calledTool } from "../providerRequest";
  * It records MOCK_KNOWLEDGE_CONCEPT from MOCK_KNOWLEDGE_ARTICLE, a finding
  * citing that article, then the same link again, which must not add a
  * second concept, and reports. One whose title carries
- * KNOWLEDGE_REUSE_PROMPT_MARKER reads the concept its brief offers, follows
- * it to the finding, reads the excerpt, declares that it relied on it, and
+ * KNOWLEDGE_REUSE_PROMPT_MARKER searches in other words, since its brief
+ * lists no saved entry, follows the concept it finds to the finding, reads the excerpt, declares that it relied on it, and
  * reports. Both titles name the project they bind to.
  */
 export const KNOWLEDGE_RECORD_PROMPT_MARKER = "learn how the harbor inbox retries";
@@ -44,7 +44,7 @@ export const MOCK_KNOWLEDGE_REUSE_REPORT =
 /**
  * One crewmate saves an article as a concept and a sourced finding, then a
  * second save of the same link reuses the concept; a later crewmate finds the
- * concept through its brief, follows it to the finding, reads the excerpt and
+ * concept by searching in other words, follows it to the finding, reads the excerpt and
  * declares its use.
  */
 export const knowledgeRecord: Scenario =
@@ -53,8 +53,8 @@ export const knowledgeRecord: Scenario =
     if (isFirstmate || !wantsStream) return undefined;
     // The knowledge crewmates (knowledge.spec.ts): one saves an article
     // as a concept, cites it from a finding, and is refused a second
-    // concept for the same link; a later one finds the concept through
-    // its brief, follows it to the finding, reads the excerpt and
+    // concept for the same link; a later one finds the concept by a
+    // search in other words, follows it to the finding, reads the excerpt and
     // declares its use. Each step reads the ids the app answered with.
     if (!isFirstmate && body.includes(KNOWLEDGE_RECORD_PROMPT_MARKER) && wantsStream) {
       const concept = /Recorded concept (c-[a-z0-9]{6})/.exec(latestUserTail)?.[1];
@@ -125,7 +125,12 @@ export const knowledgeRecord: Scenario =
     if (!isFirstmate && body.includes(KNOWLEDGE_REUSE_PROMPT_MARKER) && wantsStream) {
       const concept = /(c-[a-z0-9]{6}) concept \\?"Inbox delivery/.exec(body)?.[1];
       const finding = /finding about this: (f-[a-z0-9]{6})/.exec(latestUserTail)?.[1];
-      if (concept && !calledTool(latestUserTail, "knowledge")) {
+      if (!calledTool(latestUserTail, "knowledge")) {
+        // Nothing saved is in the brief: the crewmate looks it up in its own words.
+        return {
+          calls: [{ name: "knowledge", args: { action: "search", query: "harbor wake queue" } }],
+        };
+      } else if (concept && toolCallCount(latestUserTail, "knowledge") === 1) {
         return { calls: [{ name: "knowledge", args: { action: "neighbors", id: concept } }] };
       } else if (finding && !latestUserTail.includes("statement:")) {
         return { calls: [{ name: "knowledge", args: { action: "get", ids: [finding] } }] };
@@ -155,7 +160,7 @@ export const knowledgeRecord: Scenario =
               args: {
                 text: concept
                   ? MOCK_KNOWLEDGE_REUSE_REPORT
-                  : "My brief offered no knowledge about the inbox.",
+                  : "My search found no knowledge about the inbox.",
               },
             },
           ],

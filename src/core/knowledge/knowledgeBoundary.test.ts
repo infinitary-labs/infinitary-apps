@@ -191,10 +191,10 @@ describe("user-owned knowledge", () => {
       conceptId,
     ]);
     expect(svc.get(importer, personal.ids[0] as string).summary.lane).toBe("personal");
-    expect(svc.shortlist([PRIVATE_SCOPE], "inbox retries").map((hit) => hit.id)).toContain(
+    expect(svc.search(importer, { query: "inbox retries" }).hits.map((hit) => hit.id)).toContain(
       conceptId,
     );
-    expect(svc.shortlist([PRIVATE_SCOPE], "travel plans").map((hit) => hit.id)).toContain(
+    expect(svc.search(importer, { query: "travel plans" }).hits.map((hit) => hit.id)).toContain(
       personal.ids[0],
     );
     expect(

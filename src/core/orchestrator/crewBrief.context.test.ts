@@ -75,7 +75,9 @@ describe("CrewSupervisor direction context", () => {
     }
   });
 
-  it("leads a local crewmate's brief with its project's knowledge and hands it the knowledge pair", async () => {
+  // INF-4008, the captain: "saved knowledge should be discoverable by the
+  // agent but not automatically injected".
+  it("tells a local crewmate's brief how much is saved, never a saved word, and hands it the knowledge pair", async () => {
     const { dir } = gitRepo();
     let knowledge: KnowledgeService | undefined;
     const crewmate = fakeCrewmate();
@@ -114,8 +116,10 @@ describe("CrewSupervisor direction context", () => {
     });
     await tick();
     const minted = crewmate.promptCalls[0] ?? "";
-    expect(minted).toContain("knowledge for firstmate-3000 (candidates");
-    expect(minted).toContain(`${conceptId} concept "Package smoke"`);
+    // The task's title matches the saved concept's alias, and still none of it is in the brief.
+    expect(minted).toContain("Saved knowledge: the captain's collection holds 1 personal entry.");
+    for (const word of [conceptId, "Package smoke", "first-launch check"])
+      expect(minted).not.toContain(word);
     expect(minted).toContain("Always squash-merge smoke fixes.");
     expect(minted).not.toContain("package-smoke flakes on first run");
     // All crewmates can read and write factual knowledge on request.
@@ -132,7 +136,7 @@ describe("CrewSupervisor direction context", () => {
     expect(written).toContain("Recorded");
   });
 
-  it("serves common saving guidance as its own paragraph after knowledge candidates", async () => {
+  it("serves common saving guidance as its own paragraph, with no knowledge line while nothing is saved", async () => {
     const { dir } = gitRepo();
     const crewmate = fakeCrewmate();
     const { supervisor, repos } = setup(crewmate, {
@@ -149,12 +153,8 @@ describe("CrewSupervisor direction context", () => {
     });
     await tick();
     const paragraphs = (crewmate.promptCalls[0] ?? "").split("\n\n");
-    const knowledge = paragraphs.findIndex((text) =>
-      text.startsWith("knowledge for firstmate-3000"),
-    );
-    expect(knowledge).toBeGreaterThanOrEqual(0);
-    expect(paragraphs[knowledge]).not.toContain(renderReferenceImport());
-    expect(paragraphs[knowledge + 1]).toBe(renderReferenceImport());
+    expect(paragraphs).toContain(renderReferenceImport());
+    expect(paragraphs.some((text) => text.startsWith("Saved knowledge"))).toBe(false);
   });
 
   it("gives a task with no project the same knowledge pair and common guidance", async () => {
@@ -170,7 +170,6 @@ describe("CrewSupervisor direction context", () => {
       intent: intentOf("Explain an article."),
     });
     await tick();
-    expect(crewmate.promptCalls[0]).toContain("knowledge for this task");
     expect(crewmate.promptCalls[0]).toContain(renderReferenceImport());
     const bound = specs[0]?.knowledge;
     expect(bound).toBeDefined();

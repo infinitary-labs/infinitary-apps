@@ -108,6 +108,9 @@ export type KnowledgeApproval = {
 
 export type Availability = { state: "ready" } | { state: "unavailable"; reason: string };
 
+/** How much the captain's collection holds: personal entries, saved sources and their findings. */
+export type SavedCounts = { personal: number; sources: number; findings: number };
+
 /**
  * What the service lends the owners beside it: its dependencies, its clock
  * and ids, and its one store - opened on first need, or read for the
@@ -363,21 +366,14 @@ export class KnowledgeService {
   }
 
   /**
-   * The few entries a turn or a brief is offered on its own (docs/knowledge.md,
-   * "Knowledge first"): the best matches for `query` in `scopes`, as
-   * candidates to read - never evidence, and never a declared use.
+   * How much the captain's collection holds, by category: the one fact about
+   * saved knowledge an agent is given unasked (docs/knowledge.md, "Knowledge
+   * as needed"). Nothing recorded yet reads as zero without creating the file.
    */
-  shortlist(scopes: readonly string[], query: string): EntrySummary[] {
-    const store = this.open();
-    const terms = searchTerms(query.slice(0, KNOWLEDGE_LIMITS.queryBytes));
-    if (terms.length === 0 || scopes.length === 0) return [];
-    const { hits } = store.search(scopes, matchOf(terms), undefined, SEARCH_WINDOW, 0);
-    return hits
-      .flatMap((hit) => {
-        const entry = store.entry(hit.id);
-        return entry ? [summary(store, this.nameOf, entry)] : [];
-      })
-      .slice(0, KNOWLEDGE_LIMITS.shortlistHits);
+  savedCounts(): SavedCounts | { state: "unavailable"; reason: string } {
+    return this.browsing((store) =>
+      store ? store.savedCounts(PRIVATE_SCOPE) : { personal: 0, sources: 0, findings: 0 },
+    );
   }
 
   /** How many active entries the collections hold. */

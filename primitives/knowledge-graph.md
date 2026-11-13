@@ -28,7 +28,7 @@ A finding is evidence to weigh, never an instruction or a permission; saving an 
 - One writer each: `KnowledgeService` is the one writer over `userData/knowledge/` (`../docs/knowledge.md`), with one connection to `userData/knowledge/knowledge.db` through [`../src/core/storage/knowledgeStore.ts`](../src/core/storage/knowledgeStore.ts); no other module opens it.
 - Writes: `KnowledgeService.record(actor, input)` (`publish`, `revise`, `assess`, `relate`, `retire`, `retire_many`, `use`), each checked by `KnowledgeWrites` in [`../src/core/knowledge/writes.ts`](../src/core/knowledge/writes.ts); a refusal is the answer's words, never a throw.
 - Agent tools: `knowledge` and `record_knowledge` in [`../src/core/knowledge/knowledgeTools.ts`](../src/core/knowledge/knowledgeTools.ts), one declaration each for the first mate and every crewmate on both runtimes, bound to the actor the host stamps.
-- Topical lookup: `knowledgeShortlist`, `contextKnowledge` and `renderBriefKnowledge` in [`../src/core/knowledge/context.ts`](../src/core/knowledge/context.ts).
+- How much is saved: `savedKnowledge`, `contextSavedKnowledge` and `renderBriefKnowledge` in [`../src/core/knowledge/context.ts`](../src/core/knowledge/context.ts), counts only; nothing saved enters an agent's instructions on its own.
 - Evidence: `captureFile` and `checkFile` in [`../src/core/knowledge/sources.ts`](../src/core/knowledge/sources.ts), with `../src/core/knowledge/gitFacts.ts`; every write is scanned by `scanKnowledgeThreat` (`../src/core/knowledge/threatScan.ts`).
 - Window reads and shapes: the `knowledge.*` reads (`../src/shared/reads.ts`), answered by `KnowledgeWindow` in [`../src/core/knowledge/windowReads.ts`](../src/core/knowledge/windowReads.ts), and their schemas in [`../src/shared/knowledge.ts`](../src/shared/knowledge.ts), with `standingOf` in `../src/core/knowledge/browse.ts` and `knowledgeIdsIn` for ids a card body writes.
 - Browser and panel: `../src/panels/knowledge/`, an ordinary app panel folder on the `knowledge` gate.
@@ -69,18 +69,18 @@ A finding is evidence to weigh, never an instruction or a permission; saving an 
 - An unreadable or newer collection stays unchanged; reads answer `unavailable` with the app's words, never an empty collection, and new agent work pauses because its directions cannot be read.
 - A refused write changes nothing and returns its reason to the model as guidance.
 - A changed or missing cited file shows the finding as needing a recheck; nothing rewrites it automatically.
-- A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`../src/shared/contractFeatures.ts`) gets neither the tools nor the factual candidate lines.
+- A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`../src/shared/contractFeatures.ts`) gets neither the tools nor the saved-knowledge line.
 
 ## Uses
 
-- Saving an article on request: a crewmate extracts concepts and sourced findings with a short excerpt, and a later crewmate finds it in other words through its brief's candidates (`../tests/e2e/knowledge.spec.ts`).
-- Personal context: the first mate records what the captain states about themselves, and its `knowledge` shortlist offers matching entries on the captain's later turns.
+- Saving an article on request: a crewmate extracts concepts and sourced findings with a short excerpt, and a later crewmate finds it by searching in other words (`../tests/e2e/knowledge.spec.ts`).
+- Personal context: the first mate records what the captain states about themselves, and reads them with the `knowledge` tool when a later message may depend on them.
 - References in an answer: a card that writes `f-` or `c-` ids links each to the inspector with its standing (`../tests/e2e/knowledge-references.spec.ts`).
 - The Knowledge browser: graph, concepts, findings and an inspector the captain reads without writing (`../tests/e2e/knowledge-browser.spec.ts`).
 
 ## Checks
 
-- [`../src/core/knowledge/knowledgeService.test.ts`](../src/core/knowledge/knowledgeService.test.ts): scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist.
+- [`../src/core/knowledge/knowledgeService.test.ts`](../src/core/knowledge/knowledgeService.test.ts): scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data and purge.
 - [`../src/core/knowledge/knowledgeBoundary.test.ts`](../src/core/knowledge/knowledgeBoundary.test.ts): the user-owned boundary, equal crewmate access, project collections and report-origin writes refused.
 - [`../src/core/knowledge/knowledgeTools.test.ts`](../src/core/knowledge/knowledgeTools.test.ts) and [`../src/core/knowledge/knowledgeContext.test.ts`](../src/core/knowledge/knowledgeContext.test.ts): tools and context.
 - [`../src/core/knowledge/knowledgeSources.integration.test.ts`](../src/core/knowledge/knowledgeSources.integration.test.ts): evidence from a real git working copy.

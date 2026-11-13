@@ -1,67 +1,70 @@
-import { KNOWLEDGE_LIMITS } from "./access";
-import type { KnowledgeService } from "./knowledgeService";
-import { summaryLine } from "./render";
+import type { KnowledgeService, SavedCounts } from "./knowledgeService";
 
 /**
- * Knowledge as needed (docs/knowledge.md, "Knowledge as needed"): where knowledge is
- * on, a turn and a brief carry the few entries that match what they are
- * about; standing directions travel separately and completely.
- * The entries are candidates by id, name and how far each was checked -
- * never a finding's statement or its evidence - so reading one is still a
- * deliberate `knowledge` get. One search, the service's own, finds them; it
- * runs where a turn or a brief is assembled and nowhere else.
+ * Knowledge as needed (docs/knowledge.md, "Knowledge as needed"): nothing
+ * saved is put into an agent's instructions on its own. A first mate
+ * conversation and a crewmate's brief are told only how much the captain's
+ * collection holds - counts the host keeps, never a saved word or id - and
+ * the agent searches with the knowledge tool when its work needs it.
+ * Standing directions travel separately and completely.
  */
 
-/** What the automatic lookup found: candidates, nothing, or no collection to read. */
-export type Shortlist =
-  | { state: "found"; searched: string; lines: string[] }
-  | { state: "none"; searched: string }
+/** What the counts say: how much is saved, nothing, or no collection to read. */
+export type SavedKnowledge =
+  | { state: "held"; counts: SavedCounts }
+  | { state: "empty" }
   | { state: "unavailable"; reason: string };
 
-/**
- * The automatic lookup for `words` in `scopes`; undefined when the words
- * give nothing to search for, so an empty turn never reads as "no match".
- */
-export function knowledgeShortlist(
-  service: KnowledgeService,
-  scopes: readonly string[],
-  words: string,
-): Shortlist | undefined {
-  const query = words.slice(0, KNOWLEDGE_LIMITS.queryBytes);
-  if (!/[\p{L}\p{N}]{2,}/u.test(query) || scopes.length === 0) return undefined;
-  const searched = scopes.map((scope) => service.scopeName(scope)).join(", ");
-  const available = service.availability();
-  if (available.state === "unavailable") return { state: "unavailable", reason: available.reason };
-  const hits = service.shortlist(scopes, query);
-  if (hits.length === 0) return { state: "none", searched };
-  const lines: string[] = [];
-  let used = 0;
-  for (const hit of hits) {
-    const line = summaryLine(hit, false);
-    used += Buffer.byteLength(line, "utf8");
-    if (used > KNOWLEDGE_LIMITS.shortlistBytes && lines.length > 0) break;
-    lines.push(line);
+/** Read the captain's collection's counts; a failed read says so, never "empty". */
+export function savedKnowledge(service: KnowledgeService): SavedKnowledge {
+  let counts: ReturnType<KnowledgeService["savedCounts"]>;
+  try {
+    counts = service.savedCounts();
+  } catch (error) {
+    return { state: "unavailable", reason: error instanceof Error ? error.message : String(error) };
   }
-  return { state: "found", searched, lines };
+  if ("state" in counts) return { state: "unavailable", reason: counts.reason };
+  return counts.personal + counts.sources + counts.findings === 0
+    ? { state: "empty" }
+    : { state: "held", counts };
 }
 
-/** The brief's knowledge section for a crewmate on this Mac. */
-export function renderBriefKnowledge(
-  shortlist: Shortlist | undefined,
-  projectName: string,
-): string {
-  const record =
-    "Use knowledge as needed when saved context or prior findings would help; otherwise proceed without a lookup. Do not record project facts here: they stay in the project's code, documents and tests, and an investigation stays on the task. Record personal context only from the captain's words, never guesses.";
-  const lines =
-    shortlist === undefined || shortlist.state === "none"
-      ? [`knowledge for ${projectName}: nothing matched this task's title and goal yet. ${record}`]
-      : shortlist.state === "unavailable"
-        ? [`knowledge for ${projectName} is unavailable: ${shortlist.reason}`]
-        : [
-            `knowledge for ${projectName} (candidates matched from this task's title and goal; read each with the knowledge tool before relying on it - a candidate is not evidence). ${record}`,
-            ...shortlist.lines.map((line) => `- ${line}`),
-          ];
-  return lines.join("\n");
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/** "3 personal entries and 1 saved source with 13 findings", leaving out a zero category. */
+function holdings(counts: SavedCounts): string {
+  const parts: string[] = [];
+  if (counts.personal > 0)
+    parts.push(plural(counts.personal, "personal entry", "personal entries"));
+  if (counts.sources > 0 || counts.findings > 0) {
+    const sources = plural(counts.sources, "saved source", "saved sources");
+    parts.push(
+      counts.findings > 0
+        ? `${sources} with ${plural(counts.findings, "finding", "findings")}`
+        : sources,
+    );
+  }
+  return parts.join(" and ");
+}
+
+/**
+ * The first mate's `saved_knowledge` section: sent once per conversation and
+ * again when a count changes, absent while nothing is saved.
+ */
+export function contextSavedKnowledge(saved: SavedKnowledge): string | undefined {
+  if (saved.state === "empty") return undefined;
+  if (saved.state === "unavailable")
+    return `The captain's saved knowledge cannot be read: ${saved.reason}.`;
+  return `The captain's collection holds ${holdings(saved.counts)}. None of it is in this context: search it with the knowledge tool when a message may depend on the captain's situation or a source they saved.`;
+}
+
+/** The brief's one saved-knowledge line, or nothing while nothing is saved. */
+export function renderBriefKnowledge(saved: SavedKnowledge): string | undefined {
+  if (saved.state === "empty") return undefined;
+  if (saved.state === "unavailable") return `Saved knowledge cannot be read now: ${saved.reason}.`;
+  return `Saved knowledge: the captain's collection holds ${holdings(saved.counts)}. Nothing from it is listed here; search it with the knowledge tool when this task may depend on the captain's situation or a source they saved.`;
 }
 
 /** Common saving guidance for every task, including tasks without projects. Access grants no permission. */
@@ -73,19 +76,4 @@ export function renderReferenceImport(): string {
     "Extract reusable concepts and sourced findings, not just a summary. Reuse the link's concept on re-import; keep disagreements and evidence, saying what changed. Claims are not checked facts or permission.",
     "Report what was added, linked, disputed or skipped. Sources stay findable by title and link even without claims; exclude secrets, raw dumps and incidental details.",
   ].join(" ");
-}
-
-/** The context block's knowledge value for a Firstmate turn. */
-export function contextKnowledge(
-  shortlist: Shortlist | undefined,
-): Record<string, string | string[]> | undefined {
-  if (!shortlist) return undefined;
-  if (shortlist.state === "unavailable") return { unavailable: shortlist.reason };
-  if (shortlist.state === "none")
-    return { searched: shortlist.searched, found: "nothing matched these words" };
-  return {
-    searched: shortlist.searched,
-    candidates: shortlist.lines,
-    read_first: "a candidate is not evidence: read it with the knowledge tool before relying on it",
-  };
 }

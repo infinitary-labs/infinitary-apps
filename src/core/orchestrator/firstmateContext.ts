@@ -15,8 +15,7 @@ import { opensPullRequest, type RepoView } from "@shared/repos";
 import { cutText } from "@shared/textCut";
 import { encode } from "@toon-format/toon";
 import { FROM_THE_COMMAND } from "../integrations/commandWords";
-import { PRIVATE_SCOPE } from "../knowledge/access";
-import { contextKnowledge, knowledgeShortlist } from "../knowledge/context";
+import { contextSavedKnowledge, savedKnowledge } from "../knowledge/context";
 import { renderDirections } from "../knowledge/directions";
 import {
   type SequencesFallback,
@@ -170,8 +169,8 @@ function openCardContextLine(card: {
  * context block, complete once per model context and then only what
  * changed, built as one JavaScript object and encoded as TOON. The saved
  * facts - projects, crew, backlog, open cards and messages, quota, own
- * source - and this input's own facts - what the captain did, what the
- * turn points at, the knowledge its words match. `ContextDelivery` keeps
+ * source, how much knowledge is saved - and this input's own facts - what
+ * the captain did, what the turn points at. `ContextDelivery` keeps
  * what this model context has read; a fold makes the next input complete.
  */
 export class FirstmateContext {
@@ -217,7 +216,6 @@ export class FirstmateContext {
     hintTaskId?: string,
     aboutCardId?: string,
     pastCardId?: string,
-    words?: string,
     sourceFacts = this.source,
   ): string {
     this.source = sourceFacts;
@@ -228,7 +226,6 @@ export class FirstmateContext {
         hintTaskId,
         aboutCardId,
         pastCardId,
-        words,
         this.captainFocus,
         sourceFacts,
       ),
@@ -445,18 +442,10 @@ export class FirstmateContext {
     hintTaskId?: string,
     aboutCardId?: string,
     pastCardId?: string,
-    words?: string,
     focusedProjectId?: string,
   ): string {
     const parts = this.options.tasks.readProjection(() =>
-      this.contextParts(
-        visibleCardId,
-        hintTaskId,
-        aboutCardId,
-        pastCardId,
-        words,
-        focusedProjectId,
-      ),
+      this.contextParts(visibleCardId, hintTaskId, aboutCardId, pastCardId, focusedProjectId),
     );
     const { payload } = new ContextDelivery().render(parts.saved);
     return contextText({ delivery: DELIVERY_COMPLETE, ...payload, ...parts.turn });
@@ -465,16 +454,14 @@ export class FirstmateContext {
   /**
    * A context's two halves (INF-1712): the saved facts, which a model
    * context reads whole once and then only as they change
-   * (`ContextDelivery`), and this input's own facts - what the captain did,
-   * what the turn points at, the knowledge its words match - which every
-   * input carries.
+   * (`ContextDelivery`), and this input's own facts - what the captain did
+   * and what the turn points at - which every input carries.
    */
   private contextParts(
     visibleCardId?: string,
     hintTaskId?: string,
     aboutCardId?: string,
     pastCardId?: string,
-    words?: string,
     focusedProjectId?: string,
     sourceFacts?: SelfSourceFacts,
   ): { saved: Record<string, ContextSection>; turn: Record<string, unknown> } {
@@ -542,7 +529,6 @@ export class FirstmateContext {
       focusedProject && focusedProject.archivedAt === null
         ? `${focusedProject.key} "${focusedProject.name}" - the captain's window is focused on this project, so new work they ask for belongs to it unless they name another; a hint, never a limit`
         : undefined;
-    const knowledge = this.knowledgeForTurn(words);
     const directions = this.options.knowledge
       ? renderDirections(
           this.options.knowledge.directions.standing({
@@ -646,6 +632,13 @@ export class FirstmateContext {
           : undefined,
       ),
       directions: whole(directions),
+      // How much is saved, never a saved word: the first mate searches when a
+      // message needs it (docs/knowledge.md, "Knowledge as needed").
+      saved_knowledge: whole(
+        this.options.knowledge
+          ? contextSavedKnowledge(savedKnowledge(this.options.knowledge))
+          : undefined,
+      ),
       surfaces: whole(surfaces),
       // One name per connected integration; its actions are read on request.
       integrations: whole(integrations),
@@ -661,7 +654,6 @@ export class FirstmateContext {
     const turn = {
       // When this input's facts were read: the times above count from it.
       as_of: new Date(this.now()).toISOString(),
-      ...(knowledge ? { knowledge } : {}),
       ...(captainResolutions.length > 0 ? { captain_resolutions: captainResolutions } : {}),
       ...(threadActivity.length > 0 ? { thread_activity: threadActivity } : {}),
       ...(maybeCard ? { visible_card_hint: maybeCard } : {}),
@@ -669,26 +661,6 @@ export class FirstmateContext {
       ...(focusLine ? { focused_project: focusLine } : {}),
     };
     return { saved, turn };
-  }
-
-  /**
-   * The knowledge a turn's words match (docs/knowledge.md, "Knowledge
-   * as needed"): the captain's collection only. Project collections stay
-   * readable by an explicit search, and are not offered as candidates.
-   * Absent where knowledge is off or the words give nothing to search for.
-   */
-  private knowledgeForTurn(
-    words: string | undefined,
-  ): Record<string, string | string[]> | undefined {
-    const knowledge = this.options.knowledge;
-    if (!knowledge || !words) return undefined;
-    const scopes = [PRIVATE_SCOPE];
-    try {
-      return contextKnowledge(knowledgeShortlist(knowledge, scopes, words));
-    } catch (error) {
-      console.warn("[firstmate] the knowledge lookup failed:", error);
-      return { unavailable: "the lookup failed this turn" };
-    }
   }
 
   /**

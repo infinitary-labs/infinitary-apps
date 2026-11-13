@@ -196,11 +196,12 @@ Each input the first mate is served opens with one context, and a context carrie
   A fold of the conversation, a restart and a new session each reset the view, so the next context is complete again.
   An input sent before the reset and read after that complete context still counts, in read order, so a stale fact it puts back goes again in the next input.
 - **The saved sections.**
-  `project_scopes`, `repos` (by repo id), `crew` (by task id), `computers`, `computer_versions`, `backlog`, `open_cards` (by card id), `open_asks`, `introduction`, `schedules` (by id), `recent_fleet_outcomes`, `directions`, `surfaces`, `integrations`, `models_by_intelligence_bucket`, `quota`, `captain_time_zone`, `captain_language` and `self_source`.
+  `project_scopes`, `repos` (by repo id), `crew` (by task id), `computers`, `computer_versions`, `backlog`, `open_cards` (by card id), `open_asks`, `introduction`, `schedules` (by id), `recent_fleet_outcomes`, `directions`, `saved_knowledge`, `surfaces`, `integrations`, `models_by_intelligence_bucket`, `quota`, `captain_time_zone`, `captain_language` and `self_source`.
   A row carries the time a fact runs from, never an elapsed time, so it changes when its fact does and never with the clock; `as_of` says when the input was read.
   `directions` is one section: when any direction changes, every current direction goes again whole under its authority line, so the model never holds part of the set.
+  `saved_knowledge` says only how much the captain's collection holds, never a saved entry; the first mate searches it when a message needs it (`docs/knowledge.md`, "Knowledge as needed").
 - **The facts of one input.**
-  `as_of`, `knowledge`, `captain_resolutions`, `thread_activity`, `visible_card_hint`, `about`, `focused_project` and `recovery` belong to the input they ride and are sent whenever they apply.
+  `as_of`, `captain_resolutions`, `thread_activity`, `visible_card_hint`, `about`, `focused_project` and `recovery` belong to the input they ride and are sent whenever they apply.
 - **The crew lists started work.**
   `crew` lists every active task: running, idle, paused, held, and work on a computer that cannot be reached.
   Unstarted work is the `backlog` section's count per project; the `tasks` query reads it, a page at a time: a list that stops short names the `next` that alone reads its later pages from the one cut its first page took, under that page's filters, and a `next` whose cut is no longer kept, or was taken by an earlier session's tool, is refused.

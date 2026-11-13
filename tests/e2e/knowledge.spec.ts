@@ -261,8 +261,9 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
     ),
   ).toBe(true);
 
-  // Reuse: after the restart, a crewmate asked in other words is offered the
-  // concept in its brief, follows it to the finding and reads the evidence.
+  // Reuse: after the restart, a crewmate asked in other words finds the
+  // concept by searching - its brief lists no saved entry, only how much is
+  // saved (INF-4008) - follows it to the finding and reads the evidence.
   const second = await launchApp({ userDataDir, homeDir, reuseMockProvider: mockProvider });
   try {
     const again = promptInput(second.page);
@@ -276,15 +277,20 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
     await second.close();
   }
   const seen = crewmateMessages(mockProvider.requestBodies(), KNOWLEDGE_REUSE_PROMPT_MARKER);
-  // The brief's knowledge header for harbor when candidates matched (no candidate lines).
-  const candidatesHeader = renderBriefKnowledge(
-    { state: "found", searched: "", lines: [] },
-    repo.name,
-  );
-  const brief = seen.find((text) => text.includes(candidatesHeader));
+  // The brief says how much is saved and names nothing in it.
+  const countLine = renderBriefKnowledge({
+    state: "held",
+    counts: { personal: 0, sources: 1, findings: 1 },
+  }) as string;
+  const brief = seen.find((text) => text.includes(countLine));
   expect(brief).toBeDefined();
+  expect(brief).not.toContain(MOCK_KNOWLEDGE_CONCEPT.title);
   expect(brief).toContain(revisedText);
   expect(brief).not.toContain(privateText);
+  // A search answer, not the brief, is what named the concept.
+  const found = seen.find((text) => text.includes(`concept "${MOCK_KNOWLEDGE_CONCEPT.title}"`));
+  expect(found).toBeDefined();
+  expect(found).not.toBe(brief);
   // The finding as the crewmate read it: what it says, and the saved link.
   // Kept text is requested separately by source id.
   const read = seen.find(
@@ -320,8 +326,6 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
       db.prepare("SELECT entry_id, revision, op, actor, origin, body FROM revisions").all(),
     ),
   });
-  // The concept's own words are what the brief offered, never the finding's.
-  expect(brief).toContain(MOCK_KNOWLEDGE_CONCEPT.title);
   expect(brief).not.toContain(MOCK_KNOWLEDGE_FINDING.statement);
 }
 

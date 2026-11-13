@@ -131,7 +131,7 @@ These wait within a major, and every one but the last is older than major 10, so
 | `PLACED_WORK_SINCE` (1.64) | A computer takes work at all (`takesWork`), and the published `orders` start here. |
 | `CUSTOM_API_SIGN_INS_SINCE` (2.6) | The home asks a computer the custom API sign-in orders (`speaksCustomApi`), and refuses with "Update Infinitary on" that computer "first." otherwise. |
 | `PLACED_SEED_SINCE` (3.1) | A computer takes a task with no project (`speaksSeed`). |
-| `KNOWLEDGE_THERE_SINCE` (5.5) | The home names the knowledge pair among a task's tools and writes its knowledge lines into the brief (`speaksKnowledge`; `docs/knowledge.md`, "The tools"). |
+| `KNOWLEDGE_THERE_SINCE` (5.5) | The home names the knowledge pair among a task's tools and writes its saved-knowledge line into the brief (`speaksKnowledge`; `docs/knowledge.md`, "The tools"). |
 | `RESOURCE_OBSERVATIONS_SINCE` (6.3) | The home asks a computer its CPU and memory (`speaksResources`); an older one's reading is unknown, `unsupported`. |
 | `TEMP_CLEANUP_SINCE` (7.1) | The home asks a computer to remove a closed task's temporary folder (`speaksTempCleanup`), and otherwise says that computer needs an update first (`docs/task-retention.md`, "A task's temporary folder"). |
 | `PLACEMENT_FACTS_SINCE` (8.0) | The home asks a computer its placement facts (`inf:computer:placement`, `src/core/placed/automaticPlacement.ts`). |

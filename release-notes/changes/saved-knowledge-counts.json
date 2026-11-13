@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "saved-knowledge-counts",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "The first mate and crewmates look up what you saved only when they need it",
+      "body": "What you saved in Knowledge is no longer added to every message and task on its own. Your first mate and crewmates know how much you saved and search it when the work depends on it. Your standing directions still reach them in full.",
+      "noPicture": "Nothing on screen changes: this changes what the first mate and crewmates are told before they work.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

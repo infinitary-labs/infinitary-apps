@@ -539,6 +539,25 @@ export class KnowledgeStore {
     return row.n;
   }
 
+  /**
+   * How much a collection holds by category, the counts an agent is told
+   * instead of any saved words (docs/knowledge.md, "Knowledge as needed"):
+   * active personal entries, and saved sources (reference concepts) with
+   * their reference findings. One aggregate over the scope's index seek.
+   */
+  savedCounts(scope: string): { personal: number; sources: number; findings: number } {
+    const row = this.db
+      .prepare(
+        `SELECT
+           COALESCE(SUM(lane = 'personal'), 0) AS personal,
+           COALESCE(SUM(lane = 'reference' AND kind = 'concept'), 0) AS sources,
+           COALESCE(SUM(lane = 'reference' AND kind = 'finding'), 0) AS findings
+         FROM entries WHERE scope = ? AND lifecycle = 'active'`,
+      )
+      .get(scope) as { personal: number; sources: number; findings: number };
+    return { personal: row.personal, sources: row.sources, findings: row.findings };
+  }
+
   /** Active entries of the scopes, counted by kind: the browser's collection counts. */
   countsByKind(scopes: readonly string[]): { scope: string; kind: KnowledgeKind; n: number }[] {
     if (scopes.length === 0) return [];

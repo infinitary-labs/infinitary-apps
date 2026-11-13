@@ -30,6 +30,7 @@ export {
 } from "@shared/dependencyVisual";
 export {
   NOW_GROUP_LABELS,
+  NOW_GROUP_TITLES,
   NOW_GROUPS,
   type NowGroup,
   nowGroupOf,
@@ -49,7 +50,13 @@ export {
 export { feedRelativeAge } from "@shared/relativeAge";
 export { foldForSearch } from "@shared/searchText";
 // A task's pin (INF-3127): Pin and Unpin in the record's own words.
-export { PIN_LABEL, pinActionLabel, pinnedPastWeek, UNPIN_LABEL } from "@shared/taskPin";
+export {
+  PIN_LABEL,
+  PIN_WORDS,
+  pinActionLabel,
+  pinnedPastWeek,
+  UNPIN_LABEL,
+} from "@shared/taskPin";
 export {
   type TaskStatus,
   type TaskStatusReading,

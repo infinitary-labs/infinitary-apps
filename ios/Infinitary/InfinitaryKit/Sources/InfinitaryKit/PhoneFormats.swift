@@ -41,6 +41,16 @@ public enum PhoneFormats {
         return PhoneMessages.phoneFormatHoursMinutes(hours: whole(minutes / 60, locale: locale), minutes: rest)
     }
 
+    /// Items joined as one list (`formatList`, src/shared/i18n/format.ts): `a, b and c` in English, as the Mac has
+    /// always written them, and the phone language's own form otherwise.
+    public static func list(_ items: [String], locale: Locale = locale) -> String {
+        guard PhoneWords.language != "en" else {
+            guard let last = items.last, items.count > 1 else { return items.joined() }
+            return "\(items.dropLast().joined(separator: ", ")) and \(last)"
+        }
+        return items.formatted(.list(type: .and, width: .standard).locale(locale))
+    }
+
     /// The time of day: `3:12 PM`.
     public static func time(_ date: Date, locale: Locale = locale) -> String {
         date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale))

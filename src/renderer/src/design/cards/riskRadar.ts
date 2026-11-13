@@ -1,4 +1,4 @@
-import { RISK_DIMENSIONS, RISK_WORDS, type RiskDimension } from "@shared/risk";
+import { RISK_DIMENSIONS, RISK_LABELS, type RiskDimension } from "@shared/risk";
 
 /**
  * The risk radar's geometry (FI3-1127's plan, round 8; design skill
@@ -72,7 +72,7 @@ export function riskRadarGeometry(
     const t = ((angle - 90) * Math.PI) / 180;
     const cos = Math.cos(t);
     const x = (radius + LABEL_GAP) * cos;
-    const width = RISK_WORDS[dimension].label.length * LABEL_CHAR;
+    const width = RISK_LABELS[dimension].label.length * LABEL_CHAR;
     if (cos > 0.2) right = Math.max(right, x + width);
     else if (cos < -0.2) left = Math.max(left, -x + width);
     else {

@@ -8,6 +8,19 @@ public struct ActivityLine: Decodable, Sendable {
     public let at: Double
 }
 
+extension ActivityLine {
+    private enum Keys: String, CodingKey { case kind, taskKey, text, at, said, saidHere }
+
+    /// Its words in the phone's language from the fact beside them (`PhoneWords.line`).
+    public init(from decoder: Decoder) throws {
+        let line = try decoder.container(keyedBy: Keys.self)
+        self.init(
+            kind: try line.decode(String.self, forKey: .kind), taskKey: try line.decodeIfPresent(String.self, forKey: .taskKey),
+            text: try PhoneWords.line(line, text: .text, said: .said, here: .saidHere, decoder: decoder),
+            at: try line.decode(Double.self, forKey: .at))
+    }
+}
+
 /// Which side a reads-only phone updates (INF-1649): the older one, named in the line under the message box.
 public enum PhoneUpdate: Equatable, Sendable {
     case phone, computer
@@ -204,7 +217,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any] = [], as: T.Type = T.self, waits: Bool) async throws -> T {
         let answer = try await invoke(channel.rawValue, changes: channel.changes, args: args, waits: waits)
         try Task.checkCancellation()
-        do { return try JSONDecoder().decode(T.self, from: answer) }
+        do { return try PhoneWords.decoder(home: mac.name).decode(T.self, from: answer) }
         catch {
             if channel.changes { throw PhoneError.unconfirmed }
             throw PhoneError.invalidReply
@@ -854,7 +867,7 @@ public struct PhoneNotice: Equatable, Sendable {
                 // once whole, so an answer still arriving is never cut as a stuck one.
                 guard let whole = try parts.read(text) else { hear(); framed = .now; continue }
                 // INF-2566: the frame is parsed and its payload decoded off the main thread, then read here in order.
-                let frame = try await PhoneFrame.decode(whole, reads: pending)
+                let frame = try await PhoneFrame.decode(whole, reads: pending, home: mac.name)
                 guard current == generation, !Task.isCancelled else { break }
                 try await receive(frame, on: socket)
                 guard current == generation, !Task.isCancelled else { break }

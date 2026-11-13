@@ -1,4 +1,4 @@
-import { anythingElseOf, type CardWidth, PAST_CARD_WORDS_LEAD, type PastCard } from "@shared/cards";
+import { anythingElseOf, type CardWidth, type PastCard } from "@shared/cards";
 import { formatDateTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { pastCardEndingWords } from "@shared/pastCard";
@@ -213,7 +213,7 @@ export function PastCardColumn({
               overflowWrap: "anywhere",
             }}
           >
-            {PAST_CARD_WORDS_LEAD} {sentWords}
+            {m.cardPastSentLead()} {sentWords}
           </p>
         ) : undefined
       }

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { formatList } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated.ts";
 
 /** How a filed after-merge step's title opens, the same word a crewmate's Continue filing uses. */
 export const AFTER_MERGE_TITLE_PREFIX = "Continue: ";
@@ -108,14 +110,18 @@ export type FirstmateAfterMergeStep = { title: string; goal: string; why?: strin
 
 /** The line under a step that waits for other work to merge first. */
 export function afterMergeWaitWords(keys: readonly string[]): string {
-  return `Starts once ${keys.join(" and ")} ${keys.length > 1 ? "merge" : "merges"} too`;
+  return m.cardAfterMergeWait({ count: keys.length, keys: formatList(keys) });
 }
 
 /** The line under each step on its merge card, naming who does it. */
 export const AFTER_MERGE_DOER_WORDS: Record<AfterMergeDoer, string> = {
-  crewmate: "A crewmate does this in a working copy",
-  firstmate: "Your first mate does this in the app; no crewmate starts",
+  get crewmate() {
+    return m.cardAfterMergeDoerCrewmate();
+  },
+  get firstmate() {
+    return m.cardAfterMergeDoerFirstmate();
+  },
 };
 
 /** What leads a merge card's after-merge steps (`AfterMergeSteps.tsx`). */
-export const AFTER_MERGE_LEAD = "After merging, the crew starts";
+export const AFTER_MERGE_LEAD = m.cardAfterMergeLead();

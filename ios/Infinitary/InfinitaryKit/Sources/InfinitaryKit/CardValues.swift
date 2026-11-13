@@ -107,7 +107,12 @@ public struct PhoneAsked: Equatable, Sendable {
 public struct PhoneCard: Decodable, Identifiable, Sendable {
     public let value: PhoneJSON
     public var id: String { value["id"].text! }
-    public var title: String { value["title"].text! }
+    /// The welcome card the app wrote itself reads its title in the phone's language, as the Mac's `wordedTitle`.
+    public var title: String {
+        let saved = value["title"].text!
+        guard saved == PhoneContract.welcomeTitle, value["body"].text?.contains(PhoneContract.welcomeBodyMark) == true else { return saved }
+        return PhoneMessages.welcomeTitle()
+    }
     public var author: String { value["author"].text! }
     public var meta: String? { value["meta"].text }
     /// INF-2714: the first mate's own answer, whose head says first mate and names no task, as the Mac's `firstmateOwnCard`.

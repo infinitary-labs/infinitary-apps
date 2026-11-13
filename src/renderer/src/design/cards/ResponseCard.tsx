@@ -1,4 +1,3 @@
-import { REVIEW_FINDING_LABEL } from "@shared/cards";
 import { ENDED_CHIP_LABEL } from "@shared/endedCard";
 import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
@@ -277,7 +276,7 @@ export function ResponseCard({
               </Badge>
               {reviewFinding && (
                 <Badge tone="warn" style={{ flexShrink: 0 }}>
-                  {REVIEW_FINDING_LABEL}
+                  {m.cardReviewFinding()}
                 </Badge>
               )}
               {headExtra}

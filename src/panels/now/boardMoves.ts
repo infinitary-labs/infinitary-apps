@@ -11,9 +11,8 @@ import {
   dropReviewKeys,
   dropUnderwayLine,
   dropWaitingLine,
-  PIN_LABEL,
+  PIN_WORDS,
   taskStatusOf,
-  UNPIN_LABEL,
 } from "@infinitary/ui";
 import type { BoardColumn, BoardLane } from "./boardTiles";
 import * as m from "./messages.generated";
@@ -459,8 +458,8 @@ export function boardMenuOf(
   // After the moves, so the keys and the hand that walk a menu to a move find it where it was.
   entries.push(
     task.pinnedAt === undefined
-      ? { id: "pin", label: PIN_LABEL, detail: PIN_DETAIL }
-      : { id: "pin", label: UNPIN_LABEL, detail: UNPIN_DETAIL },
+      ? { id: "pin", label: PIN_WORDS.pin, detail: PIN_DETAIL }
+      : { id: "pin", label: PIN_WORDS.unpin, detail: UNPIN_DETAIL },
   );
   const drop = boardMoveOf(task, lane, "drop", context);
   entries.push(

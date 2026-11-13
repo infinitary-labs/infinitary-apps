@@ -30,20 +30,21 @@ struct PhoneFrame: Sendable {
 
     /// Parses `text` and decodes the payload its channel names; `reads` maps each read the session is waiting for to
     /// its channel, as the session's own `pending` held it when the frame arrived.
-    @concurrent static func decode(_ text: String, reads: [Int: String]) async throws -> PhoneFrame {
-        try read(Data(text.utf8), reads: reads)
+    /// `home` is the Mac's name, for the lines in its own words (`PhoneWords.line`).
+    @concurrent static func decode(_ text: String, reads: [Int: String], home: String? = nil) async throws -> PhoneFrame {
+        try read(Data(text.utf8), reads: reads, home: home)
     }
 
-    static func read(_ data: Data, reads: [Int: String]) throws -> PhoneFrame {
+    static func read(_ data: Data, reads: [Int: String], home: String? = nil) throws -> PhoneFrame {
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw PhoneError.invalidReply }
         switch object["t"] as? String {
         case "push":
             guard let channel = object["channel"] as? String, let value = object["payload"] else { break }
-            return PhoneFrame(object: object, payload: payload(channel, value: value, pushed: true), answer: nil)
+            return PhoneFrame(object: object, payload: payload(channel, value: value, pushed: true, home: home), answer: nil)
         case "result":
             guard object["ok"] as? Bool == true, let id = object["id"] as? Int, let value = object["value"] else { break }
             let answer = try? JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed)
-            let payload = reads[id].flatMap { payload($0, value: value, pushed: false) }
+            let payload = reads[id].flatMap { payload($0, value: value, pushed: false, home: home) }
             return PhoneFrame(object: object, payload: payload, answer: answer)
         default: break
         }
@@ -54,10 +55,10 @@ struct PhoneFrame: Sendable {
         self.object = object; self.payload = payload; self.answer = answer
     }
 
-    private static func payload(_ channel: String, value: Any, pushed: Bool) -> Payload? {
+    private static func payload(_ channel: String, value: Any, pushed: Bool, home: String?) -> Payload? {
         func decoded<T: Decodable>(_ type: T.Type, _ wrap: (T) -> Payload) -> Payload {
             guard let bytes = try? JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed),
-                  let result = try? JSONDecoder().decode(T.self, from: bytes) else { return .failed }
+                  let result = try? PhoneWords.decoder(home: home).decode(T.self, from: bytes) else { return .failed }
             return wrap(result)
         }
         switch (channel, pushed) {

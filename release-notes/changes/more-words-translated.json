@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "more-words-translated",
+      "kind": "improvement",
+      "title": "More of the window speaks your language",
+      "body": "When Infinitary speaks a language other than English, card notes and their buttons, the task record's next step, rigor and policies, the risk chart, the Tasks panel's groups and rows, pinning, and the endings of past cards now read in that language too.",
+      "area": "cards",
+      "noPicture": "The same controls show the same layout, only their words change to the chosen language.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

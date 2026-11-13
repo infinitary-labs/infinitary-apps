@@ -7,16 +7,27 @@
  * record, and by the record's timeline.
  */
 
+import * as m from "./i18n/messages.generated.ts";
 import { BOARD_RECENT_MS } from "./tasks";
 
-export const PIN_LABEL = "Pin";
+/** Pin and Unpin in the process's language: the board menu's and the row's own words, and the phone's. */
+export const PIN_WORDS = {
+  get pin() {
+    return m.taskPinPin();
+  },
+  get unpin() {
+    return m.taskPinUnpin();
+  },
+};
+/** The source language's words as the module loads, for a test that names them. */
+export const PIN_LABEL = m.taskPinPin();
 /** What the filled pin beside a pinned task's key in a crewmate's summary says to a screen reader (INF-3634). */
 export const PINNED_MARK_LABEL = "Pinned";
-export const UNPIN_LABEL = "Unpin";
+export const UNPIN_LABEL = m.taskPinUnpin();
 
 /** What a pin control is called: Pin INF-402 on a task that is not pinned, Unpin INF-402 on one that is. */
 export function pinActionLabel(pinned: boolean, key: string): string {
-  return `${pinned ? UNPIN_LABEL : PIN_LABEL} ${key}`.trim();
+  return `${pinned ? PIN_WORDS.unpin : PIN_WORDS.pin} ${key}`.trim();
 }
 
 /** The record's Activity line for a pin or an unpin. */

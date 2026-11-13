@@ -1,4 +1,4 @@
-import { answerDoneRest, DECLINE_LABEL } from "@shared/cardLeave";
+import { answerDoneRest } from "@shared/cardLeave";
 import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import {
@@ -9,9 +9,6 @@ import {
 } from "@shared/recordBar";
 import { CLOSE_DONE_LABEL, closeDoneConfirm } from "@shared/recordCloseDone";
 import {
-  DROP_CANCEL_LABEL,
-  DROP_REVIEW_STALE,
-  DROP_TASK_LABEL,
   dropConfirmLead,
   dropPartsLine,
   dropUnderwayLine,
@@ -321,7 +318,7 @@ export function RecordPaneFooter({
   const beginDrop = () => {
     if (end === "drop-task") {
       if (!effects) {
-        setError(DROP_REVIEW_STALE);
+        setError(m.recordDropReviewStale());
         return;
       }
     }
@@ -426,7 +423,7 @@ export function RecordPaneFooter({
         disabled={closingDone}
         onClick={() => setConfirming(null)}
       >
-        {DROP_CANCEL_LABEL}
+        {m.recordDropCancel()}
       </Button>
     );
     nextButton = (
@@ -476,7 +473,7 @@ export function RecordPaneFooter({
   } else if (end === "dismiss-question") {
     endButton = (
       <Button variant="secondary" pending={pending === end} onClick={() => run(end)}>
-        {DECLINE_LABEL}
+        {m.cardDecline()}
       </Button>
     );
     nextButton = (
@@ -487,12 +484,12 @@ export function RecordPaneFooter({
   } else if (asking) {
     endButton = (
       <Button variant="secondary" autoFocus disabled={busy} onClick={() => setConfirming(null)}>
-        {DROP_CANCEL_LABEL}
+        {m.recordDropCancel()}
       </Button>
     );
     nextButton = (
       <Button variant="danger" pending={pending === end} disabled={busy} onClick={confirm}>
-        {DROP_TASK_LABEL}
+        {m.recordDropTask()}
       </Button>
     );
   } else {
@@ -524,7 +521,7 @@ export function RecordPaneFooter({
         <>
           {end && (
             <Button variant="secondary" disabled={busy} onClick={beginDrop}>
-              {DROP_TASK_LABEL}
+              {m.recordDropTask()}
             </Button>
           )}
           {moveButton}

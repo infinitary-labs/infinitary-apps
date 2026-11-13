@@ -131,6 +131,7 @@
     "src/panels/knowledge/words.ts",
     "src/panels/knowledge/messages.generated.ts",
     "src/panels/now/words.ts",
+    "src/panels/now/messages.generated.ts",
     // Numbers the e2e specs read from their owner: the frame watchdog's pace
     // and misses, and the knowledge graph's camera steps.
     "src/renderer/src/plugins/frames/frameController.ts",

@@ -1,5 +1,5 @@
 import {
-  RISK_WORDS,
+  RISK_LABELS,
   type RiskAssessment,
   type RiskDimension,
   riskStep,
@@ -168,7 +168,7 @@ export function RiskChart({ risk }: { risk: RiskAssessment }) {
                   opacity: active === axis.dimension ? 1 : 0,
                 }}
               >
-                {RISK_WORDS[axis.dimension].label}
+                {RISK_LABELS[axis.dimension].label}
               </text>
             ))}
             {points.map((point) => (
@@ -183,7 +183,7 @@ export function RiskChart({ risk }: { risk: RiskAssessment }) {
             ))}
           </svg>
           {points.map((point) => {
-            const words = RISK_WORDS[point.dimension];
+            const words = RISK_LABELS[point.dimension];
             return (
               <button
                 key={point.dimension}
@@ -258,8 +258,8 @@ export function RiskChart({ risk }: { risk: RiskAssessment }) {
           }}
         >
           <div style={{ color: "var(--fg-1)" }}>
-            <span style={{ fontWeight: 500 }}>{RISK_WORDS[lit.dimension].label}</span> ·{" "}
-            {RISK_WORDS[lit.dimension].levels[lit.level]}
+            <span style={{ fontWeight: 500 }}>{RISK_LABELS[lit.dimension].label}</span> ·{" "}
+            {RISK_LABELS[lit.dimension].levels[lit.level]}
           </div>
           <div data-risk-why="" style={{ marginTop: "var(--space-2)" }}>
             {risk.declared[lit.dimension].why}

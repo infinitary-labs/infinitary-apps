@@ -2,7 +2,6 @@ import { fileSizeWords } from "@shared/attachments";
 import { queuedNotesWords, sendNotesLabel } from "@shared/cardNotes";
 import {
   CARD_CHAT_LABEL,
-  CARD_REPLY_HINT,
   CARD_REPLY_MAX_CHARS,
   type Card,
   type CardAnswer,
@@ -269,7 +268,7 @@ const REPLY_LINE_CAP = 5;
  */
 export function ReplyRow({
   cardId,
-  placeholder = CARD_REPLY_HINT,
+  placeholder = m.cardReplyHint(),
   inThread,
   lead,
   collect,

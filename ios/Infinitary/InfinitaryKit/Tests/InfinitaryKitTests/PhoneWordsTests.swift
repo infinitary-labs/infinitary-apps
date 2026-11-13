@@ -17,4 +17,26 @@ struct PhoneWordsTests {
             #expect(PhoneWords.word(sample.said, locale: Locale(identifier: "en_US")) == sample.words, "\(sample.said.m)")
         }
     }
+
+    /// INF-3675's piece 3: the phone words a feed line from the fact beside its English, names the Mac where a line in
+    /// its own words says this computer, as the desktop's view of another computer does, and shows the saved English
+    /// of a fact it cannot word. The lines are the Mac's own: `runsOnSaid`'s fact (src/shared/repos.ts) and a merge.
+    @Test func wordsTheMacsFeedLinesNamingTheMac() async throws {
+        let place = { (name: String) in ["m": name] }
+        let lines: [[String: Any]] = [
+            ["kind": "repo_runs_on", "at": 1, "saidHere": true,
+             "text": "notes-app runs on this computer now. Its next task starts here.",
+             "said": ["m": "feedRunsOnHere", "a": ["name": "notes-app", "computer": place("placeThisComputer"), "here": place("placeHere")]]],
+            ["kind": "firstmate_note", "at": 2, "saidHere": true, "text": "Paused this computer's crew."],
+            ["kind": "task_event", "at": 3, "taskKey": "INF-61", "text": "Merged PR #61", "said": ["m": "noSuchMessage"]],
+        ]
+        let frame = try JSONSerialization.data(withJSONObject: ["t": "result", "id": 4, "ok": true, "value": lines])
+        let decoded = try await PhoneFrame.decode(String(decoding: frame, as: UTF8.self), reads: [4: PhoneContract.feed], home: "Studio Mac")
+        #expect(try decoded.feed().map(\.text) == [
+            "notes-app runs on Studio Mac now. Its next task starts on Studio Mac.",
+            "Paused Studio Mac's crew.",
+            "Merged PR #61",
+        ])
+    }
 }
+

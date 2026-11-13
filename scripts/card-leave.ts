@@ -34,7 +34,8 @@ export function cornerProblems(files: Record<string, string>): string[] {
       ts.forEachChild(node, walk);
     };
     walk(tree);
-    if (path !== "src/shared/cardLeave.ts" && /(?:Put aside|Hide) ·/.test(text)) problems.push(`${path}: corner rest words belong in cardLeave.ts`);
+    // The compiled catalog holds the words cardLeave.ts takes from it (docs/i18n.md).
+    if (path !== "src/shared/cardLeave.ts" && !path.endsWith("messages.generated.ts") && /(?:Put aside|Hide) ·/.test(text)) problems.push(`${path}: corner rest words belong in cardLeave.ts`);
   }
   if (closeCalls > 1) problems.push("The shell must have one card-close dispatcher");
   if (dismissCalls > 1) problems.push("The supervisor must have one corner dispatcher");

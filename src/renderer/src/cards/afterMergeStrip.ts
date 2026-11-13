@@ -1,6 +1,5 @@
 import {
   AFTER_MERGE_DOER_WORDS,
-  AFTER_MERGE_LEAD,
   type AfterMergeShown,
   afterMergeWaitWords,
 } from "@shared/afterMerge";
@@ -39,7 +38,7 @@ export function afterMergeStrip(
         .join("")}</ul></section>`
     : "";
   const crews = steps.length
-    ? `<section aria-label="${text(AFTER_MERGE_LEAD)}" data-inf-after-merge-steps="">${lead("crew", AFTER_MERGE_LEAD)}<ul>${steps
+    ? `<section aria-label="${text(m.cardAfterMergeLead())}" data-inf-after-merge-steps="">${lead("crew", m.cardAfterMergeLead())}<ul>${steps
         .map((step) => {
           const doer = step.doer ?? "crewmate";
           const key = step.key ? `<span class="inf-mono">${text(step.key)}</span> ` : "";

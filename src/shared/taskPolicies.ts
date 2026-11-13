@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as m from "./i18n/messages.generated.ts";
 import { autonomyForRecord, deliveryForRecord, type RepoView, repoDeliverySchema } from "./repos";
 import { rigorFor, rigorSchema } from "./rigor";
 
@@ -116,6 +117,49 @@ export const POLICY_MERGING_WORDS = { on: "Merges on its own", off: "Asks first"
 export const POLICY_HELPER = "Ask your first mate to change these for this task.";
 export const POLICY_CARE_BOUND =
   "Local merge uses Default rigor; Careful remains requested for pull requests.";
+
+/**
+ * The policies' words as a person reads them on a task's record, in the process's language. The tables above keep
+ * the English a model reads in a tool's answer (docs/i18n.md, "What stays English").
+ */
+export const POLICY_LABELS = {
+  delivery: {
+    get "direct-pr"() {
+      return m.cardRecordDeliveryDirectPr();
+    },
+    get "queue-pr"() {
+      return m.cardRecordDeliveryQueuePr();
+    },
+    get "local-only"() {
+      return m.cardRecordDeliveryLocalOnly();
+    },
+  },
+  merging: {
+    get on() {
+      return m.mergesOnItsOwn();
+    },
+    get off() {
+      return m.policyAsksFirst();
+    },
+  },
+  source: {
+    get task() {
+      return m.policySourceTask();
+    },
+    get project() {
+      return m.policySourceProject();
+    },
+    get parent() {
+      return m.policySourceParent();
+    },
+  },
+  get helper() {
+    return m.policyHelper();
+  },
+  get careBound() {
+    return m.policyCareBound();
+  },
+};
 
 const CARE_RANK = { quick: 0, standard: 1, reviewed: 2 } as const;
 

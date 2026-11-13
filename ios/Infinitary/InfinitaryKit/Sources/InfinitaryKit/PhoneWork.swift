@@ -492,3 +492,38 @@ public struct PhoneAnswer: Decodable, Sendable {
         if !ok { throw PhoneError.refused(text ?? PhoneMessages.phoneSessionChangeFailed()) }
     }
 }
+
+extension PhoneTask.ActivityRow {
+    private enum Keys: String, CodingKey { case id, at, kind, text, from, actions, folded, said, saidHere }
+
+    /// Its words in the phone's language from the fact beside them (`PhoneWords.line`).
+    public init(from decoder: Decoder) throws {
+        let row = try decoder.container(keyedBy: Keys.self)
+        self.init(
+            id: try row.decodeIfPresent(Int.self, forKey: .id), at: try row.decode(Double.self, forKey: .at),
+            kind: try row.decode(String.self, forKey: .kind),
+            text: try PhoneWords.line(row, text: .text, said: .said, here: .saidHere, decoder: decoder),
+            from: try row.decodeIfPresent(From.self, forKey: .from), actions: try row.decodeIfPresent([PhoneTask.ActionLine].self, forKey: .actions),
+            folded: try row.decodeIfPresent([Folded].self, forKey: .folded))
+    }
+}
+
+extension PhoneTask.ActivityRow.Folded {
+    private enum Keys: String, CodingKey { case at, kind, text, said, saidHere }
+
+    public init(from decoder: Decoder) throws {
+        let line = try decoder.container(keyedBy: Keys.self)
+        self.init(
+            at: try line.decode(Double.self, forKey: .at), kind: try line.decode(String.self, forKey: .kind),
+            text: try PhoneWords.line(line, text: .text, said: .said, here: .saidHere, decoder: decoder))
+    }
+}
+
+extension PhoneTask.ActionLine {
+    private enum Keys: String, CodingKey { case at, text, said, saidHere }
+
+    public init(from decoder: Decoder) throws {
+        let line = try decoder.container(keyedBy: Keys.self)
+        self.init(at: try line.decode(Double.self, forKey: .at), text: try PhoneWords.line(line, text: .text, said: .said, here: .saidHere, decoder: decoder))
+    }
+}

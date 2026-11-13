@@ -1,21 +1,4 @@
-import {
-  ANNOTATE,
-  type CardNote,
-  EDIT_UNAVAILABLE,
-  EMPTY_NOTE,
-  NOT_SENT,
-  NOTE_CANCEL,
-  NOTE_COMMENT_LABEL,
-  NOTE_DISCARD_HINT,
-  NOTE_EDIT,
-  NOTE_PLACEHOLDER,
-  NOTE_REMOVE,
-  noteLabel,
-  POINT_AT,
-  QUEUE_NOTE,
-  STALE_NOTE,
-  UNAVAILABLE_NOTE,
-} from "@shared/cardNotes";
+import { type CardNote, noteLabel } from "@shared/cardNotes";
 import { notePart } from "@shared/cardNoteTargets";
 import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
@@ -64,7 +47,7 @@ export function AnnotationControls({
       {/* Centred on the reply field's last line (`--reply-line`), as the row's far end is. */}
       <span style={{ display: "flex", alignItems: "center", height: "var(--reply-line)" }}>
         <IconButton
-          label={POINT_AT}
+          label={m.cardNotePointAt()}
           size={34}
           disabled={sending}
           keys={keys.keys}
@@ -114,14 +97,14 @@ export function QueuedNotes({ cardId }: { cardId: string }) {
       {notes.map((note) => (
         <div className="inf-queued-note" key={JSON.stringify([note.key, note.start, note.span])}>
           <NoteAnchor cardId={cardId} note={note} />
-          <span>{note.comment || EMPTY_NOTE}</span>
+          <span>{note.comment || m.cardNoteEmpty()}</span>
           {editFailure?.note === note && (
             <span role="status">
-              {editFailure.result === "missing" ? STALE_NOTE : EDIT_UNAVAILABLE}
+              {editFailure.result === "missing" ? m.cardNoteStale() : m.cardNoteEditUnavailable()}
             </span>
           )}
           <div className="inf-annotation-actions">
-            <span>{NOT_SENT}</span>
+            <span>{m.cardNoteNotSent()}</span>
             <Button
               variant="ghost"
               disabled={sending}
@@ -130,10 +113,10 @@ export function QueuedNotes({ cardId }: { cardId: string }) {
                 setEditFailure(result === "revealed" ? undefined : { note, result });
               }}
             >
-              {NOTE_EDIT}
+              {m.cardNoteEdit()}
             </Button>
             <Button variant="ghost" disabled={sending} onClick={() => removeNote(cardId, note)}>
-              {NOTE_REMOVE}
+              {m.cardNoteRemove()}
             </Button>
           </div>
         </div>
@@ -158,9 +141,9 @@ export function NoteAnchor({ cardId, note }: { cardId: string; note: CardNote })
         {noteLabel(note)}
       </button>
       {stale ? (
-        <span role="status">{STALE_NOTE}</span>
+        <span role="status">{m.cardNoteStale()}</span>
       ) : result === "unavailable" ? (
-        <span role="status">{UNAVAILABLE_NOTE}</span>
+        <span role="status">{m.cardNoteUnavailable()}</span>
       ) : null}
     </div>
   );
@@ -199,7 +182,7 @@ function AnnotateOffer({ cardId }: { cardId: string }) {
           )
         }
       >
-        {ANNOTATE}
+        {m.cardNoteAnnotate()}
       </Button>
     </div>,
     document.body,
@@ -257,7 +240,7 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
       className="inf-annotation-popover"
       role="dialog"
       tabIndex={-1}
-      aria-label={`${ANNOTATE} ${pick.note.kind}`}
+      aria-label={`${m.cardNoteAnnotate()} ${pick.note.kind}`}
       style={{ left, top }}
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing) return;
@@ -290,14 +273,14 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
       }}
     >
       <strong>
-        {ANNOTATE} {pick.note.kind}
+        {m.cardNoteAnnotate()} {pick.note.kind}
       </strong>
       <blockquote>{pick.note.excerpt}</blockquote>
       <textarea
         ref={field}
         rows={3}
-        aria-label={NOTE_COMMENT_LABEL}
-        placeholder={NOTE_PLACEHOLDER}
+        aria-label={m.cardNoteCommentLabel()}
+        placeholder={m.cardNotePlaceholder()}
         maxLength={CARD_REPLY_MAX_CHARS}
         value={pick.note.comment}
         onChange={(event) => {
@@ -308,7 +291,7 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
         }}
       />
       <p className="inf-annotation-hint" role="status">
-        {hint ? NOTE_DISCARD_HINT : m.cardAnnotationKeys({ sendKey })}
+        {hint ? m.cardNoteDiscardHint() : m.cardAnnotationKeys({ sendKey })}
       </p>
       <div className="inf-annotation-actions">
         {queued && (
@@ -321,13 +304,13 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
               focusPointAt(cardId);
             }}
           >
-            {NOTE_REMOVE}
+            {m.cardNoteRemove()}
           </Button>
         )}
         <Button variant="ghost" onClick={cancel}>
-          {NOTE_CANCEL}
+          {m.cardNoteCancel()}
         </Button>
-        <Button onClick={() => queue(false)}>{QUEUE_NOTE}</Button>
+        <Button onClick={() => queue(false)}>{m.cardNoteQueue()}</Button>
       </div>
     </div>,
     document.body,

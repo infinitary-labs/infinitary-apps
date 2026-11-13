@@ -20,9 +20,11 @@ export type ModuleRunner = {
   close: () => Promise<void>;
 };
 
-export async function openModuleRunner(): Promise<ModuleRunner> {
+/** `plugins` change what a module reads as it loads, such as the phone's marked words (`scripts/phone-word-marks.ts`). */
+export async function openModuleRunner(plugins: import("vite").PluginOption[] = []): Promise<ModuleRunner> {
   const { createServer, createServerModuleRunner } = await import("vite");
   const server = await createServer({
+    plugins,
     configFile: false,
     root: REPO_ROOT,
     logLevel: "error",

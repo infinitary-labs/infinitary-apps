@@ -7,6 +7,8 @@ import {
   isPreviewBody,
 } from "@shared/cards";
 import { forgePlace } from "@shared/forge";
+import { inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { levelForFirstmate } from "@shared/levelWords";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { catalogEntry } from "@shared/providers";
@@ -510,7 +512,7 @@ export class FirstmateContext {
     const hinted = hintTaskId ? this.options.tasks.get(hintTaskId) : undefined;
     const past = pastCardId ? this.options.supervisor.cards.past(pastCardId) : undefined;
     const pastLine = past
-      ? `past card ${past.id} "${past.title}" (${pastCardEndingWords(past)}) - the captain is reading it as history${
+      ? `past card ${past.id} "${past.title}" (${inLanguage(SOURCE_LANGUAGE, () => pastCardEndingWords(past))}) - the captain is reading it as history${
           hinted ? ` on ${hinted.key || hinted.id}` : ""
         }; it is closed and nothing on it can be clicked, so any change comes through your tools`
       : undefined;

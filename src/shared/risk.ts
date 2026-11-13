@@ -1,4 +1,5 @@
 import { RISK_LEVELS, type RiskDimension, type RiskLevel } from "./cards";
+import * as m from "./i18n/messages.generated.ts";
 
 // The wire shape lives with the card it rides (`./cards`, which loads in
 // plain Node and so imports no sibling); it is re-exported here beside the
@@ -94,6 +95,127 @@ export const RISK_WORDS: Readonly<
       low: "none",
       medium: "updates a package",
       high: "adds a package",
+    },
+  },
+};
+
+/**
+ * Each dimension's name and what each level means as a person reads them on the card, in the process's language.
+ * `RISK_WORDS` keeps the English the crew's guidance and a pull request's story read.
+ */
+export const RISK_LABELS: Readonly<
+  Record<RiskDimension, { label: string; levels: Readonly<Record<RiskLevel, string>> }>
+> = {
+  blast: {
+    get label() {
+      return m.riskBlast();
+    },
+    levels: {
+      get low() {
+        return m.riskBlastLow();
+      },
+      get medium() {
+        return m.riskBlastMedium();
+      },
+      get high() {
+        return m.riskBlastHigh();
+      },
+    },
+  },
+  behavior: {
+    get label() {
+      return m.riskBehavior();
+    },
+    levels: {
+      get low() {
+        return m.riskBehaviorLow();
+      },
+      get medium() {
+        return m.riskBehaviorMedium();
+      },
+      get high() {
+        return m.riskBehaviorHigh();
+      },
+    },
+  },
+  undo: {
+    get label() {
+      return m.riskUndo();
+    },
+    levels: {
+      get low() {
+        return m.riskUndoLow();
+      },
+      get medium() {
+        return m.riskUndoMedium();
+      },
+      get high() {
+        return m.riskUndoHigh();
+      },
+    },
+  },
+  evidence: {
+    get label() {
+      return m.riskEvidence();
+    },
+    levels: {
+      get low() {
+        return m.riskEvidenceLow();
+      },
+      get medium() {
+        return m.riskEvidenceMedium();
+      },
+      get high() {
+        return m.riskEvidenceHigh();
+      },
+    },
+  },
+  sensitivity: {
+    get label() {
+      return m.riskSensitivity();
+    },
+    levels: {
+      get low() {
+        return m.riskSensitivityLow();
+      },
+      get medium() {
+        return m.riskSensitivityMedium();
+      },
+      get high() {
+        return m.riskSensitivityHigh();
+      },
+    },
+  },
+  novelty: {
+    get label() {
+      return m.riskNovelty();
+    },
+    levels: {
+      get low() {
+        return m.riskNoveltyLow();
+      },
+      get medium() {
+        return m.riskNoveltyMedium();
+      },
+      get high() {
+        return m.riskNoveltyHigh();
+      },
+    },
+  },
+  deps: {
+    get label() {
+      return m.riskDeps();
+    },
+    levels: {
+      get low() {
+        return m.riskDepsLow();
+      },
+      get medium() {
+        return m.riskDepsMedium();
+      },
+      get high() {
+        return m.riskDepsHigh();
+      },
     },
   },
 };

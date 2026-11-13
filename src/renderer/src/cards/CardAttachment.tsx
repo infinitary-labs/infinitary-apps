@@ -1,11 +1,7 @@
 import type { LiveAttachment } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { PAGE_ATTACHMENT_WORDS } from "@shared/projectPage";
-import {
-  type AttachmentStanding,
-  attachmentStanding,
-  STALE_ATTACHMENT_LINE,
-} from "@shared/taskBrowser";
+import { type AttachmentStanding, attachmentStanding } from "@shared/taskBrowser";
 import { browserLineOf, type TaskBrowserLine } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { useEffect, useState } from "react";
@@ -153,7 +149,7 @@ export function CardAttachmentStrip({
             · {line.words}
           </>
         ) : standing === "same" ? null : (
-          STALE_ATTACHMENT_LINE
+          m.taskBrowserStaleAttachment()
         )}
       </span>
       {handoff ? null : (

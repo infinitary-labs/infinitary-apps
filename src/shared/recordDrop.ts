@@ -1,4 +1,5 @@
 import type { DropTaskReview } from "./cards";
+import * as m from "./i18n/messages.generated.ts";
 
 /**
  * The captain's Drop task (FI3-243, from the accepted plan FI3-242; in every
@@ -10,8 +11,9 @@ import type { DropTaskReview } from "./cards";
  * ends the task.
  */
 
-export const DROP_TASK_LABEL = "Drop task";
-export const DROP_CANCEL_LABEL = "Cancel";
+/** The source language's words as the module loads, for the host and the phone's generated words; the window words them when shown. */
+export const DROP_TASK_LABEL = m.recordDropTask();
+export const DROP_CANCEL_LABEL = m.recordDropCancel();
 export const HIDE_RECORD_LABEL = "Hide";
 
 /** Preset reason. Not a field the captain fills in. */
@@ -23,7 +25,7 @@ export const DROPPED_BEFORE_START_ACTIVITY = "You closed this task before it sta
 /** Typed fact on the close event. Activity reads this, never the sentence. */
 export const DROP_BEFORE_START = "beforeStart";
 
-export const DROP_REVIEW_STALE = "This task changed. Review it again before dropping it.";
+export const DROP_REVIEW_STALE = m.recordDropReviewStale();
 
 /** Drop task's one question, saying whether unfinished work is kept (the captain's `end_verb`). */
 export function dropConfirmLead(key: string, started = false): string {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CONNECTION_MAX_FRAME_BYTES } from "./connection";
 import { HERE } from "./deviceNames";
+import * as m from "./i18n/messages.generated.ts";
 
 /**
  * The page's own size: every check's, and every view's while no maximized
@@ -289,16 +290,34 @@ export function browserDriverOf(
 
 /** Who is driving, after the site on the record's line and a card's. */
 export const DRIVER_WORDS: Record<TaskBrowserDriver, string> = {
-  crewmate: "the crewmate is driving",
-  nobody: "nobody is driving",
-  waiting: "paused for your help",
-  taking: "you are taking control",
-  captain: "you have control",
+  get crewmate() {
+    return m.taskBrowserDriverCrewmate();
+  },
+  get nobody() {
+    return m.taskBrowserDriverNobody();
+  },
+  get waiting() {
+    return m.taskBrowserDriverWaiting();
+  },
+  get taking() {
+    return m.taskBrowserDriverTaking();
+  },
+  get captain() {
+    return m.taskBrowserDriverCaptain();
+  },
 };
 
 /** Who is driving in the view's own row, which says more where the captain drives. */
 export const VIEW_DRIVER_WORDS: Record<TaskBrowserDriver, string> = {
-  ...DRIVER_WORDS,
+  get crewmate() {
+    return m.taskBrowserDriverCrewmate();
+  },
+  get nobody() {
+    return m.taskBrowserDriverNobody();
+  },
+  get waiting() {
+    return m.taskBrowserDriverWaiting();
+  },
   taking: "finishing the crewmate's current action…",
   captain: "you have control · the crewmate cannot see this page",
 };
@@ -357,11 +376,21 @@ export const USE_SAVED_SIGN_IN_ACTION = "use-saved-sign-in";
 
 /** What stopped it, in the record's Browser line. */
 export const STOP_LINE_WORDS: Record<TaskBrowserStop, string> = {
-  captain: "you stopped it",
-  crewmate: "the crewmate closed it",
-  idle: "stopped after 30 minutes unused",
-  gone: "its page stopped working",
-  "task-closed": "stopped when the task closed",
+  get captain() {
+    return m.taskBrowserStoppedCaptain();
+  },
+  get crewmate() {
+    return m.taskBrowserStoppedCrewmate();
+  },
+  get idle() {
+    return m.taskBrowserStoppedIdle();
+  },
+  get gone() {
+    return m.taskBrowserStoppedGone();
+  },
+  get "task-closed"() {
+    return m.taskBrowserStoppedTaskClosed();
+  },
 };
 
 /** The view's sentence for a stopped browser, and the line under it. */
@@ -403,7 +432,7 @@ export function attachmentStanding(
 }
 
 /** A card's attachment line once its browser is no longer the task's. */
-export const STALE_ATTACHMENT_LINE = "this card's browser has stopped";
+export const STALE_ATTACHMENT_LINE = m.taskBrowserStaleAttachment();
 
 /** The view's line under its row when a card opened it on a browser that is no longer the task's. */
 export const STALE_ATTACHMENT_WORDS: Record<Exclude<AttachmentStanding, "same">, string> = {
@@ -453,11 +482,11 @@ export const OPEN_AGAIN_CAPTION = "A fresh browser, with nothing signed in";
 export const REPORT_PROBLEM_DRAFT = "This task's browser has a problem: ";
 
 /** The task card's first tab, the record. */
-export const INFO_TAB_LABEL = "Info";
+export const INFO_TAB_LABEL = m.taskTabInfo();
 /** The Cards tab's label (INF-2261): its count sits beside it in mono. */
-export const CARDS_TAB_LABEL = "Cards";
+export const CARDS_TAB_LABEL = m.taskTabCards();
 /** The Activity tab's label (INF-2261): it shows no count. */
-export const ACTIVITY_TAB_LABEL = "Activity";
+export const ACTIVITY_TAB_LABEL = m.taskTabActivity();
 
 /**
  * A browser tab's words on the task card: Browser, then the page's title when

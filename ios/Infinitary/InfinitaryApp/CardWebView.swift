@@ -271,7 +271,7 @@ import SwiftUI
         let actions = card.actions.compactMap { action -> PhoneJSON? in
             guard let id = action["id"].text, !effectIDs.contains(id) else { return nil }; return .string(id)
         }
-        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "readOnly": .bool(card.isPast || part == .facts),
+        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "language": .string(PhoneWords.language), "readOnly": .bool(card.isPast || part == .facts),
             "fill": fill, "actions": .array(part == .facts ? [] : actions), "width": card.value["width"] == .null ? .string("wide") : card.value["width"],
             "keys": .array(keys.map(PhoneJSON.string))])
         if part == .body, case .object(var fields) = input {

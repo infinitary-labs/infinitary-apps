@@ -9,6 +9,9 @@ import { cardBodyHtml, cardBodyMarkup, cardStylesheet } from "../../../src/rende
 import { type CardNote, cardNoteSchema, cardNotesSchema } from "../../../src/shared/cardNotes";
 import { noteTarget, pickedNote } from "../../../src/shared/cardNoteTargets";
 import { cardNavigationParts, type NavigationPart } from "../../../src/shared/cardParts";
+import { setCurrentLanguage } from "../../../src/shared/i18n/current";
+import { wordSaidBody } from "../../../src/shared/i18n/said";
+import { appBodyOf } from "../../../src/shared/welcome";
 
 /** INF-64 piece 4: trusted WK parent, never the agent-authored frame. Native chrome owns effects. */
 interface NativeHost { postMessage(value: unknown): Promise<unknown> }
@@ -26,6 +29,8 @@ declare global {
  * card's own included, and `card` what decides whether the body's last fact strip stands apart, as on the Mac.
  */
 type Input = {
+  /** The phone's language, which a body the app wrote and a body's saved facts are worded in, as on the Mac. */
+  language?: string;
   body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";
   marks?: number[]; keys?: string[]; card?: Pick<Card, "actions" | "reviewTaskId" | "risk">;
 };
@@ -169,7 +174,13 @@ window.addEventListener("message", (event: MessageEvent) => {
 });
 
 window.phoneCard = {
-  async mount(value) {
+  async mount(given) {
+    // The Mac's `useWordedBody` (PrototypeBody.tsx): a body the app wrote itself, in the phone's language, or each
+    // saved fact worded in it, the change marks moved with the words (docs/i18n.md, "Saved facts").
+    setCurrentLanguage(given.language ?? "en");
+    const app = appBodyOf(given.body);
+    const worded = app === undefined ? wordSaidBody(given.body) : { body: app, at: () => 0 };
+    const value = worded.body === given.body ? given : { ...given, body: worded.body, ...(given.marks ? { marks: given.marks.map(worded.at) } : {}) };
     input = value;
     // The Mac's split: a settle card's fact strip stands beside its choices, and the body shows the rest.
     const split = value.card && takesTaskFacts(value.card) ? splitSettleFacts(value.body) : undefined;

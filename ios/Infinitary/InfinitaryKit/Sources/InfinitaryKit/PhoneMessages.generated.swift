@@ -783,6 +783,355 @@ public enum PhoneMessages {
     public static func `settingsCommandStopFailed`() -> String { PhoneWords.format("settingsCommandStopFailed", []) }
     public static func `settingsCommandStartAtLogin`() -> String { PhoneWords.format("settingsCommandStartAtLogin", []) }
     public static func `settingsWebsiteSignInsStorage`() -> String { PhoneWords.format("settingsWebsiteSignInsStorage", []) }
+    public static func `activityPanelLinesLabel`() -> String { PhoneWords.format("activityPanelLinesLabel", []) }
+    public static func `automationPanelUnreadableSummary`() -> String { PhoneWords.format("automationPanelUnreadableSummary", []) }
+    public static func `automationPanelEmpty`() -> String { PhoneWords.format("automationPanelEmpty", []) }
+    public static func `automationPanelActiveCount`(`count`: Int) -> String { PhoneWords.format("automationPanelActiveCount", [`count`]) }
+    public static func `automationPanelPausedCount`(`count`: Int) -> String { PhoneWords.format("automationPanelPausedCount", [`count`]) }
+    public static func `automationPanelListLabel`() -> String { PhoneWords.format("automationPanelListLabel", []) }
+    public static func `knowledgePanelPrivateCollection`() -> String { PhoneWords.format("knowledgePanelPrivateCollection", []) }
+    public static func `knowledgePanelDirectionsEverywhere`() -> String { PhoneWords.format("knowledgePanelDirectionsEverywhere", []) }
+    public static func `knowledgePanelUnreadableSummary`() -> String { PhoneWords.format("knowledgePanelUnreadableSummary", []) }
+    public static func `knowledgePanelConceptCount`(`count`: Int) -> String { PhoneWords.format("knowledgePanelConceptCount", [`count`]) }
+    public static func `knowledgePanelFindingCount`(`count`: Int) -> String { PhoneWords.format("knowledgePanelFindingCount", [`count`]) }
+    public static func `knowledgePanelDirectionCount`(`count`: Int) -> String { PhoneWords.format("knowledgePanelDirectionCount", [`count`]) }
+    public static func `knowledgePanelCounts`(`concepts`: String, `findings`: String) -> String { PhoneWords.format("knowledgePanelCounts", [`concepts`, `findings`]) }
+    public static func `knowledgePanelCountsWithDirections`(`concepts`: String, `directions`: String, `findings`: String) -> String { PhoneWords.format("knowledgePanelCountsWithDirections", [`concepts`, `directions`, `findings`]) }
+    public static func `knowledgePanelOriginYourWords`() -> String { PhoneWords.format("knowledgePanelOriginYourWords", []) }
+    public static func `knowledgePanelOriginCrewmateReport`(`key`: String) -> String { PhoneWords.format("knowledgePanelOriginCrewmateReport", [`key`]) }
+    public static func `knowledgePanelOriginAgent`() -> String { PhoneWords.format("knowledgePanelOriginAgent", []) }
+    public static func `knowledgePanelStandingChecked`() -> String { PhoneWords.format("knowledgePanelStandingChecked", []) }
+    public static func `knowledgePanelStandingUnchecked`() -> String { PhoneWords.format("knowledgePanelStandingUnchecked", []) }
+    public static func `knowledgePanelStandingRecheck`() -> String { PhoneWords.format("knowledgePanelStandingRecheck", []) }
+    public static func `knowledgePanelStandingDiffering`() -> String { PhoneWords.format("knowledgePanelStandingDiffering", []) }
+    public static func `knowledgePanelStandingSuperseded`() -> String { PhoneWords.format("knowledgePanelStandingSuperseded", []) }
+    public static func `knowledgePanelStandingRetired`() -> String { PhoneWords.format("knowledgePanelStandingRetired", []) }
+    public static func `knowledgePanelClaimKindLine`(`standing`: String) -> String { PhoneWords.format("knowledgePanelClaimKindLine", [`standing`]) }
+    public static func `knowledgePanelContextKindLine`() -> String { PhoneWords.format("knowledgePanelContextKindLine", []) }
+    public static func `knowledgePanelReadWith`(`from`: String, `to`: String) -> String { PhoneWords.format("knowledgePanelReadWith", [`from`, `to`]) }
+    public static func `knowledgePanelOriginLine`(`line`: String) -> String { PhoneWords.format("knowledgePanelOriginLine", [`line`]) }
+    public static func `knowledgePanelOriginLines`(`first`: String, `last`: String) -> String { PhoneWords.format("knowledgePanelOriginLines", [`first`, `last`]) }
+    public static func `knowledgePanelOriginFile`(`lines`: String, `path`: String) -> String { PhoneWords.format("knowledgePanelOriginFile", [`lines`, `path`]) }
+    public static func `knowledgePanelOriginFileKept`(`commit`: String, `lines`: String, `path`: String) -> String { PhoneWords.format("knowledgePanelOriginFileKept", [`commit`, `lines`, `path`]) }
+    public static func `knowledgePanelOriginFileKeptDirty`(`commit`: String, `lines`: String, `path`: String) -> String { PhoneWords.format("knowledgePanelOriginFileKeptDirty", [`commit`, `lines`, `path`]) }
+    public static func `knowledgePanelOriginReport`(`key`: String) -> String { PhoneWords.format("knowledgePanelOriginReport", [`key`]) }
+    public static func `knowledgePanelOriginArticle`(`title`: String, `url`: String) -> String { PhoneWords.format("knowledgePanelOriginArticle", [`title`, `url`]) }
+    public static func `knowledgePanelOriginArticleBy`(`author`: String, `title`: String, `url`: String) -> String { PhoneWords.format("knowledgePanelOriginArticleBy", [`author`, `title`, `url`]) }
+    public static func `knowledgePanelOriginArticleOn`(`published`: String, `title`: String, `url`: String) -> String { PhoneWords.format("knowledgePanelOriginArticleOn", [`published`, `title`, `url`]) }
+    public static func `knowledgePanelOriginArticleByOn`(`author`: String, `published`: String, `title`: String, `url`: String) -> String { PhoneWords.format("knowledgePanelOriginArticleByOn", [`author`, `published`, `title`, `url`]) }
+    public static func `knowledgePanelOriginQuote`(`citation`: String) -> String { PhoneWords.format("knowledgePanelOriginQuote", [`citation`]) }
+    public static func `knowledgePanelSourceUnchanged`() -> String { PhoneWords.format("knowledgePanelSourceUnchanged", []) }
+    public static func `knowledgePanelSourceChanged`() -> String { PhoneWords.format("knowledgePanelSourceChanged", []) }
+    public static func `knowledgePanelSourceMissing`() -> String { PhoneWords.format("knowledgePanelSourceMissing", []) }
+    public static func `knowledgePanelSourceUnknown`() -> String { PhoneWords.format("knowledgePanelSourceUnknown", []) }
+    public static func `knowledgePanelSourceKept`() -> String { PhoneWords.format("knowledgePanelSourceKept", []) }
+    public static func `knowledgePanelVerdictSupports`() -> String { PhoneWords.format("knowledgePanelVerdictSupports", []) }
+    public static func `knowledgePanelVerdictContradicts`() -> String { PhoneWords.format("knowledgePanelVerdictContradicts", []) }
+    public static func `knowledgePanelVerdictInconclusive`() -> String { PhoneWords.format("knowledgePanelVerdictInconclusive", []) }
+    public static func `knowledgePanelOpPublish`() -> String { PhoneWords.format("knowledgePanelOpPublish", []) }
+    public static func `knowledgePanelOpRevise`() -> String { PhoneWords.format("knowledgePanelOpRevise", []) }
+    public static func `knowledgePanelOpLink`() -> String { PhoneWords.format("knowledgePanelOpLink", []) }
+    public static func `knowledgePanelOpRetire`() -> String { PhoneWords.format("knowledgePanelOpRetire", []) }
+    public static func `knowledgePanelOpRestore`() -> String { PhoneWords.format("knowledgePanelOpRestore", []) }
+    public static func `knowledgePanelRelationContradicts`() -> String { PhoneWords.format("knowledgePanelRelationContradicts", []) }
+    public static func `knowledgePanelRelationReplaces`() -> String { PhoneWords.format("knowledgePanelRelationReplaces", []) }
+    public static func `knowledgePanelRelationReplacedBy`() -> String { PhoneWords.format("knowledgePanelRelationReplacedBy", []) }
+    public static func `knowledgePanelRelationDuplicates`() -> String { PhoneWords.format("knowledgePanelRelationDuplicates", []) }
+    public static func `knowledgePanelRelationDuplicatedBy`() -> String { PhoneWords.format("knowledgePanelRelationDuplicatedBy", []) }
+    public static func `knowledgePanelRange`(`first`: String, `last`: String, `total`: String) -> String { PhoneWords.format("knowledgePanelRange", [`first`, `last`, `total`]) }
+    public static func `knowledgePanelAskConcept`(`id`: String, `revision`: String, `title`: String) -> String { PhoneWords.format("knowledgePanelAskConcept", [`id`, `revision`, `title`]) }
+    public static func `knowledgePanelAskFinding`(`id`: String, `revision`: String, `title`: String) -> String { PhoneWords.format("knowledgePanelAskFinding", [`id`, `revision`, `title`]) }
+    public static func `knowledgePanelAskClaim`(`finding`: String, `revision`: String, `sentence`: String) -> String { PhoneWords.format("knowledgePanelAskClaim", [`finding`, `revision`, `sentence`]) }
+    public static func `knowledgePanelAskContext`(`from`: String, `fromId`: String, `to`: String, `toId`: String) -> String { PhoneWords.format("knowledgePanelAskContext", [`from`, `fromId`, `to`, `toId`]) }
+    public static func `knowledgePanelAskDirection`(`id`: String, `text`: String) -> String { PhoneWords.format("knowledgePanelAskDirection", [`id`, `text`]) }
+    public static func `knowledgePanelNothingRecorded`() -> String { PhoneWords.format("knowledgePanelNothingRecorded", []) }
+    public static func `knowledgePanelBrowserTitle`() -> String { PhoneWords.format("knowledgePanelBrowserTitle", []) }
+    public static func `knowledgePanelEmpty`() -> String { PhoneWords.format("knowledgePanelEmpty", []) }
+    public static func `knowledgePanelAllDirections`(`count`: Int) -> String { PhoneWords.format("knowledgePanelAllDirections", [`count`]) }
+    public static func `knowledgePanelGraphLink`(`count`: Int) -> String { PhoneWords.format("knowledgePanelGraphLink", [`count`]) }
+    public static func `knowledgePanelDirectionLabel`(`text`: String) -> String { PhoneWords.format("knowledgePanelDirectionLabel", [`text`]) }
+    public static func `knowledgePanelDirectionScopedLabel`(`scope`: String, `text`: String) -> String { PhoneWords.format("knowledgePanelDirectionScopedLabel", [`scope`, `text`]) }
+    public static func `knowledgePanelSectionOverview`() -> String { PhoneWords.format("knowledgePanelSectionOverview", []) }
+    public static func `knowledgePanelSectionEvidence`() -> String { PhoneWords.format("knowledgePanelSectionEvidence", []) }
+    public static func `knowledgePanelSectionHistory`() -> String { PhoneWords.format("knowledgePanelSectionHistory", []) }
+    public static func `knowledgePanelSectionUsed`() -> String { PhoneWords.format("knowledgePanelSectionUsed", []) }
+    public static func `knowledgePanelSourceCheckLine`(`check`: String, `when`: String) -> String { PhoneWords.format("knowledgePanelSourceCheckLine", [`check`, `when`]) }
+    public static func `knowledgePanelAskAboutThis`() -> String { PhoneWords.format("knowledgePanelAskAboutThis", []) }
+    public static func `knowledgePanelCompareUnchanged`(`label`: String) -> String { PhoneWords.format("knowledgePanelCompareUnchanged", [`label`]) }
+    public static func `knowledgePanelCompareChanged`(`label`: String) -> String { PhoneWords.format("knowledgePanelCompareChanged", [`label`]) }
+    public static func `knowledgePanelNone`() -> String { PhoneWords.format("knowledgePanelNone", []) }
+    public static func `knowledgePanelRevisionLabel`(`revision`: String) -> String { PhoneWords.format("knowledgePanelRevisionLabel", [`revision`]) }
+    public static func `knowledgePanelRecordedClaim`() -> String { PhoneWords.format("knowledgePanelRecordedClaim", []) }
+    public static func `knowledgePanelConceptEyebrow`() -> String { PhoneWords.format("knowledgePanelConceptEyebrow", []) }
+    public static func `knowledgePanelFindingEyebrow`(`revision`: String) -> String { PhoneWords.format("knowledgePanelFindingEyebrow", [`revision`]) }
+    public static func `knowledgePanelFindingEarlierEyebrow`(`current`: String, `revision`: String) -> String { PhoneWords.format("knowledgePanelFindingEarlierEyebrow", [`current`, `revision`]) }
+    public static func `knowledgePanelBack`() -> String { PhoneWords.format("knowledgePanelBack", []) }
+    public static func `knowledgePanelSelectPrompt`() -> String { PhoneWords.format("knowledgePanelSelectPrompt", []) }
+    public static func `knowledgePanelReading`() -> String { PhoneWords.format("knowledgePanelReading", []) }
+    public static func `knowledgePanelEntryMissing`() -> String { PhoneWords.format("knowledgePanelEntryMissing", []) }
+    public static func `knowledgePanelRetired`() -> String { PhoneWords.format("knowledgePanelRetired", []) }
+    public static func `knowledgePanelCompareHeading`() -> String { PhoneWords.format("knowledgePanelCompareHeading", []) }
+    public static func `knowledgePanelCompareNote`(`current`: String, `revision`: String) -> String { PhoneWords.format("knowledgePanelCompareNote", [`current`, `revision`]) }
+    public static func `knowledgePanelCompareStatement`() -> String { PhoneWords.format("knowledgePanelCompareStatement", []) }
+    public static func `knowledgePanelCompareName`() -> String { PhoneWords.format("knowledgePanelCompareName", []) }
+    public static func `knowledgePanelWhereItHolds`() -> String { PhoneWords.format("knowledgePanelWhereItHolds", []) }
+    public static func `knowledgePanelCompareExplanation`() -> String { PhoneWords.format("knowledgePanelCompareExplanation", []) }
+    public static func `knowledgePanelCompareSourcesSame`() -> String { PhoneWords.format("knowledgePanelCompareSourcesSame", []) }
+    public static func `knowledgePanelCompareSourcesChanged`() -> String { PhoneWords.format("knowledgePanelCompareSourcesChanged", []) }
+    public static func `knowledgePanelCompareSourcesCounts`(`current`: String, `currentCount`: String, `earlierCount`: String, `revision`: String) -> String { PhoneWords.format("knowledgePanelCompareSourcesCounts", [`current`, `currentCount`, `earlierCount`, `revision`]) }
+    public static func `knowledgePanelStandingNow`(`standing`: String) -> String { PhoneWords.format("knowledgePanelStandingNow", [`standing`]) }
+    public static func `knowledgePanelReadingCurrent`() -> String { PhoneWords.format("knowledgePanelReadingCurrent", []) }
+    public static func `knowledgePanelShowCurrent`() -> String { PhoneWords.format("knowledgePanelShowCurrent", []) }
+    public static func `knowledgePanelSupportingFinding`() -> String { PhoneWords.format("knowledgePanelSupportingFinding", []) }
+    public static func `knowledgePanelOpenEvidenceNote`() -> String { PhoneWords.format("knowledgePanelOpenEvidenceNote", []) }
+    public static func `knowledgePanelConnectedConcepts`() -> String { PhoneWords.format("knowledgePanelConnectedConcepts", []) }
+    public static func `knowledgePanelWhyConnect`() -> String { PhoneWords.format("knowledgePanelWhyConnect", []) }
+    public static func `knowledgePanelReadingSuggestionNote`() -> String { PhoneWords.format("knowledgePanelReadingSuggestionNote", []) }
+    public static func `knowledgePanelConnectionMissing`() -> String { PhoneWords.format("knowledgePanelConnectionMissing", []) }
+    public static func `knowledgePanelAliases`(`aliases`: String) -> String { PhoneWords.format("knowledgePanelAliases", [`aliases`]) }
+    public static func `knowledgePanelConnectedIdeas`() -> String { PhoneWords.format("knowledgePanelConnectedIdeas", []) }
+    public static func `knowledgePanelNoConnections`() -> String { PhoneWords.format("knowledgePanelNoConnections", []) }
+    public static func `knowledgePanelClaimDetail`(`predicate`: String, `standing`: String) -> String { PhoneWords.format("knowledgePanelClaimDetail", [`predicate`, `standing`]) }
+    public static func `knowledgePanelContextDetail`(`reason`: String) -> String { PhoneWords.format("knowledgePanelContextDetail", [`reason`]) }
+    public static func `knowledgePanelSupportingFindings`() -> String { PhoneWords.format("knowledgePanelSupportingFindings", []) }
+    public static func `knowledgePanelNoFindings`() -> String { PhoneWords.format("knowledgePanelNoFindings", []) }
+    public static func `knowledgePanelMoreFindings`(`count`: Int) -> String { PhoneWords.format("knowledgePanelMoreFindings", [`count`]) }
+    public static func `knowledgePanelShowOnGraph`() -> String { PhoneWords.format("knowledgePanelShowOnGraph", []) }
+    public static func `knowledgePanelReasonedBy`(`author`: String) -> String { PhoneWords.format("knowledgePanelReasonedBy", [`author`]) }
+    public static func `knowledgePanelObservedBy`(`author`: String) -> String { PhoneWords.format("knowledgePanelObservedBy", [`author`]) }
+    public static func `knowledgePanelRelationshipClaimed`() -> String { PhoneWords.format("knowledgePanelRelationshipClaimed", []) }
+    public static func `knowledgePanelAbout`() -> String { PhoneWords.format("knowledgePanelAbout", []) }
+    public static func `knowledgePanelNoConcept`() -> String { PhoneWords.format("knowledgePanelNoConcept", []) }
+    public static func `knowledgePanelContextNoEvidence`() -> String { PhoneWords.format("knowledgePanelContextNoEvidence", []) }
+    public static func `knowledgePanelItsSources`() -> String { PhoneWords.format("knowledgePanelItsSources", []) }
+    public static func `knowledgePanelKeptSources`() -> String { PhoneWords.format("knowledgePanelKeptSources", []) }
+    public static func `knowledgePanelNoSources`() -> String { PhoneWords.format("knowledgePanelNoSources", []) }
+    public static func `knowledgePanelChecks`() -> String { PhoneWords.format("knowledgePanelChecks", []) }
+    public static func `knowledgePanelNoChecks`() -> String { PhoneWords.format("knowledgePanelNoChecks", []) }
+    public static func `knowledgePanelCheckHead`(`by`: String, `revision`: String, `verdict`: String, `when`: String) -> String { PhoneWords.format("knowledgePanelCheckHead", [`by`, `revision`, `verdict`, `when`]) }
+    public static func `knowledgePanelMethod`() -> String { PhoneWords.format("knowledgePanelMethod", []) }
+    public static func `knowledgePanelConditions`() -> String { PhoneWords.format("knowledgePanelConditions", []) }
+    public static func `knowledgePanelCheckNoEvidence`() -> String { PhoneWords.format("knowledgePanelCheckNoEvidence", []) }
+    public static func `knowledgePanelRevisions`() -> String { PhoneWords.format("knowledgePanelRevisions", []) }
+    public static func `knowledgePanelRevisionHead`(`by`: String, `op`: String, `revision`: String, `when`: String) -> String { PhoneWords.format("knowledgePanelRevisionHead", [`by`, `op`, `revision`, `when`]) }
+    public static func `knowledgePanelShownHere`() -> String { PhoneWords.format("knowledgePanelShownHere", []) }
+    public static func `knowledgePanelCurrentShownHere`() -> String { PhoneWords.format("knowledgePanelCurrentShownHere", []) }
+    public static func `knowledgePanelReadCurrent`() -> String { PhoneWords.format("knowledgePanelReadCurrent", []) }
+    public static func `knowledgePanelReadRevision`(`revision`: String) -> String { PhoneWords.format("knowledgePanelReadRevision", [`revision`]) }
+    public static func `knowledgePanelEarlierRevisions`(`count`: Int) -> String { PhoneWords.format("knowledgePanelEarlierRevisions", [`count`]) }
+    public static func `knowledgePanelDisagreements`() -> String { PhoneWords.format("knowledgePanelDisagreements", []) }
+    public static func `knowledgePanelNoDisagreements`() -> String { PhoneWords.format("knowledgePanelNoDisagreements", []) }
+    public static func `knowledgePanelRelationTitle`(`relation`: String, `title`: String) -> String { PhoneWords.format("knowledgePanelRelationTitle", [`relation`, `title`]) }
+    public static func `knowledgePanelContextNoUse`() -> String { PhoneWords.format("knowledgePanelContextNoUse", []) }
+    public static func `knowledgePanelNoUses`() -> String { PhoneWords.format("knowledgePanelNoUses", []) }
+    public static func `knowledgePanelDeclaredUseNote`() -> String { PhoneWords.format("knowledgePanelDeclaredUseNote", []) }
+    public static func `knowledgePanelUseHead`(`by`: String, `revision`: String, `when`: String) -> String { PhoneWords.format("knowledgePanelUseHead", [`by`, `revision`, `when`]) }
+    public static func `knowledgePanelEarlierUses`(`count`: Int) -> String { PhoneWords.format("knowledgePanelEarlierUses", [`count`]) }
+    public static func `knowledgePanelEarlierRevision`() -> String { PhoneWords.format("knowledgePanelEarlierRevision", []) }
+    public static func `knowledgePanelSourceChangedNote`() -> String { PhoneWords.format("knowledgePanelSourceChangedNote", []) }
+    public static func `knowledgePanelInspectorSections`() -> String { PhoneWords.format("knowledgePanelInspectorSections", []) }
+    public static func `knowledgePanelRecordUnavailable`() -> String { PhoneWords.format("knowledgePanelRecordUnavailable", []) }
+    public static func `knowledgePanelDirectionEyebrow`(`revision`: String) -> String { PhoneWords.format("knowledgePanelDirectionEyebrow", [`revision`]) }
+    public static func `knowledgePanelInstruction`() -> String { PhoneWords.format("knowledgePanelInstruction", []) }
+    public static func `knowledgePanelAdvice`() -> String { PhoneWords.format("knowledgePanelAdvice", []) }
+    public static func `knowledgePanelAppliesTo`() -> String { PhoneWords.format("knowledgePanelAppliesTo", []) }
+    public static func `knowledgePanelRecordedOrigin`() -> String { PhoneWords.format("knowledgePanelRecordedOrigin", []) }
+    public static func `knowledgePanelDirectionNote`() -> String { PhoneWords.format("knowledgePanelDirectionNote", []) }
+    public static func `knowledgePanelDirectionDates`(`created`: String, `updated`: String) -> String { PhoneWords.format("knowledgePanelDirectionDates", [`created`, `updated`]) }
+    public static func `knowledgePanelDirectionHistoryNote`() -> String { PhoneWords.format("knowledgePanelDirectionHistoryNote", []) }
+    public static func `knowledgePanelDirectionRevisionHead`(`op`: String, `revision`: String, `when`: String) -> String { PhoneWords.format("knowledgePanelDirectionRevisionHead", [`op`, `revision`, `when`]) }
+    public static func `knowledgePanelDirectionRetiredRevision`() -> String { PhoneWords.format("knowledgePanelDirectionRetiredRevision", []) }
+    public static func `knowledgePanelPrevious`() -> String { PhoneWords.format("knowledgePanelPrevious", []) }
+    public static func `knowledgePanelNext`() -> String { PhoneWords.format("knowledgePanelNext", []) }
+    public static func `knowledgePanelConceptMatches`(`count`: Int) -> String { PhoneWords.format("knowledgePanelConceptMatches", [`count`]) }
+    public static func `knowledgePanelNoMatch`(`query`: String) -> String { PhoneWords.format("knowledgePanelNoMatch", [`query`]) }
+    public static func `knowledgePanelNoConcepts`() -> String { PhoneWords.format("knowledgePanelNoConcepts", []) }
+    public static func `knowledgePanelConceptsLabel`() -> String { PhoneWords.format("knowledgePanelConceptsLabel", []) }
+    public static func `knowledgePanelConceptColumn`() -> String { PhoneWords.format("knowledgePanelConceptColumn", []) }
+    public static func `knowledgePanelFindingsColumn`() -> String { PhoneWords.format("knowledgePanelFindingsColumn", []) }
+    public static func `knowledgePanelFilterAll`() -> String { PhoneWords.format("knowledgePanelFilterAll", []) }
+    public static func `knowledgePanelNoRecheckFindings`() -> String { PhoneWords.format("knowledgePanelNoRecheckFindings", []) }
+    public static func `knowledgePanelNoDifferingFindings`() -> String { PhoneWords.format("knowledgePanelNoDifferingFindings", []) }
+    public static func `knowledgePanelNoFindingsRecorded`() -> String { PhoneWords.format("knowledgePanelNoFindingsRecorded", []) }
+    public static func `knowledgePanelFilterShow`() -> String { PhoneWords.format("knowledgePanelFilterShow", []) }
+    public static func `knowledgePanelFindingsLabel`() -> String { PhoneWords.format("knowledgePanelFindingsLabel", []) }
+    public static func `knowledgePanelFindingColumn`() -> String { PhoneWords.format("knowledgePanelFindingColumn", []) }
+    public static func `knowledgePanelEvidenceColumn`() -> String { PhoneWords.format("knowledgePanelEvidenceColumn", []) }
+    public static func `knowledgePanelSourceCount`(`count`: Int) -> String { PhoneWords.format("knowledgePanelSourceCount", [`count`]) }
+    public static func `knowledgePanelCheckCount`(`count`: Int) -> String { PhoneWords.format("knowledgePanelCheckCount", [`count`]) }
+    public static func `knowledgePanelDirectionsNote`() -> String { PhoneWords.format("knowledgePanelDirectionsNote", []) }
+    public static func `knowledgePanelNoDirections`() -> String { PhoneWords.format("knowledgePanelNoDirections", []) }
+    public static func `knowledgePanelDirectionsLabel`() -> String { PhoneWords.format("knowledgePanelDirectionsLabel", []) }
+    public static func `knowledgePanelGraphConceptsOf`(`count`: Int, `shown`: String) -> String { PhoneWords.format("knowledgePanelGraphConceptsOf", [`count`, `shown`]) }
+    public static func `knowledgePanelGraphConnectionsOf`(`count`: Int, `shown`: String) -> String { PhoneWords.format("knowledgePanelGraphConnectionsOf", [`count`, `shown`]) }
+    public static func `knowledgePanelConnectionCount`(`count`: Int) -> String { PhoneWords.format("knowledgePanelConnectionCount", [`count`]) }
+    public static func `knowledgePanelCameraOrbited`() -> String { PhoneWords.format("knowledgePanelCameraOrbited", []) }
+    public static func `knowledgePanelZoomSaid`(`percent`: String) -> String { PhoneWords.format("knowledgePanelZoomSaid", [`percent`]) }
+    public static func `knowledgePanelCameraOrbitedLeft`() -> String { PhoneWords.format("knowledgePanelCameraOrbitedLeft", []) }
+    public static func `knowledgePanelCameraOrbitedRight`() -> String { PhoneWords.format("knowledgePanelCameraOrbitedRight", []) }
+    public static func `knowledgePanelCameraTiltedUp`() -> String { PhoneWords.format("knowledgePanelCameraTiltedUp", []) }
+    public static func `knowledgePanelCameraTiltedDown`() -> String { PhoneWords.format("knowledgePanelCameraTiltedDown", []) }
+    public static func `knowledgePanelCameraReset`() -> String { PhoneWords.format("knowledgePanelCameraReset", []) }
+    public static func `knowledgePanelReadWithLabel`() -> String { PhoneWords.format("knowledgePanelReadWithLabel", []) }
+    public static func `knowledgePanelConceptNotDrawn`() -> String { PhoneWords.format("knowledgePanelConceptNotDrawn", []) }
+    public static func `knowledgePanelFocusNearby`() -> String { PhoneWords.format("knowledgePanelFocusNearby", []) }
+    public static func `knowledgePanelNearbyReach`() -> String { PhoneWords.format("knowledgePanelNearbyReach", []) }
+    public static func `knowledgePanelHops`(`count`: Int) -> String { PhoneWords.format("knowledgePanelHops", [`count`]) }
+    public static func `knowledgePanelConceptsNotDrawn`(`count`: Int) -> String { PhoneWords.format("knowledgePanelConceptsNotDrawn", [`count`]) }
+    public static func `knowledgePanelNoConceptMatches`() -> String { PhoneWords.format("knowledgePanelNoConceptMatches", []) }
+    public static func `knowledgePanelNoConceptYet`() -> String { PhoneWords.format("knowledgePanelNoConceptYet", []) }
+    public static func `knowledgePanelGraphLabel`() -> String { PhoneWords.format("knowledgePanelGraphLabel", []) }
+    public static func `knowledgePanelGraphLegend`() -> String { PhoneWords.format("knowledgePanelGraphLegend", []) }
+    public static func `knowledgePanelOrbitLeft`() -> String { PhoneWords.format("knowledgePanelOrbitLeft", []) }
+    public static func `knowledgePanelOrbitRight`() -> String { PhoneWords.format("knowledgePanelOrbitRight", []) }
+    public static func `knowledgePanelZoomIn`() -> String { PhoneWords.format("knowledgePanelZoomIn", []) }
+    public static func `knowledgePanelZoomOut`() -> String { PhoneWords.format("knowledgePanelZoomOut", []) }
+    public static func `knowledgePanelResetView`() -> String { PhoneWords.format("knowledgePanelResetView", []) }
+    public static func `knowledgePanelPointerHint`() -> String { PhoneWords.format("knowledgePanelPointerHint", []) }
+    public static func `knowledgePanelKeyHint`() -> String { PhoneWords.format("knowledgePanelKeyHint", []) }
+    public static func `knowledgePanelConnectionsFor`(`title`: String) -> String { PhoneWords.format("knowledgePanelConnectionsFor", [`title`]) }
+    public static func `knowledgePanelConnections`() -> String { PhoneWords.format("knowledgePanelConnections", []) }
+    public static func `knowledgePanelSelectConceptPrompt`() -> String { PhoneWords.format("knowledgePanelSelectConceptPrompt", []) }
+    public static func `knowledgePanelNoConnection`() -> String { PhoneWords.format("knowledgePanelNoConnection", []) }
+    public static func `knowledgePanelTabGraph`() -> String { PhoneWords.format("knowledgePanelTabGraph", []) }
+    public static func `knowledgePanelTabConcepts`() -> String { PhoneWords.format("knowledgePanelTabConcepts", []) }
+    public static func `knowledgePanelTabFindings`() -> String { PhoneWords.format("knowledgePanelTabFindings", []) }
+    public static func `knowledgePanelTabDirections`() -> String { PhoneWords.format("knowledgePanelTabDirections", []) }
+    public static func `knowledgePanelSomeConcept`() -> String { PhoneWords.format("knowledgePanelSomeConcept", []) }
+    public static func `knowledgePanelSaidNameSelected`(`name`: String) -> String { PhoneWords.format("knowledgePanelSaidNameSelected", [`name`]) }
+    public static func `knowledgePanelSaidSelected`() -> String { PhoneWords.format("knowledgePanelSaidSelected", []) }
+    public static func `knowledgePanelSaidRevisionOpened`(`revision`: String) -> String { PhoneWords.format("knowledgePanelSaidRevisionOpened", [`revision`]) }
+    public static func `knowledgePanelSaidOpened`() -> String { PhoneWords.format("knowledgePanelSaidOpened", []) }
+    public static func `knowledgePanelSaidAskReady`() -> String { PhoneWords.format("knowledgePanelSaidAskReady", []) }
+    public static func `knowledgePanelBrowserEmpty`() -> String { PhoneWords.format("knowledgePanelBrowserEmpty", []) }
+    public static func `knowledgePanelSaidNearby`() -> String { PhoneWords.format("knowledgePanelSaidNearby", []) }
+    public static func `knowledgePanelSaidCollection`() -> String { PhoneWords.format("knowledgePanelSaidCollection", []) }
+    public static func `knowledgePanelFind`() -> String { PhoneWords.format("knowledgePanelFind", []) }
+    public static func `knowledgePanelFindDirection`() -> String { PhoneWords.format("knowledgePanelFindDirection", []) }
+    public static func `knowledgePanelFindEntry`() -> String { PhoneWords.format("knowledgePanelFindEntry", []) }
+    public static func `knowledgePanelViews`() -> String { PhoneWords.format("knowledgePanelViews", []) }
+    public static func `knowledgePanelProject`() -> String { PhoneWords.format("knowledgePanelProject", []) }
+    public static func `knowledgePanelSaidProject`() -> String { PhoneWords.format("knowledgePanelSaidProject", []) }
+    public static func `knowledgePanelAllProjects`() -> String { PhoneWords.format("knowledgePanelAllProjects", []) }
+    public static func `knowledgePanelInspector`() -> String { PhoneWords.format("knowledgePanelInspector", []) }
+    public static func `knowledgePanelSaidShownOnGraph`() -> String { PhoneWords.format("knowledgePanelSaidShownOnGraph", []) }
+    public static func `nowPanelBoardQueueLabel`() -> String { PhoneWords.format("nowPanelBoardQueueLabel", []) }
+    public static func `nowPanelBoardUnqueueLabel`() -> String { PhoneWords.format("nowPanelBoardUnqueueLabel", []) }
+    public static func `nowPanelBoardStartLabel`() -> String { PhoneWords.format("nowPanelBoardStartLabel", []) }
+    public static func `nowPanelBoardStartNowLabel`() -> String { PhoneWords.format("nowPanelBoardStartNowLabel", []) }
+    public static func `nowPanelBoardPinDetail`() -> String { PhoneWords.format("nowPanelBoardPinDetail", []) }
+    public static func `nowPanelBoardUnpinDetail`() -> String { PhoneWords.format("nowPanelBoardUnpinDetail", []) }
+    public static func `nowPanelBoardDragStarted`() -> String { PhoneWords.format("nowPanelBoardDragStarted", []) }
+    public static func `nowPanelBoardMoveCancelled`() -> String { PhoneWords.format("nowPanelBoardMoveCancelled", []) }
+    public static func `nowPanelBoardAnotherTask`() -> String { PhoneWords.format("nowPanelBoardAnotherTask", []) }
+    public static func `nowPanelBoardKeyList`(`keys`: String, `last`: String) -> String { PhoneWords.format("nowPanelBoardKeyList", [`keys`, `last`]) }
+    public static func `nowPanelBoardMoveClosed`() -> String { PhoneWords.format("nowPanelBoardMoveClosed", []) }
+    public static func `nowPanelBoardMoveAlreadyHere`() -> String { PhoneWords.format("nowPanelBoardMoveAlreadyHere", []) }
+    public static func `nowPanelBoardMoveNotWaiting`() -> String { PhoneWords.format("nowPanelBoardMoveNotWaiting", []) }
+    public static func `nowPanelBoardMoveShowsMergeCard`() -> String { PhoneWords.format("nowPanelBoardMoveShowsMergeCard", []) }
+    public static func `nowPanelBoardMoveNoMergeCard`() -> String { PhoneWords.format("nowPanelBoardMoveNoMergeCard", []) }
+    public static func `nowPanelBoardMoveAnswerCardFirst`() -> String { PhoneWords.format("nowPanelBoardMoveAnswerCardFirst", []) }
+    public static func `nowPanelBoardMoveWaitsForYou`() -> String { PhoneWords.format("nowPanelBoardMoveWaitsForYou", []) }
+    public static func `nowPanelBoardMoveStarting`() -> String { PhoneWords.format("nowPanelBoardMoveStarting", []) }
+    public static func `nowPanelBoardMoveAlreadyStarted`() -> String { PhoneWords.format("nowPanelBoardMoveAlreadyStarted", []) }
+    public static func `nowPanelBoardMoveParentToBacklog`() -> String { PhoneWords.format("nowPanelBoardMoveParentToBacklog", []) }
+    public static func `nowPanelBoardMoveToBacklog`() -> String { PhoneWords.format("nowPanelBoardMoveToBacklog", []) }
+    public static func `nowPanelBoardMovedToBacklog`(`key`: String) -> String { PhoneWords.format("nowPanelBoardMovedToBacklog", [`key`]) }
+    public static func `nowPanelBoardMoveParentToQueue`() -> String { PhoneWords.format("nowPanelBoardMoveParentToQueue", []) }
+    public static func `nowPanelBoardMoveQueuedBlocked`(`waitsOn`: String) -> String { PhoneWords.format("nowPanelBoardMoveQueuedBlocked", [`waitsOn`]) }
+    public static func `nowPanelBoardMovedQueuedBlocked`(`key`: String, `waitsOn`: String) -> String { PhoneWords.format("nowPanelBoardMovedQueuedBlocked", [`key`, `waitsOn`]) }
+    public static func `nowPanelBoardMoveQueuedHeld`() -> String { PhoneWords.format("nowPanelBoardMoveQueuedHeld", []) }
+    public static func `nowPanelBoardMovedQueuedHeld`(`key`: String) -> String { PhoneWords.format("nowPanelBoardMovedQueuedHeld", [`key`]) }
+    public static func `nowPanelBoardAskQueue`(`key`: String) -> String { PhoneWords.format("nowPanelBoardAskQueue", [`key`]) }
+    public static func `nowPanelBoardMoveBlockedOne`(`waitsOn`: String) -> String { PhoneWords.format("nowPanelBoardMoveBlockedOne", [`waitsOn`]) }
+    public static func `nowPanelBoardMoveBlockedMany`(`waitsOn`: String) -> String { PhoneWords.format("nowPanelBoardMoveBlockedMany", [`waitsOn`]) }
+    public static func `nowPanelBoardMoveHeld`() -> String { PhoneWords.format("nowPanelBoardMoveHeld", []) }
+    public static func `nowPanelBoardMoveParentStart`() -> String { PhoneWords.format("nowPanelBoardMoveParentStart", []) }
+    public static func `nowPanelBoardMoveAlreadyQueued`() -> String { PhoneWords.format("nowPanelBoardMoveAlreadyQueued", []) }
+    public static func `nowPanelBoardAskStart`(`key`: String) -> String { PhoneWords.format("nowPanelBoardAskStart", [`key`]) }
+    public static func `nowPanelBoardMovedStartedToBacklog`(`key`: String) -> String { PhoneWords.format("nowPanelBoardMovedStartedToBacklog", [`key`]) }
+    public static func `nowPanelBoardAskStartAgain`(`key`: String) -> String { PhoneWords.format("nowPanelBoardAskStartAgain", [`key`]) }
+    public static func `nowPanelBoardMoveStartedInBacklog`() -> String { PhoneWords.format("nowPanelBoardMoveStartedInBacklog", []) }
+    public static func `nowPanelBoardStartedBacklogText`() -> String { PhoneWords.format("nowPanelBoardStartedBacklogText", []) }
+    public static func `nowPanelBoardMoveCannotDrop`() -> String { PhoneWords.format("nowPanelBoardMoveCannotDrop", []) }
+    public static func `nowPanelBoardDropChanged`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDropChanged", [`key`]) }
+    public static func `nowPanelBoardDonePinned`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDonePinned", [`key`]) }
+    public static func `nowPanelBoardDoneUnpinned`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneUnpinned", [`key`]) }
+    public static func `nowPanelBoardDoneCardShown`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneCardShown", [`key`]) }
+    public static func `nowPanelBoardDoneQueued`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneQueued", [`key`]) }
+    public static func `nowPanelBoardDoneUnqueued`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneUnqueued", [`key`]) }
+    public static func `nowPanelBoardDoneStartedAgain`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneStartedAgain", [`key`]) }
+    public static func `nowPanelBoardDoneStarting`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneStarting", [`key`]) }
+    public static func `nowPanelBoardDoneContinued`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneContinued", [`key`]) }
+    public static func `nowPanelBoardDoneDropped`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneDropped", [`key`]) }
+    public static func `nowPanelBoardDoneStopped`(`key`: String) -> String { PhoneWords.format("nowPanelBoardDoneStopped", [`key`]) }
+    public static func `nowPanelBoardMenuShowCard`() -> String { PhoneWords.format("nowPanelBoardMenuShowCard", []) }
+    public static func `nowPanelBoardMenuOpenRecord`() -> String { PhoneWords.format("nowPanelBoardMenuOpenRecord", []) }
+    public static func `nowPanelBoardMenuContinue`() -> String { PhoneWords.format("nowPanelBoardMenuContinue", []) }
+    public static func `nowPanelBoardMenuContinueDetail`() -> String { PhoneWords.format("nowPanelBoardMenuContinueDetail", []) }
+    public static func `nowPanelBoardMenuStopDetail`() -> String { PhoneWords.format("nowPanelBoardMenuStopDetail", []) }
+    public static func `nowPanelBoardMenuUnqueueDetail`() -> String { PhoneWords.format("nowPanelBoardMenuUnqueueDetail", []) }
+    public static func `nowPanelBoardMenuQueueAskDetail`() -> String { PhoneWords.format("nowPanelBoardMenuQueueAskDetail", []) }
+    public static func `nowPanelBoardMenuQueueBlockedDetail`(`waitsOn`: String) -> String { PhoneWords.format("nowPanelBoardMenuQueueBlockedDetail", [`waitsOn`]) }
+    public static func `nowPanelBoardMenuQueueHeldDetail`() -> String { PhoneWords.format("nowPanelBoardMenuQueueHeldDetail", []) }
+    public static func `nowPanelBoardMenuStartDetail`() -> String { PhoneWords.format("nowPanelBoardMenuStartDetail", []) }
+    public static func `nowPanelBoardMenuDropDetail`() -> String { PhoneWords.format("nowPanelBoardMenuDropDetail", []) }
+    public static func `nowPanelBoardLaneDropped`() -> String { PhoneWords.format("nowPanelBoardLaneDropped", []) }
+    public static func `nowPanelBoardLaneEarlier`() -> String { PhoneWords.format("nowPanelBoardLaneEarlier", []) }
+    public static func `nowPanelBoardEmptyWaiting`() -> String { PhoneWords.format("nowPanelBoardEmptyWaiting", []) }
+    public static func `nowPanelBoardEmptyBacklog`() -> String { PhoneWords.format("nowPanelBoardEmptyBacklog", []) }
+    public static func `nowPanelBoardEmptyQueued`() -> String { PhoneWords.format("nowPanelBoardEmptyQueued", []) }
+    public static func `nowPanelBoardEmptyWorking`() -> String { PhoneWords.format("nowPanelBoardEmptyWorking", []) }
+    public static func `nowPanelBoardEmptyLanded`() -> String { PhoneWords.format("nowPanelBoardEmptyLanded", []) }
+    public static func `nowPanelBoardEmptyDropped`() -> String { PhoneWords.format("nowPanelBoardEmptyDropped", []) }
+    public static func `nowPanelBoardEmptyEarlier`() -> String { PhoneWords.format("nowPanelBoardEmptyEarlier", []) }
+    public static func `nowPanelBoardTileFoundOn`(`key`: String) -> String { PhoneWords.format("nowPanelBoardTileFoundOn", [`key`]) }
+    public static func `nowPanelBoardTilePartOf`(`key`: String) -> String { PhoneWords.format("nowPanelBoardTilePartOf", [`key`]) }
+    public static func `nowPanelBoardAllProjects`() -> String { PhoneWords.format("nowPanelBoardAllProjects", []) }
+    public static func `nowPanelSummaryWaiting`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryWaiting", [`count`]) }
+    public static func `nowPanelSummaryWorking`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryWorking", [`count`]) }
+    public static func `nowPanelSummaryFailed`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryFailed", [`count`]) }
+    public static func `nowPanelNoTasks`() -> String { PhoneWords.format("nowPanelNoTasks", []) }
+    public static func `nowPanelFilterPlaceholder`() -> String { PhoneWords.format("nowPanelFilterPlaceholder", []) }
+    public static func `nowPanelFilterLabel`() -> String { PhoneWords.format("nowPanelFilterLabel", []) }
+    public static func `nowPanelCloseSearch`() -> String { PhoneWords.format("nowPanelCloseSearch", []) }
+    public static func `nowPanelRowBlockedBy`(`keys`: String) -> String { PhoneWords.format("nowPanelRowBlockedBy", [`keys`]) }
+    public static func `nowPanelBoardMovedTo`(`key`: String, `lane`: String) -> String { PhoneWords.format("nowPanelBoardMovedTo", [`key`, `lane`]) }
+    public static func `nowPanelBoardOffBoard`(`key`: String) -> String { PhoneWords.format("nowPanelBoardOffBoard", [`key`]) }
+    public static func `nowPanelBoardMoveChanged`(`key`: String) -> String { PhoneWords.format("nowPanelBoardMoveChanged", [`key`]) }
+    public static func `nowPanelBoardCannotMove`() -> String { PhoneWords.format("nowPanelBoardCannotMove", []) }
+    public static func `nowPanelBoardBroughtCard`() -> String { PhoneWords.format("nowPanelBoardBroughtCard", []) }
+    public static func `nowPanelBoardCardGone`() -> String { PhoneWords.format("nowPanelBoardCardGone", []) }
+    public static func `nowPanelBoardDropAsks`() -> String { PhoneWords.format("nowPanelBoardDropAsks", []) }
+    public static func `nowPanelBoardLandedAsks`() -> String { PhoneWords.format("nowPanelBoardLandedAsks", []) }
+    public static func `nowPanelBoardCannotPin`() -> String { PhoneWords.format("nowPanelBoardCannotPin", []) }
+    public static func `nowPanelBoardPartsFinished`(`closed`: String, `count`: Int) -> String { PhoneWords.format("nowPanelBoardPartsFinished", [`closed`, `count`]) }
+    public static func `nowPanelBoardWaitRecorded`(`when`: String) -> String { PhoneWords.format("nowPanelBoardWaitRecorded", [`when`]) }
+    public static func `nowPanelBoardTileActions`(`key`: String) -> String { PhoneWords.format("nowPanelBoardTileActions", [`key`]) }
+    public static func `nowPanelBoardCancel`() -> String { PhoneWords.format("nowPanelBoardCancel", []) }
+    public static func `nowPanelBoardRange`(`first`: String, `last`: String, `total`: String) -> String { PhoneWords.format("nowPanelBoardRange", [`first`, `last`, `total`]) }
+    public static func `nowPanelBoardPreviousPage`(`lane`: String) -> String { PhoneWords.format("nowPanelBoardPreviousPage", [`lane`]) }
+    public static func `nowPanelBoardPrevious`() -> String { PhoneWords.format("nowPanelBoardPrevious", []) }
+    public static func `nowPanelBoardNextPage`(`lane`: String) -> String { PhoneWords.format("nowPanelBoardNextPage", [`lane`]) }
+    public static func `nowPanelBoardNext`() -> String { PhoneWords.format("nowPanelBoardNext", []) }
+    public static func `nowPanelBoardEarlierUnavailable`() -> String { PhoneWords.format("nowPanelBoardEarlierUnavailable", []) }
+    public static func `nowPanelBoardEarlierReading`() -> String { PhoneWords.format("nowPanelBoardEarlierReading", []) }
+    public static func `nowPanelBoardEarlierCapped`() -> String { PhoneWords.format("nowPanelBoardEarlierCapped", []) }
+    public static func `nowPanelBoardListLabel`(`count`: Int, `lane`: String) -> String { PhoneWords.format("nowPanelBoardListLabel", [`count`, `lane`]) }
+    public static func `nowPanelBoardNewCount`(`count`: Int) -> String { PhoneWords.format("nowPanelBoardNewCount", [`count`]) }
+    public static func `nowPanelBoardReadOnly`() -> String { PhoneWords.format("nowPanelBoardReadOnly", []) }
+    public static func `nowPanelBoardLabel`() -> String { PhoneWords.format("nowPanelBoardLabel", []) }
+    public static func `nowPanelBoardFindPlaceholder`() -> String { PhoneWords.format("nowPanelBoardFindPlaceholder", []) }
+    public static func `nowPanelBoardFindLabel`() -> String { PhoneWords.format("nowPanelBoardFindLabel", []) }
+    public static func `nowPanelBoardViews`() -> String { PhoneWords.format("nowPanelBoardViews", []) }
+    public static func `nowPanelBoardViewBoard`() -> String { PhoneWords.format("nowPanelBoardViewBoard", []) }
+    public static func `nowPanelBoardViewBacklog`() -> String { PhoneWords.format("nowPanelBoardViewBacklog", []) }
+    public static func `nowPanelBoardViewLanded`() -> String { PhoneWords.format("nowPanelBoardViewLanded", []) }
+    public static func `nowPanelBoardViewEarlier`() -> String { PhoneWords.format("nowPanelBoardViewEarlier", []) }
+    public static func `nowPanelBoardWaitingNote`() -> String { PhoneWords.format("nowPanelBoardWaitingNote", []) }
+    public static func `nowPanelBoardShowAll`(`count`: Int) -> String { PhoneWords.format("nowPanelBoardShowAll", [`count`]) }
+    public static func `nowPanelBoardDroppedToggle`(`count`: Int) -> String { PhoneWords.format("nowPanelBoardDroppedToggle", [`count`]) }
+    public static func `nowPanelBoardHint`(`enter`: String, `space`: String) -> String { PhoneWords.format("nowPanelBoardHint", [`enter`, `space`]) }
     public static func `settingsKeyboardSaveFailed`() -> String { PhoneWords.format("settingsKeyboardSaveFailed", []) }
     public static func `settingsKeyboardHeading`() -> String { PhoneWords.format("settingsKeyboardHeading", []) }
     public static func `settingsKeyboardSearch`() -> String { PhoneWords.format("settingsKeyboardSearch", []) }
@@ -988,6 +1337,580 @@ public enum PhoneMessages {
     public static func `settingsIntegrationsRuleNote`() -> String { PhoneWords.format("settingsIntegrationsRuleNote", []) }
     public static func `settingsIntegrationsRuleOff`() -> String { PhoneWords.format("settingsIntegrationsRuleOff", []) }
     public static func `settingsIntegrationsCopying`() -> String { PhoneWords.format("settingsIntegrationsCopying", []) }
+    public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
+    public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
+    public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
+    public static func `phoneMediaRecordingFinished`() -> String { PhoneWords.format("phoneMediaRecordingFinished", []) }
+    public static func `phoneMediaPlayAgain`() -> String { PhoneWords.format("phoneMediaPlayAgain", []) }
+    public static func `phoneMediaRecordingFailed`() -> String { PhoneWords.format("phoneMediaRecordingFailed", []) }
+    public static func `phoneMediaStopRecording`() -> String { PhoneWords.format("phoneMediaStopRecording", []) }
+    public static func `phoneMediaPlayRecording`() -> String { PhoneWords.format("phoneMediaPlayRecording", []) }
+    public static func `phoneCommonRetry`() -> String { PhoneWords.format("phoneCommonRetry", []) }
+    public static func `phoneMediaLoadingRecording`() -> String { PhoneWords.format("phoneMediaLoadingRecording", []) }
+    public static func `phoneMediaPreviousPicture`() -> String { PhoneWords.format("phoneMediaPreviousPicture", []) }
+    public static func `phoneMediaPicturePosition`(`count`: Int, `position`: String) -> String { PhoneWords.format("phoneMediaPicturePosition", [`count`, `position`]) }
+    public static func `phoneMediaNextPicture`() -> String { PhoneWords.format("phoneMediaNextPicture", []) }
+    public static func `phoneMediaTitleRecording`() -> String { PhoneWords.format("phoneMediaTitleRecording", []) }
+    public static func `phoneMediaTitleDiagram`() -> String { PhoneWords.format("phoneMediaTitleDiagram", []) }
+    public static func `phoneMediaTitlePicture`() -> String { PhoneWords.format("phoneMediaTitlePicture", []) }
+    public static func `phoneCommonDone`() -> String { PhoneWords.format("phoneCommonDone", []) }
+    public static func `phoneMediaRecordingLoadFailed`() -> String { PhoneWords.format("phoneMediaRecordingLoadFailed", []) }
+    public static func `phoneCommonRemovePhoto`() -> String { PhoneWords.format("phoneCommonRemovePhoto", []) }
+    public static func `phoneComposerPhotos`() -> String { PhoneWords.format("phoneComposerPhotos", []) }
+    public static func `phoneComposerPlaceholder`() -> String { PhoneWords.format("phoneComposerPlaceholder", []) }
+    public static func `phoneCommonSend`() -> String { PhoneWords.format("phoneCommonSend", []) }
+    public static func `phoneComposerAddingPhotos`() -> String { PhoneWords.format("phoneComposerAddingPhotos", []) }
+    public static func `phoneComposerPictureOnly`() -> String { PhoneWords.format("phoneComposerPictureOnly", []) }
+    public static func `phoneComposerReplyHint`() -> String { PhoneWords.format("phoneComposerReplyHint", []) }
+    public static func `phoneCommonSendingEllipsis`() -> String { PhoneWords.format("phoneCommonSendingEllipsis", []) }
+    public static func `phoneComposerWorking`() -> String { PhoneWords.format("phoneComposerWorking", []) }
+    public static func `phoneComposerTooLong`() -> String { PhoneWords.format("phoneComposerTooLong", []) }
+    public static func `phoneComposerPhotoFailed`() -> String { PhoneWords.format("phoneComposerPhotoFailed", []) }
+    public static func `phoneComposerYou`() -> String { PhoneWords.format("phoneComposerYou", []) }
+    public static func `phoneComposerFirstMate`() -> String { PhoneWords.format("phoneComposerFirstMate", []) }
+    public static func `phoneComposerReplyTitle`() -> String { PhoneWords.format("phoneComposerReplyTitle", []) }
+    public static func `phoneComposerPhotoTooLarge`() -> String { PhoneWords.format("phoneComposerPhotoTooLarge", []) }
+    public static func `phoneCardWebNoAnswer`() -> String { PhoneWords.format("phoneCardWebNoAnswer", []) }
+    public static func `phoneCardWebStopped`() -> String { PhoneWords.format("phoneCardWebStopped", []) }
+    public static func `phoneCardWebNotReady`() -> String { PhoneWords.format("phoneCardWebNotReady", []) }
+    public static func `phoneCardWebTooLarge`() -> String { PhoneWords.format("phoneCardWebTooLarge", []) }
+    public static func `phoneCardWebMacOnly`(`computer`: String) -> String { PhoneWords.format("phoneCardWebMacOnly", [`computer`]) }
+    public static func `phoneCardWebLinkRefused`() -> String { PhoneWords.format("phoneCardWebLinkRefused", []) }
+    public static func `phoneCardWebCannotDo`() -> String { PhoneWords.format("phoneCardWebCannotDo", []) }
+    public static func `phoneCardWebFooterOnly`() -> String { PhoneWords.format("phoneCardWebFooterOnly", []) }
+    public static func `phoneCardWebChoiceInProgress`() -> String { PhoneWords.format("phoneCardWebChoiceInProgress", []) }
+    public static func `phoneCardWebNoDataFile`() -> String { PhoneWords.format("phoneCardWebNoDataFile", []) }
+    public static func `phoneCardWebDataUnreadable`() -> String { PhoneWords.format("phoneCardWebDataUnreadable", []) }
+    public static func `phoneCardRisk`() -> String { PhoneWords.format("phoneCardRisk", []) }
+    public static func `phoneCardBrowser`() -> String { PhoneWords.format("phoneCardBrowser", []) }
+    public static func `phoneCardOpenBrowser`() -> String { PhoneWords.format("phoneCardOpenBrowser", []) }
+    public static func `phoneCardNoAnswer`() -> String { PhoneWords.format("phoneCardNoAnswer", []) }
+    public static func `phoneJoinNearbyRefused`() -> String { PhoneWords.format("phoneJoinNearbyRefused", []) }
+    public static func `phoneJoinCameraNotAllowed`() -> String { PhoneWords.format("phoneJoinCameraNotAllowed", []) }
+    public static func `phoneJoinNoCamera`() -> String { PhoneWords.format("phoneJoinNoCamera", []) }
+    public static func `phoneJoinCameraFailed`() -> String { PhoneWords.format("phoneJoinCameraFailed", []) }
+    public static func `phoneAppHideKeyboard`() -> String { PhoneWords.format("phoneAppHideKeyboard", []) }
+    public static func `phoneJoinRemovedTitle`() -> String { PhoneWords.format("phoneJoinRemovedTitle", []) }
+    public static func `phoneJoinRemovedLine`() -> String { PhoneWords.format("phoneJoinRemovedLine", []) }
+    public static func `phoneJoinAgain`() -> String { PhoneWords.format("phoneJoinAgain", []) }
+    public static func `phoneCommonSettings`() -> String { PhoneWords.format("phoneCommonSettings", []) }
+    public static func `phoneAppYourComputer`() -> String { PhoneWords.format("phoneAppYourComputer", []) }
+    public static func `phoneJoinScanTitle`() -> String { PhoneWords.format("phoneJoinScanTitle", []) }
+    public static func `phoneCommonCancel`() -> String { PhoneWords.format("phoneCommonCancel", []) }
+    public static func `phoneJoinPasteHelp`() -> String { PhoneWords.format("phoneJoinPasteHelp", []) }
+    public static func `phoneJoinPasteField`() -> String { PhoneWords.format("phoneJoinPasteField", []) }
+    public static func `phoneCommonContinue`() -> String { PhoneWords.format("phoneCommonContinue", []) }
+    public static func `phoneJoinPasteTitle`() -> String { PhoneWords.format("phoneJoinPasteTitle", []) }
+    public static func `phoneJoinConfirmTitleNamed`(`computer`: String) -> String { PhoneWords.format("phoneJoinConfirmTitleNamed", [`computer`]) }
+    public static func `phoneJoinConfirmTitle`() -> String { PhoneWords.format("phoneJoinConfirmTitle", []) }
+    public static func `phoneJoinConfirmNamed`(`computer`: String) -> String { PhoneWords.format("phoneJoinConfirmNamed", [`computer`]) }
+    public static func `phoneJoinConfirm`() -> String { PhoneWords.format("phoneJoinConfirm", []) }
+    public static func `phoneJoinConfirmLine`() -> String { PhoneWords.format("phoneJoinConfirmLine", []) }
+    public static func `phoneJoinWelcomeTitle`() -> String { PhoneWords.format("phoneJoinWelcomeTitle", []) }
+    public static func `phoneJoinWelcomeLine`() -> String { PhoneWords.format("phoneJoinWelcomeLine", []) }
+    public static func `phoneJoinJoining`() -> String { PhoneWords.format("phoneJoinJoining", []) }
+    public static func `phoneJoinScanLine`() -> String { PhoneWords.format("phoneJoinScanLine", []) }
+    public static func `phoneJoinPasteLine`() -> String { PhoneWords.format("phoneJoinPasteLine", []) }
+    public static func `phoneJoinAddressTitle`() -> String { PhoneWords.format("phoneJoinAddressTitle", []) }
+    public static func `phoneJoinAddressLine`() -> String { PhoneWords.format("phoneJoinAddressLine", []) }
+    public static func `phoneJoinNearbyEmpty`() -> String { PhoneWords.format("phoneJoinNearbyEmpty", []) }
+    public static func `phoneJoinNearbyScan`() -> String { PhoneWords.format("phoneJoinNearbyScan", []) }
+    public static func `phoneJoinNearbyScanLabel`(`computer`: String) -> String { PhoneWords.format("phoneJoinNearbyScanLabel", [`computer`]) }
+    public static func `phoneAddressSweepAsk`() -> String { PhoneWords.format("phoneAddressSweepAsk", []) }
+    public static func `phoneAddressSweepLook`() -> String { PhoneWords.format("phoneAddressSweepLook", []) }
+    public static func `phoneAddressSweepWarning`() -> String { PhoneWords.format("phoneAddressSweepWarning", []) }
+    public static func `phoneAddressTypingHelp`() -> String { PhoneWords.format("phoneAddressTypingHelp", []) }
+    public static func `phoneAddressPortField`() -> String { PhoneWords.format("phoneAddressPortField", []) }
+    public static func `phoneAddressOnThisNetwork`() -> String { PhoneWords.format("phoneAddressOnThisNetwork", []) }
+    public static func `phoneAddressAccountField`() -> String { PhoneWords.format("phoneAddressAccountField", []) }
+    public static func `phoneAddressAccountHelp`() -> String { PhoneWords.format("phoneAddressAccountHelp", []) }
+    public static func `phoneAddressSweptLine`() -> String { PhoneWords.format("phoneAddressSweptLine", []) }
+    public static func `phoneAddressSweepOffer`() -> String { PhoneWords.format("phoneAddressSweepOffer", []) }
+    public static func `phoneAddressSweeping`(`count`: Int) -> String { PhoneWords.format("phoneAddressSweeping", [`count`]) }
+    public static func `phoneAddressSweptNone`() -> String { PhoneWords.format("phoneAddressSweptNone", []) }
+    public static func `phoneAddressNoNetwork`() -> String { PhoneWords.format("phoneAddressNoNetwork", []) }
+    public static func `phoneAddressLooking`() -> String { PhoneWords.format("phoneAddressLooking", []) }
+    public static func `phoneAddressLookingNotAllowed`() -> String { PhoneWords.format("phoneAddressLookingNotAllowed", []) }
+    public static func `phoneAddressLookingFailed`() -> String { PhoneWords.format("phoneAddressLookingFailed", []) }
+    public static func `phoneAddressSigningIn`(`computer`: String) -> String { PhoneWords.format("phoneAddressSigningIn", [`computer`]) }
+    public static func `phoneAddressTrustAsk`(`computer`: String) -> String { PhoneWords.format("phoneAddressTrustAsk", [`computer`]) }
+    public static func `phoneAddressTrustLine`(`computer`: String) -> String { PhoneWords.format("phoneAddressTrustLine", [`computer`]) }
+    public static func `phoneAddressTrustWarning`() -> String { PhoneWords.format("phoneAddressTrustWarning", []) }
+    public static func `phoneAddressNotThisOne`() -> String { PhoneWords.format("phoneAddressNotThisOne", []) }
+    public static func `phoneAddressTrustNamed`(`computer`: String) -> String { PhoneWords.format("phoneAddressTrustNamed", [`computer`]) }
+    public static func `phoneAddressKeyRefusedPassword`(`computer`: String) -> String { PhoneWords.format("phoneAddressKeyRefusedPassword", [`computer`]) }
+    public static func `phoneAddressPasswordField`(`computer`: String) -> String { PhoneWords.format("phoneAddressPasswordField", [`computer`]) }
+    public static func `phoneAddressCopyKeyInstead`() -> String { PhoneWords.format("phoneAddressCopyKeyInstead", []) }
+    public static func `phoneAddressKeyRefused`(`computer`: String) -> String { PhoneWords.format("phoneAddressKeyRefused", [`computer`]) }
+    public static func `phoneCommonCopied`() -> String { PhoneWords.format("phoneCommonCopied", []) }
+    public static func `phoneAddressCopyKey`() -> String { PhoneWords.format("phoneAddressCopyKey", []) }
+    public static func `phoneCommonTryAgain`() -> String { PhoneWords.format("phoneCommonTryAgain", []) }
+    public static func `phoneAddressSignInOnce`() -> String { PhoneWords.format("phoneAddressSignInOnce", []) }
+    public static func `phoneCharacterFirstMate`() -> String { PhoneWords.format("phoneCharacterFirstMate", []) }
+    public static func `phoneHideKeyboard`() -> String { PhoneWords.format("phoneHideKeyboard", []) }
+    public static func `phoneSceneComputerFallback`() -> String { PhoneWords.format("phoneSceneComputerFallback", []) }
+    public static func `phoneSceneActivityUnknown`() -> String { PhoneWords.format("phoneSceneActivityUnknown", []) }
+    public static func `phoneSceneWaitingBatchCheck`() -> String { PhoneWords.format("phoneSceneWaitingBatchCheck", []) }
+    public static func `phoneSceneWaitingChecks`() -> String { PhoneWords.format("phoneSceneWaitingChecks", []) }
+    public static func `phoneSceneWorking`() -> String { PhoneWords.format("phoneSceneWorking", []) }
+    public static func `phoneSceneProgramParts`(`count`: Int) -> String { PhoneWords.format("phoneSceneProgramParts", [`count`]) }
+    public static func `phoneSceneSelected`(`words`: String) -> String { PhoneWords.format("phoneSceneSelected", [`words`]) }
+    public static func `phoneReachAsOf`(`time`: String) -> String { PhoneWords.format("phoneReachAsOf", [`time`]) }
+    public static func `phoneReachInReach`() -> String { PhoneWords.format("phoneReachInReach", []) }
+    public static func `phoneReachReaching`() -> String { PhoneWords.format("phoneReachReaching", []) }
+    public static func `phoneReachOutOfReach`() -> String { PhoneWords.format("phoneReachOutOfReach", []) }
+    public static func `phoneReachLine`(`reach`: String, `time`: String) -> String { PhoneWords.format("phoneReachLine", [`reach`, `time`]) }
+    public static func `phoneReachChangesOff`(`computer`: String) -> String { PhoneWords.format("phoneReachChangesOff", [`computer`]) }
+    public static func `phoneComputerFirstMateHere`() -> String { PhoneWords.format("phoneComputerFirstMateHere", []) }
+    public static func `phoneComputerTitle`() -> String { PhoneWords.format("phoneComputerTitle", []) }
+    public static func `phoneComputerLeaveAsk`(`computer`: String) -> String { PhoneWords.format("phoneComputerLeaveAsk", [`computer`]) }
+    public static func `phoneComputerLeaveConfirm`() -> String { PhoneWords.format("phoneComputerLeaveConfirm", []) }
+    public static func `phoneComputerKeep`() -> String { PhoneWords.format("phoneComputerKeep", []) }
+    public static func `phoneComputerLeaveWarning`() -> String { PhoneWords.format("phoneComputerLeaveWarning", []) }
+    public static func `phoneComputerForgetAsk`() -> String { PhoneWords.format("phoneComputerForgetAsk", []) }
+    public static func `phoneComputerForgetConfirm`() -> String { PhoneWords.format("phoneComputerForgetConfirm", []) }
+    public static func `phoneComputerForgetWarning`() -> String { PhoneWords.format("phoneComputerForgetWarning", []) }
+    public static func `phoneComputerLeaveHeading`() -> String { PhoneWords.format("phoneComputerLeaveHeading", []) }
+    public static func `phoneComputerLeaveExplain`() -> String { PhoneWords.format("phoneComputerLeaveExplain", []) }
+    public static func `phoneComputerLeaveButton`(`computer`: String) -> String { PhoneWords.format("phoneComputerLeaveButton", [`computer`]) }
+    public static func `phoneComputerForgetHeading`() -> String { PhoneWords.format("phoneComputerForgetHeading", []) }
+    public static func `phoneComputerForgetExplain`(`computer`: String) -> String { PhoneWords.format("phoneComputerForgetExplain", [`computer`]) }
+    public static func `phoneComputerForgetButton`() -> String { PhoneWords.format("phoneComputerForgetButton", []) }
+    public static func `phoneGoogleSignedInAs`(`account`: String, `computer`: String) -> String { PhoneWords.format("phoneGoogleSignedInAs", [`account`, `computer`]) }
+    public static func `phoneGoogleSignedIn`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSignedIn", [`computer`]) }
+    public static func `phoneGoogleSignInAgainNeeded`() -> String { PhoneWords.format("phoneGoogleSignInAgainNeeded", []) }
+    public static func `phoneGoogleSignInAgain`() -> String { PhoneWords.format("phoneGoogleSignInAgain", []) }
+    public static func `phoneGoogleSignOut`() -> String { PhoneWords.format("phoneGoogleSignOut", []) }
+    public static func `phoneGoogleSignOutAsk`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSignOutAsk", [`computer`]) }
+    public static func `phoneGoogleSignOutWarning`() -> String { PhoneWords.format("phoneGoogleSignOutWarning", []) }
+    public static func `phoneGoogleInvite`(`computer`: String) -> String { PhoneWords.format("phoneGoogleInvite", [`computer`]) }
+    public static func `phoneGoogleSignIn`() -> String { PhoneWords.format("phoneGoogleSignIn", []) }
+    public static func `phoneSceneLabel`() -> String { PhoneWords.format("phoneSceneLabel", []) }
+    public static func `phoneSceneBrowsing`() -> String { PhoneWords.format("phoneSceneBrowsing", []) }
+    public static func `phoneSceneNotBrowsing`() -> String { PhoneWords.format("phoneSceneNotBrowsing", []) }
+    public static func `phoneSceneHint`() -> String { PhoneWords.format("phoneSceneHint", []) }
+    public static func `phoneSceneBrowse`() -> String { PhoneWords.format("phoneSceneBrowse", []) }
+    public static func `phoneSceneCloseComputerPreview`() -> String { PhoneWords.format("phoneSceneCloseComputerPreview", []) }
+    public static func `phoneCrewSummaryOpenTask`() -> String { PhoneWords.format("phoneCrewSummaryOpenTask", []) }
+    public static func `phoneCommonClose`() -> String { PhoneWords.format("phoneCommonClose", []) }
+    public static func `phoneModelReadSavedUnlock`() -> String { PhoneWords.format("phoneModelReadSavedUnlock", []) }
+    public static func `phoneModelReadSavedRetry`() -> String { PhoneWords.format("phoneModelReadSavedRetry", []) }
+    public static func `phoneModelForgotDamaged`() -> String { PhoneWords.format("phoneModelForgotDamaged", []) }
+    public static func `phoneModelForgetUnlock`() -> String { PhoneWords.format("phoneModelForgetUnlock", []) }
+    public static func `phoneModelForgetRetry`() -> String { PhoneWords.format("phoneModelForgetRetry", []) }
+    public static func `phoneModelLeaveBeforeJoining`() -> String { PhoneWords.format("phoneModelLeaveBeforeJoining", []) }
+    public static func `phoneModelKeepFingerprintFailed`() -> String { PhoneWords.format("phoneModelKeepFingerprintFailed", []) }
+    public static func `phoneModelKeepAddressFailed`() -> String { PhoneWords.format("phoneModelKeepAddressFailed", []) }
+    public static func `phoneModelForgetTryLeave`() -> String { PhoneWords.format("phoneModelForgetTryLeave", []) }
+    public static func `phoneCardsPagerPast`() -> String { PhoneWords.format("phoneCardsPagerPast", []) }
+    public static func `phoneCardsPagerPosition`(`position`: String, `total`: String) -> String { PhoneWords.format("phoneCardsPagerPosition", [`position`, `total`]) }
+    public static func `phoneCardsTaskKeyHint`() -> String { PhoneWords.format("phoneCardsTaskKeyHint", []) }
+    public static func `phoneCardsRetryNote`() -> String { PhoneWords.format("phoneCardsRetryNote", []) }
+    public static func `phoneCardsDoThisOn`(`computer`: String) -> String { PhoneWords.format("phoneCardsDoThisOn", [`computer`]) }
+    public static func `phoneCommonSending`() -> String { PhoneWords.format("phoneCommonSending", []) }
+    public static func `phoneCardsChooseFallback`() -> String { PhoneWords.format("phoneCardsChooseFallback", []) }
+    public static func `phoneCardsChosen`() -> String { PhoneWords.format("phoneCardsChosen", []) }
+    public static func `phoneCardsChoosePhotos`() -> String { PhoneWords.format("phoneCardsChoosePhotos", []) }
+    public static func `phoneCardsTakePhoto`() -> String { PhoneWords.format("phoneCardsTakePhoto", []) }
+    public static func `phoneCardsAddPhotos`() -> String { PhoneWords.format("phoneCardsAddPhotos", []) }
+    public static func `phoneCardsSendReply`() -> String { PhoneWords.format("phoneCardsSendReply", []) }
+    public static func `phoneCardsReplyTooLong`(`count`: Int) -> String { PhoneWords.format("phoneCardsReplyTooLong", [`count`]) }
+    public static func `phoneCardsApprovalAsks`(`confirmation`: String) -> String { PhoneWords.format("phoneCardsApprovalAsks", [`confirmation`]) }
+    public static func `phoneCardsApprovalTurnOn`(`computer`: String) -> String { PhoneWords.format("phoneCardsApprovalTurnOn", [`computer`]) }
+    public static func `phoneCardsApprovalStillWaiting`() -> String { PhoneWords.format("phoneCardsApprovalStillWaiting", []) }
+    public static func `phoneCardsKindEnded`() -> String { PhoneWords.format("phoneCardsKindEnded", []) }
+    public static func `phoneCardsAnswerRequiredFirst`() -> String { PhoneWords.format("phoneCardsAnswerRequiredFirst", []) }
+    public static func `phoneCardsPhotoNotAdded`() -> String { PhoneWords.format("phoneCardsPhotoNotAdded", []) }
+    public static func `phoneSettingsGeneral`() -> String { PhoneWords.format("phoneSettingsGeneral", []) }
+    public static func `phoneSettingsAppearance`() -> String { PhoneWords.format("phoneSettingsAppearance", []) }
+    public static func `phoneSettingsIntegrations`() -> String { PhoneWords.format("phoneSettingsIntegrations", []) }
+    public static func `phoneSettingsDevices`() -> String { PhoneWords.format("phoneSettingsDevices", []) }
+    public static func `phoneSettingsThisIpad`() -> String { PhoneWords.format("phoneSettingsThisIpad", []) }
+    public static func `phoneSettingsThisPhone`() -> String { PhoneWords.format("phoneSettingsThisPhone", []) }
+    public static func `phoneSettingsThisIpadInline`() -> String { PhoneWords.format("phoneSettingsThisIpadInline", []) }
+    public static func `phoneSettingsThisPhoneInline`() -> String { PhoneWords.format("phoneSettingsThisPhoneInline", []) }
+    public static func `phoneSettingsVersion`(`version`: String) -> String { PhoneWords.format("phoneSettingsVersion", [`version`]) }
+    public static func `phoneSettingsConversationStays`() -> String { PhoneWords.format("phoneSettingsConversationStays", []) }
+    public static func `phoneSettingsBack`() -> String { PhoneWords.format("phoneSettingsBack", []) }
+    public static func `phoneSettingsCapabilityRead`(`update`: String) -> String { PhoneWords.format("phoneSettingsCapabilityRead", [`update`]) }
+    public static func `phoneSettingsCapabilityFull`() -> String { PhoneWords.format("phoneSettingsCapabilityFull", []) }
+    public static func `phoneSettingsThemeSummary`(`theme`: String) -> String { PhoneWords.format("phoneSettingsThemeSummary", [`theme`]) }
+    public static func `phoneSettingsGoogleSummary`(`account`: String) -> String { PhoneWords.format("phoneSettingsGoogleSummary", [`account`]) }
+    public static func `phoneSettingsGoogleSignedIn`() -> String { PhoneWords.format("phoneSettingsGoogleSignedIn", []) }
+    public static func `phoneSettingsGoogleSignedOut`() -> String { PhoneWords.format("phoneSettingsGoogleSignedOut", []) }
+    public static func `phoneSettingsTheme`() -> String { PhoneWords.format("phoneSettingsTheme", []) }
+    public static func `phoneSettingsThemeScope`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsThemeScope", [`computer`, `device`]) }
+    public static func `phoneSettingsSecretsApprovals`() -> String { PhoneWords.format("phoneSettingsSecretsApprovals", []) }
+    public static func `phoneSettingsApprovalDamaged`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalDamaged", [`computer`, `device`]) }
+    public static func `phoneSettingsSetUpAgain`() -> String { PhoneWords.format("phoneSettingsSetUpAgain", []) }
+    public static func `phoneSettingsApprovalEarlierListed`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalEarlierListed", [`computer`, `device`]) }
+    public static func `phoneSettingsApprovalConfirmOn`(`computer`: String) -> String { PhoneWords.format("phoneSettingsApprovalConfirmOn", [`computer`]) }
+    public static func `phoneSettingsApprovalCode`(`code`: String) -> String { PhoneWords.format("phoneSettingsApprovalCode", [`code`]) }
+    public static func `phoneSettingsApprovalCodesDiffer`() -> String { PhoneWords.format("phoneSettingsApprovalCodesDiffer", []) }
+    public static func `phoneSettingsApprovalEnrolled`(`confirmation`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalEnrolled", [`confirmation`, `device`]) }
+    public static func `phoneSettingsApprovalTurnOff`(`computer`: String) -> String { PhoneWords.format("phoneSettingsApprovalTurnOff", [`computer`]) }
+    public static func `phoneSettingsApprovalReplaced`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalReplaced", [`computer`, `device`]) }
+    public static func `phoneSettingsApprovalOffer`(`computer`: String, `confirmation`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalOffer", [`computer`, `confirmation`, `device`]) }
+    public static func `phoneSettingsApprovesSecretUses`() -> String { PhoneWords.format("phoneSettingsApprovesSecretUses", []) }
+    public static func `phoneRecordWhy`() -> String { PhoneWords.format("phoneRecordWhy", []) }
+    public static func `phoneRecordNoReason`() -> String { PhoneWords.format("phoneRecordNoReason", []) }
+    public static func `phoneRecordFirstMateVerdict`(`verdict`: String) -> String { PhoneWords.format("phoneRecordFirstMateVerdict", [`verdict`]) }
+    public static func `phoneRecordFirstMatePending`() -> String { PhoneWords.format("phoneRecordFirstMatePending", []) }
+    public static func `phoneRecordProject`() -> String { PhoneWords.format("phoneRecordProject", []) }
+    public static func `phoneRecordNow`() -> String { PhoneWords.format("phoneRecordNow", []) }
+    public static func `phoneRecordPartOf`() -> String { PhoneWords.format("phoneRecordPartOf", []) }
+    public static func `phoneRecordWaitsOn`() -> String { PhoneWords.format("phoneRecordWaitsOn", []) }
+    public static func `phoneRecordHoldsUp`() -> String { PhoneWords.format("phoneRecordHoldsUp", []) }
+    public static func `phoneRecordParts`() -> String { PhoneWords.format("phoneRecordParts", []) }
+    public static func `phoneRecordPartsClosed`(`closed`: String, `total`: String) -> String { PhoneWords.format("phoneRecordPartsClosed", [`closed`, `total`]) }
+    public static func `phoneRecordGoal`() -> String { PhoneWords.format("phoneRecordGoal", []) }
+    public static func `phoneRecordWhyFiled`() -> String { PhoneWords.format("phoneRecordWhyFiled", []) }
+    public static func `phoneRecordWhyNoPlan`() -> String { PhoneWords.format("phoneRecordWhyNoPlan", []) }
+    public static func `phoneRecordYouSaid`() -> String { PhoneWords.format("phoneRecordYouSaid", []) }
+    public static func `phoneRecordProgress`() -> String { PhoneWords.format("phoneRecordProgress", []) }
+    public static func `phoneRecordPlanCount`(`done`: String, `total`: String) -> String { PhoneWords.format("phoneRecordPlanCount", [`done`, `total`]) }
+    public static func `phoneRecordShowEarlier`(`count`: String) -> String { PhoneWords.format("phoneRecordShowEarlier", [`count`]) }
+    public static func `phoneRecordPlanSkipped`() -> String { PhoneWords.format("phoneRecordPlanSkipped", []) }
+    public static func `phoneRecordModel`() -> String { PhoneWords.format("phoneRecordModel", []) }
+    public static func `phoneRecordReasoning`() -> String { PhoneWords.format("phoneRecordReasoning", []) }
+    public static func `phoneRecordChecks`() -> String { PhoneWords.format("phoneRecordChecks", []) }
+    public static func `phoneRecordReview`() -> String { PhoneWords.format("phoneRecordReview", []) }
+    public static func `phoneRecordDelivery`() -> String { PhoneWords.format("phoneRecordDelivery", []) }
+    public static func `phoneRecordRunsOn`() -> String { PhoneWords.format("phoneRecordRunsOn", []) }
+    public static func `phoneRecordMore`() -> String { PhoneWords.format("phoneRecordMore", []) }
+    public static func `phoneRecordCardNote`() -> String { PhoneWords.format("phoneRecordCardNote", []) }
+    public static func `phoneRecordCardDecision`() -> String { PhoneWords.format("phoneRecordCardDecision", []) }
+    public static func `phoneRecordCardAside`() -> String { PhoneWords.format("phoneRecordCardAside", []) }
+    public static func `phoneRecordCardOnStage`() -> String { PhoneWords.format("phoneRecordCardOnStage", []) }
+    public static func `phoneRecordCardClosed`() -> String { PhoneWords.format("phoneRecordCardClosed", []) }
+    public static func `phoneRecordCardEnded`(`age`: String, `ending`: String) -> String { PhoneWords.format("phoneRecordCardEnded", [`age`, `ending`]) }
+    public static func `phoneRecordCrewEarlier`(`count`: Int) -> String { PhoneWords.format("phoneRecordCrewEarlier", [`count`]) }
+    public static func `phoneRecordReport`() -> String { PhoneWords.format("phoneRecordReport", []) }
+    public static func `phoneRecordSteer`() -> String { PhoneWords.format("phoneRecordSteer", []) }
+    public static func `phoneTaskChangeRefused`() -> String { PhoneWords.format("phoneTaskChangeRefused", []) }
+    public static func `phoneRecordShowCardRefused`() -> String { PhoneWords.format("phoneRecordShowCardRefused", []) }
+    public static func `phoneRecordSteerTooLong`() -> String { PhoneWords.format("phoneRecordSteerTooLong", []) }
+    public static func `phoneRecordResultLines`(`count`: Int, `preview`: String) -> String { PhoneWords.format("phoneRecordResultLines", [`count`, `preview`]) }
+    public static func `phoneRecordReading`() -> String { PhoneWords.format("phoneRecordReading", []) }
+    public static func `phoneRecordResultCut`(`count`: Int) -> String { PhoneWords.format("phoneRecordResultCut", [`count`]) }
+    public static func `phoneRecordNoResult`() -> String { PhoneWords.format("phoneRecordNoResult", []) }
+    public static func `phoneTasksEmpty`() -> String { PhoneWords.format("phoneTasksEmpty", []) }
+    public static func `phoneTasksNoMatch`() -> String { PhoneWords.format("phoneTasksNoMatch", []) }
+    public static func `phoneTasksFind`() -> String { PhoneWords.format("phoneTasksFind", []) }
+    public static func `phoneTasksSearchTooLong`() -> String { PhoneWords.format("phoneTasksSearchTooLong", []) }
+    public static func `phoneTasksSearch`() -> String { PhoneWords.format("phoneTasksSearch", []) }
+    public static func `phoneTasksCloseSearch`() -> String { PhoneWords.format("phoneTasksCloseSearch", []) }
+    public static func `phoneTasksGroupExpanded`() -> String { PhoneWords.format("phoneTasksGroupExpanded", []) }
+    public static func `phoneTasksGroupCollapsed`() -> String { PhoneWords.format("phoneTasksGroupCollapsed", []) }
+    public static func `phoneTasksRestoreHint`() -> String { PhoneWords.format("phoneTasksRestoreHint", []) }
+    public static func `phoneTabHome`() -> String { PhoneWords.format("phoneTabHome", []) }
+    public static func `phoneTabTasks`() -> String { PhoneWords.format("phoneTabTasks", []) }
+    public static func `phoneTabActivity`() -> String { PhoneWords.format("phoneTabActivity", []) }
+    public static func `phoneWorkspaceShow`() -> String { PhoneWords.format("phoneWorkspaceShow", []) }
+    public static func `phoneWorkspaceTabs`() -> String { PhoneWords.format("phoneWorkspaceTabs", []) }
+    public static func `phoneNoticeReply`() -> String { PhoneWords.format("phoneNoticeReply", []) }
+    public static func `phoneNoticeNewCard`() -> String { PhoneWords.format("phoneNoticeNewCard", []) }
+    public static func `phoneNoticeLabel`(`kind`: String, `title`: String) -> String { PhoneWords.format("phoneNoticeLabel", [`kind`, `title`]) }
+    public static func `phoneNoticeOpenHint`() -> String { PhoneWords.format("phoneNoticeOpenHint", []) }
+    public static func `phoneNoticeDismiss`() -> String { PhoneWords.format("phoneNoticeDismiss", []) }
+    public static func `phoneNoticeDismissHint`() -> String { PhoneWords.format("phoneNoticeDismissHint", []) }
+    public static func `phoneActivityEmpty`() -> String { PhoneWords.format("phoneActivityEmpty", []) }
+    public static func `phoneActivityOpenTaskHint`() -> String { PhoneWords.format("phoneActivityOpenTaskHint", []) }
+    public static func `phoneActivityTask`() -> String { PhoneWords.format("phoneActivityTask", []) }
+    public static func `phoneActivityProject`() -> String { PhoneWords.format("phoneActivityProject", []) }
+    public static func `phoneApprovalConfirmFaceId`() -> String { PhoneWords.format("phoneApprovalConfirmFaceId", []) }
+    public static func `phoneApprovalConfirmTouchId`() -> String { PhoneWords.format("phoneApprovalConfirmTouchId", []) }
+    public static func `phoneApprovalConfirmOpticId`() -> String { PhoneWords.format("phoneApprovalConfirmOpticId", []) }
+    public static func `phoneApprovalConfirmPasscode`() -> String { PhoneWords.format("phoneApprovalConfirmPasscode", []) }
+    public static func `phoneApprovalUnsupported`() -> String { PhoneWords.format("phoneApprovalUnsupported", []) }
+    public static func `phoneApprovalUnusable`() -> String { PhoneWords.format("phoneApprovalUnusable", []) }
+    public static func `phoneApprovalNotConfirmed`() -> String { PhoneWords.format("phoneApprovalNotConfirmed", []) }
+    public static func `phoneApprovalNotKept`() -> String { PhoneWords.format("phoneApprovalNotKept", []) }
+    public static func `phoneApprovalDamaged`() -> String { PhoneWords.format("phoneApprovalDamaged", []) }
+    public static func `phoneApprovalChanged`() -> String { PhoneWords.format("phoneApprovalChanged", []) }
+    public static func `phoneAskedPicture`() -> String { PhoneWords.format("phoneAskedPicture", []) }
+    public static func `phoneAskedFrom`(`key`: String) -> String { PhoneWords.format("phoneAskedFrom", [`key`]) }
+    public static func `phoneAskedSaid`() -> String { PhoneWords.format("phoneAskedSaid", []) }
+    public static func `phoneAskedChoseOn`(`card`: String) -> String { PhoneWords.format("phoneAskedChoseOn", [`card`]) }
+    public static func `phoneAskedChose`() -> String { PhoneWords.format("phoneAskedChose", []) }
+    public static func `phoneAskedAutomation`() -> String { PhoneWords.format("phoneAskedAutomation", []) }
+    public static func `phoneAskedAsked`() -> String { PhoneWords.format("phoneAskedAsked", []) }
+    public static func `phoneAskedDateTime`(`date`: String, `time`: String) -> String { PhoneWords.format("phoneAskedDateTime", [`date`, `time`]) }
+    public static func `phoneAskedLabel`(`name`: String, `when`: String) -> String { PhoneWords.format("phoneAskedLabel", [`name`, `when`]) }
+    public static func `phoneAskedLabelThrough`(`count`: Int, `name`: String, `when`: String) -> String { PhoneWords.format("phoneAskedLabelThrough", [`count`, `name`, `when`]) }
+    public static func `phoneJoinLinkDamaged`() -> String { PhoneWords.format("phoneJoinLinkDamaged", []) }
+    public static func `phoneJoinLinkUnsupported`() -> String { PhoneWords.format("phoneJoinLinkUnsupported", []) }
+    public static func `phoneJoinWrongComputer`() -> String { PhoneWords.format("phoneJoinWrongComputer", []) }
+    public static func `phoneJoinUnavailable`() -> String { PhoneWords.format("phoneJoinUnavailable", []) }
+    public static func `phoneJoinInvalidReply`() -> String { PhoneWords.format("phoneJoinInvalidReply", []) }
+    public static func `phoneJoinUnconfirmed`() -> String { PhoneWords.format("phoneJoinUnconfirmed", []) }
+    public static func `phoneJoinYourComputer`() -> String { PhoneWords.format("phoneJoinYourComputer", []) }
+    public static func `phoneFormatNow`() -> String { PhoneWords.format("phoneFormatNow", []) }
+    public static func `phoneFormatMinutes`(`minutes`: String) -> String { PhoneWords.format("phoneFormatMinutes", [`minutes`]) }
+    public static func `phoneFormatHours`(`hours`: String) -> String { PhoneWords.format("phoneFormatHours", [`hours`]) }
+    public static func `phoneFormatDays`(`days`: String) -> String { PhoneWords.format("phoneFormatDays", [`days`]) }
+    public static func `phoneFormatDaysHours`(`days`: String, `hours`: String) -> String { PhoneWords.format("phoneFormatDaysHours", [`days`, `hours`]) }
+    public static func `phoneFormatHoursMinutes`(`hours`: String, `minutes`: String) -> String { PhoneWords.format("phoneFormatHoursMinutes", [`hours`, `minutes`]) }
+    public static func `phoneFormatUnderMinute`() -> String { PhoneWords.format("phoneFormatUnderMinute", []) }
+    public static func `phoneIdentityUnreadable`() -> String { PhoneWords.format("phoneIdentityUnreadable", []) }
+    public static func `phoneIdentityNotKept`() -> String { PhoneWords.format("phoneIdentityNotKept", []) }
+    public static func `phoneLookDevice`() -> String { PhoneWords.format("phoneLookDevice", []) }
+    public static func `phoneLookDark`() -> String { PhoneWords.format("phoneLookDark", []) }
+    public static func `phoneLookLight`() -> String { PhoneWords.format("phoneLookLight", []) }
+    public static func `phoneRecordStartChecking`() -> String { PhoneWords.format("phoneRecordStartChecking", []) }
+    public static func `phoneRecordStartSlow`() -> String { PhoneWords.format("phoneRecordStartSlow", []) }
+    public static func `phoneRecordStartFailed`(`reason`: String) -> String { PhoneWords.format("phoneRecordStartFailed", [`reason`]) }
+    public static func `phoneRecordCouldNotStart`() -> String { PhoneWords.format("phoneRecordCouldNotStart", []) }
+    public static func `phoneRecordWaitTimeUnknown`() -> String { PhoneWords.format("phoneRecordWaitTimeUnknown", []) }
+    public static func `phoneRecordWaitLineRecorded`(`event`: String, `label`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitLineRecorded", [`event`, `label`, `time`]) }
+    public static func `phoneRecordWaitLine`(`event`: String, `label`: String) -> String { PhoneWords.format("phoneRecordWaitLine", [`event`, `label`]) }
+    public static func `phoneRecordWaitNextRead`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextRead", [`time`]) }
+    public static func `phoneRecordWaitNextCheckBack`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextCheckBack", [`time`]) }
+    public static func `phoneRecordWaitNextReset`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextReset", [`time`]) }
+    public static func `phoneRecordWaitNextStart`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextStart", [`time`]) }
+    public static func `phoneRecordWaitNextOther`(`event`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitNextOther", [`event`, `time`]) }
+    public static func `phoneRecordWaitDueRead`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueRead", [`time`]) }
+    public static func `phoneRecordWaitDueCheckBack`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueCheckBack", [`time`]) }
+    public static func `phoneRecordWaitDueReset`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueReset", [`time`]) }
+    public static func `phoneRecordWaitDueStart`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueStart", [`time`]) }
+    public static func `phoneRecordWaitDueOther`(`event`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitDueOther", [`event`, `time`]) }
+    public static func `phoneRecordAttentionFailed`() -> String { PhoneWords.format("phoneRecordAttentionFailed", []) }
+    public static func `phoneRecordAttentionInterrupted`() -> String { PhoneWords.format("phoneRecordAttentionInterrupted", []) }
+    public static func `phoneRecordAttentionInterruptedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionInterruptedGuidance", []) }
+    public static func `phoneRecordAttentionWaitingOn`(`keys`: String) -> String { PhoneWords.format("phoneRecordAttentionWaitingOn", [`keys`]) }
+    public static func `phoneRecordAttentionBlockedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionBlockedGuidance", []) }
+    public static func `phoneRecordAttentionDependencyDropped`() -> String { PhoneWords.format("phoneRecordAttentionDependencyDropped", []) }
+    public static func `phoneRecordAttentionDependencyDroppedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionDependencyDroppedGuidance", []) }
+    public static func `phoneRecordAttentionPaused`() -> String { PhoneWords.format("phoneRecordAttentionPaused", []) }
+    public static func `phoneRecordAttentionPausedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionPausedGuidance", []) }
+    public static func `phoneRecordPartsDo`(`count`: Int) -> String { PhoneWords.format("phoneRecordPartsDo", [`count`]) }
+    public static func `phoneRecordPartsProgress`(`closed`: String, `open`: String) -> String { PhoneWords.format("phoneRecordPartsProgress", [`closed`, `open`]) }
+    public static func `phoneRecordAttentionStartTime`() -> String { PhoneWords.format("phoneRecordAttentionStartTime", []) }
+    public static func `phoneRecordClosedMerged`() -> String { PhoneWords.format("phoneRecordClosedMerged", []) }
+    public static func `phoneRecordClosedReleased`() -> String { PhoneWords.format("phoneRecordClosedReleased", []) }
+    public static func `phoneRecordClosedAnswered`() -> String { PhoneWords.format("phoneRecordClosedAnswered", []) }
+    public static func `phoneRecordClosedClosed`() -> String { PhoneWords.format("phoneRecordClosedClosed", []) }
+    public static func `phoneRecordClosedFinished`() -> String { PhoneWords.format("phoneRecordClosedFinished", []) }
+    public static func `phoneRecordClosedDropped`() -> String { PhoneWords.format("phoneRecordClosedDropped", []) }
+    public static func `phoneRecordClosedDiscarded`() -> String { PhoneWords.format("phoneRecordClosedDiscarded", []) }
+    public static func `phoneRecordClosedFailed`() -> String { PhoneWords.format("phoneRecordClosedFailed", []) }
+    public static func `phoneRecordClosedSuperseded`() -> String { PhoneWords.format("phoneRecordClosedSuperseded", []) }
+    public static func `phoneRecordClosedMergedPullRequest`(`age`: String, `label`: String) -> String { PhoneWords.format("phoneRecordClosedMergedPullRequest", [`age`, `label`]) }
+    public static func `phoneRecordClosedMergedBranch`(`age`: String, `label`: String) -> String { PhoneWords.format("phoneRecordClosedMergedBranch", [`age`, `label`]) }
+    public static func `phoneRecordClosedMergedAt`(`age`: String) -> String { PhoneWords.format("phoneRecordClosedMergedAt", [`age`]) }
+    public static func `phoneRecordClosedChecksPassed`() -> String { PhoneWords.format("phoneRecordClosedChecksPassed", []) }
+    public static func `phoneRecordClosedCarried`(`age`: String, `note`: String) -> String { PhoneWords.format("phoneRecordClosedCarried", [`age`, `note`]) }
+    public static func `phoneRecordClosedWithNote`(`age`: String, `note`: String, `status`: String) -> String { PhoneWords.format("phoneRecordClosedWithNote", [`age`, `note`, `status`]) }
+    public static func `phoneRecordClosedAt`(`age`: String, `status`: String) -> String { PhoneWords.format("phoneRecordClosedAt", [`age`, `status`]) }
+    public static func `phoneRecordClosedDone`() -> String { PhoneWords.format("phoneRecordClosedDone", []) }
+    public static func `phoneRecordFoldFiledPlanMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldFiledPlanMessages", [`count`]) }
+    public static func `phoneRecordFoldFiledPlan`() -> String { PhoneWords.format("phoneRecordFoldFiledPlan", []) }
+    public static func `phoneRecordFoldFiledMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldFiledMessages", [`count`]) }
+    public static func `phoneRecordFoldFiled`() -> String { PhoneWords.format("phoneRecordFoldFiled", []) }
+    public static func `phoneRecordFoldPlanMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldPlanMessages", [`count`]) }
+    public static func `phoneRecordFoldPlan`() -> String { PhoneWords.format("phoneRecordFoldPlan", []) }
+    public static func `phoneRecordFoldMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldMessages", [`count`]) }
+    public static func `phoneRecordDeliveryPullRequest`() -> String { PhoneWords.format("phoneRecordDeliveryPullRequest", []) }
+    public static func `phoneRecordDeliveryBatched`() -> String { PhoneWords.format("phoneRecordDeliveryBatched", []) }
+    public static func `phoneRecordDeliveryLocal`() -> String { PhoneWords.format("phoneRecordDeliveryLocal", []) }
+    public static func `phoneRecordDeliveryInPlace`() -> String { PhoneWords.format("phoneRecordDeliveryInPlace", []) }
+    public static func `phoneRecordDeliveryRigor`(`care`: String) -> String { PhoneWords.format("phoneRecordDeliveryRigor", [`care`]) }
+    public static func `phoneRecordModePullRequest`() -> String { PhoneWords.format("phoneRecordModePullRequest", []) }
+    public static func `phoneRecordModeBatched`() -> String { PhoneWords.format("phoneRecordModeBatched", []) }
+    public static func `phoneRecordModeLocal`() -> String { PhoneWords.format("phoneRecordModeLocal", []) }
+    public static func `phoneRecordModeInPlace`() -> String { PhoneWords.format("phoneRecordModeInPlace", []) }
+    public static func `phoneRecordFactResult`() -> String { PhoneWords.format("phoneRecordFactResult", []) }
+    public static func `phoneRecordFactOperation`() -> String { PhoneWords.format("phoneRecordFactOperation", []) }
+    public static func `phoneRecordFactCrewmate`() -> String { PhoneWords.format("phoneRecordFactCrewmate", []) }
+    public static func `phoneRecordFactCrewmateOn`(`crewmate`: String, `model`: String) -> String { PhoneWords.format("phoneRecordFactCrewmateOn", [`crewmate`, `model`]) }
+    public static func `phoneRecordFactBranch`() -> String { PhoneWords.format("phoneRecordFactBranch", []) }
+    public static func `phoneRecordLandsMerged`() -> String { PhoneWords.format("phoneRecordLandsMerged", []) }
+    public static func `phoneRecordLandsRigor`(`care`: String) -> String { PhoneWords.format("phoneRecordLandsRigor", [`care`]) }
+    public static func `phoneRecordFactDelivery`() -> String { PhoneWords.format("phoneRecordFactDelivery", []) }
+    public static func `phoneRecordFactMerging`() -> String { PhoneWords.format("phoneRecordFactMerging", []) }
+    public static func `phoneRecordFactRigor`() -> String { PhoneWords.format("phoneRecordFactRigor", []) }
+    public static func `phoneRecordFactRunsOn`() -> String { PhoneWords.format("phoneRecordFactRunsOn", []) }
+    public static func `phoneRecordFactComputerChoice`() -> String { PhoneWords.format("phoneRecordFactComputerChoice", []) }
+    public static func `phoneRecordMoreClosedHelper`() -> String { PhoneWords.format("phoneRecordMoreClosedHelper", []) }
+    public static func `phoneRecordMorePreviewBranch`() -> String { PhoneWords.format("phoneRecordMorePreviewBranch", []) }
+    public static func `phoneRecordMorePreviewComputerChoice`() -> String { PhoneWords.format("phoneRecordMorePreviewComputerChoice", []) }
+    public static func `phoneRecordMorePreviewDelivery`() -> String { PhoneWords.format("phoneRecordMorePreviewDelivery", []) }
+    public static func `phoneRecordDropStarted`(`key`: String) -> String { PhoneWords.format("phoneRecordDropStarted", [`key`]) }
+    public static func `phoneRecordDropUnstarted`(`key`: String) -> String { PhoneWords.format("phoneRecordDropUnstarted", [`key`]) }
+    public static func `phoneRecordDropWaiting`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropWaiting", [`count`, `keys`]) }
+    public static func `phoneRecordDropUnderway`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropUnderway", [`count`, `keys`]) }
+    public static func `phoneRecordDropPartsPlanned`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropPartsPlanned", [`count`, `keys`]) }
+    public static func `phoneRecordDropPartsStarted`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropPartsStarted", [`count`, `keys`]) }
+    public static func `phoneRecordElapsedSeconds`(`seconds`: String) -> String { PhoneWords.format("phoneRecordElapsedSeconds", [`seconds`]) }
+    public static func `phoneRecordElapsedMinutes`(`minutes`: String, `seconds`: String) -> String { PhoneWords.format("phoneRecordElapsedMinutes", [`minutes`, `seconds`]) }
+    public static func `phoneRecordElapsedHours`(`hours`: String, `minutes`: String) -> String { PhoneWords.format("phoneRecordElapsedHours", [`hours`, `minutes`]) }
+    public static func `phoneSecretsGiveOnce`(`recipient`: String, `secrets`: String) -> String { PhoneWords.format("phoneSecretsGiveOnce", [`recipient`, `secrets`]) }
+    public static func `phoneSecretsRefusedUnavailable`() -> String { PhoneWords.format("phoneSecretsRefusedUnavailable", []) }
+    public static func `phoneSecretsRefusedExpired`() -> String { PhoneWords.format("phoneSecretsRefusedExpired", []) }
+    public static func `phoneSecretsRefusedDenied`() -> String { PhoneWords.format("phoneSecretsRefusedDenied", []) }
+    public static func `phoneSecretsRefusedGone`() -> String { PhoneWords.format("phoneSecretsRefusedGone", []) }
+    public static func `phoneSecretsRefusedStarted`() -> String { PhoneWords.format("phoneSecretsRefusedStarted", []) }
+    public static func `phoneSecretsRefusedUnknown`() -> String { PhoneWords.format("phoneSecretsRefusedUnknown", []) }
+    public static func `phoneSecretsTurnOnFirst`() -> String { PhoneWords.format("phoneSecretsTurnOnFirst", []) }
+    public static func `phoneSSHKeyStorageFailed`() -> String { PhoneWords.format("phoneSSHKeyStorageFailed", []) }
+    public static func `phoneRowMoveOpenRecord`() -> String { PhoneWords.format("phoneRowMoveOpenRecord", []) }
+    public static func `phoneRowMoveShowCard`() -> String { PhoneWords.format("phoneRowMoveShowCard", []) }
+    public static func `phoneRowMoveAnotherTask`() -> String { PhoneWords.format("phoneRowMoveAnotherTask", []) }
+    public static func `phoneRowMoveKeyList`(`last`: String, `rest`: String) -> String { PhoneWords.format("phoneRowMoveKeyList", [`last`, `rest`]) }
+    public static func `phoneRowMoveClosedStays`() -> String { PhoneWords.format("phoneRowMoveClosedStays", []) }
+    public static func `phoneRowMoveAlreadyHere`() -> String { PhoneWords.format("phoneRowMoveAlreadyHere", []) }
+    public static func `phoneRowMoveWaitingNeedsDecision`() -> String { PhoneWords.format("phoneRowMoveWaitingNeedsDecision", []) }
+    public static func `phoneRowMoveBringsMergeCard`() -> String { PhoneWords.format("phoneRowMoveBringsMergeCard", []) }
+    public static func `phoneRowMoveNoMergeCard`() -> String { PhoneWords.format("phoneRowMoveNoMergeCard", []) }
+    public static func `phoneRowMoveAnswerCardFirst`() -> String { PhoneWords.format("phoneRowMoveAnswerCardFirst", []) }
+    public static func `phoneRowMoveWaitsForYou`() -> String { PhoneWords.format("phoneRowMoveWaitsForYou", []) }
+    public static func `phoneRowMoveIsStarting`() -> String { PhoneWords.format("phoneRowMoveIsStarting", []) }
+    public static func `phoneRowMoveAlreadyStarted`() -> String { PhoneWords.format("phoneRowMoveAlreadyStarted", []) }
+    public static func `phoneRowMovePartsMove`() -> String { PhoneWords.format("phoneRowMovePartsMove", []) }
+    public static func `phoneRowMoveBacklogText`() -> String { PhoneWords.format("phoneRowMoveBacklogText", []) }
+    public static func `phoneRowMoveBacklogDone`(`key`: String) -> String { PhoneWords.format("phoneRowMoveBacklogDone", [`key`]) }
+    public static func `phoneRowMovePartsQueue`() -> String { PhoneWords.format("phoneRowMovePartsQueue", []) }
+    public static func `phoneRowMoveQueuedBlockedText`(`waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveQueuedBlockedText", [`waitsOn`]) }
+    public static func `phoneRowMoveQueuedBlockedDone`(`key`: String, `waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveQueuedBlockedDone", [`key`, `waitsOn`]) }
+    public static func `phoneRowMoveQueuedHeldText`() -> String { PhoneWords.format("phoneRowMoveQueuedHeldText", []) }
+    public static func `phoneRowMoveQueuedHeldDone`(`key`: String) -> String { PhoneWords.format("phoneRowMoveQueuedHeldDone", [`key`]) }
+    public static func `phoneRowMoveQueueAsk`(`key`: String) -> String { PhoneWords.format("phoneRowMoveQueueAsk", [`key`]) }
+    public static func `phoneRowMoveMustFinishFirst`(`count`: Int, `waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveMustFinishFirst", [`count`, `waitsOn`]) }
+    public static func `phoneRowMoveHeldNoDrag`() -> String { PhoneWords.format("phoneRowMoveHeldNoDrag", []) }
+    public static func `phoneRowMovePartsStart`() -> String { PhoneWords.format("phoneRowMovePartsStart", []) }
+    public static func `phoneRowMoveAlreadyQueued`() -> String { PhoneWords.format("phoneRowMoveAlreadyQueued", []) }
+    public static func `phoneRowMoveStartAsk`(`key`: String) -> String { PhoneWords.format("phoneRowMoveStartAsk", [`key`]) }
+    public static func `phoneRowMoveStartedBacklogDone`(`key`: String) -> String { PhoneWords.format("phoneRowMoveStartedBacklogDone", [`key`]) }
+    public static func `phoneRowMoveStartAgainAsk`(`key`: String) -> String { PhoneWords.format("phoneRowMoveStartAgainAsk", [`key`]) }
+    public static func `phoneRowMoveAlreadyStartedBacklog`() -> String { PhoneWords.format("phoneRowMoveAlreadyStartedBacklog", []) }
+    public static func `phoneRowMoveCannotDrop`() -> String { PhoneWords.format("phoneRowMoveCannotDrop", []) }
+    public static func `phoneRowMoveDropChanged`(`key`: String) -> String { PhoneWords.format("phoneRowMoveDropChanged", [`key`]) }
+    public static func `phoneRowMoveContinueDetail`() -> String { PhoneWords.format("phoneRowMoveContinueDetail", []) }
+    public static func `phoneRowMoveStopDetail`() -> String { PhoneWords.format("phoneRowMoveStopDetail", []) }
+    public static func `phoneRowMoveUnqueueDetail`() -> String { PhoneWords.format("phoneRowMoveUnqueueDetail", []) }
+    public static func `phoneRowMoveQueueAskDetail`() -> String { PhoneWords.format("phoneRowMoveQueueAskDetail", []) }
+    public static func `phoneRowMoveQueueBlockedDetail`(`waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveQueueBlockedDetail", [`waitsOn`]) }
+    public static func `phoneRowMoveQueueHeldDetail`() -> String { PhoneWords.format("phoneRowMoveQueueHeldDetail", []) }
+    public static func `phoneRowMoveStartDetail`() -> String { PhoneWords.format("phoneRowMoveStartDetail", []) }
+    public static func `phoneRowMoveDropDetail`() -> String { PhoneWords.format("phoneRowMoveDropDetail", []) }
+    public static func `phoneTaskFactsStatusBacklog`() -> String { PhoneWords.format("phoneTaskFactsStatusBacklog", []) }
+    public static func `phoneTaskFactsStatusQueued`() -> String { PhoneWords.format("phoneTaskFactsStatusQueued", []) }
+    public static func `phoneTaskFactsStatusStarting`() -> String { PhoneWords.format("phoneTaskFactsStatusStarting", []) }
+    public static func `phoneTaskFactsStatusWorking`() -> String { PhoneWords.format("phoneTaskFactsStatusWorking", []) }
+    public static func `phoneTaskFactsStatusIdle`() -> String { PhoneWords.format("phoneTaskFactsStatusIdle", []) }
+    public static func `phoneTaskFactsStatusInterrupted`() -> String { PhoneWords.format("phoneTaskFactsStatusInterrupted", []) }
+    public static func `phoneTaskFactsStatusWaiting`() -> String { PhoneWords.format("phoneTaskFactsStatusWaiting", []) }
+    public static func `phoneTaskFactsStatusDone`() -> String { PhoneWords.format("phoneTaskFactsStatusDone", []) }
+    public static func `phoneTaskFactsStatusDropped`() -> String { PhoneWords.format("phoneTaskFactsStatusDropped", []) }
+    public static func `phoneTaskFactsPostureJob`() -> String { PhoneWords.format("phoneTaskFactsPostureJob", []) }
+    public static func `phoneTaskFactsPostureChecks`() -> String { PhoneWords.format("phoneTaskFactsPostureChecks", []) }
+    public static func `phoneTaskFactsPostureGuidance`() -> String { PhoneWords.format("phoneTaskFactsPostureGuidance", []) }
+    public static func `phoneTaskFactsPostureSettlement`() -> String { PhoneWords.format("phoneTaskFactsPostureSettlement", []) }
+    public static func `phoneTaskFactsPostureTimedWait`() -> String { PhoneWords.format("phoneTaskFactsPostureTimedWait", []) }
+    public static func `phoneTaskFactsPostureCaptain`() -> String { PhoneWords.format("phoneTaskFactsPostureCaptain", []) }
+    public static func `phoneTaskFactsPostureInactive`() -> String { PhoneWords.format("phoneTaskFactsPostureInactive", []) }
+    public static func `phoneTaskFactsPostureAccess`() -> String { PhoneWords.format("phoneTaskFactsPostureAccess", []) }
+    public static func `phoneTaskFactsBlockedByAnother`() -> String { PhoneWords.format("phoneTaskFactsBlockedByAnother", []) }
+    public static func `phoneTaskFactsPostureUnobserved`() -> String { PhoneWords.format("phoneTaskFactsPostureUnobserved", []) }
+    public static func `phoneTaskFactsProviderRetrying`() -> String { PhoneWords.format("phoneTaskFactsProviderRetrying", []) }
+    public static func `phoneTaskFactsProviderStuck`() -> String { PhoneWords.format("phoneTaskFactsProviderStuck", []) }
+    public static func `phoneTaskFactsAwayConnecting`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayConnecting", [`computer`]) }
+    public static func `phoneTaskFactsAwayNoNewWork`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayNoNewWork", [`computer`]) }
+    public static func `phoneTaskFactsAwayOutOfReach`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayOutOfReach", [`computer`]) }
+    public static func `phoneTaskFactsClosedAnswered`() -> String { PhoneWords.format("phoneTaskFactsClosedAnswered", []) }
+    public static func `phoneTaskFactsClosedFailed`() -> String { PhoneWords.format("phoneTaskFactsClosedFailed", []) }
+    public static func `phoneTaskFactsWaitingPrerequisites`() -> String { PhoneWords.format("phoneTaskFactsWaitingPrerequisites", []) }
+    public static func `phoneTaskFactsAnswerReady`() -> String { PhoneWords.format("phoneTaskFactsAnswerReady", []) }
+    public static func `phoneTaskFactsAnswerReadyWaiting`(`duration`: String) -> String { PhoneWords.format("phoneTaskFactsAnswerReadyWaiting", [`duration`]) }
+    public static func `phoneTaskFactsWaitingMerge`() -> String { PhoneWords.format("phoneTaskFactsWaitingMerge", []) }
+    public static func `phoneTaskFactsDecisionReady`() -> String { PhoneWords.format("phoneTaskFactsDecisionReady", []) }
+    public static func `phoneTaskFactsStartedInBacklog`() -> String { PhoneWords.format("phoneTaskFactsStartedInBacklog", []) }
+    public static func `phoneTaskFactsCouldNotStart`() -> String { PhoneWords.format("phoneTaskFactsCouldNotStart", []) }
+    public static func `phoneTaskFactsHeld`() -> String { PhoneWords.format("phoneTaskFactsHeld", []) }
+    public static func `phoneTaskFactsPartsDoWork`(`count`: Int) -> String { PhoneWords.format("phoneTaskFactsPartsDoWork", [`count`]) }
+    public static func `phoneTaskFactsStartsOnStart`() -> String { PhoneWords.format("phoneTaskFactsStartsOnStart", []) }
+    public static func `phoneTaskFactsStartsWhenReady`() -> String { PhoneWords.format("phoneTaskFactsStartsWhenReady", []) }
+    public static func `phoneTaskFactsWaitingBatchCheck`() -> String { PhoneWords.format("phoneTaskFactsWaitingBatchCheck", []) }
+    public static func `phoneTaskFactsWorkInterrupted`() -> String { PhoneWords.format("phoneTaskFactsWorkInterrupted", []) }
+    public static func `phoneTaskFactsWaitingOnKey`(`key`: String) -> String { PhoneWords.format("phoneTaskFactsWaitingOnKey", [`key`]) }
+    public static func `phoneTaskFactsWaitingOnTasks`(`count`: Int) -> String { PhoneWords.format("phoneTaskFactsWaitingOnTasks", [`count`]) }
+    public static func `phoneTaskFactsChecksNoPull`() -> String { PhoneWords.format("phoneTaskFactsChecksNoPull", []) }
+    public static func `phoneTaskFactsChecksMergedOutside`() -> String { PhoneWords.format("phoneTaskFactsChecksMergedOutside", []) }
+    public static func `phoneTaskFactsChecksNotRead`() -> String { PhoneWords.format("phoneTaskFactsChecksNotRead", []) }
+    public static func `phoneTaskFactsChangePull`() -> String { PhoneWords.format("phoneTaskFactsChangePull", []) }
+    public static func `phoneTaskFactsChangeBranch`() -> String { PhoneWords.format("phoneTaskFactsChangeBranch", []) }
+    public static func `phoneTaskFactsCheckTimedOut`() -> String { PhoneWords.format("phoneTaskFactsCheckTimedOut", []) }
+    public static func `phoneTaskFactsCheckNeedsDecision`() -> String { PhoneWords.format("phoneTaskFactsCheckNeedsDecision", []) }
+    public static func `phoneTaskFactsCheckDidNotStart`() -> String { PhoneWords.format("phoneTaskFactsCheckDidNotStart", []) }
+    public static func `phoneTaskFactsCheckOutOfDate`() -> String { PhoneWords.format("phoneTaskFactsCheckOutOfDate", []) }
+    public static func `phoneTaskFactsChecksUnreadableWhy`(`problem`: String) -> String { PhoneWords.format("phoneTaskFactsChecksUnreadableWhy", [`problem`]) }
+    public static func `phoneTaskFactsChecksIncomplete`() -> String { PhoneWords.format("phoneTaskFactsChecksIncomplete", []) }
+    public static func `phoneTaskFactsChecksNone`() -> String { PhoneWords.format("phoneTaskFactsChecksNone", []) }
+    public static func `phoneTaskFactsChecksNoneReported`() -> String { PhoneWords.format("phoneTaskFactsChecksNoneReported", []) }
+    public static func `phoneTaskFactsChecksUnreadable`() -> String { PhoneWords.format("phoneTaskFactsChecksUnreadable", []) }
+    public static func `phoneTaskFactsChecksOtherVersion`() -> String { PhoneWords.format("phoneTaskFactsChecksOtherVersion", []) }
+    public static func `phoneTaskFactsChecksJustNow`() -> String { PhoneWords.format("phoneTaskFactsChecksJustNow", []) }
+    public static func `phoneTaskFactsChecksAgo`(`age`: String) -> String { PhoneWords.format("phoneTaskFactsChecksAgo", [`age`]) }
+    public static func `phoneTaskFactsLevelNone`() -> String { PhoneWords.format("phoneTaskFactsLevelNone", []) }
+    public static func `phoneTaskFactsLevelMinimal`() -> String { PhoneWords.format("phoneTaskFactsLevelMinimal", []) }
+    public static func `phoneTaskFactsLevelLow`() -> String { PhoneWords.format("phoneTaskFactsLevelLow", []) }
+    public static func `phoneTaskFactsLevelMedium`() -> String { PhoneWords.format("phoneTaskFactsLevelMedium", []) }
+    public static func `phoneTaskFactsLevelHigh`() -> String { PhoneWords.format("phoneTaskFactsLevelHigh", []) }
+    public static func `phoneTaskFactsLevelExtraHigh`() -> String { PhoneWords.format("phoneTaskFactsLevelExtraHigh", []) }
+    public static func `phoneTaskFactsLevelModelDefault`() -> String { PhoneWords.format("phoneTaskFactsLevelModelDefault", []) }
+    public static func `phoneTaskFactsReasoningQuick`() -> String { PhoneWords.format("phoneTaskFactsReasoningQuick", []) }
+    public static func `phoneTaskFactsReasoningCapped`() -> String { PhoneWords.format("phoneTaskFactsReasoningCapped", []) }
+    public static func `phoneWorkStateDone`() -> String { PhoneWords.format("phoneWorkStateDone", []) }
+    public static func `phoneWorkStateDropped`() -> String { PhoneWords.format("phoneWorkStateDropped", []) }
+    public static func `phoneWorkStateWaitingOnYou`() -> String { PhoneWords.format("phoneWorkStateWaitingOnYou", []) }
+    public static func `phoneWorkStateStarting`() -> String { PhoneWords.format("phoneWorkStateStarting", []) }
+    public static func `phoneWorkStateWaitingOnTask`() -> String { PhoneWords.format("phoneWorkStateWaitingOnTask", []) }
+    public static func `phoneWorkStateBacklog`() -> String { PhoneWords.format("phoneWorkStateBacklog", []) }
+    public static func `phoneWorkStateQueued`() -> String { PhoneWords.format("phoneWorkStateQueued", []) }
+    public static func `phoneWorkStateWorking`() -> String { PhoneWords.format("phoneWorkStateWorking", []) }
+    public static func `phoneWorkStateInterrupted`() -> String { PhoneWords.format("phoneWorkStateInterrupted", []) }
+    public static func `phoneWorkStateStopping`() -> String { PhoneWords.format("phoneWorkStateStopping", []) }
+    public static func `phoneWorkStateIdle`() -> String { PhoneWords.format("phoneWorkStateIdle", []) }
+    public static func `phoneWorkStateNotStarted`() -> String { PhoneWords.format("phoneWorkStateNotStarted", []) }
+    public static func `phoneWorkPlaceCompacted`() -> String { PhoneWords.format("phoneWorkPlaceCompacted", []) }
+    public static func `phoneWorkPlaceStopped`() -> String { PhoneWords.format("phoneWorkPlaceStopped", []) }
+    public static func `phoneSessionChangeFailed`() -> String { PhoneWords.format("phoneSessionChangeFailed", []) }
+    public static func `phonePairUpdateMac`() -> String { PhoneWords.format("phonePairUpdateMac", []) }
+    public static func `phonePairLinkSpent`() -> String { PhoneWords.format("phonePairLinkSpent", []) }
+    public static func `phonePairRefused`() -> String { PhoneWords.format("phonePairRefused", []) }
+    public static func `phoneSessionUpdatePhone`() -> String { PhoneWords.format("phoneSessionUpdatePhone", []) }
+    public static func `phoneSessionUpdateComputer`() -> String { PhoneWords.format("phoneSessionUpdateComputer", []) }
+    public static func `phoneSessionOutOfReach`() -> String { PhoneWords.format("phoneSessionOutOfReach", []) }
+    public static func `phoneSessionRequestRefused`() -> String { PhoneWords.format("phoneSessionRequestRefused", []) }
+    public static func `phoneSshJoinAddressInvalid`() -> String { PhoneWords.format("phoneSshJoinAddressInvalid", []) }
+    public static func `phoneSshJoinPortInvalid`() -> String { PhoneWords.format("phoneSshJoinPortInvalid", []) }
+    public static func `phoneSshJoinNotReached`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNotReached", [`host`]) }
+    public static func `phoneSshJoinLoginOff`(`host`: String) -> String { PhoneWords.format("phoneSshJoinLoginOff", [`host`]) }
+    public static func `phoneSshJoinUnknownHost`() -> String { PhoneWords.format("phoneSshJoinUnknownHost", []) }
+    public static func `phoneSshJoinHostChanged`(`host`: String) -> String { PhoneWords.format("phoneSshJoinHostChanged", [`host`]) }
+    public static func `phoneSshJoinKeyRefused`(`host`: String) -> String { PhoneWords.format("phoneSshJoinKeyRefused", [`host`]) }
+    public static func `phoneSshJoinKeyRefusedNoPassword`(`host`: String) -> String { PhoneWords.format("phoneSshJoinKeyRefusedNoPassword", [`host`]) }
+    public static func `phoneSshJoinWrongPassword`(`host`: String) -> String { PhoneWords.format("phoneSshJoinWrongPassword", [`host`]) }
+    public static func `phoneSshJoinNotOpen`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNotOpen", [`host`]) }
+    public static func `phoneSshJoinComputerTooOld`(`host`: String) -> String { PhoneWords.format("phoneSshJoinComputerTooOld", [`host`]) }
+    public static func `phoneSshJoinNoCurl`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNoCurl", [`host`]) }
+    public static func `phoneSshJoinNoLink`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNoLink", [`host`]) }
+    public static func `phoneSshJoinPhoneTooOld`(`host`: String) -> String { PhoneWords.format("phoneSshJoinPhoneTooOld", [`host`]) }
+    public static func `phoneSshJoinFailed`(`host`: String) -> String { PhoneWords.format("phoneSshJoinFailed", [`host`]) }
+    public static func `phoneChecksPassed`() -> String { PhoneWords.format("phoneChecksPassed", []) }
+    public static func `phoneChecksFailed`() -> String { PhoneWords.format("phoneChecksFailed", []) }
+    public static func `phoneChecksRunning`() -> String { PhoneWords.format("phoneChecksRunning", []) }
+    public static func `phoneChecksCancelled`() -> String { PhoneWords.format("phoneChecksCancelled", []) }
+    public static func `phoneChecksError`() -> String { PhoneWords.format("phoneChecksError", []) }
+    public static func `phoneChecksSkipped`() -> String { PhoneWords.format("phoneChecksSkipped", []) }
+    public static func `phoneChecksNeutral`() -> String { PhoneWords.format("phoneChecksNeutral", []) }
+    public static func `phoneChecksCounted`(`count`: Int, `word`: String) -> String { PhoneWords.format("phoneChecksCounted", [`count`, `word`]) }
+    public static func `phoneChecksForDuration`(`duration`: String, `words`: String) -> String { PhoneWords.format("phoneChecksForDuration", [`duration`, `words`]) }
+    public static func `phoneChecksInDuration`(`duration`: String, `words`: String) -> String { PhoneWords.format("phoneChecksInDuration", [`duration`, `words`]) }
+    public static func `phoneChecksAfterDuration`(`duration`: String, `words`: String) -> String { PhoneWords.format("phoneChecksAfterDuration", [`duration`, `words`]) }
+    public static func `phoneReviewFindings`() -> String { PhoneWords.format("phoneReviewFindings", []) }
+    public static func `phoneReviewBlocked`() -> String { PhoneWords.format("phoneReviewBlocked", []) }
+    public static func `phoneReviewWithRisk`(`risk`: String, `words`: String) -> String { PhoneWords.format("phoneReviewWithRisk", [`risk`, `words`]) }
     public static func `recordHelperClosed`() -> String { PhoneWords.format("recordHelperClosed", []) }
     public static func `recordMergingOnItsOwn`() -> String { PhoneWords.format("recordMergingOnItsOwn", []) }
     public static func `recordFactCrewmate`() -> String { PhoneWords.format("recordFactCrewmate", []) }
@@ -2077,580 +3000,182 @@ public enum PhoneMessages {
     public static func `automationRunAlsoSkipped`(`count`: String) -> String { PhoneWords.format("automationRunAlsoSkipped", [`count`]) }
     public static func `automationScreenedNote`() -> String { PhoneWords.format("automationScreenedNote", []) }
     public static func `automationWaitsForNote`() -> String { PhoneWords.format("automationWaitsForNote", []) }
-    public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
-    public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
-    public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
-    public static func `phoneMediaRecordingFinished`() -> String { PhoneWords.format("phoneMediaRecordingFinished", []) }
-    public static func `phoneMediaPlayAgain`() -> String { PhoneWords.format("phoneMediaPlayAgain", []) }
-    public static func `phoneMediaRecordingFailed`() -> String { PhoneWords.format("phoneMediaRecordingFailed", []) }
-    public static func `phoneMediaStopRecording`() -> String { PhoneWords.format("phoneMediaStopRecording", []) }
-    public static func `phoneMediaPlayRecording`() -> String { PhoneWords.format("phoneMediaPlayRecording", []) }
-    public static func `phoneCommonRetry`() -> String { PhoneWords.format("phoneCommonRetry", []) }
-    public static func `phoneMediaLoadingRecording`() -> String { PhoneWords.format("phoneMediaLoadingRecording", []) }
-    public static func `phoneMediaPreviousPicture`() -> String { PhoneWords.format("phoneMediaPreviousPicture", []) }
-    public static func `phoneMediaPicturePosition`(`count`: Int, `position`: String) -> String { PhoneWords.format("phoneMediaPicturePosition", [`count`, `position`]) }
-    public static func `phoneMediaNextPicture`() -> String { PhoneWords.format("phoneMediaNextPicture", []) }
-    public static func `phoneMediaTitleRecording`() -> String { PhoneWords.format("phoneMediaTitleRecording", []) }
-    public static func `phoneMediaTitleDiagram`() -> String { PhoneWords.format("phoneMediaTitleDiagram", []) }
-    public static func `phoneMediaTitlePicture`() -> String { PhoneWords.format("phoneMediaTitlePicture", []) }
-    public static func `phoneCommonDone`() -> String { PhoneWords.format("phoneCommonDone", []) }
-    public static func `phoneMediaRecordingLoadFailed`() -> String { PhoneWords.format("phoneMediaRecordingLoadFailed", []) }
-    public static func `phoneCommonRemovePhoto`() -> String { PhoneWords.format("phoneCommonRemovePhoto", []) }
-    public static func `phoneComposerPhotos`() -> String { PhoneWords.format("phoneComposerPhotos", []) }
-    public static func `phoneComposerPlaceholder`() -> String { PhoneWords.format("phoneComposerPlaceholder", []) }
-    public static func `phoneCommonSend`() -> String { PhoneWords.format("phoneCommonSend", []) }
-    public static func `phoneComposerAddingPhotos`() -> String { PhoneWords.format("phoneComposerAddingPhotos", []) }
-    public static func `phoneComposerPictureOnly`() -> String { PhoneWords.format("phoneComposerPictureOnly", []) }
-    public static func `phoneComposerReplyHint`() -> String { PhoneWords.format("phoneComposerReplyHint", []) }
-    public static func `phoneCommonSendingEllipsis`() -> String { PhoneWords.format("phoneCommonSendingEllipsis", []) }
-    public static func `phoneComposerWorking`() -> String { PhoneWords.format("phoneComposerWorking", []) }
-    public static func `phoneComposerTooLong`() -> String { PhoneWords.format("phoneComposerTooLong", []) }
-    public static func `phoneComposerPhotoFailed`() -> String { PhoneWords.format("phoneComposerPhotoFailed", []) }
-    public static func `phoneComposerYou`() -> String { PhoneWords.format("phoneComposerYou", []) }
-    public static func `phoneComposerFirstMate`() -> String { PhoneWords.format("phoneComposerFirstMate", []) }
-    public static func `phoneComposerReplyTitle`() -> String { PhoneWords.format("phoneComposerReplyTitle", []) }
-    public static func `phoneComposerPhotoTooLarge`() -> String { PhoneWords.format("phoneComposerPhotoTooLarge", []) }
-    public static func `phoneCardWebNoAnswer`() -> String { PhoneWords.format("phoneCardWebNoAnswer", []) }
-    public static func `phoneCardWebStopped`() -> String { PhoneWords.format("phoneCardWebStopped", []) }
-    public static func `phoneCardWebNotReady`() -> String { PhoneWords.format("phoneCardWebNotReady", []) }
-    public static func `phoneCardWebTooLarge`() -> String { PhoneWords.format("phoneCardWebTooLarge", []) }
-    public static func `phoneCardWebMacOnly`(`computer`: String) -> String { PhoneWords.format("phoneCardWebMacOnly", [`computer`]) }
-    public static func `phoneCardWebLinkRefused`() -> String { PhoneWords.format("phoneCardWebLinkRefused", []) }
-    public static func `phoneCardWebCannotDo`() -> String { PhoneWords.format("phoneCardWebCannotDo", []) }
-    public static func `phoneCardWebFooterOnly`() -> String { PhoneWords.format("phoneCardWebFooterOnly", []) }
-    public static func `phoneCardWebChoiceInProgress`() -> String { PhoneWords.format("phoneCardWebChoiceInProgress", []) }
-    public static func `phoneCardWebNoDataFile`() -> String { PhoneWords.format("phoneCardWebNoDataFile", []) }
-    public static func `phoneCardWebDataUnreadable`() -> String { PhoneWords.format("phoneCardWebDataUnreadable", []) }
-    public static func `phoneCardRisk`() -> String { PhoneWords.format("phoneCardRisk", []) }
-    public static func `phoneCardBrowser`() -> String { PhoneWords.format("phoneCardBrowser", []) }
-    public static func `phoneCardOpenBrowser`() -> String { PhoneWords.format("phoneCardOpenBrowser", []) }
-    public static func `phoneCardNoAnswer`() -> String { PhoneWords.format("phoneCardNoAnswer", []) }
-    public static func `phoneJoinNearbyRefused`() -> String { PhoneWords.format("phoneJoinNearbyRefused", []) }
-    public static func `phoneJoinCameraNotAllowed`() -> String { PhoneWords.format("phoneJoinCameraNotAllowed", []) }
-    public static func `phoneJoinNoCamera`() -> String { PhoneWords.format("phoneJoinNoCamera", []) }
-    public static func `phoneJoinCameraFailed`() -> String { PhoneWords.format("phoneJoinCameraFailed", []) }
-    public static func `phoneAppHideKeyboard`() -> String { PhoneWords.format("phoneAppHideKeyboard", []) }
-    public static func `phoneJoinRemovedTitle`() -> String { PhoneWords.format("phoneJoinRemovedTitle", []) }
-    public static func `phoneJoinRemovedLine`() -> String { PhoneWords.format("phoneJoinRemovedLine", []) }
-    public static func `phoneJoinAgain`() -> String { PhoneWords.format("phoneJoinAgain", []) }
-    public static func `phoneCommonSettings`() -> String { PhoneWords.format("phoneCommonSettings", []) }
-    public static func `phoneAppYourComputer`() -> String { PhoneWords.format("phoneAppYourComputer", []) }
-    public static func `phoneJoinScanTitle`() -> String { PhoneWords.format("phoneJoinScanTitle", []) }
-    public static func `phoneCommonCancel`() -> String { PhoneWords.format("phoneCommonCancel", []) }
-    public static func `phoneJoinPasteHelp`() -> String { PhoneWords.format("phoneJoinPasteHelp", []) }
-    public static func `phoneJoinPasteField`() -> String { PhoneWords.format("phoneJoinPasteField", []) }
-    public static func `phoneCommonContinue`() -> String { PhoneWords.format("phoneCommonContinue", []) }
-    public static func `phoneJoinPasteTitle`() -> String { PhoneWords.format("phoneJoinPasteTitle", []) }
-    public static func `phoneJoinConfirmTitleNamed`(`computer`: String) -> String { PhoneWords.format("phoneJoinConfirmTitleNamed", [`computer`]) }
-    public static func `phoneJoinConfirmTitle`() -> String { PhoneWords.format("phoneJoinConfirmTitle", []) }
-    public static func `phoneJoinConfirmNamed`(`computer`: String) -> String { PhoneWords.format("phoneJoinConfirmNamed", [`computer`]) }
-    public static func `phoneJoinConfirm`() -> String { PhoneWords.format("phoneJoinConfirm", []) }
-    public static func `phoneJoinConfirmLine`() -> String { PhoneWords.format("phoneJoinConfirmLine", []) }
-    public static func `phoneJoinWelcomeTitle`() -> String { PhoneWords.format("phoneJoinWelcomeTitle", []) }
-    public static func `phoneJoinWelcomeLine`() -> String { PhoneWords.format("phoneJoinWelcomeLine", []) }
-    public static func `phoneJoinJoining`() -> String { PhoneWords.format("phoneJoinJoining", []) }
-    public static func `phoneJoinScanLine`() -> String { PhoneWords.format("phoneJoinScanLine", []) }
-    public static func `phoneJoinPasteLine`() -> String { PhoneWords.format("phoneJoinPasteLine", []) }
-    public static func `phoneJoinAddressTitle`() -> String { PhoneWords.format("phoneJoinAddressTitle", []) }
-    public static func `phoneJoinAddressLine`() -> String { PhoneWords.format("phoneJoinAddressLine", []) }
-    public static func `phoneJoinNearbyEmpty`() -> String { PhoneWords.format("phoneJoinNearbyEmpty", []) }
-    public static func `phoneJoinNearbyScan`() -> String { PhoneWords.format("phoneJoinNearbyScan", []) }
-    public static func `phoneJoinNearbyScanLabel`(`computer`: String) -> String { PhoneWords.format("phoneJoinNearbyScanLabel", [`computer`]) }
-    public static func `phoneAddressSweepAsk`() -> String { PhoneWords.format("phoneAddressSweepAsk", []) }
-    public static func `phoneAddressSweepLook`() -> String { PhoneWords.format("phoneAddressSweepLook", []) }
-    public static func `phoneAddressSweepWarning`() -> String { PhoneWords.format("phoneAddressSweepWarning", []) }
-    public static func `phoneAddressTypingHelp`() -> String { PhoneWords.format("phoneAddressTypingHelp", []) }
-    public static func `phoneAddressPortField`() -> String { PhoneWords.format("phoneAddressPortField", []) }
-    public static func `phoneAddressOnThisNetwork`() -> String { PhoneWords.format("phoneAddressOnThisNetwork", []) }
-    public static func `phoneAddressAccountField`() -> String { PhoneWords.format("phoneAddressAccountField", []) }
-    public static func `phoneAddressAccountHelp`() -> String { PhoneWords.format("phoneAddressAccountHelp", []) }
-    public static func `phoneAddressSweptLine`() -> String { PhoneWords.format("phoneAddressSweptLine", []) }
-    public static func `phoneAddressSweepOffer`() -> String { PhoneWords.format("phoneAddressSweepOffer", []) }
-    public static func `phoneAddressSweeping`(`count`: Int) -> String { PhoneWords.format("phoneAddressSweeping", [`count`]) }
-    public static func `phoneAddressSweptNone`() -> String { PhoneWords.format("phoneAddressSweptNone", []) }
-    public static func `phoneAddressNoNetwork`() -> String { PhoneWords.format("phoneAddressNoNetwork", []) }
-    public static func `phoneAddressLooking`() -> String { PhoneWords.format("phoneAddressLooking", []) }
-    public static func `phoneAddressLookingNotAllowed`() -> String { PhoneWords.format("phoneAddressLookingNotAllowed", []) }
-    public static func `phoneAddressLookingFailed`() -> String { PhoneWords.format("phoneAddressLookingFailed", []) }
-    public static func `phoneAddressSigningIn`(`computer`: String) -> String { PhoneWords.format("phoneAddressSigningIn", [`computer`]) }
-    public static func `phoneAddressTrustAsk`(`computer`: String) -> String { PhoneWords.format("phoneAddressTrustAsk", [`computer`]) }
-    public static func `phoneAddressTrustLine`(`computer`: String) -> String { PhoneWords.format("phoneAddressTrustLine", [`computer`]) }
-    public static func `phoneAddressTrustWarning`() -> String { PhoneWords.format("phoneAddressTrustWarning", []) }
-    public static func `phoneAddressNotThisOne`() -> String { PhoneWords.format("phoneAddressNotThisOne", []) }
-    public static func `phoneAddressTrustNamed`(`computer`: String) -> String { PhoneWords.format("phoneAddressTrustNamed", [`computer`]) }
-    public static func `phoneAddressKeyRefusedPassword`(`computer`: String) -> String { PhoneWords.format("phoneAddressKeyRefusedPassword", [`computer`]) }
-    public static func `phoneAddressPasswordField`(`computer`: String) -> String { PhoneWords.format("phoneAddressPasswordField", [`computer`]) }
-    public static func `phoneAddressCopyKeyInstead`() -> String { PhoneWords.format("phoneAddressCopyKeyInstead", []) }
-    public static func `phoneAddressKeyRefused`(`computer`: String) -> String { PhoneWords.format("phoneAddressKeyRefused", [`computer`]) }
-    public static func `phoneCommonCopied`() -> String { PhoneWords.format("phoneCommonCopied", []) }
-    public static func `phoneAddressCopyKey`() -> String { PhoneWords.format("phoneAddressCopyKey", []) }
-    public static func `phoneCommonTryAgain`() -> String { PhoneWords.format("phoneCommonTryAgain", []) }
-    public static func `phoneAddressSignInOnce`() -> String { PhoneWords.format("phoneAddressSignInOnce", []) }
-    public static func `phoneCharacterFirstMate`() -> String { PhoneWords.format("phoneCharacterFirstMate", []) }
-    public static func `phoneHideKeyboard`() -> String { PhoneWords.format("phoneHideKeyboard", []) }
-    public static func `phoneSceneComputerFallback`() -> String { PhoneWords.format("phoneSceneComputerFallback", []) }
-    public static func `phoneSceneActivityUnknown`() -> String { PhoneWords.format("phoneSceneActivityUnknown", []) }
-    public static func `phoneSceneWaitingBatchCheck`() -> String { PhoneWords.format("phoneSceneWaitingBatchCheck", []) }
-    public static func `phoneSceneWaitingChecks`() -> String { PhoneWords.format("phoneSceneWaitingChecks", []) }
-    public static func `phoneSceneWorking`() -> String { PhoneWords.format("phoneSceneWorking", []) }
-    public static func `phoneSceneProgramParts`(`count`: Int) -> String { PhoneWords.format("phoneSceneProgramParts", [`count`]) }
-    public static func `phoneSceneSelected`(`words`: String) -> String { PhoneWords.format("phoneSceneSelected", [`words`]) }
-    public static func `phoneReachAsOf`(`time`: String) -> String { PhoneWords.format("phoneReachAsOf", [`time`]) }
-    public static func `phoneReachInReach`() -> String { PhoneWords.format("phoneReachInReach", []) }
-    public static func `phoneReachReaching`() -> String { PhoneWords.format("phoneReachReaching", []) }
-    public static func `phoneReachOutOfReach`() -> String { PhoneWords.format("phoneReachOutOfReach", []) }
-    public static func `phoneReachLine`(`reach`: String, `time`: String) -> String { PhoneWords.format("phoneReachLine", [`reach`, `time`]) }
-    public static func `phoneReachChangesOff`(`computer`: String) -> String { PhoneWords.format("phoneReachChangesOff", [`computer`]) }
-    public static func `phoneComputerFirstMateHere`() -> String { PhoneWords.format("phoneComputerFirstMateHere", []) }
-    public static func `phoneComputerTitle`() -> String { PhoneWords.format("phoneComputerTitle", []) }
-    public static func `phoneComputerLeaveAsk`(`computer`: String) -> String { PhoneWords.format("phoneComputerLeaveAsk", [`computer`]) }
-    public static func `phoneComputerLeaveConfirm`() -> String { PhoneWords.format("phoneComputerLeaveConfirm", []) }
-    public static func `phoneComputerKeep`() -> String { PhoneWords.format("phoneComputerKeep", []) }
-    public static func `phoneComputerLeaveWarning`() -> String { PhoneWords.format("phoneComputerLeaveWarning", []) }
-    public static func `phoneComputerForgetAsk`() -> String { PhoneWords.format("phoneComputerForgetAsk", []) }
-    public static func `phoneComputerForgetConfirm`() -> String { PhoneWords.format("phoneComputerForgetConfirm", []) }
-    public static func `phoneComputerForgetWarning`() -> String { PhoneWords.format("phoneComputerForgetWarning", []) }
-    public static func `phoneComputerLeaveHeading`() -> String { PhoneWords.format("phoneComputerLeaveHeading", []) }
-    public static func `phoneComputerLeaveExplain`() -> String { PhoneWords.format("phoneComputerLeaveExplain", []) }
-    public static func `phoneComputerLeaveButton`(`computer`: String) -> String { PhoneWords.format("phoneComputerLeaveButton", [`computer`]) }
-    public static func `phoneComputerForgetHeading`() -> String { PhoneWords.format("phoneComputerForgetHeading", []) }
-    public static func `phoneComputerForgetExplain`(`computer`: String) -> String { PhoneWords.format("phoneComputerForgetExplain", [`computer`]) }
-    public static func `phoneComputerForgetButton`() -> String { PhoneWords.format("phoneComputerForgetButton", []) }
-    public static func `phoneGoogleSignedInAs`(`account`: String, `computer`: String) -> String { PhoneWords.format("phoneGoogleSignedInAs", [`account`, `computer`]) }
-    public static func `phoneGoogleSignedIn`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSignedIn", [`computer`]) }
-    public static func `phoneGoogleSignInAgainNeeded`() -> String { PhoneWords.format("phoneGoogleSignInAgainNeeded", []) }
-    public static func `phoneGoogleSignInAgain`() -> String { PhoneWords.format("phoneGoogleSignInAgain", []) }
-    public static func `phoneGoogleSignOut`() -> String { PhoneWords.format("phoneGoogleSignOut", []) }
-    public static func `phoneGoogleSignOutAsk`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSignOutAsk", [`computer`]) }
-    public static func `phoneGoogleSignOutWarning`() -> String { PhoneWords.format("phoneGoogleSignOutWarning", []) }
-    public static func `phoneGoogleInvite`(`computer`: String) -> String { PhoneWords.format("phoneGoogleInvite", [`computer`]) }
-    public static func `phoneGoogleSignIn`() -> String { PhoneWords.format("phoneGoogleSignIn", []) }
-    public static func `phoneSceneLabel`() -> String { PhoneWords.format("phoneSceneLabel", []) }
-    public static func `phoneSceneBrowsing`() -> String { PhoneWords.format("phoneSceneBrowsing", []) }
-    public static func `phoneSceneNotBrowsing`() -> String { PhoneWords.format("phoneSceneNotBrowsing", []) }
-    public static func `phoneSceneHint`() -> String { PhoneWords.format("phoneSceneHint", []) }
-    public static func `phoneSceneBrowse`() -> String { PhoneWords.format("phoneSceneBrowse", []) }
-    public static func `phoneSceneCloseComputerPreview`() -> String { PhoneWords.format("phoneSceneCloseComputerPreview", []) }
-    public static func `phoneCrewSummaryOpenTask`() -> String { PhoneWords.format("phoneCrewSummaryOpenTask", []) }
-    public static func `phoneCommonClose`() -> String { PhoneWords.format("phoneCommonClose", []) }
-    public static func `phoneModelReadSavedUnlock`() -> String { PhoneWords.format("phoneModelReadSavedUnlock", []) }
-    public static func `phoneModelReadSavedRetry`() -> String { PhoneWords.format("phoneModelReadSavedRetry", []) }
-    public static func `phoneModelForgotDamaged`() -> String { PhoneWords.format("phoneModelForgotDamaged", []) }
-    public static func `phoneModelForgetUnlock`() -> String { PhoneWords.format("phoneModelForgetUnlock", []) }
-    public static func `phoneModelForgetRetry`() -> String { PhoneWords.format("phoneModelForgetRetry", []) }
-    public static func `phoneModelLeaveBeforeJoining`() -> String { PhoneWords.format("phoneModelLeaveBeforeJoining", []) }
-    public static func `phoneModelKeepFingerprintFailed`() -> String { PhoneWords.format("phoneModelKeepFingerprintFailed", []) }
-    public static func `phoneModelKeepAddressFailed`() -> String { PhoneWords.format("phoneModelKeepAddressFailed", []) }
-    public static func `phoneModelForgetTryLeave`() -> String { PhoneWords.format("phoneModelForgetTryLeave", []) }
-    public static func `phoneCardsPagerPast`() -> String { PhoneWords.format("phoneCardsPagerPast", []) }
-    public static func `phoneCardsPagerPosition`(`position`: String, `total`: String) -> String { PhoneWords.format("phoneCardsPagerPosition", [`position`, `total`]) }
-    public static func `phoneCardsTaskKeyHint`() -> String { PhoneWords.format("phoneCardsTaskKeyHint", []) }
-    public static func `phoneCardsRetryNote`() -> String { PhoneWords.format("phoneCardsRetryNote", []) }
-    public static func `phoneCardsDoThisOn`(`computer`: String) -> String { PhoneWords.format("phoneCardsDoThisOn", [`computer`]) }
-    public static func `phoneCommonSending`() -> String { PhoneWords.format("phoneCommonSending", []) }
-    public static func `phoneCardsChooseFallback`() -> String { PhoneWords.format("phoneCardsChooseFallback", []) }
-    public static func `phoneCardsChosen`() -> String { PhoneWords.format("phoneCardsChosen", []) }
-    public static func `phoneCardsChoosePhotos`() -> String { PhoneWords.format("phoneCardsChoosePhotos", []) }
-    public static func `phoneCardsTakePhoto`() -> String { PhoneWords.format("phoneCardsTakePhoto", []) }
-    public static func `phoneCardsAddPhotos`() -> String { PhoneWords.format("phoneCardsAddPhotos", []) }
-    public static func `phoneCardsSendReply`() -> String { PhoneWords.format("phoneCardsSendReply", []) }
-    public static func `phoneCardsReplyTooLong`(`count`: Int) -> String { PhoneWords.format("phoneCardsReplyTooLong", [`count`]) }
-    public static func `phoneCardsApprovalAsks`(`confirmation`: String) -> String { PhoneWords.format("phoneCardsApprovalAsks", [`confirmation`]) }
-    public static func `phoneCardsApprovalTurnOn`(`computer`: String) -> String { PhoneWords.format("phoneCardsApprovalTurnOn", [`computer`]) }
-    public static func `phoneCardsApprovalStillWaiting`() -> String { PhoneWords.format("phoneCardsApprovalStillWaiting", []) }
-    public static func `phoneCardsKindEnded`() -> String { PhoneWords.format("phoneCardsKindEnded", []) }
-    public static func `phoneCardsAnswerRequiredFirst`() -> String { PhoneWords.format("phoneCardsAnswerRequiredFirst", []) }
-    public static func `phoneCardsPhotoNotAdded`() -> String { PhoneWords.format("phoneCardsPhotoNotAdded", []) }
-    public static func `phoneSettingsGeneral`() -> String { PhoneWords.format("phoneSettingsGeneral", []) }
-    public static func `phoneSettingsAppearance`() -> String { PhoneWords.format("phoneSettingsAppearance", []) }
-    public static func `phoneSettingsIntegrations`() -> String { PhoneWords.format("phoneSettingsIntegrations", []) }
-    public static func `phoneSettingsDevices`() -> String { PhoneWords.format("phoneSettingsDevices", []) }
-    public static func `phoneSettingsThisIpad`() -> String { PhoneWords.format("phoneSettingsThisIpad", []) }
-    public static func `phoneSettingsThisPhone`() -> String { PhoneWords.format("phoneSettingsThisPhone", []) }
-    public static func `phoneSettingsThisIpadInline`() -> String { PhoneWords.format("phoneSettingsThisIpadInline", []) }
-    public static func `phoneSettingsThisPhoneInline`() -> String { PhoneWords.format("phoneSettingsThisPhoneInline", []) }
-    public static func `phoneSettingsVersion`(`version`: String) -> String { PhoneWords.format("phoneSettingsVersion", [`version`]) }
-    public static func `phoneSettingsConversationStays`() -> String { PhoneWords.format("phoneSettingsConversationStays", []) }
-    public static func `phoneSettingsBack`() -> String { PhoneWords.format("phoneSettingsBack", []) }
-    public static func `phoneSettingsCapabilityRead`(`update`: String) -> String { PhoneWords.format("phoneSettingsCapabilityRead", [`update`]) }
-    public static func `phoneSettingsCapabilityFull`() -> String { PhoneWords.format("phoneSettingsCapabilityFull", []) }
-    public static func `phoneSettingsThemeSummary`(`theme`: String) -> String { PhoneWords.format("phoneSettingsThemeSummary", [`theme`]) }
-    public static func `phoneSettingsGoogleSummary`(`account`: String) -> String { PhoneWords.format("phoneSettingsGoogleSummary", [`account`]) }
-    public static func `phoneSettingsGoogleSignedIn`() -> String { PhoneWords.format("phoneSettingsGoogleSignedIn", []) }
-    public static func `phoneSettingsGoogleSignedOut`() -> String { PhoneWords.format("phoneSettingsGoogleSignedOut", []) }
-    public static func `phoneSettingsTheme`() -> String { PhoneWords.format("phoneSettingsTheme", []) }
-    public static func `phoneSettingsThemeScope`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsThemeScope", [`computer`, `device`]) }
-    public static func `phoneSettingsSecretsApprovals`() -> String { PhoneWords.format("phoneSettingsSecretsApprovals", []) }
-    public static func `phoneSettingsApprovalDamaged`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalDamaged", [`computer`, `device`]) }
-    public static func `phoneSettingsSetUpAgain`() -> String { PhoneWords.format("phoneSettingsSetUpAgain", []) }
-    public static func `phoneSettingsApprovalEarlierListed`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalEarlierListed", [`computer`, `device`]) }
-    public static func `phoneSettingsApprovalConfirmOn`(`computer`: String) -> String { PhoneWords.format("phoneSettingsApprovalConfirmOn", [`computer`]) }
-    public static func `phoneSettingsApprovalCode`(`code`: String) -> String { PhoneWords.format("phoneSettingsApprovalCode", [`code`]) }
-    public static func `phoneSettingsApprovalCodesDiffer`() -> String { PhoneWords.format("phoneSettingsApprovalCodesDiffer", []) }
-    public static func `phoneSettingsApprovalEnrolled`(`confirmation`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalEnrolled", [`confirmation`, `device`]) }
-    public static func `phoneSettingsApprovalTurnOff`(`computer`: String) -> String { PhoneWords.format("phoneSettingsApprovalTurnOff", [`computer`]) }
-    public static func `phoneSettingsApprovalReplaced`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalReplaced", [`computer`, `device`]) }
-    public static func `phoneSettingsApprovalOffer`(`computer`: String, `confirmation`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsApprovalOffer", [`computer`, `confirmation`, `device`]) }
-    public static func `phoneSettingsApprovesSecretUses`() -> String { PhoneWords.format("phoneSettingsApprovesSecretUses", []) }
-    public static func `phoneRecordWhy`() -> String { PhoneWords.format("phoneRecordWhy", []) }
-    public static func `phoneRecordNoReason`() -> String { PhoneWords.format("phoneRecordNoReason", []) }
-    public static func `phoneRecordFirstMateVerdict`(`verdict`: String) -> String { PhoneWords.format("phoneRecordFirstMateVerdict", [`verdict`]) }
-    public static func `phoneRecordFirstMatePending`() -> String { PhoneWords.format("phoneRecordFirstMatePending", []) }
-    public static func `phoneRecordProject`() -> String { PhoneWords.format("phoneRecordProject", []) }
-    public static func `phoneRecordNow`() -> String { PhoneWords.format("phoneRecordNow", []) }
-    public static func `phoneRecordPartOf`() -> String { PhoneWords.format("phoneRecordPartOf", []) }
-    public static func `phoneRecordWaitsOn`() -> String { PhoneWords.format("phoneRecordWaitsOn", []) }
-    public static func `phoneRecordHoldsUp`() -> String { PhoneWords.format("phoneRecordHoldsUp", []) }
-    public static func `phoneRecordParts`() -> String { PhoneWords.format("phoneRecordParts", []) }
-    public static func `phoneRecordPartsClosed`(`closed`: String, `total`: String) -> String { PhoneWords.format("phoneRecordPartsClosed", [`closed`, `total`]) }
-    public static func `phoneRecordGoal`() -> String { PhoneWords.format("phoneRecordGoal", []) }
-    public static func `phoneRecordWhyFiled`() -> String { PhoneWords.format("phoneRecordWhyFiled", []) }
-    public static func `phoneRecordWhyNoPlan`() -> String { PhoneWords.format("phoneRecordWhyNoPlan", []) }
-    public static func `phoneRecordYouSaid`() -> String { PhoneWords.format("phoneRecordYouSaid", []) }
-    public static func `phoneRecordProgress`() -> String { PhoneWords.format("phoneRecordProgress", []) }
-    public static func `phoneRecordPlanCount`(`done`: String, `total`: String) -> String { PhoneWords.format("phoneRecordPlanCount", [`done`, `total`]) }
-    public static func `phoneRecordShowEarlier`(`count`: String) -> String { PhoneWords.format("phoneRecordShowEarlier", [`count`]) }
-    public static func `phoneRecordPlanSkipped`() -> String { PhoneWords.format("phoneRecordPlanSkipped", []) }
-    public static func `phoneRecordModel`() -> String { PhoneWords.format("phoneRecordModel", []) }
-    public static func `phoneRecordReasoning`() -> String { PhoneWords.format("phoneRecordReasoning", []) }
-    public static func `phoneRecordChecks`() -> String { PhoneWords.format("phoneRecordChecks", []) }
-    public static func `phoneRecordReview`() -> String { PhoneWords.format("phoneRecordReview", []) }
-    public static func `phoneRecordDelivery`() -> String { PhoneWords.format("phoneRecordDelivery", []) }
-    public static func `phoneRecordRunsOn`() -> String { PhoneWords.format("phoneRecordRunsOn", []) }
-    public static func `phoneRecordMore`() -> String { PhoneWords.format("phoneRecordMore", []) }
-    public static func `phoneRecordCardNote`() -> String { PhoneWords.format("phoneRecordCardNote", []) }
-    public static func `phoneRecordCardDecision`() -> String { PhoneWords.format("phoneRecordCardDecision", []) }
-    public static func `phoneRecordCardAside`() -> String { PhoneWords.format("phoneRecordCardAside", []) }
-    public static func `phoneRecordCardOnStage`() -> String { PhoneWords.format("phoneRecordCardOnStage", []) }
-    public static func `phoneRecordCardClosed`() -> String { PhoneWords.format("phoneRecordCardClosed", []) }
-    public static func `phoneRecordCardEnded`(`age`: String, `ending`: String) -> String { PhoneWords.format("phoneRecordCardEnded", [`age`, `ending`]) }
-    public static func `phoneRecordCrewEarlier`(`count`: Int) -> String { PhoneWords.format("phoneRecordCrewEarlier", [`count`]) }
-    public static func `phoneRecordReport`() -> String { PhoneWords.format("phoneRecordReport", []) }
-    public static func `phoneRecordSteer`() -> String { PhoneWords.format("phoneRecordSteer", []) }
-    public static func `phoneTaskChangeRefused`() -> String { PhoneWords.format("phoneTaskChangeRefused", []) }
-    public static func `phoneRecordShowCardRefused`() -> String { PhoneWords.format("phoneRecordShowCardRefused", []) }
-    public static func `phoneRecordSteerTooLong`() -> String { PhoneWords.format("phoneRecordSteerTooLong", []) }
-    public static func `phoneRecordResultLines`(`count`: Int, `preview`: String) -> String { PhoneWords.format("phoneRecordResultLines", [`count`, `preview`]) }
-    public static func `phoneRecordReading`() -> String { PhoneWords.format("phoneRecordReading", []) }
-    public static func `phoneRecordResultCut`(`count`: Int) -> String { PhoneWords.format("phoneRecordResultCut", [`count`]) }
-    public static func `phoneRecordNoResult`() -> String { PhoneWords.format("phoneRecordNoResult", []) }
-    public static func `phoneTasksEmpty`() -> String { PhoneWords.format("phoneTasksEmpty", []) }
-    public static func `phoneTasksNoMatch`() -> String { PhoneWords.format("phoneTasksNoMatch", []) }
-    public static func `phoneTasksFind`() -> String { PhoneWords.format("phoneTasksFind", []) }
-    public static func `phoneTasksSearchTooLong`() -> String { PhoneWords.format("phoneTasksSearchTooLong", []) }
-    public static func `phoneTasksSearch`() -> String { PhoneWords.format("phoneTasksSearch", []) }
-    public static func `phoneTasksCloseSearch`() -> String { PhoneWords.format("phoneTasksCloseSearch", []) }
-    public static func `phoneTasksGroupExpanded`() -> String { PhoneWords.format("phoneTasksGroupExpanded", []) }
-    public static func `phoneTasksGroupCollapsed`() -> String { PhoneWords.format("phoneTasksGroupCollapsed", []) }
-    public static func `phoneTasksRestoreHint`() -> String { PhoneWords.format("phoneTasksRestoreHint", []) }
-    public static func `phoneTabHome`() -> String { PhoneWords.format("phoneTabHome", []) }
-    public static func `phoneTabTasks`() -> String { PhoneWords.format("phoneTabTasks", []) }
-    public static func `phoneTabActivity`() -> String { PhoneWords.format("phoneTabActivity", []) }
-    public static func `phoneWorkspaceShow`() -> String { PhoneWords.format("phoneWorkspaceShow", []) }
-    public static func `phoneWorkspaceTabs`() -> String { PhoneWords.format("phoneWorkspaceTabs", []) }
-    public static func `phoneNoticeReply`() -> String { PhoneWords.format("phoneNoticeReply", []) }
-    public static func `phoneNoticeNewCard`() -> String { PhoneWords.format("phoneNoticeNewCard", []) }
-    public static func `phoneNoticeLabel`(`kind`: String, `title`: String) -> String { PhoneWords.format("phoneNoticeLabel", [`kind`, `title`]) }
-    public static func `phoneNoticeOpenHint`() -> String { PhoneWords.format("phoneNoticeOpenHint", []) }
-    public static func `phoneNoticeDismiss`() -> String { PhoneWords.format("phoneNoticeDismiss", []) }
-    public static func `phoneNoticeDismissHint`() -> String { PhoneWords.format("phoneNoticeDismissHint", []) }
-    public static func `phoneActivityEmpty`() -> String { PhoneWords.format("phoneActivityEmpty", []) }
-    public static func `phoneActivityOpenTaskHint`() -> String { PhoneWords.format("phoneActivityOpenTaskHint", []) }
-    public static func `phoneActivityTask`() -> String { PhoneWords.format("phoneActivityTask", []) }
-    public static func `phoneActivityProject`() -> String { PhoneWords.format("phoneActivityProject", []) }
-    public static func `phoneApprovalConfirmFaceId`() -> String { PhoneWords.format("phoneApprovalConfirmFaceId", []) }
-    public static func `phoneApprovalConfirmTouchId`() -> String { PhoneWords.format("phoneApprovalConfirmTouchId", []) }
-    public static func `phoneApprovalConfirmOpticId`() -> String { PhoneWords.format("phoneApprovalConfirmOpticId", []) }
-    public static func `phoneApprovalConfirmPasscode`() -> String { PhoneWords.format("phoneApprovalConfirmPasscode", []) }
-    public static func `phoneApprovalUnsupported`() -> String { PhoneWords.format("phoneApprovalUnsupported", []) }
-    public static func `phoneApprovalUnusable`() -> String { PhoneWords.format("phoneApprovalUnusable", []) }
-    public static func `phoneApprovalNotConfirmed`() -> String { PhoneWords.format("phoneApprovalNotConfirmed", []) }
-    public static func `phoneApprovalNotKept`() -> String { PhoneWords.format("phoneApprovalNotKept", []) }
-    public static func `phoneApprovalDamaged`() -> String { PhoneWords.format("phoneApprovalDamaged", []) }
-    public static func `phoneApprovalChanged`() -> String { PhoneWords.format("phoneApprovalChanged", []) }
-    public static func `phoneAskedPicture`() -> String { PhoneWords.format("phoneAskedPicture", []) }
-    public static func `phoneAskedFrom`(`key`: String) -> String { PhoneWords.format("phoneAskedFrom", [`key`]) }
-    public static func `phoneAskedSaid`() -> String { PhoneWords.format("phoneAskedSaid", []) }
-    public static func `phoneAskedChoseOn`(`card`: String) -> String { PhoneWords.format("phoneAskedChoseOn", [`card`]) }
-    public static func `phoneAskedChose`() -> String { PhoneWords.format("phoneAskedChose", []) }
-    public static func `phoneAskedAutomation`() -> String { PhoneWords.format("phoneAskedAutomation", []) }
-    public static func `phoneAskedAsked`() -> String { PhoneWords.format("phoneAskedAsked", []) }
-    public static func `phoneAskedDateTime`(`date`: String, `time`: String) -> String { PhoneWords.format("phoneAskedDateTime", [`date`, `time`]) }
-    public static func `phoneAskedLabel`(`name`: String, `when`: String) -> String { PhoneWords.format("phoneAskedLabel", [`name`, `when`]) }
-    public static func `phoneAskedLabelThrough`(`count`: Int, `name`: String, `when`: String) -> String { PhoneWords.format("phoneAskedLabelThrough", [`count`, `name`, `when`]) }
-    public static func `phoneJoinLinkDamaged`() -> String { PhoneWords.format("phoneJoinLinkDamaged", []) }
-    public static func `phoneJoinLinkUnsupported`() -> String { PhoneWords.format("phoneJoinLinkUnsupported", []) }
-    public static func `phoneJoinWrongComputer`() -> String { PhoneWords.format("phoneJoinWrongComputer", []) }
-    public static func `phoneJoinUnavailable`() -> String { PhoneWords.format("phoneJoinUnavailable", []) }
-    public static func `phoneJoinInvalidReply`() -> String { PhoneWords.format("phoneJoinInvalidReply", []) }
-    public static func `phoneJoinUnconfirmed`() -> String { PhoneWords.format("phoneJoinUnconfirmed", []) }
-    public static func `phoneJoinYourComputer`() -> String { PhoneWords.format("phoneJoinYourComputer", []) }
-    public static func `phoneFormatNow`() -> String { PhoneWords.format("phoneFormatNow", []) }
-    public static func `phoneFormatMinutes`(`minutes`: String) -> String { PhoneWords.format("phoneFormatMinutes", [`minutes`]) }
-    public static func `phoneFormatHours`(`hours`: String) -> String { PhoneWords.format("phoneFormatHours", [`hours`]) }
-    public static func `phoneFormatDays`(`days`: String) -> String { PhoneWords.format("phoneFormatDays", [`days`]) }
-    public static func `phoneFormatDaysHours`(`days`: String, `hours`: String) -> String { PhoneWords.format("phoneFormatDaysHours", [`days`, `hours`]) }
-    public static func `phoneFormatHoursMinutes`(`hours`: String, `minutes`: String) -> String { PhoneWords.format("phoneFormatHoursMinutes", [`hours`, `minutes`]) }
-    public static func `phoneFormatUnderMinute`() -> String { PhoneWords.format("phoneFormatUnderMinute", []) }
-    public static func `phoneIdentityUnreadable`() -> String { PhoneWords.format("phoneIdentityUnreadable", []) }
-    public static func `phoneIdentityNotKept`() -> String { PhoneWords.format("phoneIdentityNotKept", []) }
-    public static func `phoneLookDevice`() -> String { PhoneWords.format("phoneLookDevice", []) }
-    public static func `phoneLookDark`() -> String { PhoneWords.format("phoneLookDark", []) }
-    public static func `phoneLookLight`() -> String { PhoneWords.format("phoneLookLight", []) }
-    public static func `phoneRecordStartChecking`() -> String { PhoneWords.format("phoneRecordStartChecking", []) }
-    public static func `phoneRecordStartSlow`() -> String { PhoneWords.format("phoneRecordStartSlow", []) }
-    public static func `phoneRecordStartFailed`(`reason`: String) -> String { PhoneWords.format("phoneRecordStartFailed", [`reason`]) }
-    public static func `phoneRecordCouldNotStart`() -> String { PhoneWords.format("phoneRecordCouldNotStart", []) }
-    public static func `phoneRecordWaitTimeUnknown`() -> String { PhoneWords.format("phoneRecordWaitTimeUnknown", []) }
-    public static func `phoneRecordWaitLineRecorded`(`event`: String, `label`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitLineRecorded", [`event`, `label`, `time`]) }
-    public static func `phoneRecordWaitLine`(`event`: String, `label`: String) -> String { PhoneWords.format("phoneRecordWaitLine", [`event`, `label`]) }
-    public static func `phoneRecordWaitNextRead`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextRead", [`time`]) }
-    public static func `phoneRecordWaitNextCheckBack`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextCheckBack", [`time`]) }
-    public static func `phoneRecordWaitNextReset`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextReset", [`time`]) }
-    public static func `phoneRecordWaitNextStart`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextStart", [`time`]) }
-    public static func `phoneRecordWaitNextOther`(`event`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitNextOther", [`event`, `time`]) }
-    public static func `phoneRecordWaitDueRead`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueRead", [`time`]) }
-    public static func `phoneRecordWaitDueCheckBack`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueCheckBack", [`time`]) }
-    public static func `phoneRecordWaitDueReset`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueReset", [`time`]) }
-    public static func `phoneRecordWaitDueStart`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueStart", [`time`]) }
-    public static func `phoneRecordWaitDueOther`(`event`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitDueOther", [`event`, `time`]) }
-    public static func `phoneRecordAttentionFailed`() -> String { PhoneWords.format("phoneRecordAttentionFailed", []) }
-    public static func `phoneRecordAttentionInterrupted`() -> String { PhoneWords.format("phoneRecordAttentionInterrupted", []) }
-    public static func `phoneRecordAttentionInterruptedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionInterruptedGuidance", []) }
-    public static func `phoneRecordAttentionWaitingOn`(`keys`: String) -> String { PhoneWords.format("phoneRecordAttentionWaitingOn", [`keys`]) }
-    public static func `phoneRecordAttentionBlockedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionBlockedGuidance", []) }
-    public static func `phoneRecordAttentionDependencyDropped`() -> String { PhoneWords.format("phoneRecordAttentionDependencyDropped", []) }
-    public static func `phoneRecordAttentionDependencyDroppedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionDependencyDroppedGuidance", []) }
-    public static func `phoneRecordAttentionPaused`() -> String { PhoneWords.format("phoneRecordAttentionPaused", []) }
-    public static func `phoneRecordAttentionPausedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionPausedGuidance", []) }
-    public static func `phoneRecordPartsDo`(`count`: Int) -> String { PhoneWords.format("phoneRecordPartsDo", [`count`]) }
-    public static func `phoneRecordPartsProgress`(`closed`: String, `open`: String) -> String { PhoneWords.format("phoneRecordPartsProgress", [`closed`, `open`]) }
-    public static func `phoneRecordAttentionStartTime`() -> String { PhoneWords.format("phoneRecordAttentionStartTime", []) }
-    public static func `phoneRecordClosedMerged`() -> String { PhoneWords.format("phoneRecordClosedMerged", []) }
-    public static func `phoneRecordClosedReleased`() -> String { PhoneWords.format("phoneRecordClosedReleased", []) }
-    public static func `phoneRecordClosedAnswered`() -> String { PhoneWords.format("phoneRecordClosedAnswered", []) }
-    public static func `phoneRecordClosedClosed`() -> String { PhoneWords.format("phoneRecordClosedClosed", []) }
-    public static func `phoneRecordClosedFinished`() -> String { PhoneWords.format("phoneRecordClosedFinished", []) }
-    public static func `phoneRecordClosedDropped`() -> String { PhoneWords.format("phoneRecordClosedDropped", []) }
-    public static func `phoneRecordClosedDiscarded`() -> String { PhoneWords.format("phoneRecordClosedDiscarded", []) }
-    public static func `phoneRecordClosedFailed`() -> String { PhoneWords.format("phoneRecordClosedFailed", []) }
-    public static func `phoneRecordClosedSuperseded`() -> String { PhoneWords.format("phoneRecordClosedSuperseded", []) }
-    public static func `phoneRecordClosedMergedPullRequest`(`age`: String, `label`: String) -> String { PhoneWords.format("phoneRecordClosedMergedPullRequest", [`age`, `label`]) }
-    public static func `phoneRecordClosedMergedBranch`(`age`: String, `label`: String) -> String { PhoneWords.format("phoneRecordClosedMergedBranch", [`age`, `label`]) }
-    public static func `phoneRecordClosedMergedAt`(`age`: String) -> String { PhoneWords.format("phoneRecordClosedMergedAt", [`age`]) }
-    public static func `phoneRecordClosedChecksPassed`() -> String { PhoneWords.format("phoneRecordClosedChecksPassed", []) }
-    public static func `phoneRecordClosedCarried`(`age`: String, `note`: String) -> String { PhoneWords.format("phoneRecordClosedCarried", [`age`, `note`]) }
-    public static func `phoneRecordClosedWithNote`(`age`: String, `note`: String, `status`: String) -> String { PhoneWords.format("phoneRecordClosedWithNote", [`age`, `note`, `status`]) }
-    public static func `phoneRecordClosedAt`(`age`: String, `status`: String) -> String { PhoneWords.format("phoneRecordClosedAt", [`age`, `status`]) }
-    public static func `phoneRecordClosedDone`() -> String { PhoneWords.format("phoneRecordClosedDone", []) }
-    public static func `phoneRecordFoldFiledPlanMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldFiledPlanMessages", [`count`]) }
-    public static func `phoneRecordFoldFiledPlan`() -> String { PhoneWords.format("phoneRecordFoldFiledPlan", []) }
-    public static func `phoneRecordFoldFiledMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldFiledMessages", [`count`]) }
-    public static func `phoneRecordFoldFiled`() -> String { PhoneWords.format("phoneRecordFoldFiled", []) }
-    public static func `phoneRecordFoldPlanMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldPlanMessages", [`count`]) }
-    public static func `phoneRecordFoldPlan`() -> String { PhoneWords.format("phoneRecordFoldPlan", []) }
-    public static func `phoneRecordFoldMessages`(`count`: Int) -> String { PhoneWords.format("phoneRecordFoldMessages", [`count`]) }
-    public static func `phoneRecordDeliveryPullRequest`() -> String { PhoneWords.format("phoneRecordDeliveryPullRequest", []) }
-    public static func `phoneRecordDeliveryBatched`() -> String { PhoneWords.format("phoneRecordDeliveryBatched", []) }
-    public static func `phoneRecordDeliveryLocal`() -> String { PhoneWords.format("phoneRecordDeliveryLocal", []) }
-    public static func `phoneRecordDeliveryInPlace`() -> String { PhoneWords.format("phoneRecordDeliveryInPlace", []) }
-    public static func `phoneRecordDeliveryRigor`(`care`: String) -> String { PhoneWords.format("phoneRecordDeliveryRigor", [`care`]) }
-    public static func `phoneRecordModePullRequest`() -> String { PhoneWords.format("phoneRecordModePullRequest", []) }
-    public static func `phoneRecordModeBatched`() -> String { PhoneWords.format("phoneRecordModeBatched", []) }
-    public static func `phoneRecordModeLocal`() -> String { PhoneWords.format("phoneRecordModeLocal", []) }
-    public static func `phoneRecordModeInPlace`() -> String { PhoneWords.format("phoneRecordModeInPlace", []) }
-    public static func `phoneRecordFactResult`() -> String { PhoneWords.format("phoneRecordFactResult", []) }
-    public static func `phoneRecordFactOperation`() -> String { PhoneWords.format("phoneRecordFactOperation", []) }
-    public static func `phoneRecordFactCrewmate`() -> String { PhoneWords.format("phoneRecordFactCrewmate", []) }
-    public static func `phoneRecordFactCrewmateOn`(`crewmate`: String, `model`: String) -> String { PhoneWords.format("phoneRecordFactCrewmateOn", [`crewmate`, `model`]) }
-    public static func `phoneRecordFactBranch`() -> String { PhoneWords.format("phoneRecordFactBranch", []) }
-    public static func `phoneRecordLandsMerged`() -> String { PhoneWords.format("phoneRecordLandsMerged", []) }
-    public static func `phoneRecordLandsRigor`(`care`: String) -> String { PhoneWords.format("phoneRecordLandsRigor", [`care`]) }
-    public static func `phoneRecordFactDelivery`() -> String { PhoneWords.format("phoneRecordFactDelivery", []) }
-    public static func `phoneRecordFactMerging`() -> String { PhoneWords.format("phoneRecordFactMerging", []) }
-    public static func `phoneRecordFactRigor`() -> String { PhoneWords.format("phoneRecordFactRigor", []) }
-    public static func `phoneRecordFactRunsOn`() -> String { PhoneWords.format("phoneRecordFactRunsOn", []) }
-    public static func `phoneRecordFactComputerChoice`() -> String { PhoneWords.format("phoneRecordFactComputerChoice", []) }
-    public static func `phoneRecordMoreClosedHelper`() -> String { PhoneWords.format("phoneRecordMoreClosedHelper", []) }
-    public static func `phoneRecordMorePreviewBranch`() -> String { PhoneWords.format("phoneRecordMorePreviewBranch", []) }
-    public static func `phoneRecordMorePreviewComputerChoice`() -> String { PhoneWords.format("phoneRecordMorePreviewComputerChoice", []) }
-    public static func `phoneRecordMorePreviewDelivery`() -> String { PhoneWords.format("phoneRecordMorePreviewDelivery", []) }
-    public static func `phoneRecordDropStarted`(`key`: String) -> String { PhoneWords.format("phoneRecordDropStarted", [`key`]) }
-    public static func `phoneRecordDropUnstarted`(`key`: String) -> String { PhoneWords.format("phoneRecordDropUnstarted", [`key`]) }
-    public static func `phoneRecordDropWaiting`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropWaiting", [`count`, `keys`]) }
-    public static func `phoneRecordDropUnderway`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropUnderway", [`count`, `keys`]) }
-    public static func `phoneRecordDropPartsPlanned`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropPartsPlanned", [`count`, `keys`]) }
-    public static func `phoneRecordDropPartsStarted`(`count`: Int, `keys`: String) -> String { PhoneWords.format("phoneRecordDropPartsStarted", [`count`, `keys`]) }
-    public static func `phoneRecordElapsedSeconds`(`seconds`: String) -> String { PhoneWords.format("phoneRecordElapsedSeconds", [`seconds`]) }
-    public static func `phoneRecordElapsedMinutes`(`minutes`: String, `seconds`: String) -> String { PhoneWords.format("phoneRecordElapsedMinutes", [`minutes`, `seconds`]) }
-    public static func `phoneRecordElapsedHours`(`hours`: String, `minutes`: String) -> String { PhoneWords.format("phoneRecordElapsedHours", [`hours`, `minutes`]) }
-    public static func `phoneSecretsGiveOnce`(`recipient`: String, `secrets`: String) -> String { PhoneWords.format("phoneSecretsGiveOnce", [`recipient`, `secrets`]) }
-    public static func `phoneSecretsRefusedUnavailable`() -> String { PhoneWords.format("phoneSecretsRefusedUnavailable", []) }
-    public static func `phoneSecretsRefusedExpired`() -> String { PhoneWords.format("phoneSecretsRefusedExpired", []) }
-    public static func `phoneSecretsRefusedDenied`() -> String { PhoneWords.format("phoneSecretsRefusedDenied", []) }
-    public static func `phoneSecretsRefusedGone`() -> String { PhoneWords.format("phoneSecretsRefusedGone", []) }
-    public static func `phoneSecretsRefusedStarted`() -> String { PhoneWords.format("phoneSecretsRefusedStarted", []) }
-    public static func `phoneSecretsRefusedUnknown`() -> String { PhoneWords.format("phoneSecretsRefusedUnknown", []) }
-    public static func `phoneSecretsTurnOnFirst`() -> String { PhoneWords.format("phoneSecretsTurnOnFirst", []) }
-    public static func `phoneSSHKeyStorageFailed`() -> String { PhoneWords.format("phoneSSHKeyStorageFailed", []) }
-    public static func `phoneRowMoveOpenRecord`() -> String { PhoneWords.format("phoneRowMoveOpenRecord", []) }
-    public static func `phoneRowMoveShowCard`() -> String { PhoneWords.format("phoneRowMoveShowCard", []) }
-    public static func `phoneRowMoveAnotherTask`() -> String { PhoneWords.format("phoneRowMoveAnotherTask", []) }
-    public static func `phoneRowMoveKeyList`(`last`: String, `rest`: String) -> String { PhoneWords.format("phoneRowMoveKeyList", [`last`, `rest`]) }
-    public static func `phoneRowMoveClosedStays`() -> String { PhoneWords.format("phoneRowMoveClosedStays", []) }
-    public static func `phoneRowMoveAlreadyHere`() -> String { PhoneWords.format("phoneRowMoveAlreadyHere", []) }
-    public static func `phoneRowMoveWaitingNeedsDecision`() -> String { PhoneWords.format("phoneRowMoveWaitingNeedsDecision", []) }
-    public static func `phoneRowMoveBringsMergeCard`() -> String { PhoneWords.format("phoneRowMoveBringsMergeCard", []) }
-    public static func `phoneRowMoveNoMergeCard`() -> String { PhoneWords.format("phoneRowMoveNoMergeCard", []) }
-    public static func `phoneRowMoveAnswerCardFirst`() -> String { PhoneWords.format("phoneRowMoveAnswerCardFirst", []) }
-    public static func `phoneRowMoveWaitsForYou`() -> String { PhoneWords.format("phoneRowMoveWaitsForYou", []) }
-    public static func `phoneRowMoveIsStarting`() -> String { PhoneWords.format("phoneRowMoveIsStarting", []) }
-    public static func `phoneRowMoveAlreadyStarted`() -> String { PhoneWords.format("phoneRowMoveAlreadyStarted", []) }
-    public static func `phoneRowMovePartsMove`() -> String { PhoneWords.format("phoneRowMovePartsMove", []) }
-    public static func `phoneRowMoveBacklogText`() -> String { PhoneWords.format("phoneRowMoveBacklogText", []) }
-    public static func `phoneRowMoveBacklogDone`(`key`: String) -> String { PhoneWords.format("phoneRowMoveBacklogDone", [`key`]) }
-    public static func `phoneRowMovePartsQueue`() -> String { PhoneWords.format("phoneRowMovePartsQueue", []) }
-    public static func `phoneRowMoveQueuedBlockedText`(`waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveQueuedBlockedText", [`waitsOn`]) }
-    public static func `phoneRowMoveQueuedBlockedDone`(`key`: String, `waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveQueuedBlockedDone", [`key`, `waitsOn`]) }
-    public static func `phoneRowMoveQueuedHeldText`() -> String { PhoneWords.format("phoneRowMoveQueuedHeldText", []) }
-    public static func `phoneRowMoveQueuedHeldDone`(`key`: String) -> String { PhoneWords.format("phoneRowMoveQueuedHeldDone", [`key`]) }
-    public static func `phoneRowMoveQueueAsk`(`key`: String) -> String { PhoneWords.format("phoneRowMoveQueueAsk", [`key`]) }
-    public static func `phoneRowMoveMustFinishFirst`(`count`: Int, `waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveMustFinishFirst", [`count`, `waitsOn`]) }
-    public static func `phoneRowMoveHeldNoDrag`() -> String { PhoneWords.format("phoneRowMoveHeldNoDrag", []) }
-    public static func `phoneRowMovePartsStart`() -> String { PhoneWords.format("phoneRowMovePartsStart", []) }
-    public static func `phoneRowMoveAlreadyQueued`() -> String { PhoneWords.format("phoneRowMoveAlreadyQueued", []) }
-    public static func `phoneRowMoveStartAsk`(`key`: String) -> String { PhoneWords.format("phoneRowMoveStartAsk", [`key`]) }
-    public static func `phoneRowMoveStartedBacklogDone`(`key`: String) -> String { PhoneWords.format("phoneRowMoveStartedBacklogDone", [`key`]) }
-    public static func `phoneRowMoveStartAgainAsk`(`key`: String) -> String { PhoneWords.format("phoneRowMoveStartAgainAsk", [`key`]) }
-    public static func `phoneRowMoveAlreadyStartedBacklog`() -> String { PhoneWords.format("phoneRowMoveAlreadyStartedBacklog", []) }
-    public static func `phoneRowMoveCannotDrop`() -> String { PhoneWords.format("phoneRowMoveCannotDrop", []) }
-    public static func `phoneRowMoveDropChanged`(`key`: String) -> String { PhoneWords.format("phoneRowMoveDropChanged", [`key`]) }
-    public static func `phoneRowMoveContinueDetail`() -> String { PhoneWords.format("phoneRowMoveContinueDetail", []) }
-    public static func `phoneRowMoveStopDetail`() -> String { PhoneWords.format("phoneRowMoveStopDetail", []) }
-    public static func `phoneRowMoveUnqueueDetail`() -> String { PhoneWords.format("phoneRowMoveUnqueueDetail", []) }
-    public static func `phoneRowMoveQueueAskDetail`() -> String { PhoneWords.format("phoneRowMoveQueueAskDetail", []) }
-    public static func `phoneRowMoveQueueBlockedDetail`(`waitsOn`: String) -> String { PhoneWords.format("phoneRowMoveQueueBlockedDetail", [`waitsOn`]) }
-    public static func `phoneRowMoveQueueHeldDetail`() -> String { PhoneWords.format("phoneRowMoveQueueHeldDetail", []) }
-    public static func `phoneRowMoveStartDetail`() -> String { PhoneWords.format("phoneRowMoveStartDetail", []) }
-    public static func `phoneRowMoveDropDetail`() -> String { PhoneWords.format("phoneRowMoveDropDetail", []) }
-    public static func `phoneTaskFactsStatusBacklog`() -> String { PhoneWords.format("phoneTaskFactsStatusBacklog", []) }
-    public static func `phoneTaskFactsStatusQueued`() -> String { PhoneWords.format("phoneTaskFactsStatusQueued", []) }
-    public static func `phoneTaskFactsStatusStarting`() -> String { PhoneWords.format("phoneTaskFactsStatusStarting", []) }
-    public static func `phoneTaskFactsStatusWorking`() -> String { PhoneWords.format("phoneTaskFactsStatusWorking", []) }
-    public static func `phoneTaskFactsStatusIdle`() -> String { PhoneWords.format("phoneTaskFactsStatusIdle", []) }
-    public static func `phoneTaskFactsStatusInterrupted`() -> String { PhoneWords.format("phoneTaskFactsStatusInterrupted", []) }
-    public static func `phoneTaskFactsStatusWaiting`() -> String { PhoneWords.format("phoneTaskFactsStatusWaiting", []) }
-    public static func `phoneTaskFactsStatusDone`() -> String { PhoneWords.format("phoneTaskFactsStatusDone", []) }
-    public static func `phoneTaskFactsStatusDropped`() -> String { PhoneWords.format("phoneTaskFactsStatusDropped", []) }
-    public static func `phoneTaskFactsPostureJob`() -> String { PhoneWords.format("phoneTaskFactsPostureJob", []) }
-    public static func `phoneTaskFactsPostureChecks`() -> String { PhoneWords.format("phoneTaskFactsPostureChecks", []) }
-    public static func `phoneTaskFactsPostureGuidance`() -> String { PhoneWords.format("phoneTaskFactsPostureGuidance", []) }
-    public static func `phoneTaskFactsPostureSettlement`() -> String { PhoneWords.format("phoneTaskFactsPostureSettlement", []) }
-    public static func `phoneTaskFactsPostureTimedWait`() -> String { PhoneWords.format("phoneTaskFactsPostureTimedWait", []) }
-    public static func `phoneTaskFactsPostureCaptain`() -> String { PhoneWords.format("phoneTaskFactsPostureCaptain", []) }
-    public static func `phoneTaskFactsPostureInactive`() -> String { PhoneWords.format("phoneTaskFactsPostureInactive", []) }
-    public static func `phoneTaskFactsPostureAccess`() -> String { PhoneWords.format("phoneTaskFactsPostureAccess", []) }
-    public static func `phoneTaskFactsBlockedByAnother`() -> String { PhoneWords.format("phoneTaskFactsBlockedByAnother", []) }
-    public static func `phoneTaskFactsPostureUnobserved`() -> String { PhoneWords.format("phoneTaskFactsPostureUnobserved", []) }
-    public static func `phoneTaskFactsProviderRetrying`() -> String { PhoneWords.format("phoneTaskFactsProviderRetrying", []) }
-    public static func `phoneTaskFactsProviderStuck`() -> String { PhoneWords.format("phoneTaskFactsProviderStuck", []) }
-    public static func `phoneTaskFactsAwayConnecting`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayConnecting", [`computer`]) }
-    public static func `phoneTaskFactsAwayNoNewWork`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayNoNewWork", [`computer`]) }
-    public static func `phoneTaskFactsAwayOutOfReach`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayOutOfReach", [`computer`]) }
-    public static func `phoneTaskFactsClosedAnswered`() -> String { PhoneWords.format("phoneTaskFactsClosedAnswered", []) }
-    public static func `phoneTaskFactsClosedFailed`() -> String { PhoneWords.format("phoneTaskFactsClosedFailed", []) }
-    public static func `phoneTaskFactsWaitingPrerequisites`() -> String { PhoneWords.format("phoneTaskFactsWaitingPrerequisites", []) }
-    public static func `phoneTaskFactsAnswerReady`() -> String { PhoneWords.format("phoneTaskFactsAnswerReady", []) }
-    public static func `phoneTaskFactsAnswerReadyWaiting`(`duration`: String) -> String { PhoneWords.format("phoneTaskFactsAnswerReadyWaiting", [`duration`]) }
-    public static func `phoneTaskFactsWaitingMerge`() -> String { PhoneWords.format("phoneTaskFactsWaitingMerge", []) }
-    public static func `phoneTaskFactsDecisionReady`() -> String { PhoneWords.format("phoneTaskFactsDecisionReady", []) }
-    public static func `phoneTaskFactsStartedInBacklog`() -> String { PhoneWords.format("phoneTaskFactsStartedInBacklog", []) }
-    public static func `phoneTaskFactsCouldNotStart`() -> String { PhoneWords.format("phoneTaskFactsCouldNotStart", []) }
-    public static func `phoneTaskFactsHeld`() -> String { PhoneWords.format("phoneTaskFactsHeld", []) }
-    public static func `phoneTaskFactsPartsDoWork`(`count`: Int) -> String { PhoneWords.format("phoneTaskFactsPartsDoWork", [`count`]) }
-    public static func `phoneTaskFactsStartsOnStart`() -> String { PhoneWords.format("phoneTaskFactsStartsOnStart", []) }
-    public static func `phoneTaskFactsStartsWhenReady`() -> String { PhoneWords.format("phoneTaskFactsStartsWhenReady", []) }
-    public static func `phoneTaskFactsWaitingBatchCheck`() -> String { PhoneWords.format("phoneTaskFactsWaitingBatchCheck", []) }
-    public static func `phoneTaskFactsWorkInterrupted`() -> String { PhoneWords.format("phoneTaskFactsWorkInterrupted", []) }
-    public static func `phoneTaskFactsWaitingOnKey`(`key`: String) -> String { PhoneWords.format("phoneTaskFactsWaitingOnKey", [`key`]) }
-    public static func `phoneTaskFactsWaitingOnTasks`(`count`: Int) -> String { PhoneWords.format("phoneTaskFactsWaitingOnTasks", [`count`]) }
-    public static func `phoneTaskFactsChecksNoPull`() -> String { PhoneWords.format("phoneTaskFactsChecksNoPull", []) }
-    public static func `phoneTaskFactsChecksMergedOutside`() -> String { PhoneWords.format("phoneTaskFactsChecksMergedOutside", []) }
-    public static func `phoneTaskFactsChecksNotRead`() -> String { PhoneWords.format("phoneTaskFactsChecksNotRead", []) }
-    public static func `phoneTaskFactsChangePull`() -> String { PhoneWords.format("phoneTaskFactsChangePull", []) }
-    public static func `phoneTaskFactsChangeBranch`() -> String { PhoneWords.format("phoneTaskFactsChangeBranch", []) }
-    public static func `phoneTaskFactsCheckTimedOut`() -> String { PhoneWords.format("phoneTaskFactsCheckTimedOut", []) }
-    public static func `phoneTaskFactsCheckNeedsDecision`() -> String { PhoneWords.format("phoneTaskFactsCheckNeedsDecision", []) }
-    public static func `phoneTaskFactsCheckDidNotStart`() -> String { PhoneWords.format("phoneTaskFactsCheckDidNotStart", []) }
-    public static func `phoneTaskFactsCheckOutOfDate`() -> String { PhoneWords.format("phoneTaskFactsCheckOutOfDate", []) }
-    public static func `phoneTaskFactsChecksUnreadableWhy`(`problem`: String) -> String { PhoneWords.format("phoneTaskFactsChecksUnreadableWhy", [`problem`]) }
-    public static func `phoneTaskFactsChecksIncomplete`() -> String { PhoneWords.format("phoneTaskFactsChecksIncomplete", []) }
-    public static func `phoneTaskFactsChecksNone`() -> String { PhoneWords.format("phoneTaskFactsChecksNone", []) }
-    public static func `phoneTaskFactsChecksNoneReported`() -> String { PhoneWords.format("phoneTaskFactsChecksNoneReported", []) }
-    public static func `phoneTaskFactsChecksUnreadable`() -> String { PhoneWords.format("phoneTaskFactsChecksUnreadable", []) }
-    public static func `phoneTaskFactsChecksOtherVersion`() -> String { PhoneWords.format("phoneTaskFactsChecksOtherVersion", []) }
-    public static func `phoneTaskFactsChecksJustNow`() -> String { PhoneWords.format("phoneTaskFactsChecksJustNow", []) }
-    public static func `phoneTaskFactsChecksAgo`(`age`: String) -> String { PhoneWords.format("phoneTaskFactsChecksAgo", [`age`]) }
-    public static func `phoneTaskFactsLevelNone`() -> String { PhoneWords.format("phoneTaskFactsLevelNone", []) }
-    public static func `phoneTaskFactsLevelMinimal`() -> String { PhoneWords.format("phoneTaskFactsLevelMinimal", []) }
-    public static func `phoneTaskFactsLevelLow`() -> String { PhoneWords.format("phoneTaskFactsLevelLow", []) }
-    public static func `phoneTaskFactsLevelMedium`() -> String { PhoneWords.format("phoneTaskFactsLevelMedium", []) }
-    public static func `phoneTaskFactsLevelHigh`() -> String { PhoneWords.format("phoneTaskFactsLevelHigh", []) }
-    public static func `phoneTaskFactsLevelExtraHigh`() -> String { PhoneWords.format("phoneTaskFactsLevelExtraHigh", []) }
-    public static func `phoneTaskFactsLevelModelDefault`() -> String { PhoneWords.format("phoneTaskFactsLevelModelDefault", []) }
-    public static func `phoneTaskFactsReasoningQuick`() -> String { PhoneWords.format("phoneTaskFactsReasoningQuick", []) }
-    public static func `phoneTaskFactsReasoningCapped`() -> String { PhoneWords.format("phoneTaskFactsReasoningCapped", []) }
-    public static func `phoneWorkStateDone`() -> String { PhoneWords.format("phoneWorkStateDone", []) }
-    public static func `phoneWorkStateDropped`() -> String { PhoneWords.format("phoneWorkStateDropped", []) }
-    public static func `phoneWorkStateWaitingOnYou`() -> String { PhoneWords.format("phoneWorkStateWaitingOnYou", []) }
-    public static func `phoneWorkStateStarting`() -> String { PhoneWords.format("phoneWorkStateStarting", []) }
-    public static func `phoneWorkStateWaitingOnTask`() -> String { PhoneWords.format("phoneWorkStateWaitingOnTask", []) }
-    public static func `phoneWorkStateBacklog`() -> String { PhoneWords.format("phoneWorkStateBacklog", []) }
-    public static func `phoneWorkStateQueued`() -> String { PhoneWords.format("phoneWorkStateQueued", []) }
-    public static func `phoneWorkStateWorking`() -> String { PhoneWords.format("phoneWorkStateWorking", []) }
-    public static func `phoneWorkStateInterrupted`() -> String { PhoneWords.format("phoneWorkStateInterrupted", []) }
-    public static func `phoneWorkStateStopping`() -> String { PhoneWords.format("phoneWorkStateStopping", []) }
-    public static func `phoneWorkStateIdle`() -> String { PhoneWords.format("phoneWorkStateIdle", []) }
-    public static func `phoneWorkStateNotStarted`() -> String { PhoneWords.format("phoneWorkStateNotStarted", []) }
-    public static func `phoneWorkPlaceCompacted`() -> String { PhoneWords.format("phoneWorkPlaceCompacted", []) }
-    public static func `phoneWorkPlaceStopped`() -> String { PhoneWords.format("phoneWorkPlaceStopped", []) }
-    public static func `phoneSessionChangeFailed`() -> String { PhoneWords.format("phoneSessionChangeFailed", []) }
-    public static func `phonePairUpdateMac`() -> String { PhoneWords.format("phonePairUpdateMac", []) }
-    public static func `phonePairLinkSpent`() -> String { PhoneWords.format("phonePairLinkSpent", []) }
-    public static func `phonePairRefused`() -> String { PhoneWords.format("phonePairRefused", []) }
-    public static func `phoneSessionUpdatePhone`() -> String { PhoneWords.format("phoneSessionUpdatePhone", []) }
-    public static func `phoneSessionUpdateComputer`() -> String { PhoneWords.format("phoneSessionUpdateComputer", []) }
-    public static func `phoneSessionOutOfReach`() -> String { PhoneWords.format("phoneSessionOutOfReach", []) }
-    public static func `phoneSessionRequestRefused`() -> String { PhoneWords.format("phoneSessionRequestRefused", []) }
-    public static func `phoneSshJoinAddressInvalid`() -> String { PhoneWords.format("phoneSshJoinAddressInvalid", []) }
-    public static func `phoneSshJoinPortInvalid`() -> String { PhoneWords.format("phoneSshJoinPortInvalid", []) }
-    public static func `phoneSshJoinNotReached`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNotReached", [`host`]) }
-    public static func `phoneSshJoinLoginOff`(`host`: String) -> String { PhoneWords.format("phoneSshJoinLoginOff", [`host`]) }
-    public static func `phoneSshJoinUnknownHost`() -> String { PhoneWords.format("phoneSshJoinUnknownHost", []) }
-    public static func `phoneSshJoinHostChanged`(`host`: String) -> String { PhoneWords.format("phoneSshJoinHostChanged", [`host`]) }
-    public static func `phoneSshJoinKeyRefused`(`host`: String) -> String { PhoneWords.format("phoneSshJoinKeyRefused", [`host`]) }
-    public static func `phoneSshJoinKeyRefusedNoPassword`(`host`: String) -> String { PhoneWords.format("phoneSshJoinKeyRefusedNoPassword", [`host`]) }
-    public static func `phoneSshJoinWrongPassword`(`host`: String) -> String { PhoneWords.format("phoneSshJoinWrongPassword", [`host`]) }
-    public static func `phoneSshJoinNotOpen`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNotOpen", [`host`]) }
-    public static func `phoneSshJoinComputerTooOld`(`host`: String) -> String { PhoneWords.format("phoneSshJoinComputerTooOld", [`host`]) }
-    public static func `phoneSshJoinNoCurl`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNoCurl", [`host`]) }
-    public static func `phoneSshJoinNoLink`(`host`: String) -> String { PhoneWords.format("phoneSshJoinNoLink", [`host`]) }
-    public static func `phoneSshJoinPhoneTooOld`(`host`: String) -> String { PhoneWords.format("phoneSshJoinPhoneTooOld", [`host`]) }
-    public static func `phoneSshJoinFailed`(`host`: String) -> String { PhoneWords.format("phoneSshJoinFailed", [`host`]) }
-    public static func `phoneChecksPassed`() -> String { PhoneWords.format("phoneChecksPassed", []) }
-    public static func `phoneChecksFailed`() -> String { PhoneWords.format("phoneChecksFailed", []) }
-    public static func `phoneChecksRunning`() -> String { PhoneWords.format("phoneChecksRunning", []) }
-    public static func `phoneChecksCancelled`() -> String { PhoneWords.format("phoneChecksCancelled", []) }
-    public static func `phoneChecksError`() -> String { PhoneWords.format("phoneChecksError", []) }
-    public static func `phoneChecksSkipped`() -> String { PhoneWords.format("phoneChecksSkipped", []) }
-    public static func `phoneChecksNeutral`() -> String { PhoneWords.format("phoneChecksNeutral", []) }
-    public static func `phoneChecksCounted`(`count`: Int, `word`: String) -> String { PhoneWords.format("phoneChecksCounted", [`count`, `word`]) }
-    public static func `phoneChecksForDuration`(`duration`: String, `words`: String) -> String { PhoneWords.format("phoneChecksForDuration", [`duration`, `words`]) }
-    public static func `phoneChecksInDuration`(`duration`: String, `words`: String) -> String { PhoneWords.format("phoneChecksInDuration", [`duration`, `words`]) }
-    public static func `phoneChecksAfterDuration`(`duration`: String, `words`: String) -> String { PhoneWords.format("phoneChecksAfterDuration", [`duration`, `words`]) }
-    public static func `phoneReviewFindings`() -> String { PhoneWords.format("phoneReviewFindings", []) }
-    public static func `phoneReviewBlocked`() -> String { PhoneWords.format("phoneReviewBlocked", []) }
-    public static func `phoneReviewWithRisk`(`risk`: String, `words`: String) -> String { PhoneWords.format("phoneReviewWithRisk", [`risk`, `words`]) }
+    public static func `cardReplyHint`() -> String { PhoneWords.format("cardReplyHint", []) }
+    public static func `cardPastSentLead`() -> String { PhoneWords.format("cardPastSentLead", []) }
+    public static func `cardReviewFinding`() -> String { PhoneWords.format("cardReviewFinding", []) }
+    public static func `cardLeaveAside`() -> String { PhoneWords.format("cardLeaveAside", []) }
+    public static func `cardLeaveAsideRest`() -> String { PhoneWords.format("cardLeaveAsideRest", []) }
+    public static func `cardLeaveHide`() -> String { PhoneWords.format("cardLeaveHide", []) }
+    public static func `cardLeaveHideRest`() -> String { PhoneWords.format("cardLeaveHideRest", []) }
+    public static func `cardLeaveHidePanelRest`() -> String { PhoneWords.format("cardLeaveHidePanelRest", []) }
+    public static func `cardAnswerDone`() -> String { PhoneWords.format("cardAnswerDone", []) }
+    public static func `cardAnswerDoneRest`(`key`: String) -> String { PhoneWords.format("cardAnswerDoneRest", [`key`]) }
+    public static func `cardDecline`() -> String { PhoneWords.format("cardDecline", []) }
+    public static func `cardAfterMergeWait`(`count`: Int, `keys`: String) -> String { PhoneWords.format("cardAfterMergeWait", [`count`, `keys`]) }
+    public static func `cardAfterMergeDoerCrewmate`() -> String { PhoneWords.format("cardAfterMergeDoerCrewmate", []) }
+    public static func `cardAfterMergeDoerFirstmate`() -> String { PhoneWords.format("cardAfterMergeDoerFirstmate", []) }
+    public static func `cardAfterMergeLead`() -> String { PhoneWords.format("cardAfterMergeLead", []) }
+    public static func `taskBrowserDriverCrewmate`() -> String { PhoneWords.format("taskBrowserDriverCrewmate", []) }
+    public static func `taskBrowserDriverNobody`() -> String { PhoneWords.format("taskBrowserDriverNobody", []) }
+    public static func `taskBrowserDriverWaiting`() -> String { PhoneWords.format("taskBrowserDriverWaiting", []) }
+    public static func `taskBrowserDriverTaking`() -> String { PhoneWords.format("taskBrowserDriverTaking", []) }
+    public static func `taskBrowserDriverCaptain`() -> String { PhoneWords.format("taskBrowserDriverCaptain", []) }
+    public static func `taskBrowserStoppedCaptain`() -> String { PhoneWords.format("taskBrowserStoppedCaptain", []) }
+    public static func `taskBrowserStoppedCrewmate`() -> String { PhoneWords.format("taskBrowserStoppedCrewmate", []) }
+    public static func `taskBrowserStoppedIdle`() -> String { PhoneWords.format("taskBrowserStoppedIdle", []) }
+    public static func `taskBrowserStoppedGone`() -> String { PhoneWords.format("taskBrowserStoppedGone", []) }
+    public static func `taskBrowserStoppedTaskClosed`() -> String { PhoneWords.format("taskBrowserStoppedTaskClosed", []) }
+    public static func `taskBrowserStaleAttachment`() -> String { PhoneWords.format("taskBrowserStaleAttachment", []) }
+    public static func `taskTabInfo`() -> String { PhoneWords.format("taskTabInfo", []) }
+    public static func `taskTabCards`() -> String { PhoneWords.format("taskTabCards", []) }
+    public static func `taskTabActivity`() -> String { PhoneWords.format("taskTabActivity", []) }
+    public static func `taskTabCrewmate`() -> String { PhoneWords.format("taskTabCrewmate", []) }
+    public static func `crewmatePlaceholderWorking`() -> String { PhoneWords.format("crewmatePlaceholderWorking", []) }
+    public static func `crewmatePlaceholderIdle`() -> String { PhoneWords.format("crewmatePlaceholderIdle", []) }
+    public static func `crewmateField`() -> String { PhoneWords.format("crewmateField", []) }
+    public static func `crewmateSendsTo`() -> String { PhoneWords.format("crewmateSendsTo", []) }
+    public static func `crewmateQueued`() -> String { PhoneWords.format("crewmateQueued", []) }
+    public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
+    public static func `crewmateInterruptHint`() -> String { PhoneWords.format("crewmateInterruptHint", []) }
+    public static func `crewmateStop`() -> String { PhoneWords.format("crewmateStop", []) }
+    public static func `crewmateStopping`() -> String { PhoneWords.format("crewmateStopping", []) }
+    public static func `crewmateIdle`() -> String { PhoneWords.format("crewmateIdle", []) }
+    public static func `crewmateWaiting`() -> String { PhoneWords.format("crewmateWaiting", []) }
+    public static func `crewmatePaused`() -> String { PhoneWords.format("crewmatePaused", []) }
+    public static func `crewmateClosed`() -> String { PhoneWords.format("crewmateClosed", []) }
+    public static func `crewmateEmpty`() -> String { PhoneWords.format("crewmateEmpty", []) }
+    public static func `crewmateUnreadable`() -> String { PhoneWords.format("crewmateUnreadable", []) }
+    public static func `crewmateOpen`() -> String { PhoneWords.format("crewmateOpen", []) }
+    public static func `crewmateFold`() -> String { PhoneWords.format("crewmateFold", []) }
+    public static func `crewmateBrief`() -> String { PhoneWords.format("crewmateBrief", []) }
+    public static func `crewmateFirstmate`() -> String { PhoneWords.format("crewmateFirstmate", []) }
+    public static func `crewmateApp`() -> String { PhoneWords.format("crewmateApp", []) }
+    public static func `crewmateRunning`() -> String { PhoneWords.format("crewmateRunning", []) }
+    public static func `crewmateNoResult`() -> String { PhoneWords.format("crewmateNoResult", []) }
+    public static func `crewmateNoOutput`() -> String { PhoneWords.format("crewmateNoOutput", []) }
+    public static func `crewmatePicture`() -> String { PhoneWords.format("crewmatePicture", []) }
+    public static func `crewmatePictureLarger`() -> String { PhoneWords.format("crewmatePictureLarger", []) }
+    public static func `crewmatePictureSmaller`() -> String { PhoneWords.format("crewmatePictureSmaller", []) }
+    public static func `crewmateFailed`() -> String { PhoneWords.format("crewmateFailed", []) }
+    public static func `crewmatePlan`() -> String { PhoneWords.format("crewmatePlan", []) }
+    public static func `crewmateProgress`() -> String { PhoneWords.format("crewmateProgress", []) }
+    public static func `crewmateReport`() -> String { PhoneWords.format("crewmateReport", []) }
+    public static func `crewmateCard`() -> String { PhoneWords.format("crewmateCard", []) }
+    public static func `crewmateShowCard`() -> String { PhoneWords.format("crewmateShowCard", []) }
+    public static func `crewmateChange`() -> String { PhoneWords.format("crewmateChange", []) }
+    public static func `crewmateCompacted`() -> String { PhoneWords.format("crewmateCompacted", []) }
+    public static func `crewmateStoppedCaptain`() -> String { PhoneWords.format("crewmateStoppedCaptain", []) }
+    public static func `crewmateStoppedFirstmate`() -> String { PhoneWords.format("crewmateStoppedFirstmate", []) }
+    public static func `crewmateStoppedApp`() -> String { PhoneWords.format("crewmateStoppedApp", []) }
+    public static func `crewmateMoreLines`(`count`: Int) -> String { PhoneWords.format("crewmateMoreLines", [`count`]) }
+    public static func `crewmateCut`(`count`: Int) -> String { PhoneWords.format("crewmateCut", [`count`]) }
+    public static func `crewmateEarlier`(`count`: Int) -> String { PhoneWords.format("crewmateEarlier", [`count`]) }
+    public static func `policyAsksFirst`() -> String { PhoneWords.format("policyAsksFirst", []) }
+    public static func `policySourceTask`() -> String { PhoneWords.format("policySourceTask", []) }
+    public static func `policySourceProject`() -> String { PhoneWords.format("policySourceProject", []) }
+    public static func `policySourceParent`() -> String { PhoneWords.format("policySourceParent", []) }
+    public static func `policyHelper`() -> String { PhoneWords.format("policyHelper", []) }
+    public static func `policyCareBound`() -> String { PhoneWords.format("policyCareBound", []) }
+    public static func `recordStart`() -> String { PhoneWords.format("recordStart", []) }
+    public static func `recordTryAgain`() -> String { PhoneWords.format("recordTryAgain", []) }
+    public static func `recordStarting`() -> String { PhoneWords.format("recordStarting", []) }
+    public static func `recordStartAgain`() -> String { PhoneWords.format("recordStartAgain", []) }
+    public static func `recordContinue`() -> String { PhoneWords.format("recordContinue", []) }
+    public static func `recordShowCard`() -> String { PhoneWords.format("recordShowCard", []) }
+    public static func `recordDropTask`() -> String { PhoneWords.format("recordDropTask", []) }
+    public static func `recordDropCancel`() -> String { PhoneWords.format("recordDropCancel", []) }
+    public static func `recordDropReviewStale`() -> String { PhoneWords.format("recordDropReviewStale", []) }
+    public static func `pastEndingAnOption`() -> String { PhoneWords.format("pastEndingAnOption", []) }
+    public static func `pastEndingFirstmateChose`(`label`: String) -> String { PhoneWords.format("pastEndingFirstmateChose", [`label`]) }
+    public static func `pastEndingCrewmateChose`(`label`: String) -> String { PhoneWords.format("pastEndingCrewmateChose", [`label`]) }
+    public static func `pastEndingYouChose`(`label`: String) -> String { PhoneWords.format("pastEndingYouChose", [`label`]) }
+    public static func `pastEndingDismissed`() -> String { PhoneWords.format("pastEndingDismissed", []) }
+    public static func `pastEndingAuthorWithdrawal`() -> String { PhoneWords.format("pastEndingAuthorWithdrawal", []) }
+    public static func `pastEndingHostWithdrawal`() -> String { PhoneWords.format("pastEndingHostWithdrawal", []) }
+    public static func `pastEndingTaskRetired`() -> String { PhoneWords.format("pastEndingTaskRetired", []) }
+    public static func `pastEndingDuplicate`() -> String { PhoneWords.format("pastEndingDuplicate", []) }
+    public static func `pastEndingUnknown`() -> String { PhoneWords.format("pastEndingUnknown", []) }
+    public static func `nowPanelRowStart`() -> String { PhoneWords.format("nowPanelRowStart", []) }
+    public static func `nowPanelRowTryAgain`() -> String { PhoneWords.format("nowPanelRowTryAgain", []) }
+    public static func `nowPanelRowStarting`() -> String { PhoneWords.format("nowPanelRowStarting", []) }
+    public static func `nowPanelRowCouldNotStart`() -> String { PhoneWords.format("nowPanelRowCouldNotStart", []) }
+    public static func `nowPanelRowChecks`() -> String { PhoneWords.format("nowPanelRowChecks", []) }
+    public static func `nowPanelRowBatch`() -> String { PhoneWords.format("nowPanelRowBatch", []) }
+    public static func `nowPanelRowWaiting`() -> String { PhoneWords.format("nowPanelRowWaiting", []) }
+    public static func `nowPanelRowBlocked`() -> String { PhoneWords.format("nowPanelRowBlocked", []) }
+    public static func `nowPanelRowHeld`() -> String { PhoneWords.format("nowPanelRowHeld", []) }
+    public static func `nowPanelRowFoundOn`(`key`: String) -> String { PhoneWords.format("nowPanelRowFoundOn", [`key`]) }
+    public static func `nowPanelRowConnecting`() -> String { PhoneWords.format("nowPanelRowConnecting", []) }
+    public static func `nowPanelRowNoNewWork`() -> String { PhoneWords.format("nowPanelRowNoNewWork", []) }
+    public static func `nowPanelRowAway`() -> String { PhoneWords.format("nowPanelRowAway", []) }
+    public static func `nowPanelRowNewCount`(`count`: Int) -> String { PhoneWords.format("nowPanelRowNewCount", [`count`]) }
+    public static func `nowPanelRowFailedCount`(`count`: Int) -> String { PhoneWords.format("nowPanelRowFailedCount", [`count`]) }
+    public static func `nowPanelGroupEarlier`() -> String { PhoneWords.format("nowPanelGroupEarlier", []) }
+    public static func `nowPanelGroupPinned`() -> String { PhoneWords.format("nowPanelGroupPinned", []) }
+    public static func `taskGroupWaiting`() -> String { PhoneWords.format("taskGroupWaiting", []) }
+    public static func `taskGroupWorking`() -> String { PhoneWords.format("taskGroupWorking", []) }
+    public static func `taskGroupQueued`() -> String { PhoneWords.format("taskGroupQueued", []) }
+    public static func `taskGroupBacklog`() -> String { PhoneWords.format("taskGroupBacklog", []) }
+    public static func `taskGroupLanded`() -> String { PhoneWords.format("taskGroupLanded", []) }
+    public static func `taskPinPin`() -> String { PhoneWords.format("taskPinPin", []) }
+    public static func `taskPinUnpin`() -> String { PhoneWords.format("taskPinUnpin", []) }
+    public static func `secretsAllowOnce`() -> String { PhoneWords.format("secretsAllowOnce", []) }
+    public static func `secretsDeny`() -> String { PhoneWords.format("secretsDeny", []) }
+    public static func `integrationsSignInWaiting`(`name`: String) -> String { PhoneWords.format("integrationsSignInWaiting", [`name`]) }
+    public static func `integrationsSignInAgain`() -> String { PhoneWords.format("integrationsSignInAgain", []) }
+    public static func `integrationsSignInCancel`() -> String { PhoneWords.format("integrationsSignInCancel", []) }
+    public static func `viewGoogleUpdateThere`(`mac`: String) -> String { PhoneWords.format("viewGoogleUpdateThere", [`mac`]) }
+    public static func `viewReturnPasteLead`(`name`: String) -> String { PhoneWords.format("viewReturnPasteLead", [`name`]) }
+    public static func `viewReturnPasteLabel`(`name`: String) -> String { PhoneWords.format("viewReturnPasteLabel", [`name`]) }
+    public static func `viewReturnPastePlaceholder`() -> String { PhoneWords.format("viewReturnPastePlaceholder", []) }
+    public static func `viewReturnPasteSend`(`mac`: String) -> String { PhoneWords.format("viewReturnPasteSend", [`mac`]) }
+    public static func `viewReturnPasteRefused`() -> String { PhoneWords.format("viewReturnPasteRefused", []) }
+    public static func `cardNotePointAt`() -> String { PhoneWords.format("cardNotePointAt", []) }
+    public static func `cardNotePointedAt`() -> String { PhoneWords.format("cardNotePointedAt", []) }
+    public static func `cardNoteStale`() -> String { PhoneWords.format("cardNoteStale", []) }
+    public static func `cardNoteUnavailable`() -> String { PhoneWords.format("cardNoteUnavailable", []) }
+    public static func `cardNoteEditUnavailable`() -> String { PhoneWords.format("cardNoteEditUnavailable", []) }
+    public static func `cardNoteEmpty`() -> String { PhoneWords.format("cardNoteEmpty", []) }
+    public static func `cardNoteAnnotate`() -> String { PhoneWords.format("cardNoteAnnotate", []) }
+    public static func `cardNoteQueue`() -> String { PhoneWords.format("cardNoteQueue", []) }
+    public static func `cardNoteCommentLabel`() -> String { PhoneWords.format("cardNoteCommentLabel", []) }
+    public static func `cardNoteCancel`() -> String { PhoneWords.format("cardNoteCancel", []) }
+    public static func `cardNoteEdit`() -> String { PhoneWords.format("cardNoteEdit", []) }
+    public static func `cardNoteRemove`() -> String { PhoneWords.format("cardNoteRemove", []) }
+    public static func `cardNoteNotSent`() -> String { PhoneWords.format("cardNoteNotSent", []) }
+    public static func `cardNotePlaceholder`() -> String { PhoneWords.format("cardNotePlaceholder", []) }
+    public static func `cardNoteDiscardHint`() -> String { PhoneWords.format("cardNoteDiscardHint", []) }
+    public static func `cardNoteSend`(`count`: Int) -> String { PhoneWords.format("cardNoteSend", [`count`]) }
+    public static func `cardNoteQueued`(`count`: Int) -> String { PhoneWords.format("cardNoteQueued", [`count`]) }
+    public static func `cardNoteLabel`(`excerpt`: String, `kind`: String) -> String { PhoneWords.format("cardNoteLabel", [`excerpt`, `kind`]) }
+    public static func `riskBlast`() -> String { PhoneWords.format("riskBlast", []) }
+    public static func `riskBlastLow`() -> String { PhoneWords.format("riskBlastLow", []) }
+    public static func `riskBlastMedium`() -> String { PhoneWords.format("riskBlastMedium", []) }
+    public static func `riskBlastHigh`() -> String { PhoneWords.format("riskBlastHigh", []) }
+    public static func `riskBehavior`() -> String { PhoneWords.format("riskBehavior", []) }
+    public static func `riskBehaviorLow`() -> String { PhoneWords.format("riskBehaviorLow", []) }
+    public static func `riskBehaviorMedium`() -> String { PhoneWords.format("riskBehaviorMedium", []) }
+    public static func `riskBehaviorHigh`() -> String { PhoneWords.format("riskBehaviorHigh", []) }
+    public static func `riskUndo`() -> String { PhoneWords.format("riskUndo", []) }
+    public static func `riskUndoLow`() -> String { PhoneWords.format("riskUndoLow", []) }
+    public static func `riskUndoMedium`() -> String { PhoneWords.format("riskUndoMedium", []) }
+    public static func `riskUndoHigh`() -> String { PhoneWords.format("riskUndoHigh", []) }
+    public static func `riskEvidence`() -> String { PhoneWords.format("riskEvidence", []) }
+    public static func `riskEvidenceLow`() -> String { PhoneWords.format("riskEvidenceLow", []) }
+    public static func `riskEvidenceMedium`() -> String { PhoneWords.format("riskEvidenceMedium", []) }
+    public static func `riskEvidenceHigh`() -> String { PhoneWords.format("riskEvidenceHigh", []) }
+    public static func `riskSensitivity`() -> String { PhoneWords.format("riskSensitivity", []) }
+    public static func `riskSensitivityLow`() -> String { PhoneWords.format("riskSensitivityLow", []) }
+    public static func `riskSensitivityMedium`() -> String { PhoneWords.format("riskSensitivityMedium", []) }
+    public static func `riskSensitivityHigh`() -> String { PhoneWords.format("riskSensitivityHigh", []) }
+    public static func `riskNovelty`() -> String { PhoneWords.format("riskNovelty", []) }
+    public static func `riskNoveltyLow`() -> String { PhoneWords.format("riskNoveltyLow", []) }
+    public static func `riskNoveltyMedium`() -> String { PhoneWords.format("riskNoveltyMedium", []) }
+    public static func `riskNoveltyHigh`() -> String { PhoneWords.format("riskNoveltyHigh", []) }
+    public static func `riskDeps`() -> String { PhoneWords.format("riskDeps", []) }
+    public static func `riskDepsLow`() -> String { PhoneWords.format("riskDepsLow", []) }
+    public static func `riskDepsMedium`() -> String { PhoneWords.format("riskDepsMedium", []) }
+    public static func `riskDepsHigh`() -> String { PhoneWords.format("riskDepsHigh", []) }
 }
 
 extension PhoneWords {
@@ -3435,6 +3960,355 @@ extension PhoneWords {
         "settingsCommandStopFailed": [],
         "settingsCommandStartAtLogin": [],
         "settingsWebsiteSignInsStorage": [],
+        "activityPanelLinesLabel": [],
+        "automationPanelUnreadableSummary": [],
+        "automationPanelEmpty": [],
+        "automationPanelActiveCount": ["count"],
+        "automationPanelPausedCount": ["count"],
+        "automationPanelListLabel": [],
+        "knowledgePanelPrivateCollection": [],
+        "knowledgePanelDirectionsEverywhere": [],
+        "knowledgePanelUnreadableSummary": [],
+        "knowledgePanelConceptCount": ["count"],
+        "knowledgePanelFindingCount": ["count"],
+        "knowledgePanelDirectionCount": ["count"],
+        "knowledgePanelCounts": ["concepts", "findings"],
+        "knowledgePanelCountsWithDirections": ["concepts", "directions", "findings"],
+        "knowledgePanelOriginYourWords": [],
+        "knowledgePanelOriginCrewmateReport": ["key"],
+        "knowledgePanelOriginAgent": [],
+        "knowledgePanelStandingChecked": [],
+        "knowledgePanelStandingUnchecked": [],
+        "knowledgePanelStandingRecheck": [],
+        "knowledgePanelStandingDiffering": [],
+        "knowledgePanelStandingSuperseded": [],
+        "knowledgePanelStandingRetired": [],
+        "knowledgePanelClaimKindLine": ["standing"],
+        "knowledgePanelContextKindLine": [],
+        "knowledgePanelReadWith": ["from", "to"],
+        "knowledgePanelOriginLine": ["line"],
+        "knowledgePanelOriginLines": ["first", "last"],
+        "knowledgePanelOriginFile": ["lines", "path"],
+        "knowledgePanelOriginFileKept": ["commit", "lines", "path"],
+        "knowledgePanelOriginFileKeptDirty": ["commit", "lines", "path"],
+        "knowledgePanelOriginReport": ["key"],
+        "knowledgePanelOriginArticle": ["title", "url"],
+        "knowledgePanelOriginArticleBy": ["author", "title", "url"],
+        "knowledgePanelOriginArticleOn": ["published", "title", "url"],
+        "knowledgePanelOriginArticleByOn": ["author", "published", "title", "url"],
+        "knowledgePanelOriginQuote": ["citation"],
+        "knowledgePanelSourceUnchanged": [],
+        "knowledgePanelSourceChanged": [],
+        "knowledgePanelSourceMissing": [],
+        "knowledgePanelSourceUnknown": [],
+        "knowledgePanelSourceKept": [],
+        "knowledgePanelVerdictSupports": [],
+        "knowledgePanelVerdictContradicts": [],
+        "knowledgePanelVerdictInconclusive": [],
+        "knowledgePanelOpPublish": [],
+        "knowledgePanelOpRevise": [],
+        "knowledgePanelOpLink": [],
+        "knowledgePanelOpRetire": [],
+        "knowledgePanelOpRestore": [],
+        "knowledgePanelRelationContradicts": [],
+        "knowledgePanelRelationReplaces": [],
+        "knowledgePanelRelationReplacedBy": [],
+        "knowledgePanelRelationDuplicates": [],
+        "knowledgePanelRelationDuplicatedBy": [],
+        "knowledgePanelRange": ["first", "last", "total"],
+        "knowledgePanelAskConcept": ["id", "revision", "title"],
+        "knowledgePanelAskFinding": ["id", "revision", "title"],
+        "knowledgePanelAskClaim": ["finding", "revision", "sentence"],
+        "knowledgePanelAskContext": ["from", "fromId", "to", "toId"],
+        "knowledgePanelAskDirection": ["id", "text"],
+        "knowledgePanelNothingRecorded": [],
+        "knowledgePanelBrowserTitle": [],
+        "knowledgePanelEmpty": [],
+        "knowledgePanelAllDirections": ["count"],
+        "knowledgePanelGraphLink": ["count"],
+        "knowledgePanelDirectionLabel": ["text"],
+        "knowledgePanelDirectionScopedLabel": ["scope", "text"],
+        "knowledgePanelSectionOverview": [],
+        "knowledgePanelSectionEvidence": [],
+        "knowledgePanelSectionHistory": [],
+        "knowledgePanelSectionUsed": [],
+        "knowledgePanelSourceCheckLine": ["check", "when"],
+        "knowledgePanelAskAboutThis": [],
+        "knowledgePanelCompareUnchanged": ["label"],
+        "knowledgePanelCompareChanged": ["label"],
+        "knowledgePanelNone": [],
+        "knowledgePanelRevisionLabel": ["revision"],
+        "knowledgePanelRecordedClaim": [],
+        "knowledgePanelConceptEyebrow": [],
+        "knowledgePanelFindingEyebrow": ["revision"],
+        "knowledgePanelFindingEarlierEyebrow": ["current", "revision"],
+        "knowledgePanelBack": [],
+        "knowledgePanelSelectPrompt": [],
+        "knowledgePanelReading": [],
+        "knowledgePanelEntryMissing": [],
+        "knowledgePanelRetired": [],
+        "knowledgePanelCompareHeading": [],
+        "knowledgePanelCompareNote": ["current", "revision"],
+        "knowledgePanelCompareStatement": [],
+        "knowledgePanelCompareName": [],
+        "knowledgePanelWhereItHolds": [],
+        "knowledgePanelCompareExplanation": [],
+        "knowledgePanelCompareSourcesSame": [],
+        "knowledgePanelCompareSourcesChanged": [],
+        "knowledgePanelCompareSourcesCounts": ["current", "currentCount", "earlierCount", "revision"],
+        "knowledgePanelStandingNow": ["standing"],
+        "knowledgePanelReadingCurrent": [],
+        "knowledgePanelShowCurrent": [],
+        "knowledgePanelSupportingFinding": [],
+        "knowledgePanelOpenEvidenceNote": [],
+        "knowledgePanelConnectedConcepts": [],
+        "knowledgePanelWhyConnect": [],
+        "knowledgePanelReadingSuggestionNote": [],
+        "knowledgePanelConnectionMissing": [],
+        "knowledgePanelAliases": ["aliases"],
+        "knowledgePanelConnectedIdeas": [],
+        "knowledgePanelNoConnections": [],
+        "knowledgePanelClaimDetail": ["predicate", "standing"],
+        "knowledgePanelContextDetail": ["reason"],
+        "knowledgePanelSupportingFindings": [],
+        "knowledgePanelNoFindings": [],
+        "knowledgePanelMoreFindings": ["count"],
+        "knowledgePanelShowOnGraph": [],
+        "knowledgePanelReasonedBy": ["author"],
+        "knowledgePanelObservedBy": ["author"],
+        "knowledgePanelRelationshipClaimed": [],
+        "knowledgePanelAbout": [],
+        "knowledgePanelNoConcept": [],
+        "knowledgePanelContextNoEvidence": [],
+        "knowledgePanelItsSources": [],
+        "knowledgePanelKeptSources": [],
+        "knowledgePanelNoSources": [],
+        "knowledgePanelChecks": [],
+        "knowledgePanelNoChecks": [],
+        "knowledgePanelCheckHead": ["by", "revision", "verdict", "when"],
+        "knowledgePanelMethod": [],
+        "knowledgePanelConditions": [],
+        "knowledgePanelCheckNoEvidence": [],
+        "knowledgePanelRevisions": [],
+        "knowledgePanelRevisionHead": ["by", "op", "revision", "when"],
+        "knowledgePanelShownHere": [],
+        "knowledgePanelCurrentShownHere": [],
+        "knowledgePanelReadCurrent": [],
+        "knowledgePanelReadRevision": ["revision"],
+        "knowledgePanelEarlierRevisions": ["count"],
+        "knowledgePanelDisagreements": [],
+        "knowledgePanelNoDisagreements": [],
+        "knowledgePanelRelationTitle": ["relation", "title"],
+        "knowledgePanelContextNoUse": [],
+        "knowledgePanelNoUses": [],
+        "knowledgePanelDeclaredUseNote": [],
+        "knowledgePanelUseHead": ["by", "revision", "when"],
+        "knowledgePanelEarlierUses": ["count"],
+        "knowledgePanelEarlierRevision": [],
+        "knowledgePanelSourceChangedNote": [],
+        "knowledgePanelInspectorSections": [],
+        "knowledgePanelRecordUnavailable": [],
+        "knowledgePanelDirectionEyebrow": ["revision"],
+        "knowledgePanelInstruction": [],
+        "knowledgePanelAdvice": [],
+        "knowledgePanelAppliesTo": [],
+        "knowledgePanelRecordedOrigin": [],
+        "knowledgePanelDirectionNote": [],
+        "knowledgePanelDirectionDates": ["created", "updated"],
+        "knowledgePanelDirectionHistoryNote": [],
+        "knowledgePanelDirectionRevisionHead": ["op", "revision", "when"],
+        "knowledgePanelDirectionRetiredRevision": [],
+        "knowledgePanelPrevious": [],
+        "knowledgePanelNext": [],
+        "knowledgePanelConceptMatches": ["count"],
+        "knowledgePanelNoMatch": ["query"],
+        "knowledgePanelNoConcepts": [],
+        "knowledgePanelConceptsLabel": [],
+        "knowledgePanelConceptColumn": [],
+        "knowledgePanelFindingsColumn": [],
+        "knowledgePanelFilterAll": [],
+        "knowledgePanelNoRecheckFindings": [],
+        "knowledgePanelNoDifferingFindings": [],
+        "knowledgePanelNoFindingsRecorded": [],
+        "knowledgePanelFilterShow": [],
+        "knowledgePanelFindingsLabel": [],
+        "knowledgePanelFindingColumn": [],
+        "knowledgePanelEvidenceColumn": [],
+        "knowledgePanelSourceCount": ["count"],
+        "knowledgePanelCheckCount": ["count"],
+        "knowledgePanelDirectionsNote": [],
+        "knowledgePanelNoDirections": [],
+        "knowledgePanelDirectionsLabel": [],
+        "knowledgePanelGraphConceptsOf": ["count", "shown"],
+        "knowledgePanelGraphConnectionsOf": ["count", "shown"],
+        "knowledgePanelConnectionCount": ["count"],
+        "knowledgePanelCameraOrbited": [],
+        "knowledgePanelZoomSaid": ["percent"],
+        "knowledgePanelCameraOrbitedLeft": [],
+        "knowledgePanelCameraOrbitedRight": [],
+        "knowledgePanelCameraTiltedUp": [],
+        "knowledgePanelCameraTiltedDown": [],
+        "knowledgePanelCameraReset": [],
+        "knowledgePanelReadWithLabel": [],
+        "knowledgePanelConceptNotDrawn": [],
+        "knowledgePanelFocusNearby": [],
+        "knowledgePanelNearbyReach": [],
+        "knowledgePanelHops": ["count"],
+        "knowledgePanelConceptsNotDrawn": ["count"],
+        "knowledgePanelNoConceptMatches": [],
+        "knowledgePanelNoConceptYet": [],
+        "knowledgePanelGraphLabel": [],
+        "knowledgePanelGraphLegend": [],
+        "knowledgePanelOrbitLeft": [],
+        "knowledgePanelOrbitRight": [],
+        "knowledgePanelZoomIn": [],
+        "knowledgePanelZoomOut": [],
+        "knowledgePanelResetView": [],
+        "knowledgePanelPointerHint": [],
+        "knowledgePanelKeyHint": [],
+        "knowledgePanelConnectionsFor": ["title"],
+        "knowledgePanelConnections": [],
+        "knowledgePanelSelectConceptPrompt": [],
+        "knowledgePanelNoConnection": [],
+        "knowledgePanelTabGraph": [],
+        "knowledgePanelTabConcepts": [],
+        "knowledgePanelTabFindings": [],
+        "knowledgePanelTabDirections": [],
+        "knowledgePanelSomeConcept": [],
+        "knowledgePanelSaidNameSelected": ["name"],
+        "knowledgePanelSaidSelected": [],
+        "knowledgePanelSaidRevisionOpened": ["revision"],
+        "knowledgePanelSaidOpened": [],
+        "knowledgePanelSaidAskReady": [],
+        "knowledgePanelBrowserEmpty": [],
+        "knowledgePanelSaidNearby": [],
+        "knowledgePanelSaidCollection": [],
+        "knowledgePanelFind": [],
+        "knowledgePanelFindDirection": [],
+        "knowledgePanelFindEntry": [],
+        "knowledgePanelViews": [],
+        "knowledgePanelProject": [],
+        "knowledgePanelSaidProject": [],
+        "knowledgePanelAllProjects": [],
+        "knowledgePanelInspector": [],
+        "knowledgePanelSaidShownOnGraph": [],
+        "nowPanelBoardQueueLabel": [],
+        "nowPanelBoardUnqueueLabel": [],
+        "nowPanelBoardStartLabel": [],
+        "nowPanelBoardStartNowLabel": [],
+        "nowPanelBoardPinDetail": [],
+        "nowPanelBoardUnpinDetail": [],
+        "nowPanelBoardDragStarted": [],
+        "nowPanelBoardMoveCancelled": [],
+        "nowPanelBoardAnotherTask": [],
+        "nowPanelBoardKeyList": ["keys", "last"],
+        "nowPanelBoardMoveClosed": [],
+        "nowPanelBoardMoveAlreadyHere": [],
+        "nowPanelBoardMoveNotWaiting": [],
+        "nowPanelBoardMoveShowsMergeCard": [],
+        "nowPanelBoardMoveNoMergeCard": [],
+        "nowPanelBoardMoveAnswerCardFirst": [],
+        "nowPanelBoardMoveWaitsForYou": [],
+        "nowPanelBoardMoveStarting": [],
+        "nowPanelBoardMoveAlreadyStarted": [],
+        "nowPanelBoardMoveParentToBacklog": [],
+        "nowPanelBoardMoveToBacklog": [],
+        "nowPanelBoardMovedToBacklog": ["key"],
+        "nowPanelBoardMoveParentToQueue": [],
+        "nowPanelBoardMoveQueuedBlocked": ["waitsOn"],
+        "nowPanelBoardMovedQueuedBlocked": ["key", "waitsOn"],
+        "nowPanelBoardMoveQueuedHeld": [],
+        "nowPanelBoardMovedQueuedHeld": ["key"],
+        "nowPanelBoardAskQueue": ["key"],
+        "nowPanelBoardMoveBlockedOne": ["waitsOn"],
+        "nowPanelBoardMoveBlockedMany": ["waitsOn"],
+        "nowPanelBoardMoveHeld": [],
+        "nowPanelBoardMoveParentStart": [],
+        "nowPanelBoardMoveAlreadyQueued": [],
+        "nowPanelBoardAskStart": ["key"],
+        "nowPanelBoardMovedStartedToBacklog": ["key"],
+        "nowPanelBoardAskStartAgain": ["key"],
+        "nowPanelBoardMoveStartedInBacklog": [],
+        "nowPanelBoardStartedBacklogText": [],
+        "nowPanelBoardMoveCannotDrop": [],
+        "nowPanelBoardDropChanged": ["key"],
+        "nowPanelBoardDonePinned": ["key"],
+        "nowPanelBoardDoneUnpinned": ["key"],
+        "nowPanelBoardDoneCardShown": ["key"],
+        "nowPanelBoardDoneQueued": ["key"],
+        "nowPanelBoardDoneUnqueued": ["key"],
+        "nowPanelBoardDoneStartedAgain": ["key"],
+        "nowPanelBoardDoneStarting": ["key"],
+        "nowPanelBoardDoneContinued": ["key"],
+        "nowPanelBoardDoneDropped": ["key"],
+        "nowPanelBoardDoneStopped": ["key"],
+        "nowPanelBoardMenuShowCard": [],
+        "nowPanelBoardMenuOpenRecord": [],
+        "nowPanelBoardMenuContinue": [],
+        "nowPanelBoardMenuContinueDetail": [],
+        "nowPanelBoardMenuStopDetail": [],
+        "nowPanelBoardMenuUnqueueDetail": [],
+        "nowPanelBoardMenuQueueAskDetail": [],
+        "nowPanelBoardMenuQueueBlockedDetail": ["waitsOn"],
+        "nowPanelBoardMenuQueueHeldDetail": [],
+        "nowPanelBoardMenuStartDetail": [],
+        "nowPanelBoardMenuDropDetail": [],
+        "nowPanelBoardLaneDropped": [],
+        "nowPanelBoardLaneEarlier": [],
+        "nowPanelBoardEmptyWaiting": [],
+        "nowPanelBoardEmptyBacklog": [],
+        "nowPanelBoardEmptyQueued": [],
+        "nowPanelBoardEmptyWorking": [],
+        "nowPanelBoardEmptyLanded": [],
+        "nowPanelBoardEmptyDropped": [],
+        "nowPanelBoardEmptyEarlier": [],
+        "nowPanelBoardTileFoundOn": ["key"],
+        "nowPanelBoardTilePartOf": ["key"],
+        "nowPanelBoardAllProjects": [],
+        "nowPanelSummaryWaiting": ["count"],
+        "nowPanelSummaryWorking": ["count"],
+        "nowPanelSummaryFailed": ["count"],
+        "nowPanelNoTasks": [],
+        "nowPanelFilterPlaceholder": [],
+        "nowPanelFilterLabel": [],
+        "nowPanelCloseSearch": [],
+        "nowPanelRowBlockedBy": ["keys"],
+        "nowPanelBoardMovedTo": ["key", "lane"],
+        "nowPanelBoardOffBoard": ["key"],
+        "nowPanelBoardMoveChanged": ["key"],
+        "nowPanelBoardCannotMove": [],
+        "nowPanelBoardBroughtCard": [],
+        "nowPanelBoardCardGone": [],
+        "nowPanelBoardDropAsks": [],
+        "nowPanelBoardLandedAsks": [],
+        "nowPanelBoardCannotPin": [],
+        "nowPanelBoardPartsFinished": ["closed", "count"],
+        "nowPanelBoardWaitRecorded": ["when"],
+        "nowPanelBoardTileActions": ["key"],
+        "nowPanelBoardCancel": [],
+        "nowPanelBoardRange": ["first", "last", "total"],
+        "nowPanelBoardPreviousPage": ["lane"],
+        "nowPanelBoardPrevious": [],
+        "nowPanelBoardNextPage": ["lane"],
+        "nowPanelBoardNext": [],
+        "nowPanelBoardEarlierUnavailable": [],
+        "nowPanelBoardEarlierReading": [],
+        "nowPanelBoardEarlierCapped": [],
+        "nowPanelBoardListLabel": ["count", "lane"],
+        "nowPanelBoardNewCount": ["count"],
+        "nowPanelBoardReadOnly": [],
+        "nowPanelBoardLabel": [],
+        "nowPanelBoardFindPlaceholder": [],
+        "nowPanelBoardFindLabel": [],
+        "nowPanelBoardViews": [],
+        "nowPanelBoardViewBoard": [],
+        "nowPanelBoardViewBacklog": [],
+        "nowPanelBoardViewLanded": [],
+        "nowPanelBoardViewEarlier": [],
+        "nowPanelBoardWaitingNote": [],
+        "nowPanelBoardShowAll": ["count"],
+        "nowPanelBoardDroppedToggle": ["count"],
+        "nowPanelBoardHint": ["enter", "space"],
         "settingsKeyboardSaveFailed": [],
         "settingsKeyboardHeading": [],
         "settingsKeyboardSearch": [],
@@ -3640,6 +4514,580 @@ extension PhoneWords {
         "settingsIntegrationsRuleNote": [],
         "settingsIntegrationsRuleOff": [],
         "settingsIntegrationsCopying": [],
+        "phonePromptCamera": [],
+        "phonePromptFaceId": [],
+        "phonePromptLocalNetwork": [],
+        "phoneMediaRecordingFinished": [],
+        "phoneMediaPlayAgain": [],
+        "phoneMediaRecordingFailed": [],
+        "phoneMediaStopRecording": [],
+        "phoneMediaPlayRecording": [],
+        "phoneCommonRetry": [],
+        "phoneMediaLoadingRecording": [],
+        "phoneMediaPreviousPicture": [],
+        "phoneMediaPicturePosition": ["count", "position"],
+        "phoneMediaNextPicture": [],
+        "phoneMediaTitleRecording": [],
+        "phoneMediaTitleDiagram": [],
+        "phoneMediaTitlePicture": [],
+        "phoneCommonDone": [],
+        "phoneMediaRecordingLoadFailed": [],
+        "phoneCommonRemovePhoto": [],
+        "phoneComposerPhotos": [],
+        "phoneComposerPlaceholder": [],
+        "phoneCommonSend": [],
+        "phoneComposerAddingPhotos": [],
+        "phoneComposerPictureOnly": [],
+        "phoneComposerReplyHint": [],
+        "phoneCommonSendingEllipsis": [],
+        "phoneComposerWorking": [],
+        "phoneComposerTooLong": [],
+        "phoneComposerPhotoFailed": [],
+        "phoneComposerYou": [],
+        "phoneComposerFirstMate": [],
+        "phoneComposerReplyTitle": [],
+        "phoneComposerPhotoTooLarge": [],
+        "phoneCardWebNoAnswer": [],
+        "phoneCardWebStopped": [],
+        "phoneCardWebNotReady": [],
+        "phoneCardWebTooLarge": [],
+        "phoneCardWebMacOnly": ["computer"],
+        "phoneCardWebLinkRefused": [],
+        "phoneCardWebCannotDo": [],
+        "phoneCardWebFooterOnly": [],
+        "phoneCardWebChoiceInProgress": [],
+        "phoneCardWebNoDataFile": [],
+        "phoneCardWebDataUnreadable": [],
+        "phoneCardRisk": [],
+        "phoneCardBrowser": [],
+        "phoneCardOpenBrowser": [],
+        "phoneCardNoAnswer": [],
+        "phoneJoinNearbyRefused": [],
+        "phoneJoinCameraNotAllowed": [],
+        "phoneJoinNoCamera": [],
+        "phoneJoinCameraFailed": [],
+        "phoneAppHideKeyboard": [],
+        "phoneJoinRemovedTitle": [],
+        "phoneJoinRemovedLine": [],
+        "phoneJoinAgain": [],
+        "phoneCommonSettings": [],
+        "phoneAppYourComputer": [],
+        "phoneJoinScanTitle": [],
+        "phoneCommonCancel": [],
+        "phoneJoinPasteHelp": [],
+        "phoneJoinPasteField": [],
+        "phoneCommonContinue": [],
+        "phoneJoinPasteTitle": [],
+        "phoneJoinConfirmTitleNamed": ["computer"],
+        "phoneJoinConfirmTitle": [],
+        "phoneJoinConfirmNamed": ["computer"],
+        "phoneJoinConfirm": [],
+        "phoneJoinConfirmLine": [],
+        "phoneJoinWelcomeTitle": [],
+        "phoneJoinWelcomeLine": [],
+        "phoneJoinJoining": [],
+        "phoneJoinScanLine": [],
+        "phoneJoinPasteLine": [],
+        "phoneJoinAddressTitle": [],
+        "phoneJoinAddressLine": [],
+        "phoneJoinNearbyEmpty": [],
+        "phoneJoinNearbyScan": [],
+        "phoneJoinNearbyScanLabel": ["computer"],
+        "phoneAddressSweepAsk": [],
+        "phoneAddressSweepLook": [],
+        "phoneAddressSweepWarning": [],
+        "phoneAddressTypingHelp": [],
+        "phoneAddressPortField": [],
+        "phoneAddressOnThisNetwork": [],
+        "phoneAddressAccountField": [],
+        "phoneAddressAccountHelp": [],
+        "phoneAddressSweptLine": [],
+        "phoneAddressSweepOffer": [],
+        "phoneAddressSweeping": ["count"],
+        "phoneAddressSweptNone": [],
+        "phoneAddressNoNetwork": [],
+        "phoneAddressLooking": [],
+        "phoneAddressLookingNotAllowed": [],
+        "phoneAddressLookingFailed": [],
+        "phoneAddressSigningIn": ["computer"],
+        "phoneAddressTrustAsk": ["computer"],
+        "phoneAddressTrustLine": ["computer"],
+        "phoneAddressTrustWarning": [],
+        "phoneAddressNotThisOne": [],
+        "phoneAddressTrustNamed": ["computer"],
+        "phoneAddressKeyRefusedPassword": ["computer"],
+        "phoneAddressPasswordField": ["computer"],
+        "phoneAddressCopyKeyInstead": [],
+        "phoneAddressKeyRefused": ["computer"],
+        "phoneCommonCopied": [],
+        "phoneAddressCopyKey": [],
+        "phoneCommonTryAgain": [],
+        "phoneAddressSignInOnce": [],
+        "phoneCharacterFirstMate": [],
+        "phoneHideKeyboard": [],
+        "phoneSceneComputerFallback": [],
+        "phoneSceneActivityUnknown": [],
+        "phoneSceneWaitingBatchCheck": [],
+        "phoneSceneWaitingChecks": [],
+        "phoneSceneWorking": [],
+        "phoneSceneProgramParts": ["count"],
+        "phoneSceneSelected": ["words"],
+        "phoneReachAsOf": ["time"],
+        "phoneReachInReach": [],
+        "phoneReachReaching": [],
+        "phoneReachOutOfReach": [],
+        "phoneReachLine": ["reach", "time"],
+        "phoneReachChangesOff": ["computer"],
+        "phoneComputerFirstMateHere": [],
+        "phoneComputerTitle": [],
+        "phoneComputerLeaveAsk": ["computer"],
+        "phoneComputerLeaveConfirm": [],
+        "phoneComputerKeep": [],
+        "phoneComputerLeaveWarning": [],
+        "phoneComputerForgetAsk": [],
+        "phoneComputerForgetConfirm": [],
+        "phoneComputerForgetWarning": [],
+        "phoneComputerLeaveHeading": [],
+        "phoneComputerLeaveExplain": [],
+        "phoneComputerLeaveButton": ["computer"],
+        "phoneComputerForgetHeading": [],
+        "phoneComputerForgetExplain": ["computer"],
+        "phoneComputerForgetButton": [],
+        "phoneGoogleSignedInAs": ["account", "computer"],
+        "phoneGoogleSignedIn": ["computer"],
+        "phoneGoogleSignInAgainNeeded": [],
+        "phoneGoogleSignInAgain": [],
+        "phoneGoogleSignOut": [],
+        "phoneGoogleSignOutAsk": ["computer"],
+        "phoneGoogleSignOutWarning": [],
+        "phoneGoogleInvite": ["computer"],
+        "phoneGoogleSignIn": [],
+        "phoneSceneLabel": [],
+        "phoneSceneBrowsing": [],
+        "phoneSceneNotBrowsing": [],
+        "phoneSceneHint": [],
+        "phoneSceneBrowse": [],
+        "phoneSceneCloseComputerPreview": [],
+        "phoneCrewSummaryOpenTask": [],
+        "phoneCommonClose": [],
+        "phoneModelReadSavedUnlock": [],
+        "phoneModelReadSavedRetry": [],
+        "phoneModelForgotDamaged": [],
+        "phoneModelForgetUnlock": [],
+        "phoneModelForgetRetry": [],
+        "phoneModelLeaveBeforeJoining": [],
+        "phoneModelKeepFingerprintFailed": [],
+        "phoneModelKeepAddressFailed": [],
+        "phoneModelForgetTryLeave": [],
+        "phoneCardsPagerPast": [],
+        "phoneCardsPagerPosition": ["position", "total"],
+        "phoneCardsTaskKeyHint": [],
+        "phoneCardsRetryNote": [],
+        "phoneCardsDoThisOn": ["computer"],
+        "phoneCommonSending": [],
+        "phoneCardsChooseFallback": [],
+        "phoneCardsChosen": [],
+        "phoneCardsChoosePhotos": [],
+        "phoneCardsTakePhoto": [],
+        "phoneCardsAddPhotos": [],
+        "phoneCardsSendReply": [],
+        "phoneCardsReplyTooLong": ["count"],
+        "phoneCardsApprovalAsks": ["confirmation"],
+        "phoneCardsApprovalTurnOn": ["computer"],
+        "phoneCardsApprovalStillWaiting": [],
+        "phoneCardsKindEnded": [],
+        "phoneCardsAnswerRequiredFirst": [],
+        "phoneCardsPhotoNotAdded": [],
+        "phoneSettingsGeneral": [],
+        "phoneSettingsAppearance": [],
+        "phoneSettingsIntegrations": [],
+        "phoneSettingsDevices": [],
+        "phoneSettingsThisIpad": [],
+        "phoneSettingsThisPhone": [],
+        "phoneSettingsThisIpadInline": [],
+        "phoneSettingsThisPhoneInline": [],
+        "phoneSettingsVersion": ["version"],
+        "phoneSettingsConversationStays": [],
+        "phoneSettingsBack": [],
+        "phoneSettingsCapabilityRead": ["update"],
+        "phoneSettingsCapabilityFull": [],
+        "phoneSettingsThemeSummary": ["theme"],
+        "phoneSettingsGoogleSummary": ["account"],
+        "phoneSettingsGoogleSignedIn": [],
+        "phoneSettingsGoogleSignedOut": [],
+        "phoneSettingsTheme": [],
+        "phoneSettingsThemeScope": ["computer", "device"],
+        "phoneSettingsSecretsApprovals": [],
+        "phoneSettingsApprovalDamaged": ["computer", "device"],
+        "phoneSettingsSetUpAgain": [],
+        "phoneSettingsApprovalEarlierListed": ["computer", "device"],
+        "phoneSettingsApprovalConfirmOn": ["computer"],
+        "phoneSettingsApprovalCode": ["code"],
+        "phoneSettingsApprovalCodesDiffer": [],
+        "phoneSettingsApprovalEnrolled": ["confirmation", "device"],
+        "phoneSettingsApprovalTurnOff": ["computer"],
+        "phoneSettingsApprovalReplaced": ["computer", "device"],
+        "phoneSettingsApprovalOffer": ["computer", "confirmation", "device"],
+        "phoneSettingsApprovesSecretUses": [],
+        "phoneRecordWhy": [],
+        "phoneRecordNoReason": [],
+        "phoneRecordFirstMateVerdict": ["verdict"],
+        "phoneRecordFirstMatePending": [],
+        "phoneRecordProject": [],
+        "phoneRecordNow": [],
+        "phoneRecordPartOf": [],
+        "phoneRecordWaitsOn": [],
+        "phoneRecordHoldsUp": [],
+        "phoneRecordParts": [],
+        "phoneRecordPartsClosed": ["closed", "total"],
+        "phoneRecordGoal": [],
+        "phoneRecordWhyFiled": [],
+        "phoneRecordWhyNoPlan": [],
+        "phoneRecordYouSaid": [],
+        "phoneRecordProgress": [],
+        "phoneRecordPlanCount": ["done", "total"],
+        "phoneRecordShowEarlier": ["count"],
+        "phoneRecordPlanSkipped": [],
+        "phoneRecordModel": [],
+        "phoneRecordReasoning": [],
+        "phoneRecordChecks": [],
+        "phoneRecordReview": [],
+        "phoneRecordDelivery": [],
+        "phoneRecordRunsOn": [],
+        "phoneRecordMore": [],
+        "phoneRecordCardNote": [],
+        "phoneRecordCardDecision": [],
+        "phoneRecordCardAside": [],
+        "phoneRecordCardOnStage": [],
+        "phoneRecordCardClosed": [],
+        "phoneRecordCardEnded": ["age", "ending"],
+        "phoneRecordCrewEarlier": ["count"],
+        "phoneRecordReport": [],
+        "phoneRecordSteer": [],
+        "phoneTaskChangeRefused": [],
+        "phoneRecordShowCardRefused": [],
+        "phoneRecordSteerTooLong": [],
+        "phoneRecordResultLines": ["count", "preview"],
+        "phoneRecordReading": [],
+        "phoneRecordResultCut": ["count"],
+        "phoneRecordNoResult": [],
+        "phoneTasksEmpty": [],
+        "phoneTasksNoMatch": [],
+        "phoneTasksFind": [],
+        "phoneTasksSearchTooLong": [],
+        "phoneTasksSearch": [],
+        "phoneTasksCloseSearch": [],
+        "phoneTasksGroupExpanded": [],
+        "phoneTasksGroupCollapsed": [],
+        "phoneTasksRestoreHint": [],
+        "phoneTabHome": [],
+        "phoneTabTasks": [],
+        "phoneTabActivity": [],
+        "phoneWorkspaceShow": [],
+        "phoneWorkspaceTabs": [],
+        "phoneNoticeReply": [],
+        "phoneNoticeNewCard": [],
+        "phoneNoticeLabel": ["kind", "title"],
+        "phoneNoticeOpenHint": [],
+        "phoneNoticeDismiss": [],
+        "phoneNoticeDismissHint": [],
+        "phoneActivityEmpty": [],
+        "phoneActivityOpenTaskHint": [],
+        "phoneActivityTask": [],
+        "phoneActivityProject": [],
+        "phoneApprovalConfirmFaceId": [],
+        "phoneApprovalConfirmTouchId": [],
+        "phoneApprovalConfirmOpticId": [],
+        "phoneApprovalConfirmPasscode": [],
+        "phoneApprovalUnsupported": [],
+        "phoneApprovalUnusable": [],
+        "phoneApprovalNotConfirmed": [],
+        "phoneApprovalNotKept": [],
+        "phoneApprovalDamaged": [],
+        "phoneApprovalChanged": [],
+        "phoneAskedPicture": [],
+        "phoneAskedFrom": ["key"],
+        "phoneAskedSaid": [],
+        "phoneAskedChoseOn": ["card"],
+        "phoneAskedChose": [],
+        "phoneAskedAutomation": [],
+        "phoneAskedAsked": [],
+        "phoneAskedDateTime": ["date", "time"],
+        "phoneAskedLabel": ["name", "when"],
+        "phoneAskedLabelThrough": ["count", "name", "when"],
+        "phoneJoinLinkDamaged": [],
+        "phoneJoinLinkUnsupported": [],
+        "phoneJoinWrongComputer": [],
+        "phoneJoinUnavailable": [],
+        "phoneJoinInvalidReply": [],
+        "phoneJoinUnconfirmed": [],
+        "phoneJoinYourComputer": [],
+        "phoneFormatNow": [],
+        "phoneFormatMinutes": ["minutes"],
+        "phoneFormatHours": ["hours"],
+        "phoneFormatDays": ["days"],
+        "phoneFormatDaysHours": ["days", "hours"],
+        "phoneFormatHoursMinutes": ["hours", "minutes"],
+        "phoneFormatUnderMinute": [],
+        "phoneIdentityUnreadable": [],
+        "phoneIdentityNotKept": [],
+        "phoneLookDevice": [],
+        "phoneLookDark": [],
+        "phoneLookLight": [],
+        "phoneRecordStartChecking": [],
+        "phoneRecordStartSlow": [],
+        "phoneRecordStartFailed": ["reason"],
+        "phoneRecordCouldNotStart": [],
+        "phoneRecordWaitTimeUnknown": [],
+        "phoneRecordWaitLineRecorded": ["event", "label", "time"],
+        "phoneRecordWaitLine": ["event", "label"],
+        "phoneRecordWaitNextRead": ["time"],
+        "phoneRecordWaitNextCheckBack": ["time"],
+        "phoneRecordWaitNextReset": ["time"],
+        "phoneRecordWaitNextStart": ["time"],
+        "phoneRecordWaitNextOther": ["event", "time"],
+        "phoneRecordWaitDueRead": ["time"],
+        "phoneRecordWaitDueCheckBack": ["time"],
+        "phoneRecordWaitDueReset": ["time"],
+        "phoneRecordWaitDueStart": ["time"],
+        "phoneRecordWaitDueOther": ["event", "time"],
+        "phoneRecordAttentionFailed": [],
+        "phoneRecordAttentionInterrupted": [],
+        "phoneRecordAttentionInterruptedGuidance": [],
+        "phoneRecordAttentionWaitingOn": ["keys"],
+        "phoneRecordAttentionBlockedGuidance": [],
+        "phoneRecordAttentionDependencyDropped": [],
+        "phoneRecordAttentionDependencyDroppedGuidance": [],
+        "phoneRecordAttentionPaused": [],
+        "phoneRecordAttentionPausedGuidance": [],
+        "phoneRecordPartsDo": ["count"],
+        "phoneRecordPartsProgress": ["closed", "open"],
+        "phoneRecordAttentionStartTime": [],
+        "phoneRecordClosedMerged": [],
+        "phoneRecordClosedReleased": [],
+        "phoneRecordClosedAnswered": [],
+        "phoneRecordClosedClosed": [],
+        "phoneRecordClosedFinished": [],
+        "phoneRecordClosedDropped": [],
+        "phoneRecordClosedDiscarded": [],
+        "phoneRecordClosedFailed": [],
+        "phoneRecordClosedSuperseded": [],
+        "phoneRecordClosedMergedPullRequest": ["age", "label"],
+        "phoneRecordClosedMergedBranch": ["age", "label"],
+        "phoneRecordClosedMergedAt": ["age"],
+        "phoneRecordClosedChecksPassed": [],
+        "phoneRecordClosedCarried": ["age", "note"],
+        "phoneRecordClosedWithNote": ["age", "note", "status"],
+        "phoneRecordClosedAt": ["age", "status"],
+        "phoneRecordClosedDone": [],
+        "phoneRecordFoldFiledPlanMessages": ["count"],
+        "phoneRecordFoldFiledPlan": [],
+        "phoneRecordFoldFiledMessages": ["count"],
+        "phoneRecordFoldFiled": [],
+        "phoneRecordFoldPlanMessages": ["count"],
+        "phoneRecordFoldPlan": [],
+        "phoneRecordFoldMessages": ["count"],
+        "phoneRecordDeliveryPullRequest": [],
+        "phoneRecordDeliveryBatched": [],
+        "phoneRecordDeliveryLocal": [],
+        "phoneRecordDeliveryInPlace": [],
+        "phoneRecordDeliveryRigor": ["care"],
+        "phoneRecordModePullRequest": [],
+        "phoneRecordModeBatched": [],
+        "phoneRecordModeLocal": [],
+        "phoneRecordModeInPlace": [],
+        "phoneRecordFactResult": [],
+        "phoneRecordFactOperation": [],
+        "phoneRecordFactCrewmate": [],
+        "phoneRecordFactCrewmateOn": ["crewmate", "model"],
+        "phoneRecordFactBranch": [],
+        "phoneRecordLandsMerged": [],
+        "phoneRecordLandsRigor": ["care"],
+        "phoneRecordFactDelivery": [],
+        "phoneRecordFactMerging": [],
+        "phoneRecordFactRigor": [],
+        "phoneRecordFactRunsOn": [],
+        "phoneRecordFactComputerChoice": [],
+        "phoneRecordMoreClosedHelper": [],
+        "phoneRecordMorePreviewBranch": [],
+        "phoneRecordMorePreviewComputerChoice": [],
+        "phoneRecordMorePreviewDelivery": [],
+        "phoneRecordDropStarted": ["key"],
+        "phoneRecordDropUnstarted": ["key"],
+        "phoneRecordDropWaiting": ["count", "keys"],
+        "phoneRecordDropUnderway": ["count", "keys"],
+        "phoneRecordDropPartsPlanned": ["count", "keys"],
+        "phoneRecordDropPartsStarted": ["count", "keys"],
+        "phoneRecordElapsedSeconds": ["seconds"],
+        "phoneRecordElapsedMinutes": ["minutes", "seconds"],
+        "phoneRecordElapsedHours": ["hours", "minutes"],
+        "phoneSecretsGiveOnce": ["recipient", "secrets"],
+        "phoneSecretsRefusedUnavailable": [],
+        "phoneSecretsRefusedExpired": [],
+        "phoneSecretsRefusedDenied": [],
+        "phoneSecretsRefusedGone": [],
+        "phoneSecretsRefusedStarted": [],
+        "phoneSecretsRefusedUnknown": [],
+        "phoneSecretsTurnOnFirst": [],
+        "phoneSSHKeyStorageFailed": [],
+        "phoneRowMoveOpenRecord": [],
+        "phoneRowMoveShowCard": [],
+        "phoneRowMoveAnotherTask": [],
+        "phoneRowMoveKeyList": ["last", "rest"],
+        "phoneRowMoveClosedStays": [],
+        "phoneRowMoveAlreadyHere": [],
+        "phoneRowMoveWaitingNeedsDecision": [],
+        "phoneRowMoveBringsMergeCard": [],
+        "phoneRowMoveNoMergeCard": [],
+        "phoneRowMoveAnswerCardFirst": [],
+        "phoneRowMoveWaitsForYou": [],
+        "phoneRowMoveIsStarting": [],
+        "phoneRowMoveAlreadyStarted": [],
+        "phoneRowMovePartsMove": [],
+        "phoneRowMoveBacklogText": [],
+        "phoneRowMoveBacklogDone": ["key"],
+        "phoneRowMovePartsQueue": [],
+        "phoneRowMoveQueuedBlockedText": ["waitsOn"],
+        "phoneRowMoveQueuedBlockedDone": ["key", "waitsOn"],
+        "phoneRowMoveQueuedHeldText": [],
+        "phoneRowMoveQueuedHeldDone": ["key"],
+        "phoneRowMoveQueueAsk": ["key"],
+        "phoneRowMoveMustFinishFirst": ["count", "waitsOn"],
+        "phoneRowMoveHeldNoDrag": [],
+        "phoneRowMovePartsStart": [],
+        "phoneRowMoveAlreadyQueued": [],
+        "phoneRowMoveStartAsk": ["key"],
+        "phoneRowMoveStartedBacklogDone": ["key"],
+        "phoneRowMoveStartAgainAsk": ["key"],
+        "phoneRowMoveAlreadyStartedBacklog": [],
+        "phoneRowMoveCannotDrop": [],
+        "phoneRowMoveDropChanged": ["key"],
+        "phoneRowMoveContinueDetail": [],
+        "phoneRowMoveStopDetail": [],
+        "phoneRowMoveUnqueueDetail": [],
+        "phoneRowMoveQueueAskDetail": [],
+        "phoneRowMoveQueueBlockedDetail": ["waitsOn"],
+        "phoneRowMoveQueueHeldDetail": [],
+        "phoneRowMoveStartDetail": [],
+        "phoneRowMoveDropDetail": [],
+        "phoneTaskFactsStatusBacklog": [],
+        "phoneTaskFactsStatusQueued": [],
+        "phoneTaskFactsStatusStarting": [],
+        "phoneTaskFactsStatusWorking": [],
+        "phoneTaskFactsStatusIdle": [],
+        "phoneTaskFactsStatusInterrupted": [],
+        "phoneTaskFactsStatusWaiting": [],
+        "phoneTaskFactsStatusDone": [],
+        "phoneTaskFactsStatusDropped": [],
+        "phoneTaskFactsPostureJob": [],
+        "phoneTaskFactsPostureChecks": [],
+        "phoneTaskFactsPostureGuidance": [],
+        "phoneTaskFactsPostureSettlement": [],
+        "phoneTaskFactsPostureTimedWait": [],
+        "phoneTaskFactsPostureCaptain": [],
+        "phoneTaskFactsPostureInactive": [],
+        "phoneTaskFactsPostureAccess": [],
+        "phoneTaskFactsBlockedByAnother": [],
+        "phoneTaskFactsPostureUnobserved": [],
+        "phoneTaskFactsProviderRetrying": [],
+        "phoneTaskFactsProviderStuck": [],
+        "phoneTaskFactsAwayConnecting": ["computer"],
+        "phoneTaskFactsAwayNoNewWork": ["computer"],
+        "phoneTaskFactsAwayOutOfReach": ["computer"],
+        "phoneTaskFactsClosedAnswered": [],
+        "phoneTaskFactsClosedFailed": [],
+        "phoneTaskFactsWaitingPrerequisites": [],
+        "phoneTaskFactsAnswerReady": [],
+        "phoneTaskFactsAnswerReadyWaiting": ["duration"],
+        "phoneTaskFactsWaitingMerge": [],
+        "phoneTaskFactsDecisionReady": [],
+        "phoneTaskFactsStartedInBacklog": [],
+        "phoneTaskFactsCouldNotStart": [],
+        "phoneTaskFactsHeld": [],
+        "phoneTaskFactsPartsDoWork": ["count"],
+        "phoneTaskFactsStartsOnStart": [],
+        "phoneTaskFactsStartsWhenReady": [],
+        "phoneTaskFactsWaitingBatchCheck": [],
+        "phoneTaskFactsWorkInterrupted": [],
+        "phoneTaskFactsWaitingOnKey": ["key"],
+        "phoneTaskFactsWaitingOnTasks": ["count"],
+        "phoneTaskFactsChecksNoPull": [],
+        "phoneTaskFactsChecksMergedOutside": [],
+        "phoneTaskFactsChecksNotRead": [],
+        "phoneTaskFactsChangePull": [],
+        "phoneTaskFactsChangeBranch": [],
+        "phoneTaskFactsCheckTimedOut": [],
+        "phoneTaskFactsCheckNeedsDecision": [],
+        "phoneTaskFactsCheckDidNotStart": [],
+        "phoneTaskFactsCheckOutOfDate": [],
+        "phoneTaskFactsChecksUnreadableWhy": ["problem"],
+        "phoneTaskFactsChecksIncomplete": [],
+        "phoneTaskFactsChecksNone": [],
+        "phoneTaskFactsChecksNoneReported": [],
+        "phoneTaskFactsChecksUnreadable": [],
+        "phoneTaskFactsChecksOtherVersion": [],
+        "phoneTaskFactsChecksJustNow": [],
+        "phoneTaskFactsChecksAgo": ["age"],
+        "phoneTaskFactsLevelNone": [],
+        "phoneTaskFactsLevelMinimal": [],
+        "phoneTaskFactsLevelLow": [],
+        "phoneTaskFactsLevelMedium": [],
+        "phoneTaskFactsLevelHigh": [],
+        "phoneTaskFactsLevelExtraHigh": [],
+        "phoneTaskFactsLevelModelDefault": [],
+        "phoneTaskFactsReasoningQuick": [],
+        "phoneTaskFactsReasoningCapped": [],
+        "phoneWorkStateDone": [],
+        "phoneWorkStateDropped": [],
+        "phoneWorkStateWaitingOnYou": [],
+        "phoneWorkStateStarting": [],
+        "phoneWorkStateWaitingOnTask": [],
+        "phoneWorkStateBacklog": [],
+        "phoneWorkStateQueued": [],
+        "phoneWorkStateWorking": [],
+        "phoneWorkStateInterrupted": [],
+        "phoneWorkStateStopping": [],
+        "phoneWorkStateIdle": [],
+        "phoneWorkStateNotStarted": [],
+        "phoneWorkPlaceCompacted": [],
+        "phoneWorkPlaceStopped": [],
+        "phoneSessionChangeFailed": [],
+        "phonePairUpdateMac": [],
+        "phonePairLinkSpent": [],
+        "phonePairRefused": [],
+        "phoneSessionUpdatePhone": [],
+        "phoneSessionUpdateComputer": [],
+        "phoneSessionOutOfReach": [],
+        "phoneSessionRequestRefused": [],
+        "phoneSshJoinAddressInvalid": [],
+        "phoneSshJoinPortInvalid": [],
+        "phoneSshJoinNotReached": ["host"],
+        "phoneSshJoinLoginOff": ["host"],
+        "phoneSshJoinUnknownHost": [],
+        "phoneSshJoinHostChanged": ["host"],
+        "phoneSshJoinKeyRefused": ["host"],
+        "phoneSshJoinKeyRefusedNoPassword": ["host"],
+        "phoneSshJoinWrongPassword": ["host"],
+        "phoneSshJoinNotOpen": ["host"],
+        "phoneSshJoinComputerTooOld": ["host"],
+        "phoneSshJoinNoCurl": ["host"],
+        "phoneSshJoinNoLink": ["host"],
+        "phoneSshJoinPhoneTooOld": ["host"],
+        "phoneSshJoinFailed": ["host"],
+        "phoneChecksPassed": [],
+        "phoneChecksFailed": [],
+        "phoneChecksRunning": [],
+        "phoneChecksCancelled": [],
+        "phoneChecksError": [],
+        "phoneChecksSkipped": [],
+        "phoneChecksNeutral": [],
+        "phoneChecksCounted": ["count", "word"],
+        "phoneChecksForDuration": ["duration", "words"],
+        "phoneChecksInDuration": ["duration", "words"],
+        "phoneChecksAfterDuration": ["duration", "words"],
+        "phoneReviewFindings": [],
+        "phoneReviewBlocked": [],
+        "phoneReviewWithRisk": ["risk", "words"],
         "recordHelperClosed": [],
         "recordMergingOnItsOwn": [],
         "recordFactCrewmate": [],
@@ -4729,580 +6177,182 @@ extension PhoneWords {
         "automationRunAlsoSkipped": ["count"],
         "automationScreenedNote": [],
         "automationWaitsForNote": [],
-        "phonePromptCamera": [],
-        "phonePromptFaceId": [],
-        "phonePromptLocalNetwork": [],
-        "phoneMediaRecordingFinished": [],
-        "phoneMediaPlayAgain": [],
-        "phoneMediaRecordingFailed": [],
-        "phoneMediaStopRecording": [],
-        "phoneMediaPlayRecording": [],
-        "phoneCommonRetry": [],
-        "phoneMediaLoadingRecording": [],
-        "phoneMediaPreviousPicture": [],
-        "phoneMediaPicturePosition": ["count", "position"],
-        "phoneMediaNextPicture": [],
-        "phoneMediaTitleRecording": [],
-        "phoneMediaTitleDiagram": [],
-        "phoneMediaTitlePicture": [],
-        "phoneCommonDone": [],
-        "phoneMediaRecordingLoadFailed": [],
-        "phoneCommonRemovePhoto": [],
-        "phoneComposerPhotos": [],
-        "phoneComposerPlaceholder": [],
-        "phoneCommonSend": [],
-        "phoneComposerAddingPhotos": [],
-        "phoneComposerPictureOnly": [],
-        "phoneComposerReplyHint": [],
-        "phoneCommonSendingEllipsis": [],
-        "phoneComposerWorking": [],
-        "phoneComposerTooLong": [],
-        "phoneComposerPhotoFailed": [],
-        "phoneComposerYou": [],
-        "phoneComposerFirstMate": [],
-        "phoneComposerReplyTitle": [],
-        "phoneComposerPhotoTooLarge": [],
-        "phoneCardWebNoAnswer": [],
-        "phoneCardWebStopped": [],
-        "phoneCardWebNotReady": [],
-        "phoneCardWebTooLarge": [],
-        "phoneCardWebMacOnly": ["computer"],
-        "phoneCardWebLinkRefused": [],
-        "phoneCardWebCannotDo": [],
-        "phoneCardWebFooterOnly": [],
-        "phoneCardWebChoiceInProgress": [],
-        "phoneCardWebNoDataFile": [],
-        "phoneCardWebDataUnreadable": [],
-        "phoneCardRisk": [],
-        "phoneCardBrowser": [],
-        "phoneCardOpenBrowser": [],
-        "phoneCardNoAnswer": [],
-        "phoneJoinNearbyRefused": [],
-        "phoneJoinCameraNotAllowed": [],
-        "phoneJoinNoCamera": [],
-        "phoneJoinCameraFailed": [],
-        "phoneAppHideKeyboard": [],
-        "phoneJoinRemovedTitle": [],
-        "phoneJoinRemovedLine": [],
-        "phoneJoinAgain": [],
-        "phoneCommonSettings": [],
-        "phoneAppYourComputer": [],
-        "phoneJoinScanTitle": [],
-        "phoneCommonCancel": [],
-        "phoneJoinPasteHelp": [],
-        "phoneJoinPasteField": [],
-        "phoneCommonContinue": [],
-        "phoneJoinPasteTitle": [],
-        "phoneJoinConfirmTitleNamed": ["computer"],
-        "phoneJoinConfirmTitle": [],
-        "phoneJoinConfirmNamed": ["computer"],
-        "phoneJoinConfirm": [],
-        "phoneJoinConfirmLine": [],
-        "phoneJoinWelcomeTitle": [],
-        "phoneJoinWelcomeLine": [],
-        "phoneJoinJoining": [],
-        "phoneJoinScanLine": [],
-        "phoneJoinPasteLine": [],
-        "phoneJoinAddressTitle": [],
-        "phoneJoinAddressLine": [],
-        "phoneJoinNearbyEmpty": [],
-        "phoneJoinNearbyScan": [],
-        "phoneJoinNearbyScanLabel": ["computer"],
-        "phoneAddressSweepAsk": [],
-        "phoneAddressSweepLook": [],
-        "phoneAddressSweepWarning": [],
-        "phoneAddressTypingHelp": [],
-        "phoneAddressPortField": [],
-        "phoneAddressOnThisNetwork": [],
-        "phoneAddressAccountField": [],
-        "phoneAddressAccountHelp": [],
-        "phoneAddressSweptLine": [],
-        "phoneAddressSweepOffer": [],
-        "phoneAddressSweeping": ["count"],
-        "phoneAddressSweptNone": [],
-        "phoneAddressNoNetwork": [],
-        "phoneAddressLooking": [],
-        "phoneAddressLookingNotAllowed": [],
-        "phoneAddressLookingFailed": [],
-        "phoneAddressSigningIn": ["computer"],
-        "phoneAddressTrustAsk": ["computer"],
-        "phoneAddressTrustLine": ["computer"],
-        "phoneAddressTrustWarning": [],
-        "phoneAddressNotThisOne": [],
-        "phoneAddressTrustNamed": ["computer"],
-        "phoneAddressKeyRefusedPassword": ["computer"],
-        "phoneAddressPasswordField": ["computer"],
-        "phoneAddressCopyKeyInstead": [],
-        "phoneAddressKeyRefused": ["computer"],
-        "phoneCommonCopied": [],
-        "phoneAddressCopyKey": [],
-        "phoneCommonTryAgain": [],
-        "phoneAddressSignInOnce": [],
-        "phoneCharacterFirstMate": [],
-        "phoneHideKeyboard": [],
-        "phoneSceneComputerFallback": [],
-        "phoneSceneActivityUnknown": [],
-        "phoneSceneWaitingBatchCheck": [],
-        "phoneSceneWaitingChecks": [],
-        "phoneSceneWorking": [],
-        "phoneSceneProgramParts": ["count"],
-        "phoneSceneSelected": ["words"],
-        "phoneReachAsOf": ["time"],
-        "phoneReachInReach": [],
-        "phoneReachReaching": [],
-        "phoneReachOutOfReach": [],
-        "phoneReachLine": ["reach", "time"],
-        "phoneReachChangesOff": ["computer"],
-        "phoneComputerFirstMateHere": [],
-        "phoneComputerTitle": [],
-        "phoneComputerLeaveAsk": ["computer"],
-        "phoneComputerLeaveConfirm": [],
-        "phoneComputerKeep": [],
-        "phoneComputerLeaveWarning": [],
-        "phoneComputerForgetAsk": [],
-        "phoneComputerForgetConfirm": [],
-        "phoneComputerForgetWarning": [],
-        "phoneComputerLeaveHeading": [],
-        "phoneComputerLeaveExplain": [],
-        "phoneComputerLeaveButton": ["computer"],
-        "phoneComputerForgetHeading": [],
-        "phoneComputerForgetExplain": ["computer"],
-        "phoneComputerForgetButton": [],
-        "phoneGoogleSignedInAs": ["account", "computer"],
-        "phoneGoogleSignedIn": ["computer"],
-        "phoneGoogleSignInAgainNeeded": [],
-        "phoneGoogleSignInAgain": [],
-        "phoneGoogleSignOut": [],
-        "phoneGoogleSignOutAsk": ["computer"],
-        "phoneGoogleSignOutWarning": [],
-        "phoneGoogleInvite": ["computer"],
-        "phoneGoogleSignIn": [],
-        "phoneSceneLabel": [],
-        "phoneSceneBrowsing": [],
-        "phoneSceneNotBrowsing": [],
-        "phoneSceneHint": [],
-        "phoneSceneBrowse": [],
-        "phoneSceneCloseComputerPreview": [],
-        "phoneCrewSummaryOpenTask": [],
-        "phoneCommonClose": [],
-        "phoneModelReadSavedUnlock": [],
-        "phoneModelReadSavedRetry": [],
-        "phoneModelForgotDamaged": [],
-        "phoneModelForgetUnlock": [],
-        "phoneModelForgetRetry": [],
-        "phoneModelLeaveBeforeJoining": [],
-        "phoneModelKeepFingerprintFailed": [],
-        "phoneModelKeepAddressFailed": [],
-        "phoneModelForgetTryLeave": [],
-        "phoneCardsPagerPast": [],
-        "phoneCardsPagerPosition": ["position", "total"],
-        "phoneCardsTaskKeyHint": [],
-        "phoneCardsRetryNote": [],
-        "phoneCardsDoThisOn": ["computer"],
-        "phoneCommonSending": [],
-        "phoneCardsChooseFallback": [],
-        "phoneCardsChosen": [],
-        "phoneCardsChoosePhotos": [],
-        "phoneCardsTakePhoto": [],
-        "phoneCardsAddPhotos": [],
-        "phoneCardsSendReply": [],
-        "phoneCardsReplyTooLong": ["count"],
-        "phoneCardsApprovalAsks": ["confirmation"],
-        "phoneCardsApprovalTurnOn": ["computer"],
-        "phoneCardsApprovalStillWaiting": [],
-        "phoneCardsKindEnded": [],
-        "phoneCardsAnswerRequiredFirst": [],
-        "phoneCardsPhotoNotAdded": [],
-        "phoneSettingsGeneral": [],
-        "phoneSettingsAppearance": [],
-        "phoneSettingsIntegrations": [],
-        "phoneSettingsDevices": [],
-        "phoneSettingsThisIpad": [],
-        "phoneSettingsThisPhone": [],
-        "phoneSettingsThisIpadInline": [],
-        "phoneSettingsThisPhoneInline": [],
-        "phoneSettingsVersion": ["version"],
-        "phoneSettingsConversationStays": [],
-        "phoneSettingsBack": [],
-        "phoneSettingsCapabilityRead": ["update"],
-        "phoneSettingsCapabilityFull": [],
-        "phoneSettingsThemeSummary": ["theme"],
-        "phoneSettingsGoogleSummary": ["account"],
-        "phoneSettingsGoogleSignedIn": [],
-        "phoneSettingsGoogleSignedOut": [],
-        "phoneSettingsTheme": [],
-        "phoneSettingsThemeScope": ["computer", "device"],
-        "phoneSettingsSecretsApprovals": [],
-        "phoneSettingsApprovalDamaged": ["computer", "device"],
-        "phoneSettingsSetUpAgain": [],
-        "phoneSettingsApprovalEarlierListed": ["computer", "device"],
-        "phoneSettingsApprovalConfirmOn": ["computer"],
-        "phoneSettingsApprovalCode": ["code"],
-        "phoneSettingsApprovalCodesDiffer": [],
-        "phoneSettingsApprovalEnrolled": ["confirmation", "device"],
-        "phoneSettingsApprovalTurnOff": ["computer"],
-        "phoneSettingsApprovalReplaced": ["computer", "device"],
-        "phoneSettingsApprovalOffer": ["computer", "confirmation", "device"],
-        "phoneSettingsApprovesSecretUses": [],
-        "phoneRecordWhy": [],
-        "phoneRecordNoReason": [],
-        "phoneRecordFirstMateVerdict": ["verdict"],
-        "phoneRecordFirstMatePending": [],
-        "phoneRecordProject": [],
-        "phoneRecordNow": [],
-        "phoneRecordPartOf": [],
-        "phoneRecordWaitsOn": [],
-        "phoneRecordHoldsUp": [],
-        "phoneRecordParts": [],
-        "phoneRecordPartsClosed": ["closed", "total"],
-        "phoneRecordGoal": [],
-        "phoneRecordWhyFiled": [],
-        "phoneRecordWhyNoPlan": [],
-        "phoneRecordYouSaid": [],
-        "phoneRecordProgress": [],
-        "phoneRecordPlanCount": ["done", "total"],
-        "phoneRecordShowEarlier": ["count"],
-        "phoneRecordPlanSkipped": [],
-        "phoneRecordModel": [],
-        "phoneRecordReasoning": [],
-        "phoneRecordChecks": [],
-        "phoneRecordReview": [],
-        "phoneRecordDelivery": [],
-        "phoneRecordRunsOn": [],
-        "phoneRecordMore": [],
-        "phoneRecordCardNote": [],
-        "phoneRecordCardDecision": [],
-        "phoneRecordCardAside": [],
-        "phoneRecordCardOnStage": [],
-        "phoneRecordCardClosed": [],
-        "phoneRecordCardEnded": ["age", "ending"],
-        "phoneRecordCrewEarlier": ["count"],
-        "phoneRecordReport": [],
-        "phoneRecordSteer": [],
-        "phoneTaskChangeRefused": [],
-        "phoneRecordShowCardRefused": [],
-        "phoneRecordSteerTooLong": [],
-        "phoneRecordResultLines": ["count", "preview"],
-        "phoneRecordReading": [],
-        "phoneRecordResultCut": ["count"],
-        "phoneRecordNoResult": [],
-        "phoneTasksEmpty": [],
-        "phoneTasksNoMatch": [],
-        "phoneTasksFind": [],
-        "phoneTasksSearchTooLong": [],
-        "phoneTasksSearch": [],
-        "phoneTasksCloseSearch": [],
-        "phoneTasksGroupExpanded": [],
-        "phoneTasksGroupCollapsed": [],
-        "phoneTasksRestoreHint": [],
-        "phoneTabHome": [],
-        "phoneTabTasks": [],
-        "phoneTabActivity": [],
-        "phoneWorkspaceShow": [],
-        "phoneWorkspaceTabs": [],
-        "phoneNoticeReply": [],
-        "phoneNoticeNewCard": [],
-        "phoneNoticeLabel": ["kind", "title"],
-        "phoneNoticeOpenHint": [],
-        "phoneNoticeDismiss": [],
-        "phoneNoticeDismissHint": [],
-        "phoneActivityEmpty": [],
-        "phoneActivityOpenTaskHint": [],
-        "phoneActivityTask": [],
-        "phoneActivityProject": [],
-        "phoneApprovalConfirmFaceId": [],
-        "phoneApprovalConfirmTouchId": [],
-        "phoneApprovalConfirmOpticId": [],
-        "phoneApprovalConfirmPasscode": [],
-        "phoneApprovalUnsupported": [],
-        "phoneApprovalUnusable": [],
-        "phoneApprovalNotConfirmed": [],
-        "phoneApprovalNotKept": [],
-        "phoneApprovalDamaged": [],
-        "phoneApprovalChanged": [],
-        "phoneAskedPicture": [],
-        "phoneAskedFrom": ["key"],
-        "phoneAskedSaid": [],
-        "phoneAskedChoseOn": ["card"],
-        "phoneAskedChose": [],
-        "phoneAskedAutomation": [],
-        "phoneAskedAsked": [],
-        "phoneAskedDateTime": ["date", "time"],
-        "phoneAskedLabel": ["name", "when"],
-        "phoneAskedLabelThrough": ["count", "name", "when"],
-        "phoneJoinLinkDamaged": [],
-        "phoneJoinLinkUnsupported": [],
-        "phoneJoinWrongComputer": [],
-        "phoneJoinUnavailable": [],
-        "phoneJoinInvalidReply": [],
-        "phoneJoinUnconfirmed": [],
-        "phoneJoinYourComputer": [],
-        "phoneFormatNow": [],
-        "phoneFormatMinutes": ["minutes"],
-        "phoneFormatHours": ["hours"],
-        "phoneFormatDays": ["days"],
-        "phoneFormatDaysHours": ["days", "hours"],
-        "phoneFormatHoursMinutes": ["hours", "minutes"],
-        "phoneFormatUnderMinute": [],
-        "phoneIdentityUnreadable": [],
-        "phoneIdentityNotKept": [],
-        "phoneLookDevice": [],
-        "phoneLookDark": [],
-        "phoneLookLight": [],
-        "phoneRecordStartChecking": [],
-        "phoneRecordStartSlow": [],
-        "phoneRecordStartFailed": ["reason"],
-        "phoneRecordCouldNotStart": [],
-        "phoneRecordWaitTimeUnknown": [],
-        "phoneRecordWaitLineRecorded": ["event", "label", "time"],
-        "phoneRecordWaitLine": ["event", "label"],
-        "phoneRecordWaitNextRead": ["time"],
-        "phoneRecordWaitNextCheckBack": ["time"],
-        "phoneRecordWaitNextReset": ["time"],
-        "phoneRecordWaitNextStart": ["time"],
-        "phoneRecordWaitNextOther": ["event", "time"],
-        "phoneRecordWaitDueRead": ["time"],
-        "phoneRecordWaitDueCheckBack": ["time"],
-        "phoneRecordWaitDueReset": ["time"],
-        "phoneRecordWaitDueStart": ["time"],
-        "phoneRecordWaitDueOther": ["event", "time"],
-        "phoneRecordAttentionFailed": [],
-        "phoneRecordAttentionInterrupted": [],
-        "phoneRecordAttentionInterruptedGuidance": [],
-        "phoneRecordAttentionWaitingOn": ["keys"],
-        "phoneRecordAttentionBlockedGuidance": [],
-        "phoneRecordAttentionDependencyDropped": [],
-        "phoneRecordAttentionDependencyDroppedGuidance": [],
-        "phoneRecordAttentionPaused": [],
-        "phoneRecordAttentionPausedGuidance": [],
-        "phoneRecordPartsDo": ["count"],
-        "phoneRecordPartsProgress": ["closed", "open"],
-        "phoneRecordAttentionStartTime": [],
-        "phoneRecordClosedMerged": [],
-        "phoneRecordClosedReleased": [],
-        "phoneRecordClosedAnswered": [],
-        "phoneRecordClosedClosed": [],
-        "phoneRecordClosedFinished": [],
-        "phoneRecordClosedDropped": [],
-        "phoneRecordClosedDiscarded": [],
-        "phoneRecordClosedFailed": [],
-        "phoneRecordClosedSuperseded": [],
-        "phoneRecordClosedMergedPullRequest": ["age", "label"],
-        "phoneRecordClosedMergedBranch": ["age", "label"],
-        "phoneRecordClosedMergedAt": ["age"],
-        "phoneRecordClosedChecksPassed": [],
-        "phoneRecordClosedCarried": ["age", "note"],
-        "phoneRecordClosedWithNote": ["age", "note", "status"],
-        "phoneRecordClosedAt": ["age", "status"],
-        "phoneRecordClosedDone": [],
-        "phoneRecordFoldFiledPlanMessages": ["count"],
-        "phoneRecordFoldFiledPlan": [],
-        "phoneRecordFoldFiledMessages": ["count"],
-        "phoneRecordFoldFiled": [],
-        "phoneRecordFoldPlanMessages": ["count"],
-        "phoneRecordFoldPlan": [],
-        "phoneRecordFoldMessages": ["count"],
-        "phoneRecordDeliveryPullRequest": [],
-        "phoneRecordDeliveryBatched": [],
-        "phoneRecordDeliveryLocal": [],
-        "phoneRecordDeliveryInPlace": [],
-        "phoneRecordDeliveryRigor": ["care"],
-        "phoneRecordModePullRequest": [],
-        "phoneRecordModeBatched": [],
-        "phoneRecordModeLocal": [],
-        "phoneRecordModeInPlace": [],
-        "phoneRecordFactResult": [],
-        "phoneRecordFactOperation": [],
-        "phoneRecordFactCrewmate": [],
-        "phoneRecordFactCrewmateOn": ["crewmate", "model"],
-        "phoneRecordFactBranch": [],
-        "phoneRecordLandsMerged": [],
-        "phoneRecordLandsRigor": ["care"],
-        "phoneRecordFactDelivery": [],
-        "phoneRecordFactMerging": [],
-        "phoneRecordFactRigor": [],
-        "phoneRecordFactRunsOn": [],
-        "phoneRecordFactComputerChoice": [],
-        "phoneRecordMoreClosedHelper": [],
-        "phoneRecordMorePreviewBranch": [],
-        "phoneRecordMorePreviewComputerChoice": [],
-        "phoneRecordMorePreviewDelivery": [],
-        "phoneRecordDropStarted": ["key"],
-        "phoneRecordDropUnstarted": ["key"],
-        "phoneRecordDropWaiting": ["count", "keys"],
-        "phoneRecordDropUnderway": ["count", "keys"],
-        "phoneRecordDropPartsPlanned": ["count", "keys"],
-        "phoneRecordDropPartsStarted": ["count", "keys"],
-        "phoneRecordElapsedSeconds": ["seconds"],
-        "phoneRecordElapsedMinutes": ["minutes", "seconds"],
-        "phoneRecordElapsedHours": ["hours", "minutes"],
-        "phoneSecretsGiveOnce": ["recipient", "secrets"],
-        "phoneSecretsRefusedUnavailable": [],
-        "phoneSecretsRefusedExpired": [],
-        "phoneSecretsRefusedDenied": [],
-        "phoneSecretsRefusedGone": [],
-        "phoneSecretsRefusedStarted": [],
-        "phoneSecretsRefusedUnknown": [],
-        "phoneSecretsTurnOnFirst": [],
-        "phoneSSHKeyStorageFailed": [],
-        "phoneRowMoveOpenRecord": [],
-        "phoneRowMoveShowCard": [],
-        "phoneRowMoveAnotherTask": [],
-        "phoneRowMoveKeyList": ["last", "rest"],
-        "phoneRowMoveClosedStays": [],
-        "phoneRowMoveAlreadyHere": [],
-        "phoneRowMoveWaitingNeedsDecision": [],
-        "phoneRowMoveBringsMergeCard": [],
-        "phoneRowMoveNoMergeCard": [],
-        "phoneRowMoveAnswerCardFirst": [],
-        "phoneRowMoveWaitsForYou": [],
-        "phoneRowMoveIsStarting": [],
-        "phoneRowMoveAlreadyStarted": [],
-        "phoneRowMovePartsMove": [],
-        "phoneRowMoveBacklogText": [],
-        "phoneRowMoveBacklogDone": ["key"],
-        "phoneRowMovePartsQueue": [],
-        "phoneRowMoveQueuedBlockedText": ["waitsOn"],
-        "phoneRowMoveQueuedBlockedDone": ["key", "waitsOn"],
-        "phoneRowMoveQueuedHeldText": [],
-        "phoneRowMoveQueuedHeldDone": ["key"],
-        "phoneRowMoveQueueAsk": ["key"],
-        "phoneRowMoveMustFinishFirst": ["count", "waitsOn"],
-        "phoneRowMoveHeldNoDrag": [],
-        "phoneRowMovePartsStart": [],
-        "phoneRowMoveAlreadyQueued": [],
-        "phoneRowMoveStartAsk": ["key"],
-        "phoneRowMoveStartedBacklogDone": ["key"],
-        "phoneRowMoveStartAgainAsk": ["key"],
-        "phoneRowMoveAlreadyStartedBacklog": [],
-        "phoneRowMoveCannotDrop": [],
-        "phoneRowMoveDropChanged": ["key"],
-        "phoneRowMoveContinueDetail": [],
-        "phoneRowMoveStopDetail": [],
-        "phoneRowMoveUnqueueDetail": [],
-        "phoneRowMoveQueueAskDetail": [],
-        "phoneRowMoveQueueBlockedDetail": ["waitsOn"],
-        "phoneRowMoveQueueHeldDetail": [],
-        "phoneRowMoveStartDetail": [],
-        "phoneRowMoveDropDetail": [],
-        "phoneTaskFactsStatusBacklog": [],
-        "phoneTaskFactsStatusQueued": [],
-        "phoneTaskFactsStatusStarting": [],
-        "phoneTaskFactsStatusWorking": [],
-        "phoneTaskFactsStatusIdle": [],
-        "phoneTaskFactsStatusInterrupted": [],
-        "phoneTaskFactsStatusWaiting": [],
-        "phoneTaskFactsStatusDone": [],
-        "phoneTaskFactsStatusDropped": [],
-        "phoneTaskFactsPostureJob": [],
-        "phoneTaskFactsPostureChecks": [],
-        "phoneTaskFactsPostureGuidance": [],
-        "phoneTaskFactsPostureSettlement": [],
-        "phoneTaskFactsPostureTimedWait": [],
-        "phoneTaskFactsPostureCaptain": [],
-        "phoneTaskFactsPostureInactive": [],
-        "phoneTaskFactsPostureAccess": [],
-        "phoneTaskFactsBlockedByAnother": [],
-        "phoneTaskFactsPostureUnobserved": [],
-        "phoneTaskFactsProviderRetrying": [],
-        "phoneTaskFactsProviderStuck": [],
-        "phoneTaskFactsAwayConnecting": ["computer"],
-        "phoneTaskFactsAwayNoNewWork": ["computer"],
-        "phoneTaskFactsAwayOutOfReach": ["computer"],
-        "phoneTaskFactsClosedAnswered": [],
-        "phoneTaskFactsClosedFailed": [],
-        "phoneTaskFactsWaitingPrerequisites": [],
-        "phoneTaskFactsAnswerReady": [],
-        "phoneTaskFactsAnswerReadyWaiting": ["duration"],
-        "phoneTaskFactsWaitingMerge": [],
-        "phoneTaskFactsDecisionReady": [],
-        "phoneTaskFactsStartedInBacklog": [],
-        "phoneTaskFactsCouldNotStart": [],
-        "phoneTaskFactsHeld": [],
-        "phoneTaskFactsPartsDoWork": ["count"],
-        "phoneTaskFactsStartsOnStart": [],
-        "phoneTaskFactsStartsWhenReady": [],
-        "phoneTaskFactsWaitingBatchCheck": [],
-        "phoneTaskFactsWorkInterrupted": [],
-        "phoneTaskFactsWaitingOnKey": ["key"],
-        "phoneTaskFactsWaitingOnTasks": ["count"],
-        "phoneTaskFactsChecksNoPull": [],
-        "phoneTaskFactsChecksMergedOutside": [],
-        "phoneTaskFactsChecksNotRead": [],
-        "phoneTaskFactsChangePull": [],
-        "phoneTaskFactsChangeBranch": [],
-        "phoneTaskFactsCheckTimedOut": [],
-        "phoneTaskFactsCheckNeedsDecision": [],
-        "phoneTaskFactsCheckDidNotStart": [],
-        "phoneTaskFactsCheckOutOfDate": [],
-        "phoneTaskFactsChecksUnreadableWhy": ["problem"],
-        "phoneTaskFactsChecksIncomplete": [],
-        "phoneTaskFactsChecksNone": [],
-        "phoneTaskFactsChecksNoneReported": [],
-        "phoneTaskFactsChecksUnreadable": [],
-        "phoneTaskFactsChecksOtherVersion": [],
-        "phoneTaskFactsChecksJustNow": [],
-        "phoneTaskFactsChecksAgo": ["age"],
-        "phoneTaskFactsLevelNone": [],
-        "phoneTaskFactsLevelMinimal": [],
-        "phoneTaskFactsLevelLow": [],
-        "phoneTaskFactsLevelMedium": [],
-        "phoneTaskFactsLevelHigh": [],
-        "phoneTaskFactsLevelExtraHigh": [],
-        "phoneTaskFactsLevelModelDefault": [],
-        "phoneTaskFactsReasoningQuick": [],
-        "phoneTaskFactsReasoningCapped": [],
-        "phoneWorkStateDone": [],
-        "phoneWorkStateDropped": [],
-        "phoneWorkStateWaitingOnYou": [],
-        "phoneWorkStateStarting": [],
-        "phoneWorkStateWaitingOnTask": [],
-        "phoneWorkStateBacklog": [],
-        "phoneWorkStateQueued": [],
-        "phoneWorkStateWorking": [],
-        "phoneWorkStateInterrupted": [],
-        "phoneWorkStateStopping": [],
-        "phoneWorkStateIdle": [],
-        "phoneWorkStateNotStarted": [],
-        "phoneWorkPlaceCompacted": [],
-        "phoneWorkPlaceStopped": [],
-        "phoneSessionChangeFailed": [],
-        "phonePairUpdateMac": [],
-        "phonePairLinkSpent": [],
-        "phonePairRefused": [],
-        "phoneSessionUpdatePhone": [],
-        "phoneSessionUpdateComputer": [],
-        "phoneSessionOutOfReach": [],
-        "phoneSessionRequestRefused": [],
-        "phoneSshJoinAddressInvalid": [],
-        "phoneSshJoinPortInvalid": [],
-        "phoneSshJoinNotReached": ["host"],
-        "phoneSshJoinLoginOff": ["host"],
-        "phoneSshJoinUnknownHost": [],
-        "phoneSshJoinHostChanged": ["host"],
-        "phoneSshJoinKeyRefused": ["host"],
-        "phoneSshJoinKeyRefusedNoPassword": ["host"],
-        "phoneSshJoinWrongPassword": ["host"],
-        "phoneSshJoinNotOpen": ["host"],
-        "phoneSshJoinComputerTooOld": ["host"],
-        "phoneSshJoinNoCurl": ["host"],
-        "phoneSshJoinNoLink": ["host"],
-        "phoneSshJoinPhoneTooOld": ["host"],
-        "phoneSshJoinFailed": ["host"],
-        "phoneChecksPassed": [],
-        "phoneChecksFailed": [],
-        "phoneChecksRunning": [],
-        "phoneChecksCancelled": [],
-        "phoneChecksError": [],
-        "phoneChecksSkipped": [],
-        "phoneChecksNeutral": [],
-        "phoneChecksCounted": ["count", "word"],
-        "phoneChecksForDuration": ["duration", "words"],
-        "phoneChecksInDuration": ["duration", "words"],
-        "phoneChecksAfterDuration": ["duration", "words"],
-        "phoneReviewFindings": [],
-        "phoneReviewBlocked": [],
-        "phoneReviewWithRisk": ["risk", "words"],
+        "cardReplyHint": [],
+        "cardPastSentLead": [],
+        "cardReviewFinding": [],
+        "cardLeaveAside": [],
+        "cardLeaveAsideRest": [],
+        "cardLeaveHide": [],
+        "cardLeaveHideRest": [],
+        "cardLeaveHidePanelRest": [],
+        "cardAnswerDone": [],
+        "cardAnswerDoneRest": ["key"],
+        "cardDecline": [],
+        "cardAfterMergeWait": ["count", "keys"],
+        "cardAfterMergeDoerCrewmate": [],
+        "cardAfterMergeDoerFirstmate": [],
+        "cardAfterMergeLead": [],
+        "taskBrowserDriverCrewmate": [],
+        "taskBrowserDriverNobody": [],
+        "taskBrowserDriverWaiting": [],
+        "taskBrowserDriverTaking": [],
+        "taskBrowserDriverCaptain": [],
+        "taskBrowserStoppedCaptain": [],
+        "taskBrowserStoppedCrewmate": [],
+        "taskBrowserStoppedIdle": [],
+        "taskBrowserStoppedGone": [],
+        "taskBrowserStoppedTaskClosed": [],
+        "taskBrowserStaleAttachment": [],
+        "taskTabInfo": [],
+        "taskTabCards": [],
+        "taskTabActivity": [],
+        "taskTabCrewmate": [],
+        "crewmatePlaceholderWorking": [],
+        "crewmatePlaceholderIdle": [],
+        "crewmateField": [],
+        "crewmateSendsTo": [],
+        "crewmateQueued": [],
+        "crewmateWorking": [],
+        "crewmateInterruptHint": [],
+        "crewmateStop": [],
+        "crewmateStopping": [],
+        "crewmateIdle": [],
+        "crewmateWaiting": [],
+        "crewmatePaused": [],
+        "crewmateClosed": [],
+        "crewmateEmpty": [],
+        "crewmateUnreadable": [],
+        "crewmateOpen": [],
+        "crewmateFold": [],
+        "crewmateBrief": [],
+        "crewmateFirstmate": [],
+        "crewmateApp": [],
+        "crewmateRunning": [],
+        "crewmateNoResult": [],
+        "crewmateNoOutput": [],
+        "crewmatePicture": [],
+        "crewmatePictureLarger": [],
+        "crewmatePictureSmaller": [],
+        "crewmateFailed": [],
+        "crewmatePlan": [],
+        "crewmateProgress": [],
+        "crewmateReport": [],
+        "crewmateCard": [],
+        "crewmateShowCard": [],
+        "crewmateChange": [],
+        "crewmateCompacted": [],
+        "crewmateStoppedCaptain": [],
+        "crewmateStoppedFirstmate": [],
+        "crewmateStoppedApp": [],
+        "crewmateMoreLines": ["count"],
+        "crewmateCut": ["count"],
+        "crewmateEarlier": ["count"],
+        "policyAsksFirst": [],
+        "policySourceTask": [],
+        "policySourceProject": [],
+        "policySourceParent": [],
+        "policyHelper": [],
+        "policyCareBound": [],
+        "recordStart": [],
+        "recordTryAgain": [],
+        "recordStarting": [],
+        "recordStartAgain": [],
+        "recordContinue": [],
+        "recordShowCard": [],
+        "recordDropTask": [],
+        "recordDropCancel": [],
+        "recordDropReviewStale": [],
+        "pastEndingAnOption": [],
+        "pastEndingFirstmateChose": ["label"],
+        "pastEndingCrewmateChose": ["label"],
+        "pastEndingYouChose": ["label"],
+        "pastEndingDismissed": [],
+        "pastEndingAuthorWithdrawal": [],
+        "pastEndingHostWithdrawal": [],
+        "pastEndingTaskRetired": [],
+        "pastEndingDuplicate": [],
+        "pastEndingUnknown": [],
+        "nowPanelRowStart": [],
+        "nowPanelRowTryAgain": [],
+        "nowPanelRowStarting": [],
+        "nowPanelRowCouldNotStart": [],
+        "nowPanelRowChecks": [],
+        "nowPanelRowBatch": [],
+        "nowPanelRowWaiting": [],
+        "nowPanelRowBlocked": [],
+        "nowPanelRowHeld": [],
+        "nowPanelRowFoundOn": ["key"],
+        "nowPanelRowConnecting": [],
+        "nowPanelRowNoNewWork": [],
+        "nowPanelRowAway": [],
+        "nowPanelRowNewCount": ["count"],
+        "nowPanelRowFailedCount": ["count"],
+        "nowPanelGroupEarlier": [],
+        "nowPanelGroupPinned": [],
+        "taskGroupWaiting": [],
+        "taskGroupWorking": [],
+        "taskGroupQueued": [],
+        "taskGroupBacklog": [],
+        "taskGroupLanded": [],
+        "taskPinPin": [],
+        "taskPinUnpin": [],
+        "secretsAllowOnce": [],
+        "secretsDeny": [],
+        "integrationsSignInWaiting": ["name"],
+        "integrationsSignInAgain": [],
+        "integrationsSignInCancel": [],
+        "viewGoogleUpdateThere": ["mac"],
+        "viewReturnPasteLead": ["name"],
+        "viewReturnPasteLabel": ["name"],
+        "viewReturnPastePlaceholder": [],
+        "viewReturnPasteSend": ["mac"],
+        "viewReturnPasteRefused": [],
+        "cardNotePointAt": [],
+        "cardNotePointedAt": [],
+        "cardNoteStale": [],
+        "cardNoteUnavailable": [],
+        "cardNoteEditUnavailable": [],
+        "cardNoteEmpty": [],
+        "cardNoteAnnotate": [],
+        "cardNoteQueue": [],
+        "cardNoteCommentLabel": [],
+        "cardNoteCancel": [],
+        "cardNoteEdit": [],
+        "cardNoteRemove": [],
+        "cardNoteNotSent": [],
+        "cardNotePlaceholder": [],
+        "cardNoteDiscardHint": [],
+        "cardNoteSend": ["count"],
+        "cardNoteQueued": ["count"],
+        "cardNoteLabel": ["excerpt", "kind"],
+        "riskBlast": [],
+        "riskBlastLow": [],
+        "riskBlastMedium": [],
+        "riskBlastHigh": [],
+        "riskBehavior": [],
+        "riskBehaviorLow": [],
+        "riskBehaviorMedium": [],
+        "riskBehaviorHigh": [],
+        "riskUndo": [],
+        "riskUndoLow": [],
+        "riskUndoMedium": [],
+        "riskUndoHigh": [],
+        "riskEvidence": [],
+        "riskEvidenceLow": [],
+        "riskEvidenceMedium": [],
+        "riskEvidenceHigh": [],
+        "riskSensitivity": [],
+        "riskSensitivityLow": [],
+        "riskSensitivityMedium": [],
+        "riskSensitivityHigh": [],
+        "riskNovelty": [],
+        "riskNoveltyLow": [],
+        "riskNoveltyMedium": [],
+        "riskNoveltyHigh": [],
+        "riskDeps": [],
+        "riskDepsLow": [],
+        "riskDepsMedium": [],
+        "riskDepsHigh": [],
     ]
 
     /// The fill whose count picks each plural message's form.
@@ -5323,27 +6373,34 @@ extension PhoneWords {
         "cardRevisedPartsRemoved": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",
+        "automationPanelActiveCount": "count",
+        "automationPanelPausedCount": "count",
+        "knowledgePanelConceptCount": "count",
+        "knowledgePanelFindingCount": "count",
+        "knowledgePanelDirectionCount": "count",
+        "knowledgePanelAllDirections": "count",
+        "knowledgePanelGraphLink": "count",
+        "knowledgePanelMoreFindings": "count",
+        "knowledgePanelEarlierRevisions": "count",
+        "knowledgePanelEarlierUses": "count",
+        "knowledgePanelConceptMatches": "count",
+        "knowledgePanelSourceCount": "count",
+        "knowledgePanelCheckCount": "count",
+        "knowledgePanelGraphConceptsOf": "count",
+        "knowledgePanelGraphConnectionsOf": "count",
+        "knowledgePanelConnectionCount": "count",
+        "knowledgePanelHops": "count",
+        "knowledgePanelConceptsNotDrawn": "count",
+        "nowPanelSummaryWaiting": "count",
+        "nowPanelSummaryWorking": "count",
+        "nowPanelSummaryFailed": "count",
+        "nowPanelBoardPartsFinished": "count",
+        "nowPanelBoardListLabel": "count",
+        "nowPanelBoardNewCount": "count",
+        "nowPanelBoardShowAll": "count",
+        "nowPanelBoardDroppedToggle": "count",
         "settingsGeneralTasksPurged": "count",
         "settingsIntegrationsActionCount": "count",
-        "recordUsesMore": "count",
-        "recordAgeMinutes": "count",
-        "recordAgeHours": "count",
-        "recordAgeDays": "count",
-        "recordMoreKnowledge": "count",
-        "recordShowEarlier": "count",
-        "recordFoldedMore": "count",
-        "settingsDevicesWayCount": "count",
-        "settingsDevicesRemoveTasksStop": "count",
-        "settingsDevicesRemoveTasksStopOn": "count",
-        "settingsDevicesRemoveRunsAfter": "count",
-        "settingsDevicesTasks": "count",
-        "settingsProjectsPauseSummary": "count",
-        "accountsCustomApiListed": "count",
-        "settingsAutomationRunEvents": "count",
-        "settingsAutomationRunCatchingUpMissed": "count",
-        "settingsAutomationEventPreview": "count",
-        "settingsAutomationRunsEachTimeLooks": "count",
-        "automationRunSkipped": "count",
         "phoneMediaPicturePosition": "count",
         "phoneAddressSweeping": "count",
         "phoneSceneProgramParts": "count",
@@ -5365,5 +6422,32 @@ extension PhoneWords {
         "phoneTaskFactsPartsDoWork": "count",
         "phoneTaskFactsWaitingOnTasks": "count",
         "phoneChecksCounted": "count",
+        "recordUsesMore": "count",
+        "recordAgeMinutes": "count",
+        "recordAgeHours": "count",
+        "recordAgeDays": "count",
+        "recordMoreKnowledge": "count",
+        "recordShowEarlier": "count",
+        "recordFoldedMore": "count",
+        "settingsDevicesWayCount": "count",
+        "settingsDevicesRemoveTasksStop": "count",
+        "settingsDevicesRemoveTasksStopOn": "count",
+        "settingsDevicesRemoveRunsAfter": "count",
+        "settingsDevicesTasks": "count",
+        "settingsProjectsPauseSummary": "count",
+        "accountsCustomApiListed": "count",
+        "settingsAutomationRunEvents": "count",
+        "settingsAutomationRunCatchingUpMissed": "count",
+        "settingsAutomationEventPreview": "count",
+        "settingsAutomationRunsEachTimeLooks": "count",
+        "automationRunSkipped": "count",
+        "cardAfterMergeWait": "count",
+        "crewmateMoreLines": "count",
+        "crewmateCut": "count",
+        "crewmateEarlier": "count",
+        "nowPanelRowNewCount": "count",
+        "nowPanelRowFailedCount": "count",
+        "cardNoteSend": "count",
+        "cardNoteQueued": "count",
     ]
 }

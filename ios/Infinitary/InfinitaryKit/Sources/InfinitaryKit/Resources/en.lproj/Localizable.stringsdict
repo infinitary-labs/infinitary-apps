@@ -259,6 +259,422 @@
       <string>%1$ld more projects</string>
     </dict>
   </dict>
+  <key>automationPanelActiveCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld active</string>
+      <key>other</key>
+      <string>%1$ld active</string>
+    </dict>
+  </dict>
+  <key>automationPanelPausedCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld paused</string>
+      <key>other</key>
+      <string>%1$ld paused</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelConceptCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld concept</string>
+      <key>other</key>
+      <string>%1$ld concepts</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelFindingCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld finding</string>
+      <key>other</key>
+      <string>%1$ld findings</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelDirectionCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld direction</string>
+      <key>other</key>
+      <string>%1$ld directions</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelAllDirections</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>All %1$ld direction</string>
+      <key>other</key>
+      <string>All %1$ld directions</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelGraphLink</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Graph · %1$ld concept</string>
+      <key>other</key>
+      <string>Graph · %1$ld concepts</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelMoreFindings</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>And %1$ld more in Findings.</string>
+      <key>other</key>
+      <string>And %1$ld more in Findings.</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelEarlierRevisions</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>And %1$ld earlier revisions.</string>
+      <key>other</key>
+      <string>And %1$ld earlier revisions.</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelEarlierUses</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>And %1$ld earlier uses.</string>
+      <key>other</key>
+      <string>And %1$ld earlier uses.</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelConceptMatches</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld concept matches</string>
+      <key>other</key>
+      <string>%1$ld concepts match</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelSourceCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld source</string>
+      <key>other</key>
+      <string>%1$ld sources</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelCheckCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld check</string>
+      <key>other</key>
+      <string>%1$ld checks</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelGraphConceptsOf</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ of %1$ld concepts</string>
+      <key>other</key>
+      <string>%2$@ of %1$ld concepts</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelGraphConnectionsOf</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ of %1$ld connections</string>
+      <key>other</key>
+      <string>%2$@ of %1$ld connections</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelConnectionCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld connection</string>
+      <key>other</key>
+      <string>%1$ld connections</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelHops</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld hop</string>
+      <key>other</key>
+      <string>%1$ld hops</string>
+    </dict>
+  </dict>
+  <key>knowledgePanelConceptsNotDrawn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld more concepts are not drawn. Focus nearby or Find narrows the graph to what you need.</string>
+      <key>other</key>
+      <string>%1$ld more concepts are not drawn. Focus nearby or Find narrows the graph to what you need.</string>
+    </dict>
+  </dict>
+  <key>nowPanelSummaryWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld waiting</string>
+      <key>other</key>
+      <string>%1$ld waiting</string>
+    </dict>
+  </dict>
+  <key>nowPanelSummaryWorking</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld working</string>
+      <key>other</key>
+      <string>%1$ld working</string>
+    </dict>
+  </dict>
+  <key>nowPanelSummaryFailed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld could not start</string>
+      <key>other</key>
+      <string>%1$ld could not start</string>
+    </dict>
+  </dict>
+  <key>nowPanelBoardPartsFinished</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ of %2$ld parts finished</string>
+      <key>other</key>
+      <string>%1$@ of %2$ld parts finished</string>
+    </dict>
+  </dict>
+  <key>nowPanelBoardListLabel</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@, %1$ld task</string>
+      <key>other</key>
+      <string>%2$@, %1$ld tasks</string>
+    </dict>
+  </dict>
+  <key>nowPanelBoardNewCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld new</string>
+      <key>other</key>
+      <string>%1$ld new</string>
+    </dict>
+  </dict>
+  <key>nowPanelBoardShowAll</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Show all %1$ld</string>
+      <key>other</key>
+      <string>Show all %1$ld</string>
+    </dict>
+  </dict>
+  <key>nowPanelBoardDroppedToggle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Dropped · %1$ld</string>
+      <key>other</key>
+      <string>Dropped · %1$ld</string>
+    </dict>
+  </dict>
   <key>settingsGeneralTasksPurged</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -289,310 +705,6 @@
       <string>%1$ld action</string>
       <key>other</key>
       <string>%1$ld actions</string>
-    </dict>
-  </dict>
-  <key>recordUsesMore</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>And %1$ld more.</string>
-      <key>other</key>
-      <string>And %1$ld more.</string>
-    </dict>
-  </dict>
-  <key>recordAgeMinutes</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld min ago</string>
-      <key>other</key>
-      <string>%1$ld min ago</string>
-    </dict>
-  </dict>
-  <key>recordAgeHours</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld hr ago</string>
-      <key>other</key>
-      <string>%1$ld hr ago</string>
-    </dict>
-  </dict>
-  <key>recordAgeDays</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld day ago</string>
-      <key>other</key>
-      <string>%1$ld days ago</string>
-    </dict>
-  </dict>
-  <key>recordMoreKnowledge</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>knowledge %1$ld</string>
-      <key>other</key>
-      <string>knowledge %1$ld</string>
-    </dict>
-  </dict>
-  <key>recordShowEarlier</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Show earlier · %1$ld</string>
-      <key>other</key>
-      <string>Show earlier · %1$ld</string>
-    </dict>
-  </dict>
-  <key>recordFoldedMore</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld more</string>
-      <key>other</key>
-      <string>%1$ld more</string>
-    </dict>
-  </dict>
-  <key>settingsDevicesWayCount</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld computer</string>
-      <key>other</key>
-      <string>%1$ld computers</string>
-    </dict>
-  </dict>
-  <key>settingsDevicesRemoveTasksStop</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Its task stops. Infinitary then removes what it set up there, with its sign-ins.</string>
-      <key>other</key>
-      <string>Its %1$ld tasks stop. Infinitary then removes what it set up there, with its sign-ins.</string>
-    </dict>
-  </dict>
-  <key>settingsDevicesRemoveTasksStopOn</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Its task on %2$@ stops. Infinitary then removes what it set up there, with its sign-ins.</string>
-      <key>other</key>
-      <string>Its %1$ld tasks on %2$@ stop. Infinitary then removes what it set up there, with its sign-ins.</string>
-    </dict>
-  </dict>
-  <key>settingsDevicesRemoveRunsAfter</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%2$@ runs on this computer after.</string>
-      <key>other</key>
-      <string>%2$@ run on this computer after.</string>
-    </dict>
-  </dict>
-  <key>settingsDevicesTasks</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld task</string>
-      <key>other</key>
-      <string>%1$ld tasks</string>
-    </dict>
-  </dict>
-  <key>settingsProjectsPauseSummary</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%2$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Paused since %4$@: batch run %3$@ failed its checks, so one approved change waits for a fix: %1$@.</string>
-      <key>other</key>
-      <string>Paused since %4$@: batch run %3$@ failed its checks, so %2$ld approved changes wait for a fix: %1$@.</string>
-    </dict>
-  </dict>
-  <key>accountsCustomApiListed</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>This server lists %1$ld model. Pick the ones you would like to use:</string>
-      <key>other</key>
-      <string>This server lists %1$ld models. Pick the ones you would like to use:</string>
-    </dict>
-  </dict>
-  <key>settingsAutomationRunEvents</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld event, sent %2$@</string>
-      <key>other</key>
-      <string>%1$ld events, sent %2$@</string>
-    </dict>
-  </dict>
-  <key>settingsAutomationRunCatchingUpMissed</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Planned %2$@, sent %3$@, catching up %1$ld missed run</string>
-      <key>other</key>
-      <string>Planned %2$@, sent %3$@, catching up %1$ld missed runs</string>
-    </dict>
-  </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.</string>
-      <key>other</key>
-      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every %1$ld minutes. Nothing is sent.</string>
-    </dict>
-  </dict>
-  <key>settingsAutomationRunsEachTimeLooks</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Each time new events arrive. Infinitary looks every minute.</string>
-      <key>other</key>
-      <string>Each time new events arrive. Infinitary looks every %1$ld minutes.</string>
-    </dict>
-  </dict>
-  <key>automationRunSkipped</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%1$ld event, %2$@</string>
-      <key>other</key>
-      <string>%1$ld events, %2$@</string>
     </dict>
   </dict>
   <key>phoneMediaPicturePosition</key>
@@ -929,6 +1041,438 @@
       <string>%1$ld %2$@</string>
       <key>other</key>
       <string>%1$ld %2$@</string>
+    </dict>
+  </dict>
+  <key>recordUsesMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>And %1$ld more.</string>
+      <key>other</key>
+      <string>And %1$ld more.</string>
+    </dict>
+  </dict>
+  <key>recordAgeMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld min ago</string>
+      <key>other</key>
+      <string>%1$ld min ago</string>
+    </dict>
+  </dict>
+  <key>recordAgeHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld hr ago</string>
+      <key>other</key>
+      <string>%1$ld hr ago</string>
+    </dict>
+  </dict>
+  <key>recordAgeDays</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld day ago</string>
+      <key>other</key>
+      <string>%1$ld days ago</string>
+    </dict>
+  </dict>
+  <key>recordMoreKnowledge</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>knowledge %1$ld</string>
+      <key>other</key>
+      <string>knowledge %1$ld</string>
+    </dict>
+  </dict>
+  <key>recordShowEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Show earlier · %1$ld</string>
+      <key>other</key>
+      <string>Show earlier · %1$ld</string>
+    </dict>
+  </dict>
+  <key>recordFoldedMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld more</string>
+      <key>other</key>
+      <string>%1$ld more</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesWayCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld computer</string>
+      <key>other</key>
+      <string>%1$ld computers</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesRemoveTasksStop</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its task stops. Infinitary then removes what it set up there, with its sign-ins.</string>
+      <key>other</key>
+      <string>Its %1$ld tasks stop. Infinitary then removes what it set up there, with its sign-ins.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesRemoveTasksStopOn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its task on %2$@ stops. Infinitary then removes what it set up there, with its sign-ins.</string>
+      <key>other</key>
+      <string>Its %1$ld tasks on %2$@ stop. Infinitary then removes what it set up there, with its sign-ins.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesRemoveRunsAfter</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ runs on this computer after.</string>
+      <key>other</key>
+      <string>%2$@ run on this computer after.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld task</string>
+      <key>other</key>
+      <string>%1$ld tasks</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsPauseSummary</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Paused since %4$@: batch run %3$@ failed its checks, so one approved change waits for a fix: %1$@.</string>
+      <key>other</key>
+      <string>Paused since %4$@: batch run %3$@ failed its checks, so %2$ld approved changes wait for a fix: %1$@.</string>
+    </dict>
+  </dict>
+  <key>accountsCustomApiListed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>This server lists %1$ld model. Pick the ones you would like to use:</string>
+      <key>other</key>
+      <string>This server lists %1$ld models. Pick the ones you would like to use:</string>
+    </dict>
+  </dict>
+  <key>settingsAutomationRunEvents</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld event, sent %2$@</string>
+      <key>other</key>
+      <string>%1$ld events, sent %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsAutomationRunCatchingUpMissed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Planned %2$@, sent %3$@, catching up %1$ld missed run</string>
+      <key>other</key>
+      <string>Planned %2$@, sent %3$@, catching up %1$ld missed runs</string>
+    </dict>
+  </dict>
+  <key>settingsAutomationEventPreview</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.</string>
+      <key>other</key>
+      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every %1$ld minutes. Nothing is sent.</string>
+    </dict>
+  </dict>
+  <key>settingsAutomationRunsEachTimeLooks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Each time new events arrive. Infinitary looks every minute.</string>
+      <key>other</key>
+      <string>Each time new events arrive. Infinitary looks every %1$ld minutes.</string>
+    </dict>
+  </dict>
+  <key>automationRunSkipped</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld event, %2$@</string>
+      <key>other</key>
+      <string>%1$ld events, %2$@</string>
+    </dict>
+  </dict>
+  <key>cardAfterMergeWait</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Starts once %2$@ merges too</string>
+      <key>other</key>
+      <string>Starts once %2$@ merge too</string>
+    </dict>
+  </dict>
+  <key>crewmateMoreLines</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>+%1$ld line</string>
+      <key>other</key>
+      <string>+%1$ld lines</string>
+    </dict>
+  </dict>
+  <key>crewmateCut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld more character is not shown.</string>
+      <key>other</key>
+      <string>%1$ld more characters are not shown.</string>
+    </dict>
+  </dict>
+  <key>crewmateEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld earlier line is not shown.</string>
+      <key>other</key>
+      <string>%1$ld earlier lines are not shown.</string>
+    </dict>
+  </dict>
+  <key>nowPanelRowNewCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld new</string>
+      <key>other</key>
+      <string>%1$ld new</string>
+    </dict>
+  </dict>
+  <key>nowPanelRowFailedCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld could not start</string>
+      <key>other</key>
+      <string>%1$ld could not start</string>
+    </dict>
+  </dict>
+  <key>cardNoteSend</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Send %1$ld note</string>
+      <key>other</key>
+      <string>Send %1$ld notes</string>
+    </dict>
+  </dict>
+  <key>cardNoteQueued</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld note not sent</string>
+      <key>other</key>
+      <string>%1$ld notes not sent</string>
     </dict>
   </dict>
 </dict>

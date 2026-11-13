@@ -493,10 +493,10 @@ export function compileCatalogs(sources: Record<string, string>, infoPlist?: str
     if (!own.length) continue;
     panels[panelMessagesPath(panel)] = panelModule(panel, own, languages);
   }
-  // The phone takes the shared messages, the ones a saved fact may name, and its own; a panel's own words stay with its panel.
+  // The phone takes every message: the shared ones a saved fact may name, its own, and a panel's own that the
+  // phone's generated words call, such as the Tasks panel's row words. Its parity fixture replays the shared ones.
   const sharedCatalog: Catalog = new Map(shared);
-  const phoneCatalog: Catalog = new Map([...shared, ...[...english].filter(([id]) => isPhoneOwn(id))]);
-  const phone: Record<string, string> = { [PHONE_MESSAGES_PATH]: phoneMessagesSwift(phoneCatalog) };
+  const phone: Record<string, string> = { [PHONE_MESSAGES_PATH]: phoneMessagesSwift(english) };
   checkInfoPlist(english, infoPlist, problems);
   const catalogs = new Map<string, Catalog>([[SOURCE_LANGUAGE, english], ...translations]);
   for (const tag of PHONE_LANGUAGES) {
@@ -505,7 +505,7 @@ export function compileCatalogs(sources: Record<string, string>, infoPlist?: str
       problems.push(`scripts/generate-messages.ts: the phone ships ${tag}, which the catalog lacks`);
       continue;
     }
-    const files = appleStringFiles(catalog, phoneCatalog);
+    const files = appleStringFiles(catalog, english);
     phone[`${phoneStringsDir(tag)}/Localizable.strings`] = files.strings;
     phone[`${phoneStringsDir(tag)}/Localizable.stringsdict`] = files.stringsdict;
     phone[phoneInfoPlistStrings(tag)] = infoPlistStrings(catalog, english);

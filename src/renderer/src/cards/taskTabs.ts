@@ -1,10 +1,8 @@
-import { CREWMATE_TAB_LABEL } from "@shared/crewTranscript";
 import * as m from "@shared/i18n/messages.generated";
 import {
   ACTIVITY_TAB_LABEL,
   browserTabLabel,
   CARDS_TAB_LABEL,
-  INFO_TAB_LABEL,
   type TaskBrowserFact,
 } from "@shared/taskBrowser";
 import type { TaskDetail, TaskView } from "@shared/tasks";
@@ -22,10 +20,10 @@ export { ACTIVITY_TAB_LABEL, CARDS_TAB_LABEL };
  * switch between.
  */
 export type TaskTab =
-  | { kind: "info"; label: typeof INFO_TAB_LABEL }
-  | { kind: "cards"; label: typeof CARDS_TAB_LABEL; count: number }
-  | { kind: "activity"; label: typeof ACTIVITY_TAB_LABEL }
-  | { kind: "crewmate"; label: typeof CREWMATE_TAB_LABEL }
+  | { kind: "info"; label: string }
+  | { kind: "cards"; label: string; count: number }
+  | { kind: "activity"; label: string }
+  | { kind: "crewmate"; label: string }
   | { kind: "browser"; label: string; page: number };
 
 /** Which of a task's tabs is the one on the stage. */
@@ -37,9 +35,25 @@ export type { RecordView };
 export const isRecordView = (kind: ShownTab): kind is RecordView =>
   kind === "info" || kind === "cards" || kind === "activity";
 
-export const INFO_TAB: TaskTab = { kind: "info", label: INFO_TAB_LABEL };
-export const ACTIVITY_TAB: TaskTab = { kind: "activity", label: ACTIVITY_TAB_LABEL };
-export const CREWMATE_TAB: TaskTab = { kind: "crewmate", label: CREWMATE_TAB_LABEL };
+/** Each tab's label is worded when it is read, so it follows the window's language. */
+export const INFO_TAB: TaskTab = {
+  kind: "info",
+  get label() {
+    return m.taskTabInfo();
+  },
+};
+export const ACTIVITY_TAB: TaskTab = {
+  kind: "activity",
+  get label() {
+    return m.taskTabActivity();
+  },
+};
+export const CREWMATE_TAB: TaskTab = {
+  kind: "crewmate",
+  get label() {
+    return m.taskTabCrewmate();
+  },
+};
 
 /** Whether a task has a Crewmate tab: a crewmate has started on it, so it has a session to read. */
 export const hasCrewmateTab = (task: Pick<TaskView, "startedAt">): boolean =>
@@ -74,7 +88,7 @@ export function taskTabsOf(
   facts: TaskTabFacts = NO_TAB_FACTS,
 ): TaskTab[] {
   const head: TaskTab[] = [INFO_TAB];
-  if (facts.cards > 0) head.push({ kind: "cards", label: CARDS_TAB_LABEL, count: facts.cards });
+  if (facts.cards > 0) head.push({ kind: "cards", label: m.taskTabCards(), count: facts.cards });
   if (facts.activity) head.push(ACTIVITY_TAB);
   if (facts.crewmate) head.push(CREWMATE_TAB);
   if (!browser) return head.length > 1 ? head : [];

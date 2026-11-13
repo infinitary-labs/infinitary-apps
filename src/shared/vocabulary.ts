@@ -1,4 +1,5 @@
 import { formatNumber } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated.ts";
 import type { RepoDelivery } from "./repos";
 import type { Rigor } from "./rigor";
 import type { RunChecks, TaskDeliveryView } from "./tasks";
@@ -97,6 +98,22 @@ export const RIGOR_WORDS: Words<Rigor> = {
   quick: "Quick",
   standard: "Default",
   reviewed: "Careful",
+};
+
+/**
+ * Each rigor's name as a person reads it, in the process's language. `RIGOR_WORDS` keeps the English a model reads
+ * (docs/i18n.md, "What stays English").
+ */
+export const RIGOR_LABELS: Readonly<Record<Rigor, string>> = {
+  get quick() {
+    return m.feedCareQuick();
+  },
+  get standard() {
+    return m.feedCareStandard();
+  },
+  get reviewed() {
+    return m.feedCareReviewed();
+  },
 };
 
 /** The project a fact names for a task that sits in no project. */

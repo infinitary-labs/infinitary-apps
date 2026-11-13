@@ -68,6 +68,8 @@ const isolatedUnit = [
   "src/core/models/accountStore.test.ts",
   "src/core/models/catalogReaders.test.ts",
   "src/core/orchestrator/localOrchestrator.test.ts",
+  // It counts card bodies read through a module mock of the card words reader (INF-3909).
+  "src/core/tasks/taskTimeline.test.ts",
   "src/core/pi/accountVault.test.ts",
   "src/core/pi/classifierSession.realSession.test.ts",
   "src/core/pi/codexLogin.integration.test.ts",

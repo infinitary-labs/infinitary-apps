@@ -2,6 +2,7 @@ import { type CardAction, opensSettings, takesTaskBrowser } from "@shared/cards"
 import type { ComposerNotice } from "@shared/composer";
 import type { JoinOutcome, ThisMac } from "@shared/devices";
 import { formatTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { COMPUTER, HERE } from "../../../shared/deviceNames";
 
 /**
@@ -85,7 +86,7 @@ export function sectionWaitsForUpdate(
  * returns to the first mate's computer"), in place of its accept.
  */
 export function googleUpdateThereWords(mac: ViewMac): string {
-  return `Update Infinitary on ${mac.name} to sign in to Google from here.`;
+  return m.viewGoogleUpdateThere({ mac: mac.name });
 }
 
 /**
@@ -95,15 +96,17 @@ export function googleUpdateThereWords(mac: ViewMac): string {
  * computer").
  */
 export const RETURN_PASTE_WORDS = {
-  lead: (name: string) =>
-    `Approve on ${name}'s page. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.`,
-  label: (name: string) => `The address your browser ended on after ${name}`,
-  placeholder: "paste the address",
-  send: (mac: ViewMac) => `Send to ${mac.name}`,
+  lead: (name: string) => m.viewReturnPasteLead({ name }),
+  label: (name: string) => m.viewReturnPasteLabel({ name }),
+  get placeholder() {
+    return m.viewReturnPastePlaceholder();
+  },
+  send: (mac: ViewMac) => m.viewReturnPasteSend({ mac: mac.name }),
   /** A pasted address the waiting sign-in turned away, such as one from an earlier sign-in. */
-  refused:
-    "That address is not this sign-in's. Paste the address your browser ended on after this sign-in.",
-} as const;
+  get refused() {
+    return m.viewReturnPasteRefused();
+  },
+};
 
 /**
  * What a request card's button that hands the captain a task's browser says

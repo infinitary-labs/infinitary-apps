@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CardPresentation } from "./cards";
+import * as m from "./i18n/messages.generated.ts";
 import { formatDurationShort } from "./quotaSignals.ts";
 
 /**
@@ -24,14 +25,22 @@ type LeaveRow = CardCornerWords & {
 };
 const aside = {
   icon: "minus",
-  label: "Put aside",
-  restWords: "Put aside · waits in Tasks, back when it changes",
+  get label() {
+    return m.cardLeaveAside();
+  },
+  get restWords() {
+    return m.cardLeaveAsideRest();
+  },
   operation: "aside",
 } as const;
 const hide = {
   icon: "minus",
-  label: "Hide",
-  restWords: "Hide · the task goes on",
+  get label() {
+    return m.cardLeaveHide();
+  },
+  get restWords() {
+    return m.cardLeaveHideRest();
+  },
   operation: "hide",
 } as const;
 export const CARD_LEAVE = {
@@ -40,7 +49,16 @@ export const CARD_LEAVE = {
   note: aside,
   attention: aside,
   record: hide,
-  "window-panel": { ...hide, restWords: "Hide · the view stays available" },
+  "window-panel": {
+    icon: "minus",
+    get label() {
+      return m.cardLeaveHide();
+    },
+    get restWords() {
+      return m.cardLeaveHidePanelRest();
+    },
+    operation: "hide",
+  },
 } as const satisfies Record<CardLeaveKind, LeaveRow>;
 
 /** The corner's operation for a card of this kind. */
@@ -53,9 +71,9 @@ export function cardCornerOf(kind: CardLeaveKind): CardCornerWords {
   const row: LeaveRow = CARD_LEAVE[kind];
   return { icon: row.icon, label: row.label, restWords: row.restWords, operation: row.operation };
 }
-export const ANSWER_DONE_LABEL = "Done";
+export const ANSWER_DONE_LABEL = m.cardAnswerDone();
 export function answerDoneRest(key: string): string {
-  return `${ANSWER_DONE_LABEL} · closes ${key} as answered; the answer stays on its record`;
+  return m.cardAnswerDoneRest({ key });
 }
 
 /**
@@ -93,7 +111,7 @@ export function noteDoneOf(key: string | undefined, closesTask: boolean): NoteDo
  * (`withAppDecline`); no author declares it.
  */
 export const DECLINE_ACTION_ID = "app-decline";
-export const DECLINE_LABEL = "Decline";
+export const DECLINE_LABEL = m.cardDecline();
 
 /** A recorded wait age is information, never a deadline. */
 export function answerWaitWords(since: number, now: number): string {

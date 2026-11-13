@@ -3887,3 +3887,614 @@ export function nowPanelBoardHint(input: { enter: string; space: string }): stri
   }
   return `Arrows move · ${enter} opens · ${space} menu`;
 }
+
+export function nowPanelRowStart(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بدء`;
+    case "de":
+      return `Starten`;
+    case "es":
+      return `Iniciar`;
+    case "fr":
+      return `Démarrer`;
+    case "ja":
+      return `開始`;
+    case "ko":
+      return `시작`;
+    case "pt-BR":
+      return `Iniciar`;
+    case "zh-Hans":
+      return `开始`;
+    case "zh-Hant":
+      return `開始`;
+    case "en-XA":
+      return `[Šţáŕţ ~~]`;
+    case "ar-XB":
+      return `\u202eStart\u202c`;
+  }
+  return `Start`;
+}
+
+export function nowPanelRowTryAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة المحاولة`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Volver a intentar`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `もう一度試す`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `再試一次`;
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTry again\u202c`;
+  }
+  return `Try again`;
+}
+
+export function nowPanelRowStarting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ البدء`;
+    case "de":
+      return `startet`;
+    case "es":
+      return `iniciando`;
+    case "fr":
+      return `démarrage`;
+    case "ja":
+      return `開始中`;
+    case "ko":
+      return `시작 중`;
+    case "pt-BR":
+      return `iniciando`;
+    case "zh-Hans":
+      return `正在开始`;
+    case "zh-Hant":
+      return `啟動中`;
+    case "en-XA":
+      return `[šţáŕţîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202estarting\u202c`;
+  }
+  return `starting`;
+}
+
+export function nowPanelRowCouldNotStart(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر البدء`;
+    case "de":
+      return `nicht gestartet`;
+    case "es":
+      return `no pudo iniciarse`;
+    case "fr":
+      return `n’a pas pu démarrer`;
+    case "ja":
+      return `開始できません`;
+    case "ko":
+      return `시작하지 못함`;
+    case "pt-BR":
+      return `não iniciou`;
+    case "zh-Hans":
+      return `无法开始`;
+    case "zh-Hant":
+      return `無法啟動`;
+    case "en-XA":
+      return `[çöûļð ñöţ šţáŕţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202ecould not start\u202c`;
+  }
+  return `could not start`;
+}
+
+export function nowPanelRowChecks(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الفحوصات`;
+    case "de":
+      return `Überprüfungen`;
+    case "es":
+      return `comprobaciones`;
+    case "fr":
+      return `vérifications`;
+    case "ja":
+      return `チェック`;
+    case "ko":
+      return `검사`;
+    case "pt-BR":
+      return `verificações`;
+    case "zh-Hans":
+      return `检查`;
+    case "zh-Hant":
+      return `檢查`;
+    case "en-XA":
+      return `[çĥéçķš ~~]`;
+    case "ar-XB":
+      return `\u202echecks\u202c`;
+  }
+  return `checks`;
+}
+
+export function nowPanelRowBatch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدفعة`;
+    case "de":
+      return `Sammelprüfung`;
+    case "es":
+      return `lote`;
+    case "fr":
+      return `groupe`;
+    case "ja":
+      return `一括`;
+    case "ko":
+      return `일괄`;
+    case "pt-BR":
+      return `lote`;
+    case "zh-Hans":
+      return `批量`;
+    case "zh-Hant":
+      return `批次`;
+    case "en-XA":
+      return `[ƀáţçĥ ~~]`;
+    case "ar-XB":
+      return `\u202ebatch\u202c`;
+  }
+  return `batch`;
+}
+
+export function nowPanelRowWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تنتظر`;
+    case "de":
+      return `wartet`;
+    case "es":
+      return `esperando`;
+    case "fr":
+      return `en attente`;
+    case "ja":
+      return `待機中`;
+    case "ko":
+      return `대기`;
+    case "pt-BR":
+      return `aguardando`;
+    case "zh-Hans":
+      return `等待中`;
+    case "zh-Hant":
+      return `等待中`;
+    case "en-XA":
+      return `[ŵáîţîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202ewaiting\u202c`;
+  }
+  return `waiting`;
+}
+
+export function nowPanelRowBlocked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معطّلة`;
+    case "de":
+      return `blockiert`;
+    case "es":
+      return `bloqueada`;
+    case "fr":
+      return `bloquée`;
+    case "ja":
+      return `ブロック中`;
+    case "ko":
+      return `막힘`;
+    case "pt-BR":
+      return `bloqueada`;
+    case "zh-Hans":
+      return `受阻`;
+    case "zh-Hant":
+      return `受阻`;
+    case "en-XA":
+      return `[ƀļöçķéð ~~~]`;
+    case "ar-XB":
+      return `\u202eblocked\u202c`;
+  }
+  return `blocked`;
+}
+
+export function nowPanelRowHeld(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معلّقة`;
+    case "de":
+      return `zurückgehalten`;
+    case "es":
+      return `retenida`;
+    case "fr":
+      return `retenue`;
+    case "ja":
+      return `保留中`;
+    case "ko":
+      return `보류`;
+    case "pt-BR":
+      return `retida`;
+    case "zh-Hans":
+      return `暂缓`;
+    case "zh-Hant":
+      return `暫緩`;
+    case "en-XA":
+      return `[ĥéļð ~~]`;
+    case "ar-XB":
+      return `\u202eheld\u202c`;
+  }
+  return `held`;
+}
+
+export function nowPanelRowFoundOn(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `وُجدت في ${key}`;
+    case "de":
+      return `gefunden bei ${key}`;
+    case "es":
+      return `hallada en ${key}`;
+    case "fr":
+      return `trouvée sur ${key}`;
+    case "ja":
+      return `${key} で発見`;
+    case "ko":
+      return `${key}에서 발견`;
+    case "pt-BR":
+      return `encontrada em ${key}`;
+    case "zh-Hans":
+      return `发现于 ${key}`;
+    case "zh-Hant":
+      return `發現於 ${key}`;
+    case "en-XA":
+      return `[ƒöûñð öñ ${key} ~~~]`;
+    case "ar-XB":
+      return `\u202efound on \u202c${key}`;
+  }
+  return `found on ${key}`;
+}
+
+export function nowPanelRowConnecting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الاتصال`;
+    case "de":
+      return `verbindet`;
+    case "es":
+      return `conectando`;
+    case "fr":
+      return `connexion`;
+    case "ja":
+      return `接続中`;
+    case "ko":
+      return `연결 중`;
+    case "pt-BR":
+      return `conectando`;
+    case "zh-Hans":
+      return `正在连接`;
+    case "zh-Hant":
+      return `連線中`;
+    case "en-XA":
+      return `[çöññéçţîñĝ ~~~~]`;
+    case "ar-XB":
+      return `\u202econnecting\u202c`;
+  }
+  return `connecting`;
+}
+
+export function nowPanelRowNoNewWork(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يقبل عملًا جديدًا`;
+    case "de":
+      return `nimmt keine neue Arbeit an`;
+    case "es":
+      return `no recibe trabajo nuevo`;
+    case "fr":
+      return `n’accepte rien de nouveau`;
+    case "ja":
+      return `新しい作業は受けません`;
+    case "ko":
+      return `새 작업을 받지 않음`;
+    case "pt-BR":
+      return `não recebe trabalho novo`;
+    case "zh-Hans":
+      return `不接新工作`;
+    case "zh-Hant":
+      return `不接新工作`;
+    case "en-XA":
+      return `[ţáķéš ñö ñéŵ ŵöŕķ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202etakes no new work\u202c`;
+  }
+  return `takes no new work`;
+}
+
+export function nowPanelRowAway(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خارج المتناول`;
+    case "de":
+      return `außer Reichweite`;
+    case "es":
+      return `fuera de alcance`;
+    case "fr":
+      return `hors de portée`;
+    case "ja":
+      return `連絡がつきません`;
+    case "ko":
+      return `연락 닿지 않음`;
+    case "pt-BR":
+      return `fora de alcance`;
+    case "zh-Hans":
+      return `无法联系`;
+    case "zh-Hant":
+      return `連絡不上`;
+    case "en-XA":
+      return `[öûţ öƒ ŕéáçĥ ~~~~]`;
+    case "ar-XB":
+      return `\u202eout of reach\u202c`;
+  }
+  return `out of reach`;
+}
+
+export function nowPanelRowNewCount(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `${count} جديد`;
+        case "one":
+          return `${count} جديد`;
+        case "two":
+          return `${count} جديدان`;
+        case "few":
+          return `${count} جديدة`;
+        case "many":
+          return `${count} جديدًا`;
+        default:
+          return `${count} جديد`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} neu`;
+        default:
+          return `${count} neu`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} nueva`;
+        case "many":
+          return `${count} de nuevas`;
+        default:
+          return `${count} nuevas`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} nouvelle`;
+        case "many":
+          return `${count} nouvelles`;
+        default:
+          return `${count} nouvelles`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `新規${count}件`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `새 작업 ${count}개`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} nova`;
+        case "many":
+          return `${count} novas`;
+        default:
+          return `${count} novas`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 个新的`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 項新的`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ñéŵ ~~]`;
+        default:
+          return `[${count} ñéŵ ~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e new\u202c`;
+        default:
+          return `${count}\u202e new\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} new`;
+    default:
+      return `${count} new`;
+  }
+}
+
+export function nowPanelRowFailedCount(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `تعذّر بدء ${count}`;
+        case "one":
+          return `تعذّر بدء ${count}`;
+        case "two":
+          return `تعذّر بدء ${count}`;
+        case "few":
+          return `تعذّر بدء ${count}`;
+        case "many":
+          return `تعذّر بدء ${count}`;
+        default:
+          return `تعذّر بدء ${count}`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} nicht gestartet`;
+        default:
+          return `${count} nicht gestartet`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} no pudo iniciarse`;
+        case "many":
+          return `${count} de ellas no pudieron iniciarse`;
+        default:
+          return `${count} no pudieron iniciarse`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} n’a pas pu démarrer`;
+        case "many":
+          return `${count} n’ont pas pu démarrer`;
+        default:
+          return `${count} n’ont pas pu démarrer`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件が開始できません`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}개 시작하지 못함`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} não iniciou`;
+        case "many":
+          return `${count} não iniciaram`;
+        default:
+          return `${count} não iniciaram`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 个无法开始`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 項無法啟動`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} çöûļð ñöţ šţáŕţ ~~~~~~]`;
+        default:
+          return `[${count} çöûļð ñöţ šţáŕţ ~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e could not start\u202c`;
+        default:
+          return `${count}\u202e could not start\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} could not start`;
+    default:
+      return `${count} could not start`;
+  }
+}
+
+export function nowPanelGroupEarlier(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أقدم`;
+    case "de":
+      return `früher`;
+    case "es":
+      return `anteriores`;
+    case "fr":
+      return `plus tôt`;
+    case "ja":
+      return `以前`;
+    case "ko":
+      return `이전`;
+    case "pt-BR":
+      return `anteriores`;
+    case "zh-Hans":
+      return `更早`;
+    case "zh-Hant":
+      return `較早`;
+    case "en-XA":
+      return `[éáŕļîéŕ ~~~]`;
+    case "ar-XB":
+      return `\u202eearlier\u202c`;
+  }
+  return `earlier`;
+}
+
+export function nowPanelGroupPinned(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مثبّتة`;
+    case "de":
+      return `angeheftet`;
+    case "es":
+      return `fijadas`;
+    case "fr":
+      return `épinglées`;
+    case "ja":
+      return `固定済み`;
+    case "ko":
+      return `고정됨`;
+    case "pt-BR":
+      return `fixadas`;
+    case "zh-Hans":
+      return `已固定`;
+    case "zh-Hant":
+      return `已釘選`;
+    case "en-XA":
+      return `[þîññéð ~~]`;
+    case "ar-XB":
+      return `\u202epinned\u202c`;
+  }
+  return `pinned`;
+}

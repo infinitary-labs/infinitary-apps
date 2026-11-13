@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { forgeSignInStateSchema, isForgeHostName } from "./forges";
+import * as m from "./i18n/messages.generated.ts";
 import { type KeptOutsideData, SAVED_OUTSIDE_DATA_WORDS } from "./savedOutsideData";
 
 /**
@@ -434,10 +435,14 @@ export function openedSection(effect: { target: string; signIn?: string | undefi
  * row signing in again, while the app waits for the browser to come back.
  */
 export const INTEGRATIONS_BROWSER_SIGN_IN_WORDS = {
-  waiting: (name: string) => `Finish signing in to ${name} in your browser.`,
-  again: "Open the page again",
-  cancel: "Cancel",
-} as const;
+  waiting: (name: string) => m.integrationsSignInWaiting({ name }),
+  get again() {
+    return m.integrationsSignInAgain();
+  },
+  get cancel() {
+    return m.integrationsSignInCancel();
+  },
+};
 
 /**
  * What a kind tells the person before its sign-in starts, and the accept

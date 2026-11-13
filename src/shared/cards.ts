@@ -6,6 +6,7 @@ import { cardNotesSchema, pointedAtLines } from "./cardNotes.ts";
 import { cardEndedSchema } from "./endedCard.ts";
 import { HOST_OPS } from "./hostOps.ts";
 import { servedNumber } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated.ts";
 import { putOffUntilSchema } from "./putOff.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
 import { rigorSchema } from "./rigor.ts";
@@ -766,11 +767,11 @@ export const CARD_WRITTEN_MAX = 500;
  */
 export const ANYTHING_ELSE_ANSWER = "anything_else";
 /** What the card's one field says while it is empty (the captain's words, INF-924). */
-export const CARD_REPLY_HINT = "anything to add?";
+export const CARD_REPLY_HINT = m.cardReplyHint();
 /** The button at the right edge of a card's choices that sends the field as a reply. */
 export const CARD_CHAT_LABEL = "Chat";
 /** What leads the words a past card's field sent with its choice. */
-export const PAST_CARD_WORDS_LEAD = "Sent with your choice:";
+export const PAST_CARD_WORDS_LEAD = m.cardPastSentLead();
 /** Why a card's choices wait while a file or picture is attached to its field. */
 export const CARD_FILES_FIRST = "Send the file as a reply first";
 /** A reply is one message, not a document: longer is refused at the boundary. */
@@ -1019,7 +1020,7 @@ export type CardSubmission = z.infer<typeof cardSubmissionSchema>;
 /** The meta line of a card the Firstmate itself writes, where a crewmate's card names its task. */
 export const FIRSTMATE_CARD_META = "firstmate";
 /** INF-63: the app-owned label for a validated independent review. */
-export const REVIEW_FINDING_LABEL = "Review finding";
+export const REVIEW_FINDING_LABEL = m.cardReviewFinding();
 
 /**
  * Whether a card is the first mate's own answer (INF-2714): a first mate

@@ -1,3 +1,4 @@
+import * as m from "./i18n/messages.generated.ts";
 import { taskStatusOf } from "./taskPresentation";
 import type { TaskView } from "./tasks";
 
@@ -46,6 +47,28 @@ export const NOW_GROUP_LABELS: Record<NowGroup, string> = {
   queued: "queued",
   backlog: "backlog",
   landed: "done · 7d",
+};
+
+/**
+ * Each group's name as a person reads it, in the process's language: the panel's headers and the phone's.
+ * `NOW_GROUP_LABELS` keeps the English the app's own commands answer.
+ */
+export const NOW_GROUP_TITLES: Readonly<Record<NowGroup, string>> = {
+  get waiting() {
+    return m.taskGroupWaiting();
+  },
+  get working() {
+    return m.taskGroupWorking();
+  },
+  get queued() {
+    return m.taskGroupQueued();
+  },
+  get backlog() {
+    return m.taskGroupBacklog();
+  },
+  get landed() {
+    return m.taskGroupLanded();
+  },
 };
 
 /**

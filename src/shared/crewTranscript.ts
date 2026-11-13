@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as m from "./i18n/messages.generated.ts";
 import { planItemStateSchema } from "./taskPlan";
 
 /**
@@ -15,7 +16,7 @@ import { planItemStateSchema } from "./taskPlan";
  */
 
 /** The tab's name on the strip: the captain's own word for it. */
-export const CREWMATE_TAB_LABEL = "Crewmate";
+export const CREWMATE_TAB_LABEL = m.taskTabCrewmate();
 
 /** How much of a tool's result its fold opens to. */
 export const CREW_RESULT_TEXT_MAX = 8_000;
@@ -192,62 +193,135 @@ export type CrewSendResult = z.infer<typeof crewSendResultSchema>;
 /** The tab's words, owned here so the window and its journeys read the same ones. */
 export const CREWMATE_WORDS = {
   /** The composer's placeholder while a turn runs, and while none does. */
-  placeholderWorking: "Tell the crewmate something; it hears it at its next step",
-  placeholderIdle: "Tell the crewmate what to do next",
+  get placeholderWorking() {
+    return m.crewmatePlaceholderWorking();
+  },
+  get placeholderIdle() {
+    return m.crewmatePlaceholderIdle();
+  },
   /** The composer's field, by its accessible name. */
-  field: "Message to the crewmate",
+  get field() {
+    return m.crewmateField();
+  },
   /** Beside the field: where Enter sends it. */
-  sendsTo: "to the crewmate",
+  get sendsTo() {
+    return m.crewmateSendsTo();
+  },
   /** A typed line the crewmate's session does not hold yet. */
-  queued: "queued",
+  get queued() {
+    return m.crewmateQueued();
+  },
   /** The status line's words for each state. */
-  working: "Working…",
-  interruptHint: "to interrupt",
-  stop: "Stop",
-  stopping: "Stopping…",
-  idle: "Idle",
-  waiting: "Waiting on you",
-  paused: "Paused · you hold its browser",
-  closed: "This task is closed; its session reads as it ran.",
+  get working() {
+    return m.crewmateWorking();
+  },
+  get interruptHint() {
+    return m.crewmateInterruptHint();
+  },
+  get stop() {
+    return m.crewmateStop();
+  },
+  get stopping() {
+    return m.crewmateStopping();
+  },
+  get idle() {
+    return m.crewmateIdle();
+  },
+  get waiting() {
+    return m.crewmateWaiting();
+  },
+  get paused() {
+    return m.crewmatePaused();
+  },
+  get closed() {
+    return m.crewmateClosed();
+  },
   /** No copied session lines to read yet; the turn may already be running. */
-  empty: "No session lines to show yet.",
-  unreadable: "This crewmate's session could not be read.",
+  get empty() {
+    return m.crewmateEmpty();
+  },
+  get unreadable() {
+    return m.crewmateUnreadable();
+  },
   /** A fold's buttons. */
-  open: "open",
-  fold: "fold",
+  get open() {
+    return m.crewmateOpen();
+  },
+  get fold() {
+    return m.crewmateFold();
+  },
   /** The brief's line. */
-  brief: "The brief",
+  get brief() {
+    return m.crewmateBrief();
+  },
   /** Labels for a line someone else sent. */
-  firstmate: "First mate",
-  app: "From the app",
+  get firstmate() {
+    return m.crewmateFirstmate();
+  },
+  get app() {
+    return m.crewmateApp();
+  },
   /** A call that has not answered: still running, or never answered; one that answered nothing. */
-  running: "running…",
-  noResult: "no result",
-  noOutput: "no output",
+  get running() {
+    return m.crewmateRunning();
+  },
+  get noResult() {
+    return m.crewmateNoResult();
+  },
+  get noOutput() {
+    return m.crewmateNoOutput();
+  },
   /** What a fold opens to past its first line. */
-  moreLines: (count: number) => `+${count} ${count === 1 ? "line" : "lines"}`,
-  cut: (count: number) => `${count} more characters are not shown.`,
+  moreLines: (count: number) => m.crewmateMoreLines({ count }),
+  cut: (count: number) => m.crewmateCut({ count }),
   /** A picture a call's result holds: shown small, larger on a press. */
-  picture: "A picture the crewmate's call answered with",
-  pictureLarger: "Show larger",
-  pictureSmaller: "Show smaller",
+  get picture() {
+    return m.crewmatePicture();
+  },
+  get pictureLarger() {
+    return m.crewmatePictureLarger();
+  },
+  get pictureSmaller() {
+    return m.crewmatePictureSmaller();
+  },
   /** Who stopped a turn. */
   stopped: {
-    captain: "You stopped its turn.",
-    firstmate: "Your first mate stopped its turn.",
-    app: "Its turn was stopped.",
+    get captain() {
+      return m.crewmateStoppedCaptain();
+    },
+    get firstmate() {
+      return m.crewmateStoppedFirstmate();
+    },
+    get app() {
+      return m.crewmateStoppedApp();
+    },
   },
-  failed: "Its turn failed:",
+  get failed() {
+    return m.crewmateFailed();
+  },
   /** Blocks' labels. */
-  plan: "Plan",
-  progress: "Progress",
-  report: "Report",
-  card: "Card",
-  showCard: "Show the card",
-  change: "Pull request",
-  compacted: "Its conversation was shortened to fit.",
-  earlier: (count: number) =>
-    `${count} earlier ${count === 1 ? "line is" : "lines are"} not shown.`,
+  get plan() {
+    return m.crewmatePlan();
+  },
+  get progress() {
+    return m.crewmateProgress();
+  },
+  get report() {
+    return m.crewmateReport();
+  },
+  get card() {
+    return m.crewmateCard();
+  },
+  get showCard() {
+    return m.crewmateShowCard();
+  },
+  get change() {
+    return m.crewmateChange();
+  },
+  get compacted() {
+    return m.crewmateCompacted();
+  },
+  earlier: (count: number) => m.crewmateEarlier({ count }),
 } as const;
 
 /** A result's fold, as the line under its call reads it. */

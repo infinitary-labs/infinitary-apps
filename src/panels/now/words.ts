@@ -1,35 +1,59 @@
+import * as m from "./messages.generated";
+
 /**
  * The words a Tasks row and its group header read, in a module of words
  * alone, so a journey and the phone's generated words read them from their
- * owner (scripts/generate-phone-contract.ts).
+ * owner (scripts/generate-phone-contract.ts). A constant holds the source
+ * language's words as the module loads; a table's getters word each read in
+ * the panel's language.
  */
 
 /** A backlog row's Start (INF-1663): the task record's own, Start, and Try again after a start that failed. */
-export const ROW_START_LABEL = "Start";
-export const ROW_TRY_AGAIN_LABEL = "Try again";
+export const ROW_START_LABEL = m.nowPanelRowStart();
+export const ROW_TRY_AGAIN_LABEL = m.nowPanelRowTryAgain();
 
 /** The one dim word a row may carry after its title (`wordOf`). */
 export const ROW_WORDS = {
-  starting: "starting",
-  couldNotStart: "could not start",
-  checks: "checks",
-  batch: "batch",
-  waiting: "waiting",
-  blocked: "blocked",
-  held: "held",
-} as const;
+  get starting() {
+    return m.nowPanelRowStarting();
+  },
+  get couldNotStart() {
+    return m.nowPanelRowCouldNotStart();
+  },
+  get checks() {
+    return m.nowPanelRowChecks();
+  },
+  get batch() {
+    return m.nowPanelRowBatch();
+  },
+  get waiting() {
+    return m.nowPanelRowWaiting();
+  },
+  get blocked() {
+    return m.nowPanelRowBlocked();
+  },
+  get held() {
+    return m.nowPanelRowHeld();
+  },
+};
 
 /** The word of a row a crewmate filed while working on another task. */
 export function foundOnWords(key: string): string {
-  return `found on ${key}`;
+  return m.nowPanelRowFoundOn({ key });
 }
 
 /** Why a row's computer cannot take work now (`rowTrailing`). */
 export const ROW_REACH_WORDS = {
-  connecting: "connecting",
-  noNewWork: "takes no new work",
-  away: "out of reach",
-} as const;
+  get connecting() {
+    return m.nowPanelRowConnecting();
+  },
+  get noNewWork() {
+    return m.nowPanelRowNoNewWork();
+  },
+  get away() {
+    return m.nowPanelRowAway();
+  },
+};
 
 /**
  * What a row says while its computer is connected and this Mac is still
@@ -40,19 +64,19 @@ export const ROW_CATCHING_UP = "catching up";
 
 /** What a folding group's header adds after its count: crew filings not yet opened. */
 export function newCountWords(count: number): string {
-  return ` · ${count} new`;
+  return ` · ${m.nowPanelRowNewCount({ count })}`;
 }
 
 /** What the Backlog header adds after its count: starts that failed. */
 export function failedCountWords(count: number): string {
-  return ` · ${count} could not start`;
+  return ` · ${m.nowPanelRowFailedCount({ count })}`;
 }
 
 /** The search's own group of older closed work. */
-export const EARLIER_LABEL = "earlier";
+export const EARLIER_LABEL = m.nowPanelGroupEarlier();
 
 /** The panel's own group at its top: the tasks the captain pinned, whatever their state (INF-3127). */
-export const PINNED_LABEL = "pinned";
+export const PINNED_LABEL = m.nowPanelGroupPinned();
 
 /**
  * A task's parts (INF-3823's plan): how many are finished, in words, for

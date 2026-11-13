@@ -31,6 +31,8 @@ import {
 } from "@shared/cards";
 import { cardWrittenText } from "@shared/cardWrittenText";
 import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
+import { inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { heldMerges } from "@shared/mergeHeld";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { type KeptPutOff, keptPutOffSchema } from "@shared/putOff";
@@ -964,7 +966,7 @@ export class CardStore {
           kind: cardWord(past),
           title: past.title,
           state: "closed",
-          ending: pastCardEndingWords(past),
+          ending: inLanguage(SOURCE_LANGUAGE, () => pastCardEndingWords(past)),
           at: past.ending.at,
         },
       });

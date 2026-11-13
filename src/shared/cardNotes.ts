@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { inLanguage } from "./i18n/current.ts";
+import { SOURCE_LANGUAGE } from "./i18n/languages.ts";
+import * as m from "./i18n/messages.generated.ts";
 
 /** A note uses the same part identity as revision navigation, never a selector. */
 export const cardNoteSchema = z.object({
@@ -21,12 +24,12 @@ export const cardNoteSchema = z.object({
 });
 export const cardNotesSchema = z.array(cardNoteSchema);
 export type CardNote = z.infer<typeof cardNoteSchema>;
-export const POINT_AT = "Point at";
-export const POINTED_AT = "Pointed at";
-export const STALE_NOTE = "This part is no longer in the card";
-export const UNAVAILABLE_NOTE = "This part cannot be shown in this view";
-export const EDIT_UNAVAILABLE = "Editing is unavailable in this view";
-export const EMPTY_NOTE = "No comment";
+export const POINT_AT = m.cardNotePointAt();
+export const POINTED_AT = m.cardNotePointedAt();
+export const STALE_NOTE = m.cardNoteStale();
+export const UNAVAILABLE_NOTE = m.cardNoteUnavailable();
+export const EDIT_UNAVAILABLE = m.cardNoteEditUnavailable();
+export const EMPTY_NOTE = m.cardNoteEmpty();
 
 export function pointedAtLines(notes: readonly CardNote[]): string[] {
   if (!notes.length) return [];
@@ -39,27 +42,28 @@ export function pointedAtLines(notes: readonly CardNote[]): string[] {
   ];
 }
 
-export const ANNOTATE = "Annotate";
-export const QUEUE_NOTE = "Queue";
-export const NOTE_COMMENT_LABEL = "Comment on this part";
-export const NOTE_CANCEL = "Cancel";
-export const NOTE_EDIT = "Edit";
-export const NOTE_REMOVE = "Remove";
-export const NOT_SENT = "Not sent";
-export const NOTE_PLACEHOLDER = "Add a comment, or queue as-is";
-export const NOTE_DISCARD_HINT = "Cancel discards your comment. Queue keeps it.";
+export const ANNOTATE = m.cardNoteAnnotate();
+export const QUEUE_NOTE = m.cardNoteQueue();
+export const NOTE_COMMENT_LABEL = m.cardNoteCommentLabel();
+export const NOTE_CANCEL = m.cardNoteCancel();
+export const NOTE_EDIT = m.cardNoteEdit();
+export const NOTE_REMOVE = m.cardNoteRemove();
+export const NOT_SENT = m.cardNoteNotSent();
+export const NOTE_PLACEHOLDER = m.cardNotePlaceholder();
+export const NOTE_DISCARD_HINT = m.cardNoteDiscardHint();
 /** The card's send button while notes wait (INF-3786): the notes and any typed words leave as one reply. */
 export function sendNotesLabel(count: number): string {
-  return `Send ${count} ${count === 1 ? "note" : "notes"}`;
+  return m.cardNoteSend({ count });
 }
 export function queuedNotesWords(count: number): string {
-  return `${count} ${count === 1 ? "note" : "notes"} not sent`;
+  return m.cardNoteQueued({ count });
 }
 
 /** Reader-facing fallback for a view that cannot draw structured notes. */
 export function noteLabel(note: Pick<CardNote, "kind" | "excerpt">): string {
-  return `${POINTED_AT} ${note.kind}: “${note.excerpt}”`;
+  return m.cardNoteLabel({ kind: note.kind, excerpt: note.excerpt });
 }
+/** A note as the saved reply and the crew read it: always the source language (docs/i18n.md, "What stays English"). */
 export function noteText(note: CardNote): string {
-  return `${noteLabel(note)}\n${note.comment || EMPTY_NOTE}`;
+  return `${inLanguage(SOURCE_LANGUAGE, () => noteLabel(note))}\n${note.comment || EMPTY_NOTE}`;
 }

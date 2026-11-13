@@ -35,6 +35,16 @@ public struct PhoneSaid: Decodable, Equatable, Sendable {
 /// The catalog's words on the phone (docs/i18n.md, "On the phone"): the Apple string files the message compiler
 /// writes into this package, worded in the phone's language, and the Mac's saved facts worded from them.
 public enum PhoneWords {
+    /// The language the phone words the catalog in: the string files' language iOS chose for this phone.
+    public static var language: String { Bundle.module.preferredLocalizations.first ?? "en" }
+
+    /// Words led by a capital, as a heading reads the Mac's lowercase name of a group: its first letter in upper case,
+    /// as the Mac's generator wrote it, and unchanged in a script with no case.
+    public static func sentence(_ words: String) -> String {
+        guard let first = words.first else { return words }
+        return first.uppercased() + words.dropFirst()
+    }
+
     /// One message worded from the string files, its fills in the order `fills` lists them; English when the phone's
     /// language lacks it. A count groups its digits as the language does, as the Mac's `formatNumber` writes it.
     static func format(_ name: String, _ fills: [CVarArg], locale: Locale = PhoneFormats.locale) -> String {
@@ -65,5 +75,56 @@ public enum PhoneWords {
             }
         }
         return format(said.m, filled, locale: locale)
+    }
+}
+
+public extension CodingUserInfoKey {
+    /// The name of the Mac the phone reads, so a line in that Mac's own words names it where it says this computer.
+    static let phoneHome = CodingUserInfoKey(rawValue: "infinitary.phoneHome")!
+}
+
+extension PhoneSaid {
+    /// The fact with each blank the Mac filled with itself named from the phone, as the Mac's `placesAs` names it on
+    /// another computer (src/shared/deviceNames.ts): this computer becomes the Mac's name, and here becomes on it.
+    public func placed(as name: String) -> PhoneSaid {
+        guard let a else { return self }
+        var fills = a
+        for (blank, fill) in a {
+            guard case .part(let place) = fill else { continue }
+            if place.m == PhoneContract.placeThis { fills[blank] = .words(name) }
+            if place.m == PhoneContract.placeHere { fills[blank] = .part(PhoneSaid(m: PhoneContract.placeOn, a: ["computer": .words(name)])) }
+        }
+        return fills == a ? self : PhoneSaid(m: m, a: fills)
+    }
+}
+
+extension PhoneWords {
+    /// A saved line as the phone shows it (docs/i18n.md, "Saved facts"): its fact in the phone's language, or the
+    /// English the Mac saved beside it when the phone cannot word the fact. A line in the Mac's own words (`here`)
+    /// names that Mac where it says this computer, as the Mac's own view of another computer does
+    /// (src/main/view/namedHere.ts): a fact's places are named first, and words that still say this computer keep
+    /// their English with the Mac's name in it.
+    public static func line(_ text: String, said: PhoneSaid?, here: Bool, home: String?, locale: Locale = PhoneFormats.locale) -> String {
+        guard here, let home else { return said.flatMap { word($0, locale: locale) } ?? text }
+        let named = PhoneContract.hereWords.reduce(text) { $0.replacingOccurrences(of: $1, with: home) }
+        guard let said else { return named }
+        let placed = said.placed(as: home)
+        if placed != said { return word(placed, locale: locale) ?? named }
+        return named == text ? word(said, locale: locale) ?? text : named
+    }
+
+    /// A decoder whose saved lines name `home` where the Mac said this computer of itself.
+    static func decoder(home: String?) -> JSONDecoder {
+        let decoder = JSONDecoder()
+        if let home { decoder.userInfo[.phoneHome] = home }
+        return decoder
+    }
+
+    /// A saved line's words as a reader decodes them: `text`, worded from `said` and named by `saidHere` beside it.
+    static func line<Keys: CodingKey>(_ container: KeyedDecodingContainer<Keys>, text: Keys, said: Keys, here: Keys, decoder: Decoder) throws -> String {
+        let english = try container.decode(String.self, forKey: text)
+        let fact = try? container.decodeIfPresent(PhoneSaid.self, forKey: said)
+        let mine = (try? container.decodeIfPresent(Bool.self, forKey: here)) == true
+        return line(english, said: fact ?? nil, here: mine, home: decoder.userInfo[.phoneHome] as? String)
     }
 }

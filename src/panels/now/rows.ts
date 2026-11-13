@@ -1,7 +1,7 @@
 import type { PanelSummaryPart, PanelTaskBoard, PanelTaskRow } from "@infinitary/contracts";
 import {
   foldForSearch,
-  NOW_GROUP_LABELS,
+  NOW_GROUP_TITLES,
   NOW_GROUPS,
   type NowGroup,
   nowGroupOf,
@@ -10,9 +10,7 @@ import {
 } from "@infinitary/ui";
 import * as m from "./messages.generated";
 import {
-  EARLIER_LABEL,
   foundOnWords,
-  PINNED_LABEL,
   ROW_CATCHING_UP,
   ROW_REACH_WORDS,
   ROW_START_LABEL,
@@ -42,10 +40,28 @@ export type PanelGroup = "pinned" | NowGroup | "earlier";
 /** Every group the panel paints, in its order: Pinned first, Earlier last. */
 export const PANEL_GROUPS: readonly PanelGroup[] = ["pinned", ...NOW_GROUPS, "earlier"];
 
-export const PANEL_GROUP_LABELS: Record<PanelGroup, string> = {
-  pinned: PINNED_LABEL,
-  ...NOW_GROUP_LABELS,
-  earlier: EARLIER_LABEL,
+export const PANEL_GROUP_LABELS: Readonly<Record<PanelGroup, string>> = {
+  get pinned() {
+    return m.nowPanelGroupPinned();
+  },
+  get waiting() {
+    return NOW_GROUP_TITLES.waiting;
+  },
+  get working() {
+    return NOW_GROUP_TITLES.working;
+  },
+  get queued() {
+    return NOW_GROUP_TITLES.queued;
+  },
+  get backlog() {
+    return NOW_GROUP_TITLES.backlog;
+  },
+  get landed() {
+    return NOW_GROUP_TITLES.landed;
+  },
+  get earlier() {
+    return m.nowPanelGroupEarlier();
+  },
 };
 
 /** Groups whose rows show without a click. */

@@ -1,4 +1,4 @@
-import { ANSWER_DONE_LABEL } from "./cardLeave.ts";
+import * as m from "./i18n/messages.generated.ts";
 import { type TaskStatusInput, taskStatusOf } from "./taskPresentation";
 import { type ComputerMoveView, isUnstartedWork, type TaskView } from "./tasks";
 
@@ -51,14 +51,29 @@ export type RecordBarInput = TaskStatusInput &
     "kind" | "startedAt" | "children" | "blockedBy" | "replacedBy" | "startAttempt" | "startNotice"
   >;
 
-export const RECORD_NEXT_LABELS: Record<RecordBarNext, string> = {
-  start: "Start",
-  "try-again": "Try again",
-  starting: "Starting",
-  "start-again": "Start again",
-  continue: "Continue",
-  "show-card": "Show the card",
-  "answer-done": ANSWER_DONE_LABEL,
+/** The next slot's words, in the process's language. */
+export const RECORD_NEXT_LABELS: Readonly<Record<RecordBarNext, string>> = {
+  get start() {
+    return m.recordStart();
+  },
+  get "try-again"() {
+    return m.recordTryAgain();
+  },
+  get starting() {
+    return m.recordStarting();
+  },
+  get "start-again"() {
+    return m.recordStartAgain();
+  },
+  get continue() {
+    return m.recordContinue();
+  },
+  get "show-card"() {
+    return m.recordShowCard();
+  },
+  get "answer-done"() {
+    return m.cardAnswerDone();
+  },
 };
 
 /** The open record bar, or Start again on eligible dropped work. */

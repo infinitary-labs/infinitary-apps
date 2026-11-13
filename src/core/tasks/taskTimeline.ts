@@ -2,6 +2,8 @@ import { noteText } from "@shared/cardNotes";
 import type { CardMessage, CardObservation, CardObservationKind } from "@shared/cards";
 import { cardWords } from "@shared/cardWords";
 import { reportSummary } from "@shared/feed";
+import { inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { pastEndingWords } from "@shared/pastCard";
 import { cutText } from "@shared/textCut";
 import {
@@ -703,7 +705,9 @@ function observationText(
     }
     case "exit":
       return [
-        pastEndingWords({ how: observation.payload.reason, at: observation.recordedAt }),
+        inLanguage(SOURCE_LANGUAGE, () =>
+          pastEndingWords({ how: observation.payload.reason, at: observation.recordedAt }),
+        ),
         observation.payload.note,
       ]
         .filter(Boolean)

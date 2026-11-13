@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as m from "./i18n/messages.generated.ts";
 
 export const secretRefSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/);
 export const secretRuleSchema = z.strictObject({
@@ -347,10 +348,14 @@ export const SECRETS_WORDS = {
   add: "Add secret",
   replace: "Replace",
   forget: "Forget",
-  once: "Allow once",
+  get once() {
+    return m.secretsAllowOnce();
+  },
   always: "Always allow this",
   short: `Allow for ${SHORT_READ_SECONDS / 60} minutes`,
-  deny: "Don't allow",
+  get deny() {
+    return m.secretsDeny();
+  },
   waiting: "Review request",
   waitingFor: (names: string) =>
     `${names} ${names.includes(", ") ? "are" : "is"} waiting for your answer.`,

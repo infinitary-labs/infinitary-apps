@@ -61271,6 +61271,4872 @@ export function automationWaitsForNote(): string {
   return `Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history.`;
 }
 
+export function cardReplyHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هل من إضافة؟`;
+    case "de":
+      return `noch etwas hinzuzufügen?`;
+    case "es":
+      return `¿algo que agregar?`;
+    case "fr":
+      return `quelque chose à ajouter ?`;
+    case "ja":
+      return `補足があれば`;
+    case "ko":
+      return `덧붙일 말이 있나요?`;
+    case "pt-BR":
+      return `algo a acrescentar?`;
+    case "zh-Hans":
+      return `还有要补充的吗？`;
+    case "zh-Hant":
+      return `還有要補充的嗎？`;
+    case "en-XA":
+      return `[áñýţĥîñĝ ţö áðð? ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eanything to add?\u202c`;
+  }
+  return `anything to add?`;
+}
+
+export function cardPastSentLead(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُرسل مع اختيارك:`;
+    case "de":
+      return `Mit deiner Wahl gesendet:`;
+    case "es":
+      return `Enviado con tu elección:`;
+    case "fr":
+      return `Envoyé avec votre choix :`;
+    case "ja":
+      return `選択と一緒に送信：`;
+    case "ko":
+      return `선택과 함께 보냄:`;
+    case "pt-BR":
+      return `Enviado com a sua escolha:`;
+    case "zh-Hans":
+      return `已随你的选择发送：`;
+    case "zh-Hant":
+      return `隨你的選擇送出：`;
+    case "en-XA":
+      return `[Šéñţ ŵîţĥ ýöûŕ çĥöîçé: ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSent with your choice:\u202c`;
+  }
+  return `Sent with your choice:`;
+}
+
+export function cardReviewFinding(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نتيجة المراجعة`;
+    case "de":
+      return `Befund im Review`;
+    case "es":
+      return `Hallazgo de la revisión`;
+    case "fr":
+      return `Constat de la revue`;
+    case "ja":
+      return `レビューの指摘`;
+    case "ko":
+      return `검토에서 발견한 점`;
+    case "pt-BR":
+      return `Constatação da revisão`;
+    case "zh-Hans":
+      return `审查发现`;
+    case "zh-Hant":
+      return `審查發現`;
+    case "en-XA":
+      return `[Ŕéṽîéŵ ƒîñðîñĝ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eReview finding\u202c`;
+  }
+  return `Review finding`;
+}
+
+export function cardLeaveAside(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `وضع جانبًا`;
+    case "de":
+      return `Beiseitelegen`;
+    case "es":
+      return `Apartar`;
+    case "fr":
+      return `Mettre de côté`;
+    case "ja":
+      return `脇に置く`;
+    case "ko":
+      return `치워 두기`;
+    case "pt-BR":
+      return `Deixar de lado`;
+    case "zh-Hans":
+      return `放到一边`;
+    case "zh-Hant":
+      return `放到一旁`;
+    case "en-XA":
+      return `[Þûţ ášîðé ~~~]`;
+    case "ar-XB":
+      return `\u202ePut aside\u202c`;
+  }
+  return `Put aside`;
+}
+
+export function cardLeaveAsideRest(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `وضع جانبًا · تنتظر في المهام وتعود عندما تتغيّر`;
+    case "de":
+      return `Beiseitelegen · wartet in Aufgaben, kommt zurück, sobald sich etwas ändert`;
+    case "es":
+      return `Apartar · espera en Tareas y vuelve cuando cambie`;
+    case "fr":
+      return `Mettre de côté · attend dans Tâches, revient dès qu’elle change`;
+    case "ja":
+      return `脇に置く · タスクで待機し、変化があると戻ります`;
+    case "ko":
+      return `치워 두기 · 작업에서 기다리다가 바뀌면 다시 나와요`;
+    case "pt-BR":
+      return `Deixar de lado · aguarda em Tarefas, volta quando mudar`;
+    case "zh-Hans":
+      return `放到一边 · 在任务中等候，有变化时再回来`;
+    case "zh-Hant":
+      return `放到一旁 · 留在任務中，有變動時再回來`;
+    case "en-XA":
+      return `[Þûţ ášîðé · ŵáîţš îñ Ţášķš, ƀáçķ ŵĥéñ îţ çĥáñĝéš ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePut aside · waits in Tasks, back when it changes\u202c`;
+  }
+  return `Put aside · waits in Tasks, back when it changes`;
+}
+
+export function cardLeaveHide(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إخفاء`;
+    case "de":
+      return `Ausblenden`;
+    case "es":
+      return `Ocultar`;
+    case "fr":
+      return `Masquer`;
+    case "ja":
+      return `隠す`;
+    case "ko":
+      return `숨기기`;
+    case "pt-BR":
+      return `Ocultar`;
+    case "zh-Hans":
+      return `隐藏`;
+    case "zh-Hant":
+      return `隱藏`;
+    case "en-XA":
+      return `[Ĥîðé ~~]`;
+    case "ar-XB":
+      return `\u202eHide\u202c`;
+  }
+  return `Hide`;
+}
+
+export function cardLeaveHideRest(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إخفاء · تستمر المهمة`;
+    case "de":
+      return `Ausblenden · die Aufgabe geht weiter`;
+    case "es":
+      return `Ocultar · la tarea sigue`;
+    case "fr":
+      return `Masquer · la tâche continue`;
+    case "ja":
+      return `隠す · タスクは続行します`;
+    case "ko":
+      return `숨기기 · 작업은 계속돼요`;
+    case "pt-BR":
+      return `Ocultar · a tarefa continua`;
+    case "zh-Hans":
+      return `隐藏 · 任务继续进行`;
+    case "zh-Hant":
+      return `隱藏 · 任務繼續進行`;
+    case "en-XA":
+      return `[Ĥîðé · ţĥé ţášķ ĝöéš öñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHide · the task goes on\u202c`;
+  }
+  return `Hide · the task goes on`;
+}
+
+export function cardLeaveHidePanelRest(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إخفاء · يبقى العرض متاحًا`;
+    case "de":
+      return `Ausblenden · die Ansicht bleibt verfügbar`;
+    case "es":
+      return `Ocultar · la vista sigue disponible`;
+    case "fr":
+      return `Masquer · la vue reste disponible`;
+    case "ja":
+      return `隠す · ビューは引き続き使えます`;
+    case "ko":
+      return `숨기기 · 보기는 계속 쓸 수 있어요`;
+    case "pt-BR":
+      return `Ocultar · a visualização continua disponível`;
+    case "zh-Hans":
+      return `隐藏 · 视图仍可使用`;
+    case "zh-Hant":
+      return `隱藏 · 這個檢視仍可使用`;
+    case "en-XA":
+      return `[Ĥîðé · ţĥé ṽîéŵ šţáýš áṽáîļáƀļé ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHide · the view stays available\u202c`;
+  }
+  return `Hide · the view stays available`;
+}
+
+export function cardAnswerDone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تم`;
+    case "de":
+      return `Fertig`;
+    case "es":
+      return `Hecho`;
+    case "fr":
+      return `Terminé`;
+    case "ja":
+      return `完了`;
+    case "ko":
+      return `완료`;
+    case "pt-BR":
+      return `Concluído`;
+    case "zh-Hans":
+      return `完成`;
+    case "zh-Hant":
+      return `完成`;
+    case "en-XA":
+      return `[Ðöñé ~~]`;
+    case "ar-XB":
+      return `\u202eDone\u202c`;
+  }
+  return `Done`;
+}
+
+export function cardAnswerDoneRest(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تم · يغلق ${key} بوصفها مُجابة؛ تبقى الإجابة في سجلها`;
+    case "de":
+      return `Fertig · schließt ${key} als beantwortet; die Antwort bleibt im Protokoll`;
+    case "es":
+      return `Hecho · cierra ${key} como respondida; la respuesta queda en su registro`;
+    case "fr":
+      return `Terminé · clôt ${key} comme traitée ; la réponse reste dans sa fiche`;
+    case "ja":
+      return `完了 · ${key} を回答済みとして閉じます。回答は記録に残ります`;
+    case "ko":
+      return `완료 · ${key}을(를) 답변됨으로 닫아요. 답변은 기록에 남아요`;
+    case "pt-BR":
+      return `Concluído · encerra ${key} como respondida; a resposta fica no registro dela`;
+    case "zh-Hans":
+      return `完成 · 将 ${key} 关闭为已回答；回答会保留在它的记录中`;
+    case "zh-Hant":
+      return `完成 · 將 ${key} 以已回答關閉；回答會留在它的紀錄中`;
+    case "en-XA":
+      return `[Ðöñé · çļöšéš ${key} áš áñšŵéŕéð; ţĥé áñšŵéŕ šţáýš öñ îţš ŕéçöŕð ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDone · closes \u202c${key}\u202e as answered; the answer stays on its record\u202c`;
+  }
+  return `Done · closes ${key} as answered; the answer stays on its record`;
+}
+
+export function cardDecline(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رفض`;
+    case "de":
+      return `Ablehnen`;
+    case "es":
+      return `Rechazar`;
+    case "fr":
+      return `Refuser`;
+    case "ja":
+      return `お断り`;
+    case "ko":
+      return `거절`;
+    case "pt-BR":
+      return `Recusar`;
+    case "zh-Hans":
+      return `拒绝`;
+    case "zh-Hant":
+      return `拒絕`;
+    case "en-XA":
+      return `[Ðéçļîñé ~~~]`;
+    case "ar-XB":
+      return `\u202eDecline\u202c`;
+  }
+  return `Decline`;
+}
+
+export function cardAfterMergeWait(input: { count: number; keys: string }): string {
+  const count = formatNumber(input.count);
+  const keys = input.keys;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `تبدأ بعد دمج ${keys} أيضًا`;
+        case "one":
+          return `تبدأ بعد دمج ${keys} أيضًا`;
+        case "two":
+          return `تبدأ بعد دمج ${keys} أيضًا`;
+        case "few":
+          return `تبدأ بعد دمج ${keys} أيضًا`;
+        case "many":
+          return `تبدأ بعد دمج ${keys} أيضًا`;
+        default:
+          return `تبدأ بعد دمج ${keys} أيضًا`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Startet, sobald auch ${keys} zusammengeführt wird`;
+        default:
+          return `Startet, sobald auch ${keys} zusammengeführt werden`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Empieza cuando ${keys} también se fusione`;
+        case "many":
+          return `Empieza cuando ${keys} también se fusionen`;
+        default:
+          return `Empieza cuando ${keys} también se fusionen`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Démarre dès que ${keys} sera aussi fusionnée`;
+        case "many":
+          return `Démarre dès que ${keys} seront aussi fusionnées`;
+        default:
+          return `Démarre dès que ${keys} seront aussi fusionnées`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${keys} もマージされたら開始します`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${keys}도 병합되면 시작해요`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Inicia quando ${keys} também for mesclada`;
+        case "many":
+          return `Inicia quando ${keys} também forem mescladas`;
+        default:
+          return `Inicia quando ${keys} também forem mescladas`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `等 ${keys} 也合并后开始`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `等 ${keys} 也合併後開始`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Šţáŕţš öñçé ${keys} ɱéŕĝéš ţöö ~~~~~~~~]`;
+        default:
+          return `[Šţáŕţš öñçé ${keys} ɱéŕĝé ţöö ~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eStarts once \u202c${keys}\u202e merges too\u202c`;
+        default:
+          return `\u202eStarts once \u202c${keys}\u202e merge too\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Starts once ${keys} merges too`;
+    default:
+      return `Starts once ${keys} merge too`;
+  }
+}
+
+export function cardAfterMergeDoerCrewmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتولى فرد الطاقم هذا في نسخة عمل`;
+    case "de":
+      return `Ein Crewmitglied erledigt das in einer Arbeitskopie`;
+    case "es":
+      return `Un tripulante hace esto en una copia de trabajo`;
+    case "fr":
+      return `Un équipier s’en charge dans une copie de travail`;
+    case "ja":
+      return `担当の乗組員が作業コピーで行います`;
+    case "ko":
+      return `선원이 작업 사본에서 해요`;
+    case "pt-BR":
+      return `Um tripulante faz isso em uma cópia de trabalho`;
+    case "zh-Hans":
+      return `由一名船员在工作副本中完成`;
+    case "zh-Hant":
+      return `由一位船員在工作副本中進行`;
+    case "en-XA":
+      return `[Å çŕéŵɱáţé ðöéš ţĥîš îñ á ŵöŕķîñĝ çöþý ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA crewmate does this in a working copy\u202c`;
+  }
+  return `A crewmate does this in a working copy`;
+}
+
+export function cardAfterMergeDoerFirstmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتولى نائب القبطان هذا في التطبيق؛ ولا يبدأ أي فرد من الطاقم`;
+    case "de":
+      return `Dein erster Offizier erledigt das in der App; kein Crewmitglied startet`;
+    case "es":
+      return `Tu primer oficial hace esto en la app; no empieza ningún tripulante`;
+    case "fr":
+      return `Votre second s’en charge dans l’app ; aucun équipier ne démarre`;
+    case "ja":
+      return `一等航海士がアプリ内で行います。乗組員は開始しません`;
+    case "ko":
+      return `일등항해사가 앱에서 해요. 선원은 시작하지 않아요`;
+    case "pt-BR":
+      return `Seu imediato faz isso no app; nenhum tripulante inicia`;
+    case "zh-Hans":
+      return `由你的大副在应用中完成；不会有船员开始`;
+    case "zh-Hant":
+      return `由你的大副在程式中進行；不會啟動船員`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ðöéš ţĥîš îñ ţĥé áþþ; ñö çŕéŵɱáţé šţáŕţš ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate does this in the app; no crewmate starts\u202c`;
+  }
+  return `Your first mate does this in the app; no crewmate starts`;
+}
+
+export function cardAfterMergeLead(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بعد الدمج، يبدأ الطاقم`;
+    case "de":
+      return `Nach dem Zusammenführen startet die Crew`;
+    case "es":
+      return `Después de fusionar, la tripulación empieza`;
+    case "fr":
+      return `Après la fusion, l’équipage démarre`;
+    case "ja":
+      return `マージ後、乗組員が開始します`;
+    case "ko":
+      return `병합 후 선원들이 시작해요`;
+    case "pt-BR":
+      return `Depois da mesclagem, a tripulação inicia`;
+    case "zh-Hans":
+      return `合并后，船员们将开始`;
+    case "zh-Hant":
+      return `合併後，船員會開始`;
+    case "en-XA":
+      return `[Åƒţéŕ ɱéŕĝîñĝ, ţĥé çŕéŵ šţáŕţš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAfter merging, the crew starts\u202c`;
+  }
+  return `After merging, the crew starts`;
+}
+
+export function taskBrowserDriverCrewmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فرد الطاقم يتحكم فيه`;
+    case "de":
+      return `das Crewmitglied steuert`;
+    case "es":
+      return `el tripulante lo está manejando`;
+    case "fr":
+      return `l’équipier pilote`;
+    case "ja":
+      return `乗組員が操作中`;
+    case "ko":
+      return `선원이 조작 중이에요`;
+    case "pt-BR":
+      return `o tripulante está conduzindo`;
+    case "zh-Hans":
+      return `船员正在操作`;
+    case "zh-Hant":
+      return `船員正在操作`;
+    case "en-XA":
+      return `[ţĥé çŕéŵɱáţé îš ðŕîṽîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethe crewmate is driving\u202c`;
+  }
+  return `the crewmate is driving`;
+}
+
+export function taskBrowserDriverNobody(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا أحد يتحكم فيه`;
+    case "de":
+      return `niemand steuert`;
+    case "es":
+      return `nadie lo está manejando`;
+    case "fr":
+      return `personne ne pilote`;
+    case "ja":
+      return `誰も操作していません`;
+    case "ko":
+      return `조작하는 사람이 없어요`;
+    case "pt-BR":
+      return `ninguém está conduzindo`;
+    case "zh-Hans":
+      return `没有人在操作`;
+    case "zh-Hant":
+      return `沒有人在操作`;
+    case "en-XA":
+      return `[ñöƀöðý îš ðŕîṽîñĝ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202enobody is driving\u202c`;
+  }
+  return `nobody is driving`;
+}
+
+export function taskBrowserDriverWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف مؤقتًا بانتظار مساعدتك`;
+    case "de":
+      return `pausiert, wartet auf deine Hilfe`;
+    case "es":
+      return `en pausa, esperando tu ayuda`;
+    case "fr":
+      return `en pause, il attend votre aide`;
+    case "ja":
+      return `あなたの手助け待ちで一時停止中`;
+    case "ko":
+      return `도움을 기다리며 멈춤`;
+    case "pt-BR":
+      return `em pausa, esperando a sua ajuda`;
+    case "zh-Hans":
+      return `已暂停，等你帮忙`;
+    case "zh-Hant":
+      return `已暫停，等你協助`;
+    case "en-XA":
+      return `[þáûšéð ƒöŕ ýöûŕ ĥéļþ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202epaused for your help\u202c`;
+  }
+  return `paused for your help`;
+}
+
+export function taskBrowserDriverTaking(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أنت تتولى التحكم`;
+    case "de":
+      return `du übernimmst die Steuerung`;
+    case "es":
+      return `estás tomando el control`;
+    case "fr":
+      return `vous prenez la main`;
+    case "ja":
+      return `操作を引き継いでいます`;
+    case "ko":
+      return `선장님이 넘겨받는 중이에요`;
+    case "pt-BR":
+      return `você está assumindo o controle`;
+    case "zh-Hans":
+      return `你正在接管`;
+    case "zh-Hant":
+      return `你正在接手`;
+    case "en-XA":
+      return `[ýöû áŕé ţáķîñĝ çöñţŕöļ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eyou are taking control\u202c`;
+  }
+  return `you are taking control`;
+}
+
+export function taskBrowserDriverCaptain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التحكم بيدك`;
+    case "de":
+      return `du hast die Steuerung`;
+    case "es":
+      return `tienes el control`;
+    case "fr":
+      return `vous avez la main`;
+    case "ja":
+      return `あなたが操作中`;
+    case "ko":
+      return `선장님이 조작 중이에요`;
+    case "pt-BR":
+      return `você tem o controle`;
+    case "zh-Hans":
+      return `由你操作`;
+    case "zh-Hant":
+      return `你正在操作`;
+    case "en-XA":
+      return `[ýöû ĥáṽé çöñţŕöļ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eyou have control\u202c`;
+  }
+  return `you have control`;
+}
+
+export function taskBrowserStoppedCaptain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أوقفته أنت`;
+    case "de":
+      return `du hast ihn gestoppt`;
+    case "es":
+      return `lo detuviste`;
+    case "fr":
+      return `vous l’avez arrêté`;
+    case "ja":
+      return `あなたが停止しました`;
+    case "ko":
+      return `선장님이 중지했어요`;
+    case "pt-BR":
+      return `você o parou`;
+    case "zh-Hans":
+      return `你已停止它`;
+    case "zh-Hant":
+      return `你已停止`;
+    case "en-XA":
+      return `[ýöû šţöþþéð îţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eyou stopped it\u202c`;
+  }
+  return `you stopped it`;
+}
+
+export function taskBrowserStoppedCrewmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أغلقه فرد الطاقم`;
+    case "de":
+      return `das Crewmitglied hat ihn geschlossen`;
+    case "es":
+      return `el tripulante lo cerró`;
+    case "fr":
+      return `l’équipier l’a fermé`;
+    case "ja":
+      return `乗組員が閉じました`;
+    case "ko":
+      return `선원이 닫았어요`;
+    case "pt-BR":
+      return `o tripulante o fechou`;
+    case "zh-Hans":
+      return `船员已关闭它`;
+    case "zh-Hant":
+      return `船員已關閉`;
+    case "en-XA":
+      return `[ţĥé çŕéŵɱáţé çļöšéð îţ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethe crewmate closed it\u202c`;
+  }
+  return `the crewmate closed it`;
+}
+
+export function taskBrowserStoppedIdle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُوقف بعد 30 دقيقة دون استخدام`;
+    case "de":
+      return `nach 30 Minuten ohne Nutzung gestoppt`;
+    case "es":
+      return `se detuvo tras 30 minutos sin uso`;
+    case "fr":
+      return `arrêté après 30 min sans usage`;
+    case "ja":
+      return `30分間使われず停止しました`;
+    case "ko":
+      return `30분간 쓰지 않아 중지됨`;
+    case "pt-BR":
+      return `parou após 30 minutos sem uso`;
+    case "zh-Hans":
+      return `闲置 30 分钟后已停止`;
+    case "zh-Hant":
+      return `閒置 30 分鐘後已停止`;
+    case "en-XA":
+      return `[šţöþþéð áƒţéŕ 30 ɱîñûţéš ûñûšéð ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202estopped after 30 minutes unused\u202c`;
+  }
+  return `stopped after 30 minutes unused`;
+}
+
+export function taskBrowserStoppedGone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `توقفت صفحته عن العمل`;
+    case "de":
+      return `seine Seite reagiert nicht mehr`;
+    case "es":
+      return `su página dejó de funcionar`;
+    case "fr":
+      return `sa page a cessé de fonctionner`;
+    case "ja":
+      return `ページが動作しなくなりました`;
+    case "ko":
+      return `페이지가 작동을 멈췄어요`;
+    case "pt-BR":
+      return `a página dele parou de funcionar`;
+    case "zh-Hans":
+      return `它的页面已停止工作`;
+    case "zh-Hant":
+      return `它的頁面已無法運作`;
+    case "en-XA":
+      return `[îţš þáĝé šţöþþéð ŵöŕķîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eits page stopped working\u202c`;
+  }
+  return `its page stopped working`;
+}
+
+export function taskBrowserStoppedTaskClosed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُوقف عند إغلاق المهمة`;
+    case "de":
+      return `beim Schließen der Aufgabe gestoppt`;
+    case "es":
+      return `se detuvo al cerrarse la tarea`;
+    case "fr":
+      return `arrêté à la clôture de la tâche`;
+    case "ja":
+      return `タスクの終了とともに停止しました`;
+    case "ko":
+      return `작업이 닫히면서 중지됨`;
+    case "pt-BR":
+      return `parou quando a tarefa foi encerrada`;
+    case "zh-Hans":
+      return `任务关闭时已停止`;
+    case "zh-Hant":
+      return `任務關閉時已停止`;
+    case "en-XA":
+      return `[šţöþþéð ŵĥéñ ţĥé ţášķ çļöšéð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202estopped when the task closed\u202c`;
+  }
+  return `stopped when the task closed`;
+}
+
+export function taskBrowserStaleAttachment(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `توقف متصفح هذه البطاقة`;
+    case "de":
+      return `der Browser dieser Karte wurde gestoppt`;
+    case "es":
+      return `el navegador de esta tarjeta se detuvo`;
+    case "fr":
+      return `le navigateur de cette carte est arrêté`;
+    case "ja":
+      return `このカードのブラウザは停止しました`;
+    case "ko":
+      return `이 카드의 브라우저가 중지됐어요`;
+    case "pt-BR":
+      return `o navegador deste cartão parou`;
+    case "zh-Hans":
+      return `这张卡片的浏览器已停止`;
+    case "zh-Hant":
+      return `這張卡片的瀏覽器已停止`;
+    case "en-XA":
+      return `[ţĥîš çáŕð'š ƀŕöŵšéŕ ĥáš šţöþþéð ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethis card's browser has stopped\u202c`;
+  }
+  return `this card's browser has stopped`;
+}
+
+export function taskTabInfo(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معلومات`;
+    case "de":
+      return `Info`;
+    case "es":
+      return `Info`;
+    case "fr":
+      return `Infos`;
+    case "ja":
+      return `情報`;
+    case "ko":
+      return `정보`;
+    case "pt-BR":
+      return `Info`;
+    case "zh-Hans":
+      return `信息`;
+    case "zh-Hant":
+      return `資訊`;
+    case "en-XA":
+      return `[Îñƒö ~~]`;
+    case "ar-XB":
+      return `\u202eInfo\u202c`;
+  }
+  return `Info`;
+}
+
+export function taskTabCards(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البطاقات`;
+    case "de":
+      return `Karten`;
+    case "es":
+      return `Tarjetas`;
+    case "fr":
+      return `Cartes`;
+    case "ja":
+      return `カード`;
+    case "ko":
+      return `카드`;
+    case "pt-BR":
+      return `Cartões`;
+    case "zh-Hans":
+      return `卡片`;
+    case "zh-Hant":
+      return `卡片`;
+    case "en-XA":
+      return `[Çáŕðš ~~]`;
+    case "ar-XB":
+      return `\u202eCards\u202c`;
+  }
+  return `Cards`;
+}
+
+export function taskTabActivity(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النشاط`;
+    case "de":
+      return `Aktivität`;
+    case "es":
+      return `Actividad`;
+    case "fr":
+      return `Activité`;
+    case "ja":
+      return `アクティビティ`;
+    case "ko":
+      return `활동`;
+    case "pt-BR":
+      return `Atividade`;
+    case "zh-Hans":
+      return `动态`;
+    case "zh-Hant":
+      return `動態`;
+    case "en-XA":
+      return `[Åçţîṽîţý ~~~]`;
+    case "ar-XB":
+      return `\u202eActivity\u202c`;
+  }
+  return `Activity`;
+}
+
+export function taskTabCrewmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فرد الطاقم`;
+    case "de":
+      return `Crewmitglied`;
+    case "es":
+      return `Tripulante`;
+    case "fr":
+      return `Équipier`;
+    case "ja":
+      return `乗組員`;
+    case "ko":
+      return `선원`;
+    case "pt-BR":
+      return `Tripulante`;
+    case "zh-Hans":
+      return `船员`;
+    case "zh-Hant":
+      return `船員`;
+    case "en-XA":
+      return `[Çŕéŵɱáţé ~~~]`;
+    case "ar-XB":
+      return `\u202eCrewmate\u202c`;
+  }
+  return `Crewmate`;
+}
+
+export function crewmatePlaceholderWorking(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قل شيئًا لفرد الطاقم؛ يسمعه في خطوته التالية`;
+    case "de":
+      return `Sag dem Crewmitglied etwas; es hört es bei seinem nächsten Schritt`;
+    case "es":
+      return `Dile algo al tripulante; lo oirá en su siguiente paso`;
+    case "fr":
+      return `Dites quelque chose à l’équipier ; il l’entendra à sa prochaine étape`;
+    case "ja":
+      return `乗組員に伝えます。次のステップで届きます`;
+    case "ko":
+      return `선원에게 말을 전하세요. 다음 단계에서 들어요`;
+    case "pt-BR":
+      return `Diga algo ao tripulante; ele ouve no próximo passo`;
+    case "zh-Hans":
+      return `告诉船员一些事；它会在下一步时听到`;
+    case "zh-Hant":
+      return `對船員說些話；它會在下一步聽到`;
+    case "en-XA":
+      return `[Ţéļļ ţĥé çŕéŵɱáţé šöɱéţĥîñĝ; îţ ĥéáŕš îţ áţ îţš ñéẋţ šţéþ ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTell the crewmate something; it hears it at its next step\u202c`;
+  }
+  return `Tell the crewmate something; it hears it at its next step`;
+}
+
+export function crewmatePlaceholderIdle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قل لفرد الطاقم ما يفعله بعد ذلك`;
+    case "de":
+      return `Sag dem Crewmitglied, was es als Nächstes tun soll`;
+    case "es":
+      return `Dile al tripulante qué hacer a continuación`;
+    case "fr":
+      return `Dites à l’équipier quoi faire ensuite`;
+    case "ja":
+      return `乗組員に次の作業を伝える`;
+    case "ko":
+      return `선원에게 다음에 할 일을 알려 주세요`;
+    case "pt-BR":
+      return `Diga ao tripulante o que fazer em seguida`;
+    case "zh-Hans":
+      return `告诉船员接下来做什么`;
+    case "zh-Hant":
+      return `告訴船員接下來要做什麼`;
+    case "en-XA":
+      return `[Ţéļļ ţĥé çŕéŵɱáţé ŵĥáţ ţö ðö ñéẋţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTell the crewmate what to do next\u202c`;
+  }
+  return `Tell the crewmate what to do next`;
+}
+
+export function crewmateField(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رسالة إلى فرد الطاقم`;
+    case "de":
+      return `Nachricht an das Crewmitglied`;
+    case "es":
+      return `Mensaje para el tripulante`;
+    case "fr":
+      return `Message à l’équipier`;
+    case "ja":
+      return `乗組員へのメッセージ`;
+    case "ko":
+      return `선원에게 보낼 메시지`;
+    case "pt-BR":
+      return `Mensagem ao tripulante`;
+    case "zh-Hans":
+      return `发给船员的消息`;
+    case "zh-Hant":
+      return `給船員的訊息`;
+    case "en-XA":
+      return `[Ṁéššáĝé ţö ţĥé çŕéŵɱáţé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMessage to the crewmate\u202c`;
+  }
+  return `Message to the crewmate`;
+}
+
+export function crewmateSendsTo(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلى فرد الطاقم`;
+    case "de":
+      return `an das Crewmitglied`;
+    case "es":
+      return `para el tripulante`;
+    case "fr":
+      return `à l’équipier`;
+    case "ja":
+      return `乗組員へ`;
+    case "ko":
+      return `선원에게`;
+    case "pt-BR":
+      return `ao tripulante`;
+    case "zh-Hans":
+      return `发给船员`;
+    case "zh-Hant":
+      return `給船員`;
+    case "en-XA":
+      return `[ţö ţĥé çŕéŵɱáţé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eto the crewmate\u202c`;
+  }
+  return `to the crewmate`;
+}
+
+export function crewmateQueued(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في قائمة الانتظار`;
+    case "de":
+      return `eingereiht`;
+    case "es":
+      return `en cola`;
+    case "fr":
+      return `en attente`;
+    case "ja":
+      return `待機中`;
+    case "ko":
+      return `대기 중`;
+    case "pt-BR":
+      return `na fila`;
+    case "zh-Hans":
+      return `排队中`;
+    case "zh-Hant":
+      return `已排入佇列`;
+    case "en-XA":
+      return `[ǫûéûéð ~~]`;
+    case "ar-XB":
+      return `\u202equeued\u202c`;
+  }
+  return `queued`;
+}
+
+export function crewmateWorking(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ العمل…`;
+    case "de":
+      return `Arbeitet …`;
+    case "es":
+      return `Trabajando…`;
+    case "fr":
+      return `En cours…`;
+    case "ja":
+      return `作業中…`;
+    case "ko":
+      return `작업 중…`;
+    case "pt-BR":
+      return `Trabalhando…`;
+    case "zh-Hans":
+      return `处理中…`;
+    case "zh-Hant":
+      return `處理中…`;
+    case "en-XA":
+      return `[Ŵöŕķîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202eWorking…\u202c`;
+  }
+  return `Working…`;
+}
+
+export function crewmateInterruptHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `للمقاطعة`;
+    case "de":
+      return `zum Unterbrechen`;
+    case "es":
+      return `para interrumpir`;
+    case "fr":
+      return `pour interrompre`;
+    case "ja":
+      return `で中断`;
+    case "ko":
+      return `눌러서 중단`;
+    case "pt-BR":
+      return `para interromper`;
+    case "zh-Hans":
+      return `以打断`;
+    case "zh-Hant":
+      return `可中斷`;
+    case "en-XA":
+      return `[ţö îñţéŕŕûþţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eto interrupt\u202c`;
+  }
+  return `to interrupt`;
+}
+
+export function crewmateStop(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف`;
+    case "de":
+      return `Stoppen`;
+    case "es":
+      return `Detener`;
+    case "fr":
+      return `Arrêter`;
+    case "ja":
+      return `停止`;
+    case "ko":
+      return `중지`;
+    case "pt-BR":
+      return `Parar`;
+    case "zh-Hans":
+      return `停止`;
+    case "zh-Hant":
+      return `停止`;
+    case "en-XA":
+      return `[Šţöþ ~~]`;
+    case "ar-XB":
+      return `\u202eStop\u202c`;
+  }
+  return `Stop`;
+}
+
+export function crewmateStopping(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الإيقاف…`;
+    case "de":
+      return `Wird gestoppt …`;
+    case "es":
+      return `Deteniendo…`;
+    case "fr":
+      return `Arrêt en cours…`;
+    case "ja":
+      return `停止中…`;
+    case "ko":
+      return `중지하는 중…`;
+    case "pt-BR":
+      return `Parando…`;
+    case "zh-Hans":
+      return `正在停止…`;
+    case "zh-Hant":
+      return `正在停止…`;
+    case "en-XA":
+      return `[Šţöþþîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202eStopping…\u202c`;
+  }
+  return `Stopping…`;
+}
+
+export function crewmateIdle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خامل`;
+    case "de":
+      return `Frei`;
+    case "es":
+      return `En reposo`;
+    case "fr":
+      return `Au repos`;
+    case "ja":
+      return `待機中`;
+    case "ko":
+      return `쉬는 중`;
+    case "pt-BR":
+      return `Ocioso`;
+    case "zh-Hans":
+      return `空闲`;
+    case "zh-Hant":
+      return `閒置`;
+    case "en-XA":
+      return `[Îðļé ~~]`;
+    case "ar-XB":
+      return `\u202eIdle\u202c`;
+  }
+  return `Idle`;
+}
+
+export function crewmateWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بانتظارك`;
+    case "de":
+      return `Wartet auf dich`;
+    case "es":
+      return `Esperándote`;
+    case "fr":
+      return `En attente de vous`;
+    case "ja":
+      return `あなた待ち`;
+    case "ko":
+      return `선장님을 기다림`;
+    case "pt-BR":
+      return `Aguardando você`;
+    case "zh-Hans":
+      return `等你处理`;
+    case "zh-Hant":
+      return `等你處理`;
+    case "en-XA":
+      return `[Ŵáîţîñĝ öñ ýöû ~~~~~]`;
+    case "ar-XB":
+      return `\u202eWaiting on you\u202c`;
+  }
+  return `Waiting on you`;
+}
+
+export function crewmatePaused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف مؤقتًا · متصفحه بيدك`;
+    case "de":
+      return `Pausiert · du hast seinen Browser`;
+    case "es":
+      return `En pausa · tienes su navegador`;
+    case "fr":
+      return `En pause · vous tenez son navigateur`;
+    case "ja":
+      return `一時停止中 · ブラウザはあなたが操作中`;
+    case "ko":
+      return `멈춤 · 선장님이 브라우저를 쥐고 있어요`;
+    case "pt-BR":
+      return `Em pausa · você está com o navegador dele`;
+    case "zh-Hans":
+      return `已暂停 · 浏览器由你操作`;
+    case "zh-Hant":
+      return `已暫停 · 瀏覽器由你操作`;
+    case "en-XA":
+      return `[Þáûšéð · ýöû ĥöļð îţš ƀŕöŵšéŕ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaused · you hold its browser\u202c`;
+  }
+  return `Paused · you hold its browser`;
+}
+
+export function crewmateClosed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذه المهمة مغلقة؛ تُقرأ محادثتها كما جرت.`;
+    case "de":
+      return `Diese Aufgabe ist geschlossen; die Unterhaltung liest sich, wie sie ablief.`;
+    case "es":
+      return `Esta tarea está cerrada; sus notas se leen tal como ocurrieron.`;
+    case "fr":
+      return `Cette tâche est terminée ; sa conversation se lit telle qu’elle s’est déroulée.`;
+    case "ja":
+      return `このタスクは終了しています。会話は実行時のまま表示されます。`;
+    case "ko":
+      return `이 작업은 닫혔어요. 대화는 진행된 그대로 보여요.`;
+    case "pt-BR":
+      return `Esta tarefa foi encerrada; a sessão dela aparece como foi executada.`;
+    case "zh-Hans":
+      return `此任务已关闭；它的对话保持运行时的样子。`;
+    case "zh-Hant":
+      return `這項任務已關閉；對話內容保持當時執行的樣子。`;
+    case "en-XA":
+      return `[Ţĥîš ţášķ îš çļöšéð; îţš šéššîöñ ŕéáðš áš îţ ŕáñ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis task is closed; its session reads as it ran.\u202c`;
+  }
+  return `This task is closed; its session reads as it ran.`;
+}
+
+export function crewmateEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا توجد أسطر من المحادثة لعرضها بعد.`;
+    case "de":
+      return `Noch keine Zeilen der Unterhaltung zu zeigen.`;
+    case "es":
+      return `Aún no hay líneas de notas que mostrar.`;
+    case "fr":
+      return `Aucune ligne de conversation à afficher pour l’instant.`;
+    case "ja":
+      return `表示できる会話の行はまだありません。`;
+    case "ko":
+      return `아직 보여 줄 대화 내용이 없어요.`;
+    case "pt-BR":
+      return `Ainda não há linhas da sessão para mostrar.`;
+    case "zh-Hans":
+      return `暂无可显示的对话内容。`;
+    case "zh-Hant":
+      return `還沒有可顯示的對話內容。`;
+    case "en-XA":
+      return `[Ñö šéššîöñ ļîñéš ţö šĥöŵ ýéţ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo session lines to show yet.\u202c`;
+  }
+  return `No session lines to show yet.`;
+}
+
+export function crewmateUnreadable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة محادثة فرد الطاقم هذا.`;
+    case "de":
+      return `Die Unterhaltung dieses Crewmitglieds konnte nicht gelesen werden.`;
+    case "es":
+      return `No se pudieron leer las notas de este tripulante.`;
+    case "fr":
+      return `La conversation de cet équipier n’a pas pu être lue.`;
+    case "ja":
+      return `この乗組員の会話を読み込めませんでした。`;
+    case "ko":
+      return `이 선원의 대화를 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler a sessão deste tripulante.`;
+    case "zh-Hans":
+      return `无法读取这名船员的对话。`;
+    case "zh-Hant":
+      return `無法讀取這位船員的對話。`;
+    case "en-XA":
+      return `[Ţĥîš çŕéŵɱáţé'š šéššîöñ çöûļð ñöţ ƀé ŕéáð. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis crewmate's session could not be read.\u202c`;
+  }
+  return `This crewmate's session could not be read.`;
+}
+
+export function crewmateOpen(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح`;
+    case "de":
+      return `öffnen`;
+    case "es":
+      return `abrir`;
+    case "fr":
+      return `ouvrir`;
+    case "ja":
+      return `開く`;
+    case "ko":
+      return `펼치기`;
+    case "pt-BR":
+      return `abrir`;
+    case "zh-Hans":
+      return `展开`;
+    case "zh-Hant":
+      return `展開`;
+    case "en-XA":
+      return `[öþéñ ~~]`;
+    case "ar-XB":
+      return `\u202eopen\u202c`;
+  }
+  return `open`;
+}
+
+export function crewmateFold(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `طي`;
+    case "de":
+      return `einklappen`;
+    case "es":
+      return `plegar`;
+    case "fr":
+      return `replier`;
+    case "ja":
+      return `たたむ`;
+    case "ko":
+      return `접기`;
+    case "pt-BR":
+      return `recolher`;
+    case "zh-Hans":
+      return `收起`;
+    case "zh-Hant":
+      return `收合`;
+    case "en-XA":
+      return `[ƒöļð ~~]`;
+    case "ar-XB":
+      return `\u202efold\u202c`;
+  }
+  return `fold`;
+}
+
+export function crewmateBrief(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التكليف`;
+    case "de":
+      return `Der Auftrag`;
+    case "es":
+      return `El encargo`;
+    case "fr":
+      return `La consigne`;
+    case "ja":
+      return `依頼内容`;
+    case "ko":
+      return `지시서`;
+    case "pt-BR":
+      return `O briefing`;
+    case "zh-Hans":
+      return `任务说明`;
+    case "zh-Hant":
+      return `任務說明`;
+    case "en-XA":
+      return `[Ţĥé ƀŕîéƒ ~~~]`;
+    case "ar-XB":
+      return `\u202eThe brief\u202c`;
+  }
+  return `The brief`;
+}
+
+export function crewmateFirstmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نائب القبطان`;
+    case "de":
+      return `Erster Offizier`;
+    case "es":
+      return `Primer oficial`;
+    case "fr":
+      return `Second`;
+    case "ja":
+      return `航海士`;
+    case "ko":
+      return `일등항해사`;
+    case "pt-BR":
+      return `Imediato`;
+    case "zh-Hans":
+      return `大副`;
+    case "zh-Hant":
+      return `大副`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate\u202c`;
+  }
+  return `First mate`;
+}
+
+export function crewmateApp(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `من التطبيق`;
+    case "de":
+      return `Von der App`;
+    case "es":
+      return `De la app`;
+    case "fr":
+      return `De la part de l’app`;
+    case "ja":
+      return `アプリから`;
+    case "ko":
+      return `앱에서`;
+    case "pt-BR":
+      return `Do app`;
+    case "zh-Hans":
+      return `来自应用`;
+    case "zh-Hant":
+      return `來自程式`;
+    case "en-XA":
+      return `[Ƒŕöɱ ţĥé áþþ ~~~~]`;
+    case "ar-XB":
+      return `\u202eFrom the app\u202c`;
+  }
+  return `From the app`;
+}
+
+export function crewmateRunning(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قيد التشغيل…`;
+    case "de":
+      return `läuft …`;
+    case "es":
+      return `en curso…`;
+    case "fr":
+      return `en cours…`;
+    case "ja":
+      return `実行中…`;
+    case "ko":
+      return `실행 중…`;
+    case "pt-BR":
+      return `executando…`;
+    case "zh-Hans":
+      return `运行中…`;
+    case "zh-Hant":
+      return `執行中…`;
+    case "en-XA":
+      return `[ŕûññîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202erunning…\u202c`;
+  }
+  return `running…`;
+}
+
+export function crewmateNoResult(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلا نتيجة`;
+    case "de":
+      return `kein Ergebnis`;
+    case "es":
+      return `sin resultado`;
+    case "fr":
+      return `aucun résultat`;
+    case "ja":
+      return `結果なし`;
+    case "ko":
+      return `결과 없음`;
+    case "pt-BR":
+      return `sem resultado`;
+    case "zh-Hans":
+      return `没有结果`;
+    case "zh-Hant":
+      return `沒有結果`;
+    case "en-XA":
+      return `[ñö ŕéšûļţ ~~~]`;
+    case "ar-XB":
+      return `\u202eno result\u202c`;
+  }
+  return `no result`;
+}
+
+export function crewmateNoOutput(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلا ناتج`;
+    case "de":
+      return `keine Ausgabe`;
+    case "es":
+      return `sin salida`;
+    case "fr":
+      return `aucune sortie`;
+    case "ja":
+      return `出力なし`;
+    case "ko":
+      return `출력 없음`;
+    case "pt-BR":
+      return `sem saída`;
+    case "zh-Hans":
+      return `没有输出`;
+    case "zh-Hant":
+      return `沒有輸出`;
+    case "en-XA":
+      return `[ñö öûţþûţ ~~~]`;
+    case "ar-XB":
+      return `\u202eno output\u202c`;
+  }
+  return `no output`;
+}
+
+export function crewmatePicture(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `صورة أجاب بها استدعاء فرد الطاقم`;
+    case "de":
+      return `Ein Bild, mit dem der Aufruf des Crewmitglieds beantwortet wurde`;
+    case "es":
+      return `Una imagen con la que respondió la llamada del tripulante`;
+    case "fr":
+      return `Une image renvoyée en réponse à l’appel de l’équipier`;
+    case "ja":
+      return `乗組員の呼び出しが返した画像`;
+    case "ko":
+      return `선원의 호출에 대한 답으로 온 그림`;
+    case "pt-BR":
+      return `Uma imagem com que a chamada do tripulante respondeu`;
+    case "zh-Hans":
+      return `船员的调用返回的图片`;
+    case "zh-Hant":
+      return `船員的呼叫所回傳的圖片`;
+    case "en-XA":
+      return `[Å þîçţûŕé ţĥé çŕéŵɱáţé'š çáļļ áñšŵéŕéð ŵîţĥ ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA picture the crewmate's call answered with\u202c`;
+  }
+  return `A picture the crewmate's call answered with`;
+}
+
+export function crewmatePictureLarger(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض أكبر`;
+    case "de":
+      return `Größer anzeigen`;
+    case "es":
+      return `Ver más grande`;
+    case "fr":
+      return `Agrandir`;
+    case "ja":
+      return `拡大`;
+    case "ko":
+      return `크게 보기`;
+    case "pt-BR":
+      return `Mostrar maior`;
+    case "zh-Hans":
+      return `放大`;
+    case "zh-Hant":
+      return `放大顯示`;
+    case "en-XA":
+      return `[Šĥöŵ ļáŕĝéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eShow larger\u202c`;
+  }
+  return `Show larger`;
+}
+
+export function crewmatePictureSmaller(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض أصغر`;
+    case "de":
+      return `Kleiner anzeigen`;
+    case "es":
+      return `Ver más pequeña`;
+    case "fr":
+      return `Réduire`;
+    case "ja":
+      return `縮小`;
+    case "ko":
+      return `작게 보기`;
+    case "pt-BR":
+      return `Mostrar menor`;
+    case "zh-Hans":
+      return `缩小`;
+    case "zh-Hant":
+      return `縮小顯示`;
+    case "en-XA":
+      return `[Šĥöŵ šɱáļļéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eShow smaller\u202c`;
+  }
+  return `Show smaller`;
+}
+
+export function crewmateFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر إكمال دوره:`;
+    case "de":
+      return `Sein Durchgang ist fehlgeschlagen:`;
+    case "es":
+      return `Su turno falló:`;
+    case "fr":
+      return `Son tour a échoué :`;
+    case "ja":
+      return `ターンが失敗しました：`;
+    case "ko":
+      return `이번 차례가 실패했어요:`;
+    case "pt-BR":
+      return `O turno dele falhou:`;
+    case "zh-Hans":
+      return `它的这一轮失败了：`;
+    case "zh-Hant":
+      return `它這一輪失敗了：`;
+    case "en-XA":
+      return `[Îţš ţûŕñ ƒáîļéð: ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts turn failed:\u202c`;
+  }
+  return `Its turn failed:`;
+}
+
+export function crewmatePlan(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الخطة`;
+    case "de":
+      return `Plan`;
+    case "es":
+      return `Plan`;
+    case "fr":
+      return `Plan`;
+    case "ja":
+      return `プラン`;
+    case "ko":
+      return `계획`;
+    case "pt-BR":
+      return `Plano`;
+    case "zh-Hans":
+      return `计划`;
+    case "zh-Hant":
+      return `計畫`;
+    case "en-XA":
+      return `[Þļáñ ~~]`;
+    case "ar-XB":
+      return `\u202ePlan\u202c`;
+  }
+  return `Plan`;
+}
+
+export function crewmateProgress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التقدّم`;
+    case "de":
+      return `Fortschritt`;
+    case "es":
+      return `Progreso`;
+    case "fr":
+      return `Avancement`;
+    case "ja":
+      return `進捗`;
+    case "ko":
+      return `진행 상황`;
+    case "pt-BR":
+      return `Progresso`;
+    case "zh-Hans":
+      return `进度`;
+    case "zh-Hant":
+      return `進度`;
+    case "en-XA":
+      return `[Þŕöĝŕéšš ~~~]`;
+    case "ar-XB":
+      return `\u202eProgress\u202c`;
+  }
+  return `Progress`;
+}
+
+export function crewmateReport(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التقرير`;
+    case "de":
+      return `Bericht`;
+    case "es":
+      return `Informe`;
+    case "fr":
+      return `Rapport`;
+    case "ja":
+      return `報告`;
+    case "ko":
+      return `보고`;
+    case "pt-BR":
+      return `Relatório`;
+    case "zh-Hans":
+      return `汇报`;
+    case "zh-Hant":
+      return `回報`;
+    case "en-XA":
+      return `[Ŕéþöŕţ ~~]`;
+    case "ar-XB":
+      return `\u202eReport\u202c`;
+  }
+  return `Report`;
+}
+
+export function crewmateCard(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البطاقة`;
+    case "de":
+      return `Karte`;
+    case "es":
+      return `Tarjeta`;
+    case "fr":
+      return `Carte`;
+    case "ja":
+      return `カード`;
+    case "ko":
+      return `카드`;
+    case "pt-BR":
+      return `Cartão`;
+    case "zh-Hans":
+      return `卡片`;
+    case "zh-Hant":
+      return `卡片`;
+    case "en-XA":
+      return `[Çáŕð ~~]`;
+    case "ar-XB":
+      return `\u202eCard\u202c`;
+  }
+  return `Card`;
+}
+
+export function crewmateShowCard(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض البطاقة`;
+    case "de":
+      return `Karte anzeigen`;
+    case "es":
+      return `Mostrar la tarjeta`;
+    case "fr":
+      return `Afficher la carte`;
+    case "ja":
+      return `カードを表示`;
+    case "ko":
+      return `카드 보기`;
+    case "pt-BR":
+      return `Mostrar o cartão`;
+    case "zh-Hans":
+      return `显示卡片`;
+    case "zh-Hant":
+      return `顯示卡片`;
+    case "en-XA":
+      return `[Šĥöŵ ţĥé çáŕð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow the card\u202c`;
+  }
+  return `Show the card`;
+}
+
+export function crewmateChange(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `طلب سحب`;
+    case "de":
+      return `Pull Request`;
+    case "es":
+      return `Solicitud de incorporación de cambios`;
+    case "fr":
+      return `Demande de tirage`;
+    case "ja":
+      return `プルリクエスト`;
+    case "ko":
+      return `끌어오기 요청`;
+    case "pt-BR":
+      return `Solicitação de pull`;
+    case "zh-Hans":
+      return `拉取请求`;
+    case "zh-Hant":
+      return `Pull request`;
+    case "en-XA":
+      return `[Þûļļ ŕéǫûéšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202ePull request\u202c`;
+  }
+  return `Pull request`;
+}
+
+export function crewmateCompacted(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختُصرت محادثته ليتسع لها المجال.`;
+    case "de":
+      return `Seine Unterhaltung wurde gekürzt, damit sie passt.`;
+    case "es":
+      return `Su conversación se acortó para que cupiera.`;
+    case "fr":
+      return `Sa conversation a été raccourcie pour tenir.`;
+    case "ja":
+      return `会話は収まるように短縮されました。`;
+    case "ko":
+      return `대화가 맞도록 줄어들었어요.`;
+    case "pt-BR":
+      return `A conversa dele foi encurtada para caber.`;
+    case "zh-Hans":
+      return `它的对话已被缩短以便容纳。`;
+    case "zh-Hant":
+      return `它的對話已縮短以便容納。`;
+    case "en-XA":
+      return `[Îţš çöñṽéŕšáţîöñ ŵáš šĥöŕţéñéð ţö ƒîţ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts conversation was shortened to fit.\u202c`;
+  }
+  return `Its conversation was shortened to fit.`;
+}
+
+export function crewmateStoppedCaptain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أوقفت دوره.`;
+    case "de":
+      return `Du hast seinen Durchgang gestoppt.`;
+    case "es":
+      return `Detuviste su turno.`;
+    case "fr":
+      return `Vous avez arrêté son tour.`;
+    case "ja":
+      return `あなたがターンを停止しました。`;
+    case "ko":
+      return `선장님이 이번 차례를 중지했어요.`;
+    case "pt-BR":
+      return `Você parou o turno dele.`;
+    case "zh-Hans":
+      return `你停止了它的这一轮。`;
+    case "zh-Hant":
+      return `你停止了它這一輪。`;
+    case "en-XA":
+      return `[Ýöû šţöþþéð îţš ţûŕñ. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYou stopped its turn.\u202c`;
+  }
+  return `You stopped its turn.`;
+}
+
+export function crewmateStoppedFirstmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أوقف نائب القبطان دوره.`;
+    case "de":
+      return `Dein erster Offizier hat seinen Durchgang gestoppt.`;
+    case "es":
+      return `Tu primer oficial detuvo su turno.`;
+    case "fr":
+      return `Votre second a arrêté son tour.`;
+    case "ja":
+      return `一等航海士がターンを停止しました。`;
+    case "ko":
+      return `일등항해사가 이번 차례를 중지했어요.`;
+    case "pt-BR":
+      return `Seu imediato parou o turno dele.`;
+    case "zh-Hans":
+      return `你的大副停止了它的这一轮。`;
+    case "zh-Hant":
+      return `你的大副停止了它這一輪。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé šţöþþéð îţš ţûŕñ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate stopped its turn.\u202c`;
+  }
+  return `Your first mate stopped its turn.`;
+}
+
+export function crewmateStoppedApp(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُوقف دوره.`;
+    case "de":
+      return `Sein Durchgang wurde gestoppt.`;
+    case "es":
+      return `Su turno se detuvo.`;
+    case "fr":
+      return `Son tour a été arrêté.`;
+    case "ja":
+      return `ターンが停止されました。`;
+    case "ko":
+      return `이번 차례가 중지됐어요.`;
+    case "pt-BR":
+      return `O turno dele foi parado.`;
+    case "zh-Hans":
+      return `它的这一轮已被停止。`;
+    case "zh-Hant":
+      return `它這一輪已被停止。`;
+    case "en-XA":
+      return `[Îţš ţûŕñ ŵáš šţöþþéð. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts turn was stopped.\u202c`;
+  }
+  return `Its turn was stopped.`;
+}
+
+export function crewmateMoreLines(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `+${count} سطر`;
+        case "one":
+          return `+${count} سطر`;
+        case "two":
+          return `+${count} سطران`;
+        case "few":
+          return `+${count} أسطر`;
+        case "many":
+          return `+${count} سطرًا`;
+        default:
+          return `+${count} سطر`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `+${count} Zeile`;
+        default:
+          return `+${count} Zeilen`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `+${count} línea`;
+        case "many":
+          return `+${count} de líneas`;
+        default:
+          return `+${count} líneas`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `+${count} ligne`;
+        case "many":
+          return `+${count} lignes`;
+        default:
+          return `+${count} lignes`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `+${count}行`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `+${count}줄`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `+${count} linha`;
+        case "many":
+          return `+${count} linhas`;
+        default:
+          return `+${count} linhas`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `+${count} 行`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `+${count} 行`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[+${count} ļîñé ~~]`;
+        default:
+          return `[+${count} ļîñéš ~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202e+\u202c${count}\u202e line\u202c`;
+        default:
+          return `\u202e+\u202c${count}\u202e lines\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `+${count} line`;
+    default:
+      return `+${count} lines`;
+  }
+}
+
+export function crewmateCut(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `لا يظهر ${count} حرف إضافي.`;
+        case "one":
+          return `لا يظهر حرف إضافي واحد.`;
+        case "two":
+          return `لا يظهر حرفان إضافيان.`;
+        case "few":
+          return `لا تظهر ${count} أحرف إضافية.`;
+        case "many":
+          return `لا يظهر ${count} حرفًا إضافيًا.`;
+        default:
+          return `لا يظهر ${count} حرف إضافي.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} weiteres Zeichen wird nicht angezeigt.`;
+        default:
+          return `${count} weitere Zeichen werden nicht angezeigt.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `No se muestra ${count} carácter más.`;
+        case "many":
+          return `No se muestran ${count} de caracteres más.`;
+        default:
+          return `No se muestran ${count} caracteres más.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} caractère de plus n’est pas affiché.`;
+        case "many":
+          return `${count} caractères de plus ne sont pas affichés.`;
+        default:
+          return `${count} caractères de plus ne sont pas affichés.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `さらに${count}文字は表示されていません。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}자가 더 있지만 보이지 않아요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} caractere a mais não é mostrado.`;
+        case "many":
+          return `${count} caracteres a mais não são mostrados.`;
+        default:
+          return `${count} caracteres a mais não são mostrados.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `另有 ${count} 个字符未显示。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `還有 ${count} 個字元未顯示。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ɱöŕé çĥáŕáçţéŕ îš ñöţ šĥöŵñ. ~~~~~~~~~~]`;
+        default:
+          return `[${count} ɱöŕé çĥáŕáçţéŕš áŕé ñöţ šĥöŵñ. ~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e more character is not shown.\u202c`;
+        default:
+          return `${count}\u202e more characters are not shown.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} more character is not shown.`;
+    default:
+      return `${count} more characters are not shown.`;
+  }
+}
+
+export function crewmateEarlier(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `لا يظهر ${count} سطر سابق.`;
+        case "one":
+          return `لا يظهر سطر سابق واحد.`;
+        case "two":
+          return `لا يظهر سطران سابقان.`;
+        case "few":
+          return `لا تظهر ${count} أسطر سابقة.`;
+        case "many":
+          return `لا يظهر ${count} سطرًا سابقًا.`;
+        default:
+          return `لا يظهر ${count} سطر سابق.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} frühere Zeile wird nicht angezeigt.`;
+        default:
+          return `${count} frühere Zeilen werden nicht angezeigt.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `No se muestra ${count} línea anterior.`;
+        case "many":
+          return `No se muestran ${count} de líneas anteriores.`;
+        default:
+          return `No se muestran ${count} líneas anteriores.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} ligne précédente n’est pas affichée.`;
+        case "many":
+          return `${count} lignes précédentes ne sont pas affichées.`;
+        default:
+          return `${count} lignes précédentes ne sont pas affichées.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `これより前の${count}行は表示されていません。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `앞의 ${count}줄은 보이지 않아요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} linha anterior não é mostrada.`;
+        case "many":
+          return `${count} linhas anteriores não são mostradas.`;
+        default:
+          return `${count} linhas anteriores não são mostradas.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `更早的 ${count} 行未显示。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `先前有 ${count} 行未顯示。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} éáŕļîéŕ ļîñé îš ñöţ šĥöŵñ. ~~~~~~~~~]`;
+        default:
+          return `[${count} éáŕļîéŕ ļîñéš áŕé ñöţ šĥöŵñ. ~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e earlier line is not shown.\u202c`;
+        default:
+          return `${count}\u202e earlier lines are not shown.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} earlier line is not shown.`;
+    default:
+      return `${count} earlier lines are not shown.`;
+  }
+}
+
+export function policyAsksFirst(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يسأل أولًا`;
+    case "de":
+      return `Fragt vorher`;
+    case "es":
+      return `Pregunta antes`;
+    case "fr":
+      return `Demande d’abord`;
+    case "ja":
+      return `先に確認`;
+    case "ko":
+      return `먼저 물어봄`;
+    case "pt-BR":
+      return `Pergunta antes`;
+    case "zh-Hans":
+      return `先询问`;
+    case "zh-Hant":
+      return `先問過你`;
+    case "en-XA":
+      return `[Åšķš ƒîŕšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAsks first\u202c`;
+  }
+  return `Asks first`;
+}
+
+export function policySourceTask(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذه المهمة`;
+    case "de":
+      return `Diese Aufgabe`;
+    case "es":
+      return `Esta tarea`;
+    case "fr":
+      return `Cette tâche`;
+    case "ja":
+      return `このタスク`;
+    case "ko":
+      return `이 작업`;
+    case "pt-BR":
+      return `Esta tarefa`;
+    case "zh-Hans":
+      return `此任务`;
+    case "zh-Hant":
+      return `這項任務`;
+    case "en-XA":
+      return `[Ţĥîš ţášķ ~~~]`;
+    case "ar-XB":
+      return `\u202eThis task\u202c`;
+  }
+  return `This task`;
+}
+
+export function policySourceProject(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعداد المشروع`;
+    case "de":
+      return `Projekteinstellung`;
+    case "es":
+      return `Ajuste del proyecto`;
+    case "fr":
+      return `Réglage du projet`;
+    case "ja":
+      return `プロジェクトの設定`;
+    case "ko":
+      return `프로젝트 설정`;
+    case "pt-BR":
+      return `Ajuste do projeto`;
+    case "zh-Hans":
+      return `项目设置`;
+    case "zh-Hant":
+      return `專案設定`;
+    case "en-XA":
+      return `[Þŕöĵéçţ šéţţîñĝ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eProject setting\u202c`;
+  }
+  return `Project setting`;
+}
+
+export function policySourceParent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهمة الأم`;
+    case "de":
+      return `Übergeordnete Aufgabe`;
+    case "es":
+      return `Tarea principal`;
+    case "fr":
+      return `Tâche parente`;
+    case "ja":
+      return `親タスク`;
+    case "ko":
+      return `상위 작업`;
+    case "pt-BR":
+      return `Tarefa principal`;
+    case "zh-Hans":
+      return `上层任务`;
+    case "zh-Hant":
+      return `上層任務`;
+    case "en-XA":
+      return `[Þáŕéñţ ţášķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eParent task\u202c`;
+  }
+  return `Parent task`;
+}
+
+export function policyHelper(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اطلب من نائب القبطان تغيير هذه لهذه المهمة.`;
+    case "de":
+      return `Bitte deinen ersten Offizier, das für diese Aufgabe zu ändern.`;
+    case "es":
+      return `Pídele a tu primer oficial que cambie esto para esta tarea.`;
+    case "fr":
+      return `Demandez à votre second de les modifier pour cette tâche.`;
+    case "ja":
+      return `このタスクでの変更は、一等航海士に頼んでください。`;
+    case "ko":
+      return `이 작업의 설정을 바꾸려면 일등항해사에게 요청하세요.`;
+    case "pt-BR":
+      return `Peça ao seu imediato para mudar isto nesta tarefa.`;
+    case "zh-Hans":
+      return `请让你的大副为此任务更改这些设置。`;
+    case "zh-Hant":
+      return `請你的大副為這項任務變更這些設定。`;
+    case "en-XA":
+      return `[Åšķ ýöûŕ ƒîŕšţ ɱáţé ţö çĥáñĝé ţĥéšé ƒöŕ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAsk your first mate to change these for this task.\u202c`;
+  }
+  return `Ask your first mate to change these for this task.`;
+}
+
+export function policyCareBound(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدمج المحلي يستخدم العناية الافتراضية؛ وتبقى العناية المتأنّية مطلوبة لطلبات السحب.`;
+    case "de":
+      return `Lokales Zusammenführen nutzt die Sorgfalt „Standard“; für Pull Requests bleibt „Sorgfältig“ angefordert.`;
+    case "es":
+      return `La fusión local usa el rigor Predeterminado; Cuidadoso sigue solicitado para las solicitudes de incorporación de cambios.`;
+    case "fr":
+      return `La fusion locale utilise le soin Par défaut ; Minutieux reste demandé pour les demandes de tirage.`;
+    case "ja":
+      return `ローカルマージでは慎重さは標準になります。プルリクエストでは引き続き「慎重」を求めます。`;
+    case "ko":
+      return `로컬 병합은 주의 수준 기본으로 하고, 끌어오기 요청에는 신중하게를 계속 요청해요.`;
+    case "pt-BR":
+      return `A mesclagem local usa o cuidado Padrão; o Cuidadoso continua pedido para solicitações de pull.`;
+    case "zh-Hans":
+      return `本地合并使用默认把关；拉取请求仍然要求谨慎把关。`;
+    case "zh-Hant":
+      return `本機合併使用預設謹慎度；pull request 仍要求謹慎。`;
+    case "en-XA":
+      return `[Ļöçáļ ɱéŕĝé ûšéš Ðéƒáûļţ ŕîĝöŕ; Çáŕéƒûļ ŕéɱáîñš ŕéǫûéšţéð ƒöŕ þûļļ ŕéǫûéšţš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal merge uses Default rigor; Careful remains requested for pull requests.\u202c`;
+  }
+  return `Local merge uses Default rigor; Careful remains requested for pull requests.`;
+}
+
+export function recordStart(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بدء`;
+    case "de":
+      return `Starten`;
+    case "es":
+      return `Iniciar`;
+    case "fr":
+      return `Démarrer`;
+    case "ja":
+      return `開始`;
+    case "ko":
+      return `시작`;
+    case "pt-BR":
+      return `Iniciar`;
+    case "zh-Hans":
+      return `开始`;
+    case "zh-Hant":
+      return `開始`;
+    case "en-XA":
+      return `[Šţáŕţ ~~]`;
+    case "ar-XB":
+      return `\u202eStart\u202c`;
+  }
+  return `Start`;
+}
+
+export function recordTryAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة المحاولة`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Volver a intentar`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `もう一度試す`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `再試一次`;
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTry again\u202c`;
+  }
+  return `Try again`;
+}
+
+export function recordStarting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ البدء`;
+    case "de":
+      return `Startet`;
+    case "es":
+      return `Iniciando`;
+    case "fr":
+      return `Démarrage`;
+    case "ja":
+      return `開始中`;
+    case "ko":
+      return `시작하는 중`;
+    case "pt-BR":
+      return `Iniciando`;
+    case "zh-Hans":
+      return `正在开始`;
+    case "zh-Hant":
+      return `正在啟動`;
+    case "en-XA":
+      return `[Šţáŕţîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eStarting\u202c`;
+  }
+  return `Starting`;
+}
+
+export function recordStartAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بدء من جديد`;
+    case "de":
+      return `Erneut starten`;
+    case "es":
+      return `Volver a iniciar`;
+    case "fr":
+      return `Redémarrer`;
+    case "ja":
+      return `もう一度開始`;
+    case "ko":
+      return `다시 시작`;
+    case "pt-BR":
+      return `Iniciar de novo`;
+    case "zh-Hans":
+      return `重新开始`;
+    case "zh-Hant":
+      return `重新開始`;
+    case "en-XA":
+      return `[Šţáŕţ áĝáîñ ~~~~]`;
+    case "ar-XB":
+      return `\u202eStart again\u202c`;
+  }
+  return `Start again`;
+}
+
+export function recordContinue(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متابعة`;
+    case "de":
+      return `Fortsetzen`;
+    case "es":
+      return `Continuar`;
+    case "fr":
+      return `Poursuivre`;
+    case "ja":
+      return `続行`;
+    case "ko":
+      return `이어서 하기`;
+    case "pt-BR":
+      return `Continuar`;
+    case "zh-Hans":
+      return `继续`;
+    case "zh-Hant":
+      return `繼續`;
+    case "en-XA":
+      return `[Çöñţîñûé ~~~]`;
+    case "ar-XB":
+      return `\u202eContinue\u202c`;
+  }
+  return `Continue`;
+}
+
+export function recordShowCard(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض البطاقة`;
+    case "de":
+      return `Karte anzeigen`;
+    case "es":
+      return `Mostrar la tarjeta`;
+    case "fr":
+      return `Afficher la carte`;
+    case "ja":
+      return `カードを表示`;
+    case "ko":
+      return `카드 보기`;
+    case "pt-BR":
+      return `Mostrar o cartão`;
+    case "zh-Hans":
+      return `显示卡片`;
+    case "zh-Hant":
+      return `顯示卡片`;
+    case "en-XA":
+      return `[Šĥöŵ ţĥé çáŕð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow the card\u202c`;
+  }
+  return `Show the card`;
+}
+
+export function recordDropTask(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إسقاط المهمة`;
+    case "de":
+      return `Aufgabe aufgeben`;
+    case "es":
+      return `Abandonar tarea`;
+    case "fr":
+      return `Écarter la tâche`;
+    case "ja":
+      return `タスクを取りやめ`;
+    case "ko":
+      return `작업 중단`;
+    case "pt-BR":
+      return `Abandonar tarefa`;
+    case "zh-Hans":
+      return `放弃任务`;
+    case "zh-Hant":
+      return `放棄任務`;
+    case "en-XA":
+      return `[Ðŕöþ ţášķ ~~~]`;
+    case "ar-XB":
+      return `\u202eDrop task\u202c`;
+  }
+  return `Drop task`;
+}
+
+export function recordDropCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function recordDropReviewStale(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تغيّرت هذه المهمة. راجعها مرة أخرى قبل إسقاطها.`;
+    case "de":
+      return `Diese Aufgabe hat sich geändert. Sieh sie dir noch einmal an, bevor du sie aufgibst.`;
+    case "es":
+      return `Esta tarea cambió. Revísala de nuevo antes de abandonarla.`;
+    case "fr":
+      return `Cette tâche a changé. Regardez-la de nouveau avant de l’écarter.`;
+    case "ja":
+      return `このタスクは変更されました。取りやめる前にもう一度確認してください。`;
+    case "ko":
+      return `이 작업이 바뀌었어요. 중단하기 전에 다시 검토하세요.`;
+    case "pt-BR":
+      return `Esta tarefa mudou. Revise-a de novo antes de abandoná-la.`;
+    case "zh-Hans":
+      return `此任务已有变化。放弃前请再审查一次。`;
+    case "zh-Hant":
+      return `這項任務已變更。放棄前請再審查一次。`;
+    case "en-XA":
+      return `[Ţĥîš ţášķ çĥáñĝéð. Ŕéṽîéŵ îţ áĝáîñ ƀéƒöŕé ðŕöþþîñĝ îţ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis task changed. Review it again before dropping it.\u202c`;
+  }
+  return `This task changed. Review it again before dropping it.`;
+}
+
+export function pastEndingAnOption(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خيار`;
+    case "de":
+      return `eine Option`;
+    case "es":
+      return `una opción`;
+    case "fr":
+      return `une option`;
+    case "ja":
+      return `選択肢`;
+    case "ko":
+      return `선택지 하나`;
+    case "pt-BR":
+      return `uma opção`;
+    case "zh-Hans":
+      return `一个选项`;
+    case "zh-Hant":
+      return `一個選項`;
+    case "en-XA":
+      return `[áñ öþţîöñ ~~~]`;
+    case "ar-XB":
+      return `\u202ean option\u202c`;
+  }
+  return `an option`;
+}
+
+export function pastEndingFirstmateChose(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختار نائب القبطان ${label}`;
+    case "de":
+      return `Dein erster Offizier hat „${label}“ gewählt`;
+    case "es":
+      return `Tu primer oficial eligió ${label}`;
+    case "fr":
+      return `Votre second a choisi ${label}`;
+    case "ja":
+      return `一等航海士が「${label}」を選びました`;
+    case "ko":
+      return `일등항해사가 ${label}을(를) 골랐어요`;
+    case "pt-BR":
+      return `Seu imediato escolheu ${label}`;
+    case "zh-Hans":
+      return `你的大副选择了 ${label}`;
+    case "zh-Hant":
+      return `你的大副選了${label}`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé çĥöšé ${label} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate chose \u202c${label}`;
+  }
+  return `Your first mate chose ${label}`;
+}
+
+export function pastEndingCrewmateChose(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختار فرد الطاقم ${label}`;
+    case "de":
+      return `Sein Crewmitglied hat „${label}“ gewählt`;
+    case "es":
+      return `Su tripulante eligió ${label}`;
+    case "fr":
+      return `Son équipier a choisi ${label}`;
+    case "ja":
+      return `担当の乗組員が「${label}」を選びました`;
+    case "ko":
+      return `선원이 ${label}을(를) 골랐어요`;
+    case "pt-BR":
+      return `O tripulante dela escolheu ${label}`;
+    case "zh-Hans":
+      return `它的船员选择了 ${label}`;
+    case "zh-Hant":
+      return `它的船員選了${label}`;
+    case "en-XA":
+      return `[Îţš çŕéŵɱáţé çĥöšé ${label} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts crewmate chose \u202c${label}`;
+  }
+  return `Its crewmate chose ${label}`;
+}
+
+export function pastEndingYouChose(input: { label: string }): string {
+  const label = input.label;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اخترت ${label}`;
+    case "de":
+      return `Du hast „${label}“ gewählt`;
+    case "es":
+      return `Elegiste ${label}`;
+    case "fr":
+      return `Vous avez choisi ${label}`;
+    case "ja":
+      return `「${label}」を選びました`;
+    case "ko":
+      return `선장님이 ${label}을(를) 골랐어요`;
+    case "pt-BR":
+      return `Você escolheu ${label}`;
+    case "zh-Hans":
+      return `你选择了 ${label}`;
+    case "zh-Hant":
+      return `你選了${label}`;
+    case "en-XA":
+      return `[Ýöû çĥöšé ${label} ~~~~]`;
+    case "ar-XB":
+      return `\u202eYou chose \u202c${label}`;
+  }
+  return `You chose ${label}`;
+}
+
+export function pastEndingDismissed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُغلقت دون اختيار`;
+    case "de":
+      return `Ohne Wahl geschlossen`;
+    case "es":
+      return `Cerrada sin elegir`;
+    case "fr":
+      return `Fermée sans choix`;
+    case "ja":
+      return `選ばずに閉じました`;
+    case "ko":
+      return `고르지 않고 닫음`;
+    case "pt-BR":
+      return `Fechado sem escolha`;
+    case "zh-Hans":
+      return `未作选择就已关闭`;
+    case "zh-Hant":
+      return `未做選擇就關閉`;
+    case "en-XA":
+      return `[Çļöšéð ŵîţĥöûţ çĥööšîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClosed without choosing\u202c`;
+  }
+  return `Closed without choosing`;
+}
+
+export function pastEndingAuthorWithdrawal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سحبها كاتبها`;
+    case "de":
+      return `Vom Verfasser zurückgezogen`;
+    case "es":
+      return `Retirada por su autor`;
+    case "fr":
+      return `Retirée par son auteur`;
+    case "ja":
+      return `作成者が取り下げました`;
+    case "ko":
+      return `작성자가 거둬들임`;
+    case "pt-BR":
+      return `Retirado pelo autor`;
+    case "zh-Hans":
+      return `已由发起者撤回`;
+    case "zh-Hant":
+      return `已由作者撤回`;
+    case "en-XA":
+      return `[Ŵîţĥðŕáŵñ ƀý îţš áûţĥöŕ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWithdrawn by its author\u202c`;
+  }
+  return `Withdrawn by its author`;
+}
+
+export function pastEndingHostWithdrawal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أزالها التطبيق`;
+    case "de":
+      return `Von der App entfernt`;
+    case "es":
+      return `Retirada por la app`;
+    case "fr":
+      return `Retirée par l’app`;
+    case "ja":
+      return `アプリが取り下げました`;
+    case "ko":
+      return `앱이 내림`;
+    case "pt-BR":
+      return `Removido pelo app`;
+    case "zh-Hans":
+      return `已被应用撤下`;
+    case "zh-Hant":
+      return `已由程式撤下`;
+    case "en-XA":
+      return `[Ţáķéñ ðöŵñ ƀý ţĥé áþþ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTaken down by the app\u202c`;
+  }
+  return `Taken down by the app`;
+}
+
+export function pastEndingTaskRetired(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُزيلت عند انتهاء المهمة`;
+    case "de":
+      return `Entfernt, als die Aufgabe endete`;
+    case "es":
+      return `Retirada al terminar la tarea`;
+    case "fr":
+      return `Retirée à la fin de la tâche`;
+    case "ja":
+      return `タスクの終了とともに取り下げられました`;
+    case "ko":
+      return `작업이 끝나면서 내림`;
+    case "pt-BR":
+      return `Removido quando a tarefa terminou`;
+    case "zh-Hans":
+      return `任务结束时已撤下`;
+    case "zh-Hant":
+      return `任務結束時已撤下`;
+    case "en-XA":
+      return `[Ţáķéñ ðöŵñ ŵĥéñ ţĥé ţášķ éñðéð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTaken down when the task ended\u202c`;
+  }
+  return `Taken down when the task ended`;
+}
+
+export function pastEndingDuplicate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُغلقت بوصفها مكررة`;
+    case "de":
+      return `Als Duplikat geschlossen`;
+    case "es":
+      return `Cerrada como duplicada`;
+    case "fr":
+      return `Fermée comme doublon`;
+    case "ja":
+      return `重複として閉じました`;
+    case "ko":
+      return `중복으로 닫음`;
+    case "pt-BR":
+      return `Fechado como duplicado`;
+    case "zh-Hans":
+      return `因重复而关闭`;
+    case "zh-Hant":
+      return `因重複而關閉`;
+    case "en-XA":
+      return `[Çļöšéð áš á ðûþļîçáţé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClosed as a duplicate\u202c`;
+  }
+  return `Closed as a duplicate`;
+}
+
+export function pastEndingUnknown(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُغلقت`;
+    case "de":
+      return `Geschlossen`;
+    case "es":
+      return `Cerrada`;
+    case "fr":
+      return `Fermée`;
+    case "ja":
+      return `閉じました`;
+    case "ko":
+      return `닫힘`;
+    case "pt-BR":
+      return `Fechado`;
+    case "zh-Hans":
+      return `已关闭`;
+    case "zh-Hant":
+      return `已關閉`;
+    case "en-XA":
+      return `[Çļöšéð ~~]`;
+    case "ar-XB":
+      return `\u202eClosed\u202c`;
+  }
+  return `Closed`;
+}
+
+export function taskGroupWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بانتظارك`;
+    case "de":
+      return `wartet auf dich`;
+    case "es":
+      return `esperándote`;
+    case "fr":
+      return `en attente de vous`;
+    case "ja":
+      return `あなた待ち`;
+    case "ko":
+      return `선장님을 기다림`;
+    case "pt-BR":
+      return `aguardando você`;
+    case "zh-Hans":
+      return `等你处理`;
+    case "zh-Hant":
+      return `等你處理`;
+    case "en-XA":
+      return `[ŵáîţîñĝ öñ ýöû ~~~~~]`;
+    case "ar-XB":
+      return `\u202ewaiting on you\u202c`;
+  }
+  return `waiting on you`;
+}
+
+export function taskGroupWorking(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قيد العمل`;
+    case "de":
+      return `in Arbeit`;
+    case "es":
+      return `trabajando`;
+    case "fr":
+      return `en cours`;
+    case "ja":
+      return `作業中`;
+    case "ko":
+      return `작업 중`;
+    case "pt-BR":
+      return `trabalhando`;
+    case "zh-Hans":
+      return `处理中`;
+    case "zh-Hant":
+      return `進行中`;
+    case "en-XA":
+      return `[ŵöŕķîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eworking\u202c`;
+  }
+  return `working`;
+}
+
+export function taskGroupQueued(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في قائمة الانتظار`;
+    case "de":
+      return `eingereiht`;
+    case "es":
+      return `en cola`;
+    case "fr":
+      return `en attente`;
+    case "ja":
+      return `待機中`;
+    case "ko":
+      return `대기열`;
+    case "pt-BR":
+      return `na fila`;
+    case "zh-Hans":
+      return `排队中`;
+    case "zh-Hant":
+      return `排入佇列`;
+    case "en-XA":
+      return `[ǫûéûéð ~~]`;
+    case "ar-XB":
+      return `\u202equeued\u202c`;
+  }
+  return `queued`;
+}
+
+export function taskGroupBacklog(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المؤجلة`;
+    case "de":
+      return `Backlog`;
+    case "es":
+      return `pendientes`;
+    case "fr":
+      return `réserve`;
+    case "ja":
+      return `バックログ`;
+    case "ko":
+      return `백로그`;
+    case "pt-BR":
+      return `backlog`;
+    case "zh-Hans":
+      return `待办`;
+    case "zh-Hant":
+      return `待辦清單`;
+    case "en-XA":
+      return `[ƀáçķļöĝ ~~~]`;
+    case "ar-XB":
+      return `\u202ebacklog\u202c`;
+  }
+  return `backlog`;
+}
+
+export function taskGroupLanded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دُمجت · 7 أيام`;
+    case "de":
+      return `erledigt · 7 T.`;
+    case "es":
+      return `terminadas · 7 d`;
+    case "fr":
+      return `terminées · 7 j`;
+    case "ja":
+      return `完了 · 7日`;
+    case "ko":
+      return `완료 · 7일`;
+    case "pt-BR":
+      return `concluídas · 7 d`;
+    case "zh-Hans":
+      return `完成 · 7 天`;
+    case "zh-Hant":
+      return `完成 · 7 天`;
+    case "en-XA":
+      return `[ðöñé · 7ð ~~~]`;
+    case "ar-XB":
+      return `\u202edone · 7d\u202c`;
+  }
+  return `done · 7d`;
+}
+
+export function taskPinPin(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تثبيت`;
+    case "de":
+      return `Anheften`;
+    case "es":
+      return `Fijar`;
+    case "fr":
+      return `Épingler`;
+    case "ja":
+      return `固定`;
+    case "ko":
+      return `고정`;
+    case "pt-BR":
+      return `Fixar`;
+    case "zh-Hans":
+      return `固定`;
+    case "zh-Hant":
+      return `釘選`;
+    case "en-XA":
+      return `[Þîñ ~]`;
+    case "ar-XB":
+      return `\u202ePin\u202c`;
+  }
+  return `Pin`;
+}
+
+export function taskPinUnpin(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء التثبيت`;
+    case "de":
+      return `Nicht mehr anheften`;
+    case "es":
+      return `Desfijar`;
+    case "fr":
+      return `Désépingler`;
+    case "ja":
+      return `固定を解除`;
+    case "ko":
+      return `고정 해제`;
+    case "pt-BR":
+      return `Desafixar`;
+    case "zh-Hans":
+      return `取消固定`;
+    case "zh-Hant":
+      return `取消釘選`;
+    case "en-XA":
+      return `[Ûñþîñ ~~]`;
+    case "ar-XB":
+      return `\u202eUnpin\u202c`;
+  }
+  return `Unpin`;
+}
+
+export function secretsAllowOnce(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السماح مرة واحدة`;
+    case "de":
+      return `Einmal erlauben`;
+    case "es":
+      return `Permitir una vez`;
+    case "fr":
+      return `Autoriser une fois`;
+    case "ja":
+      return `今回のみ許可`;
+    case "ko":
+      return `한 번만 허용`;
+    case "pt-BR":
+      return `Permitir uma vez`;
+    case "zh-Hans":
+      return `允许一次`;
+    case "zh-Hant":
+      return `允許一次`;
+    case "en-XA":
+      return `[Åļļöŵ öñçé ~~~~]`;
+    case "ar-XB":
+      return `\u202eAllow once\u202c`;
+  }
+  return `Allow once`;
+}
+
+export function secretsDeny(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عدم السماح`;
+    case "de":
+      return `Nicht erlauben`;
+    case "es":
+      return `No permitir`;
+    case "fr":
+      return `Ne pas autoriser`;
+    case "ja":
+      return `許可しない`;
+    case "ko":
+      return `허용 안 함`;
+    case "pt-BR":
+      return `Não permitir`;
+    case "zh-Hans":
+      return `不允许`;
+    case "zh-Hant":
+      return `不允許`;
+    case "en-XA":
+      return `[Ðöñ'ţ áļļöŵ ~~~~]`;
+    case "ar-XB":
+      return `\u202eDon't allow\u202c`;
+  }
+  return `Don't allow`;
+}
+
+export function integrationsSignInWaiting(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أكمل تسجيل الدخول إلى ${name} في متصفحك.`;
+    case "de":
+      return `Schließe die Anmeldung bei ${name} in deinem Browser ab.`;
+    case "es":
+      return `Termina de iniciar sesión en ${name} en tu navegador.`;
+    case "fr":
+      return `Terminez la connexion à ${name} dans votre navigateur.`;
+    case "ja":
+      return `ブラウザで ${name} へのサインインを完了してください。`;
+    case "ko":
+      return `브라우저에서 ${name} 로그인을 마무리하세요.`;
+    case "pt-BR":
+      return `Termine de fazer login no ${name} no seu navegador.`;
+    case "zh-Hans":
+      return `请在浏览器中完成 ${name} 的登录。`;
+    case "zh-Hant":
+      return `請在瀏覽器中完成登入 ${name}。`;
+    case "en-XA":
+      return `[Ƒîñîšĥ šîĝñîñĝ îñ ţö ${name} îñ ýöûŕ ƀŕöŵšéŕ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFinish signing in to \u202c${name}\u202e in your browser.\u202c`;
+  }
+  return `Finish signing in to ${name} in your browser.`;
+}
+
+export function integrationsSignInAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح الصفحة مرة أخرى`;
+    case "de":
+      return `Seite erneut öffnen`;
+    case "es":
+      return `Abrir la página otra vez`;
+    case "fr":
+      return `Rouvrir la page`;
+    case "ja":
+      return `ページをもう一度開く`;
+    case "ko":
+      return `페이지 다시 열기`;
+    case "pt-BR":
+      return `Abrir a página de novo`;
+    case "zh-Hans":
+      return `重新打开页面`;
+    case "zh-Hant":
+      return `重新開啟頁面`;
+    case "en-XA":
+      return `[Öþéñ ţĥé þáĝé áĝáîñ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the page again\u202c`;
+  }
+  return `Open the page again`;
+}
+
+export function integrationsSignInCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function viewGoogleUpdateThere(input: { mac: string }): string {
+  const mac = input.mac;
+  switch (currentLanguage()) {
+    case "ar":
+      return `حدّث Infinitary على ${mac} لتسجيل الدخول إلى Google من هنا.`;
+    case "de":
+      return `Aktualisiere Infinitary auf ${mac}, um dich von hier aus bei Google anzumelden.`;
+    case "es":
+      return `Actualiza Infinitary en ${mac} para iniciar sesión en Google desde aquí.`;
+    case "fr":
+      return `Mettez Infinitary à jour sur ${mac} pour vous connecter à Google d’ici.`;
+    case "ja":
+      return `ここから Google にサインインするには、${mac} の Infinitary をアップデートしてください。`;
+    case "ko":
+      return `여기서 Google에 로그인하려면 ${mac}의 Infinitary를 업데이트하세요.`;
+    case "pt-BR":
+      return `Atualize o Infinitary em ${mac} para fazer login no Google daqui.`;
+    case "zh-Hans":
+      return `请更新 ${mac} 上的 Infinitary，才能从这里登录 Google。`;
+    case "zh-Hant":
+      return `請先更新 ${mac} 上的 Infinitary，才能從這裡登入 Google。`;
+    case "en-XA":
+      return `[Ûþðáţé Îñƒîñîţáŕý öñ ${mac} ţö šîĝñ îñ ţö Ĝööĝļé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUpdate Infinitary on \u202c${mac}\u202e to sign in to Google from here.\u202c`;
+  }
+  return `Update Infinitary on ${mac} to sign in to Google from here.`;
+}
+
+export function viewReturnPasteLead(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `وافق في صفحة ${name}. سينتهي متصفحك بعدها عند صفحة لا يمكن الوصول إليها. انسخ عنوان تلك الصفحة والصقه هنا.`;
+    case "de":
+      return `Bestätige auf der Seite von ${name}. Danach landet dein Browser auf einer Seite, die nicht erreichbar ist. Kopiere die Adresse dieser Seite und füge sie hier ein.`;
+    case "es":
+      return `Aprueba en la página de ${name}. Tu navegador terminará en una página a la que no se puede llegar. Copia la dirección de esa página y pégala aquí.`;
+    case "fr":
+      return `Approuvez sur la page de ${name}. Votre navigateur s’arrête ensuite sur une page inaccessible. Copiez l’adresse de cette page et collez-la ici.`;
+    case "ja":
+      return `${name} のページで承認してください。そのあとブラウザは、表示できないページで止まります。そのページのアドレスをコピーして、ここに貼り付けてください。`;
+    case "ko":
+      return `${name} 페이지에서 승인하세요. 그러면 브라우저가 열 수 없는 페이지로 끝나요. 그 페이지의 주소를 복사해 여기에 붙여넣으세요.`;
+    case "pt-BR":
+      return `Aprove na página do ${name}. Seu navegador então termina em uma página que não pode ser acessada. Copie o endereço dessa página e cole aqui.`;
+    case "zh-Hans":
+      return `请在 ${name} 的页面上批准。之后你的浏览器会停在一个无法访问的页面。复制该页面的地址，粘贴到这里。`;
+    case "zh-Hant":
+      return `請在 ${name} 的頁面上核准。接著你的瀏覽器會停在一個無法連上的頁面。請複製該頁面的網址，貼到這裡。`;
+    case "en-XA":
+      return `[Åþþŕöṽé öñ ${name}'š þáĝé. Ýöûŕ ƀŕöŵšéŕ ţĥéñ éñðš öñ á þáĝé ţĥáţ çáññöţ ƀé ŕéáçĥéð. Çöþý ţĥáţ þáĝé'š áððŕéšš áñð þášţé îţ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eApprove on \u202c${name}\u202e's page. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.\u202c`;
+  }
+  return `Approve on ${name}'s page. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.`;
+}
+
+export function viewReturnPasteLabel(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان الذي انتهى عنده متصفحك بعد ${name}`;
+    case "de":
+      return `Die Adresse, auf der dein Browser nach ${name} gelandet ist`;
+    case "es":
+      return `La dirección en la que terminó tu navegador después de ${name}`;
+    case "fr":
+      return `L’adresse où votre navigateur s’est arrêté après ${name}`;
+    case "ja":
+      return `${name} のあとブラウザが止まったページのアドレス`;
+    case "ko":
+      return `${name} 이후 브라우저가 끝난 주소`;
+    case "pt-BR":
+      return `O endereço em que o navegador terminou depois do ${name}`;
+    case "zh-Hans":
+      return `${name} 之后你的浏览器停留的地址`;
+    case "zh-Hant":
+      return `${name} 之後你的瀏覽器停留的網址`;
+    case "en-XA":
+      return `[Ţĥé áððŕéšš ýöûŕ ƀŕöŵšéŕ éñðéð öñ áƒţéŕ ${name} ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe address your browser ended on after \u202c${name}`;
+  }
+  return `The address your browser ended on after ${name}`;
+}
+
+export function viewReturnPastePlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق العنوان`;
+    case "de":
+      return `Adresse einfügen`;
+    case "es":
+      return `pega la dirección`;
+    case "fr":
+      return `collez l’adresse`;
+    case "ja":
+      return `アドレスを貼り付け`;
+    case "ko":
+      return `주소 붙여넣기`;
+    case "pt-BR":
+      return `cole o endereço`;
+    case "zh-Hans":
+      return `粘贴地址`;
+    case "zh-Hant":
+      return `貼上網址`;
+    case "en-XA":
+      return `[þášţé ţĥé áððŕéšš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202epaste the address\u202c`;
+  }
+  return `paste the address`;
+}
+
+export function viewReturnPasteSend(input: { mac: string }): string {
+  const mac = input.mac;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إرسال إلى ${mac}`;
+    case "de":
+      return `An ${mac} senden`;
+    case "es":
+      return `Enviar a ${mac}`;
+    case "fr":
+      return `Envoyer à ${mac}`;
+    case "ja":
+      return `${mac} に送信`;
+    case "ko":
+      return `${mac}(으)로 보내기`;
+    case "pt-BR":
+      return `Enviar para ${mac}`;
+    case "zh-Hans":
+      return `发送到 ${mac}`;
+    case "zh-Hant":
+      return `傳送到 ${mac}`;
+    case "en-XA":
+      return `[Šéñð ţö ${mac} ~~~]`;
+    case "ar-XB":
+      return `\u202eSend to \u202c${mac}`;
+  }
+  return `Send to ${mac}`;
+}
+
+export function viewReturnPasteRefused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا العنوان ليس لتسجيل الدخول هذا. الصق العنوان الذي انتهى عنده متصفحك بعد تسجيل الدخول هذا.`;
+    case "de":
+      return `Diese Adresse gehört nicht zu dieser Anmeldung. Füge die Adresse ein, auf der dein Browser nach dieser Anmeldung gelandet ist.`;
+    case "es":
+      return `Esa dirección no es la de este inicio de sesión. Pega la dirección en la que terminó tu navegador después de este inicio de sesión.`;
+    case "fr":
+      return `Cette adresse n’est pas celle de cette connexion. Collez l’adresse où votre navigateur s’est arrêté après cette connexion.`;
+    case "ja":
+      return `このアドレスは今回のサインインのものではありません。このサインインのあとブラウザが止まったページのアドレスを貼り付けてください。`;
+    case "ko":
+      return `이 로그인의 주소가 아니에요. 이 로그인 후 브라우저가 끝난 주소를 붙여넣으세요.`;
+    case "pt-BR":
+      return `Esse endereço não é deste login. Cole o endereço em que o navegador terminou depois deste login.`;
+    case "zh-Hans":
+      return `这个地址不属于此次登录。请粘贴此次登录之后你的浏览器停留的地址。`;
+    case "zh-Hant":
+      return `這個網址不屬於這次登入。請貼上這次登入之後你的瀏覽器停留的網址。`;
+    case "en-XA":
+      return `[Ţĥáţ áððŕéšš îš ñöţ ţĥîš šîĝñ-îñ'š. Þášţé ţĥé áððŕéšš ýöûŕ ƀŕöŵšéŕ éñðéð öñ áƒţéŕ ţĥîš šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThat address is not this sign-in's. Paste the address your browser ended on after this sign-in.\u202c`;
+  }
+  return `That address is not this sign-in's. Paste the address your browser ended on after this sign-in.`;
+}
+
+export function cardNotePointAt(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإشارة إلى`;
+    case "de":
+      return `Zeigen auf`;
+    case "es":
+      return `Señalar`;
+    case "fr":
+      return `Désigner`;
+    case "ja":
+      return `指し示す`;
+    case "ko":
+      return `가리키기`;
+    case "pt-BR":
+      return `Apontar para`;
+    case "zh-Hans":
+      return `指向`;
+    case "zh-Hant":
+      return `指向`;
+    case "en-XA":
+      return `[Þöîñţ áţ ~~~]`;
+    case "ar-XB":
+      return `\u202ePoint at\u202c`;
+  }
+  return `Point at`;
+}
+
+export function cardNotePointedAt(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُشير إلى`;
+    case "de":
+      return `Gezeigt auf`;
+    case "es":
+      return `Señalado`;
+    case "fr":
+      return `Désigné`;
+    case "ja":
+      return `指し示し済み`;
+    case "ko":
+      return `가리킴`;
+    case "pt-BR":
+      return `Apontado para`;
+    case "zh-Hans":
+      return `已指向`;
+    case "zh-Hant":
+      return `已指向`;
+    case "en-XA":
+      return `[Þöîñţéð áţ ~~~~]`;
+    case "ar-XB":
+      return `\u202ePointed at\u202c`;
+  }
+  return `Pointed at`;
+}
+
+export function cardNoteStale(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يعد هذا الجزء في البطاقة`;
+    case "de":
+      return `Dieser Teil ist nicht mehr in der Karte`;
+    case "es":
+      return `Esta parte ya no está en la tarjeta`;
+    case "fr":
+      return `Cette partie n’est plus dans la carte`;
+    case "ja":
+      return `この部分はカードにありません`;
+    case "ko":
+      return `이 부분은 더 이상 카드에 없어요`;
+    case "pt-BR":
+      return `Esta parte não está mais no cartão`;
+    case "zh-Hans":
+      return `卡片中已没有这个部分`;
+    case "zh-Hant":
+      return `卡片中已沒有這個部分`;
+    case "en-XA":
+      return `[Ţĥîš þáŕţ îš ñö ļöñĝéŕ îñ ţĥé çáŕð ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis part is no longer in the card\u202c`;
+  }
+  return `This part is no longer in the card`;
+}
+
+export function cardNoteUnavailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يمكن عرض هذا الجزء في هذه الواجهة`;
+    case "de":
+      return `Dieser Teil kann in dieser Ansicht nicht angezeigt werden`;
+    case "es":
+      return `Esta parte no se puede mostrar en esta vista`;
+    case "fr":
+      return `Cette partie ne peut pas être affichée dans cette vue`;
+    case "ja":
+      return `この部分はこのビューでは表示できません`;
+    case "ko":
+      return `이 보기에서는 이 부분을 보여 줄 수 없어요`;
+    case "pt-BR":
+      return `Esta parte não pode ser mostrada nesta visualização`;
+    case "zh-Hans":
+      return `此视图无法显示这个部分`;
+    case "zh-Hant":
+      return `這個檢視無法顯示這個部分`;
+    case "en-XA":
+      return `[Ţĥîš þáŕţ çáññöţ ƀé šĥöŵñ îñ ţĥîš ṽîéŵ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis part cannot be shown in this view\u202c`;
+  }
+  return `This part cannot be shown in this view`;
+}
+
+export function cardNoteEditUnavailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التعديل غير متاح في هذه الواجهة`;
+    case "de":
+      return `Bearbeiten ist in dieser Ansicht nicht möglich`;
+    case "es":
+      return `No se puede editar en esta vista`;
+    case "fr":
+      return `La modification n’est pas disponible dans cette vue`;
+    case "ja":
+      return `このビューでは編集できません`;
+    case "ko":
+      return `이 보기에서는 편집할 수 없어요`;
+    case "pt-BR":
+      return `A edição não está disponível nesta visualização`;
+    case "zh-Hans":
+      return `此视图无法编辑`;
+    case "zh-Hant":
+      return `這個檢視無法編輯`;
+    case "en-XA":
+      return `[Éðîţîñĝ îš ûñáṽáîļáƀļé îñ ţĥîš ṽîéŵ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEditing is unavailable in this view\u202c`;
+  }
+  return `Editing is unavailable in this view`;
+}
+
+export function cardNoteEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلا تعليق`;
+    case "de":
+      return `Kein Kommentar`;
+    case "es":
+      return `Sin comentario`;
+    case "fr":
+      return `Aucun commentaire`;
+    case "ja":
+      return `コメントなし`;
+    case "ko":
+      return `댓글 없음`;
+    case "pt-BR":
+      return `Sem comentário`;
+    case "zh-Hans":
+      return `没有评论`;
+    case "zh-Hant":
+      return `沒有留言`;
+    case "en-XA":
+      return `[Ñö çöɱɱéñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eNo comment\u202c`;
+  }
+  return `No comment`;
+}
+
+export function cardNoteAnnotate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة ملاحظة`;
+    case "de":
+      return `Anmerken`;
+    case "es":
+      return `Anotar`;
+    case "fr":
+      return `Annoter`;
+    case "ja":
+      return `注釈を付ける`;
+    case "ko":
+      return `주석 달기`;
+    case "pt-BR":
+      return `Anotar`;
+    case "zh-Hans":
+      return `批注`;
+    case "zh-Hant":
+      return `加註`;
+    case "en-XA":
+      return `[Åññöţáţé ~~~]`;
+    case "ar-XB":
+      return `\u202eAnnotate\u202c`;
+  }
+  return `Annotate`;
+}
+
+export function cardNoteQueue(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة إلى القائمة`;
+    case "de":
+      return `Vormerken`;
+    case "es":
+      return `Poner en cola`;
+    case "fr":
+      return `Garder`;
+    case "ja":
+      return `保留にする`;
+    case "ko":
+      return `대기열에 넣기`;
+    case "pt-BR":
+      return `Pôr na fila`;
+    case "zh-Hans":
+      return `加入队列`;
+    case "zh-Hant":
+      return `加入佇列`;
+    case "en-XA":
+      return `[Ǫûéûé ~~]`;
+    case "ar-XB":
+      return `\u202eQueue\u202c`;
+  }
+  return `Queue`;
+}
+
+export function cardNoteCommentLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعليق على هذا الجزء`;
+    case "de":
+      return `Diesen Teil kommentieren`;
+    case "es":
+      return `Comentar esta parte`;
+    case "fr":
+      return `Commentaire sur cette partie`;
+    case "ja":
+      return `この部分へのコメント`;
+    case "ko":
+      return `이 부분에 댓글 달기`;
+    case "pt-BR":
+      return `Comentar esta parte`;
+    case "zh-Hans":
+      return `对这个部分的评论`;
+    case "zh-Hant":
+      return `對這個部分留言`;
+    case "en-XA":
+      return `[Çöɱɱéñţ öñ ţĥîš þáŕţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eComment on this part\u202c`;
+  }
+  return `Comment on this part`;
+}
+
+export function cardNoteCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function cardNoteEdit(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعديل`;
+    case "de":
+      return `Bearbeiten`;
+    case "es":
+      return `Editar`;
+    case "fr":
+      return `Modifier`;
+    case "ja":
+      return `編集`;
+    case "ko":
+      return `편집`;
+    case "pt-BR":
+      return `Editar`;
+    case "zh-Hans":
+      return `编辑`;
+    case "zh-Hant":
+      return `編輯`;
+    case "en-XA":
+      return `[Éðîţ ~~]`;
+    case "ar-XB":
+      return `\u202eEdit\u202c`;
+  }
+  return `Edit`;
+}
+
+export function cardNoteRemove(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة`;
+    case "de":
+      return `Entfernen`;
+    case "es":
+      return `Quitar`;
+    case "fr":
+      return `Retirer`;
+    case "ja":
+      return `削除`;
+    case "ko":
+      return `제거`;
+    case "pt-BR":
+      return `Remover`;
+    case "zh-Hans":
+      return `移除`;
+    case "zh-Hant":
+      return `移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ~~]`;
+    case "ar-XB":
+      return `\u202eRemove\u202c`;
+  }
+  return `Remove`;
+}
+
+export function cardNoteNotSent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم تُرسل`;
+    case "de":
+      return `Nicht gesendet`;
+    case "es":
+      return `Sin enviar`;
+    case "fr":
+      return `Non envoyée`;
+    case "ja":
+      return `未送信`;
+    case "ko":
+      return `보내지 않음`;
+    case "pt-BR":
+      return `Não enviada`;
+    case "zh-Hans":
+      return `未发送`;
+    case "zh-Hant":
+      return `尚未送出`;
+    case "en-XA":
+      return `[Ñöţ šéñţ ~~~]`;
+    case "ar-XB":
+      return `\u202eNot sent\u202c`;
+  }
+  return `Not sent`;
+}
+
+export function cardNotePlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أضف تعليقًا، أو أضفها إلى القائمة كما هي`;
+    case "de":
+      return `Kommentar hinzufügen oder unverändert vormerken`;
+    case "es":
+      return `Agrega un comentario o pon en cola tal cual`;
+    case "fr":
+      return `Ajoutez un commentaire, ou gardez la note telle quelle`;
+    case "ja":
+      return `コメントを追加、またはそのまま保留`;
+    case "ko":
+      return `댓글을 달거나 그대로 대기열에 넣으세요`;
+    case "pt-BR":
+      return `Adicione um comentário ou ponha na fila como está`;
+    case "zh-Hans":
+      return `添加评论，或直接加入队列`;
+    case "zh-Hant":
+      return `加上留言，或直接加入佇列`;
+    case "en-XA":
+      return `[Åðð á çöɱɱéñţ, öŕ ǫûéûé áš-îš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd a comment, or queue as-is\u202c`;
+  }
+  return `Add a comment, or queue as-is`;
+}
+
+export function cardNoteDiscardHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإلغاء يتجاهل تعليقك. الإضافة إلى القائمة تحفظه.`;
+    case "de":
+      return `Abbrechen verwirft deinen Kommentar. Vormerken behält ihn.`;
+    case "es":
+      return `Cancelar descarta tu comentario. Poner en cola lo conserva.`;
+    case "fr":
+      return `Annuler supprime votre commentaire. Garder le conserve.`;
+    case "ja":
+      return `「キャンセル」はコメントを破棄します。「保留にする」は残します。`;
+    case "ko":
+      return `취소하면 댓글이 사라져요. 대기열에 넣으면 유지돼요.`;
+    case "pt-BR":
+      return `Cancelar descarta seu comentário. Pôr na fila o mantém.`;
+    case "zh-Hans":
+      return `取消会丢弃你的评论。加入队列会保留它。`;
+    case "zh-Hant":
+      return `取消會捨棄你的留言。加入佇列則會保留。`;
+    case "en-XA":
+      return `[Çáñçéļ ðîšçáŕðš ýöûŕ çöɱɱéñţ. Ǫûéûé ķééþš îţ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCancel discards your comment. Queue keeps it.\u202c`;
+  }
+  return `Cancel discards your comment. Queue keeps it.`;
+}
+
+export function cardNoteSend(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `إرسال ${count} ملاحظة`;
+        case "one":
+          return `إرسال ملاحظة`;
+        case "two":
+          return `إرسال ملاحظتين`;
+        case "few":
+          return `إرسال ${count} ملاحظات`;
+        case "many":
+          return `إرسال ${count} ملاحظةً`;
+        default:
+          return `إرسال ${count} ملاحظة`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Notiz senden`;
+        default:
+          return `${count} Notizen senden`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Enviar ${count} nota`;
+        case "many":
+          return `Enviar ${count} de notas`;
+        default:
+          return `Enviar ${count} notas`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Envoyer ${count} note`;
+        case "many":
+          return `Envoyer ${count} notes`;
+        default:
+          return `Envoyer ${count} notes`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件のメモを送信`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `메모 ${count}개 보내기`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Enviar ${count} nota`;
+        case "many":
+          return `Enviar ${count} notas`;
+        default:
+          return `Enviar ${count} notas`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `发送 ${count} 条批注`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `送出 ${count} 則筆記`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Šéñð ${count} ñöţé ~~~~]`;
+        default:
+          return `[Šéñð ${count} ñöţéš ~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eSend \u202c${count}\u202e note\u202c`;
+        default:
+          return `\u202eSend \u202c${count}\u202e notes\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Send ${count} note`;
+    default:
+      return `Send ${count} notes`;
+  }
+}
+
+export function cardNoteQueued(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `لا ملاحظات غير مرسلة`;
+        case "one":
+          return `ملاحظة واحدة لم تُرسل`;
+        case "two":
+          return `ملاحظتان لم تُرسلا`;
+        case "few":
+          return `${count} ملاحظات لم تُرسل`;
+        case "many":
+          return `${count} ملاحظةً لم تُرسل`;
+        default:
+          return `${count} ملاحظة لم تُرسل`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Notiz nicht gesendet`;
+        default:
+          return `${count} Notizen nicht gesendet`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} nota sin enviar`;
+        case "many":
+          return `${count} de notas sin enviar`;
+        default:
+          return `${count} notas sin enviar`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} note non envoyée`;
+        case "many":
+          return `${count} notes non envoyées`;
+        default:
+          return `${count} notes non envoyées`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `未送信のメモ${count}件`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `메모 ${count}개 보내지 않음`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} nota não enviada`;
+        case "many":
+          return `${count} notas não enviadas`;
+        default:
+          return `${count} notas não enviadas`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 条批注未发送`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 則筆記尚未送出`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ñöţé ñöţ šéñţ ~~~~~]`;
+        default:
+          return `[${count} ñöţéš ñöţ šéñţ ~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e note not sent\u202c`;
+        default:
+          return `${count}\u202e notes not sent\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} note not sent`;
+    default:
+      return `${count} notes not sent`;
+  }
+}
+
+export function cardNoteLabel(input: { excerpt: string; kind: string }): string {
+  const excerpt = input.excerpt;
+  const kind = input.kind;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُشير إلى ${kind}: «${excerpt}»`;
+    case "de":
+      return `Gezeigt auf ${kind}: „${excerpt}“`;
+    case "es":
+      return `Señalado ${kind}: «${excerpt}»`;
+    case "fr":
+      return `Désigné : ${kind}, « ${excerpt} »`;
+    case "ja":
+      return `${kind}を指し示し：「${excerpt}」`;
+    case "ko":
+      return `${kind}을(를) 가리킴: “${excerpt}”`;
+    case "pt-BR":
+      return `Apontado para ${kind}: “${excerpt}”`;
+    case "zh-Hans":
+      return `已指向${kind}：“${excerpt}”`;
+    case "zh-Hant":
+      return `已指向 ${kind}：「${excerpt}」`;
+    case "en-XA":
+      return `[Þöîñţéð áţ ${kind}: “${excerpt}” ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePointed at \u202c${kind}\u202e: “\u202c${excerpt}\u202e”\u202c`;
+  }
+  return `Pointed at ${kind}: “${excerpt}”`;
+}
+
+export function riskBlast(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نطاق الأثر`;
+    case "de":
+      return `Reichweite`;
+    case "es":
+      return `Alcance del cambio`;
+    case "fr":
+      return `Étendue des effets`;
+    case "ja":
+      return `影響範囲`;
+    case "ko":
+      return `영향 범위`;
+    case "pt-BR":
+      return `Alcance`;
+    case "zh-Hans":
+      return `影响范围`;
+    case "zh-Hant":
+      return `影響範圍`;
+    case "en-XA":
+      return `[Ɓļášţ ŕáðîûš ~~~~]`;
+    case "ar-XB":
+      return `\u202eBlast radius\u202c`;
+  }
+  return `Blast radius`;
+}
+
+export function riskBlastLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ضيق: منطقة واحدة`;
+    case "de":
+      return `schmal: ein Bereich`;
+    case "es":
+      return `reducido: una sola área`;
+    case "fr":
+      return `restreinte : une seule zone`;
+    case "ja":
+      return `狭い：1か所`;
+    case "ko":
+      return `좁음: 한 영역`;
+    case "pt-BR":
+      return `restrito: uma área`;
+    case "zh-Hans":
+      return `窄：只涉及一处`;
+    case "zh-Hant":
+      return `小：僅一處`;
+    case "en-XA":
+      return `[ñáŕŕöŵ: öñé áŕéá ~~~~~~]`;
+    case "ar-XB":
+      return `\u202enarrow: one area\u202c`;
+  }
+  return `narrow: one area`;
+}
+
+export function riskBlastMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوسط: بضع مناطق`;
+    case "de":
+      return `teils: einige Bereiche`;
+    case "es":
+      return `moderado: unas pocas áreas`;
+    case "fr":
+      return `moyenne : quelques zones`;
+    case "ja":
+      return `一部：数か所`;
+    case "ko":
+      return `일부: 몇 개 영역`;
+    case "pt-BR":
+      return `médio: algumas áreas`;
+    case "zh-Hans":
+      return `中等：涉及几处`;
+    case "zh-Hant":
+      return `中：幾處`;
+    case "en-XA":
+      return `[šöɱé: á ƒéŵ áŕéáš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202esome: a few areas\u202c`;
+  }
+  return `some: a few areas`;
+}
+
+export function riskBlastHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `واسع: شيفرة مشتركة أو مناطق كثيرة`;
+    case "de":
+      return `breit: gemeinsamer Code oder viele Bereiche`;
+    case "es":
+      return `amplio: código compartido o muchas áreas`;
+    case "fr":
+      return `large : code partagé ou nombreuses zones`;
+    case "ja":
+      return `広い：共有コードまたは多くの箇所`;
+    case "ko":
+      return `넓음: 공용 코드 또는 많은 영역`;
+    case "pt-BR":
+      return `amplo: código compartilhado ou muitas áreas`;
+    case "zh-Hans":
+      return `广：涉及共用代码或许多处`;
+    case "zh-Hant":
+      return `大：共用程式碼或多處`;
+    case "en-XA":
+      return `[ŵîðé: šĥáŕéð çöðé öŕ ɱáñý áŕéáš ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ewide: shared code or many areas\u202c`;
+  }
+  return `wide: shared code or many areas`;
+}
+
+export function riskBehavior(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السلوك`;
+    case "de":
+      return `Verhalten`;
+    case "es":
+      return `Comportamiento`;
+    case "fr":
+      return `Comportement`;
+    case "ja":
+      return `動作`;
+    case "ko":
+      return `동작`;
+    case "pt-BR":
+      return `Comportamento`;
+    case "zh-Hans":
+      return `行为`;
+    case "zh-Hant":
+      return `行為`;
+    case "en-XA":
+      return `[Ɓéĥáṽîöŕ ~~~]`;
+    case "ar-XB":
+      return `\u202eBehavior\u202c`;
+  }
+  return `Behavior`;
+}
+
+export function riskBehaviorLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء، أو إصلاح خلل`;
+    case "de":
+      return `nichts, oder ein Fehler behoben`;
+    case "es":
+      return `ninguno, o se corrige un defecto`;
+    case "fr":
+      return `aucun, ou un défaut corrigé`;
+    case "ja":
+      return `変化なし、または不具合の修正`;
+    case "ko":
+      return `없음, 또는 결함 수정`;
+    case "pt-BR":
+      return `nenhum, ou um defeito corrigido`;
+    case "zh-Hans":
+      return `没有变化，或只是修正了缺陷`;
+    case "zh-Hant":
+      return `沒有變化，或修正了瑕疵`;
+    case "en-XA":
+      return `[ñöţĥîñĝ, öŕ á ðéƒéçţ çöŕŕéçţéð ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202enothing, or a defect corrected\u202c`;
+  }
+  return `nothing, or a defect corrected`;
+}
+
+export function riskBehaviorMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يضيف شيئًا يختار الشخص تفعيله`;
+    case "de":
+      return `fügt etwas hinzu, das man selbst wählt`;
+    case "es":
+      return `agrega algo que una persona decide usar`;
+    case "fr":
+      return `ajoute quelque chose qu’on choisit d’activer`;
+    case "ja":
+      return `利用者が選んで使える機能の追加`;
+    case "ko":
+      return `사용자가 선택해서 쓰는 기능 추가`;
+    case "pt-BR":
+      return `acrescenta algo que a pessoa escolhe usar`;
+    case "zh-Hans":
+      return `新增了人们可自行选择启用的内容`;
+    case "zh-Hant":
+      return `新增使用者可自行選擇的功能`;
+    case "en-XA":
+      return `[áððš šöɱéţĥîñĝ á þéŕšöñ öþţš îñţö ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eadds something a person opts into\u202c`;
+  }
+  return `adds something a person opts into`;
+}
+
+export function riskBehaviorHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يغيّر ما يحدث افتراضيًا`;
+    case "de":
+      return `ändert, was standardmäßig geschieht`;
+    case "es":
+      return `cambia lo que ocurre de forma predeterminada`;
+    case "fr":
+      return `change ce qui se passe par défaut`;
+    case "ja":
+      return `既定の動作が変わる`;
+    case "ko":
+      return `기본으로 일어나는 일이 바뀜`;
+    case "pt-BR":
+      return `muda o que acontece por padrão`;
+    case "zh-Hans":
+      return `改变了默认情况下发生的事`;
+    case "zh-Hant":
+      return `改變預設會發生的事`;
+    case "en-XA":
+      return `[çĥáñĝéš ŵĥáţ ĥáþþéñš ƀý ðéƒáûļţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202echanges what happens by default\u202c`;
+  }
+  return `changes what happens by default`;
+}
+
+export function riskUndo(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التراجع`;
+    case "de":
+      return `Rückgängig`;
+    case "es":
+      return `Deshacer`;
+    case "fr":
+      return `Annulation`;
+    case "ja":
+      return `取り消し`;
+    case "ko":
+      return `되돌리기`;
+    case "pt-BR":
+      return `Desfazer`;
+    case "zh-Hans":
+      return `撤销`;
+    case "zh-Hant":
+      return `復原`;
+    case "en-XA":
+      return `[Ûñðö ~~]`;
+    case "ar-XB":
+      return `\u202eUndo\u202c`;
+  }
+  return `Undo`;
+}
+
+export function riskUndoLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُلغى التغيير وينتهي الأمر`;
+    case "de":
+      return `zurücksetzen, fertig`;
+    case "es":
+      return `se revierte y listo`;
+    case "fr":
+      return `un retour en arrière suffit`;
+    case "ja":
+      return `元に戻すだけ`;
+    case "ko":
+      return `되돌리면 끝`;
+    case "pt-BR":
+      return `reverter e pronto`;
+    case "zh-Hans":
+      return `还原即可`;
+    case "zh-Hant":
+      return `還原即可`;
+    case "en-XA":
+      return `[ŕéṽéŕţ áñð ðöñé ~~~~~]`;
+    case "ar-XB":
+      return `\u202erevert and done\u202c`;
+  }
+  return `revert and done`;
+}
+
+export function riskUndoMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحتاج خطوة: نُقلت بيانات أو إعدادات محفوظة`;
+    case "de":
+      return `braucht einen Schritt: gespeicherte Daten oder Einstellungen verschoben`;
+    case "es":
+      return `requiere un paso: datos o ajustes guardados movidos`;
+    case "fr":
+      return `demande une étape : données ou réglages enregistrés déplacés`;
+    case "ja":
+      return `手順が必要：保存データや設定の移行`;
+    case "ko":
+      return `단계가 필요: 저장된 데이터나 설정이 옮겨짐`;
+    case "pt-BR":
+      return `exige um passo: dados ou ajustes salvos foram movidos`;
+    case "zh-Hans":
+      return `需要一步操作：已保存的数据或设置被移动`;
+    case "zh-Hant":
+      return `需要一個步驟：已儲存的資料或設定被移動`;
+    case "en-XA":
+      return `[ñééðš á šţéþ: šáṽéð ðáţá öŕ šéţţîñĝš ɱöṽéð ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eneeds a step: saved data or settings moved\u202c`;
+  }
+  return `needs a step: saved data or settings moved`;
+}
+
+export function riskUndoHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `صعب: أُعيدت كتابة بيانات، أو أُصدرت، أو أُرسلت إلى الخارج`;
+    case "de":
+      return `schwer: Daten überschrieben, veröffentlicht oder nach außen gesendet`;
+    case "es":
+      return `difícil: datos reescritos, publicados o enviados fuera`;
+    case "fr":
+      return `difficile : données réécrites, publiées ou envoyées à l’extérieur`;
+    case "ja":
+      return `難しい：データの書き換え、リリース、外部への送信`;
+    case "ko":
+      return `어려움: 데이터가 다시 쓰이거나 릴리스되거나 밖으로 보내짐`;
+    case "pt-BR":
+      return `difícil: dados reescritos, publicados ou enviados para fora`;
+    case "zh-Hans":
+      return `困难：数据被改写、已发布或已发送到外部`;
+    case "zh-Hant":
+      return `困難：資料被改寫、已發布或已送出`;
+    case "en-XA":
+      return `[ĥáŕð: ðáţá ŕéŵŕîţţéñ, ŕéļéášéð öŕ šéñţ öûţšîðé ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ehard: data rewritten, released or sent outside\u202c`;
+  }
+  return `hard: data rewritten, released or sent outside`;
+}
+
+export function riskEvidence(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الأدلة`;
+    case "de":
+      return `Belege`;
+    case "es":
+      return `Pruebas`;
+    case "fr":
+      return `Éléments`;
+    case "ja":
+      return `根拠`;
+    case "ko":
+      return `근거`;
+    case "pt-BR":
+      return `Evidências`;
+    case "zh-Hans":
+      return `证据`;
+    case "zh-Hant":
+      return `證據`;
+    case "en-XA":
+      return `[Éṽîðéñçé ~~~]`;
+    case "ar-XB":
+      return `\u202eEvidence\u202c`;
+  }
+  return `Evidence`;
+}
+
+export function riskEvidenceLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ثبت عمله من البداية إلى النهاية`;
+    case "de":
+      return `durchgehend funktionierend gezeigt`;
+    case "es":
+      return `se mostró funcionando de principio a fin`;
+    case "fr":
+      return `fonctionnement montré de bout en bout`;
+    case "ja":
+      return `端から端まで動作を確認済み`;
+    case "ko":
+      return `처음부터 끝까지 작동을 확인함`;
+    case "pt-BR":
+      return `funcionamento demonstrado de ponta a ponta`;
+    case "zh-Hans":
+      return `已端到端验证可用`;
+    case "zh-Hant":
+      return `已完整展示可運作`;
+    case "en-XA":
+      return `[šĥöŵñ ŵöŕķîñĝ éñð ţö éñð ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eshown working end to end\u202c`;
+  }
+  return `shown working end to end`;
+}
+
+export function riskEvidenceMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختبارات فقط`;
+    case "de":
+      return `nur Tests`;
+    case "es":
+      return `solo pruebas automáticas`;
+    case "fr":
+      return `tests seulement`;
+    case "ja":
+      return `テストのみ`;
+    case "ko":
+      return `테스트만 함`;
+    case "pt-BR":
+      return `só testes`;
+    case "zh-Hans":
+      return `仅有测试`;
+    case "zh-Hant":
+      return `僅有測試`;
+    case "en-XA":
+      return `[ţéšţš öñļý ~~~~]`;
+    case "ar-XB":
+      return `\u202etests only\u202c`;
+  }
+  return `tests only`;
+}
+
+export function riskEvidenceHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يثبت عمله`;
+    case "de":
+      return `nicht gezeigt`;
+    case "es":
+      return `no se mostró`;
+    case "fr":
+      return `non démontré`;
+    case "ja":
+      return `未確認`;
+    case "ko":
+      return `확인하지 않음`;
+    case "pt-BR":
+      return `não demonstrado`;
+    case "zh-Hans":
+      return `未经验证`;
+    case "zh-Hant":
+      return `未展示`;
+    case "en-XA":
+      return `[ñöţ šĥöŵñ ~~~]`;
+    case "ar-XB":
+      return `\u202enot shown\u202c`;
+  }
+  return `not shown`;
+}
+
+export function riskSensitivity(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحساسية`;
+    case "de":
+      return `Sensibilität`;
+    case "es":
+      return `Sensibilidad`;
+    case "fr":
+      return `Sensibilité`;
+    case "ja":
+      return `機密性`;
+    case "ko":
+      return `민감도`;
+    case "pt-BR":
+      return `Sensibilidade`;
+    case "zh-Hans":
+      return `敏感度`;
+    case "zh-Hant":
+      return `敏感度`;
+    case "en-XA":
+      return `[Šéñšîţîṽîţý ~~~~]`;
+    case "ar-XB":
+      return `\u202eSensitivity\u202c`;
+  }
+  return `Sensitivity`;
+}
+
+export function riskSensitivityLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء`;
+    case "de":
+      return `keine`;
+    case "es":
+      return `ninguna`;
+    case "fr":
+      return `aucune`;
+    case "ja":
+      return `なし`;
+    case "ko":
+      return `없음`;
+    case "pt-BR":
+      return `nenhuma`;
+    case "zh-Hans":
+      return `无`;
+    case "zh-Hant":
+      return `無`;
+    case "en-XA":
+      return `[ñöñé ~~]`;
+    case "ar-XB":
+      return `\u202enone\u202c`;
+  }
+  return `none`;
+}
+
+export function riskSensitivityMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بيانات أو إعدادات محفوظة`;
+    case "de":
+      return `gespeicherte Daten oder Einstellungen`;
+    case "es":
+      return `datos o ajustes guardados`;
+    case "fr":
+      return `données ou réglages enregistrés`;
+    case "ja":
+      return `保存データや設定`;
+    case "ko":
+      return `저장된 데이터나 설정`;
+    case "pt-BR":
+      return `dados ou ajustes salvos`;
+    case "zh-Hans":
+      return `已保存的数据或设置`;
+    case "zh-Hant":
+      return `已儲存的資料或設定`;
+    case "en-XA":
+      return `[šáṽéð ðáţá öŕ šéţţîñĝš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202esaved data or settings\u202c`;
+  }
+  return `saved data or settings`;
+}
+
+export function riskSensitivityHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول أو المفاتيح أو المدفوعات أو إصدار`;
+    case "de":
+      return `Anmeldungen, Schlüssel, Zahlungen oder eine Veröffentlichung`;
+    case "es":
+      return `inicios de sesión, claves, pagos o una publicación`;
+    case "fr":
+      return `connexions, clés, paiements ou une publication`;
+    case "ja":
+      return `サインイン、キー、支払い、リリース`;
+    case "ko":
+      return `로그인, 키, 결제 또는 릴리스`;
+    case "pt-BR":
+      return `logins, chaves, pagamentos ou uma publicação`;
+    case "zh-Hans":
+      return `登录、密钥、付款或发布`;
+    case "zh-Hant":
+      return `登入、金鑰、付款或發布`;
+    case "en-XA":
+      return `[šîĝñ-îñš, ķéýš, þáýɱéñţš öŕ á ŕéļéášé ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202esign-ins, keys, payments or a release\u202c`;
+  }
+  return `sign-ins, keys, payments or a release`;
+}
+
+export function riskNovelty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الجِدّة`;
+    case "de":
+      return `Neuheit`;
+    case "es":
+      return `Novedad`;
+    case "fr":
+      return `Nouveauté`;
+    case "ja":
+      return `新しさ`;
+    case "ko":
+      return `새로움`;
+    case "pt-BR":
+      return `Novidade`;
+    case "zh-Hans":
+      return `新颖度`;
+    case "zh-Hant":
+      return `新穎度`;
+    case "en-XA":
+      return `[Ñöṽéļţý ~~~]`;
+    case "ar-XB":
+      return `\u202eNovelty\u202c`;
+  }
+  return `Novelty`;
+}
+
+export function riskNoveltyLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعدّل شيفرة مألوفة`;
+    case "de":
+      return `ändert bewährten Code`;
+    case "es":
+      return `edita código muy conocido`;
+    case "fr":
+      return `modifie du code bien rodé`;
+    case "ja":
+      return `実績のあるコードの編集`;
+    case "ko":
+      return `자주 다룬 코드를 고침`;
+    case "pt-BR":
+      return `edita código bem conhecido`;
+    case "zh-Hans":
+      return `修改的是久经使用的代码`;
+    case "zh-Hant":
+      return `修改常用的程式碼`;
+    case "en-XA":
+      return `[éðîţš ŵéļļ-ţŕöððéñ çöðé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eedits well-trodden code\u202c`;
+  }
+  return `edits well-trodden code`;
+}
+
+export function riskNoveltyMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `شيفرة جديدة بجانب القائمة`;
+    case "de":
+      return `neuer Code neben bestehendem`;
+    case "es":
+      return `código nuevo junto al existente`;
+    case "fr":
+      return `nouveau code à côté de l’existant`;
+    case "ja":
+      return `既存コードの隣に新しいコード`;
+    case "ko":
+      return `기존 코드 옆에 새 코드`;
+    case "pt-BR":
+      return `código novo ao lado do existente`;
+    case "zh-Hans":
+      return `在现有代码旁新增代码`;
+    case "zh-Hant":
+      return `在既有程式碼旁新增程式碼`;
+    case "en-XA":
+      return `[ñéŵ çöðé ƀéšîðé éẋîšţîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202enew code beside existing\u202c`;
+  }
+  return `new code beside existing`;
+}
+
+export function riskNoveltyHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `منظومة فرعية جديدة`;
+    case "de":
+      return `ein neues Teilsystem`;
+    case "es":
+      return `un subsistema nuevo`;
+    case "fr":
+      return `un nouveau sous-système`;
+    case "ja":
+      return `新しいサブシステム`;
+    case "ko":
+      return `새로운 하위 시스템`;
+    case "pt-BR":
+      return `um subsistema novo`;
+    case "zh-Hans":
+      return `全新的子系统`;
+    case "zh-Hant":
+      return `全新的子系統`;
+    case "en-XA":
+      return `[á ñéŵ šûƀšýšţéɱ ~~~~~]`;
+    case "ar-XB":
+      return `\u202ea new subsystem\u202c`;
+  }
+  return `a new subsystem`;
+}
+
+export function riskDeps(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاعتماديات`;
+    case "de":
+      return `Abhängigkeiten`;
+    case "es":
+      return `Dependencias`;
+    case "fr":
+      return `Dépendances`;
+    case "ja":
+      return `依存関係`;
+    case "ko":
+      return `의존성`;
+    case "pt-BR":
+      return `Dependências`;
+    case "zh-Hans":
+      return `依赖`;
+    case "zh-Hant":
+      return `相依套件`;
+    case "en-XA":
+      return `[Ðéþéñðéñçîéš ~~~~]`;
+    case "ar-XB":
+      return `\u202eDependencies\u202c`;
+  }
+  return `Dependencies`;
+}
+
+export function riskDepsLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء`;
+    case "de":
+      return `keine`;
+    case "es":
+      return `ninguna`;
+    case "fr":
+      return `aucune`;
+    case "ja":
+      return `なし`;
+    case "ko":
+      return `없음`;
+    case "pt-BR":
+      return `nenhuma`;
+    case "zh-Hans":
+      return `无`;
+    case "zh-Hant":
+      return `無`;
+    case "en-XA":
+      return `[ñöñé ~~]`;
+    case "ar-XB":
+      return `\u202enone\u202c`;
+  }
+  return `none`;
+}
+
+export function riskDepsMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحدّث حزمة`;
+    case "de":
+      return `aktualisiert ein Paket`;
+    case "es":
+      return `actualiza un paquete`;
+    case "fr":
+      return `met à jour un paquet`;
+    case "ja":
+      return `パッケージを更新`;
+    case "ko":
+      return `패키지를 업데이트함`;
+    case "pt-BR":
+      return `atualiza um pacote`;
+    case "zh-Hans":
+      return `更新一个软件包`;
+    case "zh-Hant":
+      return `更新一個套件`;
+    case "en-XA":
+      return `[ûþðáţéš á þáçķáĝé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eupdates a package\u202c`;
+  }
+  return `updates a package`;
+}
+
+export function riskDepsHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يضيف حزمة`;
+    case "de":
+      return `fügt ein Paket hinzu`;
+    case "es":
+      return `agrega un paquete`;
+    case "fr":
+      return `ajoute un paquet`;
+    case "ja":
+      return `パッケージを追加`;
+    case "ko":
+      return `패키지를 추가함`;
+    case "pt-BR":
+      return `adiciona um pacote`;
+    case "zh-Hans":
+      return `新增一个软件包`;
+    case "zh-Hant":
+      return `新增一個套件`;
+    case "en-XA":
+      return `[áððš á þáçķáĝé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eadds a package\u202c`;
+  }
+  return `adds a package`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -63346,6 +68212,165 @@ export const MESSAGES = {
   automationRunAlsoSkipped,
   automationScreenedNote,
   automationWaitsForNote,
+  cardReplyHint,
+  cardPastSentLead,
+  cardReviewFinding,
+  cardLeaveAside,
+  cardLeaveAsideRest,
+  cardLeaveHide,
+  cardLeaveHideRest,
+  cardLeaveHidePanelRest,
+  cardAnswerDone,
+  cardAnswerDoneRest,
+  cardDecline,
+  cardAfterMergeWait,
+  cardAfterMergeDoerCrewmate,
+  cardAfterMergeDoerFirstmate,
+  cardAfterMergeLead,
+  taskBrowserDriverCrewmate,
+  taskBrowserDriverNobody,
+  taskBrowserDriverWaiting,
+  taskBrowserDriverTaking,
+  taskBrowserDriverCaptain,
+  taskBrowserStoppedCaptain,
+  taskBrowserStoppedCrewmate,
+  taskBrowserStoppedIdle,
+  taskBrowserStoppedGone,
+  taskBrowserStoppedTaskClosed,
+  taskBrowserStaleAttachment,
+  taskTabInfo,
+  taskTabCards,
+  taskTabActivity,
+  taskTabCrewmate,
+  crewmatePlaceholderWorking,
+  crewmatePlaceholderIdle,
+  crewmateField,
+  crewmateSendsTo,
+  crewmateQueued,
+  crewmateWorking,
+  crewmateInterruptHint,
+  crewmateStop,
+  crewmateStopping,
+  crewmateIdle,
+  crewmateWaiting,
+  crewmatePaused,
+  crewmateClosed,
+  crewmateEmpty,
+  crewmateUnreadable,
+  crewmateOpen,
+  crewmateFold,
+  crewmateBrief,
+  crewmateFirstmate,
+  crewmateApp,
+  crewmateRunning,
+  crewmateNoResult,
+  crewmateNoOutput,
+  crewmatePicture,
+  crewmatePictureLarger,
+  crewmatePictureSmaller,
+  crewmateFailed,
+  crewmatePlan,
+  crewmateProgress,
+  crewmateReport,
+  crewmateCard,
+  crewmateShowCard,
+  crewmateChange,
+  crewmateCompacted,
+  crewmateStoppedCaptain,
+  crewmateStoppedFirstmate,
+  crewmateStoppedApp,
+  crewmateMoreLines,
+  crewmateCut,
+  crewmateEarlier,
+  policyAsksFirst,
+  policySourceTask,
+  policySourceProject,
+  policySourceParent,
+  policyHelper,
+  policyCareBound,
+  recordStart,
+  recordTryAgain,
+  recordStarting,
+  recordStartAgain,
+  recordContinue,
+  recordShowCard,
+  recordDropTask,
+  recordDropCancel,
+  recordDropReviewStale,
+  pastEndingAnOption,
+  pastEndingFirstmateChose,
+  pastEndingCrewmateChose,
+  pastEndingYouChose,
+  pastEndingDismissed,
+  pastEndingAuthorWithdrawal,
+  pastEndingHostWithdrawal,
+  pastEndingTaskRetired,
+  pastEndingDuplicate,
+  pastEndingUnknown,
+  taskGroupWaiting,
+  taskGroupWorking,
+  taskGroupQueued,
+  taskGroupBacklog,
+  taskGroupLanded,
+  taskPinPin,
+  taskPinUnpin,
+  secretsAllowOnce,
+  secretsDeny,
+  integrationsSignInWaiting,
+  integrationsSignInAgain,
+  integrationsSignInCancel,
+  viewGoogleUpdateThere,
+  viewReturnPasteLead,
+  viewReturnPasteLabel,
+  viewReturnPastePlaceholder,
+  viewReturnPasteSend,
+  viewReturnPasteRefused,
+  cardNotePointAt,
+  cardNotePointedAt,
+  cardNoteStale,
+  cardNoteUnavailable,
+  cardNoteEditUnavailable,
+  cardNoteEmpty,
+  cardNoteAnnotate,
+  cardNoteQueue,
+  cardNoteCommentLabel,
+  cardNoteCancel,
+  cardNoteEdit,
+  cardNoteRemove,
+  cardNoteNotSent,
+  cardNotePlaceholder,
+  cardNoteDiscardHint,
+  cardNoteSend,
+  cardNoteQueued,
+  cardNoteLabel,
+  riskBlast,
+  riskBlastLow,
+  riskBlastMedium,
+  riskBlastHigh,
+  riskBehavior,
+  riskBehaviorLow,
+  riskBehaviorMedium,
+  riskBehaviorHigh,
+  riskUndo,
+  riskUndoLow,
+  riskUndoMedium,
+  riskUndoHigh,
+  riskEvidence,
+  riskEvidenceLow,
+  riskEvidenceMedium,
+  riskEvidenceHigh,
+  riskSensitivity,
+  riskSensitivityLow,
+  riskSensitivityMedium,
+  riskSensitivityHigh,
+  riskNovelty,
+  riskNoveltyLow,
+  riskNoveltyMedium,
+  riskNoveltyHigh,
+  riskDeps,
+  riskDepsLow,
+  riskDepsMedium,
+  riskDepsHigh,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -65426,4 +70451,163 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   automationRunAlsoSkipped: ["count"],
   automationScreenedNote: [],
   automationWaitsForNote: [],
+  cardReplyHint: [],
+  cardPastSentLead: [],
+  cardReviewFinding: [],
+  cardLeaveAside: [],
+  cardLeaveAsideRest: [],
+  cardLeaveHide: [],
+  cardLeaveHideRest: [],
+  cardLeaveHidePanelRest: [],
+  cardAnswerDone: [],
+  cardAnswerDoneRest: ["key"],
+  cardDecline: [],
+  cardAfterMergeWait: ["count", "keys"],
+  cardAfterMergeDoerCrewmate: [],
+  cardAfterMergeDoerFirstmate: [],
+  cardAfterMergeLead: [],
+  taskBrowserDriverCrewmate: [],
+  taskBrowserDriverNobody: [],
+  taskBrowserDriverWaiting: [],
+  taskBrowserDriverTaking: [],
+  taskBrowserDriverCaptain: [],
+  taskBrowserStoppedCaptain: [],
+  taskBrowserStoppedCrewmate: [],
+  taskBrowserStoppedIdle: [],
+  taskBrowserStoppedGone: [],
+  taskBrowserStoppedTaskClosed: [],
+  taskBrowserStaleAttachment: [],
+  taskTabInfo: [],
+  taskTabCards: [],
+  taskTabActivity: [],
+  taskTabCrewmate: [],
+  crewmatePlaceholderWorking: [],
+  crewmatePlaceholderIdle: [],
+  crewmateField: [],
+  crewmateSendsTo: [],
+  crewmateQueued: [],
+  crewmateWorking: [],
+  crewmateInterruptHint: [],
+  crewmateStop: [],
+  crewmateStopping: [],
+  crewmateIdle: [],
+  crewmateWaiting: [],
+  crewmatePaused: [],
+  crewmateClosed: [],
+  crewmateEmpty: [],
+  crewmateUnreadable: [],
+  crewmateOpen: [],
+  crewmateFold: [],
+  crewmateBrief: [],
+  crewmateFirstmate: [],
+  crewmateApp: [],
+  crewmateRunning: [],
+  crewmateNoResult: [],
+  crewmateNoOutput: [],
+  crewmatePicture: [],
+  crewmatePictureLarger: [],
+  crewmatePictureSmaller: [],
+  crewmateFailed: [],
+  crewmatePlan: [],
+  crewmateProgress: [],
+  crewmateReport: [],
+  crewmateCard: [],
+  crewmateShowCard: [],
+  crewmateChange: [],
+  crewmateCompacted: [],
+  crewmateStoppedCaptain: [],
+  crewmateStoppedFirstmate: [],
+  crewmateStoppedApp: [],
+  crewmateMoreLines: ["count"],
+  crewmateCut: ["count"],
+  crewmateEarlier: ["count"],
+  policyAsksFirst: [],
+  policySourceTask: [],
+  policySourceProject: [],
+  policySourceParent: [],
+  policyHelper: [],
+  policyCareBound: [],
+  recordStart: [],
+  recordTryAgain: [],
+  recordStarting: [],
+  recordStartAgain: [],
+  recordContinue: [],
+  recordShowCard: [],
+  recordDropTask: [],
+  recordDropCancel: [],
+  recordDropReviewStale: [],
+  pastEndingAnOption: [],
+  pastEndingFirstmateChose: ["label"],
+  pastEndingCrewmateChose: ["label"],
+  pastEndingYouChose: ["label"],
+  pastEndingDismissed: [],
+  pastEndingAuthorWithdrawal: [],
+  pastEndingHostWithdrawal: [],
+  pastEndingTaskRetired: [],
+  pastEndingDuplicate: [],
+  pastEndingUnknown: [],
+  taskGroupWaiting: [],
+  taskGroupWorking: [],
+  taskGroupQueued: [],
+  taskGroupBacklog: [],
+  taskGroupLanded: [],
+  taskPinPin: [],
+  taskPinUnpin: [],
+  secretsAllowOnce: [],
+  secretsDeny: [],
+  integrationsSignInWaiting: ["name"],
+  integrationsSignInAgain: [],
+  integrationsSignInCancel: [],
+  viewGoogleUpdateThere: ["mac"],
+  viewReturnPasteLead: ["name"],
+  viewReturnPasteLabel: ["name"],
+  viewReturnPastePlaceholder: [],
+  viewReturnPasteSend: ["mac"],
+  viewReturnPasteRefused: [],
+  cardNotePointAt: [],
+  cardNotePointedAt: [],
+  cardNoteStale: [],
+  cardNoteUnavailable: [],
+  cardNoteEditUnavailable: [],
+  cardNoteEmpty: [],
+  cardNoteAnnotate: [],
+  cardNoteQueue: [],
+  cardNoteCommentLabel: [],
+  cardNoteCancel: [],
+  cardNoteEdit: [],
+  cardNoteRemove: [],
+  cardNoteNotSent: [],
+  cardNotePlaceholder: [],
+  cardNoteDiscardHint: [],
+  cardNoteSend: ["count"],
+  cardNoteQueued: ["count"],
+  cardNoteLabel: ["excerpt", "kind"],
+  riskBlast: [],
+  riskBlastLow: [],
+  riskBlastMedium: [],
+  riskBlastHigh: [],
+  riskBehavior: [],
+  riskBehaviorLow: [],
+  riskBehaviorMedium: [],
+  riskBehaviorHigh: [],
+  riskUndo: [],
+  riskUndoLow: [],
+  riskUndoMedium: [],
+  riskUndoHigh: [],
+  riskEvidence: [],
+  riskEvidenceLow: [],
+  riskEvidenceMedium: [],
+  riskEvidenceHigh: [],
+  riskSensitivity: [],
+  riskSensitivityLow: [],
+  riskSensitivityMedium: [],
+  riskSensitivityHigh: [],
+  riskNovelty: [],
+  riskNoveltyLow: [],
+  riskNoveltyMedium: [],
+  riskNoveltyHigh: [],
+  riskDeps: [],
+  riskDepsLow: [],
+  riskDepsMedium: [],
+  riskDepsHigh: [],
 };

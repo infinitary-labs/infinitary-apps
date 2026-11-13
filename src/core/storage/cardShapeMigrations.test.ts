@@ -49,8 +49,8 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
     // migration 82 `required_actions_json`, migration 87 `review_task_id`,
     // INF-476 `minimized`, INF-1226 `continues`, INF-1610 `answering`,
     // INF-1670 `answered_by`, INF-2796 `after_merge_json`, INF-3071
-    // `ended_json`, the card's files for the captain `files_json` and INF-3846
-    // `put_off_json`.
+    // `ended_json`, the card's files for the captain `files_json`, INF-3846
+    // `put_off_json` and INF-3898 piece 2's command mark `resolved_through`.
     expect(columnNames(upgraded, "cards")).toEqual([
       ...before,
       "duplicate_of",
@@ -80,6 +80,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
       "ended_json",
       "files_json",
       "put_off_json",
+      "resolved_through",
     ]);
     expect(columnNames(upgraded, "card_revisions")).toEqual([
       "id",

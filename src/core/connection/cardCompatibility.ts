@@ -3,7 +3,7 @@ import { type CardNote, noteText } from "@shared/cardNotes";
 /** Strict older desktops need fields removed; readers without annotations keep a readable note. */
 export function threadLinesFor(
   value: unknown,
-  reads: { sharing: boolean; annotations: boolean },
+  reads: { sharing: boolean; annotations: boolean; through?: boolean },
 ): unknown {
   if (Array.isArray(value)) return value.map((entry) => threadLinesFor(entry, reads));
   if (!value || typeof value !== "object") return value;
@@ -16,12 +16,11 @@ export function threadLinesFor(
     ...record,
     messages: record.messages.map((message) => {
       if (!message || typeof message !== "object") return message;
-      const { contributor, answersMessage, clarification, notes, ...line } = message as Record<
-        string,
-        unknown
-      >;
+      const { contributor, answersMessage, clarification, notes, through, ...line } =
+        message as Record<string, unknown>;
       return {
         ...line,
+        ...(reads.through && through ? { through } : {}),
         ...(reads.sharing ? { contributor, answersMessage, clarification } : {}),
         ...(reads.annotations
           ? notes

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { throughSchema } from "./through";
 
 /**
  * The last turn above the input (FI3-1089's plan, the captain's Approve and
@@ -40,6 +41,8 @@ export const lastRoundSchema = z.object({
   you: z.string(),
   /** The Firstmate's reply line, or null while none has been given. */
   reply: lastTurnReplySchema.nullable(),
+  /** The message came from the captain's own command, `infinitary-axi`, not the window. */
+  through: throughSchema.optional(),
 });
 export type LastRound = z.infer<typeof lastRoundSchema>;
 

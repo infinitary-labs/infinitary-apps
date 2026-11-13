@@ -24,6 +24,7 @@ import { QUEUE_POLICY } from "@shared/taskQueue";
 import type { DropEffects } from "@shared/tasks";
 import { savedTaskTitle, taskTitleRefusal } from "@shared/taskTitle";
 import { cutText } from "@shared/textCut";
+import { THROUGH_THE_COMMAND, type Through } from "@shared/through";
 import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
 import { RIGOR_WORDS } from "@shared/vocabulary";
 import { amendBriefGoal, type BriefPart, type SpawnIntent } from "../orchestrator/intentBrief";
@@ -190,6 +191,8 @@ export type TaskCardClick = {
   /** A lifecycle button, or the record's Close as done (INF-3169's plan, piece 3). */
   op: TaskLifecycleOp | "close-done";
   panel?: string;
+  /** The click came from the captain's own command, `infinitary-axi` (INF-3898 piece 2). */
+  through?: Through;
 };
 
 /**
@@ -794,7 +797,18 @@ export class TaskService {
       .flatMap((event): TaskCardClick[] => {
         const op = taskCardOp(event);
         const panel = typeof event.data?.panel === "string" ? event.data.panel : undefined;
-        return op ? [{ taskId: event.taskId, at: event.at, op, ...(panel ? { panel } : {}) }] : [];
+        const through = event.data?.through === THROUGH_THE_COMMAND;
+        return op
+          ? [
+              {
+                taskId: event.taskId,
+                at: event.at,
+                op,
+                ...(panel ? { panel } : {}),
+                ...(through ? { through: THROUGH_THE_COMMAND } : {}),
+              },
+            ]
+          : [];
       });
   }
 

@@ -27,6 +27,8 @@
 import { type AttachmentRef, attachmentWords } from "@shared/attachments";
 import { ATTACHMENTS_DROPPED_NOTE } from "@shared/cards";
 import type { ServedOrigin } from "@shared/servedFrame";
+import type { Through } from "@shared/through";
+import { FROM_THE_COMMAND } from "../integrations/commandWords";
 import type { InboxRow, WAKE_ENVELOPE_VERSION } from "../storage/inboxStore";
 import {
   CAPTAIN_WORDS,
@@ -50,6 +52,9 @@ import { TURN_WORDS, type TurnFacts } from "./turnWakes";
  * reads the mark after them.
  */
 export const GUIDANCE_MARK_WORDS = "check_change captainGuidance with mark";
+
+/** The line under the captain's words his own command sent (INF-3898 piece 2). */
+export const CAPTAIN_WORDS_FROM_THE_COMMAND = `Sent ${FROM_THE_COMMAND}.`;
 
 /** What the crewmate is told beside the captain's guidance that holds his kept merge. */
 function guidanceMarkNote(mark: number): string {
@@ -95,6 +100,8 @@ type CarrierFacts =
        * on rows older builds queued and on words with no saved message.
        */
       askId?: string;
+      /** The message came from the captain's own command, `infinitary-axi` (INF-3898 piece 2). */
+      through?: Through;
     }
   | {
       /** Guidance whose pictures a legacy durable copy could not keep, and says so. */
@@ -174,12 +181,33 @@ export type KindWords<F extends { kind: string }> = {
   ) => string;
 };
 
+/**
+ * The inbox ref of a captain turn parked on the firstmate lane (benched, or
+ * a mid-turn steer the session refused). Its row is stamped origin
+ * `captain`, which is what the drain frames as the captain's `user` segment
+ * (R2 framing); the ref names the row for offline readers.
+ */
+export const CAPTAIN_TURN_REF = "captain-turn";
+
+/** The ref of a parked captain turn, naming the card it was about when it was about one. */
+export function captainTurnRef(aboutCardId?: string): string {
+  return aboutCardId ? `${CAPTAIN_TURN_REF}:card:${aboutCardId}` : CAPTAIN_TURN_REF;
+}
+
+/** The card a parked captain turn's ref names, if any. */
+export function aboutCardIdFromRef(ref: string | null | undefined): string | undefined {
+  const prefix = `${CAPTAIN_TURN_REF}:card:`;
+  if (!ref?.startsWith(prefix)) return undefined;
+  return ref.slice(prefix.length) || undefined;
+}
+
 /** The captain's words, framed as his turn (`[user]`), and whether their pictures were dropped. */
 export function captainTurn(
   words: string,
   imagesDropped: boolean,
   attachments?: readonly AttachmentRef[],
   askId?: string,
+  through?: Through,
 ): TypedWake {
   return {
     facts: {
@@ -188,6 +216,7 @@ export function captainTurn(
       imagesDropped,
       ...(attachments?.length ? { attachments: [...attachments] } : {}),
       ...(askId ? { askId } : {}),
+      ...(through ? { through } : {}),
     },
   };
 }
@@ -239,7 +268,9 @@ const CARRIER_WORDS: KindWords<CarrierFacts> = {
   "response-request": (facts, wake) =>
     `${typeof facts.guidance === "string" ? facts.guidance : renderWake({ facts: facts.guidance, ways: wake.ways })}\n\nResponse requested: ${facts.requestId}. In report.responses name request_id, a stable response_id, and status answered or not-yet-answered. The report text is your exact response. Submission saves it and queues the first mate immediately, even while work continues. Ordinary reports do not answer this request.`,
   "captain-turn": (facts) =>
-    `[user]\n${facts.words}${facts.imagesDropped ? `\n\n${ATTACHMENTS_DROPPED_NOTE}` : ""}`,
+    `[user]\n${facts.words}${facts.imagesDropped ? `\n\n${ATTACHMENTS_DROPPED_NOTE}` : ""}${
+      facts.through ? `\n\n(${CAPTAIN_WORDS_FROM_THE_COMMAND})` : ""
+    }`,
   "attachments-kept": (facts, wake) =>
     `${
       typeof facts.guidance === "string"

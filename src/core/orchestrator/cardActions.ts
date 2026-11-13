@@ -49,6 +49,7 @@ import {
 } from "@shared/vocabulary";
 import { allowanceCovers, type IntegrationAllowance } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
+import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
 import { keepImages } from "../attachments";
 import type { BrowserReturned } from "../browser/taskBrowsers";
 import type { IntegrationAskTaken } from "../integrations";
@@ -748,6 +749,8 @@ export class CardActions {
             ...(decisionTaskId ? { taskId: decisionTaskId } : {}),
           },
           choice,
+          // A choice the captain's own command made says so (INF-3898 piece 2).
+          ...(source === "chrome" && throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
         },
       };
       const hooks = this.core.hooks();

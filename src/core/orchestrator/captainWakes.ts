@@ -19,7 +19,9 @@ import {
 import { HERE } from "@shared/deviceNames";
 import type { ProjectSetupOutcome } from "@shared/projectSetup";
 import { SAVED_SIGN_IN_FAILED_WORDS, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
+import type { Through } from "@shared/through";
 import { browserCommand } from "../browser/commandWords";
+import { FROM_THE_COMMAND } from "../integrations/commandWords";
 import {
   ABANDON,
   APPROVE_AND_BUILD,
@@ -56,6 +58,8 @@ export type CaptainFacts =
        * had stopped, or it ended when the app quit.
        */
       browserGone?: "stopped" | "quit";
+      /** The choice came from the captain's own command, `infinitary-axi` (INF-3898 piece 2). */
+      through?: Through;
     }
   | {
       /**
@@ -386,7 +390,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
       const about = `card "${facts.card.title}"${facts.card.id ? ` (${facts.card.id})` : ""}${facts.card.taskId ? ` on task ${facts.card.taskId}` : ""}`;
       return facts.source === "frame"
         ? `[fm-op] a script chose "${facts.choice.label}" (${facts.choice.id}) on ${about}.${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`
-        : `[user]\n${facts.choice.label}\nChoice on ${about}.${declined}${valueText(facts.choice)}${answersText(facts.choice)}`;
+        : `[user]\n${facts.choice.label}\nChoice on ${about}${facts.through ? `, ${FROM_THE_COMMAND}` : ""}.${declined}${valueText(facts.choice)}${answersText(facts.choice)}`;
     }
     if (facts.browserGone) return renderBrowserGone(facts);
     return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${fromText(facts.from, "chose it")}${declined}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`;

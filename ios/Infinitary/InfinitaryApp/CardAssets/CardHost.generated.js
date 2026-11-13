@@ -4875,13 +4875,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     line: number().int().positive()
   });
   const cardNotesSchema = array(cardNoteSchema);
-  const SPELLINGS = ["fm", "inf"];
-  const OWN_SPELLING = "inf";
-  function hookAttributes(name) {
-    return [OWN_SPELLING, ...SPELLINGS.filter((spelling) => spelling !== OWN_SPELLING)].map(
-      (spelling) => `data-${spelling}-${name}`
-    );
-  }
   const cardEndedSchema = object({
     /** Who ended it: the card's crewmate or the first mate. */
     by: _enum(["crewmate", "firstmate"]),
@@ -5070,6 +5063,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     text: string().trim().min(1).max(4e3),
     action: findingActionSchema
   });
+  const SPELLINGS = ["fm", "inf"];
+  const OWN_SPELLING = "inf";
+  function hookAttributes(name) {
+    return [OWN_SPELLING, ...SPELLINGS.filter((spelling) => spelling !== OWN_SPELLING)].map(
+      (spelling) => `data-${spelling}-${name}`
+    );
+  }
+  function splitSettleFacts(body) {
+    const at = Math.max(
+      ...SPELLINGS.map((spelling) => body.lastIndexOf(`<div class="${spelling}-facts" data-facts>`))
+    );
+    if (at < 0) return void 0;
+    const close = body.indexOf("</div>", at);
+    if (close < 0) return void 0;
+    const end = close + "</div>".length;
+    return { body: body.slice(0, at) + body.slice(end), facts: body.slice(at, end), at };
+  }
+  const THROUGH_THE_COMMAND = "command";
+  const throughSchema = literal(THROUGH_THE_COMMAND);
   const settleEffectSchema = object({
     kind: literal("settle"),
     mode: literal("discard"),
@@ -5276,16 +5288,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (card.reviewTaskId) return true;
     if (card.actions.some((action) => settleEffectOf(action) || mergeEffectOf(action))) return true;
     return card.risk !== void 0 && card.actions.length === 0;
-  }
-  function splitSettleFacts(body) {
-    const at = Math.max(
-      ...SPELLINGS.map((spelling) => body.lastIndexOf(`<div class="${spelling}-facts" data-facts>`))
-    );
-    if (at < 0) return void 0;
-    const close = body.indexOf("</div>", at);
-    if (close < 0) return void 0;
-    const end = close + "</div>".length;
-    return { body: body.slice(0, at) + body.slice(end), facts: body.slice(at, end), at };
   }
   const CARD_WIDTHS = ["regular", "wide", "full"];
   const cardWidthSchema = _enum(CARD_WIDTHS);
@@ -5658,7 +5660,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * he typed and his settings apart (FI3-617). The author still reads both
      * together (`replyWithSettings`).
      */
-    answers: cardAnswersSchema.optional()
+    answers: cardAnswersSchema.optional(),
+    /** On a captain's line: sent from his own command, `infinitary-axi`, not the window. */
+    through: throughSchema.optional()
   });
   strictObject({
     cardId: string(),

@@ -93,6 +93,15 @@
   justify-content: flex-end;
   height: 22px;
 }
+/* A message the captain's own command sent names it beside his bubble, quiet. */
+[data-last-turn] .row.you .through {
+  flex: none;
+  margin-inline-end: 8px;
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  line-height: 18px;
+  white-space: nowrap;
+}
 [data-last-turn] .row.mate {
   gap: 8px;
   height: 20px;

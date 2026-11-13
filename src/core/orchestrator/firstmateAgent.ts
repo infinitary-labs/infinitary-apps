@@ -15,6 +15,7 @@ import {
   type ServedSegmentInput,
   type ServedWakeOrigin,
 } from "@shared/servedFrame";
+import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
 import type { CorrectionCaseRequest } from "../decisions/correctionCases";
 import type { CoreDispatch } from "../dispatcher";
@@ -64,7 +65,18 @@ import {
 } from "./seat";
 import { appendDigest, digestEntry, digestFor } from "./seatDigest";
 import { turnOriginOf } from "./turnOrigins";
-import { captainTurn, drainWakes, renderWake, rowAttachments, type TypedWake } from "./wakes";
+import {
+  aboutCardIdFromRef,
+  captainTurn,
+  captainTurnRef,
+  drainWakes,
+  renderWake,
+  rowAttachments,
+  type TypedWake,
+} from "./wakes";
+
+/** The inbox ref of a captain turn parked on the firstmate lane (`./wakes`). */
+export { CAPTAIN_TURN_REF } from "./wakes";
 
 /** The progress a shortening of the conversation reports itself by. */
 const [FOLD_TOOL] = PROGRESS_TOOL_NAMES;
@@ -421,14 +433,6 @@ type TurnPayload =
       focusedProjectId?: string;
     };
 
-/**
- * The inbox ref of a captain turn parked on the firstmate lane (benched, or
- * a mid-turn steer the session refused). Its row is stamped origin
- * `captain`, which is what the drain frames as the captain's `user` segment
- * (R2 framing); the ref names the row for offline readers.
- */
-export const CAPTAIN_TURN_REF = "captain-turn";
-
 /** The captain's words a batch of inbox rows carries, oldest first. */
 function captainWordsOf(rows: readonly InboxRow[]): string[] {
   return rows.flatMap((row) => {
@@ -438,16 +442,6 @@ function captainWordsOf(rows: readonly InboxRow[]): string[] {
       return [row.facts.choice.label];
     return row.text ? [row.text] : [];
   });
-}
-
-function captainTurnRef(aboutCardId?: string): string {
-  return aboutCardId ? `${CAPTAIN_TURN_REF}:card:${aboutCardId}` : CAPTAIN_TURN_REF;
-}
-
-function aboutCardIdFromRef(ref: string | null | undefined): string | undefined {
-  const prefix = `${CAPTAIN_TURN_REF}:card:`;
-  if (!ref?.startsWith(prefix)) return undefined;
-  return ref.slice(prefix.length) || undefined;
 }
 
 export class FirstmateAgent {
@@ -690,6 +684,7 @@ export class FirstmateAgent {
     this.options.broadcastEvent({
       type: "user_turn",
       text: typeof turn === "string" ? trimmed : (turn.receipt ?? trimmed),
+      ...(throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
     });
     // The ask row exists before anything runs (capture, P1): the open card
     // or the record card is the hint the fallback prefers.
@@ -757,7 +752,7 @@ export class FirstmateAgent {
         trimmed,
         sourceFacts,
       );
-    const userBody = renderWake(captainTurn(trimmed, false));
+    const userBody = renderWake(captainTurn(trimmed, false, undefined, undefined, ask.through));
     const userSegment: ServedSegmentInput = { kind: "user", body: userBody, origin: "captain" };
     const captainOnly = (context: string): ServedInput => ({
       framed: frameServedInput([{ kind: "context", body: context }, userSegment]),
@@ -949,9 +944,10 @@ export class FirstmateAgent {
    * context block. Answers the row's id.
    */
   private park({ words, attachments, aboutCardId, askId }: AcceptedSteer): number {
+    const through = askId ? this.options.tasks.capture.getAsk(askId)?.through : undefined;
     return this.options.inbox.enqueue(
       FIRSTMATE_RECIPIENT,
-      captainTurn(words, false, attachments, askId),
+      captainTurn(words, false, attachments, askId, through),
       captainTurnRef(aboutCardId),
       "captain",
     );

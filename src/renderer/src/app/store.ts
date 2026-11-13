@@ -494,7 +494,14 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         lastTurn: {
           you: event.text,
           reply: null,
-          previous: s.lastTurn ? { you: s.lastTurn.you, reply: s.lastTurn.reply } : null,
+          ...(event.through ? { through: event.through } : {}),
+          previous: s.lastTurn
+            ? {
+                you: s.lastTurn.you,
+                reply: s.lastTurn.reply,
+                ...(s.lastTurn.through ? { through: s.lastTurn.through } : {}),
+              }
+            : null,
         },
         lastTurnSeq: s.lastTurnSeq + 1,
       }));

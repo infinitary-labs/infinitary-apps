@@ -1,6 +1,7 @@
 import { type CardNote, noteText } from "@shared/cardNotes";
 import { cardNavigationParts } from "@shared/cardParts";
 import { cardMessageSchema, cardThreadSchema } from "@shared/cards";
+import { THROUGH_THE_COMMAND } from "@shared/through";
 import { describe, expect, it } from "vitest";
 import {
   ANNOTATION_BODY,
@@ -56,5 +57,18 @@ describe("annotation compatibility", () => {
     expect(result.cards[0]?.messages[0]?.notes).toBeUndefined();
     expect(result.cards[0]?.messages[0]?.text).toContain(ANNOTATION_COMMENT);
     expect(threadLinesFor([value], { sharing: true, annotations: false })).toEqual(result.cards);
+  });
+  it("keeps the command's mark only for a view that lists the change (INF-3898 piece 2)", () => {
+    const value = thread(),
+      message = value.messages[0];
+    if (!message) throw new Error("missing reply");
+    const marked = { ...value, messages: [{ ...message, through: THROUGH_THE_COMMAND }] };
+    const reads = { sharing: true, annotations: true };
+    const current = threadLinesFor(marked, { ...reads, through: true }) as typeof marked;
+    expect(current.messages[0]?.through).toBe(THROUGH_THE_COMMAND);
+    const older = threadLinesFor(marked, { ...reads, through: false }) as typeof marked;
+    expect(cardMessageSchema.omit({ through: true }).parse(older.messages[0])).not.toHaveProperty(
+      "through",
+    );
   });
 });

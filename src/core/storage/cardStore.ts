@@ -35,7 +35,9 @@ import { pastCardEndingWords } from "@shared/pastCard";
 import { type KeptPutOff, keptPutOffSchema } from "@shared/putOff";
 import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
 import type { TaskCardRow } from "@shared/tasks";
+import { THROUGH_THE_COMMAND, type Through } from "@shared/through";
 import { z } from "zod";
+import { throughNow } from "../askedFromTheCommand";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 
@@ -133,6 +135,8 @@ export type CardResolution = {
   answers?: CardAnswer[];
   /** Exact offer dispatched at the closing interaction, when capture exists. */
   offer?: CardObservationPayload<"offer">;
+  /** The choice came from the captain's own command, `infinitary-axi`, not the window. */
+  through?: Through;
 };
 
 /** One card's action observations, oldest first: never its offers' words. */
@@ -182,6 +186,7 @@ type ResolvedRow = Row & {
   chosen_action: string;
   resolved_at: number;
   answers_json: string | null;
+  resolved_through: string | null;
 };
 
 /**
@@ -339,10 +344,11 @@ type MessageRow = {
   contributor_json: string | null;
   answers_message: number | null;
   clarification: number | null;
+  through: string | null;
 };
 
 const MESSAGE_COLUMNS = `m.notes_json, m.id, m.card_id, m.who, m.text, m.at, m.revision_json,
-  m.contributor_json, m.answers_message, m.clarification,
+  m.contributor_json, m.answers_message, m.clarification, m.through,
   (SELECT o.payload_json FROM card_observations o
     WHERE o.card_id = m.card_id AND o.kind = 'message_ref' AND o.message_id = m.id
     ORDER BY o.seq LIMIT 1) AS ref_json`;
@@ -365,6 +371,8 @@ function messageOf(row: MessageRow): CardMessage {
   }
   if (row.answers_message !== null) message.answersMessage = row.answers_message;
   if (row.clarification === 1) message.clarification = true;
+  if (row.who === "captain" && row.through === THROUGH_THE_COMMAND)
+    message.through = THROUGH_THE_COMMAND;
   if (row.who === "host" && row.revision_json) {
     try {
       const revision = cardRevisionSchema.safeParse(JSON.parse(row.revision_json));
@@ -678,10 +686,19 @@ export class CardStore {
     });
   }
 
+  /** The choice that closes a card; one the captain's command made is marked so (`throughNow`). */
   resolve(cardId: string, chosenAction: string, answers?: readonly CardAnswer[]): void {
     this.db
-      .prepare("UPDATE cards SET resolved_at = ?, chosen_action = ?, answers_json = ? WHERE id = ?")
-      .run(Date.now(), chosenAction, answers?.length ? JSON.stringify(answers) : null, cardId);
+      .prepare(
+        "UPDATE cards SET resolved_at = ?, chosen_action = ?, answers_json = ?, resolved_through = ? WHERE id = ?",
+      )
+      .run(
+        Date.now(),
+        chosenAction,
+        answers?.length ? JSON.stringify(answers) : null,
+        throughNow() ?? null,
+        cardId,
+      );
   }
 
   /**
@@ -811,6 +828,7 @@ export class CardStore {
       resolvedAt: row.resolved_at,
       ...(offer?.kind === "offer" ? { offer: offer.payload } : {}),
       ...(answers?.success && answers.data.length > 0 ? { answers: answers.data } : {}),
+      ...(row.resolved_through === THROUGH_THE_COMMAND ? { through: THROUGH_THE_COMMAND } : {}),
     };
   }
 
@@ -985,7 +1003,7 @@ export class CardStore {
   reopen(cardId: string): void {
     this.db
       .prepare(
-        "UPDATE cards SET resolved_at = NULL, chosen_action = NULL, ended_json = NULL, put_off_json = NULL WHERE id = ?",
+        "UPDATE cards SET resolved_at = NULL, chosen_action = NULL, ended_json = NULL, put_off_json = NULL, resolved_through = NULL WHERE id = ?",
       )
       .run(cardId);
   }
@@ -1155,11 +1173,13 @@ export class CardStore {
   }): CardMessage {
     const at = input.at ?? Date.now();
     const original = input.who === "captain" && input.captainText !== undefined;
+    // The captain's line his own command sent says so (INF-3898 piece 2).
+    const through = input.who === "captain" ? throughNow() : undefined;
     const result = this.db
       .prepare(
         `INSERT INTO card_messages
-          (card_id, who, text, at, revision_json, contributor_json, answers_message, clarification, response_id, notes_json${original ? ", captain_text" : ""})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
+          (card_id, who, text, at, revision_json, contributor_json, answers_message, clarification, response_id, notes_json, through${original ? ", captain_text" : ""})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
       )
       .run(
         input.cardId,
@@ -1172,6 +1192,7 @@ export class CardStore {
         input.clarification ? 1 : null,
         input.responseId ?? null,
         input.notes?.length ? JSON.stringify(cardNotesSchema.parse(input.notes)) : null,
+        through ?? null,
         ...(original ? [input.captainText] : []),
       );
     return {
@@ -1185,6 +1206,7 @@ export class CardStore {
       ...(input.contributor ? { contributor: input.contributor } : {}),
       ...(input.answersMessage !== undefined ? { answersMessage: input.answersMessage } : {}),
       ...(input.clarification ? { clarification: true as const } : {}),
+      ...(through ? { through } : {}),
     };
   }
 

@@ -1,6 +1,7 @@
 import * as m from "@shared/i18n/messages.generated";
 import { KEYBOARD_COMMANDS } from "@shared/keyboard";
 import type { LastRound, LastTurn as Turn } from "@shared/lastTurn";
+import { CAPTAIN_COMMAND } from "@shared/through";
 import {
   useCallback,
   useEffect,
@@ -301,6 +302,11 @@ export function LastTurnRound({
       aria-hidden={leaving || undefined}
     >
       <div className="row you">
+        {round.through ? (
+          <span className="through" data-last-turn-through="">
+            {m.shellLastTurnFromCommand({ command: CAPTAIN_COMMAND })}
+          </span>
+        ) : null}
         <span data-last-turn-bubble="you" title={youFit.title}>
           <span className="words" data-last-turn-words="" ref={youRef}>
             {you}

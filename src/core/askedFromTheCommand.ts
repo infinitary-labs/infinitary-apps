@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { THROUGH_THE_COMMAND, type Through } from "@shared/through";
 
 /**
  * Work the captain's own command, `infinitary-axi`, asked for
@@ -10,7 +11,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 const asking = new AsyncLocalStorage<true>();
 
 /** The `through` an event the captain's command caused carries in its data. */
-export const THROUGH_THE_COMMAND = "command";
+export { THROUGH_THE_COMMAND };
 
 /** Runs one request of the captain's command. */
 export function asTheCommand<T>(work: () => T): T {
@@ -20,4 +21,12 @@ export function asTheCommand<T>(work: () => T): T {
 /** Whether the work running now began with a request of the captain's command. */
 export function askedFromTheCommand(): boolean {
   return asking.getStore() === true;
+}
+
+/**
+ * The mark a record the captain writes now carries: `command` while a
+ * request of the captain's command runs, else none (the window).
+ */
+export function throughNow(): Through | undefined {
+  return askedFromTheCommand() ? THROUGH_THE_COMMAND : undefined;
 }

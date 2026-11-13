@@ -19,6 +19,7 @@ import { ENDED_CLOSE_CARD_LABEL } from "@shared/endedCard";
 import { formatTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { hasNotTypingKeys } from "@shared/keyboard";
+import { CAPTAIN_COMMAND } from "@shared/through";
 import {
   type CSSProperties,
   type MouseEvent,
@@ -1176,6 +1177,11 @@ function Message({ message }: { message: CardMessage }) {
               ...(message.contributor ? { label: message.contributor.label } : {}),
               ...(message.clarification ? { clarification: true } : {}),
             })}
+          </span>
+        ) : null}
+        {message.who === "captain" && message.through ? (
+          <span data-thread-through="" style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
+            {m.cardThreadFromCommand({ command: CAPTAIN_COMMAND })}
           </span>
         ) : null}
         {message.notes?.map((note) => (

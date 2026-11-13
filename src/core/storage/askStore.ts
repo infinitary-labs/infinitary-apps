@@ -1,5 +1,6 @@
 import { type AttachmentRef, attachmentRefSchema } from "@shared/attachments";
 import { type LastTurn, type LastTurnReply, lastTurnReplySchema } from "@shared/lastTurn";
+import { THROUGH_THE_COMMAND, type Through } from "@shared/through";
 import {
   type AskDelivery,
   type DeliveryFacts,
@@ -75,6 +76,8 @@ export type AskRecord = {
   answeredAt: number | null;
   /** When the crewmate whose task ended its work was asked once for the answering card. */
   crewmateAskedAt: number | null;
+  /** Sent from the captain's own command, `infinitary-axi`; absent is the window or an older row. */
+  through?: Through;
 };
 
 /** Captain-facing words; model readers keep the original text and its full target detail. */
@@ -102,6 +105,7 @@ type Row = {
   accepted_at: number | null;
   answered_at: number | null;
   crewmate_asked_at: number | null;
+  through?: string | null;
 };
 
 /** The saved reply line back to its shape; anything unreadable is no reply, never a throw. */
@@ -183,6 +187,7 @@ function fromRow(row: Row): AskRecord {
     acceptedAt: row.accepted_at ?? null,
     answeredAt: row.answered_at ?? null,
     crewmateAskedAt: row.crewmate_asked_at ?? null,
+    ...(row.through === THROUGH_THE_COMMAND ? { through: THROUGH_THE_COMMAND } : {}),
   };
 }
 
@@ -218,8 +223,8 @@ export class AskStore {
     const original = captainText !== undefined;
     this.db
       .prepare(
-        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at${original ? ", captain_text" : ""})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
+        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at, through${original ? ", captain_text" : ""})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
       )
       .run(
         ask.id,
@@ -248,6 +253,7 @@ export class AskStore {
         ask.acceptedAt,
         ask.answeredAt,
         ask.crewmateAskedAt,
+        ask.through ?? null,
         ...(original ? [captainText] : []),
       );
     if (captainText !== undefined) {
@@ -397,23 +403,19 @@ export class AskStore {
   lastTurn(): LastTurn | null {
     const [row, before] = this.db
       .prepare(
-        "SELECT text, reply, delivery_facts FROM captain_asks WHERE at <= (SELECT MAX(at) FROM captain_asks) ORDER BY at DESC, rowid DESC LIMIT 2",
+        "SELECT text, reply, delivery_facts, through FROM captain_asks WHERE at <= (SELECT MAX(at) FROM captain_asks) ORDER BY at DESC, rowid DESC LIMIT 2",
       )
-      .all() as Pick<Row, "text" | "reply" | "delivery_facts">[];
+      .all() as Pick<Row, "text" | "reply" | "delivery_facts" | "through">[];
     if (!row) return null;
-    return {
-      you: askReceipt({ text: row.text, deliveryFacts: parseDeliveryFacts(row.delivery_facts) }),
-      reply: replyOf(row.reply),
-      previous: before
-        ? {
-            you: askReceipt({
-              text: before.text,
-              deliveryFacts: parseDeliveryFacts(before.delivery_facts),
-            }),
-            reply: replyOf(before.reply),
-          }
-        : null,
-    };
+    const round = (saved: Pick<Row, "text" | "reply" | "delivery_facts" | "through">) => ({
+      you: askReceipt({
+        text: saved.text,
+        deliveryFacts: parseDeliveryFacts(saved.delivery_facts),
+      }),
+      reply: replyOf(saved.reply),
+      ...(saved.through === THROUGH_THE_COMMAND ? { through: THROUGH_THE_COMMAND } : {}),
+    });
+    return { ...round(row), previous: before ? round(before) : null };
   }
 
   /** Asks whose turn has not closed yet, oldest first. */

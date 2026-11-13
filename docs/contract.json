@@ -993,6 +993,10 @@
                   }
                 ]
               },
+              "through": {
+                "type": "string",
+                "const": "command"
+              },
               "previous": {
                 "anyOf": [
                   {
@@ -1031,6 +1035,10 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "through": {
+                        "type": "string",
+                        "const": "command"
                       }
                     },
                     "required": [
@@ -12376,6 +12384,10 @@
                           "changed"
                         ]
                       }
+                    },
+                    "through": {
+                      "type": "string",
+                      "const": "command"
                     }
                   },
                   "required": [
@@ -12846,6 +12858,10 @@
                       "changed"
                     ]
                   }
+                },
+                "through": {
+                  "type": "string",
+                  "const": "command"
                 }
               },
               "required": [
@@ -13989,6 +14005,10 @@
                           "changed"
                         ]
                       }
+                    },
+                    "through": {
+                      "type": "string",
+                      "const": "command"
                     }
                   },
                   "required": [
@@ -14930,6 +14950,10 @@
                       "changed"
                     ]
                   }
+                },
+                "through": {
+                  "type": "string",
+                  "const": "command"
                 }
               },
               "required": [
@@ -15511,6 +15535,10 @@
                       "changed"
                     ]
                   }
+                },
+                "through": {
+                  "type": "string",
+                  "const": "command"
                 }
               },
               "required": [
@@ -49001,6 +49029,10 @@
                             "changed"
                           ]
                         }
+                      },
+                      "through": {
+                        "type": "string",
+                        "const": "command"
                       }
                     },
                     "required": [
@@ -64063,6 +64095,10 @@
                                 },
                                 "text": {
                                   "type": "string"
+                                },
+                                "through": {
+                                  "type": "string",
+                                  "const": "command"
                                 }
                               },
                               "required": [
@@ -67990,6 +68026,10 @@
               },
               "text": {
                 "type": "string"
+              },
+              "through": {
+                "type": "string",
+                "const": "command"
               }
             },
             "required": [
@@ -69925,6 +69965,10 @@
                       "changed"
                     ]
                   }
+                },
+                "through": {
+                  "type": "string",
+                  "const": "command"
                 }
               },
               "required": [

@@ -3,6 +3,7 @@ import type { CardAnswer, CardDecisionContext } from "@shared/cards";
 import { reportSummary } from "@shared/feed";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
 import { savedTaskTitle } from "@shared/taskTitle";
+import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
 import {
   type AskDelivery,
   type DeliveryEntry,
@@ -568,6 +569,8 @@ export class TaskCapture {
       acceptedAt: null,
       answeredAt: null,
       crewmateAskedAt: null,
+      // A message the captain's own command sent says so (INF-3898 piece 2).
+      ...(throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
     };
     this.writer.asks.insert(record, input.captainText);
     return record;

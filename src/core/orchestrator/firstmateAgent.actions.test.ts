@@ -19,7 +19,9 @@ import {
   toolsOf,
 } from "../../../tests/helpers/firstmateHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { asTheCommand } from "../askedFromTheCommand";
 import { piToolsOf } from "../pi/toolSpec";
+import { CardStore } from "../storage/cardStore";
 import { FIRSTMATE_RECIPIENT, InboxStore, WAKE_COALESCE_MS } from "../storage/inboxStore";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -885,6 +887,65 @@ describe("FirstmateAgent", () => {
       `- task ${key("t1")} (task_id: t1) "Write the ADR": the captain started it from the Task desk panel, 2m ago; a crewmate is on it`,
     ]);
     session.emitTurnEnd("Noted.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
+  it("names infinitary-axi beside the captain's words, choices, clicks and thread lines it sent, and never beside the window's (INF-3898 piece 2)", async () => {
+    const start = Date.parse("2026-11-12T09:00:00Z");
+    vi.setSystemTime(start);
+    const { agent, db, session, supervisor, tasks } = setup({
+      seedTasks: [
+        { id: "t1", title: "Write the ADR", status: "queued", startPolicy: "on-request" },
+        { id: "t2", title: "Explain delivered", status: "idle" },
+      ],
+      seedCards: [crewCard("card-t2-1", "t2", "Delivered means stopped", "<p>a</p>")],
+    });
+    const key = (id: string) => tasks.get(id)?.key;
+    // The captain's command starts a task, replies on a crewmate's card, then picks on a first mate card.
+    asTheCommand(() => supervisor.hostOps.runTaskOp("t1", "start-task"));
+    await endStartTurn(session);
+    const thread = new CardStore(db);
+    asTheCommand(() =>
+      thread.appendMessage({ cardId: "card-t2-1", who: "captain", text: "Which checks ran?" }),
+    );
+    const courseId = supervisor.addFirstmateCard({
+      title: "Pick a course",
+      body: "<p>Plot the new course.</p>",
+      actions: [{ id: "change", label: "Plot new course", default: true }],
+    });
+    asTheCommand(() => supervisor.cardActions.act(courseId, "change"));
+    await tick();
+    const served = session.prompts[1] as string;
+    expect(served).toContain(`Choice on card "Pick a course" (${courseId}), from infinitary-axi.`);
+    const context = decodeContext(served);
+    expect((context.captain_resolutions as string[]).slice(1)).toEqual([
+      `- card ${courseId} (decision) "Pick a course" no task: chose "Plot new course", from infinitary-axi, just now`,
+      expect.stringMatching(
+        new RegExp(
+          `^- task ${key("t1")} \\(task_id: t1\\) "Write the ADR": the captain started it from infinitary-axi, [^;]+; a crewmate is on it$`,
+        ),
+      ),
+    ]);
+    expect(context.thread_activity as string[]).toContainEqual(
+      expect.stringContaining(
+        'last from captain from infinitary-axi just now - "Which checks ran?"',
+      ),
+    );
+    session.emitTurnEnd("Noted.");
+    session.resolveNextPrompt();
+    await tick();
+
+    // Words the command sent say so in the captain's own part; the window's never do.
+    await asTheCommand(() => agent.converse("What is waiting on me?"));
+    expect(session.prompts[2]).toContain("What is waiting on me?\n\n(Sent from infinitary-axi.)");
+    session.emitTurnEnd("Two cards.");
+    session.resolveNextPrompt();
+    await tick();
+    thread.appendMessage({ cardId: "card-t2-1", who: "captain", text: "And the lint?" });
+    await agent.converse("Thanks.");
+    expect(session.prompts[3]).toContain("Thanks.");
+    expect(session.prompts[3]).not.toContain("infinitary-axi");
     session.resolveNextPrompt();
     await tick();
   });

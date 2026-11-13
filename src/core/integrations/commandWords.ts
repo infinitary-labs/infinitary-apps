@@ -1,3 +1,5 @@
+import { CAPTAIN_COMMAND } from "@shared/through";
+
 /**
  * The integrations' command on a crewmate's search path (docs/axi-commands.md,
  * docs/integrations.md): every answer and the prompt line name it from here.
@@ -18,7 +20,14 @@ export const CREWMATE_INTEGRATIONS_LINE = `Integrations reach places outside you
  * with its key - never a task's. Its `note` drops an event into the inbox
  * (docs/integrations.md, "The inbox").
  */
-export const INFINITARY_COMMAND = "infinitary-axi";
+export const INFINITARY_COMMAND = CAPTAIN_COMMAND;
+
+/**
+ * What the first mate's turn says beside the captain's words, choice or
+ * click that came through his command (INF-3898 piece 2), as a panel's
+ * click names its panel.
+ */
+export const FROM_THE_COMMAND = `from ${INFINITARY_COMMAND}`;
 
 /**
  * The inbox's own command before `infinitary-axi`, kept as a second name of

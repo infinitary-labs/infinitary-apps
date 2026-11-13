@@ -13874,6 +13874,35 @@ export function cardThreadWrittenBy(input: { label: string }): string {
   return `Written by ${label}`;
 }
 
+export function cardThreadFromCommand(input: { command: string }): string {
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `من ${command}`;
+    case "de":
+      return `Von ${command}`;
+    case "es":
+      return `Desde ${command}`;
+    case "fr":
+      return `Depuis ${command}`;
+    case "ja":
+      return `${command} から`;
+    case "ko":
+      return `${command}에서`;
+    case "pt-BR":
+      return `De ${command}`;
+    case "zh-Hans":
+      return `来自 ${command}`;
+    case "zh-Hant":
+      return `來自 ${command}`;
+    case "en-XA":
+      return `[Ƒŕöɱ ${command} ~~]`;
+    case "ar-XB":
+      return `\u202eFrom \u202c${command}`;
+  }
+  return `From ${command}`;
+}
+
 export function cardThreadRevisedByAfterClose(input: { label: string }): string {
   const label = input.label;
   switch (currentLanguage()) {
@@ -16994,6 +17023,35 @@ export function shellLastTurnWorking(): string {
       return `\u202eWorking…\u202c`;
   }
   return `Working…`;
+}
+
+export function shellLastTurnFromCommand(input: { command: string }): string {
+  const command = input.command;
+  switch (currentLanguage()) {
+    case "ar":
+      return `من ${command}`;
+    case "de":
+      return `Von ${command}`;
+    case "es":
+      return `Desde ${command}`;
+    case "fr":
+      return `Depuis ${command}`;
+    case "ja":
+      return `${command} から`;
+    case "ko":
+      return `${command}에서`;
+    case "pt-BR":
+      return `De ${command}`;
+    case "zh-Hans":
+      return `来自 ${command}`;
+    case "zh-Hant":
+      return `來自 ${command}`;
+    case "en-XA":
+      return `[Ƒŕöɱ ${command} ~~]`;
+    case "ar-XB":
+      return `\u202eFrom \u202c${command}`;
+  }
+  return `From ${command}`;
 }
 
 export function shellLastTurnPictureOnly(): string {
@@ -22745,6 +22803,7 @@ export const MESSAGES = {
   cardThreadCount,
   cardThreadRevisedBy,
   cardThreadWrittenBy,
+  cardThreadFromCommand,
   cardThreadRevisedByAfterClose,
   cardThreadWrittenByAfterClose,
   cardThreadWrittenAfterClose,
@@ -22846,6 +22905,7 @@ export const MESSAGES = {
   shellPromptTranscribingShort,
   shellPromptReturnToMessage,
   shellLastTurnWorking,
+  shellLastTurnFromCommand,
   shellLastTurnPictureOnly,
   shellConversationHeading,
   shellNextKeysLabel,
@@ -23500,6 +23560,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   cardThreadCount: ["count"],
   cardThreadRevisedBy: ["label"],
   cardThreadWrittenBy: ["label"],
+  cardThreadFromCommand: ["command"],
   cardThreadRevisedByAfterClose: ["label"],
   cardThreadWrittenByAfterClose: ["label"],
   cardThreadWrittenAfterClose: [],
@@ -23601,6 +23662,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   shellPromptTranscribingShort: [],
   shellPromptReturnToMessage: ["key"],
   shellLastTurnWorking: [],
+  shellLastTurnFromCommand: ["command"],
   shellLastTurnPictureOnly: [],
   shellConversationHeading: [],
   shellNextKeysLabel: [],

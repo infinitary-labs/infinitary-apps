@@ -14,6 +14,7 @@ import { PREMIUM_SLOT, SLOTS, type Slot, servedModelKey, servedProviderOf } from
 import { opensPullRequest, type RepoView } from "@shared/repos";
 import { cutText } from "@shared/textCut";
 import { encode } from "@toon-format/toon";
+import { FROM_THE_COMMAND } from "../integrations/commandWords";
 import { PRIVATE_SCOPE } from "../knowledge/access";
 import { contextKnowledge, knowledgeShortlist } from "../knowledge/context";
 import { renderDirections } from "../knowledge/directions";
@@ -290,7 +291,7 @@ export class FirstmateContext {
 
   /** One card the captain resolved: his choice or close, and the answers it carried. */
   private cardResolutionLines(
-    { card: stored, offer, action, resolvedAt, answers }: CardResolution,
+    { card: stored, offer, action, resolvedAt, answers, through }: CardResolution,
     now: number,
   ): string[] {
     const card = offer
@@ -302,7 +303,9 @@ export class FirstmateContext {
       : "no task";
     const label = card.actions.find((entry) => entry.id === action)?.label ?? action;
     const what = action === "close" ? "dismissed" : `chose "${label}"`;
-    const line = `- card ${card.id} (${cardPresentation(card)}) "${card.title}" ${about}: ${what}, ${ageText(now - resolvedAt)}`;
+    // A choice the captain's own command made says so, as a panel's click names its panel.
+    const from = through ? `${FROM_THE_COMMAND}, ` : "";
+    const line = `- card ${card.id} (${cardPresentation(card)}) "${card.title}" ${about}: ${what}, ${from}${ageText(now - resolvedAt)}`;
     // The answers to the body's own questions ride the choice (contract
     // 4.22), indented under it.
     if (!answers?.length) return [line];
@@ -313,15 +316,20 @@ export class FirstmateContext {
   }
 
   /** One click of the captain's on a task card's own buttons, in that button's words. */
-  private taskCardClickLine({ taskId, at, op, panel }: TaskCardClick, now: number): string {
+  private taskCardClickLine(
+    { taskId, at, op, panel, through }: TaskCardClick,
+    now: number,
+  ): string {
     const task = this.options.tasks.get(taskId);
-    // A move a panel made on his click names it, so "task card" never says where it did not happen.
-    const age = panel ? `from the ${panel} panel, ${ageText(now - at)}` : ageText(now - at);
+    // A move a panel made on his click names it, so "task card" never says where it did not happen;
+    // a move his own command made names it the same way.
+    const where = panel ? `from the ${panel} panel` : through ? FROM_THE_COMMAND : undefined;
+    const age = where ? `${where}, ${ageText(now - at)}` : ageText(now - at);
     const what =
       op === "start-again"
         ? `the captain started it again as ${this.options.tasks.graph.replacementOf(taskId) ?? "a new task"} (Start again), ${age}; the old task stays dropped`
         : op === "start-task"
-          ? `the captain started it ${panel ? "" : "from its task card, "}${age}${task?.status === "active" ? "; a crewmate is on it" : ""}`
+          ? `the captain started it ${where ? "" : "from its task card, "}${age}${task?.status === "active" ? "; a crewmate is on it" : ""}`
           : op === "continue-task"
             ? `the captain told its crewmate to carry on (Continue), ${age}`
             : op === "drop-task"
@@ -370,7 +378,7 @@ export class FirstmateContext {
         );
         return `- card ${card.id} "${card.title}" ${about}: ${count} message${
           count === 1 ? "" : "s"
-        }, last from ${last.who} ${ageText(now - last.at)} - "${excerpt}" (${THREAD_OWED_WORDS[owed]})`;
+        }, last from ${last.who}${last.through ? ` ${FROM_THE_COMMAND}` : ""} ${ageText(now - last.at)} - "${excerpt}" (${THREAD_OWED_WORDS[owed]})`;
       }),
     ];
   }

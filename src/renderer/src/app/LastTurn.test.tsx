@@ -48,6 +48,16 @@ function render(
 }
 
 describe("a round of the last turn above the input", () => {
+  // INF-3898 piece 2, the captain's answer: "From infinitary-axi" beside his line in the conversation.
+  it("names infinitary-axi beside words the captain's command sent, and nothing beside the window's", () => {
+    const fromTheCommand = render({ you: "What is waiting?", reply: null, through: "command" });
+    expect(fromTheCommand.you?.words).toBe("What is waiting?");
+    expect(fromTheCommand.html).toMatch(/data-last-turn-through="">From infinitary-axi</);
+    expect(render({ you: "What is waiting?", reply: null }).html).not.toContain(
+      "data-last-turn-through",
+    );
+  });
+
   // INF-2483's plan, the captain's Approve and build: "instead of using dot
   // dot dot, we should simply turn the mark to orange and spin it".
   it("shows the Firstmate working while it is busy with no reply yet, with the spinning mark and the working words", () => {

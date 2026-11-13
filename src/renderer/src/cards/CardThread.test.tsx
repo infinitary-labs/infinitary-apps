@@ -102,6 +102,29 @@ describe("card thread messages", () => {
       "Written by your first mate, after the card closed",
     ]);
   });
+
+  // INF-3898 piece 2, the captain's answer: "From infinitary-axi" beside his line in card threads.
+  it("says From infinitary-axi under a captain's line his command sent, and nothing under the window's", () => {
+    const markup = renderToStaticMarkup(
+      <MessageList
+        messages={[
+          { id: 1, cardId: "card-1", who: "captain", text: "From the window", at: 0 },
+          {
+            id: 2,
+            cardId: "card-1",
+            who: "captain",
+            text: "From my terminal",
+            at: 1,
+            through: "command",
+          },
+        ]}
+      />,
+    );
+    // Each captain line's markup runs from its own row to the next.
+    const [, window, command] = markup.split('data-thread-message="captain"');
+    expect(window).not.toContain("data-thread-through");
+    expect(command).toMatch(/data-thread-through[^>]*>From infinitary-axi</);
+  });
 });
 
 // INF-3071's plan, its second change: the line naming the work the captain's

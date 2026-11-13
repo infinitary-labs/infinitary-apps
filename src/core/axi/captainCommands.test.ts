@@ -80,6 +80,7 @@ const stuck = [
   "axi-background",
   "axi-closing",
   "axi-claude",
+  "axi-mark",
 ] as const;
 
 beforeAll(async () => {
@@ -398,6 +399,47 @@ describe("infinitary-axi", () => {
     expect(said.exitCode).toBe(0);
     expect(answer(said.stdout)).toMatchObject({ sent: "yes" });
     expect(core.services.tasks.capture.lastTurn()?.you).toBe("What is waiting on me?");
+  });
+
+  it("marks your words, thread replies and choices from the command, and never the window's (INF-3898 piece 2)", async () => {
+    // The first mate reads three records besides a task's timeline; each keeps the mark.
+    const cardId = "card-stall-axi-mark";
+    const live = core.services.supervisor.cards.snapshot().find((one) => one.id === cardId);
+    const button = live?.actions[0];
+    if (!button) throw new Error("the stall card has no button");
+    const captainLines = async () => {
+      const thread = (await core.dispatch("inf:cards:thread", [cardId])) as {
+        messages: { who: string; text: string; through?: string }[];
+      };
+      return thread.messages.filter((message) => message.who === "captain");
+    };
+
+    // A reply in the window first, then one from the command: only the command's is marked.
+    await core.dispatch("inf:cards:reply", [cardId, { text: "From the window" }], {
+      kind: "captain",
+    });
+    const replied = await run(["card", "reply", cardId, "From my terminal"]);
+    expect(replied.exitCode).toBe(0);
+    expect(await captainLines()).toEqual([
+      expect.not.objectContaining({ through: expect.anything() }),
+      expect.objectContaining({ text: "From my terminal", through: "command" }),
+    ]);
+
+    // The choice that closes the card is marked on its resolution.
+    expect((await run(["card", "act", cardId, button.id])).exitCode).toBe(0);
+    const resolution = core.services.supervisor.cards
+      .captainResolutionsSince(0, 100)
+      .find((one) => one.card.id === cardId);
+    expect(resolution).toMatchObject({ action: button.id, through: "command" });
+
+    // A message from the command is marked where it is saved and in the window's last turn;
+    // one from the window's input is not.
+    await core.dispatch("inf:converse", [{ text: "From the window's input" }], { kind: "captain" });
+    expect(core.services.tasks.capture.lastTurn()?.through).toBeUndefined();
+    expect((await run(["say", "From my terminal too"])).exitCode).toBe(0);
+    const turn = core.services.tasks.capture.lastTurn();
+    expect(turn).toMatchObject({ you: "From my terminal too", through: "command" });
+    expect(turn?.previous?.through).toBeUndefined();
   });
 
   it("watches a change after its cursor, and answers a cursor from before with reloaded", async () => {

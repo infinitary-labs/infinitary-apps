@@ -13,6 +13,7 @@ import {
 } from "./remoteLogin";
 import { repoDeliverySchema, repoSetupKindSchema } from "./repos";
 import { rigorSchema } from "./rigor";
+import { throughSchema } from "./through";
 import { workPostureSchema } from "./workPosture";
 
 /**
@@ -427,7 +428,12 @@ export const fmEventSchema = z.discriminatedUnion("type", [
    */
   z.object({ type: z.literal("knowledge_changed") }),
   /** The captain submitted a home-input turn (text and/or images). */
-  z.object({ type: z.literal("user_turn"), text: z.string() }),
+  z.object({
+    type: z.literal("user_turn"),
+    text: z.string(),
+    /** Sent from the captain's own command, `infinitary-axi`, not the window. */
+    through: throughSchema.optional(),
+  }),
   /**
    * The Firstmate's reply line to the captain's last message, sent as the
    * turn that read it ends and before its busy signal falls (src/shared/

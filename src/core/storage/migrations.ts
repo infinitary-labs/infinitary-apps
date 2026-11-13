@@ -1360,6 +1360,17 @@ export const MIGRATIONS: readonly Migration[] = [
     );
     addColumn(db, "schedules", "card_id", "TEXT");
   },
+  // INF-3898 piece 2 (docs/axi-commands.md, "Infinitary from your terminal"):
+  // the captain's own command marks what it says and chooses, as it marks
+  // task events. A message, a thread line and a card's choice record
+  // `command` when `infinitary-axi` sent them; every older row and every
+  // window click stays null, unmarked. Their stores are the only writers.
+  // Dropping the three columns reverses it.
+  (db) => {
+    addColumn(db, "captain_asks", "through", "TEXT");
+    addColumn(db, "card_messages", "through", "TEXT");
+    addColumn(db, "cards", "resolved_through", "TEXT");
+  },
 ];
 
 /**

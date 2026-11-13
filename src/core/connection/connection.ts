@@ -556,9 +556,17 @@ const CARD_ANNOTATIONS = contractChange("card-annotations");
 /** Files for the captain on a card (`card-files.md`). */
 const CARD_FILES = contractChange("card-files");
 const LANGUAGE_CHOICE = contractChange("language-choice");
+/** The captain's own command's mark on his thread lines (`from-the-command.md`). */
+const FROM_THE_COMMAND = contractChange("from-the-command");
 
 /** Which added card fields a view's card decoder reads. */
-type CardReads = { updates: boolean; ended: boolean; annotations: boolean; files: boolean };
+type CardReads = {
+  updates: boolean;
+  ended: boolean;
+  annotations: boolean;
+  files: boolean;
+  through: boolean;
+};
 
 /**
  * Keep old desktop strict card decoders working: a snapshot leaves out each
@@ -598,13 +606,17 @@ function cardPushFor(
   const spelled = lookPushFor(entry, spelling, readsLanguage);
   const text =
     taskAllow || !entry.channel.startsWith("inf:cards") ? spelled : frameWithoutTaskAllow(spelled);
-  if ((!sharedCards || !reads.annotations) && THREAD_CHANNELS.has(entry.channel)) {
+  if (
+    (!sharedCards || !reads.annotations || !reads.through) &&
+    THREAD_CHANNELS.has(entry.channel)
+  ) {
     const frame = JSON.parse(text);
     return JSON.stringify({
       ...frame,
       payload: threadLinesFor(frame.payload, {
         sharing: sharedCards,
         annotations: reads.annotations,
+        through: reads.through,
       }),
     });
   }
@@ -1009,6 +1021,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         annotations: listsChange(hello.changes, CARD_ANNOTATIONS),
         // An older desktop reads a card strictly; a phone ignores the field and draws no Save.
         files: hello.system === "ios" || listsChange(hello.changes, CARD_FILES),
+        // A view that does not list the mark, the phone included, gets the line without it.
+        through: listsChange(hello.changes, FROM_THE_COMMAND),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
@@ -1177,10 +1191,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
             channel === "inf:cards:list"
               ? legacyCardSnapshot(value, client.cardReads)
               : THREAD_CHANNELS.has(channel) &&
-                  (!client.sharedCards || !client.cardReads.annotations)
+                  (!client.sharedCards ||
+                    !client.cardReads.annotations ||
+                    !client.cardReads.through)
                 ? threadLinesFor(value, {
                     sharing: client.sharedCards,
                     annotations: client.cardReads.annotations,
+                    through: client.cardReads.through,
                   })
                 : value,
         });
@@ -1216,7 +1233,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         spelling: FIRST_SPELLING,
         appVersion: undefined,
         changes: undefined,
-        cardReads: { updates: false, ended: false, annotations: false, files: false },
+        cardReads: {
+          updates: false,
+          ended: false,
+          annotations: false,
+          files: false,
+          through: false,
+        },
         sharedCards: false,
         taskAllow: false,
         streamed: "none",

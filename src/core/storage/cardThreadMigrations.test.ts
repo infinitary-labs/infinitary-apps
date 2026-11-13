@@ -28,6 +28,9 @@ describe("clearing the answers interim lines kept", () => {
     // The current thread reader also names the later optional notes column;
     // lend it to this fixture without changing the interim-answer repair.
     older.exec("ALTER TABLE card_messages ADD COLUMN notes_json TEXT");
+    // INF-3898 piece 2's command marks, read by today's card store, lent the same way.
+    older.exec("ALTER TABLE card_messages ADD COLUMN through TEXT");
+    older.exec("ALTER TABLE cards ADD COLUMN resolved_through TEXT");
     const before = setup(older);
     seedTask(before.tasks, { id: "t1", title: "Fix the meter", status: "idle" });
     const cards = before.make();

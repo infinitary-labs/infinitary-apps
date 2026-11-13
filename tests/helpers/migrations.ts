@@ -19,6 +19,8 @@ export const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) 
  * optional query indexes over its columns (INF-2061's statement check).
  */
 export const REVERSE_MIGRATION_102 =
+  // INF-3898 piece 2's command mark is newer than every captain_asks shape these tests compare.
+  "ALTER TABLE captain_asks DROP COLUMN through; " +
   // The approved correction source migration is newer than both historical schemas.
   // Undo its private ask column first, preserving the original full-shape assertions.
   "ALTER TABLE captain_asks DROP COLUMN captain_text; DROP INDEX IF EXISTS captain_asks_continues; DROP INDEX IF EXISTS captain_asks_unanswered; ALTER TABLE captain_asks DROP COLUMN followed; ALTER TABLE captain_asks DROP COLUMN continues; ALTER TABLE captain_asks DROP COLUMN answer_card_id; ALTER TABLE captain_asks DROP COLUMN accepted_at; ALTER TABLE captain_asks DROP COLUMN answered_at; ALTER TABLE captain_asks DROP COLUMN crewmate_asked_at;\n";
@@ -119,9 +121,10 @@ export const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
 /** INF-3108's record of the close controls it gave back, undone: its one table. */
 export const REVERSE_CLOSE_CONTROL_RESTORE = "DROP TABLE IF EXISTS card_close_control_restore;\n";
-/** INF-3846's put-off kept on a closed card, undone. */
-export const REVERSE_PUT_OFF =
-  "ALTER TABLE schedules DROP COLUMN card_id;\nDROP INDEX cards_put_off;\nALTER TABLE cards DROP COLUMN put_off_json;\n";
+/** INF-3898 piece 2's command mark on a card's resolution, undone: the `cards` column. */
+export const REVERSE_RESOLVED_THROUGH = "ALTER TABLE cards DROP COLUMN resolved_through;\n";
+/** INF-3846's put-off kept on a closed card, with the later card column undone. */
+export const REVERSE_PUT_OFF = `${REVERSE_RESOLVED_THROUGH}ALTER TABLE schedules DROP COLUMN card_id;\nDROP INDEX cards_put_off;\nALTER TABLE cards DROP COLUMN put_off_json;\n`;
 /** The files for the captain a card holds by reference, with the later card column undone. */
 export const REVERSE_CARD_FILES = `${REVERSE_PUT_OFF}ALTER TABLE cards DROP COLUMN files_json;\n`;
 /** INF-3071's ended card kept on the stack, with the later card columns undone. */

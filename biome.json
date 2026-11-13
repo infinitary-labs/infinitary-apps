@@ -329,6 +329,7 @@
         "!src/core/claude/claudeModelProbe.test.ts",
         "!src/core/claude/claudeRenewProbe.test.ts",
         "!src/core/claude/claudeToolSurface.test.ts",
+        "!src/core/batches/combine.test.ts",
         "!src/core/core.boot.test.ts",
         "!src/core/core.capture.test.ts",
         "!src/core/core.connection.test.ts",

@@ -63,6 +63,18 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
 ].join(" ");
 
 /**
+ * The batch parameter's own words: the answers to a held batch a Claude
+ * crewmate must see are here (docs/forge.md, "Batches of your own").
+ */
+export const BATCH_DECLARATION_DESCRIPTION = [
+  "Answer the held batch of the captain's approved changes in your task's project, from the task repairing it.",
+  "fix true declares your own change the batch's fix: once approved on its merge card it joins the held batch and ends the hold.",
+  "sendBack names each change at fault by its task key, with the reason its crewmate reads: it loses its approval, and the rest combine again with the changes waiting in line.",
+  "evidence says how you accounted for every failed test against every change in the batch.",
+  "Give fix or sendBack, never both. A flake takes neither: run the failed checks again where the project lives and name the flaky test's owner in your report.",
+].join(" ");
+
+/**
  * The declaration parameter's own words (INF-3190): the answer to the
  * project's queue a Claude crewmate must see is here.
  */
@@ -432,6 +444,18 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
           description:
             "Head-bound declaration that this version intentionally has no checks, with workflow evidence and the local gate result. Does not waive a failed, pending or unreadable check.",
         },
+      ),
+    ),
+    batch: Type.Optional(
+      Type.Object(
+        {
+          fix: Type.Optional(Type.Boolean()),
+          sendBack: Type.Optional(
+            Type.Array(Type.Object({ task: Type.String(), reason: Type.String() })),
+          ),
+          evidence: Type.String(),
+        },
+        { description: BATCH_DECLARATION_DESCRIPTION },
       ),
     ),
   }),

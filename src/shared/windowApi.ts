@@ -1,6 +1,7 @@
 import type { AccountView } from "./accounts";
 import type { ChosenFile, DroppedPath } from "./attachments";
 import type { AutomationList, AutomationRule, AutomationSave, AutomationSpec } from "./automation";
+import type { BatchAnswer } from "./batches";
 import type { CardFileSaved } from "./cardFiles";
 import type {
   Card,
@@ -288,6 +289,8 @@ export type FirstmateApi = {
     configure: (repoId: string, changes: RepoPolicyPatch) => Promise<RepoView>;
     /** Resume a paused batch, or send one change back, with a reason (docs/forge.md, "A paused batch"). */
     queueAnswer: (repoId: string, answer: QueueAnswer) => Promise<{ ok: true }>;
+    /** Answer a held batch of the captain's own approved changes: try again, or send changes back. */
+    batchAnswer: (repoId: string, answer: BatchAnswer) => Promise<{ ok: true }>;
     /** The token the project's queue writes with, where its host keeps one (GitLab); null where the queue needs none. */
     queueCredential: (repoId: string) => Promise<QueueCredential | null>;
     /** Create that token where the project lives with your sign-in; it never reaches the app. */

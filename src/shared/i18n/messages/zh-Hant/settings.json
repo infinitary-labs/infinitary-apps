@@ -688,6 +688,32 @@
   "settingsProjectsAutonomyOff": "完成的工作會等你同意。",
   "settingsProjectsAutonomyOn": "通過檢查的工作可以不問你就合併。",
   "settingsProjectsAutonomyPersonal": "就地建置。通過檢查的工作一完成就會寫入。",
+  "settingsProjectsBatchChanges": "要退回的變更",
+  "settingsProjectsBatchHeld": "批次已暫緩",
+  "settingsProjectsBatchHeldChecks": {
+    "plural": "count",
+    "other": "從 {since} 起暫緩：{checks} 未通過，所以有 {count} 項已核准的變更在等待。這段期間你核准的變更會排在它後面。"
+  },
+  "settingsProjectsBatchHeldChecksUnnamed": {
+    "plural": "count",
+    "other": "從 {since} 起暫緩：檢查未通過，所以有 {count} 項已核准的變更在等待。這段期間你核准的變更會排在它後面。"
+  },
+  "settingsProjectsBatchHeldNoWay": "從 {since} 起暫緩：這個專案不允許任何能為每項變更保留一個提交的合併方式。請在專案所在處允許 rebase 合併或合併提交，然後再試一次。",
+  "settingsProjectsBatchHeldRefused": "從 {since} 起暫緩：合併在專案所在處遭到拒絕：{detail}",
+  "settingsProjectsBatchHeldRules": "從 {since} 起暫緩：檢查已通過，但專案所在處有一條規則擋下它，例如必要的審查。等這條規則放行後，它就會自行合併。",
+  "settingsProjectsBatchNeedsChange": "請先選擇要退回的變更。",
+  "settingsProjectsBatchNeedsReason": "請先說明每項所選變更退回的原因。",
+  "settingsProjectsBatchOpen": "開啟 {label}",
+  "settingsProjectsBatchOwn": "你已核准的變更會一起合併：Infinitary 會把它們合成一個批次 pull request，每項變更一個提交，並在檢查通過後合併。",
+  "settingsProjectsBatchReason": "退回「{title}」的原因",
+  "settingsProjectsBatchReasonPlaceholder": "退回的原因",
+  "settingsProjectsBatchRetried": "正在重新合成這個批次。檢查會在新版本上執行。",
+  "settingsProjectsBatchSendBack": "附上原因退回",
+  "settingsProjectsBatchSentBack": {
+    "plural": "count",
+    "other": "已退回 {count} 項變更。批次的其餘部分會重新合成。"
+  },
+  "settingsProjectsBatchTryAgain": "再試一次",
   "settingsProjectsCare": "謹慎度",
   "settingsProjectsCareNone": "無",
   "settingsProjectsCarePersonal": "這裡的內容不經過任何關卡。",
@@ -697,7 +723,7 @@
   "settingsProjectsCostNone": "不設上限",
   "settingsProjectsCostOwn": "自訂金額",
   "settingsProjectsCostTitle": "費用上限",
-  "settingsProjectsDelivery": "在專案所在處以 pull request 提出、以你專案的佇列在合併前測試的批次 pull request 提出，或不經 pull request 本機合併。",
+  "settingsProjectsDelivery": "在專案所在處以 pull request 提出、與你其他已核准的變更一起合成一個批次 pull request 合併，或不經 pull request 本機合併。",
   "settingsProjectsDeliveryTitle": "變更去向",
   "settingsProjectsEmpty": "還沒有專案。在下方加入一個，或告訴你的大副要處理哪個專案。",
   "settingsProjectsFolder": "資料夾",

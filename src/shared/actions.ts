@@ -2,6 +2,7 @@ import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import type { AccountView } from "./accounts";
 import { type AutomationList, type AutomationRule, automationSpecSchema } from "./automation";
+import { type BatchAnswer, batchAnswerSchema } from "./batches";
 import type { DeviceMake } from "./cards";
 import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
@@ -1442,6 +1443,24 @@ const actionLines = {
       (v.answer as QueueAnswer).action === "resume"
         ? "asked the queue to resume"
         : `asked the queue to send #${(v.answer as Extract<QueueAnswer, { action: "send-back" }>).number} back`,
+  },
+  "project-batch-answer": {
+    area: "projects",
+    tier: "own-words",
+    change: "inf:repos:batch-answer",
+    current: "inf:repos:list",
+    value: z.strictObject({ repoId: z.string().min(1), answer: batchAnswerSchema }),
+    line: "Try a project's held batch of the captain's approved changes again, or send changes back from it, each by its taskId with the captain's reason. Only on the captain's own words; head is the held version.",
+    toRequest: (v) => [v.repoId, v.answer],
+    readValue: (c) => ({
+      held: (c as RepoView[])
+        .filter((repo) => repo.batch?.open?.hold)
+        .map(({ id, name, batch }) => ({ id, name, batch: batch?.open })),
+    }),
+    done: (v) =>
+      (v.answer as BatchAnswer).action === "try-again"
+        ? "asked for the held batch to be tried again"
+        : `sent ${(v.answer as Extract<BatchAnswer, { action: "send-back" }>).changes.length} of the held batch's changes back`,
   },
   "cost-limit": {
     area: "intelligence",

@@ -527,7 +527,7 @@ describe("durable pending queue removals", () => {
       host: secondary.target.host,
       owner: secondary.target.owner,
       name: secondary.target.name,
-      number: secondary.target.prNumber,
+      number: PR + 1,
       headSha: OTHER_HEAD,
       branch: secondary.target.branch,
       base: "main",

@@ -340,11 +340,14 @@ export function readyPresentation(
 ): Pick<PresentationPublication, "revision" | "head" | "contentHash"> | undefined {
   const story = record?.revisions.at(-1);
   if (!story) return undefined;
-  const ready = hostedPresentation(story.destination)
-    ? record?.publication?.state === "confirmed"
-      ? record.published
-      : undefined
-    : record?.completion;
+  // A hosted story with no publication of its own was confirmed on its pushed
+  // branch, to be published on its batch's pull request (docs/forge.md, "Batches of your own").
+  const ready =
+    hostedPresentation(story.destination) && (record?.publication || record?.published)
+      ? record?.publication?.state === "confirmed"
+        ? record.published
+        : undefined
+      : record?.completion;
   return ready?.revision === story.revision && ready.head === story.head ? ready : undefined;
 }
 

@@ -699,7 +699,7 @@ function batchCheck(
       return { dot: "idle", value: BATCH_CHECK_WORDS.held, why: BATCH_CHECK_WORDS.heldWhy };
     return { dot: "idle", value: BATCH_CHECK_WORDS.approval };
   }
-  const state = queueKind(item.state, kept?.words ?? "");
+  const state = kept?.kind ? { kind: kept.kind } : queueKind(item.state, kept?.words ?? "");
   const dot =
     state.kind === "passed"
       ? "ok"

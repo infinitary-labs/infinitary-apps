@@ -58,6 +58,20 @@ type StubPull = {
   body?: string;
   merged?: boolean;
   closed?: boolean;
+  /** The check runs on this change's head, where they are not every head's (`setChecks`). */
+  checks?: StubCheckRun[];
+  /** The head `checks` finished on: a newer head's checks start again. */
+  checksHead?: string;
+};
+
+/** A pull request the app opened here (`POST /pulls`), as GitHub holds it now. */
+export type StubOpenedPull = {
+  number: number;
+  branch: string;
+  title: string;
+  body: string;
+  merged: boolean;
+  closed: boolean;
 };
 
 export type StubDispatch = {
@@ -243,6 +257,25 @@ export type GitHubStub = {
   onMergeRequest: (apply: () => void) => void;
   /** Move a local stand-in's main ref when GitHub accepts a put-in. */
   onPutIn: (apply: (sha: string) => void) => void;
+  /** Every pull request the app opened here, in the order opened, as GitHub holds each now. */
+  pulls: () => StubOpenedPull[];
+  /**
+   * The check runs on the head of each pull request the app opens from now
+   * on, in place of every head's (`setChecks`): a batch pull request whose
+   * checks have yet to finish, while each change's own branch already passed.
+   */
+  setOpenedChecks: (runs: StubCheckRun[]) => void;
+  /**
+   * The check runs on the head pull request N is at now, as its workflows
+   * finish or fail; a head pushed later starts again from `setOpenedChecks`.
+   */
+  setPullChecks: (number: number, runs: StubCheckRun[]) => void;
+  /** The merges the project's settings allow; all three until set, as on a new GitHub project. */
+  setMergeButtons: (buttons: { squash: boolean; merge: boolean; rebase: boolean }) => void;
+  /** Every branch the app deleted here (`DELETE /git/refs/heads/...`), in order. */
+  deletedBranches: () => string[];
+  /** Drop a local stand-in's branch when GitHub deletes it. */
+  onBranchDelete: (apply: (branch: string) => void) => void;
   /**
    * Which heads GitHub refuses to merge for conflicting with newer work: it
    * answers the merge request 405, as GitHub does. Its mergeability read
@@ -307,6 +340,8 @@ export async function startGitHubStub(
   let anyPull: StubPull | null = null;
   const opened = new Map<string, StubPull>();
   const queued: StubPull[] = [];
+  /** The pull requests the app opened, in order; a later one may reuse an earlier one's branch. */
+  const appOpened: StubPull[] = [];
   // Crew stories, queue approvals and revocations share issue comments, read
   // through GitHub's API before the app writes its waiting status.
   const issueComments = new Map<
@@ -359,6 +394,10 @@ export async function startGitHubStub(
   let headOf: ((branch: string) => string) | null = null;
   let onMergeRequest: () => void = () => {};
   let onPutIn: (sha: string) => void = () => {};
+  let onBranchDelete: (branch: string) => void = () => {};
+  const deletedBranches: string[] = [];
+  let openedChecks: StubCheckRun[] | undefined;
+  let mergeButtons = { squash: true, merge: true, rebase: true };
   let priorPullRequestWorkflows = false;
   let conflicted: (head: string) => boolean = () => false;
   const knownConflicts = new Set<string>();
@@ -375,9 +414,20 @@ export async function startGitHubStub(
       req.on("end", () => resolve(Buffer.concat(chunks)));
     });
 
-  /** A change's head now: its branch's commit where the test reads one. */
-  const headOfPull = (pull: StubPull): string | undefined =>
-    (pull.branch && headOf ? headOf(pull.branch) : undefined) ?? pull.headSha;
+  /**
+   * A change's head now: its branch's commit where the test reads one. A
+   * merged change whose branch is gone keeps the head it merged at, as
+   * GitHub's pull request does.
+   */
+  const headOfPull = (pull: StubPull): string | undefined => {
+    if (!pull.branch || !headOf) return pull.headSha;
+    try {
+      return headOf(pull.branch) ?? pull.headSha;
+    } catch (caught) {
+      if (pull.merged && pull.headSha) return pull.headSha;
+      throw caught;
+    }
+  };
 
   const pullJson = (pull: StubPull, owner: string, name: string) => ({
     number: pull.number,
@@ -838,7 +888,19 @@ export async function startGitHubStub(
             private: project?.private ?? true,
             visibility: (project?.private ?? true) ? "private" : "public",
             permissions: { push: true },
+            allow_squash_merge: mergeButtons.squash,
+            allow_merge_commit: mergeButtons.merge,
+            allow_rebase_merge: mergeButtons.rebase,
           });
+          return;
+        }
+        const deletedRef = method === "DELETE" ? /^\/git\/refs\/heads\/(.+)$/.exec(rest) : null;
+        if (deletedRef) {
+          const branch = decodeURIComponent(deletedRef[1] ?? "");
+          deletedBranches.push(branch);
+          onBranchDelete(branch);
+          res.writeHead(204);
+          res.end();
           return;
         }
         if (method === "GET" && rest.startsWith("/git/ref/heads/")) {
@@ -919,6 +981,8 @@ export async function startGitHubStub(
           }
           const pull: StubPull = { number: nextNumber++, branch, title: body.title ?? "" };
           if (body.body !== undefined) pull.body = body.body;
+          if (openedChecks) pull.checks = openedChecks;
+          appOpened.push(pull);
           opened.set(branch, pull);
           send(201, pullJson(pull, owner, name));
           return;
@@ -959,7 +1023,20 @@ export async function startGitHubStub(
           return;
         }
         if (method === "GET" && /^\/commits\/[^/]+\/check-runs$/.test(rest)) {
-          const listed = checkRuns.map(({ run, ...check }) =>
+          const sha = decodeURIComponent(rest.split("/")[2] ?? "");
+          // A change that carries its own checks answers them at its own head.
+          const own = [...opened.values()].find((pull) => {
+            if (!pull.checks || pull.merged || pull.closed) return false;
+            try {
+              return headOfPull(pull) === sha;
+            } catch {
+              return false;
+            }
+          });
+          // Checks that finished on an earlier head say nothing of this one: its own start again.
+          const moved = own?.checksHead !== undefined && own.checksHead !== sha;
+          const runs = own ? (moved ? (openedChecks ?? checkRuns) : own.checks) : checkRuns;
+          const listed = (runs ?? checkRuns).map(({ run, ...check }) =>
             run === undefined ? check : { ...check, check_suite: { id: run } },
           );
           send(200, { total_count: listed.length, check_runs: listed });
@@ -1174,6 +1251,7 @@ export async function startGitHubStub(
             message: body.commit_message ?? "",
           });
           pull.merged = true;
+          pull.headSha = body.sha;
           onPutIn(body.sha);
           send(200, { merged: true, sha: body.sha });
           return;
@@ -1334,6 +1412,32 @@ export async function startGitHubStub(
     },
     onPutIn: (apply) => {
       onPutIn = apply;
+    },
+    pulls: () =>
+      appOpened.map((pull) => ({
+        number: pull.number,
+        branch: pull.branch ?? "",
+        title: pull.title,
+        body: pull.body ?? "",
+        merged: pull.merged === true,
+        closed: pull.closed === true,
+      })),
+    setOpenedChecks: (runs) => {
+      openedChecks = runs;
+    },
+    setPullChecks: (number, runs) => {
+      const pull = appOpened.find((open) => open.number === number);
+      if (!pull) throw new Error(`the app opened no pull request #${number}`);
+      pull.checks = runs;
+      const head = headOfPull(pull);
+      if (head) pull.checksHead = head;
+    },
+    setMergeButtons: (buttons) => {
+      mergeButtons = buttons;
+    },
+    deletedBranches: () => [...deletedBranches],
+    onBranchDelete: (apply) => {
+      onBranchDelete = apply;
     },
     conflicts: (next) => {
       conflicted = next;

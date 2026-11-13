@@ -1502,6 +1502,33 @@ describe("a review's click on a queue-pr project (docs/forge.md, \"A project's q
     expect(starts).toEqual(["form"]);
   });
 
+  // Intent: the captain's answer on the plan for batches of their own, for a pull request
+  // someone else opened in such a project: it merges "As its own pull request through merge
+  // review, so the host shows it merged".
+  it("merges at the click, marking no queue status, where the project has no team queue and gets batches of the person's own", async () => {
+    const { service, forge, repos, tasks, task, host, prepare } = await onGitHub({
+      delivery_ask: "queue-pr",
+    });
+    if (!task.repoId) throw new Error("the task has no project");
+    // The project's default branch was read and carries no file of a team queue.
+    repos.recordQueue(task.repoId, { workflows: [] });
+    host.pull = openPull({ branch: "their/reading" });
+    const marked: string[] = [];
+    forge.markQueued = async (sha) => {
+      marked.push(sha);
+      return {};
+    };
+    forge.atHead[HEAD] = [{ name: "linux-checks", state: "success" }];
+    const review = await prepare();
+    expect(tasks.get(task.id)?.delivery?.checkTarget).toMatchObject({ number: 23 });
+    expect(await service.reviews.mergeReview(task.id, review.id)).toMatchObject({
+      ok: true,
+      receipt: { head: HEAD },
+    });
+    expect(marked).toEqual([]);
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
+  });
+
   it("refuses in words when the host cannot mark a version for the queue", async () => {
     const { service, review, putIns } = await queuedReview();
     expect(await service.reviews.mergeReview("ab12cd34", review.id)).toEqual({

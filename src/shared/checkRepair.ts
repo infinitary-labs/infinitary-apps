@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type BatchDeclaration, batchDeclarationSchema } from "./batches";
 
 /** Agent-declared diagnosis; the host never infers ownership from report prose. */
 export type CheckDiagnosis = {
@@ -208,6 +209,13 @@ export type CheckChangeInput = {
    * captain's click on its card sends it.
    */
   skipRules?: { headSha: string; method: "squash" };
+  /**
+   * An answer to the held batch of approved changes in the task's project
+   * (docs/forge.md, "Batches of your own"), from the task repairing it:
+   * this task's own change is the batch's fix, or changes are sent back,
+   * each named by its task and with its reason.
+   */
+  batch?: BatchDeclaration;
 };
 
 /**
@@ -317,6 +325,7 @@ export const checkChangeInputSchema = z.object({
     .object({ headSha: z.string(), evidence: z.string(), localGate: z.string() })
     .optional(),
   skipRules: z.object({ headSha: z.string(), method: z.literal("squash") }).optional(),
+  batch: batchDeclarationSchema.optional(),
   diagnosis: z
     .object({
       headSha: z.string(),

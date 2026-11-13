@@ -159,8 +159,10 @@ export const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** The contribution route, undone before reconstructing an older project record. */
-export const REVERSE_PROJECT_CONTRIBUTIONS = "ALTER TABLE repos DROP COLUMN contribution_json;\n";
+/** A project's batch of its own, undone: the newest project column. */
+export const REVERSE_PROJECT_BATCH = "ALTER TABLE repos DROP COLUMN batch_json;\n";
+/** The contribution route, undone before reconstructing an older project record, after the later batch column. */
+export const REVERSE_PROJECT_CONTRIBUTIONS = `${REVERSE_PROJECT_BATCH}ALTER TABLE repos DROP COLUMN contribution_json;\n`;
 /** The later project columns, undone before an older project migration: contribution routing and queue facts. */
 export const REVERSE_PROJECT_QUEUE = `${REVERSE_PROJECT_CONTRIBUTIONS}ALTER TABLE repos DROP COLUMN queue_pause_json; ALTER TABLE repos DROP COLUMN queue_offered; ALTER TABLE repos DROP COLUMN queue_pending_at; ALTER TABLE repos DROP COLUMN queue_workflows_json; ALTER TABLE repos DROP COLUMN queue_answered_at;\n`;
 /** Reversing Runs on also removes the later project requirements, scope and queue columns. */

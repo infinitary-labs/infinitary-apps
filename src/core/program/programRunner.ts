@@ -8,7 +8,7 @@ import type { HostChildProcess, HostChildSpawner } from "../host";
 import type { CrewSupervisorOptions, FirstmateHooks } from "../orchestrator/crewSupervisorOptions";
 import type { TaskIntake } from "../orchestrator/intake";
 import { parseSpawnIntent, renderIntentBrief, type SpawnIntent } from "../orchestrator/intentBrief";
-import { queueMerges } from "../orchestrator/projectQueue";
+import { queueWay } from "../orchestrator/projectQueue";
 import type { SettleOwners } from "../orchestrator/settleOwners";
 import type { TypedWake } from "../orchestrator/wakes";
 import { handOffShape, withDeliverable, workShape } from "../orchestrator/workShape";
@@ -730,7 +730,7 @@ export class CrewPrograms {
         placement.delivery,
         undefined,
         undefined,
-        queueMerges(placement.repoId ? this.options.repos.get(placement.repoId) : undefined),
+        queueWay(placement.repoId ? this.options.repos.get(placement.repoId) : undefined),
       ),
       intent,
       repoId: placement.repoId,

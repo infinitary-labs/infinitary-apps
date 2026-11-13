@@ -708,6 +708,7 @@ public enum PhoneMessages {
     public static func `keptGuidance`() -> String { PhoneWords.format("keptGuidance", []) }
     public static func `keptProtected`(`place`: String) -> String { PhoneWords.format("keptProtected", [`place`]) }
     public static func `keptQueue`() -> String { PhoneWords.format("keptQueue", []) }
+    public static func `keptQueueOwn`() -> String { PhoneWords.format("keptQueueOwn", []) }
     public static func `keptQueueOwned`() -> String { PhoneWords.format("keptQueueOwned", []) }
     public static func `keptRefused`(`place`: String) -> String { PhoneWords.format("keptRefused", [`place`]) }
     public static func `keptRepair`() -> String { PhoneWords.format("keptRepair", []) }
@@ -2562,6 +2563,23 @@ public enum PhoneMessages {
     public static func `settingsProjectsAutonomyOff`() -> String { PhoneWords.format("settingsProjectsAutonomyOff", []) }
     public static func `settingsProjectsAutonomyOn`() -> String { PhoneWords.format("settingsProjectsAutonomyOn", []) }
     public static func `settingsProjectsAutonomyPersonal`() -> String { PhoneWords.format("settingsProjectsAutonomyPersonal", []) }
+    public static func `settingsProjectsBatchChanges`() -> String { PhoneWords.format("settingsProjectsBatchChanges", []) }
+    public static func `settingsProjectsBatchHeld`() -> String { PhoneWords.format("settingsProjectsBatchHeld", []) }
+    public static func `settingsProjectsBatchHeldChecks`(`checks`: String, `count`: Int, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldChecks", [`checks`, `count`, `since`]) }
+    public static func `settingsProjectsBatchHeldChecksUnnamed`(`count`: Int, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldChecksUnnamed", [`count`, `since`]) }
+    public static func `settingsProjectsBatchHeldNoWay`(`since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldNoWay", [`since`]) }
+    public static func `settingsProjectsBatchHeldRefused`(`detail`: String, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldRefused", [`detail`, `since`]) }
+    public static func `settingsProjectsBatchHeldRules`(`since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldRules", [`since`]) }
+    public static func `settingsProjectsBatchNeedsChange`() -> String { PhoneWords.format("settingsProjectsBatchNeedsChange", []) }
+    public static func `settingsProjectsBatchNeedsReason`() -> String { PhoneWords.format("settingsProjectsBatchNeedsReason", []) }
+    public static func `settingsProjectsBatchOpen`(`label`: String) -> String { PhoneWords.format("settingsProjectsBatchOpen", [`label`]) }
+    public static func `settingsProjectsBatchOwn`() -> String { PhoneWords.format("settingsProjectsBatchOwn", []) }
+    public static func `settingsProjectsBatchReason`(`title`: String) -> String { PhoneWords.format("settingsProjectsBatchReason", [`title`]) }
+    public static func `settingsProjectsBatchReasonPlaceholder`() -> String { PhoneWords.format("settingsProjectsBatchReasonPlaceholder", []) }
+    public static func `settingsProjectsBatchRetried`() -> String { PhoneWords.format("settingsProjectsBatchRetried", []) }
+    public static func `settingsProjectsBatchSendBack`() -> String { PhoneWords.format("settingsProjectsBatchSendBack", []) }
+    public static func `settingsProjectsBatchSentBack`(`count`: Int) -> String { PhoneWords.format("settingsProjectsBatchSentBack", [`count`]) }
+    public static func `settingsProjectsBatchTryAgain`() -> String { PhoneWords.format("settingsProjectsBatchTryAgain", []) }
     public static func `settingsProjectsCare`() -> String { PhoneWords.format("settingsProjectsCare", []) }
     public static func `settingsProjectsCareNone`() -> String { PhoneWords.format("settingsProjectsCareNone", []) }
     public static func `settingsProjectsCarePersonal`() -> String { PhoneWords.format("settingsProjectsCarePersonal", []) }
@@ -3892,6 +3910,7 @@ extension PhoneWords {
         "keptGuidance": [],
         "keptProtected": ["place"],
         "keptQueue": [],
+        "keptQueueOwn": [],
         "keptQueueOwned": [],
         "keptRefused": ["place"],
         "keptRepair": [],
@@ -5746,6 +5765,23 @@ extension PhoneWords {
         "settingsProjectsAutonomyOff": [],
         "settingsProjectsAutonomyOn": [],
         "settingsProjectsAutonomyPersonal": [],
+        "settingsProjectsBatchChanges": [],
+        "settingsProjectsBatchHeld": [],
+        "settingsProjectsBatchHeldChecks": ["checks", "count", "since"],
+        "settingsProjectsBatchHeldChecksUnnamed": ["count", "since"],
+        "settingsProjectsBatchHeldNoWay": ["since"],
+        "settingsProjectsBatchHeldRefused": ["detail", "since"],
+        "settingsProjectsBatchHeldRules": ["since"],
+        "settingsProjectsBatchNeedsChange": [],
+        "settingsProjectsBatchNeedsReason": [],
+        "settingsProjectsBatchOpen": ["label"],
+        "settingsProjectsBatchOwn": [],
+        "settingsProjectsBatchReason": ["title"],
+        "settingsProjectsBatchReasonPlaceholder": [],
+        "settingsProjectsBatchRetried": [],
+        "settingsProjectsBatchSendBack": [],
+        "settingsProjectsBatchSentBack": ["count"],
+        "settingsProjectsBatchTryAgain": [],
         "settingsProjectsCare": [],
         "settingsProjectsCareNone": [],
         "settingsProjectsCarePersonal": [],
@@ -6456,6 +6492,9 @@ extension PhoneWords {
         "settingsDevicesWayCount": "count",
         "settingsGeneralTasksPurged": "count",
         "settingsIntegrationsActionCount": "count",
+        "settingsProjectsBatchHeldChecks": "count",
+        "settingsProjectsBatchHeldChecksUnnamed": "count",
+        "settingsProjectsBatchSentBack": "count",
         "settingsProjectsPauseSummary": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",

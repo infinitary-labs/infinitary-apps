@@ -8,6 +8,7 @@
   "keptGuidance": "Ainda não é possível mesclar: o tripulante ainda não disse se suas palavras mais recentes mudam o trabalho que você aprovou. Sua mesclagem está guardada e acontece assim que ele disser que não mudam.",
   "keptProtected": "Ainda não é possível mesclar: o {place} a retém por uma revisão obrigatória ou outra regra do branch principal. Sua mesclagem está guardada e acontece assim que o {place} permitir.",
   "keptQueue": "Aguardando a verificação em lote: a fila do seu projeto está testando esta versão com outros trabalhos aprovados. Sua mesclagem está guardada. O app vai mesclá-la depois que a fila do seu projeto a aprovar.",
+  "keptQueueOwn": "Aguardando a verificação em lote: esta versão é mesclada com suas outras alterações aprovadas, como uma única solicitação de pull em lote. Sua mesclagem está guardada. O app mescla o lote depois que as verificações passarem.",
   "keptQueueOwned": "Aguardando a verificação em lote: a fila do seu projeto está testando esta versão com outros trabalhos aprovados. Sua mesclagem está guardada. A fila do seu projeto vai mesclá-la depois que as verificações passarem.",
   "keptRefused": "Ainda não é possível mesclar: o {place} recusou. Sua mesclagem está guardada e acontece de novo assim que o tripulante corrigir a causa.",
   "keptRepair": "Ainda não é possível mesclar: ela mudou depois do cartão que você aprovou. Sua mesclagem está guardada e acontece assim que o tripulante mostrar que o trabalho continua sendo o que você aprovou.",

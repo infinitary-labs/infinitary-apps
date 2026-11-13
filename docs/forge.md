@@ -574,6 +574,7 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
 `check_change` reads the newest change through the forge and returns a `facts` JSON object: the change's id and base, the version, whether it moved since the recorded reading, mergeability as the host reports it, and each check's name, state, run, workflow and event where available.
 It takes the change's id (`change`) and refuses another task's; a task reads only its own change (INF-1868 piece 2, INF-1873).
 A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a check whose run carries an event stays only when that event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`ownChecksOf` in `src/core/forge/forge.ts`); a check with no event, such as a commit status, stays as read, and a branch's own checks, read with no number, keep every run at their version.
+A batch's pull request also keeps the runs its own push started (`push`), because the app itself pushed that branch: a project that checks every pushed branch starts no other run for a batch ("Batches of your own").
 When a reading of the task's own pull request finds a check red, the same reading asks the host for the default branch's own checks (`Forge.branchChecks`) and records that branch's newest run of each failed check beside the reading - its version, when, and each check's state there (`TaskDelivery.mainChecks`, `facts.main`, `ChangeChecks.main`; INF-1915 fix 1).
 That is evidence about the failure's cause for the crewmate's diagnosis and the merge card, never a merge input: the merge boundary does not read it, a default branch that fails the same check passes nothing, and a selected pull request gets none.
 The merge card's checks hold does read it (`docs/delivery-rigor.md`, "Check facts and declarations"): when that branch's newest run of every failed check at the offered version failed too, the card goes up at once, says so under its status line and offers Merge anyway, so the crewmate spends no rerun and asks for no reopening; the merge is still the captain's click.
@@ -711,13 +712,102 @@ No real merge past the rules has been attempted; the check is the captain's, on 
 Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rules ...") has a scripted crewmate prepare an adopted release pull request held by a review rule and a failed check, reads the rules and the check off the card, finds nothing sent before the captain's key and one asynchronous merge with `bypass_rules` after it, and refuses the same review on a revised card.
 `mergeReviews.test.ts` holds each refusal word for word, the review marked sent before the request, and every outcome of the one send: merged, refused, unknown, a lost answer read back as merged, and a second click that sends nothing.
 
+## Batches of your own
+
+A project on batched pull requests that carries no file of a team queue merges each person's approved changes in batches of their own (INF-3759 piece 1; `src/core/batches/`).
+The app combines them at home into one batch pull request per project, one commit for each change, and merges it once its checks pass.
+Nothing is written into the project for it: no workflow, status, label or issue.
+The typed fact that chooses it is the workflow files that mention `infinitary/queue` (`ownsBatches`, `src/shared/repos.ts`).
+A project read with none gets batches of its own, and one that carries such a file keeps the team queue ("A project's queue" below) until the files are removed.
+A project whose files were never read is unknown, never guessed: the app reads them once before a change's merge decides (`ChangeContext.resolveOwnBatch`), and the change keeps the team queue's path while that read fails.
+It works wherever the forge seam has a host with pull requests and checks: GitHub, GitHub on a team's own server, gitlab.com and GitLab on a team's own server.
+
+A change is a pushed branch with its saved story and no pull request of its own.
+`open_change` confirms the story on the pushed branch and opens nothing (`BATCH_OPEN_WORDS`, `ChangePublication`).
+A story revised at a version already in line or in a batch keeps its change in its place: the entry takes the story's title and commit words (`Batches.revise`, `reworded`), and the batch's pull request is described again from the story as it reads now.
+A batch whose member's title or commit words changed is combined again on the same pull request, with the same changes in the same order, so that commit says them and the batch's checks run again; a revision that changes neither leaves the batch at its version, with any hold it carries.
+A story confirmed at another version takes the earlier version out of the line and the batch, as an approval that ends does.
+`check_change` reads the checks the project runs on that branch by its commit, with no pull request to name (`ChangeContext.pushedBranch`, `Forge.branchHead`; on GitLab, the commit's pipelines alone), and the merge card goes up on green as any other.
+A branch whose project runs no checks on it is declared with `check_change`'s `absentChecks`, as for a pull request.
+The merge click keeps the captain's approval at that version and puts the change in line (`ChangeMerge.mergeInBatch`): it reads the branch's checks, range, title, review and story as any merge does, and sends nothing to merge.
+A change that still has a pull request of its own joins the same way, and that pull request is closed with a note linking the batch once the batch merges (`Forge.closeWithNote`); one stacked on another branch joins only once that branch's work is already in.
+The kept approval then waits on `queue`, and each later run reads the change's place from the app's own record: in line, in a batch, left out, the only change of a failed batch, or merged.
+The merge card's Batch check state and the check reading say that place in words (`BatchStatus`, `BATCH_STATUS_WORDS`); no status where the project lives carries it.
+
+`Batches` (`src/core/batches/batches.ts`) is the one writer of a project's line and its one open batch, kept on the project's row (`RepoRegistry.recordBatch`) and shown as `batch` on the project's view.
+`line.ts` holds the rules as pure steps over that record, and `combine.ts` the git work.
+A batch forms when the line holds a change and no batch of this home's is open (`forms`), and takes the whole line in approval order.
+The order is the approvals' own: each change stands in line at the time its kept approval was given (`MergeGuard.approvedAt`), never at the time its merge run reached the line.
+A change reaches the line only once its merge run has read its branch where the project lives, and a batch forms from the changes that have reached it.
+So with no batch open, a change approved a few seconds after another can reach the line first, form a batch alone and merge ahead of it, and where the two clash the earlier-approved one is then the one left out.
+The combine fetches the default branch and each change's pushed branch into the project's folder and writes one commit per change on top with git's plumbing alone (`merge-tree --write-tree`, `commit-tree`), so no file and no branch of the folder moves.
+Each commit carries the change's checked title as its subject and, as its body, its story's What changed with the footers the active naming runbook has a commit carry (`presentationCommitMessage`), under the name the change's own last commit carries.
+A change is left out with its reason, and the rest go on, when its branch is no longer at the approved version, it no longer combines, it changes nothing, or it builds on a branch whose work is not in (`LEFT_OUT_WORDS`); its crewmate is told and shows a new version.
+Each fetch and the push wait at most `REMOTE_TIMEOUT_MS` on the place the project lives, because every writer of the project's batch waits behind them.
+A call that limit ends fails the pass, so the next one reads again, and a change is never left out for a branch that could not be read in time.
+The combined version is pushed with a lease to a branch the app owns, `infinitary-batch/<id>` (`BATCH_BRANCH_PREFIX`), and opened as one pull request with the captain's sign-in.
+A batch of one carries its change's own title and story, so it reads as that change's pull request would.
+A batch of several is titled in the app's plain words, `merge N approved changes`, in the form the active naming runbook gives a name the app writes itself (`batchTitle`; `chore: merge N approved changes` under the built-in runbook), and its description holds each change's story under its title (`ChangePresentations.batchRegion`).
+When its members change, the same pull request takes the new version, and its title and description are rewritten at the version just read.
+Both hosts refuse a rewrite of a pull request that moved since that read, so a refused one is sent again on the next pass (`Batches.describe`).
+A story that cannot be written into the description, such as one whose picture could not be sent, never keeps the batch from opening: the pull request opens or is rewritten without it, Activity names the missing story once for that version of its change (`BATCH_WORDS.noStory`), and each pass writes the description again until every story is in it.
+
+The host's own reading decides what happens next, on each pass of the tick and after each change of the line (`Batches.follow`).
+A project's record has one writer at a time: a pass keeps the record it read through its work where the project lives, so an approval, a withdrawal and a declared fix each take their turn behind the pass at work, and none is saved over (`Batches.write`).
+Checks all passed or skipped, with the host reading the pull request as mergeable, merge it; a reading where no check ran, none at all or only skipped ones, counts as passed only where every member's version was declared to run none.
+On GitHub the batch's checks are the runs its pull request and the push of its own branch started, so a project can check a batch by either, telling it by the branch's `infinitary-batch/` prefix (`ownChecksOf`).
+A pull request the host reads as behind or conflicting is combined again onto the default branch as it is now.
+The merge keeps one commit per change (`mergeWayFor`, `src/shared/batches.ts`).
+A batch of one merges as that change's pull request does, by squash, where the project allows it.
+A batch of several takes a rebase merge where allowed and a merge commit otherwise; on GitLab that is a merge without squash, which keeps every commit under each of its merge methods.
+The merges a project allows are read where it lives (`Forge.mergeWays`): GitHub's merge buttons narrowed by the default branch's rules (`waysUnderRules`, `src/core/forge/mergeWays.ts`), and GitLab's squash setting.
+A project that allows only squash merges is not offered batched pull requests: the choice is refused with its reason, and Settings says it under "Where changes go" (`SQUASH_ONLY_WORDS`).
+After the merge the app deletes the batch branch and reads each member's own commit on the default branch (`landedCommits`): the commits as written where the merge kept them, or the rewritten ones matched by title after a rebase merge.
+Each member gets a receipt, its task's kept merge reads it and the task closes as merged, naming its own commit; a commit that could not be read stays absent, never guessed.
+
+Only approved work merges.
+An approval that ends takes its change out of the line and the open batch, which is combined again without it (`Batches.withdraw`), and each pass and the last look before a merge drop a member whose approval no longer stands at its version.
+A batch whose every member left takes the line's changes on the same pull request, or with an empty line is closed and its branch deleted.
+The batch branch is the app's own.
+A pull request can trail its pushed branch for a moment, so a pass that reads the pull request at an older version reads the branch itself, and waits while the branch is where the app pushed it.
+A branch at a version the record never kept, such as a push whose record was lost in a crash or a commit someone else pushed there, is combined over with a lease on the version just read, so nothing but an approved change merges through it.
+The record is local to this home: a batch waits while the app is closed, and nothing merges it meanwhile.
+The first pass after a start reconciles each open batch from the host: a pull request merged meanwhile is recorded with its receipts, one closed without a merge puts its changes back in line, and a branch pushed with no pull request yet is read before one is opened.
+Another person's pull request is untouched: one the captain reviews merges as its own pull request through the merge review ("A requested merge").
+It merges at the captain's click and waits on no batch check, since a project with no team queue has nothing to answer one (`ChangeMerge.queued`).
+
+Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` (real git against a bare repository) and `batches.test.ts`; `src/shared/batches.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub and `tests/e2e/gitlab-own-batches.spec.ts` on GitLab.
+
+### A held batch
+
+A batch holds when one of its checks fails, when the project allows no merge that keeps its commits, or when the host refuses the merge (`BatchHold`, reasons `checks` and `merge-way`).
+It also holds, with the reason `rules`, when its checks passed and the host still reads its pull request as blocked by a rule of the default branch, such as a required review or signed commits.
+The app sends no merge against that reading, says so once in the feed, on each change's merge card and in Settings, and wakes no repair; the hold ends by itself on the pass that reads the pull request as mergeable.
+The commits the app combines carry no signature, so under a rule that requires signed commits every batch holds, of one or of several, until that rule is lifted; choosing batched pull requests does not read that rule, so such a project is one to leave on pull requests.
+Nothing in it merges, and changes approved meanwhile wait in line behind it.
+The app runs no check again and files no issue, label or claim.
+A batch of one that fails wakes its own crewmate through the failed-check wake like any failed check, and its merge reads that the checks of its batch failed.
+At a version the captain's approval still covers, that wake and a merge card's refusal give the repair's route alone, a new version declared with `conflictRepair`, and never the team queue's answered verdict (`coveredNextStep`, `docs/delivery-rigor.md` "No second card for an approved version").
+A batch of several reaches the first mate once for each held version, as the `batch-held` wake (`BATCH_HELD_OPENING`, `src/core/orchestrator/noticeWakes.ts`).
+The first mate starts one repair task with the `batch-repair` skill and no card, unless a task already repairs that batch (`resources/runbooks/queue/skills/batch-repair`).
+The repair accounts for every failed test against every change in the batch, then answers once with `check_change`'s `batch`.
+`sendBack` names each change at fault by its task key, with the reason its crewmate reads: the change loses its approval, its crewmate is told, and the rest combine again with the changes that waited in line.
+`fix` declares the repair's own change the batch's fix: once approved on its own merge card it joins the held batch and ends the hold, while the rest of the line keeps waiting.
+For a flake, the repair runs the failed checks again where the project lives, and checks that run again end the hold by the host's own reading; the flaky test still gets an owner.
+Settings → Projects shows a held batch under the project (`BatchHoldPanel`, `src/renderer/src/settings/`): why it holds and since when, a button that opens its pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
+Try again combines the batch again at a new version, so its checks run again.
+The first mate sends the same answers in the captain's words through `app_change`'s `project-batch-answer`.
+Every answer names the held version it answers (`BatchAnswer`, `inf:repos:batch-answer`), so one for a hold that already ended is refused in words and changes nothing.
+A merge the host refused is never sent again at that version: Try again makes a new one.
+
 ## A project's queue
 
 A project whose host has a part of the shipped queue (GitHub and GitLab) may merge its pull requests through a queue, a job in the project that tests approved work together before it merges (INF-2430 piece 2).
-It is off by default, and a project chooses it in Settings → Projects or through the first mate's project settings.
+Batched pull requests is off by default, and a project chooses it in Settings → Projects or through the first mate's project settings.
 A person reads it as "batched pull requests" in Settings and "Batched pull request" on a task (`PROJECT_DELIVERY_WORDS`, `POLICY_DELIVERY_WORDS`).
+This section is the team queue, which a batched project keeps only while it carries a workflow file that mentions the queue's status; a batched project with no such file gets batches of the person's own ("Batches of your own" above) and nothing here applies to it.
 The queue is either the one Infinitary ships ("The shipped queue" below) or one the project wrote itself.
-While a project has the choice and runs no shipped queue, Settings says the merge waits until the project has a queue and holds a short how-to behind "How to set one up": asking the first mate to set up the shipped queue, or the things a queue of the project's own does, and a link to the host's guide to commit statuses (`queueHowTo`, `src/renderer/src/settings/projectsWords.ts`).
+While such a project runs no shipped queue, Settings says the merge waits until the project has a queue and holds a short how-to behind "How to set one up": asking the first mate to set up the shipped queue, or the things a queue of the project's own does, and a link to the host's guide to commit statuses (`queueHowTo`, `src/renderer/src/settings/projectsWords.ts`).
 The app's whole contract with any such queue is one commit status, `infinitary/queue` (`QUEUE_STATUS`, `src/shared/repos.ts`), on the pull request's version.
 Nothing writes it before the captain's merge click: the pull request's own checks still hold the merge card as they do today.
 The click publishes the story and checks the title as any merge does, keeps the captain's approval, and writes `infinitary/queue` as `pending` on the approved version with the words "Waiting for the batch check" (`GitHubForge.markQueued`).
@@ -754,16 +844,20 @@ The app reads them when the batched delivery is chosen, whoever chooses it, befo
 The second is when anything other than the app last wrote the status on one of the project's versions (`queueAnsweredAt`).
 The third is whether a waiting version still holds only the app's own mark: the mark keeps the status id GitHub gave it back (`queueMark` on the task's delivery), and any reading of the version's checks whose status is no longer waiting, or carries another id, is an answer.
 `RepoRegistry.recordQueue` is the one writer of the first two, on the project's row, and every change reaches Settings as a `repo_queue` event.
-Settings → Projects shows a warning under "Where changes go" while the project is batched, its queue has never answered, and no workflow that is on mentions the status (`queueSettingsWarning`, `src/shared/repos.ts`); it clears once one does or the queue answers.
+Settings → Projects shows a warning under "Where changes go" while the project is batched, its queue has never answered, and every workflow that mentions the status is turned off (`queueSettingsWarning`, `src/shared/repos.ts`); it clears once one is on or the queue answers.
+A project with no such workflow shows no warning: it gets batches of the person's own.
 What the first mate is told beside the click's queue wait (`keptNote`) names what the workflow read found while the project's queue has never answered (`queueWakeWords`, INF-2913).
 On a project whose queue answered before, a version nothing has written for the check watch's two hours is said in the watch's two-hour wake to the crewmate; the app adds no timer of its own.
 Evidence: `githubForge.test.ts` ("reads the workflows that mention the queue status ..."), `changeMerge.test.ts` ("says what the workflow read found ..."), `settleService.keptMerge.test.ts` ("tells the Firstmate, not the captain, when nothing answers the project's queue") and the Settings section of `tests/e2e/queue-merge.spec.ts`.
 
 ### Choosing batched pull requests before a queue exists
 
-Choosing batched pull requests applies only once something in the project can answer its queue (INF-2885, direction B; `src/core/orchestrator/queueChoice.ts`).
-Every change of where a project's changes go passes the core dispatcher's configure, whoever makes it: Settings, the first mate's project settings, the exact-change card and a new project's setup card.
-A choice of batched pull requests reads the project's workflows first, and when the read finds nothing to answer the queue - no workflow that is on mentions `infinitary/queue` and the status was never answered (`queueMissing`, `src/shared/repos.ts`) - the choice waits.
+Every change of where a project's changes go passes the core dispatcher's configure, whoever makes it: Settings, the first mate's project settings, the exact-change card and a new project's setup card (`src/core/orchestrator/queueChoice.ts`).
+A choice of batched pull requests reads the project's workflows first.
+A project with no workflow file that mentions `infinitary/queue` gets batches of the person's own, so the choice applies at once with nothing to set up and no card ("Batches of your own").
+The same read asks the host which merges the project allows, and a project that allows only squash merges is refused with its reason (`SQUASH_ONLY_WORDS`), since a batch keeps one commit for each change; merges that cannot be read refuse nothing.
+A project that carries such a file applies the choice only once something in it can answer its queue (INF-2885, direction B).
+When every workflow that mentions the status is turned off and the status was never answered (`queueMissing`, `src/shared/repos.ts`), the choice waits.
 The rest of the same change applies, the project keeps where its changes go, and its row keeps when the choice was made (`queuePendingAt`, written only by `RepoRegistry.waitForQueue`; any later choice of where changes go clears it).
 A read that fails or was never made is unknown, never "nothing answers", so the choice applies at once as before.
 While a choice waits, Settings says so under "Where changes go" and the first mate's project rows carry `delivery_waiting`.
@@ -772,6 +866,8 @@ Ask the first mate to plan it sends the first mate one `queue-plan-asked` wake, 
 The planner shows the shipped queue's plan on one decision card where the captain chooses which of the project's checks each batch runs, says what those checks need changed, and revises the plan by reply before anything is built.
 Since the project's delivery has not changed, the plan's builder ships as the project's changes ship now, so the workflow's own pull request never waits on a queue that exists only inside it.
 Each merge of a task in a waiting project, and each start of the app, reads its workflows again; once a workflow that is on mentions the status, or the status has answered, the app applies the waiting choice through the same dispatcher and says so in the feed.
+A choice that waited for a queue the project never got, read later with no such file, applies with batches of the person's own and says so in the feed; one for a project that allows only squash merges ends the wait with that reason instead.
+A batched project whose own workflow answers the queue status keeps it, and is no longer offered the shipped queue in its place.
 Evidence: `queueChoice.test.ts` and the second test of `tests/e2e/queue-merge.spec.ts`.
 
 ### The shipped queue

@@ -332,7 +332,8 @@ export class KeptMerge {
     const readPull = this.host.readPull;
     let pull: ForgePull | undefined;
     try {
-      pull = readPull ? await readPull(taskId, authorization.target.prNumber) : undefined;
+      const number = authorization.target.prNumber;
+      pull = readPull && number !== undefined ? await readPull(taskId, number) : undefined;
     } catch {
       pull = undefined;
     }

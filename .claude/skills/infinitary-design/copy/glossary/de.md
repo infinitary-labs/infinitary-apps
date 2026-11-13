@@ -23,6 +23,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Approves secret uses (switch) | Gibt Geheimnisse frei | The computer's Settings → Devices should show the same words. |
 | Asks first | Fragt vorher | |
 | backlog | Backlog | |
+| batch (your approved changes, combined) | Bündel | Neuter, matching "gebündelter Pull Request"; "Stapel" reads like a pile of paper. |
 | batch / batch run (the queue's) | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
 | batch check | Sammelprüfung | The project's queue testing approved work together. |
 | batched pull request | gebündelter Pull Request | |
@@ -65,6 +66,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | font (Settings → Appearance) | Schrift | |
 | forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
 | header (a request header) | Header | Masculine, plural "Header"; only in the custom API form. |
+| held (a batch that stopped) | angehalten | "Bündel angehalten", "Seit {since} angehalten"; "pausiert" stays for what a person pauses. |
 | hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
 | Infinitary | Infinitary | Never translated. |
 | Intelligence | Intelligenz | |
@@ -104,6 +106,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Queued (board lane) | Eingereiht | |
 | rail | Leiste | |
 | Reasoning | Denkaufwand | |
+| rebase merges, merge commits (the host's settings) | Rebase-Merges, Merge-Commits | Named only as the settings where the project lives, as GitHub's German docs say them; the app's own action stays "auf den neuesten Stand bringen". |
 | record (a Usage record) | Eintrag | Kept apart from a task's Protokoll. |
 | Remove (a device) | Entfernen | |
 | report | Bericht, berichten | |
@@ -113,6 +116,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Runbooks | Leitfäden | Plain word for a settings section a non-developer reads. |
 | Runs on | Läuft auf | |
 | Secrets | Geheimnisse | As GitHub's German docs name secrets. |
+| send back (a change out of a batch) | zurückschicken | "Mit Begründung zurückschicken"; the change "geht zurück" to its crewmate. |
 | Settings | Einstellungen | Plural, so "Die Einstellungen sind offen". |
 | sign-in / sign in | Anmeldung / anmelden | "sich erneut anmelden". |
 | start | starten | |

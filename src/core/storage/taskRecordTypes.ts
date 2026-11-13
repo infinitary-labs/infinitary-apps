@@ -214,7 +214,11 @@ export type MergeAuthorization = {
     host: string;
     owner: string;
     name: string;
-    prNumber: number;
+    /**
+     * Absent for a pushed branch with no pull request of its own: it merges
+     * in this person's batch (docs/forge.md, "Batches of your own").
+     */
+    prNumber?: number;
     branch: string;
     delivery: "direct-pr";
     method: "squash";
@@ -473,6 +477,12 @@ export type TaskDelivery = {
    */
   queueMark?: QueueMark;
   queueStatus?: import("@shared/repos").QueueStatusFact; // the Batch check cell's reading
+  /**
+   * The crew's declaration that a pushed branch's version runs no checks,
+   * for a change with no pull request of its own (docs/forge.md, "Batches
+   * of your own"). A pull request's declaration rides its merge review.
+   */
+  branchAbsence?: import("@shared/mergeReview").AbsentChecksDeclaration & { branch: string };
   /** Non-PR run watches, saved until their named terminal wake or a crewmate outcome read. */
   runWatches?: RunWatch[];
   /** Contract 4.66's unversioned kept click; retired at boot, never run. */

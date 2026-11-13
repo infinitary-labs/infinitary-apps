@@ -160,6 +160,8 @@ export class ChangeChecks {
     const branch = current.branch;
     try {
       let change = await this.checkChange(record, branch, forge, located.repo);
+      if (!change && branch === record.branch && this.context.ownBatch(taskId))
+        change = await this.context.pushedBranch(forge, branch);
       if (!change) {
         const pull = await this.namedPull(forge, current.number);
         this.assertCheckTarget(record);
@@ -170,7 +172,9 @@ export class ChangeChecks {
         return { kind: "gone" };
       }
       change = await this.readiness.readyPrerequisite(taskId, forge, change);
-      const checks = countedChecks(await forge.checks(change));
+      const batched = branch === record.branch ? this.context.ownBatch(taskId) : undefined;
+      const read = countedChecks(await forge.checks(change));
+      const checks = batched ? this.withBatchCheck(taskId, batched, change.headSha, read) : read;
       const main = await this.mainEvidence(record, forge, change, checks);
       this.assertCheckTarget(record);
       if (
@@ -183,7 +187,7 @@ export class ChangeChecks {
         this.observeContribution(record, forge, pull);
       }
       const observationId = this.observeChecks(taskId, change.headSha, checks, false);
-      this.queue?.observe(taskId, change.headSha, checks.items);
+      if (!batched) this.queue?.observe(taskId, change.headSha, checks.items);
       const words = changeWords(forge, change);
       // The watch's own reading leaves the watch as it is (`watchAfter`),
       // whether its checks still run or not.
@@ -386,6 +390,48 @@ export class ChangeChecks {
     return change;
   }
 
+  /**
+   * A change that merges in this person's batch reads its place there as
+   * the batch check (docs/forge.md, "Batches of your own"): the status name
+   * the merge card's Batch check cell reads, kept on the task and written
+   * nowhere the project lives. A version with no place reads as it is.
+   */
+  private withBatchCheck<T extends { items: ForgeCheck[] }>(
+    taskId: string,
+    repo: RepoView,
+    head: string,
+    checks: T,
+  ): T {
+    const status = this.context.batches?.status(repo.id, taskId, head);
+    const kept = this.options.tasks.get(taskId)?.delivery?.queueStatus;
+    if (!status) {
+      if (kept?.kind)
+        this.options.tasks.delivery.recordChangeEvidence(taskId, { queueStatus: undefined });
+      return checks;
+    }
+    const fact = {
+      head,
+      kind: status.kind,
+      words: status.words,
+      ...(status.link ? { link: status.link } : {}),
+    };
+    if (JSON.stringify(kept) !== JSON.stringify(fact))
+      this.options.tasks.delivery.recordChangeEvidence(taskId, { queueStatus: fact });
+    return {
+      ...checks,
+      items: [
+        ...checks.items.filter((item) => item.name !== QUEUE_STATUS),
+        {
+          name: QUEUE_STATUS,
+          state:
+            status.kind === "passed" ? "success" : status.kind === "failed" ? "failure" : "pending",
+          detail: status.words,
+          ...(status.link ? { link: status.link } : {}),
+        },
+      ],
+    };
+  }
+
   async run(taskId: string, audience: Audience = "firstmate"): Promise<CheckRun> {
     const located = this.context.locate(taskId);
     if ("said" in located) return { text: located.said, recorded: false };
@@ -394,6 +440,11 @@ export class ChangeChecks {
     const branch = current.branch;
     try {
       let change = await this.checkChange(record, branch, forge, located.repo);
+      // A change of a project that gets batches of its own is a pushed branch
+      // with no pull request of its own: its checks are read on that branch's
+      // commit (docs/forge.md, "Batches of your own").
+      if (!change && branch === record.branch && this.context.ownBatch(taskId))
+        change = await this.context.pushedBranch(forge, branch);
       if (!change) {
         // The pull request the task names may have been merged or closed
         // outside the app: read it by its number, never guessed from its
@@ -421,14 +472,16 @@ export class ChangeChecks {
         };
       }
       change = await this.readiness.readyPrerequisite(taskId, forge, change);
-      const checks = countedChecks(await forge.checks(change));
+      const batched = branch === record.branch ? this.context.ownBatch(taskId) : undefined;
+      const read = countedChecks(await forge.checks(change));
+      const checks = batched ? this.withBatchCheck(taskId, batched, change.headSha, read) : read;
       const main = await this.mainEvidence(record, forge, change, checks);
       const mergeability =
         change.number !== undefined && forge.pull ? await forge.pull(change.number) : undefined;
       this.assertCheckTarget(record);
       if (mergeability) this.observeContribution(record, forge, mergeability);
       this.observeChecks(taskId, change.headSha, checks, audience === "crewmate");
-      this.queue?.observe(taskId, change.headSha, checks.items);
+      if (!batched) this.queue?.observe(taskId, change.headSha, checks.items);
       const stillRunning = this.checksPending(record, { change, forge }, checks);
       this.record(
         record.id,
@@ -568,10 +621,31 @@ export class ChangeChecks {
     );
   }
 
+  /**
+   * Whether the task's crew declared that its own change at `head` runs no
+   * checks at all: what its batch reads before it calls no checks green
+   * (docs/forge.md, "Batches of your own").
+   */
+  declaredAbsent(taskId: string, head: string): boolean {
+    const located = this.context.locate(taskId);
+    if ("said" in located) return false;
+    const { record, forge, branch } = located;
+    const number = currentChange(record.delivery, branch).number;
+    return this.absenceDeclared(record, {
+      forge,
+      change: { ...(number !== undefined ? { number } : {}), branch, headSha: head, url: null },
+    });
+  }
+
   /** Positive, exact-version absence evidence, never inferred from an empty result or history. */
   absenceDeclared(record: TaskRecord, checked: CheckedChange): boolean {
     if (!checked.forge.hasChecks) return true;
     const change = checked.change;
+    // A pushed branch with no pull request of its own: the declaration is the task's own.
+    if (change.number === undefined) {
+      const own = record.delivery?.branchAbsence;
+      return own?.branch === change.branch && own.headSha === change.headSha;
+    }
     const reviews = [
       ...(record.delivery?.mergeReviews ?? []),
       ...(record.delivery?.mergeAuthorization?.review
@@ -730,6 +804,14 @@ export class ChangeChecks {
     head: string,
     items: readonly { name: string; state: ForgeCheckState }[],
   ): string | undefined {
+    const own = this.context.ownBatch(taskId);
+    if (own) {
+      // A change in this person's batch waits on the batch, not on its crewmate.
+      const status = this.context.batches?.status(own.id, taskId, head);
+      return status && status.kind !== "failed"
+        ? `The change waits in this project's batch of approved changes (${status.words}). The app merges the batch once its checks pass, so nothing is needed from you.`
+        : undefined;
+    }
     if (!this.queue) return undefined;
     const mark = this.options.tasks.get(taskId)?.delivery?.queueMark;
     const waiting = items.some((item) => item.name === QUEUE_STATUS && item.state === "pending");

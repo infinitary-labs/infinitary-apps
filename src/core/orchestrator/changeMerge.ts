@@ -5,7 +5,13 @@ import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { englishOf, type Said, said } from "@shared/i18n/said";
 import { isForkReview } from "@shared/mergeReview";
 import { isMergeConflict } from "@shared/plainProblem";
-import { deliveryForRecord, opensPullRequest, queueShipped, type RepoView } from "@shared/repos";
+import {
+  deliveryForRecord,
+  opensPullRequest,
+  ownsBatches,
+  queueShipped,
+  type RepoView,
+} from "@shared/repos";
 import {
   type Forge,
   ForgeBaseMoved,
@@ -134,8 +140,11 @@ export type MergeBoundary = {
 
 export type MergeGuard = {
   head: string;
-  prNumber: number;
+  /** Absent for a pushed branch that merges in this person's batch. */
+  prNumber?: number;
   unattended: boolean;
+  /** When the approval was given: its change's place in the line of a batch. */
+  approvedAt?: number;
   /** A hold on the approval right now: the merge waits on it and the approval stands. */
   held?: () => string | undefined;
   /** Revoke an interrupted publication through its durable approval owner. */
@@ -174,6 +183,12 @@ export type MergeAttempt = PrOutcome & {
   dispatched?: boolean;
   baseMoved?: boolean;
 };
+
+/** What a merge says of a change that joins this person's batch. */
+export const BATCH_MERGE_WORDS = {
+  needsCard:
+    "Cannot merge yet: this project merges approved changes together, as one batch pull request. A change joins the batch from its merge card: its crewmate puts the card up, and the captain's click on it, or the task's autonomy, approves that version.",
+} as const;
 
 /** A merge's refusal on the saved story names the soft hold the captain's words pass (INF-1365). */
 function storyHeld(caught: unknown): never {
@@ -265,6 +280,8 @@ export class ChangeMerge {
     boundary?: MergeBoundary,
     settle = false,
   ): Promise<MergeAttempt> {
+    const batched = await this.mergeInBatch(taskId, guard);
+    if (batched) return batched;
     // The change this re-check read, never an earlier one: a stale earlier
     // success must never survive a failed re-check.
     const status = await this.checks.run(taskId);
@@ -295,7 +312,7 @@ export class ChangeMerge {
       if (checked.change.number !== guard.prNumber) {
         return {
           ok: false,
-          text: `Cannot merge: the branch's open pull request is ${checked.forge.label(checked.change)}, not the ${numberLabel(checked.forge, guard.prNumber)} the captain approved.`,
+          text: `Cannot merge: the branch's open pull request is ${checked.forge.label(checked.change)}, not the ${guard.prNumber === undefined ? "pushed branch" : numberLabel(checked.forge, guard.prNumber)} the captain approved.`,
           plain: "its pull request is not the one you approved",
           stop: "identity",
         };
@@ -530,6 +547,203 @@ export class ChangeMerge {
   }
 
   /**
+   * The merge of a change that joins this person's batch (docs/forge.md,
+   * "Batches of your own"); undefined for every other task, which merges
+   * as its own pull request. The approval is kept at its version: the
+   * first run reads the pushed branch's checks, range, title, review and
+   * story as any merge does, then puts the change in line and sends
+   * nothing. Each later run reads the change's place: waiting, left out,
+   * the only change of a failed batch, or merged with the batch, whose
+   * receipt names the change's own commit on the default branch.
+   */
+  private async mergeInBatch(
+    taskId: string,
+    guard: MergeGuard | undefined,
+  ): Promise<MergeAttempt | undefined> {
+    const batches = this.context.batches;
+    const repo = batches ? await this.context.resolveOwnBatch(taskId) : undefined;
+    const located = repo ? this.context.locate(taskId) : undefined;
+    if (!batches || !repo || !located || "said" in located) return undefined;
+    const { forge } = located;
+    if (!guard)
+      return {
+        ok: false,
+        text: BATCH_MERGE_WORDS.needsCard,
+        plain: "it joins its batch from its merge card",
+      };
+    const place = batches.standing(repo.id, taskId, guard.head);
+    if (place?.state === "merged") {
+      const label = numberLabel(forge, place.receipt.number);
+      const line = `Merged with batch ${label} ${placeWords(forge)}`;
+      return {
+        ok: true,
+        text: `${line}.${place.receipt.url ? ` ${place.receipt.url}` : ""}`,
+        line,
+        receipt: {
+          head: guard.head,
+          ...(place.receipt.sha ? { sha: place.receipt.sha } : {}),
+        },
+      };
+    }
+    if (place?.state === "waiting")
+      return {
+        ok: false,
+        text:
+          place.place === "line"
+            ? `Cannot merge yet - ${QUEUE_WAITING_WORDS}: the change is approved and in line for this project's next batch.`
+            : `Cannot merge yet - ${QUEUE_WAITING_WORDS}: the change is in batch ${place.number === undefined ? "being opened" : numberLabel(forge, place.number)}${place.place !== "held" ? ", whose checks have not passed yet" : place.hold === "rules" ? `, which ${forge.place ?? "the project's host"} holds for a required review or another rule on the main branch` : place.hold === "merge-way" ? ", which is held because it could not be merged where the project lives" : ", which is held until its failed checks are answered"}.`,
+        plain: QUEUE_WAITING_WORDS.toLowerCase(),
+        stop: "queue",
+      };
+    if (place?.state === "left-out")
+      return {
+        ok: false,
+        text: `Cannot merge: the change was left out of its batch because ${place.reason}.`,
+        plain: place.reason,
+        stop: "conflict",
+      };
+    if (place?.state === "failed")
+      return {
+        ok: false,
+        text: `Cannot merge yet - the checks of its batch${place.number === undefined ? "" : `, ${numberLabel(forge, place.number)},`} failed${place.checks.length ? `: ${place.checks.join(", ")}` : ""}. Its crewmate reads them there and repairs the change in a new version.`,
+        plain: "the checks of its batch failed",
+        notGreen: true,
+        stop: "checks",
+      };
+    const status = await this.checks.run(taskId);
+    const reading = this.checks.reading(taskId);
+    const checked = status.checked;
+    if (status.problem)
+      return {
+        ok: false,
+        text: `Cannot merge yet - the checks could not be read. ${status.text}`,
+        problem: status.problem,
+        ...(status.transient ? { transient: true } : {}),
+        ...(status.signIn ? { signIn: status.signIn, stop: "sign-in" as const } : {}),
+      };
+    if (checked && checked.change.number !== guard.prNumber)
+      return {
+        ok: false,
+        text: `Cannot merge: the branch's change is ${checked.forge.label(checked.change)}, not the ${guard.prNumber === undefined ? "pushed branch" : numberLabel(checked.forge, guard.prNumber)} the captain approved.`,
+        plain: "its change is not the one you approved",
+        stop: "identity",
+      };
+    if (checked && checked.change.headSha !== guard.head)
+      return {
+        ok: false,
+        text: `Cannot merge yet: the branch is at ${checked.change.headSha}, and the captain's approval covers ${guard.head}. A repair of the approved change is declared with check_change conflictRepair.`,
+        plain: "it changed after the version you approved",
+        stop: "moved",
+      };
+    const unfinished = reading?.overall === "red" || reading?.overall === "pending";
+    const passed =
+      unfinished &&
+      status.recorded &&
+      checked !== undefined &&
+      overridePasses(this.options.tasks.get(taskId)?.delivery, "checks", checked.change.headSha);
+    if (!checked || (!passed && (!status.recorded || reading?.overall !== "green"))) {
+      const reason =
+        reading?.overall === "red"
+          ? "the checks failed"
+          : reading?.overall === "no-pr"
+            ? "nothing is pushed for its branch"
+            : MERGE_CHECKS_HOLD_REASON;
+      return {
+        ok: false,
+        text: `Cannot merge yet - ${reason}. ${status.text}${unfinished ? ` ${softHoldWords("checks", "firstmate")}` : ""}`,
+        notGreen: true,
+        stop: "checks",
+        plain: reason,
+      };
+    }
+    const { change } = checked;
+    try {
+      const record = this.options.tasks.get(taskId);
+      if (record && !record.delivery?.presentation) await this.context.branchHome(record);
+      const dir = await this.context.validateRange(
+        record?.repoId,
+        record?.repoDir,
+        change.branch,
+        forge,
+        change.headSha,
+      );
+      // A change that still has a pull request of its own carries that
+      // pull request's story; a pushed branch carries the one confirmed on it.
+      let commit: { title: string; body: string };
+      if (change.number !== undefined) {
+        const storied = await this.withPublishedStory(taskId, forge, change, guard);
+        if ("held" in storied)
+          return { ok: false, text: `Cannot merge yet: ${storied.held}.`, stop: "guidance" };
+        commit = { title: change.title ?? "", body: storied.change.squashMessage ?? "" };
+      } else {
+        if (!this.options.presentations)
+          throw new Error("The current story cannot be checked for complete evidence.");
+        try {
+          commit = this.options.presentations.batchCommit(taskId, change.branch, change.headSha);
+        } catch (caught) {
+          storyHeld(caught);
+        }
+      }
+      requireNamed(commit.title, "change title", this.options.namingRule?.() ?? null);
+      const fresh = this.options.tasks.get(taskId) ?? record;
+      if (fresh)
+        await carryPassedReview({
+          tasks: this.options.tasks,
+          taskId,
+          record: fresh,
+          repoDir: dir,
+          head: change.headSha,
+        });
+      // A pull request stacked on another branch: the combine carries it
+      // only once that branch's work is already in.
+      const stacked =
+        change.number !== undefined && change.base && change.base !== (await forge.defaultBranch())
+          ? change.base
+          : undefined;
+      const held = guard.held?.();
+      if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
+      const withdrawn = guard.beforeDispatch(change.headSha, true);
+      if (withdrawn)
+        return {
+          ok: false,
+          text: `Cannot merge: ${withdrawn}${withdrawn.endsWith(".") ? "" : "."}`,
+          stop: "withdrawn",
+        };
+      await batches.enqueue(repo.id, {
+        taskId,
+        branch: change.branch,
+        head: change.headSha,
+        title: commit.title,
+        body: commit.body,
+        // The line keeps the order of the approvals, not of the runs that carry them here.
+        at: guard.approvedAt ?? this.context.now(),
+        ...(change.number !== undefined ? { number: change.number } : {}),
+        ...(stacked ? { base: stacked } : {}),
+      });
+      // The reading now carries the change's place in the batch, so the
+      // check watch follows it and wakes its crewmate if the batch fails it.
+      await this.checks.run(taskId).catch(() => {});
+      return {
+        ok: false,
+        text: `Approved and in line: ${QUEUE_WAITING_WORDS.toLowerCase()}. The change merges with this project's next batch, as one commit of its own.`,
+        plain: QUEUE_WAITING_WORDS.toLowerCase(),
+        stop: "queue",
+      };
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      return {
+        ok: false,
+        text: `Cannot merge: ${message}`,
+        problem: message,
+        ...(isTransientForgeFailure(caught) ? { transient: true } : {}),
+        ...(isSignInForgeFailure(caught)
+          ? { signIn: this.context.signInFact(forge, repo.id), stop: "sign-in" as const }
+          : {}),
+      };
+    }
+  }
+
+  /**
    * The pull request as it merges with its change's saved story - each
    * change keeps its own (INF-2490) - for both merges, the finishing one and
    * a continuing one: the published story at this version, or the
@@ -702,14 +916,23 @@ export class ChangeMerge {
 
   /** Whether the task merges through its project's queue (`queue-pr`). */
   queued(taskId: string): boolean {
+    // Batches of this person's own carry no queue status where the project lives.
+    if (this.context.ownBatch(taskId)) return false;
     const record = this.options.tasks.get(taskId);
+    if (!record) return false;
     // A change opened in another managed project merges by that project's
     // delivery (INF-2510); the task's own decides its own.
-    const target = record?.delivery?.checkTarget;
-    if (record && target?.repoId && target.repoId !== record.repoId)
-      return this.options.repos.get(target.repoId)?.delivery === "queue-pr";
-    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    return record !== undefined && deliveryForRecord(record, repo?.delivery) === "queue-pr";
+    const target = record.delivery?.checkTarget;
+    const other = target?.repoId && target.repoId !== record.repoId ? target.repoId : undefined;
+    const repoId = other ?? record.repoId;
+    const repo = repoId ? this.options.repos.get(repoId) : undefined;
+    const delivery = other ? repo?.delivery : deliveryForRecord(record, repo?.delivery);
+    if (delivery !== "queue-pr") return false;
+    // A pull request the task names by number joins no batch, and a project
+    // with no team queue has no batch check to answer for it: it merges as
+    // its own pull request through its merge review (docs/forge.md,
+    // "Batches of your own").
+    return !(target && repo && ownsBatches("queue-pr", repo) === true);
   }
 
   queueOwnsMerge(taskId: string, number: number | undefined): boolean {
@@ -724,8 +947,16 @@ export class ChangeMerge {
   /** Remove the eligibility of the exact approval head; an already sent merge cannot be undone. */
   async removeQueuedApproval(taskId: string, removal: QueueApprovalRemoval): Promise<void> {
     const record = this.options.tasks.get(taskId);
+    const number = removal.target.prNumber;
     if (!record) return;
-    const elsewhere = this.projectOfNumber(record, removal.target.prNumber);
+    // Its place in this person's batch is the app's own record: the change
+    // leaves the line and the open batch, which combines again without it.
+    const own = this.context.ownBatch(taskId);
+    if (own && removal.target.branch === record.branch)
+      await this.context.batches?.withdraw(own.id, taskId);
+    // A pushed branch with no pull request of its own was never marked for a project's queue.
+    if (number === undefined) return;
+    const elsewhere = this.projectOfNumber(record, number);
     if (elsewhere === null) throw new Error("The queued change's project is no longer registered.");
     const registered =
       elsewhere ?? this.options.repos.get(removal.review?.repoId ?? removal.target.repoId);
@@ -743,11 +974,11 @@ export class ChangeMerge {
     if (!queueMerges(repo)) return;
     const forge = this.options.forgeFor(repo, repo.path);
     if (!forge.removeQueued) throw new Error("This project's host cannot remove its queue mark.");
-    const pull = await forge.pull?.(removal.target.prNumber);
+    const pull = await forge.pull?.(number);
     if (!pull)
       throw new Error("The queued change cannot be read, so its removal is not confirmed.");
     if (pull.merged) return;
-    await forge.removeQueued(removal.head, removal.target.prNumber);
+    await forge.removeQueued(removal.head, number);
   }
 
   /**
@@ -984,7 +1215,7 @@ export class ChangeMerge {
     guard: MergeGuard,
   ): Promise<{ merged?: PrOutcome; closed?: PrOutcome; open?: boolean }> {
     const located = this.context.locate(taskId);
-    if ("said" in located) return {};
+    if ("said" in located || guard.prNumber === undefined) return {};
     let pull: ForgePull;
     try {
       pull = await this.context.pullOf(located.forge, guard.prNumber);
@@ -1025,9 +1256,11 @@ export class ChangeMerge {
       return "moved";
     }
     try {
-      const pull = await this.context.pullOf(forge, guard.prNumber);
-      const held = readinessStop(forge, pull, guard);
-      if (held?.stop && held.stop !== "computing") return held.stop;
+      if (guard.prNumber !== undefined) {
+        const pull = await this.context.pullOf(forge, guard.prNumber);
+        const held = readinessStop(forge, pull, guard);
+        if (held?.stop && held.stop !== "computing") return held.stop;
+      }
     } catch {
       // The read is evidence only; the refusal itself still speaks.
     }

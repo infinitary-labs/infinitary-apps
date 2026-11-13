@@ -7,6 +7,7 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Mock, vi } from "vitest";
+import type { Batches } from "../../src/core/batches/batches";
 import {
   type Forge,
   type ForgeChange,
@@ -24,6 +25,7 @@ import type { AppDatabase } from "../../src/core/storage/db";
 import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
+import type { MergeWay } from "../../src/shared/batches";
 import type { NamingRule } from "../../src/shared/runbooks";
 import { freshDatabase } from "./database";
 import { BUNDLED_NAMING } from "./namingRunbook";
@@ -160,7 +162,11 @@ export class FakeForge implements Forge {
       }));
     return { items };
   }
-  async putIn(change: ForgeChange, headSha: string) {
+  async putIn(
+    change: ForgeChange,
+    headSha: string,
+    _way?: MergeWay,
+  ): Promise<{ sha?: string } | undefined> {
     this.calls.push(`putIn ${change.branch} ${headSha}`);
     if (this.fail.putIn) throw this.fail.putIn;
     return undefined;
@@ -213,6 +219,8 @@ export function setup(
     forgeFor?: (repo: { origin?: string | null } | undefined) => FakeForge;
     /** The active naming runbook's rule, as the app reads it; the bundled one, on by default, unless a test names another. */
     namingRule?: () => NamingRule | null;
+    /** The line and open batch of projects that get batches of the person's own, read late as the app wires it. */
+    batches?: () => Batches | undefined;
   } = {},
 ): PrCiHarness {
   const db = freshDatabase();
@@ -245,6 +253,7 @@ export function setup(
     ...(options.onNote ? { onNote: options.onNote } : {}),
     ...(options.steer ? { steer: options.steer } : {}),
     ...(options.tell ? { tell: options.tell } : {}),
+    ...(options.batches ? { batches: options.batches } : {}),
   });
   return { db, tasks, repos, service, forge, paths, presentations, readHead };
 }

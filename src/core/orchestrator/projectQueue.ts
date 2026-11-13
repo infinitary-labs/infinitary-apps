@@ -1,6 +1,6 @@
 import { checkSnapshotSummary } from "@shared/checkSnapshot";
 import { checksTimes } from "@shared/checksSpan";
-import { type QueueStatusFact, queueShipped, type RepoView } from "@shared/repos";
+import { ownsBatches, type QueueStatusFact, queueShipped, type RepoView } from "@shared/repos";
 import { type ForgeCheck, QUEUE_STATUS } from "../forge";
 import { QUEUE_OWNED_MERGES_VERSION } from "../queue/shipped";
 import { HELD } from "../queue/shipped/gitlab.mjs";
@@ -243,4 +243,17 @@ export function queueWakeWords(facts: QueueNoteFacts | undefined): string | unde
 /** The merge route the installed project queue actually supports. */
 export function queueMerges(repo: Pick<RepoView, "queueWorkflows"> | undefined): boolean {
   return repo !== undefined && (queueShipped(repo) ?? 0) >= QUEUE_OWNED_MERGES_VERSION;
+}
+
+/**
+ * Who merges a batched project's approved changes, for the words a brief
+ * says it in: `"own"` where they combine in batches of this person's own,
+ * true where the project's installed queue merges, false where the app
+ * merges after the queue passes.
+ */
+export function queueWay(
+  repo: Pick<RepoView, "host" | "queueWorkflows"> | undefined,
+): boolean | "own" {
+  if (repo && ownsBatches("queue-pr", repo) === true) return "own";
+  return queueMerges(repo);
 }

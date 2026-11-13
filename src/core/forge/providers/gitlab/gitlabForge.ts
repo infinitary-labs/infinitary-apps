@@ -1,3 +1,4 @@
+import type { MergeWay, MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
@@ -319,9 +320,14 @@ export class GitLabForge implements Forge {
   }
 
   async checks(change: ForgeChange, movedPast?: string) {
-    const iid = numbered(change, this.place);
+    // A pushed branch with no merge request reads its commit's pipelines alone
+    // (docs/forge.md, "Batches of your own").
+    const iid = change.number;
     const head = movedPast ?? change.headSha;
-    const ofRequest = await this.pipelines(`${this.mergeRequestPath(iid)}/pipelines?per_page=100`);
+    const ofRequest =
+      iid === undefined
+        ? []
+        : await this.pipelines(`${this.mergeRequestPath(iid)}/pipelines?per_page=100`);
     const onHead = await this.pipelines(
       `${this.sourcePath()}/pipelines?sha=${encodeURIComponent(head)}&per_page=100`,
     );
@@ -425,7 +431,11 @@ export class GitLabForge implements Forge {
     return at;
   }
 
-  async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
+  async putIn(
+    change: ForgeChange,
+    headSha: string,
+    way: MergeWay = "squash",
+  ): Promise<{ sha?: string }> {
     this.requireMaintainer();
     const iid = numbered(change, this.place);
     const title = requireNamed(
@@ -440,7 +450,19 @@ export class GitLabForge implements Forge {
     let answer = (await this.client.request(
       "PUT",
       `${this.mergeRequestPath(iid)}/merge`,
-      { sha: headSha, squash: true, squash_commit_message: body ? `${title}\n\n${body}` : title },
+      // A batch merges without squash, so each change keeps its own commit; a
+      // merge commit, where the project writes one, takes the batch's title.
+      way === "squash"
+        ? {
+            sha: headSha,
+            squash: true,
+            squash_commit_message: body ? `${title}\n\n${body}` : title,
+          }
+        : {
+            sha: headSha,
+            squash: false,
+            merge_commit_message: body ? `${title}\n\n${body}` : title,
+          },
       GITLAB_READ_MAX_BYTES,
     )) as MergeRequestJson | null;
     if (answer?.state !== "merged") {
@@ -535,6 +557,40 @@ export class GitLabForge implements Forge {
     );
   }
 
+  /**
+   * GitLab's squash setting decides: "Require" allows only a squash, "Do not
+   * allow" none. Its merge without squash keeps every commit under each of
+   * its merge methods, so it is the one way a batch of several merges.
+   */
+  async mergeWays(): Promise<MergeWays> {
+    const project = (await this.read(this.projectPath())) as { squash_option?: string } | null;
+    const option = project?.squash_option ?? "default_off";
+    return { squash: option !== "never", rebase: false, merge: option !== "always" };
+  }
+
+  async deleteBranch(branch: string): Promise<void> {
+    try {
+      await this.client.request(
+        "DELETE",
+        `${this.projectPath()}/repository/branches/${encodeURIComponent(branch)}`,
+        undefined,
+        GITLAB_READ_MAX_BYTES,
+      );
+    } catch (caught) {
+      if (!(caught instanceof ForgeError && caught.failure === "not-found")) throw caught;
+    }
+  }
+
+  async closeWithNote(change: ForgeChange, note: string): Promise<void> {
+    await this.client.request(
+      "POST",
+      `${this.mergeRequestPath(numbered(change, this.place))}/notes`,
+      { body: note },
+      GITLAB_READ_MAX_BYTES,
+    );
+    await this.close(change);
+  }
+
   label(change: ForgeChange): string {
     return change.number !== undefined ? `!${change.number}` : change.branch;
   }
@@ -582,7 +638,7 @@ export class GitLabForge implements Forge {
   private async countedPipelines(
     listed: PipelineJson[],
     head: string,
-    iid: number,
+    iid: number | undefined,
   ): Promise<PipelineJson[]> {
     const byId = new Map(listed.map((pipeline) => [pipeline.id, pipeline]));
     const newestFirst = [...byId.values()].sort((a, b) => b.id - a.id);
@@ -596,7 +652,7 @@ export class GitLabForge implements Forge {
         continue;
       }
       const ref = MERGE_REQUEST_REF.exec(pipeline.ref);
-      if (!ref || Number(ref[1]) !== iid || ref[2] === "head") continue;
+      if (!ref || iid === undefined || Number(ref[1]) !== iid || ref[2] === "head") continue;
       if (opened >= MAX_MERGE_COMMIT_READS) continue;
       opened += 1;
       if (await this.mergesHead(pipeline.sha, head, this.pipelineProject(pipeline)))

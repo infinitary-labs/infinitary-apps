@@ -7,6 +7,7 @@ A change is the host's typed record of one unit of work offered to a project: wh
 Record every change a task carries as one record with a stable id, so the pull request, its checks, its reviews, its story, the consent given and the merge are facts about the change at a version rather than fields scattered over the task.
 A task carries one change on its own branch and one for every other pull request it names, whoever opened it (INF-2490): one change per pull request.
 A fork may use the same branch name as the task; its source and request number keep the review, checks and story separate.
+On a project that merges a person's approved changes in batches of their own, the task's own change is its pushed branch, with no pull request of its own: its checks are read on the branch's commit, its story is confirmed there, and it merges as one commit of its batch's pull request ([the forge seam](../docs/forge.md), "Batches of your own").
 Surfaces show the current pull request; the task record's Info tab and its `pullRequests` list name every one with its own checks, and which merge closes the task.
 Each change keeps its own saved story, so a story on one pull request never blocks another's.
 Give each version pushed its own row in the order the host saw it, holding the checks read, the review verdict declared with its findings and its reading, the story prepared and published, and the consent given there.
@@ -36,11 +37,13 @@ Another pull request's change comes into being when the task first names it, by 
 One the task opened in another project the app manages is that project's change: its review names the project (`MergeReview.repoId`), and the record keeps it under that project's id (INF-2510; [the forge seam](../docs/forge.md), "A change in another project").
 Each head the project's host saw makes one version, in order: a check read, an owned merge review, a published story, a merge click and the repairs it was carried to, a merge card, or an override given for one version.
 A plain branch's confirmed story and a local story's committed-head completion binding also make a version, without inventing a hosted request or upload.
+A batched change's story confirmed on its pushed branch makes a version the same way, and the change never takes its batch's pull request number as its own.
 A review, a reading of the working copy or an unbound prepared story makes no version; they attach once its head is observed.
 A version once recorded stays, dated when the host first saw it; a reading of the checks replaces the last whole, a review replaces the last whole, and the consent's click, carried approval and override each follow their own newest fact.
 A fact the task no longer names is kept, never erased, so the record accumulates what the delivery facts forget.
 The receipt closes it with the task's closed reason once the change is merged, discarded or closed, and the task's close reaches only the current change.
 Every change takes a merged receipt from its own merge on the record, never from the task's close.
+A batched change's merge is its batch's: the receipt names the change's own commit on the default branch where it could be read, and stays without one where it could not.
 A task's hard delete takes its change; a project removed keeps what its changes recorded.
 In this piece the record is still a projection: the delivery fields stay their writers' and readers' slot, and the change record keeps no second source (INF-1868 piece 5); dropping those fields waits for readers that read the change first.
 
@@ -55,6 +58,8 @@ A merge made elsewhere closes the task as merged when the crewmate's open merge 
 An outgoing contribution's saved story is a note without merge actions, while the existing change watcher follows the upstream maintainers' activity and confirmed outcome ([the forge seam](../docs/forge.md), "Contributing through an owned fork").
 Its fork route is a project choice captured on the task, never permission to merge upstream or mark its queue.
 A change holds facts, never permission: consent at a version is the captain's click on a card, an approval carried to a repaired version by a declared repair, or an override given for that version alone, and an override given for the whole task sits on the change ([delivery rigor](../docs/delivery-rigor.md), "The record and its holds").
+A batched change's approval is kept at its version while the change waits in line and in its batch; a change sent back from its batch loses it, and its crewmate is told the reason.
+A story revised at that version keeps the change's place in line and in its batch, which takes the story's title and words.
 The host's holds read the record's typed facts - the checks, a kept approval's version, consent for an effect - and never the care's name.
 What a care asks of the crew - Default's procedure, Careful's review and live proof - is served guidance, and the host neither orders nor refuses by it (the captain, INF-1868: "the host only knows the three names as typed fact - a metadata").
 A reading of another branch's pull request writes into the same slot, and an approval of it is consent to merge that pull request, never another change; the record binds every fact to the change of the pull request it names, by its number, never by its head.
@@ -65,6 +70,7 @@ A reading of another branch's pull request writes into the same slot, and an app
 - Projects and working copies supply where the change lives and its delivery posture ([projects-and-working-copies.md](projects-and-working-copies.md)).
 - Cards and consent: the merge card offers one version, and the captain's click is consent at that version ([cards-and-consent.md](cards-and-consent.md)).
 - The forge seam reads the checks and opens, publishes and merges the change ([the forge seam](../docs/forge.md)).
+- Batches of your own combine one person's approved changes of a project into one pull request and merge it; the line and the open batch are `Batches`' record on the project's row, never part of a change ([`../src/core/batches/batches.ts`](../src/core/batches/batches.ts); [the forge seam](../docs/forge.md), "Batches of your own").
 - The served guidance that judges the change: the delivery judgment and the care sections, selected by the task's typed facts ([runbooks](../docs/runbooks.md)).
 
 ## Failure and recovery
@@ -77,6 +83,7 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 
 - Every direct-pr task's pull request, its checks, its story and its merge.
 - A requested merge of any pull request the task names, a change of its own ([the forge seam](../docs/forge.md), "A requested merge").
+- Every change of a batched project that carries no team queue: a pushed branch that merges with the person's other approved changes, as one commit of its own.
 - The attestation a github.com story carries when a review passed and live proof was accepted at its version.
 - The merge line on the story note of a task that merges on its own, and when that held note shows: the card stack draws both from the change's receipt, which keeps the merge's time even when the task stays open ([card authoring](../docs/card-authoring.md), "Work that closed without the captain's click").
 
@@ -88,11 +95,13 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 - [`../src/core/orchestrator/changePublication.test.ts`](../src/core/orchestrator/changePublication.test.ts) and [`../src/core/orchestrator/changePublication.stories.test.ts`](../src/core/orchestrator/changePublication.stories.test.ts): opening a change, the story and the attestation at a version.
 - [`../src/core/orchestrator/mergeReviews.test.ts`](../src/core/orchestrator/mergeReviews.test.ts): a review of a pull request named by its number, a merge past the branch rules, and the captain's click on either.
 - [`../src/core/orchestrator/changeMerge.test.ts`](../src/core/orchestrator/changeMerge.test.ts): the merge and its checks at the put-in, what a kept merge stops on, a lost answer read back before anything is sent again, and a project's queue answering a review's click.
+- [`../src/core/orchestrator/ownBatchChange.test.ts`](../src/core/orchestrator/ownBatchChange.test.ts): a batched change's story, checks, merge card and approval on its pushed branch, its place in the batch and its receipt.
+- [`../src/core/batches/batches.test.ts`](../src/core/batches/batches.test.ts), [`../src/core/batches/line.test.ts`](../src/core/batches/line.test.ts) and [`../src/core/batches/combine.test.ts`](../src/core/batches/combine.test.ts): the line, the combine, a held batch and its answers, an approval withdrawn, and the reconcile after a start.
 - [`../tests/holds.test.ts`](../tests/holds.test.ts) and `scripts/holds.ts`: every hold the host places reads a typed fact, none the care's name.
 
 ## Where the detail lives
 
 - [The task record](../docs/task-record.md): "A task's change", "A task's change evidence and permissions".
-- [The forge seam](../docs/forge.md): "Check facts and crew judgment", "Saved change stories", "A requested merge", "No-mistakes' attestation".
+- [The forge seam](../docs/forge.md): "Check facts and crew judgment", "Saved change stories", "A requested merge", "Batches of your own", "A held batch", "No-mistakes' attestation".
 - [Delivery rigor](../docs/delivery-rigor.md): "The three care names", "The review", "The record and its holds", "The holds".
 - [Runbooks](../docs/runbooks.md): the delivery judgment and the Rigor levels runbook.

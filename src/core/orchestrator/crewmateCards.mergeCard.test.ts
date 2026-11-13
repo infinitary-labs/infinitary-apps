@@ -8,6 +8,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { BATCH_STATUS_WORDS } from "@shared/batches";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { type Card, MERGE_HELD_MARK, mergeEffectOf } from "@shared/cards";
 import type { ChangePresentation, MergeCardRequest } from "@shared/changePresentation";
@@ -28,6 +29,7 @@ import {
   presentationMarkdown,
   QUEUE_STATUS,
 } from "../forge";
+import { coveredNextStep } from "./mergeAuthorization";
 import type { MergeCardWalk } from "./mergeCardSteps";
 import { heldLine } from "./settleCardFacts";
 
@@ -519,6 +521,35 @@ describe("a merge card for a version the captain already approved (INF-4018)", (
     expect(answer).not.toContain("Merge anyway case");
     expect(answer).not.toContain("check_change rerun");
     expect(at.approval()?.status).toBe("standing");
+  });
+
+  // A batch of the person's own (docs/forge.md, "Batches of your own"): the
+  // app itself wrote that failed batch check, and an answer to a queue puts
+  // nothing back in its line, so the refusal gives the repair's route alone.
+  it("gives the repair's route when the person's own batch failed that version", async () => {
+    const at = await clicked();
+    const words = BATCH_STATUS_WORDS.failed(["typecheck-lint-build"]);
+    seedDelivery(at.tasks, at.taskId, {
+      ci: "red",
+      checks: {
+        headSha: HEAD,
+        prNumber: 7,
+        items: [
+          { name: "typecheck-lint-build", state: "success" },
+          { name: QUEUE_STATUS, state: "failure" },
+        ],
+        absenceDeclared: false,
+      },
+      queueStatus: { head: HEAD, kind: "failed", words },
+    });
+    const answer = await at.call({ id: "merge-meter" });
+    const approval = at.approval();
+    if (!approval) throw new Error("No approval");
+    expect(answer).toContain(`The captain's merge approval is kept and covers ${HEAD}`);
+    expect(answer).toContain(coveredNextStep(approval, "own-batch"));
+    expect(answer).not.toContain("answered verdict");
+    expect(answer).not.toContain("Merge anyway case");
+    expect(approval.status).toBe("standing");
   });
 
   // INF-2746: an approval waiting behind another one still covers its version.

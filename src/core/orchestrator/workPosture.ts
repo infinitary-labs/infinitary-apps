@@ -80,8 +80,8 @@ function pendingBatch(record: TaskRecord): WorkPosture["batch"] {
   // queue status, whoever wrote it, outranks that initial mark.
   const marked = delivery.queueMark?.head === head && !delivery.queueMark.answered;
   if (status ? status.state !== "pending" : !marked) return undefined;
-  const words = delivery.queueStatus?.head === head ? delivery.queueStatus.words : undefined;
-  const state = queueKind("pending", words);
+  const kept = delivery.queueStatus?.head === head ? delivery.queueStatus : undefined;
+  const state = kept?.kind ? { kind: kept.kind } : queueKind("pending", kept?.words);
   return state.kind === "waiting" || state.kind === "in-batch" || state.kind === "paused"
     ? state.kind
     : undefined;

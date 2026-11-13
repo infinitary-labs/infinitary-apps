@@ -21,6 +21,7 @@ import {
   gitFailure,
   inheritWorktreeRemotes,
   isGitRepo,
+  REMOTE_TIMEOUT_MS,
   releaseTaskRemote,
   taskRemoteName,
 } from "./git";
@@ -113,9 +114,6 @@ export type WorkspaceServiceOptions = {
    */
   knownHosts?: () => readonly KnownForgeHost[];
 };
-
-/** A slow remote must not hold a dispatch; the last fetched commit is the fallback. */
-const FETCH_TIMEOUT_MS = 30 * 1000;
 
 /** A fetch overtaken by another fetch of the same ref runs again, this many times in all. */
 const FETCH_ATTEMPTS = 3;
@@ -848,7 +846,7 @@ export class WorkspaceService {
           repo,
           ["fetch", "--quiet", "--no-tags", remoteName, `+refs/heads/${branch}:${tracking}`],
           {
-            timeoutMs: this.options.fetchTimeoutMs ?? FETCH_TIMEOUT_MS,
+            timeoutMs: this.options.fetchTimeoutMs ?? REMOTE_TIMEOUT_MS,
             env: { GIT_TERMINAL_PROMPT: "0" },
           },
         );

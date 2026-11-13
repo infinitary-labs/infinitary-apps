@@ -1380,6 +1380,12 @@ export const MIGRATIONS: readonly Migration[] = [
   // the only writer and no published view reads it. Dropping the column
   // reverses it.
   (db) => addColumn(db, "schedules", "event_waits_for", "TEXT"),
+  // INF-3759 piece 1: batches of your own (docs/forge.md, "Batches of your
+  // own"). A project's line of approved changes and its one open batch, as
+  // this home keeps them. Null on every existing project, which has neither.
+  // `RepoRegistry.recordBatch` is the only writer, for `Batches`; no
+  // published view reads it. Dropping the column reverses it.
+  `ALTER TABLE repos ADD COLUMN batch_json TEXT;`,
 ];
 
 /**

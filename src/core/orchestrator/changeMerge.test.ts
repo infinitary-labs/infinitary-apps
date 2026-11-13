@@ -1066,7 +1066,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
           ];
         };
         const cleanup = vi.fn(async () => {
-          await forge.removeQueued?.(guard.head, guard.prNumber);
+          await forge.removeQueued?.(guard.head, guard.prNumber as number);
         });
         const guard: MergeGuard = {
           head: "feedbeef",
@@ -1246,7 +1246,9 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     // merge click, and warn in Settings and on the waiting note". The click
     // reads which workflows mention infinitary/queue; the waiting note warns
     // while nothing has answered; a status the project's batch writes is an
-    // answer, and the note goes back to its plain words.
+    // answer, and the note goes back to its plain words. The project carries
+    // its queue's workflow, turned off at first: one with no such file gets
+    // batches of the captain's own instead (INF-3759 piece 1).
     const forge = new PinnedForge();
     const harness = setup({ forge });
     await insertDirectPrTask(harness.tasks, harness.repos, {
@@ -1254,7 +1256,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     });
     const repoId = harness.tasks.get("ab12cd34")!.repoId!;
     harness.repos.configure(repoId, { origin: "https://github.com/x/y.git" });
-    let workflows: QueueWorkflow[] = [];
+    let workflows: QueueWorkflow[] = [{ path: ".github/workflows/batch.yml", active: false }];
     forge.queueWorkflows = async () => workflows;
     forge.markQueued = async (sha: string) => {
       forge.atHead[sha] = [
@@ -1274,7 +1276,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
       stop: "queue",
     });
-    expect(harness.repos.get(repoId)).toMatchObject({ queueWorkflows: [] });
+    expect(harness.repos.get(repoId)).toMatchObject({ queueWorkflows: workflows });
     expect(harness.repos.get(repoId)?.queueAnsweredAt).toBeUndefined();
     expect(harness.tasks.get("ab12cd34")?.delivery?.queueMark).toMatchObject({
       head: "feedbeef",
@@ -1283,7 +1285,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     // What the Firstmate hears beside the click's queue wait (INF-2913),
     // and the check watch's reading for its two-hour wake: the same fact.
     expect(note()).toBe(
-      `Nothing in this project has ever answered ${QUEUE_STATUS}, and no workflow on its default branch mentions it.`,
+      `Nothing in this project has ever answered ${QUEUE_STATUS}, and .github/workflows/batch.yml mentions it but is turned off.`,
     );
     expect(await harness.service.checks.readWatched("ab12cd34")).toMatchObject({
       kind: "pending",

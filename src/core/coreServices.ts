@@ -5,6 +5,7 @@ import type { ForgeChangesView } from "@shared/forges";
 import type { ProviderView } from "@shared/providers";
 import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
 import type { AxiChannel } from "./axi/channel";
+import type { Batches } from "./batches/batches";
 import type { DecisionModels } from "./decisions/decisionModel";
 import type { startCorrections } from "./decisions/startCorrections";
 import type { HomeAnnouncement } from "./devices/announce";
@@ -168,6 +169,8 @@ export type CoreServices = {
   queueChoice: QueueChoice;
   /** A project's paused batch of the shipped queue: followed, and answered by hand from Settings. */
   queuePauses: QueuePauses;
+  /** The captain's own batches of approved changes, one line and one open batch per project. */
+  batches: Batches;
   /** Worktree pool and background trash cleanup (also awaited by core integration tests). */
   workspace: WorkspaceService;
   /**

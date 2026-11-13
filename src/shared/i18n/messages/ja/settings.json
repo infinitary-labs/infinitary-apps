@@ -688,6 +688,32 @@
   "settingsProjectsAutonomyOff": "完了した作業はあなたの承認を待ちます。",
   "settingsProjectsAutonomyOn": "チェックに合格した作業は、確認なしでマージされることがあります。",
   "settingsProjectsAutonomyPersonal": "その場で作成。チェックに合格した作業は、終わりしだい書き込まれます。",
+  "settingsProjectsBatchChanges": "差し戻す変更",
+  "settingsProjectsBatchHeld": "一括プルリクエストを保留中",
+  "settingsProjectsBatchHeldChecks": {
+    "plural": "count",
+    "other": "{since} から保留中：{checks} が失敗したため、承認済みの変更{count}件が待機しています。その間に承認した変更は、その後ろに並びます。"
+  },
+  "settingsProjectsBatchHeldChecksUnnamed": {
+    "plural": "count",
+    "other": "{since} から保留中：チェックに失敗したため、承認済みの変更{count}件が待機しています。その間に承認した変更は、その後ろに並びます。"
+  },
+  "settingsProjectsBatchHeldNoWay": "{since} から保留中：このプロジェクトでは、変更ごとに1つのコミットを残すマージが許可されていません。プロジェクトの保管先でリベースマージかマージコミットを許可してから、もう一度お試しください。",
+  "settingsProjectsBatchHeldRefused": "{since} から保留中：プロジェクトの保管先でマージが拒否されました：{detail}",
+  "settingsProjectsBatchHeldRules": "{since} から保留中：チェックには合格しましたが、プロジェクトの保管先のルール（必須のレビューなど）により保留されています。そのルールが許可すると、自動でマージされます。",
+  "settingsProjectsBatchNeedsChange": "先に、差し戻す変更を選んでください。",
+  "settingsProjectsBatchNeedsReason": "先に、選んだ変更ごとに差し戻す理由を入力してください。",
+  "settingsProjectsBatchOpen": "{label} を開く",
+  "settingsProjectsBatchOwn": "承認済みの変更はまとめてマージされます：Infinitary が変更ごとに1つのコミットで1つの一括プルリクエストにまとめ、チェックに合格するとマージします。",
+  "settingsProjectsBatchReason": "「{title}」を差し戻す理由",
+  "settingsProjectsBatchReasonPlaceholder": "差し戻す理由",
+  "settingsProjectsBatchRetried": "一括プルリクエストをまとめ直しています。チェックは新しいバージョンで実行されます。",
+  "settingsProjectsBatchSendBack": "理由を付けて差し戻す",
+  "settingsProjectsBatchSentBack": {
+    "plural": "count",
+    "other": "変更{count}件を差し戻しました。残りの変更をまとめ直します。"
+  },
+  "settingsProjectsBatchTryAgain": "再試行",
   "settingsProjectsCare": "慎重さ",
   "settingsProjectsCareNone": "なし",
   "settingsProjectsCarePersonal": "ここでは何も関門を通りません。",
@@ -697,7 +723,7 @@
   "settingsProjectsCostNone": "上限なし",
   "settingsProjectsCostOwn": "独自の金額",
   "settingsProjectsCostTitle": "コスト上限",
-  "settingsProjectsDelivery": "プロジェクトの保管先でプルリクエストとして出すか、マージ前にプロジェクトのキューがテストする一括プルリクエストとして出すか、プルリクエストなしでローカルマージします。",
+  "settingsProjectsDelivery": "プロジェクトの保管先でプルリクエストとして出すか、ほかの承認済みの変更とまとめて1つの一括プルリクエストとしてマージするか、プルリクエストなしでローカルマージします。",
   "settingsProjectsDeliveryTitle": "変更の届け方",
   "settingsProjectsEmpty": "プロジェクトはまだありません。下で追加するか、どのプロジェクトで作業するかを一等航海士に伝えてください。",
   "settingsProjectsFolder": "フォルダ",

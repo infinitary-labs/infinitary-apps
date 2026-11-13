@@ -112,6 +112,8 @@ export type GitLabStubPipeline = {
   head?: string;
   /** How GitLab started it; `merge_request_event` for a merge request or merged-result one by default. */
   source?: string;
+  /** The one merge request it ran for; every merge request when absent. */
+  iid?: number;
 };
 
 /** One merge GitLab accepted, as the app asked for it. */
@@ -120,6 +122,7 @@ export type GitLabStubMerge = {
   /** The head the app required the merge request to still be at. */
   sha: string;
   squash: boolean;
+  /** The squash commit's message, or the merge commit's for a merge that keeps every commit. */
   message: string;
 };
 
@@ -186,6 +189,10 @@ type StubMergeRequest = {
   state: "opened" | "closed" | "merged";
   /** The head it merged at, once merged. */
   mergedHead?: string;
+  /** The commit its merge wrote on the default branch, where the test's repository made one. */
+  mergedCommit?: string;
+  /** Whether it merged by squash. */
+  squashed?: boolean;
   draft?: boolean;
 };
 
@@ -258,6 +265,13 @@ export async function startGitLabStub(host: string) {
   let headOf: ((branch: string) => string) | null = null;
   let conflicted: (head: string) => boolean = () => false;
   let onMergeRequest: () => void = () => {};
+  let onMerged: (merge: GitLabStubMerge) => string | undefined = () => undefined;
+  let onBranchDelete: (branch: string) => void = () => {};
+  const deletedBranches: string[] = [];
+  /** The project's squash setting, as its settings page saves it. */
+  let squashOption: "never" | "always" | "default_on" | "default_off" = "default_off";
+  /** The project's pushed branches, where it runs a pipeline on each one. */
+  let pushedBranches: (() => string[]) | null = null;
   let pipelines: GitLabStubPipeline[] = [{ status: "success" }];
   /** Pipelines the project ran before any merge request here: its branches and main. */
   let history: { ref: string; source: string }[] = [];
@@ -354,8 +368,14 @@ export async function startGitLabStub(host: string) {
             : conflict
               ? "conflict"
               : "mergeable",
-      merge_commit_sha: request.mergedHead ? gitlabMergedResultSha(request.mergedHead) : null,
-      squash_commit_sha: null,
+      merge_commit_sha: request.mergedCommit
+        ? request.squashed
+          ? null
+          : request.mergedCommit
+        : request.mergedHead
+          ? gitlabMergedResultSha(request.mergedHead)
+          : null,
+      squash_commit_sha: request.squashed ? (request.mergedCommit ?? null) : null,
     };
   };
 
@@ -383,7 +403,7 @@ export async function startGitLabStub(host: string) {
       const current = headOfRequest(request);
       pipelines.forEach((pipeline, index) => {
         const head = pipeline.head ?? current;
-        if (!head) return;
+        if (!head || (pipeline.iid !== undefined && pipeline.iid !== request.iid)) return;
         const kind = pipeline.kind ?? "branch";
         listed.push({
           id: 100 * request.iid + index + 1,
@@ -395,6 +415,24 @@ export async function startGitLabStub(host: string) {
           iid: request.iid,
           ...(kind === "merge" ? { merges: head } : {}),
         });
+      });
+    }
+    // A branch pipeline for each pushed branch no merge request names: its one job passed.
+    const requested = new Set([...mergeRequests.values()].map((request) => request.branch));
+    for (const branch of pushedBranches?.() ?? []) {
+      const head = branchHead(branch);
+      if (!head || requested.has(branch)) continue;
+      listed.push({
+        // One id per branch, the same at every read.
+        id:
+          500_000 +
+          (Number.parseInt(createHash("sha1").update(branch).digest("hex").slice(0, 6), 16) %
+            400_000),
+        sha: head,
+        ref: branch,
+        status: "success",
+        source: "push",
+        jobs: PASSED_JOBS,
       });
     }
     // A pipeline with a retried job runs again until that job finishes.
@@ -581,7 +619,11 @@ export async function startGitLabStub(host: string) {
       }
       const rest = path.slice(prefix.length);
       const body = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>;
-      if (method === "DELETE" && rest === "/repository/branches/topic") {
+      const branchDelete = /^\/repository\/branches\/(.+)$/.exec(rest);
+      if (method === "DELETE" && branchDelete) {
+        const branch = decodeURIComponent(branchDelete[1] as string);
+        deletedBranches.push(branch);
+        onBranchDelete(branch);
         res.writeHead(204);
         res.end();
         return;
@@ -591,7 +633,11 @@ export async function startGitLabStub(host: string) {
       const paged = <T>(rows: T[]) => rows.slice((page - 1) * perPage, page * perPage);
 
       if (method === "GET" && rest === "") {
-        send(200, { ...project, enforce_auth_checks_on_uploads: mediaProtected });
+        send(200, {
+          ...project,
+          enforce_auth_checks_on_uploads: mediaProtected,
+          squash_option: squashOption,
+        });
         return;
       }
       if (method === "POST" && rest === "/uploads") {
@@ -753,14 +799,23 @@ export async function startGitLabStub(host: string) {
           send(422, { message: "Branch cannot be merged" });
           return;
         }
-        merges.push({
+        const squash = body.squash === true;
+        // GitLab refuses a merge its squash setting forbids.
+        if (squash ? squashOption === "never" : squashOption === "always") {
+          send(405, { message: "405 Method Not Allowed" });
+          return;
+        }
+        const merge: GitLabStubMerge = {
           iid: request.iid,
           sha: head,
-          squash: body.squash === true,
-          message: String(body.squash_commit_message ?? ""),
-        });
+          squash,
+          message: String((squash ? body.squash_commit_message : body.merge_commit_message) ?? ""),
+        };
+        merges.push(merge);
         request.state = "merged";
         request.mergedHead = head;
+        const written = onMerged(merge);
+        if (written) Object.assign(request, { mergedCommit: written, squashed: squash });
         send(200, requestJson(request));
         return;
       }
@@ -1062,6 +1117,37 @@ export async function startGitLabStub(host: string) {
     /** Runs when a merge request arrives, before GitLab compares heads. */
     onMergeRequest: (apply: () => void) => {
       onMergeRequest = apply;
+    },
+    /**
+     * Runs once GitLab accepted a merge, so a journey's repository moves its
+     * default branch as GitLab does; the commit it answers is the one the
+     * merge request then names as its merge's.
+     */
+    onMerged: (apply: (merge: GitLabStubMerge) => string | undefined) => {
+      onMerged = apply;
+    },
+    /** Every merge request the project holds, oldest first, as GitLab holds each now. */
+    mergeRequests: () =>
+      [...mergeRequests.values()].map((request) => ({
+        iid: request.iid,
+        branch: request.branch,
+        title: request.title,
+        description: request.description,
+        state: request.state,
+      })),
+    /** The project's squash setting: "Do not allow", "Require", or allowed and on or off by default. */
+    setSquashOption: (option: "never" | "always" | "default_on" | "default_off") => {
+      squashOption = option;
+    },
+    /** The project runs a pipeline on every pushed branch: one that passed, until a merge request names it. */
+    runsBranches: (branches: () => string[]) => {
+      pushedBranches = branches;
+    },
+    /** Every branch deleted through the API, in order. */
+    deletedBranches: () => [...deletedBranches],
+    /** Runs when a branch is deleted, so a journey's repository drops it as GitLab does. */
+    onBranchDelete: (apply: (branch: string) => void) => {
+      onBranchDelete = apply;
     },
     /** Open a merge request as a person would on GitLab's own page, for a change the app finds. */
     openMergeRequest: (input: {

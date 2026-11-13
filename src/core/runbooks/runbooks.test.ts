@@ -436,6 +436,7 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(books.crew(code).skills.map((skill) => skill.name)).toEqual([
       "careful-change",
       "programs",
+      "batch-repair",
       "queue-repair",
       "queue-setup",
       "computer-cleanup",
@@ -492,6 +493,23 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(
       books.crew({ ...code, kind: "fix", delivery: "queue-pr" }).skills.map((skill) => skill.name),
     ).not.toContain("queue-repair");
+  });
+  // Intent: the approved plan for batches of your own puts the accounting of every failed test
+  // against every change in the batch into the repair's guidance, with its three exits.
+  // Exercise the real bundle-to-work-computer skill door, not a source-file presence check.
+  it("stages the held batch's repair procedure and withdraws it when its runbook is off", async () => {
+    const { books } = fixture();
+    const repairing = { ...code, kind: "fix" as const, delivery: "queue-pr" as const };
+    const staged = await stageRunbookSkills(
+      books.crew(repairing).skills,
+      join(scratchDir("inf-batch-repair-"), "skills"),
+    );
+    const repair = staged.find((skill) => skill.name === "batch-repair");
+    expect(repair).toBeDefined();
+    const procedure = readFileSync(join(repair?.dir ?? "", "SKILL.md"), "utf8");
+    expect(procedure).toBe(readFileSync(join(root, "queue/skills/batch-repair/SKILL.md"), "utf8"));
+    books.set("queue", false);
+    expect(books.crew(repairing).skills.map((skill) => skill.name)).not.toContain("batch-repair");
   });
   it("puts only the matched section in the actual crew preset on both backends", () => {
     const { books } = fixture();

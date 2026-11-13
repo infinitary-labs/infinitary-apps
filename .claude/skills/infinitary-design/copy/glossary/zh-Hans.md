@@ -22,6 +22,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Appearance | 外观 | |
 | Approves secret uses (switch) | 批准机密使用 | The computer's Settings → Devices should show the same words. |
 | backlog | 待办列表 | |
+| batch (your approved changes, combined) | 这批改动 | 批量 stays the adjective in 批量检查 and 批量拉取请求. |
 | batched pull request / your project's queue | 批量拉取请求 / 你项目的队列 | |
 | branch | 分支 | |
 | bring up to date | 更新到最新 | Used instead of rebase and conflict where the app speaks. |
@@ -61,6 +62,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | font (Settings → Appearance) | 字体 | |
 | forget (a computer, on the phone) | 忘记 | Leave stays 离开. |
 | header (an extra request header) | 请求头 | Short form of 请求标头, as Chinese developer docs say it. |
+| held (a batch that stopped) | 暂缓 | The same word as a merge a rule holds (暂缓了它); 暂停 stays for what a person pauses. |
 | hold (on a task) | 暂缓 | 暂缓结束 for a hold ending. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |
@@ -102,6 +104,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | queued | 排队中 | |
 | rail | 侧栏 | |
 | Reasoning | 推理 | Used instead of thinking level or effort. |
+| rebase merges, merge commits (the host's settings) | 变基合并、合并提交 | Named only as the settings where the project lives, in GitHub's own Simplified Chinese wording; the app's own action stays 更新到最新. |
 | redacted (decision records) | 脱敏 | The mainland word for records with personal details stripped. |
 | Remove (a device) | 移除 | |
 | report | 汇报 | |
@@ -111,6 +114,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Runbooks | 操作手册 | |
 | Runs on | 运行于 | |
 | Secrets (the Settings section) | 机密 | |
+| send back (a change out of a batch) | 退回 | |
 | server (a custom API's) | 服务器 | Only for the custom API's server, never for a computer of the person's. |
 | Settings | 设置 | |
 | sign-in / sign in | 登录 | Used instead of token, OAuth or credential. |

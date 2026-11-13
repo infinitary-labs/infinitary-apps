@@ -1363,6 +1363,54 @@
       <string>%1$ld actions</string>
     </dict>
   </dict>
+  <key>settingsProjectsBatchHeldChecks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Held since %3$@: %1$@ failed, so one approved change waits. Changes you approve meanwhile wait in line behind it.</string>
+      <key>other</key>
+      <string>Held since %3$@: %1$@ failed, so %2$ld approved changes wait. Changes you approve meanwhile wait in line behind it.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchHeldChecksUnnamed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Held since %2$@: its checks failed, so one approved change waits. Changes you approve meanwhile wait in line behind it.</string>
+      <key>other</key>
+      <string>Held since %2$@: its checks failed, so %1$ld approved changes wait. Changes you approve meanwhile wait in line behind it.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchSentBack</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Sent one change back. The rest of the batch is combined again.</string>
+      <key>other</key>
+      <string>Sent %1$ld changes back. The rest of the batch is combined again.</string>
+    </dict>
+  </dict>
   <key>settingsProjectsPauseSummary</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

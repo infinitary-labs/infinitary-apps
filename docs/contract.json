@@ -1927,6 +1927,281 @@
                 "since",
                 "changes"
               ]
+            },
+            "batch": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "branch": {
+                        "type": "string"
+                      },
+                      "head": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "at": {
+                        "type": "number"
+                      },
+                      "number": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "base": {
+                        "type": "string"
+                      },
+                      "fix": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "taskId",
+                      "branch",
+                      "head",
+                      "title",
+                      "body",
+                      "at"
+                    ]
+                  }
+                },
+                "open": {
+                  "type": "object",
+                  "properties": {
+                    "branch": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "base": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "url": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "taskId": {
+                            "type": "string"
+                          },
+                          "branch": {
+                            "type": "string"
+                          },
+                          "head": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "body": {
+                            "type": "string"
+                          },
+                          "at": {
+                            "type": "number"
+                          },
+                          "number": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "base": {
+                            "type": "string"
+                          },
+                          "fix": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "commit": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "taskId",
+                          "branch",
+                          "head",
+                          "title",
+                          "body",
+                          "at",
+                          "commit"
+                        ]
+                      }
+                    },
+                    "since": {
+                      "type": "number"
+                    },
+                    "hold": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "head": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "checks",
+                            "merge-way",
+                            "rules"
+                          ]
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "detail": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "head",
+                        "reason",
+                        "checks"
+                      ]
+                    },
+                    "stale": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "branch",
+                    "head",
+                    "base",
+                    "members",
+                    "since"
+                  ]
+                },
+                "receipts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "head": {
+                        "type": "string"
+                      },
+                      "sha": {
+                        "type": "string"
+                      },
+                      "number": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "url": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "at": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "taskId",
+                      "head",
+                      "number",
+                      "at"
+                    ]
+                  }
+                },
+                "leftOut": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "head": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "at": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "taskId",
+                      "head",
+                      "reason",
+                      "at"
+                    ]
+                  }
+                },
+                "ways": {
+                  "type": "object",
+                  "properties": {
+                    "squash": {
+                      "type": "boolean"
+                    },
+                    "rebase": {
+                      "type": "boolean"
+                    },
+                    "merge": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "squash",
+                    "rebase",
+                    "merge"
+                  ]
+                },
+                "fixes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "line",
+                "receipts",
+                "leftOut"
+              ]
             }
           },
           "required": [
@@ -2378,6 +2653,281 @@
                   "url",
                   "since",
                   "changes"
+                ]
+              },
+              "batch": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "branch": {
+                          "type": "string"
+                        },
+                        "head": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "body": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "number"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "base": {
+                          "type": "string"
+                        },
+                        "fix": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "branch",
+                        "head",
+                        "title",
+                        "body",
+                        "at"
+                      ]
+                    }
+                  },
+                  "open": {
+                    "type": "object",
+                    "properties": {
+                      "branch": {
+                        "type": "string"
+                      },
+                      "head": {
+                        "type": "string"
+                      },
+                      "base": {
+                        "type": "string"
+                      },
+                      "number": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "url": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "members": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "taskId": {
+                              "type": "string"
+                            },
+                            "branch": {
+                              "type": "string"
+                            },
+                            "head": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "body": {
+                              "type": "string"
+                            },
+                            "at": {
+                              "type": "number"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "base": {
+                              "type": "string"
+                            },
+                            "fix": {
+                              "type": "boolean",
+                              "const": true
+                            },
+                            "commit": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "taskId",
+                            "branch",
+                            "head",
+                            "title",
+                            "body",
+                            "at",
+                            "commit"
+                          ]
+                        }
+                      },
+                      "since": {
+                        "type": "number"
+                      },
+                      "hold": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "number"
+                          },
+                          "head": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "checks",
+                              "merge-way",
+                              "rules"
+                            ]
+                          },
+                          "checks": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "detail": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "at",
+                          "head",
+                          "reason",
+                          "checks"
+                        ]
+                      },
+                      "stale": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "branch",
+                      "head",
+                      "base",
+                      "members",
+                      "since"
+                    ]
+                  },
+                  "receipts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "head": {
+                          "type": "string"
+                        },
+                        "sha": {
+                          "type": "string"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "at": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "head",
+                        "number",
+                        "at"
+                      ]
+                    }
+                  },
+                  "leftOut": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "head": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "head",
+                        "reason",
+                        "at"
+                      ]
+                    }
+                  },
+                  "ways": {
+                    "type": "object",
+                    "properties": {
+                      "squash": {
+                        "type": "boolean"
+                      },
+                      "rebase": {
+                        "type": "boolean"
+                      },
+                      "merge": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "squash",
+                      "rebase",
+                      "merge"
+                    ]
+                  },
+                  "fixes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "line",
+                  "receipts",
+                  "leftOut"
                 ]
               }
             },
@@ -3007,6 +3557,281 @@
               "since",
               "changes"
             ]
+          },
+          "batch": {
+            "type": "object",
+            "properties": {
+              "line": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "branch": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "base": {
+                      "type": "string"
+                    },
+                    "fix": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "taskId",
+                    "branch",
+                    "head",
+                    "title",
+                    "body",
+                    "at"
+                  ]
+                }
+              },
+              "open": {
+                "type": "object",
+                "properties": {
+                  "branch": {
+                    "type": "string"
+                  },
+                  "head": {
+                    "type": "string"
+                  },
+                  "base": {
+                    "type": "string"
+                  },
+                  "number": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "url": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "branch": {
+                          "type": "string"
+                        },
+                        "head": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "body": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "number"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "base": {
+                          "type": "string"
+                        },
+                        "fix": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "commit": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "branch",
+                        "head",
+                        "title",
+                        "body",
+                        "at",
+                        "commit"
+                      ]
+                    }
+                  },
+                  "since": {
+                    "type": "number"
+                  },
+                  "hold": {
+                    "type": "object",
+                    "properties": {
+                      "at": {
+                        "type": "number"
+                      },
+                      "head": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "enum": [
+                          "checks",
+                          "merge-way",
+                          "rules"
+                        ]
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "detail": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "at",
+                      "head",
+                      "reason",
+                      "checks"
+                    ]
+                  },
+                  "stale": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "branch",
+                  "head",
+                  "base",
+                  "members",
+                  "since"
+                ]
+              },
+              "receipts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "sha": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "url": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "at": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "taskId",
+                    "head",
+                    "number",
+                    "at"
+                  ]
+                }
+              },
+              "leftOut": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "taskId",
+                    "head",
+                    "reason",
+                    "at"
+                  ]
+                }
+              },
+              "ways": {
+                "type": "object",
+                "properties": {
+                  "squash": {
+                    "type": "boolean"
+                  },
+                  "rebase": {
+                    "type": "boolean"
+                  },
+                  "merge": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "squash",
+                  "rebase",
+                  "merge"
+                ]
+              },
+              "fixes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "line",
+              "receipts",
+              "leftOut"
+            ]
           }
         },
         "required": [
@@ -3088,6 +3913,93 @@
                   "run",
                   "number",
                   "reason"
+                ]
+              }
+            ]
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:repos:batch-answer": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "try-again"
+                  },
+                  "head": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "action",
+                  "head"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "send-back"
+                  },
+                  "head": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "changes": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "reason"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "action",
+                  "head",
+                  "changes"
                 ]
               }
             ]
@@ -6068,6 +6980,281 @@
               "url",
               "since",
               "changes"
+            ]
+          },
+          "batch": {
+            "type": "object",
+            "properties": {
+              "line": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "branch": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "base": {
+                      "type": "string"
+                    },
+                    "fix": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "taskId",
+                    "branch",
+                    "head",
+                    "title",
+                    "body",
+                    "at"
+                  ]
+                }
+              },
+              "open": {
+                "type": "object",
+                "properties": {
+                  "branch": {
+                    "type": "string"
+                  },
+                  "head": {
+                    "type": "string"
+                  },
+                  "base": {
+                    "type": "string"
+                  },
+                  "number": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "url": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "branch": {
+                          "type": "string"
+                        },
+                        "head": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "body": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "number"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "base": {
+                          "type": "string"
+                        },
+                        "fix": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "commit": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "branch",
+                        "head",
+                        "title",
+                        "body",
+                        "at",
+                        "commit"
+                      ]
+                    }
+                  },
+                  "since": {
+                    "type": "number"
+                  },
+                  "hold": {
+                    "type": "object",
+                    "properties": {
+                      "at": {
+                        "type": "number"
+                      },
+                      "head": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "enum": [
+                          "checks",
+                          "merge-way",
+                          "rules"
+                        ]
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "detail": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "at",
+                      "head",
+                      "reason",
+                      "checks"
+                    ]
+                  },
+                  "stale": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "branch",
+                  "head",
+                  "base",
+                  "members",
+                  "since"
+                ]
+              },
+              "receipts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "sha": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "url": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "at": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "taskId",
+                    "head",
+                    "number",
+                    "at"
+                  ]
+                }
+              },
+              "leftOut": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "taskId",
+                    "head",
+                    "reason",
+                    "at"
+                  ]
+                }
+              },
+              "ways": {
+                "type": "object",
+                "properties": {
+                  "squash": {
+                    "type": "boolean"
+                  },
+                  "rebase": {
+                    "type": "boolean"
+                  },
+                  "merge": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "squash",
+                  "rebase",
+                  "merge"
+                ]
+              },
+              "fixes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "line",
+              "receipts",
+              "leftOut"
             ]
           }
         },
@@ -61355,6 +62542,38 @@
                     "required": [
                       "headSha",
                       "method"
+                    ]
+                  },
+                  "batch": {
+                    "type": "object",
+                    "properties": {
+                      "fix": {
+                        "type": "boolean"
+                      },
+                      "sendBack": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "task": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "task",
+                            "reason"
+                          ]
+                        }
+                      },
+                      "evidence": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "evidence"
                     ]
                   },
                   "diagnosis": {

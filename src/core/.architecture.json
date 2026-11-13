@@ -151,6 +151,12 @@
       "group": "Projects"
     },
     {
+      "name": "batches",
+      "path": "src/core/batches",
+      "about": "One person's approved changes combined into one pull request per project",
+      "group": "Projects"
+    },
+    {
       "name": "axi",
       "path": "src/core/axi",
       "about": "The task channel behind a crewmate's commands",
@@ -555,6 +561,16 @@
       "why": "runs git and checks commit names"
     },
     {
+      "from": "batches",
+      "to": "forge",
+      "why": "opens the batch's pull request, reads its checks and merges"
+    },
+    {
+      "from": "batches",
+      "to": "workspace",
+      "why": "combines and pushes with git and keeps each project's batch"
+    },
+    {
       "from": "freeze",
       "to": "update",
       "why": "recognizes an alpha build"
@@ -828,6 +844,11 @@
       "from": "orchestrator",
       "to": "queue",
       "why": "reads the queue's labels and parts"
+    },
+    {
+      "from": "orchestrator",
+      "to": "batches",
+      "why": "puts approved changes in line and reads their place"
     },
     {
       "from": "orchestrator",
@@ -1310,6 +1331,11 @@
       "why": "reads hosts, holds and check states"
     },
     {
+      "from": "batches",
+      "to": "shared",
+      "why": "reads batch shapes and check states"
+    },
+    {
       "from": "freeze",
       "to": "shared",
       "why": "reads the source identity"
@@ -1513,6 +1539,11 @@
       "from": "workspace",
       "to": "git",
       "why": "keeps working copies and commits"
+    },
+    {
+      "from": "batches",
+      "to": "git",
+      "why": "writes one commit per change and pushes the batch branch"
     },
     {
       "from": "forge",
@@ -1961,6 +1992,56 @@
           "to": "unknown",
           "why": "its outcome is unknown",
           "by": "secrets"
+        }
+      ]
+    },
+    {
+      "name": "a batch of your own",
+      "in": "batches",
+      "about": "One project's approved changes, combined into one pull request",
+      "states": ["in line", "checking", "held", "merged", "withdrawn"],
+      "moves": [
+        {
+          "from": "in line",
+          "to": "checking",
+          "why": "no batch is open, so the line is combined and pushed",
+          "by": "batches"
+        },
+        {
+          "from": "checking",
+          "to": "merged",
+          "why": "the pull request's checks pass",
+          "by": "batches"
+        },
+        {
+          "from": "checking",
+          "to": "held",
+          "why": "a check fails, the project allows no merge that keeps its commits, or a rule where it lives blocks it",
+          "by": "batches"
+        },
+        {
+          "from": "held",
+          "to": "checking",
+          "why": "Try again, a change sent back, a fix, revised commit words or checks that run again",
+          "by": "batches"
+        },
+        {
+          "from": "held",
+          "to": "merged",
+          "why": "the rule that blocked it lets it through",
+          "by": "batches"
+        },
+        {
+          "from": "checking",
+          "to": "checking",
+          "why": "an approval is withdrawn, a change's commit words are revised or the default branch moved, so it is combined again",
+          "by": "batches"
+        },
+        {
+          "from": "checking",
+          "to": "withdrawn",
+          "why": "every change in it lost its approval",
+          "by": "batches"
         }
       ]
     }

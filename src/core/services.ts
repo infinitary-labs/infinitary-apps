@@ -81,6 +81,7 @@ import { FirstmateAgent, type RunningComputerVersion } from "./orchestrator/firs
 import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
+import { createOwnBatches } from "./orchestrator/ownBatches";
 import { waitThroughAutomation } from "./orchestrator/putOffs";
 import { Scheduler } from "./orchestrator/scheduler";
 import { withTaskEvents } from "./orchestrator/taskEvents";
@@ -150,14 +151,13 @@ import { ScheduleStore } from "./storage/scheduleStore";
 import { SettingsStore } from "./storage/settingsStore";
 import type { TaskRecord } from "./storage/taskRecords";
 import { type UsageInput, UsageStore } from "./storage/usageStore";
-import { ClosedTaskFiles } from "./tasks/closedTaskFiles";
 import { CrewActions } from "./tasks/crewActions";
 import { CrewLiveText, CrewTranscripts } from "./tasks/crewTranscript";
+import { startHomeTaskFiles } from "./tasks/homeTaskFiles";
 import { LeftoverPrograms } from "./tasks/leftoverPrograms";
 import { TaskProtocol } from "./tasks/taskProtocol";
 import { TaskService } from "./tasks/taskService";
 import { taskStopsCommand } from "./tasks/taskStops";
-import { TaskTempFiles } from "./tasks/taskTemp";
 import { TaskTimeline } from "./tasks/taskTimeline";
 import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
@@ -802,6 +802,18 @@ export async function createServices(
     mapPart: () => runbooks.mapPart(),
   });
   const prepareContribution = (taskId: string) => projectContributions.prepareTask(taskId, tasks);
+  const batches = createOwnBatches({
+    repos,
+    forgeFor,
+    ticker,
+    tasks,
+    presentations,
+    inbox,
+    late: () => ({ checks: changeDelivery.checks, settling: supervisor.settling }),
+    firstmate: () => firstmateForSeat,
+    note: (text) => broadcastEvent({ type: "firstmate_note", text }),
+    namingRule,
+  });
   const changeDelivery: ChangeDelivery = createChangeDelivery({
     namingRule,
     tasks,
@@ -812,6 +824,7 @@ export async function createServices(
     // the app's own GitHub sign-in (PR 1.2), read at each request. A 401
     // asks the sign-in service to look again; its health read is the proof.
     forgeFor,
+    batches: () => batches,
     onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
     steer: (taskId, wake) => {
       if (wake.once === undefined) inbox.enqueue(taskId, wake);
@@ -1307,6 +1320,7 @@ export async function createServices(
     repos,
     tasks,
     queue: changeDelivery.queue,
+    ways: (repoId) => batches.readWays(repoId),
     forgeFor,
     supervisor,
     broadcastEvent,
@@ -1360,50 +1374,16 @@ export async function createServices(
   workspace.sweepPool();
   // Retired worktrees a quit left half-deleted finish deleting, below the UI.
   workspace.sweepTrash();
-  // A closed task's leftover files go a week after its close, unless a live
-  // task builds on it, was filed from it or waits on it
-  // (docs/task-retention.md): pass now, at each close or renewed contact,
-  // and hourly so a running app crosses the week without another close.
-  const closedTaskFiles = new ClosedTaskFiles({
+  // What a closed task left on disk goes on its owners' clocks (docs/task-retention.md).
+  startHomeTaskFiles({
     paths,
     tasks,
-    removePlaced: (record) => placed.removeClosedTaskFiles(record),
-    deleteInBackground: (dir) => workspace.deleteInBackground(dir),
-    now: ticker.now,
+    placed,
+    workspace,
+    leftoverPrograms,
+    workDevices,
+    ticker,
   });
-  closedTaskFiles.watch();
-  void closedTaskFiles.sweep();
-  workDevices.onWorkDevice((contact) => {
-    if (contact.contact === "in-reach") void closedTaskFiles.sweep();
-  });
-  ticker.register("closed-task-files", 60 * 60 * 1000, () => void closedTaskFiles.sweep());
-  // A provisioned temporary folder goes at the close, not after a week, and
-  // a removal that could not finish is tried again on the same clocks.
-  const taskTempFiles = new TaskTempFiles({
-    paths,
-    tasks,
-    removePlaced: async (record) => {
-      const result = await placed.removeClosedTaskTemp(record);
-      if (result.status === "removed") return { status: "removed", bytes: result.bytes };
-      if (result.status === "pending") {
-        return {
-          status: "pending",
-          bytes: 0,
-          reason: result.reason ?? "safe removal is uncertain",
-        };
-      }
-      return { status: "absent", bytes: 0 };
-    },
-    leftoversSettled: (taskId) => leftoverPrograms.settled(taskId),
-    deleteInBackground: (dir) => workspace.deleteInBackground(dir),
-    now: ticker.now,
-  });
-  taskTempFiles.watch();
-  void taskTempFiles.sweep();
-  workDevices.onWorkDevice((contact) => {
-    if (contact.contact === "in-reach") void taskTempFiles.sweep();
-  });
-  ticker.register("task-temp-files", 60 * 60 * 1000, () => void taskTempFiles.sweep());
   const flagship = new Flagship({
     vault,
     settings,
@@ -1956,6 +1936,7 @@ export async function createServices(
     projectChanges,
     queueChoice,
     queuePauses,
+    batches,
     workspace,
     forges: forgeSignIns,
     integrations,

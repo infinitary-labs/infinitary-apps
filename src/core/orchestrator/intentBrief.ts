@@ -140,8 +140,19 @@ const DELIVERY_TEXT: Record<RepoDelivery, string> = {
   "local-only": "local-only - work merges on a local branch and never leaves the machine",
 };
 
-function deliveryText(delivery: RepoDelivery, queueOwned = false): string {
+/**
+ * A batched project whose approved changes combine in batches of the
+ * captain's own (docs/forge.md, "Batches of your own"): the pushed branch is
+ * the change, with no pull request of its own.
+ */
+const OWN_BATCH_DELIVERY_TEXT = `queue-pr - finished work is pushed to its branch where the project lives and its story confirmed (git push, then open_change), with no pull request of its own. The captain's merge click puts the approved version in line: the app combines the captain's approved changes into one batch pull request, one commit for each change, and merges it once its checks pass. ${AFTER_MERGE_DELIVERY_RULE}`;
+
+/** Who merges a batched project's approved changes (`queueWay`). */
+export type QueueOwned = boolean | "own";
+
+function deliveryText(delivery: RepoDelivery, queueOwned: QueueOwned = false): string {
   if (delivery !== "queue-pr") return DELIVERY_TEXT[delivery];
+  if (queueOwned === "own") return OWN_BATCH_DELIVERY_TEXT;
   return `${DELIVERY_TEXT["queue-pr"]} ${queueOwned ? "The project's queue tests and merges the approved version itself." : "The app merges the approved version after the project's queue passes it."}`;
 }
 
@@ -201,7 +212,7 @@ export function renderIntentBrief(
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
   folder?: FolderBriefFacts,
-  queueOwned = false,
+  queueOwned: QueueOwned = false,
 ): string {
   const lines: string[] = [USER_WORDS_PRECEDENCE, intent.userWords, "", `Goal: ${intent.goal}`, ""];
   if (intent.constraints && intent.constraints.length > 0) {
@@ -311,7 +322,7 @@ export function renderEscalationBrief(
   escalation: EscalationBriefFacts,
   personal?: PersonalBriefFacts,
   folder?: FolderBriefFacts,
-  queueOwned = false,
+  queueOwned: QueueOwned = false,
 ): string {
   const base = renderIntentBrief(intent, delivery, personal, folder, queueOwned);
   const previous = escalation.previousModel
@@ -354,7 +365,7 @@ export function renderFollowupBrief(
   },
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
-  queueOwned = false,
+  queueOwned: QueueOwned = false,
 ): string {
   return [
     `Goal: ${followup.goal}`,
@@ -397,7 +408,7 @@ export function withoutDeliveryLine(brief: string): string {
 export function withDeliveryLine(
   brief: string,
   delivery: RepoDelivery | undefined,
-  queueOwned = false,
+  queueOwned: QueueOwned = false,
 ): string {
   const rest = withoutDeliveryLine(brief);
   return delivery ? `${rest.trimEnd()}\n\nDelivery: ${deliveryText(delivery, queueOwned)}.` : rest;
@@ -1192,7 +1203,7 @@ export function renderReviewBrief(
   intent: SpawnIntent,
   delivery: RepoDelivery,
   facts: ReviewBriefFacts,
-  queueOwned = false,
+  queueOwned: QueueOwned = false,
 ): string {
   const userWords = intent.userWords.trim();
   if (!userWords) {

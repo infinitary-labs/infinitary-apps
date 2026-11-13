@@ -480,6 +480,7 @@ describe("ipc contract", () => {
       "inf:quota:opened",
       "inf:quota:refresh",
       "inf:quota:snapshot",
+      "inf:repos:batch-answer",
       "inf:repos:configure",
       "inf:repos:folder",
       "inf:repos:folder:set",

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { failedBatch } from "@shared/checkSnapshot";
 import { hasChangeRequests } from "@shared/forge";
 import { overridePasses } from "@shared/holds";
-import { deliveryForRecord, opensPullRequest } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, ownsBatches } from "@shared/repos";
 import { forgeLocationOf, presentationCommitMessage } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type {
@@ -19,6 +19,7 @@ import {
   candidateHead,
   endedAuthorization,
   FAILED_BATCH_NOTE,
+  FAILED_OWN_BATCH_NOTE,
   outstandingGuidance,
   putInFront,
   retryAfter,
@@ -718,6 +719,7 @@ export class KeptApproval {
       head,
       prNumber: authorization.target.prNumber,
       unattended,
+      approvedAt: authorization.at,
       // The captain's guidance since his click holds the merge without
       // spending the approval, read right before the last look (FI3-662).
       held: () => {
@@ -970,12 +972,26 @@ export class KeptApproval {
   }
 
   /** The installed merge route of the approved change's actual project. */
-  queueOwnsMerge(taskId: string): boolean {
+  queueOwnsMerge(taskId: string): boolean | "own" {
     const record = this.host.tasks.get(taskId);
     if (!record) return false;
     const own = record.repoId ? this.host.repos.get(record.repoId) : undefined;
     const review = standingAuthorization(record.delivery)?.review ?? record.delivery?.checkTarget;
+    if (this.ownBatch(record, own, review)) return "own";
     return queueMerges(this.changeRepoOf(record, own, review));
+  }
+
+  /** Whether the task's own change merges in this person's batch (docs/forge.md, "Batches of your own"). */
+  private ownBatch(
+    record: TaskRecord,
+    repo: ReturnType<RepoRegistry["get"]>,
+    review: { repoId?: string } | undefined,
+  ): boolean {
+    return (
+      !review &&
+      repo !== undefined &&
+      ownsBatches(deliveryForRecord(record, repo.delivery), repo) === true
+    );
   }
 
   /**
@@ -988,16 +1004,26 @@ export class KeptApproval {
   queueWarning(taskId: string, wait: MergeWait): string | undefined {
     const record = this.host.tasks.get(taskId);
     const repo = record?.repoId ? this.host.repos.get(record.repoId) : undefined;
+    const own =
+      record !== undefined &&
+      this.ownBatch(
+        record,
+        repo,
+        standingAuthorization(record.delivery)?.review ?? record.delivery?.checkTarget,
+      );
     if (wait === "checks") {
       const head = record?.delivery?.headSha;
       return record &&
         head &&
         deliveryForRecord(record, repo?.delivery) === "queue-pr" &&
         failedBatch(record.delivery, head)
-        ? FAILED_BATCH_NOTE
+        ? own
+          ? FAILED_OWN_BATCH_NOTE
+          : FAILED_BATCH_NOTE
         : undefined;
     }
-    if (wait !== "queue") return undefined;
+    // A batch of this person's own waits on no status where the project lives.
+    if (wait !== "queue" || own) return undefined;
     return repo
       ? queueWakeWords(queueNoteFacts(repo, record?.delivery?.queueMark, this.host.now()))
       : undefined;

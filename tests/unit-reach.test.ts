@@ -196,6 +196,7 @@ describe("local direct unit reach", () => {
     const contract = "src/shared/publishedContract.test.ts";
     const feed = "src/core/orchestrator/crewFacts.test.ts";
     const wakes = [
+      "src/core/orchestrator/wakes.words.batches.test.ts",
       "src/core/orchestrator/wakes.words.corrections.test.ts",
       "src/core/orchestrator/wakes.words.crewmate.test.ts",
       "src/core/orchestrator/wakes.words.firstmate.test.ts",

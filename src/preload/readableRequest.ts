@@ -30,6 +30,10 @@ export const REQUEST_COPY = {
     fallback: "Could not answer this paused batch. Please try again.",
     prefix: "Could not answer this paused batch: ",
   },
+  "inf:repos:batch-answer": {
+    fallback: "Could not answer this held batch. Please try again.",
+    prefix: "Could not answer this held batch: ",
+  },
   "inf:repos:queue-credential-create": {
     fallback: "Could not make the queue's key. Please try again.",
     prefix: "Could not make the queue's key: ",

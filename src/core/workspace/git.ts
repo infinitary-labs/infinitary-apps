@@ -17,6 +17,13 @@ export const APP_GIT_IDENTITY = [
 ];
 
 /**
+ * How long one fetch or push may wait on the place a project lives. A slow
+ * or silent remote must not hold what waits behind the call: a dispatch
+ * falls back to the last fetched commit, and a batch's pass reads again.
+ */
+export const REMOTE_TIMEOUT_MS = 30 * 1000;
+
+/**
  * Thin git runner for the work substrate. Always explicit about the repo via
  * -C; never touches the user's global config beyond what git reads itself.
  */

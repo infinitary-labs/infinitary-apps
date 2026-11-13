@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { batchAnswerSchema } from "../batches";
 import {
   CARD_REPLY_MAX_CHARS,
   CONVERSE_TEXT_MAX_CHARS,
@@ -236,6 +237,16 @@ export const talkChannels = {
     surface: "core",
     reach: "views",
     request: z.tuple([z.string().min(1), queueAnswerSchema]),
+    response: okSchema,
+  },
+  // A by-hand answer to a held batch of the captain's own approved changes
+  // (Settings -> Projects, docs/forge.md "A held batch"): try it again, or
+  // send changes back, each with its reason.
+  "inf:repos:batch-answer": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1), batchAnswerSchema]),
     response: okSchema,
   },
   // The token a project's shipped queue writes with, where its host keeps

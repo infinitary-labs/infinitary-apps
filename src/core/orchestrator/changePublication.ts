@@ -47,6 +47,14 @@ import { carryPassedReview } from "./reviewCarry";
  * prepared and published, and the change opened - in the task's own project
  * or another the app manages - for the checks and the merge to read.
  */
+/** What open_change answers for a change that joins this person's batch instead of opening a pull request. */
+export const BATCH_OPEN_WORDS = {
+  confirmed: (branch: string) =>
+    `Confirmed the story on the pushed branch ${branch}. This project merges approved changes together, as one batch pull request, so this change opens no pull request of its own: its story is published on its batch's pull request once the change is approved. Read its checks with check_change, which reads the checks the project runs on the pushed branch; if the project runs none there, declare that with check_change absentChecks after the local gate. Then show the merge card: the captain's click on it, or the task's autonomy, puts this version in line for the project's next batch, where it merges as one commit of its own. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the merge card.`,
+  around:
+    "This change has no pull request of its own: it merges in this project's batch, so there are no words around its story to change. Pass presentation alone.",
+} as const;
+
 export class ChangePublication {
   private readonly options: ChangeDeliveryOptions;
 
@@ -263,7 +271,13 @@ export class ChangePublication {
     const selected = currentChange(located.record.delivery, located.branch);
     const checkedOut = await this.presentationBranch(taskId).catch(() => undefined);
     const branch = fork?.branch ?? checkedOut ?? selected.branch;
-    const change = await forge.changeFor(branch);
+    // A change that joins a batch of this person's own has no pull request:
+    // its story is confirmed on its pushed branch (docs/forge.md, "Batches of your own").
+    const change =
+      (await forge.changeFor(branch)) ??
+      (!fork && branch === located.record.branch && this.context.ownBatch(taskId)
+        ? await this.context.pushedBranch(located.forge, branch)
+        : null);
     if (!change)
       throw new Error(
         fork
@@ -533,6 +547,34 @@ export class ChangePublication {
           { head },
         );
       };
+      // A project that gets batches of its own opens no pull request for a
+      // change: its story is confirmed on the pushed branch and published on
+      // its batch's pull request (docs/forge.md, "Batches of your own"). A
+      // change that already has a pull request, targets another branch or
+      // publishes a draft for its validation keeps its own.
+      if (own && !existing && usesStory && !prerequisite && !input.base) {
+        const batched = await this.context.resolveOwnBatch(taskId);
+        if (batched) {
+          if (input.around) return BATCH_OPEN_WORDS.around;
+          const confirmed = await presentations.confirmBranch(
+            taskId,
+            input.presentation as number,
+            forge,
+            branch,
+            input.title,
+            validationHead ? { beforePublish: beginPublication } : undefined,
+          );
+          this.checks.noteChange(record.id, { change: confirmed, forge });
+          // A story revised under a kept approval: the change keeps its
+          // place in line or in its batch, which takes the story's words.
+          await this.context.batches?.revise(batched.id, {
+            taskId,
+            head: confirmed.headSha,
+            ...presentations.batchCommit(taskId, branch, confirmed.headSha),
+          });
+          return BATCH_OPEN_WORDS.confirmed(branch);
+        }
+      }
       let change: ForgeChange;
       let described = "";
       if (usesStory) {

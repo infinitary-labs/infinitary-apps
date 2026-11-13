@@ -190,7 +190,11 @@ it("retains a pending queue removal at the front when another approval rotates i
   first.queued = [
     standingApproval({
       id: "other",
-      target: { ...first.target, prNumber: first.target.prNumber + 1, branch: "fm/task-other" },
+      target: {
+        ...first.target,
+        prNumber: (first.target.prNumber as number) + 1,
+        branch: "fm/task-other",
+      },
     }),
   ];
   const rotated = putInFront(first, 0, true);

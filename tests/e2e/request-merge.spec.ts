@@ -67,6 +67,17 @@ const MERGE = MERGE_WORDS["merge-pr"];
 const ADOPTED_HEAD = "4fc9140d92b3a9d25937dec0ff4f9754fdc8c8e4";
 const ADOPTED_BRANCH = "release-please--branches--main";
 
+// A team queue of the project's own (docs/forge.md, "A project's queue"): a
+// workflow on GitHub, or the CI file on GitLab, that names the batch check.
+// A batched project that carries neither takes batches of your own, where a
+// pull request named by number merges at the click with no batch check.
+const TEAM_QUEUE_WORKFLOW = {
+  path: ".github/workflows/batch.yml",
+  state: "active",
+  text: `name: Batch\non:\n  status:\njobs:\n  batch:\n    if: github.event.context == '${QUEUE_STATUS}'\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n`,
+};
+const TEAM_QUEUE_CI_FILE = `batch:\n  rules:\n    - if: $CI_PIPELINE_SOURCE == "schedule"\n  script:\n    - ./batch.sh --status ${QUEUE_STATUS}\n`;
+
 function seedRepo(userDataDir: string, taskId: string) {
   const repoDir = join(userDataDir, "repo");
   const worktreeDir = join(userDataDir, "worktree");
@@ -695,6 +706,7 @@ test("a crewmate reads a fork and the captain's keyboard merge queues its review
     headRepoId: 912,
   });
   github.setChecks([{ name: "build", status: "completed", conclusion: "success" }]);
+  github.serveWorkflows([TEAM_QUEUE_WORKFLOW]);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
   seedProject(db, {
@@ -857,6 +869,10 @@ for (const kind of ["github", "gitlab"] as const) {
             ...Object.fromEntries(files.map((file) => [file.path, file.text])),
             ".gitlab-ci.yml": `include:\n  - local: ${part.queueFile}\n`,
           });
+      } else {
+        // Not the shipped queue: the project answers the batch check itself.
+        github?.serveWorkflows([TEAM_QUEUE_WORKFLOW]);
+        gitlab?.serveFiles({ ".gitlab-ci.yml": TEAM_QUEUE_CI_FILE });
       }
       const db = openDatabase(userDataDir);
       seedProject(db, {

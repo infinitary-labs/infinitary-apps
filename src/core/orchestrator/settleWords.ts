@@ -355,7 +355,9 @@ export function placeOf(
  * The task's pull request by its number, in the host's own words: the
  * label the forge recorded for it (`#N`, `!N`), else `#N`.
  */
-export function changeName(record: TaskRecord | undefined, number: number): string {
+export function changeName(record: TaskRecord | undefined, number: number | undefined): string {
+  // A pushed branch with no pull request of its own (docs/forge.md, "Batches of your own").
+  if (number === undefined) return "its pushed branch";
   const delivery = record?.delivery;
   return delivery?.prNumber === number && delivery.changeLabel
     ? delivery.changeLabel

@@ -89,10 +89,13 @@ export type CorrectionWakeKind =
   | "correction-review"
   | "kept-project-direction";
 
+/** Batches of your own have their own byte-exact cases: the hold the first mate hears and a crewmate's send-back. */
+export type OwnBatchWakeKind = "batch-held" | "batch-sent-back";
+
 /** Every other kind: a crewmate's steers, and the wrappers and choices either lane hears. */
 export type CrewmateWakeKind = Exclude<
   WakeKind,
-  FirstmateWakeKind | SavedOnlyWakeKind | CorrectionWakeKind
+  FirstmateWakeKind | SavedOnlyWakeKind | CorrectionWakeKind | OwnBatchWakeKind
 >;
 
 /** One wake as a lane holds it, and the words it is served as. */

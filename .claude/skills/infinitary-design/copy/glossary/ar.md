@@ -23,6 +23,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Asks first | يسأل أولًا | |
 | Automation | الأتمتة | |
 | backlog | قائمة المهام المؤجلة | |
+| batch (your approved changes, combined) | الدفعة | As in "فحص الدفعة"; feminine, so a held batch is "معلّقة". |
 | batch / batch run (the queue's) | دفعة / تشغيل الدفعة | Matches "طلب سحب مجمّع" and "فحص الدفعة". |
 | board (task board) | لوح المهام | "لوح" kept apart from "لوحة" (panel). |
 | branch | فرع | "الفرع الرئيسي" for the main branch. |
@@ -63,6 +64,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
 | graph | المخطط | |
 | header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
+| held (a batch that stopped) | معلّقة | "إيقاف مؤقت" stays for what a person pauses. |
 | hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | inspector | التفاصيل | The side pane that shows one entry. |
@@ -107,6 +109,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | quota, rate limit (never said) | رصيد باقتك | "حصة" appears only as an extra search word. |
 | rail | شريط | Only in search words ("أشرطة"), for the side column of panels. |
 | Reasoning | الاستدلال | As the task facts already say it. |
+| rebase merges, merge commits (the host's settings) | الدمج بإعادة التأسيس (rebase)، إيداعات الدمج | Named only as the settings where the project lives, with "rebase" beside it because that settings page is in English; the app's own action stays "تحديثه بآخر التغييرات". |
 | record (a Usage record) | سجل | Plural "سجلات". |
 | release | إصدار | "أُصدرت" for "Released"; "نسخة" is a version of the work. |
 | Remove (a device) | إزالة | |
@@ -120,6 +123,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | save point (never said) | إيداع | |
 | seconds (short unit) | ث | Durations read "{minutes} د {seconds} ث". |
 | Secrets | الأسرار | |
+| send back (a change out of a batch) | إرجاع | A verbal noun on the button ("إرجاع مع ذكر السبب"). |
 | server (a model API server) | الخادم | Only for the custom API form, where the person types a server address; a computer is still never "خادم". |
 | session, transcript (never said) | المحادثة | |
 | Settings | الإعدادات | |

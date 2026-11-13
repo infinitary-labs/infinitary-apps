@@ -688,6 +688,32 @@
   "settingsProjectsAutonomyOff": "完成的工作会等你确认。",
   "settingsProjectsAutonomyOn": "通过检查的工作可以不经询问直接合并。",
   "settingsProjectsAutonomyPersonal": "就地构建。通过检查的工作一完成就会写入。",
+  "settingsProjectsBatchChanges": "要退回的改动",
+  "settingsProjectsBatchHeld": "这批改动已暂缓",
+  "settingsProjectsBatchHeldChecks": {
+    "plural": "count",
+    "other": "自 {since} 起暂缓：{checks} 未通过，因此有 {count} 个已批准的改动在等待。这期间你批准的改动会排在它后面。"
+  },
+  "settingsProjectsBatchHeldChecksUnnamed": {
+    "plural": "count",
+    "other": "自 {since} 起暂缓：检查未通过，因此有 {count} 个已批准的改动在等待。这期间你批准的改动会排在它后面。"
+  },
+  "settingsProjectsBatchHeldNoWay": "自 {since} 起暂缓：这个项目不允许任何能为每个改动保留一个提交的合并方式。请在项目托管处允许变基合并或合并提交，然后重试。",
+  "settingsProjectsBatchHeldRefused": "自 {since} 起暂缓：合并在项目托管处被拒绝：{detail}",
+  "settingsProjectsBatchHeldRules": "自 {since} 起暂缓：检查已通过，但项目托管处的一条规则暂缓了它，例如必需的审查。等这条规则放行后，它会自行合并。",
+  "settingsProjectsBatchNeedsChange": "请先选择要退回的改动。",
+  "settingsProjectsBatchNeedsReason": "请先说明每个所选改动退回的原因。",
+  "settingsProjectsBatchOpen": "打开 {label}",
+  "settingsProjectsBatchOwn": "你已批准的改动会一起合并：Infinitary 会把它们合成一个批量拉取请求，每个改动一个提交，并在检查通过后合并。",
+  "settingsProjectsBatchReason": "退回“{title}”的原因",
+  "settingsProjectsBatchReasonPlaceholder": "退回的原因",
+  "settingsProjectsBatchRetried": "正在重新合成这批改动。检查会在新版本上运行。",
+  "settingsProjectsBatchSendBack": "说明原因并退回",
+  "settingsProjectsBatchSentBack": {
+    "plural": "count",
+    "other": "已退回 {count} 个改动。这批改动的其余部分会重新合成。"
+  },
+  "settingsProjectsBatchTryAgain": "重试",
   "settingsProjectsCare": "把关",
   "settingsProjectsCareNone": "无",
   "settingsProjectsCarePersonal": "这里的内容不经过任何把关。",
@@ -697,7 +723,7 @@
   "settingsProjectsCostNone": "不设上限",
   "settingsProjectsCostOwn": "自定金额",
   "settingsProjectsCostTitle": "费用上限",
-  "settingsProjectsDelivery": "在项目托管处以拉取请求提交、以你项目的队列在合并前测试的批量拉取请求提交，或不经拉取请求本地合并。",
+  "settingsProjectsDelivery": "在项目托管处以拉取请求提交、与你其他已批准的改动一起合成一个批量拉取请求合并，或不经拉取请求本地合并。",
   "settingsProjectsDeliveryTitle": "改动去向",
   "settingsProjectsEmpty": "还没有项目。在下方添加一个，或告诉你的大副要处理哪个项目。",
   "settingsProjectsFolder": "文件夹",

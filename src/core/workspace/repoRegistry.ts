@@ -12,6 +12,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { basename, isAbsolute, join, resolve, sep } from "node:path";
+import { type BatchRecord, batchRecordSchema } from "@shared/batches";
 import {
   type ContributionRoute,
   contributionOriginMatches,
@@ -109,10 +110,11 @@ type Row = {
   queue_pending_at?: number | null;
   queue_pause_json?: string | null;
   contribution_json?: string | null;
+  batch_json?: string | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json, contribution_json";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json, contribution_json, batch_json";
 
 function fromRow(row: Row): RepoView {
   const contribution = row.contribution_json ? JSON.parse(row.contribution_json) : null;
@@ -150,7 +152,18 @@ function fromRow(row: Row): RepoView {
       : {}),
     ...(typeof row.queue_pending_at === "number" ? { queuePendingAt: row.queue_pending_at } : {}),
     ...(row.queue_pause_json ? queuePauseOf(row.queue_pause_json) : {}),
+    ...(row.batch_json ? batchOf(row.batch_json) : {}),
   };
+}
+
+/** The saved line and open batch; a garbled value reads as none. */
+function batchOf(json: string): { batch?: BatchRecord } {
+  try {
+    const parsed = batchRecordSchema.safeParse(JSON.parse(json));
+    return parsed.success ? { batch: parsed.data } : {};
+  } catch {
+    return {};
+  }
 }
 
 /** The saved pause; a garbled value reads as no pause. */
@@ -789,6 +802,30 @@ export class RepoRegistry {
       this.db
         .prepare("UPDATE repos SET queue_answered_at = ? WHERE id = ?")
         .run(facts.answeredAt, id);
+    this.projection?.delete(id);
+    const next = this.get(id) as RepoView;
+    for (const listener of [...this.queueListeners]) listener(next);
+    return next;
+  }
+
+  /**
+   * A project's line of approved changes and its open batch (docs/forge.md,
+   * "Batches of your own"), written whole by `Batches` alone; an empty
+   * record clears it. The queue listeners hear a change, so Settings reads
+   * the project again.
+   */
+  recordBatch(id: string, record: BatchRecord): RepoView | undefined {
+    const repo = this.get(id);
+    if (!repo) return undefined;
+    const empty =
+      record.line.length === 0 &&
+      !record.open &&
+      record.receipts.length === 0 &&
+      record.leftOut.length === 0 &&
+      !record.ways;
+    const json = empty ? null : JSON.stringify(batchRecordSchema.parse(record));
+    if (json === (repo.batch ? JSON.stringify(repo.batch) : null)) return repo;
+    this.db.prepare("UPDATE repos SET batch_json = ? WHERE id = ?").run(json, id);
     this.projection?.delete(id);
     const next = this.get(id) as RepoView;
     for (const listener of [...this.queueListeners]) listener(next);

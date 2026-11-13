@@ -69,7 +69,7 @@ import { TaskIntake } from "./intake";
 import { IntegrationAsks } from "./integrationAsks";
 import { renderReviewBrief } from "./intentBrief";
 import { mergeHold } from "./mergeAuthorization";
-import { queueMerges } from "./projectQueue";
+import { queueWay } from "./projectQueue";
 import { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
 import { RestartWatch } from "./restartWatch";
@@ -1012,7 +1012,7 @@ export class CrewSupervisor {
       review.intent,
       this.facts.taskDelivery(builder.id) ?? "local-only",
       passedHead ? { ...facts, passedHead } : facts,
-      queueMerges(builder.repoId ? this.options.repos.get(builder.repoId) : undefined),
+      queueWay(builder.repoId ? this.options.repos.get(builder.repoId) : undefined),
     );
     // Re-send the assignment even when the head stayed put: a previous
     // prompt may have failed after preparation but before the model read it.

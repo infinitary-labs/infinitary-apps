@@ -23,6 +23,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Asks first | Demande d’abord | |
 | automation | automatisation | The Settings section and each scheduled prompt in it; feminine ("créée par votre second"). |
 | backlog | réserve | A plain word for tasks waiting for your Start. |
+| batch (your approved changes, combined) | lot | Masculine; "groupée" stays the adjective of the pull request and its check. |
 | batched pull request / queue | demande de tirage groupée / file | "la file de votre projet". |
 | branch | branche | |
 | bring up to date | mettre à jour | "l’aura mise à jour"; never "rebaser" and never "conflit". |
@@ -59,6 +60,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | first mate | second | The French navy and merchant-marine term for a ship's second-in-command ("le second"); a common noun, "votre second", "Second" only as a short label or at a sentence start. |
 | font (Settings → Appearance) | police | |
 | header (a request's) | en-tête | Masculine: "un en-tête". |
+| held (a batch that stopped) | retenu | "Lot retenu", "Retenu depuis {since}"; the same verb as "la retient" on a merge a rule holds. |
 | hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
 | Intelligence | Intelligence | |
@@ -99,6 +101,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | rail | colonne | Only in search words ("colonnes"); a plain word for the side column of panels. |
 | reach (another computer) | joindre | "Impossible de joindre {host}", "joint sur ce réseau"; never "atteindre". |
 | Reasoning | Raisonnement | |
+| rebase merges, merge commits (the host's settings) | fusion par rebasage (rebase), commits de fusion | Named only as the settings where the project lives, with "rebase" beside it because that settings page is in English; the app's own action stays "mettre à jour". |
 | rebase, conflict (never said) | mettre à jour, ne s’accorde pas avec | "elle ne s’accorde pas avec un travail plus récent du projet". |
 | released (closed through an outside process) | publiée | "Publiée en dehors de cette tâche". |
 | remote, origin (never said) | là où le projet est hébergé | |
@@ -110,6 +113,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | revision (of a knowledge record) | révision | Kept apart from "revue", which is review. |
 | rigor levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The rigor label reads "Soin : {care}". |
 | runbooks | procédures | The Settings section "Procédures". |
+| send back (a change out of a batch) | renvoyer | "Renvoyer avec un motif". |
 | server, address (a custom API's) | serveur, adresse | Said only where English names the person's own server and its address. |
 | session, transcript (never said) | conversation | |
 | Settings | Réglages | As macOS French says it; macOS's own "System Settings" is "Réglages Système". |

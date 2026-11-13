@@ -502,62 +502,7 @@ export class ChangePresentations {
       existing,
     );
     opening?.beforePublish?.(story.head);
-    const urls = new Map<string, string>();
-    for (const asset of this.nativeAssets(story)) {
-      if (!forge.attachments)
-        throw new Error("Native evidence publication is not available on this host.");
-      let receipt = this.receipt(story, branch, asset);
-      if (receipt?.state === "sending" || receipt?.state === "uncertain") {
-        this.keepReceipt(story, branch, { ...receipt, state: "uncertain" });
-        if (!recovery?.retryUploads?.includes(asset.uploadSha256))
-          throw new Error(
-            `An attachment may already exist on ${words.place}. Disclose this possible orphan on a card before asking for a deliberate new attempt; then pass recovery.retryUploads with digest ${asset.uploadSha256}. No upload was resent.`,
-          );
-        receipt = { ...receipt, possibleOrphan: true };
-      }
-      if (receipt?.state === "confirmed" && receipt.url) {
-        urls.set(asset.id, receipt.url);
-        continue;
-      }
-      const bytes = await this.readAsset(story, asset).catch((error: unknown) => {
-        this.keepReceipt(story, branch, {
-          destination: destination,
-          digest: asset.uploadSha256,
-          mediaType: asset.mediaType,
-          state: "unavailable",
-          problem: "The retained evidence is unavailable or changed.",
-        });
-        throw error;
-      });
-      receipt = {
-        ...(receipt?.possibleOrphan ? { possibleOrphan: true } : {}),
-        destination: destination,
-        digest: asset.uploadSha256,
-        mediaType: asset.mediaType,
-        state: "sending",
-      };
-      this.keepReceipt(story, branch, receipt);
-      try {
-        const uploaded = await forge.attachments.upload(destination, {
-          bytes,
-          sha256: asset.uploadSha256,
-          mediaType: asset.mediaType,
-        });
-        receipt = { ...receipt, state: "confirmed", url: uploaded.url };
-        this.keepReceipt(story, branch, receipt);
-        urls.set(asset.id, uploaded.url);
-      } catch (error) {
-        this.keepReceipt(story, branch, {
-          ...receipt,
-          state: error instanceof AttachmentUploadError ? error.outcome : "uncertain",
-          problem:
-            error instanceof AttachmentUploadError
-              ? error.message
-              : "The upload outcome was not confirmed. Do not resend automatically; disclose the possible orphan before asking for another attempt.",
-        });
-        throw error;
-      }
-    }
+    const urls = await this.uploadAssets(story, branch, forge, destination, recovery);
     // Uploading may have taken time. No write until code, destination and all retained files still match.
     await this.validateCurrent(story, forge, branch, remoteOnly);
     const region =
@@ -829,6 +774,147 @@ export class ChangePresentations {
     });
   }
 
+  /** Send each selected file once, by its receipt; a failed or uncertain upload stops before any write. */
+  private async uploadAssets(
+    story: ChangePresentation,
+    branch: string,
+    forge: Forge,
+    destination: PresentationReceipt["destination"],
+    recovery?: PresentationRecovery,
+  ): Promise<Map<string, string>> {
+    const urls = new Map<string, string>();
+    const words = hostWords(forge);
+    for (const asset of this.nativeAssets(story)) {
+      if (!forge.attachments)
+        throw new Error("Native evidence publication is not available on this host.");
+      let receipt = this.receipt(story, branch, asset);
+      if (receipt?.state === "sending" || receipt?.state === "uncertain") {
+        this.keepReceipt(story, branch, { ...receipt, state: "uncertain" });
+        if (!recovery?.retryUploads?.includes(asset.uploadSha256))
+          throw new Error(
+            `An attachment may already exist on ${words.place}. Disclose this possible orphan on a card before asking for a deliberate new attempt; then pass recovery.retryUploads with digest ${asset.uploadSha256}. No upload was resent.`,
+          );
+        receipt = { ...receipt, possibleOrphan: true };
+      }
+      if (receipt?.state === "confirmed" && receipt.url) {
+        urls.set(asset.id, receipt.url);
+        continue;
+      }
+      const bytes = await this.readAsset(story, asset).catch((error: unknown) => {
+        this.keepReceipt(story, branch, {
+          destination: destination,
+          digest: asset.uploadSha256,
+          mediaType: asset.mediaType,
+          state: "unavailable",
+          problem: "The retained evidence is unavailable or changed.",
+        });
+        throw error;
+      });
+      receipt = {
+        ...(receipt?.possibleOrphan ? { possibleOrphan: true } : {}),
+        destination: destination,
+        digest: asset.uploadSha256,
+        mediaType: asset.mediaType,
+        state: "sending",
+      };
+      this.keepReceipt(story, branch, receipt);
+      try {
+        const uploaded = await forge.attachments.upload(destination, {
+          bytes,
+          sha256: asset.uploadSha256,
+          mediaType: asset.mediaType,
+        });
+        receipt = { ...receipt, state: "confirmed", url: uploaded.url };
+        this.keepReceipt(story, branch, receipt);
+        urls.set(asset.id, uploaded.url);
+      } catch (error) {
+        this.keepReceipt(story, branch, {
+          ...receipt,
+          state: error instanceof AttachmentUploadError ? error.outcome : "uncertain",
+          problem:
+            error instanceof AttachmentUploadError
+              ? error.message
+              : "The upload outcome was not confirmed. Do not resend automatically; disclose the possible orphan before asking for another attempt.",
+        });
+        throw error;
+      }
+    }
+    return urls;
+  }
+
+  /**
+   * Confirm a story on its pushed branch where its change takes no pull
+   * request of its own (docs/forge.md, "Batches of your own"): the pushed
+   * code is this story's, and the story is published later, on its batch's
+   * pull request. Nothing is written where the project lives.
+   */
+  async confirmBranch(
+    taskId: string,
+    revision: number,
+    forge: Forge,
+    branch: string,
+    title: string,
+    opening?: PublicationOpening,
+  ): Promise<ForgeChange> {
+    const record = this.options.tasks.delivery.changePresentation(taskId, branch);
+    const named = (record && shownRevision(record, revision)) ?? revision;
+    return this.serial(taskId, async () => {
+      const story = this.current(taskId, branch, named);
+      if (story.version === 2 && title !== story.title)
+        throw new Error("Use the saved title for the pull request and merge card.");
+      if (!hostedPresentation(story.destination))
+        throw new Error("A batch needs a host that keeps a description.");
+      if (this.ledger(taskId, branch).published)
+        throw new Error("This story is already published on its own pull request.");
+      await this.validateCurrent(story, forge, branch);
+      if (story.liveValidation?.verdict) this.currentValidation(taskId, story);
+      opening?.beforePublish?.(story.head);
+      await this.save(taskId, branch, (kept) => ({
+        ...this.required(kept),
+        completion: {
+          revision: named,
+          head: story.head,
+          contentHash: presentationContentHash(story),
+        },
+      }));
+      return { branch, headSha: story.head, url: null, title };
+    });
+  }
+
+  /**
+   * What a change's one commit in a batch says: its story's title as the
+   * subject, and under it the words a squash of its own pull request
+   * would carry. Refused in words when this version has no ready story.
+   */
+  batchCommit(taskId: string, branch: string, head: string): { title: string; body: string } {
+    const story = this.publishedStory(taskId, branch, head);
+    return {
+      title: story.title,
+      body: presentationCommitMessage(story, this.options.namingRule?.() ?? null),
+    };
+  }
+
+  /**
+   * A change's story as its batch's pull request shows it: its selected
+   * files sent by their receipts, then the same words its own pull request
+   * would carry, between the task's own markers.
+   */
+  async batchRegion(
+    taskId: string,
+    branch: string,
+    head: string,
+    forge: Forge,
+  ): Promise<{ story: ChangePresentation; region: string }> {
+    return this.serial(taskId, async () => {
+      const story = this.publishedStory(taskId, branch, head);
+      if (!hostedPresentation(story.destination))
+        throw new Error("A batch needs a host that keeps a description.");
+      await this.validatePrepared(story, forge, true);
+      const urls = await this.uploadAssets(story, branch, forge, story.destination);
+      return { story, region: presentationMarkdown(story, urls, "pending") };
+    });
+  }
+
   private currentValidation(taskId: string, story: ChangePresentation) {
     const current = liveValidationSummary(
       this.options.tasks.get(taskId)?.delivery?.liveValidation,
@@ -884,6 +970,12 @@ export class ChangePresentations {
     if (!samePresentationDestination(story.destination, await storyDestination(forge)))
       throw new Error("The story's destination or audience changed.");
     if (!hostedPresentation(story.destination)) return change;
+    // A story awaiting its batch carries no description of its own to read back.
+    if (!record.published && !record.publication)
+      return {
+        ...change,
+        squashMessage: presentationCommitMessage(story, this.options.namingRule?.() ?? null),
+      };
     if (!record.published) throw new Error("The current story has not been published.");
     for (const asset of this.nativeAssets(story)) {
       const receipt = this.receipt(story, branch, asset, change.number);
@@ -1015,6 +1107,12 @@ export class ChangePresentations {
           "The current committed version needs its newest story. Prepare it with prepare_change, and on a pushed branch confirm it with open_change, before showing its merge card or merging.",
         );
       return story;
+    }
+    // Confirmed on its pushed branch, to be published on its batch's pull request.
+    if (story && !record.published && !record.publication) {
+      const ready = readyPresentation(record);
+      if (ready && ready.head === head && (revision === undefined || ready.revision === revision))
+        return story;
     }
     if (!story || (!record.published && revision === undefined))
       throw new Error("The current story has not been published.");

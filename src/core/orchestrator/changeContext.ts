@@ -4,8 +4,9 @@ import type { ChangeRecord } from "@shared/change";
 import { notSignedInText } from "@shared/forges";
 import { acceptedValidation } from "@shared/liveValidation";
 import { MERGE_REVIEW_CAP, type MergeReview } from "@shared/mergeReview";
-import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, ownsBatches, type RepoView } from "@shared/repos";
 import type { NamingRule } from "../../shared/runbooks";
+import type { Batches } from "../batches/batches";
 import {
   type Forge,
   type ForgeChange,
@@ -24,6 +25,7 @@ import type { LineageFacts, LineageQuestion } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
 import { reviewCoversHead } from "./reviewCarry";
 import type { TypedWake, WakeFacts } from "./wakes";
+import { taskContributesUpstream } from "./workShape";
 
 /**
  * What every owner of a task's change shares (`./changeDelivery.ts`): the
@@ -39,6 +41,12 @@ export type ChangeDeliveryOptions = {
   tasks: TaskService;
   repos: RepoRegistry;
   presentations?: ChangePresentations;
+  /**
+   * The line and open batch of projects whose approved changes combine in
+   * batches of this person's own (docs/forge.md, "Batches of your own");
+   * read late, since it is built after the owners that use it.
+   */
+  batches?: () => Batches | undefined;
   /** The forge for a task's repository (`createForgeResolver` in `src/core/forge/`). */
   forgeFor: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
   now?: () => number;
@@ -97,7 +105,52 @@ export type Located = {
 };
 
 export class ChangeContext {
+  /** Reads whether a project carries the team queue's files, where that was never read. */
+  readQueueFiles?: (repoId: string) => Promise<unknown>;
+
   constructor(readonly options: ChangeDeliveryOptions) {}
+
+  /**
+   * The project whose batches of this person's own the task's change joins
+   * (docs/forge.md, "Batches of your own"), from the typed facts the app
+   * keeps; undefined for every other task. A pull request the task names
+   * by number is never batched, and neither is a contribution through a fork.
+   */
+  ownBatch(taskId: string): RepoView | undefined {
+    const record = this.options.tasks.get(taskId);
+    if (!record?.repoId || record.delivery?.checkTarget) return undefined;
+    const repo = this.options.repos.get(record.repoId);
+    if (!repo || taskContributesUpstream(record, repo)) return undefined;
+    return ownsBatches(deliveryForRecord(record, repo.delivery), repo) === true ? repo : undefined;
+  }
+
+  /** `ownBatch`, after reading the project's queue files once where they were never read. */
+  async resolveOwnBatch(taskId: string): Promise<RepoView | undefined> {
+    const record = this.options.tasks.get(taskId);
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (record && repo && ownsBatches(deliveryForRecord(record, repo.delivery), repo) === undefined)
+      await this.readQueueFiles?.(repo.id).catch(() => {});
+    return this.ownBatch(taskId);
+  }
+
+  get batches(): Batches | undefined {
+    return this.options.batches?.();
+  }
+
+  /**
+   * A batched change's pushed branch as a change with no number, since it
+   * takes no pull request of its own; null while nothing is pushed.
+   */
+  async pushedBranch(forge: Forge, branch: string): Promise<ForgeChange | null> {
+    if (!forge.branchHead) return null;
+    try {
+      return { branch, headSha: await forge.branchHead(branch), url: null };
+    } catch (caught) {
+      // The host's refusal is its answer for a branch that is not there yet.
+      if (caught instanceof ForgeError && caught.failure === "refused") return null;
+      throw caught;
+    }
+  }
 
   now(): number {
     return this.options.now?.() ?? Date.now();

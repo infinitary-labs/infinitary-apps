@@ -57,6 +57,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | forget (a computer, on the phone) | Esquecer | Pairs with "Sair" for Leave. |
 | Got it / Done | Entendi / Concluído | |
 | header (a request's) | cabeçalho | |
+| held (a batch that stopped) | retido | "Lote retido", "Retido desde as {since}"; the same verb as "a retém" on a merge a rule holds. |
 | hold (on a task) | retenção | "está retida", "quando a retenção acabar"; as in "a retém" for a merge. |
 | Infinitary | Infinitary | Never translated; masculine article: "o Infinitary". |
 | Intelligence | Inteligência | |
@@ -94,6 +95,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | rail | barra lateral | The column of panels at a window's side. |
 | reach (another computer) | alcançar | "Não foi possível alcançar o {host}", matching "fora de alcance". |
 | Reasoning | Raciocínio | |
+| rebase merges, merge commits (the host's settings) | mesclagens com rebase, commits de mesclagem | Named only as the settings where the project lives, as GitHub's Portuguese docs say them; the app's own action stays "atualizar". |
 | released (a task's close) | publicada | Closed through an outside release process. |
 | remote, origin (avoided) | onde o projeto fica | |
 | Remove / Leave (a device) | Remover / Sair | |
@@ -106,6 +108,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | Runbooks | Manuais | |
 | Runs on | Roda em | |
 | Secrets | Segredos | The Settings section's name. |
+| send back (a change out of a batch) | devolver | "Devolver com um motivo"; the change "volta" to its crewmate. |
 | server, address (a custom API's) | servidor, endereço | Said only where English names the person's own server and its address. |
 | session (avoided in sentences) | conversa | "sessão" survives only as the crewmate's log name and a search word. |
 | Settings | Ajustes | Follows Apple's Brazilian Portuguese; macOS's own is "Ajustes do Sistema". |

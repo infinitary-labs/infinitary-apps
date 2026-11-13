@@ -21,6 +21,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Approves secret uses (switch) | Aprueba usos de secretos | The computer's Settings → Devices should show the same words. |
 | automation | automatización | The Settings section and each scheduled prompt in it; feminine ("creada por tu primer oficial"). |
 | backlog | pendientes | |
+| batch (your approved changes, combined) | lote | As in "la comprobación del lote"; masculine. |
 | branch | rama | GitHub's Spanish docs say "rama"; "la rama principal". |
 | bring up to date | poner al día | "lo haya puesto al día"; used where English says rebase or resolve a conflict. |
 | captain | capitán | The usual word a crew uses for a ship's captain; masculine default form, see the register lines above; lowercase in the middle of a sentence, also as a form of address. |
@@ -54,6 +55,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | first mate | primer oficial | The ship's officer who is second-in-command; a common noun, lowercase: "tu primer oficial", "Primer oficial" only as a short label; "oficial" alone in the thread's short author tag. |
 | font (Settings → Appearance) | fuente | |
 | header (a request's) | encabezado | |
+| held (a batch that stopped) | retenido | "Lote retenido", "Retenido desde las {since}"; the same verb as "lo retiene" on a merge a rule holds. |
 | hold (on a task) | retención | "está retenida", "cuando termine su retención"; as in "lo retiene" for a merge. |
 | Infinitary | Infinitary | Never translated. |
 | Intelligence | Inteligencia | |
@@ -97,6 +99,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | quota, rate limit (never said) | asignación de tu plan | |
 | rail | barra | The column of panels at a window's side; "barras" in command search words. |
 | Reasoning | Razonamiento | |
+| rebase merges, merge commits (the host's settings) | fusiones con cambio de base (rebase), confirmaciones de fusión | Named only as the settings where the project lives, following GitHub's Spanish docs, with "rebase" beside it because that settings page is in English; the app's own action stays "poner al día". |
 | rebase, conflict (never said) | poner al día | One English line says "conflicts"; it reads "choca con trabajo más reciente". |
 | Remove (a device) | Quitar | |
 | repo (never said) | proyecto | "repositorio" only where the sentence points at GitHub. |
@@ -107,6 +110,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | rigor levels: Quick, Default, Careful | Rápido, Predeterminado, Cuidadoso | Masculine, agreeing with "cuidado": "Cuidado: Rápido". |
 | Runbooks | Manuales | A Settings tab and the folder of guidance it opens. |
 | Secrets | Secretos | |
+| send back (a change out of a batch) | devolver | "Devolver con un motivo". |
 | server, address (a custom API's) | servidor, dirección | Said only where English names the person's own server and its address. |
 | session, transcript (never said) | conversación, notas | |
 | Settings | Configuración | The app's settings window and menu item; a project's own settings are "los ajustes de este proyecto". |

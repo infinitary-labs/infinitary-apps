@@ -23,6 +23,7 @@ import {
   QUEUE_SHIPPED_WORDS,
   queueWaitingWords,
 } from "../../src/renderer/src/settings/projectsWords";
+import { BATCH_BRANCH_PREFIX } from "../../src/shared/batches";
 import { queueSettingsWarning } from "../../src/shared/repos";
 import { PROJECT_DELIVERY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -38,6 +39,21 @@ import { cardSurface, showCard, shownCard, shownEntry } from "./stack";
 import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 /**
+ * The branches the app pushed for a batch of the captain's own, one per
+ * line. The project folder is its own mirror in these journeys, so a pushed
+ * branch is one of its own.
+ */
+function batchBranches(repoDir: string): string {
+  return execFileSync(
+    "git",
+    ["-C", repoDir, "for-each-ref", "--format=%(refname)", `refs/heads/${BATCH_BRANCH_PREFIX}`],
+    { stdio: "pipe" },
+  )
+    .toString()
+    .trim();
+}
+
+/**
  * INF-2435, piece 2 of the captain's approved swept-batch plan (INF-2430):
  * "The merge click, or a carried repair, writes infinitary/queue as waiting
  * on the approved version, and the kept click merges only once that status
@@ -49,7 +65,9 @@ import { focusOn, pressKey, typeInto } from "./windowKeys";
  * plan: the choice and the click read the project's workflows, so Settings
  * warns under Where changes go and the waiting note warns until the queue
  * first answers. The project chose the queue on an earlier version, before
- * INF-2885's direction B held such a choice, and its read found no workflow;
+ * INF-2885's direction B held such a choice, and its read found the queue's
+ * workflow turned off (a project with no such file gets batches of the
+ * captain's own, INF-3759 piece 1; `own-batches.spec.ts` owns that);
  * the merge click then marks the version and merges nothing; once the
  * project's queue sets the status to success, the kept click merges at that
  * version after the app starts again (its standing approvals run at start)
@@ -83,14 +101,30 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
   github.servePull({ number: 82, title: "fix: read the meter on time" });
   github.headOf(() => headSha);
   github.setChecks([{ name: "unit-tests", status: "completed", conclusion: "success" }]);
+  // The project still carries the team queue's workflow, turned off.
+  const turnedOff = [{ path: ".github/workflows/batch.yml", active: false }];
+  github.serveWorkflows([
+    {
+      path: ".github/workflows/batch.yml",
+      state: "disabled_manually",
+      text: `name: Batch\non:\n  status:\njobs:\n  batch:\n    if: github.event.context == '${QUEUE_STATUS}'\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n`,
+    },
+  ]);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
   // A project that chose batched pull requests on an earlier version, whose
-  // read then found no workflow that mentions its batch check (INF-2885's
-  // direction B now holds such a choice; see the next test).
+  // read then found its workflow that mentions the batch check turned off
+  // (INF-2885's direction B now holds such a choice; see the next test).
   db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor, queue_workflows_json) VALUES (?, ?, ?, ?, 'clone', ?, 'queue-pr', 0, 'quick', '[]')",
-  ).run("repo-meter", repoDir, "meter", Date.now(), "https://github.com/o/meter.git");
+    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor, queue_workflows_json) VALUES (?, ?, ?, ?, 'clone', ?, 'queue-pr', 0, 'quick', ?)",
+  ).run(
+    "repo-meter",
+    repoDir,
+    "meter",
+    Date.now(),
+    "https://github.com/o/meter.git",
+    JSON.stringify(turnedOff),
+  );
   seedHostedOrigins(db, userDataDir);
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {
@@ -139,7 +173,7 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
   });
   db.close();
 
-  // The missing-workflow warning legitimately reaches the first mate. Give
+  // The turned-off workflow's warning legitimately reaches the first mate. Give
   // that agent the isolated model on every start, so the warning is handled
   // without an unrelated provider sign-in card masking the quiet queue wait.
   let launched = await launchApp({ userDataDir, env: github.env, withMockProvider: true });
@@ -161,11 +195,11 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
     const choices = row.getByRole("radiogroup", { name: "Where changes go" });
     const queue = choices.getByRole("radio", { name: PROJECT_DELIVERY_WORDS["queue-pr"] });
     await expect(queue).toBeChecked();
-    // INF-2886: the last read of the project's workflows found none that
-    // mentions its batch check, so Settings warns under Where changes go.
-    const warning = row.getByRole("status").filter({
-      hasText: queueSettingsWarning({ delivery: "queue-pr", queueWorkflows: [] }) ?? "",
-    });
+    // INF-2886: the last read of the project's workflows found none turned on
+    // that mentions its batch check, so Settings warns under Where changes go.
+    const warned = queueSettingsWarning({ delivery: "queue-pr", queueWorkflows: turnedOff });
+    expect(warned).not.toBeNull();
+    const warning = row.getByRole("status").filter({ hasText: warned as string });
     await expect(warning).toBeVisible({ timeout: 20_000 });
     await heroShot(launched.app, page, {
       region: warning,
@@ -199,6 +233,12 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
       .poll(() => github.statuses(headSha), { timeout: 20_000 })
       .toEqual([expect.objectContaining({ context: QUEUE_STATUS, state: "pending" })]);
     expect(github.merges()).toEqual([]);
+    // INF-3759 piece 1, the approved plan's "A project that still carries the
+    // team queue's files keeps the team queue until they are removed": the
+    // click opens no batch pull request of the captain's own and pushes no
+    // branch for one.
+    expect(github.pulls()).toEqual([]);
+    expect(batchBranches(repoDir)).toBe("");
     const saved = () => readSavedData(userDataDir, (savedDb) => new TaskStore(savedDb).get(taskId));
     await expect
       .poll(saved)
@@ -230,6 +270,10 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
     await expect.poll(saved).toMatchObject({
       delivery: { mergeAuthorization: { status: "consumed", receipt: { head: headSha } } },
     });
+    // It merged as its own pull request, through two starts of the app:
+    // still no batch of the captain's own (INF-3759 piece 1).
+    expect(github.pulls()).toEqual([]);
+    expect(batchBranches(repoDir)).toBe("");
     // The queue's answer is the project's first: Settings' warning has nothing left to say.
     await expect
       .poll(async () =>
@@ -250,17 +294,19 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
  * user their repo is not set up to use that option yet, and give them the
  * option to ask first mate to plan it".
  *
- * A disposable GitHub serves a project with no workflow that mentions its
- * batch check, and the pull request a crewmate finished. The captain chooses
+ * A disposable GitHub serves a project that still carries a team queue's
+ * workflow, turned off, and the pull request a crewmate finished. (A
+ * project with no such file gets batches of the captain's own at once,
+ * INF-3759 piece 1; `own-batches.spec.ts` owns that.) The captain chooses
  * batched pull requests by keys: the project keeps pull requests, Settings
  * says the choice waits, and the app's card says the project is not set up
  * yet. Its Ask the first mate to plan it tells the first mate. The queue
- * workflow then reaches the project's default branch, and the next merge in
- * the project, a plain pull request, switches the project to batched pull
- * requests by itself. Requires desktop Electron and local git; no real
- * sign-in or shared pull request.
+ * workflow is then turned on, and the next merge in the project, a plain
+ * pull request, switches the project to batched pull requests by itself.
+ * Requires desktop Electron and local git; no real sign-in or shared pull
+ * request.
  */
-test("choosing batched pull requests with no queue workflow waits, asks on a card, then switches on once one merges", async () => {
+test("choosing batched pull requests with the queue workflow turned off waits, asks on a card, then switches on once it is on", async () => {
   const userDataDir = scratchDir("infinitary-queue-choice-");
   const taskId = "queueplanned";
   const repoDir = join(userDataDir, "repo");
@@ -288,6 +334,10 @@ test("choosing batched pull requests with no queue workflow waits, asks on a car
   });
   github.headOf(() => headSha);
   github.setChecks([{ name: "unit-tests", status: "completed", conclusion: "success" }]);
+  // The project still carries the queue's workflow, turned off.
+  github.serveWorkflows([
+    { path: ".github/workflows/batch.yml", state: "disabled_manually", text: workflow },
+  ]);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
   db.prepare(
@@ -357,7 +407,7 @@ test("choosing batched pull requests with no queue workflow waits, asks on a car
     const title = QUEUE_SETUP_WORDS.title("meter");
     await showCard(page, title);
     await expect(cardBody(page, title).locator("body")).toContainText(
-      QUEUE_SETUP_WORDS.missing("meter"),
+      QUEUE_SETUP_WORDS.turnedOff("meter"),
     );
     await heroShot(launched.app, page, {
       region: cardSurface(page),
@@ -376,8 +426,8 @@ test("choosing batched pull requests with no queue workflow waits, asks on a car
     await expect.poll(told, { timeout: 30_000 }).toBeGreaterThan(0);
     expect(await meter()).toMatchObject({ delivery: "direct-pr" });
 
-    // The planned workflow merges as a plain pull request; once it is on the
-    // default branch, the merge's read switches the project on.
+    // The workflow is turned on; the next merge in the project, a plain pull
+    // request, reads it again and switches the project on.
     github.serveWorkflows([
       { path: ".github/workflows/batch.yml", state: "active", text: workflow },
     ]);
@@ -634,6 +684,11 @@ test("a project running the shipped queue is batched for every teammate, and its
     await expect(panel).toHaveCount(0, { timeout: 30_000 });
     expect((await meter())?.queuePause).toBeUndefined();
     expect(told()).toBe(1);
+    // INF-3759 piece 1: a project running the team queue's files keeps that
+    // queue through every pass of this journey, with no batch of the
+    // captain's own opened or pushed.
+    expect(github.pulls()).toEqual([]);
+    expect(batchBranches(repoDir)).toBe("");
   } finally {
     await launched.close();
     await github.close();

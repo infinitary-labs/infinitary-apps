@@ -14,6 +14,7 @@ export function startHomeQueue({
   repos,
   tasks,
   queue,
+  ways,
   forgeFor,
   supervisor,
   broadcastEvent,
@@ -23,6 +24,7 @@ export function startHomeQueue({
   repos: RepoRegistry;
   tasks: Pick<TaskService, "get" | "note" | "onChange">;
   queue: Pick<ProjectQueue, "readWorkflows" | "onState">;
+  ways: ConstructorParameters<typeof QueueChoice>[0]["ways"];
   forgeFor: ConstructorParameters<typeof QueuePauses>[0]["forgeFor"];
   supervisor: Pick<CrewSupervisor, "cards" | "hostOps">;
   broadcastEvent: (event: FmEvent) => void;
@@ -40,6 +42,7 @@ export function startHomeQueue({
     withdrawCard: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
     tell: (facts) => notify({ facts }),
     note: (text) => broadcastEvent({ type: "firstmate_note", text }),
+    ways,
     offers: {
       offered: (repoId) => repos.queueOffered(repoId),
       record: (repoId, version) => repos.recordQueueOffered(repoId, version),
@@ -48,7 +51,7 @@ export function startHomeQueue({
   });
   // Each new read of a project's queue is followed for every teammate: a
   // project that runs the shipped queue is batched here too, and an older
-  // or a project's own queue is offered once (docs/forge.md, "The shipped queue").
+  // shipped queue is offered its update once (docs/forge.md, "The shipped queue").
   repos.onQueue((repo) => void queueChoice.follow(repo).catch(() => {}));
   // A paused batch of the shipped queue (docs/forge.md, "A paused batch"):
   // each task's queue reading may show it, Settings shows it with its

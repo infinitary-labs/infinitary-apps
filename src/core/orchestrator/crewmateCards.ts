@@ -73,6 +73,7 @@ import {
   type CoveredFailure,
   coveredNextStep,
   coveringApproval,
+  failedBatchOf,
   keptApprovalLine,
 } from "./mergeAuthorization";
 import { type MergeCardWalk, mergeCardAnswer } from "./mergeCardSteps";
@@ -1251,7 +1252,7 @@ export class CrewmateCards {
       !reading || !head || reading.headSha !== head || currentCheckStatus(reading) !== "red"
         ? "none"
         : failedBatch(reading, head)
-          ? "batch"
+          ? failedBatchOf(reading, head)
           : "checks";
     return `Card refused: ${keptApprovalLine(kept)} ${coveredNextStep(kept, failure)}`;
   }

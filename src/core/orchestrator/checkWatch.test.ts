@@ -1,3 +1,4 @@
+import { BATCH_STATUS_WORDS } from "@shared/batches";
 import { describe, expect, it } from "vitest";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { openInMemoryDatabase } from "../storage/db";
@@ -12,6 +13,7 @@ import {
   checkWatchOnce,
   type WatchedReading,
 } from "./checkWatch";
+import { coveredNextStep } from "./mergeAuthorization";
 import { renderWake, type TypedWake } from "./wakes";
 
 /**
@@ -433,6 +435,34 @@ describe("CheckWatcher at a version the captain's approval covers (INF-4018)", (
     expect(words).toContain("no checks override passes the queue");
     expect(words).toContain("check_change's answered verdict");
     expect(words).not.toContain("Merge anyway case");
+    expect(kept).toEqual([]);
+  });
+
+  // A batch of the person's own (docs/forge.md, "Batches of your own"): the
+  // app itself wrote that failed batch check, and an answer to a queue puts
+  // nothing back in its line, so the wake gives the repair's route alone.
+  it("wakes on a failed batch of the person's own there with the repair's route, never an answer to a queue", async () => {
+    const { tasks, answer, at, steers, kept } = setup();
+    approve(tasks);
+    const words = BATCH_STATUS_WORDS.failed(["typecheck-lint-build"]);
+    seedDelivery(tasks, "t1", { queueStatus: { head: HEAD, kind: "failed", words } });
+    answer({
+      kind: "finished",
+      head: HEAD,
+      change: "PR #7",
+      checks: [
+        { name: "typecheck-lint-build", state: "success" },
+        { name: "infinitary/queue", state: "failure" },
+      ],
+    });
+    await at(minutes(1));
+    expect(steers).toHaveLength(1);
+    const approval = tasks.get("t1")?.delivery?.mergeAuthorization;
+    if (!approval) throw new Error("No approval");
+    const said = renderWake(steers[0]!);
+    expect(said).toContain(coveredNextStep(approval, "own-batch"));
+    expect(said).not.toContain("answered verdict");
+    expect(said).not.toContain("Merge anyway case");
     expect(kept).toEqual([]);
   });
 

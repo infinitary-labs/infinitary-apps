@@ -32,6 +32,7 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
   const context = new ChangeContext(options);
   const readiness = new DraftReadiness(context);
   const queue = new ProjectQueue(options);
+  context.readQueueFiles = (repoId) => queue.readWorkflows(repoId);
   const checks = new ChangeChecks(context, readiness, queue);
   const merges = new ChangeMerge(context, checks, queue);
   const reviews = new MergeReviews(context, checks, merges);

@@ -1,3 +1,4 @@
+import type { MergeWay, MergeWays } from "@shared/batches";
 import type { ForgeCheckState } from "@shared/checkSnapshot";
 import type { ForgeKind } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
@@ -85,9 +86,19 @@ const CHANGE_RUN_EVENTS = new Set(["pull_request", "pull_request_target"]);
  * with no event - a commit status, a check an app posted - stays as read.
  * A branch's own checks, such as the default branch's, are never read
  * through this: their runs carry the push that made them.
+ *
+ * `pushed` is a batch's pull request (docs/forge.md, "Batches of your own"):
+ * its branch is one the app itself pushed, so the run the host started for
+ * that push is the batch's check as much as one its pull request started.
+ * A project that checks every pushed branch starts no other run for it.
  */
-export function ownChecksOf(items: ForgeCheck[]): ForgeCheck[] {
-  return items.filter((check) => check.event === undefined || CHANGE_RUN_EVENTS.has(check.event));
+export function ownChecksOf(items: ForgeCheck[], pushed = false): ForgeCheck[] {
+  return items.filter(
+    (check) =>
+      check.event === undefined ||
+      CHANGE_RUN_EVENTS.has(check.event) ||
+      (pushed && check.event === "push"),
+  );
 }
 
 /**
@@ -439,7 +450,24 @@ export interface Forge {
    * Put the change in, only while its head is still `headSha`. A host that
    * confirms the merge answers its commit; one that cannot says nothing.
    */
-  putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string } | undefined>;
+  putIn(
+    change: ForgeChange,
+    headSha: string,
+    /**
+     * How a batch merges (docs/forge.md, "Batches of your own"): `rebase` and
+     * `merge` keep one commit per change. Left out, the merge is a squash.
+     */
+    way?: MergeWay,
+  ): Promise<{ sha?: string } | undefined>;
+  /**
+   * The merges the project allows, from its own settings and its default
+   * branch's rules, as the host answers them now.
+   */
+  mergeWays?(): Promise<MergeWays>;
+  /** Delete a branch the app pushed; one already gone is not an error. */
+  deleteBranch?(branch: string): Promise<void>;
+  /** Close a change with a note saying where its work went. */
+  closeWithNote?(change: ForgeChange, note: string): Promise<void>;
   /**
    * The pull request by its number, open or not, with whether it may merge
    * now: the pinned read a kept merge approval runs on. Absent on a kind

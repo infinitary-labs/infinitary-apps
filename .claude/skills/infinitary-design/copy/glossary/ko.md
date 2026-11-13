@@ -22,6 +22,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Automation | 자동화 | |
 | autonomy | (not used) | 알아서 병합 / 먼저 물어봄 instead |
 | backlog | 백로그 | |
+| batch (your approved changes, combined) | 일괄 끌어오기 요청 | The batch is named by its pull request; 배치 is avoided as jargon |
 | batch / batch run (the queue's) | 일괄 실행 | Matches 일괄 끌어오기 요청 and 일괄 검사 |
 | branch | 분기 | GitHub's Korean docs say 분기; the main branch is 기본 분기 |
 | bring up to date | 최신 상태로 맞추다 | Replaces rebase and conflict; "conflicts with newer work" is 더 새로운 작업과 겹쳐요 |
@@ -61,6 +62,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | font (Settings → Appearance) | 글꼴 | |
 | forget (a computer, on the phone) | 지우기 | As iOS forgets a network; kept apart from 제거 and 나가기. |
 | header (a request header) | 헤더 | Only in the custom API form, where the person types header names |
+| held (a batch that stopped) | 보류 | 보류됨, 보류 중; 일시 정지 stays for what a person pauses |
 | hold (on a task) | 보류 | "once its hold ends" is 보류가 풀리면 |
 | Infinitary | Infinitary | Never translated |
 | inspector | 상세 보기 | Avoids 검사, which is the checks |
@@ -107,6 +109,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | quota, rate limit | (not used) | 사용 한도 instead |
 | rail | 레일 | Only in command search words |
 | Reasoning | 추론 | |
+| rebase merges, merge commits (the host's settings) | 리베이스 병합, 병합 커밋 | Named only as the settings where the project lives; the app's own action stays 최신 상태로 맞추다 |
 | rebase, conflict | (not used) | 최신 상태로 맞추다 and 겹치다 instead |
 | record (a Usage record) | 기록 | "{priced} of {records} records priced" is 기록 {records}개 중 {priced}개에 가격 있음 |
 | release / released | 릴리스 / 릴리스됨 | |
@@ -123,6 +126,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Runbooks | 런북 | |
 | Runs on | 실행 위치 | |
 | Secrets | 비밀 정보 | |
+| send back (a change out of a batch) | 돌려보내다 | 이유와 함께 돌려보내기 |
 | session, transcript | (not used) | 대화 instead |
 | Settings | 설정 | |
 | sign-in / sign in | 로그인 / 로그인하다 | Korean software uses 로그인 for both the noun and the verb |

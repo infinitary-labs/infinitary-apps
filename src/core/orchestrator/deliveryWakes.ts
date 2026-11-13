@@ -184,6 +184,16 @@ export type DeliveryFacts =
       current?: string;
     }
   | {
+      /**
+       * The task's change was sent back from its batch with a reason
+       * (docs/forge.md, "Batches of your own"): it lost its approval, and
+       * its own crewmate repairs it.
+       */
+      kind: "batch-sent-back";
+      head: string;
+      reason: string;
+    }
+  | {
       /** A task-scoped run's first failure or terminal reading, independent of PR green. */
       kind: "run-watch";
       outcome:
@@ -559,6 +569,8 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
       .join("\n\n"),
   "queue-held": (facts) =>
     `The project's queue holds ${facts.change} at ${facts.head} out of its batches; its status reads "${facts.words}". Its code joins a batch only once a Maintainer of the project approves the merge request after its last push, since a later mark does not admit it, and then the captain's merge click starts the queue again, which nothing else does. Put up your merge card again saying a Maintainer must approve this version first; do not start the queue yourself.`,
+  "batch-sent-back": (facts) =>
+    `Your change at ${facts.head} was sent back from its batch of approved changes and is no longer approved: ${facts.reason} The other changes of that batch go on without it. Repair it on your branch, validate, push and confirm its story, then put up a new merge card for the new version: once approved it joins the project's next batch.`,
   "queue-start-failed": (facts) =>
     `The app tried twice to start your project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms until something starts it. Start it yourself through your project's API the way the queue-setup skill's queue starts it, or report what stops you.`,
   "merge-card-behind": (facts) => renderMergeCardBehind(facts),

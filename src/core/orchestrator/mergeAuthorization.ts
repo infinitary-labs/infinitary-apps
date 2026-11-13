@@ -9,7 +9,7 @@ import {
 import { hasChangeRequests } from "@shared/forge";
 import { englishOf, type Said, said, saidPart } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
-import { opensPullRequest, type RepoDelivery } from "@shared/repos";
+import { opensPullRequest, ownsBatches, type RepoDelivery, type RepoView } from "@shared/repos";
 import { type ForgeRepo, forgeLocationOf, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type {
@@ -59,8 +59,11 @@ import type { WakeBody } from "./wakes";
 export function taskPull(
   record: TaskRecord,
   changes: readonly ChangeRecord[],
-  number: number,
+  number: number | undefined,
 ): { branch: string; review?: MergeReview } | undefined {
+  // An approval with no number is of the task's own pushed branch, which
+  // merges in this person's batch (docs/forge.md, "Batches of your own").
+  if (number === undefined) return record.branch ? { branch: record.branch } : undefined;
   const target = record.delivery?.checkTarget;
   if (target?.number === number) return { branch: target.branch, review: target };
   // The task's own pull request: the current change's number while it is
@@ -86,13 +89,11 @@ export function taskPull(
  */
 export function approvableOffer(
   record: TaskRecord,
-  repo: ForgeRepo | undefined,
+  repo: (ForgeRepo & { queueWorkflows?: RepoView["queueWorkflows"] }) | undefined,
   delivery: RepoDelivery | undefined,
   card: { cardId: string; offerId?: string | undefined },
   changes?: readonly ChangeRecord[],
-):
-  | { baseline: CompletionOffer & { prNumber: number }; host: string; owner: string; name: string }
-  | undefined {
+): { baseline: CompletionOffer; host: string; owner: string; name: string } | undefined {
   if (!card.offerId || !opensPullRequest(delivery)) return undefined;
   if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
     return undefined;
@@ -101,16 +102,26 @@ export function approvableOffer(
   const baseline = record.delivery?.completionOffers?.find(
     (offer) => offer.cardId === card.cardId && offer.offerId === card.offerId,
   );
-  if (
-    !baseline ||
-    baseline.prNumber === undefined ||
-    (changes
+  if (!baseline) return undefined;
+  if (baseline.prNumber === undefined) {
+    // A pushed branch with no pull request of its own is approved only
+    // where it merges in this person's batch (docs/forge.md, "Batches of
+    // your own"); a pull request the task names by number is never batched.
+    if (
+      !delivery ||
+      ownsBatches(delivery, repo) !== true ||
+      record.delivery?.checkTarget ||
+      currentChange(record.delivery, record.branch).number !== undefined
+    )
+      return undefined;
+  } else if (
+    changes
       ? !taskPull(record, changes, baseline.prNumber)
-      : baseline.prNumber !== currentChange(record.delivery, record.branch).number)
+      : baseline.prNumber !== currentChange(record.delivery, record.branch).number
   )
     return undefined;
   return {
-    baseline: { ...baseline, prNumber: baseline.prNumber },
+    baseline,
     host: location.host,
     owner: location.owner,
     name: location.name,
@@ -206,23 +217,41 @@ export function coveringApproval(
 
 /**
  * What failed at a version an approval covers (INF-4018): nothing, the
- * pull request's own checks, or the project's queue batch check, which no
- * checks override passes (INF-3208).
+ * pull request's own checks, the project's queue batch check, which no
+ * checks override passes (INF-3208), or the batch of this person's own that
+ * carried the version (docs/forge.md, "Batches of your own").
  */
-export type CoveredFailure = "none" | "checks" | "batch";
+export type CoveredFailure = "none" | "checks" | "batch" | "own-batch";
+
+/**
+ * Whose batch failed `head`, where its batch check reads failed: this
+ * person's own where the app itself wrote that status
+ * (`QueueStatusFact.kind`), the project's queue otherwise.
+ */
+export function failedBatchOf(
+  delivery: TaskDelivery | null | undefined,
+  head: string | undefined,
+): "batch" | "own-batch" {
+  const status = delivery?.queueStatus;
+  return status?.kind !== undefined && status.head === head ? "own-batch" : "batch";
+}
 
 /**
  * What a crewmate does instead of a merge card at a version an approval
  * covers (INF-4018): declare the captain's newer words; clear failed checks
  * by a declared repair, a rerun or the captain's recorded override; answer
- * a failed batch the queue's way (FAILED_BATCH_NOTE); or nothing, since the
- * app runs the merge once nothing holds it.
+ * a failed batch the queue's way (FAILED_BATCH_NOTE); repair a change its
+ * own batch failed or left out, which no answer to a queue puts back in
+ * line (FAILED_OWN_BATCH_NOTE); or nothing, since the app runs the merge
+ * once nothing holds it.
  */
 export function coveredNextStep(kept: MergeAuthorization, failure: CoveredFailure): string {
   if (outstandingGuidance(kept) !== undefined)
     return "Put up no merge card: declare the impact of the captain's newer words with check_change captainGuidance instead.";
   if (failure === "batch")
     return "Put up no merge card: the project's queue failed or sent back this version, and no checks override passes the queue, so there is no Merge anyway. Fix the cause in a new version and declare it with check_change conflictRepair, or answer a send-back of a version that already holds the fix with check_change's answered verdict; the approval then goes ahead without a new card.";
+  if (failure === "own-batch")
+    return "Put up no merge card: this version's batch failed with it alone or left it out, as the batch check's words say, and no checks override passes a batch, so there is no Merge anyway. Fix the cause in a new version and declare it with check_change conflictRepair; the approval then goes ahead without a new card and the new version joins the project's next batch.";
   if (failure === "checks")
     return "Put up no merge card: the approval waits for these checks. Push a fix and declare it with check_change conflictRepair, record a rerun with check_change rerun, or, when it is a Merge anyway case, report it naming each failed check and your diagnosis so the first mate records the captain's override; the approval then goes ahead without a new card.";
   return "Put up no merge card and end your turn: the app runs the merge on that approval, through the project's queue where it has one, once nothing holds it; a new merge card is only for a new version.";
@@ -781,7 +810,8 @@ export function keptFeedLine(
   wait: MergeWait,
   place: string,
   checks?: string,
-  queueOwned = false,
+  /** `own`: the change merges in this person's batch, with no queue where the project lives. */
+  queueOwned: boolean | "own" = false,
 ): string {
   return englishOf(keptFeedSaid(wait, place, checks, queueOwned));
 }
@@ -794,7 +824,7 @@ export function keptFeedSaid(
   wait: MergeWait,
   place: string,
   checks?: string,
-  queueOwned = false,
+  queueOwned: boolean | "own" = false,
 ): Said {
   const where = { place: place || saidPart("projectsHost") };
   switch (wait) {
@@ -823,9 +853,18 @@ export function keptFeedSaid(
     case "guidance":
       return said("keptGuidance");
     case "queue":
+      if (queueOwned === "own") return said("keptQueueOwn");
       return queueOwned ? said("keptQueueOwned") : said("keptQueue");
   }
 }
+
+/**
+ * What the Firstmate is told beside a checks wait of a change that was the
+ * only one in its batch when the batch's checks failed (docs/forge.md,
+ * "Batches of your own"): its own crewmate repairs it.
+ */
+export const FAILED_OWN_BATCH_NOTE =
+  "The change was the only one in its batch, and the batch's checks failed. Merge anyway could do nothing there, so never offer or ask for it: the crewmate reads the failed checks on the batch's pull request and fixes the cause in a new version, which joins the batch again once approved.";
 
 /**
  * What the Firstmate is told beside a checks wait whose failure is the
@@ -847,7 +886,7 @@ export function keptNote(
   place: string,
   checks?: string,
   queueWarning?: string,
-  queueOwned = false,
+  queueOwned: boolean | "own" = false,
 ): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
@@ -880,6 +919,8 @@ export function keptNote(
     case "guidance":
       return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new merge card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
     case "queue":
+      if (queueOwned === "own")
+        return `${kept} The project merges the captain's approved changes together: ${head} is in line for one batch pull request, as one commit of its own, and the host merges that pull request once its checks pass. A change the batch leaves out, or the only change of a batch whose checks fail, wakes its crewmate; a failed batch of several is told to you once. Nothing is needed from you now. ${declare}`;
       return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting. ${queueOwned ? "The project's queue merges after its pass; the app observes its receipt." : "The app merges after the project's queue passes this version."}${queueWarning ? ` ${queueWarning}` : ""} A batch that fails in the queue Infinitary ships keeps the version waiting and pauses, and you hear the pause once; a change the queue fails or sends back wakes the crewmate like any failed check. ${declare}`;
   }
 }

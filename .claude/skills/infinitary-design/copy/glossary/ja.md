@@ -23,6 +23,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Asks first | 先に確認 | Merge setting. |
 | Automation | 自動化 | Settings section name. |
 | backlog | バックログ | Common in Japanese project tools. |
+| batch (your approved changes, combined) | 一括プルリクエスト | The batch is named by its pull request; バッチ is avoided as jargon. |
 | batched pull request | 一括プルリクエスト | Delivery through the project's queue. |
 | branch | ブランチ | GitHub Japanese docs. |
 | bring up to date | 最新の状態に更新 | Replaces rebase; 競合 (conflict) is avoided and the clash is said as 食い違い. |
@@ -68,6 +69,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | font (Settings → Appearance) | フォント | |
 | forget (a computer, on the phone) | 登録を解除 | Kept apart from 削除 (Remove) and 離脱 (Leave). |
 | header (an extra request header) | ヘッダー | Long-vowel mark. |
+| held (a batch that stopped) | 保留中 | The same word as a merge a rule holds (保留しています); 一時停止 stays for what a person pauses. |
 | hold (on a task) | 保留 | 「保留が解ける」 for a hold ending. |
 | Idle (a task's state) | アイドル | 待機中 is Queued; both appear in one list. |
 | Infinitary | Infinitary | Never translated or written in katakana. |
@@ -112,6 +114,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Quick | クイック | Rigor level. |
 | rail | パネル列 | The column of panels; レール would be opaque. |
 | Reasoning | 推論 | The fact strip's label. |
+| rebase merges, merge commits (the host's settings) | リベースマージ、マージコミット | Named only as the settings where the project lives, as GitHub's Japanese docs say them; the app's own action stays 最新の状態に更新. |
 | recording (the file) | 録画 | A demo's recording; a voice recording in progress is 録音中. |
 | redacted (decision records) | 個人情報を伏せた | Plain phrase; 墨消し and リダクト read as jargon. |
 | Reduce motion (macOS) | 視差効果を減らす | macOS's own Japanese setting name, used only in the path to it. |
@@ -123,6 +126,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Runbooks | ランブック | Settings section name. |
 | Runs on | 実行先 | Record label. |
 | Secrets (settings section) | シークレット | The section's own name. |
+| send back (a change out of a batch) | 差し戻す | The usual word for returning work with a reason. |
 | server (a custom API's) | サーバー | Long-vowel mark, as for コンピューター. |
 | Settings | 設定 | macOS Japanese. |
 | sign-in / sign in | サインイン / サインインする | Apple and GitHub Japanese use サインイン; never トークン or 認証情報. |

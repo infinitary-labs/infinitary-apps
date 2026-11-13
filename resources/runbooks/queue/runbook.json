@@ -1,6 +1,6 @@
 {
   "id": "queue",
   "name": "Batched pull requests",
-  "description": "Setting up the fix-forward queue Infinitary ships for batched pull requests, and repairing a paused batch.",
+  "description": "Repairing a held batch of your approved changes, and setting up or repairing the fix-forward queue a team's project may carry.",
   "skills": "skills"
 }

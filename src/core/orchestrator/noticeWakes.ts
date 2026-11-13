@@ -165,6 +165,24 @@ export type NoticeFacts =
     }
   | {
       /**
+       * A batch of several of the captain's approved changes failed its
+       * checks (docs/forge.md, "Batches of your own"), so it holds until
+       * it is answered. Told once per held version.
+       */
+      kind: "batch-held";
+      project: { id: string; name: string };
+      /** The batch's pull request, as it is named where the project lives. */
+      change: string;
+      url?: string;
+      /** The held version of the batch. */
+      head: string;
+      /** The failed checks' names. */
+      checks: string[];
+      /** The changes the batch carries, in its order. */
+      members: { task: string; title: string }[];
+    }
+  | {
+      /**
        * The app's start of a project's queue after a merge failed twice
        * (docs/forge.md, "The shipped queue"), and no live task of this app
        * waits in that queue to start it: no batch forms until something does.
@@ -448,6 +466,16 @@ function renderQueuePaused(facts: Extract<WakeFacts, { kind: "queue-paused" }>):
   return `${head}${next} Put up no card about the pause: Settings shows it with its Resume, and each paused task says who repairs it.`;
 }
 
+/** How the first mate hears a held batch of the captain's own opens. */
+export const BATCH_HELD_OPENING =
+  "[fm-op] a batch of the captain's approved changes is held in project";
+
+/** A failed batch of several changes: one repair task answers it. */
+function renderBatchHeld(facts: Extract<WakeFacts, { kind: "batch-held" }>): string {
+  const members = facts.members.map((member) => `${member.task} "${member.title}"`).join(", ");
+  return `${BATCH_HELD_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): ${facts.change}${facts.url ? ` (${facts.url})` : ""} at ${facts.head} failed ${facts.checks.length ? facts.checks.join(", ") : "its checks"}. It carries, in order: ${members}. Changes approved meanwhile wait in line behind it. Start one task in that project now, with no card first, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch's fix, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing. Put up no card about the hold: Settings shows it with Try again and Send back with a reason.`;
+}
+
 /** How the seat-moved wake opens when the captain moved the seat. */
 export const SEAT_MOVED_OPENING = "Your seat moved on the captain's word";
 
@@ -537,6 +565,7 @@ export const NOTICE_WORDS: KindWords<NoticeFacts> = {
   "queue-plan-asked": (facts) => renderQueuePlanAsked(facts),
   "queue-offered": (facts) => renderQueueOffered(facts),
   "queue-paused": (facts) => renderQueuePaused(facts),
+  "batch-held": (facts) => renderBatchHeld(facts),
   "queue-stalled": (facts) =>
     `[fm-op] after a merge in project "${facts.project.name}" (repo_id ${facts.project.id}), the app tried twice to start the project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms there until something starts it, and no task of this app waits in that queue. Start one task in that project now, with no card first, whose brief says to start the queue through the project's API the way the queue-setup skill's queue starts it, or to report what stops it. Put up no card about it.`,
   "task-policies-changed": (facts) =>

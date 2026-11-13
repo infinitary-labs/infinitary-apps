@@ -24,6 +24,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | Asks first | 先問過你 | Warmer than 先詢問 and still short. |
 | Automation | 自動化 | Standard. |
 | backlog | 待辦清單 | Standard. |
+| batch (your approved changes, combined) | 批次 | As in 批次檢查 and 批次 pull request. |
 | batched pull request | 批次 pull request | Taiwan writes 批次, not 批量. |
 | branch | 分支 | Standard. |
 | bring up to date | 更新到最新 | Avoids 重定基底 (rebase) and does not lean on 衝突 alone; 衝突 appears only where English says "conflicts". |
@@ -61,6 +62,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | font (Settings → Appearance) | 字體 | |
 | forget (a computer, on the phone) | 忘記 | As Apple's 忘記此網路; Leave stays 退出. |
 | header (an extra request header) | 標頭 | Microsoft Taiwan's word. |
+| held (a batch that stopped) | 暫緩 | 暫停 stays for what a person pauses. |
 | hold (on a task) | 暫緩 | 暫緩結束 for a hold ending. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 檢閱器 | The Knowledge pane that reads one entry, as Apple's Taiwan apps say. |
@@ -102,6 +104,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | quota, rate limit (never said) | 方案額度 | Never 配額. |
 | rail | 側欄 | Used in command search words. |
 | Reasoning | 推理 | The fact strip's label. |
+| rebase merges, merge commits (the host's settings) | rebase 合併、合併提交 | Named only as the settings where the project lives, where rebase stays in English; the app's own action stays 更新到最新. |
 | rebase, conflict (never said alone) | 更新到最新 | Never 重定基底 or 變基. |
 | recording, demo | 錄製內容, 示範 | Never 影片 or 動畫 for the file. |
 | recovery key | 復原金鑰 | Taiwan writes 復原, not 恢復. |
@@ -116,6 +119,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | Runbooks | 作業手冊 | Plain word for the guidance folder. |
 | save point (never said) | 提交 | Never 存檔點. |
 | Secrets | 機密 | The Settings tab; 密鑰 and 秘密 are avoided. |
+| send back (a change out of a batch) | 退回 | |
 | server (a custom API's) | 伺服器 | Taiwan's word; 服務器 is mainland. |
 | session, transcript (never said) | 對話 | Never 工作階段 or 逐字稿. |
 | Settings | 設定 | Taiwan's word; 設置 is mainland. |

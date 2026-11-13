@@ -1,3 +1,4 @@
+import { BATCH_BRANCH_PREFIX, type MergeWay, type MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
@@ -54,6 +55,7 @@ import {
   QUEUE_WAITING_WORDS,
   type QueueWorkflow,
 } from "../../forge";
+import { waysUnderRules } from "../../mergeWays";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import type { ArchiveRanges } from "../../workflows";
 import { GitHubAttachments, githubStoryDestination } from "./attachments";
@@ -595,9 +597,13 @@ export class GitHubForge implements Forge {
         });
       }
     }
-    // A pull request's checks are the runs it started (INF-1891); a branch's
-    // own checks, read with no number, keep every run at its version.
-    const items = change.number !== undefined ? ownChecksOf(read) : read;
+    // A pull request's checks are the runs it started (INF-1891), and a
+    // batch's the runs its own pushed branch started too; a branch's own
+    // checks, read with no number, keep every run at its version.
+    const items =
+      change.number !== undefined
+        ? ownChecksOf(read, change.branch.startsWith(BATCH_BRANCH_PREFIX))
+        : read;
     return {
       items,
       ...(problem ? { problem } : {}),
@@ -718,7 +724,11 @@ export class GitHubForge implements Forge {
     return { items, complete: false };
   }
 
-  async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
+  async putIn(
+    change: ForgeChange,
+    headSha: string,
+    way: MergeWay = "squash",
+  ): Promise<{ sha?: string }> {
     this.requireMaintainer();
     // `sha` is GitHub's "match head commit" guard: the merge is refused if
     // the change moved on after its checks were read.
@@ -727,13 +737,18 @@ export class GitHubForge implements Forge {
       `${this.repoPath()}/pulls/${numbered(change)}/merge`,
       {
         sha: headSha,
-        merge_method: "squash",
-        commit_title: requireNamed(
-          change.title ?? "",
-          "pull request title",
-          this.options.namingRule?.() ?? null,
-        ),
-        commit_message: change.squashMessage ?? change.body ?? "",
+        merge_method: way,
+        // A rebase merge writes no commit of its own: each change keeps its own.
+        ...(way === "rebase"
+          ? {}
+          : {
+              commit_title: requireNamed(
+                change.title ?? "",
+                "pull request title",
+                this.options.namingRule?.() ?? null,
+              ),
+              commit_message: change.squashMessage ?? change.body ?? "",
+            }),
       },
     )) as { merged?: boolean; sha?: string; message?: string } | null;
     // A 200 is not a merge on its own: GitHub says it merged, or it did not.
@@ -1122,6 +1137,61 @@ export class GitHubForge implements Forge {
     await this.request("PATCH", `${this.repoPath()}/pulls/${numbered(change)}`, {
       state: "closed",
     });
+  }
+
+  /** The repository's own merge buttons, narrowed by its default branch's rules. */
+  async mergeWays(): Promise<MergeWays> {
+    const repo = (await this.request("GET", this.repoPath())) as {
+      default_branch?: string;
+      allow_squash_merge?: boolean;
+      allow_merge_commit?: boolean;
+      allow_rebase_merge?: boolean;
+    };
+    // GitHub leaves the three out for a sign-in that cannot push: unknown, never read as allowed.
+    if (
+      typeof repo.allow_squash_merge !== "boolean" ||
+      typeof repo.allow_merge_commit !== "boolean" ||
+      typeof repo.allow_rebase_merge !== "boolean" ||
+      !repo.default_branch
+    )
+      throw new ForgeError(
+        "permission",
+        `${this.place} did not say which merges this project allows for this sign-in.`,
+      );
+    // A project with no rules, or a plan without them, answers none.
+    const rules = await this.branchRules(repo.default_branch).catch((caught: unknown) => {
+      if (
+        caught instanceof ForgeError &&
+        (caught.failure === "permission" || caught.failure === "not-found")
+      )
+        return [] as ForgeRuleset[];
+      throw caught;
+    });
+    return waysUnderRules(
+      {
+        squash: repo.allow_squash_merge,
+        merge: repo.allow_merge_commit,
+        rebase: repo.allow_rebase_merge,
+      },
+      rules,
+    );
+  }
+
+  async deleteBranch(branch: string): Promise<void> {
+    const answer = await this.apiCall(
+      "DELETE",
+      `${this.repoPath()}/git/refs/heads/${branch.split("/").map(encodeURIComponent).join("/")}`,
+    );
+    // 422 is GitHub's answer for a reference that does not exist.
+    if (answer.status !== 204 && answer.status !== 404 && answer.status !== 422)
+      throw changeWriteError(answer.status, "deleting the batch branch", answer.body);
+  }
+
+  async closeWithNote(change: ForgeChange, note: string): Promise<void> {
+    await this.request("POST", `${this.repoPath()}/issues/${numbered(change)}/comments`, {
+      body: note,
+    });
+    await this.close(change);
   }
 
   label(change: ForgeChange): string {

@@ -1,6 +1,8 @@
+import { keepsCommits, type MergeWays, SQUASH_ONLY_WORDS } from "@shared/batches";
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
 import {
   hostRunsQueue,
+  ownsBatches,
   queueMissing,
   queueShipped,
   type RepoPolicyPatch,
@@ -24,14 +26,17 @@ export const QUEUE_SETUP_WORDS = {
   title: (name: string) => `${name} is not set up for batched pull requests yet`,
   plan: "Ask the first mate to plan it",
   notNow: "Not now",
-  /** What the workflow read found: nothing mentions the batch check. */
-  missing: (name: string) => `No workflow in ${name} mentions its batch check yet.`,
   /** What the workflow read found: the one that mentions it is turned off. */
   turnedOff: (name: string) =>
     `The workflow in ${name} that mentions its batch check is turned off.`,
   /** The feed's line once a waiting choice switches on. */
   switched: (name: string) =>
     `${name} now uses batched pull requests: a workflow in it mentions its batch check.`,
+  /** The feed's line once a choice that waited for a queue applies with batches of this person's own. */
+  own: (name: string) =>
+    `${name} now uses batched pull requests: your approved changes combine into one batch pull request, with no queue to set up.`,
+  /** The feed's line when a choice that waited for a queue cannot apply: the project allows only squash merges. */
+  squashOnly: (name: string) => `${name} keeps where its changes go. ${SQUASH_ONLY_WORDS}`,
   /** The feed's line when the project's own shipped queue makes it batched here too. */
   adopted: (name: string) =>
     `${name} now uses batched pull requests: your project runs Infinitary's queue, so its changes go through it for everyone.`,
@@ -40,18 +45,13 @@ export const QUEUE_SETUP_WORDS = {
     `${name} runs Infinitary's queue on its default branch, so its changes go as batched pull requests for everyone working on it. Remove the queue from the project to choose another way.`,
 } as const;
 
-/** What the app's read of the project's workflows found, in the card's words. */
-function foundWords(repo: Pick<RepoView, "name" | "queueWorkflows">): string {
-  return (repo.queueWorkflows ?? []).length > 0
-    ? QUEUE_SETUP_WORDS.turnedOff(repo.name)
-    : QUEUE_SETUP_WORDS.missing(repo.name);
-}
-
 /**
  * The card the app puts up when batched pull requests is chosen for a
- * project the app's reads find nothing to answer (INF-2885 direction B):
- * the choice waits, the project keeps where its changes go, and the
- * captain may ask the first mate to plan the project's queue workflow.
+ * project that still carries a team queue's files with every one of them
+ * turned off (INF-2885 direction B): the choice waits, the project keeps
+ * where its changes go, and the captain may ask the first mate to plan
+ * the project's queue workflow. A project with no such file gets batches
+ * of this person's own and no card (docs/forge.md, "Batches of your own").
  */
 export function queueSetupCard(
   repo: Pick<RepoView, "id" | "name" | "delivery" | "queueWorkflows">,
@@ -63,7 +63,7 @@ export function queueSetupCard(
     title: QUEUE_SETUP_WORDS.title(repo.name),
     meta: FIRSTMATE_CARD_META,
     body: [
-      `<p>A batched pull request merges only once your project's queue passes it, in a batch with the other approved changes. ${escapeCardText(foundWords(repo))}</p>`,
+      `<p>A batched pull request merges only once your project's queue passes it, in a batch with the other approved changes. ${escapeCardText(QUEUE_SETUP_WORDS.turnedOff(repo.name))}</p>`,
       `<p>Until a queue merges, ${name}'s changes still go as ${now}. Once one does, the app switches ${name} to batched pull requests by itself, for everyone working on it.</p>`,
       `<p>Your first mate can plan the queue Infinitary ships with you: you choose which of your project's checks each batch runs, and change the plan before anything is built. A batch that fails pauses until a fix is approved, instead of failing every change in it. ${escapeCardText(QUEUE_SETUP_WORDS.notNow)} keeps ${now}.</p>`,
     ].join(""),
@@ -86,14 +86,16 @@ export function queueSetupCard(
 }
 
 /**
- * A project's batched choice before its queue exists (INF-2885 direction B,
- * docs/forge.md "Choosing batched pull requests before a queue exists").
- * Every delivery change passes the core dispatcher's configure, which asks
- * this first: a choice of batched pull requests the app's workflow read
- * finds nothing to answer waits on the project's row instead of applying,
- * and its card asks whether the first mate should plan the workflow. A
- * merge in the project reads its workflows again, and the waiting choice
- * applies once a workflow that is on mentions the queue status.
+ * A project's batched choice (docs/forge.md, "Choosing batched pull
+ * requests"). Every delivery change passes the core dispatcher's
+ * configure, which asks this first. A project with no file of a team
+ * queue gets batches of this person's own at once, unless it allows only
+ * squash merges, which is refused with its reason. A project whose team
+ * queue files are all turned off keeps the choice waiting on its row
+ * (INF-2885 direction B): its card asks whether the first mate should
+ * plan the workflow, a merge in the project reads its workflows again, and
+ * the waiting choice applies once a workflow that is on mentions the queue
+ * status.
  */
 export class QueueChoice {
   private dispatch: CoreDispatch | undefined;
@@ -112,6 +114,8 @@ export class QueueChoice {
       };
       /** The shipped queue's version this Infinitary carries for every host; its host part's own unless a test names a later one. */
       version?: number;
+      /** The merges the project allows, read where it lives; undefined when they cannot be read. */
+      ways?: (repoId: string) => Promise<MergeWays | undefined>;
       withdrawCard: (id: string, reason: string) => void;
       tell: (facts: Extract<WakeFacts, { kind: "queue-plan-asked" | "queue-offered" }>) => void;
       note: (text: string) => void;
@@ -125,10 +129,12 @@ export class QueueChoice {
   }
 
   /**
-   * Apply a project's settings change through `apply`, holding a choice of
-   * batched pull requests the project cannot answer yet: the rest of the
-   * patch applies, the project keeps its delivery, the choice waits and
-   * its card goes up. Answers the project as it now stands.
+   * Apply a project's settings change through `apply`. A choice of batched
+   * pull requests for a project that allows only squash merges is refused
+   * with its reason. One a turned-off team queue cannot answer yet is
+   * held: the rest of the patch applies, the project keeps its delivery,
+   * the choice waits and its card goes up. Answers the project as it now
+   * stands.
    */
   async configure(
     repoId: string,
@@ -154,7 +160,13 @@ export class QueueChoice {
       changes.origin === undefined
     ) {
       const read = await this.read(repoId, true);
-      if (read && queueMissing(read)) {
+      if (read && ownsBatches("queue-pr", read) === true) {
+        // No file of a team queue: batches of this person's own, which keep
+        // one commit for each change, so a squash-only project is not offered them.
+        const ways = await this.options.ways?.(repoId).catch(() => undefined);
+        if (ways && !keepsCommits(ways)) throw new Error(SQUASH_ONLY_WORDS);
+        if (read.queuePendingAt !== undefined) this.options.repos.waitForQueue(repoId, null);
+      } else if (read && queueMissing(read)) {
         const { delivery: _held, ...rest } = changes;
         const kept = Object.keys(rest).length > 0 ? apply(rest) : read;
         const waiting =
@@ -197,8 +209,22 @@ export class QueueChoice {
   async recheck(repoId: string): Promise<void> {
     if (this.options.repos.get(repoId)?.queuePendingAt === undefined) return;
     const read = await this.read(repoId);
-    if (!read || read.queuePendingAt === undefined || !queueAnswers(read)) return;
-    if (!this.dispatch) return;
+    if (!read || read.queuePendingAt === undefined || !this.dispatch) return;
+    // A choice that waited for a queue the project never got: it needs none now.
+    if (ownsBatches("queue-pr", read) === true) {
+      try {
+        const next = await this.dispatch("inf:repos:configure", [repoId, { delivery: "queue-pr" }]);
+        if (next.delivery === "queue-pr") this.options.note(QUEUE_SETUP_WORDS.own(next.name));
+      } catch (caught) {
+        if (!(caught instanceof Error) || !caught.message.includes(SQUASH_ONLY_WORDS)) throw caught;
+        // Refused: the project allows only squash merges. The wait ends with its reason.
+        this.options.repos.waitForQueue(repoId, null);
+        this.options.withdrawCard(queueSetupCardId(repoId), SQUASH_ONLY_WORDS);
+        this.options.note(QUEUE_SETUP_WORDS.squashOnly(read.name));
+      }
+      return;
+    }
+    if (!queueAnswers(read)) return;
     const next = await this.dispatch("inf:repos:configure", [repoId, { delivery: "queue-pr" }]);
     if (next.delivery === "queue-pr") this.options.note(QUEUE_SETUP_WORDS.switched(next.name));
   }
@@ -223,9 +249,10 @@ export class QueueChoice {
    * captain's shipped-queue and keep-and-offer choices, docs/forge.md "The
    * shipped queue"): a project that runs the shipped queue goes as batched
    * pull requests here too; one whose stamp is older than this Infinitary's
-   * queue is offered the update once; and a batched project whose own
-   * workflow answers the queue status keeps it and is offered the shipped
-   * queue once. A waiting choice is `recheck`'s.
+   * queue is offered the update once. A batched project whose own
+   * workflow answers the queue status keeps it, and is no longer offered
+   * the shipped queue (docs/forge.md, "Batches of your own"). A waiting
+   * choice is `recheck`'s.
    */
   async follow(repo: RepoView): Promise<void> {
     if (repo.queuePendingAt !== undefined || this.following.has(repo.id)) return;
@@ -256,23 +283,6 @@ export class QueueChoice {
         offer: "update",
         from: shipped,
         to: version,
-      });
-      return;
-    }
-    const own = (repo.queueWorkflows ?? []).filter((workflow) => workflow.active);
-    if (
-      shipped === undefined &&
-      repo.delivery === "queue-pr" &&
-      own.length > 0 &&
-      repo.queueAnsweredAt !== undefined
-    ) {
-      offers.record(repo.id, version);
-      this.options.tell({
-        kind: "queue-offered",
-        project,
-        offer: "replace",
-        to: version,
-        workflows: own,
       });
     }
   }

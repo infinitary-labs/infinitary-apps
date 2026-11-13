@@ -192,7 +192,7 @@ The named waits before it retire: every computer taking work on this major has e
 
 ### Tasks, projects and routing
 
-A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a pull request whose kept merge click waits for the project's own queue (major 13; `docs/forge.md`, "A project's queue").
+A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a change whose kept merge click waits for the person's own batch or for the project's team queue (major 13; `docs/forge.md`, "Batches of your own" and "A project's queue").
 A computer on another major takes no work; the current view floor is 15 because the protected Secrets host actions extend another closed set.
 Queue delivery already requires major 13, and its older readers remain read-only.
 The named waits before it retire: every computer taking work on this major has each earlier change, and a view meets an older home's current-update sightings through `CARD_SEEN_UPDATE_SINCE`.

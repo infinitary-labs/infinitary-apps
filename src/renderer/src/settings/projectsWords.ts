@@ -1,4 +1,5 @@
 import { changeNumberLabel, type ForgeKind } from "@shared/forge";
+import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { QUEUE_STATUS, type RepoView } from "@shared/repos";
@@ -156,6 +157,60 @@ export const QUEUE_PAUSE_WORDS = {
     return m.settingsProjectsPauseSent();
   },
 } as const;
+
+/**
+ * What "Where changes go" says on a batched project that carries no team
+ * queue (docs/forge.md, "Batches of your own"): the app combines this
+ * person's approved changes itself, with nothing to set up.
+ */
+export const BATCH_OWN_WORDS = {
+  get note() {
+    return m.settingsProjectsBatchOwn();
+  },
+};
+
+/**
+ * A held batch of this person's own approved changes in Settings
+ * (docs/forge.md, "A held batch"): why it holds, its pull request, and the
+ * by-hand answers - Try again, or Send back the chosen changes, each with
+ * the reason its crewmate reads.
+ */
+export const BATCH_HOLD_WORDS = {
+  get title() {
+    return m.settingsProjectsBatchHeld();
+  },
+  checks: (since: string, checks: readonly string[], changes: number) =>
+    checks.length
+      ? m.settingsProjectsBatchHeldChecks({ since, checks: formatList(checks), count: changes })
+      : m.settingsProjectsBatchHeldChecksUnnamed({ since, count: changes }),
+  noWay: (since: string) => m.settingsProjectsBatchHeldNoWay({ since }),
+  refused: (since: string, detail: string) => m.settingsProjectsBatchHeldRefused({ since, detail }),
+  rules: (since: string) => m.settingsProjectsBatchHeldRules({ since }),
+  open: (label: string) => m.settingsProjectsBatchOpen({ label }),
+  get tryAgain() {
+    return m.settingsProjectsBatchTryAgain();
+  },
+  get changes() {
+    return m.settingsProjectsBatchChanges();
+  },
+  reason: (title: string) => m.settingsProjectsBatchReason({ title }),
+  get reasonPlaceholder() {
+    return m.settingsProjectsBatchReasonPlaceholder();
+  },
+  get sendBack() {
+    return m.settingsProjectsBatchSendBack();
+  },
+  get needsChange() {
+    return m.settingsProjectsBatchNeedsChange();
+  },
+  get needsReason() {
+    return m.settingsProjectsBatchNeedsReason();
+  },
+  get retried() {
+    return m.settingsProjectsBatchRetried();
+  },
+  sentBack: (changes: number) => m.settingsProjectsBatchSentBack({ count: changes }),
+};
 
 /** What "Where changes go" says on a project whose host runs no queue Infinitary can use. */
 export function queueNoHostWords(): string {

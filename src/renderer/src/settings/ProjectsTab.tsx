@@ -1,9 +1,11 @@
+import { keepsCommits, SQUASH_ONLY_WORDS } from "@shared/batches";
 import { CONTRIBUTION_WORDS } from "@shared/contributions";
 import type { ForgeKind } from "@shared/forge";
 import * as m from "@shared/i18n/messages.generated";
 import {
   deliveryChoices,
   hostRunsQueue,
+  ownsBatches,
   queueSettingsWarning,
   queueShipped,
   type RepoPolicyPatch,
@@ -27,10 +29,12 @@ import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
 import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
 import { FOLDER_THERE_WORDS } from "./addProjectWords";
+import { BatchHoldPanel } from "./BatchHoldPanel";
 import { ForgeSection } from "./ForgeSection";
 import { ProjectCostLimit } from "./ProjectCostLimit";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
 import {
+  BATCH_OWN_WORDS,
   PROJECT_POLICY_WORDS,
   PROJECT_ROW_WORDS,
   projectRowWords,
@@ -551,6 +555,16 @@ function ProjectRow({
   const here = useHereAs();
   const personal = repo.kind === "personal";
   const shipped = personal ? undefined : queueShipped(repo);
+  // Batches of this person's own: the app combines the approved changes, with no queue to set up.
+  const ownBatch = !personal && ownsBatches(repo.delivery, repo) === true;
+  const held = !personal && repo.batch?.open?.hold ? repo.batch.open : undefined;
+  // A project that allows only squash merges and carries no team queue is not offered batches.
+  const squashOnly =
+    !personal &&
+    repo.delivery !== "queue-pr" &&
+    repo.queueWorkflows?.length === 0 &&
+    repo.batch?.ways !== undefined &&
+    !keepsCommits(repo.batch.ways);
   const runsWhere = computers ? runsOnWhere(repo, computers) : null;
   const words = projectRowWords(repo, folder, runsWhere);
   const showPath = !personal && folder !== null && words.includes(PROJECT_ROW_WORDS.linked);
@@ -718,14 +732,18 @@ function ProjectRow({
           {!personal && repo.origin && repo.host && !hostRunsQueue(repo.host) && (
             <QueueNote words={queueNoHostWords()} data="no-host" id={repo.id} />
           )}
+          {squashOnly && <QueueNote words={SQUASH_ONLY_WORDS} data="squash-only" id={repo.id} />}
+          {ownBatch && <QueueNote words={BATCH_OWN_WORDS.note} data="own-batch" id={repo.id} />}
+          {held?.hold && <BatchHoldPanel repo={repo} batch={{ ...held, hold: held.hold }} />}
           {!personal && repo.queuePause && <QueuePausePanel repo={repo} pause={repo.queuePause} />}
           {!personal &&
+            !ownBatch &&
             repo.origin &&
             (repo.delivery === "queue-pr" ||
               repo.queuePendingAt !== undefined ||
               shipped !== undefined) && <QueueKeyPanel key={repo.id} repo={repo} />}
           {!personal && <QueueWarning repo={repo} />}
-          {!personal && repo.delivery === "queue-pr" && shipped === undefined && (
+          {!personal && !ownBatch && repo.delivery === "queue-pr" && shipped === undefined && (
             <QueueHowTo kind={repo.host?.kind} />
           )}
           <PolicyRow

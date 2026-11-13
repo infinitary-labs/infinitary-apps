@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { batchRecordSchema } from "./batches";
 import { contributionDestinationSchema, contributionRouteSchema } from "./contributions";
 import { costLimitSchema } from "./costLimit";
 import { HERE, PLACE_SAID } from "./deviceNames";
@@ -95,6 +96,12 @@ export const QUEUE_STATUS = "infinitary/queue"; // the shipped queue's rules own
  */
 export type QueueStatusFact = {
   head: string;
+  /**
+   * What the status says, where the app itself wrote the fact: a change's
+   * place in this person's own batch (docs/forge.md, "Batches of your
+   * own"), which no status where the project lives carries.
+   */
+  kind?: "waiting" | "in-batch" | "paused" | "passed" | "failed";
   words?: string;
   link?: string;
   pause?: string;
@@ -435,6 +442,11 @@ export const repoViewSchema = z.object({
   queuePendingAt: z.number().optional(),
   /** The project's paused batch, while this app reads one (docs/forge.md, "A paused batch"). */
   queuePause: queuePauseSchema.optional(),
+  /**
+   * This person's line of approved changes and open batch in the project,
+   * while there is either (docs/forge.md, "Batches of your own").
+   */
+  batch: batchRecordSchema.optional(),
 });
 export type RepoView = z.infer<typeof repoViewSchema>;
 
@@ -464,6 +476,23 @@ export function queueMissing(repo: Pick<RepoView, "queueWorkflows" | "queueAnswe
 }
 
 /**
+ * Whether a batched project's approved changes combine in batches of this
+ * person's own (docs/forge.md, "Batches of your own"), read from the typed
+ * fact the app already keeps: the workflow files that mention the team
+ * queue's status. A project that carries such a file keeps the team queue
+ * until the files are removed; one read with none gets batches of its own.
+ * Undefined while the files were never read: unknown, never guessed.
+ */
+export function ownsBatches(
+  delivery: RepoDelivery,
+  repo: Pick<RepoView, "host" | "queueWorkflows">,
+): boolean | undefined {
+  if (delivery !== "queue-pr" || !hostRunsQueue(repo.host)) return false;
+  if (repo.queueWorkflows === undefined) return undefined;
+  return repo.queueWorkflows.length === 0;
+}
+
+/**
  * Settings' warning under "Where changes go" for a project on the batched
  * delivery whose queue the app's reads find nothing to answer (docs/forge.md,
  * "A project's queue"); null when the queue answered before, a workflow that
@@ -474,9 +503,10 @@ export function queueSettingsWarning(
   repo: Pick<RepoView, "delivery" | "queueWorkflows" | "queueAnsweredAt">,
 ): string | null {
   if (repo.delivery !== "queue-pr" || !queueMissing(repo)) return null;
+  // A project with no such file gets batches of its own, and nothing waits.
   return (repo.queueWorkflows ?? []).length > 0
     ? "The workflow in this project that mentions its batch check is turned off, so approved merges would wait for one."
-    : "No workflow in this project mentions its batch check yet, so approved merges would wait for one.";
+    : null;
 }
 
 /**

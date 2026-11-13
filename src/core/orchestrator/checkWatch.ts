@@ -4,8 +4,10 @@ import type { CiWatch, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import {
   type CoveredFailure,
+  candidateHead,
   coveredNextStep,
   coveringApproval,
+  failedBatchOf,
   keptApprovalLine,
 } from "./mergeAuthorization";
 import type { TypedWake, WakeFacts } from "./wakes";
@@ -325,7 +327,7 @@ export class CheckWatcher {
       red.length === 0
         ? "none"
         : red.some((check) => check.name === QUEUE_STATUS)
-          ? "batch"
+          ? failedBatchOf(record?.delivery, candidateHead(kept))
           : "checks";
     return { ...facts, approval: `${keptApprovalLine(kept)} ${coveredNextStep(kept, failure)}` };
   }

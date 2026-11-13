@@ -407,6 +407,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       await services.queuePauses.answer(repoId, answer);
       return { ok: true as const };
     },
+    "inf:repos:batch-answer": (repoId, answer) => services.batches.answerOrThrow(repoId, answer),
     "inf:repos:queue-credential": (repoId) => services.queuePauses.credential(repoId),
     "inf:repos:queue-credential-create": (repoId) => services.queuePauses.createCredential(repoId),
     "inf:repos:configure": async (repoId, changes) => {

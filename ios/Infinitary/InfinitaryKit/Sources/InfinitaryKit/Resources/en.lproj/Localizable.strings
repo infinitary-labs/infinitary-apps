@@ -683,6 +683,7 @@
 "keptGuidance" = "Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not.";
 "keptProtected" = "Cannot merge yet: %1$@ holds it for a required review or another rule on the main branch. Your merge is kept and runs once %1$@ allows it.";
 "keptQueue" = "Waiting for the batch check: your project's queue is testing this version with other approved work. Your merge is kept. The app will merge it after your project's queue passes it.";
+"keptQueueOwn" = "Waiting for the batch check: this version merges with your other approved changes, as one batch pull request. Your merge is kept. The app merges the batch after its checks pass.";
 "keptQueueOwned" = "Waiting for the batch check: your project's queue is testing this version with other approved work. Your merge is kept. Your project's queue will merge it after its checks pass.";
 "keptRefused" = "Cannot merge yet: %1$@ refused it. Your merge is kept and runs again once its crewmate has fixed the cause.";
 "keptRepair" = "Cannot merge yet: it changed after the card you approved. Your merge is kept and runs once its crewmate shows the work is still what you approved.";
@@ -2472,6 +2473,20 @@
 "settingsProjectsAutonomyOff" = "Finished work waits for your word.";
 "settingsProjectsAutonomyOn" = "Work that passes the checks may merge without asking you.";
 "settingsProjectsAutonomyPersonal" = "Builds in place. Work that passes the checks is written as soon as it is done.";
+"settingsProjectsBatchChanges" = "Changes to send back";
+"settingsProjectsBatchHeld" = "Batch held";
+"settingsProjectsBatchHeldNoWay" = "Held since %1$@: this project allows no merge that keeps one commit for each change. Allow rebase merges or merge commits where the project lives, then try again.";
+"settingsProjectsBatchHeldRefused" = "Held since %2$@: the merge was refused where the project lives: %1$@";
+"settingsProjectsBatchHeldRules" = "Held since %1$@: its checks passed, and a rule where the project lives holds it, such as a required review. It merges by itself once that rule lets it through.";
+"settingsProjectsBatchNeedsChange" = "Choose the changes to send back first.";
+"settingsProjectsBatchNeedsReason" = "Say why each chosen change goes back first.";
+"settingsProjectsBatchOpen" = "Open %1$@";
+"settingsProjectsBatchOwn" = "Your approved changes merge together: Infinitary combines them into one batch pull request, one commit for each change, and merges it once its checks pass.";
+"settingsProjectsBatchReason" = "Why \"%1$@\" goes back";
+"settingsProjectsBatchReasonPlaceholder" = "Why it goes back";
+"settingsProjectsBatchRetried" = "Combining the batch again. Its checks run on the new version.";
+"settingsProjectsBatchSendBack" = "Send back with a reason";
+"settingsProjectsBatchTryAgain" = "Try again";
 "settingsProjectsCare" = "Rigor";
 "settingsProjectsCareNone" = "none";
 "settingsProjectsCarePersonal" = "Nothing here passes through a gate.";
@@ -2481,7 +2496,7 @@
 "settingsProjectsCostNone" = "No limit";
 "settingsProjectsCostOwn" = "Own amount";
 "settingsProjectsCostTitle" = "Cost limit";
-"settingsProjectsDelivery" = "Offered as a pull request where the project lives, as a batched pull request your project's own queue tests before it merges, or merged locally with no pull request.";
+"settingsProjectsDelivery" = "Offered as a pull request where the project lives, merged together with your other approved changes as one batch pull request, or merged locally with no pull request.";
 "settingsProjectsDeliveryTitle" = "Where changes go";
 "settingsProjectsEmpty" = "No projects yet. Add one below, or tell your first mate which project to work on.";
 "settingsProjectsFolder" = "Folder";

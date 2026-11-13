@@ -47,6 +47,12 @@ export const secretMetadataSchema = z.strictObject({
    * knows it (`secrets-last-task.md`): what the Secrets page names beside when.
    */
   lastTask: z.string().optional(),
+  /**
+   * A sign-in the app keeps for one of its own services, hidden from the crew
+   * (docs/secrets.md, "App sign-ins"): the page offers its Integrations row,
+   * never Replace, Forget or a saved decision.
+   */
+  kept: z.literal(true).optional(),
 });
 export const secretUseSchema = z.strictObject({
   request: z.string(),
@@ -77,6 +83,11 @@ export const secretHistorySchema = z.strictObject({
   state: secretStateSchema,
   exitCode: z.number().optional(),
   approval: z.enum(["local", "remote", "rule", "short-read"]).optional(),
+  /**
+   * The app spent its own sign-in, made in the app, which was the consent
+   * (docs/secrets.md, "App sign-ins"): no one approved it, so it has no `approval`.
+   */
+  signIn: z.literal(true).optional(),
   device: z.string().optional(),
   reconciled: z.literal(true).optional(),
   /** Historical metadata imported from a recovery archive, never live authority. */
@@ -348,6 +359,8 @@ export const SECRETS_WORDS = {
   add: "Add secret",
   replace: "Replace",
   forget: "Forget",
+  /** What happened's line for a use an app sign-in covered (`signIn`). */
+  yourSignIn: "Your sign-in",
   get once() {
     return m.secretsAllowOnce();
   },

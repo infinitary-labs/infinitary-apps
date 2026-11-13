@@ -150,6 +150,12 @@ describe("protected Secrets owner", () => {
     ),
   )(
     "restarts $layout authority after $interruption without replay",
+    // Integration budget (docs/test-cohorts.md): each case starts two Node
+    // processes that load the owner through the module runner. A case took
+    // 1.5-1.9 s on an Apple silicon Mac and 3.0-5.9 s beside three other
+    // integration workers on the pull request's Linux check, past the 5 s
+    // default an in-memory test keeps.
+    { timeout: 15_000 },
     async ({ layout, interruption }, { signal }) => {
       const dir = scratchDir("secrets-authority-restart-");
       const custody = disposableCustody();

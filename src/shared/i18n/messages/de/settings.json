@@ -856,6 +856,8 @@
   "settingsSecretsFinishForm": "Schließ zuerst das offene Formular für das Geheimnis ab.",
   "settingsSecretsFinishFormOrChange": "Schließ zuerst das offene Formular für das Geheimnis oder die laufende Änderung ab.",
   "settingsSecretsHistoryExported": "Verlauf exportiert.",
+  "settingsSecretsKeptSignIn": "Infinitary bewahrt dies für eine Anmeldung auf, die du in Integrationen vorgenommen hast, und nutzt es ohne Rückfrage: Die Anmeldung war deine Zustimmung. Melde dich dort ab, um es zu entfernen.",
+  "settingsSecretsManageInIntegrations": "In Integrationen verwalten",
   "settingsSecretsNamePlaceholder": "Zum Beispiel: Website-Veröffentlichung",
   "settingsSecretsNoExport": "Kein Export gespeichert.",
   "settingsSecretsNoHistory": "Kein Verlauf aufgezeichnet.",

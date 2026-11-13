@@ -8,7 +8,8 @@ import { canonical, type RootKeys, writePrivateFile } from "./custody";
 import type { UseReceipt, UseState } from "./requests";
 
 /** How a use was approved: fresh authentication here, a signed decision elsewhere, or a saved rule. */
-export type ApprovalMethod = "local" | "remote" | "rule" | "short-read";
+/** `sign-in`: the app spent its own sign-in, made in the app, which is the consent. */
+export type ApprovalMethod = "local" | "remote" | "rule" | "short-read" | "sign-in";
 
 /** States a use can end in without launching, and the two a launch can end in. */
 export type EndState = Exclude<UseState, "waiting" | "executing" | "completed">;
@@ -49,7 +50,9 @@ export type HistoryItem = {
   requestedAt: number;
   state: UseState;
   exitCode?: number;
-  approval?: ApprovalMethod;
+  approval?: Exclude<ApprovalMethod, "sign-in">;
+  /** An app sign-in covered it (docs/secrets.md, "App sign-ins"); no one approved it. */
+  signIn?: true;
   device?: string;
   reconciled?: true;
   recoveredFrom?: string;
@@ -201,7 +204,8 @@ export class UseJournal {
       const item = items.get(entry.request);
       if (!item) continue;
       if (entry.kind === "approved") {
-        item.approval = entry.method;
+        if (entry.method === "sign-in") item.signIn = true;
+        else item.approval = entry.method;
         if (entry.device) item.device = entry.device;
       } else if (entry.kind === "consumed") item.state = "executing";
       else if (entry.kind === "completed") {

@@ -841,6 +841,8 @@
   "settingsSecretsFinishForm": "열려 있는 비밀 정보 양식을 먼저 마치세요.",
   "settingsSecretsFinishFormOrChange": "열려 있는 비밀 정보 양식이나 진행 중인 변경을 먼저 마치세요.",
   "settingsSecretsHistoryExported": "기록을 내보냈어요.",
+  "settingsSecretsKeptSignIn": "Infinitary는 연동에서 로그인한 계정을 위해 이것을 보관하고 묻지 않고 사용합니다. 로그인한 것이 동의입니다. 지우려면 연동에서 로그아웃하세요.",
+  "settingsSecretsManageInIntegrations": "연동에서 관리",
   "settingsSecretsNamePlaceholder": "예: 웹사이트 배포",
   "settingsSecretsNoExport": "내보낸 파일을 저장하지 않았어요.",
   "settingsSecretsNoHistory": "기록된 내용이 없어요.",

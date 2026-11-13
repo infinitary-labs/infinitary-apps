@@ -26,6 +26,7 @@ The task is named by its own title; a request no task made names only when.
 A request timestamp is never called proof that a value was used.
 A reference appears only when another secret has the same name and place; the row never shows a saved version or a raw timestamp.
 Opening a row offers Replace, Forget and that secret's saved decisions.
+A sign-in the app keeps for one of its own services, such as Google's, opens to one line saying Infinitary keeps it for a sign-in made in Integrations and uses it without asking, and one secondary button, Manage in Integrations, reached with Tab after the row; it has no Replace, Forget or decisions.
 A temporary read shows on the secret's own row as Reading until a time, beside End access; there is no separate temporary-access section.
 Discovery is global: crew can find the names without receiving the values or permission to use them.
 There is no project/computer linking control.

@@ -47089,6 +47089,10 @@
                 },
                 "lastTask": {
                   "type": "string"
+                },
+                "kept": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -47290,6 +47294,10 @@
                     "rule",
                     "short-read"
                   ]
+                },
+                "signIn": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "device": {
                   "type": "string"
@@ -47598,6 +47606,10 @@
                 },
                 "lastTask": {
                   "type": "string"
+                },
+                "kept": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -47799,6 +47811,10 @@
                     "rule",
                     "short-read"
                   ]
+                },
+                "signIn": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "device": {
                   "type": "string"
@@ -48307,6 +48323,10 @@
                 },
                 "lastTask": {
                   "type": "string"
+                },
+                "kept": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -48508,6 +48528,10 @@
                     "rule",
                     "short-read"
                   ]
+                },
+                "signIn": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "device": {
                   "type": "string"

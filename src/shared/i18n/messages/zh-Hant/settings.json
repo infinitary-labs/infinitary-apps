@@ -841,6 +841,8 @@
   "settingsSecretsFinishForm": "請先完成開啟中的機密表單。",
   "settingsSecretsFinishFormOrChange": "請先完成開啟中的機密表單或目前的變更。",
   "settingsSecretsHistoryExported": "已匯出歷史紀錄。",
+  "settingsSecretsKeptSignIn": "Infinitary 為你在整合中完成的登入保存此項，並在使用時不再詢問：登入即表示你已同意。在那裡登出即可移除。",
+  "settingsSecretsManageInIntegrations": "在整合中管理",
   "settingsSecretsNamePlaceholder": "例如：網站部署",
   "settingsSecretsNoExport": "沒有儲存匯出檔案。",
   "settingsSecretsNoHistory": "沒有歷史紀錄。",

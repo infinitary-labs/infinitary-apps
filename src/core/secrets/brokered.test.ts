@@ -158,6 +158,7 @@ async function fixture() {
   };
   return {
     received,
+    url: (path: string) => `${base}${path}`,
     custody,
     dir,
     options,
@@ -459,6 +460,66 @@ describe("protected brokered delivery", () => {
     expect((await f.requests.broker(f.request("redirect", "/redirect"))).state).toBe("unknown");
     f.custody.state = "locked";
     expect((await f.requests.broker(f.request("locked"))).state).toBe("unavailable");
+    expect(f.received).toHaveLength(1);
+  });
+
+  // INF-4096: signing in in the app is the consent ("when the user sign-in to google in
+  // infinitary, that sign-in is already the consent"), only for an adapter that declares
+  // the app's own sign-in and only for entries the app keeps hidden from the crew.
+  it("runs an app sign-in's own use without asking, and still asks for an undeclared adapter, a crew-visible secret and a crewmate's run", async () => {
+    const f = await fixture();
+    f.backend.registerBroker(
+      httpSecretBroker({
+        id: "app-sign-in",
+        label: "App sign-in",
+        signIn: true,
+        resolve: (input) =>
+          input &&
+          typeof input === "object" &&
+          !Array.isArray(input) &&
+          typeof input.ref === "string"
+            ? {
+                url: f.url("/token"),
+                method: "POST",
+                form: { client_id: "installed-desktop-client", grant_type: "refresh_token" },
+                credentials: {
+                  refresh: { ref: input.ref, delivery: { kind: "form", name: "refresh_token" } },
+                },
+                operation: "Renew the app's sign-in",
+                read: false,
+                result: "A new access key for the app",
+              }
+            : undefined,
+        send: (url, init) => fetch(url, init),
+      }),
+    );
+    await f.backend.putSecret("crew-refresh", "Crew refresh", Buffer.from("crew-refresh-value"), {
+      discoverable: true,
+    });
+    const renew = (id: string, ref: string): BrokeredUse => ({
+      id,
+      reason: "Renew the app's sign-in",
+      broker: "app-sign-in",
+      input: { ref },
+    });
+
+    const signedIn = await f.requests.broker(renew("renew-1", "google-refresh"));
+    expect(await settled(f.requests, signedIn.request)).toMatchObject({ state: "completed" });
+    expect(new URLSearchParams(f.received[0]?.form).get("refresh_token")).toBe(REFRESH);
+    expect(f.backend.history()[0]).toMatchObject({ state: "completed", signIn: true });
+
+    expect((await f.requests.broker(renew("renew-crew", "crew-refresh"))).state).toBe("waiting");
+    expect((await f.requests.broker(f.request("undeclared", "/token"))).state).toBe("waiting");
+    const cwd = scratchDir("secrets-broker-project-");
+    await writeFile(join(cwd, "run.sh"), "exit 0\n");
+    const run = await f.requests.inject({
+      id: "crew-run",
+      reason: "Run the reviewed script",
+      env: { CREW_REFRESH: "crew-refresh" },
+      argv: ["/bin/sh", "run.sh"],
+      cwd,
+    });
+    expect(run.state).toBe("waiting");
     expect(f.received).toHaveLength(1);
   });
 

@@ -2704,6 +2704,8 @@ public enum PhoneMessages {
     public static func `settingsSecretsFinishForm`() -> String { PhoneWords.format("settingsSecretsFinishForm", []) }
     public static func `settingsSecretsFinishFormOrChange`() -> String { PhoneWords.format("settingsSecretsFinishFormOrChange", []) }
     public static func `settingsSecretsHistoryExported`() -> String { PhoneWords.format("settingsSecretsHistoryExported", []) }
+    public static func `settingsSecretsKeptSignIn`() -> String { PhoneWords.format("settingsSecretsKeptSignIn", []) }
+    public static func `settingsSecretsManageInIntegrations`() -> String { PhoneWords.format("settingsSecretsManageInIntegrations", []) }
     public static func `settingsSecretsNamePlaceholder`() -> String { PhoneWords.format("settingsSecretsNamePlaceholder", []) }
     public static func `settingsSecretsNoExport`() -> String { PhoneWords.format("settingsSecretsNoExport", []) }
     public static func `settingsSecretsNoHistory`() -> String { PhoneWords.format("settingsSecretsNoHistory", []) }
@@ -5906,6 +5908,8 @@ extension PhoneWords {
         "settingsSecretsFinishForm": [],
         "settingsSecretsFinishFormOrChange": [],
         "settingsSecretsHistoryExported": [],
+        "settingsSecretsKeptSignIn": [],
+        "settingsSecretsManageInIntegrations": [],
         "settingsSecretsNamePlaceholder": [],
         "settingsSecretsNoExport": [],
         "settingsSecretsNoHistory": [],

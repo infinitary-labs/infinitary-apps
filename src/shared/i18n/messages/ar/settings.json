@@ -916,6 +916,8 @@
   "settingsSecretsFinishForm": "أكمل نموذج السر المفتوح أولًا.",
   "settingsSecretsFinishFormOrChange": "أكمل نموذج السر المفتوح أو التغيير الجاري أولًا.",
   "settingsSecretsHistoryExported": "صُدِّر السجل.",
+  "settingsSecretsKeptSignIn": "يحتفظ Infinitary بهذا لتسجيل دخول أجريته في التكاملات ويستخدمه دون أن يسألك: تسجيل الدخول كان موافقتك. سجّل الخروج هناك لإزالته.",
+  "settingsSecretsManageInIntegrations": "الإدارة في التكاملات",
   "settingsSecretsNamePlaceholder": "مثلًا، نشر الموقع الإلكتروني",
   "settingsSecretsNoExport": "لم يُحفظ أي تصدير.",
   "settingsSecretsNoHistory": "لا يوجد سجل مدوَّن.",

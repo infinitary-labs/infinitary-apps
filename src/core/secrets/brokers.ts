@@ -37,6 +37,12 @@ export type BrokeredUse = {
  */
 export type SecretBroker = {
   id: string;
+  /**
+   * The adapter spends a sign-in the person made in the app itself, at an
+   * address its own code names (docs/secrets.md, "App sign-ins"). That sign-in
+   * is the consent: a use naming only hidden entries runs with no question.
+   */
+  signIn?: true;
   prepare(input: BrokerInput): Promise<PreparedBroker | undefined>;
 };
 

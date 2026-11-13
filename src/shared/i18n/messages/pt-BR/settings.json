@@ -871,6 +871,8 @@
   "settingsSecretsFinishForm": "Termine primeiro o formulário de segredo aberto.",
   "settingsSecretsFinishFormOrChange": "Termine primeiro o formulário de segredo aberto ou a alteração atual.",
   "settingsSecretsHistoryExported": "Histórico exportado.",
+  "settingsSecretsKeptSignIn": "O Infinitary guarda isto para um login que você fez em Integrações e o usa sem perguntar: entrar foi o seu consentimento. Saia por lá para removê-lo.",
+  "settingsSecretsManageInIntegrations": "Gerenciar em Integrações",
   "settingsSecretsNamePlaceholder": "Por exemplo, Publicação do site",
   "settingsSecretsNoExport": "Nenhuma exportação salva.",
   "settingsSecretsNoHistory": "Nenhum histórico registrado.",

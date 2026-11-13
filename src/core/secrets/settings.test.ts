@@ -653,6 +653,54 @@ describe("trusted Secrets settings", () => {
     expect((await f.settings.view()).entries).toEqual(recreated.entries);
   });
 
+  // INF-4096's accepted plan: an app sign-in stays listed, kept for its service, with no
+  // Replace, Forget or saved decision; a decision naming it stops applying and showing,
+  // and the next decision the captain confirms leaves it out of the record.
+  it("keeps an app sign-in out of Replace, Forget and saved decisions, and drops its decision at the next confirmed save", async () => {
+    const f = fixture();
+    const kept = await f.settings.keepHidden({
+      label: "Google sign-in",
+      value: Buffer.from("1//invented-google-refresh"),
+    });
+    if (!kept) throw new Error("No kept sign-in.");
+    await f.settings.put(INPUT);
+    const owner = await f.owner();
+    const earlier = [
+      { id: "renewals", effect: "allow" as const, secret: kept, operation: "a".repeat(64) },
+      { id: "calendar", effect: "never" as const, secret: INPUT.ref },
+    ];
+    const proposal = owner.proposeAuthority({ rules: earlier, devices: [] });
+    if (!proposal) throw new Error("No rule proposal.");
+    const proof = await owner.confirmAuthority(proposal.digest, 1_000_000, "Save earlier rules.");
+    expect(await owner.saveAuthority(proposal.authority, proof)).toBe("stored");
+
+    const view = await f.settings.view();
+    expect(view.entries.map((entry) => [entry.ref, entry.kept])).toEqual([
+      [INPUT.ref, undefined],
+      [kept, true],
+    ]);
+    expect(view.rules.map((rule) => rule.id)).toEqual(["calendar"]);
+
+    const sign = view.entries.find((entry) => entry.ref === kept);
+    if (!sign) throw new Error("No kept row.");
+    const replaced = await f.settings.put({
+      ...INPUT,
+      ref: kept,
+      expectedVersion: sign.version,
+      expectedRevision: sign.revision,
+    });
+    expect(replaced.saved).toBeUndefined();
+    expect(replaced.entries.find((entry) => entry.ref === kept)?.version).toBe(sign.version);
+    const cards = f.cards.length;
+    await f.settings.action({ kind: "forget", ref: kept });
+    expect(f.cards).toHaveLength(cards);
+    expect((await f.settings.view()).entries.map((entry) => entry.ref)).toContain(kept);
+
+    await f.settings.action({ kind: "save-rules", rules: [] });
+    await f.click(SAVED_DECISION_WORDS.removeConfirm);
+    expect(owner.authority()?.rules).toEqual([]);
+  });
+
   it("only the exact host offer plus fresh confirmation sends a brokered request, with no raw result in views", async () => {
     const f = fixture();
     await f.settings.put(INPUT);

@@ -68,8 +68,6 @@ const NO_SECRETS =
   "Google keeps its sign-in in Secrets, which this computer does not offer. Google is not available here.";
 const SECRETS_LOCKED =
   "Google waits for Secrets, which is locked or cannot open now. Unlock it in Settings -> Secrets.";
-const NOT_ALLOWED =
-  "Infinitary was not allowed to use the Google sign-in. Press Check in Settings -> Integrations to be asked again.";
 const SIGN_IN_AGAIN = "Google is signed out. Sign in again in Settings -> Integrations.";
 const RATE_LIMITED = new Set(["rateLimitExceeded", "userRateLimitExceeded"]);
 
@@ -134,8 +132,6 @@ export function googleIntegration(
   let moving: Promise<string> | undefined;
   /** The access key, in memory only: a start renews it once. */
   let access: { token: string; expiresAt: number } | undefined;
-  /** Why a renewal is not asked again (the captain did not allow it), until a check or sign-in. */
-  let held: string | undefined;
   let registered = false;
   /** Keys of sign-ins just removed, renewed once more only to revoke them at Google. */
   const forgetting = new Set<string>();
@@ -152,10 +148,10 @@ export function googleIntegration(
 
   /**
    * The renewal broker: the lasting key in the form's refresh_token field,
-   * sent to Google's token address and nowhere else. Every bit it sends but
-   * the key is the same each time, so one saved decision covers every
-   * renewal of this sign-in; another sign-in keeps its key under another
-   * reference and is asked again.
+   * sent to Google's token address and nowhere else. Signing in to Google
+   * in the app is the consent, so it declares the app's own sign-in and
+   * Secrets runs each renewal, and the revoke at sign-out, without asking
+   * (docs/secrets.md, "App sign-ins").
    */
   const register = () => {
     if (registered) return;
@@ -164,6 +160,7 @@ export function googleIntegration(
       httpSecretBroker({
         id: GOOGLE_BROKER,
         label: KEY_LABEL,
+        signIn: true,
         resolve: (input) => {
           const ref =
             input && typeof input === "object" && !Array.isArray(input) ? input.ref : undefined;
@@ -233,7 +230,6 @@ export function googleIntegration(
   /** Trade the lasting key for a new access key, inside Secrets; one renewal at a time. */
   const renew = (): Promise<void> => {
     renewing ??= (async () => {
-      if (held) throw new Error(held);
       const ref = await lastingKey();
       register();
       const used = await options.keys.use({
@@ -242,11 +238,6 @@ export function googleIntegration(
         broker: GOOGLE_BROKER,
         input: { ref },
       });
-      if (used.state === "denied" || used.state === "expired" || used.state === "cancelled") {
-        held = NOT_ALLOWED;
-        setHealth("unavailable");
-        throw new Error(NOT_ALLOWED);
-      }
       if (used.state === "unavailable") {
         setHealth("unavailable");
         throw new Error(options.keys.shown() ? SECRETS_LOCKED : NO_SECRETS);
@@ -376,8 +367,8 @@ export function googleIntegration(
 
   /**
    * Forget a sign-in: here at once, then at Google and in Secrets. With no
-   * access key in memory, a renewal makes one to revoke with - under the
-   * saved decision that covers renewals, or asking once when there is none.
+   * access key in memory, a renewal makes one to revoke with, under the
+   * same sign-in consent as every renewal.
    */
   const forgetSignIn = (
     record: { key?: string } | undefined,
@@ -386,7 +377,6 @@ export function googleIntegration(
   ) => {
     store.remove();
     access = undefined;
-    held = undefined;
     waitUntil = 0;
     const earlier = moved.present() ? moved.lastingKey() : undefined;
     return (async () => {
@@ -512,7 +502,6 @@ export function googleIntegration(
           }. Try again.`,
         );
       waitUntil = 0;
-      held = undefined;
       access = { token: issued.accessToken, expiresAt: issued.expiresAt };
       store.write({
         account,
@@ -533,8 +522,6 @@ export function googleIntegration(
     },
     check: async () => {
       if (!store.read()) return;
-      // Checking is the captain's own ask: a renewal they did not allow is asked again.
-      held = undefined;
       try {
         await gmail("/profile");
       } catch {

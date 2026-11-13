@@ -1872,6 +1872,8 @@
   {"said":{"m":"settingsSecretsFinishForm"},"words":"Finish the open secret form first."},
   {"said":{"m":"settingsSecretsFinishFormOrChange"},"words":"Finish the open secret form or current change first."},
   {"said":{"m":"settingsSecretsHistoryExported"},"words":"History exported."},
+  {"said":{"m":"settingsSecretsKeptSignIn"},"words":"Infinitary keeps this for a sign-in you made in Integrations and uses it without asking: signing in was your consent. Sign out there to remove it."},
+  {"said":{"m":"settingsSecretsManageInIntegrations"},"words":"Manage in Integrations"},
   {"said":{"m":"settingsSecretsNamePlaceholder"},"words":"For example, Website deployment"},
   {"said":{"m":"settingsSecretsNoExport"},"words":"No export saved."},
   {"said":{"m":"settingsSecretsNoHistory"},"words":"No history recorded."},

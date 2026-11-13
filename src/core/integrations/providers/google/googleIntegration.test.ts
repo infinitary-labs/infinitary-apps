@@ -8,7 +8,6 @@ import {
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
 import { fencedListReminder, fencedSpans, fenceReminder } from "@shared/outsideData";
-import { SECRET_APPROVAL_CARD_WORDS, SECRETS_WORDS, secretsNamed } from "@shared/secrets";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
 import {
@@ -1107,18 +1106,30 @@ describe("Google's sign-in kept in Secrets", () => {
       ...(key ? { key } : {}),
     });
 
-  it("asks the captain once, and every later renewal runs on that one saved decision", async () => {
+  // Signing in to Google in the app is the consent (INF-4096: "when the user sign-in to google
+  // in infinitary, that sign-in is already the consent"): no card, confirmation or saved decision.
+  it("never asks about the sign-in: renewals hours later and the sign-out run on signing in alone", async () => {
     const { google, clock, integrations, keys } = await signedIn();
     for (let hour = 1; hour <= 3; hour++) {
       clock.now += 3_600_000;
       expect((await search(integrations)).refused).toBeUndefined();
     }
     expect(renewals(google)).toHaveLength(3);
-    expect(keys.cards).toHaveLength(1);
-    expect(keys.cards[0]?.title).toContain("Google sign-in");
-    expect((await keys.keys.view()).rules).toEqual([
-      expect.objectContaining({ effect: "allow", secret: "google-sign-in" }),
+    const view = await keys.keys.view();
+    expect(view.rules).toEqual([]);
+    expect(view.history.map((item) => [item.approval, item.signIn])).toEqual([
+      [undefined, true],
+      [undefined, true],
+      [undefined, true],
     ]);
+    expect(view.entries).toEqual([
+      expect.objectContaining({ ref: "google-sign-in", label: "Google sign-in", kept: true }),
+    ]);
+
+    await integrations.remove("google");
+    expect(google.revoked).toHaveLength(1);
+    expect(keys.cards).toEqual([]);
+    expect(keys.confirms()).toBe(0);
   });
 
   it("moves a sign-in an earlier version kept in its own file into Secrets, then removes the file", async () => {
@@ -1175,33 +1186,6 @@ describe("Google's sign-in kept in Secrets", () => {
     await keys.keys.action({ kind: "unlock" });
     expect((await search(integrations)).refused).toBeUndefined();
     expect(existsSync(join(dir, "secrets"))).toBe(false);
-  });
-
-  it("holds Google after the captain does not allow a renewal, and asks again only on Check", async () => {
-    const { google, clock, integrations, keys } = await signedIn();
-    keys.answer(SECRETS_WORDS.deny);
-    clock.now += 3_600_000;
-
-    const refused = await search(integrations);
-    expect(refused.refused).toBe("refused");
-    expect(refused.text).toContain("was not allowed to use the Google sign-in");
-    expect(integrations.view().integrations[0]?.health).toBe("unavailable");
-    // A poll a minute later asks nothing.
-    clock.now += 60_000;
-    expect((await search(integrations)).refused).toBe("refused");
-    // One question, then the offer to stop asking that follows every Don't allow.
-    const named = secretsNamed(["Google sign-in"]);
-    expect(keys.cards.map((card) => card.title)).toEqual([
-      SECRET_APPROVAL_CARD_WORDS.title(named, null),
-      SECRET_APPROVAL_CARD_WORDS.stopTitle(named),
-    ]);
-    expect(renewals(google)).toEqual([]);
-
-    keys.answer(SECRETS_WORDS.once);
-    await integrations.check("google");
-    expect(keys.cards).toHaveLength(3);
-    expect(renewals(google)).toHaveLength(1);
-    expect(integrations.view().integrations[0]?.health).toBe("ok");
   });
 
   it("keeps no sign-in on a computer without Secrets, and tells Google to forget what it granted", async () => {

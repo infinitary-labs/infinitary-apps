@@ -22,6 +22,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { openIntegrations } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input } from "../design";
 import { thisDesktop } from "../design/core/desktop";
@@ -372,31 +373,20 @@ function SecretRow({
           <span className="fm-secrets-key-status">{status}</span>
         </summary>
         <div className="fm-secrets-key-body">
-          <div className="fm-secrets-actions">
-            <Button
-              variant="secondary"
-              off={!canWrite || entryNote !== undefined}
-              note={entryNote}
-              onClick={(event) => onReplace(event.currentTarget)}
-            >
-              {SECRETS_WORDS.replace}
-            </Button>
-            <Button
-              variant="ghost"
-              off={busy || !canWrite}
-              note={
-                !canWrite
-                  ? SECRETS_WORDS.unavailable
-                  : busy
-                    ? m.settingsSecretsWaitForChange()
-                    : undefined
-              }
-              onClick={() => void act({ kind: "forget", ref: entry.ref })}
-            >
-              {SECRETS_WORDS.forget}
-            </Button>
-          </div>
-          {rules.length > 0 && <Decisions view={view} rules={rules} act={act} busy={busy} />}
+          {entry.kept ? (
+            <KeptSignIn />
+          ) : (
+            <OwnSecret
+              entry={entry}
+              view={view}
+              act={act}
+              busy={busy}
+              canWrite={canWrite}
+              entryNote={entryNote}
+              onReplace={onReplace}
+              rules={rules}
+            />
+          )}
         </div>
       </details>
       {reads.map((read) => (
@@ -408,6 +398,75 @@ function SecretRow({
         </div>
       ))}
     </li>
+  );
+}
+
+/** The captain's own secret: Replace, Forget and its saved decisions. */
+function OwnSecret({
+  entry,
+  view,
+  act,
+  busy,
+  canWrite,
+  entryNote,
+  onReplace,
+  rules,
+}: {
+  entry: Entry;
+  view: SecretsView;
+  act: Act;
+  busy: boolean;
+  canWrite: boolean;
+  entryNote: string | undefined;
+  onReplace: (trigger: HTMLButtonElement) => void;
+  rules: SecretsView["rules"];
+}) {
+  return (
+    <>
+      <div className="fm-secrets-actions">
+        <Button
+          variant="secondary"
+          off={!canWrite || entryNote !== undefined}
+          note={entryNote}
+          onClick={(event) => onReplace(event.currentTarget)}
+        >
+          {SECRETS_WORDS.replace}
+        </Button>
+        <Button
+          variant="ghost"
+          off={busy || !canWrite}
+          note={
+            !canWrite
+              ? SECRETS_WORDS.unavailable
+              : busy
+                ? m.settingsSecretsWaitForChange()
+                : undefined
+          }
+          onClick={() => void act({ kind: "forget", ref: entry.ref })}
+        >
+          {SECRETS_WORDS.forget}
+        </Button>
+      </div>
+      {rules.length > 0 && <Decisions view={view} rules={rules} act={act} busy={busy} />}
+    </>
+  );
+}
+
+/**
+ * A sign-in the app keeps for one of its own services (docs/secrets.md, "App
+ * sign-ins"): signing in was the consent, so it has no Replace, Forget or
+ * decisions here; it is changed where it was made.
+ */
+function KeptSignIn() {
+  return (
+    <div className="fm-secrets-kept" data-secrets-kept>
+      <p className="fm-secrets-kept-note">{m.settingsSecretsKeptSignIn()}</p>
+      <div className="fm-secrets-actions">
+        <Button variant="secondary" onClick={openIntegrations}>
+          {m.settingsSecretsManageInIntegrations()}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -703,6 +762,7 @@ function History({
             <p className="fm-secrets-muted">
               <span className="fm-secrets-mono">{item.program}</span>
               {item.approval ? ` · ${SECRET_APPROVAL_WORDS[item.approval]}` : ""}
+              {item.signIn ? ` · ${SECRETS_WORDS.yourSignIn}` : ""}
               {item.reconciled && !item.recoveredFrom
                 ? ` · ${SECRETS_RECOVERY_WORDS.reconciledAfterRestart}`
                 : ""}

@@ -51,7 +51,7 @@ The journal makes each use durable: after a restart a consumed use with no recor
 
 Protected rules apply conjunctively to all required secrets and operation facts; Never precedes Ask, then Allow, and no match asks.
 Rules live in a record checked by a custody key, with its head in custody, and are saved only with fresh local authentication of that exact revision; an Allow rule always names one operation.
-New operations begin at Ask and human Allow requires fresh system authentication.
+New operations begin at Ask and human Allow requires fresh system authentication, except an app sign-in's own brokered use ("App sign-ins").
 Requests expire after 300 seconds.
 An optional bounded permission covers eligible brokered reads for at most 600 seconds or 20 uses, never program launches, renewals, writes or direct value disclosure.
 It binds the exact operation and sealed-record revisions, and disappears on restart, secret replacement, a protected rule change or End access.
@@ -93,6 +93,7 @@ No automatic scan or import of unrelated user files is permitted.
 
 The complete maintained consumer register and migration obligations are in [`../docs/secrets.md`](../docs/secrets.md).
 The Google integration's sign-in is migrated, as a hidden entry an app service keeps and uses through its own broker ([`../docs/secrets.md`](../docs/secrets.md), "App services"); every other listed consumer remains unmigrated.
+A sign-in the person made in the app is the consent to the app's own use of it: a broker that declares `signIn` and names only hidden entries runs with no card, confirmation or saved decision ("App sign-ins").
 Possible: approved brokered requests, exact-run shell injection, reviewed reusable scripts, narrow signing and origin-scoped browser session loading through their existing owners.
 
 ## Checks

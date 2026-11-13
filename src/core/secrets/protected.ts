@@ -430,7 +430,7 @@ export class ProtectedSecrets implements SecretsBackend {
     const entries: VaultEntry[] = [];
     for (const ref of refs) {
       const entry = await ready.vault.entry(ref);
-      // A registered app service may use hidden credentials; registration is not approval.
+      // A registered app service may use hidden credentials; registration alone is not approval.
       if (!entry) {
         await prepared.dispose?.();
         return undefined;
@@ -447,7 +447,13 @@ export class ProtectedSecrets implements SecretsBackend {
     }
     const authority = ready.authority.authority;
     const operation = sha256(canonical({ kind: "broker", facts }));
-    const evaluation = ready.authority.evaluate(refs, operation);
+    // The app's own sign-in is the consent (docs/secrets.md, "App sign-ins"): a
+    // declaring adapter spending only entries the app keeps hidden meets no saved
+    // decision and asks nothing. A crew-visible entry is evaluated as always.
+    const signIn = adapter.signIn === true && entries.every((entry) => !entry.discoverable);
+    const evaluation: Evaluation = signIn
+      ? { effect: "allow", matched: [] }
+      : ready.authority.evaluate(refs, operation);
     const versions = entries.map(({ ref, version, revision }) => ({ ref, version, revision }));
     const key = sha256(
       canonical({
@@ -459,7 +465,7 @@ export class ProtectedSecrets implements SecretsBackend {
     );
     const digest = sha256(canonical({ key, request }));
     const shortReadEligible =
-      facts.read && evaluation.effect === "ask" && evaluation.matched.length === 0;
+      !signIn && facts.read && evaluation.effect === "ask" && evaluation.matched.length === 0;
     const permission = shortReadEligible ? this.readAccess.find(key) : undefined;
     const kept: KeptBroker = {
       key,
@@ -496,7 +502,7 @@ export class ProtectedSecrets implements SecretsBackend {
         await ready.journal.append({
           kind: "approved",
           request,
-          method: permission ? "short-read" : "rule",
+          method: signIn ? "sign-in" : permission ? "short-read" : "rule",
         });
     } catch {
       await prepared.dispose?.();

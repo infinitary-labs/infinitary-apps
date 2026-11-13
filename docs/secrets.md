@@ -164,6 +164,7 @@ Searchable rows lead with each secret's name and its place (the optional environ
 The view's `lastTask` carries that task's title: the controller reads it from the task its own coordinator saw, or from the task a crewmate's intent names in the history (`taskIntent`), so it survives a restart; a request no task made, or by a task the home no longer knows, names only when.
 A reference appears only when another secret has the same name and place.
 Opening a row offers Replace, Forget and that secret's saved decisions; a temporary read shows on the row as Reading until a time, beside End access.
+A hidden entry's row (the view's `kept`, "App sign-ins") instead says Infinitary keeps it for a sign-in made in Integrations and offers Manage in Integrations; the controller refuses Replace and Forget on it.
 Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
 Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
@@ -228,9 +229,18 @@ An app service that signs in somewhere keeps its own key here as a hidden entry,
 A hidden entry is written with `discoverable: false`: Settings → Secrets lists it by its label, while the crew's catalog, a task's request and a program launch never reach it.
 `keepHidden` writes under a reference the service names, or a fresh one no entry, rule or history names; it never replaces an entry the captain added, and it zero-fills the value it was handed.
 `forgetHidden` forgets only a hidden entry.
-`use` asks through the service's own registered broker and waits for the use to end - approved, refused or expired - with the broker's private result; it also waits for the captain's Always allow this to save its rule, so the service's next use reads it.
-The approval card, the saved decisions and the journal are the same as for any brokered use: a broker whose every bit but the key is fixed, such as Google's renewal, is covered by one saved Allow.
+`use` runs through the service's own registered broker and waits for the use to end with the broker's private result.
 The Google integration is the one such service today ([Integrations](integrations.md#keys)).
+
+### App sign-ins
+
+A sign-in the person makes in the app itself is their consent to the app's own use of it, so that use asks nothing.
+A broker declares it with `signIn` (`SecretBroker`, `httpSecretBroker`): its adapter spends a sign-in made in the app, sent only to an address its own code names.
+`prepareBrokered` allows a use with no card, no system confirmation and no saved decision only when the adapter declares `signIn` and every secret it names is a hidden entry; the journal records the method `sign-in`, and history marks the use `signIn` with no approval ("Your sign-in" in What happened).
+Anything else is evaluated as before: an undeclared broker, a declaring broker that names a crew-visible secret, and every crewmate run.
+Signing out where the sign-in was made withdraws the consent: the service forgets its hidden entry.
+A saved decision naming a hidden entry no longer applies and is not listed, and the next decision the captain confirms leaves it out of the record (`withoutKept` in `settings.ts`), since every authority write needs a fresh confirmation and none is made silently.
+Settings → Secrets keeps listing a hidden entry, with no Replace, Forget or decisions: it is replaced by signing in again and removed by signing out, in Settings → Integrations.
 
 ## The recipient
 

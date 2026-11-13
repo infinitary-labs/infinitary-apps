@@ -407,8 +407,8 @@ function openAutomation(): void {
   openSettingsAt("automation", "[data-automation-new]");
 }
 
-/** Settings → Integrations, with focus on its first row or add chip. */
-function openIntegrations(): void {
+/** Settings → Integrations, with focus on its first row or add chip; Secrets' app sign-in rows open it too. */
+export function openIntegrations(): void {
   openSettingsAt("integrations", INTEGRATIONS_FIRST);
 }
 

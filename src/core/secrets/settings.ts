@@ -191,12 +191,13 @@ export class SecretsSettings {
     if (!owner) return empty;
     const authority = owner.protected.authority();
     const history = owner.protected.history();
+    const metadata = await owner.protected.metadata();
     const snapshot: SecretsView = {
       ...empty,
       availability: await owner.protected.status(),
       home: authority?.home ?? null,
-      entries: (await owner.protected.metadata()).map(
-        ({ ref, label, version, revision, updatedAt, environment }) => ({
+      entries: metadata.map(
+        ({ ref, label, version, revision, updatedAt, environment, discoverable }) => ({
           ref,
           label,
           version,
@@ -204,10 +205,11 @@ export class SecretsSettings {
           updatedAt,
           environment: environment ?? "",
           ...this.lastUse(history.filter((item) => item.secrets.includes(ref)).at(-1)),
+          ...(discoverable ? {} : { kept: true as const }),
         }),
       ),
       uses: owner.requests.receipts().map((receipt) => this.receiptView(owner, receipt)),
-      rules: authority?.rules ?? [],
+      rules: withoutKept(authority?.rules ?? [], metadata),
       history,
       historyBytes: await owner.protected.storageUse(),
       reads: owner.protected.readPermissions(),
@@ -311,6 +313,8 @@ export class SecretsSettings {
       else {
         const metadata = await owner.protected.metadata();
         const replacing = input.expectedVersion !== 0 || input.expectedRevision !== null;
+        // An app sign-in is replaced only by signing in again where it was made.
+        const kept = metadata.some((entry) => entry.ref === input.ref && !entry.discoverable);
         const ref =
           input.ref ??
           (replacing
@@ -320,14 +324,15 @@ export class SecretsSettings {
                 ...(owner.protected.authority()?.rules.map((rule) => rule.secret) ?? []),
                 ...owner.protected.history().flatMap((item) => item.secrets),
               ]));
-        const written = ref
-          ? await owner.protected.putSecret(ref, input.label, value, {
-              discoverable: true,
-              expectedVersion: input.expectedVersion,
-              expectedRevision: input.expectedRevision,
-              environment: input.environment,
-            })
-          : undefined;
+        const written =
+          ref && !kept
+            ? await owner.protected.putSecret(ref, input.label, value, {
+                discoverable: true,
+                expectedVersion: input.expectedVersion,
+                expectedRevision: input.expectedRevision,
+                environment: input.environment,
+              })
+            : undefined;
         if (written) {
           this.message = SECRETS_WORDS.saved;
           saved = { ref: written.ref, version: written.version };
@@ -380,7 +385,8 @@ export class SecretsSettings {
         break;
       case "forget": {
         const entries = await owner.protected.metadata();
-        const entry = entries.find((one) => one.ref === action.ref);
+        // An app sign-in is forgotten by signing out where it was made, never here.
+        const entry = entries.find((one) => one.ref === action.ref && one.discoverable);
         if (entry)
           this.offer(
             `forget-${entry.ref}`,
@@ -466,7 +472,12 @@ export class SecretsSettings {
         const authority = owner.protected.authority();
         if (!authority) break;
         const entries = await owner.protected.metadata();
-        this.offerDecisions(owner, authority.rules, structuredClone(action.rules), entries);
+        this.offerDecisions(
+          owner,
+          withoutKept(authority.rules, entries),
+          structuredClone(action.rules),
+          entries,
+        );
         break;
       }
     }
@@ -754,7 +765,10 @@ export class SecretsSettings {
   ): Promise<boolean> {
     const current = owner.protected.authority();
     if (!current || (revision !== undefined && current.revision !== revision)) return false;
-    const proposal = owner.protected.proposeAuthority({ rules, devices });
+    const proposal = owner.protected.proposeAuthority({
+      rules: withoutKept(rules, await owner.protected.metadata()),
+      devices,
+    });
     if (!proposal) return false;
     const proof = await owner.protected.confirmAuthority(
       proposal.digest,
@@ -878,7 +892,10 @@ export class SecretsSettings {
           note: runWords(ask.run),
         })),
       ];
-      const proposal = owner.protected.proposeAuthority({ rules, devices: authority.devices });
+      const proposal = owner.protected.proposeAuthority({
+        rules: withoutKept(rules, await owner.protected.metadata()),
+        devices: authority.devices,
+      });
       if (!proposal) return;
       const proofs = await owner.protected.confirmUseAndAuthority(
         { request, digest: pending.digest, expires: pending.expires },
@@ -1276,6 +1293,19 @@ const REFERENCE_STEM = 64 - "-9999999".length;
  * or the history already holds, so a rule kept for a forgotten secret never
  * names it and its history never reads as the new one's.
  */
+/**
+ * The saved decisions without those naming an app sign-in (docs/secrets.md,
+ * "App sign-ins"): signing in is their consent, so such a decision no longer
+ * applies, is not shown, and the next confirmed save leaves it out.
+ */
+function withoutKept(
+  rules: readonly Rule[],
+  entries: readonly { ref: string; discoverable?: boolean }[],
+): Rule[] {
+  const kept = new Set(entries.filter((entry) => !entry.discoverable).map((entry) => entry.ref));
+  return rules.filter((rule) => !kept.has(rule.secret));
+}
+
 export function newReference(label: string, taken: readonly string[]): string {
   const base =
     label

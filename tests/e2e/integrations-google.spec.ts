@@ -21,6 +21,8 @@ import {
   GOOGLE_OAUTH_CLIENT,
 } from "../../src/core/integrations";
 import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
+import * as m from "../../src/shared/i18n/messages.generated";
+import { SECRETS_WORDS } from "../../src/shared/secrets";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
 import {
   type GoogleStandIn,
@@ -256,6 +258,38 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     await expect(
       actions.locator(`[data-integration-event="${GMAIL_MESSAGE_EVENT.name}"]`),
     ).toContainText(GMAIL_MESSAGE_EVENT.label);
+  });
+
+  // INF-4096: signing in was the consent, so Secrets lists the sign-in as kept for its
+  // service, with no Replace, Forget or saved decision, and opens Integrations by keys.
+  await test.step("Secrets lists the sign-in as kept, asked nothing, and opens Integrations by keys", async () => {
+    await runFromSearch(app, page, "settings.secrets");
+    const section = settingsSection(page, "secrets");
+    await expect(section.locator("[data-secret-waiting]")).toHaveCount(0);
+    const row = section.getByRole("listitem").filter({ hasText: "Google sign-in" });
+    const summary = row.locator("summary");
+    await pressKey(summary, "Enter");
+    await expect(row.locator("[data-secrets-kept]")).toContainText(m.settingsSecretsKeptSignIn());
+    await expect(row.getByRole("button", { name: SECRETS_WORDS.replace, exact: true })).toHaveCount(
+      0,
+    );
+    await expect(row.getByRole("button", { name: SECRETS_WORDS.forget, exact: true })).toHaveCount(
+      0,
+    );
+    await expect(row.getByRole("button", { name: SECRETS_WORDS.remove, exact: true })).toHaveCount(
+      0,
+    );
+    const manage = row.getByRole("button", {
+      name: m.settingsSecretsManageInIntegrations(),
+      exact: true,
+    });
+    await pressKey(summary, "Tab");
+    await expect(manage).toBeFocused();
+    await pressKey(manage, "Enter");
+    await expect(settingsSection(page, "integrations")).toBeVisible();
+    await expect(
+      settingsSection(page, "integrations").locator('[data-integration-row="google"]'),
+    ).toContainText(`as ${STAND_IN_ACCOUNT}`);
   });
 
   await test.step("a message that arrives reaches the first mate through a rule", async () => {

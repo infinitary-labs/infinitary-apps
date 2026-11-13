@@ -841,6 +841,8 @@
   "settingsSecretsFinishForm": "開いているシークレットのフォームを先に完了してください。",
   "settingsSecretsFinishFormOrChange": "開いているシークレットのフォームか、現在の変更を先に完了してください。",
   "settingsSecretsHistoryExported": "履歴を書き出しました。",
+  "settingsSecretsKeptSignIn": "Infinitary は連携でサインインしたときのためにこれを保管し、確認せずに使います。サインインしたことが同意です。削除するには連携でサインアウトしてください。",
+  "settingsSecretsManageInIntegrations": "連携で管理",
   "settingsSecretsNamePlaceholder": "例：Web サイトのデプロイ",
   "settingsSecretsNoExport": "書き出したファイルは保存されませんでした。",
   "settingsSecretsNoHistory": "記録された履歴はありません。",

@@ -871,6 +871,8 @@
   "settingsSecretsFinishForm": "Primero termina el formulario de secreto abierto.",
   "settingsSecretsFinishFormOrChange": "Primero termina el formulario de secreto abierto o el cambio actual.",
   "settingsSecretsHistoryExported": "Historial exportado.",
+  "settingsSecretsKeptSignIn": "Infinitary guarda esto para un inicio de sesión que hiciste en Integraciones y lo usa sin preguntar: iniciar sesión fue tu consentimiento. Cierra la sesión allí para quitarlo.",
+  "settingsSecretsManageInIntegrations": "Gestionar en Integraciones",
   "settingsSecretsNamePlaceholder": "Por ejemplo, Publicación del sitio web",
   "settingsSecretsNoExport": "No se guardó ninguna exportación.",
   "settingsSecretsNoHistory": "No hay historial registrado.",

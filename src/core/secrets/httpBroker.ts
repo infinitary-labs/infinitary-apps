@@ -32,11 +32,14 @@ export type BoundHttpRequest = {
 export function httpSecretBroker(options: {
   id: string;
   label: string;
+  /** The owner spends the app's own sign-in, made in the app (`SecretBroker.signIn`). */
+  signIn?: true;
   resolve(input: BrokerInput): BoundHttpRequest | undefined;
   send(url: string, init: RequestInit): Promise<Response>;
 }): SecretBroker {
   return {
     id: options.id,
+    ...(options.signIn ? { signIn: true as const } : {}),
     async prepare(input) {
       const resolved = options.resolve(structuredClone(input));
       if (!resolved) return undefined;

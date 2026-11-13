@@ -123,3 +123,11 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Diagnostics (Settings → Sharing) | 診断 | |
 | redacted (decision records) | 個人情報を伏せた | Plain phrase; 墨消し and リダクト read as jargon. |
 | Dictation | 音声入力 | macOS Japanese names the feature 音声入力. |
+| join (the phone joins a computer) | 接続する | 「{computer} に接続しますか？」 |
+| forget (a computer, on the phone) | 登録を解除 | Kept apart from 削除 (Remove) and 離脱 (Leave). |
+| Idle (a task's state) | アイドル | 待機中 is Queued; both appear in one list. |
+| fingerprint (a computer's key) | フィンガープリント | 指紋 would read as Touch ID. |
+| A phone (the item under Devices) | 「スマートフォン」 |  |
+| Approves secret uses (switch) | シークレットの使用を承認 | The computer's Settings → Devices should show the same words. |
+| Steer (button) | 伝える | 指示 is the Instruction kind. |
+| Theme: Device / Dark / Light | テーマ: デバイスに合わせる / ダーク / ライト |  |

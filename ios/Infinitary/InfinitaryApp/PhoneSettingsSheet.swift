@@ -15,13 +15,22 @@ struct PhoneSettingsSheet: View {
     @State private var browsing = false
 
     private enum Section: String, CaseIterable {
+        // i18n-exempt: raw values name each section's accessibility identifier; `title` is shown
         case general = "General", appearance = "Appearance", integrations = "Integrations", devices = "Devices"
         var id: String { rawValue.lowercased() }
+        var title: String {
+            switch self {
+            case .general: PhoneMessages.phoneSettingsGeneral()
+            case .appearance: PhoneMessages.phoneSettingsAppearance()
+            case .integrations: PhoneMessages.phoneSettingsIntegrations()
+            case .devices: PhoneMessages.phoneSettingsDevices()
+            }
+        }
     }
 
-    private var device: String { UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone" }
+    private var device: String { UIDevice.current.userInterfaceIdiom == .pad ? PhoneMessages.phoneSettingsThisIpad() : PhoneMessages.phoneSettingsThisPhone() }
     /// The same device inside a sentence: lowercasing the heading would read "this ipad".
-    private var thisDevice: String { UIDevice.current.userInterfaceIdiom == .pad ? "this iPad" : "this phone" }
+    private var thisDevice: String { UIDevice.current.userInterfaceIdiom == .pad ? PhoneMessages.phoneSettingsThisIpadInline() : PhoneMessages.phoneSettingsThisPhoneInline() }
     /// The name this device offers with its approval key, the same one it joined with.
     private var label: String { UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone" }
 
@@ -35,13 +44,13 @@ struct PhoneSettingsSheet: View {
 
     var body: some View {
         NavigationStack {
-            page(section?.rawValue ?? "Settings") {
+            page(section?.title ?? PhoneMessages.phoneCommonSettings()) {
                 if let section {
                     switch section {
                     case .general:
                         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                             Text("Infinitary").font(PhoneFont.headline)
-                            Text("Version \(Self.version)").font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                            Text(PhoneMessages.phoneSettingsVersion(version: Self.version)).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
                                 .accessibilityIdentifier("app-version")
                         }
                     case .appearance:
@@ -53,7 +62,7 @@ struct PhoneSettingsSheet: View {
                         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                             Text(device).font(PhoneFont.headline)
                             Text(capability).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                            Text("Conversation stays on your computer.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                            Text(PhoneMessages.phoneSettingsConversationStays()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                             if let secrets, secrets.standing != .unavailable { approvals(secrets) }
                         }
                     }
@@ -64,18 +73,18 @@ struct PhoneSettingsSheet: View {
             // One navigation content owner keeps exactly one Done on every page, with no inherited toolbar items.
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.accessibilityIdentifier("close-phone-settings")
+                    Button(PhoneMessages.phoneCommonDone()) { dismiss() }.accessibilityIdentifier("close-phone-settings")
                 }
                 if section != nil {
                     ToolbarItem(placement: .cancellationAction) {
                         Button { section = nil } label: {
                             HStack(spacing: PhoneTheme.space2) {
                                 PhoneSymbol.chevron.image.rotationEffect(.degrees(180))
-                                Text("Settings")
+                                Text(PhoneMessages.phoneCommonSettings())
                             }
                         }
                         .keyboardShortcut("[", modifiers: .command)
-                        .accessibilityLabel("Back to Settings")
+                        .accessibilityLabel(PhoneMessages.phoneSettingsBack())
                         .accessibilityIdentifier("phone-settings-back")
                     }
                 }
@@ -91,7 +100,7 @@ struct PhoneSettingsSheet: View {
         PhoneList {
             ForEach(shown, id: \.self) { section in
                 Button { open(section) } label: {
-                    PhoneRow(title: section.rawValue, line: summary(section), chevron: true)
+                    PhoneRow(title: section.title, line: summary(section), chevron: true)
                 }
                 .buttonStyle(PhoneRowStyle())
                 .overlay {
@@ -118,8 +127,8 @@ struct PhoneSettingsSheet: View {
 
     private var capability: String {
         session.contact == "in-reach" && session.access != "full"
-            ? "Reads cards, Activity and tasks. \(PhoneUpdate.side(phone: PhoneContract.version, computer: session.homeVersion).words)"
-            : "Answers cards, sends messages and controls tasks on your computer."
+            ? PhoneMessages.phoneSettingsCapabilityRead(update: PhoneUpdate.side(phone: PhoneContract.version, computer: session.homeVersion).words)
+            : PhoneMessages.phoneSettingsCapabilityFull()
     }
 
     /// Sections with nothing to show stay off the list: Integrations waits for the computer's connections.
@@ -129,9 +138,9 @@ struct PhoneSettingsSheet: View {
 
     private func summary(_ section: Section) -> String {
         switch section {
-        case .general: "Version \(Self.version)"
-        case .appearance: "Theme: \(appearance?.look.words ?? PhoneLook.device.words)"
-        case .integrations: "Google: \(google?.row.map { $0.account ?? "Signed in" } ?? "Not signed in")"
+        case .general: PhoneMessages.phoneSettingsVersion(version: Self.version)
+        case .appearance: PhoneMessages.phoneSettingsThemeSummary(theme: appearance?.look.words ?? PhoneLook.device.words)
+        case .integrations: PhoneMessages.phoneSettingsGoogleSummary(account: google?.row.map { $0.account ?? PhoneMessages.phoneSettingsGoogleSignedIn() } ?? PhoneMessages.phoneSettingsGoogleSignedOut())
         case .devices: device
         }
     }
@@ -160,10 +169,10 @@ struct PhoneSettingsSheet: View {
     private func theme(_ appearance: PhoneAppearance) -> some View {
         @Bindable var appearance = appearance
         return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            Text("Theme").font(PhoneFont.headline)
-            Text("Set on this \(label) only. \(session.mac.name) keeps its own.")
+            Text(PhoneMessages.phoneSettingsTheme()).font(PhoneFont.headline)
+            Text(PhoneMessages.phoneSettingsThemeScope(computer: session.mac.name, device: label))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("phone-theme-scope")
-            Picker("Theme", selection: $appearance.look) {
+            Picker(PhoneMessages.phoneSettingsTheme(), selection: $appearance.look) {
                 ForEach(PhoneLook.allCases, id: \.self) { look in Text(look.words).tag(look) }
             }
             .pickerStyle(.segmented).labelsHidden().accessibilityIdentifier("phone-theme")
@@ -182,35 +191,35 @@ struct PhoneSettingsSheet: View {
     /// confirmation. Turning it off is the computer's, which confirms that too, so here it says where.
     private func approvals(_ secrets: PhoneSecrets) -> some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            Text("Secrets approvals").font(PhoneFont.headline)
+            Text(PhoneMessages.phoneSettingsSecretsApprovals()).font(PhoneFont.headline)
             if secrets.standing == .damaged {
                 // INF-1109: a record this phone reads but cannot decode. Only this choice replaces it, under a new
                 // device name, so the computer confirms the new key like a first one and keeps any earlier one.
                 // Short enough that the button stays in view at the sheet's medium height on an iPad.
-                Text("\(device)’s approval setup is damaged. Set up approvals again replaces it, then \(session.mac.name) asks you to confirm a new code.")
+                Text(PhoneMessages.phoneSettingsApprovalDamaged(computer: session.mac.name, device: device))
                     .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-damaged")
-                setUp(secrets, "Set up approvals again", again: true)
-                Text("If \(session.mac.name) still lists an earlier approval from \(thisDevice), turn it off in Settings → Devices there.")
+                setUp(secrets, PhoneMessages.phoneSettingsSetUpAgain(), again: true)
+                Text(PhoneMessages.phoneSettingsApprovalEarlierListed(computer: session.mac.name, device: thisDevice))
                     .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
             } else {
                 approvalSwitch(secrets)
                 switch secrets.standing {
                 case .offered:
-                    Text("Confirm on \(session.mac.name). Check that it shows this code:")
+                    Text(PhoneMessages.phoneSettingsApprovalConfirmOn(computer: session.mac.name))
                         .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                     Text(secrets.key?.code ?? "").font(PhoneFont.title.monospacedDigit()).foregroundStyle(PhoneTheme.text)
-                        .accessibilityLabel("Code \(secrets.key?.code ?? "")").accessibilityIdentifier("approval-code")
-                    Text("If the codes differ, choose Not now there.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                        .accessibilityLabel(PhoneMessages.phoneSettingsApprovalCode(code: secrets.key?.code ?? "")).accessibilityIdentifier("approval-code")
+                    Text(PhoneMessages.phoneSettingsApprovalCodesDiffer()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 case .enrolled:
-                    Text("\(device) can allow uses of your secrets. Each Allow asks for \(ApprovalKey.confirmation).")
+                    Text(PhoneMessages.phoneSettingsApprovalEnrolled(confirmation: ApprovalKey.confirmation, device: device))
                         .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-enrolled")
-                    Text("Code \(secrets.key?.code ?? "")").font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
-                    Text("To turn it off, open Settings → Devices on \(session.mac.name).").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                    Text(PhoneMessages.phoneSettingsApprovalCode(code: secrets.key?.code ?? "")).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                    Text(PhoneMessages.phoneSettingsApprovalTurnOff(computer: session.mac.name)).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 case .replaced:
-                    Text("\(session.mac.name) holds an earlier approval from \(thisDevice). Turn this on again to use this one.")
+                    Text(PhoneMessages.phoneSettingsApprovalReplaced(computer: session.mac.name, device: thisDevice))
                         .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 case .none, .unavailable, .damaged:
-                    Text("Allow uses of your secrets from \(thisDevice), with \(ApprovalKey.confirmation) each time. \(session.mac.name) asks you to confirm first.")
+                    Text(PhoneMessages.phoneSettingsApprovalOffer(computer: session.mac.name, confirmation: ApprovalKey.confirmation, device: thisDevice))
                         .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 }
             }
@@ -224,9 +233,9 @@ struct PhoneSettingsSheet: View {
     private func approvalSwitch(_ secrets: PhoneSecrets) -> some View {
         let on = secrets.standing == .enrolled || secrets.standing == .offered
         return HStack(spacing: PhoneTheme.space3) {
-            Text("Approves secret uses").font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
+            Text(PhoneMessages.phoneSettingsApprovesSecretUses()).font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
             Spacer(minLength: 0)
-            Toggle("Approves secret uses", isOn: Binding(get: { on }, set: { turnedOn in
+            Toggle(PhoneMessages.phoneSettingsApprovesSecretUses(), isOn: Binding(get: { on }, set: { turnedOn in
                 if turnedOn, !on { Task { await secrets.setUp(label: label) } }
             }))
             .labelsHidden().tint(PhoneTheme.accent)

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-own-words-catalog",
+      "reason": "The phone app's own words, plurals and permission prompts move into the translation catalog with every language's version; the phone still ships English alone and every word it shows stays the same."
+    }
+  ]
+}

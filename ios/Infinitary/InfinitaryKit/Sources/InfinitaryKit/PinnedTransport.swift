@@ -110,12 +110,12 @@ public final class PinnedTransport: NSObject, URLSessionDelegate, URLSessionTask
                 return try await pair(link, at: address, name: name, again: true)
             }
             if refusal == "malformed" {
-                throw PhoneError.refused("Update Infinitary on your Mac before joining this phone.")
+                throw PhoneError.refused(PhoneMessages.phonePairUpdateMac())
             }
             if refusal == "expired" || refusal == "used" || refusal == "unknown" {
-                throw PhoneError.refused("This link no longer works. Make a new one in Devices on your Mac.")
+                throw PhoneError.refused(PhoneMessages.phonePairLinkSpent())
             }
-            throw PhoneError.refused("Your Mac could not add this phone. Make a new link in Devices and try again.")
+            throw PhoneError.refused(PhoneMessages.phonePairRefused())
         }
         guard result["kind"] as? String == "view", let id = result["deviceId"] as? String,
               !id.isEmpty, id.count <= 64 else { throw PhoneError.invalidReply }

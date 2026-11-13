@@ -52,7 +52,7 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
         }
         /// The sentence the system's confirmation shows, naming exactly what this Allow gives and to whom.
         public var giving: String {
-            "Give \(secrets.map(named).joined(separator: ", ")) to \(task ?? recipient) once"
+            PhoneMessages.phoneSecretsGiveOnce(recipient: task ?? recipient, secrets: secrets.map(named).joined(separator: ", "))
         }
     }
     public let availability: String
@@ -201,12 +201,12 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
             } else {
                 let words: String
                 switch state {
-                case "unavailable": words = "Protected storage is unavailable. Your decision was not accepted."
-                case "expired": words = "This request expired. Your decision was not accepted."
-                case "denied": words = "This request was denied. Nothing was allowed."
-                case "cancelled", "invalidated": words = "This request is no longer available. Your decision was not accepted."
-                case "executing", "completed": words = "This use already started. It could not be denied."
-                default: words = "The result is unknown. Check what happened on your computer before requesting another use."
+                case "unavailable": words = PhoneMessages.phoneSecretsRefusedUnavailable()
+                case "expired": words = PhoneMessages.phoneSecretsRefusedExpired()
+                case "denied": words = PhoneMessages.phoneSecretsRefusedDenied()
+                case "cancelled", "invalidated": words = PhoneMessages.phoneSecretsRefusedGone()
+                case "executing", "completed": words = PhoneMessages.phoneSecretsRefusedStarted()
+                default: words = PhoneMessages.phoneSecretsRefusedUnknown()
                 }
                 self = .refused(words)
             }
@@ -217,7 +217,7 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
     /// challenge, expiry and decision. Nothing is sent when the confirmation fails.
     public func allow(_ use: PhoneApprovals.Use) async throws -> Outcome {
         guard let key, standing == .enrolled, let enrolled = approvals?.device, let home = approvals?.home, let nonce = use.nonce
-        else { throw PhoneError.refused("Turn on Approves secret uses in Settings first.") }
+        else { throw PhoneError.refused(PhoneMessages.phoneSecretsTurnOnFirst()) }
         let message = PhoneDecision.message(home: home, device: key.device, generation: enrolled.generation,
             request: use.request, digest: use.digest, nonce: nonce, expires: use.expires)
         let signature = try await key.sign(message, reason: use.giving)

@@ -185,20 +185,20 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     }
     public struct RequiredAction: Decodable, Sendable { public let state: String?; public let result: String? }
     public var state: String {
-        if status == "done" { return "Done" }
-        if status == "dropped" { return "Dropped" }
-        if waitingCardId != nil || answerNoteId != nil { return "Waiting on you" }
-        if startAttempt?.phase == "preparing" || startAttempt?.phase == "checking" { return "Starting" }
-        if !blockedBy.isEmpty { return "Waiting on another task" }
-        if status == "open" { return startPolicy == "on-request" ? "Backlog" : "Queued" }
+        if status == "done" { return PhoneMessages.phoneWorkStateDone() }
+        if status == "dropped" { return PhoneMessages.phoneWorkStateDropped() }
+        if waitingCardId != nil || answerNoteId != nil { return PhoneMessages.phoneWorkStateWaitingOnYou() }
+        if startAttempt?.phase == "preparing" || startAttempt?.phase == "checking" { return PhoneMessages.phoneWorkStateStarting() }
+        if !blockedBy.isEmpty { return PhoneMessages.phoneWorkStateWaitingOnTask() }
+        if status == "open" { return startPolicy == "on-request" ? PhoneMessages.phoneWorkStateBacklog() : PhoneMessages.phoneWorkStateQueued() }
         switch activity {
-        case "running": return "Working"
-        case "starting": return "Starting"
-        case "interrupted": return "Interrupted"
+        case "running": return PhoneMessages.phoneWorkStateWorking()
+        case "starting": return PhoneMessages.phoneWorkStateStarting()
+        case "interrupted": return PhoneMessages.phoneWorkStateInterrupted()
         // INF-2553: an interrupt the phone sent and its computer has not shown yet.
-        case "stopping": return "Stopping"
-        case "idle": return "Idle"
-        default: return "Not started"
+        case "stopping": return PhoneMessages.phoneWorkStateStopping()
+        case "idle": return PhoneMessages.phoneWorkStateIdle()
+        default: return PhoneMessages.phoneWorkStateNotStarted()
         }
     }
     public struct Place: Decodable, Sendable {
@@ -466,7 +466,7 @@ public struct PhoneCrew: Decodable, Sendable {
         public let reading: String?
         public let result: Result?
         public var words: String {
-            text ?? title ?? reading ?? (kind == "compacted" ? "The conversation was shortened to fit." : kind == "stopped" ? "The turn was interrupted." : kind)
+            text ?? title ?? reading ?? (kind == "compacted" ? PhoneMessages.phoneWorkPlaceCompacted() : kind == "stopped" ? PhoneMessages.phoneWorkPlaceStopped() : kind)
         }
         public struct Result: Decodable, Sendable {
             public let ref: String
@@ -489,6 +489,6 @@ public struct PhoneAnswer: Decodable, Sendable {
     public let ok: Bool
     public let text: String?
     public func accepted() throws {
-        if !ok { throw PhoneError.refused(text ?? "Your computer could not make this change.") }
+        if !ok { throw PhoneError.refused(text ?? PhoneMessages.phoneSessionChangeFailed()) }
     }
 }

@@ -10,9 +10,9 @@ public enum PhoneLook: String, CaseIterable, Sendable {
     /// The words on the segmented control, as short as the computer's Dark and Light pills.
     public var words: String {
         switch self {
-        case .device: "Device"
-        case .dark: "Dark"
-        case .light: "Light"
+        case .device: PhoneMessages.phoneLookDevice()
+        case .dark: PhoneMessages.phoneLookDark()
+        case .light: PhoneMessages.phoneLookLight()
         }
     }
 

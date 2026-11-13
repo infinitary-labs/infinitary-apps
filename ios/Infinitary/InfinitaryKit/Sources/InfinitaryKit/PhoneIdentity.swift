@@ -19,7 +19,7 @@ public struct PhoneIdentity: @unchecked Sendable {
             let identity = item as! SecIdentity
             var certificate: SecCertificate?
             guard SecIdentityCopyCertificate(identity, &certificate) == errSecSuccess, let certificate
-            else { throw PhoneError.refused("Could not read this phone’s identity.") }
+            else { throw PhoneError.refused(PhoneMessages.phoneIdentityUnreadable()) }
             return PhoneIdentity(identity: identity, certificate: certificate)
         }
         guard status == errSecItemNotFound else { throw storageError(status) }
@@ -63,11 +63,13 @@ public struct PhoneIdentity: @unchecked Sendable {
         return PhoneIdentity(identity: identity, certificate: storedCertificate)
         #else
         // Unit tests on macOS exercise certificate and pin logic without touching its keychain.
+        // i18n-exempt: thrown only in macOS unit tests, never shown
         throw PhoneError.refused("Phone identities can only be created on iOS.")
         #endif
     }
 
     static func certificate(key: P256.Signing.PrivateKey) throws -> SecCertificate {
+        // i18n-exempt: the certificate's subject name, not shown
         let name = try DistinguishedName { CommonName("Infinitary phone") }
         let certificate = try Certificate(version: .v3, serialNumber: .init(),
             publicKey: .init(key.publicKey),
@@ -96,8 +98,9 @@ public struct PhoneIdentity: @unchecked Sendable {
 
     private static func storageError(_ status: OSStatus? = nil) -> PhoneError {
         #if DEBUG
+        // i18n-exempt: a debug log line
         FileHandle.standardError.write(Data("Infinitary identity storage status: \(status.map(String.init) ?? "no status")\n".utf8))
         #endif
-        return .refused("Could not read or keep this phone’s identity. Unlock your phone and try again.")
+        return .refused(PhoneMessages.phoneIdentityNotKept())
     }
 }

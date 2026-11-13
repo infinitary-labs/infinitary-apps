@@ -21,8 +21,8 @@ public enum PhoneUpdate: Equatable, Sendable {
 
     public var words: String {
         switch self {
-        case .phone: return "Update Infinitary on this phone to make changes."
-        case .computer: return "Update Infinitary on your computer to make changes."
+        case .phone: return PhoneMessages.phoneSessionUpdatePhone()
+        case .computer: return PhoneMessages.phoneSessionUpdateComputer()
         }
     }
 }
@@ -101,7 +101,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public var unreadCards: Int { stack.filter { !hasSeen($0) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     public var changeRefusal: String? {
-        if contact != "in-reach" { return "Your computer is out of reach. Nothing will be sent later." }
+        if contact != "in-reach" { return PhoneMessages.phoneSessionOutOfReach() }
         if access != "full" { return PhoneUpdate.side(phone: PhoneContract.version, computer: homeVersion).words }
         return nil
     }
@@ -373,7 +373,7 @@ public struct PhoneNotice: Equatable, Sendable {
         do {
             let answer: PhoneAnswer = try await request(channel, args: args)
             if !answer.ok {
-                let words = answer.text ?? "Your computer could not make this change."
+                let words = answer.text ?? PhoneMessages.phoneSessionChangeFailed()
                 refuse(id, words); throw PhoneError.refused(words)
             }
             accept(id)
@@ -1065,7 +1065,7 @@ public struct PhoneNotice: Equatable, Sendable {
                     if let answer = decoded.answer { continuation.resume(returning: answer) }
                     else { continuation.resume(throwing: PhoneError.invalidReply) }
                 } else {
-                    continuation.resume(throwing: PhoneError.refused((frame["error"] as? [String: Any])?["message"] as? String ?? frame["error"] as? String ?? "Your computer refused this request."))
+                    continuation.resume(throwing: PhoneError.refused((frame["error"] as? [String: Any])?["message"] as? String ?? frame["error"] as? String ?? PhoneMessages.phoneSessionRequestRefused()))
                 }
                 return
             }

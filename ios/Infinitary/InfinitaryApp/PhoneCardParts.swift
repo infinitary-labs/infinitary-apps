@@ -65,7 +65,7 @@ struct PhoneRiskDots: View {
             .padding(.horizontal, PhoneTheme.space2).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Risk")
+        .accessibilityLabel(PhoneMessages.phoneCardRisk())
         .accessibilityValue(PhoneCardWords.riskDimensions.compactMap { dimension in
             declared[dimension.id]["level"].text.flatMap { dimension.levels[$0] }.map { "\(dimension.label): \($0)" }
         }.joined(separator: ", "))
@@ -73,8 +73,8 @@ struct PhoneRiskDots: View {
         .sheet(isPresented: $open) {
             NavigationStack {
                 PhoneRiskSheet(declared: declared)
-                    .phoneTitle("Risk")
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { open = false } } }
+                    .phoneTitle(PhoneMessages.phoneCardRisk())
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button(PhoneMessages.phoneCommonDone()) { open = false } } }
             }
             .presentationDetents([.medium, .large]).phoneSheetSurface()
             .font(PhoneFont.body).tint(PhoneTheme.accent)
@@ -174,7 +174,7 @@ struct PhoneBrowserStrip: View {
 
     var body: some View {
         HStack(spacing: PhoneTheme.space3) {
-            Text("Browser").textCase(.uppercase).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.secondary).fixedSize()
+            Text(PhoneMessages.phoneCardBrowser()).textCase(.uppercase).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.secondary).fixedSize()
             Group {
                 if let line {
                     Text("\(Text(line.site ?? "").font(PhoneFont.mono).foregroundStyle(PhoneTheme.text))\(line.site == nil ? "" : " · ")\(line.words)")
@@ -182,7 +182,7 @@ struct PhoneBrowserStrip: View {
             }.font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
             Spacer(minLength: 0)
             if !attachment["handoff"].flag {
-                Button(attachment["label"].text ?? "Open browser", action: open)
+                Button(attachment["label"].text ?? PhoneMessages.phoneCardOpenBrowser(), action: open)
                     .buttonStyle(PhoneChoiceStyle(.secondary)).fixedSize().accessibilityIdentifier("card-browser")
             }
         }
@@ -378,7 +378,7 @@ private struct PhoneThreadMessage: View {
                 Text(PhoneCardWords.threadWho[who] ?? who).font(PhoneFont.mono).foregroundStyle(color)
                 // INF-2553: a reply the computer has not carried yet is marked sending where its time will be.
                 if message["sending"].flag {
-                    Text("Sending…").font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).accessibilityIdentifier("thread-sending")
+                    Text(PhoneMessages.phoneCommonSendingEllipsis()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).accessibilityIdentifier("thread-sending")
                 } else {
                     Text(time).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
                 }
@@ -425,7 +425,7 @@ private struct PhoneThreadMessage: View {
                     labels.indices.contains(index) ? labels[index].flatMap { $0.isEmpty ? nil : $0 } ?? value : value
                 }
                 if let written = answer["written"].text { picked.append("“\(written)”") }
-                rows.append((name, picked.isEmpty ? "no answer" : picked.joined(separator: ", ")))
+                rows.append((name, picked.isEmpty ? PhoneMessages.phoneCardNoAnswer() : picked.joined(separator: ", ")))
                 continue
             }
             let raw = values.first ?? ""

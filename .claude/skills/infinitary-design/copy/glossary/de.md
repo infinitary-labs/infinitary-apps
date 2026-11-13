@@ -113,3 +113,12 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
 | Waiting on you (board lane) | Wartet auf dich | |
 | Queued (board lane) | Eingereiht | |
+| join (the phone joins a computer) | sich mit … verbinden | "Mit {computer} verbinden?", "Erneut verbinden"; reads more naturally than "beitreten". |
+| forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
+| fingerprint (a computer's key) | Fingerabdruck |  |
+| passcode (iOS) | Code | iOS German says "Face ID & Code". |
+| A phone (the item under Devices) | „Ein Telefon“ | Quoted mid-sentence. |
+| Allow (secrets approval button) | „Erlauben“ |  |
+| Approves secret uses (switch) | Gibt Geheimnisse frei | The computer's Settings → Devices should show the same words. |
+| Steer (button) | Lenken |  |
+| Theme: Device / Dark / Light | Darstellung: Gerät / Dunkel / Hell | Kept apart from "Erscheinungsbild" (Appearance). |

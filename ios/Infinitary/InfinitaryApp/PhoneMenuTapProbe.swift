@@ -83,6 +83,7 @@ struct PhoneMenuTapProbeReading: View {
     var body: some View {
         Color.clear.frame(width: 1, height: 1)
             .accessibilityElement().accessibilityIdentifier("menu-tap-probe")
+            // i18n-exempt: a test probe's counts read by the journey, not shown to a person
             .accessibilityLabel("\(probe.taps) taps, \(probe.rebuilds) rebuilds, \(probe.clears) notice clears, \(probe.redraws) redraws")
             .allowsHitTesting(false)
     }

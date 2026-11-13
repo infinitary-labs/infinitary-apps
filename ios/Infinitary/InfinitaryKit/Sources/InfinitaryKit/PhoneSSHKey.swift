@@ -46,12 +46,13 @@ public struct PhoneSSHKey: Sendable {
         return PhoneSSHKey(key)
         #else
         // Package tests on macOS make their own keys and never touch a Mac's keychain.
+        // i18n-exempt: thrown only in package tests on macOS, never on a phone
         throw PhoneError.refused("Phone keys can only be made on iOS.")
         #endif
     }
 
     private static func storageError() -> PhoneError {
-        .refused("Could not read or keep this phone’s key. Unlock your phone and try again.")
+        .refused(PhoneMessages.phoneSSHKeyStorageFailed())
     }
 }
 

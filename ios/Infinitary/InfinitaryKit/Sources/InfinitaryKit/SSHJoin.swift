@@ -71,22 +71,22 @@ public enum SSHJoinError: LocalizedError, Equatable, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .address: "Type the address as your account and your computer, such as kun@studio."
-        case .port: "Type a port from 1 to 65535, or leave it empty for 22."
-        case .notReached(let host): "Could not reach \(host). Check the address, and that both devices share a network such as Tailscale."
-        case .loginOff(let host): "\(host) answered, but not for signing in. Turn on Remote Login in your Mac’s Sharing settings, or the SSH server on Linux."
-        case .unknownHost: "Check this computer’s fingerprint before joining."
-        case .hostChanged(let host): "\(host)’s fingerprint changed since this phone trusted it. Nothing was sent. If you did not change it, someone else may be answering at that address."
+        case .address: PhoneMessages.phoneSshJoinAddressInvalid()
+        case .port: PhoneMessages.phoneSshJoinPortInvalid()
+        case .notReached(let host): PhoneMessages.phoneSshJoinNotReached(host: host)
+        case .loginOff(let host): PhoneMessages.phoneSshJoinLoginOff(host: host)
+        case .unknownHost: PhoneMessages.phoneSshJoinUnknownHost()
+        case .hostChanged(let host): PhoneMessages.phoneSshJoinHostChanged(host: host)
         case .keyRefused(let host, let password): password
-            ? "\(host) did not let this phone’s key in."
-            : "\(host) did not let this phone’s key in, and it takes no password. Copy this phone’s key to your account there, then try again."
-        case .wrongPassword(let host): "\(host) did not take that password. Nothing was kept."
-        case .notOpen(let host): "Infinitary is not open on \(host). Open it there, then try again."
-        case .tooOld(let host): "Infinitary on \(host) needs an update before this phone can join it by its address."
-        case .noCurl(let host): "\(host) needs curl for this phone to join it. Install curl there, then try again."
-        case .noLink(let host): "Infinitary on \(host) could not make a link. Open Devices there to see why."
-        case .phoneTooOld(let host): "Update Infinitary on this phone to join \(host) by its address."
-        case .failed(let host): "Could not sign in to \(host). Try again."
+            ? PhoneMessages.phoneSshJoinKeyRefused(host: host)
+            : PhoneMessages.phoneSshJoinKeyRefusedNoPassword(host: host)
+        case .wrongPassword(let host): PhoneMessages.phoneSshJoinWrongPassword(host: host)
+        case .notOpen(let host): PhoneMessages.phoneSshJoinNotOpen(host: host)
+        case .tooOld(let host): PhoneMessages.phoneSshJoinComputerTooOld(host: host)
+        case .noCurl(let host): PhoneMessages.phoneSshJoinNoCurl(host: host)
+        case .noLink(let host): PhoneMessages.phoneSshJoinNoLink(host: host)
+        case .phoneTooOld(let host): PhoneMessages.phoneSshJoinPhoneTooOld(host: host)
+        case .failed(let host): PhoneMessages.phoneSshJoinFailed(host: host)
         }
     }
 }

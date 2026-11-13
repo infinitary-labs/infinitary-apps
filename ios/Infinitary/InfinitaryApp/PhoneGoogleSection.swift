@@ -41,30 +41,30 @@ struct PhoneGoogleSection: View {
 
     @ViewBuilder private var standing: some View {
         if let row = google.row {
-            Text(row.account.map { "Signed in as \($0) on \(mac)." } ?? "Signed in on \(mac).")
+            Text(row.account.map { PhoneMessages.phoneGoogleSignedInAs(account: $0, computer: mac) } ?? PhoneMessages.phoneGoogleSignedIn(computer: mac))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 .accessibilityIdentifier("google-account")
             if row.health == "needs_reauth" {
-                Text("Google asks you to sign in again.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning)
+                Text(PhoneMessages.phoneGoogleSignInAgainNeeded()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning)
             }
             PhoneChoiceRow {
-                if row.health == "needs_reauth" { signIn("Sign in again") }
-                Button("Sign out") { confirmingSignOut = true }
+                if row.health == "needs_reauth" { signIn(PhoneMessages.phoneGoogleSignInAgain()) }
+                Button(PhoneMessages.phoneGoogleSignOut()) { confirmingSignOut = true }
                     .buttonStyle(PhoneChoiceStyle(.secondary))
                     .disabled(google.busy || !session.canChange)
                     .accessibilityIdentifier("google-sign-out")
             }
-            .confirmationDialog("Sign out of Google on \(mac)?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
-                Button("Sign out", role: .destructive) { Task { await google.signOut() } }
+            .confirmationDialog(PhoneMessages.phoneGoogleSignOutAsk(computer: mac), isPresented: $confirmingSignOut, titleVisibility: .visible) {
+                Button(PhoneMessages.phoneGoogleSignOut(), role: .destructive) { Task { await google.signOut() } }
                     .accessibilityIdentifier("google-sign-out-confirm")
             } message: {
-                Text("Your first mate and crew stop reaching Gmail and Calendar.")
+                Text(PhoneMessages.phoneGoogleSignOutWarning())
             }
         } else {
-            Text("Let your first mate on \(mac) read Gmail and Calendar. The sign-in stays on \(mac).")
+            Text(PhoneMessages.phoneGoogleInvite(computer: mac))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
             if google.homeTakesReturn {
-                PhoneChoiceRow { signIn("Sign in") }
+                PhoneChoiceRow { signIn(PhoneMessages.phoneGoogleSignIn()) }
             } else {
                 Text(PhoneGoogleWords.updateThere(mac)).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                     .accessibilityIdentifier("google-update-there")

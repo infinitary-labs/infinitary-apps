@@ -42,13 +42,13 @@ public enum PhoneRowMoves {
     /// Done and Dropped tiles never move.
     public static func movable(_ lane: Lane) -> Bool { lane != .landed && lane != .dropped }
 
-    public static let openLabel = "Open record"
-    static let cardLabel = "Show the card"
+    public static var openLabel: String { PhoneMessages.phoneRowMoveOpenRecord() }
+    static var cardLabel: String { PhoneMessages.phoneRowMoveShowCard() }
 
     /// "INF-3", "INF-3 and INF-4", "INF-3, INF-4 and INF-5".
     static func keyList(_ keys: [String]) -> String {
-        guard keys.count > 1, let last = keys.last else { return keys.first ?? "another task" }
-        return "\(keys.dropLast().joined(separator: ", ")) and \(last)"
+        guard keys.count > 1, let last = keys.last else { return keys.first ?? PhoneMessages.phoneRowMoveAnotherTask() }
+        return PhoneMessages.phoneRowMoveKeyList(last: last, rest: keys.dropLast().joined(separator: ", "))
     }
 
     private static func blocked(_ task: PhoneTask) -> Bool { task.flags?.blocked == true || !task.blockedBy.isEmpty }
@@ -61,52 +61,52 @@ public enum PhoneRowMoves {
     /// What moving `task`, in `from`, to `target` does (`boardMoveOf`).
     public static func move(_ task: PhoneTask, from: Lane, to target: Target) -> Move {
         let key = task.key
-        if !movable(from) { return .refused("Closed work stays where it is. Open its record instead.") }
+        if !movable(from) { return .refused(PhoneMessages.phoneRowMoveClosedStays()) }
         if target.rawValue == from.rawValue {
-            return .none("Already here. The order follows priority and age, so this drop changes nothing.")
+            return .none(PhoneMessages.phoneRowMoveAlreadyHere())
         }
-        if target == .waiting { return .refused("Only a ready decision puts a task in Waiting on you.") }
+        if target == .waiting { return .refused(PhoneMessages.phoneRowMoveWaitingNeedsDecision()) }
         if target == .drop { return dropMove(task) }
         if target == .landed {
             if let card = completionCard(task) {
-                return .card(cardID: card, text: "Brings its merge card forward. The card merges; the drop never does.")
+                return .card(cardID: card, text: PhoneMessages.phoneRowMoveBringsMergeCard())
             }
-            return .refused("No merge card is up for it, so nothing can finish it from here.")
+            return .refused(PhoneMessages.phoneRowMoveNoMergeCard())
         }
         if from == .waiting {
-            return .refused(task.waitingCardId != nil ? "Answer its card first. Moving it cannot dismiss that decision."
-                : "It waits for you. Open its record; moving it cannot answer that wait.")
+            return .refused(task.waitingCardId != nil ? PhoneMessages.phoneRowMoveAnswerCardFirst()
+                : PhoneMessages.phoneRowMoveWaitsForYou())
         }
-        if from == .queued && PhoneTaskFacts.status(task).mark == "starting" { return .refused("It is starting.") }
+        if from == .queued && PhoneTaskFacts.status(task).mark == "starting" { return .refused(PhoneMessages.phoneRowMoveIsStarting()) }
         if task.status == "active" { return startedMove(task, from: from, to: target) }
-        if from == .working || !PhoneRecord.unstartedWork(task) { return .refused("It has already started.") }
+        if from == .working || !PhoneRecord.unstartedWork(task) { return .refused(PhoneMessages.phoneRowMoveAlreadyStarted()) }
         let waitsOn = keyList(task.blockedBy)
         if target == .backlog {
-            return hasParts(task) ? .refused("Its parts are the work. Move a part, not the container.")
-                : .now(op: "unqueue-task", text: "It now waits for your word. Its blockers and holds stay.",
-                       done: "\(key) moved to Backlog. It waits for your word; its blockers and holds stay.")
+            return hasParts(task) ? .refused(PhoneMessages.phoneRowMovePartsMove())
+                : .now(op: "unqueue-task", text: PhoneMessages.phoneRowMoveBacklogText(),
+                       done: PhoneMessages.phoneRowMoveBacklogDone(key: key))
         }
         if target == .queued {
-            if hasParts(task) { return .refused("Its parts are the work. Queue a part, not the container.") }
+            if hasParts(task) { return .refused(PhoneMessages.phoneRowMovePartsQueue()) }
             if blocked(task) {
-                return .now(op: "queue-task", text: "Queued at once. It starts on its own once \(waitsOn) is done.",
-                            done: "\(key) moved to Queued. It starts on its own once \(waitsOn) is done.")
+                return .now(op: "queue-task", text: PhoneMessages.phoneRowMoveQueuedBlockedText(waitsOn: waitsOn),
+                            done: PhoneMessages.phoneRowMoveQueuedBlockedDone(key: key, waitsOn: waitsOn))
             }
             if task.flags?.held == true {
-                return .now(op: "queue-task", text: "Queued at once. It starts on its own once its hold ends.",
-                            done: "\(key) moved to Queued. It starts on its own once its hold ends.")
+                return .now(op: "queue-task", text: PhoneMessages.phoneRowMoveQueuedHeldText(),
+                            done: PhoneMessages.phoneRowMoveQueuedHeldDone(key: key))
             }
-            return .ask(op: "queue-task", sentence: "Start automatically? \(key) can begin at once and spends your plan's allowance.",
+            return .ask(op: "queue-task", sentence: PhoneMessages.phoneRowMoveQueueAsk(key: key),
                         confirm: PhoneRowMoveWords.queue)
         }
         // Working: the record's Start.
         if blocked(task) {
-            return .refused("\(waitsOn) must finish first. \(task.blockedBy.count > 1 ? "The dependencies stay." : "The dependency stays.")")
+            return .refused(PhoneMessages.phoneRowMoveMustFinishFirst(count: max(1, task.blockedBy.count), waitsOn: waitsOn))
         }
-        if task.flags?.held == true { return .refused("It is held, so a drag cannot start it. Its record's Start can.") }
-        if hasParts(task) { return .refused("Its parts are already planned. Start a part, not the container.") }
-        if task.startPolicy == "when-ready" { return .refused("It is already queued to start by itself. A drag cannot force a start.") }
-        return .ask(op: "start-task", sentence: "Start \(key) now? It spends your plan's allowance; what it waits on is checked again first.",
+        if task.flags?.held == true { return .refused(PhoneMessages.phoneRowMoveHeldNoDrag()) }
+        if hasParts(task) { return .refused(PhoneMessages.phoneRowMovePartsStart()) }
+        if task.startPolicy == "when-ready" { return .refused(PhoneMessages.phoneRowMoveAlreadyQueued()) }
+        return .ask(op: "start-task", sentence: PhoneMessages.phoneRowMoveStartAsk(key: key),
                     confirm: PhoneRowMoveWords.start)
     }
 
@@ -117,14 +117,14 @@ public enum PhoneRowMoves {
         if target == .backlog {
             if let unqueue = task.moves?["unqueue-task"], !unqueue.ok { return .refused(unqueue.text ?? "") }
             return .now(op: "unqueue-task", text: PhoneRowMoveWords.startedBacklog,
-                        done: "\(key) moved to Backlog. Its work is kept; Start picks it up.")
+                        done: PhoneMessages.phoneRowMoveStartedBacklogDone(key: key))
         }
         if target == .working && from == .backlog {
             return .ask(op: "start-task",
-                        sentence: "Start \(key) again? Its crewmate carries on in the same conversation and spends your plan's allowance.",
+                        sentence: PhoneMessages.phoneRowMoveStartAgainAsk(key: key),
                         confirm: PhoneRowMoveWords.start)
         }
-        return .refused(from == .backlog ? "It has already started. Start picks it up from the backlog." : "It has already started.")
+        return .refused(from == .backlog ? PhoneMessages.phoneRowMoveAlreadyStartedBacklog() : PhoneMessages.phoneRowMoveAlreadyStarted())
     }
 
     /// The Drop task tray: the record's own end, as the row says it - Drop task before the work starts, its stop once it
@@ -136,7 +136,7 @@ public enum PhoneRowMoves {
         if task.moves?["stop-task"]?.ok == true {
             return .ask(op: "stop-task", sentence: PhoneRecord.dropLead(task.key, started: true), confirm: PhoneRecordWords.dropTask)
         }
-        return .refused("This task cannot be dropped here. Open its record instead.")
+        return .refused(PhoneMessages.phoneRowMoveCannotDrop())
     }
 
     /// The record's own question for never-started work, from the effects its record lists (`dropAskOf`): the sentence,
@@ -147,7 +147,7 @@ public enum PhoneRowMoves {
     }
 
     public static func dropAsk(_ key: String, effects: PhoneTask.DropEffects?) -> DropAsk {
-        guard let effects else { return .refused("\(key) changed. Look at it again before dropping it.") }
+        guard let effects else { return .refused(PhoneMessages.phoneRowMoveDropChanged(key: key)) }
         let sentence = [PhoneRecord.dropLead(key, started: false), PhoneRecord.dropParts(effects.parts),
                         PhoneRecord.dropWaiting(effects.waiting.map(\.key)),
                         PhoneRecord.dropUnderway(effects.underway.map(\.key))].compactMap(\.self).joined(separator: " ")
@@ -170,28 +170,28 @@ public enum PhoneRowMoves {
             items.append(.entry(Entry(id: .card, label: cardLabel, detail: nil, disabled: false, danger: false, target: nil)))
         }
         if lane == .working && PhoneTaskFacts.status(task).mark == "interrupted" {
-            items.append(.entry(Entry(id: .continue, label: "Continue", detail: "Picks the work up where it stopped",
+            items.append(.entry(Entry(id: .continue, label: PhoneMessages.phoneCommonContinue(), detail: PhoneMessages.phoneRowMoveContinueDetail(),
                                       disabled: false, danger: false, target: nil)))
         }
         if lane == .working && task.status == "active" {
             let back = self.move(task, from: lane, to: .backlog)
             items.append(.entry(Entry(id: .unqueue, label: PhoneRowMoveWords.unqueue,
-                                      detail: refusal(back) ?? "Stops its turn, keeps its work · at once",
+                                      detail: refusal(back) ?? PhoneMessages.phoneRowMoveStopDetail(),
                                       disabled: refusal(back) != nil, danger: false, target: .backlog)))
         }
         if lane == .backlog || lane == .queued {
             let target: Target = lane == .backlog ? .queued : .backlog
             let shift = self.move(task, from: lane, to: target)
             let detail: String = if let why = refusal(shift) { why }
-                else if lane == .queued { "Waits for your word again · at once" }
-                else if case .ask = shift { "May start at once · asks once" }
-                else if blocked(task) { "Starts by itself once \(keyList(task.blockedBy)) is done · at once" }
-                else { "Starts by itself once its hold ends · at once" }
+                else if lane == .queued { PhoneMessages.phoneRowMoveUnqueueDetail() }
+                else if case .ask = shift { PhoneMessages.phoneRowMoveQueueAskDetail() }
+                else if blocked(task) { PhoneMessages.phoneRowMoveQueueBlockedDetail(waitsOn: keyList(task.blockedBy)) }
+                else { PhoneMessages.phoneRowMoveQueueHeldDetail() }
             items.append(.entry(Entry(id: lane == .backlog ? .queue : .unqueue,
                                       label: lane == .backlog ? PhoneRowMoveWords.queue : PhoneRowMoveWords.unqueue,
                                       detail: detail, disabled: refusal(shift) != nil, danger: false, target: target)))
             let start = self.move(task, from: lane, to: .working)
-            items.append(.entry(Entry(id: .start, label: PhoneRowMoveWords.startNow, detail: refusal(start) ?? "Asks once · the record's Start",
+            items.append(.entry(Entry(id: .start, label: PhoneRowMoveWords.startNow, detail: refusal(start) ?? PhoneMessages.phoneRowMoveStartDetail(),
                                       disabled: refusal(start) != nil, danger: false, target: .working)))
         }
         // INF-3127: Pin keeps the task at the top of Tasks, whatever its state; Unpin lists it under its state again. After the moves,
@@ -202,7 +202,7 @@ public enum PhoneRowMoves {
                     target: nil)))
         let drop = self.move(task, from: lane, to: .drop)
         items.append(.separator)
-        items.append(.entry(Entry(id: .drop, label: PhoneRecordWords.dropTask, detail: refusal(drop) ?? "Asks once",
+        items.append(.entry(Entry(id: .drop, label: PhoneRecordWords.dropTask, detail: refusal(drop) ?? PhoneMessages.phoneRowMoveDropDetail(),
                                   disabled: refusal(drop) != nil, danger: true, target: .drop)))
         return items
     }

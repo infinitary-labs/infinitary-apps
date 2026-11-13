@@ -113,3 +113,11 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | evidence | éléments | "Éléments divergents", "Ouvrez ses éléments"; plain and countable. |
 | hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
 | task board / its lanes | tableau des tâches / En attente de vous, Réserve, En attente, En cours, Terminées · 7 j | |
+| join (the phone joins a computer) | rejoindre | "Rejoindre votre ordinateur"; "In reach" is "À portée". |
+| fingerprint (a computer's key) | empreinte |  |
+| passcode (iOS) | code | As French iOS says "Face ID et code". |
+| A phone (the item under Devices) | « Un téléphone » |  |
+| Allow (secrets approval button) | « Autoriser » |  |
+| Approves secret uses (switch) | Approuve l’utilisation des secrets | The computer's Settings → Devices should show the same words. |
+| Steer (button) | Orienter |  |
+| Theme: Device / Dark / Light | Thème : Appareil / Sombre / Clair |  |

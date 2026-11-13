@@ -159,7 +159,7 @@ import SwiftUI
 
     func close() {
         watchdog?.cancel(); watchdog = nil
-        if let id = collection?.id { finishCollection(id, .failure(PhoneRequestError("This card did not answer. Your choice was not sent."))) }
+        if let id = collection?.id { finishCollection(id, .failure(PhoneRequestError(PhoneMessages.phoneCardWebNoAnswer()))) }
         onReading = nil; onDrawn = nil; onLink = nil; onDraft = nil; onTask = nil
         onAnnotate = nil; onAnnotationIdle = nil; onPointExit = nil
         view?.configuration.userContentController.removeScriptMessageHandler(forName: "cardHost", contentWorld: .page)
@@ -168,7 +168,7 @@ import SwiftUI
         assets?.cancel(); assets = nil
         view?.stopLoading(); view?.navigationDelegate = nil; view?.uiDelegate = nil; view = nil
     }
-    private func fail() { failure = "This card stopped responding."; close() }
+    private func fail() { failure = PhoneMessages.phoneCardWebStopped(); close() }
 
     func updateTheme(_ theme: String) {
         guard theme != self.theme else { return }
@@ -214,7 +214,7 @@ import SwiftUI
     }
 
     func collect() async throws -> PhoneJSON {
-        guard drawn, let view, failure == nil, collection == nil else { throw PhoneRequestError("This card is not ready. Your choice was not sent.") }
+        guard drawn, let view, failure == nil, collection == nil else { throw PhoneRequestError(PhoneMessages.phoneCardWebNotReady()) }
         return try await withCheckedThrowingContinuation { continuation in
             let id = UUID()
             collection = (id, continuation)
@@ -222,11 +222,11 @@ import SwiftUI
             collectionTimeout = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(4))
                 guard !Task.isCancelled else { return }
-                self?.finishCollection(id, .failure(PhoneRequestError("This card did not answer. Your choice was not sent.")))
+                self?.finishCollection(id, .failure(PhoneRequestError(PhoneMessages.phoneCardWebNoAnswer())))
             }
             view.callAsyncJavaScript("return await window.phoneCard.collect()", arguments: [:], in: nil, in: .page) { [weak self] result in
                 do { self?.finishCollection(id, .success(try PhoneJSON.read(result.get()))) }
-                catch { self?.finishCollection(id, .failure(PhoneRequestError("This card did not answer. Your choice was not sent."))) }
+                catch { self?.finishCollection(id, .failure(PhoneRequestError(PhoneMessages.phoneCardWebNoAnswer()))) }
             }
         }
     }
@@ -293,12 +293,13 @@ import SwiftUI
         // The opaque child can see WebKit's handler too. It may NEVER call the native host directly.
         guard message.frameInfo.isMainFrame, message.webView === view,
               let payload = try? PhoneJSON.read(message.body), let type = payload["type"].text else {
+            // i18n-exempt: a refusal to a frame that may never call the host, not shown
             replyHandler(nil, "This frame has no native access."); return
         }
         switch type {
         case "hash":
             let scripts = payload["scripts"].list.compactMap(\.text)
-            guard scripts.reduce(0, { $0 + $1.utf8.count }) <= 262_144 else { replyHandler(nil, "The card is too large."); return }
+            guard scripts.reduce(0, { $0 + $1.utf8.count }) <= 262_144 else { replyHandler(nil, PhoneMessages.phoneCardWebTooLarge()); return }
             replyHandler(scripts.map { "sha256-" + Data(SHA256.hash(data: Data($0.utf8))).base64EncodedString() }, nil)
         case "answers":
             reading = payload["reading"]; onReading?(reading); replyHandler(true, nil)
@@ -316,7 +317,7 @@ import SwiftUI
             replyHandler(true, nil)
         case "ready": watch.bodyReady(); replyHandler(true, nil)
         case "pong": watch.bodyAnswered(Int(payload["seq"].numeric ?? 0)); replyHandler(true, nil)
-        case "mac-only": notice = "Do this on \(session.mac.name)."; replyHandler(true, nil)
+        case "mac-only": notice = PhoneMessages.phoneCardWebMacOnly(computer: session.mac.name); replyHandler(true, nil)
         case "mounted":
             watch.pageMounted()
             if part == .body { facts = payload["facts"].text; preview = payload["preview"] == .bool(true) }
@@ -324,14 +325,14 @@ import SwiftUI
         case "link":
             // The page checked the address against the Mac's own rule; this checks the scheme once more before it leaves.
             guard let url = URL(string: payload["href"].text ?? ""), ["https", "http"].contains(url.scheme?.lowercased() ?? "") else {
-                replyHandler(nil, "This link cannot open."); return
+                replyHandler(nil, PhoneMessages.phoneCardWebLinkRefused()); return
             }
             onLink?(url); replyHandler(true, nil)
         case "draft":
-            guard let text = payload["text"].text, !text.isEmpty else { replyHandler(nil, "This card cannot do that."); return }
+            guard let text = payload["text"].text, !text.isEmpty else { replyHandler(nil, PhoneMessages.phoneCardWebCannotDo()); return }
             onDraft?(text); replyHandler(true, nil)
         case "task":
-            guard let key = payload["key"].text, keys.contains(key) else { replyHandler(nil, "This card cannot do that."); return }
+            guard let key = payload["key"].text, keys.contains(key) else { replyHandler(nil, PhoneMessages.phoneCardWebCannotDo()); return }
             onTask?(key); replyHandler(true, nil)
         case "image", "demo": presentation = payload; replyHandler(true, nil)
         case "annotate":
@@ -339,7 +340,7 @@ import SwiftUI
             guard annotates, part == .body, payload["note"]["key"].text != nil,
                   let top = box["top"].numeric, let bottom = box["bottom"].numeric,
                   let left = box["left"].numeric, let right = box["right"].numeric else {
-                replyHandler(nil, "This card cannot do that."); return
+                replyHandler(nil, PhoneMessages.phoneCardWebCannotDo()); return
             }
             onAnnotate?(payload["note"], CGRect(x: left, y: top, width: max(1, right - left), height: max(1, bottom - top)))
             replyHandler(true, nil)
@@ -349,10 +350,10 @@ import SwiftUI
             guard !card.isPast, let id = payload["id"].text,
                   card.actions.contains(where: { $0["id"].text == id }),
                   !card.actions.contains(where: { $0["id"].text == id && $0["effect"] != .null }) else {
-                replyHandler(nil, "Only the card’s own footer can do that."); return
+                replyHandler(nil, PhoneMessages.phoneCardWebFooterOnly()); return
             }
             guard beginChange() else {
-                let words = session.changeRefusal ?? "This card already has a choice in progress."
+                let words = session.changeRefusal ?? PhoneMessages.phoneCardWebChoiceInProgress()
                 notice = words; replyHandler(nil, words); return
             }
             Task {
@@ -372,18 +373,18 @@ import SwiftUI
             // A data file the card's body names, its text from the Mac's copy (docs/card-authoring.md, "Data by reference").
             guard let name = payload["name"].text,
                   name.range(of: "^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}\\.json$", options: .regularExpression) != nil else {
-                replyHandler(nil, "This card names no such data file."); return
+                replyHandler(nil, PhoneMessages.phoneCardWebNoDataFile()); return
             }
             Task {
                 do {
                     let file = try await session.read(.data, [.string(name)])
-                    guard let text = file["data"].text else { replyHandler(nil, "This card’s data file could not be read."); return }
+                    guard let text = file["data"].text else { replyHandler(nil, PhoneMessages.phoneCardWebDataUnreadable()); return }
                     replyHandler(text, nil)
                 } catch {
                     replyHandler(nil, error.localizedDescription)
                 }
             }
-        default: replyHandler(nil, "This card cannot do that.")
+        default: replyHandler(nil, PhoneMessages.phoneCardWebCannotDo())
         }
     }
 

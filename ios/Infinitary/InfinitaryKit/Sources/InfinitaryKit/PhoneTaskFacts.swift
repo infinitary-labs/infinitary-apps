@@ -37,7 +37,12 @@ public struct PhoneTaskFacts: Sendable {
         public func stateWords(now: Double) -> String { withSpan(state, now: now) }
         private func withSpan(_ words: String, now: Double) -> String {
             guard let span else { return words }
-            return "\(words) \(span.joint) \(PhoneTaskFacts.checksDuration((span.finishedAt ?? now) - span.startedAt))"
+            let duration = PhoneTaskFacts.checksDuration((span.finishedAt ?? now) - span.startedAt)
+            switch span.joint {
+            case "for": return PhoneMessages.phoneChecksForDuration(duration: duration, words: words)
+            case "in": return PhoneMessages.phoneChecksInDuration(duration: duration, words: words)
+            default: return PhoneMessages.phoneChecksAfterDuration(duration: duration, words: words)
+            }
         }
     }
     public struct Review: Equatable, Sendable { public let dot: String; public let words: String }
@@ -75,16 +80,26 @@ public struct PhoneTaskFacts: Sendable {
 
     // MARK: Status
 
-    static let statusWords = ["backlog": "Backlog", "queued": "Queued", "starting": "Starting", "working": "Working",
-                              "idle": "Idle", "interrupted": "Interrupted", "waiting": "Waiting on you", "done": "Done",
-                              "dropped": "Dropped"]
-    static let postureWords = ["turn": "Working", "job": "Background work continues", "checks": "Waiting for checks",
-                               "guidance": "A reply is queued", "settlement": "Finishing the task",
-                               "timed-wait": "Waiting to continue automatically", "captain": "Work is paused",
-                               "inactive": "No continuing work", "access": "Paused for access",
-                               "dependency": "Blocked by another task", "unobserved": "Background work is unknown"]
+    static var statusWords: [String: String] {
+        ["backlog": PhoneMessages.phoneTaskFactsStatusBacklog(), "queued": PhoneMessages.phoneTaskFactsStatusQueued(),
+         "starting": PhoneMessages.phoneTaskFactsStatusStarting(), "working": PhoneMessages.phoneTaskFactsStatusWorking(),
+         "idle": PhoneMessages.phoneTaskFactsStatusIdle(), "interrupted": PhoneMessages.phoneTaskFactsStatusInterrupted(),
+         "waiting": PhoneMessages.phoneTaskFactsStatusWaiting(), "done": PhoneMessages.phoneTaskFactsStatusDone(),
+         "dropped": PhoneMessages.phoneTaskFactsStatusDropped()]
+    }
+    static var postureWords: [String: String] {
+        ["turn": PhoneMessages.phoneTaskFactsStatusWorking(), "job": PhoneMessages.phoneTaskFactsPostureJob(),
+         "checks": PhoneMessages.phoneTaskFactsPostureChecks(), "guidance": PhoneMessages.phoneTaskFactsPostureGuidance(),
+         "settlement": PhoneMessages.phoneTaskFactsPostureSettlement(),
+         "timed-wait": PhoneMessages.phoneTaskFactsPostureTimedWait(), "captain": PhoneMessages.phoneTaskFactsPostureCaptain(),
+         "inactive": PhoneMessages.phoneTaskFactsPostureInactive(), "access": PhoneMessages.phoneTaskFactsPostureAccess(),
+         "dependency": PhoneMessages.phoneTaskFactsBlockedByAnother(),
+         "unobserved": PhoneMessages.phoneTaskFactsPostureUnobserved()]
+    }
     /// The Mac's `AT_PROVIDER_WORDS` (src/shared/workPosture.ts), which outrank the reason's words.
-    static let atProviderWords = ["retrying": "Retrying at its provider", "stuck": "Stuck at its provider"]
+    static var atProviderWords: [String: String] {
+        ["retrying": PhoneMessages.phoneTaskFactsProviderRetrying(), "stuck": PhoneMessages.phoneTaskFactsProviderStuck()]
+    }
 
     /// The Mac's `formatDurationShort` (src/shared/quotaSignals.ts): whole minutes as 2d 3h, 1h 35m or 4m.
     static func durationShort(_ ms: Double) -> String { PhoneFormats.durationShort(ms) }
@@ -98,21 +113,22 @@ public struct PhoneTaskFacts: Sendable {
         }
         let connecting = task.place?.reach == "connecting"
         let away = task.place?.reach != nil && task.place?.reach != "in-reach" ? task.place?.name.flatMap { $0.isEmpty ? nil : $0 } : nil
-        let awayWords = connecting ? "\(away ?? "") is connecting"
-            : task.place?.noNewWork == true ? "\(away ?? "") takes no new work" : "\(away ?? "") is out of reach"
+        let awayWords = connecting ? PhoneMessages.phoneTaskFactsAwayConnecting(computer: away ?? "")
+            : task.place?.noNewWork == true ? PhoneMessages.phoneTaskFactsAwayNoNewWork(computer: away ?? "")
+            : PhoneMessages.phoneTaskFactsAwayOutOfReach(computer: away ?? "")
         // Connecting keeps the mark as it was: only out of reach draws it in warn.
         func awayReading(_ mark: String, _ reason: String?) -> Status { reading(mark, reason ?? awayWords, outOfReach: !connecting) }
         let onRequest = task.startPolicy == "on-request"
-        if task.status == "done" { return reading("done", task.requiredAction?.result ?? (task.closedReason == "answered" ? "Answered" : "")) }
-        if task.status == "dropped" { return reading("dropped", task.requiredAction?.result ?? (task.closedReason == "failed" ? "Failed" : "")) }
-        if let required = task.requiredAction { return reading("waiting", required.state == "blocked" ? "Waiting for prerequisites" : "") }
+        if task.status == "done" { return reading("done", task.requiredAction?.result ?? (task.closedReason == "answered" ? PhoneMessages.phoneTaskFactsClosedAnswered() : "")) }
+        if task.status == "dropped" { return reading("dropped", task.requiredAction?.result ?? (task.closedReason == "failed" ? PhoneMessages.phoneTaskFactsClosedFailed() : "")) }
+        if let required = task.requiredAction { return reading("waiting", required.state == "blocked" ? PhoneMessages.phoneTaskFactsWaitingPrerequisites() : "") }
         // A note's answer waits on the captain, with how long (`answerWaitWords`, src/shared/cardLeave.ts).
         if task.answerNoteId != nil {
-            guard let since = task.answerSince else { return reading("waiting", "Answer ready") }
-            return reading("waiting", "Answer ready · waiting \(durationShort(max(0, now - since)))", since: since)
+            guard let since = task.answerSince else { return reading("waiting", PhoneMessages.phoneTaskFactsAnswerReady()) }
+            return reading("waiting", PhoneMessages.phoneTaskFactsAnswerReadyWaiting(duration: durationShort(max(0, now - since))), since: since)
         }
         if task.waitingCardId != nil {
-            return reading("waiting", task.waitingCardMerges == true ? "Waiting for your merge" : "A decision card is ready")
+            return reading("waiting", task.waitingCardMerges == true ? PhoneMessages.phoneTaskFactsWaitingMerge() : PhoneMessages.phoneTaskFactsDecisionReady())
         }
         if task.startAttempt?.phase == "preparing" || task.startAttempt?.phase == "checking"
             || (task.status == "active" && task.activity == "starting") {
@@ -120,30 +136,31 @@ public struct PhoneTaskFacts: Sendable {
         }
         // Started work back in the backlog (INF-2062): Backlog, marked started, since it went.
         if task.status == "active", let since = task.backlogSince {
-            return reading("backlog", "Started · its work waits for your Start", since: since)
+            return reading("backlog", PhoneMessages.phoneTaskFactsStartedInBacklog(), since: since)
         }
         if task.startNotice != nil && (task.status == "open" || task.status == "active") {
-            return reading(onRequest ? "backlog" : "queued", "Could not start")
+            return reading(onRequest ? "backlog" : "queued", PhoneMessages.phoneTaskFactsCouldNotStart())
         }
         if task.status == "open" {
             let mark = onRequest ? "backlog" : "queued"
             if let wait = task.queueWait { return reading(mark, wait.line) }
             let parts = task.children?.total ?? 0
-            let holds = task.flags?.blocked == true ? "Blocked by another task"
-                : task.flags?.held == true ? "Held"
-                : parts > 0 ? "Its \(parts) \(parts == 1 ? "part does" : "parts do") the work" : nil
+            let holds = task.flags?.blocked == true ? PhoneMessages.phoneTaskFactsBlockedByAnother()
+                : task.flags?.held == true ? PhoneMessages.phoneTaskFactsHeld()
+                : parts > 0 ? PhoneMessages.phoneTaskFactsPartsDoWork(count: parts) : nil
             if away != nil { return awayReading(mark, holds) }
-            return reading(mark, holds ?? (onRequest ? "Starts when you press Start" : "Starts by itself when ready"))
+            return reading(mark, holds ?? (onRequest ? PhoneMessages.phoneTaskFactsStartsOnStart() : PhoneMessages.phoneTaskFactsStartsWhenReady()))
         }
         let waits = task.blockedBy
         let dependency = task.workPosture?.reason == "dependency" && !waits.isEmpty
         let running = task.activity == "running" || task.activity == "starting"
         let reason = dependency ? dependencyWaitWords(waits)
             : task.workPosture.map { posture in
-                posture.reason == "checks" && posture.batch != nil ? "Waiting for the batch check"
+                posture.reason == "checks" && posture.batch != nil ? PhoneMessages.phoneTaskFactsWaitingBatchCheck()
                     : posture.atProvider.flatMap { atProviderWords[$0] } ?? postureWords[posture.reason] ?? ""
             }
-            ?? (running ? "Working" : task.activity == "interrupted" ? "Work was interrupted" : "No continuing work")
+            ?? (running ? PhoneMessages.phoneTaskFactsStatusWorking() : task.activity == "interrupted" ? PhoneMessages.phoneTaskFactsWorkInterrupted()
+                : PhoneMessages.phoneTaskFactsPostureInactive())
         if task.workPosture?.state == "active" || (task.workPosture == nil && running) {
             if away != nil { return awayReading("working", nil) }
             let wait = task.workPosture?.state == "active" ? task.workPosture?.reason : nil
@@ -159,7 +176,8 @@ public struct PhoneTaskFacts: Sendable {
 
     /// What a started task waits on: the one task by its key, or how many.
     public static func dependencyWaitWords(_ blockedBy: [String]) -> String {
-        blockedBy.count == 1 ? "Waiting on \(blockedBy[0])" : "Waiting on \(blockedBy.count) tasks"
+        blockedBy.count == 1 ? PhoneMessages.phoneTaskFactsWaitingOnKey(key: blockedBy[0])
+            : PhoneMessages.phoneTaskFactsWaitingOnTasks(count: blockedBy.count)
     }
 
     // MARK: Now
@@ -183,13 +201,22 @@ public struct PhoneTaskFacts: Sendable {
     // MARK: Delivery
 
     static let checksDot = ["green": "ok", "merged": "ok", "red": "failed", "pending": "running", "no-pr": "idle"]
-    static let checkWords = ["green": "passed", "red": "failed", "pending": "running", "no-pr": "no pull request yet",
-                             "merged": "merged outside the app"]
+    static var checkWords: [String: String] {
+        ["green": PhoneMessages.phoneChecksPassed(), "red": PhoneMessages.phoneChecksFailed(),
+         "pending": PhoneMessages.phoneChecksRunning(), "no-pr": PhoneMessages.phoneTaskFactsChecksNoPull(),
+         "merged": PhoneMessages.phoneTaskFactsChecksMergedOutside()]
+    }
     static let runDot = ["running": "running", "passed": "ok", "failed": "failed", "cancelled": "idle"]
-    static let runWords = ["running": "running", "passed": "passed", "failed": "failed", "cancelled": "cancelled"]
+    static var runWords: [String: String] {
+        ["running": PhoneMessages.phoneChecksRunning(), "passed": PhoneMessages.phoneChecksPassed(),
+         "failed": PhoneMessages.phoneChecksFailed(), "cancelled": PhoneMessages.phoneChecksCancelled()]
+    }
     static let reviewDot = ["pass": "ok", "findings": "warn", "blocked": "failed"]
-    static let reviewWords = ["pass": "passed", "findings": "findings", "blocked": "blocked"]
-    static let notReadWords = "not read yet"
+    static var reviewWords: [String: String] {
+        ["pass": PhoneMessages.phoneChecksPassed(), "findings": PhoneMessages.phoneReviewFindings(),
+         "blocked": PhoneMessages.phoneReviewBlocked()]
+    }
+    static var notReadWords: String { PhoneMessages.phoneTaskFactsChecksNotRead() }
 
     /// The change and its checks while the work is live, and a review's verdict whether or not it is.
     public static func delivery(_ task: PhoneTask) -> Delivery? {
@@ -212,7 +239,8 @@ public struct PhoneTaskFacts: Sendable {
         }
         let review = facts.reviewVerdict.map { verdict in
             Review(dot: reviewDot[verdict] ?? "idle",
-                   words: (reviewWords[verdict] ?? verdict) + (facts.reviewRisk.map { " · risk \($0)" } ?? ""))
+                   words: facts.reviewRisk.map { PhoneMessages.phoneReviewWithRisk(risk: $0, words: reviewWords[verdict] ?? verdict) }
+                       ?? reviewWords[verdict] ?? verdict)
         }
         return change != nil || checks != nil || review != nil ? Delivery(change: change, checks: checks, review: review) : nil
     }
@@ -222,13 +250,17 @@ public struct PhoneTaskFacts: Sendable {
         let number = facts.prNumber.flatMap { $0 == 0 ? nil : $0 }
         let label = facts.changeLabel ?? number.map { "#\($0)" }
         if facts.prUrl == nil && label == nil { return nil }
-        return Change(noun: number != nil || label?.hasPrefix("#") == true ? "Pull request" : "Branch", label: label, url: facts.prUrl)
+        return Change(noun: number != nil || label?.hasPrefix("#") == true ? PhoneMessages.phoneTaskFactsChangePull() : PhoneMessages.phoneTaskFactsChangeBranch(), label: label, url: facts.prUrl)
     }
 
-    static let checkStateWords = ["success": "passed", "failure": "failed", "error": "error", "cancelled": "cancelled",
-                                  "timed_out": "timed out", "action_required": "needs a decision",
-                                  "startup_failure": "did not start", "stale": "out of date", "skipped": "skipped",
-                                  "neutral": "neutral", "pending": "running"]
+    static var checkStateWords: [String: String] {
+        ["success": PhoneMessages.phoneChecksPassed(), "failure": PhoneMessages.phoneChecksFailed(),
+         "error": PhoneMessages.phoneChecksError(), "cancelled": PhoneMessages.phoneChecksCancelled(),
+         "timed_out": PhoneMessages.phoneTaskFactsCheckTimedOut(), "action_required": PhoneMessages.phoneTaskFactsCheckNeedsDecision(),
+         "startup_failure": PhoneMessages.phoneTaskFactsCheckDidNotStart(), "stale": PhoneMessages.phoneTaskFactsCheckOutOfDate(),
+         "skipped": PhoneMessages.phoneChecksSkipped(), "neutral": PhoneMessages.phoneChecksNeutral(),
+         "pending": PhoneMessages.phoneChecksRunning()]
+    }
     static let redStates: Set<String> = ["failure", "error", "cancelled", "timed_out", "action_required", "startup_failure", "stale"]
 
     public struct CheckSummary: Equatable, Sendable { public let overall: String; public let words: String; public let dot: String; public let problem: String? }
@@ -236,11 +268,11 @@ public struct PhoneTaskFacts: Sendable {
     /// One reading of a version's checks in the merge card's words: each state's count, in the order first seen.
     public static func checkSummary(_ reading: PhoneTask.Delivery.CheckSnapshot) -> CheckSummary {
         let incomplete = reading.complete == false || reading.problem != nil
-        let unknownWords = reading.problem.map { "cannot read all checks: \($0)" } ?? "reading incomplete"
+        let unknownWords = reading.problem.map { PhoneMessages.phoneTaskFactsChecksUnreadableWhy(problem: $0) } ?? PhoneMessages.phoneTaskFactsChecksIncomplete()
         if reading.items.isEmpty {
             let absent = reading.absenceDeclared == true && !incomplete
             return CheckSummary(overall: absent ? "none" : "pending",
-                                words: absent ? "no checks" : incomplete ? unknownWords : "none reported",
+                                words: absent ? PhoneMessages.phoneTaskFactsChecksNone() : incomplete ? unknownWords : PhoneMessages.phoneTaskFactsChecksNoneReported(),
                                 dot: absent ? "idle" : reading.problem != nil ? "warn" : "running", problem: reading.problem)
         }
         var order: [String] = [], counts: [String: Int] = [:]
@@ -250,7 +282,7 @@ public struct PhoneTaskFacts: Sendable {
         }
         let words = order.map { state in
             let word = checkStateWords[state] ?? state
-            return reading.items.count == 1 ? word : "\(counts[state]!) \(word)"
+            return reading.items.count == 1 ? word : PhoneMessages.phoneChecksCounted(count: counts[state]!, word: word)
         }.joined(separator: " · ") + (incomplete ? " · \(unknownWords)" : "")
         if reading.items.contains(where: { redStates.contains($0.state) }) {
             return CheckSummary(overall: "red", words: words, dot: "failed", problem: reading.problem)
@@ -270,15 +302,15 @@ public struct PhoneTaskFacts: Sendable {
     /// The counts and a refusal's reason are the task record's (`checkSummary`).
     public static func checkState(_ reading: PhoneTask.Delivery.CheckSnapshot) -> String {
         let summary = checkSummary(reading)
-        if summary.overall == "red" { return "failed" }
-        if reading.problem != nil { return "cannot read all checks" }
+        if summary.overall == "red" { return PhoneMessages.phoneChecksFailed() }
+        if reading.problem != nil { return PhoneMessages.phoneTaskFactsChecksUnreadable() }
         if reading.items.isEmpty { return summary.words }
         // Only skipped checks never read passed, even once declared (INF-3915).
-        if noCheckRan(reading) && reading.complete != false { return "skipped" }
-        if summary.overall == "green" { return "passed" }
-        if reading.items.contains(where: { $0.state == "pending" }) { return "running" }
-        if reading.complete == false { return "reading incomplete" }
-        return "neutral"
+        if noCheckRan(reading) && reading.complete != false { return PhoneMessages.phoneChecksSkipped() }
+        if summary.overall == "green" { return PhoneMessages.phoneChecksPassed() }
+        if reading.items.contains(where: { $0.state == "pending" }) { return PhoneMessages.phoneChecksRunning() }
+        if reading.complete == false { return PhoneMessages.phoneTaskFactsChecksIncomplete() }
+        return PhoneMessages.phoneChecksNeutral()
     }
 
     /// No check that ran: none at all, or only skipped ones (`noCheckRan`, INF-3915).
@@ -290,7 +322,7 @@ public struct PhoneTaskFacts: Sendable {
     public static func currentCheckSummary(_ delivery: PhoneTask.Delivery) -> CheckSummary? {
         guard let reading = delivery.checks else { return nil }
         if let head = delivery.headSha, head != reading.headSha {
-            return CheckSummary(overall: "pending", words: "not read for this version", dot: "idle", problem: nil)
+            return CheckSummary(overall: "pending", words: PhoneMessages.phoneTaskFactsChecksOtherVersion(), dot: "idle", problem: nil)
         }
         return checkSummary(reading)
     }
@@ -321,7 +353,7 @@ public struct PhoneTaskFacts: Sendable {
     /// `just now` or `5m ago`, after the checks' duration.
     public static func checksFinishedAgo(_ finishedAt: Double, now: Double) -> String {
         let age = relativeAge(finishedAt, now: max(now, finishedAt))
-        return age == "now" ? "just now" : "\(age) ago"
+        return age == "now" ? PhoneMessages.phoneTaskFactsChecksJustNow() : PhoneMessages.phoneTaskFactsChecksAgo(age: age)
     }
 
     /// A short age beside a fact, as the feed writes it: `now`, `5m`, `2h`, `3d`.
@@ -329,12 +361,16 @@ public struct PhoneTaskFacts: Sendable {
 
     // MARK: Model
 
-    static let levelWords = ["off": "None", "minimal": "Minimal", "low": "Low", "medium": "Medium", "high": "High",
-                             "xhigh": "Extra high", "default": "Model's own"]
+    static var levelWords: [String: String] {
+        ["off": PhoneMessages.phoneTaskFactsLevelNone(), "minimal": PhoneMessages.phoneTaskFactsLevelMinimal(),
+         "low": PhoneMessages.phoneTaskFactsLevelLow(), "medium": PhoneMessages.phoneTaskFactsLevelMedium(),
+         "high": PhoneMessages.phoneTaskFactsLevelHigh(), "xhigh": PhoneMessages.phoneTaskFactsLevelExtraHigh(),
+         "default": PhoneMessages.phoneTaskFactsLevelModelDefault()]
+    }
 
     static func reasoningNote(_ reasoning: PhoneTask.Reasoning) -> String? {
-        if reasoning.lower == "quick" { return "Reasoning one step lower for Quick rigor." }
-        if reasoning.lower == "capped" { return "Reasoning at the most this model offers." }
+        if reasoning.lower == "quick" { return PhoneMessages.phoneTaskFactsReasoningQuick() }
+        if reasoning.lower == "capped" { return PhoneMessages.phoneTaskFactsReasoningCapped() }
         return nil
     }
 

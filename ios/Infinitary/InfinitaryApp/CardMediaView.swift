@@ -27,21 +27,21 @@ struct CardMediaView: View {
                             .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime,
                                 object: recording.player.currentItem)) { _ in playbackFailed = true }
                         if recordingFinished {
-                            Text("Recording finished").font(PhoneFont.caption).accessibilityIdentifier("recording-finished")
-                            Button("Play again") {
+                            Text(PhoneMessages.phoneMediaRecordingFinished()).font(PhoneFont.caption).accessibilityIdentifier("recording-finished")
+                            Button(PhoneMessages.phoneMediaPlayAgain()) {
                                 recordingFinished = false
                                 Task { await recording.player.seek(to: .zero); recording.player.play() }
                             }
                         }
-                        if playbackFailed { Text("This recording could not play.").foregroundStyle(PhoneTheme.warning) }
+                        if playbackFailed { Text(PhoneMessages.phoneMediaRecordingFailed()).foregroundStyle(PhoneTheme.warning) }
                     } else if let gif {
                         if playGif { PassiveCardMedia(source: gif, session: session) }
                         else if let poster = presentation["poster"]["src"].text { PassiveCardMedia(source: poster, session: session) }
-                        Button(playGif ? "Stop recording" : "Play recording") { playGif.toggle() }
+                        Button(playGif ? PhoneMessages.phoneMediaStopRecording() : PhoneMessages.phoneMediaPlayRecording()) { playGif.toggle() }
                     } else if let failure {
                         Text(failure).foregroundStyle(PhoneTheme.warning)
-                        Button("Retry") { Task { await loadRecording() } }
-                    } else { ProgressView("Loading recording") }
+                        Button(PhoneMessages.phoneCommonRetry()) { Task { await loadRecording() } }
+                    } else { ProgressView(PhoneMessages.phoneMediaLoadingRecording()) }
                     Text(presentation["caption"].text ?? "").font(PhoneFont.caption)
                 } else if pictures.indices.contains(index), let source = pictures[index]["src"].text {
                     // INF-3107: one viewer for pictures and diagrams - fitted, pinch to 8x, double-tap to its own size, drag.
@@ -53,17 +53,17 @@ struct CardMediaView: View {
                     Text(pictures[index]["alt"].text ?? "").font(PhoneFont.caption)
                     if pictures.count > 1 {
                         HStack {
-                            Button("Previous picture") { index -= 1 }.disabled(index == 0)
-                            Text("\(index + 1) of \(pictures.count)")
-                            Button("Next picture") { index += 1 }.disabled(index == pictures.count - 1)
+                            Button(PhoneMessages.phoneMediaPreviousPicture()) { index -= 1 }.disabled(index == 0)
+                            Text(PhoneMessages.phoneMediaPicturePosition(count: pictures.count, position: String(index + 1)))
+                            Button(PhoneMessages.phoneMediaNextPicture()) { index += 1 }.disabled(index == pictures.count - 1)
                         }.padding()
                     }
                 }
             }.background(PhoneTheme.background)
-                .phoneTitle(presentation["type"].text == "demo" ? "Card recording"
+                .phoneTitle(presentation["type"].text == "demo" ? PhoneMessages.phoneMediaTitleRecording()
                     : (pictures.indices.contains(index) && pictures[index]["src"].text?.hasPrefix(CardDrawing.prefix) == true)
-                        ? "Card diagram" : "Card picture")
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+                        ? PhoneMessages.phoneMediaTitleDiagram() : PhoneMessages.phoneMediaTitlePicture())
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(PhoneMessages.phoneCommonDone()) { dismiss() } } }
         }.onAppear { index = Int(presentation["index"].numeric ?? 0); playGif = presentation["play"].flag }
             .task { if presentation["type"].text == "demo" { await loadRecording() } }
     }
@@ -77,7 +77,7 @@ struct CardMediaView: View {
             guard type == "video/mp4" || type == "image/gif" else { throw PhoneError.invalidReply }
             if type == "video/mp4" { recording = MemoryCardRecording(bytes: bytes) }
             else { gif = "data:image/gif;base64,\(bytes.base64EncodedString())" }
-        } catch { if !Task.isCancelled { failure = "This recording could not load. Try again when your computer is in reach." } }
+        } catch { if !Task.isCancelled { failure = PhoneMessages.phoneMediaRecordingLoadFailed() } }
     }
 }
 

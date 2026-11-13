@@ -12,7 +12,7 @@ struct PhoneReach: View {
                     .frame(width: 6, height: 6).accessibilityHidden(true)
                 Text(session.reachWords).accessibilityIdentifier("contact")
             }
-            if let time = session.reachTime { Text("as of \(time)") }
+            if let time = session.reachTime { Text(PhoneMessages.phoneReachAsOf(time: time)) }
         }.font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary)
     }
 }
@@ -22,9 +22,9 @@ extension ReadOnlySession {
     /// `reach`, so a redial the computer answers within the captain's 20 s says nothing.
     var reachWords: String {
         switch reach {
-        case "in-reach": "In reach"
-        case "reaching": "Reaching your computer…"
-        default: "Out of reach"
+        case "in-reach": PhoneMessages.phoneReachInReach()
+        case "reaching": PhoneMessages.phoneReachReaching()
+        default: PhoneMessages.phoneReachOutOfReach()
         }
     }
 
@@ -37,7 +37,7 @@ extension ReadOnlySession {
     /// INF-1062: the computer button in the top bar says the reach to VoiceOver, with its time while out of reach.
     var reachLine: String {
         guard let reachTime else { return reachWords }
-        return "\(reachWords), as of \(reachTime)"
+        return PhoneMessages.phoneReachLine(reach: reachWords, time: reachTime)
     }
 
     /// INF-589 item 11: the reach line says out of reach, so the one line where changes are made says only that
@@ -47,7 +47,7 @@ extension ReadOnlySession {
         switch reach {
         case "in-reach": contact == "in-reach" ? changeRefusal : nil
         case "reaching": nil
-        default: "Changes are off until \(mac.name) is back."
+        default: PhoneMessages.phoneReachChangesOff(computer: mac.name)
         }
     }
 }
@@ -69,7 +69,7 @@ struct PhoneComputerSheet: View {
                 VStack(alignment: .leading, spacing: PhoneTheme.space5) {
                     VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                         Text(session.mac.name).font(PhoneFont.headline).accessibilityIdentifier("home-name")
-                        Text("Your first mate lives here.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                        Text(PhoneMessages.phoneComputerFirstMateHere()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                         PhoneReach(session: session)
                         if let address = session.reachedAddress {
                             Text(address).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
@@ -79,19 +79,19 @@ struct PhoneComputerSheet: View {
                     exitControls
                 }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
             }
-            .phoneTitle("Your computer")
+            .phoneTitle(PhoneMessages.phoneComputerTitle())
             .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }.accessibilityIdentifier("close-computer-details")
+                Button(PhoneMessages.phoneCommonDone()) { dismiss() }.accessibilityIdentifier("close-computer-details")
             } }
             // Alerts keep the cancel choice in view; a popover from the button would hide it.
-            .alert("Leave \(session.mac.name)?", isPresented: $leaving) {
-                Button("Leave this computer", role: .destructive) { dismiss(); leave() }.accessibilityIdentifier("confirm-leave")
-                Button("Keep it", role: .cancel) {}
-            } message: { Text("This device forgets the computer. To come back, use a new link.") }
-            .alert("Forget this computer?", isPresented: $forgetting) {
-                Button("Forget this computer", role: .destructive) { dismiss(); forget() }.accessibilityIdentifier("confirm-forget")
-                Button("Keep it", role: .cancel) {}
-            } message: { Text("You’ll need a new link to join again. Your computer may still list this device.") }
+            .alert(PhoneMessages.phoneComputerLeaveAsk(computer: session.mac.name), isPresented: $leaving) {
+                Button(PhoneMessages.phoneComputerLeaveConfirm(), role: .destructive) { dismiss(); leave() }.accessibilityIdentifier("confirm-leave")
+                Button(PhoneMessages.phoneComputerKeep(), role: .cancel) {}
+            } message: { Text(PhoneMessages.phoneComputerLeaveWarning()) }
+            .alert(PhoneMessages.phoneComputerForgetAsk(), isPresented: $forgetting) {
+                Button(PhoneMessages.phoneComputerForgetConfirm(), role: .destructive) { dismiss(); forget() }.accessibilityIdentifier("confirm-forget")
+                Button(PhoneMessages.phoneComputerKeep(), role: .cancel) {}
+            } message: { Text(PhoneMessages.phoneComputerForgetWarning()) }
         }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
@@ -103,17 +103,17 @@ struct PhoneComputerSheet: View {
     private var exitControls: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             if session.contact == "in-reach" {
-                Text("Leave").font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
-                Text("This device stops showing it. To come back, scan a new code.")
+                Text(PhoneMessages.phoneComputerLeaveHeading()).font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
+                Text(PhoneMessages.phoneComputerLeaveExplain())
                 PhoneChoiceRow {
-                    Button("Leave \(session.mac.name)") { leaving = true }
+                    Button(PhoneMessages.phoneComputerLeaveButton(computer: session.mac.name)) { leaving = true }
                         .buttonStyle(PhoneChoiceStyle(.danger)).accessibilityIdentifier("leave")
                 }
             } else {
-                Text("Forget").font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
-                Text("Clears this computer from this device. \(session.mac.name) may still list it.")
+                Text(PhoneMessages.phoneComputerForgetHeading()).font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
+                Text(PhoneMessages.phoneComputerForgetExplain(computer: session.mac.name))
                 PhoneChoiceRow {
-                    Button("Forget this computer") { forgetting = true }
+                    Button(PhoneMessages.phoneComputerForgetButton()) { forgetting = true }
                         .buttonStyle(PhoneChoiceStyle(.danger)).accessibilityIdentifier("forget-mac")
                 }
             }

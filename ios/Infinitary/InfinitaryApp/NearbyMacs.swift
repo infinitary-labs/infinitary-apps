@@ -1,4 +1,5 @@
 import Foundation
+import InfinitaryKit
 import Observation
 
 struct NearbyMac: Identifiable {
@@ -56,6 +57,6 @@ struct NearbyMac: Identifiable {
 
     func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
         guard browser === self.browser else { return }
-        problem = "Nearby could not look on your network. Allow Local Network for Infinitary in Settings, or paste your computer’s link."
+        problem = PhoneMessages.phoneJoinNearbyRefused()
     }
 }

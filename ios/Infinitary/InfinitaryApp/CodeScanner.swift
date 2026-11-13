@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import InfinitaryKit
 import SwiftUI
 import UIKit
 
@@ -32,7 +33,7 @@ struct CodeScanner: UIViewControllerRepresentable {
             let allowed = await AVCaptureDevice.requestAccess(for: .video)
             guard visible else { return }
             guard allowed else {
-                failed("Allow Camera for Infinitary in Settings, or paste the link instead."); return
+                failed(PhoneMessages.phoneJoinCameraNotAllowed()); return
             }
             configure()
         }
@@ -41,10 +42,10 @@ struct CodeScanner: UIViewControllerRepresentable {
     private func configure() {
         guard let camera = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: camera), capture.canAddInput(input)
-        else { failed("This device has no camera available. Paste your computer’s link instead."); return }
+        else { failed(PhoneMessages.phoneJoinNoCamera()); return }
         capture.addInput(input)
         let output = AVCaptureMetadataOutput()
-        guard capture.canAddOutput(output) else { failed("Could not open the camera. Paste the link instead."); return }
+        guard capture.canAddOutput(output) else { failed(PhoneMessages.phoneJoinCameraFailed()); return }
         capture.addOutput(output); output.setMetadataObjectsDelegate(self, queue: .main)
         output.metadataObjectTypes = [.qr]
         let preview = AVCaptureVideoPreviewLayer(session: capture)

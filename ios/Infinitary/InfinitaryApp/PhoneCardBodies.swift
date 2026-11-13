@@ -141,7 +141,7 @@ struct PhoneCardRowProbeReading: View {
     var body: some View {
         Color.clear.frame(width: 1, height: 1)
             .accessibilityElement().accessibilityIdentifier("card-row-probe")
-            .accessibilityLabel("beside \(beside.allSatisfy { $0 } ? "drawn" : "loading"), \(probe.moves) moves, "
+            .accessibilityLabel("beside \(beside.allSatisfy { $0 } ? "drawn" : "loading"), \(probe.moves) moves, " // i18n-exempt: a test probe the UI tests read, not shown
                 + "arrived \(probe.arrivedDrawn ? "drawn" : "loading"), \(probe.reports) reports after rest")
             .allowsHitTesting(false)
     }

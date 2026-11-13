@@ -61,7 +61,7 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
         }
         let marks = frame.marks.map { mark -> (Target, Int) in
             (Target(id: mark.id, task: mark.task, computer: mark.computerID, point: shifted(mark.point), label: mark.task.key + ", " + mark.task.title,
-                    words: "Program, " + String(mark.parts.count) + " running parts"), roster.order[mark.task.id] ?? roster.tasks.count)
+                    words: PhoneMessages.phoneSceneProgramParts(count: mark.parts.count)), roster.order[mark.task.id] ?? roster.tasks.count)
         }
         return (glyphs + marks).sorted { $0.1 == $1.1 ? $0.0.id < $1.0.id : $0.1 < $1.1 }.map(\.0)
     }
@@ -123,7 +123,7 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
         override var accessibilityIdentifier: String? { get { "crew-task-" + id } set {} }
         override var accessibilityLabel: String? { get { target?.label } set {} }
         override var accessibilityValue: String? {
-            get { target.map { view?.selection == id ? "Selected, " + $0.words : $0.words } }
+            get { target.map { view?.selection == id ? PhoneMessages.phoneSceneSelected(words: $0.words) : $0.words } }
             set {}
         }
         override var accessibilityTraits: UIAccessibilityTraits {

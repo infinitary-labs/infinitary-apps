@@ -65,11 +65,11 @@ struct PhoneCrewSummary: View {
                 if facts.model != nil || facts.delivery != nil { strip(facts, now: now) }
                 if !preview {
                     PhoneChoiceRow {
-                        Button("Open task") { open(shown) }.buttonStyle(PhoneChoiceStyle(.secondary))
+                        Button(PhoneMessages.phoneCrewSummaryOpenTask()) { open(shown) }.buttonStyle(PhoneChoiceStyle(.secondary))
                             .accessibilityIdentifier("open-crew-task")
                     }.padding(.top, PhoneTheme.space4)
                     // The standard sheet has no close mark; Escape closes it from a keyboard.
-                    Button("Close", action: close).keyboardShortcut(.cancelAction).hidden().frame(width: 0, height: 0)
+                    Button(PhoneMessages.phoneCommonClose(), action: close).keyboardShortcut(.cancelAction).hidden().frame(width: 0, height: 0)
                 }
             }
             .font(PhoneFont.summary).foregroundStyle(PhoneTheme.secondary)
@@ -125,20 +125,20 @@ struct PhoneCrewSummary: View {
 
     private func reviewing(_ builderID: String) -> some View {
         let builder = tasks.first { $0.id == builderID }
-        return keyRow("Reviewing", id: "crew-summary-reviewing") {
-            if let builder { keyButton(builder.key, task: builder) } else { Text("another task").font(PhoneFont.micro) }
+        return keyRow(PhoneMessages.crewSummaryReviewing(), id: "crew-summary-reviewing") {
+            if let builder { keyButton(builder.key, task: builder) } else { Text(PhoneMessages.crewSummaryAnotherTask()).font(PhoneFont.micro) }
         }
     }
 
     @ViewBuilder private func partOf(_ parentID: String) -> some View {
         if let program = tasks.first(where: { $0.id == parentID && $0.program == true }) {
-            keyRow("Part of", id: "crew-summary-part-of") { keyButton(program.key, task: program) }
+            keyRow(PhoneMessages.crewSummaryPartOf(), id: "crew-summary-part-of") { keyButton(program.key, task: program) }
         }
     }
 
     /// Each blocker by its key only (INF-2528); when each wait was recorded is the task record's.
     private func blockedBy() -> some View {
-        keyRow("Blocked by", id: "crew-summary-blocked") {
+        keyRow(PhoneMessages.crewSummaryBlockedBy(), id: "crew-summary-blocked") {
             ForEach(task.blockedBy, id: \.self) { key in keyButton(key, task: tasks.first { $0.key == key }) }
         }
     }
@@ -152,8 +152,8 @@ struct PhoneCrewSummary: View {
         let waiting = parts.filter { $0.status == "open" }.count
         if finished + running.count + waiting > 0 {
             VStack(alignment: .leading, spacing: 0) {
-                factRow("Parts") {
-                    Text("\(finished) finished, \(running.count) running, \(waiting) waiting")
+                factRow(PhoneMessages.crewSummaryParts()) {
+                    Text(PhoneMessages.crewPartsCount(finished: String(finished), running: String(running.count), waiting: String(waiting)))
                         .accessibilityIdentifier("crew-program-counts")
                 }
                 GeometryReader { geometry in
@@ -172,7 +172,7 @@ struct PhoneCrewSummary: View {
                 .frame(height: 3).padding(.leading, Self.labelWidth + Self.labelGap).padding(.top, 5)
                 .accessibilityHidden(true)
                 if !running.isEmpty {
-                    factRow("Running") {
+                    factRow(PhoneMessages.crewSummaryRunning()) {
                         PhoneFlowRow(spacing: 10) {
                             ForEach(running) { part in
                                 HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -204,19 +204,19 @@ struct PhoneCrewSummary: View {
         // The plan is drawn until the task is done or dropped.
         let plan = facts.status.mark == "done" || facts.status.mark == "dropped" ? nil : facts.plan.flatMap { $0.items.isEmpty ? nil : $0 }
         VStack(alignment: .leading, spacing: Self.rowGap) {
-            factRow("Task") {
+            factRow(PhoneMessages.uiTaskFactsTask()) {
                 Text(facts.title).foregroundStyle(PhoneTheme.text).fontWeight(.medium).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("crew-summary-task")
             }
             if !project.isEmpty {
-                factRow("Project") {
+                factRow(PhoneMessages.uiTaskFactsProject()) {
                     Text(project).foregroundStyle(PhoneTheme.text).fontWeight(.medium).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("crew-summary-project")
                 }
             }
             // Held open while the record is read, so the sheet does not jump.
             if !facts.read || facts.now != nil {
-                factRow("Now") {
+                factRow(PhoneMessages.uiTaskFactsNow()) {
                     HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                         Text(facts.now?.text ?? " ").lineLimit(1).truncationMode(.tail)
                             .accessibilityIdentifier("crew-summary-now")
@@ -227,12 +227,12 @@ struct PhoneCrewSummary: View {
             }
             if let plan {
                 let counts = PhoneTaskFacts.planCounts(plan.items)
-                factRow("Progress") {
+                factRow(PhoneMessages.uiTaskFactsProgress()) {
                     HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
-                        Text("\(counts.done) of \(counts.total)").font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize()
-                        if counts.skipped > 0 { Text("· \(counts.skipped) skipped").font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize() }
+                        Text(PhoneMessages.uiTaskFactsPlanCount(done: String(counts.done), total: String(counts.total))).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize()
+                        if counts.skipped > 0 { Text(PhoneMessages.uiTaskFactsPlanSkipped(count: counts.skipped)).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize() }
                         Text("·").foregroundStyle(PhoneTheme.muted)
-                        Text(counts.current ?? (counts.done == counts.total ? "All done" : "Between items")).lineLimit(1)
+                        Text(counts.current ?? (counts.done == counts.total ? PhoneMessages.uiTaskFactsAllDone() : PhoneMessages.uiTaskFactsBetweenItems())).lineLimit(1)
                             .accessibilityIdentifier("crew-summary-plan")
                         Spacer(minLength: 0)
                         if let at = plan.at { PhoneFactAge(words: PhoneTaskFacts.relativeAge(at, now: max(now, at))) }
@@ -255,7 +255,7 @@ struct PhoneCrewSummary: View {
             if facts.model != nil || change != nil || checks != nil {
                 HStack(alignment: .top, spacing: PhoneTheme.space4) {
                     if let model = facts.model {
-                        cell("Model") {
+                        cell(PhoneMessages.uiTaskFactsModel()) {
                             HStack(spacing: PhoneTheme.space2) {
                                 Text(model).lineLimit(1).truncationMode(.tail).accessibilityIdentifier("crew-summary-model")
                                 if let tier = facts.tier { PhoneSlotBadge(slot: tier).fixedSize() }
@@ -263,7 +263,7 @@ struct PhoneCrewSummary: View {
                         }.layoutPriority(0)
                     }
                     if change != nil || checks != nil {
-                        cell(change?.noun ?? "Checks") {
+                        cell(change?.noun ?? PhoneMessages.uiTaskFactsChecks()) {
                             HStack(spacing: PhoneTheme.space2) {
                                 if let change {
                                     Text(change.label ?? change.noun).lineLimit(1).accessibilityIdentifier("crew-summary-change")
@@ -281,7 +281,7 @@ struct PhoneCrewSummary: View {
                 }
             }
             if let review = facts.delivery?.review {
-                cell("Review") {
+                cell(PhoneMessages.uiTaskFactsReview()) {
                     HStack(spacing: 4) { PhoneFactDot(state: review.dot); Text(review.words).accessibilityIdentifier("crew-summary-review") }
                 }
             }
@@ -409,10 +409,10 @@ struct PhoneSlotBadge: View {
 
     var body: some View {
         let (label, color, bars): (String, Color, Int) = switch slot {
-        case "premium": ("Premium", PhoneTheme.slotPremium, 4)
-        case "high": ("Hard", PhoneTheme.slotHigh, 3)
-        case "low": ("Simple", PhoneTheme.slotLow, 1)
-        default: ("Normal", PhoneTheme.slotMedium, 2)
+        case "premium": (PhoneMessages.uiSlotPremium(), PhoneTheme.slotPremium, 4)
+        case "high": (PhoneMessages.uiSlotHigh(), PhoneTheme.slotHigh, 3)
+        case "low": (PhoneMessages.uiSlotLow(), PhoneTheme.slotLow, 1)
+        default: (PhoneMessages.uiSlotMedium(), PhoneTheme.slotMedium, 2)
         }
         HStack(spacing: 6) {
             HStack(alignment: .bottom, spacing: 2) {

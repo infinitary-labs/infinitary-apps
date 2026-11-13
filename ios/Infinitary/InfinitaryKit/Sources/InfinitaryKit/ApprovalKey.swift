@@ -123,6 +123,7 @@ public struct ApprovalKey: Sendable, Equatable {
     static func confirmationFailure(_ error: Error, isolatedPhoneTest: Bool) -> PhoneError {
         guard isolatedPhoneTest else { return .refused(notConfirmed) }
         let failure = error as NSError
+        // i18n-exempt: native error details for the isolated simulator journey's assertion, not for a person
         return .refused("\(notConfirmed) LocalAuthentication: domain=\(failure.domain), code=\(failure.code), description=\(failure.localizedDescription)")
     }
 
@@ -227,13 +228,13 @@ public struct ApprovalKey: Sendable, Equatable {
         let context = LAContext()
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
         switch context.biometryType {
-        case .faceID: return "Face ID or the passcode"
-        case .touchID: return "Touch ID or the passcode"
-        case .opticID: return "Optic ID or the passcode"
-        default: return "the passcode"
+        case .faceID: return PhoneMessages.phoneApprovalConfirmFaceId()
+        case .touchID: return PhoneMessages.phoneApprovalConfirmTouchId()
+        case .opticID: return PhoneMessages.phoneApprovalConfirmOpticId()
+        default: return PhoneMessages.phoneApprovalConfirmPasscode()
         }
         #else
-        return "the passcode"
+        return PhoneMessages.phoneApprovalConfirmPasscode()
         #endif
     }
 
@@ -244,12 +245,12 @@ public struct ApprovalKey: Sendable, Equatable {
     }
     #endif
 
-    static let unsupported = "This device cannot keep a Secrets approval. Set a passcode, then try again."
-    static let unusable = "This phone’s saved Secrets approval cannot be used. Turn on Approves secret uses in Settings again."
-    static let notConfirmed = "Not confirmed. Nothing was allowed."
-    static let notKept = "Could not keep this phone’s Secrets approval. Unlock your phone and try again."
-    static let damaged = "This phone’s saved Secrets approval is damaged. Set up approvals again in Settings."
-    static let changed = "This phone’s saved Secrets approval changed, so nothing was replaced."
+    static var unsupported: String { PhoneMessages.phoneApprovalUnsupported() }
+    static var unusable: String { PhoneMessages.phoneApprovalUnusable() }
+    static var notConfirmed: String { PhoneMessages.phoneApprovalNotConfirmed() }
+    static var notKept: String { PhoneMessages.phoneApprovalNotKept() }
+    static var damaged: String { PhoneMessages.phoneApprovalDamaged() }
+    static var changed: String { PhoneMessages.phoneApprovalChanged() }
     private static var storageError: PhoneError { .refused(notKept) }
 }
 

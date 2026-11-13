@@ -109,3 +109,12 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | purge (task data) | 清除 | Settings → General's button and its confirm; distinct from 移除 for a device. |
 | Diagnostics (Settings → Sharing) | 诊断 | |
 | redacted (decision records) | 脱敏 | The mainland word for records with personal details stripped. |
+| join (the phone joins a computer) | 连接 |  |
+| forget (a computer, on the phone) | 忘记 | Leave stays 离开. |
+| fingerprint (a computer's key) | 指纹 |  |
+| passcode (iOS) | 密码 | iOS's word. |
+| the code (the join code to scan) | 二维码 |  |
+| A phone (the item under Devices) | “一部手机” |  |
+| Approves secret uses (switch) | 批准机密使用 | The computer's Settings → Devices should show the same words. |
+| Steer (button) | 引导 |  |
+| Theme: Device / Dark / Light | 主题：跟随设备 / 深色 / 浅色 |  |

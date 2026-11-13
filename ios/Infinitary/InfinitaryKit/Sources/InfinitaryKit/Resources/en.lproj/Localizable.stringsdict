@@ -291,5 +291,341 @@
       <string>%1$ld actions</string>
     </dict>
   </dict>
+  <key>phoneMediaPicturePosition</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ of %1$ld</string>
+      <key>other</key>
+      <string>%2$@ of %1$ld</string>
+    </dict>
+  </dict>
+  <key>phoneAddressSweeping</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Trying %1$ld address on this network…</string>
+      <key>other</key>
+      <string>Trying %1$ld addresses on this network…</string>
+    </dict>
+  </dict>
+  <key>phoneSceneProgramParts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Program, %1$ld running part</string>
+      <key>other</key>
+      <string>Program, %1$ld running parts</string>
+    </dict>
+  </dict>
+  <key>phoneCardsReplyTooLong</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Keep your reply within %1$ld character.</string>
+      <key>other</key>
+      <string>Keep your reply within %1$ld characters.</string>
+    </dict>
+  </dict>
+  <key>phoneRecordCrewEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld earlier entries are not shown.</string>
+      <key>other</key>
+      <string>%1$ld earlier entries are not shown.</string>
+    </dict>
+  </dict>
+  <key>phoneRecordResultLines</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld lines · %2$@</string>
+      <key>other</key>
+      <string>%1$ld lines · %2$@</string>
+    </dict>
+  </dict>
+  <key>phoneRecordResultCut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld more characters are not shown.</string>
+      <key>other</key>
+      <string>%1$ld more characters are not shown.</string>
+    </dict>
+  </dict>
+  <key>phoneAskedLabelThrough</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ · %3$@ · through %1$ld task</string>
+      <key>other</key>
+      <string>%2$@ · %3$@ · through %1$ld tasks</string>
+    </dict>
+  </dict>
+  <key>phoneRecordPartsDo</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its %1$ld part does the work</string>
+      <key>other</key>
+      <string>Its %1$ld parts do the work</string>
+    </dict>
+  </dict>
+  <key>phoneRecordFoldFiledPlanMessages</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Why it was filed, why there was no plan and your %1$ld message</string>
+      <key>other</key>
+      <string>Why it was filed, why there was no plan and your %1$ld messages</string>
+    </dict>
+  </dict>
+  <key>phoneRecordFoldFiledMessages</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Why it was filed and your %1$ld message</string>
+      <key>other</key>
+      <string>Why it was filed and your %1$ld messages</string>
+    </dict>
+  </dict>
+  <key>phoneRecordFoldPlanMessages</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Why there was no plan and your %1$ld message</string>
+      <key>other</key>
+      <string>Why there was no plan and your %1$ld messages</string>
+    </dict>
+  </dict>
+  <key>phoneRecordFoldMessages</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Your %1$ld message</string>
+      <key>other</key>
+      <string>Your %1$ld messages</string>
+    </dict>
+  </dict>
+  <key>phoneRecordDropWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ is still waiting on this work. Dropping this task will not start it.</string>
+      <key>other</key>
+      <string>%1$ld tasks are still waiting on this work (%2$@). Dropping this task will not start them.</string>
+    </dict>
+  </dict>
+  <key>phoneRecordDropUnderway</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ is already working and will not be stopped.</string>
+      <key>other</key>
+      <string>%1$ld tasks are already working (%2$@) and will not be stopped.</string>
+    </dict>
+  </dict>
+  <key>phoneRecordDropPartsPlanned</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its part %2$@ stays planned.</string>
+      <key>other</key>
+      <string>Its %1$ld parts (%2$@) stay planned.</string>
+    </dict>
+  </dict>
+  <key>phoneRecordDropPartsStarted</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its part %2$@ has started and keeps working.</string>
+      <key>other</key>
+      <string>Its %1$ld parts that started (%2$@) keep working.</string>
+    </dict>
+  </dict>
+  <key>phoneRowMoveMustFinishFirst</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ must finish first. The dependency stays.</string>
+      <key>other</key>
+      <string>%2$@ must finish first. The dependencies stay.</string>
+    </dict>
+  </dict>
+  <key>phoneTaskFactsPartsDoWork</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its %1$ld part does the work</string>
+      <key>other</key>
+      <string>Its %1$ld parts do the work</string>
+    </dict>
+  </dict>
+  <key>phoneTaskFactsWaitingOnTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Waiting on %1$ld task</string>
+      <key>other</key>
+      <string>Waiting on %1$ld tasks</string>
+    </dict>
+  </dict>
+  <key>phoneChecksCounted</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld %2$@</string>
+      <key>other</key>
+      <string>%1$ld %2$@</string>
+    </dict>
+  </dict>
 </dict>
 </plist>

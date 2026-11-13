@@ -116,3 +116,11 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | session, transcript (never said) | المحادثة | |
 | plugin, extension (never said) | لوحة | |
 | error (never said) | تعذّر … | A line says what could not be done ("تعذّر فتح هذه اللوحة."). |
+| Steer (button) | إرشاد | توجيه is a knowledge direction. |
+| Allow (secrets approval button) | «سماح» |  |
+| Approves secret uses (switch) | «يوافق على استخدام الأسرار» | The computer's Settings → Devices should show the same words. |
+| fingerprint (a computer's key) | بصمة |  |
+| passcode (iOS) | رمز الدخول | Apple's Arabic word. |
+| A phone (the item under Devices) | «هاتف» |  |
+| Theme: Device / Dark / Light | السمة: الجهاز / داكن / فاتح |  |
+| seconds (short unit) | ث | Durations read "{minutes} د {seconds} ث". |

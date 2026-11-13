@@ -164,51 +164,10 @@ export function phoneRawWordsIn(source: string): RawWords[] {
 
 /**
  * The phone's files that still hold raw words, with how many runs each
- * holds. It only shrinks: the change that moves a file's words into the
- * catalog lowers or removes its entry, until the ledger is empty.
+ * holds. It is empty: every word the phone's own Swift writes for a person
+ * is in the catalog, and a file that gains one fails the check.
  */
-export const PHONE_RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
-  "ios/Infinitary/InfinitaryApp/CardMediaView.swift": 14,
-  "ios/Infinitary/InfinitaryApp/CardWebView.swift": 17,
-  "ios/Infinitary/InfinitaryApp/CodeScanner.swift": 3,
-  "ios/Infinitary/InfinitaryApp/InfinitaryApp.swift": 32,
-  "ios/Infinitary/InfinitaryApp/MessageComposer.swift": 17,
-  "ios/Infinitary/InfinitaryApp/NearbyMacs.swift": 1,
-  "ios/Infinitary/InfinitaryApp/PhoneAddressSheet.swift": 35,
-  "ios/Infinitary/InfinitaryApp/PhoneCardBodies.swift": 2,
-  "ios/Infinitary/InfinitaryApp/PhoneCardParts.swift": 7,
-  "ios/Infinitary/InfinitaryApp/PhoneCards.swift": 31,
-  "ios/Infinitary/InfinitaryApp/PhoneCharacter.swift": 1,
-  "ios/Infinitary/InfinitaryApp/PhoneComputerSheet.swift": 23,
-  "ios/Infinitary/InfinitaryApp/PhoneCrewScene.swift": 10,
-  "ios/Infinitary/InfinitaryApp/PhoneCrewSummary.swift": 21,
-  "ios/Infinitary/InfinitaryApp/PhoneGoogleSection.swift": 10,
-  "ios/Infinitary/InfinitaryApp/PhoneHideKeyboard.swift": 1,
-  "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift": 1,
-  "ios/Infinitary/InfinitaryApp/PhoneModel.swift": 13,
-  "ios/Infinitary/InfinitaryApp/PhoneSceneRoster.swift": 5,
-  "ios/Infinitary/InfinitaryApp/PhoneSceneTouches.swift": 3,
-  "ios/Infinitary/InfinitaryApp/PhoneSettingsSheet.swift": 38,
-  "ios/Infinitary/InfinitaryApp/PhoneTaskRecord.swift": 43,
-  "ios/Infinitary/InfinitaryApp/PhoneTasks.swift": 11,
-  "ios/Infinitary/InfinitaryApp/PhoneWorkspace.swift": 18,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ApprovalKey.swift": 12,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/CardValues.swift": 7,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/JoinLink.swift": 7,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneFormats.swift": 4,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIdentity.swift": 6,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneLook.swift": 3,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneRecordRules.swift": 72,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneRowMoves.swift": 43,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecrets.swift": 8,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift": 3,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSSHKey.swift": 2,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneTaskFacts.swift": 72,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneWork.swift": 16,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PinnedTransport.swift": 3,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ReadOnlySession.swift": 5,
-  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/SSHJoin.swift": 15,
-};
+export const PHONE_RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {};
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const showing = process.argv.indexOf("--show");

@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compileCatalogs, readCatalogs } from "../scripts/generate-messages";
+import {
+  compileCatalogs,
+  PHONE_INFO_PLIST,
+  PHONE_MESSAGES_PATH,
+  readCatalogs,
+} from "../scripts/generate-messages";
 import * as knowledgeWords from "../src/panels/knowledge/messages.generated";
 
 // The approved plan (INF-3674, question 5 and "What done looks like"): the
@@ -24,7 +29,9 @@ function german(edit: (messages: Record<string, unknown>) => void): string {
 
 describe("the message compiler", () => {
   it("compiles the project's own catalogs with no problem", () => {
-    expect(compileCatalogs(readCatalogs()).problems).toEqual([]);
+    expect(
+      compileCatalogs(readCatalogs(), readFileSync(PHONE_INFO_PLIST, "utf8")).problems,
+    ).toEqual([]);
   });
 
   it("compiles a whole translation into a branch of each message", () => {
@@ -116,5 +123,34 @@ describe("an app panel's own messages", () => {
   it("speak English in a frame that names no language", () => {
     vi.stubGlobal("document", { documentElement: { lang: "" } });
     expect(knowledgeWords.knowledgePanelTabConcepts()).toBe(catalog.knowledgePanelTabConcepts);
+  });
+});
+
+// The approved plan for the phone's languages (INF-3675, piece 2): the phone's
+// own words and its three permission prompts move into the catalog. The
+// phone's own words compile into the phone alone, and iOS reads the prompts
+// in the phone's language from InfoPlist.strings.
+describe("the phone's own messages", () => {
+  const infoPlist = readFileSync(PHONE_INFO_PLIST, "utf8");
+
+  it("compile into the phone's typed messages and stay out of the desktop's file", () => {
+    const { output, phone } = compileCatalogs({ en: english }, infoPlist);
+    expect(phone[PHONE_MESSAGES_PATH]).toContain("func `phoneCommonCancel`()");
+    expect(output).not.toContain("phoneCommonCancel");
+  });
+
+  it("word each permission prompt in InfoPlist.strings, and refuse an Info.plist that drifted from the catalog", () => {
+    const { phone, problems } = compileCatalogs({ en: english }, infoPlist);
+    expect(problems).toEqual([]);
+    expect(phone["ios/Infinitary/InfinitaryApp/en.lproj/InfoPlist.strings"]).toContain(
+      `"NSCameraUsageDescription" = ${JSON.stringify(catalog.phonePromptCamera)};`,
+    );
+    const drifted = infoPlist.replace(
+      String(catalog.phonePromptFaceId),
+      "Infinitary uses Face ID.",
+    );
+    expect(compileCatalogs({ en: english }, drifted).problems).toEqual([
+      expect.stringContaining("NSFaceIDUsageDescription must read as"),
+    ]);
   });
 });

@@ -77,7 +77,7 @@ public final class PhoneSignInReturnListener: @unchecked Sendable {
             guard let self else { connection.cancel(); return }
             var head = head
             if let data { head.append(data) }
-            if let end = head.range(of: Data("\r\n\r\n".utf8)) {
+            if let end = head.range(of: Data("\r\n\r\n".utf8)) { // i18n-exempt: the HTTP head's end, not words
                 self.answer(connection, String(decoding: head[..<end.lowerBound], as: UTF8.self))
             } else if error != nil || done || head.count >= 16 * 1024 {
                 connection.cancel()
@@ -104,6 +104,7 @@ public final class PhoneSignInReturnListener: @unchecked Sendable {
 
     private func send(_ connection: NWConnection, _ answer: PhoneSignInAnswer) {
         let body = Data(answer.page.utf8)
+        // i18n-exempt: HTTP status phrases, not shown
         let reason = answer.status == 200 ? "OK" : answer.status == 405 ? "Method Not Allowed" : "Not OK"
         let head = "HTTP/1.1 \(answer.status) \(reason)\r\ncontent-type: text/html; charset=utf-8\r\ncontent-length: \(body.count)\r\nconnection: close\r\n\r\n"
         connection.send(content: Data(head.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })

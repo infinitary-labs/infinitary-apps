@@ -109,3 +109,11 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | revision (of a knowledge record) | versão | Kept apart from "revisão", which is review. |
 | hold (on a task) | retenção | "está retida", "quando a retenção acabar"; as in "a retém" for a merge. |
 | task board / its lanes | quadro de tarefas / Aguardando você, Backlog, Na fila, Trabalhando, Concluídas · 7 d | |
+| join (the phone joins a computer) | conectar-se a |  |
+| forget (a computer, on the phone) | Esquecer | Pairs with "Sair" for Leave. |
+| fingerprint (a computer's key) | impressão digital |  |
+| passcode (iOS) | código | iOS says "Face ID e Código". |
+| A phone (the item under Devices) | Um celular |  |
+| Approves secret uses (switch) | Aprova usos de segredos | The computer's Settings → Devices should show the same words. |
+| Steer (button) | Orientar |  |
+| Theme: Device / Dark / Light | Tema: Dispositivo / Escuro / Claro |  |

@@ -23,7 +23,7 @@ struct PhoneCharacter: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Your first mate")
+        .accessibilityLabel(PhoneMessages.phoneCharacterFirstMate())
         .accessibilityValue(state.rawValue)
         .accessibilityIdentifier("phone-character")
         .onAppear { visible = true; syncClock() }

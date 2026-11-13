@@ -54,9 +54,9 @@ struct PhoneCrewScene: View {
                     .allowsHitTesting(false).accessibilityHidden(true)
             }
             .background { keyboardCommands(roster: roster, viewport: viewport) }
-            .accessibilityLabel("Crew scene")
-            .accessibilityValue(browsing ? "Browsing crew" : "Not browsing")
-            .accessibilityHint("Swipe to browse. Shift-Command-C starts crew browsing; arrow keys pan it. Tab selects a crewmate, Space opens their task, and Escape stops browsing.")
+            .accessibilityLabel(PhoneMessages.phoneSceneLabel())
+            .accessibilityValue(browsing ? PhoneMessages.phoneSceneBrowsing() : PhoneMessages.phoneSceneNotBrowsing())
+            .accessibilityHint(PhoneMessages.phoneSceneHint())
             .accessibilityIdentifier("crew-scene")
             .onAppear {
                 if !centered {
@@ -129,7 +129,7 @@ struct PhoneCrewScene: View {
     }
     @ViewBuilder private func keyboardCommands(roster: PhoneSceneRoster, viewport: PhoneSceneViewport) -> some View {
         if visible && messageContext.cardsVisible && phase == .active && record == nil && preview == nil && computerPreview == nil {
-            Button("Browse crew") { dismissPhoneKeyboard(); browsing = true; selectedCrew = nil }
+            Button(PhoneMessages.phoneSceneBrowse()) { dismissPhoneKeyboard(); browsing = true; selectedCrew = nil }
                 .keyboardShortcut("c", modifiers: [.command, .shift]).hidden()
             // Unmodified keys reach the app only as priority commands of the current first responder.
             // The scene holds that ownership only while browsing and releases it with every stop.
@@ -195,9 +195,9 @@ struct PhoneCrewScene: View {
                 Text(computer.name).font(PhoneFont.headline)
                 Spacer()
                 Button { computerPreview = nil } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
-                    .accessibilityLabel("Close computer preview")
+                    .accessibilityLabel(PhoneMessages.phoneSceneCloseComputerPreview())
             }
-            if !computer.reachable { Text("Activity unknown").foregroundStyle(PhoneTheme.secondary) }
+            if !computer.reachable { Text(PhoneMessages.phoneSceneActivityUnknown()).foregroundStyle(PhoneTheme.secondary) }
             ForEach(computer.tasks) { task in
                 Button { preview = task; previewComputer = computer.id; computerPreview = nil } label: {
                     VStack(alignment: .leading, spacing: 4) {
@@ -232,8 +232,8 @@ struct PhoneSceneControls: View {
                 preview = task; previewComputer = computer; computerPreview = nil
             }
             Color.clear.frame(width: 280, height: 280)
-                .accessibilityElement(children: .ignore).accessibilityLabel("Your first mate")
-                .accessibilityValue(observed ? state.rawValue : "Activity unknown").accessibilityIdentifier("phone-character")
+                .accessibilityElement(children: .ignore).accessibilityLabel(PhoneMessages.phoneCharacterFirstMate())
+                .accessibilityValue(observed ? state.rawValue : PhoneMessages.phoneSceneActivityUnknown()).accessibilityIdentifier("phone-character")
                 .position(x: roster.homeX + offset.width, y: roster.height / 2 + offset.height)
                 .allowsHitTesting(false)
             if roster.computers.count > 1 {
@@ -242,7 +242,7 @@ struct PhoneSceneControls: View {
                         Button(computer.name) { preview = nil; computerPreview = computer.id }
                             .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).frame(minWidth: 44, minHeight: 44)
                             .accessibilityIdentifier("crew-computer-" + computer.id)
-                        if !computer.reachable { Text("Activity unknown").font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted) }
+                        if !computer.reachable { Text(PhoneMessages.phoneSceneActivityUnknown()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted) }
                     }.position(x: computer.x + offset.width, y: roster.height / 2 + computer.radius + 24 + offset.height)
                 }
             }

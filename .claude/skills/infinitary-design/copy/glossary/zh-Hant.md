@@ -122,3 +122,11 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | restore (Secrets from a backup) | 還原 | Kept apart from 復原, which the recovery key and recovery states use. |
 | Diagnostics (Settings → Sharing) | 診斷 | |
 | redacted (decision records) | 去識別化 | Taiwan's word for records with personal details stripped. |
+| join (the phone joins a computer) | 加入 |  |
+| forget (a computer, on the phone) | 忘記 | As Apple's 忘記此網路; Leave stays 退出. |
+| fingerprint (a computer's key) | 指紋 |  |
+| the code (to scan) / comparison code | 條碼 / 代碼 | One is scanned, the other read and compared. |
+| A phone (the item under Devices) | 「手機」 |  |
+| Approves secret uses (switch) | 核准使用機密 | The computer's Settings → Devices should show the same words. |
+| Steer (button) | 引導 | 指引 is a standing direction. |
+| Theme: Device / Dark / Light | 主題：跟隨裝置 / 深色 / 淺色 |  |

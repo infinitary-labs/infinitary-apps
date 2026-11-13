@@ -1,3 +1,4 @@
+import InfinitaryKit
 import SwiftUI
 
 /// INF-3106 direction B, the captain's picks: while the software keyboard is up for a field, a keyboard-down button sits
@@ -24,7 +25,7 @@ private struct PhoneHideKeyboardButton: View {
         Button(action: dismissPhoneKeyboard) {
             circle.frame(width: 44, height: height).contentShape(Rectangle())
         }
-        .accessibilityLabel("Hide keyboard")
+        .accessibilityLabel(PhoneMessages.phoneHideKeyboard())
         .accessibilityIdentifier("hide-keyboard")
     }
 

@@ -44,7 +44,7 @@ public enum PhoneJSON: Codable, Sendable, Equatable {
 public func phoneQuestionWords(_ text: String, open: Bool) -> String {
     let words = open ? text.trimmingCharacters(in: .whitespacesAndNewlines)
         : text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-    return words.isEmpty ? "A picture" : words
+    return words.isEmpty ? PhoneMessages.phoneAskedPicture() : words
 }
 
 /// Where a card's work came from (INF-2326), as the Mac read it: the captain's message that filed or started it,
@@ -89,18 +89,18 @@ public struct PhoneAsked: Equatable, Sendable {
     /// "You asked · 9:10 AM", with the date in front when it was not today, as the Mac writes it, then
     /// "· through 3 tasks" when the source is on another task; "From INF-2081" for the nearest task.
     public func label(now: Date = Date(), calendar: Calendar = .current) -> String {
-        if kind == .from { return "From \(key ?? "")" }
+        if kind == .from { return PhoneMessages.phoneAskedFrom(key: key ?? "") }
         let name: String
         switch kind {
-        case .said: name = "You said"
-        case .chose: name = card.map { "You chose on “\($0)”" } ?? "You chose"
-        case .automation: name = "Run by an automation"
-        default: name = "You asked"
+        case .said: name = PhoneMessages.phoneAskedSaid()
+        case .chose: name = card.map { PhoneMessages.phoneAskedChoseOn(card: $0) } ?? PhoneMessages.phoneAskedChose()
+        case .automation: name = PhoneMessages.phoneAskedAutomation()
+        default: name = PhoneMessages.phoneAskedAsked()
         }
         let time = PhoneFormats.time(at)
-        let when = calendar.isDate(at, inSameDayAs: now) ? time : "\(PhoneFormats.monthDay(at)), \(time)"
-        let tail = through.map { " · through \($0) \($0 == 1 ? "task" : "tasks")" } ?? ""
-        return "\(name) · \(when)\(tail)"
+        let when = calendar.isDate(at, inSameDayAs: now) ? time : PhoneMessages.phoneAskedDateTime(date: PhoneFormats.monthDay(at), time: time)
+        guard let through else { return PhoneMessages.phoneAskedLabel(name: name, when: when) }
+        return PhoneMessages.phoneAskedLabelThrough(count: through, name: name, when: when)
     }
 }
 

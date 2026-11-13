@@ -20,6 +20,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/Fonts/Font-licenses.txt",
     "ios/Infinitary/InfinitaryApp/Fonts/JetBrainsMono.ttf",
     "ios/Infinitary/InfinitaryApp/Fonts/SpaceGrotesk.ttf",
+    // Each language's InfoPlist.strings, the words of the permission prompts every part can raise.
+    "ios/Infinitary/InfinitaryApp/en.lproj/",
     "ios/Infinitary/InfinitaryApp/InfinitaryApp.swift",
     "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-LICENSE.txt",

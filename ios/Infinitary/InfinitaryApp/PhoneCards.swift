@@ -305,11 +305,11 @@ struct PhoneCards: View {
 
     private var pager: some View {
         HStack(spacing: PhoneTheme.space2) {
-            Button { page(-1) } label: { Label("Previous card", systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
+            Button { page(-1) } label: { Label(PhoneMessages.uiCardStackPrevious(), systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
                 .disabled(!canPagePrevious).accessibilityIdentifier("previous-card")
             PhoneCardPagerMenu(pager: pagerMenu)
             Button { page(1) } label: {
-                Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+                Label(PhoneMessages.uiCardStackNext(), systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     .overlay(alignment: .topTrailing) {
                         if session.stack.dropFirst(index + 1).contains(where: { !session.hasSeen($0) }) {
                             Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
@@ -320,7 +320,7 @@ struct PhoneCards: View {
             // INF-1524, the captain's pick: on Home a new card is counted here rather than in a pill over the stage.
             if !fresh.isEmpty {
                 Button { selected = fresh[0].id; past = nil } label: {
-                    Text("\(fresh.count) new").font(PhoneFont.mono).foregroundStyle(PhoneTheme.accent).frame(minHeight: 44)
+                    Text(PhoneMessages.uiCardStackNew(count: fresh.count)).font(PhoneFont.mono).foregroundStyle(PhoneTheme.accent).frame(minHeight: 44)
                 }.accessibilityIdentifier("card-new")
             }
         }
@@ -329,7 +329,7 @@ struct PhoneCards: View {
                 .frame(width: 0, height: 0)
         }
     }
-    private var pagerLabel: String { past != nil ? "Past card" : "\(index + 1) of \(session.stack.count)" }
+    private var pagerLabel: String { past != nil ? PhoneMessages.phoneCardsPagerPast() : PhoneMessages.phoneCardsPagerPosition(position: String(index + 1), total: String(session.stack.count)) }
     /// The cards on the stack not yet read, besides the one shown.
     private var fresh: [PhoneCard] {
         session.stack.filter { $0.id != card?.id && !session.hasSeen($0) }
@@ -402,7 +402,7 @@ struct PhonePagerKeys: UIViewRepresentable {
         var previousPage: (() -> Void)?
         var nextPage: (() -> Void)?
         private weak var owner: UIViewController?
-        private let commands = [("[", "Previous card", -1), ("]", "Next card", 1)].map { input, title, delta in
+        private let commands = [("[", PhoneMessages.uiCardStackPrevious(), -1), ("]", PhoneMessages.uiCardStackNext(), 1)].map { input, title, delta in
             let command = UIKeyCommand(title: title, action: #selector(UIApplication.infinitaryPageCard(_:)), input: input,
                                        modifierFlags: [.command, .shift], propertyList: delta)
             if #available(iOS 26, *) { command.repeatBehavior = .nonRepeatable }
@@ -996,7 +996,7 @@ private struct PhoneCardPane: View {
                         Button(task.key) { onTask(task.key) }
                             .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).buttonStyle(.plain)
                             .frame(minHeight: 28).contentShape(Rectangle())
-                            .accessibilityHint("Opens its record").accessibilityIdentifier("card-task-key")
+                            .accessibilityHint(PhoneMessages.phoneCardsTaskKeyHint()).accessibilityIdentifier("card-task-key")
                     }
                     if let place = card.value["place"].text {
                         Text(place).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-place")
@@ -1065,9 +1065,9 @@ private struct PhoneCardPane: View {
             if let failure = host.failure {
                 Text(failure).foregroundStyle(PhoneTheme.secondary)
                 if host.reading["of"].numeric != nil {
-                    Text("Choices use the last saved answers. Retry to read the card again.").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                    Text(PhoneMessages.phoneCardsRetryNote()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                 }
-                Button("Retry") {
+                Button(PhoneMessages.phoneCommonRetry()) {
                     let fill = host.reading["answers"]; host.close(); problem = nil
                     host = Self.bodyHost(card, session, fill, heightLag: CardWebHost.retriedHeightLag)
                     bodies?.replace(card, with: host)
@@ -1096,7 +1096,7 @@ private struct PhoneCardPane: View {
             }
             if let notice = host.notice { Text(notice).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-notice") }
             if card.value["attachment"] != .null {
-                PhoneBrowserStrip(attachment: card.value["attachment"], session: session) { host.notice = "Do this on \(session.mac.name)." }
+                PhoneBrowserStrip(attachment: card.value["attachment"], session: session) { host.notice = PhoneMessages.phoneCardsDoThisOn(computer: session.mac.name) }
             }
             // A computer from before every note had its button still sends only an answer's Done here.
             if !card.isPast, card.value["noteDone"] == .null, let taskID = card.value["answerDone"]["taskId"].text {
@@ -1181,7 +1181,7 @@ private struct PhoneCardPane: View {
                     Button { pressNote() } label: {
                         HStack(spacing: 6) {
                             Text(label)
-                            if pending == Self.noteDoneID { ProgressView().controlSize(.mini).accessibilityLabel("Sending") }
+                            if pending == Self.noteDoneID { ProgressView().controlSize(.mini).accessibilityLabel(PhoneMessages.phoneCommonSending()) }
                         }
                     }
                     .buttonStyle(PhoneChoiceStyle(.primary))
@@ -1203,13 +1203,13 @@ private struct PhoneCardPane: View {
                     ForEach(Array(footerOrder.enumerated()), id: \.offset) { _, action in
                         Button { choose(action) } label: {
                             HStack(spacing: 6) {
-                                Text(action["label"].text ?? "Choose")
-                                if pending != nil && pending == action["id"].text { ProgressView().controlSize(.mini).accessibilityLabel("Sending") }
+                                Text(action["label"].text ?? PhoneMessages.phoneCardsChooseFallback())
+                                if pending != nil && pending == action["id"].text { ProgressView().controlSize(.mini).accessibilityLabel(PhoneMessages.phoneCommonSending()) }
                             }
                         }
                         .buttonStyle(PhoneChoiceStyle(footerKind(action), chosen: chosenID == action["id"]))
                         .disabled(card.isPast || host.changing || !session.canChange || !host.revealed)
-                        .accessibilityValue(chosenID == action["id"] ? "Chosen" : "")
+                        .accessibilityValue(chosenID == action["id"] ? PhoneMessages.phoneCardsChosen() : "")
                         .accessibilityIdentifier("card-action-\(action["id"].text ?? "")")
                     }
                 }
@@ -1232,7 +1232,7 @@ private struct PhoneCardPane: View {
                                 Image(uiImage: photo.image).resizable().scaledToFill()
                                     .frame(width: 44, height: 44).clipped()
                                     .overlay(alignment: .topTrailing) { Image(systemName: "xmark.circle.fill").foregroundStyle(PhoneTheme.text, PhoneTheme.surface) }
-                            }.accessibilityLabel("Remove photo").accessibilityIdentifier("reply-photo-chip")
+                            }.accessibilityLabel(PhoneMessages.phoneCommonRemovePhoto()).accessibilityIdentifier("reply-photo-chip")
                         }
                     }
                 }
@@ -1262,12 +1262,12 @@ private struct PhoneCardPane: View {
                     .disabled(host.changing || !host.drawn)
                 }
                 Menu {
-                    Button { libraryOpen = true } label: { Label("Choose photos", systemImage: "photo.on.rectangle") }
+                    Button { libraryOpen = true } label: { Label(PhoneMessages.phoneCardsChoosePhotos(), systemImage: "photo.on.rectangle") }
                     if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                        Button { cameraOpen = true } label: { Label("Take photo", systemImage: "camera") }
+                        Button { cameraOpen = true } label: { Label(PhoneMessages.phoneCardsTakePhoto(), systemImage: "camera") }
                     }
                 } label: {
-                    Label("Add photos", systemImage: "photo").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                    Label(PhoneMessages.phoneCardsAddPhotos(), systemImage: "photo").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                 }
                 .disabled(photos.count >= PhoneLimits.images || host.changing).accessibilityIdentifier("reply-photos")
                 TextField(PhoneCardWords.replyHint, text: $reply, axis: .vertical).lineLimit(1...5)
@@ -1281,13 +1281,13 @@ private struct PhoneCardPane: View {
                         .frame(width: 32, height: 32)
                         .background(canSendReply ? PhoneTheme.accent : PhoneTheme.muted, in: Circle())
                         .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
-                }.accessibilityLabel("Send reply").accessibilityIdentifier("send-reply")
+                }.accessibilityLabel(PhoneMessages.phoneCardsSendReply()).accessibilityIdentifier("send-reply")
                     .disabled(!canSendReply)
                     .hidesKeyboardBefore(replyFocus == side && messageContext.keyboardUp, diameter: 32)
             }.phoneInput()
                 // INF-589 item 11: the line under the composer says why; the reply row only dims.
                 .opacity(session.canChange ? 1 : 0.5)
-            if reply.utf16.count > PhoneLimits.reply { Text("Keep your reply within \(PhoneLimits.reply.formatted()) characters.").foregroundStyle(PhoneTheme.warning) }
+            if reply.utf16.count > PhoneLimits.reply { Text(PhoneMessages.phoneCardsReplyTooLong(count: PhoneLimits.reply)).foregroundStyle(PhoneTheme.warning) }
         }
     }
 
@@ -1302,8 +1302,8 @@ private struct PhoneCardPane: View {
     private func approvalFoot(_ use: PhoneApprovals.Use, _ secrets: PhoneSecrets) -> some View {
         let allows = secrets.standing == .enrolled && use.nonce != nil
         let names = use.secrets.map(use.named)
-        let phrases = names.count == 1 ? ["the \(names[0]) secret to "]
-            : names.count == 2 ? ["the \(names[0]) and \(names[1]) secrets to ", "the \(names[1]) and \(names[0]) secrets to "]
+        let phrases = names.count == 1 ? ["the \(names[0]) secret to "] // i18n-exempt: matched in the computer's own title, not shown
+            : names.count == 2 ? ["the \(names[0]) and \(names[1]) secrets to ", "the \(names[1]) and \(names[0]) secrets to "] // i18n-exempt: matched in the computer's own title, not shown
             : []
         let titleNames = phrases.contains { card.title.contains($0) }
         return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
@@ -1313,8 +1313,8 @@ private struct PhoneCardPane: View {
                 Text("\(name)  \(detail)")
                     .accessibilityLabel(use.named(secret)).accessibilityIdentifier("approval-secret-\(secret.ref)")
             }
-            Text(allows ? "Each Allow here asks for \(ApprovalKey.confirmation)."
-                : "To allow here, turn on Approves secret uses in Settings. You can also allow on \(session.mac.name).")
+            Text(allows ? PhoneMessages.phoneCardsApprovalAsks(confirmation: ApprovalKey.confirmation)
+                : PhoneMessages.phoneCardsApprovalTurnOn(computer: session.mac.name))
                 .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-note")
             PhoneChoiceRow {
                 if allows {
@@ -1335,7 +1335,7 @@ private struct PhoneCardPane: View {
             switch try await decision() {
             case .accepted: break
             case .stillWaiting:
-                throw PhoneRequestError("Your computer did not accept this decision. The use is still waiting.")
+                throw PhoneRequestError(PhoneMessages.phoneCardsApprovalStillWaiting())
             case .refused(let reason): throw PhoneRequestError(reason)
             }
             activeHost.chosen = true
@@ -1345,7 +1345,8 @@ private struct PhoneCardPane: View {
     private var kind: some View {
         let attention = !card.isPast && card.author == "host"
         let ended = !card.isPast && card.value["ended"] != .null
-        return Text(card.isPast ? "Past" : ended ? "Ended" : attention ? "Attention" : card.actions.isEmpty ? "Note" : "Decision")
+        return Text(card.isPast ? PhoneMessages.cardPastMark() : ended ? PhoneMessages.phoneCardsKindEnded() : attention ? PhoneMessages.uiCardKindAttention()
+            : card.actions.isEmpty ? PhoneMessages.uiCardKindNote() : PhoneMessages.uiCardKindDecision())
             .font(.custom("JetBrainsMono-Regular", size: 11, relativeTo: .caption2))
             .foregroundStyle(attention ? PhoneTheme.danger : card.actions.isEmpty || card.isPast ? PhoneTheme.secondary : PhoneTheme.accent)
             .padding(.horizontal, PhoneTheme.space2).padding(.vertical, 4)
@@ -1371,7 +1372,7 @@ private struct PhoneCardPane: View {
     }
 
     private func choose(_ action: PhoneJSON) {
-        if onMac(action) { host.notice = "Do this on \(session.mac.name)."; return }
+        if onMac(action) { host.notice = PhoneMessages.phoneCardsDoThisOn(computer: session.mac.name); return }
         let id = action["id"].text
         perform {
             pending = id
@@ -1379,7 +1380,7 @@ private struct PhoneCardPane: View {
             let snapshot = try await host.submissionReading()
             let reading = snapshot.value
             guard !action["default"].flag || reading["answered"] == reading["of"] else {
-                throw PhoneRequestError("Answer each required question first.")
+                throw PhoneRequestError(PhoneMessages.phoneCardsAnswerRequiredFirst())
             }
             // INF-1524: the field's words go with the choice as its anything-else answer, as the Mac's withAnythingElse sends them.
             let words = replyWords
@@ -1567,7 +1568,7 @@ private struct PhoneCardPane: View {
         for item in photoSelection {
             do {
                 guard photos.count < PhoneLimits.images, let bytes = try await item.loadTransferable(type: Data.self) else {
-                    throw PhoneError.refused("Could not add this photo. Choose another.")
+                    throw PhoneError.refused(PhoneMessages.phoneCardsPhotoNotAdded())
                 }
                 photos.append(try PhonePhoto(bytes: bytes))
             } catch is CancellationError { return }

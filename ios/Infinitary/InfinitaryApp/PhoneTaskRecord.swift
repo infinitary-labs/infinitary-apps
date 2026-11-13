@@ -145,9 +145,9 @@ struct PhoneTaskRecord: View {
             if let attention, attention.urgent { attentionBox(attention) }
             if let filing = task.filing, task.status == "open" {
                 VStack(alignment: .leading, spacing: 4) {
-                    PhoneFactLabel(text: "Why")
-                    Text(filing.why.isEmpty ? "No reason was recorded." : filing.why).foregroundStyle(PhoneTheme.text)
-                    Text(filing.verdict.map { "First mate: \($0)" } ?? "Your first mate has not said yet.").foregroundStyle(PhoneTheme.muted)
+                    PhoneFactLabel(text: PhoneMessages.phoneRecordWhy())
+                    Text(filing.why.isEmpty ? PhoneMessages.phoneRecordNoReason() : filing.why).foregroundStyle(PhoneTheme.text)
+                    Text(filing.verdict.map { PhoneMessages.phoneRecordFirstMateVerdict(verdict: $0) } ?? PhoneMessages.phoneRecordFirstMatePending()).foregroundStyle(PhoneTheme.muted)
                 }.accessibilityElement(children: .combine).accessibilityIdentifier("task-record-why")
             }
             if let attention, !attention.urgent { attentionBox(attention) }
@@ -159,10 +159,10 @@ struct PhoneTaskRecord: View {
                 relations
                 goal(now: now)
                 if let project = task.repo?.name ?? session.board?.projects.first(where: { $0.id == task.projectId })?.name {
-                    row("Project") { Text(project).foregroundStyle(PhoneTheme.text) }
+                    row(PhoneMessages.phoneRecordProject(), id: "task-record-project") { Text(project).foregroundStyle(PhoneTheme.text) }
                 }
                 if let current = facts.now {
-                    row("Now") {
+                    row(PhoneMessages.phoneRecordNow(), id: "task-record-now") {
                         HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                             Text(current.text).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("task-record-now")
                             PhoneFactAge(words: PhoneTaskFacts.relativeAge(current.at, now: max(now, current.at)))
@@ -190,12 +190,12 @@ struct PhoneTaskRecord: View {
     /// Part of, Waits on, Holds up and Parts; each key opens that task's record in this sheet.
     @ViewBuilder private var relations: some View {
         if let parent = task.parentId.flatMap({ id in session.board?.tasks.first { $0.id == id } }) {
-            row("Part of", id: "task-record-part-of") { keys([parent.key]) }
+            row(PhoneMessages.phoneRecordPartOf(), id: "task-record-part-of") { keys([parent.key]) }
         }
-        if !task.blockedBy.isEmpty { row("Waits on", id: "task-record-waits-on") { keys(task.blockedBy) } }
-        if let blocks = task.blocks, !blocks.isEmpty { row("Holds up", id: "task-record-holds-up") { keys(blocks) } }
+        if !task.blockedBy.isEmpty { row(PhoneMessages.phoneRecordWaitsOn(), id: "task-record-waits-on") { keys(task.blockedBy) } }
+        if let blocks = task.blocks, !blocks.isEmpty { row(PhoneMessages.phoneRecordHoldsUp(), id: "task-record-holds-up") { keys(blocks) } }
         if let children = task.children, children.total > 0 {
-            row("Parts") { Text("\(children.closed) of \(children.total) closed").foregroundStyle(PhoneTheme.text) }
+            row(PhoneMessages.phoneRecordParts(), id: "task-record-parts") { Text(PhoneMessages.phoneRecordPartsClosed(closed: String(children.closed), total: String(children.total))).foregroundStyle(PhoneTheme.text) }
         }
     }
 
@@ -219,7 +219,7 @@ struct PhoneTaskRecord: View {
     @ViewBuilder private func goal(now: Double) -> some View {
         let fold = PhoneRecord.wordsFoldName(task)
         if task.goal != nil || fold != nil {
-            row("Goal") {
+            row(PhoneMessages.phoneRecordGoal(), id: "task-record-goal") {
                 VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                     if let goal = task.goal { Text(goal).foregroundStyle(PhoneTheme.text).textSelection(.enabled) }
                     if let fold {
@@ -239,20 +239,20 @@ struct PhoneTaskRecord: View {
         return VStack(alignment: .leading, spacing: PhoneTheme.space3) {
             if let filing = task.filing, task.status != "open" {
                 VStack(alignment: .leading, spacing: 4) {
-                    PhoneFactLabel(text: "Why it was filed")
-                    Text(filing.why.isEmpty ? "No reason was recorded." : filing.why)
-                    if !closed { Text(filing.verdict.map { "First mate: \($0)" } ?? "Your first mate has not said yet.").foregroundStyle(PhoneTheme.muted) }
+                    PhoneFactLabel(text: PhoneMessages.phoneRecordWhyFiled())
+                    Text(filing.why.isEmpty ? PhoneMessages.phoneRecordNoReason() : filing.why)
+                    if !closed { Text(filing.verdict.map { PhoneMessages.phoneRecordFirstMateVerdict(verdict: $0) } ?? PhoneMessages.phoneRecordFirstMatePending()).foregroundStyle(PhoneTheme.muted) }
                 }
             }
             if let skipped = task.skippedPlanBecause, !skipped.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    PhoneFactLabel(text: "Why your first mate built without a plan")
+                    PhoneFactLabel(text: PhoneMessages.phoneRecordWhyNoPlan())
                     Text(skipped)
                 }
             }
             if !words.isEmpty || !asks.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    PhoneFactLabel(text: "You said")
+                    PhoneFactLabel(text: PhoneMessages.phoneRecordYouSaid())
                     if !words.isEmpty {
                         Text(words).foregroundStyle(PhoneTheme.text).textSelection(.enabled)
                             .padding(.leading, PhoneTheme.space3)
@@ -274,18 +274,18 @@ struct PhoneTaskRecord: View {
     private func progress(_ plan: PhoneTask.Plan, now: Double) -> some View {
         let counts = PhoneTaskFacts.planCounts(plan.items)
         let fold = planEarlier ? nil : PhoneTaskFacts.foldPlan(plan.items, state: \.state)
-        return row("Progress") {
+        return row(PhoneMessages.phoneRecordProgress(), id: "task-record-progress") {
             VStack(alignment: .leading, spacing: 6) {
-                Text("\(counts.done) of \(counts.total)").font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                Text(PhoneMessages.phoneRecordPlanCount(done: String(counts.done), total: String(counts.total))).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
                 if let fold {
-                    Button("Show earlier · \(fold.folded.count)") { planEarlier = true }.buttonStyle(.plain)
+                    Button(PhoneMessages.phoneRecordShowEarlier(count: String(fold.folded.count))) { planEarlier = true }.buttonStyle(.plain)
                         .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).frame(minHeight: 44)
                 }
                 ForEach(Array((fold?.rest ?? plan.items).enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                         PhonePlanMark(state: item.state).alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
                         (Text(item.label).foregroundStyle(item.state == "current" ? PhoneTheme.text : PhoneTheme.secondary)
-                         + Text(item.state == "skipped" ? " skipped" : "").foregroundStyle(PhoneTheme.muted))
+                         + Text(item.state == "skipped" ? " " + PhoneMessages.phoneRecordPlanSkipped() : "").foregroundStyle(PhoneTheme.muted))
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if item.state == "done", let since = item.since {
                             PhoneFactAge(words: PhoneTaskFacts.relativeAge(since, now: max(now, since)))
@@ -306,7 +306,7 @@ struct PhoneTaskRecord: View {
             VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                 PhoneFlowRow(spacing: PhoneTheme.space3) {
                     if let model = facts.model {
-                        cell("Model") {
+                        cell(PhoneMessages.phoneRecordModel()) {
                             HStack(spacing: PhoneTheme.space2) {
                                 Text(model).lineLimit(1).accessibilityIdentifier("task-record-model")
                                 if let tier = facts.tier { PhoneSlotBadge(slot: tier).fixedSize() }
@@ -314,10 +314,10 @@ struct PhoneTaskRecord: View {
                         }
                     }
                     if let reasoning = facts.reasoning {
-                        cell("Reasoning") { Text(reasoning).accessibilityIdentifier("task-record-reasoning") }
+                        cell(PhoneMessages.phoneRecordReasoning()) { Text(reasoning).accessibilityIdentifier("task-record-reasoning") }
                     }
                     if change != nil || checks != nil {
-                        cell(change?.noun ?? "Checks") {
+                        cell(change?.noun ?? PhoneMessages.phoneRecordChecks()) {
                             HStack(spacing: PhoneTheme.space2) {
                                 if let change {
                                     let words = change.label ?? change.noun
@@ -335,10 +335,10 @@ struct PhoneTaskRecord: View {
                         }
                     }
                     if let review = facts.delivery?.review {
-                        cell("Review") { HStack(spacing: 4) { PhoneFactDot(state: review.dot); Text(review.words) } }
+                        cell(PhoneMessages.phoneRecordReview()) { HStack(spacing: 4) { PhoneFactDot(state: review.dot); Text(review.words) } }
                     }
-                    if !delivery.isEmpty { cell("Delivery") { Text(delivery).accessibilityIdentifier("task-record-delivery") } }
-                    if let runsOn = task.runsOn { cell("Runs on") { Text(runsOn.label).accessibilityIdentifier("task-record-runs-on") } }
+                    if !delivery.isEmpty { cell(PhoneMessages.phoneRecordDelivery()) { Text(delivery).accessibilityIdentifier("task-record-delivery") } }
+                    if let runsOn = task.runsOn { cell(PhoneMessages.phoneRecordRunsOn()) { Text(runsOn.label).accessibilityIdentifier("task-record-runs-on") } }
                 }
                 if let reason = facts.reason { Text(reason).font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted) }
             }
@@ -364,7 +364,7 @@ struct PhoneTaskRecord: View {
             }.fixedSize(horizontal: false, vertical: true).padding(.top, PhoneTheme.space2)
         } label: {
             HStack(spacing: PhoneTheme.space2) {
-                Text("More").foregroundStyle(PhoneTheme.secondary)
+                Text(PhoneMessages.phoneRecordMore()).foregroundStyle(PhoneTheme.secondary)
                 if !moreOpen && !more.preview.isEmpty { Text(more.preview).font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted).lineLimit(1) }
             }
         }.tint(PhoneTheme.muted).accessibilityIdentifier("task-record-more")
@@ -399,10 +399,10 @@ struct PhoneTaskRecord: View {
                 ForEach(task.cards ?? []) { card in
                     Button { show(card) } label: {
                         HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
-                            Text(card.kind == "note" ? "Note" : "Decision").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
+                            Text(card.kind == "note" ? PhoneMessages.phoneRecordCardNote() : PhoneMessages.phoneRecordCardDecision()).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
                             Text(card.title).foregroundStyle(PhoneTheme.text).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(card.state == "open" ? (card.minimized == true ? "Put aside" : "On the stage")
-                                 : "\(card.ending ?? "Closed") · \(PhoneTaskFacts.relativeAge(card.at, now: max(now, card.at)))")
+                            Text(card.state == "open" ? (card.minimized == true ? PhoneMessages.phoneRecordCardAside() : PhoneMessages.phoneRecordCardOnStage())
+                                 : PhoneMessages.phoneRecordCardEnded(age: PhoneTaskFacts.relativeAge(card.at, now: max(now, card.at)), ending: card.ending ?? PhoneMessages.phoneRecordCardClosed()))
                                 .font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted)
                         }.padding(.vertical, PhoneTheme.space3).frame(minHeight: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain).disabled(!session.canChange && card.state == "open" && card.minimized == true)
@@ -440,7 +440,7 @@ struct PhoneTaskRecord: View {
             let now = clock.date.timeIntervalSince1970 * 1000
             VStack(alignment: .leading, spacing: PhoneTheme.space3) {
                 if earlier > 0 && !activityEarlier {
-                    Button("Show earlier · \(earlier)") { activityEarlier = true }.buttonStyle(.plain)
+                    Button(PhoneMessages.phoneRecordShowEarlier(count: String(earlier))) { activityEarlier = true }.buttonStyle(.plain)
                         .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).frame(minHeight: 44)
                         .accessibilityIdentifier("record-activity-earlier")
                 }
@@ -515,17 +515,17 @@ struct PhoneTaskRecord: View {
     /// The transcript's rows sit straight in the record's lazy stack, so only the lines on screen are laid out.
     @ViewBuilder private var crewContent: some View {
         if let crew = transcript {
-            if crew.earlier > 0 { Text("\(crew.earlier) earlier entries are not shown.").font(PhoneFont.caption) }
+            if crew.earlier > 0 { Text(PhoneMessages.phoneRecordCrewEarlier(count: crew.earlier)).font(PhoneFont.caption) }
             if crew.lines.isEmpty { Text(PhoneRecordWords.crewEmpty).foregroundStyle(PhoneTheme.secondary) }
             ForEach(crew.lines) { line in
                 VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                     if line.kind == "sent" && line.from != "captain" {
                         Text(line.from == "firstmate" ? PhoneRecordWords.crewFirstmate : PhoneRecordWords.crewApp).font(PhoneFont.caption)
                     }
-                    if line.sending { Text("Sending…").font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).accessibilityIdentifier("crew-sending") }
+                    if line.sending { Text(PhoneMessages.phoneCommonSendingEllipsis()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).accessibilityIdentifier("crew-sending") }
                     if let name = line.name { Text("\(name) · \(line.target ?? "")").font(PhoneFont.mono) }
                     if line.kind == "brief" || line.kind == "report" {
-                        DisclosureGroup(line.summary ?? (line.kind == "brief" ? PhoneRecordWords.crewBrief : "Report")) { Text(line.words).textSelection(.enabled) }
+                        DisclosureGroup(line.summary ?? (line.kind == "brief" ? PhoneRecordWords.crewBrief : PhoneMessages.phoneRecordReport())) { Text(line.words).textSelection(.enabled) }
                     } else {
                         Text(line.words).textSelection(.enabled)
                             .foregroundStyle(line.kind == "sent" && line.from == "captain" ? PhoneTheme.captain : PhoneTheme.text)
@@ -662,7 +662,7 @@ struct PhoneTaskRecord: View {
                 change(.steer(task: task.id, text: draft, before: PhoneIntentLedger.captainSteers(transcript)), .steer,
                        args: [task.id, draft], clearDraft: true, from: "steer-task")
             } label: {
-                Label("Steer", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly)
+                Label(PhoneMessages.phoneRecordSteer(), systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly)
                     .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
             }.disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || busy || !session.canChange)
                 .keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("steer-task")
@@ -715,7 +715,7 @@ struct PhoneTaskRecord: View {
             defer { busy = false }
             do {
                 let answer: PhoneAnswer = try await session.request(.run, args: args ?? [task.id, op])
-                if answer.ok { sent += 1; dropping = false } else { problem = answer.text ?? "Your computer could not make this change." }
+                if answer.ok { sent += 1; dropping = false } else { problem = answer.text ?? PhoneMessages.phoneTaskChangeRefused() }
             } catch { problem = error.localizedDescription }
             await refresh(crewmate: false)
         }
@@ -729,7 +729,7 @@ struct PhoneTaskRecord: View {
             defer { busy = false }
             do {
                 let answer: PhoneAnswer = try await session.request(.run, args: [task.id, "show-card"])
-                guard answer.ok else { problem = answer.text ?? "Your computer could not show the card."; return }
+                guard answer.ok else { problem = answer.text ?? PhoneMessages.phoneRecordShowCardRefused(); return }
                 if let card = try await session.readDetail(task.id).waitingCardId ?? task.waitingCardId {
                     messageContext.restoring = card
                     leave()
@@ -742,7 +742,7 @@ struct PhoneTaskRecord: View {
     /// back, says why in the foot and puts the draft back.
     private func change(_ kind: PhoneIntent.Kind, _ channel: PhoneRequest, args: [Any], clearDraft: Bool = false, from control: String) {
         guard !busy, session.canChange else { return }
-        if clearDraft && draft.utf16.count > PhoneLimits.steer { problem = "This message is too long. Shorten it before sending."; return }
+        if clearDraft && draft.utf16.count > PhoneLimits.steer { problem = PhoneMessages.phoneRecordSteerTooLong(); return }
         let words = draft
         busy = true; pressed = control; problem = nil
         if clearDraft { draft = "" }
@@ -771,14 +771,14 @@ private struct CrewResult: View {
     @State private var open = false
     @State private var text: String?
     var body: some View {
-        DisclosureGroup("\(result.lines) lines · \(result.preview)", isExpanded: $open) {
-            Text(text ?? "Reading…").textSelection(.enabled).font(PhoneFont.mono)
+        DisclosureGroup(PhoneMessages.phoneRecordResultLines(count: result.lines, preview: result.preview), isExpanded: $open) {
+            Text(text ?? PhoneMessages.phoneRecordReading()).textSelection(.enabled).font(PhoneFont.mono)
         }.task(id: open) {
             guard open else { return }
             do {
                 let read: PhoneResultText? = try await session.request(.result, args: [taskID, result.ref])
                 guard !Task.isCancelled else { return }
-                text = read.map { $0.text + ($0.cut > 0 ? "\n\($0.cut) more characters are not shown." : "") } ?? "No result to read."
+                text = read.map { $0.text + ($0.cut > 0 ? "\n" + PhoneMessages.phoneRecordResultCut(count: $0.cut) : "") } ?? PhoneMessages.phoneRecordNoResult()
             } catch { text = error.localizedDescription }
         }
     }

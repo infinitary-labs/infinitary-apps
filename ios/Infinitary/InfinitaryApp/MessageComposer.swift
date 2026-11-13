@@ -51,7 +51,7 @@ struct MessageComposer: View {
                                     Image(uiImage: photo.image).resizable().scaledToFill()
                                         .frame(width: 44, height: 44).clipped()
                                         .overlay(alignment: .topTrailing) { Image(systemName: "xmark.circle.fill").foregroundStyle(PhoneTheme.text, PhoneTheme.surface) }
-                                }.accessibilityLabel("Remove photo").accessibilityIdentifier("photo-chip")
+                                }.accessibilityLabel(PhoneMessages.phoneCommonRemovePhoto()).accessibilityIdentifier("photo-chip")
                             }
                         }
                     }.frame(maxWidth: compact ? 96 : .infinity)
@@ -62,10 +62,10 @@ struct MessageComposer: View {
                     PhotosPicker(selection: $selection, maxSelectionCount: max(1, PhoneLimits.images - photos.count), matching: .images) {
                         // The glyph is about 22 points wide, centered in its 44: 5 + 11 puts it 16 in. The inset stays
                         // inside the button, so its frame starts where the box does, on the reading column.
-                        Label("Photos", systemImage: "photo").labelStyle(.iconOnly).frame(width: 44, height: 48)
+                        Label(PhoneMessages.phoneComposerPhotos(), systemImage: "photo").labelStyle(.iconOnly).frame(width: 44, height: 48)
                             .padding(.leading, 5).contentShape(Rectangle())
                     }.disabled(loading || photos.count >= PhoneLimits.images).accessibilityIdentifier("add-photos")
-                    TextField("Give your first mate a task", text: $text, axis: .vertical)
+                    TextField(PhoneMessages.phoneComposerPlaceholder(), text: $text, axis: .vertical)
                         .lineLimit(1...(compact ? 2 : 4)).focused($focused)
                         .padding(.vertical, PhoneTheme.space3).frame(minHeight: 48)
                         .padding(.leading, 3)
@@ -78,7 +78,7 @@ struct MessageComposer: View {
                             .frame(width: 44, height: 48).padding(.trailing, 2).contentShape(Rectangle())
                     }.keyboardShortcut(.return, modifiers: .command)
                         .disabled(!canSend)
-                        .accessibilityLabel("Send")
+                        .accessibilityLabel(PhoneMessages.phoneCommonSend())
                         .accessibilityIdentifier("send-message")
                         // INF-3106 direction B: the keyboard-down circle before send, matching its 32 points.
                         .hidesKeyboardBefore(focused && messageContext.keyboardUp, diameter: 32, height: 48)
@@ -88,7 +88,7 @@ struct MessageComposer: View {
                     .opacity(session.canChange ? 1 : 0.5)
                     .phoneInput(floating: true)
             }
-            if loading { ProgressView("Adding photos…") }
+            if loading { ProgressView(PhoneMessages.phoneComposerAddingPhotos()) }
             if let words = session.changesOffLine {
                 Text(words).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     .frame(maxWidth: .infinity).multilineTextAlignment(.center)
@@ -150,7 +150,7 @@ struct MessageComposer: View {
         let bubble = UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 5, topTrailingRadius: 14)
         return VStack(alignment: .leading, spacing: 4) {
             BubbleColumn {
-                WholeWordsLine(words: round.you.isEmpty ? "A picture" : round.you)
+                WholeWordsLine(words: round.you.isEmpty ? PhoneMessages.phoneComposerPictureOnly() : round.you)
                     .foregroundStyle(PhoneTheme.text)
                     .padding(.vertical, 4).padding(.horizontal, 12)
                     .background(PhoneTheme.text.opacity(0.1), in: bubble)
@@ -167,14 +167,14 @@ struct MessageComposer: View {
                         Button { replyOpen = OpenedReply(round: round) } label: {
                             WholeWordsLine(words: reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
                                 .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
-                        }.buttonStyle(.plain).accessibilityHint("Opens the whole reply")
+                        }.buttonStyle(.plain).accessibilityHint(PhoneMessages.phoneComposerReplyHint())
                             .accessibilityIdentifier("\(id)-reply")
                     } else if newest && session.messageSending {
                         // INF-2553: the message is the last turn at the tap, marked sending until the computer has it.
-                        Text("Sending…").foregroundStyle(PhoneTheme.muted)
+                        Text(PhoneMessages.phoneCommonSendingEllipsis()).foregroundStyle(PhoneTheme.muted)
                             .frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("last-turn-sending")
                     } else {
-                        Text("Working…").foregroundStyle(PhoneTheme.muted)
+                        Text(PhoneMessages.phoneComposerWorking()).foregroundStyle(PhoneTheme.muted)
                             .frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).opacity(strength)
@@ -207,7 +207,7 @@ struct MessageComposer: View {
     /// pictures back in front of anything typed since, and the session says why.
     private func send() {
         guard !loading, session.canChange else { return }
-        guard text.utf16.count <= PhoneLimits.text else { problem = "This message is too long. Shorten it before sending."; return }
+        guard text.utf16.count <= PhoneLimits.text else { problem = PhoneMessages.phoneComposerTooLong(); return }
         let words = text, pictures = photos
         var payload: [String: Any] = ["text": words, "images": pictures.map(\.wire)]
         for (key, value) in messageContext.fields { payload[key] = value }
@@ -236,7 +236,7 @@ struct MessageComposer: View {
         for item in selection {
             do {
                 guard photos.count < PhoneLimits.images, let bytes = try await item.loadTransferable(type: Data.self) else {
-                    throw PhoneError.refused("Could not add this photo. Choose another.")
+                    throw PhoneError.refused(PhoneMessages.phoneComposerPhotoFailed())
                 }
                 try Task.checkCancellation()
                 photos.append(try PhonePhoto(bytes: bytes))
@@ -383,7 +383,7 @@ private struct PhoneReplySheet: View {
                 VStack(alignment: .leading, spacing: PhoneTheme.space5) {
                     BubbleColumn {
                         VStack(alignment: .trailing, spacing: 4) {
-                            Text("You").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
+                            Text(PhoneMessages.phoneComposerYou()).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
                             PhoneQuestionBubble(
                                 text: round.you,
                                 open: $questionOpen,
@@ -394,7 +394,7 @@ private struct PhoneReplySheet: View {
                         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                             HStack(spacing: PhoneTheme.space2) {
                                 MateMark(working: false, still: true).frame(width: 16, height: 16)
-                                Text("First mate").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
+                                Text(PhoneMessages.phoneComposerFirstMate()).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
                             }
                             Text(reply.words ?? reply.text).font(PhoneFont.callout)
                                 .foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
@@ -405,9 +405,9 @@ private struct PhoneReplySheet: View {
                 }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
             }
             .accessibilityIdentifier("reply-note-scroll")
-            .phoneTitle("Reply")
+            .phoneTitle(PhoneMessages.phoneComposerReplyTitle())
             .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }.accessibilityIdentifier("close-reply-note")
+                Button(PhoneMessages.phoneCommonDone()) { dismiss() }.accessibilityIdentifier("close-reply-note")
             } }
         }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
@@ -428,14 +428,14 @@ struct PhonePhoto: Identifiable {
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                 kCGImageSourceCreateThumbnailWithTransform: true,
                 kCGImageSourceThumbnailMaxPixelSize: 2048,
-              ] as CFDictionary) else { throw PhoneError.refused("Could not add this photo. Choose another.") }
+              ] as CFDictionary) else { throw PhoneError.refused(PhoneMessages.phoneComposerPhotoFailed()) }
         try self.init(image: UIImage(cgImage: thumbnail))
     }
 
     init(image: UIImage) throws {
         guard let data = image.jpegData(compressionQuality: 0.85), data.count <= 5 * 1024 * 1024,
               ((data.count + 2) / 3) * 4 <= PhoneLimits.imageBase64 else {
-            throw PhoneError.refused("This photo is too large. Choose a smaller photo.")
+            throw PhoneError.refused(PhoneMessages.phoneComposerPhotoTooLarge())
         }
         self.data = data; self.image = image
     }

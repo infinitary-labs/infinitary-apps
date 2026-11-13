@@ -42,12 +42,12 @@ enum PhoneTab: CaseIterable {
 
     var title: String {
         switch self {
-        case .home: "Home"
-        case .tasks: "Tasks"
-        case .activity: "Activity"
+        case .home: PhoneMessages.phoneTabHome()
+        case .tasks: PhoneMessages.phoneTabTasks()
+        case .activity: PhoneMessages.phoneTabActivity()
         }
     }
-    var identifier: String { "tab-" + title.lowercased() }
+    var identifier: String { "tab-\(self)" }
     /// INF-1334, the captain's icons: a house for Home, a checklist for the tasks, and a pulse line for Activity,
     /// the shape of the app's own activity glyph.
     var symbol: String {
@@ -287,9 +287,9 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     private var sidebar: some View {
         VStack(spacing: 0) {
             if tasks != nil {
-                Picker("Show", selection: $rail) {
-                    Text("Tasks").tag(Rail.tasks)
-                    Text("Activity").tag(Rail.activity)
+                Picker(PhoneMessages.phoneWorkspaceShow(), selection: $rail) {
+                    Text(PhoneMessages.phoneTabTasks()).tag(Rail.tasks)
+                    Text(PhoneMessages.phoneTabActivity()).tag(Rail.activity)
                 }.pickerStyle(.segmented).labelsHidden()
                     .padding([.horizontal, .top], PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
             }
@@ -357,7 +357,7 @@ struct PhoneTabStrip: View {
     private var roundWidth: CGFloat { CGFloat(tabs.count) * (40 + 16.0 / 3) + 8 }
 
     private var picker: some View {
-        Picker("Tabs", selection: $selection) {
+        Picker(PhoneMessages.phoneWorkspaceTabs(), selection: $selection) {
             ForEach(tabs, id: \.self) { tab in
                 Image(systemName: tab.symbol).accessibilityLabel(tab.title).tag(tab).accessibilityIdentifier(tab.identifier)
             }
@@ -379,7 +379,7 @@ struct PhoneTabStrip: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isTabBar)
-        .accessibilityLabel("Tabs")
+        .accessibilityLabel(PhoneMessages.phoneWorkspaceTabs())
         .accessibilityIdentifier("phone-tabs")
     }
 }
@@ -394,7 +394,7 @@ private struct PhoneNoticePill: View {
     var body: some View {
         Button(action: open) {
             HStack(spacing: PhoneTheme.space2) {
-                Text(notice.reply ? "Reply" : "New card").textCase(.uppercase).font(PhoneFont.micro).tracking(1)
+                Text(notice.reply ? PhoneMessages.phoneNoticeReply() : PhoneMessages.phoneNoticeNewCard()).textCase(.uppercase).font(PhoneFont.micro).tracking(1)
                     .foregroundStyle(PhoneTheme.accent).fixedSize()
                 Text(notice.title).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text).lineLimit(1)
             }
@@ -410,9 +410,9 @@ private struct PhoneNoticePill: View {
                 if value.translation.height < -16 || abs(value.translation.width) > 60 { dismiss() }
                 else { withAnimation(.snappy) { drag = .zero } }
             })
-        .accessibilityLabel("\(notice.reply ? "Reply" : "New card"): \(notice.title)")
-        .accessibilityHint("Opens the card")
-        .accessibilityAction(named: "Dismiss", dismiss)
+        .accessibilityLabel(PhoneMessages.phoneNoticeLabel(kind: notice.reply ? PhoneMessages.phoneNoticeReply() : PhoneMessages.phoneNoticeNewCard(), title: notice.title))
+        .accessibilityHint(PhoneMessages.phoneNoticeOpenHint())
+        .accessibilityAction(named: PhoneMessages.phoneNoticeDismiss(), dismiss)
         .accessibilityIdentifier("phone-notice")
     }
 }
@@ -432,7 +432,7 @@ private struct PhoneChangePill: View {
         }
         .buttonStyle(.plain).frame(maxWidth: PhoneColumn.inside)
         .highPriorityGesture(DragGesture(minimumDistance: 12).onEnded { _ in dismiss() })
-        .accessibilityHint("Dismisses this notice")
+        .accessibilityHint(PhoneMessages.phoneNoticeDismissHint())
         .accessibilityIdentifier("change-notice")
     }
 }
@@ -479,7 +479,7 @@ struct PhoneActivity: View {
         ScrollView {
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    if lines.isEmpty { Text("No activity yet").foregroundStyle(PhoneTheme.muted).font(PhoneFont.callout) }
+                    if lines.isEmpty { Text(PhoneMessages.phoneActivityEmpty()).foregroundStyle(PhoneTheme.muted).font(PhoneFont.callout) }
                     ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                         row(line, now: timeline.date)
                             .contentShape(Rectangle())
@@ -514,7 +514,7 @@ struct PhoneActivity: View {
                 if let openTask, task(key) != nil {
                     Button(key) { openTask(key) }.buttonStyle(.plain)
                         .font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).underline().fixedSize()
-                        .accessibilityHint("Opens the task").accessibilityIdentifier("activity-key")
+                        .accessibilityHint(PhoneMessages.phoneActivityOpenTaskHint()).accessibilityIdentifier("activity-key")
                 } else {
                     Text(key).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize()
                 }
@@ -575,15 +575,15 @@ private struct PhoneActivitySummary: View {
                     Circle().fill(PhoneActivity.tone(line.kind)).frame(width: 6, height: 6).accessibilityHidden(true)
                     Text(PhoneActivity.exactTime(line.at)).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
                     Spacer()
-                    Button("Close", action: close).font(PhoneFont.callout).accessibilityIdentifier("close-activity-summary")
+                    Button(PhoneMessages.phoneCommonClose(), action: close).font(PhoneFont.callout).accessibilityIdentifier("close-activity-summary")
                 }
                 Text(line.text).font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
                     .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                     .accessibilityIdentifier("activity-summary-text")
                 if let task {
                     VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        fact("Task", task.title)
-                        if let project { fact("Project", project) }
+                        fact(PhoneMessages.phoneActivityTask(), task.title)
+                        if let project { fact(PhoneMessages.phoneActivityProject(), project) }
                     }
                 }
             }.padding(PhoneTheme.space5)

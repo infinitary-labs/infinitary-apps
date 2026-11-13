@@ -111,3 +111,11 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | revision (of a knowledge record) | versión | Kept apart from "revisión", which is review. |
 | hold (on a task) | retención | "está retenida", "cuando termine su retención"; as in "lo retiene" for a merge. |
 | task board / its lanes | tablero de tareas / Esperándote, Pendientes, En cola, Trabajando, Terminadas · 7 d | |
+| join (the phone joins a computer) | unirse a | "Unirse a tu computadora", "Volver a unirse". |
+| iOS Settings (the phone's own app) | Ajustes | Apple's name; the app's own Settings stays "Configuración". |
+| fingerprint (a computer's key) | huella digital |  |
+| passcode (iOS) | código | As in Apple's "Face ID y código". |
+| A phone (the item under Devices) | Un teléfono |  |
+| Approves secret uses (switch) | Aprueba usos de secretos | The computer's Settings → Devices should show the same words. |
+| Steer (button) | Orientar |  |
+| Theme: Device / Dark / Light | Dispositivo / Oscuro / Claro |  |

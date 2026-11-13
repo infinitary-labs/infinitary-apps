@@ -147,7 +147,7 @@ struct PhoneSceneRoster {
             let pinned = pinnedOrder.filter { ids.contains($0) && !parts.contains($0) }
             let sky = PhoneFixedStars.places(pinned.count, orbits: PhoneFixedStars.orbits(counts: book.counts))
             let skyReach: Double = sky.points.map { Double(max(abs($0.x), abs($0.y))) * Self.ringScale * share }.max() ?? 0
-            return Computer(id: id, name: id == "home" ? homeName : observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? "Computer",
+            return Computer(id: id, name: id == "home" ? homeName : observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? PhoneMessages.phoneSceneComputerFallback(),
                             reachable: inReach && (id == "home" || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: parts,
                             pinned: pinned, sky: sky, skyReach: skyReach, book: book, share: share, radius: radius)
         }
@@ -231,9 +231,9 @@ struct PhoneSceneRoster {
         !computer.reachable
     }
     static func words(_ task: PhoneTask, computer: Computer) -> String {
-        if unknown(task, computer: computer) || task.workPosture?.state == "unknown" { return "Activity unknown" }
-        if task.workPosture?.reason == "checks" { return task.workPosture?.batch != nil ? "Waiting for the batch check" : "Waiting for checks" }
-        return working(task) ? "Working" : task.state
+        if unknown(task, computer: computer) || task.workPosture?.state == "unknown" { return PhoneMessages.phoneSceneActivityUnknown() }
+        if task.workPosture?.reason == "checks" { return task.workPosture?.batch != nil ? PhoneMessages.phoneSceneWaitingBatchCheck() : PhoneMessages.phoneSceneWaitingChecks() }
+        return working(task) ? PhoneMessages.phoneSceneWorking() : task.state
     }
 }
 

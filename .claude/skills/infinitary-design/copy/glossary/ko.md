@@ -122,3 +122,11 @@ Particles after a filled value are avoided by word order, or written in the pair
 | session, transcript | (not used) | 대화 instead |
 | plugin, extension | (not used) | 패널 instead |
 | autonomy | (not used) | 알아서 병합 / 먼저 물어봄 instead |
+| join (the phone joins a computer) | 연결하다 | Pairs with 나가기 for Leave. |
+| forget (a computer, on the phone) | 지우기 | As iOS forgets a network; kept apart from 제거 and 나가기. |
+| fingerprint (a computer's key) | 지문 |  |
+| passcode (iOS) | 암호 | iOS's own word. |
+| A phone (the item under Devices) | 휴대폰 항목 |  |
+| Approves secret uses (switch) | 비밀 정보 사용 승인 | The computer's Settings → Devices should show the same words. |
+| Steer (button) | 지시 보내기 |  |
+| Theme: Device / Dark / Light | 테마: 기기 설정 / 다크 / 라이트 |  |

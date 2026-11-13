@@ -13,13 +13,13 @@ public enum PhoneError: LocalizedError, Sendable {
     case damagedApproval(ApprovalKey.Damage)
     public var errorDescription: String? {
         switch self {
-        case .damagedLink: "This link is damaged. Copy a new link from Devices on your computer."
-        case .unsupportedLink: "Use a link for another computer, not a command for another user."
-        case .wrongMac: "This is not the computer your link names. Nothing was sent."
-        case .unavailable: "Your computer is out of reach. Check that Infinitary is open and both devices share a network."
-        case .invalidReply: "This computer sent an answer Infinitary could not read."
+        case .damagedLink: PhoneMessages.phoneJoinLinkDamaged()
+        case .unsupportedLink: PhoneMessages.phoneJoinLinkUnsupported()
+        case .wrongMac: PhoneMessages.phoneJoinWrongComputer()
+        case .unavailable: PhoneMessages.phoneJoinUnavailable()
+        case .invalidReply: PhoneMessages.phoneJoinInvalidReply()
         case .refused(let reason): reason
-        case .unconfirmed: "Could not confirm the change. Check your computer before sending it again."
+        case .unconfirmed: PhoneMessages.phoneJoinUnconfirmed()
         case .unusableApproval: ApprovalKey.unusable
         case .damagedApproval: ApprovalKey.damaged
         }
@@ -33,7 +33,7 @@ public struct JoinLink: Equatable, Sendable {
     public let kind: String
     /// INF-1183: the address its person typed, at the link's port, tried before the link's own.
     public private(set) var first: String?
-    public var computer: String { (try? Self.url(first ?? addresses[0], path: "/").host) ?? "your computer" }
+    public var computer: String { (try? Self.url(first ?? addresses[0], path: "/").host) ?? PhoneMessages.phoneJoinYourComputer() }
 
     /// The routes in the order a join tries them: the typed address, then the link's own.
     public var routes: [String] {

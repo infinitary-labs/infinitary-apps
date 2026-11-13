@@ -120,10 +120,10 @@ struct AddressJoin: Equatable {
             return true
         } catch {
             if identity == nil { problem = error.localizedDescription }
-            else if needsUnlock(error) { problem = "Could not read this phone’s saved computer. Unlock your phone and try again." }
+            else if needsUnlock(error) { problem = PhoneMessages.phoneModelReadSavedUnlock() }
             else if error is DecodingError || (error as? CocoaError)?.code == .fileReadCorruptFile {
                 return discardDamagedMac()
-            } else { problem = "Could not read this phone’s saved computer. Try again." }
+            } else { problem = PhoneMessages.phoneModelReadSavedRetry() }
             return false
         }
     }
@@ -134,16 +134,16 @@ struct AddressJoin: Equatable {
 
     private func discardDamagedMac() -> Bool {
         guard protectedDataAvailable() else {
-            problem = "Could not read this phone’s saved computer. Unlock your phone and try again."
+            problem = PhoneMessages.phoneModelReadSavedUnlock()
             return false
         }
         do {
             try forget()
-            problem = "Infinitary forgot a damaged connection. Use a new link to join your computer again."
+            problem = PhoneMessages.phoneModelForgotDamaged()
             return true
         } catch {
-            problem = needsUnlock(error) ? "Could not forget this computer. Unlock your phone and try again."
-                : "Could not forget this computer. Try again."
+            problem = needsUnlock(error) ? PhoneMessages.phoneModelForgetUnlock()
+                : PhoneMessages.phoneModelForgetRetry()
             return false
         }
     }
@@ -163,7 +163,7 @@ struct AddressJoin: Equatable {
         guard !busy else { return }
         guard restore(), let identity else { proposal = nil; return }
         guard connection == nil else {
-            proposal = nil; problem = "Leave or forget your saved computer before joining another."
+            proposal = nil; problem = PhoneMessages.phoneModelLeaveBeforeJoining()
             return
         }
         busy = true; proposal = nil; problem = nil
@@ -208,7 +208,7 @@ struct AddressJoin: Equatable {
         var homes = trustedHomes()
         homes.trust(key, for: join.address)
         do { try keep(homes) } catch {
-            addressJoin?.problem = "Could not keep this computer’s fingerprint. Try again."
+            addressJoin?.problem = PhoneMessages.phoneModelKeepFingerprintFailed()
             return
         }
         askForLink()
@@ -291,8 +291,8 @@ struct AddressJoin: Equatable {
             connection?.stop(); connection = nil; secrets = nil; google = nil
             removed = false; proposal = nil; problem = nil
         } catch {
-            problem = needsUnlock(error) ? "Could not forget this computer. Unlock your phone and try again."
-                : "Could not forget this computer. Try again."
+            problem = needsUnlock(error) ? PhoneMessages.phoneModelForgetUnlock()
+                : PhoneMessages.phoneModelForgetRetry()
         }
     }
 
@@ -311,6 +311,7 @@ struct AddressJoin: Equatable {
     /// background time iOS gives the app and closes when iOS ends that time, before the app is suspended.
     private func keepThroughBackgroundTime() {
         guard connection != nil, backgroundTime == .invalid else { return }
+        // i18n-exempt: a background task's name for the system, not shown
         backgroundTime = UIApplication.shared.beginBackgroundTask(withName: "Stay in reach") { [weak self] in
             MainActor.assumeIsolated { self?.backgroundTimeEnded() }
         }
@@ -341,11 +342,11 @@ struct AddressJoin: Equatable {
         let session = ReadOnlySession(mac: mac, phone: identity)
         session.usage = Self.usage
         session.onMacChanged = { [weak self] mac in
-            do { try self?.save(mac) } catch { self?.problem = "Could not keep this computer’s new address." }
+            do { try self?.save(mac) } catch { self?.problem = PhoneMessages.phoneModelKeepAddressFailed() }
         }
         session.onRemoved = { [weak self] in
             guard let self else { return }
-            do { try forget() } catch { problem = "Could not forget this computer. Try Leave again." }
+            do { try forget() } catch { problem = PhoneMessages.phoneModelForgetTryLeave() }
             removed = true
         }
         session.onEmote = { emote in CharacterCues.reacted(emote) }

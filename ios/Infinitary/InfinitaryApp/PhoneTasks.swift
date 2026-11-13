@@ -85,7 +85,7 @@ struct PhoneTasks: View {
                 LazyVStack(alignment: .leading, spacing: PhoneTheme.space2) {
                     // INF-3750: In reach comes before the board's first read, so an empty list says nothing until it is read.
                     if list.isEmpty, !query.isEmpty || list.board != nil {
-                        Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary)
+                        Text(query.isEmpty ? PhoneMessages.phoneTasksEmpty() : PhoneMessages.phoneTasksNoMatch()).foregroundStyle(PhoneTheme.secondary)
                     }
                     // INF-2928 piece 1: only the groups with rows show, as on the Mac, and a search opens every one.
                     ForEach(list.parts) { part in
@@ -113,7 +113,7 @@ struct PhoneTasks: View {
         } action: { _, pulled in
             if pulled && !searchOpen { withAnimation(.snappy) { searchOpen = true } }
         }
-        .background { Button("Find a task") { openSearch() }.keyboardShortcut("f", modifiers: [.command, .shift]).hidden() }
+        .background { Button(PhoneMessages.phoneTasksFind()) { openSearch() }.keyboardShortcut("f", modifiers: [.command, .shift]).hidden() }
         .accessibilityIdentifier("tasks-list")
         .onChange(of: searchFocused) { _, focused in if !focused && query.isEmpty { closeSearch() } }
         .onDisappear { if query.isEmpty { searchOpen = false } }
@@ -121,7 +121,7 @@ struct PhoneTasks: View {
             earlier = []; problem = nil
             let requested = query
             guard !requested.isEmpty, session.contact == "in-reach" else { return }
-            guard requested.utf16.count <= 200 else { problem = "Use a shorter search."; return }
+            guard requested.utf16.count <= 200 else { problem = PhoneMessages.phoneTasksSearchTooLong(); return }
             do {
                 let found: [PhoneTask] = try await session.request(.search, args: [requested])
                 guard !Task.isCancelled, query == requested else { return }
@@ -159,7 +159,7 @@ struct PhoneTasks: View {
 
     private var search: some View {
         HStack(spacing: PhoneTheme.space2) {
-            TextField("Search tasks", text: $query).textFieldStyle(.phone)
+            TextField(PhoneMessages.phoneTasksSearch(), text: $query).textFieldStyle(.phone)
                 .focused($searchFocused).submitLabel(.search)
                 .onAppear {
                     guard focusOnOpen else { return }
@@ -175,7 +175,7 @@ struct PhoneTasks: View {
                 Button { closeSearch() } label: {
                     Image(systemName: "xmark").font(PhoneFont.callout).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain).foregroundStyle(PhoneTheme.muted)
-                    .accessibilityLabel("Close search").accessibilityIdentifier("close-task-search")
+                    .accessibilityLabel(PhoneMessages.phoneTasksCloseSearch()).accessibilityIdentifier("close-task-search")
             }
         }.transition(.move(edge: .top).combined(with: .opacity))
     }
@@ -212,7 +212,7 @@ struct PhoneTasks: View {
                     .contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("group-\(part.id)")
                 .accessibilityLabel("\(part.section.title), \(part.count)")
-                .accessibilityValue(open ? "Expanded" : "Collapsed")
+                .accessibilityValue(open ? PhoneMessages.phoneTasksGroupExpanded() : PhoneMessages.phoneTasksGroupCollapsed())
         } else {
             title.foregroundStyle(PhoneTheme.muted).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("group-\(part.id)")
@@ -386,7 +386,7 @@ struct PhoneTasks: View {
         Task {
             do {
                 let answer: PhoneAnswer = try await session.request(.pin, args: [task.id, task.pinnedAt == nil])
-                if !answer.ok { say(answer.text ?? "Your computer could not make this change.") }
+                if !answer.ok { say(answer.text ?? PhoneMessages.phoneTaskChangeRefused()) }
             } catch { say(error.localizedDescription) }
         }
     }
@@ -397,7 +397,7 @@ struct PhoneTasks: View {
         Task {
             do {
                 let answer: PhoneAnswer = try await session.request(.run, args: args)
-                if !answer.ok { say(answer.text ?? "Your computer could not make this change.") }
+                if !answer.ok { say(answer.text ?? PhoneMessages.phoneTaskChangeRefused()) }
             } catch { say(error.localizedDescription) }
         }
     }
@@ -496,7 +496,7 @@ struct PhoneTasks: View {
             }.padding(.vertical, PhoneTheme.space3).frame(minHeight: 44)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).disabled(!session.canChange).accessibilityIdentifier("minimized-card")
-            .accessibilityLabel(card.title).accessibilityHint("Brings the card back")
+            .accessibilityLabel(card.title).accessibilityHint(PhoneMessages.phoneTasksRestoreHint())
         .overlay(alignment: .bottom) {
             if !last { Rectangle().fill(PhoneTheme.line).frame(height: 1).padding(.leading, Self.markWidth + PhoneTheme.space3) }
         }

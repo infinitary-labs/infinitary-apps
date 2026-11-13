@@ -603,7 +603,10 @@ jobs:
     if: ${{ needs.resolve.outputs.skip != 'true' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # Each GitHub read waits out GitHub not answering for up to 30 minutes
+    # (scripts/phone-order.ts, readGitHub), so a server error never fails the
+    # release; the limit leaves room for one such wait.
+    timeout-minutes: 45
     steps:
       - name: Checkout every branch and tag
         uses: actions/checkout@v4

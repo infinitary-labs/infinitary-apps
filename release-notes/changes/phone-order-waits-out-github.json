@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-order-waits-out-github",
+      "reason": "Release pipeline only: the alpha's phone check waits out a GitHub server error or lost connection instead of failing the release, with no change to the app or to which phone builds it accepts."
+    }
+  ]
+}

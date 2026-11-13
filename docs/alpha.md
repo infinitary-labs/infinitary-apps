@@ -467,6 +467,8 @@ A phone build keeps changing things on a release when the release's view floor r
   Once one was, a stable always waits for such a build, also while a withdrawn version leaves none live.
 
 The Linux packages and the desktop checks wait for the phone job too, so a failed phone job spends no hosted machine minutes on packages that can never publish (INF-3059).
+Only an answer about the phone builds fails the phone job: a server error (HTTP 5xx, 408 or 429) or a lost connection from GitHub says nothing about them, so each read waits it out, 30 seconds apart, for up to 30 minutes, naming each wait in the job's log, as the keyless downloads do (INF-4061: an alpha failed on one 502 while a build that fit was on TestFlight).
+Any other answer, such as a 404, or an answer that is not JSON, fails the job at once, and its time limit leaves room for one such wait.
 Without such a build the phone job fails, and the release job neither signs nor publishes anything; a rehearsal says what it would wait for and never fails on it.
 
 ## Promoting an alpha

@@ -146,15 +146,82 @@ function contractAt(commit: string): Contract {
   );
 }
 
-async function github<T>(path: string, env: NodeJS.ProcessEnv): Promise<T> {
-  const response = await fetch(`https://api.github.com${path}`, {
-    headers: {
-      authorization: `Bearer ${env.GH_TOKEN ?? ""}`,
-      accept: "application/vnd.github+json",
-    },
-  });
-  if (!response.ok) throw new Error(`GitHub answered ${response.status} for ${path}.`);
-  return (await response.json()) as T;
+/** How a GitHub read waits out GitHub not answering: the pause between tries, and how long one read waits. */
+export type Patience = { pauseMs: number; patienceMs: number };
+
+/**
+ * The release's keyless downloads' patience (scripts/fetch-without-credential.sh):
+ * 30 seconds between tries, for up to 30 minutes a read, since GitHub has answered
+ * server errors for over twenty minutes during its own incidents (INF-3224).
+ */
+export const GITHUB_PATIENCE: Patience = { pauseMs: 30_000, patienceMs: 30 * 60_000 };
+
+/** A server error, a timeout or GitHub asking to slow down: none of them is an answer about what was read. */
+const notAnswering = (status: number) => status >= 500 || status === 408 || status === 429;
+
+/** GitHub's answer about what was read, which no waiting changes. */
+class GitHubRefusal extends Error {}
+
+function answerOf<T>(text: string, path: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new GitHubRefusal(`GitHub's answer for ${path} is not JSON.`);
+  }
+}
+
+/**
+ * One read of GitHub's API. Only an answer about what was read fails it: a
+ * refusal, such as a 401 or a 404, fails at once, and so does an answer that is
+ * not JSON. A server error (HTTP 5xx, 408 or 429) or a lost connection says
+ * nothing about the phone builds: GitHub answered one 502 to an old phone run's
+ * job list and an alpha failed, though a build that fit was on TestFlight. Those
+ * are tried again, each wait named in the log, until the read's patience runs
+ * out; the job's time limit leaves room for it (release.yml's phone job).
+ */
+export async function readGitHub<T>(
+  path: string,
+  token: string,
+  {
+    request = fetch,
+    patience = GITHUB_PATIENCE,
+    pause = (ms: number) => new Promise<void>((done) => setTimeout(done, ms)),
+    now = Date.now,
+    log = (line: string) => console.log(line),
+  }: {
+    request?: typeof fetch;
+    patience?: Patience;
+    pause?: (ms: number) => Promise<void>;
+    now?: () => number;
+    log?: (line: string) => void;
+  } = {},
+): Promise<T> {
+  const started = now();
+  for (;;) {
+    let gave: string;
+    try {
+      const response = await request(`https://api.github.com${path}`, {
+        headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" },
+      });
+      const text = await response.text();
+      if (response.ok) return answerOf<T>(text, path);
+      if (!notAnswering(response.status)) throw new GitHubRefusal(`GitHub answered ${response.status} for ${path}.`);
+      gave = `HTTP ${response.status}`;
+    } catch (error) {
+      if (error instanceof GitHubRefusal) throw error;
+      gave = `no answer (${error instanceof Error ? error.message : String(error)})`;
+    }
+    const elapsed = now() - started;
+    const waited = Math.round(elapsed / 1000);
+    if (elapsed >= patience.patienceMs)
+      throw new Error(`GitHub still gave ${gave} for ${path} after ${waited}s of waiting; it is not answering, so the phone builds are unread.`);
+    log(`GitHub gave ${gave} for ${path} after ${waited}s; it is not answering, so the read is tried again in ${patience.pauseMs / 1000}s.`);
+    await pause(patience.pauseMs);
+  }
+}
+
+function github<T>(path: string, env: NodeJS.ProcessEnv): Promise<T> {
+  return readGitHub<T>(path, env.GH_TOKEN ?? "");
 }
 
 /**

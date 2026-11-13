@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   contractOf,
+  GITHUB_PATIENCE,
   phoneChanges,
   phoneRuns,
+  readGitHub,
   storeRelease,
   testFlightBuilds,
 } from "../scripts/phone-order.ts";
@@ -132,6 +134,72 @@ describe("the release order between the phone and the desktop app", () => {
       },
     ]);
     expect(builds).toEqual([{ build: "1.2", source: "c".repeat(40) }]);
+  });
+
+  // INF-4061: alpha run 43384480422 failed when GitHub answered one 502 to this
+  // read of an old phone run's jobs, though a build that fit was on TestFlight.
+  it("waits out GitHub not answering a read, and fails at once on an answer about what was read", async () => {
+    const path =
+      "/repos/infinitary-labs/infinitary/actions/runs/42099484998/jobs?filter=latest&per_page=100";
+    const jobs = {
+      total_count: 1,
+      jobs: [
+        {
+          name: "Requested TestFlight · Confirm TestFlight availability",
+          status: "completed",
+          conclusion: "success",
+        },
+      ],
+    };
+    // GitHub's answers in turn, the last one repeated.
+    const reader = (first: () => Response, ...then: Array<() => Response>) => {
+      let clock = 0;
+      const asked: string[] = [];
+      const waits: string[] = [];
+      const options = {
+        request: (async (url: string | URL | Request) => {
+          asked.push(String(url));
+          return ([first, ...then][Math.min(asked.length - 1, then.length)] ?? first)();
+        }) as typeof fetch,
+        pause: async (ms: number) => {
+          clock += ms;
+        },
+        now: () => clock,
+        log: (line: string) => waits.push(line),
+      };
+      return { read: () => readGitHub(path, "token", options), asked, waits };
+    };
+
+    const lost = () => {
+      throw new TypeError("fetch failed");
+    };
+    const blip = reader(
+      () => new Response("Server Error", { status: 502 }),
+      lost,
+      () => Response.json(jobs),
+    );
+    await expect(blip.read()).resolves.toEqual(jobs);
+    expect(blip.asked).toEqual(Array(3).fill(`https://api.github.com${path}`));
+    expect(blip.waits).toEqual([
+      `GitHub gave HTTP 502 for ${path} after 0s; it is not answering, so the read is tried again in ${GITHUB_PATIENCE.pauseMs / 1000}s.`,
+      `GitHub gave no answer (fetch failed) for ${path} after ${GITHUB_PATIENCE.pauseMs / 1000}s; it is not answering, so the read is tried again in ${GITHUB_PATIENCE.pauseMs / 1000}s.`,
+    ]);
+
+    for (const status of [401, 403, 404]) {
+      const refused = reader(() => new Response("{}", { status }));
+      await expect(refused.read()).rejects.toThrow(`GitHub answered ${status} for ${path}.`);
+      expect(refused.asked).toHaveLength(1);
+    }
+    const garbled = reader(() => new Response("<html>"));
+    await expect(garbled.read()).rejects.toThrow(`GitHub's answer for ${path} is not JSON.`);
+    expect(garbled.asked).toHaveLength(1);
+
+    const down = reader(() => new Response("Service Unavailable", { status: 503 }));
+    const patience = GITHUB_PATIENCE.patienceMs / 1000;
+    await expect(down.read()).rejects.toThrow(
+      `GitHub still gave HTTP 503 for ${path} after ${patience}s of waiting; it is not answering, so the phone builds are unread.`,
+    );
+    expect(down.asked).toHaveLength(GITHUB_PATIENCE.patienceMs / GITHUB_PATIENCE.pauseMs + 1);
   });
 
   // The captain's "enforce this only once the first ios app release is live in app store" and,

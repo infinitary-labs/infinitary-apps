@@ -1,3 +1,4 @@
+import type { FontChoices, FontSlot } from "@shared/fonts";
 import {
   type Appearance,
   DEFAULT_APPEARANCE,
@@ -40,6 +41,13 @@ export type AppearanceSlice = {
   language: string | null;
   setLanguage: (language: string | null) => void;
   /**
+   * The fonts the captain chose for the app, reading and code; a slot left
+   * out is Infinitary's own (docs/fonts.md).
+   */
+  fonts: FontChoices;
+  /** Chooses one slot's font, or Infinitary's own for null. */
+  setFont: (slot: FontSlot, family: string | null) => void;
+  /**
    * Why the last appearance write was refused, beside the control that made
    * it, while the window shows the saved look again. The next write clears it.
    */
@@ -66,11 +74,19 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     showCrewModelNames: appearance.showCrewModelNames ?? true,
     usageUnit: appearance.usageUnit ?? "tokens",
     language: appearance.language ?? null,
+    fonts: appearance.fonts ?? NO_FONTS,
   } satisfies Partial<ShellState>;
   return Object.fromEntries(
-    Object.entries(look).filter(([key, value]) => s[key as keyof typeof look] !== value),
+    Object.entries(look).filter(([key, value]) =>
+      key === "fonts"
+        ? JSON.stringify(s.fonts) !== JSON.stringify(value)
+        : s[key as keyof typeof look] !== value,
+    ),
   );
 }
+
+/** No font chosen: every slot is Infinitary's own. */
+const NO_FONTS: FontChoices = {};
 
 export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
   /** The choice whose write is running, so a refusal is told beside its own control. */
@@ -123,6 +139,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
         showCrewModelNames: s.showCrewModelNames,
         usageUnit: s.usageUnit,
         ...(s.language ? { language: s.language } : {}),
+        ...(Object.keys(s.fonts).length > 0 ? { fonts: s.fonts } : {}),
       };
       return window.infinitary.settings.setAppearance({ ...saved, ...change });
     });
@@ -140,6 +157,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     showCrewModelNames: DEFAULT_APPEARANCE.showCrewModelNames ?? true,
     usageUnit: "tokens",
     language: null,
+    fonts: NO_FONTS,
     appearanceError: null,
     applyAppearance: (appearance) => appearanceSave.apply(appearance),
     refreshAppearance: () => {
@@ -186,6 +204,13 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     setLanguage: (language) => {
       set({ language });
       saveAppearance("language", { language: language ?? undefined });
+    },
+    // A look with no fonts takes Infinitary's own: the core removes the row.
+    setFont: (slot, family) => {
+      const { [slot]: _was, ...others } = get().fonts;
+      const fonts: FontChoices = family ? { ...others, [slot]: family } : others;
+      set({ fonts });
+      saveAppearance("fonts", { fonts: Object.keys(fonts).length > 0 ? fonts : undefined });
     },
   };
 }

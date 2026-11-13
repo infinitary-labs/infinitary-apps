@@ -1,3 +1,4 @@
+import { COMPUTER_LANGUAGES_ATTRIBUTE, computerLanguagesFromArgv } from "@shared/fonts";
 import {
   COMPUTER_LOCALE_ATTRIBUTE,
   languageFromArgv,
@@ -57,6 +58,9 @@ const windowMaterial = windowMaterialFromArgv(process.argv);
 const platform = platformFromArgv(process.argv);
 const language = languageFromArgv(process.argv);
 const computerLocale = localeFromArgv(process.argv);
+// Every language the computer prefers, for the order of the script faces
+// after the chosen font (docs/fonts.md, "Letters in other scripts").
+const computerLanguages = computerLanguagesFromArgv(process.argv);
 const markWindowMaterial = () => {
   document.documentElement?.setAttribute(WINDOW_MATERIAL_ATTRIBUTE, windowMaterial);
   if (platform) document.documentElement?.setAttribute(PLATFORM_ATTRIBUTE, platform);
@@ -64,6 +68,11 @@ const markWindowMaterial = () => {
   document.documentElement?.setAttribute("dir", textDirection(language));
   if (computerLocale)
     document.documentElement?.setAttribute(COMPUTER_LOCALE_ATTRIBUTE, computerLocale);
+  if (computerLanguages.length > 0)
+    document.documentElement?.setAttribute(
+      COMPUTER_LANGUAGES_ATTRIBUTE,
+      computerLanguages.join(","),
+    );
 };
 markWindowMaterial();
 document.addEventListener("DOMContentLoaded", markWindowMaterial, { once: true });

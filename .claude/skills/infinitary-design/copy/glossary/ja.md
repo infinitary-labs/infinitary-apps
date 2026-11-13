@@ -106,6 +106,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | demo | デモ | Plain loanword. |
 | version (for a SHA) | バージョン | Never ハッシュ or SHA in a sentence. |
 | window | ウインドウ | Apple's Japanese spelling. |
+| font (Settings → Appearance) | フォント | |
 | Infinitary | Infinitary | Never translated or written in katakana. |
 | Knowledge (the panel) | ナレッジ | The panel's name; 知識 reads as schooling. |
 | concept | 概念 | A Knowledge entry, as on cards. |

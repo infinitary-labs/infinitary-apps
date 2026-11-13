@@ -153,11 +153,13 @@ export function buildPrototypeSrcdoc(
   body: string,
   theme: FrameTheme,
   marks: readonly number[] = [],
+  fontStyle = "",
 ): string {
   return buildFrameDocument({
     csp: PROTOTYPE_FRAME_CSP,
     theme,
-    style: cardStylesheet(),
+    // The window's chosen fonts, after the tokens they set (docs/fonts.md).
+    style: fontStyle ? `${cardStylesheet()}\n${fontStyle}` : cardStylesheet(),
     html: cardBodyMarkup(body, marks).html,
     // Its animations wait until the card is shown, as a scripted page's do.
     held: true,

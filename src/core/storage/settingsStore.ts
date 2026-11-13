@@ -12,6 +12,7 @@ import {
   dictationSettingsSchema,
 } from "@shared/dictation";
 import { EMPTY_FIRST_RUN, type FirstRunRecord, firstRunRecordSchema } from "@shared/firstRun";
+import { fontChoicesSchema } from "@shared/fonts";
 import { readSavedKeymap, type SavedKeymap, type SavedKeymapRead } from "@shared/keymap";
 import {
   DEFAULT_LOCAL_ORCHESTRATOR_SETTING,
@@ -99,6 +100,9 @@ const cardMaximizeRowSchema = z.strictObject({
 
 /** The `language` row: the language the captain chose (docs/i18n.md, "The language choice"). */
 const languageRowSchema = z.strictObject({ language: languageChoiceSchema });
+
+/** The `fonts` row: the fonts the captain chose (docs/fonts.md). */
+const fontsRowSchema = z.strictObject({ fonts: fontChoicesSchema });
 
 /** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
@@ -300,6 +304,7 @@ export class SettingsStore {
     }
     const maximize = cardMaximizeRowSchema.safeParse(this.get("card-maximize"));
     const language = languageRowSchema.safeParse(this.get("language"));
+    const fonts = fontsRowSchema.safeParse(this.get("fonts"));
     return {
       ...DEFAULT_APPEARANCE,
       ...appearance,
@@ -307,6 +312,9 @@ export class SettingsStore {
         ? { keepCardsMaximized: maximize.data.keep, cardsMaximized: maximize.data.maximized }
         : {}),
       ...(language.success ? { language: language.data.language } : {}),
+      ...(fonts.success && Object.keys(fonts.data.fonts).length > 0
+        ? { fonts: fonts.data.fonts }
+        : {}),
     };
   }
 
@@ -317,16 +325,19 @@ export class SettingsStore {
    * them keeps the saved ones. The language goes to its own row too
    * (`language`), and a look without it follows the computer again: the
    * window always writes the whole look, so a missing language is the
-   * captain's choice to follow the computer.
+   * captain's choice to follow the computer. The fonts go to their own row
+   * (`fonts`) the same way, and a look without them takes Infinitary's own.
    */
   setAppearance(appearance: Appearance): void {
-    const { language: _saved, ...was } = this.getAppearance();
-    const { keepCardsMaximized, cardsMaximized, language, ...look } = {
+    const { language: _saved, fonts: _savedFonts, ...was } = this.getAppearance();
+    const { keepCardsMaximized, cardsMaximized, language, fonts, ...look } = {
       ...was,
       ...appearance,
     };
     if (language === undefined) this.remove("language");
     else this.set("language", { language });
+    if (fonts === undefined || Object.keys(fonts).length === 0) this.remove("fonts");
+    else this.set("fonts", { fonts });
     this.set("appearance", look);
     this.set("wash-opacity-v2", true);
     if (keepCardsMaximized !== undefined || cardsMaximized !== undefined)

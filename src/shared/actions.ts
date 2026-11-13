@@ -14,6 +14,7 @@ import {
   deviceWords,
   userDisplayName,
 } from "./devices";
+import { FONT_SLOTS, type FontChoices, type FontSlot, fontFamilySchema } from "./fonts";
 import { hostOfAddress, kindByName } from "./forge";
 import { FORGE_HOST_NAME, type ForgesView } from "./forges";
 import { englishOf, type Said } from "./i18n/said";
@@ -740,6 +741,41 @@ const actionLines = {
     toRequest: (v, c) => [{ ...(c as Appearance), theme: v.theme }],
     readValue: (c) => ({ theme: (c as Appearance).theme }),
     done: (v) => `switched to the ${v.theme} theme`,
+  },
+  font: {
+    fields: ["fonts"],
+    area: "appearance",
+    tier: "asked",
+    change: "inf:settings:appearance:set",
+    current: "inf:settings:appearance:get",
+    value: z.strictObject({ slot: z.enum(FONT_SLOTS), font: fontFamilySchema.nullable() }),
+    line: "Set the font of one place when asked: app (the window's words), reading (what the crew writes on cards) or code. font is a family installed on the captain's computer by its exact name, system-ui (ui-monospace for code) for the computer's own font, or null for Infinitary's own. Reading follows the app font while it is null. Settings → Appearance lists the installed fonts.",
+    toRequest: (v, c) => {
+      const slot = v.slot as FontSlot;
+      const font = v.font as string | null;
+      const { [slot]: _was, ...others } = (c as Appearance).fonts ?? {};
+      const fonts = font ? { ...others, [slot]: font } : others;
+      const { fonts: _saved, ...look } = c as Appearance;
+      return [{ ...look, ...(Object.keys(fonts).length > 0 ? { fonts } : {}) }];
+    },
+    readValue: (c) => ({ fonts: (c as Appearance).fonts ?? {} }),
+    // A line is written from the fonts as `readValue` reads them, whoever chose.
+    done: (v) => {
+      const fonts = (v.fonts ?? {}) as FontChoices;
+      const chosen = FONT_SLOTS.filter((slot) => fonts[slot]);
+      return chosen.length === 0
+        ? "set every font to Infinitary's own"
+        : `set the fonts: ${chosen.map((slot) => `${slot} ${fonts[slot]}`).join(", ")}`;
+    },
+    settled: (from, to) => {
+      const was = (from.fonts ?? {}) as FontChoices;
+      const now = (to.fonts ?? {}) as FontChoices;
+      const named = (font: string | undefined) => font ?? "Infinitary's own";
+      const moved = FONT_SLOTS.filter((slot) => was[slot] !== now[slot]);
+      return moved.length === 0
+        ? "kept the fonts"
+        : moved.map((slot) => `${slot} font ${named(was[slot])} → ${named(now[slot])}`).join(", ");
+    },
   },
   panel: {
     fields: ["hiddenPanels", "arrangement"],

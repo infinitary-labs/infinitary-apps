@@ -80,7 +80,9 @@ const sizes: Record<ButtonSize, { padY: number; padX: number; fontSize?: string 
 
 /**
  * Where a key sits inside the button: one mono glyph at `--text-sm` is 0.6em
- * of 12.5px wide (JetBrains Mono), the key ends `KEY_INSET` inside the border,
+ * of 12.5px wide in JetBrains Mono, or `--key-glyph` wide in the code font
+ * the captain chose, which the window measures (docs/fonts.md); the key ends
+ * `KEY_INSET` inside the border,
  * and at least `KEY_GAP` separates it from the label. It sits on the label's
  * baseline (`keyLine`), not above it. The label moves left to make room, down
  * to `KEY_MIN_LEAD` before it, so a Mac key widens a button by six pixels: the
@@ -94,9 +96,9 @@ const KEY_MIN_LEAD = 10;
 
 function keyPadding(size: ButtonSize, keys: string): React.CSSProperties {
   const { padY, padX } = sizes[size];
-  const room = KEY_INSET + keys.length * KEY_GLYPH + KEY_GAP;
-  const lead = Math.max(KEY_MIN_LEAD, 2 * padX - room);
-  return { padding: `${padY}px ${room}px ${padY}px ${lead}px` };
+  const room = `calc(${KEY_INSET + KEY_GAP}px + ${keys.length} * var(--key-glyph, ${KEY_GLYPH}px))`;
+  const lead = `max(${KEY_MIN_LEAD}px, calc(${2 * padX}px - ${room}))`;
+  return { padding: `${padY}px ${room} ${padY}px ${lead}` };
 }
 
 // The key's line: the button's own font at the label's line height, between the

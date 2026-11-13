@@ -93,6 +93,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | recording, demo | 錄製內容, 示範 | Never 影片 or 動畫 for the file. |
 | program (a set of task parts) | 程序 | Kept apart from 程式, which means the app. |
 | the app (thread author, "app") | 程式 / Infinitary | 程式 as a short label, Infinitary where a sentence needs the app's name. |
+| font (Settings → Appearance) | 字體 | |
 | Infinitary | Infinitary | Never translated. |
 | repo (never said) | 專案 | 存放庫 only where a sentence points at GitHub. |
 | worktree (never said) | 工作副本 | Never 工作樹. |

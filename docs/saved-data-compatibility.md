@@ -413,6 +413,13 @@ An older build reads `appearance` strictly, so the choice never goes in it; that
 A look written without a language removes the row, which means the default language.
 A saved language this build's catalog lacks, such as one a newer build added, falls back to the default language too (`chosenLanguage`).
 
+## The font choice
+
+The fonts the captain chose in Settings → Appearance live in a settings row of their own, `fonts`, beside the `appearance` row (`SettingsStore.getAppearance` and `setAppearance`).
+An older build reads `appearance` strictly, so the choice never goes in it; that build ignores the new row and writes in Infinitary's own fonts.
+A look written without fonts removes the row, which means Infinitary's own fonts.
+A saved font this computer lacks stays saved, and the window draws Infinitary's own font in its place (`docs/fonts.md`).
+
 ## A task's pin
 
 Migration 122 adds the `pinned_at` column to `tasks`, empty on every row, and a partial index over the pinned rows, so the board reads the few pinned tasks without walking the record (INF-3127).

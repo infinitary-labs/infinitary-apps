@@ -39,20 +39,22 @@ export function threadLinesFor(
 }
 
 /**
- * A view from before `language-choice.md` reads the look strictly, so the
- * captain's language choice is left out of the look it is pushed or answered;
- * a view keeps its own language and never needs the home's.
+ * A view reads the look strictly, so each choice added after it - the
+ * language (`language-choice.md`) and the fonts (`font-choice.md`) - is left
+ * out of the look it is pushed or answered when its hello does not list the
+ * change; a view keeps its own look and never needs the home's.
  */
-export function lookFor(channel: string, value: unknown, readsLanguage: boolean): unknown {
-  if (readsLanguage || !value || typeof value !== "object") return value;
-  if (channel === "inf:settings:appearance:get") return withoutLanguage(value);
+export function lookFor(channel: string, value: unknown, unread: readonly string[]): unknown {
+  if (unread.length === 0 || !value || typeof value !== "object") return value;
+  if (channel === "inf:settings:appearance:get") return without(value, unread);
   if (channel !== "inf:shell:preferences") return value;
   const look = value as Record<string, unknown>;
-  return { ...look, appearance: withoutLanguage(look.appearance) };
+  return { ...look, appearance: without(look.appearance, unread) };
 }
 
-function withoutLanguage(appearance: unknown): unknown {
+function without(appearance: unknown, unread: readonly string[]): unknown {
   if (!appearance || typeof appearance !== "object") return appearance;
-  const { language: _chosen, ...rest } = appearance as Record<string, unknown>;
-  return rest;
+  return Object.fromEntries(
+    Object.entries(appearance as Record<string, unknown>).filter(([key]) => !unread.includes(key)),
+  );
 }

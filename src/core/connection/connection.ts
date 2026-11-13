@@ -558,6 +558,15 @@ const CARD_FILES = contractChange("card-files");
 const LANGUAGE_CHOICE = contractChange("language-choice");
 /** The captain's own command's mark on his thread lines (`from-the-command.md`). */
 const FROM_THE_COMMAND = contractChange("from-the-command");
+const FONT_CHOICE = contractChange("font-choice");
+
+/** The look's later choices a view's hello does not list, which it cannot read (`lookFor`). */
+function unreadLook(changes: readonly string[] | undefined): string[] {
+  return [
+    ...(listsChange(changes, LANGUAGE_CHOICE) ? [] : ["language"]),
+    ...(listsChange(changes, FONT_CHOICE) ? [] : ["fonts"]),
+  ];
+}
 
 /** Which added card fields a view's card decoder reads. */
 type CardReads = {
@@ -601,9 +610,9 @@ function cardPushFor(
   reads: CardReads,
   sharedCards = true,
   taskAllow = true,
-  readsLanguage = true,
+  unread: readonly string[] = [],
 ): string {
-  const spelled = lookPushFor(entry, spelling, readsLanguage);
+  const spelled = lookPushFor(entry, spelling, unread);
   const text =
     taskAllow || !entry.channel.startsWith("inf:cards") ? spelled : frameWithoutTaskAllow(spelled);
   if (
@@ -625,12 +634,12 @@ function cardPushFor(
   return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload, reads) });
 }
 
-/** A look pushed to a view, without the language choice it cannot read (`lookFor`). */
-function lookPushFor(entry: JournalEntry, spelling: Spelling, readsLanguage: boolean): string {
+/** A look pushed to a view, without the choices it cannot read (`lookFor`). */
+function lookPushFor(entry: JournalEntry, spelling: Spelling, unread: readonly string[]): string {
   const spelled = pushFrameIn(entry, spelling);
-  if (readsLanguage || entry.channel !== "inf:shell:preferences") return spelled;
+  if (unread.length === 0 || entry.channel !== "inf:shell:preferences") return spelled;
   const frame = JSON.parse(spelled);
-  return JSON.stringify({ ...frame, payload: lookFor(entry.channel, frame.payload, false) });
+  return JSON.stringify({ ...frame, payload: lookFor(entry.channel, frame.payload, unread) });
 }
 
 /** What each refusal at `FETCH_APP_PATH` says; none echoes the code. */
@@ -919,7 +928,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.cardReads,
                 client.sharedCards,
                 client.taskAllow,
-                listsChange(client.changes, LANGUAGE_CHOICE),
+                unreadLook(client.changes),
               ),
             );
       } catch (error) {
@@ -1092,7 +1101,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.cardReads,
                 client.sharedCards,
                 client.taskAllow,
-                listsChange(client.changes, LANGUAGE_CHOICE),
+                unreadLook(client.changes),
               ),
         );
       client.welcomed = true;
@@ -1183,7 +1192,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           client.taskAllow || !channel.startsWith("inf:cards")
             ? answered
             : withoutTaskAllow(answered),
-          listsChange(client.changes, LANGUAGE_CHOICE),
+          unreadLook(client.changes),
         );
         reply({
           ok: true,

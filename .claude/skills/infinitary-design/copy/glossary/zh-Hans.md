@@ -15,6 +15,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | first mate | 大副 | The ship's second-in-command, a common noun, never a name. |
 | crew | 船员 / 船员们 | 船员们 where the sentence needs the group. |
 | crewmate | 船员 | One helper of the first mate. |
+| font (Settings → Appearance) | 字体 | |
 | Infinitary | Infinitary | Never translated. |
 | task | 任务 | |
 | card | 卡片 | Measure word 张. |

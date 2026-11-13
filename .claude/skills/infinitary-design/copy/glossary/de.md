@@ -101,6 +101,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Diagnostics / Contribution (Sharing) | Diagnose / Beitrag | The two Sharing switches; what Diagnostics sends is "Diagnosedaten". |
 | decision records | Entscheidungsaufzeichnungen | Kept apart from "Protokoll", the task record; "redacted" is "geschwärzt". |
 | action (an integration action) | Aktion | |
+| font (Settings → Appearance) | Schrift | |
 | Infinitary | Infinitary | Never translated. |
 | Knowledge (panel) | Wissen | "Wissen öffnen" |
 | concept / finding | Begriff / Erkenntnis | As the card references already say |

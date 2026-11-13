@@ -48,3 +48,41 @@ it("leaves the language choice out of the look an older view is pushed or answer
   await old.close();
   await current.close();
 });
+
+// The approved font plan (INF-3982, font-choice.md): a view that reads the
+// language but not the fonts is never pushed or answered the fonts, and a
+// view listing both reads the whole look.
+it("leaves the font choice out of the look a view without font-choice is pushed or answered", async () => {
+  const look = {
+    ...DEFAULT_SHELL_PREFERENCES,
+    appearance: {
+      ...DEFAULT_SHELL_PREFERENCES.appearance,
+      language: "ja",
+      fonts: { app: "Inter", code: "ui-monospace" },
+    },
+  };
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:shell:preferences") return look;
+      if (channel === "inf:settings:appearance:get") return look.appearance;
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const older = await connectClient(grant, { changes: ["language-choice"] });
+  const current = await connectClient(grant, { changes: ["language-choice", "font-choice"] });
+  const olderAppearance = appearanceSchema.omit({ fonts: true });
+  const { fonts: _chosen, ...withoutFonts } = look.appearance;
+  expect(olderAppearance.parse(await older.invoke("inf:settings:appearance:get", []))).toEqual(
+    withoutFonts,
+  );
+  expect(await current.invoke("inf:settings:appearance:get", [])).toEqual(look.appearance);
+  at.events.emit("inf:shell:preferences", look);
+  const pushed = await older.push((push) => push.channel === "inf:shell:preferences");
+  expect(olderAppearance.parse((pushed.payload as typeof look).appearance)).toEqual(withoutFonts);
+  expect((await current.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual(
+    look,
+  );
+  await older.close();
+  await current.close();
+});

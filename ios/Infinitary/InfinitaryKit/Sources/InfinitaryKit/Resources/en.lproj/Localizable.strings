@@ -705,6 +705,17 @@
 "settingsLanguageFollow" = "Follow this computer (%1$@)";
 "settingsLanguagePartial" = "Some parts of Infinitary still show English.";
 "settingsDecisionUseKindReads" = "Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.";
+"settingsFontApp" = "App font";
+"settingsFontAppDescription" = "The words of the window: its panels, buttons and Settings.";
+"settingsFontReading" = "Reading font";
+"settingsFontReadingDescription" = "What the crew writes on cards.";
+"settingsFontCode" = "Code font";
+"settingsFontCodeDescription" = "Code, keys and task keys.";
+"settingsFontOwn" = "Infinitary (%1$@)";
+"settingsFontSameAsApp" = "Same as the app font";
+"settingsFontComputer" = "This computer's font";
+"settingsFontInstalled" = "Installed fonts";
+"settingsFontMissing" = "%1$@ (not on this computer)";
 "settingsKeyboardPreset" = "Preset";
 "settingsKeyboardPresetDescription" = "A whole set of keys to start from. Each keeps the keys you change in it.";
 "settingsKeyboardPrefix" = "Prefix";

@@ -46,6 +46,22 @@ describe("isAllowedPermission", () => {
     }
   });
 
+  // The approved font plan (INF-3982, direction B): Settings lists the
+  // installed fonts, and no card, panel or page may read that list.
+  it("lets only our own renderer list the installed fonts", () => {
+    expect(isAllowedPermission("local-fonts", "http://localhost:5573/", options)).toBe(true);
+    expect(isAllowedPermission("local-fonts", "file:///app/out/renderer/index.html", options)).toBe(
+      true,
+    );
+    for (const source of [
+      undefined,
+      "https://example.com/",
+      "about:srcdoc",
+      "app-frame://card/body",
+    ])
+      expect(isAllowedPermission("local-fonts", source, options)).toBe(false);
+  });
+
   it("denies every other permission, including clipboard reads, even for our renderer", () => {
     for (const permission of [
       "geolocation",

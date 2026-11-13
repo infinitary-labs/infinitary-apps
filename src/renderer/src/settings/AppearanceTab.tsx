@@ -12,6 +12,7 @@ import { useShellStore } from "../app/store";
 import { GroupedPills, Switch } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { isView } from "../devices/viewWords";
+import { FontRows } from "./FontRows";
 import { FIRSTMATE_SELECT_STYLE } from "./GeneralTab";
 import { ROW_GAP, SectionLabel, SettingRow } from "./settingRows";
 
@@ -290,6 +291,8 @@ export function AppearanceTab() {
             />
           }
         />
+        {/* Below the rows above, so they stay on screen in the smallest window. */}
+        <FontRows />
         {/* Last, so the rows above stay on screen in the smallest window. */}
         <LanguageRow computer={windowDefaultLanguage()} view={isView(thisMac)} />
       </div>

@@ -704,6 +704,43 @@ describe("the core, driven with no Electron in the process", () => {
       evidence: "hide names",
     });
     expect((await core.dispatch("inf:settings:appearance:get", [])).showCrewModelNames).toBe(false);
+    // The approved font plan (INF-3982): a person can ask the first mate for a font.
+    const fontLines: string[] = [];
+    const detachFonts = core.events.subscribe((channel, payload) => {
+      const event = payload as FmEvent;
+      if (channel === "inf:event" && event.type === "personalized") fontLines.push(event.text);
+    });
+    await change.run({
+      action: "font",
+      value: { slot: "code", font: "ui-monospace" },
+      evidence: "use my computer's own mono font for code",
+    });
+    expect((await core.dispatch("inf:settings:appearance:get", [])).fonts).toEqual({
+      code: "ui-monospace",
+    });
+    await change.run({
+      action: "font",
+      value: { slot: "code", font: null },
+      evidence: "put the code font back",
+    });
+    expect((await core.dispatch("inf:settings:appearance:get", [])).fonts).toBeUndefined();
+    // The captain's own pick in Settings writes the whole look; its line names the place and font.
+    await core.dispatch("inf:settings:appearance:set", [
+      {
+        ...(await core.dispatch("inf:settings:appearance:get", [])),
+        fonts: { app: "Avenir Next" },
+      },
+    ]);
+    await core.dispatch("inf:settings:appearance:set", [
+      { ...(await core.dispatch("inf:settings:appearance:get", [])), fonts: undefined },
+    ]);
+    detachFonts();
+    expect(fontLines.slice(0, 3)).toEqual([
+      expect.stringMatching(/code ui-monospace/),
+      expect.stringMatching(/Infinitary's own/),
+      expect.stringMatching(/app font Infinitary's own → Avenir Next/),
+    ]);
+    for (const line of fontLines) expect(line).not.toMatch(/undefined/);
     await change.run({
       action: "panel-collapse",
       value: { surface: "activity", collapsed: true },

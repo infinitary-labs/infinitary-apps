@@ -9,6 +9,7 @@ import type {
   PanelModule,
 } from "@shared/plugins/frameDocument";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { fontFrameStyle, useFontsDrawn } from "../../app/fonts";
 import { Button } from "../../design";
 import { hasShellPainted } from "../../design/reveals";
 import { appReadExecutor } from "../reads/appExecutor";
@@ -322,6 +323,9 @@ export function FrameMount({
   // One mount per template: the theme at mount time seeds the served
   // document, and every later theme is pushed over the bridge rather than
   // re-mounting (data never rebuilds the document - the point of the split).
+  // The fonts are in the document's stylesheet, so a new font mounts it anew
+  // (docs/fonts.md).
+  const fontsDrawn = useFontsDrawn();
   // biome-ignore lint/correctness/useExhaustiveDependencies: theme is pushed, not re-mounted; attempt is the retry
   useEffect(() => {
     let active = true;
@@ -334,11 +338,16 @@ export function FrameMount({
           kind: "panel" as const,
           title,
           theme,
-          style: panelStylesheet(layout === "auto"),
+          style: `${panelStylesheet(layout === "auto")}\n${fontFrameStyle()}`,
           panel: panelSource.module,
           config: panelSource.config,
         }
-      : { title, theme, style: frameStylesheet(), template: template as FrameTemplate };
+      : {
+          title,
+          theme,
+          style: `${frameStylesheet()}\n${fontFrameStyle()}`,
+          template: template as FrameTemplate,
+        };
     void window.infinitary.plugins
       .mountFrame(request)
       .then((result) => {
@@ -359,7 +368,7 @@ export function FrameMount({
       active = false;
       if (mounted) void window.infinitary.plugins.unmountFrame(mounted.mountId).catch(() => {});
     };
-  }, [title, template, panelSource, layout, attempt]);
+  }, [title, template, panelSource, layout, attempt, fontsDrawn]);
 
   useFrameController(
     frameRef,

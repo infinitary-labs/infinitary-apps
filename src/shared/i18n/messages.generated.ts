@@ -21553,6 +21553,316 @@ export function settingsDecisionUseKindReads(): string {
   return `Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.`;
 }
 
+export function settingsFontApp(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خط التطبيق`;
+    case "de":
+      return `App-Schrift`;
+    case "es":
+      return `Fuente de la app`;
+    case "fr":
+      return `Police de l’app`;
+    case "ja":
+      return `アプリのフォント`;
+    case "ko":
+      return `앱 글꼴`;
+    case "pt-BR":
+      return `Fonte do app`;
+    case "zh-Hans":
+      return `应用字体`;
+    case "zh-Hant":
+      return `應用程式字體`;
+    case "en-XA":
+      return `[Åþþ ƒöñţ ~~~]`;
+    case "ar-XB":
+      return `\u202eApp font\u202c`;
+  }
+  return `App font`;
+}
+
+export function settingsFontAppDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كلمات النافذة: لوحاتها وأزرارها والإعدادات.`;
+    case "de":
+      return `Die Wörter des Fensters: seine Bereiche, Schaltflächen und Einstellungen.`;
+    case "es":
+      return `Las palabras de la ventana: sus paneles, botones y Configuración.`;
+    case "fr":
+      return `Les mots de la fenêtre : ses panneaux, ses boutons et les Réglages.`;
+    case "ja":
+      return `ウインドウの言葉です。パネル、ボタン、設定に使われます。`;
+    case "ko":
+      return `창의 말이에요. 패널, 버튼, 설정에 쓰여요.`;
+    case "pt-BR":
+      return `As palavras da janela: seus painéis, botões e Ajustes.`;
+    case "zh-Hans":
+      return `窗口里的文字：面板、按钮和设置。`;
+    case "zh-Hant":
+      return `視窗裡的文字：面板、按鈕和設定。`;
+    case "en-XA":
+      return `[Ţĥé ŵöŕðš öƒ ţĥé ŵîñðöŵ: îţš þáñéļš, ƀûţţöñš áñð Šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe words of the window: its panels, buttons and Settings.\u202c`;
+  }
+  return `The words of the window: its panels, buttons and Settings.`;
+}
+
+export function settingsFontReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خط القراءة`;
+    case "de":
+      return `Leseschrift`;
+    case "es":
+      return `Fuente de lectura`;
+    case "fr":
+      return `Police de lecture`;
+    case "ja":
+      return `読むためのフォント`;
+    case "ko":
+      return `읽기 글꼴`;
+    case "pt-BR":
+      return `Fonte de leitura`;
+    case "zh-Hans":
+      return `阅读字体`;
+    case "zh-Hant":
+      return `閱讀字體`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ ƒöñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eReading font\u202c`;
+  }
+  return `Reading font`;
+}
+
+export function settingsFontReadingDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما يكتبه الطاقم على البطاقات.`;
+    case "de":
+      return `Was die Crew auf Karten schreibt.`;
+    case "es":
+      return `Lo que la tripulación escribe en las tarjetas.`;
+    case "fr":
+      return `Ce que l’équipage écrit sur les cartes.`;
+    case "ja":
+      return `乗組員がカードに書く文章です。`;
+    case "ko":
+      return `선원들이 카드에 쓰는 글이에요.`;
+    case "pt-BR":
+      return `O que a tripulação escreve nos cartões.`;
+    case "zh-Hans":
+      return `船员在卡片上写的内容。`;
+    case "zh-Hant":
+      return `船員在卡片上寫的內容。`;
+    case "en-XA":
+      return `[Ŵĥáţ ţĥé çŕéŵ ŵŕîţéš öñ çáŕðš. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat the crew writes on cards.\u202c`;
+  }
+  return `What the crew writes on cards.`;
+}
+
+export function settingsFontCode(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خط الشيفرة`;
+    case "de":
+      return `Code-Schrift`;
+    case "es":
+      return `Fuente de código`;
+    case "fr":
+      return `Police du code`;
+    case "ja":
+      return `コードのフォント`;
+    case "ko":
+      return `코드 글꼴`;
+    case "pt-BR":
+      return `Fonte de código`;
+    case "zh-Hans":
+      return `代码字体`;
+    case "zh-Hant":
+      return `程式碼字體`;
+    case "en-XA":
+      return `[Çöðé ƒöñţ ~~~]`;
+    case "ar-XB":
+      return `\u202eCode font\u202c`;
+  }
+  return `Code font`;
+}
+
+export function settingsFontCodeDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الشيفرة والمفاتيح ومفاتيح المهام.`;
+    case "de":
+      return `Code, Tasten und Aufgabenschlüssel.`;
+    case "es":
+      return `Código, teclas y claves de tareas.`;
+    case "fr":
+      return `Le code, les touches et les clés de tâche.`;
+    case "ja":
+      return `コード、キー、タスクキーです。`;
+    case "ko":
+      return `코드, 키, 작업 키예요.`;
+    case "pt-BR":
+      return `Código, teclas e chaves de tarefa.`;
+    case "zh-Hans":
+      return `代码、按键和任务编号。`;
+    case "zh-Hant":
+      return `程式碼、按鍵和任務編號。`;
+    case "en-XA":
+      return `[Çöðé, ķéýš áñð ţášķ ķéýš. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCode, keys and task keys.\u202c`;
+  }
+  return `Code, keys and task keys.`;
+}
+
+export function settingsFontOwn(input: { font: string }): string {
+  const font = input.font;
+  switch (currentLanguage()) {
+    case "ar":
+      return `Infinitary (${font})`;
+    case "de":
+      return `Infinitary (${font})`;
+    case "es":
+      return `Infinitary (${font})`;
+    case "fr":
+      return `Infinitary (${font})`;
+    case "ja":
+      return `Infinitary（${font}）`;
+    case "ko":
+      return `Infinitary(${font})`;
+    case "pt-BR":
+      return `Infinitary (${font})`;
+    case "zh-Hans":
+      return `Infinitary（${font}）`;
+    case "zh-Hant":
+      return `Infinitary（${font}）`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý (${font}) ~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary (\u202c${font}\u202e)\u202c`;
+  }
+  return `Infinitary (${font})`;
+}
+
+export function settingsFontSameAsApp(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مثل خط التطبيق`;
+    case "de":
+      return `Wie die App-Schrift`;
+    case "es":
+      return `La misma que la fuente de la app`;
+    case "fr":
+      return `Comme la police de l’app`;
+    case "ja":
+      return `アプリのフォントと同じ`;
+    case "ko":
+      return `앱 글꼴과 같게`;
+    case "pt-BR":
+      return `A mesma do app`;
+    case "zh-Hans":
+      return `与应用字体相同`;
+    case "zh-Hant":
+      return `與應用程式字體相同`;
+    case "en-XA":
+      return `[Šáɱé áš ţĥé áþþ ƒöñţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSame as the app font\u202c`;
+  }
+  return `Same as the app font`;
+}
+
+export function settingsFontComputer(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خط هذا الحاسوب`;
+    case "de":
+      return `Schrift dieses Computers`;
+    case "es":
+      return `Fuente de esta computadora`;
+    case "fr":
+      return `Police de cet ordinateur`;
+    case "ja":
+      return `このコンピューターのフォント`;
+    case "ko":
+      return `이 컴퓨터의 글꼴`;
+    case "pt-BR":
+      return `Fonte deste computador`;
+    case "zh-Hans":
+      return `这台电脑的字体`;
+    case "zh-Hant":
+      return `這台電腦的字體`;
+    case "en-XA":
+      return `[Ţĥîš çöɱþûţéŕ'š ƒöñţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis computer's font\u202c`;
+  }
+  return `This computer's font`;
+}
+
+export function settingsFontInstalled(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الخطوط المثبتة`;
+    case "de":
+      return `Installierte Schriften`;
+    case "es":
+      return `Fuentes instaladas`;
+    case "fr":
+      return `Polices installées`;
+    case "ja":
+      return `インストール済みのフォント`;
+    case "ko":
+      return `설치된 글꼴`;
+    case "pt-BR":
+      return `Fontes instaladas`;
+    case "zh-Hans":
+      return `已安装的字体`;
+    case "zh-Hant":
+      return `已安裝的字體`;
+    case "en-XA":
+      return `[Îñšţáļļéð ƒöñţš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eInstalled fonts\u202c`;
+  }
+  return `Installed fonts`;
+}
+
+export function settingsFontMissing(input: { font: string }): string {
+  const font = input.font;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${font} (غير موجود على هذا الحاسوب)`;
+    case "de":
+      return `${font} (nicht auf diesem Computer)`;
+    case "es":
+      return `${font} (no está en esta computadora)`;
+    case "fr":
+      return `${font} (absente de cet ordinateur)`;
+    case "ja":
+      return `${font}（このコンピューターにはありません）`;
+    case "ko":
+      return `${font}(이 컴퓨터에 없음)`;
+    case "pt-BR":
+      return `${font} (não está neste computador)`;
+    case "zh-Hans":
+      return `${font}（这台电脑上没有）`;
+    case "zh-Hant":
+      return `${font}（這台電腦上沒有）`;
+    case "en-XA":
+      return `[${font} (ñöţ öñ ţĥîš çöɱþûţéŕ) ~~~~~~~~]`;
+    case "ar-XB":
+      return `${font}\u202e (not on this computer)\u202c`;
+  }
+  return `${font} (not on this computer)`;
+}
+
 export function settingsKeyboardPreset(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -29186,6 +29496,17 @@ export const MESSAGES = {
   settingsLanguageFollow,
   settingsLanguagePartial,
   settingsDecisionUseKindReads,
+  settingsFontApp,
+  settingsFontAppDescription,
+  settingsFontReading,
+  settingsFontReadingDescription,
+  settingsFontCode,
+  settingsFontCodeDescription,
+  settingsFontOwn,
+  settingsFontSameAsApp,
+  settingsFontComputer,
+  settingsFontInstalled,
+  settingsFontMissing,
   settingsKeyboardPreset,
   settingsKeyboardPresetDescription,
   settingsKeyboardPrefix,
@@ -30155,6 +30476,17 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsLanguageFollow: ["language"],
   settingsLanguagePartial: [],
   settingsDecisionUseKindReads: [],
+  settingsFontApp: [],
+  settingsFontAppDescription: [],
+  settingsFontReading: [],
+  settingsFontReadingDescription: [],
+  settingsFontCode: [],
+  settingsFontCodeDescription: [],
+  settingsFontOwn: ["font"],
+  settingsFontSameAsApp: [],
+  settingsFontComputer: [],
+  settingsFontInstalled: [],
+  settingsFontMissing: ["font"],
   settingsKeyboardPreset: [],
   settingsKeyboardPresetDescription: [],
   settingsKeyboardPrefix: [],

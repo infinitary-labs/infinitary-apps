@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { followFonts } from "./app/fonts";
 import { LanguageRoot } from "./app/LanguageRoot";
 import { documentLanguage, followLanguage } from "./app/language";
 import { hydratePreferences } from "./app/preferences";
@@ -51,6 +52,15 @@ void Promise.all([hydratePreferences(), documentLanguage()]).then(([, computer])
     (listener) =>
       useShellStore.subscribe((state, previous) => {
         if (state.language !== previous.language) listener();
+      }),
+  );
+  // The chosen fonts, set on the document before the first paint and
+  // followed after (docs/fonts.md).
+  followFonts(
+    () => useShellStore.getState().fonts,
+    (listener) =>
+      useShellStore.subscribe((state, previous) => {
+        if (state.fonts !== previous.fonts) listener();
       }),
   );
   createRoot(container).render(

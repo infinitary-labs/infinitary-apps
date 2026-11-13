@@ -48,7 +48,7 @@ export const FRAME_BASE_STYLE = `
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: var(--font-ui);
+    font-family: var(--font-text);
     font-size: var(--text-base);
     line-height: var(--leading-body);
     color: var(--fg-2);

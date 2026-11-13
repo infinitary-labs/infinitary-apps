@@ -15,6 +15,7 @@ import { type FrameMount, type FrameTheme, frameTitle } from "@shared/plugins/fr
 import { appBodyOf } from "@shared/welcome";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { available } from "../app/focusRecovery";
+import { fontFrameStyle, useFontsDrawn } from "../app/fonts";
 import { Button } from "../design";
 import type { ViewerDemo } from "../design/cards/PictureViewer";
 import { focusWithRing } from "../design/focus";
@@ -743,10 +744,12 @@ function SrcdocCardBody(props: SrcdocProps) {
   const [drawnDocument, setDrawnDocument] = useState("");
   const [reveal] = useState(props.reveal ?? false);
   const marksKey = props.marks?.join(",") ?? "";
-  // biome-ignore lint/correctness/useExhaustiveDependencies: marksKey stands for marks, a new array on every push
+  // A change of font builds the document again in the new fonts (docs/fonts.md).
+  const fontsDrawn = useFontsDrawn();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: marksKey stands for marks, a new array on every push; fontsDrawn moves with fontFrameStyle
   const srcdoc = useMemo(
-    () => buildPrototypeSrcdoc(body, theme, props.marks),
-    [body, theme, marksKey],
+    () => buildPrototypeSrcdoc(body, theme, props.marks, fontFrameStyle()),
+    [body, theme, marksKey, fontsDrawn],
   );
 
   // A new frame keeps its first document until that document has loaded. A
@@ -866,6 +869,8 @@ function ScriptedCardBody(props: SrcdocProps) {
 
   // One mount per body (and per retry). The theme at mount time seeds the
   // served document; later themes are pushed over the bridge, not re-mounted.
+  // The fonts are in the document's stylesheet, so a new font mounts it anew.
+  const fontsDrawn = useFontsDrawn();
   // biome-ignore lint/correctness/useExhaustiveDependencies: theme is pushed, not re-mounted; attempt is the retry trigger
   useLayoutEffect(() => {
     let current = true;
@@ -879,7 +884,7 @@ function ScriptedCardBody(props: SrcdocProps) {
         // A longer title is shortened to what the mount takes (INF-3887).
         title: frameTitle(title),
         theme,
-        style: cardStylesheet(),
+        style: `${cardStylesheet()}\n${fontFrameStyle()}`,
         // The markup the agent wrote, unchanged. The host finds its inline
         // scripts and pins each one's hash into that mount's own CSP.
         template,
@@ -904,7 +909,7 @@ function ScriptedCardBody(props: SrcdocProps) {
       if (mountIdRef.current === mountId) mountIdRef.current = null;
       if (mountId) void window.infinitary.plugins.unmountFrame(mountId).catch(() => {});
     };
-  }, [title, template, attempt]);
+  }, [title, template, attempt, fontsDrawn]);
 
   const documentKey = state.phase === "mounted" ? state.mount.url : undefined;
   const drawing = useDrawnAtWidth(frameRef, documentKey);

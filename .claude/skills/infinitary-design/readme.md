@@ -187,6 +187,10 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Light theme via `[data-theme="light"]`.
   One accent at a time within each thing being read - a screen's chrome, and inside a card each figure on its own, so a card with several figures may light one element per figure; large areas are the tint over the desktop - `--material-tint`, the void at 0% by default - and read against the blurred desktop rather than as a fixed opaque color.
 - **Type:** Space Grotesk (UI/display, weights 300–600); JetBrains Mono (data).
+  **The font choice:** Settings → Appearance lets a person put any installed font, or the computer's own, in three places - the app (`--font-ui`), reading, what the crew writes on cards (`--font-text`, the app's face unless chosen), and code (`--font-mono`).
+  The choice sets only each stack's face (`--font-ui-face`, `--font-text-face`, `--font-mono-face`), with Infinitary's own face after it for any letter it lacks, so every view follows by reading the tokens; a view never names a font outright.
+  Previews drawn in a project's own look keep their own fonts.
+  A layout never assumes a font's glyph width: a mono key hint reserves `--key-glyph`, which the window measures from the chosen code font.
   Display is light (300–400) and large with tight tracking; labels are 11px uppercase tracked +0.09em.
   **One line beside a dot or an icon centres its letters, never its line box:** in a one-line row (a panel header, a feed line), every run of words is trimmed to its letters with `text-box: trim-both ex alphabetic` - an uppercase title with `cap alphabetic` - so each run's x-height (an uppercase title's cap height) sits on the same centre as the dot and the chevron at every Size and screen density.
   A line box centred by its box puts the baseline where that font's metrics round at device pixels, so 12.5px words drift below an 11px mono age and the dot on a 2x screen.

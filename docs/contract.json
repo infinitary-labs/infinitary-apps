@@ -42639,6 +42639,29 @@
             "minLength": 2,
             "maxLength": 35,
             "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "fonts": {
+            "type": "object",
+            "properties": {
+              "app": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+              },
+              "reading": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+              },
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+              }
+            }
           }
         },
         "required": [
@@ -42717,6 +42740,30 @@
                 "minLength": 2,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+              },
+              "fonts": {
+                "type": "object",
+                "properties": {
+                  "app": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  },
+                  "reading": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  }
+                },
+                "additionalProperties": false
               }
             },
             "required": [
@@ -42793,6 +42840,29 @@
             "minLength": 2,
             "maxLength": 35,
             "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "fonts": {
+            "type": "object",
+            "properties": {
+              "app": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+              },
+              "reading": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+              },
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+              }
+            }
           }
         },
         "required": [
@@ -43377,6 +43447,29 @@
                 "minLength": 2,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+              },
+              "fonts": {
+                "type": "object",
+                "properties": {
+                  "app": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  },
+                  "reading": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  }
+                }
               }
             },
             "required": [
@@ -75034,6 +75127,29 @@
                 "minLength": 2,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+              },
+              "fonts": {
+                "type": "object",
+                "properties": {
+                  "app": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  },
+                  "reading": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[^\"\\\\;{}<>\\p{Cc}]+$"
+                  }
+                }
               }
             },
             "required": [

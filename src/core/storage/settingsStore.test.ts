@@ -231,6 +231,34 @@ describe("SettingsStore preferences", () => {
     expect(new SettingsStore(db).getAppearance().theme).toBe("dark");
   });
 
+  // The approved plan (INF-3982, direction B): any installed font for the
+  // app, reading and code, kept across a restart, while an older build,
+  // which reads the appearance row strictly, still reads the rest of the look.
+  it("keeps the font choice in its own row, and a look without one takes Infinitary's own", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    settings.setAppearance({ theme: "light", fonts: { app: "Inter", code: "ui-monospace" } });
+    settings.setAppearance({ ...settings.getAppearance(), theme: "dark" });
+    expect(new SettingsStore(db).getAppearance()).toMatchObject({
+      theme: "dark",
+      fonts: { app: "Inter", code: "ui-monospace" },
+    });
+    const row = JSON.parse(
+      (
+        db.prepare("SELECT value FROM settings WHERE key = ?").get("appearance") as {
+          value: string;
+        }
+      ).value,
+    );
+    expect(appearanceSchema.omit({ fonts: true, language: true }).safeParse(row).success).toBe(
+      true,
+    );
+    const { fonts: _chosen, ...ownFonts } = settings.getAppearance();
+    settings.setAppearance(ownFonts);
+    expect(new SettingsStore(db).getAppearance().fonts).toBeUndefined();
+    expect(new SettingsStore(db).getAppearance().theme).toBe("dark");
+  });
+
   it("keeps the panels the captain moved", () => {
     const settings = store();
     settings.setLayout({

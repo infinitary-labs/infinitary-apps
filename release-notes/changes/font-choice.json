@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "font-choice",
+      "kind": "feature",
+      "title": "Choose your own fonts",
+      "body": "Settings → Appearance now has three font rows: the app font for the window's own words, the reading font for what the crew writes on cards, and the code font. Each can stay Infinitary's own, use your computer's own font, or use any font installed on your computer, and the window changes at once. Your first mate can change them too when you ask. Letters in Chinese, Japanese, Korean or Arabic now follow the order of your computer's own languages.",
+      "area": "settings",
+      "picture": {
+        "dark": "font-choice-dark.webp",
+        "light": "font-choice-light.webp",
+        "alt": "The App font, Reading font and Code font rows in Settings → Appearance, set to Avenir Next, Georgia and Menlo"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

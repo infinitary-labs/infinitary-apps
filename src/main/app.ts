@@ -22,6 +22,7 @@ import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { crewWorkHeldThere } from "@core/update/updateHold";
 import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
+import { computerLanguagesArgument } from "@shared/fonts";
 import { setComputerLocale, setCurrentLanguage } from "@shared/i18n/current";
 import {
   languageArgument,
@@ -153,6 +154,13 @@ let systemLanguage: string = SOURCE_LANGUAGE;
  */
 let computerLocale: string | undefined;
 
+/**
+ * Every language the computer prefers, most preferred first, read with its
+ * language: a window puts their scripts' faces after the chosen font in that
+ * order (docs/fonts.md, "Letters in other scripts").
+ */
+let computerLanguages: readonly string[] = [];
+
 function createMainWindow(
   mainDir: string,
   rendererSource: RendererSourceOptions,
@@ -194,6 +202,7 @@ function createMainWindow(
         platformArgument(hostPlatform()),
         languageArgument(defaultLanguage(systemLanguage)),
         ...(computerLocale ? [localeArgument(computerLocale)] : []),
+        computerLanguagesArgument(computerLanguages),
       ],
       ...REQUIRED_WEB_PREFERENCES,
       devTools: !isRelease,
@@ -579,6 +588,7 @@ export async function startApp(
       const preferred = app.getPreferredSystemLanguages();
       systemLanguage = startLanguage(preferred, languageOverride(process.env, app.isPackaged));
       computerLocale = readableLocale(preferred[0]);
+      computerLanguages = preferred;
       setComputerLocale(computerLocale);
       // An installed Linux app with no git, or with its sandbox off (an
       // AppImage promises neither), asks before it opens (./linuxStartup.ts).

@@ -1,7 +1,17 @@
 /* Infinitary — typography. Space Grotesk for UI and display, JetBrains Mono for data, keybinds, code. */
+/* Each stack is the chosen face, then the faces for other scripts, then the
+   computer's own. The faces are Infinitary's until the captain chooses a font
+   in Settings → Appearance, which sets them on the document (docs/fonts.md).
+   --font-text is what the crew writes on cards, and follows the app's face
+   unless a reading font is chosen. */
 :root {
-  --font-ui: "Space Grotesk", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-ui-face: "Space Grotesk";
+  --font-text-face: var(--font-ui-face);
+  --font-mono-face: "JetBrains Mono";
+  --font-ui: var(--font-ui-face), var(--font-script-ui, system-ui), system-ui, sans-serif;
+  --font-text: var(--font-text-face), var(--font-script-ui, system-ui), system-ui, sans-serif;
+  --font-mono:
+    var(--font-mono-face), var(--font-script-mono, ui-monospace), ui-monospace, monospace;
   --text-xs: 11px; /* micro labels, uppercase tracked */
   --text-sm: 12.5px; /* secondary, metadata */
   --text-base: 14px; /* body */
@@ -35,37 +45,31 @@ a:hover {
 }
 
 /* The languages Space Grotesk and JetBrains Mono do not draw take this
-   computer's own typeface for their script, named after the brand face so
-   Latin words keep it (docs/i18n.md, "Typefaces for every language"). The
-   document's lang names the language (src/renderer/src/app/language.ts). */
+   computer's own typeface for their script, after the chosen face so Latin
+   words keep it (docs/i18n.md, "Typefaces for every language"). The
+   document's lang names the language (src/renderer/src/app/language.ts); the
+   window and its frames put the computer's other languages' scripts after it
+   (SCRIPT_FACES in src/shared/fonts.ts names the same faces). */
 :root:lang(zh-Hans) {
-  --font-ui:
-    "Space Grotesk", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei",
-    system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "PingFang SC", "Noto Sans Mono CJK SC", ui-monospace, monospace;
+  --font-script-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei";
+  --font-script-mono: "PingFang SC", "Noto Sans Mono CJK SC";
 }
 :root:lang(zh-Hant) {
-  --font-ui:
-    "Space Grotesk", "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "PingFang TC", "Noto Sans Mono CJK TC", ui-monospace, monospace;
+  --font-script-ui: "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei";
+  --font-script-mono: "PingFang TC", "Noto Sans Mono CJK TC";
 }
 :root:lang(ja) {
-  --font-ui:
-    "Space Grotesk", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP",
-    "Yu Gothic UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Hiragino Sans", "Noto Sans Mono CJK JP", ui-monospace, monospace;
+  --font-script-ui:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Yu Gothic UI";
+  --font-script-mono: "Hiragino Sans", "Noto Sans Mono CJK JP";
 }
 :root:lang(ko) {
-  --font-ui:
-    "Space Grotesk", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", system-ui,
-    sans-serif;
-  --font-mono:
-    "JetBrains Mono", "Apple SD Gothic Neo", "Noto Sans Mono CJK KR", ui-monospace, monospace;
+  --font-script-ui: "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic";
+  --font-script-mono: "Apple SD Gothic Neo", "Noto Sans Mono CJK KR";
 }
 :root:lang(ar) {
-  --font-ui:
-    "Space Grotesk", "Geeza Pro", "SF Arabic", "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Geeza Pro", "Noto Sans Arabic", ui-monospace, monospace;
+  --font-script-ui: "Geeza Pro", "SF Arabic", "Noto Sans Arabic", "Segoe UI";
+  --font-script-mono: "Geeza Pro", "Noto Sans Arabic";
 }
 /* Tracking spaces out Chinese, Japanese and Korean glyphs that are already
    evenly set, and breaks the joins between Arabic letters. */

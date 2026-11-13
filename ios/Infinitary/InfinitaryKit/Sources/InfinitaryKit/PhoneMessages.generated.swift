@@ -726,6 +726,17 @@ public enum PhoneMessages {
     public static func `settingsLanguageFollow`(`language`: String) -> String { PhoneWords.format("settingsLanguageFollow", [`language`]) }
     public static func `settingsLanguagePartial`() -> String { PhoneWords.format("settingsLanguagePartial", []) }
     public static func `settingsDecisionUseKindReads`() -> String { PhoneWords.format("settingsDecisionUseKindReads", []) }
+    public static func `settingsFontApp`() -> String { PhoneWords.format("settingsFontApp", []) }
+    public static func `settingsFontAppDescription`() -> String { PhoneWords.format("settingsFontAppDescription", []) }
+    public static func `settingsFontReading`() -> String { PhoneWords.format("settingsFontReading", []) }
+    public static func `settingsFontReadingDescription`() -> String { PhoneWords.format("settingsFontReadingDescription", []) }
+    public static func `settingsFontCode`() -> String { PhoneWords.format("settingsFontCode", []) }
+    public static func `settingsFontCodeDescription`() -> String { PhoneWords.format("settingsFontCodeDescription", []) }
+    public static func `settingsFontOwn`(`font`: String) -> String { PhoneWords.format("settingsFontOwn", [`font`]) }
+    public static func `settingsFontSameAsApp`() -> String { PhoneWords.format("settingsFontSameAsApp", []) }
+    public static func `settingsFontComputer`() -> String { PhoneWords.format("settingsFontComputer", []) }
+    public static func `settingsFontInstalled`() -> String { PhoneWords.format("settingsFontInstalled", []) }
+    public static func `settingsFontMissing`(`font`: String) -> String { PhoneWords.format("settingsFontMissing", [`font`]) }
     public static func `settingsKeyboardPreset`() -> String { PhoneWords.format("settingsKeyboardPreset", []) }
     public static func `settingsKeyboardPresetDescription`() -> String { PhoneWords.format("settingsKeyboardPresetDescription", []) }
     public static func `settingsKeyboardPrefix`() -> String { PhoneWords.format("settingsKeyboardPrefix", []) }
@@ -2267,6 +2278,17 @@ extension PhoneWords {
         "settingsLanguageFollow": ["language"],
         "settingsLanguagePartial": [],
         "settingsDecisionUseKindReads": [],
+        "settingsFontApp": [],
+        "settingsFontAppDescription": [],
+        "settingsFontReading": [],
+        "settingsFontReadingDescription": [],
+        "settingsFontCode": [],
+        "settingsFontCodeDescription": [],
+        "settingsFontOwn": ["font"],
+        "settingsFontSameAsApp": [],
+        "settingsFontComputer": [],
+        "settingsFontInstalled": [],
+        "settingsFontMissing": ["font"],
         "settingsKeyboardPreset": [],
         "settingsKeyboardPresetDescription": [],
         "settingsKeyboardPrefix": [],

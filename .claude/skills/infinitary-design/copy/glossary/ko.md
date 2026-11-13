@@ -97,6 +97,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Diagnostics / Contribution (Sharing) | 진단 / 기여 | The two Sharing switches |
 | decision records | 결정 기록 | What Contribution sends; "redacted" is 민감한 내용을 가린 |
 | action (an integration action) | 동작 | Kept apart from 작업 (task) |
+| font (Settings → Appearance) | 글꼴 | |
 | Infinitary | Infinitary | Never translated |
 | Knowledge (panel) | 지식 | "Open Knowledge" is 지식 열기 |
 | concept / finding | 개념 / 발견 | As the card references already say |

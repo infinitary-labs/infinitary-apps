@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fontChoicesSchema } from "./fonts";
 import { type SidePanelPlacement, sidePanelPlacementSchema } from "./plugins/manifest";
 import { usageUnitSchema } from "./usage";
 
@@ -81,6 +82,13 @@ export const appearanceSchema = z.strictObject({
    * cards maximized, so an older build never meets it.
    */
   language: languageChoiceSchema.optional(),
+  /**
+   * The fonts the app, what the crew writes and code are written in
+   * (docs/fonts.md); missing means Infinitary's own. The core keeps them in a
+   * row of their own, as it does the language, so an older build never meets
+   * them.
+   */
+  fonts: fontChoicesSchema.optional(),
 });
 export type Appearance = z.infer<typeof appearanceSchema>;
 

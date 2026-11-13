@@ -16864,9 +16864,19 @@ details[open]::details-content {
   const fontsCss = '/* Infinitary webfonts - Space Grotesk (UI/display) + JetBrains Mono (data/code).\n   Vendored locally from Google Fonts (SIL Open Font License 1.1) so the package is offline-complete.\n   Binaries live in assets/fonts/; regenerate by re-fetching the css2 URL below with a woff2-capable UA.\n   https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,300..700;1,300..700&display=swap */\n/* JetBrains Mono italic cyrillic-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n/* JetBrains Mono italic cyrillic */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n/* JetBrains Mono italic greek */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n/* JetBrains Mono italic vietnamese */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* JetBrains Mono italic latin-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* JetBrains Mono italic latin */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n/* JetBrains Mono normal cyrillic-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n/* JetBrains Mono normal cyrillic */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n/* JetBrains Mono normal greek */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n/* JetBrains Mono normal vietnamese */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* JetBrains Mono normal latin-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* JetBrains Mono normal latin */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n/* Space Grotesk normal vietnamese */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* Space Grotesk normal latin-ext */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* Space Grotesk normal latin */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n';
   const spacingCss = "/* Infinitary — spacing scale (4px base). Generous whitespace is the default; density is the exception. */\n:root {\n  --space-1: 4px;\n  --space-2: 8px;\n  --space-3: 12px;\n  --space-4: 16px;\n  --space-5: 24px;\n  --space-6: 32px;\n  --space-7: 48px;\n  --space-8: 64px;\n  --space-9: 96px;\n  /* layout - dock rails are at least one fifth of the window, not resizable */\n  --rail-width: max(300px, 20vw);\n  /* layout - the voice input: one line is the pill, and the radius stays half of it at every height */\n  --prompt-height: calc(var(--space-7) + var(--space-1));\n  --prompt-radius: calc(var(--prompt-height) / 2);\n  /* layout - a card's reply field: one line of --text-sm is the pill (2px is its hairline), and the radius stays half of it at every height */\n  --reply-height: calc(var(--text-sm) * var(--leading-body) + 2 * var(--space-2) + 2px);\n  --reply-radius: calc(var(--reply-height) / 2);\n}\n";
   const typographyCss = `/* Infinitary — typography. Space Grotesk for UI and display, JetBrains Mono for data, keybinds, code. */
+/* Each stack is the chosen face, then the faces for other scripts, then the
+   computer's own. The faces are Infinitary's until the captain chooses a font
+   in Settings → Appearance, which sets them on the document (docs/fonts.md).
+   --font-text is what the crew writes on cards, and follows the app's face
+   unless a reading font is chosen. */
 :root {
-  --font-ui: "Space Grotesk", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-ui-face: "Space Grotesk";
+  --font-text-face: var(--font-ui-face);
+  --font-mono-face: "JetBrains Mono";
+  --font-ui: var(--font-ui-face), var(--font-script-ui, system-ui), system-ui, sans-serif;
+  --font-text: var(--font-text-face), var(--font-script-ui, system-ui), system-ui, sans-serif;
+  --font-mono:
+    var(--font-mono-face), var(--font-script-mono, ui-monospace), ui-monospace, monospace;
   --text-xs: 11px; /* micro labels, uppercase tracked */
   --text-sm: 12.5px; /* secondary, metadata */
   --text-base: 14px; /* body */
@@ -16900,37 +16910,31 @@ a:hover {
 }
 
 /* The languages Space Grotesk and JetBrains Mono do not draw take this
-   computer's own typeface for their script, named after the brand face so
-   Latin words keep it (docs/i18n.md, "Typefaces for every language"). The
-   document's lang names the language (src/renderer/src/app/language.ts). */
+   computer's own typeface for their script, after the chosen face so Latin
+   words keep it (docs/i18n.md, "Typefaces for every language"). The
+   document's lang names the language (src/renderer/src/app/language.ts); the
+   window and its frames put the computer's other languages' scripts after it
+   (SCRIPT_FACES in src/shared/fonts.ts names the same faces). */
 :root:lang(zh-Hans) {
-  --font-ui:
-    "Space Grotesk", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei",
-    system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "PingFang SC", "Noto Sans Mono CJK SC", ui-monospace, monospace;
+  --font-script-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei";
+  --font-script-mono: "PingFang SC", "Noto Sans Mono CJK SC";
 }
 :root:lang(zh-Hant) {
-  --font-ui:
-    "Space Grotesk", "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "PingFang TC", "Noto Sans Mono CJK TC", ui-monospace, monospace;
+  --font-script-ui: "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei";
+  --font-script-mono: "PingFang TC", "Noto Sans Mono CJK TC";
 }
 :root:lang(ja) {
-  --font-ui:
-    "Space Grotesk", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP",
-    "Yu Gothic UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Hiragino Sans", "Noto Sans Mono CJK JP", ui-monospace, monospace;
+  --font-script-ui:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Yu Gothic UI";
+  --font-script-mono: "Hiragino Sans", "Noto Sans Mono CJK JP";
 }
 :root:lang(ko) {
-  --font-ui:
-    "Space Grotesk", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", system-ui,
-    sans-serif;
-  --font-mono:
-    "JetBrains Mono", "Apple SD Gothic Neo", "Noto Sans Mono CJK KR", ui-monospace, monospace;
+  --font-script-ui: "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic";
+  --font-script-mono: "Apple SD Gothic Neo", "Noto Sans Mono CJK KR";
 }
 :root:lang(ar) {
-  --font-ui:
-    "Space Grotesk", "Geeza Pro", "SF Arabic", "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Geeza Pro", "Noto Sans Arabic", ui-monospace, monospace;
+  --font-script-ui: "Geeza Pro", "SF Arabic", "Noto Sans Arabic", "Segoe UI";
+  --font-script-mono: "Geeza Pro", "Noto Sans Arabic";
 }
 /* Tracking spaces out Chinese, Japanese and Korean glyphs that are already
    evenly set, and breaks the joins between Arabic letters. */
@@ -16954,7 +16958,7 @@ a:hover {
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: var(--font-ui);
+    font-family: var(--font-text);
     font-size: var(--text-base);
     line-height: var(--leading-body);
     color: var(--fg-2);

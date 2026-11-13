@@ -92,6 +92,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Diagnostics (Sharing) | Diagnósticos | The Sharing switch's name, also inside sentences: "cuando Diagnósticos está desactivado". |
 | decision record | registro de decisiones | What Contribution sends; "anonimizados" for redacted. |
 | window wash | velo de la ventana | The theme color laid over the blurred background. |
+| font (Settings → Appearance) | fuente | |
 | Infinitary | Infinitary | Never translated. |
 | repo (never said) | proyecto | "repositorio" only where the sentence points at GitHub. |
 | worktree (never said) | copia de trabajo | |

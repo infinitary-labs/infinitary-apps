@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "Demande d’abord",
+  "policyCareBound": "La fusion locale utilise le soin Par défaut ; Minutieux reste demandé pour les demandes de tirage.",
+  "policyHelper": "Demandez à votre second de les modifier pour cette tâche.",
+  "policySourceParent": "Tâche parente",
+  "policySourceProject": "Réglage du projet",
+  "policySourceTask": "Cette tâche"
+}

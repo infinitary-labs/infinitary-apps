@@ -58,13 +58,13 @@ const FRAME_PROGRAM_SPECS = /tests\/e2e\/observe-frame\.spec\.ts$/;
 /**
  * The product's typed words: every multi-word string, template part and JSX
  * text under src/, and every English message of the catalog
- * (src/shared/i18n/messages/en.json, docs/i18n.md), where the window's words
+ * (src/shared/i18n/messages/en/, docs/i18n.md), where the window's words
  * now live.
  */
 export function productWords(src: string): string[] {
   const words = new Set<string>();
   if (!existsSync(src)) return [];
-  for (const phrase of catalogWords(join(src, "shared/i18n/messages/en.json")))
+  for (const phrase of catalogWords(join(src, "shared/i18n/messages/en")))
     if (wordCount(phrase) >= MIN_WORDS) words.add(phrase);
   const files = readdirSync(src, { recursive: true, encoding: "utf8" }).filter(
     (file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file),
@@ -88,12 +88,19 @@ export function productWords(src: string): string[] {
 }
 
 /** Each English message's typed runs, split at its placeholders: `Cancel preparing {name}` gives `Cancel preparing`. */
-function catalogWords(path: string): string[] {
-  const text = existsSync(path) ? ts.sys.readFile(path) : undefined;
-  if (text === undefined) return [];
-  const forms = Object.values(
-    JSON.parse(text) as Record<string, string | Record<string, string>>,
-  ).flatMap((message) =>
+function catalogWords(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  const messages = readdirSync(dir)
+    .filter((name) => name.endsWith(".json"))
+    .flatMap((name) =>
+      Object.values(
+        JSON.parse(ts.sys.readFile(join(dir, name)) ?? "{}") as Record<
+          string,
+          string | Record<string, string>
+        >,
+      ),
+    );
+  const forms = messages.flatMap((message) =>
     typeof message === "string"
       ? [message]
       : Object.entries(message)

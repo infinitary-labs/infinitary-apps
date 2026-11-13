@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "먼저 물어봄",
+  "policyCareBound": "로컬 병합은 주의 수준 기본으로 하고, 끌어오기 요청에는 신중하게를 계속 요청해요.",
+  "policyHelper": "이 작업의 설정을 바꾸려면 일등항해사에게 요청하세요.",
+  "policySourceParent": "상위 작업",
+  "policySourceProject": "프로젝트 설정",
+  "policySourceTask": "이 작업"
+}

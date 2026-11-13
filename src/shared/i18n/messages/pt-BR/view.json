@@ -1,0 +1,8 @@
+{
+  "viewGoogleUpdateThere": "Atualize o Infinitary em {mac} para fazer login no Google daqui.",
+  "viewReturnPasteLabel": "O endereço em que o navegador terminou depois do {name}",
+  "viewReturnPasteLead": "Aprove na página do {name}. Seu navegador então termina em uma página que não pode ser acessada. Copie o endereço dessa página e cole aqui.",
+  "viewReturnPastePlaceholder": "cole o endereço",
+  "viewReturnPasteRefused": "Esse endereço não é deste login. Cole o endereço em que o navegador terminou depois deste login.",
+  "viewReturnPasteSend": "Enviar para {mac}"
+}

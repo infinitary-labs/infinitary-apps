@@ -1,0 +1,11 @@
+{
+  "composerLines": {
+    "plural": "count",
+    "zero": "{count} سطر",
+    "one": "{count} سطر",
+    "two": "{count} سطران",
+    "few": "{count} أسطر",
+    "many": "{count} سطرًا",
+    "other": "{count} سطر"
+  }
+}

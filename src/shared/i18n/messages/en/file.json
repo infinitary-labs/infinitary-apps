@@ -1,0 +1,13 @@
+{
+  "fileAdd": "Add files",
+  "fileCancel": "Cancel preparing {name}",
+  "fileDropHere": "Drop files to add them",
+  "filePathsAnnounce": {
+    "plural": "count",
+    "one": "Added {count} file path as text",
+    "other": "Added {count} file paths as text"
+  },
+  "filePreparing": "Preparing",
+  "fileReady": "Ready",
+  "fileReadyAnnounce": "{name} ready"
+}

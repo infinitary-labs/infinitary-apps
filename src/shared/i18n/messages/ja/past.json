@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "選択肢",
+  "pastEndingAuthorWithdrawal": "作成者が取り下げました",
+  "pastEndingCrewmateChose": "担当の乗組員が「{label}」を選びました",
+  "pastEndingDismissed": "選ばずに閉じました",
+  "pastEndingDuplicate": "重複として閉じました",
+  "pastEndingFirstmateChose": "一等航海士が「{label}」を選びました",
+  "pastEndingHostWithdrawal": "アプリが取り下げました",
+  "pastEndingTaskRetired": "タスクの終了とともに取り下げられました",
+  "pastEndingUnknown": "閉じました",
+  "pastEndingYouChose": "「{label}」を選びました"
+}

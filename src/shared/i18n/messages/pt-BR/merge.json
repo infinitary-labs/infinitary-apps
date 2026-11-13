@@ -1,0 +1,7 @@
+{
+  "mergeContinues": "A tarefa continua depois desta mesclagem.",
+  "mergeHeldOther": "Outra solicitação de pull virou a mudança atual desta tarefa depois que este cartão apareceu. Mesclar volta quando o cartão mostrá-la.",
+  "mergeHeldPushed": "Uma versão mais recente recebeu push depois que este cartão apareceu. Mesclar volta quando o cartão mostrar a versão mais recente.",
+  "mergeSetByFirstMate": "Definido pelo seu imediato para esta tarefa.",
+  "mergeSetInProject": "Definido nos ajustes deste projeto."
+}

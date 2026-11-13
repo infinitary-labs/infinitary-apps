@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "Fragt vorher",
+  "policyCareBound": "Lokales Zusammenführen nutzt die Sorgfalt „Standard“; für Pull Requests bleibt „Sorgfältig“ angefordert.",
+  "policyHelper": "Bitte deinen ersten Offizier, das für diese Aufgabe zu ändern.",
+  "policySourceParent": "Übergeordnete Aufgabe",
+  "policySourceProject": "Projekteinstellung",
+  "policySourceTask": "Diese Aufgabe"
+}

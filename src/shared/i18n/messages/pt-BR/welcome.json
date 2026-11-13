@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "Os tripulantes fazem o trabalho em segundo plano e relatam aqui.",
+  "welcomeBack": "Voltar",
+  "welcomeBox": "Digite o que você quer que seja feito na caixa de mensagem abaixo deste cartão.",
+  "welcomeCard": "Eu trago respostas e escolhas em cartões como este.",
+  "welcomeEnd": "É só isso. Para começar, pressione um ponto de partida abaixo.",
+  "welcomeFigure": "Sua janela, uma parte a cada toque: a caixa de mensagem, um cartão, Atividade e Tarefas",
+  "welcomeLabelActivity": "Atividade",
+  "welcomeLabelBox": "a caixa de mensagem",
+  "welcomeLabelTasks": "Tarefas",
+  "welcomeNext": "Avançar",
+  "welcomeStarterClone": "Clonar um projeto",
+  "welcomeStarterCloneWords": "Clone o projeto em ",
+  "welcomeStarterFolder": "Trabalhar em uma pasta do meu computador",
+  "welcomeStarterFolderWords": "Trabalhe na pasta ",
+  "welcomeStarterNew": "Começar um projeto novo",
+  "welcomeStarterNewWords": "Comece um projeto novo chamado ",
+  "welcomeStartersLead": "Para começar, pressione um e complete a frase:",
+  "welcomeTasks": "Todo pedido ganha um registro aqui.",
+  "welcomeTitle": "Como trabalhamos"
+}

@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "선원들이 뒤에서 일하고 여기에 보고해요.",
+  "welcomeBack": "이전",
+  "welcomeBox": "이 카드 아래 메시지 상자에 원하는 일을 입력하세요.",
+  "welcomeCard": "답변과 선택지는 이런 카드로 가져올게요.",
+  "welcomeEnd": "이게 전부예요. 시작하려면 아래 시작 문구를 누르세요.",
+  "welcomeFigure": "누를 때마다 창의 한 부분씩: 메시지 상자, 카드, 활동, 작업",
+  "welcomeLabelActivity": "활동",
+  "welcomeLabelBox": "메시지 상자",
+  "welcomeLabelTasks": "작업",
+  "welcomeNext": "다음",
+  "welcomeStarterClone": "프로젝트 복제",
+  "welcomeStarterCloneWords": "다음 주소의 프로젝트를 복제해 주세요: ",
+  "welcomeStarterFolder": "내 컴퓨터의 폴더에서 작업",
+  "welcomeStarterFolderWords": "다음 폴더에서 작업해 주세요: ",
+  "welcomeStarterNew": "새 프로젝트 시작",
+  "welcomeStarterNewWords": "새 프로젝트를 시작해 주세요. 이름은 ",
+  "welcomeStartersLead": "시작하려면 하나를 누르고 문장을 마저 쓰세요:",
+  "welcomeTasks": "요청마다 여기에 기록이 남아요.",
+  "welcomeTitle": "함께 일하는 방법"
+}

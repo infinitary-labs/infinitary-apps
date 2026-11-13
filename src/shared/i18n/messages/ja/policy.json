@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "先に確認",
+  "policyCareBound": "ローカルマージでは慎重さは標準になります。プルリクエストでは引き続き「慎重」を求めます。",
+  "policyHelper": "このタスクでの変更は、一等航海士に頼んでください。",
+  "policySourceParent": "親タスク",
+  "policySourceProject": "プロジェクトの設定",
+  "policySourceTask": "このタスク"
+}

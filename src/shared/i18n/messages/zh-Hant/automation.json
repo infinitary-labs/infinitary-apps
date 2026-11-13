@@ -1,0 +1,25 @@
+{
+  "automationEventsSkipped": "已略過的事件",
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "other": "{count} 個啟用中"
+  },
+  "automationPanelEmpty": "還沒有自動化",
+  "automationPanelListLabel": "自動化",
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "other": "{count} 個已暫停"
+  },
+  "automationPanelUnreadableSummary": "無法讀取",
+  "automationRunAlsoSkipped": "已略過 {count} 個",
+  "automationRunFound": "發現：{words}",
+  "automationRunSkipped": {
+    "plural": "count",
+    "other": "{count} 個事件，{date}"
+  },
+  "automationRunSkippedState": "已略過",
+  "automationScreenedNote": "未傳送給你的大副：判斷模型認為這些事件明顯不符合此自動化的「僅當」條件。",
+  "automationWaitsFor": "僅當",
+  "automationWaitsForNote": "你的大副只會處理符合此條件的事件。在設定中開啟事件篩選時，明顯不符合此條件的事件不會交給你的大副，但仍列在此自動化的記錄中。",
+  "automationWaitsForPlaceholder": "每個事件"
+}

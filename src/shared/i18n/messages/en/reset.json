@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "Reset every key to the {preset} preset's?",
+  "resetKeysConfirm": "Reset All Keys",
+  "resetKeysDetail": "Every shortcut you changed in Keyboard settings goes back to the one the {preset} preset gives it."
+}

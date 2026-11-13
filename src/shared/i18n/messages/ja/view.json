@@ -1,0 +1,8 @@
+{
+  "viewGoogleUpdateThere": "ここから Google にサインインするには、{mac} の Infinitary をアップデートしてください。",
+  "viewReturnPasteLabel": "{name} のあとブラウザが止まったページのアドレス",
+  "viewReturnPasteLead": "{name} のページで承認してください。そのあとブラウザは、表示できないページで止まります。そのページのアドレスをコピーして、ここに貼り付けてください。",
+  "viewReturnPastePlaceholder": "アドレスを貼り付け",
+  "viewReturnPasteRefused": "このアドレスは今回のサインインのものではありません。このサインインのあとブラウザが止まったページのアドレスを貼り付けてください。",
+  "viewReturnPasteSend": "{mac} に送信"
+}

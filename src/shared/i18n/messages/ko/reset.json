@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "모든 키를 {preset} 프리셋의 키로 재설정할까요?",
+  "resetKeysConfirm": "모든 키 재설정",
+  "resetKeysDetail": "키보드 설정에서 바꾼 단축키가 모두 {preset} 프리셋의 단축키로 돌아가요."
+}

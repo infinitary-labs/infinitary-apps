@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "无法合并：{problem}",
+  "settleCouldNotDiscard": "无法丢弃：{problem}",
+  "settleDiscardedPullOpen": "已丢弃。它的拉取请求在项目托管处仍处于打开状态：{problem}",
+  "settleDiscardedPullOpenThen": "已丢弃。它的拉取请求在项目托管处仍处于打开状态：{problem}。{followup}",
+  "settleDiscarding": "正在丢弃",
+  "settleDiscardingAfterTurn": "等它的船员做完手头的事，就丢弃",
+  "settleMerging": "正在合并",
+  "settleMergingAfterTurn": "等它的船员做完手头的事，就合并",
+  "settleMergingChange": "正在合并 {change}",
+  "settleMergingChangeAfterTurn": "等它的船员做完手头的事，就合并 {change}"
+}

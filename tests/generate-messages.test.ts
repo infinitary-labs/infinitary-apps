@@ -1,10 +1,16 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  CATALOG_DIR,
+  catalogLayout,
   compileCatalogs,
+  glossaryProblems,
+  layoutProblems,
   PHONE_INFO_PLIST,
   PHONE_MESSAGES_PATH,
   readCatalogs,
+  readGlossaries,
+  sortedGlossary,
 } from "../scripts/generate-messages";
 import * as knowledgeWords from "../src/panels/knowledge/messages.generated";
 
@@ -12,7 +18,7 @@ import * as knowledgeWords from "../src/panels/knowledge/messages.generated";
 // crewmate that changes the English writes every language's version in the
 // same pull request, and `pnpm check` refuses a missing translation or one
 // whose placeholders differ from English.
-const english = readFileSync("src/shared/i18n/messages/en.json", "utf8");
+const english = readCatalogs().en ?? "";
 const catalog = JSON.parse(english) as Record<string, unknown>;
 
 /** A German catalog translated from the real English one, then changed by `edit`. */
@@ -50,8 +56,8 @@ describe("the message compiler", () => {
       }),
     });
     expect(problems).toEqual([
-      expect.stringContaining("de.json: fileAdd is missing"),
-      expect.stringContaining("de.json: fileRemoved is not in the English catalog"),
+      expect.stringContaining("de/file.json: fileAdd is missing"),
+      expect.stringContaining("de/file.json: fileRemoved is not in the English catalog"),
     ]);
   });
 
@@ -85,9 +91,11 @@ describe("the message compiler", () => {
     expect(problems).toEqual(
       expect.arrayContaining([
         expect.stringContaining(
-          "ar.json: composerLines: ar needs the plural forms few, many, two, zero",
+          "ar/composer.json: composerLines: ar needs the plural forms few, many, two, zero",
         ),
-        expect.stringContaining("ja.json: composerLines: ja never uses the plural forms one"),
+        expect.stringContaining(
+          "ja/composer.json: composerLines: ja never uses the plural forms one",
+        ),
       ]),
     );
   });
@@ -98,9 +106,61 @@ describe("the message compiler", () => {
       "en-XA": english,
     });
     expect(problems).toEqual([
-      expect.stringContaining("en.json: fileAdd: {file name} is not a placeholder"),
-      expect.stringContaining("en-XA.json: en-XA is compiled from English; remove the file"),
+      expect.stringContaining("en/file.json: fileAdd: {file name} is not a placeholder"),
+      expect.stringContaining("messages/en-XA: en-XA is compiled from English; remove the folder"),
     ]);
+  });
+});
+
+// INF-4066's direction 1, which the captain started: messages kept in name
+// order, one file per area, so two changes adding different messages merge
+// without a clash (tests/catalog-merges.test.ts merges two). The check
+// refuses any other layout, so every change keeps the order a merge needs.
+describe("the catalogs' layout", () => {
+  const files = { en: catalogLayout(catalog) };
+
+  it("holds the project's own catalogs and glossaries as the compiler lays them out", () => {
+    const real = Object.fromEntries(
+      Object.entries(readCatalogs()).map(([tag, text]) => [tag, catalogLayout(JSON.parse(text))]),
+    );
+    expect(layoutProblems(real)).toEqual([]);
+    expect(glossaryProblems(readGlossaries())).toEqual([]);
+  });
+
+  it("refuses an area file out of name order, a message in another area's file and a file from before the move", () => {
+    const { fileAdd, fileCancel, ...rest } = JSON.parse(files.en.file ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    const reordered = `${JSON.stringify({ fileCancel, fileAdd, ...rest }, null, 2)}\n`;
+    const crowded = `${JSON.stringify({ ...JSON.parse(files.en.composer ?? "{}"), fileAdd }, null, 2)}\n`;
+    expect(
+      layoutProblems({ en: { ...files.en, file: reordered, composer: crowded } }, [
+        `${CATALOG_DIR}/de.json`,
+      ]),
+    ).toEqual([
+      `${CATALOG_DIR}/de.json: each language's catalog is a folder of area files now; run node scripts/move-catalogs.ts`,
+      `${CATALOG_DIR}/en/file.json: fileAdd is in another file too; keep it once, in ${CATALOG_DIR}/en/file.json`,
+      `${CATALOG_DIR}/en/composer.json: fileAdd belongs in ${CATALOG_DIR}/en/file.json; run node scripts/generate-messages.ts`,
+      `${CATALOG_DIR}/en/file.json: keep its messages in name order, as the compiler writes them; run node scripts/generate-messages.ts`,
+    ]);
+  });
+
+  it("refuses a glossary whose terms are out of name order, and puts them in order", () => {
+    const [path, text] = Object.entries(readGlossaries())[0] ?? ["", ""];
+    // The Terms rows: every table line after the header and its separator.
+    const lines = text.split("\n");
+    const rows = lines
+      .slice(lines.findIndex((line) => line.startsWith("| ---")) + 1)
+      .filter((line) => line.startsWith("|"));
+    const appended = `${text.replace(`${rows[0]}\n`, "")}`.replace(
+      `${rows.at(-1)}\n`,
+      `${rows.at(-1)}\n${rows[0]}\n`,
+    );
+    expect(glossaryProblems({ [path]: appended })).toEqual([
+      `${path}: keep the Terms rows in name order by their English term; run node scripts/generate-messages.ts`,
+    ]);
+    expect(sortedGlossary(appended)).toBe(text);
   });
 });
 
@@ -110,10 +170,7 @@ describe("the message compiler", () => {
 describe("an app panel's own messages", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  const japanese = JSON.parse(readFileSync("src/shared/i18n/messages/ja.json", "utf8")) as Record<
-    string,
-    unknown
-  >;
+  const japanese = JSON.parse(readCatalogs().ja ?? "{}") as Record<string, unknown>;
 
   it("speak the language the panel's frame opened in", () => {
     vi.stubGlobal("document", { documentElement: { lang: "ja" } });

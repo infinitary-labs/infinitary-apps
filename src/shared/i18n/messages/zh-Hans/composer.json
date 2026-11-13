@@ -1,0 +1,6 @@
+{
+  "composerLines": {
+    "plural": "count",
+    "other": "{count} 行"
+  }
+}

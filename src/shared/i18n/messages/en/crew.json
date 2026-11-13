@@ -1,0 +1,21 @@
+{
+  "crewAPart": "A part",
+  "crewFirstmateLabel": "First mate - {state}",
+  "crewModelNames": "Crew model names",
+  "crewNextComputers": "Next computers",
+  "crewOrbitLabel": "Crew - {working} working, {idle} idle",
+  "crewOutOfReach": "Out of reach",
+  "crewPartsCount": "{finished} finished, {running} running, {waiting} waiting",
+  "crewPreviousComputers": "Previous computers",
+  "crewProgramsAndParts": "Programs and their parts",
+  "crewStateIdle": "Idle",
+  "crewStateWorking": "Working",
+  "crewSummaryAnotherTask": "another task",
+  "crewSummaryBlockedBy": "Blocked by",
+  "crewSummaryPartOf": "Part of",
+  "crewSummaryParts": "Parts",
+  "crewSummaryReviewing": "Reviewing",
+  "crewSummaryRunning": "Running",
+  "crewUnavailableComputer": "Unavailable computer",
+  "crewWorkComputers": "Work computers"
+}

@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "선택지 하나",
+  "pastEndingAuthorWithdrawal": "작성자가 거둬들임",
+  "pastEndingCrewmateChose": "선원이 {label}을(를) 골랐어요",
+  "pastEndingDismissed": "고르지 않고 닫음",
+  "pastEndingDuplicate": "중복으로 닫음",
+  "pastEndingFirstmateChose": "일등항해사가 {label}을(를) 골랐어요",
+  "pastEndingHostWithdrawal": "앱이 내림",
+  "pastEndingTaskRetired": "작업이 끝나면서 내림",
+  "pastEndingUnknown": "닫힘",
+  "pastEndingYouChose": "선장님이 {label}을(를) 골랐어요"
+}

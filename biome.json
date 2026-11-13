@@ -445,6 +445,7 @@
         "!src/core/workspace/workspaceService.test.ts",
         "!src/core/workspace/naming.test.ts",
         "!tests/naming-replacement.test.ts",
+        "!tests/catalog-merges.test.ts",
         "!src/core/workspace/worktreePool.test.ts",
         "!src/core/workspace/workMove.test.ts",
         "!src/main/host/darwinKeychain.scratch.test.ts",

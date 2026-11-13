@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "一个选项",
+  "pastEndingAuthorWithdrawal": "已由发起者撤回",
+  "pastEndingCrewmateChose": "它的船员选择了 {label}",
+  "pastEndingDismissed": "未作选择就已关闭",
+  "pastEndingDuplicate": "因重复而关闭",
+  "pastEndingFirstmateChose": "你的大副选择了 {label}",
+  "pastEndingHostWithdrawal": "已被应用撤下",
+  "pastEndingTaskRetired": "任务结束时已撤下",
+  "pastEndingUnknown": "已关闭",
+  "pastEndingYouChose": "你选择了 {label}"
+}

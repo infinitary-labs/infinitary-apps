@@ -1,0 +1,8 @@
+{
+  "viewGoogleUpdateThere": "Update Infinitary on {mac} to sign in to Google from here.",
+  "viewReturnPasteLabel": "The address your browser ended on after {name}",
+  "viewReturnPasteLead": "Approve on {name}'s page. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.",
+  "viewReturnPastePlaceholder": "paste the address",
+  "viewReturnPasteRefused": "That address is not this sign-in's. Paste the address your browser ended on after this sign-in.",
+  "viewReturnPasteSend": "Send to {mac}"
+}

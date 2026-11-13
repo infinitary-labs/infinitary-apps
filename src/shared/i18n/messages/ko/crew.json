@@ -1,0 +1,21 @@
+{
+  "crewAPart": "부분",
+  "crewFirstmateLabel": "일등항해사 - {state}",
+  "crewModelNames": "선원 모델 이름",
+  "crewNextComputers": "다음 컴퓨터",
+  "crewOrbitLabel": "선원들 - 작업 중 {working}, 대기 {idle}",
+  "crewOutOfReach": "연락 닿지 않음",
+  "crewPartsCount": "끝남 {finished}, 실행 중 {running}, 대기 {waiting}",
+  "crewPreviousComputers": "이전 컴퓨터",
+  "crewProgramsAndParts": "프로그램과 그 부분",
+  "crewStateIdle": "대기",
+  "crewStateWorking": "작업 중",
+  "crewSummaryAnotherTask": "다른 작업",
+  "crewSummaryBlockedBy": "막고 있는 작업",
+  "crewSummaryPartOf": "상위 작업",
+  "crewSummaryParts": "부분",
+  "crewSummaryReviewing": "검토 중",
+  "crewSummaryRunning": "실행 중",
+  "crewUnavailableComputer": "쓸 수 없는 컴퓨터",
+  "crewWorkComputers": "작업 컴퓨터"
+}

@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "an option",
+  "pastEndingAuthorWithdrawal": "Withdrawn by its author",
+  "pastEndingCrewmateChose": "Its crewmate chose {label}",
+  "pastEndingDismissed": "Closed without choosing",
+  "pastEndingDuplicate": "Closed as a duplicate",
+  "pastEndingFirstmateChose": "Your first mate chose {label}",
+  "pastEndingHostWithdrawal": "Taken down by the app",
+  "pastEndingTaskRetired": "Taken down when the task ended",
+  "pastEndingUnknown": "Closed",
+  "pastEndingYouChose": "You chose {label}"
+}

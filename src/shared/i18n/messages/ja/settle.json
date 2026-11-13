@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "マージできません：{problem}",
+  "settleCouldNotDiscard": "破棄できませんでした：{problem}",
+  "settleDiscardedPullOpen": "破棄しました。プルリクエストはプロジェクトの保管先でまだ開いています：{problem}",
+  "settleDiscardedPullOpenThen": "破棄しました。プルリクエストはプロジェクトの保管先でまだ開いています：{problem}。{followup}",
+  "settleDiscarding": "破棄中",
+  "settleDiscardingAfterTurn": "担当の乗組員が今の作業を終えたら破棄します",
+  "settleMerging": "マージ中",
+  "settleMergingAfterTurn": "担当の乗組員が今の作業を終えたらマージします",
+  "settleMergingChange": "{change} をマージ中",
+  "settleMergingChangeAfterTurn": "担当の乗組員が今の作業を終えたら {change} をマージします"
+}

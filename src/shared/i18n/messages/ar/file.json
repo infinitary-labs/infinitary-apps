@@ -1,0 +1,17 @@
+{
+  "fileAdd": "إضافة ملفات",
+  "fileCancel": "إلغاء تجهيز {name}",
+  "fileDropHere": "أفلت الملفات لإضافتها",
+  "filePathsAnnounce": {
+    "plural": "count",
+    "zero": "أُضيف {count} مسار ملف كنص",
+    "one": "أُضيف {count} مسار ملف كنص",
+    "two": "أُضيف {count} مساران لملفين كنص",
+    "few": "أُضيفت {count} مسارات ملفات كنص",
+    "many": "أُضيف {count} مسارًا لملفات كنص",
+    "other": "أُضيف {count} مسار ملف كنص"
+  },
+  "filePreparing": "قيد التجهيز",
+  "fileReady": "جاهز",
+  "fileReadyAnnounce": "{name} جاهز"
+}

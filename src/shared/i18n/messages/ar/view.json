@@ -1,0 +1,8 @@
+{
+  "viewGoogleUpdateThere": "حدّث Infinitary على {mac} لتسجيل الدخول إلى Google من هنا.",
+  "viewReturnPasteLabel": "العنوان الذي انتهى عنده متصفحك بعد {name}",
+  "viewReturnPasteLead": "وافق في صفحة {name}. سينتهي متصفحك بعدها عند صفحة لا يمكن الوصول إليها. انسخ عنوان تلك الصفحة والصقه هنا.",
+  "viewReturnPastePlaceholder": "الصق العنوان",
+  "viewReturnPasteRefused": "هذا العنوان ليس لتسجيل الدخول هذا. الصق العنوان الذي انتهى عنده متصفحك بعد تسجيل الدخول هذا.",
+  "viewReturnPasteSend": "إرسال إلى {mac}"
+}

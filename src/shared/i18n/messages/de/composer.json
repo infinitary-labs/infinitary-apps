@@ -1,0 +1,7 @@
+{
+  "composerLines": {
+    "plural": "count",
+    "one": "{count} Zeile",
+    "other": "{count} Zeilen"
+  }
+}

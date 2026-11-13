@@ -11,131 +11,131 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 
 | English | German | Note |
 | --- | --- | --- |
+| a crewmate's notes | die Notizen des Crewmitglieds | |
+| a panel by <name> | ein Panel von <Name> | |
+| A phone (the item under Devices) | „Ein Telefon“ | Quoted mid-sentence. |
+| a stronger model | ein stärkeres Modell | |
+| account | Konto | |
+| action (an integration action) | Aktion | |
+| Allow (secrets approval button) | „Erlauben“ |  |
+| Always use | Immer verwenden | Quoted „Immer verwenden“ mid-sentence. |
+| Appearance | Erscheinungsbild | As macOS German names it. |
+| Approves secret uses (switch) | Gibt Geheimnisse frei | The computer's Settings → Devices should show the same words. |
+| Asks first | Fragt vorher | |
+| backlog | Backlog | |
+| batch / batch run (the queue's) | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
+| batch check | Sammelprüfung | The project's queue testing approved work together. |
+| batched pull request | gebündelter Pull Request | |
+| branch | Branch | Masculine; "main branch" is "Hauptbranch". |
+| bring up to date | auf den neuesten Stand bringen | Replaces rebase and conflict; "kollidiert mit neuerer Arbeit" says what happened. |
+| built in place | direkt im Ordner gebaut | Says where the work happened without "in place" jargon. |
 | captain | Kapitän | The usual word a ship's crew uses; masculine default form, see Register. |
-| first mate | erster Offizier | The German merchant-navy rank for a ship's second-in-command; a common noun with a lowercase adjective mid-sentence ("dein erster Offizier"), "Erster Offizier" only at a sentence start or as a short label. |
-| first mate (thread author tag) | Offizier | The very short author label in a card's thread. |
+| card | Karte | |
+| certificate | Zertifikat | "CA-Zertifikat" for an organization certificate. |
+| claim (recorded claim) | Aussage | "Festgehaltene Aussage" |
+| clone | klonen | "geklont", never "kopiert". |
+| collection | Sammlung | |
+| command search | Befehlssuche | |
+| commit | Commit | Masculine, as GitHub's German docs say it. |
+| computer | Computer | Every computer, never "Rechner" or "Mac" in a sentence. |
+| concept / finding | Begriff / Erkenntnis | As the card references already say |
+| conversation | Unterhaltung | Replaces session and transcript. |
 | crew | Crew | Common in German; "Besatzung" reads stiffer. |
 | crewmate | Crewmitglied | Neuter, so "sein Crewmitglied", "es". |
-| task | Aufgabe | Feminine. |
-| card | Karte | |
-| the record (a task's record) | das Protokoll, Aufgabenprotokoll | A record of every task. |
+| custom API | eigene API | A connection to a model server the person adds; "Eigene API hinzufügen". |
+| decision / note (card kinds) | Entscheidung / Notiz | |
+| decision records | Entscheidungsaufzeichnungen | Kept apart from "Protokoll", the task record; "redacted" is "geschwärzt". |
+| decisions / decision model | Entscheidungen / Entscheidungsmodell | |
+| Delivery | Lieferung | |
+| demo / its recording | Demo / Aufnahme | |
+| Devices | Geräte | |
+| Diagnostics / Contribution (Sharing) | Diagnose / Beitrag | The two Sharing switches; what Diagnostics sends is "Diagnosedaten". |
+| direction (a standing knowledge entry) | Vorgabe | Kept apart from its kinds: instruction "Anweisung", advice "Rat" |
+| discard | verwerfen | |
+| Done / Got it | Fertig / Verstanden | |
+| drop (a task) | aufgeben | Kept apart from discard. |
+| Dynamic routing | Dynamische Verteilung | |
+| estimated (Usage) | geschätzt | |
+| evidence | Belege | "Widersprüchliche Belege" |
+| feed / activity | Aktivität | |
+| file (to the backlog) | im Backlog ablegen | "Warum sie abgelegt wurde". |
+| fingerprint (a computer's key) | Fingerabdruck |  |
+| first mate | erster Offizier | The German merchant-navy rank for a ship's second-in-command; a common noun with a lowercase adjective mid-sentence ("dein erster Offizier"), "Erster Offizier" only at a sentence start or as a short label. |
+| first mate (thread author tag) | Offizier | The very short author label in a card's thread. |
+| font (Settings → Appearance) | Schrift | |
+| forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
+| header (a request header) | Header | Masculine, plural "Header"; only in the custom API form. |
+| hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
+| Infinitary | Infinitary | Never translated. |
+| Intelligence | Intelligenz | |
+| join (the phone joins a computer) | sich mit … verbinden | "Mit {computer} verbinden?", "Erneut verbinden"; reads more naturally than "beitreten". |
+| key (an integration's key) | Schlüssel | "Linear-Schlüssel", "API-Schlüssel". |
+| Knowledge (panel) | Wissen | "Wissen öffnen" |
+| Leave (a device) | Verlassen | "{name} hat deine Geräte verlassen." |
+| level (premium / high / medium / low) | Stufe | Settings → Models places; "model slots" is Modellstufen, never Slots. |
+| live validation | Live-Prüfung | Trying the change for real; kept apart from "Überprüfungen". |
 | log (a check's kept output) | das Log | "Protokoll" already names the task's record. |
-| thread (a card's replies) | Verlauf | |
-| panel | Panel | Neuter, plural "Panels"; common in German software. |
-| a panel by <name> | ein Panel von <Name> | |
-| rail | Leiste | |
-| project | Projekt | |
-| your project | dein Projekt | |
-| pull request | Pull Request | Masculine, as GitHub's German docs say it ("der Pull Request"). |
-| batched pull request | gebündelter Pull Request | |
-| PR #N | PR #N | Stays as is, in mono. |
+| main message | Hauptnachricht | |
 | merge | zusammenführen, Zusammenführen | GitHub's German docs say "Zusammenführen eines Pull Requests"; "mergen" is avoided as jargon. |
 | merged locally | lokal zusammengeführt | The "local merge" pill is "Lokal zusammengeführt". |
-| commit | Commit | Masculine, as GitHub's German docs say it. |
-| branch | Branch | Masculine; "main branch" is "Hauptbranch". |
-| push | pushen | "Den Branch gepusht", as GitHub's German docs say it. |
-| clone | klonen | "geklont", never "kopiert". |
-| the checks | die Überprüfungen | GitHub's German docs say "Überprüfungen" and "Statusüberprüfungen". |
-| the checks passed | die Überprüfungen waren erfolgreich | GitHub's German wording. |
-| the checks failed | die Überprüfungen sind fehlgeschlagen | |
-| the checks are running | die Überprüfungen laufen | |
-| review | Review | Neuter ("das Review"), so it does not collide with "Überprüfungen". |
-| batch check | Sammelprüfung | The project's queue testing approved work together. |
-| queue (the project's merge queue) | Warteschlange | |
-| bring up to date | auf den neuesten Stand bringen | Replaces rebase and conflict; "kollidiert mit neuerer Arbeit" says what happened. |
-| working copy | Arbeitskopie | Replaces worktree. |
-| where the project lives | wo das Projekt liegt | "dort, wo das Projekt liegt". |
-| the project's host | der Host des Projekts | |
-| sign-in / sign in | Anmeldung / anmelden | "sich erneut anmelden". |
-| your plan's allowance | das Kontingent deines Tarifs | "Kontingent" replaces quota, rate limit and usage window. |
-| provider | Anbieter | |
-| model | Modell | |
-| plan (subscription) | Tarif | Kept apart from a task's "Plan". |
-| plan (a task's steps) | Plan | |
-| subscription | Abo | The short everyday word. |
-| account | Konto | |
-| Settings | Einstellungen | Plural, so "Die Einstellungen sind offen". |
-| Appearance | Erscheinungsbild | As macOS German names it. |
-| rigor levels: Quick, Default, Careful | Schnell, Standard, Sorgfältig | "{care} rigor" is "Sorgfalt: {care}". |
 | Merges on its own | Führt selbst zusammen | |
-| Asks first | Fragt vorher | |
-| a stronger model | ein stärkeres Modell | |
-| Reasoning | Denkaufwand | |
-| Intelligence | Intelligenz | |
-| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Schwer / Normal / Einfach, Schwierigkeit | How hard the task is, never a reasoning word. |
-| computer | Computer | Every computer, never "Rechner" or "Mac" in a sentence. |
-| this computer | dieser Computer | |
-| phone | Telefon | |
-| out of reach | außer Reichweite | Replaces offline and unreachable. |
-| Remove (a device) | Entfernen | |
-| Leave (a device) | Verlassen | "{name} hat deine Geräte verlassen." |
-| Devices | Geräte | |
-| key (an integration's key) | Schlüssel | "Linear-Schlüssel", "API-Schlüssel". |
-| custom API | eigene API | A connection to a model server the person adds; "Eigene API hinzufügen". |
-| header (a request header) | Header | Masculine, plural "Header"; only in the custom API form. |
-| certificate | Zertifikat | "CA-Zertifikat" for an organization certificate. |
-| token (a sign-in token a command prints) | Token | Neuter ("das Token"); only in the custom API form, plural "Tokens" for counted model tokens. |
-| Models board | Modelltafel | The board of models under Intelligenz in the settings. |
-| Secrets | Geheimnisse | As GitHub's German docs name secrets. |
-| Runbooks | Leitfäden | Plain word for a settings section a non-developer reads. |
-| Usage | Nutzung | |
-| conversation | Unterhaltung | Replaces session and transcript. |
-| a crewmate's notes | die Notizen des Crewmitglieds | |
-| report | Bericht, berichten | |
-| feed / activity | Aktivität | |
-| starter | Einstieg | A button that begins a sentence in the message box. |
 | message box | Nachrichtenfeld | |
-| main message | Hauptnachricht | |
-| command search | Befehlssuche | |
-| discard | verwerfen | |
-| drop (a task) | aufgeben | Kept apart from discard. |
-| stop | stoppen | |
-| start | starten | |
-| file (to the backlog) | im Backlog ablegen | "Warum sie abgelegt wurde". |
-| backlog | Backlog | |
-| queued | eingereiht | |
-| decision / note (card kinds) | Entscheidung / Notiz | |
-| Done / Got it | Fertig / Verstanden | |
+| model | Modell | |
+| Models board | Modelltafel | The board of models under Intelligenz in the settings. |
 | Not now | Nicht jetzt | |
-| Delivery | Lieferung | |
-| Runs on | Läuft auf | |
-| built in place | direkt im Ordner gebaut | Says where the work happened without "in place" jargon. |
-| demo / its recording | Demo / Aufnahme | |
-| preset (keyboard) | Vorlage | |
-| version (replaces SHA, hash) | Version | |
-| purge (task data) | endgültig löschen | Says the removal cannot be undone. |
-| Diagnostics / Contribution (Sharing) | Diagnose / Beitrag | The two Sharing switches; what Diagnostics sends is "Diagnosedaten". |
-| decision records | Entscheidungsaufzeichnungen | Kept apart from "Protokoll", the task record; "redacted" is "geschwärzt". |
-| action (an integration action) | Aktion | |
-| font (Settings → Appearance) | Schrift | |
-| task key (a project's task numbering, "INF") | Aufgabenkürzel, Kürzel | Kept apart from "Schlüssel", which is a key that unlocks something. |
-| batch / batch run (the queue's) | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
-| level (premium / high / medium / low) | Stufe | Settings → Models places; "model slots" is Modellstufen, never Slots. |
-| Always use | Immer verwenden | Quoted „Immer verwenden“ mid-sentence. |
-| Dynamic routing | Dynamische Verteilung | |
-| decisions / decision model | Entscheidungen / Entscheidungsmodell | |
-| prompt (an automation's words) | Nachricht | What the first mate gets; plain word over "Prompt". |
-| record (a Usage record) | Eintrag | Kept apart from a task's Protokoll. |
-| estimated (Usage) | geschätzt | |
-| Infinitary | Infinitary | Never translated. |
-| Knowledge (panel) | Wissen | "Wissen öffnen" |
-| concept / finding | Begriff / Erkenntnis | As the card references already say |
-| direction (a standing knowledge entry) | Vorgabe | Kept apart from its kinds: instruction "Anweisung", advice "Rat" |
-| claim (recorded claim) | Aussage | "Festgehaltene Aussage" |
-| evidence | Belege | "Widersprüchliche Belege" |
-| revision (of a knowledge entry) | Revision | "Revision 3"; kept apart from "Version" |
-| collection | Sammlung | |
-| pin / unpin (a task) | anheften / nicht mehr angeheftet | |
-| hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
-| Waiting on you (board lane) | Wartet auf dich | |
-| Queued (board lane) | Eingereiht | |
-| join (the phone joins a computer) | sich mit … verbinden | "Mit {computer} verbinden?", "Erneut verbinden"; reads more naturally than "beitreten". |
-| forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
-| fingerprint (a computer's key) | Fingerabdruck |  |
+| out of reach | außer Reichweite | Replaces offline and unreachable. |
+| panel | Panel | Neuter, plural "Panels"; common in German software. |
 | passcode (iOS) | Code | iOS German says "Face ID & Code". |
-| A phone (the item under Devices) | „Ein Telefon“ | Quoted mid-sentence. |
-| Allow (secrets approval button) | „Erlauben“ |  |
-| Approves secret uses (switch) | Gibt Geheimnisse frei | The computer's Settings → Devices should show the same words. |
+| phone | Telefon | |
+| pin / unpin (a task) | anheften / nicht mehr angeheftet | |
+| plan (a task's steps) | Plan | |
+| plan (subscription) | Tarif | Kept apart from a task's "Plan". |
+| PR #N | PR #N | Stays as is, in mono. |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Schwer / Normal / Einfach, Schwierigkeit | How hard the task is, never a reasoning word. |
+| preset (keyboard) | Vorlage | |
+| project | Projekt | |
+| prompt (an automation's words) | Nachricht | What the first mate gets; plain word over "Prompt". |
+| provider | Anbieter | |
+| pull request | Pull Request | Masculine, as GitHub's German docs say it ("der Pull Request"). |
+| purge (task data) | endgültig löschen | Says the removal cannot be undone. |
+| push | pushen | "Den Branch gepusht", as GitHub's German docs say it. |
+| queue (the project's merge queue) | Warteschlange | |
+| queued | eingereiht | |
+| Queued (board lane) | Eingereiht | |
+| rail | Leiste | |
+| Reasoning | Denkaufwand | |
+| record (a Usage record) | Eintrag | Kept apart from a task's Protokoll. |
+| Remove (a device) | Entfernen | |
+| report | Bericht, berichten | |
+| review | Review | Neuter ("das Review"), so it does not collide with "Überprüfungen". |
+| revision (of a knowledge entry) | Revision | "Revision 3"; kept apart from "Version" |
+| rigor levels: Quick, Default, Careful | Schnell, Standard, Sorgfältig | "{care} rigor" is "Sorgfalt: {care}". |
+| Runbooks | Leitfäden | Plain word for a settings section a non-developer reads. |
+| Runs on | Läuft auf | |
+| Secrets | Geheimnisse | As GitHub's German docs name secrets. |
+| Settings | Einstellungen | Plural, so "Die Einstellungen sind offen". |
+| sign-in / sign in | Anmeldung / anmelden | "sich erneut anmelden". |
+| start | starten | |
+| starter | Einstieg | A button that begins a sentence in the message box. |
 | Steer (button) | Lenken |  |
+| stop | stoppen | |
+| subscription | Abo | The short everyday word. |
+| task | Aufgabe | Feminine. |
+| task key (a project's task numbering, "INF") | Aufgabenkürzel, Kürzel | Kept apart from "Schlüssel", which is a key that unlocks something. |
+| the checks | die Überprüfungen | GitHub's German docs say "Überprüfungen" and "Statusüberprüfungen". |
+| the checks are running | die Überprüfungen laufen | |
+| the checks failed | die Überprüfungen sind fehlgeschlagen | |
+| the checks passed | die Überprüfungen waren erfolgreich | GitHub's German wording. |
+| the project's host | der Host des Projekts | |
+| the record (a task's record) | das Protokoll, Aufgabenprotokoll | A record of every task. |
 | Theme: Device / Dark / Light | Darstellung: Gerät / Dunkel / Hell | Kept apart from "Erscheinungsbild" (Appearance). |
-| live validation | Live-Prüfung | Trying the change for real; kept apart from "Überprüfungen". |
+| this computer | dieser Computer | |
+| thread (a card's replies) | Verlauf | |
+| token (a sign-in token a command prints) | Token | Neuter ("das Token"); only in the custom API form, plural "Tokens" for counted model tokens. |
+| Usage | Nutzung | |
+| version (replaces SHA, hash) | Version | |
+| Waiting on you (board lane) | Wartet auf dich | |
+| where the project lives | wo das Projekt liegt | "dort, wo das Projekt liegt". |
+| working copy | Arbeitskopie | Replaces worktree. |
+| your plan's allowance | das Kontingent deines Tarifs | "Kontingent" replaces quota, rate limit and usage window. |
+| your project | dein Projekt | |

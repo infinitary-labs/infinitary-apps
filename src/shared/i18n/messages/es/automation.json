@@ -1,0 +1,31 @@
+{
+  "automationEventsSkipped": "Eventos omitidos",
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "one": "activas: {count}",
+    "many": "activas: {count}",
+    "other": "activas: {count}"
+  },
+  "automationPanelEmpty": "Todavía no hay automatizaciones",
+  "automationPanelListLabel": "Automatizaciones",
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "one": "en pausa: {count}",
+    "many": "en pausa: {count}",
+    "other": "en pausa: {count}"
+  },
+  "automationPanelUnreadableSummary": "no se puede leer",
+  "automationRunAlsoSkipped": "{count} omitidos",
+  "automationRunFound": "Encontrado: {words}",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} evento, {date}",
+    "many": "{count} de eventos, {date}",
+    "other": "{count} eventos, {date}"
+  },
+  "automationRunSkippedState": "Omitido",
+  "automationScreenedNote": "No se envió a tu primer oficial: el modelo de decisión leyó estos eventos como claramente fuera de la condición Solo si de esta automatización.",
+  "automationWaitsFor": "Solo si",
+  "automationWaitsForNote": "Tu primer oficial solo actúa ante los eventos que cumplen esto. Mientras el filtro de eventos esté activado en Ajustes, un evento que claramente no cumple esto no llega a tu primer oficial y sigue en el historial de esta automatización.",
+  "automationWaitsForPlaceholder": "Cada evento"
+}

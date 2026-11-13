@@ -1,0 +1,8 @@
+{
+  "composerLines": {
+    "plural": "count",
+    "one": "{count} línea",
+    "many": "{count} de líneas",
+    "other": "{count} líneas"
+  }
+}

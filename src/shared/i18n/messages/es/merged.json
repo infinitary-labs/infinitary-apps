@@ -1,0 +1,11 @@
+{
+  "mergedAt": "Se fusionó a las {at}",
+  "mergedChangeOn": "Se fusionó {change} en {place}",
+  "mergedChangeOnHost": "Se fusionó {change} en el sitio que aloja el proyecto",
+  "mergedChangeWhereItLives": "Se fusionó {change} donde se aloja el proyecto",
+  "mergedInCommit": "Se fusionó en la confirmación {commit}",
+  "mergedInPull": "Se fusionó en la solicitud de incorporación de cambios {change}",
+  "mergedOn": "Se fusionó en {place}",
+  "mergedOnItsOwnAt": "Se fusionó por su cuenta a las {at}",
+  "mergedWhereItLives": "Se fusionó donde se aloja el proyecto"
+}

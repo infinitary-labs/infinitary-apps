@@ -1,0 +1,25 @@
+{
+  "automationEventsSkipped": "スキップしたイベント",
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "other": "{count}件が有効"
+  },
+  "automationPanelEmpty": "自動化はまだありません",
+  "automationPanelListLabel": "自動化",
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "other": "{count}件が一時停止中"
+  },
+  "automationPanelUnreadableSummary": "読み取れません",
+  "automationRunAlsoSkipped": "{count}件スキップ",
+  "automationRunFound": "見つかったこと: {words}",
+  "automationRunSkipped": {
+    "plural": "count",
+    "other": "{count}件のイベント、{date}"
+  },
+  "automationRunSkippedState": "スキップ",
+  "automationScreenedNote": "一等航海士には送っていません。判断モデルが、これらのイベントはこの自動化の条件に明らかに当てはまらないと判断しました。",
+  "automationWaitsFor": "条件",
+  "automationWaitsForNote": "一等航海士はこの条件に当てはまるイベントにだけ対応します。設定でイベントの選別がオンのあいだ、この条件に明らかに当てはまらないイベントは一等航海士に届かず、この自動化の履歴には残ります。",
+  "automationWaitsForPlaceholder": "すべてのイベント"
+}

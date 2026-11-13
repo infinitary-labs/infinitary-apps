@@ -1,0 +1,14 @@
+{
+  "fileAdd": "Agregar archivos",
+  "fileCancel": "Cancelar la preparación de {name}",
+  "fileDropHere": "Suelta archivos para agregarlos",
+  "filePathsAnnounce": {
+    "plural": "count",
+    "one": "Se agregó {count} ruta de archivo como texto",
+    "many": "Se agregaron {count} de rutas de archivo como texto",
+    "other": "Se agregaron {count} rutas de archivo como texto"
+  },
+  "filePreparing": "Preparando",
+  "fileReady": "Listo",
+  "fileReadyAnnounce": "{name} listo"
+}

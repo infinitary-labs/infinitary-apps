@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "Fusion impossible : {problem}",
+  "settleCouldNotDiscard": "Abandon impossible : {problem}",
+  "settleDiscardedPullOpen": "Abandonnée. Sa demande de tirage est toujours ouverte là où le projet est hébergé : {problem}",
+  "settleDiscardedPullOpenThen": "Abandonnée. Sa demande de tirage est toujours ouverte là où le projet est hébergé : {problem}. {followup}",
+  "settleDiscarding": "Abandon en cours",
+  "settleDiscardingAfterTurn": "Abandon dès que son équipier aura fini ce qu’il fait",
+  "settleMerging": "Fusion en cours",
+  "settleMergingAfterTurn": "Fusion dès que son équipier aura fini ce qu’il fait",
+  "settleMergingChange": "Fusion de {change}",
+  "settleMergingChangeAfterTurn": "Fusion de {change} dès que son équipier aura fini ce qu’il fait"
+}

@@ -4,9 +4,14 @@ import { defineConfig } from "electron-vite";
 import type { Plugin } from "vite";
 import { buildLoadSupervisor } from "./scripts/build-load-supervisor";
 import { frameLibPlugin } from "./scripts/frame-lib";
+import { writeCompiledMessages } from "./scripts/generate-messages";
 import { contractChangeFiles } from "./src/core/connection/contractChanges";
 import { contractRevisionFiles } from "./src/core/prompts/contractVersion";
 import { PRODUCTION_CSP } from "./src/shared/csp";
+
+// The catalogs' compiled modules are built, never committed (docs/i18n.md,
+// "The catalog"): every build and dev run compiles the catalogs first.
+writeCompiledMessages(__dirname);
 
 /**
  * Injects the section 4 CSP as a meta fallback into the built index.html.

@@ -11,131 +11,131 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 
 | English | French | Note |
 | --- | --- | --- |
+| a panel by <name> | un panneau de <nom> | |
+| A phone (the item under Devices) | « Un téléphone » |  |
+| a stronger model | un modèle plus puissant | "Passée à un modèle plus puissant". |
+| account | compte | |
+| Allow (secrets approval button) | « Autoriser » |  |
+| allowance left | restant | "40 % restant". |
+| Appearance | Apparence | |
+| Approves secret uses (switch) | Approuve l’utilisation des secrets | The computer's Settings → Devices should show the same words. |
+| Ask before merging | Demander avant de fusionner | |
+| Asks first | Demande d’abord | |
+| automation | automatisation | The Settings section and each scheduled prompt in it; feminine ("créée par votre second"). |
+| backlog | réserve | A plain word for tasks waiting for your Start. |
+| batched pull request / queue | demande de tirage groupée / file | "la file de votre projet". |
+| branch | branche | |
+| bring up to date | mettre à jour | "l’aura mise à jour"; never "rebaser" and never "conflit". |
+| built in place | construit sur place | |
 | captain | capitaine | The word a ship's crew uses; masculine default form, lowercase mid-sentence ("Bienvenue à bord d’Infinitary, capitaine"). |
-| first mate | second | The French navy and merchant-marine term for a ship's second-in-command ("le second"); a common noun, "votre second", "Second" only as a short label or at a sentence start. |
+| card | carte | Feminine. |
+| claim (a recorded relationship) | affirmation | "Affirmation enregistrée". |
+| clone | cloner | "cloné", never "copié". |
+| command search | recherche de commandes | |
+| commit | commit | GitHub's French docs keep "commit"; masculine ("le commit"). |
+| computer | ordinateur | For every computer, Mac, Linux or Windows alike. |
+| concept / finding | concept / constat | "constat" keeps the card's "Constat {id}". |
+| connection (to a server) | connexion | The same word as sign-in; the sentence tells them apart. Feminine, so its status agrees: "Prête", "Vérifiée"; "En pause" for paused. |
+| conversation | conversation | Never "session" or "transcription" for a crewmate's notes. |
+| cost limit | plafond de coût | A project's estimated-dollar cap; "plafond" keeps it apart from the plan's allowance. |
 | crew | équipage | |
 | crewmate | équipier | Masculine; shorter than "membre d’équipage" and natural for one member of a crew. |
-| task | tâche | Feminine, so feed lines about a task agree ("Terminée", "Écartée"). |
-| card | carte | Feminine. |
-| the record (a task's record) | la fiche (de la tâche) | "Fiche de la tâche" as a label; "dossier" would collide with a folder. |
-| log (a check's kept output) | le journal | Distinct from the task's record, "la fiche". |
-| panel | panneau | |
-| rail | colonne | Only in search words ("colonnes"); a plain word for the side column of panels. |
-| project | projet | |
-| your project | votre projet | |
-| pull request | demande de tirage | GitHub's own French docs say "demande de tirage"; feminine, so a merged one is "fusionnée". |
-| PR #N | PR #N | Kept as is, in mono. |
-| merge | fusionner, fusion | GitHub's French docs say "fusionner"; "Fusion impossible" for "Cannot merge". |
-| commit | commit | GitHub's French docs keep "commit"; masculine ("le commit"). |
-| branch | branche | |
-| push | pousser | GitHub's French docs say "pousser"; "Branche poussée". |
-| clone | cloner | "cloné", never "copié". |
-| the checks | les vérifications | "Les vérifications ont réussi", "ont échoué", "sont en cours". |
-| bring up to date | mettre à jour | "l’aura mise à jour"; never "rebaser" and never "conflit". |
-| working copy | copie de travail | |
-| where the project lives | là où le projet est hébergé | |
-| the project's host | l’hébergeur du projet | |
-| sign-in | connexion | "votre connexion GitHub", "la connexion {place} de l’app". |
-| sign in / sign in again | se connecter / se reconnecter | |
-| your plan's allowance | l’allocation de votre forfait | "Revérifier l’allocation"; "quota" only as a search word. |
-| allowance left | restant | "40 % restant". |
-| resets | se renouvelle | "se renouvelle ven."; the allowance comes back, nothing is erased. |
-| provider | fournisseur | |
-| model | modèle | |
-| plan | forfait | The word on a French bill. |
-| subscription | abonnement | "Connectez un abonnement pour commencer". |
-| account | compte | |
-| Settings | Réglages | As macOS French says it; macOS's own "System Settings" is "Réglages Système". |
-| Appearance | Apparence | |
-| rigor levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The rigor label reads "Soin : {care}". |
-| Merges on its own | Fusionne seul | "fusionne seul" in the feed. |
-| Asks first | Demande d’abord | |
-| Ask before merging | Demander avant de fusionner | |
-| a stronger model | un modèle plus puissant | "Passée à un modèle plus puissant". |
-| computer | ordinateur | For every computer, Mac, Linux or Windows alike. |
-| this computer | cet ordinateur | |
-| phone | téléphone | |
-| out of reach | hors de portée | Never "hors ligne" or "déconnecté". |
-| Remove (a device) | Retirer | |
-| Leave (a device) | Quitter | |
+| custom API | API personnalisée | Feminine: "une API personnalisée". |
+| decision record | fiche de décision | What Contribution sends, as "fiche" already names a record; "anonymisées" for redacted. |
+| delivery | livraison | The record label "Livraison". |
+| demo / recording | démo / enregistrement | Never "vidéo" or "clip". |
+| Devices | Appareils | |
+| Diagnostics (Sharing) | Diagnostics | The Sharing switch's name, kept as one word inside sentences. |
+| direction (a standing instruction in Knowledge) | consigne | Feminine; a standing instruction, never "direction". |
+| discard | abandonner | "Abandonnée", "Abandon impossible". |
+| Done / Got it (a note's button) | Terminé / Compris | |
+| drop (a task) | écarter | "Écartée", kept apart from "abandonner" so each English word keeps one French word. |
+| error (never said) | what happened | "Fusion impossible", "n’a pas pu", never "erreur". |
+| evidence | éléments | "Éléments divergents", "Ouvrez ses éléments"; plain and countable. |
+| feed / activity | Activité | |
+| fetch (a server's list of models) | récupérer | "Récupérer depuis le serveur", "Récupération…". |
+| file (to the backlog) | classer | "Pourquoi elle a été classée"; only for the backlog. |
+| fingerprint (a computer's key) | empreinte |  |
+| first mate | second | The French navy and merchant-marine term for a ship's second-in-command ("le second"); a common noun, "votre second", "Second" only as a short label or at a sentence start. |
+| font (Settings → Appearance) | police | |
+| header (a request's) | en-tête | Masculine: "un en-tête". |
+| hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
+| Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
+| Intelligence | Intelligence | |
+| issue (where the project lives) | ticket | The queue's pause issue: "Ouvrir le ticket". |
+| join (the phone joins a computer) | rejoindre | "Rejoindre votre ordinateur"; "In reach" is "À portée". |
 | key (an integration's key) | clé | "clé Linear"; also "clé de récupération" for Secrets. |
 | keyboard key / shortcut | touche / raccourci | "Reset All Keys" is "Réinitialiser tous les raccourcis", because it resets shortcuts. |
-| a panel by <name> | un panneau de <nom> | |
-| conversation | conversation | Never "session" or "transcription" for a crewmate's notes. |
-| report | rapport | "font leur rapport", "Rapport : …". |
-| feed / activity | Activité | |
-| starter | amorce | A sentence start the person finishes ("appuyez sur une amorce"). |
-| message box | zone de message | |
-| main message | message principal | |
-| command search | recherche de commandes | |
-| discard | abandonner | "Abandonnée", "Abandon impossible". |
-| drop (a task) | écarter | "Écartée", kept apart from "abandonner" so each English word keeps one French word. |
-| stop | arrêter | |
-| start | démarrer | "Démarrée", "Démarrer un nouveau projet". |
-| file (to the backlog) | classer | "Pourquoi elle a été classée"; only for the backlog. |
-| backlog | réserve | A plain word for tasks waiting for your Start. |
-| queued | en attente | |
-| thread (a card's) | fil | |
-| review | revue | "Revue réussie". |
-| runbooks | procédures | The Settings section "Procédures". |
-| Devices | Appareils | |
-| delivery | livraison | The record label "Livraison". |
-| built in place | construit sur place | |
-| batched pull request / queue | demande de tirage groupée / file | "la file de votre projet". |
-| released (closed through an outside process) | publiée | "Publiée en dehors de cette tâche". |
-| Done / Got it (a note's button) | Terminé / Compris | |
-| Not now | Pas maintenant | |
-| demo / recording | démo / enregistrement | Never "vidéo" or "clip". |
-| Reasoning | Raisonnement | |
-| Intelligence | Intelligence | |
-| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difficile / Normale / Simple, Difficulté | How hard the task is, never a reasoning word. |
-| purge (task data) | effacer | "Effacer les données des tâches", "{count} tâches effacées"; plainer than "purger". |
-| Diagnostics (Sharing) | Diagnostics | The Sharing switch's name, kept as one word inside sentences. |
-| decision record | fiche de décision | What Contribution sends, as "fiche" already names a record; "anonymisées" for redacted. |
-| window wash | voile de la fenêtre | The theme color laid over the blurred background. |
-| font (Settings → Appearance) | police | |
-| Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
-| repo (never said) | projet | "dépôt" only where a sentence points at GitHub. |
-| worktree (never said) | copie de travail | |
-| land, ship (never said) | fusionner | |
-| rebase, conflict (never said) | mettre à jour, ne s’accorde pas avec | "elle ne s’accorde pas avec un travail plus récent du projet". |
-| quota, rate limit (never said) | allocation de votre forfait | |
-| token, OAuth, credential (never said) | connexion, clé | "jetons" appears only for billable model tokens, as English "tokens" does. |
-| remote, origin (never said) | là où le projet est hébergé | |
-| offline, disconnected (never said) | hors de portée | |
-| machine (never said) | ordinateur | "Il fonctionne sur cet ordinateur" in the voice consent line. |
-| session, transcript (never said) | conversation | |
-| error (never said) | what happened | "Fusion impossible", "n’a pas pu", never "erreur". |
-| plugin, extension (never said) | panneau | |
 | Knowledge (the panel) | Connaissances | The panel's name: "Ouvrir Connaissances". |
-| concept / finding | concept / constat | "constat" keeps the card's "Constat {id}". |
-| direction (a standing instruction in Knowledge) | consigne | Feminine; a standing instruction, never "direction". |
-| claim (a recorded relationship) | affirmation | "Affirmation enregistrée". |
-| revision (of a knowledge record) | révision | Kept apart from "revue", which is review. |
-| evidence | éléments | "Éléments divergents", "Ouvrez ses éléments"; plain and countable. |
-| hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
-| task board / its lanes | tableau des tâches / En attente de vous, Réserve, En attente, En cours, Terminées · 7 j | |
-| join (the phone joins a computer) | rejoindre | "Rejoindre votre ordinateur"; "In reach" is "À portée". |
-| fingerprint (a computer's key) | empreinte |  |
-| passcode (iOS) | code | As French iOS says "Face ID et code". |
-| A phone (the item under Devices) | « Un téléphone » |  |
-| Allow (secrets approval button) | « Autoriser » |  |
-| Approves secret uses (switch) | Approuve l’utilisation des secrets | The computer's Settings → Devices should show the same words. |
-| Steer (button) | Orienter |  |
-| Theme: Device / Dark / Light | Thème : Appareil / Sombre / Clair |  |
+| land, ship (never said) | fusionner | |
+| Leave (a device) | Quitter | |
+| level (a model's slot) | niveau | "slot" is never said: "Niveaux des modèles", "en {level}". |
 | live validation | validation en direct | Trying the change for real; kept apart from the checks. |
-| unmerged work | travail non fusionné | What another computer still holds when it is removed: "Son travail non fusionné vient d’abord sur cet ordinateur". |
+| log (a check's kept output) | le journal | Distinct from the task's record, "la fiche". |
+| machine (never said) | ordinateur | "Il fonctionne sur cet ordinateur" in the voice consent line. |
+| main message | message principal | |
+| merge | fusionner, fusion | GitHub's French docs say "fusionner"; "Fusion impossible" for "Cannot merge". |
+| Merges on its own | Fusionne seul | "fusionne seul" in the feed. |
+| message box | zone de message | |
+| model | modèle | |
+| Not now | Pas maintenant | |
+| offline, disconnected (never said) | hors de portée | |
+| out of reach | hors de portée | Never "hors ligne" or "déconnecté". |
+| panel | panneau | |
+| passcode (iOS) | code | As French iOS says "Face ID et code". |
+| phone | téléphone | |
+| plan | forfait | The word on a French bill. |
+| plugin, extension (never said) | panneau | |
+| PR #N | PR #N | Kept as is, in mono. |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difficile / Normale / Simple, Difficulté | How hard the task is, never a reasoning word. |
+| project | projet | |
+| prompt (an automation's) | consigne | What the second is told on a schedule, as in "Consigne de la tâche". |
+| provider | fournisseur | |
+| pull request | demande de tirage | GitHub's own French docs say "demande de tirage"; feminine, so a merged one is "fusionnée". |
+| purge (task data) | effacer | "Effacer les données des tâches", "{count} tâches effacées"; plainer than "purger". |
+| push | pousser | GitHub's French docs say "pousser"; "Branche poussée". |
+| queued | en attente | |
+| quota, rate limit (never said) | allocation de votre forfait | |
+| rail | colonne | Only in search words ("colonnes"); a plain word for the side column of panels. |
 | reach (another computer) | joindre | "Impossible de joindre {host}", "joint sur ce réseau"; never "atteindre". |
-| issue (where the project lives) | ticket | The queue's pause issue: "Ouvrir le ticket". |
-| cost limit | plafond de coût | A project's estimated-dollar cap; "plafond" keeps it apart from the plan's allowance. |
-| custom API | API personnalisée | Feminine: "une API personnalisée". |
-| connection (to a server) | connexion | The same word as sign-in; the sentence tells them apart. Feminine, so its status agrees: "Prête", "Vérifiée"; "En pause" for paused. |
+| Reasoning | Raisonnement | |
+| rebase, conflict (never said) | mettre à jour, ne s’accorde pas avec | "elle ne s’accorde pas avec un travail plus récent du projet". |
+| released (closed through an outside process) | publiée | "Publiée en dehors de cette tâche". |
+| remote, origin (never said) | là où le projet est hébergé | |
+| Remove (a device) | Retirer | |
+| repo (never said) | projet | "dépôt" only where a sentence points at GitHub. |
+| report | rapport | "font leur rapport", "Rapport : …". |
+| resets | se renouvelle | "se renouvelle ven."; the allowance comes back, nothing is erased. |
+| review | revue | "Revue réussie". |
+| revision (of a knowledge record) | révision | Kept apart from "revue", which is review. |
+| rigor levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The rigor label reads "Soin : {care}". |
+| runbooks | procédures | The Settings section "Procédures". |
 | server, address (a custom API's) | serveur, adresse | Said only where English names the person's own server and its address. |
-| header (a request's) | en-tête | Masculine: "un en-tête". |
-| fetch (a server's list of models) | récupérer | "Récupérer depuis le serveur", "Récupération…". |
+| session, transcript (never said) | conversation | |
+| Settings | Réglages | As macOS French says it; macOS's own "System Settings" is "Réglages Système". |
+| sign in / sign in again | se connecter / se reconnecter | |
+| sign-in | connexion | "votre connexion GitHub", "la connexion {place} de l’app". |
+| start | démarrer | "Démarrée", "Démarrer un nouveau projet". |
+| starter | amorce | A sentence start the person finishes ("appuyez sur une amorce"). |
+| Steer (button) | Orienter |  |
+| stop | arrêter | |
+| subscription | abonnement | "Connectez un abonnement pour commencer". |
+| task | tâche | Feminine, so feed lines about a task agree ("Terminée", "Écartée"). |
+| task board / its lanes | tableau des tâches / En attente de vous, Réserve, En attente, En cours, Terminées · 7 j | |
+| the checks | les vérifications | "Les vérifications ont réussi", "ont échoué", "sont en cours". |
+| the project's host | l’hébergeur du projet | |
+| the record (a task's record) | la fiche (de la tâche) | "Fiche de la tâche" as a label; "dossier" would collide with a folder. |
+| Theme: Device / Dark / Light | Thème : Appareil / Sombre / Clair |  |
+| this computer | cet ordinateur | |
+| thread (a card's) | fil | |
 | token (a custom API's sign-in token) | jeton | "Commande de jeton"; the same word as billable model tokens. |
+| token, OAuth, credential (never said) | connexion, clé | "jetons" appears only for billable model tokens, as English "tokens" does. |
+| unmerged work | travail non fusionné | What another computer still holds when it is removed: "Son travail non fusionné vient d’abord sur cet ordinateur". |
 | Usage (Settings section) | Utilisation | The section's name, as in "Ouvrir Utilisation". |
 | usage record | entrée | One recorded model response in Usage ("entrées avec prix"); "fiche" stays for a task's record and "enregistrement" for a recording. |
-| automation | automatisation | The Settings section and each scheduled prompt in it; feminine ("créée par votre second"). |
-| prompt (an automation's) | consigne | What the second is told on a schedule, as in "Consigne de la tâche". |
-| level (a model's slot) | niveau | "slot" is never said: "Niveaux des modèles", "en {level}". |
+| where the project lives | là où le projet est hébergé | |
+| window wash | voile de la fenêtre | The theme color laid over the blurred background. |
+| working copy | copie de travail | |
+| worktree (never said) | copie de travail | |
+| your plan's allowance | l’allocation de votre forfait | "Revérifier l’allocation"; "quota" only as a search word. |
+| your project | votre projet | |

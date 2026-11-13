@@ -1,0 +1,16 @@
+{
+  "keptCap": "Todavía no se puede fusionar: espera tu respuesta sobre sus intentos de reparación. Tu fusión queda pendiente para después.",
+  "keptChecks": "Tu fusión espera: no se superaron todas las comprobaciones. Tu aprobación se mantiene. Si una corrección cambia el trabajo, su tripulante te vuelve a preguntar; si no, la fusión se hace cuando se superen sus comprobaciones.",
+  "keptChecksFailed": "Tu fusión espera una corrección: sus comprobaciones fallaron. Una corrección trae una versión nueva con comprobaciones nuevas: si cambió el trabajo, su tripulante te vuelve a preguntar en una tarjeta nueva; si no, tu fusión se hace cuando se superen.",
+  "keptConflict": "Todavía no se puede fusionar: choca con trabajo más reciente del proyecto. Tu fusión queda pendiente y se hace cuando su tripulante lo haya puesto al día y se superen sus comprobaciones.",
+  "keptDraft": "Todavía no se puede fusionar: su solicitud de incorporación de cambios es un borrador. Tu fusión queda pendiente y se hace cuando esté lista para revisión.",
+  "keptEvidence": "Todavía no se puede fusionar: su tripulante no pudo saber si su último cambio conservó el trabajo que aprobaste, así que otro tripulante lo está comprobando. Tu fusión queda pendiente y se hace si esa comprobación concluye que el trabajo sigue siendo el que aprobaste.",
+  "keptGuidance": "Todavía no se puede fusionar: su tripulante no ha dicho si tus palabras más recientes cambian el trabajo que aprobaste. Tu fusión queda pendiente y se hace cuando diga que no lo cambian.",
+  "keptProtected": "Todavía no se puede fusionar: {place} lo retiene por una revisión obligatoria u otra regla de la rama principal. Tu fusión queda pendiente y se hace cuando {place} lo permita.",
+  "keptQueue": "Esperando la comprobación del lote: la cola de tu proyecto está probando esta versión junto con otro trabajo aprobado. Tu fusión queda pendiente. La app la fusionará cuando la cola de tu proyecto la apruebe.",
+  "keptQueueOwned": "Esperando la comprobación del lote: la cola de tu proyecto está probando esta versión junto con otro trabajo aprobado. Tu fusión queda pendiente. La cola de tu proyecto la fusionará cuando se superen sus comprobaciones.",
+  "keptRefused": "Todavía no se puede fusionar: {place} lo rechazó. Tu fusión queda pendiente y se vuelve a intentar cuando su tripulante haya corregido la causa.",
+  "keptRepair": "Todavía no se puede fusionar: cambió después de la tarjeta que aprobaste. Tu fusión queda pendiente y se hace cuando su tripulante demuestre que el trabajo sigue siendo el que aprobaste.",
+  "keptSignIn": "Todavía no se puede fusionar: hace falta el inicio de sesión de la app en {place}. Tu fusión queda pendiente y se hace cuando vuelvas a iniciar sesión.",
+  "keptUnclear": "Todavía no se puede fusionar: {place} no dio una respuesta clara. Tu fusión queda pendiente y la app lo vuelve a intentar en breve."
+}

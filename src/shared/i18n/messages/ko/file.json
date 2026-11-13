@@ -1,0 +1,12 @@
+{
+  "fileAdd": "파일 추가",
+  "fileCancel": "{name} 준비 취소",
+  "fileDropHere": "파일을 여기에 놓아 추가하세요",
+  "filePathsAnnounce": {
+    "plural": "count",
+    "other": "파일 경로 {count}개를 텍스트로 추가했어요"
+  },
+  "filePreparing": "준비 중",
+  "fileReady": "준비됨",
+  "fileReadyAnnounce": "{name} 준비됨"
+}

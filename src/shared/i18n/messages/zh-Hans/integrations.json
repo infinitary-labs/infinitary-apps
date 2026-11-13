@@ -1,0 +1,5 @@
+{
+  "integrationsSignInAgain": "重新打开页面",
+  "integrationsSignInCancel": "取消",
+  "integrationsSignInWaiting": "请在浏览器中完成 {name} 的登录。"
+}

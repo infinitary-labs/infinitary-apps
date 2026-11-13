@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { PROBE_FILES } from "./scripts/affected-probes.ts";
+import { writeCompiledMessages } from "./scripts/generate-messages.ts";
 import { jobCores } from "./scripts/job-cores.ts";
 import { FRAME_FOCUS_BLINK_FEATURE } from "./src/shared/plugins/containment.ts";
 import { browserCommands } from "./tests/helpers/browserCommands.ts";
@@ -28,6 +29,10 @@ function integrationTests(): string[] {
 }
 
 const integration = integrationTests();
+
+// The catalogs' compiled modules are built, never committed (docs/i18n.md,
+// "The catalog"): the tests read the ones the catalogs make now.
+writeCompiledMessages(__dirname);
 
 // The probes (docs/test-cohorts.md, "Probes"): integration files that can fail
 // with no code change. They stay on the integration list, so the unit fence

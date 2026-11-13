@@ -1,10 +1,18 @@
 /**
  * The message compiler (docs/i18n.md, "The catalog"): reads every language's
- * catalog under src/shared/i18n/messages/, checks each against the English
+ * catalog under src/shared/i18n/messages/, one folder per language of area
+ * files (`messages/<tag>/<area>.json`), checks each against the English
  * source, and writes src/shared/i18n/messages.generated.ts, one typed
  * function per message that answers in the process's current language.
  * The compiled file imports only its siblings, so it runs in every process
- * with no package at run time.
+ * with no package at run time. It is built, never committed: install, the
+ * typecheck, the tests and the build each write it first
+ * (`writeCompiledMessages`).
+ *
+ * Each area file keeps its messages in name order, and each glossary its
+ * terms, so two changes that add different messages write different lines
+ * and merge without a clash; the compiler lays the catalogs and glossaries
+ * out that way when it writes, and `--check` refuses any other layout.
  *
  * An app panel's own messages, named with its prefix (`APP_PANEL_PREFIXES`),
  * compile instead into `messages.generated.ts` in the panel's folder: a panel
@@ -17,11 +25,19 @@
  * word them, and the parity fixture the phone's tests replay against the
  * desktop's own wording of saved facts.
  *
- *   node scripts/generate-messages.ts           writes the compiled files
- *   node scripts/generate-messages.ts --check   exits 1 naming each catalog problem, or a compiled file out of step
+ *   node scripts/generate-messages.ts             lays out the catalogs and glossaries, writes the compiled files
+ *   node scripts/generate-messages.ts --check     exits 1 naming each catalog problem, or a phone file out of step
+ *   node scripts/generate-messages.ts --compiled  writes only the desktop's compiled modules
  */
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -33,6 +49,24 @@ import {
 
 export const CATALOG_DIR = "src/shared/i18n/messages";
 export const COMPILED_PATH = "src/shared/i18n/messages.generated.ts";
+/** The design skill's glossaries, one per translation (docs/i18n.md, "Translating"). */
+export const GLOSSARY_DIR = ".claude/skills/infinitary-design/copy/glossary";
+
+/** Names in order: by UTF-16 code unit, the same on every computer. */
+export const byName = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
+ * A message's area: its name's first word, `file` for `fileCancel`. Each
+ * language keeps one file per area, `messages/<tag>/<area>.json`, with its
+ * messages in name order (docs/i18n.md, "The catalog").
+ */
+export function areaOf(id: string): string {
+  return /^[a-z0-9]+/.exec(id)?.[0] ?? id;
+}
+
+/** The file a language's message lives in. */
+export const catalogFile = (tag: string, id: string): string =>
+  `${CATALOG_DIR}/${tag}/${areaOf(id)}.json`;
 
 const PHONE_KIT = "ios/Infinitary/InfinitaryKit";
 /** The typed Swift functions that word the phone's Apple string files. */
@@ -187,15 +221,15 @@ function parseCatalog(tag: string, source: string, problems: string[]): Catalog 
   try {
     entries = JSON.parse(source);
   } catch (error) {
-    problems.push(`${CATALOG_DIR}/${tag}.json: not JSON (${(error as Error).message})`);
+    problems.push(`${CATALOG_DIR}/${tag}: not JSON (${(error as Error).message})`);
     return catalog;
   }
   if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
-    problems.push(`${CATALOG_DIR}/${tag}.json: a catalog is one object of messages by name`);
+    problems.push(`${CATALOG_DIR}/${tag}: a catalog is one object of messages by name`);
     return catalog;
   }
   for (const [id, value] of Object.entries(entries)) {
-    const where = `${CATALOG_DIR}/${tag}.json: ${id}`;
+    const where = `${catalogFile(tag, id)}: ${id}`;
     if (!IDENTIFIER.test(id)) {
       problems.push(`${where}: a message's name is camelCase, starting with a lowercase letter`);
       continue;
@@ -208,17 +242,17 @@ function parseCatalog(tag: string, source: string, problems: string[]): Catalog 
 
 /** Each translation against the source: the same names, the same placeholders, and its language's plural forms. */
 function checkTranslation(tag: string, catalog: Catalog, source: Catalog, problems: string[]): void {
-  const file = `${CATALOG_DIR}/${tag}.json`;
   for (const id of source.keys()) {
-    if (!catalog.has(id)) problems.push(`${file}: ${id} is missing; translate it in the change that wrote the English`);
+    if (!catalog.has(id))
+      problems.push(`${catalogFile(tag, id)}: ${id} is missing; translate it in the change that wrote the English`);
   }
   for (const [id, message] of catalog) {
     const english = source.get(id);
+    const where = `${catalogFile(tag, id)}: ${id}`;
     if (!english) {
-      problems.push(`${file}: ${id} is not in the English catalog; remove it`);
+      problems.push(`${where} is not in the English catalog; remove it`);
       continue;
     }
-    const where = `${file}: ${id}`;
     const want = placeholdersOf(english).join(", ");
     const have = placeholdersOf(message).join(", ");
     if (want !== have) problems.push(`${where}: fills {${have}} where English fills {${want}}`);
@@ -370,7 +404,7 @@ function appleStringFiles(catalog: Catalog, english: Catalog): { strings: string
       ].join("\n"),
     );
   }
-  const header = "Generated by scripts/generate-messages.ts from src/shared/i18n/messages/*.json; never edit by hand.";
+  const header = "Generated by scripts/generate-messages.ts from src/shared/i18n/messages/; never edit by hand.";
   return {
     strings: [`/* ${header} */`, ...strings, ""].join("\n"),
     stringsdict: [
@@ -406,7 +440,7 @@ function phoneMessagesSwift(english: Catalog): string {
     message.kind === "plural" ? [`        ${JSON.stringify(id)}: ${JSON.stringify(message.selector)},`] : [],
   );
   return [
-    "// Generated by scripts/generate-messages.ts from src/shared/i18n/messages/*.json; never edit by hand.",
+    "// Generated by scripts/generate-messages.ts from src/shared/i18n/messages/; never edit by hand.",
     "// Run `node scripts/generate-messages.ts` after changing a catalog (docs/i18n.md, \"On the phone\").",
     "import Foundation",
     "",
@@ -441,20 +475,23 @@ export function compileCatalogs(sources: Record<string, string>, infoPlist?: str
   const problems: string[] = [];
   const englishSource = sources[SOURCE_LANGUAGE];
   if (englishSource === undefined)
-    return { output: "", problems: [`${CATALOG_DIR}/${SOURCE_LANGUAGE}.json is missing`], panels: {}, phone: {}, facts: [] };
-  const english = parseCatalog(SOURCE_LANGUAGE, englishSource, problems);
-  for (const [id, message] of english) checkPluralForms(message, SOURCE_LANGUAGE, `${CATALOG_DIR}/en.json: ${id}`, problems);
+    return { output: "", problems: [`${CATALOG_DIR}/${SOURCE_LANGUAGE} is missing`], panels: {}, phone: {}, facts: [] };
+  // Every compiled file lists the messages in name order, so a change adding one writes its own lines.
+  const english: Catalog = new Map(
+    [...parseCatalog(SOURCE_LANGUAGE, englishSource, problems)].sort(([a], [b]) => byName(a, b)),
+  );
+  for (const [id, message] of english) checkPluralForms(message, SOURCE_LANGUAGE, `${catalogFile(SOURCE_LANGUAGE, id)}: ${id}`, problems);
   const translations: [string, Catalog][] = [];
   for (const [tag, source] of Object.entries(sources).sort(([a], [b]) => a.localeCompare(b, "en"))) {
     if (tag === SOURCE_LANGUAGE) continue;
     if (isPseudoLanguage(tag)) {
-      problems.push(`${CATALOG_DIR}/${tag}.json: ${tag} is compiled from English; remove the file`);
+      problems.push(`${CATALOG_DIR}/${tag}: ${tag} is compiled from English; remove the folder`);
       continue;
     }
     try {
       new Intl.Locale(tag);
     } catch {
-      problems.push(`${CATALOG_DIR}/${tag}.json: ${tag} is not a language tag`);
+      problems.push(`${CATALOG_DIR}/${tag}: ${tag} is not a language tag`);
       continue;
     }
     const catalog = parseCatalog(tag, source, problems);
@@ -468,7 +505,7 @@ export function compileCatalogs(sources: Record<string, string>, infoPlist?: str
   const languages = [...translations, ...pseudo];
   const shared = [...english].filter(([id]) => panelOf(id) === undefined && !isPhoneOwn(id));
   const output = [
-    "// Generated by scripts/generate-messages.ts from src/shared/i18n/messages/*.json; never edit by hand.",
+    "// Generated by scripts/generate-messages.ts from src/shared/i18n/messages/; never edit by hand.",
     "// Run `node scripts/generate-messages.ts` after changing a catalog (docs/i18n.md).",
     'import { currentLanguage } from "./current.ts";',
     'import { formatNumber, pluralCategory } from "./format.ts";',
@@ -525,7 +562,7 @@ function infoPlistStrings(catalog: Catalog, english: Catalog): string {
     return `${stringsQuoted(key)} = ${stringsQuoted(words)};`;
   });
   return [
-    "/* Generated by scripts/generate-messages.ts from src/shared/i18n/messages/*.json; never edit by hand. */",
+    "/* Generated by scripts/generate-messages.ts from src/shared/i18n/messages/; never edit by hand. */",
     ...lines,
     "",
   ].join("\n");
@@ -537,14 +574,14 @@ function checkInfoPlist(english: Catalog, plist: string | undefined, problems: s
   for (const [key, id] of Object.entries(PHONE_INFO_PLIST_MESSAGES)) {
     const message = english.get(id);
     if (!message || message.kind !== "text" || message.parts.some((part) => !("text" in part))) {
-      problems.push(`${CATALOG_DIR}/en.json: ${id} must be plain words with no blank, for ${key} in ${PHONE_INFO_PLIST}`);
+      problems.push(`${catalogFile(SOURCE_LANGUAGE, id)}: ${id} must be plain words with no blank, for ${key} in ${PHONE_INFO_PLIST}`);
       continue;
     }
     const words = message.parts.map((part) => ("text" in part ? part.text : "")).join("");
     const xml = xmlEscaped(words).replace(/"/g, "&quot;");
     const found = plist.match(new RegExp(`<key>${key}</key>\\s*<string>([^<]*)</string>`))?.[1];
     if (found !== xmlEscaped(words) && found !== xml)
-      problems.push(`${PHONE_INFO_PLIST}: ${key} must read as ${CATALOG_DIR}/en.json's ${id}`);
+      problems.push(`${PHONE_INFO_PLIST}: ${key} must read as ${catalogFile(SOURCE_LANGUAGE, id)}'s ${id}`);
   }
 }
 
@@ -564,7 +601,7 @@ function panelModule(panel: string, own: [string, Message][], languages: [string
   const numbers = uses("formatNumber");
   const plurals = uses("pluralCategory");
   return [
-    "// Generated by scripts/generate-messages.ts from src/shared/i18n/messages/*.json; never edit by hand.",
+    "// Generated by scripts/generate-messages.ts from src/shared/i18n/messages/; never edit by hand.",
     `// The ${panel} panel's own messages, named \`${APP_PANEL_PREFIXES[panel]}…\` (docs/i18n.md, "The app's own panels").`,
     "",
     ...(numbers || plurals
@@ -599,22 +636,206 @@ function panelModule(panel: string, own: [string, Message][], languages: [string
   ].join("\n");
 }
 
-export function readCatalogs(dir = CATALOG_DIR): Record<string, string> {
+/** Each language's catalog files: its area files' text by area, by language. */
+export type CatalogFiles = Record<string, Record<string, string>>;
+
+/**
+ * Every language's area files, and any file left from before the catalogs
+ * were folders (`messages/<tag>.json`), which `scripts/move-catalogs.ts`
+ * folds into its language's folder.
+ */
+export function readCatalogFiles(root = "."): { files: CatalogFiles; strays: string[] } {
+  const dir = join(root, CATALOG_DIR);
+  const files: CatalogFiles = {};
+  const strays: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => byName(a.name, b.name))) {
+    if (entry.isDirectory()) {
+      files[entry.name] = Object.fromEntries(
+        readdirSync(join(dir, entry.name))
+          .filter((name) => name.endsWith(".json"))
+          .sort(byName)
+          .map((name) => [name.slice(0, -".json".length), readFileSync(join(dir, entry.name, name), "utf8")]),
+      );
+    } else if (entry.name.endsWith(".json")) strays.push(`${CATALOG_DIR}/${entry.name}`);
+  }
+  return { files, strays };
+}
+
+/** Each language's messages, its area files read into one object; a file that is not one JSON object of messages is a problem. */
+export function joinCatalogFiles(files: CatalogFiles): {
+  catalogs: Record<string, Record<string, unknown>>;
+  problems: string[];
+} {
+  const catalogs: Record<string, Record<string, unknown>> = {};
+  const problems: string[] = [];
+  for (const [tag, areas] of Object.entries(files)) {
+    const messages: Record<string, unknown> = {};
+    for (const [area, text] of Object.entries(areas)) {
+      const file = `${CATALOG_DIR}/${tag}/${area}.json`;
+      let entries: unknown;
+      try {
+        entries = JSON.parse(text);
+      } catch (error) {
+        problems.push(`${file}: not JSON (${(error as Error).message})`);
+        continue;
+      }
+      if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
+        problems.push(`${file}: an area file is one object of messages by name`);
+        continue;
+      }
+      for (const [id, value] of Object.entries(entries)) {
+        if (id in messages) problems.push(`${file}: ${id} is in another file too; keep it once, in ${catalogFile(tag, id)}`);
+        messages[id] = value;
+      }
+    }
+    catalogs[tag] = messages;
+  }
+  return { catalogs, problems };
+}
+
+/** Each language's catalog as the one JSON text `compileCatalogs` reads. */
+export function readCatalogs(root = "."): Record<string, string> {
+  const { catalogs } = joinCatalogFiles(readCatalogFiles(root).files);
+  return Object.fromEntries(Object.entries(catalogs).map(([tag, messages]) => [tag, JSON.stringify(messages)]));
+}
+
+/**
+ * A language's messages as the compiler lays them out: one file per area,
+ * each one JSON object with its messages in name order, so two changes that
+ * add different messages write different lines (docs/i18n.md, "The catalog").
+ */
+export function catalogLayout(messages: Record<string, unknown>): Record<string, string> {
+  const areas: Record<string, Record<string, unknown>> = {};
+  for (const id of Object.keys(messages).sort(byName)) {
+    const area = areaOf(id);
+    areas[area] ??= {};
+    areas[area][id] = messages[id];
+  }
   return Object.fromEntries(
-    readdirSync(dir)
-      .filter((name) => name.endsWith(".json"))
-      .map((name) => [name.slice(0, -".json".length), readFileSync(join(dir, name), "utf8")]),
+    Object.entries(areas)
+      .sort(([a], [b]) => byName(a, b))
+      .map(([area, entries]) => [area, `${JSON.stringify(entries, null, 2)}\n`]),
   );
 }
 
-/** The compiled file as the project's formatter writes it, so `pnpm check`'s Biome passes it unchanged. */
-function formatted(text: string, path: string): string {
-  return execFileSync("node_modules/.bin/biome", ["format", `--stdin-file-path=${path}`], {
-    input: text,
-    encoding: "utf8",
-    // The compiled file outgrows the default 1 MiB output buffer.
-    maxBuffer: 64 * 1024 * 1024,
-  });
+/** Each place the catalog files differ from the compiler's layout. */
+export function layoutProblems(files: CatalogFiles, strays: string[] = []): string[] {
+  const problems = strays.map(
+    (path) => `${path}: each language's catalog is a folder of area files now; run node scripts/move-catalogs.ts`,
+  );
+  const joined = joinCatalogFiles(files);
+  problems.push(...joined.problems);
+  for (const [tag, areas] of Object.entries(files)) {
+    const wanted = catalogLayout(joined.catalogs[tag] ?? {});
+    for (const [area, text] of Object.entries(areas)) {
+      const file = `${CATALOG_DIR}/${tag}/${area}.json`;
+      let entries: Record<string, unknown>;
+      try {
+        entries = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+      const strangers = Object.keys(entries ?? {}).filter((id) => areaOf(id) !== area);
+      for (const id of strangers)
+        problems.push(`${file}: ${id} belongs in ${catalogFile(tag, id)}; run node scripts/generate-messages.ts`);
+      if (!strangers.length && wanted[area] !== text)
+        problems.push(
+          `${file}: keep its messages in name order, as the compiler writes them; run node scripts/generate-messages.ts`,
+        );
+    }
+  }
+  return problems;
+}
+
+/** Writes a language's area files as `catalogLayout` lays them out, and removes one left with no message. */
+export function writeCatalogLayout(root: string, tag: string, messages: Record<string, unknown>): void {
+  const dir = join(root, CATALOG_DIR, tag);
+  mkdirSync(dir, { recursive: true });
+  const wanted = catalogLayout(messages);
+  for (const name of readdirSync(dir)) {
+    if (name.endsWith(".json") && !(name.slice(0, -".json".length) in wanted)) rmSync(join(dir, name));
+  }
+  for (const [area, text] of Object.entries(wanted)) writeIfChanged(join(dir, `${area}.json`), text);
+}
+
+/** A glossary's Terms row's English term, the name it is kept in order by. */
+function termOf(row: string): string {
+  return (row.split(/(?<!\\)\|/)[1] ?? "").trim().toLowerCase();
+}
+
+/**
+ * A glossary with its Terms rows in name order by their English term, so two
+ * changes that add different terms write different lines.
+ */
+export function sortedGlossary(text: string): string {
+  const lines = text.split("\n");
+  const header = lines.findIndex((line, at) => line.startsWith("|") && /^\|\s*-/.test(lines[at + 1] ?? ""));
+  if (header === -1) return text;
+  const start = header + 2;
+  let end = start;
+  while (end < lines.length && lines[end]?.startsWith("|")) end++;
+  const rows = lines
+    .slice(start, end)
+    .sort((a, b) => byName(termOf(a), termOf(b)) || byName(a, b));
+  return [...lines.slice(0, start), ...rows, ...lines.slice(end)].join("\n");
+}
+
+/** Each glossary, one per language, by its path. */
+export function readGlossaries(root = "."): Record<string, string> {
+  const dir = join(root, GLOSSARY_DIR);
+  if (!existsSync(dir)) return {};
+  return Object.fromEntries(
+    readdirSync(dir)
+      .filter((name) => name.endsWith(".md") && name !== "README.md")
+      .sort(byName)
+      .map((name) => [`${GLOSSARY_DIR}/${name}`, readFileSync(join(dir, name), "utf8")]),
+  );
+}
+
+/** Each glossary whose terms are out of name order. */
+export function glossaryProblems(glossaries: Record<string, string>): string[] {
+  return Object.entries(glossaries)
+    .filter(([, text]) => sortedGlossary(text) !== text)
+    .map(
+      ([path]) =>
+        `${path}: keep the Terms rows in name order by their English term; run node scripts/generate-messages.ts`,
+    );
+}
+
+/**
+ * Writes a file only when its text changed, through a file of its own
+ * renamed into place, so two runs side by side, as the typecheck and the
+ * tests can be, never read a half-written file.
+ */
+function writeIfChanged(path: string, text: string): void {
+  try {
+    if (readFileSync(path, "utf8") === text) return;
+  } catch {}
+  mkdirSync(dirname(path), { recursive: true });
+  const partial = `${path}.${process.pid}.partial`;
+  writeFileSync(partial, text);
+  renameSync(partial, path);
+}
+
+/**
+ * Writes the desktop's compiled modules, the shared one and each app
+ * panel's, and removes a panel's once it has no messages. They are built,
+ * never committed, so every entry that reads them writes them first:
+ * install, the typecheck, the tests' and the build's configurations
+ * (docs/i18n.md, "The catalog").
+ */
+export function writeCompiledMessages(root = "."): void {
+  writeCompiled(root, compileCatalogs(readCatalogs(root)));
+}
+
+function writeCompiled(root: string, compiled: { output: string; panels: Record<string, string> }): void {
+  if (!compiled.output) return;
+  writeIfChanged(join(root, COMPILED_PATH), compiled.output);
+  for (const [path, text] of Object.entries(compiled.panels)) writeIfChanged(join(root, path), text);
+  for (const panel of Object.keys(APP_PANEL_PREFIXES)) {
+    const path = panelMessagesPath(panel);
+    if (!(path in compiled.panels)) rmSync(join(root, path), { force: true });
+  }
 }
 
 /** A saved fact, as `src/shared/i18n/said.ts` shapes it. */
@@ -648,58 +869,56 @@ function phoneWordsFacts(english: Catalog): Fact[] {
 
 /** The parity fixture: each fact with the desktop's own English for it, or null where the desktop words nothing. */
 async function phoneWordsFixture(facts: Fact[]): Promise<string> {
-  const { wordSaid } = await import("../src/shared/i18n/said.ts");
+  // A computed path, so the build's and the tests' configurations, which bundle this module to call
+  // `writeCompiledMessages`, never bundle said.ts and the compiled module it reads before it is written.
+  const said = new URL("../src/shared/i18n/said.ts", import.meta.url).href;
+  const { wordSaid } = (await import(/* @vite-ignore */ said)) as typeof import("../src/shared/i18n/said.ts");
   const cases = facts.map((said) => ({ said, words: wordSaid(said as Parameters<typeof wordSaid>[0]) ?? null }));
   return `[\n${cases.map((entry) => `  ${JSON.stringify(entry)}`).join(",\n")}\n]\n`;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const compiled = compileCatalogs(readCatalogs(), readFileSync(PHONE_INFO_PLIST, "utf8"));
-  const { problems } = compiled;
-  const files: Record<string, string> = compiled.output
-    ? {
-        [COMPILED_PATH]: formatted(compiled.output, COMPILED_PATH),
-        ...Object.fromEntries(
-          Object.entries(compiled.panels).map(([path, text]) => [path, formatted(text, path)]),
-        ),
+/** The command: lays out, checks and compiles, as its flags say. */
+async function main(): Promise<void> {
+  if (process.argv.includes("--compiled")) {
+    writeCompiledMessages();
+  } else {
+    const checking = process.argv.includes("--check");
+    let { files, strays } = readCatalogFiles();
+    if (!checking) {
+      // Lay each language's messages out in name order, each in its area's file, and each glossary's terms in order.
+      const joined = joinCatalogFiles(files);
+      if (!joined.problems.length)
+        for (const [tag, messages] of Object.entries(joined.catalogs)) writeCatalogLayout(".", tag, messages);
+      for (const [path, text] of Object.entries(readGlossaries())) writeIfChanged(path, sortedGlossary(text));
+      ({ files, strays } = readCatalogFiles());
+    }
+    const compiled = compileCatalogs(readCatalogs(), readFileSync(PHONE_INFO_PLIST, "utf8"));
+    const problems = [...layoutProblems(files, strays), ...glossaryProblems(readGlossaries()), ...compiled.problems];
+    // The desktop's modules are built, never committed: written in every mode, before the fixture words facts with them.
+    writeCompiled(".", compiled);
+    const phone: Record<string, string> = compiled.output ? compiled.phone : {};
+    if (compiled.output) phone[PHONE_WORDS_FIXTURE] = await phoneWordsFixture(compiled.facts);
+    for (const [path, text] of Object.entries(phone)) {
+      if (checking) {
+        let current = "";
+        try {
+          current = readFileSync(path, "utf8");
+        } catch {}
+        if (current !== text) problems.push(`${path} is out of step; run node scripts/generate-messages.ts`);
+      } else if (!problems.length) {
+        writeIfChanged(path, text);
       }
-    : {};
-  // The fixture words each fact with the compiled file now on disk, so it follows the catalog just written.
-  const phone: Record<string, string> = compiled.output ? compiled.phone : {};
-  const checking = process.argv.includes("--check");
-  if (!checking && !problems.length && files[COMPILED_PATH]) writeFileSync(COMPILED_PATH, files[COMPILED_PATH]);
-  if (compiled.output) phone[PHONE_WORDS_FIXTURE] = await phoneWordsFixture(compiled.facts);
-  for (const [path, text] of Object.entries(phone)) {
-    if (checking) {
-      let current = "";
-      try {
-        current = readFileSync(path, "utf8");
-      } catch {}
-      if (current !== text) problems.push(`${path} is out of step; run node scripts/generate-messages.ts`);
-    } else if (!problems.length) {
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, text);
     }
-  }
-  // A panel folder whose prefix names no message keeps no module.
-  const stale = Object.keys(APP_PANEL_PREFIXES)
-    .map(panelMessagesPath)
-    .filter((path) => existsSync(path) && !(path in files));
-  if (checking) {
-    for (const [path, output] of Object.entries(files)) {
-      let current = "";
-      try {
-        current = readFileSync(path, "utf8");
-      } catch {}
-      if (current !== output) problems.push(`${path} is out of step; run node scripts/generate-messages.ts`);
+    if (problems.length) {
+      console.error(problems.join("\n"));
+      process.exitCode = 1;
     }
-    for (const path of stale) problems.push(`${path} compiles no message; run node scripts/generate-messages.ts`);
-  } else if (!problems.length) {
-    for (const [path, output] of Object.entries(files)) writeFileSync(path, output);
-    for (const path of stale) rmSync(path);
-  }
-  if (problems.length) {
-    console.error(problems.join("\n"));
-    process.exitCode = 1;
   }
 }
+
+// Called, not awaited at the top level: the build's and the tests' configurations import this module.
+if (process.argv[1] === fileURLToPath(import.meta.url))
+  main().catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

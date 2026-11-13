@@ -1,0 +1,8 @@
+{
+  "viewGoogleUpdateThere": "请更新 {mac} 上的 Infinitary，才能从这里登录 Google。",
+  "viewReturnPasteLabel": "{name} 之后你的浏览器停留的地址",
+  "viewReturnPasteLead": "请在 {name} 的页面上批准。之后你的浏览器会停在一个无法访问的页面。复制该页面的地址，粘贴到这里。",
+  "viewReturnPastePlaceholder": "粘贴地址",
+  "viewReturnPasteRefused": "这个地址不属于此次登录。请粘贴此次登录之后你的浏览器停留的地址。",
+  "viewReturnPasteSend": "发送到 {mac}"
+}

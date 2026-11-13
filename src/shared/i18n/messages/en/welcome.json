@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "Crewmates do the work in the background and report here.",
+  "welcomeBack": "Back",
+  "welcomeBox": "Type what you want done in the message box under this card.",
+  "welcomeCard": "I bring back answers and choices as cards like this one.",
+  "welcomeEnd": "That is all of it. To begin, press a starter below.",
+  "welcomeFigure": "Your window, one part per press: the message box, a card, Activity and Tasks",
+  "welcomeLabelActivity": "Activity",
+  "welcomeLabelBox": "the message box",
+  "welcomeLabelTasks": "Tasks",
+  "welcomeNext": "Next",
+  "welcomeStarterClone": "Clone a project",
+  "welcomeStarterCloneWords": "Clone the project at ",
+  "welcomeStarterFolder": "Work in a folder on my computer",
+  "welcomeStarterFolderWords": "Work in the folder ",
+  "welcomeStarterNew": "Start a new project",
+  "welcomeStarterNewWords": "Start a new project called ",
+  "welcomeStartersLead": "To begin, press one and finish the sentence:",
+  "welcomeTasks": "Every ask gets a record here.",
+  "welcomeTitle": "How we work"
+}

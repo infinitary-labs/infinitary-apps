@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "乗組員はバックグラウンドで作業し、ここに報告します。",
+  "welcomeBack": "戻る",
+  "welcomeBox": "このカードの下のメッセージ欄に、してほしいことを入力してください。",
+  "welcomeCard": "回答や選択肢は、このようなカードでお届けします。",
+  "welcomeEnd": "説明は以上です。始めるには、下の書き出しを押してください。",
+  "welcomeFigure": "ウインドウの各部分を1つずつ表示：メッセージ欄、カード、アクティビティ、タスク",
+  "welcomeLabelActivity": "アクティビティ",
+  "welcomeLabelBox": "メッセージ欄",
+  "welcomeLabelTasks": "タスク",
+  "welcomeNext": "次へ",
+  "welcomeStarterClone": "プロジェクトをクローン",
+  "welcomeStarterCloneWords": "次の場所にあるプロジェクトをクローンしてください：",
+  "welcomeStarterFolder": "手元のコンピューターのフォルダで作業",
+  "welcomeStarterFolderWords": "次のフォルダで作業してください：",
+  "welcomeStarterNew": "新しいプロジェクトを始める",
+  "welcomeStarterNewWords": "次の名前で新しいプロジェクトを始めてください：",
+  "welcomeStartersLead": "始めるには、どれかを押して文を完成させてください：",
+  "welcomeTasks": "依頼ごとに、ここに記録が作られます。",
+  "welcomeTitle": "私たちの進め方"
+}

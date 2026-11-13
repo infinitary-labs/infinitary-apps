@@ -1,0 +1,7 @@
+{
+  "mergeContinues": "这次合并之后，任务还会继续。",
+  "mergeHeldOther": "这张卡片出现后，另一个拉取请求成了这个任务的当前更改。卡片显示它之后，合并按钮会回来。",
+  "mergeHeldPushed": "这张卡片出现后，又推送了一个更新的版本。卡片显示新版本后，合并按钮会回来。",
+  "mergeSetByFirstMate": "由你的大副为此任务设置。",
+  "mergeSetInProject": "在此项目的设置中设定。"
+}

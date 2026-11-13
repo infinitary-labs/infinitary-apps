@@ -1,0 +1,11 @@
+{
+  "mergedAt": "已於 {at} 合併",
+  "mergedChangeOn": "已在 {place} 合併 {change}",
+  "mergedChangeOnHost": "已在專案的主機上合併 {change}",
+  "mergedChangeWhereItLives": "已在專案所在處合併 {change}",
+  "mergedInCommit": "已透過提交 {commit} 合併",
+  "mergedInPull": "已透過 pull request {change} 合併",
+  "mergedOn": "已在 {place} 合併",
+  "mergedOnItsOwnAt": "已於 {at} 自行合併",
+  "mergedWhereItLives": "已在專案所在處合併"
+}

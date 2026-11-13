@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { writeCompiledMessages } from "./generate-messages.ts";
 
 const require = createRequire(import.meta.url);
 const native = require("tsrs/package.json") as { optionalDependencies: Record<string, string> };
@@ -16,6 +17,9 @@ export function checkerPackage(platform: string = process.platform, arch: string
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  // The catalogs' compiled modules are built, never committed (docs/i18n.md, "The catalog"):
+  // this project's own, wherever the check runs from.
+  writeCompiledMessages(fileURLToPath(new URL("..", import.meta.url)));
   const name = checkerPackage();
   const manifestPath = require.resolve(`${name}/package.json`);
   const manifest = require(manifestPath) as { bin: Record<string, string> };

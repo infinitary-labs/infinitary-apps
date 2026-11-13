@@ -1,0 +1,7 @@
+{
+  "mergeContinues": "La tarea continúa después de esta fusión.",
+  "mergeHeldOther": "Otra solicitud de incorporación de cambios pasó a ser el cambio actual de esta tarea después de que apareciera esta tarjeta. Fusionar vuelve cuando la tarjeta la muestre.",
+  "mergeHeldPushed": "Se insertó una versión más reciente después de que apareciera esta tarjeta. Fusionar vuelve cuando la tarjeta muestre la versión más reciente.",
+  "mergeSetByFirstMate": "Lo configuró tu primer oficial para esta tarea.",
+  "mergeSetInProject": "Se configura en los ajustes de este proyecto."
+}

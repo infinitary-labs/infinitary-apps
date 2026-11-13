@@ -2,6 +2,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeCompiledMessages } from "./generate-messages.ts";
 
 /**
  * The quick check a crewmate runs before every push (INF-2588's report, fix 1;
@@ -50,7 +51,9 @@ export function changedFiles(base = baseRef()): string[] {
 /**
  * The node scripts `pnpm check` runs after its whole-project Biome, read from
  * package.json so a lint added there runs here too. `checks-mode.ts` is left
- * out: it is the CI-mode refusal this quick check exists to step around.
+ * out: it is the CI-mode refusal this quick check exists to step around, and
+ * so is the build of the catalogs' compiled modules, which runs first, before
+ * the steps that read them start side by side.
  */
 export function checkScripts(check: string): string[][] {
   return check
@@ -58,6 +61,7 @@ export function checkScripts(check: string): string[][] {
     .map((command) => command.trim().split(/\s+/))
     .filter(([program, script]) => program === "node" && script?.startsWith("scripts/"))
     .filter(([, script]) => script !== "scripts/checks-mode.ts")
+    .filter(([, script, flag]) => !(script === "scripts/generate-messages.ts" && flag === "--compiled"))
     .map(([, ...args]) => args);
 }
 
@@ -111,6 +115,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const renderer = files.filter((file) => /^src\/renderer\/.*\.tsx?$/.test(file));
   const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts as Record<string, string>;
   console.log(`check:changed: ${files.length} changed file(s)`);
+  writeCompiledMessages();
   const steps: Step[] = [];
   const biome = biomeStep(files);
   if (biome) steps.push(biome);

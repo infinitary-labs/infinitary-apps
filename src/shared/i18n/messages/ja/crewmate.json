@@ -1,0 +1,51 @@
+{
+  "crewmateApp": "アプリから",
+  "crewmateBrief": "依頼内容",
+  "crewmateCard": "カード",
+  "crewmateChange": "プルリクエスト",
+  "crewmateClosed": "このタスクは終了しています。会話は実行時のまま表示されます。",
+  "crewmateCompacted": "会話は収まるように短縮されました。",
+  "crewmateCut": {
+    "plural": "count",
+    "other": "さらに{count}文字は表示されていません。"
+  },
+  "crewmateEarlier": {
+    "plural": "count",
+    "other": "これより前の{count}行は表示されていません。"
+  },
+  "crewmateEmpty": "表示できる会話の行はまだありません。",
+  "crewmateFailed": "ターンが失敗しました：",
+  "crewmateField": "乗組員へのメッセージ",
+  "crewmateFirstmate": "航海士",
+  "crewmateFold": "たたむ",
+  "crewmateIdle": "待機中",
+  "crewmateInterruptHint": "で中断",
+  "crewmateMoreLines": {
+    "plural": "count",
+    "other": "+{count}行"
+  },
+  "crewmateNoOutput": "出力なし",
+  "crewmateNoResult": "結果なし",
+  "crewmateOpen": "開く",
+  "crewmatePaused": "一時停止中 · ブラウザはあなたが操作中",
+  "crewmatePicture": "乗組員の呼び出しが返した画像",
+  "crewmatePictureLarger": "拡大",
+  "crewmatePictureSmaller": "縮小",
+  "crewmatePlaceholderIdle": "乗組員に次の作業を伝える",
+  "crewmatePlaceholderWorking": "乗組員に伝えます。次のステップで届きます",
+  "crewmatePlan": "プラン",
+  "crewmateProgress": "進捗",
+  "crewmateQueued": "待機中",
+  "crewmateReport": "報告",
+  "crewmateRunning": "実行中…",
+  "crewmateSendsTo": "乗組員へ",
+  "crewmateShowCard": "カードを表示",
+  "crewmateStop": "停止",
+  "crewmateStoppedApp": "ターンが停止されました。",
+  "crewmateStoppedCaptain": "あなたがターンを停止しました。",
+  "crewmateStoppedFirstmate": "一等航海士がターンを停止しました。",
+  "crewmateStopping": "停止中…",
+  "crewmateUnreadable": "この乗組員の会話を読み込めませんでした。",
+  "crewmateWaiting": "あなた待ち",
+  "crewmateWorking": "作業中…"
+}

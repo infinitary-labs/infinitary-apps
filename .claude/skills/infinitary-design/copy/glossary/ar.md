@@ -11,138 +11,138 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 
 | English | Arabic | Note |
 | --- | --- | --- |
+| a panel by <name> | لوحة من صنع <name> | |
+| A phone (the item under Devices) | «هاتف» |  |
+| a stronger model | نموذج أقوى | |
+| account | حساب | |
+| action (an integration action) | إجراء | Plural "إجراءات". |
+| Allow (secrets approval button) | «سماح» |  |
+| Always use | الاستخدام دائمًا | Quoted «الاستخدام دائمًا» mid-sentence. |
+| Appearance | المظهر | |
+| Approves secret uses (switch) | «يوافق على استخدام الأسرار» | The computer's Settings → Devices should show the same words. |
+| Asks first | يسأل أولًا | |
+| Automation | الأتمتة | |
+| backlog | قائمة المهام المؤجلة | |
+| batch / batch run (the queue's) | دفعة / تشغيل الدفعة | Matches "طلب سحب مجمّع" and "فحص الدفعة". |
+| board (task board) | لوح المهام | "لوح" kept apart from "لوحة" (panel). |
+| branch | فرع | "الفرع الرئيسي" for the main branch. |
+| bring up to date | تحديثه بآخر التغييرات | Said in place of rebase; neither rebase nor conflict is named as a term. |
 | captain | القبطان | The word a ship's crew uses; masculine default, addressed as "أيها القبطان". |
-| first mate | نائب القبطان | The ship's second-in-command, a common noun; used without "your" because the captain is the reader, and "النائب" only as the thread's one-word author tag. |
+| card | بطاقة | Feminine. |
+| Careful | متأنٍّ | Chosen over "حذر", which reads as wary rather than thorough. |
+| certificate | شهادة | "شهادة CA" for an organization certificate. |
+| claim (recorded claim) | ادعاء | "ادعاء مسجّل". |
+| clone | استنساخ | "استُنسخ" for "cloned", never "نُسخ" (copied). |
+| collection | مجموعة | |
+| command search | البحث في الأوامر | |
+| commit | إيداع | The usual Arabic Git term. |
+| computer | حاسوب | Plural "حواسيب"; used for every computer, never "جهاز ماك" or "خادم". |
+| concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |
+| conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |
 | crew | الطاقم | |
 | crewmate | فرد الطاقم | Plural "أفراد الطاقم"; masculine default. |
-| task | مهمة | Feminine, plural "مهام"; feed lines about a task agree in the feminine. |
-| card | بطاقة | Feminine. |
-| the record (a task's record) | سجل المهمة | |
-| log (a check's kept output) | سجل التشغيل | Never "سجل" alone, which reads as the task's record ("سجل المهمة"). |
-| panel | لوحة | Plural "لوحات"; "لوحة المفاتيح" stays the keyboard. |
-| rail | شريط | Only in search words ("أشرطة"), for the side column of panels. |
-| project | مشروع | Plural "مشاريع". |
-| your project | مشروعك | |
-| pull request | طلب سحب | The term Arabic Git and GitHub material uses; masculine. |
-| PR #N | PR #N | Kept as is, in mono. |
-| merge | دمج | "تعذّر الدمج" for "Cannot merge", "دُمج" for "Merged". |
-| commit | إيداع | The usual Arabic Git term. |
-| branch | فرع | "الفرع الرئيسي" for the main branch. |
-| push | دفع | "دُفع الفرع" for "Pushed the branch". |
-| clone | استنساخ | "استُنسخ" for "cloned", never "نُسخ" (copied). |
-| the checks | الفحوصات | "نجحت الفحوصات", "فشلت الفحوصات", "الفحوصات قيد التشغيل". |
-| review | المراجعة | |
-| bring up to date | تحديثه بآخر التغييرات | Said in place of rebase; neither rebase nor conflict is named as a term. |
-| working copy | نسخة العمل | |
-| where the project lives | حيث يُستضاف المشروع | "مستضيف المشروع" for "the project's host". |
-| sign-in / sign in | تسجيل الدخول / سجّل الدخول | The usual Arabic interface words. |
-| your plan's allowance | رصيد باقتك | "الرصيد" alone on short labels such as "إعادة التحقق من الرصيد". |
-| provider | مزوّد | |
-| model | نموذج | Plural "نماذج"; "نموذج أقوى" for a stronger model. |
-| plan (a task's plan) | خطة | |
-| plan (what the person subscribes to) | باقة | Kept apart from a task's "خطة" so one word never names two things. |
-| subscription | اشتراك | |
-| account | حساب | |
-| Settings | الإعدادات | |
-| Appearance | المظهر | |
-| rigor | العناية | Written as "العناية: {care}" so the rigor label needs no agreement. |
-| Quick | سريع | |
-| Default | افتراضي | |
-| Careful | متأنٍّ | Chosen over "حذر", which reads as wary rather than thorough. |
-| Merges on its own | يدمج تلقائيًا | |
-| Asks first | يسأل أولًا | |
-| a stronger model | نموذج أقوى | |
-| computer | حاسوب | Plural "حواسيب"; used for every computer, never "جهاز ماك" or "خادم". |
-| this computer | هذا الحاسوب | |
-| phone | هاتف | |
-| device | جهاز | Only for the Devices list ("الأجهزة"). |
-| out of reach | خارج المتناول | Chosen over "غير متصل", which is the "offline" the vocabulary avoids. |
-| Remove (a device) | إزالة | |
-| Leave (a device) | مغادرة | "غادر {name}." in the feed. |
-| key (an integration's key) | مفتاح | Also a keyboard key; the sentence makes it clear. |
 | custom API | API مخصصة | A connection to a model server the person adds; "اتصال API مخصص" for the connection itself. |
-| server (a model API server) | الخادم | Only for the custom API form, where the person types a server address; a computer is still never "خادم". |
-| header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
-| certificate | شهادة | "شهادة CA" for an organization certificate. |
-| token (a sign-in token a command prints) | رمز الوصول | Only in the custom API form ("أمر رمز الوصول"), kept apart from "رموز" for counted model tokens. |
-| Models board | جدول النماذج | Not "لوحة", which names a panel. |
-| form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
-| a panel by <name> | لوحة من صنع <name> | |
-| conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |
-| report | تقرير | |
-| feed / activity | النشاط | |
-| starter | عبارة بدء | The ready sentence the person presses to begin. |
-| message box | مربع الرسالة | |
-| main message | الرسالة الرئيسية | |
-| thread (a card's replies) | السلسلة | |
-| command search | البحث في الأوامر | |
+| decision records | سجلات القرارات | What Contribution sends; "redacted" is "منقّحة". |
+| decisions / decision model | القرارات / نموذج القرارات | |
+| Default | افتراضي | |
+| demo / its recording | عرض توضيحي / التسجيل | Never "فيديو". |
+| device | جهاز | Only for the Devices list ("الأجهزة"). |
+| Diagnostics / Contribution (Sharing) | التشخيص / المساهمة | The two Sharing switches. |
+| direction (a standing knowledge entry) | توجيه | Plural "توجيهات"; its kinds are "تعليمة" (instruction) and "نصيحة" (advice). |
 | discard | تجاهل | The word Arabic interfaces use for discarding changes; "تم التجاهل" for "Discarded". |
 | drop (a task) | إسقاط | "أُسقطت" for "Dropped". |
-| stop | إيقاف | "إيقاف مؤقت" for pause. |
-| start | بدء | "بدأت" in the feed. |
-| file (to the backlog) | إدراج | Used only for the backlog, never for a task that starts now. |
-| backlog | قائمة المهام المؤجلة | |
-| queued | في قائمة الانتظار | The batch queue of a project is "طابور مشروعك". |
-| release | إصدار | "أُصدرت" for "Released"; "نسخة" is a version of the work. |
-| version | نسخة | Said in place of SHA or head. |
-| Runbooks | أدلة التشغيل | |
-| Secrets | الأسرار | |
-| Integrations | التكاملات | |
-| Automation | الأتمتة | |
-| Usage | الاستخدام | |
-| Intelligence | الذكاء | |
-| Premium / Hard / Normal / Simple (a task's level), Difficulty | ممتاز / صعبة / عادية / بسيطة, الصعوبة | How hard the task is, never a reasoning word. |
-| Observe | المراقبة | |
-| preset (keyboard) | الإعداد المسبق | |
-| demo / its recording | عرض توضيحي / التسجيل | Never "فيديو". |
-| purge (task data) | محو | Stronger than "حذف", for removing every task at once; "مُحيت" for "purged". |
-| Diagnostics / Contribution (Sharing) | التشخيص / المساهمة | The two Sharing switches. |
-| decision records | سجلات القرارات | What Contribution sends; "redacted" is "منقّحة". |
-| action (an integration action) | إجراء | Plural "إجراءات". |
-| font (Settings → Appearance) | خط | |
-| task key (a project's task numbering, "INF") | رمز المهام | "رمزه" for a project's own; kept apart from "مفتاح", which unlocks something. |
-| batch / batch run (the queue's) | دفعة / تشغيل الدفعة | Matches "طلب سحب مجمّع" and "فحص الدفعة". |
-| level (premium / high / medium / low) | مستوى | Plural "مستويات"; "model slots" is "مستويات النماذج", never a word for slot. |
-| Always use | الاستخدام دائمًا | Quoted «الاستخدام دائمًا» mid-sentence. |
 | Dynamic routing | التوزيع الديناميكي | |
-| decisions / decision model | القرارات / نموذج القرارات | |
-| prompt (an automation's words) | الرسالة | What the first mate gets. |
-| record (a Usage record) | سجل | Plural "سجلات". |
-| Reasoning | الاستدلال | As the task facts already say it. |
-| estimated (Usage) | تقديري | |
-| Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
-| Knowledge (panel) | المعرفة | "فتح المعرفة" for Open Knowledge. |
-| concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |
-| direction (a standing knowledge entry) | توجيه | Plural "توجيهات"; its kinds are "تعليمة" (instruction) and "نصيحة" (advice). |
-| claim (recorded claim) | ادعاء | "ادعاء مسجّل". |
-| evidence | الأدلة | "أدلة متعارضة" for differing evidence. |
-| revision (of a knowledge entry) | التعديل | "التعديل 3"; kept apart from "نسخة" and from "المراجعة" (review). |
-| collection | مجموعة | |
-| inspector | التفاصيل | The side pane that shows one entry. |
-| graph | المخطط | |
-| pin / unpin (a task) | تثبيت / إلغاء التثبيت | |
-| hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
-| Waiting on you (board lane) | بانتظارك | |
-| board (task board) | لوح المهام | "لوح" kept apart from "لوحة" (panel). |
-| repo (never said) | مشروع | "مستودع" only where a sentence points at GitHub. |
-| worktree (never said) | نسخة العمل | |
-| land, ship (never said) | دمج | |
-| save point (never said) | إيداع | |
-| quota, rate limit (never said) | رصيد باقتك | "حصة" appears only as an extra search word. |
-| token, credential (never said) | تسجيل الدخول | "رموز" appears only for counted model tokens in Usage. |
-| machine, server, home computer (never said) | الحاسوب باسمه | "هذا الحاسوب" on itself. |
-| offline, disconnected (never said) | خارج المتناول | |
-| session, transcript (never said) | المحادثة | |
-| plugin, extension (never said) | لوحة | |
 | error (never said) | تعذّر … | A line says what could not be done ("تعذّر فتح هذه اللوحة."). |
-| Steer (button) | إرشاد | توجيه is a knowledge direction. |
-| Allow (secrets approval button) | «سماح» |  |
-| Approves secret uses (switch) | «يوافق على استخدام الأسرار» | The computer's Settings → Devices should show the same words. |
+| estimated (Usage) | تقديري | |
+| evidence | الأدلة | "أدلة متعارضة" for differing evidence. |
+| feed / activity | النشاط | |
+| file (to the backlog) | إدراج | Used only for the backlog, never for a task that starts now. |
 | fingerprint (a computer's key) | بصمة |  |
-| passcode (iOS) | رمز الدخول | Apple's Arabic word. |
-| A phone (the item under Devices) | «هاتف» |  |
-| Theme: Device / Dark / Light | السمة: الجهاز / داكن / فاتح |  |
-| seconds (short unit) | ث | Durations read "{minutes} د {seconds} ث". |
+| first mate | نائب القبطان | The ship's second-in-command, a common noun; used without "your" because the captain is the reader, and "النائب" only as the thread's one-word author tag. |
+| font (Settings → Appearance) | خط | |
+| form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
+| graph | المخطط | |
+| header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
+| hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
+| Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
+| inspector | التفاصيل | The side pane that shows one entry. |
+| Integrations | التكاملات | |
+| Intelligence | الذكاء | |
+| key (an integration's key) | مفتاح | Also a keyboard key; the sentence makes it clear. |
 | knowledge (Knowledge used) | المعرفة | "المعرفة المستخدمة"; a finding is "نتيجة" and a concept "مفهوم". |
+| Knowledge (panel) | المعرفة | "فتح المعرفة" for Open Knowledge. |
+| land, ship (never said) | دمج | |
+| Leave (a device) | مغادرة | "غادر {name}." in the feed. |
+| level (premium / high / medium / low) | مستوى | Plural "مستويات"; "model slots" is "مستويات النماذج", never a word for slot. |
 | live validation | التحقق المباشر | Trying the change for real; kept apart from the checks. |
+| log (a check's kept output) | سجل التشغيل | Never "سجل" alone, which reads as the task's record ("سجل المهمة"). |
+| machine, server, home computer (never said) | الحاسوب باسمه | "هذا الحاسوب" on itself. |
+| main message | الرسالة الرئيسية | |
+| merge | دمج | "تعذّر الدمج" for "Cannot merge", "دُمج" for "Merged". |
+| Merges on its own | يدمج تلقائيًا | |
+| message box | مربع الرسالة | |
+| model | نموذج | Plural "نماذج"; "نموذج أقوى" for a stronger model. |
+| Models board | جدول النماذج | Not "لوحة", which names a panel. |
+| Observe | المراقبة | |
+| offline, disconnected (never said) | خارج المتناول | |
+| out of reach | خارج المتناول | Chosen over "غير متصل", which is the "offline" the vocabulary avoids. |
+| panel | لوحة | Plural "لوحات"; "لوحة المفاتيح" stays the keyboard. |
+| passcode (iOS) | رمز الدخول | Apple's Arabic word. |
+| phone | هاتف | |
+| pin / unpin (a task) | تثبيت / إلغاء التثبيت | |
+| plan (a task's plan) | خطة | |
+| plan (what the person subscribes to) | باقة | Kept apart from a task's "خطة" so one word never names two things. |
+| plugin, extension (never said) | لوحة | |
+| PR #N | PR #N | Kept as is, in mono. |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | ممتاز / صعبة / عادية / بسيطة, الصعوبة | How hard the task is, never a reasoning word. |
+| preset (keyboard) | الإعداد المسبق | |
+| project | مشروع | Plural "مشاريع". |
+| prompt (an automation's words) | الرسالة | What the first mate gets. |
+| provider | مزوّد | |
+| pull request | طلب سحب | The term Arabic Git and GitHub material uses; masculine. |
+| purge (task data) | محو | Stronger than "حذف", for removing every task at once; "مُحيت" for "purged". |
+| push | دفع | "دُفع الفرع" for "Pushed the branch". |
+| queued | في قائمة الانتظار | The batch queue of a project is "طابور مشروعك". |
+| Quick | سريع | |
+| quota, rate limit (never said) | رصيد باقتك | "حصة" appears only as an extra search word. |
+| rail | شريط | Only in search words ("أشرطة"), for the side column of panels. |
+| Reasoning | الاستدلال | As the task facts already say it. |
+| record (a Usage record) | سجل | Plural "سجلات". |
+| release | إصدار | "أُصدرت" for "Released"; "نسخة" is a version of the work. |
+| Remove (a device) | إزالة | |
+| repo (never said) | مشروع | "مستودع" only where a sentence points at GitHub. |
+| report | تقرير | |
+| review | المراجعة | |
+| revision (of a knowledge entry) | التعديل | "التعديل 3"; kept apart from "نسخة" and from "المراجعة" (review). |
 | revision (of a knowledge entry) | التعديل | "التعديل {revision}"; "المراجعة" is the review and "نسخة" a version. |
+| rigor | العناية | Written as "العناية: {care}" so the rigor label needs no agreement. |
+| Runbooks | أدلة التشغيل | |
+| save point (never said) | إيداع | |
+| seconds (short unit) | ث | Durations read "{minutes} د {seconds} ث". |
+| Secrets | الأسرار | |
+| server (a model API server) | الخادم | Only for the custom API form, where the person types a server address; a computer is still never "خادم". |
+| session, transcript (never said) | المحادثة | |
+| Settings | الإعدادات | |
+| sign-in / sign in | تسجيل الدخول / سجّل الدخول | The usual Arabic interface words. |
+| start | بدء | "بدأت" in the feed. |
+| starter | عبارة بدء | The ready sentence the person presses to begin. |
+| Steer (button) | إرشاد | توجيه is a knowledge direction. |
+| stop | إيقاف | "إيقاف مؤقت" for pause. |
+| subscription | اشتراك | |
+| task | مهمة | Feminine, plural "مهام"; feed lines about a task agree in the feminine. |
+| task key (a project's task numbering, "INF") | رمز المهام | "رمزه" for a project's own; kept apart from "مفتاح", which unlocks something. |
+| the checks | الفحوصات | "نجحت الفحوصات", "فشلت الفحوصات", "الفحوصات قيد التشغيل". |
+| the record (a task's record) | سجل المهمة | |
+| Theme: Device / Dark / Light | السمة: الجهاز / داكن / فاتح |  |
+| this computer | هذا الحاسوب | |
+| thread (a card's replies) | السلسلة | |
+| token (a sign-in token a command prints) | رمز الوصول | Only in the custom API form ("أمر رمز الوصول"), kept apart from "رموز" for counted model tokens. |
+| token, credential (never said) | تسجيل الدخول | "رموز" appears only for counted model tokens in Usage. |
+| Usage | الاستخدام | |
+| version | نسخة | Said in place of SHA or head. |
+| Waiting on you (board lane) | بانتظارك | |
+| where the project lives | حيث يُستضاف المشروع | "مستضيف المشروع" for "the project's host". |
+| working copy | نسخة العمل | |
+| worktree (never said) | نسخة العمل | |
+| your plan's allowance | رصيد باقتك | "الرصيد" alone on short labels such as "إعادة التحقق من الرصيد". |
+| your project | مشروعك | |

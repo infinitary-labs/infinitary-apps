@@ -27,3 +27,7 @@ ios/**/xcuserdata/
 # The browser layer's failure screenshots (vitest browser mode).
 tests/browser/__screenshots__/
 .vitest-attachments/
+# The catalogs' compiled desktop modules, built by install, the typecheck,
+# the tests and the build, never committed (docs/i18n.md, "The catalog").
+/src/shared/i18n/messages.generated.ts
+/src/panels/*/messages.generated.ts

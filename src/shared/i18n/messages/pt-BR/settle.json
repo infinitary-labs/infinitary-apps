@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "Não é possível mesclar: {problem}",
+  "settleCouldNotDiscard": "Não foi possível descartar: {problem}",
+  "settleDiscardedPullOpen": "Descartada. A solicitação de pull dela continua aberta onde o projeto fica: {problem}",
+  "settleDiscardedPullOpenThen": "Descartada. A solicitação de pull dela continua aberta onde o projeto fica: {problem}. {followup}",
+  "settleDiscarding": "Descartando",
+  "settleDiscardingAfterTurn": "Descartando assim que o tripulante terminar o que está fazendo",
+  "settleMerging": "Mesclando",
+  "settleMergingAfterTurn": "Mesclando assim que o tripulante terminar o que está fazendo",
+  "settleMergingChange": "Mesclando {change}",
+  "settleMergingChangeAfterTurn": "Mesclando {change} assim que o tripulante terminar o que está fazendo"
+}

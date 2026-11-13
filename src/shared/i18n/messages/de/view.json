@@ -1,0 +1,8 @@
+{
+  "viewGoogleUpdateThere": "Aktualisiere Infinitary auf {mac}, um dich von hier aus bei Google anzumelden.",
+  "viewReturnPasteLabel": "Die Adresse, auf der dein Browser nach {name} gelandet ist",
+  "viewReturnPasteLead": "Bestätige auf der Seite von {name}. Danach landet dein Browser auf einer Seite, die nicht erreichbar ist. Kopiere die Adresse dieser Seite und füge sie hier ein.",
+  "viewReturnPastePlaceholder": "Adresse einfügen",
+  "viewReturnPasteRefused": "Diese Adresse gehört nicht zu dieser Anmeldung. Füge die Adresse ein, auf der dein Browser nach dieser Anmeldung gelandet ist.",
+  "viewReturnPasteSend": "An {mac} senden"
+}

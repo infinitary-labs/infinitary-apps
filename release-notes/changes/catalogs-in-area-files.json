@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "catalogs-in-area-files",
+      "reason": "Keeps each language's messages in name-ordered area files and builds the compiled message modules instead of committing them, so changes adding different messages merge without a clash. How the project is developed changes; nothing a person sees in the app changes."
+    }
+  ]
+}

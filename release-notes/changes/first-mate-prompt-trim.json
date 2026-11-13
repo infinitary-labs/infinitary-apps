@@ -1,0 +1,7 @@
+{
+  "entries": [],
+  "exclusions": [{
+    "id": "first-mate-prompt-trim",
+    "reason": "Internal: tighter wording of a few task-tool descriptions the first mate is served, to bring its fixed context back under its token budget; every rule is kept and nothing a person sees changes."
+  }]
+}

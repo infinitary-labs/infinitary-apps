@@ -44,7 +44,7 @@ export const PLACE_PANEL_TOOL_DESCRIPTION = [
 export const CAPTURE_PANEL_TOOL_DESCRIPTION = [
   "Screenshot a personal panel at rail width, in the dark theme and the light theme.",
   "While your saved files differ from what the captain's rail holds, it photographs your version drawn out of sight, and says so; once place_panel has put that version on their rail, it photographs the panel docked, as they see it.",
-  "Returns both images and the files they were written to, so you can look at what you built rather than guess.",
+  "Returns both images and the files they were written to.",
   "The panel must be drawable: compiled, and its presence rule satisfied (a store-keyed presence needs data in that key first).",
   "Pass id: the extension's directory name.",
 ].join(" ");

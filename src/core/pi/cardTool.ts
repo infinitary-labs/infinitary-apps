@@ -593,7 +593,7 @@ const crewmateCardParams = Type.Object({
   body_file: Type.Optional(
     Type.String({
       description:
-        "Write card bodies as UTF-8 HTML in the task's card body folder outside the working copy; name an absolute or folder-relative path. Revise in place only what the captain's words changed, so the app can mark it. A full rewrite is fine when the answer changed shape; say so in the opening sentence. Call emit_card again with the same id. Give exactly one of body_file or body; inline body is accepted. The app reads only on this call and runs the usual checks; it does not watch edits.",
+        "Write card bodies as UTF-8 HTML in the task's card body folder outside the working copy; name an absolute or folder-relative path. Revise in place only what the captain's words changed, so the app can mark it. A full rewrite is fine when the answer changed shape; say so in the opening sentence. Call emit_card again with the same id. Give exactly one of body_file or body. The app reads only on this call; it does not watch edits.",
     }),
   ),
 });
@@ -636,13 +636,13 @@ const BROWSER_HANDOFF_DESCRIPTION = [
   "Optional: ask the captain to take over this task's browser for what only a person should do - a sign-in, a code, a payment - never in a card reply.",
   `Give site (the page's host), reason (why you need the captain) and after (what you will do once control comes back), each a short sentence of at most ${TASK_BROWSER_REQUEST_MAX} characters.`,
   `The card is an ordinary decision naming the site and why; give it exactly one action whose effect is { kind: "open", target: "browser" }, labeled as the captain's step, such as ${BROWSER_SIGN_IN_STEP}, beside one such as Leave waiting.`,
-  "The app pauses your browser before the card goes up: its commands refuse until the captain returns control, and nothing they do reaches you.",
-  "Only the captain's Return control resumes you, once, with your earlier refs gone: take a fresh look.",
+  "The app pauses your browser before the card goes up; its commands refuse until the captain returns control.",
+  "Only the captain's Return control resumes you, once, with your earlier refs gone.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
   `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed since the captain chose; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
   "If the price or terms change after a review, stop and review again: an earlier choice does not cover them.",
-  "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain here.",
+  "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain.",
   UNKNOWN_OUTCOME_WORDS,
 ].join(" ");
 
@@ -1124,7 +1124,7 @@ export const CLOSE_CARD_TOOL = crewmateTool({
     reason: Type.Optional(
       Type.String({
         description:
-          "Why you ended it, in one plain line for the captain: a card they have seen stays up, marked ended, with this line",
+          "Why you ended it, in one plain line: a card they have seen stays up, marked ended, with this line",
       }),
     ),
   }),

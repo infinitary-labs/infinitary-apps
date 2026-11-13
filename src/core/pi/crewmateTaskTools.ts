@@ -125,18 +125,18 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   FOLLOWUP_AFTER_MERGE_RULE,
   "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
   "Set blocks_me only for a real dependency your task cannot merge without; it stops your task closing.",
-  "Give a sentence-case title, a one-sentence goal describing done, and why, explaining your finding plainly.",
+  "Give a sentence-case title, a one-sentence goal describing done, and why, plainly.",
   "For a test failure, pass test_failure true and test_path: the host refuses a missing path and returns an existing key instead of filing a duplicate.",
-  "Never file progress, questions for the captain (emit a card), or work you are about to do yourself.",
+  "Never file progress, captain questions (emit a card), or work you are about to do yourself.",
 ].join(" ");
 
 export const NOTE_PROGRESS_TOOL_DESCRIPTION = [
   "Put one line on your task's own timeline - a milestone reached, a decision you made, what you are doing next.",
   "It is never shown as a card or a feed line; the captain can read it on the task's record.",
   "Call it as soon as a plan item finishes or the work moves on, mid-turn: the captain watches the plan move while you work, and a note held to the end leaves it standing still.",
-  "Otherwise use it at real milestones, not every command, and never instead of your final report.",
+  "Use it at real milestones, never instead of your final report.",
   "Pass plan to show where the work stands: the whole list of what the task takes, each item with a label, a word or two for its dot, and its state - done, current, next or skipped.",
-  "The captain sees dots beside the task and a list on its record: under eight items, one current at a time.",
+  "The captain sees dots and a list: under eight items, one current at a time.",
   "Send the first list with your brief, send the whole list with every later note, unchanged if nothing moved, and fold finished items into one item to make room; the final report leaves every item done or skipped.",
 ].join(" ");
 
@@ -244,7 +244,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: false,
           description:
-            "After verifying a published release, report every included merged task, internal ones included, with its earliest release, page and evidence of membership and earliest publication. Collect all keys with tasks skip; report each earliest-release group. Arrange missing verification; never infer from merge time or call unknown unshipped. Existing attributions stay unless corrects names the previous version. Records facts, never publishes or merges.",
+            "After verifying a published release, report every included merged task, internal ones included, with its earliest release, page and evidence of membership and earliest publication. Collect all keys with tasks skip; report each earliest-release group. Arrange missing verification; never infer from merge time. Existing attributions stay unless corrects names the previous version. It records facts only.",
         },
       ),
     ),
@@ -259,7 +259,7 @@ export const REPORT_TOOL = crewmateTool({
         },
         {
           description:
-            "A work wait: owner, end fact, current observation and cheapest way around it. Omit owner/end only when unknown; never poll an unchanged wait. Jobs and captain waits retain their own declarations.",
+            "A work wait: owner, end fact, current observation and cheapest way around it. Omit owner/end only when unknown; never poll an unchanged wait.",
         },
       ),
     ),
@@ -317,7 +317,7 @@ export const REPORT_TOOL = crewmateTool({
         { minutes: Type.Number(), waiting_for: Type.String() },
         {
           description:
-            "Your job still runs as your turn ends: minutes until you look again, and what it does. The app wakes you then. To wait for time alone, start a background sleep first.",
+            "Your job still runs as your turn ends: minutes until you look again, and what it does. The app wakes you then; to wait for time alone, start a background sleep first.",
         },
       ),
     ),
@@ -354,13 +354,13 @@ export const REPORT_TOOL = crewmateTool({
     captain_words_from: Type.Optional(
       Type.String({
         description:
-          "When reporting the captain's words, name your card they replied under or clicked, or crewmate-tab. The app reads the newest words there and quotes them in filed work. A card on another task or without their words refuses the report.",
+          "When reporting the captain's words, name your card they replied under or clicked, or crewmate-tab. The app reads the newest words there and quotes them in filed work. A card without their words refuses the report.",
       }),
     ),
     files: Type.Optional(
       Type.Array(Type.String(), {
         description:
-          "Absolute paths of files this report hands to another task. The app keeps verified copies for the first mate's steer. Never paste contents: they may hold secrets.",
+          "Absolute paths of files this report hands to another task. The app keeps verified copies. Never paste contents: they may hold secrets.",
       }),
     ),
     result: Type.Optional(
@@ -369,7 +369,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: true,
           description:
-            "The brief's JSON result; fix invalid fields. A waiting_on_captain, needs_firstmate, check_back or responses report may omit it. The next task reads this as data; text stays the plain account.",
+            "The brief's JSON result; fix invalid fields. A waiting_on_captain, needs_firstmate, check_back or responses report may omit it. The next task reads it as data; text stays the plain account.",
         },
       ),
     ),
@@ -462,7 +462,7 @@ export const NOTE_PROGRESS_TOOL = crewmateTool({
             description: "What the item is, in a few words",
           }),
           short: Type.String({
-            description: "A word or two under its dot on the summary, cut there when it is longer",
+            description: "A word or two under its dot",
           }),
           state: stringEnum(["done", "current", "next", "skipped"]),
         }),

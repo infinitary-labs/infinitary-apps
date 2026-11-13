@@ -18,7 +18,7 @@ export function createLocateProjectTool(locate: (name: string) => string | Promi
       "not yet managed. Case-insensitive match over the usual project locations; returns",
       "up to 8 candidates with whether each is a git repo, its origin remote, and its",
       "repo_id when already managed. With the captain's sign-in where projects live, it",
-      "also searches all of them (up to 1,000), exact owner/name or pasted address included, and says how many it searched; matches are listed first, else the newest, each with the",
+      "also searches all of them (up to 1,000), exact owner/name or pasted address included; matches are listed first, else the newest, each with the",
       "origin app_change project-setup kind clone takes. Not found, or only described: spawn a read-only investigation using github_read before asking for a link.",
     ].join(" "),
     parameters: Type.Object({

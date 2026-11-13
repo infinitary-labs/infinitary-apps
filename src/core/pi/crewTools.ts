@@ -490,7 +490,7 @@ export const NOTHING_SPAWNED = "Nothing was spawned.";
  * writes a line there naming the task, ended cards included.
  */
 export const FROM_CARD_DESCRIPTION =
-  "The card id whose thread reply from the captain this work answers, yours or one a crewmate's report names; the app writes a line there naming the task.";
+  "The card id whose captain reply this work answers, yours or one a crewmate's report names; the app writes a line there naming the task.";
 
 /** A first mate with no way to hand files on refuses files_from in words. */
 function missingHandFiles(): Promise<string> {
@@ -517,8 +517,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "so name an existing surface's id in the goal for a change.",
       "Before security, codesign or any Keychain command against the real",
       "keychains or a project's own signing material, ask for consent on a card; never put a secret in a command line;",
-      "prefer reproducing keychain or signing behavior with stand-ins under a",
-      "scratch HOME. Returns the task id immediately;",
+      "prefer stand-ins under a scratch HOME. Returns the task id immediately;",
       "the crewmate's results arrive later as [fm-op] messages, so end your turn.",
     ].join(" "),
     parameters: Type.Object({
@@ -585,7 +584,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       branch_from: Type.Optional(
         Type.String({
           description:
-            "Start from this task’s last commit, held on this computer; for work still on another computer, name its pushed version in the brief instead.",
+            "Start from this task’s last commit, held on this computer; for work on another computer, name its pushed version in the brief.",
         }),
       ),
       start_after: Type.Optional(
@@ -806,7 +805,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "discard removes unwanted work unmerged; never discard results. done closes it as done and names why: answered " +
       "(an answer reported or handed on), finished (verified work with nothing to merge), released (you independently " +
       "verified its delivery through an external release; evidence names it), carried_on (carried_by) or merged (delivered_in: any pull request in its project, or a commit on main). " +
-      "Every close stops its crewmate and keeps unmerged commits, edits, records and sessions. done leaves the task's " +
+      "Every close stops its crewmate and keeps its work. done leaves the task's " +
       "own pull request open and records it, but carried_on closes it. Closing on your own, done holds for open " +
       "decisions, parts, waits and the delivery proof: a report, its own pull request closed or merged, and its work " +
       "merged or named elsewhere. captain_words passes them all. Use crew_status to pick the task id; never guess among several matches.",

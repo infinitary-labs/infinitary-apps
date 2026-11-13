@@ -279,7 +279,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, its stuck card comes down, nothing wakes it until start_now picks it up, and you hear once if news reaches it there. Do this with a reason when the captain asks to pause a task, or when a stall wake shows it stopped on a blocker no steer will change; never steer it to stay idle. Add captain_stop true when the captain asked for the wait: until it starts again, nothing alarms about it.",
+            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now, and you hear once if news reaches it. Give a reason when the captain asks to pause it, or a stall wake shows it stopped on a blocker no steer will change; never steer it to stay idle. Add captain_stop true when the captain asked for the wait: nothing alarms until it starts.",
         }),
       ),
       // What it records is said on start_policy, so it is served bare.
@@ -308,7 +308,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       internal_step: Type.Optional(
         Type.Boolean({
           description:
-            "As spawn_crewmate's shape.internal_step, on open work before it starts, such as a crewmate's filing you start unasked.",
+            "As spawn_crewmate's shape.internal_step, on open work before it starts, such as a filing you start unasked.",
         }),
       ),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
@@ -317,7 +317,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       crew_speed: Type.Optional(
         Type.Union([stringEnum(["standard", "fast", "ultrafast"]), Type.Null()], {
           description:
-            "Captain-only crew/summary speed, next request; null inherits Models. First mate/Decisions stay Standard. Ultrafast: 8× allowance/6× credits. Unavailable: explained Standard, same model/account.",
+            "Captain-only crew/summary speed, next request; null inherits Models. First mate/Decisions stay Standard. Ultrafast: 8× allowance/6× credits..",
         }),
       ),
       override_model_id: Type.Optional(
@@ -360,7 +360,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       runs_on: Type.Optional(
         Type.String({
           description:
-            "Before start, for it and its parts: work computer name/id, this-mac, or automatic (model preference, then an answered basis’s current work computer if eligible, then room); project resets it. Automatic is a soft preference only for tasks already using it; name a computer on the captain’s words or a crewmate’s reported need, under the existing placement rules.",
+            "Before start, for it and its parts: work computer name/id, this-mac, or automatic (model preference, then an answered basis’s current work computer if eligible, then room); project resets it. Automatic is a soft preference only for tasks already using it; name a computer on the captain’s words or a crewmate’s reported need.",
         }),
       ),
       direction: Type.Optional(
@@ -378,7 +378,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       correct_required_action: Type.Optional(
         Type.Boolean({
           description:
-            "On the captain's words that they confirmed a required action by mistake: reopen its durable operation and preserve the confirmation history. This does not reverse work that already continued. Cancel an unneeded action with drop and reason, never confirm it.",
+            "On the captain's words that they confirmed a required action by mistake: reopen its durable operation, keeping the confirmation history. Cancel an unneeded action with drop and reason, never confirm it.",
         }),
       ),
       revise_required_action: Type.Optional(
@@ -405,7 +405,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       cost_limit: Type.Optional(
         Type.String({
           description:
-            "Captain's words only: this task's cost limit in estimated dollars, over it and everything under it, as a number such as 75; none for no limit, follow for the nearest answer above it, then its project's or the app's. Parts follow this answer unless they have their own. Lifts cost-limit holds it now clears.",
+            "Captain's words only: this task's cost limit in estimated dollars, over it and everything under it, as a number; none for no limit, follow for the nearest answer above it, then its project's or the app's.",
         }),
       ),
       // The captain's pin (INF-3127), served bare: the name says it, and the
@@ -419,7 +419,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       raise_put_off: Type.Optional(
         Type.Boolean({
           description:
-            "On the captain's words: raise again now the card they put off on this task with a Not until choice.",
+            "On the captain's words: raise again now the card they put off on this task.",
         }),
       ),
       take_back_yes: Type.Optional(
@@ -636,8 +636,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "Record a typed edge between two tasks (ids or keys). blocks: `to` neither starts nor merges",
       "until `from` closes, and a cycle is refused as text. related: work neither task is waiting on.",
       "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now;",
-      "link it on every move of work to another task (a drop, a takeover, a fresh task) - the waits",
-      "on `from`, and its own, move to `to`. Pass remove true to unlink.",
+      "link it on every move of work to another task (drop, takeover, fresh task): the waits",
+      "on `from`, and its own, move to `to`. remove true unlinks.",
     ].join(" "),
     parameters: Type.Object({
       from: Type.String({ description: "The task the edge starts at (id or key)" }),
@@ -678,8 +678,8 @@ export const TASKS_QUERY_TOOL_NAME = "tasks";
 export const TASKS_QUERY_TOOL_DESCRIPTION = [
   "Beyond context: key/task_id, kind/status/title/project, parent/blockers/blocked tasks/children, ready/wait; no bodies.",
   "Filters: project/status/key/id/title/goal/parent.",
-  "Key reads: reports, cards, choices, brief, checks/reviews, sessions, earlier attempt. Timeline and exact sources only with field: timeline.",
-  "Resolution is facts; HANDOFF governs authorization. History grants none; later reports preserve prior specs.",
+  "Key reads: reports, cards, choices, brief, checks, sessions, earlier attempt. Timeline and exact sources only with field: timeline.",
+  "Resolution is facts; HANDOFF governs authorization. History grants none.",
   "Paging names remaining fields/lengths; identical card bodies appear once.",
   "card alone reads one card.",
 ].join(" ");

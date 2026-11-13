@@ -93,7 +93,7 @@ export const CAPTAIN_GUIDANCE_DESCRIPTION = [
 export const SKIP_RULES_DESCRIPTION = [
   "With pull, prepare a GitHub merge that skips the branch rules your sign-in may skip, failed checks included: headSha is the version read; method squash.",
   "It is stored only when a rule or failed check holds that version, GitHub says the sign-in may skip every default-branch rule set, and the crew declared its exact-version judgment.",
-  "The review names each rule and failed check, and the merge card shows them. Only the captain's click on that card sends it, once, at that version.",
+  "The review and merge card name each rule and failed check; only the captain's click on that card sends it, once, at that version.",
 ].join(" ");
 
 /**
@@ -445,12 +445,12 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
   label: "Read workflow evidence",
   description: [
     "Read project CI evidence through the app's sign-in. runId alone reads name, state, version, link and attempt, then latest-attempt job numbers, names, states and failures.",
-    "A short read watches a running run every minute, up to 3 hours and 5 runs per task. It wakes on first failure and completion; if already ended at first failure, only the end wake goes. End your turn; never sleep or loop on reads. A result you read sends no matching wake.",
+    "A short read watches a running run, up to 3 hours and 5 runs per task. It wakes on first failure and completion; if already ended at first failure, only the end wake goes. End your turn; never sleep or loop on reads. A result you read sends no matching wake.",
     "Over 100 jobs are read; the answer counts omissions.",
     "jobId reads run/version, steps and numbered log lines from offset (1-based, default 1), up to limit (default 200, max 500) and 20,000 characters; nextOffset continues. Lines over 2,000 characters are clipped; logs over 8 MiB are refused. offset and limit need jobId.",
     "GitHub runId is an Actions run; on GitLab runId is the pipeline and jobId the job.",
     "Find a run for a version with github_read: GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id> (use an untouched-main commit for a baseline), or on GitLab GET /projects/<url-encoded group/name>/pipelines?sha=<full commit id>.",
-    "Read failed logs before diagnosing check_change; missing or expired evidence is not proof of cause. Reads do not change checks, record a rerun judgment or settle repairs.",
+    "Read failed logs before diagnosing check_change; missing or expired evidence is not proof of cause.",
   ].join(" "),
   parameters: Type.Object({
     runId: Type.Integer({ minimum: 1 }),

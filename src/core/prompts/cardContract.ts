@@ -346,14 +346,14 @@ const ACTIONS_OPEN =
  * and raises the same card again, so its author sets no reminder of its own.
  */
 const ACTIONS_UNTIL =
-  " until on an action with no effect offers Not until: kind close with task (a task key; back when that task closes, merged or not), date with at (an ISO time), event with integration, event and filter (any event an automation rule can wait for) or word (back when the captain asks). The click reaches you as usual and an automation rule raises the same card again then; set no reminder.";
+  " until on an action with no effect offers Not until: kind close with task (a task key; back when that task closes, merged or not), date with at (an ISO time), event with integration, event and filter (any event an automation rule can wait for) or word (back when the captain asks). A rule raises the same card again then; set no reminder.";
 
 export const CARD_PARAMS = {
   title: "Short sentence-case title",
   body: "The card body: a raw HTML fragment",
   id: "Stable kebab-case id; reuse it to revise the open card in place",
   holds_place:
-    "Leave unset unless the use case requires continuous attention on this card. True brings the card forward when it arrives. Choices close at once.",
+    "Leave unset unless the card needs continuous attention. True brings the card forward when it arrives. Choices close at once.",
   reply: "Your short answer in this card's thread, saying what changed where.",
   interim: "True when reply is a progress note; the captain's reply still waits.",
   width:
@@ -366,7 +366,7 @@ export const CARD_PARAMS = {
   design_only: "True only as the declared design-only fact.",
   continues: "True when its choice is not your answer.",
   answering:
-    "True when the card delivers the requested result, even if it offers further work. Not for a prerequisite question or consent. Repeat on each revision.",
+    "True when the card delivers the requested result, even if it offers further work. Not for a prerequisite question or consent; repeat on each revision.",
   review_task_id: "Review task relayed here; must review task_id. The app labels its findings.",
   related: "Tasks it mentions, by id or key; each one's record links to it",
 } as const;

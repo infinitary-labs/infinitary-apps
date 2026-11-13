@@ -21,9 +21,8 @@ export function createSupervisionLogTool(recent: (limit: number) => SupervisionO
     name: "supervision_log",
     label: "Fleet outcome log",
     description:
-      "Read the durable log of routine fleet events already triaged on your behalf: " +
-      "each task, verdict, and summary, newest first. Use it when the user asks what " +
-      "happened in the fleet.",
+      "Read the log of routine fleet events already triaged for you: each task, " +
+      "verdict, and summary, newest first. Use it when asked what happened in the fleet.",
     parameters: Type.Object({
       recent: Type.Optional(
         Type.Number({ description: "How many most-recent outcomes to read (default 20)" }),
@@ -161,8 +160,8 @@ export function createFlagMissedEscalationTool(delegate: MissedEscalationDelegat
       "Record that a fleet event triaged as routine should have reached the user.",
       "Call it only after the user says something was missed AND you have checked",
       "supervision_log and confirmed the event was handled routinely. Never call it",
-      "on a hunch, on your own initiative, or for an event that did reach the user.",
-      "It writes a label and nothing else: no card, no message, no change to the task.",
+      "on a hunch or for an event that did reach the user.",
+      "It writes a label and nothing else: no card, message or task change.",
     ].join(" "),
     parameters: Type.Object({
       task_id: Type.String({ description: "The task whose routine outcome was the miss" }),

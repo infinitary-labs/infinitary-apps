@@ -1,4 +1,5 @@
 import { formatLanguageDate, formatLanguageDateTime, formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import {
   type UsageAmount,
   type UsageAttribution,
@@ -24,29 +25,51 @@ import {
  * computed number has one home and one focused test.
  */
 
-export const NOT_AVAILABLE = "Not available";
+export const USAGE_WORDS = {
+  get notAvailable() {
+    return m.settingsUsageNotAvailable();
+  },
+} as const;
 
-export const PERIOD_WORDS: Record<UsagePeriod, string> = {
-  "7d": "Last 7 days",
-  "30d": "Last 30 days",
-  all: "All recorded time",
+export const PERIOD_WORDS: Readonly<Record<UsagePeriod, string>> = {
+  get "7d"() {
+    return m.settingsUsagePeriod7d();
+  },
+  get "30d"() {
+    return m.settingsUsagePeriod30d();
+  },
+  get all() {
+    return m.settingsUsagePeriodAll();
+  },
 };
 
-export const SCOPE_WORDS: Record<UsageScope, string> = {
-  all: "All work",
-  task: "Task work",
-  firstmate: "First mate",
-  other: "Other work",
+export const SCOPE_WORDS: Readonly<Record<UsageScope, string>> = {
+  get all() {
+    return m.settingsUsageScopeAll();
+  },
+  get task() {
+    return m.settingsUsageScopeTask();
+  },
+  get firstmate() {
+    return m.settingsUsageScopeFirstmate();
+  },
+  get other() {
+    return m.settingsUsageScopeOther();
+  },
 };
 
-export const UNIT_WORDS: Record<UsageUnit, string> = {
-  tokens: "Tokens",
-  usd: "Estimated $",
+export const UNIT_WORDS: Readonly<Record<UsageUnit, string>> = {
+  get tokens() {
+    return m.settingsUsageUnitTokens();
+  },
+  get usd() {
+    return m.settingsUsageUnitUsd();
+  },
 };
 
 /** The unit as a column or section names it. */
 export function unitHeading(unit: UsageUnit): string {
-  return unit === "tokens" ? "Tokens" : "Estimated USD";
+  return unit === "tokens" ? m.settingsUsageHeadingTokens() : m.settingsUsageHeadingUsd();
 }
 
 /** A token count, short: 950, 12.4k, 17.26M, 1.20B. */
@@ -66,7 +89,7 @@ export function dollars(usd: number): string {
 
 /** A value in the unit, or the words for one that is not available. */
 export function formatUsage(value: number | null, unit: UsageUnit): string {
-  if (value === null) return NOT_AVAILABLE;
+  if (value === null) return USAGE_WORDS.notAvailable;
   return unit === "tokens" ? compactTokens(value) : dollars(value);
 }
 
@@ -77,7 +100,7 @@ export function formatAmount(amount: UsageAmount, unit: UsageUnit): string {
 
 /** An amount with nothing recorded says so; it is not a measured zero. */
 export function formatRecorded(amount: UsageAmount, unit: UsageUnit): string {
-  return amount.records === 0 ? "No activity" : formatAmount(amount, unit);
+  return amount.records === 0 ? m.settingsUsageNoActivity() : formatAmount(amount, unit);
 }
 
 /** A day's amount, or no activity. */
@@ -98,14 +121,14 @@ export function shortDate(date: string): string {
 export function periodLabel(summary: UsageSummary): string {
   const first = summary.days[0]?.date;
   const last = summary.days.at(-1)?.date;
-  if (!first || !last) return "Nothing recorded yet";
-  if (summary.query.period === "all") return `Since ${shortDate(first)} · Local dates`;
-  return `${shortDate(first)}–${shortDate(last)} · Local dates`;
+  if (!first || !last) return m.settingsUsageNothingRecorded();
+  if (summary.query.period === "all") return m.settingsUsagePeriodSince({ date: shortDate(first) });
+  return m.settingsUsagePeriodRange({ first: shortDate(first), last: shortDate(last) });
 }
 
 /** Records priced, as the dollar view's coverage line says it. */
 export function pricedLine(amount: UsageAmount): string {
-  return `${amount.priced} of ${amount.records} records priced`;
+  return m.settingsUsagePriced({ priced: String(amount.priced), records: String(amount.records) });
 }
 
 /** Whether every record reported every category; missing older coverage is unknown. */
@@ -119,7 +142,9 @@ export function completeTokens(amount: UsageAmount): boolean {
 /** One model category's measured coverage, including zero records, or unknown coverage. */
 export function tokenCategoryCoverage(amount: UsageAmount, category: UsageCategory): string {
   const count = amount.tokenReported?.[category];
-  return count === undefined ? "Coverage not available" : `${count} of ${amount.records} records`;
+  return count === undefined
+    ? m.settingsUsageCoverageUnavailable()
+    : m.settingsUsageRecordsOf({ count: String(count), records: String(amount.records) });
 }
 
 /** Whether some model in the summary was recorded before models were kept apart. */
@@ -135,29 +160,33 @@ export function readouts(summary: UsageSummary, unit: UsageUnit): UsageReadout[]
   const usage: UsageReadout =
     unit === "tokens"
       ? {
-          label: "Recorded tokens",
+          label: m.settingsUsageReadoutTokens(),
           value: formatAmount(total, unit),
-          note: completeTokens(total) ? "Input, output and cache" : "Reported categories only",
+          note: completeTokens(total)
+            ? m.settingsUsageReadoutTokensComplete()
+            : m.settingsUsageReadoutTokensPartial(),
         }
       : {
           label:
             total.priced > 0 && total.priced < total.records
-              ? "Known estimate · USD"
-              : "Estimated value · USD",
+              ? m.settingsUsageReadoutKnownEstimate()
+              : m.settingsUsageReadoutEstimate(),
           value: formatAmount(total, unit),
           note: pricedLine(total),
         };
   return [
     usage,
     {
-      label: "Tasks finished",
+      label: m.settingsUsageReadoutFinished(),
       value: String(summary.finished),
-      note: "In this period and work",
+      note: m.settingsUsageReadoutFinishedNote(),
     },
     {
-      label: hasRecordedModels(summary) ? "Recorded models" : "Models used",
+      label: hasRecordedModels(summary)
+        ? m.settingsUsageReadoutRecordedModels()
+        : m.settingsUsageReadoutModelsUsed(),
       value: String(summary.models.length),
-      note: "Across the selected work",
+      note: m.settingsUsageReadoutModelsNote(),
     },
   ];
 }
@@ -177,47 +206,55 @@ export function sortedModels(models: readonly UsageModel[], unit: UsageUnit): Us
 
 /** A model as its row names it. */
 export function modelName(model: UsageModel): string {
-  return model.name ?? "Model not recorded";
+  return model.name ?? m.settingsUsageModelNotRecorded();
 }
 
 /** The line under a model's name: its provider, and how loosely it is named. */
 export function modelLine(model: UsageModel): string {
-  const provider = model.providerName ?? "Provider not recorded";
-  return model.attribution === "recorded" ? `${provider} · Recorded model` : provider;
+  const provider = model.providerName ?? m.settingsUsageProviderNotRecorded();
+  return model.attribution === "recorded"
+    ? m.settingsUsageModelLineRecorded({ provider })
+    : provider;
 }
 
-const ATTRIBUTION_WORDS: Record<UsageAttribution, string> = {
-  served: "Named by the provider that answered.",
-  requested: "Named by the model the app asked for; the provider did not say which model answered.",
-  recorded:
-    "Some records are from before models were kept apart: they name the model recorded then, and older Claude totals can include other models.",
+const ATTRIBUTION_WORDS: Readonly<Record<UsageAttribution, () => string>> = {
+  served: m.settingsUsageAttributionServed,
+  requested: m.settingsUsageAttributionRequested,
+  recorded: m.settingsUsageAttributionRecorded,
 };
 
-const PRICE_SOURCE_WORDS: Record<UsagePriceSource, string> = {
-  "listed-prices": "Estimates use the model's listed prices when each response was recorded.",
-  claude: "Estimates are Claude's own, made for each response.",
-  reported: "Estimates use the cost the provider reported for each response.",
-  unrecorded: "Older estimates did not keep their source.",
+const PRICE_SOURCE_WORDS: Readonly<Record<UsagePriceSource, () => string>> = {
+  "listed-prices": m.settingsUsagePriceListed,
+  claude: m.settingsUsagePriceClaude,
+  reported: m.settingsUsagePriceReported,
+  unrecorded: m.settingsUsagePriceUnrecorded,
 };
 
 /** What a model's details say about its name and its estimates. */
 export function provenance(model: UsageModel, unit: UsageUnit): string[] {
-  const lines = [ATTRIBUTION_WORDS[model.attribution]];
+  const lines = [ATTRIBUTION_WORDS[model.attribution]()];
   if (unit === "tokens") {
-    lines.push("Cache categories are apart from uncached input; the total counts each once.");
+    lines.push(m.settingsUsageProvenanceCache());
     return lines;
   }
   const { amount } = model;
   if (amount.priced === 0) {
-    lines.push("No record of this model has a price, so it has no estimate.");
+    lines.push(m.settingsUsageProvenanceUnpriced());
     return lines;
   }
-  lines.push(...model.priceSources.map((source) => PRICE_SOURCE_WORDS[source]));
-  lines.push(`${pricedLine(amount)}.`);
+  lines.push(...model.priceSources.map((source) => PRICE_SOURCE_WORDS[source]()));
+  lines.push(
+    m.settingsUsagePricedSentence({
+      priced: String(amount.priced),
+      records: String(amount.records),
+    }),
+  );
   if (amount.split === 0) {
-    lines.push("No estimate here is split by category.");
+    lines.push(m.settingsUsageNoSplit());
   } else if (amount.split < amount.priced) {
-    lines.push(`Split by category for ${amount.split} of ${amount.priced} priced records.`);
+    lines.push(
+      m.settingsUsageSplitFor({ split: String(amount.split), priced: String(amount.priced) }),
+    );
   }
   return lines;
 }
@@ -226,21 +263,39 @@ export function provenance(model: UsageModel, unit: UsageUnit): string[] {
  * A kind of work as Where it went names it: the category names the captain
  * chose on FI3-993, the kind a task's shape saved, never guessed from a title.
  */
-export const KIND_WORDS: Record<UsageWorkKind, string> = {
-  plan: "Plans",
-  research: "Research",
-  retrieval: "Lookups and explanations",
-  reproduce: "Issue reproduction",
-  implement: "Implementation",
-  fix: "Fixes",
-  chore: "Maintenance",
-  review: "Reviews",
-  operation: "Operations",
+export const KIND_WORDS: Readonly<Record<UsageWorkKind, string>> = {
+  get plan() {
+    return m.settingsUsageKindPlan();
+  },
+  get research() {
+    return m.settingsUsageKindResearch();
+  },
+  get retrieval() {
+    return m.settingsUsageKindRetrieval();
+  },
+  get reproduce() {
+    return m.settingsUsageKindReproduce();
+  },
+  get implement() {
+    return m.settingsUsageKindImplement();
+  },
+  get fix() {
+    return m.settingsUsageKindFix();
+  },
+  get chore() {
+    return m.settingsUsageKindChore();
+  },
+  get review() {
+    return m.settingsUsageKindReview();
+  },
+  get operation() {
+    return m.settingsUsageKindOperation();
+  },
 };
 
 /** A task with no saved kind, or an unclear one, is other task work in its project. */
 export function kindWords(kind: UsageWorkKind | null): string {
-  return kind === null ? "Other task work" : KIND_WORDS[kind];
+  return kind === null ? m.settingsUsageKindOther() : KIND_WORDS[kind];
 }
 
 export type WhereRow = { key: string; name: string; amount: UsageAmount };
@@ -265,7 +320,7 @@ export function whereRows(
     projects: ranked(
       where.projects.map((project) => ({
         key: project.project?.id ?? "unavailable",
-        name: project.project?.name ?? "Project unavailable",
+        name: project.project?.name ?? m.settingsUsageProjectUnavailable(),
         amount: project.amount,
         kinds: ranked(
           project.kinds.map((each) => ({
@@ -285,14 +340,16 @@ export function exactTokens(tokens: number): string {
   return formatNumber(Math.round(tokens));
 }
 
-/** A recent task's five figures, in this order. */
-export const TASK_FIGURES = [
-  ["input", "Input"],
-  ["output", "Output"],
-  ["cacheRead", "Cache read"],
-  ["cacheWrite", "Cache write"],
-  ["total", "Total"],
-] as const satisfies ReadonlyArray<readonly [UsageCategory | "total", string]>;
+/** A recent task's five figures, in this order, each with its label, worded when shown. */
+export function taskFigureLabels(): ReadonlyArray<readonly [UsageCategory | "total", string]> {
+  return [
+    ["input", m.settingsUsageFigureInput()],
+    ["output", m.settingsUsageFigureOutput()],
+    ["cacheRead", m.settingsUsageFigureCacheRead()],
+    ["cacheWrite", m.settingsUsageFigureCacheWrite()],
+    ["total", m.settingsUsageFigureTotal()],
+  ];
+}
 
 export type TaskFigure = {
   figure: UsageCategory | "total";
@@ -310,23 +367,26 @@ export type TaskFigure = {
  */
 export function taskFigures(task: UsageTask, unit: UsageUnit): TaskFigure[] {
   const { amount } = task;
-  return TASK_FIGURES.map(([figure, label]): TaskFigure => {
+  return taskFigureLabels().map(([figure, label]): TaskFigure => {
     if (figure === "total") {
       if (unit === "usd") {
         return {
           figure,
           label,
-          value: amount.priced === 0 ? NOT_AVAILABLE : dollars(amount.cost ?? 0),
+          value: amount.priced === 0 ? USAGE_WORDS.notAvailable : dollars(amount.cost ?? 0),
           coverage: amount.priced > 0 && amount.priced < amount.records ? pricedLine(amount) : null,
         };
       }
       return {
         figure,
         label,
-        value: amount.counted === 0 ? NOT_AVAILABLE : exactTokens(usageTokens(amount)),
+        value: amount.counted === 0 ? USAGE_WORDS.notAvailable : exactTokens(usageTokens(amount)),
         coverage:
           amount.counted > 0 && amount.counted < amount.records
-            ? `${amount.counted} of ${amount.records} records`
+            ? m.settingsUsageRecordsOf({
+                count: String(amount.counted),
+                records: String(amount.records),
+              })
             : null,
       };
     }
@@ -335,10 +395,13 @@ export function taskFigures(task: UsageTask, unit: UsageUnit): TaskFigure[] {
       return {
         figure,
         label,
-        value: reported === 0 ? NOT_AVAILABLE : dollars(amount.costParts[figure] ?? 0),
+        value: reported === 0 ? USAGE_WORDS.notAvailable : dollars(amount.costParts[figure] ?? 0),
         coverage:
           reported > 0 && reported < amount.priced
-            ? `${reported} of ${amount.priced} priced records`
+            ? m.settingsUsagePricedRecordsOf({
+                count: String(reported),
+                priced: String(amount.priced),
+              })
             : null,
       };
     }
@@ -346,10 +409,10 @@ export function taskFigures(task: UsageTask, unit: UsageUnit): TaskFigure[] {
     return {
       figure,
       label,
-      value: reported === 0 ? NOT_AVAILABLE : exactTokens(amount.tokens[figure]),
+      value: reported === 0 ? USAGE_WORDS.notAvailable : exactTokens(amount.tokens[figure]),
       coverage:
         reported > 0 && reported < amount.records
-          ? `${reported} of ${amount.records} records`
+          ? m.settingsUsageRecordsOf({ count: String(reported), records: String(amount.records) })
           : null,
     };
   });
@@ -360,19 +423,22 @@ export function taskNote(task: UsageTask, unit: UsageUnit): string | null {
   const { amount } = task;
   const categories = ["input", "output", "cacheRead", "cacheWrite"] as const;
   if (unit === "tokens") {
-    if (amount.counted === 0) return "No record of this task reported tokens.";
+    if (amount.counted === 0) return m.settingsUsageTaskNoTokens();
     return categories.some((category) => task.reported[category] < amount.records)
-      ? "The total counts recorded tokens only; some categories were not reported."
+      ? m.settingsUsageTaskTokensPartial()
       : null;
   }
-  if (amount.priced === 0) return "No record of this task has a price, so it has no estimate.";
-  const lines: string[] = [];
-  if (amount.priced < amount.records) lines.push("The total leaves out unpriced activity.");
-  if (amount.split === 0) lines.push("No estimate here is split by category.");
-  else if (categories.some((category) => task.costReported[category] < amount.priced)) {
-    lines.push("Category estimates cover fewer records than the total.");
+  if (amount.priced === 0) return m.settingsUsageTaskUnpriced();
+  const leavesOut = amount.priced < amount.records;
+  if (amount.split === 0) {
+    return leavesOut ? m.settingsUsageTaskLeavesOutNoSplit() : m.settingsUsageNoSplit();
   }
-  return lines.length > 0 ? lines.join(" ") : null;
+  if (categories.some((category) => task.costReported[category] < amount.priced)) {
+    return leavesOut
+      ? m.settingsUsageTaskLeavesOutFewerRecords()
+      : m.settingsUsageTaskFewerRecords();
+  }
+  return leavesOut ? m.settingsUsageTaskLeavesOut() : null;
 }
 
 /** "Created Oct 5, 3:12 PM": when a recent task was created, in local time. */
@@ -383,13 +449,17 @@ export function createdWords(at: number): string {
     hour: "numeric",
     minute: "2-digit",
   });
-  return `Created ${when}`;
+  return m.settingsUsageCreated({ when });
 }
 
 /** How many recent tasks the list shows of those that match. */
 export function taskCount(shown: number, matching: number): string {
-  if (shown >= matching) return matching === 1 ? "1 task shown" : `All ${matching} tasks shown`;
-  return `Showing ${shown} of ${matching} tasks`;
+  if (shown >= matching) {
+    return matching === 1
+      ? m.settingsUsageTaskCountOne()
+      : m.settingsUsageTaskCountAll({ count: String(matching) });
+  }
+  return m.settingsUsageTaskCountSome({ shown: String(shown), count: String(matching) });
 }
 
 /** The milestone strip: finished work, never tokens. */
@@ -397,16 +467,18 @@ export function milestoneWords(finishedEver: number): { title: string; note: str
   const { reached, next } = usageMilestone(finishedEver);
   const finished =
     finishedEver === 0
-      ? "No tasks finished yet"
-      : `${finishedEver} ${finishedEver === 1 ? "task" : "tasks"} finished`;
+      ? m.settingsUsageMilestoneNone()
+      : finishedEver === 1
+        ? m.settingsUsageMilestoneFinishedOne()
+        : m.settingsUsageMilestoneFinished({ count: String(finishedEver) });
   const where =
     next === null
-      ? `Reached ${reached}`
+      ? m.settingsUsageMilestoneReached({ count: String(reached) })
       : reached === null
-        ? "First milestone at 1"
-        : `Next milestone at ${next}`;
+        ? m.settingsUsageMilestoneFirst()
+        : m.settingsUsageMilestoneNext({ count: String(next) });
   return {
-    title: `${finished} · ${where}`,
-    note: "All retained history. Progress comes from finished work, not more tokens.",
+    title: m.settingsUsageMilestoneTitle({ finished, where }),
+    note: m.settingsUsageMilestoneNote(),
   };
 }

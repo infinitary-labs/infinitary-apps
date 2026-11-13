@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { CLAUDE_FIRST_RUN_TEXT } from "../../src/renderer/src/settings/subscriptionsWords";
+import { SUBSCRIPTIONS_WORDS } from "../../src/renderer/src/settings/subscriptionsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchApp } from "./launch";
@@ -88,7 +88,7 @@ test("Connect Claude on a machine with no account is the first-run chip", async 
     await expect(app.page.getByRole("button", { name: "Connect Claude" })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(app.page.getByText(CLAUDE_FIRST_RUN_TEXT)).toHaveCount(0);
+    await expect(app.page.getByText(SUBSCRIPTIONS_WORDS.claudeFirstRun)).toHaveCount(0);
     // Every Claude chip is that first-run chip, never the one that adds
     // another account: the chip is found by its provider, not its words.
     const claudeChips = app.page.locator('[data-connect-provider="anthropic-claude"]');

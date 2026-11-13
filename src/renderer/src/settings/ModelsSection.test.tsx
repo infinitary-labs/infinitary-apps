@@ -14,7 +14,7 @@ import { newModelNote } from "./levelDrops";
 import { ModelsSection } from "./ModelsSection";
 import { removeFromLevelOnly } from "./modelsWords";
 import { ReasoningControl } from "./ReasoningControl";
-import { USE_LEVEL_DEFAULT } from "./reasoningWords";
+import { REASONING_WORDS } from "./reasoningWords";
 
 /**
  * The multi-slot rendering contract: an offering placed in more than one
@@ -375,7 +375,7 @@ describe("inline reasoning capability states", () => {
       />,
     );
     expect(html).toContain('value="xhigh" disabled=""');
-    expect(html).toContain(`<option value="">${USE_LEVEL_DEFAULT}</option>`);
+    expect(html).toContain(`<option value="">${REASONING_WORDS.useLevelDefault}</option>`);
     expect(html).not.toContain('class="fm-models-hint"');
     expect(html.match(/<option /g)).toHaveLength(5);
   });
@@ -397,7 +397,7 @@ describe("inline reasoning capability states", () => {
       />,
     );
     expect(html).not.toContain("<select");
-    expect(html).toContain(USE_LEVEL_DEFAULT);
+    expect(html).toContain(REASONING_WORDS.useLevelDefault);
     expect(html).not.toContain("Saved High · choices unavailable");
   });
 });

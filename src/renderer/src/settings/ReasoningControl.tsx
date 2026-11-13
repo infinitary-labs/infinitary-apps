@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   offeringKey,
   type ReasoningChoice,
@@ -8,7 +9,7 @@ import { reasoningWord } from "@shared/reasoning";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../design";
 import { focusWithRing } from "../design/focus";
-import { reasoningLabel, USE_LEVEL_DEFAULT } from "./reasoningWords";
+import { REASONING_WORDS, reasoningLabel } from "./reasoningWords";
 
 /** One control reaches only this offering in this level. Saved state is never optimistic. */
 export function ReasoningControl({
@@ -67,10 +68,10 @@ export function ReasoningControl({
             void save((event.currentTarget.value as ReasoningChoice | "") || null)
           }
         >
-          <option value="">{USE_LEVEL_DEFAULT}</option>
+          <option value="">{REASONING_WORDS.useLevelDefault}</option>
           {unavailable && (
             <option value={chosen} disabled>
-              {reasoningWord({ level: chosen })} · saved, unavailable
+              {m.settingsReasoningSavedUnavailable({ reasoning: reasoningWord({ level: chosen }) })}
             </option>
           )}
           {offered.map((level) => (
@@ -83,17 +84,17 @@ export function ReasoningControl({
         <span>
           {capabilities?.fixed
             ? reasoningWord({ level: capabilities.fixed })
-            : "Reasoning choices unavailable"}
+            : m.settingsReasoningUnavailable()}
         </span>
       )}
       {chosen && offered.length === 0 && (
         <Button variant="ghost" size="sm" onClick={() => void save(null)}>
-          {USE_LEVEL_DEFAULT}
+          {REASONING_WORDS.useLevelDefault}
         </Button>
       )}
       {error && (
         <span role="alert" className="fm-models-hint">
-          Could not save reasoning. Your previous choice is still shown. Try again.
+          {m.settingsReasoningSaveFailed()}
         </span>
       )}
     </span>

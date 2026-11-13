@@ -18,7 +18,6 @@ import {
   kindWords,
   milestoneWords,
   modelLine,
-  NOT_AVAILABLE,
   periodLabel,
   provenance,
   readouts,
@@ -27,6 +26,7 @@ import {
   taskFigures,
   taskNote,
   tokenCategoryCoverage,
+  USAGE_WORDS,
   whereRows,
 } from "./usageWords";
 
@@ -92,15 +92,17 @@ describe("Usage's numbers", () => {
     expect(dollars(17.18)).toBe("$17.18");
     expect(dollars(1204.4)).toBe("$1,204");
     expect(dollars(0.004)).toBe("<$0.01");
-    expect(formatAmount(amount(10, null), "usd")).toBe(NOT_AVAILABLE);
-    expect(formatAmount(EMPTY_USAGE_AMOUNT, "tokens")).toBe(NOT_AVAILABLE);
+    expect(formatAmount(amount(10, null), "usd")).toBe(USAGE_WORDS.notAvailable);
+    expect(formatAmount(EMPTY_USAGE_AMOUNT, "tokens")).toBe(USAGE_WORDS.notAvailable);
   });
 
   it("tells a day with nothing recorded from a day whose records have no price", () => {
     expect(formatDay({ date: "2026-10-01", amount: EMPTY_USAGE_AMOUNT }, "usd")).toBe(
       "No activity",
     );
-    expect(formatDay({ date: "2026-10-01", amount: amount(40, null) }, "usd")).toBe(NOT_AVAILABLE);
+    expect(formatDay({ date: "2026-10-01", amount: amount(40, null) }, "usd")).toBe(
+      USAGE_WORDS.notAvailable,
+    );
   });
 
   it("names the period's local dates", () => {
@@ -125,7 +127,9 @@ describe("Usage's readouts", () => {
       value: "$15.41",
       note: "33 of 45 records priced",
     });
-    expect(readouts(summary({ total: amount(400, null, 3) }), "usd")[0]?.value).toBe(NOT_AVAILABLE);
+    expect(readouts(summary({ total: amount(400, null, 3) }), "usd")[0]?.value).toBe(
+      USAGE_WORDS.notAvailable,
+    );
   });
 
   it("says when older records name a model loosely", () => {
@@ -292,7 +296,7 @@ describe("Usage's recent tasks", () => {
 
   it("says a category no record reported is not available, and how much a partial one covers", () => {
     const partial = recent({ reported: { input: 2, output: 2, cacheRead: 2, cacheWrite: 0 } });
-    expect(values(partial, "tokens")[3]).toEqual(["Cache write", NOT_AVAILABLE, null]);
+    expect(values(partial, "tokens")[3]).toEqual(["Cache write", USAGE_WORDS.notAvailable, null]);
     const half = recent({ reported: { input: 1, output: 2, cacheRead: 2, cacheWrite: 2 } });
     expect(values(half, "tokens")[0]).toEqual(["Input", "210,000", "1 of 2 records"]);
     expect(taskNote(half, "tokens")).toBe(
@@ -311,10 +315,10 @@ describe("Usage's recent tasks", () => {
       costReported: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     });
     expect(values(whole, "usd").map(([, value]) => value)).toEqual([
-      NOT_AVAILABLE,
-      NOT_AVAILABLE,
-      NOT_AVAILABLE,
-      NOT_AVAILABLE,
+      USAGE_WORDS.notAvailable,
+      USAGE_WORDS.notAvailable,
+      USAGE_WORDS.notAvailable,
+      USAGE_WORDS.notAvailable,
       "$3.75",
     ]);
     expect(taskNote(whole, "usd")).toBe("No estimate here is split by category.");
@@ -326,7 +330,7 @@ describe("Usage's recent tasks", () => {
     expect(values(partial, "usd")[4]).toEqual(["Total", "$1.00", "1 of 2 records priced"]);
     expect(taskNote(partial, "usd")).toBe("The total leaves out unpriced activity.");
     const unpriced = recent({ amount: { ...recent().amount, cost: null, priced: 0, split: 0 } });
-    expect(values(unpriced, "usd")[4]?.[1]).toBe(NOT_AVAILABLE);
+    expect(values(unpriced, "usd")[4]?.[1]).toBe(USAGE_WORDS.notAvailable);
     expect(taskNote(unpriced, "usd")).toBe(
       "No record of this task has a price, so it has no estimate.",
     );
@@ -362,7 +366,7 @@ describe("token coverage disclosure", () => {
     const missing = { ...amount(0, 1), tokenReported: undefined };
     expect(tokenCategoryCoverage(missing, "input")).toBe("Coverage not available");
     const none = { ...EMPTY_USAGE_AMOUNT, records: 1, cost: 1, priced: 1 };
-    expect(readouts(summary({ total: none }), "tokens")[0]?.value).toBe(NOT_AVAILABLE);
+    expect(readouts(summary({ total: none }), "tokens")[0]?.value).toBe(USAGE_WORDS.notAvailable);
   });
 });
 

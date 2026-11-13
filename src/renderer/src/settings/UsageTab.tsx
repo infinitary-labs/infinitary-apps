@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   DEFAULT_USAGE_QUERY,
   USAGE_PERIODS,
@@ -38,8 +39,8 @@ import {
   SCOPE_WORDS,
   shortDate,
   sortedModels,
-  TASK_FIGURES,
   taskCount,
+  taskFigureLabels,
   taskFigures,
   taskNote,
   tokenCategoryCoverage,
@@ -119,14 +120,14 @@ export function UsageTab() {
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: Escape from anywhere in the tab closes a model's details.
     <div ref={root} className="fm-usage" data-usage="" onKeyDown={onKeyDown}>
-      <SectionLabel>Usage</SectionLabel>
+      <SectionLabel>{m.settingsUsageTitle()}</SectionLabel>
       <div className="fm-usage-head">
         <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
-          Your first mate and your crew, across every project.
+          {m.settingsUsageLead()}
         </p>
         <div data-usage-unit="">
           <GroupedPills<UsageUnit>
-            name="Show usage as"
+            name={m.settingsUsageShowAs()}
             htmlName="usage-unit"
             value={unit}
             options={(["tokens", "usd"] as const).map((value) => ({
@@ -141,7 +142,7 @@ export function UsageTab() {
       <SettingError error={unitError} surface="usage-unit" />
       <div className="fm-usage-filters">
         <label>
-          Period
+          {m.settingsUsagePeriodLabel()}
           <select
             data-usage-period=""
             value={query.period}
@@ -155,7 +156,7 @@ export function UsageTab() {
           </select>
         </label>
         <label>
-          Work
+          {m.settingsUsageWorkLabel()}
           <select
             data-usage-scope=""
             value={query.scope}
@@ -170,7 +171,7 @@ export function UsageTab() {
         </label>
         {shown && <span className="fm-usage-muted">{periodLabel(summary)}</span>}
       </div>
-      {failed && <SettingError error="Usage could not be read just now." surface="usage" />}
+      {failed && <SettingError error={m.settingsUsageReadFailed()} surface="usage" />}
       {shown ? (
         <UsageBody
           summary={summary}
@@ -190,7 +191,7 @@ export function UsageTab() {
       ) : (
         !failed && (
           <p className="fm-usage-muted" style={{ marginTop: "var(--space-5)" }}>
-            Reading recorded usage…
+            {m.settingsUsageReading()}
           </p>
         )
       )}
@@ -217,11 +218,9 @@ function UsageBody({
     <>
       {summary.total.records === 0 ? (
         <div className="fm-usage-empty" data-usage-empty="">
-          <h3>No recorded activity</h3>
-          <p className="fm-usage-muted">
-            Usage appears after the first mate or a crewmate finishes a model response.
-          </p>
-          <p className="fm-usage-muted">Nothing here means no records, not a measured zero.</p>
+          <h3>{m.settingsUsageEmptyTitle()}</h3>
+          <p className="fm-usage-muted">{m.settingsUsageEmptyLead()}</p>
+          <p className="fm-usage-muted">{m.settingsUsageEmptyNote()}</p>
         </div>
       ) : (
         <>
@@ -246,7 +245,7 @@ function UsageBody({
               where={summary.where}
               unit={unit}
               withFirstmate={summary.query.scope === "all" || summary.query.scope === "firstmate"}
-              legend="Each subtotal includes the model calls made for its tasks."
+              legend={m.settingsUsageWhereLegend()}
             />
           </div>
           {model && <ModelDetail model={model} unit={unit} onClose={onClose} closeRef={closeRef} />}
@@ -272,13 +271,17 @@ function DailyUsage({ summary, unit }: { summary: UsageSummary; unit: UsageUnit 
   return (
     <section className="fm-usage-section" data-usage-daily="">
       <div className="fm-usage-section-head">
-        <h3>Daily usage</h3>
-        <span className="fm-usage-muted">{unitHeading(unit)} · Today is partial</span>
+        <h3>{m.settingsUsageDailyHeading()}</h3>
+        <span className="fm-usage-muted">
+          {m.settingsUsageDailyPartial({ unit: unitHeading(unit) })}
+        </span>
       </div>
       <div
         className="fm-usage-chart"
         role="img"
-        aria-label={`Daily ${unit === "tokens" ? "token" : "estimated dollar"} totals for the selected period`}
+        aria-label={
+          unit === "tokens" ? m.settingsUsageDailyChartTokens() : m.settingsUsageDailyChartUsd()
+        }
         onMouseLeave={() => setHovered(null)}
       >
         {summary.days.map((day, index) => {
@@ -301,21 +304,24 @@ function DailyUsage({ summary, unit }: { summary: UsageSummary; unit: UsageUnit 
       </div>
       <div className="fm-usage-chart-foot">
         <span>{first ? shortDate(first.date) : ""}</span>
-        <span>Today</span>
+        <span>{m.settingsUsageToday()}</span>
       </div>
       <p className="fm-usage-legend">
         {hoveredDay
-          ? `${shortDate(hoveredDay.date)}: ${formatDay(hoveredDay, unit)}`
+          ? m.settingsUsageDayValue({
+              date: shortDate(hoveredDay.date),
+              value: formatDay(hoveredDay, unit),
+            })
           : partial
-            ? "Bars show only priced activity. Unpriced activity is left out."
-            : "Open a model to see its recorded usage."}
+            ? m.settingsUsageBarsPriced()
+            : m.settingsUsageOpenModel()}
       </p>
       <details data-usage-daily-values="">
-        <summary>Daily values</summary>
+        <summary>{m.settingsUsageDailyValues()}</summary>
         <table>
           <thead>
             <tr>
-              <th scope="col">Local date</th>
+              <th scope="col">{m.settingsUsageLocalDate()}</th>
               <th scope="col">{unitHeading(unit)}</th>
             </tr>
           </thead>
@@ -349,7 +355,7 @@ function ModelList({
   return (
     <section className="fm-usage-section" data-usage-models="">
       <div className="fm-usage-section-head">
-        <h3>{unit === "usd" ? "Estimated dollars per model" : "Tokens per model"}</h3>
+        <h3>{unit === "usd" ? m.settingsUsageModelsUsd() : m.settingsUsageModelsTokens()}</h3>
         <span className="fm-usage-muted">{unitHeading(unit)}</span>
       </div>
       {models.map((model) => {
@@ -386,7 +392,7 @@ function WhereItWent({
   unit,
   withFirstmate,
   legend,
-  heading = "Where it went",
+  heading,
 }: {
   /** Whose usage: the whole selection, or one model's. */
   of: "selection" | "model";
@@ -400,14 +406,14 @@ function WhereItWent({
   return (
     <section className="fm-usage-section" data-usage-where={of}>
       <div className="fm-usage-section-head">
-        <h3>{heading}</h3>
+        <h3>{heading ?? m.settingsUsageWhereHeading()}</h3>
         <span className="fm-usage-muted">{unitHeading(unit)}</span>
       </div>
       {rows.firstmate && (
         <div className="fm-usage-row" data-usage-place="firstmate">
           <div style={{ minWidth: 0 }}>
-            <span className="fm-usage-row-name">First mate</span>
-            <span className="fm-usage-muted">Your conversation</span>
+            <span className="fm-usage-row-name">{m.settingsUsageWhereFirstmate()}</span>
+            <span className="fm-usage-muted">{m.settingsUsageWhereFirstmateNote()}</span>
           </div>
           <span className="fm-usage-mono">{formatRecorded(rows.firstmate, unit)}</span>
         </div>
@@ -425,7 +431,7 @@ function WhereItWent({
               <span className="fm-usage-mono" data-usage-subtotal="">
                 {formatRecorded(project.amount, unit)}
               </span>
-              <span className="fm-usage-subtotal-label">Subtotal</span>
+              <span className="fm-usage-subtotal-label">{m.settingsUsageSubtotal()}</span>
             </span>
           </div>
           {project.kinds.map((kind) => (
@@ -439,8 +445,8 @@ function WhereItWent({
       {rows.other && (
         <div className="fm-usage-row fm-usage-other" data-usage-place="other">
           <div style={{ minWidth: 0 }}>
-            <span className="fm-usage-row-name">Other work</span>
-            <span className="fm-usage-muted">No task available</span>
+            <span className="fm-usage-row-name">{m.settingsUsageWhereOther()}</span>
+            <span className="fm-usage-muted">{m.settingsUsageWhereOtherNote()}</span>
           </div>
           <span className="fm-usage-mono">{formatRecorded(rows.other, unit)}</span>
         </div>
@@ -450,12 +456,21 @@ function WhereItWent({
   );
 }
 
-const CATEGORIES = [
-  ["input", "Input"],
-  ["output", "Output"],
-  ["cacheRead", "Cache read"],
-  ["cacheWrite", "Cache write"],
-] as const;
+const CATEGORIES = ["input", "output", "cacheRead", "cacheWrite"] as const;
+
+/** A category's label as the model's details name it. */
+function categoryLabel(category: (typeof CATEGORIES)[number]): string {
+  switch (category) {
+    case "input":
+      return m.settingsUsageFigureInput();
+    case "output":
+      return m.settingsUsageFigureOutput();
+    case "cacheRead":
+      return m.settingsUsageFigureCacheRead();
+    case "cacheWrite":
+      return m.settingsUsageFigureCacheWrite();
+  }
+}
 
 function ModelDetail({
   model,
@@ -473,7 +488,7 @@ function ModelDetail({
       id="fm-usage-model-detail"
       className="fm-usage-detail"
       data-usage-detail={model.id}
-      aria-label={`${modelName(model)} details`}
+      aria-label={m.settingsUsageModelDetails({ model: modelName(model) })}
     >
       <div className="fm-usage-head">
         <div style={{ minWidth: 0 }}>
@@ -488,17 +503,19 @@ function ModelDetail({
             {modelName(model)}
           </h3>
           <span className="fm-usage-muted">
-            {modelLine(model)} · {unit === "tokens" ? "Token breakdown" : "Estimated USD breakdown"}
+            {unit === "tokens"
+              ? m.settingsUsageModelBreakdownTokens({ line: modelLine(model) })
+              : m.settingsUsageModelBreakdownUsd({ line: modelLine(model) })}
           </span>
         </div>
         <Button ref={closeRef} variant="secondary" size="sm" onClick={onClose}>
-          Close details
+          {m.settingsUsageCloseDetails()}
         </Button>
       </div>
       <div className="fm-usage-detail-grid">
-        {CATEGORIES.map(([category, label]) => (
+        {CATEGORIES.map((category) => (
           <div key={category} className="fm-usage-muted" data-usage-category={category}>
-            {label}
+            {categoryLabel(category)}
             <strong data-usage-value={usageCategoryValue(model.amount, category, unit) ?? ""}>
               {formatUsage(usageCategoryValue(model.amount, category, unit), unit)}
             </strong>
@@ -525,7 +542,7 @@ function ModelDetail({
         where={model.where}
         unit={unit}
         withFirstmate={false}
-        heading="Its work"
+        heading={m.settingsUsageItsWork()}
       />
     </section>
   );
@@ -633,36 +650,32 @@ export function RecentTasksView({
   return (
     <section className="fm-usage-section fm-usage-recent" data-usage-recent="">
       <div className="fm-usage-section-head">
-        <h3>Recent tasks</h3>
+        <h3>{m.settingsUsageRecentHeading()}</h3>
         <span className="fm-usage-muted">{unitHeading(unit)}</span>
       </div>
-      <p className="fm-usage-muted fm-usage-recent-lead">
-        Newest tasks first · Amounts in the selected period
-      </p>
+      <p className="fm-usage-muted fm-usage-recent-lead">{m.settingsUsageRecentLead()}</p>
       <p className="fm-usage-legend fm-usage-recent-lead">
-        {unit === "tokens"
-          ? "Input excludes cached tokens. Total counts each category once."
-          : "Category estimates use recorded prices only. Their coverage can differ from the total."}
+        {unit === "tokens" ? m.settingsUsageRecentTokensLegend() : m.settingsUsageRecentUsdLegend()}
       </p>
       {value === null ? (
         failed ? (
-          <TasksRetry words="Recent tasks could not be read just now." onRetry={onRetry} />
+          <TasksRetry words={m.settingsUsageRecentFailed()} onRetry={onRetry} />
         ) : (
-          <p className="fm-usage-muted">Reading recent tasks…</p>
+          <p className="fm-usage-muted">{m.settingsUsageRecentReading()}</p>
         )
       ) : tasks.length === 0 ? (
         <p className="fm-usage-muted fm-usage-tasks-empty" data-usage-tasks-empty="">
-          No task usage in this selection.
+          {m.settingsUsageRecentEmpty()}
         </p>
       ) : (
         <>
           <div className="fm-usage-task fm-usage-task-head" aria-hidden="true">
-            <span>Task</span>
-            {TASK_FIGURES.map(([figure, label]) => (
+            <span>{m.settingsUsageTaskColumn()}</span>
+            {taskFigureLabels().map(([figure, label]) => (
               <span key={figure}>{label}</span>
             ))}
           </div>
-          <ol ref={listRef} className="fm-usage-tasks" aria-label="Recent tasks">
+          <ol ref={listRef} className="fm-usage-tasks" aria-label={m.settingsUsageRecentList()}>
             {tasks.map((each) => {
               const note = taskNote(each, unit);
               return (
@@ -698,16 +711,14 @@ export function RecentTasksView({
               );
             })}
           </ol>
-          {failed && (
-            <TasksRetry words="More tasks could not be read just now." onRetry={onRetry} />
-          )}
+          {failed && <TasksRetry words={m.settingsUsageMoreFailed()} onRetry={onRetry} />}
           <div className="fm-usage-tasks-foot" data-usage-tasks-foot="">
             <span className="fm-usage-muted" data-usage-task-count="" aria-live="polite">
               {taskCount(tasks.length, value.matching)}
             </span>
             {more && (
               <Button variant="secondary" size="sm" onClick={onMore}>
-                See more
+                {m.settingsUsageSeeMore()}
               </Button>
             )}
           </div>
@@ -722,7 +733,7 @@ function TasksRetry({ words, onRetry }: { words: string; onRetry: () => void }) 
     <p className="fm-usage-muted fm-usage-tasks-retry" data-usage-tasks-retry="">
       {words}{" "}
       <Button variant="secondary" size="sm" onClick={onRetry}>
-        Try again
+        {m.settingsUsageTryAgain()}
       </Button>
     </p>
   );

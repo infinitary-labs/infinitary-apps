@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setCurrentLanguage } from "../../../shared/i18n/current";
+import * as m from "../../../shared/i18n/messages.generated";
 import type { Slot } from "../../../shared/modelSlots";
 import {
   chipDisplayParts,
@@ -9,6 +11,9 @@ import {
   usedLine,
 } from "./levelDrops";
 
+afterEach(() => setCurrentLanguage("en"));
+
+// The captain asked that the task-difficulty wording follow the selected language.
 describe("what a drop on the Models board does", () => {
   const sol = { slots: ["high", "medium"] as const };
 
@@ -51,6 +56,15 @@ describe("what a drop on the Models board does", () => {
       kind: "none",
       label: "Already takes normal tasks",
     });
+  });
+
+  it("names task difficulty in the chosen language when a model moves", () => {
+    setCurrentLanguage("ja");
+    const plan = dropPlan({ slots: ["high"] }, "high", "low", false);
+    expect(plan?.label).toBe(
+      m.settingsLevelsDropMove({ level: m.settingsLevelTasks({ levels: m.uiSlotLow() }) }),
+    );
+    expect(levelList(["high"])).toBe(m.settingsLevelTasks({ levels: m.uiSlotHigh() }));
   });
 
   it("has no plan over the place the model was picked up from", () => {

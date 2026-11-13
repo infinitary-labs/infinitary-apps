@@ -9,10 +9,7 @@ import {
 } from "@shared/decisionUses";
 import { openDatabase } from "../../src/core/storage/db";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
-import {
-  DECISION_DISCLOSURE_LABELS,
-  DECISION_USES_WORDS,
-} from "../../src/renderer/src/settings/modelsWords";
+import { DECISION_USES_WORDS, MODELS_WORDS } from "../../src/renderer/src/settings/modelsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { cardBody } from "./frames";
@@ -261,7 +258,7 @@ test("an older Jev approval asks once from the keyboard, beside the locked task 
     });
     await expect(dialog).toBeVisible();
     // Intent: the captain asked the screen to say what is shared, the choice and the cost.
-    await expect(dialog.getByRole("term")).toHaveText([...DECISION_DISCLOSURE_LABELS]);
+    await expect(dialog.getByRole("term")).toHaveText([...MODELS_WORDS.decisionDisclosureLabels]);
     const notNow = dialog.getByRole("button", { name: "Not now", exact: true });
     await expect(notNow).toBeFocused();
     // Escape changes nothing and gives focus back to the switch.

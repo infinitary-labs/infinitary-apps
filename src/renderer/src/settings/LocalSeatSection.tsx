@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   DEFAULT_LOCAL_ORCHESTRATOR_SETTING,
   type LocalOrchestratorSetting,
@@ -8,6 +9,11 @@ import { useEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Input, Switch } from "../design";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
+
+/** Sample values the fields show: a URL and a model id, never words. */
+const LOCAL_ENDPOINT_SAMPLE = "http://localhost:11434/v1";
+// i18n-exempt: a model id, not words
+const LOCAL_MODEL_SAMPLE = "qwen3:8b";
 
 /**
  * The dev-only local seat (roadmap 1.7; docs/local-orchestrator.md): the
@@ -40,23 +46,23 @@ export function LocalSeatSectionView({
   const fieldStyle = { width: "calc(var(--space-9) * 3)" };
   return (
     <div data-local-seat style={{ marginTop: SECTION_GAP }}>
-      <SectionLabel>Local model (dev checkout)</SectionLabel>
+      <SectionLabel>{m.settingsLocalSeatHeading()}</SectionLabel>
       <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
         <SettingRow
           id="local-seat"
-          title="Run your first mate on a local model"
+          title={m.settingsLocalSeatRun()}
           description={localSeatDescription(view)}
           control={<Switch checked={draft.enabled} onChange={onToggle} />}
         />
         <SettingRow
           id="local-seat-url"
-          title="Endpoint"
-          description="An OpenAI-compatible base URL, such as Ollama's http://localhost:11434/v1."
+          title={m.settingsLocalSeatEndpoint()}
+          description={m.settingsLocalSeatEndpointDescription({ url: LOCAL_ENDPOINT_SAMPLE })}
           control={
             <Input
               mono
-              aria-label="Local endpoint"
-              placeholder="http://localhost:11434/v1"
+              aria-label={m.settingsLocalSeatEndpointLabel()}
+              placeholder={LOCAL_ENDPOINT_SAMPLE}
               value={draft.baseUrl}
               onChange={(event) => onDraft({ ...draft, baseUrl: event.target.value })}
               onBlur={onCommit}
@@ -67,13 +73,13 @@ export function LocalSeatSectionView({
         />
         <SettingRow
           id="local-seat-model"
-          title="Model"
-          description="The model id the endpoint serves, such as qwen3:8b."
+          title={m.settingsLocalSeatModel()}
+          description={m.settingsLocalSeatModelDescription({ model: LOCAL_MODEL_SAMPLE })}
           control={
             <Input
               mono
-              aria-label="Local model"
-              placeholder="qwen3:8b"
+              aria-label={m.settingsLocalSeatModelLabel()}
+              placeholder={LOCAL_MODEL_SAMPLE}
               value={draft.model}
               onChange={(event) => onDraft({ ...draft, model: event.target.value })}
               onBlur={onCommit}
@@ -117,9 +123,7 @@ export function LocalSeatSection() {
       .catch(() => {
         if (sequence !== saveSequence.current) return;
         setView((current) =>
-          current
-            ? { ...current, problem: "The local model setting could not be saved. Try again." }
-            : current,
+          current ? { ...current, problem: m.settingsLocalSeatSaveFailed() } : current,
         );
       });
   };

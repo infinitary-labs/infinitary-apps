@@ -1,8 +1,8 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { NOT_IN_USE, STARTING_LEVELS_SUMMARY } from "../../src/renderer/src/settings/modelsWords";
+import { MODELS_WORDS } from "../../src/renderer/src/settings/modelsWords";
 import {
-  FIRSTMATE_ACCOUNT_TAG,
   noReaderText,
+  SUBSCRIPTIONS_WORDS,
 } from "../../src/renderer/src/settings/subscriptionsWords";
 import { SLOTS } from "../../src/shared/modelSlots";
 import type { QuotaSnapshotView } from "../../src/shared/quota";
@@ -486,7 +486,9 @@ test("Models starts expanded and a row's menu reopens it after collapse", async 
   await head.click();
   await expect(head).toHaveAttribute("aria-expanded", "false");
   await expect(region.locator("[data-slot-group]")).toHaveCount(0);
-  await expect(head).toHaveText(anyOf([...SLOTS, NOT_IN_USE, STARTING_LEVELS_SUMMARY]));
+  await expect(head).toHaveText(
+    anyOf([...SLOTS, MODELS_WORDS.notInUse, MODELS_WORDS.startingLevelsSummary]),
+  );
 
   await row(page, ID.codexPersonal)
     .getByRole("button", { name: "Personal actions" })
@@ -596,15 +598,17 @@ test("a Claude account can carry the firstmate tag", async () => {
   );
   await page.evaluate(() => window.infinitary.quota.refresh());
   await expect(
-    row(page, ID.claudeMax).getByText(FIRSTMATE_ACCOUNT_TAG, { exact: true }),
+    row(page, ID.claudeMax).getByText(SUBSCRIPTIONS_WORDS.firstmateAccountTag, { exact: true }),
   ).toBeVisible({
     timeout: 15_000,
   });
   await expect(
-    row(page, ID.codexPersonal).getByText(FIRSTMATE_ACCOUNT_TAG, { exact: true }),
+    row(page, ID.codexPersonal).getByText(SUBSCRIPTIONS_WORDS.firstmateAccountTag, { exact: true }),
   ).toHaveCount(0);
   await expect(
-    page.locator("[data-account-row]").getByText(FIRSTMATE_ACCOUNT_TAG, { exact: true }),
+    page
+      .locator("[data-account-row]")
+      .getByText(SUBSCRIPTIONS_WORDS.firstmateAccountTag, { exact: true }),
   ).toHaveCount(1);
   await page.evaluate(
     (accountId) => window.infinitary.settings.setFirstmateAccount(accountId),

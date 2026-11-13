@@ -132,3 +132,8 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | header (an extra request header) | 请求头 | Short form of 请求标头, as Chinese developer docs say it. |
 | certificate | 证书 | Only where the person chooses an organization's CA certificate. |
 | token (a custom API's token command) | 令牌 | Only on that form, where the person chose a command that prints one; model sizes stay "token" as on the usage line. |
+| level (a model's level; also "slot") | 级别 | The Models board's Premium / High / Med / Low; "slot" and "slotted model" say the same thing. |
+| Always use | 始终使用 | The setting that sends all crew work to one model; quoted as “始终使用” in sentences. |
+| Dynamic routing | 动态分配 | Plain words for sending work to a level and then to the model with the most allowance left. |
+| token (on the Usage page) | token | Billable tokens stay as token, as in the first-run check line. |
+| estimate / estimated (cost) | 估算 | As in 估算美元. |

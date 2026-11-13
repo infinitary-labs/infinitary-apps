@@ -3,7 +3,7 @@ import type { DecisionModelId, DecisionsSettings, DecisionsView } from "@shared/
 import { DECISION_MODEL_CATALOG } from "@shared/decisions";
 import type { DecisionUseRequest } from "@shared/decisionUses";
 import * as m from "@shared/i18n/messages.generated";
-import { levelName } from "@shared/levelWords";
+import { levelWord } from "@shared/levelWords";
 import { modelNames } from "@shared/modelDisplayName";
 import type { ModelSlotsView, ReasoningChoice, Slot } from "@shared/modelSlots";
 import { SLOTS } from "@shared/modelSlots";
@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../design";
 import { DecisionsGroup } from "./DecisionsGroup";
 import { ModelLevels } from "./ModelLevels";
-import { NOT_IN_USE, STARTING_LEVELS_SUMMARY } from "./modelsWords";
+import { MODELS_WORDS } from "./modelsWords";
 
 /**
  * "Which of my models may Firstmate use, and as what." Level-first: four
@@ -141,19 +141,23 @@ export function ModelsSection({
   });
   const newCount = models.filter((model) => model.isNew).length;
   const summary = slots?.usingDefaults
-    ? STARTING_LEVELS_SUMMARY
+    ? MODELS_WORDS.startingLevelsSummary
     : [
-        ...SLOTS.map((slot) => (inLevel(slot) > 0 ? `${levelName(slot)} ${inLevel(slot)}` : "")),
-        notInUse > 0 ? `${notInUse} ${NOT_IN_USE}` : "",
-        alwaysUse.length ? `${alwaysUse.length} always use ✱` : "",
-        newCount ? `${newCount} new` : "",
+        ...SLOTS.map((slot) =>
+          inLevel(slot) > 0 ? `${levelWord(slot).toLocaleLowerCase()} ${inLevel(slot)}` : "",
+        ),
+        notInUse > 0 ? m.settingsModelsSummaryNotInUse({ count: String(notInUse) }) : "",
+        alwaysUse.length
+          ? m.settingsModelsSummaryAlwaysUse({ count: String(alwaysUse.length) })
+          : "",
+        newCount ? m.settingsModelsSummaryNew({ count: String(newCount) }) : "",
         decisionsSummary(decisions, modelNames([...models, ...byName])),
       ]
         .filter(Boolean)
         .join(" · ");
 
   const board = (
-    <section aria-label="Models" className="fm-subs-disclose">
+    <section aria-label={m.settingsModelsHeading()} className="fm-subs-disclose">
       <button
         type="button"
         className="fm-subs-disclose-head"
@@ -162,7 +166,7 @@ export function ModelsSection({
         onClick={onToggle}
       >
         <span style={{ fontSize: "var(--text-base)", fontWeight: 500, color: "var(--fg-1)" }}>
-          Models
+          {m.settingsModelsHeading()}
         </span>
         <span
           style={{
@@ -272,11 +276,17 @@ function decisionsSummary(
   const answerer = decisions.settings.answerer;
   if (answerer.kind === "native") {
     const row = DECISION_MODEL_CATALOG.find((entry) => entry.id === answerer.id);
-    return `decisions ${row?.name ?? answerer.id}`;
+    return m.settingsModelsSummaryDecisions({ model: row?.name ?? answerer.id });
   }
   if (answerer.kind === "openrouter")
-    return `decisions ${decisions.openrouter?.models.find((model) => model.id === answerer.model)?.name ?? "OpenRouter"}`;
-  if (answerer.offering === "auto" || decisions.pinned === "fallback") return "decisions auto";
-  if (decisions.pinned === "held") return "decisions unanswered";
-  return `decisions ${nameOf(answerer.offering)}`;
+    return m.settingsModelsSummaryDecisions({
+      model:
+        decisions.openrouter?.models.find((model) => model.id === answerer.model)?.name ??
+        // i18n-exempt: a product name
+        "OpenRouter",
+    });
+  if (answerer.offering === "auto" || decisions.pinned === "fallback")
+    return m.settingsModelsSummaryDecisionsAuto();
+  if (decisions.pinned === "held") return m.settingsModelsSummaryDecisionsUnanswered();
+  return m.settingsModelsSummaryDecisions({ model: nameOf(answerer.offering) });
 }

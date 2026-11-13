@@ -7,6 +7,7 @@ import type {
   AutomationSpec,
 } from "@shared/automation";
 import { automationClockWords, automationDateWords } from "@shared/automationWords";
+import * as m from "@shared/i18n/messages.generated";
 
 /**
  * The form conversions and the sheet's own words of Settings → Automation
@@ -101,7 +102,7 @@ export function formOf(rule: AutomationRule): RuleForm {
 export function specOf(form: RuleForm): AutomationSpec | string {
   if (form.kind === "event") {
     const at = form.event.lastIndexOf("/");
-    if (at < 0) return "Pick what happens.";
+    if (at < 0) return m.settingsAutomationPickEvent();
     return {
       kind: "event",
       integration: form.event.slice(0, at),
@@ -112,23 +113,23 @@ export function specOf(form: RuleForm): AutomationSpec | string {
   if (form.kind === "every") {
     const minutes = Number.parseInt(form.minutes, 10);
     if (!Number.isFinite(minutes) || minutes < AUTOMATION_MIN_MINUTES) {
-      return `Repeats run at most every ${AUTOMATION_MIN_MINUTES} minutes.`;
+      return m.settingsAutomationRepeatsAtMost({ minutes: String(AUTOMATION_MIN_MINUTES) });
     }
     return { kind: "every", minutes };
   }
   if (form.kind === "daily" || form.kind === "weekly") {
     const match = /^(\d{1,2}):(\d{2})$/.exec(form.time);
-    if (!match) return "Pick a time of day.";
+    if (!match) return m.settingsAutomationPickTime();
     const hour = Number(match[1]);
     const minute = Number(match[2]);
     if (form.kind === "daily") {
       return { kind: "daily", hour, minute, ...(form.timeZone ? { timeZone: form.timeZone } : {}) };
     }
-    if (form.days.length === 0) return "Pick at least one day.";
+    if (form.days.length === 0) return m.settingsAutomationPickDays();
     return { kind: "weekly", days: form.days, hour, minute, timeZone: form.timeZone || hereZone() };
   }
   const at = new Date(form.at).getTime();
-  if (!form.at || Number.isNaN(at)) return "Pick a date and time.";
+  if (!form.at || Number.isNaN(at)) return m.settingsAutomationPickDateTime();
   return { kind: "once", at };
 }
 
@@ -136,7 +137,7 @@ export function specOf(form: RuleForm): AutomationSpec | string {
 export function saveOf(form: RuleForm, enable = false): AutomationSave | string {
   const spec = specOf(form);
   if (typeof spec === "string") return spec;
-  if (!form.prompt.trim()) return "Write what to tell your first mate.";
+  if (!form.prompt.trim()) return m.settingsAutomationWritePrompt();
   return {
     ...(form.id ? { id: form.id } : {}),
     name: form.name.trim(),
@@ -149,24 +150,32 @@ export function saveOf(form: RuleForm, enable = false): AutomationSave | string 
 }
 
 export function runWords(run: AutomationRun): string {
-  if (run.events !== undefined)
-    return `${run.events} ${run.events === 1 ? "event" : "events"}, sent ${automationDateWords(run.firedAt)}`;
-  const extra =
-    run.missed > 0
-      ? `, catching up ${run.missed} missed ${run.missed === 1 ? "run" : "runs"}`
-      : run.catchUp
-        ? ", catching up after the app was closed"
-        : "";
-  return `Planned ${automationDateWords(run.plannedAt)}, sent ${automationDateWords(run.firedAt)}${extra}`;
+  const sent = automationDateWords(run.firedAt);
+  if (run.events !== undefined) return m.settingsAutomationRunEvents({ count: run.events, sent });
+  const planned = automationDateWords(run.plannedAt);
+  if (run.missed > 0)
+    return m.settingsAutomationRunCatchingUpMissed({ count: run.missed, planned, sent });
+  if (run.catchUp) return m.settingsAutomationRunCatchingUp({ planned, sent });
+  return m.settingsAutomationRunPlanned({ planned, sent });
 }
 
 /** Where a delivery stands, in a word (docs/automation.md, "Deliveries"). */
 export const DELIVERY_WORDS: Record<AutomationDelivery, string> = {
-  waiting: "Waiting",
-  retrying: "Retrying",
-  handled: "Handled",
-  cancelled: "Cancelled",
-  sent: "Sent",
+  get waiting() {
+    return m.settingsAutomationDeliveryWaiting();
+  },
+  get retrying() {
+    return m.settingsAutomationDeliveryRetrying();
+  },
+  get handled() {
+    return m.settingsAutomationDeliveryHandled();
+  },
+  get cancelled() {
+    return m.settingsAutomationDeliveryCancelled();
+  },
+  get sent() {
+    return m.settingsAutomationDeliverySent();
+  },
 };
 
 export const DELIVERY_TONES: Record<AutomationDelivery, "ok" | "busy" | "warn" | "idle" | "ring"> =
@@ -182,109 +191,138 @@ export const DELIVERY_TONES: Record<AutomationDelivery, "ok" | "busy" | "warn" |
 export function deliveryNote(run: AutomationRun): string | null {
   switch (run.delivery) {
     case "waiting":
-      return "Your first mate has not handled it yet.";
+      return m.settingsAutomationNoteWaiting();
     case "retrying":
-      return "Your first mate could not take it yet. It is being tried again.";
+      return m.settingsAutomationNoteRetrying();
     case "handled":
-      return run.settledAt === null ? null : `Your first mate handled it ${handledWhen(run)}.`;
+      return run.settledAt === null ? null : handledNote(run);
     case "cancelled":
       return run.cancelReason
         ? CANCEL_WORDS[run.cancelReason]
-        : "Taken back before your first mate read it.";
+        : m.settingsAutomationNoteCancelled();
     case "sent":
       return null;
   }
 }
 
 /** When a delivery was handled: the time on the day it was sent, the date otherwise. */
-function handledWhen(run: AutomationRun): string {
+function handledNote(run: AutomationRun): string {
   const at = new Date(run.settledAt ?? run.firedAt);
   return at.toDateString() === new Date(run.firedAt).toDateString()
-    ? `at ${automationClockWords(at.getHours(), at.getMinutes())}`
-    : `on ${automationDateWords(at.getTime())}`;
+    ? m.settingsAutomationNoteHandledAt({
+        time: automationClockWords(at.getHours(), at.getMinutes()),
+      })
+    : m.settingsAutomationNoteHandledOn({ date: automationDateWords(at.getTime()) });
 }
 
 /** Why a delivery was taken back before Firstmate read it. */
 export const CANCEL_WORDS: Record<AutomationCancelReason, string> = {
-  edited: "Taken back before your first mate read it, because the automation was changed.",
-  paused: "Taken back before your first mate read it, because the automation was paused.",
-  cleared: "Your first mate's conversation was cleared before it read this.",
+  get edited() {
+    return m.settingsAutomationCancelEdited();
+  },
+  get paused() {
+    return m.settingsAutomationCancelPaused();
+  },
+  get cleared() {
+    return m.settingsAutomationCancelCleared();
+  },
 };
-
-/** The review before a rule is turned on: what it sends, and where. */
-export const REVIEW_SENDS =
-  "This prompt and its schedule details go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.";
-
-/** The review's word on what an event rule sends, in place of `REVIEW_SENDS`. */
-export const REVIEW_SENDS_EVENTS =
-  "This prompt and a short summary of each event go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.";
 
 /** An event rule's preview: what it does in place of its next dates. */
 export function eventPreviewWords(when: string, every: number | undefined): string {
-  return `${when}, your first mate gets this prompt with the events. ${lookWords(every)} Nothing is sent.`;
+  return every === undefined
+    ? m.settingsAutomationEventPreviewNoLook({ when })
+    : m.settingsAutomationEventPreview({ when, count: every });
 }
 
-/** How often the app looks at an event: "Infinitary looks every minute." */
-export function lookWords(every: number | undefined): string {
-  if (every === undefined) return "";
-  return `Infinitary looks every ${every === 1 ? "minute" : `${every} minutes`}.`;
+/** The review's Runs for an event rule: each time events arrive, and how often the app looks. */
+export function eventRunsWords(every: number | undefined): string {
+  return every === undefined
+    ? m.settingsAutomationRunsEachTime()
+    : m.settingsAutomationRunsEachTimeLooks({ count: every });
 }
-
-/** What the preview fills `{{events}}` with, before any event arrived. */
-export const EVENTS_PREVIEW = "- (a summary of each event that arrived)";
 
 /** The review's word on a time Firstmate is not open for. */
 export function reviewMissedWords(spec: AutomationSpec, where: string | null): string {
-  const there = where ? ` on ${where}` : "";
   if (spec.kind === "event")
-    return `If Infinitary is closed${there} or the computer is asleep, what arrived meanwhile is sent once when it returns.`;
-  return spec.kind === "once"
-    ? `If Infinitary is closed${there} at that time, it runs once Infinitary opens.`
-    : `If Infinitary is closed${there} or the computer is asleep, the runs it missed happen once when it returns, with how many it missed.`;
+    return where
+      ? m.settingsAutomationMissedEventThere({ where })
+      : m.settingsAutomationMissedEvent();
+  if (spec.kind === "once")
+    return where
+      ? m.settingsAutomationMissedOnceThere({ where })
+      : m.settingsAutomationMissedOnce();
+  return where
+    ? m.settingsAutomationMissedRepeatsThere({ where })
+    : m.settingsAutomationMissedRepeats();
 }
 
 /** The weekday toggles, Monday first as a week reads. */
-export const WEEKDAY_TOGGLES = [
-  { day: 1, label: "Mon", name: "Monday" },
-  { day: 2, label: "Tue", name: "Tuesday" },
-  { day: 3, label: "Wed", name: "Wednesday" },
-  { day: 4, label: "Thu", name: "Thursday" },
-  { day: 5, label: "Fri", name: "Friday" },
-  { day: 6, label: "Sat", name: "Saturday" },
-  { day: 0, label: "Sun", name: "Sunday" },
-] as const;
-
-export const SUBMITTED_NOTE =
-  "Your first mate gets this prompt when the time comes. The prompt and time reach your AI subscription and stay in your first mate's conversation.";
-export const SUBMITTED_NOTE_EVENTS =
-  "Your first mate gets this prompt each time new events arrive, with a short summary of each. They reach your AI subscription and stay in your first mate's conversation.";
+export function weekdayToggles() {
+  return [
+    { day: 1, label: m.settingsAutomationMon(), name: m.settingsAutomationMonday() },
+    { day: 2, label: m.settingsAutomationTue(), name: m.settingsAutomationTuesday() },
+    { day: 3, label: m.settingsAutomationWed(), name: m.settingsAutomationWednesday() },
+    { day: 4, label: m.settingsAutomationThu(), name: m.settingsAutomationThursday() },
+    { day: 5, label: m.settingsAutomationFri(), name: m.settingsAutomationFriday() },
+    { day: 6, label: m.settingsAutomationSat(), name: m.settingsAutomationSaturday() },
+    { day: 0, label: m.settingsAutomationSun(), name: m.settingsAutomationSunday() },
+  ] as const;
+}
 
 /**
  * The time zone's note. `where` names the computer Firstmate lives on when
  * this one controls it, since the automation runs there.
  */
 export function zoneNote(where: string | null): string {
-  return where
-    ? `Runs at this time in the zone you pick. Automation runs on ${where}, only while Infinitary is open there and it is awake; a run missed meanwhile happens once when it returns.`
-    : "Runs at this time in the zone you pick, wherever this computer is. Automation runs only while Infinitary is open and the computer is awake; a run missed meanwhile happens once when it returns.";
+  return where ? m.settingsAutomationZoneNoteThere({ where }) : m.settingsAutomationZoneNote();
 }
 
 /** A daily rule made before time zones, which follows the clock where Firstmate lives. */
 export function localTimeNote(where: string | null): string {
   return where
-    ? `This automation follows the clock on ${where}, so it moves when that computer travels. Pick a time zone to keep it fixed.`
-    : "This automation follows this computer's clock, so it moves when you travel. Pick a time zone to keep it fixed.";
+    ? m.settingsAutomationLocalTimeNoteThere({ where })
+    : m.settingsAutomationLocalTimeNote();
 }
 
 /** The Time zone list's entry for a rule that keeps none. */
 export function localClockWords(where: string | null): string {
-  return where ? `The clock on ${where}` : "This computer's clock";
+  return where ? m.settingsAutomationClockThere({ where }) : m.settingsAutomationClockHere();
 }
 
-/** What a draft says at the top of its sheet. */
-export const DRAFT_NOTE = "A draft never runs. Choose Enable to check it and turn it on.";
-/** A stopped event rule's When, at the top of its sheet. */
-export const STOPPED_WHEN = "Waiting for its integration to be picked again";
-/** What saving a stopped event rule does, after why it stopped: it listens to what is picked. */
-export const STOPPED_NOTE = "Saving it listens to the one picked under When.";
-export const DETAIL_NOTE = "Each detail is filled in when the prompt is sent.";
+/** The sheet's fixed notes, worded when they are shown. */
+export const AUTOMATION_SHEET_WORDS = {
+  /** The review before a rule is turned on: what it sends, and where. */
+  get reviewSends() {
+    return m.settingsAutomationReviewSends();
+  },
+  /** The review's word on what an event rule sends, in place of `reviewSends`. */
+  get reviewSendsEvents() {
+    return m.settingsAutomationReviewSendsEvents();
+  },
+  /** What the preview fills `{{events}}` with, before any event arrived. */
+  get eventsPreview() {
+    return m.settingsAutomationEventsPreview();
+  },
+  get submittedNote() {
+    return m.settingsAutomationSubmittedNote();
+  },
+  get submittedNoteEvents() {
+    return m.settingsAutomationSubmittedNoteEvents();
+  },
+  /** What a draft says at the top of its sheet. */
+  get draftNote() {
+    return m.settingsAutomationDraftNote();
+  },
+  /** A stopped event rule's When, at the top of its sheet. */
+  get stoppedWhen() {
+    return m.settingsAutomationStoppedWhen();
+  },
+  /** What saving a stopped event rule does, after why it stopped: it listens to what is picked. */
+  get stoppedNote() {
+    return m.settingsAutomationStoppedNote();
+  },
+  get detailNote() {
+    return m.settingsAutomationDetailNote();
+  },
+} as const;

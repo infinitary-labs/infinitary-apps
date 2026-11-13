@@ -144,3 +144,8 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | header (an extra request header) | 標頭 | Microsoft Taiwan's word. |
 | certificate | 憑證 | Taiwan's word; 證書 reads as mainland in this sense. |
 | token (a custom API's token command) | 權杖 | Microsoft Taiwan's word, only on that form; model sizes stay "token" as on the usage line. |
+| level (a model's level; also "slot") | 等級 | The Models board's Premium / High / Med / Low; "slot" and "slotted model" say the same thing. |
+| Always use | 一律使用 | The setting that sends all crew work to one model; quoted as「一律使用」in sentences. |
+| Dynamic routing | 動態分配 | Plain words for sending work to a level and then to the model with the most allowance left. |
+| estimate / estimated (cost) | 估計 | As in 估計美元. |
+| usage record (on the Usage page) | 紀錄 | Counter 筆, as in 12 筆紀錄. |

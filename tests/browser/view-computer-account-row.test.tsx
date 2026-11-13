@@ -5,7 +5,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { DeviceSignIns } from "@shared/signIns";
 import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { CLAUDE_FIRST_RUN_TEXT } from "../../src/renderer/src/settings/subscriptionsWords";
+import { SUBSCRIPTIONS_WORDS } from "../../src/renderer/src/settings/subscriptionsWords";
 import { fakeBridge } from "./bridge";
 import { shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
@@ -82,8 +82,10 @@ test("on a view, a work computer's own account row names that computer and the f
   const there = await shown(
     `[data-device-sign-ins="${IMAC.deviceId}"] [data-account-row="${THERE.id}"]`,
   );
-  expect(own.textContent).toContain(hereAs(CLAUDE_FIRST_RUN_TEXT, FIRST_MATE_COMPUTER));
-  expect(there.textContent).toContain(hereAs(CLAUDE_FIRST_RUN_TEXT, WORK_COMPUTER));
+  expect(own.textContent).toContain(
+    hereAs(SUBSCRIPTIONS_WORDS.claudeFirstRun, FIRST_MATE_COMPUTER),
+  );
+  expect(there.textContent).toContain(hereAs(SUBSCRIPTIONS_WORDS.claudeFirstRun, WORK_COMPUTER));
   expect(there.textContent).not.toContain(FIRST_MATE_COMPUTER);
   expect(unansweredOf(bridge)).toEqual([]);
 });

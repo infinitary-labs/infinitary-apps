@@ -110,6 +110,13 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | font (Settings → Appearance) | Schrift | |
 | task key (a project's task numbering, "INF") | Aufgabenkürzel, Kürzel | Kept apart from "Schlüssel", which is a key that unlocks something. |
 | batch / batch run (the queue's) | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
+| level (premium / high / medium / low) | Stufe | Settings → Models places; "model slots" is Modellstufen, never Slots. |
+| Always use | Immer verwenden | Quoted „Immer verwenden“ mid-sentence. |
+| Dynamic routing | Dynamische Verteilung | |
+| decisions / decision model | Entscheidungen / Entscheidungsmodell | |
+| prompt (an automation's words) | Nachricht | What the first mate gets; plain word over "Prompt". |
+| record (a Usage record) | Eintrag | Kept apart from a task's Protokoll. |
+| estimated (Usage) | geschätzt | |
 | Infinitary | Infinitary | Never translated. |
 | Knowledge (panel) | Wissen | "Wissen öffnen" |
 | concept / finding | Begriff / Erkenntnis | As the card references already say |

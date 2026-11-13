@@ -47977,6 +47977,13007 @@ export function automationRunFound(input: { words: string }): string {
   return `Found: ${words}`;
 }
 
+export function settingsCostLimitTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السؤال قبل أن تنفق المهمة أكثر من`;
+    case "de":
+      return `Fragen, bevor eine Aufgabe mehr ausgibt als`;
+    case "es":
+      return `Preguntar antes de que una tarea gaste más de`;
+    case "fr":
+      return `Demander avant qu’une tâche dépense plus de`;
+    case "ja":
+      return `タスクがこの金額を超えて使う前に確認`;
+    case "ko":
+      return `작업이 이 금액보다 더 쓰기 전에 묻기`;
+    case "pt-BR":
+      return `Perguntar antes que uma tarefa gaste mais de`;
+    case "zh-Hans":
+      return `任务花费超过此金额前先询问`;
+    case "zh-Hant":
+      return `任務花費超過此金額前先問過你`;
+    case "en-XA":
+      return `[Åšķ ƀéƒöŕé á ţášķ šþéñðš ɱöŕé ţĥáñ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAsk before a task spends more than\u202c`;
+  }
+  return `Ask before a task spends more than`;
+}
+
+export function settingsCostLimitSwitchLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السؤال قبل أن تنفق المهمة أكثر`;
+    case "de":
+      return `Fragen, bevor eine Aufgabe mehr ausgibt`;
+    case "es":
+      return `Preguntar antes de que una tarea gaste más`;
+    case "fr":
+      return `Demander avant qu’une tâche dépense davantage`;
+    case "ja":
+      return `タスクがさらに使う前に確認`;
+    case "ko":
+      return `작업이 더 쓰기 전에 묻기`;
+    case "pt-BR":
+      return `Perguntar antes que uma tarefa gaste mais`;
+    case "zh-Hans":
+      return `任务花费更多前先询问`;
+    case "zh-Hant":
+      return `任務花更多錢前先問過你`;
+    case "en-XA":
+      return `[Åšķ ƀéƒöŕé á ţášķ šþéñðš ɱöŕé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAsk before a task spends more\u202c`;
+  }
+  return `Ask before a task spends more`;
+}
+
+export function settingsCostLimitAmountLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أقصى ما تنفقه المهمة قبل أن تسأل، بالدولار`;
+    case "de":
+      return `Höchstbetrag einer Aufgabe, bevor sie fragt, in Dollar`;
+    case "es":
+      return `Lo máximo que gasta una tarea antes de preguntar, en dólares`;
+    case "fr":
+      return `Montant maximal qu’une tâche dépense avant de demander, en dollars`;
+    case "ja":
+      return `確認までにタスクが使える上限（ドル）`;
+    case "ko":
+      return `작업이 묻기 전까지 쓰는 최대 금액(달러)`;
+    case "pt-BR":
+      return `O máximo que uma tarefa gasta antes de perguntar, em dólares`;
+    case "zh-Hans":
+      return `任务询问前最多花费的金额（美元）`;
+    case "zh-Hant":
+      return `任務詢問前最多花費的金額（美元）`;
+    case "en-XA":
+      return `[Ṁöšţ á ţášķ šþéñðš ƀéƒöŕé îţ ášķš, îñ ðöļļáŕš ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMost a task spends before it asks, in dollars\u202c`;
+  }
+  return `Most a task spends before it asks, in dollars`;
+}
+
+export function settingsCostLimitDescriptionUnread(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تتوقف المهمة والعمل التابع لها عند نقطة آمنة وتسألك قبل إنفاق المزيد.`;
+    case "de":
+      return `Eine Aufgabe und die Arbeit darunter halten an einer sicheren Stelle an und fragen dich, bevor sie mehr ausgeben.`;
+    case "es":
+      return `Una tarea y el trabajo que depende de ella se detienen en un punto seguro y te preguntan antes de gastar más.`;
+    case "fr":
+      return `Une tâche et le travail qui en dépend s’arrêtent à un point sûr et vous demandent avant de dépenser davantage.`;
+    case "ja":
+      return `タスクとその配下の作業は、さらに使う前に安全な区切りで止まり、確認を求めます。`;
+    case "ko":
+      return `작업과 그 아래의 작업은 안전한 지점에서 멈추고, 더 쓰기 전에 선장님께 물어요.`;
+    case "pt-BR":
+      return `Uma tarefa e o trabalho abaixo dela param em um ponto seguro e perguntam a você antes de gastar mais.`;
+    case "zh-Hans":
+      return `任务及其下的工作会在安全的节点停下，先问你再继续花费。`;
+    case "zh-Hant":
+      return `任務和它底下的工作會在安全的時間點停下，先問過你再繼續花費。`;
+    case "en-XA":
+      return `[Å ţášķ áñð ţĥé ŵöŕķ ûñðéŕ îţ šţöþ áţ á šáƒé þöîñţ áñð ášķ ýöû ƀéƒöŕé ţĥéý šþéñð ɱöŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA task and the work under it stop at a safe point and ask you before they spend more.\u202c`;
+  }
+  return `A task and the work under it stop at a safe point and ask you before they spend more.`;
+}
+
+export function settingsCostLimitDescriptionOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا تتوقف المهام أبدًا لتسأل عن التكلفة. فعّل هذا لتسألك المهمة قبل إنفاق المزيد.`;
+    case "de":
+      return `Aufgaben halten nie an, um nach den Kosten zu fragen. Schalte dies ein, damit eine Aufgabe dich fragt, bevor sie mehr ausgibt.`;
+    case "es":
+      return `Las tareas nunca se detienen a preguntar por el costo. Activa esta opción para que una tarea te pregunte antes de gastar más.`;
+    case "fr":
+      return `Les tâches ne s’arrêtent jamais pour demander à propos du coût. Activez cette option pour qu’une tâche vous demande avant de dépenser davantage.`;
+    case "ja":
+      return `タスクが費用のことで止まって確認することはありません。オンにすると、タスクはさらに使う前に確認を求めます。`;
+    case "ko":
+      return `작업은 비용 때문에 멈추고 묻지 않아요. 켜면 작업이 더 쓰기 전에 선장님께 물어요.`;
+    case "pt-BR":
+      return `As tarefas nunca param para perguntar sobre custo. Ative esta opção para que uma tarefa pergunte a você antes de gastar mais.`;
+    case "zh-Hans":
+      return `任务从不因费用停下询问。打开后，任务会在花费更多前先问你。`;
+    case "zh-Hant":
+      return `任務從不因費用停下來詢問。開啟後，任務會在花更多錢前先問過你。`;
+    case "en-XA":
+      return `[Ţášķš ñéṽéŕ šţöþ ţö ášķ áƀöûţ çöšţ. Ţûŕñ ţĥîš öñ ţö ĥáṽé á ţášķ ášķ ýöû ƀéƒöŕé îţ šþéñðš ɱöŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTasks never stop to ask about cost. Turn this on to have a task ask you before it spends more.\u202c`;
+  }
+  return `Tasks never stop to ask about cost. Turn this on to have a task ask you before it spends more.`;
+}
+
+export function settingsCostLimitDescription(input: { limit: string }): string {
+  const limit = input.limit;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تتوقف المهمة والعمل التابع لها عند نقطة آمنة وتسألك حين يتجاوز إنفاقها التقديري ${limit}، وفق تقدير الإعدادات → الاستخدام.`;
+    case "de":
+      return `Eine Aufgabe und die Arbeit darunter halten an einer sicheren Stelle an und fragen dich, sobald ihre geschätzten Kosten ${limit} übersteigen, so wie Einstellungen → Nutzung sie schätzt.`;
+    case "es":
+      return `Una tarea y el trabajo que depende de ella se detienen en un punto seguro y te preguntan cuando su gasto estimado supera ${limit}, según la estimación de Configuración → Uso.`;
+    case "fr":
+      return `Une tâche et le travail qui en dépend s’arrêtent à un point sûr et vous demandent dès que leur dépense estimée dépasse ${limit}, selon l’estimation de Réglages → Utilisation.`;
+    case "ja":
+      return `推定費用（設定 → 使用量 での見積もり）が ${limit} を超えると、タスクとその配下の作業は安全な区切りで止まり、確認を求めます。`;
+    case "ko":
+      return `작업과 그 아래의 작업은 추정 비용이 ${limit}을(를) 넘으면 안전한 지점에서 멈추고 선장님께 물어요. 추정은 설정 → 사용량 기준이에요.`;
+    case "pt-BR":
+      return `Uma tarefa e o trabalho abaixo dela param em um ponto seguro e perguntam a você quando o gasto estimado passa de ${limit}, conforme a estimativa de Ajustes → Uso.`;
+    case "zh-Hans":
+      return `当估算花费超过 ${limit}（按设置 → 用量的估算）时，任务及其下的工作会在安全的节点停下并问你。`;
+    case "zh-Hant":
+      return `當估計花費超過 ${limit}（依設定 → 用量的估計）時，任務和它底下的工作會在安全的時間點停下並問你。`;
+    case "en-XA":
+      return `[Å ţášķ áñð ţĥé ŵöŕķ ûñðéŕ îţ šţöþ áţ á šáƒé þöîñţ áñð ášķ ýöû öñçé ţĥéîŕ éšţîɱáţéð šþéñð þáššéš ${limit}, áš Šéţţîñĝš → Ûšáĝé éšţîɱáţéš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA task and the work under it stop at a safe point and ask you once their estimated spend passes \u202c${limit}\u202e, as Settings → Usage estimates it.\u202c`;
+  }
+  return `A task and the work under it stop at a safe point and ask you once their estimated spend passes ${limit}, as Settings → Usage estimates it.`;
+}
+
+export function settingsCostLimitDescriptionRecent(input: {
+  asked: string;
+  days: string;
+  limit: string;
+  tasks: string;
+}): string {
+  const asked = input.asked;
+  const days = input.days;
+  const limit = input.limit;
+  const tasks = input.tasks;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تتوقف المهمة والعمل التابع لها عند نقطة آمنة وتسألك حين يتجاوز إنفاقها التقديري ${limit}، وفق تقدير الإعدادات → الاستخدام. في آخر ${days} يوم، كانت ${asked} من أصل ${tasks} مهمة ستسأل.`;
+    case "de":
+      return `Eine Aufgabe und die Arbeit darunter halten an einer sicheren Stelle an und fragen dich, sobald ihre geschätzten Kosten ${limit} übersteigen, so wie Einstellungen → Nutzung sie schätzt. In den letzten ${days} Tagen hätten ${asked} von ${tasks} Aufgaben gefragt.`;
+    case "es":
+      return `Una tarea y el trabajo que depende de ella se detienen en un punto seguro y te preguntan cuando su gasto estimado supera ${limit}, según la estimación de Configuración → Uso. En los últimos ${days} días, ${asked} de ${tasks} tareas habrían preguntado.`;
+    case "fr":
+      return `Une tâche et le travail qui en dépend s’arrêtent à un point sûr et vous demandent dès que leur dépense estimée dépasse ${limit}, selon l’estimation de Réglages → Utilisation. Sur les ${days} derniers jours, ${asked} sur ${tasks} tâches auraient demandé.`;
+    case "ja":
+      return `推定費用（設定 → 使用量 での見積もり）が ${limit} を超えると、タスクとその配下の作業は安全な区切りで止まり、確認を求めます。過去${days}日間では、${tasks}件のタスクのうち${asked}件が確認を求めていたはずです。`;
+    case "ko":
+      return `작업과 그 아래의 작업은 추정 비용이 ${limit}을(를) 넘으면 안전한 지점에서 멈추고 선장님께 물어요. 추정은 설정 → 사용량 기준이에요. 지난 ${days}일 동안 작업 ${tasks}개 중 ${asked}개가 물었을 거예요.`;
+    case "pt-BR":
+      return `Uma tarefa e o trabalho abaixo dela param em um ponto seguro e perguntam a você quando o gasto estimado passa de ${limit}, conforme a estimativa de Ajustes → Uso. Nos últimos ${days} dias, ${asked} de ${tasks} tarefas teriam perguntado.`;
+    case "zh-Hans":
+      return `当估算花费超过 ${limit}（按设置 → 用量的估算）时，任务及其下的工作会在安全的节点停下并问你。在过去 ${days} 天里，${tasks} 个任务中有 ${asked} 个会询问。`;
+    case "zh-Hant":
+      return `當估計花費超過 ${limit}（依設定 → 用量的估計）時，任務和它底下的工作會在安全的時間點停下並問你。在過去 ${days} 天內，${tasks} 項任務中有 ${asked} 項會詢問。`;
+    case "en-XA":
+      return `[Å ţášķ áñð ţĥé ŵöŕķ ûñðéŕ îţ šţöþ áţ á šáƒé þöîñţ áñð ášķ ýöû öñçé ţĥéîŕ éšţîɱáţéð šþéñð þáššéš ${limit}, áš Šéţţîñĝš → Ûšáĝé éšţîɱáţéš îţ. Îñ ţĥé ļášţ ${days} ðáýš, ${asked} öƒ ${tasks} ţášķš ŵöûļð ĥáṽé ášķéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA task and the work under it stop at a safe point and ask you once their estimated spend passes \u202c${limit}\u202e, as Settings → Usage estimates it. In the last \u202c${days}\u202e days, \u202c${asked}\u202e of \u202c${tasks}\u202e tasks would have asked.\u202c`;
+  }
+  return `A task and the work under it stop at a safe point and ask you once their estimated spend passes ${limit}, as Settings → Usage estimates it. In the last ${days} days, ${asked} of ${tasks} tasks would have asked.`;
+}
+
+export function settingsUsageNotAvailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير متاح`;
+    case "de":
+      return `Nicht verfügbar`;
+    case "es":
+      return `No disponible`;
+    case "fr":
+      return `Indisponible`;
+    case "ja":
+      return `利用できません`;
+    case "ko":
+      return `알 수 없음`;
+    case "pt-BR":
+      return `Indisponível`;
+    case "zh-Hans":
+      return `不可用`;
+    case "zh-Hant":
+      return `無法使用`;
+    case "en-XA":
+      return `[Ñöţ áṽáîļáƀļé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot available\u202c`;
+  }
+  return `Not available`;
+}
+
+export function settingsUsagePeriod7d(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `آخر 7 أيام`;
+    case "de":
+      return `Letzte 7 Tage`;
+    case "es":
+      return `Últimos 7 días`;
+    case "fr":
+      return `7 derniers jours`;
+    case "ja":
+      return `過去7日間`;
+    case "ko":
+      return `지난 7일`;
+    case "pt-BR":
+      return `Últimos 7 dias`;
+    case "zh-Hans":
+      return `过去 7 天`;
+    case "zh-Hant":
+      return `過去 7 天`;
+    case "en-XA":
+      return `[Ļášţ 7 ðáýš ~~~~]`;
+    case "ar-XB":
+      return `\u202eLast 7 days\u202c`;
+  }
+  return `Last 7 days`;
+}
+
+export function settingsUsagePeriod30d(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `آخر 30 يومًا`;
+    case "de":
+      return `Letzte 30 Tage`;
+    case "es":
+      return `Últimos 30 días`;
+    case "fr":
+      return `30 derniers jours`;
+    case "ja":
+      return `過去30日間`;
+    case "ko":
+      return `지난 30일`;
+    case "pt-BR":
+      return `Últimos 30 dias`;
+    case "zh-Hans":
+      return `过去 30 天`;
+    case "zh-Hant":
+      return `過去 30 天`;
+    case "en-XA":
+      return `[Ļášţ 30 ðáýš ~~~~]`;
+    case "ar-XB":
+      return `\u202eLast 30 days\u202c`;
+  }
+  return `Last 30 days`;
+}
+
+export function settingsUsagePeriodAll(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل المدة المسجّلة`;
+    case "de":
+      return `Gesamter erfasster Zeitraum`;
+    case "es":
+      return `Todo el tiempo registrado`;
+    case "fr":
+      return `Toute la période enregistrée`;
+    case "ja":
+      return `記録されたすべての期間`;
+    case "ko":
+      return `기록된 전체 기간`;
+    case "pt-BR":
+      return `Todo o período registrado`;
+    case "zh-Hans":
+      return `全部记录时间`;
+    case "zh-Hant":
+      return `所有紀錄期間`;
+    case "en-XA":
+      return `[Åļļ ŕéçöŕðéð ţîɱé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAll recorded time\u202c`;
+  }
+  return `All recorded time`;
+}
+
+export function settingsUsageScopeAll(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل العمل`;
+    case "de":
+      return `Alle Arbeit`;
+    case "es":
+      return `Todo el trabajo`;
+    case "fr":
+      return `Tout le travail`;
+    case "ja":
+      return `すべての作業`;
+    case "ko":
+      return `모든 작업`;
+    case "pt-BR":
+      return `Todo o trabalho`;
+    case "zh-Hans":
+      return `全部工作`;
+    case "zh-Hant":
+      return `所有工作`;
+    case "en-XA":
+      return `[Åļļ ŵöŕķ ~~~]`;
+    case "ar-XB":
+      return `\u202eAll work\u202c`;
+  }
+  return `All work`;
+}
+
+export function settingsUsageScopeTask(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمل المهام`;
+    case "de":
+      return `Aufgabenarbeit`;
+    case "es":
+      return `Trabajo de tareas`;
+    case "fr":
+      return `Travail des tâches`;
+    case "ja":
+      return `タスクの作業`;
+    case "ko":
+      return `작업`;
+    case "pt-BR":
+      return `Trabalho das tarefas`;
+    case "zh-Hans":
+      return `任务工作`;
+    case "zh-Hant":
+      return `任務工作`;
+    case "en-XA":
+      return `[Ţášķ ŵöŕķ ~~~]`;
+    case "ar-XB":
+      return `\u202eTask work\u202c`;
+  }
+  return `Task work`;
+}
+
+export function settingsUsageScopeFirstmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نائب القبطان`;
+    case "de":
+      return `Erster Offizier`;
+    case "es":
+      return `Primer oficial`;
+    case "fr":
+      return `Second`;
+    case "ja":
+      return `一等航海士`;
+    case "ko":
+      return `일등항해사`;
+    case "pt-BR":
+      return `Imediato`;
+    case "zh-Hans":
+      return `大副`;
+    case "zh-Hant":
+      return `大副`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate\u202c`;
+  }
+  return `First mate`;
+}
+
+export function settingsUsageScopeOther(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمل آخر`;
+    case "de":
+      return `Andere Arbeit`;
+    case "es":
+      return `Otro trabajo`;
+    case "fr":
+      return `Autre travail`;
+    case "ja":
+      return `その他の作業`;
+    case "ko":
+      return `기타 작업`;
+    case "pt-BR":
+      return `Outro trabalho`;
+    case "zh-Hans":
+      return `其他工作`;
+    case "zh-Hant":
+      return `其他工作`;
+    case "en-XA":
+      return `[Öţĥéŕ ŵöŕķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eOther work\u202c`;
+  }
+  return `Other work`;
+}
+
+export function settingsUsageUnitTokens(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رموز`;
+    case "de":
+      return `Tokens`;
+    case "es":
+      return `Tokens`;
+    case "fr":
+      return `Jetons`;
+    case "ja":
+      return `トークン`;
+    case "ko":
+      return `토큰`;
+    case "pt-BR":
+      return `Tokens`;
+    case "zh-Hans":
+      return `Token`;
+    case "zh-Hant":
+      return `Token`;
+    case "en-XA":
+      return `[Ţöķéñš ~~]`;
+    case "ar-XB":
+      return `\u202eTokens\u202c`;
+  }
+  return `Tokens`;
+}
+
+export function settingsUsageUnitUsd(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `$ تقديري`;
+    case "de":
+      return `Geschätzt $`;
+    case "es":
+      return `$ estimados`;
+    case "fr":
+      return `$ estimés`;
+    case "ja":
+      return `推定 $`;
+    case "ko":
+      return `추정 $`;
+    case "pt-BR":
+      return `$ estimados`;
+    case "zh-Hans":
+      return `估算 $`;
+    case "zh-Hant":
+      return `估計 $`;
+    case "en-XA":
+      return `[Éšţîɱáţéð $ ~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimated $\u202c`;
+  }
+  return `Estimated $`;
+}
+
+export function settingsUsageHeadingTokens(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رموز`;
+    case "de":
+      return `Tokens`;
+    case "es":
+      return `Tokens`;
+    case "fr":
+      return `Jetons`;
+    case "ja":
+      return `トークン`;
+    case "ko":
+      return `토큰`;
+    case "pt-BR":
+      return `Tokens`;
+    case "zh-Hans":
+      return `Token`;
+    case "zh-Hant":
+      return `Token`;
+    case "en-XA":
+      return `[Ţöķéñš ~~]`;
+    case "ar-XB":
+      return `\u202eTokens\u202c`;
+  }
+  return `Tokens`;
+}
+
+export function settingsUsageHeadingUsd(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دولار تقديري`;
+    case "de":
+      return `Geschätzt USD`;
+    case "es":
+      return `USD estimados`;
+    case "fr":
+      return `USD estimés`;
+    case "ja":
+      return `推定（米ドル）`;
+    case "ko":
+      return `추정 USD`;
+    case "pt-BR":
+      return `USD estimados`;
+    case "zh-Hans":
+      return `估算美元`;
+    case "zh-Hant":
+      return `估計美元`;
+    case "en-XA":
+      return `[Éšţîɱáţéð ÛŠÐ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimated USD\u202c`;
+  }
+  return `Estimated USD`;
+}
+
+export function settingsUsageNoActivity(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا نشاط`;
+    case "de":
+      return `Keine Aktivität`;
+    case "es":
+      return `Sin actividad`;
+    case "fr":
+      return `Aucune activité`;
+    case "ja":
+      return `アクティビティなし`;
+    case "ko":
+      return `활동 없음`;
+    case "pt-BR":
+      return `Sem atividade`;
+    case "zh-Hans":
+      return `没有活动`;
+    case "zh-Hant":
+      return `沒有活動`;
+    case "en-XA":
+      return `[Ñö áçţîṽîţý ~~~~]`;
+    case "ar-XB":
+      return `\u202eNo activity\u202c`;
+  }
+  return `No activity`;
+}
+
+export function settingsUsageNothingRecorded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُسجَّل شيء بعد`;
+    case "de":
+      return `Noch nichts erfasst`;
+    case "es":
+      return `Todavía no hay nada registrado`;
+    case "fr":
+      return `Rien d’enregistré pour l’instant`;
+    case "ja":
+      return `まだ記録がありません`;
+    case "ko":
+      return `아직 기록된 것이 없음`;
+    case "pt-BR":
+      return `Nada registrado ainda`;
+    case "zh-Hans":
+      return `尚无记录`;
+    case "zh-Hant":
+      return `尚無紀錄`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ ŕéçöŕðéð ýéţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing recorded yet\u202c`;
+  }
+  return `Nothing recorded yet`;
+}
+
+export function settingsUsagePeriodSince(input: { date: string }): string {
+  const date = input.date;
+  switch (currentLanguage()) {
+    case "ar":
+      return `منذ ${date} · بالتواريخ المحلية`;
+    case "de":
+      return `Seit ${date} · Lokale Daten`;
+    case "es":
+      return `Desde ${date} · Fechas locales`;
+    case "fr":
+      return `Depuis le ${date} · Dates locales`;
+    case "ja":
+      return `${date} 以降 · 現地の日付`;
+    case "ko":
+      return `${date}부터 · 현지 날짜`;
+    case "pt-BR":
+      return `Desde ${date} · Datas locais`;
+    case "zh-Hans":
+      return `自 ${date} 起 · 本地日期`;
+    case "zh-Hant":
+      return `自 ${date} 起 · 當地日期`;
+    case "en-XA":
+      return `[Šîñçé ${date} · Ļöçáļ ðáţéš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSince \u202c${date}\u202e · Local dates\u202c`;
+  }
+  return `Since ${date} · Local dates`;
+}
+
+export function settingsUsagePeriodRange(input: { first: string; last: string }): string {
+  const first = input.first;
+  const last = input.last;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${first}–${last} · بالتواريخ المحلية`;
+    case "de":
+      return `${first}–${last} · Lokale Daten`;
+    case "es":
+      return `${first}–${last} · Fechas locales`;
+    case "fr":
+      return `${first}–${last} · Dates locales`;
+    case "ja":
+      return `${first}–${last} · 現地の日付`;
+    case "ko":
+      return `${first}–${last} · 현지 날짜`;
+    case "pt-BR":
+      return `${first}–${last} · Datas locais`;
+    case "zh-Hans":
+      return `${first}–${last} · 本地日期`;
+    case "zh-Hant":
+      return `${first}–${last} · 當地日期`;
+    case "en-XA":
+      return `[${first}–${last} · Ļöçáļ ðáţéš ~~~~~]`;
+    case "ar-XB":
+      return `${first}\u202e–\u202c${last}\u202e · Local dates\u202c`;
+  }
+  return `${first}–${last} · Local dates`;
+}
+
+export function settingsUsagePriced(input: { priced: string; records: string }): string {
+  const priced = input.priced;
+  const records = input.records;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${priced} من أصل ${records} سجل لها سعر`;
+    case "de":
+      return `${priced} von ${records} Einträgen mit Preis`;
+    case "es":
+      return `Registros con precio: ${priced} de ${records}`;
+    case "fr":
+      return `Entrées avec prix : ${priced} sur ${records}`;
+    case "ja":
+      return `${records}件の記録のうち${priced}件に価格あり`;
+    case "ko":
+      return `기록 ${records}개 중 ${priced}개에 가격 있음`;
+    case "pt-BR":
+      return `Registros com preço: ${priced} de ${records}`;
+    case "zh-Hans":
+      return `${records} 条记录中有 ${priced} 条已定价`;
+    case "zh-Hant":
+      return `${records} 筆紀錄中有 ${priced} 筆已計價`;
+    case "en-XA":
+      return `[${priced} öƒ ${records} ŕéçöŕðš þŕîçéð ~~~~~~~]`;
+    case "ar-XB":
+      return `${priced}\u202e of \u202c${records}\u202e records priced\u202c`;
+  }
+  return `${priced} of ${records} records priced`;
+}
+
+export function settingsUsageCoverageUnavailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التغطية غير متاحة`;
+    case "de":
+      return `Abdeckung nicht verfügbar`;
+    case "es":
+      return `Cobertura no disponible`;
+    case "fr":
+      return `Couverture indisponible`;
+    case "ja":
+      return `対象範囲を取得できません`;
+    case "ko":
+      return `범위를 알 수 없음`;
+    case "pt-BR":
+      return `Cobertura indisponível`;
+    case "zh-Hans":
+      return `覆盖范围不可用`;
+    case "zh-Hant":
+      return `無法取得涵蓋範圍`;
+    case "en-XA":
+      return `[Çöṽéŕáĝé ñöţ áṽáîļáƀļé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCoverage not available\u202c`;
+  }
+  return `Coverage not available`;
+}
+
+export function settingsUsageRecordsOf(input: { count: string; records: string }): string {
+  const count = input.count;
+  const records = input.records;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${count} من أصل ${records} سجل`;
+    case "de":
+      return `${count} von ${records} Einträgen`;
+    case "es":
+      return `${count} de ${records} registros`;
+    case "fr":
+      return `${count} sur ${records} entrées`;
+    case "ja":
+      return `${records}件の記録のうち${count}件`;
+    case "ko":
+      return `기록 ${records}개 중 ${count}개`;
+    case "pt-BR":
+      return `${count} de ${records} registros`;
+    case "zh-Hans":
+      return `${records} 条记录中的 ${count} 条`;
+    case "zh-Hant":
+      return `${records} 筆紀錄中的 ${count} 筆`;
+    case "en-XA":
+      return `[${count} öƒ ${records} ŕéçöŕðš ~~~~]`;
+    case "ar-XB":
+      return `${count}\u202e of \u202c${records}\u202e records\u202c`;
+  }
+  return `${count} of ${records} records`;
+}
+
+export function settingsUsagePricedRecordsOf(input: { count: string; priced: string }): string {
+  const count = input.count;
+  const priced = input.priced;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${count} من أصل ${priced} سجل له سعر`;
+    case "de":
+      return `${count} von ${priced} Einträgen mit Preis`;
+    case "es":
+      return `${count} de ${priced} registros con precio`;
+    case "fr":
+      return `${count} sur ${priced} entrées avec prix`;
+    case "ja":
+      return `価格のある記録${priced}件のうち${count}件`;
+    case "ko":
+      return `가격 있는 기록 ${priced}개 중 ${count}개`;
+    case "pt-BR":
+      return `${count} de ${priced} registros com preço`;
+    case "zh-Hans":
+      return `${priced} 条已定价记录中的 ${count} 条`;
+    case "zh-Hant":
+      return `${priced} 筆已計價紀錄中的 ${count} 筆`;
+    case "en-XA":
+      return `[${count} öƒ ${priced} þŕîçéð ŕéçöŕðš ~~~~~~~]`;
+    case "ar-XB":
+      return `${count}\u202e of \u202c${priced}\u202e priced records\u202c`;
+  }
+  return `${count} of ${priced} priced records`;
+}
+
+export function settingsUsageReadoutTokens(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الرموز المسجّلة`;
+    case "de":
+      return `Erfasste Tokens`;
+    case "es":
+      return `Tokens registrados`;
+    case "fr":
+      return `Jetons enregistrés`;
+    case "ja":
+      return `記録されたトークン`;
+    case "ko":
+      return `기록된 토큰`;
+    case "pt-BR":
+      return `Tokens registrados`;
+    case "zh-Hans":
+      return `已记录的 token`;
+    case "zh-Hant":
+      return `已記錄的 token`;
+    case "en-XA":
+      return `[Ŕéçöŕðéð ţöķéñš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecorded tokens\u202c`;
+  }
+  return `Recorded tokens`;
+}
+
+export function settingsUsageReadoutTokensComplete(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإدخال والإخراج والذاكرة المؤقتة`;
+    case "de":
+      return `Eingabe, Ausgabe und Cache`;
+    case "es":
+      return `Entrada, salida y caché`;
+    case "fr":
+      return `Entrée, sortie et cache`;
+    case "ja":
+      return `入力、出力、キャッシュ`;
+    case "ko":
+      return `입력, 출력, 캐시`;
+    case "pt-BR":
+      return `Entrada, saída e cache`;
+    case "zh-Hans":
+      return `输入、输出和缓存`;
+    case "zh-Hant":
+      return `輸入、輸出和快取`;
+    case "en-XA":
+      return `[Îñþûţ, öûţþûţ áñð çáçĥé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInput, output and cache\u202c`;
+  }
+  return `Input, output and cache`;
+}
+
+export function settingsUsageReadoutTokensPartial(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الفئات المُبلَّغ عنها فقط`;
+    case "de":
+      return `Nur gemeldete Kategorien`;
+    case "es":
+      return `Solo las categorías informadas`;
+    case "fr":
+      return `Catégories signalées uniquement`;
+    case "ja":
+      return `報告されたカテゴリのみ`;
+    case "ko":
+      return `보고된 항목만`;
+    case "pt-BR":
+      return `Só as categorias informadas`;
+    case "zh-Hans":
+      return `仅已报告的类别`;
+    case "zh-Hant":
+      return `僅限已回報的類別`;
+    case "en-XA":
+      return `[Ŕéþöŕţéð çáţéĝöŕîéš öñļý ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReported categories only\u202c`;
+  }
+  return `Reported categories only`;
+}
+
+export function settingsUsageReadoutKnownEstimate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تقدير معروف · دولار`;
+    case "de":
+      return `Bekannte Schätzung · USD`;
+    case "es":
+      return `Estimación conocida · USD`;
+    case "fr":
+      return `Estimation connue · USD`;
+    case "ja":
+      return `判明している推定 · 米ドル`;
+    case "ko":
+      return `확인된 추정 · USD`;
+    case "pt-BR":
+      return `Estimativa conhecida · USD`;
+    case "zh-Hans":
+      return `已知估算 · 美元`;
+    case "zh-Hant":
+      return `已知估計 · 美元`;
+    case "en-XA":
+      return `[Ķñöŵñ éšţîɱáţé · ÛŠÐ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eKnown estimate · USD\u202c`;
+  }
+  return `Known estimate · USD`;
+}
+
+export function settingsUsageReadoutEstimate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قيمة تقديرية · دولار`;
+    case "de":
+      return `Geschätzter Wert · USD`;
+    case "es":
+      return `Valor estimado · USD`;
+    case "fr":
+      return `Valeur estimée · USD`;
+    case "ja":
+      return `推定値 · 米ドル`;
+    case "ko":
+      return `추정 금액 · USD`;
+    case "pt-BR":
+      return `Valor estimado · USD`;
+    case "zh-Hans":
+      return `估算值 · 美元`;
+    case "zh-Hant":
+      return `估計值 · 美元`;
+    case "en-XA":
+      return `[Éšţîɱáţéð ṽáļûé · ÛŠÐ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimated value · USD\u202c`;
+  }
+  return `Estimated value · USD`;
+}
+
+export function settingsUsageReadoutFinished(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهام المنتهية`;
+    case "de":
+      return `Erledigte Aufgaben`;
+    case "es":
+      return `Tareas terminadas`;
+    case "fr":
+      return `Tâches terminées`;
+    case "ja":
+      return `完了したタスク`;
+    case "ko":
+      return `완료된 작업`;
+    case "pt-BR":
+      return `Tarefas concluídas`;
+    case "zh-Hans":
+      return `已完成的任务`;
+    case "zh-Hant":
+      return `已完成的任務`;
+    case "en-XA":
+      return `[Ţášķš ƒîñîšĥéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eTasks finished\u202c`;
+  }
+  return `Tasks finished`;
+}
+
+export function settingsUsageReadoutFinishedNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في هذه المدة وهذا العمل`;
+    case "de":
+      return `In diesem Zeitraum und dieser Arbeit`;
+    case "es":
+      return `En este período y trabajo`;
+    case "fr":
+      return `Sur cette période et ce travail`;
+    case "ja":
+      return `この期間と作業の範囲`;
+    case "ko":
+      return `이 기간과 작업 범위에서`;
+    case "pt-BR":
+      return `Neste período e trabalho`;
+    case "zh-Hans":
+      return `在此时段和工作范围内`;
+    case "zh-Hant":
+      return `在這段期間和工作範圍內`;
+    case "en-XA":
+      return `[Îñ ţĥîš þéŕîöð áñð ŵöŕķ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIn this period and work\u202c`;
+  }
+  return `In this period and work`;
+}
+
+export function settingsUsageReadoutRecordedModels(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النماذج المسجّلة`;
+    case "de":
+      return `Erfasste Modelle`;
+    case "es":
+      return `Modelos registrados`;
+    case "fr":
+      return `Modèles enregistrés`;
+    case "ja":
+      return `記録されたモデル`;
+    case "ko":
+      return `기록된 모델`;
+    case "pt-BR":
+      return `Modelos registrados`;
+    case "zh-Hans":
+      return `已记录的模型`;
+    case "zh-Hant":
+      return `已記錄的模型`;
+    case "en-XA":
+      return `[Ŕéçöŕðéð ɱöðéļš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecorded models\u202c`;
+  }
+  return `Recorded models`;
+}
+
+export function settingsUsageReadoutModelsUsed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النماذج المستخدمة`;
+    case "de":
+      return `Verwendete Modelle`;
+    case "es":
+      return `Modelos usados`;
+    case "fr":
+      return `Modèles utilisés`;
+    case "ja":
+      return `使用したモデル`;
+    case "ko":
+      return `사용한 모델`;
+    case "pt-BR":
+      return `Modelos usados`;
+    case "zh-Hans":
+      return `使用过的模型`;
+    case "zh-Hant":
+      return `使用過的模型`;
+    case "en-XA":
+      return `[Ṁöðéļš ûšéð ~~~~]`;
+    case "ar-XB":
+      return `\u202eModels used\u202c`;
+  }
+  return `Models used`;
+}
+
+export function settingsUsageReadoutModelsNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عبر العمل المحدد`;
+    case "de":
+      return `Über die gewählte Arbeit hinweg`;
+    case "es":
+      return `En todo el trabajo seleccionado`;
+    case "fr":
+      return `Sur tout le travail sélectionné`;
+    case "ja":
+      return `選択した作業全体`;
+    case "ko":
+      return `선택한 작업 전체에서`;
+    case "pt-BR":
+      return `Em todo o trabalho selecionado`;
+    case "zh-Hans":
+      return `所选工作范围内`;
+    case "zh-Hant":
+      return `所選工作範圍內`;
+    case "en-XA":
+      return `[Åçŕöšš ţĥé šéļéçţéð ŵöŕķ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAcross the selected work\u202c`;
+  }
+  return `Across the selected work`;
+}
+
+export function settingsUsageModelNotRecorded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج غير مسجّل`;
+    case "de":
+      return `Modell nicht erfasst`;
+    case "es":
+      return `Modelo no registrado`;
+    case "fr":
+      return `Modèle non enregistré`;
+    case "ja":
+      return `モデルの記録なし`;
+    case "ko":
+      return `모델이 기록되지 않음`;
+    case "pt-BR":
+      return `Modelo não registrado`;
+    case "zh-Hans":
+      return `未记录模型`;
+    case "zh-Hant":
+      return `未記錄模型`;
+    case "en-XA":
+      return `[Ṁöðéļ ñöţ ŕéçöŕðéð ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eModel not recorded\u202c`;
+  }
+  return `Model not recorded`;
+}
+
+export function settingsUsageProviderNotRecorded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المزوّد غير مسجّل`;
+    case "de":
+      return `Anbieter nicht erfasst`;
+    case "es":
+      return `Proveedor no registrado`;
+    case "fr":
+      return `Fournisseur non enregistré`;
+    case "ja":
+      return `プロバイダーの記録なし`;
+    case "ko":
+      return `제공자가 기록되지 않음`;
+    case "pt-BR":
+      return `Provedor não registrado`;
+    case "zh-Hans":
+      return `未记录服务商`;
+    case "zh-Hant":
+      return `未記錄供應商`;
+    case "en-XA":
+      return `[Þŕöṽîðéŕ ñöţ ŕéçöŕðéð ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eProvider not recorded\u202c`;
+  }
+  return `Provider not recorded`;
+}
+
+export function settingsUsageModelLineRecorded(input: { provider: string }): string {
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${provider} · نموذج مسجّل`;
+    case "de":
+      return `${provider} · Erfasstes Modell`;
+    case "es":
+      return `${provider} · Modelo registrado`;
+    case "fr":
+      return `${provider} · Modèle enregistré`;
+    case "ja":
+      return `${provider} · 記録されたモデル`;
+    case "ko":
+      return `${provider} · 기록된 모델`;
+    case "pt-BR":
+      return `${provider} · Modelo registrado`;
+    case "zh-Hans":
+      return `${provider} · 已记录的模型`;
+    case "zh-Hant":
+      return `${provider} · 已記錄的模型`;
+    case "en-XA":
+      return `[${provider} · Ŕéçöŕðéð ɱöðéļ ~~~~~~]`;
+    case "ar-XB":
+      return `${provider}\u202e · Recorded model\u202c`;
+  }
+  return `${provider} · Recorded model`;
+}
+
+export function settingsUsageAttributionServed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاسم كما ذكره المزوّد الذي أجاب.`;
+    case "de":
+      return `Benannt vom Anbieter, der geantwortet hat.`;
+    case "es":
+      return `Nombrado por el proveedor que respondió.`;
+    case "fr":
+      return `Nommé par le fournisseur qui a répondu.`;
+    case "ja":
+      return `応答したプロバイダーが示したモデル名です。`;
+    case "ko":
+      return `답한 제공자가 알려 준 이름이에요.`;
+    case "pt-BR":
+      return `Nomeado pelo provedor que respondeu.`;
+    case "zh-Hans":
+      return `由作答的服务商命名。`;
+    case "zh-Hant":
+      return `由回應的供應商命名。`;
+    case "en-XA":
+      return `[Ñáɱéð ƀý ţĥé þŕöṽîðéŕ ţĥáţ áñšŵéŕéð. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNamed by the provider that answered.\u202c`;
+  }
+  return `Named by the provider that answered.`;
+}
+
+export function settingsUsageAttributionRequested(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاسم هو النموذج الذي طلبه التطبيق؛ لم يذكر المزوّد أي نموذج أجاب.`;
+    case "de":
+      return `Benannt nach dem Modell, das die App angefragt hat; der Anbieter hat nicht gesagt, welches Modell geantwortet hat.`;
+    case "es":
+      return `Nombrado según el modelo que pidió la app; el proveedor no dijo qué modelo respondió.`;
+    case "fr":
+      return `Nommé d’après le modèle demandé par l’app ; le fournisseur n’a pas indiqué quel modèle a répondu.`;
+    case "ja":
+      return `アプリが要求したモデル名です。どのモデルが応答したかをプロバイダーは示していません。`;
+    case "ko":
+      return `앱이 요청한 모델의 이름이에요. 실제로 어떤 모델이 답했는지 제공자가 알려 주지 않았어요.`;
+    case "pt-BR":
+      return `Nomeado pelo modelo que o app pediu; o provedor não disse qual modelo respondeu.`;
+    case "zh-Hans":
+      return `按应用请求的模型命名；服务商没有说明是哪个模型作答。`;
+    case "zh-Hant":
+      return `依程式要求的模型命名；供應商沒有說明是哪個模型回應的。`;
+    case "en-XA":
+      return `[Ñáɱéð ƀý ţĥé ɱöðéļ ţĥé áþþ ášķéð ƒöŕ; ţĥé þŕöṽîðéŕ ðîð ñöţ šáý ŵĥîçĥ ɱöðéļ áñšŵéŕéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNamed by the model the app asked for; the provider did not say which model answered.\u202c`;
+  }
+  return `Named by the model the app asked for; the provider did not say which model answered.`;
+}
+
+export function settingsUsageAttributionRecorded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بعض السجلات أقدم من فصل النماذج بعضها عن بعض: تذكر النموذج المسجّل حينها، وقد تشمل مجاميع Claude الأقدم نماذج أخرى.`;
+    case "de":
+      return `Manche Einträge stammen aus der Zeit, bevor Modelle getrennt erfasst wurden: Sie nennen das damals erfasste Modell, und ältere Claude-Summen können andere Modelle enthalten.`;
+    case "es":
+      return `Algunos registros son de antes de que los modelos se guardaran por separado: nombran el modelo registrado entonces, y los totales antiguos de Claude pueden incluir otros modelos.`;
+    case "fr":
+      return `Certaines entrées datent d’avant la séparation des modèles : elles nomment le modèle enregistré à l’époque, et les anciens totaux Claude peuvent inclure d’autres modèles.`;
+    case "ja":
+      return `一部の記録はモデルを分けて記録する前のものです。当時記録されたモデル名を示しており、古い Claude の合計には他のモデルが含まれることがあります。`;
+    case "ko":
+      return `일부 기록은 모델을 따로 구분하기 전에 만들어졌어요. 그때 기록된 모델 이름을 쓰며, 예전 Claude 합계에는 다른 모델이 포함될 수 있어요.`;
+    case "pt-BR":
+      return `Alguns registros são de antes de os modelos serem guardados separadamente: eles nomeiam o modelo registrado na época, e totais antigos do Claude podem incluir outros modelos.`;
+    case "zh-Hans":
+      return `部分记录早于模型分开记录之前：它们写的是当时记录的模型，较早的 Claude 总计可能包含其他模型。`;
+    case "zh-Hant":
+      return `部分紀錄早於模型分開記錄之前：它們寫的是當時記錄的模型，較早的 Claude 總計可能包含其他模型。`;
+    case "en-XA":
+      return `[Šöɱé ŕéçöŕðš áŕé ƒŕöɱ ƀéƒöŕé ɱöðéļš ŵéŕé ķéþţ áþáŕţ: ţĥéý ñáɱé ţĥé ɱöðéļ ŕéçöŕðéð ţĥéñ, áñð öļðéŕ Çļáûðé ţöţáļš çáñ îñçļûðé öţĥéŕ ɱöðéļš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSome records are from before models were kept apart: they name the model recorded then, and older Claude totals can include other models.\u202c`;
+  }
+  return `Some records are from before models were kept apart: they name the model recorded then, and older Claude totals can include other models.`;
+}
+
+export function settingsUsagePriceListed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعتمد التقديرات على الأسعار المعلنة للنموذج وقت تسجيل كل رد.`;
+    case "de":
+      return `Schätzungen verwenden die Listenpreise des Modells zum Zeitpunkt, als jede Antwort erfasst wurde.`;
+    case "es":
+      return `Las estimaciones usan los precios publicados del modelo cuando se registró cada respuesta.`;
+    case "fr":
+      return `Les estimations utilisent les prix publiés du modèle au moment où chaque réponse a été enregistrée.`;
+    case "ja":
+      return `推定には、各応答を記録した時点でのモデルの公表価格を使っています。`;
+    case "ko":
+      return `추정은 각 응답이 기록될 때의 모델 공시 가격을 써요.`;
+    case "pt-BR":
+      return `As estimativas usam os preços de tabela do modelo quando cada resposta foi registrada.`;
+    case "zh-Hans":
+      return `估算使用记录每次回复时该模型的标价。`;
+    case "zh-Hant":
+      return `估計使用記錄每次回應時該模型的定價。`;
+    case "en-XA":
+      return `[Éšţîɱáţéš ûšé ţĥé ɱöðéļ'š ļîšţéð þŕîçéš ŵĥéñ éáçĥ ŕéšþöñšé ŵáš ŕéçöŕðéð. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimates use the model's listed prices when each response was recorded.\u202c`;
+  }
+  return `Estimates use the model's listed prices when each response was recorded.`;
+}
+
+export function settingsUsagePriceClaude(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التقديرات من Claude نفسه، لكل رد على حدة.`;
+    case "de":
+      return `Schätzungen stammen von Claude selbst, für jede Antwort erstellt.`;
+    case "es":
+      return `Las estimaciones son de Claude, hechas para cada respuesta.`;
+    case "fr":
+      return `Les estimations sont celles de Claude, faites pour chaque réponse.`;
+    case "ja":
+      return `推定は Claude 自身が応答ごとに出したものです。`;
+    case "ko":
+      return `추정은 Claude가 응답마다 직접 낸 값이에요.`;
+    case "pt-BR":
+      return `As estimativas são do próprio Claude, feitas para cada resposta.`;
+    case "zh-Hans":
+      return `估算由 Claude 自己为每次回复给出。`;
+    case "zh-Hant":
+      return `估計由 Claude 自己為每次回應提供。`;
+    case "en-XA":
+      return `[Éšţîɱáţéš áŕé Çļáûðé'š öŵñ, ɱáðé ƒöŕ éáçĥ ŕéšþöñšé. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimates are Claude's own, made for each response.\u202c`;
+  }
+  return `Estimates are Claude's own, made for each response.`;
+}
+
+export function settingsUsagePriceReported(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعتمد التقديرات على التكلفة التي أبلغ عنها المزوّد لكل رد.`;
+    case "de":
+      return `Schätzungen verwenden die Kosten, die der Anbieter für jede Antwort gemeldet hat.`;
+    case "es":
+      return `Las estimaciones usan el costo que informó el proveedor para cada respuesta.`;
+    case "fr":
+      return `Les estimations utilisent le coût indiqué par le fournisseur pour chaque réponse.`;
+    case "ja":
+      return `推定には、プロバイダーが応答ごとに報告した費用を使っています。`;
+    case "ko":
+      return `추정은 제공자가 응답마다 보고한 비용을 써요.`;
+    case "pt-BR":
+      return `As estimativas usam o custo que o provedor informou para cada resposta.`;
+    case "zh-Hans":
+      return `估算使用服务商为每次回复报告的费用。`;
+    case "zh-Hant":
+      return `估計使用供應商為每次回應回報的費用。`;
+    case "en-XA":
+      return `[Éšţîɱáţéš ûšé ţĥé çöšţ ţĥé þŕöṽîðéŕ ŕéþöŕţéð ƒöŕ éáçĥ ŕéšþöñšé. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimates use the cost the provider reported for each response.\u202c`;
+  }
+  return `Estimates use the cost the provider reported for each response.`;
+}
+
+export function settingsUsagePriceUnrecorded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم تحتفظ التقديرات الأقدم بمصدرها.`;
+    case "de":
+      return `Ältere Schätzungen haben ihre Quelle nicht behalten.`;
+    case "es":
+      return `Las estimaciones antiguas no guardaron su origen.`;
+    case "fr":
+      return `Les anciennes estimations n’ont pas gardé leur source.`;
+    case "ja":
+      return `以前の推定は出典を保存していません。`;
+    case "ko":
+      return `예전 추정은 출처를 남기지 않았어요.`;
+    case "pt-BR":
+      return `Estimativas antigas não guardaram a origem.`;
+    case "zh-Hans":
+      return `较早的估算没有保留来源。`;
+    case "zh-Hant":
+      return `較早的估計沒有保留來源。`;
+    case "en-XA":
+      return `[Öļðéŕ éšţîɱáţéš ðîð ñöţ ķééþ ţĥéîŕ šöûŕçé. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOlder estimates did not keep their source.\u202c`;
+  }
+  return `Older estimates did not keep their source.`;
+}
+
+export function settingsUsageProvenanceCache(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فئات الذاكرة المؤقتة منفصلة عن الإدخال غير المخزّن مؤقتًا؛ ويحسب المجموع كلًّا منها مرة واحدة.`;
+    case "de":
+      return `Cache-Kategorien zählen getrennt von nicht zwischengespeicherter Eingabe; die Summe zählt jede einmal.`;
+    case "es":
+      return `Las categorías de caché van aparte de la entrada sin caché; el total cuenta cada una una sola vez.`;
+    case "fr":
+      return `Les catégories de cache sont distinctes de l’entrée hors cache ; le total compte chacune une seule fois.`;
+    case "ja":
+      return `キャッシュのカテゴリはキャッシュされていない入力とは別です。合計ではそれぞれを一度だけ数えます。`;
+    case "ko":
+      return `캐시 항목은 캐시되지 않은 입력과 따로 세며, 합계는 각각을 한 번만 세요.`;
+    case "pt-BR":
+      return `As categorias de cache ficam separadas da entrada sem cache; o total conta cada uma só uma vez.`;
+    case "zh-Hans":
+      return `缓存类别与未缓存的输入分开计；总计中每项只算一次。`;
+    case "zh-Hant":
+      return `快取類別與未快取的輸入分開計算；總計中每項只算一次。`;
+    case "en-XA":
+      return `[Çáçĥé çáţéĝöŕîéš áŕé áþáŕţ ƒŕöɱ ûñçáçĥéð îñþûţ; ţĥé ţöţáļ çöûñţš éáçĥ öñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCache categories are apart from uncached input; the total counts each once.\u202c`;
+  }
+  return `Cache categories are apart from uncached input; the total counts each once.`;
+}
+
+export function settingsUsageProvenanceUnpriced(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوجد سجل لهذا النموذج له سعر، لذا لا تقدير له.`;
+    case "de":
+      return `Kein Eintrag dieses Modells hat einen Preis, deshalb gibt es keine Schätzung.`;
+    case "es":
+      return `Ningún registro de este modelo tiene precio, así que no tiene estimación.`;
+    case "fr":
+      return `Aucune entrée de ce modèle n’a de prix, il n’a donc pas d’estimation.`;
+    case "ja":
+      return `このモデルの記録にはどれも価格がないため、推定はありません。`;
+    case "ko":
+      return `이 모델의 기록에는 가격이 없어서 추정이 없어요.`;
+    case "pt-BR":
+      return `Nenhum registro deste modelo tem preço, então ele não tem estimativa.`;
+    case "zh-Hans":
+      return `这个模型的记录都没有价格，所以没有估算。`;
+    case "zh-Hant":
+      return `這個模型的紀錄都沒有價格，所以沒有估計。`;
+    case "en-XA":
+      return `[Ñö ŕéçöŕð öƒ ţĥîš ɱöðéļ ĥáš á þŕîçé, šö îţ ĥáš ñö éšţîɱáţé. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo record of this model has a price, so it has no estimate.\u202c`;
+  }
+  return `No record of this model has a price, so it has no estimate.`;
+}
+
+export function settingsUsagePricedSentence(input: { priced: string; records: string }): string {
+  const priced = input.priced;
+  const records = input.records;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${priced} من أصل ${records} سجل لها سعر.`;
+    case "de":
+      return `${priced} von ${records} Einträgen mit Preis.`;
+    case "es":
+      return `Registros con precio: ${priced} de ${records}.`;
+    case "fr":
+      return `Entrées avec prix : ${priced} sur ${records}.`;
+    case "ja":
+      return `${records}件の記録のうち${priced}件に価格があります。`;
+    case "ko":
+      return `기록 ${records}개 중 ${priced}개에 가격이 있어요.`;
+    case "pt-BR":
+      return `Registros com preço: ${priced} de ${records}.`;
+    case "zh-Hans":
+      return `${records} 条记录中有 ${priced} 条已定价。`;
+    case "zh-Hant":
+      return `${records} 筆紀錄中有 ${priced} 筆已計價。`;
+    case "en-XA":
+      return `[${priced} öƒ ${records} ŕéçöŕðš þŕîçéð. ~~~~~~~]`;
+    case "ar-XB":
+      return `${priced}\u202e of \u202c${records}\u202e records priced.\u202c`;
+  }
+  return `${priced} of ${records} records priced.`;
+}
+
+export function settingsUsageNoSplit(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوجد تقدير هنا مقسّم حسب الفئة.`;
+    case "de":
+      return `Keine Schätzung hier ist nach Kategorie aufgeteilt.`;
+    case "es":
+      return `Ninguna estimación de aquí está desglosada por categoría.`;
+    case "fr":
+      return `Aucune estimation ici n’est répartie par catégorie.`;
+    case "ja":
+      return `ここにある推定はどれもカテゴリ別に分かれていません。`;
+    case "ko":
+      return `여기 있는 추정은 항목별로 나뉘지 않아요.`;
+    case "pt-BR":
+      return `Nenhuma estimativa aqui está dividida por categoria.`;
+    case "zh-Hans":
+      return `这里的估算都没有按类别拆分。`;
+    case "zh-Hant":
+      return `這裡的估計都沒有依類別拆分。`;
+    case "en-XA":
+      return `[Ñö éšţîɱáţé ĥéŕé îš šþļîţ ƀý çáţéĝöŕý. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo estimate here is split by category.\u202c`;
+  }
+  return `No estimate here is split by category.`;
+}
+
+export function settingsUsageSplitFor(input: { priced: string; split: string }): string {
+  const priced = input.priced;
+  const split = input.split;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مقسّم حسب الفئة في ${split} من أصل ${priced} سجل له سعر.`;
+    case "de":
+      return `Nach Kategorie aufgeteilt für ${split} von ${priced} Einträgen mit Preis.`;
+    case "es":
+      return `Desglosado por categoría en ${split} de ${priced} registros con precio.`;
+    case "fr":
+      return `Répartition par catégorie pour ${split} des ${priced} entrées avec prix.`;
+    case "ja":
+      return `価格のある記録${priced}件のうち${split}件はカテゴリ別に分かれています。`;
+    case "ko":
+      return `가격 있는 기록 ${priced}개 중 ${split}개는 항목별로 나뉘어 있어요.`;
+    case "pt-BR":
+      return `Dividido por categoria em ${split} de ${priced} registros com preço.`;
+    case "zh-Hans":
+      return `${priced} 条已定价记录中有 ${split} 条按类别拆分。`;
+    case "zh-Hant":
+      return `${priced} 筆已計價紀錄中有 ${split} 筆依類別拆分。`;
+    case "en-XA":
+      return `[Šþļîţ ƀý çáţéĝöŕý ƒöŕ ${split} öƒ ${priced} þŕîçéð ŕéçöŕðš. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSplit by category for \u202c${split}\u202e of \u202c${priced}\u202e priced records.\u202c`;
+  }
+  return `Split by category for ${split} of ${priced} priced records.`;
+}
+
+export function settingsUsageKindPlan(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الخطط`;
+    case "de":
+      return `Pläne`;
+    case "es":
+      return `Planes`;
+    case "fr":
+      return `Plans`;
+    case "ja":
+      return `計画`;
+    case "ko":
+      return `계획`;
+    case "pt-BR":
+      return `Planos`;
+    case "zh-Hans":
+      return `计划`;
+    case "zh-Hant":
+      return `計畫`;
+    case "en-XA":
+      return `[Þļáñš ~~]`;
+    case "ar-XB":
+      return `\u202ePlans\u202c`;
+  }
+  return `Plans`;
+}
+
+export function settingsUsageKindResearch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البحث`;
+    case "de":
+      return `Recherche`;
+    case "es":
+      return `Investigación`;
+    case "fr":
+      return `Recherche`;
+    case "ja":
+      return `調査`;
+    case "ko":
+      return `조사`;
+    case "pt-BR":
+      return `Pesquisa`;
+    case "zh-Hans":
+      return `调研`;
+    case "zh-Hant":
+      return `研究`;
+    case "en-XA":
+      return `[Ŕéšéáŕçĥ ~~~]`;
+    case "ar-XB":
+      return `\u202eResearch\u202c`;
+  }
+  return `Research`;
+}
+
+export function settingsUsageKindRetrieval(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاستعلامات والشروح`;
+    case "de":
+      return `Nachschlagen und Erklärungen`;
+    case "es":
+      return `Consultas y explicaciones`;
+    case "fr":
+      return `Consultations et explications`;
+    case "ja":
+      return `調べものと説明`;
+    case "ko":
+      return `찾아보기와 설명`;
+    case "pt-BR":
+      return `Consultas e explicações`;
+    case "zh-Hans":
+      return `查询与解释`;
+    case "zh-Hant":
+      return `查詢與說明`;
+    case "en-XA":
+      return `[Ļööķûþš áñð éẋþļáñáţîöñš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLookups and explanations\u202c`;
+  }
+  return `Lookups and explanations`;
+}
+
+export function settingsUsageKindReproduce(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة إنتاج المشكلات`;
+    case "de":
+      return `Nachstellen von Problemen`;
+    case "es":
+      return `Reproducción de problemas`;
+    case "fr":
+      return `Reproduction de problèmes`;
+    case "ja":
+      return `問題の再現`;
+    case "ko":
+      return `문제 재현`;
+    case "pt-BR":
+      return `Reprodução de problemas`;
+    case "zh-Hans":
+      return `问题复现`;
+    case "zh-Hant":
+      return `問題重現`;
+    case "en-XA":
+      return `[Îššûé ŕéþŕöðûçţîöñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIssue reproduction\u202c`;
+  }
+  return `Issue reproduction`;
+}
+
+export function settingsUsageKindImplement(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التنفيذ`;
+    case "de":
+      return `Umsetzung`;
+    case "es":
+      return `Implementación`;
+    case "fr":
+      return `Réalisation`;
+    case "ja":
+      return `実装`;
+    case "ko":
+      return `구현`;
+    case "pt-BR":
+      return `Implementação`;
+    case "zh-Hans":
+      return `实现`;
+    case "zh-Hant":
+      return `實作`;
+    case "en-XA":
+      return `[Îɱþļéɱéñţáţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eImplementation\u202c`;
+  }
+  return `Implementation`;
+}
+
+export function settingsUsageKindFix(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإصلاحات`;
+    case "de":
+      return `Korrekturen`;
+    case "es":
+      return `Correcciones`;
+    case "fr":
+      return `Corrections`;
+    case "ja":
+      return `修正`;
+    case "ko":
+      return `수정`;
+    case "pt-BR":
+      return `Correções`;
+    case "zh-Hans":
+      return `修复`;
+    case "zh-Hant":
+      return `修正`;
+    case "en-XA":
+      return `[Ƒîẋéš ~~]`;
+    case "ar-XB":
+      return `\u202eFixes\u202c`;
+  }
+  return `Fixes`;
+}
+
+export function settingsUsageKindChore(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصيانة`;
+    case "de":
+      return `Wartung`;
+    case "es":
+      return `Mantenimiento`;
+    case "fr":
+      return `Entretien`;
+    case "ja":
+      return `メンテナンス`;
+    case "ko":
+      return `유지 관리`;
+    case "pt-BR":
+      return `Manutenção`;
+    case "zh-Hans":
+      return `维护`;
+    case "zh-Hant":
+      return `維護`;
+    case "en-XA":
+      return `[Ṁáîñţéñáñçé ~~~~]`;
+    case "ar-XB":
+      return `\u202eMaintenance\u202c`;
+  }
+  return `Maintenance`;
+}
+
+export function settingsUsageKindReview(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المراجعات`;
+    case "de":
+      return `Reviews`;
+    case "es":
+      return `Revisiones`;
+    case "fr":
+      return `Revues`;
+    case "ja":
+      return `レビュー`;
+    case "ko":
+      return `검토`;
+    case "pt-BR":
+      return `Revisões`;
+    case "zh-Hans":
+      return `审查`;
+    case "zh-Hant":
+      return `審查`;
+    case "en-XA":
+      return `[Ŕéṽîéŵš ~~~]`;
+    case "ar-XB":
+      return `\u202eReviews\u202c`;
+  }
+  return `Reviews`;
+}
+
+export function settingsUsageKindOperation(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العمليات`;
+    case "de":
+      return `Betrieb`;
+    case "es":
+      return `Operaciones`;
+    case "fr":
+      return `Opérations`;
+    case "ja":
+      return `運用`;
+    case "ko":
+      return `운영`;
+    case "pt-BR":
+      return `Operações`;
+    case "zh-Hans":
+      return `运维`;
+    case "zh-Hant":
+      return `維運`;
+    case "en-XA":
+      return `[Öþéŕáţîöñš ~~~~]`;
+    case "ar-XB":
+      return `\u202eOperations\u202c`;
+  }
+  return `Operations`;
+}
+
+export function settingsUsageKindOther(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمل آخر للمهام`;
+    case "de":
+      return `Andere Aufgabenarbeit`;
+    case "es":
+      return `Otro trabajo de tareas`;
+    case "fr":
+      return `Autre travail des tâches`;
+    case "ja":
+      return `その他のタスク作業`;
+    case "ko":
+      return `기타 작업`;
+    case "pt-BR":
+      return `Outro trabalho de tarefas`;
+    case "zh-Hans":
+      return `其他任务工作`;
+    case "zh-Hant":
+      return `其他任務工作`;
+    case "en-XA":
+      return `[Öţĥéŕ ţášķ ŵöŕķ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOther task work\u202c`;
+  }
+  return `Other task work`;
+}
+
+export function settingsUsageProjectUnavailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المشروع غير متاح`;
+    case "de":
+      return `Projekt nicht verfügbar`;
+    case "es":
+      return `Proyecto no disponible`;
+    case "fr":
+      return `Projet indisponible`;
+    case "ja":
+      return `プロジェクトを利用できません`;
+    case "ko":
+      return `프로젝트를 알 수 없음`;
+    case "pt-BR":
+      return `Projeto indisponível`;
+    case "zh-Hans":
+      return `项目不可用`;
+    case "zh-Hant":
+      return `無法使用專案`;
+    case "en-XA":
+      return `[Þŕöĵéçţ ûñáṽáîļáƀļé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eProject unavailable\u202c`;
+  }
+  return `Project unavailable`;
+}
+
+export function settingsUsageFigureInput(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإدخال`;
+    case "de":
+      return `Eingabe`;
+    case "es":
+      return `Entrada`;
+    case "fr":
+      return `Entrée`;
+    case "ja":
+      return `入力`;
+    case "ko":
+      return `입력`;
+    case "pt-BR":
+      return `Entrada`;
+    case "zh-Hans":
+      return `输入`;
+    case "zh-Hant":
+      return `輸入`;
+    case "en-XA":
+      return `[Îñþûţ ~~]`;
+    case "ar-XB":
+      return `\u202eInput\u202c`;
+  }
+  return `Input`;
+}
+
+export function settingsUsageFigureOutput(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإخراج`;
+    case "de":
+      return `Ausgabe`;
+    case "es":
+      return `Salida`;
+    case "fr":
+      return `Sortie`;
+    case "ja":
+      return `出力`;
+    case "ko":
+      return `출력`;
+    case "pt-BR":
+      return `Saída`;
+    case "zh-Hans":
+      return `输出`;
+    case "zh-Hant":
+      return `輸出`;
+    case "en-XA":
+      return `[Öûţþûţ ~~]`;
+    case "ar-XB":
+      return `\u202eOutput\u202c`;
+  }
+  return `Output`;
+}
+
+export function settingsUsageFigureCacheRead(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قراءة الذاكرة المؤقتة`;
+    case "de":
+      return `Cache lesen`;
+    case "es":
+      return `Lectura de caché`;
+    case "fr":
+      return `Lecture du cache`;
+    case "ja":
+      return `キャッシュ読み取り`;
+    case "ko":
+      return `캐시 읽기`;
+    case "pt-BR":
+      return `Leitura de cache`;
+    case "zh-Hans":
+      return `缓存读取`;
+    case "zh-Hant":
+      return `快取讀取`;
+    case "en-XA":
+      return `[Çáçĥé ŕéáð ~~~~]`;
+    case "ar-XB":
+      return `\u202eCache read\u202c`;
+  }
+  return `Cache read`;
+}
+
+export function settingsUsageFigureCacheWrite(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كتابة الذاكرة المؤقتة`;
+    case "de":
+      return `Cache schreiben`;
+    case "es":
+      return `Escritura en caché`;
+    case "fr":
+      return `Écriture dans le cache`;
+    case "ja":
+      return `キャッシュ書き込み`;
+    case "ko":
+      return `캐시 쓰기`;
+    case "pt-BR":
+      return `Gravação em cache`;
+    case "zh-Hans":
+      return `缓存写入`;
+    case "zh-Hant":
+      return `快取寫入`;
+    case "en-XA":
+      return `[Çáçĥé ŵŕîţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eCache write\u202c`;
+  }
+  return `Cache write`;
+}
+
+export function settingsUsageFigureTotal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المجموع`;
+    case "de":
+      return `Summe`;
+    case "es":
+      return `Total`;
+    case "fr":
+      return `Total`;
+    case "ja":
+      return `合計`;
+    case "ko":
+      return `합계`;
+    case "pt-BR":
+      return `Total`;
+    case "zh-Hans":
+      return `总计`;
+    case "zh-Hant":
+      return `總計`;
+    case "en-XA":
+      return `[Ţöţáļ ~~]`;
+    case "ar-XB":
+      return `\u202eTotal\u202c`;
+  }
+  return `Total`;
+}
+
+export function settingsUsageTaskNoTokens(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُبلغ أي سجل لهذه المهمة عن رموز.`;
+    case "de":
+      return `Kein Eintrag dieser Aufgabe hat Tokens gemeldet.`;
+    case "es":
+      return `Ningún registro de esta tarea informó tokens.`;
+    case "fr":
+      return `Aucune entrée de cette tâche n’a indiqué de jetons.`;
+    case "ja":
+      return `このタスクの記録にはトークンの報告がありません。`;
+    case "ko":
+      return `이 작업의 기록에는 보고된 토큰이 없어요.`;
+    case "pt-BR":
+      return `Nenhum registro desta tarefa informou tokens.`;
+    case "zh-Hans":
+      return `这个任务的记录都没有报告 token。`;
+    case "zh-Hant":
+      return `這項任務的紀錄都沒有回報 token。`;
+    case "en-XA":
+      return `[Ñö ŕéçöŕð öƒ ţĥîš ţášķ ŕéþöŕţéð ţöķéñš. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo record of this task reported tokens.\u202c`;
+  }
+  return `No record of this task reported tokens.`;
+}
+
+export function settingsUsageTaskTokensPartial(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحسب المجموع الرموز المسجّلة فقط؛ لم يُبلَّغ عن بعض الفئات.`;
+    case "de":
+      return `Die Summe zählt nur erfasste Tokens; manche Kategorien wurden nicht gemeldet.`;
+    case "es":
+      return `El total cuenta solo los tokens registrados; algunas categorías no se informaron.`;
+    case "fr":
+      return `Le total ne compte que les jetons enregistrés ; certaines catégories n’ont pas été indiquées.`;
+    case "ja":
+      return `合計は記録されたトークンのみです。報告されていないカテゴリがあります。`;
+    case "ko":
+      return `합계는 기록된 토큰만 세요. 보고되지 않은 항목이 있어요.`;
+    case "pt-BR":
+      return `O total conta só os tokens registrados; algumas categorias não foram informadas.`;
+    case "zh-Hans":
+      return `总计只包含已记录的 token；部分类别没有报告。`;
+    case "zh-Hant":
+      return `總計只包含已記錄的 token；部分類別沒有回報。`;
+    case "en-XA":
+      return `[Ţĥé ţöţáļ çöûñţš ŕéçöŕðéð ţöķéñš öñļý; šöɱé çáţéĝöŕîéš ŵéŕé ñöţ ŕéþöŕţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe total counts recorded tokens only; some categories were not reported.\u202c`;
+  }
+  return `The total counts recorded tokens only; some categories were not reported.`;
+}
+
+export function settingsUsageTaskUnpriced(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوجد سجل لهذه المهمة له سعر، لذا لا تقدير لها.`;
+    case "de":
+      return `Kein Eintrag dieser Aufgabe hat einen Preis, deshalb gibt es keine Schätzung.`;
+    case "es":
+      return `Ningún registro de esta tarea tiene precio, así que no tiene estimación.`;
+    case "fr":
+      return `Aucune entrée de cette tâche n’a de prix, elle n’a donc pas d’estimation.`;
+    case "ja":
+      return `このタスクの記録にはどれも価格がないため、推定はありません。`;
+    case "ko":
+      return `이 작업의 기록에는 가격이 없어서 추정이 없어요.`;
+    case "pt-BR":
+      return `Nenhum registro desta tarefa tem preço, então ela não tem estimativa.`;
+    case "zh-Hans":
+      return `这个任务的记录都没有价格，所以没有估算。`;
+    case "zh-Hant":
+      return `這項任務的紀錄都沒有價格，所以沒有估計。`;
+    case "en-XA":
+      return `[Ñö ŕéçöŕð öƒ ţĥîš ţášķ ĥáš á þŕîçé, šö îţ ĥáš ñö éšţîɱáţé. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo record of this task has a price, so it has no estimate.\u202c`;
+  }
+  return `No record of this task has a price, so it has no estimate.`;
+}
+
+export function settingsUsageTaskLeavesOut(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستثني المجموع النشاط الذي لا سعر له.`;
+    case "de":
+      return `Die Summe lässt Aktivität ohne Preis weg.`;
+    case "es":
+      return `El total deja fuera la actividad sin precio.`;
+    case "fr":
+      return `Le total laisse de côté l’activité sans prix.`;
+    case "ja":
+      return `合計には価格のないアクティビティが含まれていません。`;
+    case "ko":
+      return `합계에는 가격 없는 활동이 빠져 있어요.`;
+    case "pt-BR":
+      return `O total deixa de fora a atividade sem preço.`;
+    case "zh-Hans":
+      return `总计不含未定价的活动。`;
+    case "zh-Hant":
+      return `總計不含未計價的活動。`;
+    case "en-XA":
+      return `[Ţĥé ţöţáļ ļéáṽéš öûţ ûñþŕîçéð áçţîṽîţý. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe total leaves out unpriced activity.\u202c`;
+  }
+  return `The total leaves out unpriced activity.`;
+}
+
+export function settingsUsageTaskLeavesOutNoSplit(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستثني المجموع النشاط الذي لا سعر له. لا يوجد تقدير هنا مقسّم حسب الفئة.`;
+    case "de":
+      return `Die Summe lässt Aktivität ohne Preis weg. Keine Schätzung hier ist nach Kategorie aufgeteilt.`;
+    case "es":
+      return `El total deja fuera la actividad sin precio. Ninguna estimación de aquí está desglosada por categoría.`;
+    case "fr":
+      return `Le total laisse de côté l’activité sans prix. Aucune estimation ici n’est répartie par catégorie.`;
+    case "ja":
+      return `合計には価格のないアクティビティが含まれていません。ここにある推定はどれもカテゴリ別に分かれていません。`;
+    case "ko":
+      return `합계에는 가격 없는 활동이 빠져 있어요. 여기 있는 추정은 항목별로 나뉘지 않아요.`;
+    case "pt-BR":
+      return `O total deixa de fora a atividade sem preço. Nenhuma estimativa aqui está dividida por categoria.`;
+    case "zh-Hans":
+      return `总计不含未定价的活动。这里的估算都没有按类别拆分。`;
+    case "zh-Hant":
+      return `總計不含未計價的活動。這裡的估計都沒有依類別拆分。`;
+    case "en-XA":
+      return `[Ţĥé ţöţáļ ļéáṽéš öûţ ûñþŕîçéð áçţîṽîţý. Ñö éšţîɱáţé ĥéŕé îš šþļîţ ƀý çáţéĝöŕý. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe total leaves out unpriced activity. No estimate here is split by category.\u202c`;
+  }
+  return `The total leaves out unpriced activity. No estimate here is split by category.`;
+}
+
+export function settingsUsageTaskFewerRecords(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تغطي تقديرات الفئات سجلات أقل من المجموع.`;
+    case "de":
+      return `Die Schätzungen pro Kategorie decken weniger Einträge ab als die Summe.`;
+    case "es":
+      return `Las estimaciones por categoría cubren menos registros que el total.`;
+    case "fr":
+      return `Les estimations par catégorie couvrent moins d’entrées que le total.`;
+    case "ja":
+      return `カテゴリ別の推定は、合計より少ない記録が対象です。`;
+    case "ko":
+      return `항목별 추정은 합계보다 적은 기록을 다뤄요.`;
+    case "pt-BR":
+      return `As estimativas por categoria cobrem menos registros que o total.`;
+    case "zh-Hans":
+      return `类别估算覆盖的记录少于总计。`;
+    case "zh-Hant":
+      return `類別估計涵蓋的紀錄少於總計。`;
+    case "en-XA":
+      return `[Çáţéĝöŕý éšţîɱáţéš çöṽéŕ ƒéŵéŕ ŕéçöŕðš ţĥáñ ţĥé ţöţáļ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCategory estimates cover fewer records than the total.\u202c`;
+  }
+  return `Category estimates cover fewer records than the total.`;
+}
+
+export function settingsUsageTaskLeavesOutFewerRecords(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستثني المجموع النشاط الذي لا سعر له. تغطي تقديرات الفئات سجلات أقل من المجموع.`;
+    case "de":
+      return `Die Summe lässt Aktivität ohne Preis weg. Die Schätzungen pro Kategorie decken weniger Einträge ab als die Summe.`;
+    case "es":
+      return `El total deja fuera la actividad sin precio. Las estimaciones por categoría cubren menos registros que el total.`;
+    case "fr":
+      return `Le total laisse de côté l’activité sans prix. Les estimations par catégorie couvrent moins d’entrées que le total.`;
+    case "ja":
+      return `合計には価格のないアクティビティが含まれていません。カテゴリ別の推定は、合計より少ない記録が対象です。`;
+    case "ko":
+      return `합계에는 가격 없는 활동이 빠져 있어요. 항목별 추정은 합계보다 적은 기록을 다뤄요.`;
+    case "pt-BR":
+      return `O total deixa de fora a atividade sem preço. As estimativas por categoria cobrem menos registros que o total.`;
+    case "zh-Hans":
+      return `总计不含未定价的活动。类别估算覆盖的记录少于总计。`;
+    case "zh-Hant":
+      return `總計不含未計價的活動。類別估計涵蓋的紀錄少於總計。`;
+    case "en-XA":
+      return `[Ţĥé ţöţáļ ļéáṽéš öûţ ûñþŕîçéð áçţîṽîţý. Çáţéĝöŕý éšţîɱáţéš çöṽéŕ ƒéŵéŕ ŕéçöŕðš ţĥáñ ţĥé ţöţáļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe total leaves out unpriced activity. Category estimates cover fewer records than the total.\u202c`;
+  }
+  return `The total leaves out unpriced activity. Category estimates cover fewer records than the total.`;
+}
+
+export function settingsUsageCreated(input: { when: string }): string {
+  const when = input.when;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُنشئت ${when}`;
+    case "de":
+      return `Erstellt ${when}`;
+    case "es":
+      return `Creada: ${when}`;
+    case "fr":
+      return `Créée : ${when}`;
+    case "ja":
+      return `${when} に作成`;
+    case "ko":
+      return `만든 때: ${when}`;
+    case "pt-BR":
+      return `Criada: ${when}`;
+    case "zh-Hans":
+      return `创建于 ${when}`;
+    case "zh-Hant":
+      return `建立於 ${when}`;
+    case "en-XA":
+      return `[Çŕéáţéð ${when} ~~~]`;
+    case "ar-XB":
+      return `\u202eCreated \u202c${when}`;
+  }
+  return `Created ${when}`;
+}
+
+export function settingsUsageTaskCountOne(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض مهمة واحدة`;
+    case "de":
+      return `1 Aufgabe angezeigt`;
+    case "es":
+      return `1 tarea mostrada`;
+    case "fr":
+      return `1 tâche affichée`;
+    case "ja":
+      return `1件のタスクを表示`;
+    case "ko":
+      return `작업 1개 표시`;
+    case "pt-BR":
+      return `1 tarefa mostrada`;
+    case "zh-Hans":
+      return `显示 1 个任务`;
+    case "zh-Hant":
+      return `顯示 1 項任務`;
+    case "en-XA":
+      return `[1 ţášķ šĥöŵñ ~~~~]`;
+    case "ar-XB":
+      return `\u202e1 task shown\u202c`;
+  }
+  return `1 task shown`;
+}
+
+export function settingsUsageTaskCountAll(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض كل المهام (${count})`;
+    case "de":
+      return `Alle ${count} Aufgaben angezeigt`;
+    case "es":
+      return `Se muestran las ${count} tareas`;
+    case "fr":
+      return `Les ${count} tâches sont affichées`;
+    case "ja":
+      return `全${count}件のタスクを表示`;
+    case "ko":
+      return `작업 ${count}개 모두 표시`;
+    case "pt-BR":
+      return `Todas as ${count} tarefas mostradas`;
+    case "zh-Hans":
+      return `显示全部 ${count} 个任务`;
+    case "zh-Hant":
+      return `顯示全部 ${count} 項任務`;
+    case "en-XA":
+      return `[Åļļ ${count} ţášķš šĥöŵñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAll \u202c${count}\u202e tasks shown\u202c`;
+  }
+  return `All ${count} tasks shown`;
+}
+
+export function settingsUsageTaskCountSome(input: { count: string; shown: string }): string {
+  const count = input.count;
+  const shown = input.shown;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض ${shown} من أصل ${count} مهمة`;
+    case "de":
+      return `${shown} von ${count} Aufgaben angezeigt`;
+    case "es":
+      return `Tareas mostradas: ${shown} de ${count}`;
+    case "fr":
+      return `Tâches affichées : ${shown} sur ${count}`;
+    case "ja":
+      return `${count}件中${shown}件のタスクを表示`;
+    case "ko":
+      return `작업 ${count}개 중 ${shown}개 표시`;
+    case "pt-BR":
+      return `Tarefas mostradas: ${shown} de ${count}`;
+    case "zh-Hans":
+      return `显示 ${count} 个任务中的 ${shown} 个`;
+    case "zh-Hant":
+      return `顯示 ${count} 項任務中的 ${shown} 項`;
+    case "en-XA":
+      return `[Šĥöŵîñĝ ${shown} öƒ ${count} ţášķš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShowing \u202c${shown}\u202e of \u202c${count}\u202e tasks\u202c`;
+  }
+  return `Showing ${shown} of ${count} tasks`;
+}
+
+export function settingsUsageMilestoneNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم تنتهِ أي مهمة بعد`;
+    case "de":
+      return `Noch keine Aufgaben erledigt`;
+    case "es":
+      return `Todavía no hay tareas terminadas`;
+    case "fr":
+      return `Aucune tâche terminée pour l’instant`;
+    case "ja":
+      return `完了したタスクはまだありません`;
+    case "ko":
+      return `아직 완료된 작업 없음`;
+    case "pt-BR":
+      return `Nenhuma tarefa concluída ainda`;
+    case "zh-Hans":
+      return `还没有完成的任务`;
+    case "zh-Hant":
+      return `還沒有完成的任務`;
+    case "en-XA":
+      return `[Ñö ţášķš ƒîñîšĥéð ýéţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo tasks finished yet\u202c`;
+  }
+  return `No tasks finished yet`;
+}
+
+export function settingsUsageMilestoneFinishedOne(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `انتهت مهمة واحدة`;
+    case "de":
+      return `1 Aufgabe erledigt`;
+    case "es":
+      return `1 tarea terminada`;
+    case "fr":
+      return `1 tâche terminée`;
+    case "ja":
+      return `1件のタスクが完了`;
+    case "ko":
+      return `작업 1개 완료`;
+    case "pt-BR":
+      return `1 tarefa concluída`;
+    case "zh-Hans":
+      return `已完成 1 个任务`;
+    case "zh-Hant":
+      return `已完成 1 項任務`;
+    case "en-XA":
+      return `[1 ţášķ ƒîñîšĥéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202e1 task finished\u202c`;
+  }
+  return `1 task finished`;
+}
+
+export function settingsUsageMilestoneFinished(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهام المنتهية: ${count}`;
+    case "de":
+      return `${count} Aufgaben erledigt`;
+    case "es":
+      return `${count} tareas terminadas`;
+    case "fr":
+      return `${count} tâches terminées`;
+    case "ja":
+      return `${count}件のタスクが完了`;
+    case "ko":
+      return `작업 ${count}개 완료`;
+    case "pt-BR":
+      return `${count} tarefas concluídas`;
+    case "zh-Hans":
+      return `已完成 ${count} 个任务`;
+    case "zh-Hant":
+      return `已完成 ${count} 項任務`;
+    case "en-XA":
+      return `[${count} ţášķš ƒîñîšĥéð ~~~~~]`;
+    case "ar-XB":
+      return `${count}\u202e tasks finished\u202c`;
+  }
+  return `${count} tasks finished`;
+}
+
+export function settingsUsageMilestoneReached(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلغت ${count}`;
+    case "de":
+      return `${count} erreicht`;
+    case "es":
+      return `Alcanzado: ${count}`;
+    case "fr":
+      return `Atteint : ${count}`;
+    case "ja":
+      return `${count}件に到達`;
+    case "ko":
+      return `${count}개 달성`;
+    case "pt-BR":
+      return `Alcançado: ${count}`;
+    case "zh-Hans":
+      return `已达到 ${count}`;
+    case "zh-Hant":
+      return `已達到 ${count}`;
+    case "en-XA":
+      return `[Ŕéáçĥéð ${count} ~~~]`;
+    case "ar-XB":
+      return `\u202eReached \u202c${count}`;
+  }
+  return `Reached ${count}`;
+}
+
+export function settingsUsageMilestoneFirst(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أول إنجاز عند 1`;
+    case "de":
+      return `Erster Meilenstein bei 1`;
+    case "es":
+      return `Primer hito: 1`;
+    case "fr":
+      return `Premier palier à 1`;
+    case "ja":
+      return `最初の節目は1件`;
+    case "ko":
+      return `첫 이정표는 1개`;
+    case "pt-BR":
+      return `Primeiro marco em 1`;
+    case "zh-Hans":
+      return `第一个里程碑是 1`;
+    case "zh-Hant":
+      return `第一個里程碑是 1`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱîļéšţöñé áţ 1 ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst milestone at 1\u202c`;
+  }
+  return `First milestone at 1`;
+}
+
+export function settingsUsageMilestoneNext(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإنجاز التالي عند ${count}`;
+    case "de":
+      return `Nächster Meilenstein bei ${count}`;
+    case "es":
+      return `Próximo hito: ${count}`;
+    case "fr":
+      return `Prochain palier à ${count}`;
+    case "ja":
+      return `次の節目は${count}件`;
+    case "ko":
+      return `다음 이정표는 ${count}개`;
+    case "pt-BR":
+      return `Próximo marco em ${count}`;
+    case "zh-Hans":
+      return `下一个里程碑是 ${count}`;
+    case "zh-Hant":
+      return `下一個里程碑是 ${count}`;
+    case "en-XA":
+      return `[Ñéẋţ ɱîļéšţöñé áţ ${count} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNext milestone at \u202c${count}`;
+  }
+  return `Next milestone at ${count}`;
+}
+
+export function settingsUsageMilestoneTitle(input: { finished: string; where: string }): string {
+  const finished = input.finished;
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${finished} · ${where}`;
+    case "de":
+      return `${finished} · ${where}`;
+    case "es":
+      return `${finished} · ${where}`;
+    case "fr":
+      return `${finished} · ${where}`;
+    case "ja":
+      return `${finished} · ${where}`;
+    case "ko":
+      return `${finished} · ${where}`;
+    case "pt-BR":
+      return `${finished} · ${where}`;
+    case "zh-Hans":
+      return `${finished} · ${where}`;
+    case "zh-Hant":
+      return `${finished} · ${where}`;
+    case "en-XA":
+      return `[${finished} · ${where} ~]`;
+    case "ar-XB":
+      return `${finished}\u202e · \u202c${where}`;
+  }
+  return `${finished} · ${where}`;
+}
+
+export function settingsUsageMilestoneNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل السجل المحفوظ. التقدم يأتي من العمل المنتهي، لا من مزيد من الرموز.`;
+    case "de":
+      return `Der gesamte aufbewahrte Verlauf. Fortschritt entsteht durch erledigte Arbeit, nicht durch mehr Tokens.`;
+    case "es":
+      return `Todo el historial guardado. El progreso viene del trabajo terminado, no de más tokens.`;
+    case "fr":
+      return `Tout l’historique conservé. La progression vient du travail terminé, pas de jetons supplémentaires.`;
+    case "ja":
+      return `保存されているすべての履歴です。進み具合は完了した作業で決まり、トークンの量では決まりません。`;
+    case "ko":
+      return `보관된 전체 기록이에요. 진행은 토큰을 더 쓰는 것이 아니라 완료한 작업에서 나와요.`;
+    case "pt-BR":
+      return `Todo o histórico guardado. O progresso vem do trabalho concluído, não de mais tokens.`;
+    case "zh-Hans":
+      return `全部保留的历史。进展来自完成的工作，而不是更多的 token。`;
+    case "zh-Hant":
+      return `所有保留的歷史。進度來自完成的工作，而不是更多 token。`;
+    case "en-XA":
+      return `[Åļļ ŕéţáîñéð ĥîšţöŕý. Þŕöĝŕéšš çöɱéš ƒŕöɱ ƒîñîšĥéð ŵöŕķ, ñöţ ɱöŕé ţöķéñš. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAll retained history. Progress comes from finished work, not more tokens.\u202c`;
+  }
+  return `All retained history. Progress comes from finished work, not more tokens.`;
+}
+
+export function settingsUsageTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاستخدام`;
+    case "de":
+      return `Nutzung`;
+    case "es":
+      return `Uso`;
+    case "fr":
+      return `Utilisation`;
+    case "ja":
+      return `使用量`;
+    case "ko":
+      return `사용량`;
+    case "pt-BR":
+      return `Uso`;
+    case "zh-Hans":
+      return `用量`;
+    case "zh-Hant":
+      return `用量`;
+    case "en-XA":
+      return `[Ûšáĝé ~~]`;
+    case "ar-XB":
+      return `\u202eUsage\u202c`;
+  }
+  return `Usage`;
+}
+
+export function settingsUsageLead(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نائب القبطان وطاقمك، عبر كل المشاريع.`;
+    case "de":
+      return `Dein erster Offizier und deine Crew, über alle Projekte hinweg.`;
+    case "es":
+      return `Tu primer oficial y tu tripulación, en todos los proyectos.`;
+    case "fr":
+      return `Votre second et votre équipage, sur tous vos projets.`;
+    case "ja":
+      return `一等航海士と乗組員の、すべてのプロジェクトにわたる使用量です。`;
+    case "ko":
+      return `모든 프로젝트에 걸친 일등항해사와 선원들의 사용량이에요.`;
+    case "pt-BR":
+      return `Seu imediato e sua tripulação, em todos os projetos.`;
+    case "zh-Hans":
+      return `你的大副和船员们，涵盖所有项目。`;
+    case "zh-Hant":
+      return `你的大副和船員，涵蓋所有專案。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé áñð ýöûŕ çŕéŵ, áçŕöšš éṽéŕý þŕöĵéçţ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate and your crew, across every project.\u202c`;
+  }
+  return `Your first mate and your crew, across every project.`;
+}
+
+export function settingsUsageShowAs(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض الاستخدام بـ`;
+    case "de":
+      return `Nutzung anzeigen als`;
+    case "es":
+      return `Mostrar el uso en`;
+    case "fr":
+      return `Afficher l’utilisation en`;
+    case "ja":
+      return `使用量の表示単位`;
+    case "ko":
+      return `사용량 표시 단위`;
+    case "pt-BR":
+      return `Mostrar o uso em`;
+    case "zh-Hans":
+      return `用量显示为`;
+    case "zh-Hant":
+      return `用量顯示為`;
+    case "en-XA":
+      return `[Šĥöŵ ûšáĝé áš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eShow usage as\u202c`;
+  }
+  return `Show usage as`;
+}
+
+export function settingsUsagePeriodLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المدة`;
+    case "de":
+      return `Zeitraum`;
+    case "es":
+      return `Período`;
+    case "fr":
+      return `Période`;
+    case "ja":
+      return `期間`;
+    case "ko":
+      return `기간`;
+    case "pt-BR":
+      return `Período`;
+    case "zh-Hans":
+      return `时段`;
+    case "zh-Hant":
+      return `期間`;
+    case "en-XA":
+      return `[Þéŕîöð ~~]`;
+    case "ar-XB":
+      return `\u202ePeriod\u202c`;
+  }
+  return `Period`;
+}
+
+export function settingsUsageWorkLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العمل`;
+    case "de":
+      return `Arbeit`;
+    case "es":
+      return `Trabajo`;
+    case "fr":
+      return `Travail`;
+    case "ja":
+      return `作業`;
+    case "ko":
+      return `작업 범위`;
+    case "pt-BR":
+      return `Trabalho`;
+    case "zh-Hans":
+      return `工作`;
+    case "zh-Hant":
+      return `工作`;
+    case "en-XA":
+      return `[Ŵöŕķ ~~]`;
+    case "ar-XB":
+      return `\u202eWork\u202c`;
+  }
+  return `Work`;
+}
+
+export function settingsUsageReadFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة الاستخدام الآن.`;
+    case "de":
+      return `Die Nutzung konnte gerade nicht gelesen werden.`;
+    case "es":
+      return `No se pudo leer el uso en este momento.`;
+    case "fr":
+      return `L’utilisation n’a pas pu être lue pour l’instant.`;
+    case "ja":
+      return `現在、使用量を読み取れませんでした。`;
+    case "ko":
+      return `지금은 사용량을 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler o uso agora.`;
+    case "zh-Hans":
+      return `暂时无法读取用量。`;
+    case "zh-Hant":
+      return `目前無法讀取用量。`;
+    case "en-XA":
+      return `[Ûšáĝé çöûļð ñöţ ƀé ŕéáð ĵûšţ ñöŵ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUsage could not be read just now.\u202c`;
+  }
+  return `Usage could not be read just now.`;
+}
+
+export function settingsUsageReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ قراءة الاستخدام المسجّل…`;
+    case "de":
+      return `Erfasste Nutzung wird gelesen …`;
+    case "es":
+      return `Leyendo el uso registrado…`;
+    case "fr":
+      return `Lecture de l’utilisation enregistrée…`;
+    case "ja":
+      return `記録された使用量を読み取り中…`;
+    case "ko":
+      return `기록된 사용량 읽는 중…`;
+    case "pt-BR":
+      return `Lendo o uso registrado…`;
+    case "zh-Hans":
+      return `正在读取已记录的用量…`;
+    case "zh-Hant":
+      return `正在讀取已記錄的用量…`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ ŕéçöŕðéð ûšáĝé… ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReading recorded usage…\u202c`;
+  }
+  return `Reading recorded usage…`;
+}
+
+export function settingsUsageEmptyTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا نشاط مسجّل`;
+    case "de":
+      return `Keine erfasste Aktivität`;
+    case "es":
+      return `Sin actividad registrada`;
+    case "fr":
+      return `Aucune activité enregistrée`;
+    case "ja":
+      return `記録されたアクティビティはありません`;
+    case "ko":
+      return `기록된 활동 없음`;
+    case "pt-BR":
+      return `Nenhuma atividade registrada`;
+    case "zh-Hans":
+      return `没有记录的活动`;
+    case "zh-Hant":
+      return `沒有記錄的活動`;
+    case "en-XA":
+      return `[Ñö ŕéçöŕðéð áçţîṽîţý ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo recorded activity\u202c`;
+  }
+  return `No recorded activity`;
+}
+
+export function settingsUsageEmptyLead(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يظهر الاستخدام بعد أن يُنهي نائب القبطان أو فرد من الطاقم ردًّا من نموذج.`;
+    case "de":
+      return `Die Nutzung erscheint, sobald dein erster Offizier oder ein Crewmitglied eine Modellantwort abschließt.`;
+    case "es":
+      return `El uso aparece cuando el primer oficial o un tripulante termina una respuesta de un modelo.`;
+    case "fr":
+      return `L’utilisation apparaît dès que le second ou un équipier termine une réponse d’un modèle.`;
+    case "ja":
+      return `一等航海士か乗組員がモデルの応答を1回終えると、使用量が表示されます。`;
+    case "ko":
+      return `일등항해사나 선원이 모델 응답을 하나 끝내면 사용량이 나타나요.`;
+    case "pt-BR":
+      return `O uso aparece depois que o imediato ou um tripulante termina uma resposta de um modelo.`;
+    case "zh-Hans":
+      return `大副或船员完成一次模型回复后，这里会显示用量。`;
+    case "zh-Hant":
+      return `大副或船員完成一次模型回應後，這裡就會顯示用量。`;
+    case "en-XA":
+      return `[Ûšáĝé áþþéáŕš áƒţéŕ ţĥé ƒîŕšţ ɱáţé öŕ á çŕéŵɱáţé ƒîñîšĥéš á ɱöðéļ ŕéšþöñšé. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUsage appears after the first mate or a crewmate finishes a model response.\u202c`;
+  }
+  return `Usage appears after the first mate or a crewmate finishes a model response.`;
+}
+
+export function settingsUsageEmptyNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خلوّ هذا المكان يعني عدم وجود سجلات، لا صفرًا مُقاسًا.`;
+    case "de":
+      return `Nichts hier heißt: keine Einträge, nicht eine gemessene Null.`;
+    case "es":
+      return `Que no haya nada aquí significa que no hay registros, no que se midió un cero.`;
+    case "fr":
+      return `Rien ici signifie qu’il n’y a aucune entrée, pas qu’un zéro a été mesuré.`;
+    case "ja":
+      return `何も表示されないのは記録がないということで、ゼロと測定されたわけではありません。`;
+    case "ko":
+      return `여기가 비어 있으면 기록이 없다는 뜻이지, 0으로 측정됐다는 뜻은 아니에요.`;
+    case "pt-BR":
+      return `Nada aqui significa que não há registros, não que foi medido zero.`;
+    case "zh-Hans":
+      return `这里为空表示没有记录，而不是测得为零。`;
+    case "zh-Hant":
+      return `這裡空白代表沒有紀錄，不是測得為零。`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ ĥéŕé ɱéáñš ñö ŕéçöŕðš, ñöţ á ɱéášûŕéð žéŕö. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing here means no records, not a measured zero.\u202c`;
+  }
+  return `Nothing here means no records, not a measured zero.`;
+}
+
+export function settingsUsageWhereLegend(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يشمل كل مجموع فرعي استدعاءات النماذج التي أُجريت لمهامه.`;
+    case "de":
+      return `Jede Zwischensumme enthält die Modellaufrufe für ihre Aufgaben.`;
+    case "es":
+      return `Cada subtotal incluye las llamadas a modelos hechas para sus tareas.`;
+    case "fr":
+      return `Chaque sous-total inclut les appels aux modèles faits pour ses tâches.`;
+    case "ja":
+      return `各小計には、そのタスクのために行ったモデルの呼び出しが含まれます。`;
+    case "ko":
+      return `각 소계에는 해당 작업을 위해 호출한 모델 사용량이 포함돼요.`;
+    case "pt-BR":
+      return `Cada subtotal inclui as chamadas de modelo feitas para as tarefas dele.`;
+    case "zh-Hans":
+      return `每个小计都包含为其任务发起的模型调用。`;
+    case "zh-Hant":
+      return `每個小計都包含為其任務發出的模型呼叫。`;
+    case "en-XA":
+      return `[Éáçĥ šûƀţöţáļ îñçļûðéš ţĥé ɱöðéļ çáļļš ɱáðé ƒöŕ îţš ţášķš. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEach subtotal includes the model calls made for its tasks.\u202c`;
+  }
+  return `Each subtotal includes the model calls made for its tasks.`;
+}
+
+export function settingsUsageDailyHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاستخدام اليومي`;
+    case "de":
+      return `Tägliche Nutzung`;
+    case "es":
+      return `Uso diario`;
+    case "fr":
+      return `Utilisation quotidienne`;
+    case "ja":
+      return `日別の使用量`;
+    case "ko":
+      return `일별 사용량`;
+    case "pt-BR":
+      return `Uso diário`;
+    case "zh-Hans":
+      return `每日用量`;
+    case "zh-Hant":
+      return `每日用量`;
+    case "en-XA":
+      return `[Ðáîļý ûšáĝé ~~~~]`;
+    case "ar-XB":
+      return `\u202eDaily usage\u202c`;
+  }
+  return `Daily usage`;
+}
+
+export function settingsUsageDailyPartial(input: { unit: string }): string {
+  const unit = input.unit;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${unit} · اليوم غير مكتمل`;
+    case "de":
+      return `${unit} · Heute ist unvollständig`;
+    case "es":
+      return `${unit} · Hoy está incompleto`;
+    case "fr":
+      return `${unit} · Aujourd’hui est incomplet`;
+    case "ja":
+      return `${unit} · 今日はまだ途中です`;
+    case "ko":
+      return `${unit} · 오늘은 아직 진행 중`;
+    case "pt-BR":
+      return `${unit} · Hoje está incompleto`;
+    case "zh-Hans":
+      return `${unit} · 今天尚未结束`;
+    case "zh-Hant":
+      return `${unit} · 今天尚未結束`;
+    case "en-XA":
+      return `[${unit} · Ţöðáý îš þáŕţîáļ ~~~~~~~]`;
+    case "ar-XB":
+      return `${unit}\u202e · Today is partial\u202c`;
+  }
+  return `${unit} · Today is partial`;
+}
+
+export function settingsUsageDailyChartTokens(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مجاميع الرموز اليومية للمدة المحددة`;
+    case "de":
+      return `Tägliche Token-Summen für den gewählten Zeitraum`;
+    case "es":
+      return `Totales diarios de tokens del período seleccionado`;
+    case "fr":
+      return `Totaux quotidiens de jetons pour la période sélectionnée`;
+    case "ja":
+      return `選択した期間の日別トークン合計`;
+    case "ko":
+      return `선택한 기간의 일별 토큰 합계`;
+    case "pt-BR":
+      return `Totais diários de tokens no período selecionado`;
+    case "zh-Hans":
+      return `所选时段内每日的 token 总计`;
+    case "zh-Hant":
+      return `所選期間內每日的 token 總計`;
+    case "en-XA":
+      return `[Ðáîļý ţöķéñ ţöţáļš ƒöŕ ţĥé šéļéçţéð þéŕîöð ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDaily token totals for the selected period\u202c`;
+  }
+  return `Daily token totals for the selected period`;
+}
+
+export function settingsUsageDailyChartUsd(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مجاميع الدولارات التقديرية اليومية للمدة المحددة`;
+    case "de":
+      return `Tägliche geschätzte Dollar-Summen für den gewählten Zeitraum`;
+    case "es":
+      return `Totales diarios estimados en dólares del período seleccionado`;
+    case "fr":
+      return `Totaux quotidiens estimés en dollars pour la période sélectionnée`;
+    case "ja":
+      return `選択した期間の日別推定ドル合計`;
+    case "ko":
+      return `선택한 기간의 일별 추정 달러 합계`;
+    case "pt-BR":
+      return `Totais diários estimados em dólares no período selecionado`;
+    case "zh-Hans":
+      return `所选时段内每日的估算美元总计`;
+    case "zh-Hant":
+      return `所選期間內每日的估計美元總計`;
+    case "en-XA":
+      return `[Ðáîļý éšţîɱáţéð ðöļļáŕ ţöţáļš ƒöŕ ţĥé šéļéçţéð þéŕîöð ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDaily estimated dollar totals for the selected period\u202c`;
+  }
+  return `Daily estimated dollar totals for the selected period`;
+}
+
+export function settingsUsageToday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اليوم`;
+    case "de":
+      return `Heute`;
+    case "es":
+      return `Hoy`;
+    case "fr":
+      return `Aujourd’hui`;
+    case "ja":
+      return `今日`;
+    case "ko":
+      return `오늘`;
+    case "pt-BR":
+      return `Hoje`;
+    case "zh-Hans":
+      return `今天`;
+    case "zh-Hant":
+      return `今天`;
+    case "en-XA":
+      return `[Ţöðáý ~~]`;
+    case "ar-XB":
+      return `\u202eToday\u202c`;
+  }
+  return `Today`;
+}
+
+export function settingsUsageDayValue(input: { date: string; value: string }): string {
+  const date = input.date;
+  const value = input.value;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${date}: ${value}`;
+    case "de":
+      return `${date}: ${value}`;
+    case "es":
+      return `${date}: ${value}`;
+    case "fr":
+      return `${date} : ${value}`;
+    case "ja":
+      return `${date}：${value}`;
+    case "ko":
+      return `${date}: ${value}`;
+    case "pt-BR":
+      return `${date}: ${value}`;
+    case "zh-Hans":
+      return `${date}：${value}`;
+    case "zh-Hant":
+      return `${date}：${value}`;
+    case "en-XA":
+      return `[${date}: ${value} ~]`;
+    case "ar-XB":
+      return `${date}\u202e: \u202c${value}`;
+  }
+  return `${date}: ${value}`;
+}
+
+export function settingsUsageBarsPriced(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعرض الأعمدة النشاط الذي له سعر فقط. النشاط الذي لا سعر له مستثنى.`;
+    case "de":
+      return `Die Balken zeigen nur Aktivität mit Preis. Aktivität ohne Preis ist weggelassen.`;
+    case "es":
+      return `Las barras muestran solo la actividad con precio. La actividad sin precio queda fuera.`;
+    case "fr":
+      return `Les barres ne montrent que l’activité avec prix. L’activité sans prix est laissée de côté.`;
+    case "ja":
+      return `棒には価格のあるアクティビティのみを表示します。価格のないアクティビティは含まれません。`;
+    case "ko":
+      return `막대는 가격 있는 활동만 보여 줘요. 가격 없는 활동은 빠져요.`;
+    case "pt-BR":
+      return `As barras mostram só a atividade com preço. A atividade sem preço fica de fora.`;
+    case "zh-Hans":
+      return `柱形只显示已定价的活动，未定价的活动不计入。`;
+    case "zh-Hant":
+      return `長條只顯示已計價的活動，未計價的活動不列入。`;
+    case "en-XA":
+      return `[Ɓáŕš šĥöŵ öñļý þŕîçéð áçţîṽîţý. Ûñþŕîçéð áçţîṽîţý îš ļéƒţ öûţ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBars show only priced activity. Unpriced activity is left out.\u202c`;
+  }
+  return `Bars show only priced activity. Unpriced activity is left out.`;
+}
+
+export function settingsUsageOpenModel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتح نموذجًا لترى استخدامه المسجّل.`;
+    case "de":
+      return `Öffne ein Modell, um seine erfasste Nutzung zu sehen.`;
+    case "es":
+      return `Abre un modelo para ver su uso registrado.`;
+    case "fr":
+      return `Ouvrez un modèle pour voir son utilisation enregistrée.`;
+    case "ja":
+      return `モデルを開くと、記録された使用量が表示されます。`;
+    case "ko":
+      return `모델을 열면 기록된 사용량을 볼 수 있어요.`;
+    case "pt-BR":
+      return `Abra um modelo para ver o uso registrado dele.`;
+    case "zh-Hans":
+      return `打开一个模型，查看它的已记录用量。`;
+    case "zh-Hant":
+      return `開啟一個模型，查看它的已記錄用量。`;
+    case "en-XA":
+      return `[Öþéñ á ɱöðéļ ţö šéé îţš ŕéçöŕðéð ûšáĝé. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen a model to see its recorded usage.\u202c`;
+  }
+  return `Open a model to see its recorded usage.`;
+}
+
+export function settingsUsageDailyValues(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `القيم اليومية`;
+    case "de":
+      return `Tageswerte`;
+    case "es":
+      return `Valores diarios`;
+    case "fr":
+      return `Valeurs quotidiennes`;
+    case "ja":
+      return `日別の値`;
+    case "ko":
+      return `일별 값`;
+    case "pt-BR":
+      return `Valores diários`;
+    case "zh-Hans":
+      return `每日数值`;
+    case "zh-Hant":
+      return `每日數值`;
+    case "en-XA":
+      return `[Ðáîļý ṽáļûéš ~~~~]`;
+    case "ar-XB":
+      return `\u202eDaily values\u202c`;
+  }
+  return `Daily values`;
+}
+
+export function settingsUsageLocalDate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التاريخ المحلي`;
+    case "de":
+      return `Lokales Datum`;
+    case "es":
+      return `Fecha local`;
+    case "fr":
+      return `Date locale`;
+    case "ja":
+      return `現地の日付`;
+    case "ko":
+      return `현지 날짜`;
+    case "pt-BR":
+      return `Data local`;
+    case "zh-Hans":
+      return `本地日期`;
+    case "zh-Hant":
+      return `當地日期`;
+    case "en-XA":
+      return `[Ļöçáļ ðáţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal date\u202c`;
+  }
+  return `Local date`;
+}
+
+export function settingsUsageModelsUsd(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدولارات التقديرية لكل نموذج`;
+    case "de":
+      return `Geschätzte Dollar pro Modell`;
+    case "es":
+      return `Dólares estimados por modelo`;
+    case "fr":
+      return `Dollars estimés par modèle`;
+    case "ja":
+      return `モデル別の推定ドル`;
+    case "ko":
+      return `모델별 추정 달러`;
+    case "pt-BR":
+      return `Dólares estimados por modelo`;
+    case "zh-Hans":
+      return `每个模型的估算美元`;
+    case "zh-Hant":
+      return `每個模型的估計美元`;
+    case "en-XA":
+      return `[Éšţîɱáţéð ðöļļáŕš þéŕ ɱöðéļ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEstimated dollars per model\u202c`;
+  }
+  return `Estimated dollars per model`;
+}
+
+export function settingsUsageModelsTokens(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الرموز لكل نموذج`;
+    case "de":
+      return `Tokens pro Modell`;
+    case "es":
+      return `Tokens por modelo`;
+    case "fr":
+      return `Jetons par modèle`;
+    case "ja":
+      return `モデル別のトークン`;
+    case "ko":
+      return `모델별 토큰`;
+    case "pt-BR":
+      return `Tokens por modelo`;
+    case "zh-Hans":
+      return `每个模型的 token`;
+    case "zh-Hant":
+      return `每個模型的 token`;
+    case "en-XA":
+      return `[Ţöķéñš þéŕ ɱöðéļ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTokens per model\u202c`;
+  }
+  return `Tokens per model`;
+}
+
+export function settingsUsageWhereHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أين ذهب`;
+    case "de":
+      return `Wofür es verwendet wurde`;
+    case "es":
+      return `A dónde fue`;
+    case "fr":
+      return `Où c’est allé`;
+    case "ja":
+      return `使われた先`;
+    case "ko":
+      return `어디에 쓰였는지`;
+    case "pt-BR":
+      return `Para onde foi`;
+    case "zh-Hans":
+      return `用在了哪里`;
+    case "zh-Hant":
+      return `用在哪裡`;
+    case "en-XA":
+      return `[Ŵĥéŕé îţ ŵéñţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhere it went\u202c`;
+  }
+  return `Where it went`;
+}
+
+export function settingsUsageWhereFirstmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نائب القبطان`;
+    case "de":
+      return `Erster Offizier`;
+    case "es":
+      return `Primer oficial`;
+    case "fr":
+      return `Second`;
+    case "ja":
+      return `一等航海士`;
+    case "ko":
+      return `일등항해사`;
+    case "pt-BR":
+      return `Imediato`;
+    case "zh-Hans":
+      return `大副`;
+    case "zh-Hant":
+      return `大副`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate\u202c`;
+  }
+  return `First mate`;
+}
+
+export function settingsUsageWhereFirstmateNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `محادثتك`;
+    case "de":
+      return `Deine Unterhaltung`;
+    case "es":
+      return `Tu conversación`;
+    case "fr":
+      return `Votre conversation`;
+    case "ja":
+      return `あなたとの会話`;
+    case "ko":
+      return `선장님과의 대화`;
+    case "pt-BR":
+      return `Sua conversa`;
+    case "zh-Hans":
+      return `你的对话`;
+    case "zh-Hant":
+      return `你的對話`;
+    case "en-XA":
+      return `[Ýöûŕ çöñṽéŕšáţîöñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour conversation\u202c`;
+  }
+  return `Your conversation`;
+}
+
+export function settingsUsageSubtotal(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المجموع الفرعي`;
+    case "de":
+      return `Zwischensumme`;
+    case "es":
+      return `Subtotal`;
+    case "fr":
+      return `Sous-total`;
+    case "ja":
+      return `小計`;
+    case "ko":
+      return `소계`;
+    case "pt-BR":
+      return `Subtotal`;
+    case "zh-Hans":
+      return `小计`;
+    case "zh-Hant":
+      return `小計`;
+    case "en-XA":
+      return `[Šûƀţöţáļ ~~~]`;
+    case "ar-XB":
+      return `\u202eSubtotal\u202c`;
+  }
+  return `Subtotal`;
+}
+
+export function settingsUsageWhereOther(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمل آخر`;
+    case "de":
+      return `Andere Arbeit`;
+    case "es":
+      return `Otro trabajo`;
+    case "fr":
+      return `Autre travail`;
+    case "ja":
+      return `その他の作業`;
+    case "ko":
+      return `기타 작업`;
+    case "pt-BR":
+      return `Outro trabalho`;
+    case "zh-Hans":
+      return `其他工作`;
+    case "zh-Hant":
+      return `其他工作`;
+    case "en-XA":
+      return `[Öţĥéŕ ŵöŕķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eOther work\u202c`;
+  }
+  return `Other work`;
+}
+
+export function settingsUsageWhereOtherNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا مهمة متاحة`;
+    case "de":
+      return `Keine Aufgabe verfügbar`;
+    case "es":
+      return `Ninguna tarea disponible`;
+    case "fr":
+      return `Aucune tâche disponible`;
+    case "ja":
+      return `該当するタスクなし`;
+    case "ko":
+      return `해당 작업 없음`;
+    case "pt-BR":
+      return `Nenhuma tarefa disponível`;
+    case "zh-Hans":
+      return `没有可用的任务`;
+    case "zh-Hant":
+      return `沒有可用的任務`;
+    case "en-XA":
+      return `[Ñö ţášķ áṽáîļáƀļé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo task available\u202c`;
+  }
+  return `No task available`;
+}
+
+export function settingsUsageModelDetails(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تفاصيل ${model}`;
+    case "de":
+      return `Details zu ${model}`;
+    case "es":
+      return `Detalles de ${model}`;
+    case "fr":
+      return `Détails de ${model}`;
+    case "ja":
+      return `${model} の詳細`;
+    case "ko":
+      return `${model} 자세히`;
+    case "pt-BR":
+      return `Detalhes de ${model}`;
+    case "zh-Hans":
+      return `${model} 详情`;
+    case "zh-Hant":
+      return `${model} 詳細資料`;
+    case "en-XA":
+      return `[${model} ðéţáîļš ~~~]`;
+    case "ar-XB":
+      return `${model}\u202e details\u202c`;
+  }
+  return `${model} details`;
+}
+
+export function settingsUsageModelBreakdownTokens(input: { line: string }): string {
+  const line = input.line;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${line} · تفصيل الرموز`;
+    case "de":
+      return `${line} · Aufschlüsselung der Tokens`;
+    case "es":
+      return `${line} · Desglose de tokens`;
+    case "fr":
+      return `${line} · Répartition des jetons`;
+    case "ja":
+      return `${line} · トークンの内訳`;
+    case "ko":
+      return `${line} · 토큰 내역`;
+    case "pt-BR":
+      return `${line} · Detalhamento de tokens`;
+    case "zh-Hans":
+      return `${line} · token 明细`;
+    case "zh-Hant":
+      return `${line} · token 明細`;
+    case "en-XA":
+      return `[${line} · Ţöķéñ ƀŕéáķðöŵñ ~~~~~~]`;
+    case "ar-XB":
+      return `${line}\u202e · Token breakdown\u202c`;
+  }
+  return `${line} · Token breakdown`;
+}
+
+export function settingsUsageModelBreakdownUsd(input: { line: string }): string {
+  const line = input.line;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${line} · تفصيل الدولارات التقديرية`;
+    case "de":
+      return `${line} · Aufschlüsselung in geschätzten USD`;
+    case "es":
+      return `${line} · Desglose estimado en USD`;
+    case "fr":
+      return `${line} · Répartition estimée en USD`;
+    case "ja":
+      return `${line} · 推定ドルの内訳`;
+    case "ko":
+      return `${line} · 추정 USD 내역`;
+    case "pt-BR":
+      return `${line} · Detalhamento estimado em USD`;
+    case "zh-Hans":
+      return `${line} · 估算美元明细`;
+    case "zh-Hant":
+      return `${line} · 估計美元明細`;
+    case "en-XA":
+      return `[${line} · Éšţîɱáţéð ÛŠÐ ƀŕéáķðöŵñ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `${line}\u202e · Estimated USD breakdown\u202c`;
+  }
+  return `${line} · Estimated USD breakdown`;
+}
+
+export function settingsUsageCloseDetails(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إغلاق التفاصيل`;
+    case "de":
+      return `Details schließen`;
+    case "es":
+      return `Cerrar detalles`;
+    case "fr":
+      return `Fermer les détails`;
+    case "ja":
+      return `詳細を閉じる`;
+    case "ko":
+      return `자세히 닫기`;
+    case "pt-BR":
+      return `Fechar detalhes`;
+    case "zh-Hans":
+      return `关闭详情`;
+    case "zh-Hant":
+      return `關閉詳細資料`;
+    case "en-XA":
+      return `[Çļöšé ðéţáîļš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eClose details\u202c`;
+  }
+  return `Close details`;
+}
+
+export function settingsUsageItsWork(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمله`;
+    case "de":
+      return `Seine Arbeit`;
+    case "es":
+      return `Su trabajo`;
+    case "fr":
+      return `Son travail`;
+    case "ja":
+      return `その作業`;
+    case "ko":
+      return `이 모델의 작업`;
+    case "pt-BR":
+      return `O trabalho dele`;
+    case "zh-Hans":
+      return `它的工作`;
+    case "zh-Hant":
+      return `它的工作`;
+    case "en-XA":
+      return `[Îţš ŵöŕķ ~~~]`;
+    case "ar-XB":
+      return `\u202eIts work\u202c`;
+  }
+  return `Its work`;
+}
+
+export function settingsUsageRecentHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهام الأخيرة`;
+    case "de":
+      return `Letzte Aufgaben`;
+    case "es":
+      return `Tareas recientes`;
+    case "fr":
+      return `Tâches récentes`;
+    case "ja":
+      return `最近のタスク`;
+    case "ko":
+      return `최근 작업`;
+    case "pt-BR":
+      return `Tarefas recentes`;
+    case "zh-Hans":
+      return `最近的任务`;
+    case "zh-Hant":
+      return `最近的任務`;
+    case "en-XA":
+      return `[Ŕéçéñţ ţášķš ~~~~]`;
+    case "ar-XB":
+      return `\u202eRecent tasks\u202c`;
+  }
+  return `Recent tasks`;
+}
+
+export function settingsUsageRecentLead(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الأحدث أولًا · المقادير في المدة المحددة`;
+    case "de":
+      return `Neueste Aufgaben zuerst · Beträge im gewählten Zeitraum`;
+    case "es":
+      return `Las tareas más nuevas primero · Cantidades del período seleccionado`;
+    case "fr":
+      return `Les plus récentes d’abord · Montants sur la période sélectionnée`;
+    case "ja":
+      return `新しいタスクから表示 · 金額は選択した期間のもの`;
+    case "ko":
+      return `최신 작업부터 · 선택한 기간의 양`;
+    case "pt-BR":
+      return `Tarefas mais novas primeiro · Valores no período selecionado`;
+    case "zh-Hans":
+      return `最新的任务在前 · 金额为所选时段内`;
+    case "zh-Hant":
+      return `最新的任務在前 · 金額為所選期間內`;
+    case "en-XA":
+      return `[Ñéŵéšţ ţášķš ƒîŕšţ · Åɱöûñţš îñ ţĥé šéļéçţéð þéŕîöð ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNewest tasks first · Amounts in the selected period\u202c`;
+  }
+  return `Newest tasks first · Amounts in the selected period`;
+}
+
+export function settingsUsageRecentTokensLegend(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يشمل الإدخال الرموز المخزّنة مؤقتًا. يحسب المجموع كل فئة مرة واحدة.`;
+    case "de":
+      return `Eingabe enthält keine zwischengespeicherten Tokens. Die Summe zählt jede Kategorie einmal.`;
+    case "es":
+      return `La entrada excluye los tokens en caché. El total cuenta cada categoría una sola vez.`;
+    case "fr":
+      return `L’entrée exclut les jetons en cache. Le total compte chaque catégorie une seule fois.`;
+    case "ja":
+      return `入力にはキャッシュされたトークンは含まれません。合計では各カテゴリを一度だけ数えます。`;
+    case "ko":
+      return `입력에는 캐시된 토큰이 빠져 있어요. 합계는 각 항목을 한 번만 세요.`;
+    case "pt-BR":
+      return `A entrada exclui tokens em cache. O total conta cada categoria só uma vez.`;
+    case "zh-Hans":
+      return `输入不含缓存的 token。总计中每个类别只算一次。`;
+    case "zh-Hant":
+      return `輸入不含快取的 token。總計中每個類別只算一次。`;
+    case "en-XA":
+      return `[Îñþûţ éẋçļûðéš çáçĥéð ţöķéñš. Ţöţáļ çöûñţš éáçĥ çáţéĝöŕý öñçé. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInput excludes cached tokens. Total counts each category once.\u202c`;
+  }
+  return `Input excludes cached tokens. Total counts each category once.`;
+}
+
+export function settingsUsageRecentUsdLegend(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعتمد تقديرات الفئات على الأسعار المسجّلة فقط. قد تختلف تغطيتها عن المجموع.`;
+    case "de":
+      return `Schätzungen pro Kategorie verwenden nur erfasste Preise. Ihre Abdeckung kann von der Summe abweichen.`;
+    case "es":
+      return `Las estimaciones por categoría usan solo precios registrados. Su cobertura puede ser distinta de la del total.`;
+    case "fr":
+      return `Les estimations par catégorie n’utilisent que des prix enregistrés. Leur couverture peut différer de celle du total.`;
+    case "ja":
+      return `カテゴリ別の推定には記録された価格のみを使います。対象範囲が合計と異なる場合があります。`;
+    case "ko":
+      return `항목별 추정은 기록된 가격만 써요. 그래서 다루는 범위가 합계와 다를 수 있어요.`;
+    case "pt-BR":
+      return `As estimativas por categoria usam só preços registrados. A cobertura delas pode ser diferente da do total.`;
+    case "zh-Hans":
+      return `类别估算只使用已记录的价格，覆盖范围可能与总计不同。`;
+    case "zh-Hant":
+      return `類別估計只使用已記錄的價格，涵蓋範圍可能與總計不同。`;
+    case "en-XA":
+      return `[Çáţéĝöŕý éšţîɱáţéš ûšé ŕéçöŕðéð þŕîçéš öñļý. Ţĥéîŕ çöṽéŕáĝé çáñ ðîƒƒéŕ ƒŕöɱ ţĥé ţöţáļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCategory estimates use recorded prices only. Their coverage can differ from the total.\u202c`;
+  }
+  return `Category estimates use recorded prices only. Their coverage can differ from the total.`;
+}
+
+export function settingsUsageRecentFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة المهام الأخيرة الآن.`;
+    case "de":
+      return `Die letzten Aufgaben konnten gerade nicht gelesen werden.`;
+    case "es":
+      return `No se pudieron leer las tareas recientes en este momento.`;
+    case "fr":
+      return `Les tâches récentes n’ont pas pu être lues pour l’instant.`;
+    case "ja":
+      return `現在、最近のタスクを読み取れませんでした。`;
+    case "ko":
+      return `지금은 최근 작업을 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler as tarefas recentes agora.`;
+    case "zh-Hans":
+      return `暂时无法读取最近的任务。`;
+    case "zh-Hant":
+      return `目前無法讀取最近的任務。`;
+    case "en-XA":
+      return `[Ŕéçéñţ ţášķš çöûļð ñöţ ƀé ŕéáð ĵûšţ ñöŵ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecent tasks could not be read just now.\u202c`;
+  }
+  return `Recent tasks could not be read just now.`;
+}
+
+export function settingsUsageRecentReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ قراءة المهام الأخيرة…`;
+    case "de":
+      return `Letzte Aufgaben werden gelesen …`;
+    case "es":
+      return `Leyendo las tareas recientes…`;
+    case "fr":
+      return `Lecture des tâches récentes…`;
+    case "ja":
+      return `最近のタスクを読み取り中…`;
+    case "ko":
+      return `최근 작업 읽는 중…`;
+    case "pt-BR":
+      return `Lendo as tarefas recentes…`;
+    case "zh-Hans":
+      return `正在读取最近的任务…`;
+    case "zh-Hant":
+      return `正在讀取最近的任務…`;
+    case "en-XA":
+      return `[Ŕéáðîñĝ ŕéçéñţ ţášķš… ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReading recent tasks…\u202c`;
+  }
+  return `Reading recent tasks…`;
+}
+
+export function settingsUsageRecentEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا استخدام للمهام في هذا الاختيار.`;
+    case "de":
+      return `Keine Aufgabennutzung in dieser Auswahl.`;
+    case "es":
+      return `No hay uso de tareas en esta selección.`;
+    case "fr":
+      return `Aucune utilisation de tâche dans cette sélection.`;
+    case "ja":
+      return `この選択にはタスクの使用量がありません。`;
+    case "ko":
+      return `이 선택에는 작업 사용량이 없어요.`;
+    case "pt-BR":
+      return `Nenhum uso de tarefas nesta seleção.`;
+    case "zh-Hans":
+      return `此选择中没有任务用量。`;
+    case "zh-Hant":
+      return `這個選擇中沒有任務用量。`;
+    case "en-XA":
+      return `[Ñö ţášķ ûšáĝé îñ ţĥîš šéļéçţîöñ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo task usage in this selection.\u202c`;
+  }
+  return `No task usage in this selection.`;
+}
+
+export function settingsUsageTaskColumn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهمة`;
+    case "de":
+      return `Aufgabe`;
+    case "es":
+      return `Tarea`;
+    case "fr":
+      return `Tâche`;
+    case "ja":
+      return `タスク`;
+    case "ko":
+      return `작업`;
+    case "pt-BR":
+      return `Tarefa`;
+    case "zh-Hans":
+      return `任务`;
+    case "zh-Hant":
+      return `任務`;
+    case "en-XA":
+      return `[Ţášķ ~~]`;
+    case "ar-XB":
+      return `\u202eTask\u202c`;
+  }
+  return `Task`;
+}
+
+export function settingsUsageRecentList(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهام الأخيرة`;
+    case "de":
+      return `Letzte Aufgaben`;
+    case "es":
+      return `Tareas recientes`;
+    case "fr":
+      return `Tâches récentes`;
+    case "ja":
+      return `最近のタスク`;
+    case "ko":
+      return `최근 작업`;
+    case "pt-BR":
+      return `Tarefas recentes`;
+    case "zh-Hans":
+      return `最近的任务`;
+    case "zh-Hant":
+      return `最近的任務`;
+    case "en-XA":
+      return `[Ŕéçéñţ ţášķš ~~~~]`;
+    case "ar-XB":
+      return `\u202eRecent tasks\u202c`;
+  }
+  return `Recent tasks`;
+}
+
+export function settingsUsageMoreFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة مزيد من المهام الآن.`;
+    case "de":
+      return `Weitere Aufgaben konnten gerade nicht gelesen werden.`;
+    case "es":
+      return `No se pudieron leer más tareas en este momento.`;
+    case "fr":
+      return `Les tâches suivantes n’ont pas pu être lues pour l’instant.`;
+    case "ja":
+      return `現在、これ以上のタスクを読み取れませんでした。`;
+    case "ko":
+      return `지금은 작업을 더 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler mais tarefas agora.`;
+    case "zh-Hans":
+      return `暂时无法读取更多任务。`;
+    case "zh-Hant":
+      return `目前無法讀取更多任務。`;
+    case "en-XA":
+      return `[Ṁöŕé ţášķš çöûļð ñöţ ƀé ŕéáð ĵûšţ ñöŵ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMore tasks could not be read just now.\u202c`;
+  }
+  return `More tasks could not be read just now.`;
+}
+
+export function settingsUsageSeeMore(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عرض المزيد`;
+    case "de":
+      return `Mehr anzeigen`;
+    case "es":
+      return `Ver más`;
+    case "fr":
+      return `Voir plus`;
+    case "ja":
+      return `さらに表示`;
+    case "ko":
+      return `더 보기`;
+    case "pt-BR":
+      return `Ver mais`;
+    case "zh-Hans":
+      return `查看更多`;
+    case "zh-Hant":
+      return `查看更多`;
+    case "en-XA":
+      return `[Šéé ɱöŕé ~~~]`;
+    case "ar-XB":
+      return `\u202eSee more\u202c`;
+  }
+  return `See more`;
+}
+
+export function settingsUsageTryAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة المحاولة`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Intentar de nuevo`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `再試行`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `再試一次`;
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTry again\u202c`;
+  }
+  return `Try again`;
+}
+
+export function settingsAutomationPickEvent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر ما يحدث.`;
+    case "de":
+      return `Wähl, was passiert.`;
+    case "es":
+      return `Elige qué pasa.`;
+    case "fr":
+      return `Choisissez ce qui se passe.`;
+    case "ja":
+      return `何が起きたときかを選んでください。`;
+    case "ko":
+      return `어떤 일이 일어날 때인지 고르세요.`;
+    case "pt-BR":
+      return `Escolha o que acontece.`;
+    case "zh-Hans":
+      return `选择发生什么。`;
+    case "zh-Hant":
+      return `選擇發生什麼事。`;
+    case "en-XA":
+      return `[Þîçķ ŵĥáţ ĥáþþéñš. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePick what happens.\u202c`;
+  }
+  return `Pick what happens.`;
+}
+
+export function settingsAutomationRepeatsAtMost(input: { minutes: string }): string {
+  const minutes = input.minutes;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تتكرر عمليات التشغيل مرة كل ${minutes} دقيقة على الأكثر.`;
+    case "de":
+      return `Wiederholungen laufen höchstens alle ${minutes} Minuten.`;
+    case "es":
+      return `Las repeticiones se ejecutan como mucho cada ${minutes} minutos.`;
+    case "fr":
+      return `Les répétitions s’exécutent au plus toutes les ${minutes} minutes.`;
+    case "ja":
+      return `繰り返しの間隔は${minutes}分以上です。`;
+    case "ko":
+      return `반복 실행은 최소 ${minutes}분 간격이에요.`;
+    case "pt-BR":
+      return `As repetições rodam no máximo a cada ${minutes} minutos.`;
+    case "zh-Hans":
+      return `重复运行的间隔至少为 ${minutes} 分钟。`;
+    case "zh-Hant":
+      return `重複執行的間隔至少為 ${minutes} 分鐘。`;
+    case "en-XA":
+      return `[Ŕéþéáţš ŕûñ áţ ɱöšţ éṽéŕý ${minutes} ɱîñûţéš. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRepeats run at most every \u202c${minutes}\u202e minutes.\u202c`;
+  }
+  return `Repeats run at most every ${minutes} minutes.`;
+}
+
+export function settingsAutomationPickTime(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر وقتًا من اليوم.`;
+    case "de":
+      return `Wähl eine Uhrzeit.`;
+    case "es":
+      return `Elige una hora del día.`;
+    case "fr":
+      return `Choisissez une heure de la journée.`;
+    case "ja":
+      return `時刻を選んでください。`;
+    case "ko":
+      return `하루 중 시간을 고르세요.`;
+    case "pt-BR":
+      return `Escolha um horário do dia.`;
+    case "zh-Hans":
+      return `选择一天中的时间。`;
+    case "zh-Hant":
+      return `選擇一天中的時間。`;
+    case "en-XA":
+      return `[Þîçķ á ţîɱé öƒ ðáý. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePick a time of day.\u202c`;
+  }
+  return `Pick a time of day.`;
+}
+
+export function settingsAutomationPickDays(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر يومًا واحدًا على الأقل.`;
+    case "de":
+      return `Wähl mindestens einen Tag.`;
+    case "es":
+      return `Elige al menos un día.`;
+    case "fr":
+      return `Choisissez au moins un jour.`;
+    case "ja":
+      return `曜日を1つ以上選んでください。`;
+    case "ko":
+      return `요일을 하나 이상 고르세요.`;
+    case "pt-BR":
+      return `Escolha pelo menos um dia.`;
+    case "zh-Hans":
+      return `至少选择一天。`;
+    case "zh-Hant":
+      return `至少選擇一天。`;
+    case "en-XA":
+      return `[Þîçķ áţ ļéášţ öñé ðáý. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePick at least one day.\u202c`;
+  }
+  return `Pick at least one day.`;
+}
+
+export function settingsAutomationPickDateTime(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر تاريخًا ووقتًا.`;
+    case "de":
+      return `Wähl ein Datum und eine Uhrzeit.`;
+    case "es":
+      return `Elige una fecha y una hora.`;
+    case "fr":
+      return `Choisissez une date et une heure.`;
+    case "ja":
+      return `日付と時刻を選んでください。`;
+    case "ko":
+      return `날짜와 시간을 고르세요.`;
+    case "pt-BR":
+      return `Escolha uma data e um horário.`;
+    case "zh-Hans":
+      return `选择日期和时间。`;
+    case "zh-Hant":
+      return `選擇日期和時間。`;
+    case "en-XA":
+      return `[Þîçķ á ðáţé áñð ţîɱé. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePick a date and time.\u202c`;
+  }
+  return `Pick a date and time.`;
+}
+
+export function settingsAutomationWritePrompt(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اكتب ما تريد قوله لنائب القبطان.`;
+    case "de":
+      return `Schreib, was dein erster Offizier erfahren soll.`;
+    case "es":
+      return `Escribe qué decirle a tu primer oficial.`;
+    case "fr":
+      return `Écrivez ce qu’il faut dire à votre second.`;
+    case "ja":
+      return `一等航海士に伝える内容を書いてください。`;
+    case "ko":
+      return `일등항해사에게 전할 메시지를 쓰세요.`;
+    case "pt-BR":
+      return `Escreva o que dizer ao seu imediato.`;
+    case "zh-Hans":
+      return `写下要告诉大副的话。`;
+    case "zh-Hant":
+      return `寫下要告訴大副的話。`;
+    case "en-XA":
+      return `[Ŵŕîţé ŵĥáţ ţö ţéļļ ýöûŕ ƒîŕšţ ɱáţé. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWrite what to tell your first mate.\u202c`;
+  }
+  return `Write what to tell your first mate.`;
+}
+
+export function settingsAutomationRunEvents(input: { count: number; sent: string }): string {
+  const count = formatNumber(input.count);
+  const sent = input.sent;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `${count} حدث، الإرسال ${sent}`;
+        case "one":
+          return `${count} حدث، الإرسال ${sent}`;
+        case "two":
+          return `${count} حدثان، الإرسال ${sent}`;
+        case "few":
+          return `${count} أحداث، الإرسال ${sent}`;
+        case "many":
+          return `${count} حدثًا، الإرسال ${sent}`;
+        default:
+          return `${count} حدث، الإرسال ${sent}`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Ereignis, gesendet ${sent}`;
+        default:
+          return `${count} Ereignisse, gesendet ${sent}`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} evento, enviado ${sent}`;
+        case "many":
+          return `${count} de eventos, enviados ${sent}`;
+        default:
+          return `${count} eventos, enviados ${sent}`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} événement, envoyé ${sent}`;
+        case "many":
+          return `${count} événements, envoyés ${sent}`;
+        default:
+          return `${count} événements, envoyés ${sent}`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件のイベント、${sent} に送信`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `이벤트 ${count}개, ${sent}에 보냄`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} evento, enviado ${sent}`;
+        case "many":
+          return `${count} eventos, enviados ${sent}`;
+        default:
+          return `${count} eventos, enviados ${sent}`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 个事件，发送于 ${sent}`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 個事件，已於 ${sent} 送出`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} éṽéñţ, šéñţ ${sent} ~~~~~]`;
+        default:
+          return `[${count} éṽéñţš, šéñţ ${sent} ~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e event, sent \u202c${sent}`;
+        default:
+          return `${count}\u202e events, sent \u202c${sent}`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} event, sent ${sent}`;
+    default:
+      return `${count} events, sent ${sent}`;
+  }
+}
+
+export function settingsAutomationRunCatchingUpMissed(input: {
+  count: number;
+  planned: string;
+  sent: string;
+}): string {
+  const count = formatNumber(input.count);
+  const planned = input.planned;
+  const sent = input.sent;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `المخطط ${planned}، الإرسال ${sent}، جارٍ تعويض ${count} عملية تشغيل فائتة`;
+        case "one":
+          return `المخطط ${planned}، الإرسال ${sent}، جارٍ تعويض ${count} عملية تشغيل فائتة`;
+        case "two":
+          return `المخطط ${planned}، الإرسال ${sent}، جارٍ تعويض ${count} عمليتي تشغيل فائتتين`;
+        case "few":
+          return `المخطط ${planned}، الإرسال ${sent}، جارٍ تعويض ${count} عمليات تشغيل فائتة`;
+        case "many":
+          return `المخطط ${planned}، الإرسال ${sent}، جارٍ تعويض ${count} عمليةَ تشغيل فائتة`;
+        default:
+          return `المخطط ${planned}، الإرسال ${sent}، جارٍ تعويض ${count} عملية تشغيل فائتة`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Geplant ${planned}, gesendet ${sent}, holt ${count} verpassten Lauf nach`;
+        default:
+          return `Geplant ${planned}, gesendet ${sent}, holt ${count} verpasste Läufe nach`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Prevista ${planned}, enviada ${sent}, recuperando ${count} ejecución perdida`;
+        case "many":
+          return `Prevista ${planned}, enviada ${sent}, recuperando ${count} de ejecuciones perdidas`;
+        default:
+          return `Prevista ${planned}, enviada ${sent}, recuperando ${count} ejecuciones perdidas`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Prévue ${planned}, envoyée ${sent}, rattrapage de ${count} exécution manquée`;
+        case "many":
+          return `Prévue ${planned}, envoyée ${sent}, rattrapage de ${count} exécutions manquées`;
+        default:
+          return `Prévue ${planned}, envoyée ${sent}, rattrapage de ${count} exécutions manquées`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${planned} に予定、${sent} に送信、逃した${count}回の実行を取り戻し中`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${planned} 예정, ${sent}에 보냄, 놓친 실행 ${count}번 따라잡는 중`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Prevista ${planned}, enviada ${sent}, recuperando ${count} execução perdida`;
+        case "many":
+          return `Prevista ${planned}, enviada ${sent}, recuperando ${count} execuções perdidas`;
+        default:
+          return `Prevista ${planned}, enviada ${sent}, recuperando ${count} execuções perdidas`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `计划于 ${planned}，发送于 ${sent}，补上 ${count} 次错过的运行`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `預定於 ${planned}，已於 ${sent} 送出，補上錯過的 ${count} 次執行`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Þļáññéð ${planned}, šéñţ ${sent}, çáţçĥîñĝ ûþ ${count} ɱîššéð ŕûñ ~~~~~~~~~~~~~~]`;
+        default:
+          return `[Þļáññéð ${planned}, šéñţ ${sent}, çáţçĥîñĝ ûþ ${count} ɱîššéð ŕûñš ~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202ePlanned \u202c${planned}\u202e, sent \u202c${sent}\u202e, catching up \u202c${count}\u202e missed run\u202c`;
+        default:
+          return `\u202ePlanned \u202c${planned}\u202e, sent \u202c${sent}\u202e, catching up \u202c${count}\u202e missed runs\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Planned ${planned}, sent ${sent}, catching up ${count} missed run`;
+    default:
+      return `Planned ${planned}, sent ${sent}, catching up ${count} missed runs`;
+  }
+}
+
+export function settingsAutomationRunCatchingUp(input: { planned: string; sent: string }): string {
+  const planned = input.planned;
+  const sent = input.sent;
+  switch (currentLanguage()) {
+    case "ar":
+      return `المخطط ${planned}، الإرسال ${sent}، جارٍ التعويض بعد أن كان التطبيق مغلقًا`;
+    case "de":
+      return `Geplant ${planned}, gesendet ${sent}, nachgeholt, nachdem die App geschlossen war`;
+    case "es":
+      return `Prevista ${planned}, enviada ${sent}, recuperando tras el cierre de la app`;
+    case "fr":
+      return `Prévue ${planned}, envoyée ${sent}, rattrapage après la fermeture de l’app`;
+    case "ja":
+      return `${planned} に予定、${sent} に送信、アプリが閉じていた分を取り戻し中`;
+    case "ko":
+      return `${planned} 예정, ${sent}에 보냄, 앱이 닫혀 있던 동안의 실행 따라잡는 중`;
+    case "pt-BR":
+      return `Prevista ${planned}, enviada ${sent}, recuperando depois que o app foi fechado`;
+    case "zh-Hans":
+      return `计划于 ${planned}，发送于 ${sent}，在应用关闭后补上`;
+    case "zh-Hant":
+      return `預定於 ${planned}，已於 ${sent} 送出，在程式關閉後補上`;
+    case "en-XA":
+      return `[Þļáññéð ${planned}, šéñţ ${sent}, çáţçĥîñĝ ûþ áƒţéŕ ţĥé áþþ ŵáš çļöšéð ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePlanned \u202c${planned}\u202e, sent \u202c${sent}\u202e, catching up after the app was closed\u202c`;
+  }
+  return `Planned ${planned}, sent ${sent}, catching up after the app was closed`;
+}
+
+export function settingsAutomationRunPlanned(input: { planned: string; sent: string }): string {
+  const planned = input.planned;
+  const sent = input.sent;
+  switch (currentLanguage()) {
+    case "ar":
+      return `المخطط ${planned}، الإرسال ${sent}`;
+    case "de":
+      return `Geplant ${planned}, gesendet ${sent}`;
+    case "es":
+      return `Prevista ${planned}, enviada ${sent}`;
+    case "fr":
+      return `Prévue ${planned}, envoyée ${sent}`;
+    case "ja":
+      return `${planned} に予定、${sent} に送信`;
+    case "ko":
+      return `${planned} 예정, ${sent}에 보냄`;
+    case "pt-BR":
+      return `Prevista ${planned}, enviada ${sent}`;
+    case "zh-Hans":
+      return `计划于 ${planned}，发送于 ${sent}`;
+    case "zh-Hant":
+      return `預定於 ${planned}，已於 ${sent} 送出`;
+    case "en-XA":
+      return `[Þļáññéð ${planned}, šéñţ ${sent} ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePlanned \u202c${planned}\u202e, sent \u202c${sent}`;
+  }
+  return `Planned ${planned}, sent ${sent}`;
+}
+
+export function settingsAutomationDeliveryWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في الانتظار`;
+    case "de":
+      return `Wartet`;
+    case "es":
+      return `En espera`;
+    case "fr":
+      return `En attente`;
+    case "ja":
+      return `待機中`;
+    case "ko":
+      return `대기 중`;
+    case "pt-BR":
+      return `Aguardando`;
+    case "zh-Hans":
+      return `等待中`;
+    case "zh-Hant":
+      return `等待中`;
+    case "en-XA":
+      return `[Ŵáîţîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eWaiting\u202c`;
+  }
+  return `Waiting`;
+}
+
+export function settingsAutomationDeliveryRetrying(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة المحاولة`;
+    case "de":
+      return `Neuer Versuch`;
+    case "es":
+      return `Reintentando`;
+    case "fr":
+      return `Nouvel essai`;
+    case "ja":
+      return `再試行中`;
+    case "ko":
+      return `다시 시도 중`;
+    case "pt-BR":
+      return `Tentando de novo`;
+    case "zh-Hans":
+      return `正在重试`;
+    case "zh-Hant":
+      return `重試中`;
+    case "en-XA":
+      return `[Ŕéţŕýîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eRetrying\u202c`;
+  }
+  return `Retrying`;
+}
+
+export function settingsAutomationDeliveryHandled(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عولجت`;
+    case "de":
+      return `Erledigt`;
+    case "es":
+      return `Atendida`;
+    case "fr":
+      return `Traitée`;
+    case "ja":
+      return `対応済み`;
+    case "ko":
+      return `처리됨`;
+    case "pt-BR":
+      return `Tratada`;
+    case "zh-Hans":
+      return `已处理`;
+    case "zh-Hant":
+      return `已處理`;
+    case "en-XA":
+      return `[Ĥáñðļéð ~~~]`;
+    case "ar-XB":
+      return `\u202eHandled\u202c`;
+  }
+  return `Handled`;
+}
+
+export function settingsAutomationDeliveryCancelled(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُلغيت`;
+    case "de":
+      return `Zurückgenommen`;
+    case "es":
+      return `Cancelada`;
+    case "fr":
+      return `Annulée`;
+    case "ja":
+      return `キャンセル済み`;
+    case "ko":
+      return `취소됨`;
+    case "pt-BR":
+      return `Cancelada`;
+    case "zh-Hans":
+      return `已取消`;
+    case "zh-Hant":
+      return `已取消`;
+    case "en-XA":
+      return `[Çáñçéļļéð ~~~]`;
+    case "ar-XB":
+      return `\u202eCancelled\u202c`;
+  }
+  return `Cancelled`;
+}
+
+export function settingsAutomationDeliverySent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أُرسلت`;
+    case "de":
+      return `Gesendet`;
+    case "es":
+      return `Enviada`;
+    case "fr":
+      return `Envoyée`;
+    case "ja":
+      return `送信済み`;
+    case "ko":
+      return `보냄`;
+    case "pt-BR":
+      return `Enviada`;
+    case "zh-Hans":
+      return `已发送`;
+    case "zh-Hant":
+      return `已送出`;
+    case "en-XA":
+      return `[Šéñţ ~~]`;
+    case "ar-XB":
+      return `\u202eSent\u202c`;
+  }
+  return `Sent`;
+}
+
+export function settingsAutomationNoteWaiting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يعالجها نائب القبطان بعد.`;
+    case "de":
+      return `Dein erster Offizier hat es noch nicht bearbeitet.`;
+    case "es":
+      return `Tu primer oficial todavía no la ha atendido.`;
+    case "fr":
+      return `Votre second ne l’a pas encore traitée.`;
+    case "ja":
+      return `一等航海士はまだ対応していません。`;
+    case "ko":
+      return `일등항해사가 아직 처리하지 않았어요.`;
+    case "pt-BR":
+      return `Seu imediato ainda não tratou dela.`;
+    case "zh-Hans":
+      return `你的大副还没有处理它。`;
+    case "zh-Hant":
+      return `你的大副還沒處理它。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĥáš ñöţ ĥáñðļéð îţ ýéţ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate has not handled it yet.\u202c`;
+  }
+  return `Your first mate has not handled it yet.`;
+}
+
+export function settingsAutomationNoteRetrying(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يتمكن نائب القبطان من استلامها بعد. تجري إعادة المحاولة.`;
+    case "de":
+      return `Dein erster Offizier konnte es noch nicht annehmen. Es wird erneut versucht.`;
+    case "es":
+      return `Tu primer oficial todavía no pudo recibirla. Se está volviendo a intentar.`;
+    case "fr":
+      return `Votre second n’a pas encore pu la prendre. Un nouvel essai est en cours.`;
+    case "ja":
+      return `一等航海士がまだ受け取れませんでした。もう一度試しています。`;
+    case "ko":
+      return `일등항해사가 아직 받을 수 없었어요. 다시 시도하고 있어요.`;
+    case "pt-BR":
+      return `Seu imediato ainda não conseguiu recebê-la. Uma nova tentativa está em andamento.`;
+    case "zh-Hans":
+      return `你的大副暂时无法接收，正在再次尝试。`;
+    case "zh-Hant":
+      return `你的大副暫時無法接收，正在再試一次。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé çöûļð ñöţ ţáķé îţ ýéţ. Îţ îš ƀéîñĝ ţŕîéð áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate could not take it yet. It is being tried again.\u202c`;
+  }
+  return `Your first mate could not take it yet. It is being tried again.`;
+}
+
+export function settingsAutomationNoteCancelled(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سُحبت قبل أن يقرأها نائب القبطان.`;
+    case "de":
+      return `Zurückgenommen, bevor dein erster Offizier es gelesen hat.`;
+    case "es":
+      return `Se retiró antes de que tu primer oficial la leyera.`;
+    case "fr":
+      return `Retirée avant que votre second ne la lise.`;
+    case "ja":
+      return `一等航海士が読む前に取り消されました。`;
+    case "ko":
+      return `일등항해사가 읽기 전에 거둬들였어요.`;
+    case "pt-BR":
+      return `Retirada antes que seu imediato a lesse.`;
+    case "zh-Hans":
+      return `在你的大副读到之前已收回。`;
+    case "zh-Hant":
+      return `在你的大副讀到之前已收回。`;
+    case "en-XA":
+      return `[Ţáķéñ ƀáçķ ƀéƒöŕé ýöûŕ ƒîŕšţ ɱáţé ŕéáð îţ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTaken back before your first mate read it.\u202c`;
+  }
+  return `Taken back before your first mate read it.`;
+}
+
+export function settingsAutomationNoteHandledAt(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عالجها نائب القبطان في ${time}.`;
+    case "de":
+      return `Dein erster Offizier hat es um ${time} bearbeitet.`;
+    case "es":
+      return `Tu primer oficial la atendió a las ${time}.`;
+    case "fr":
+      return `Votre second l’a traitée à ${time}.`;
+    case "ja":
+      return `一等航海士が ${time} に対応しました。`;
+    case "ko":
+      return `일등항해사가 ${time}에 처리했어요.`;
+    case "pt-BR":
+      return `Seu imediato tratou dela às ${time}.`;
+    case "zh-Hans":
+      return `你的大副已在 ${time} 处理。`;
+    case "zh-Hant":
+      return `你的大副已在 ${time} 處理。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĥáñðļéð îţ áţ ${time}. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate handled it at \u202c${time}\u202e.\u202c`;
+  }
+  return `Your first mate handled it at ${time}.`;
+}
+
+export function settingsAutomationNoteHandledOn(input: { date: string }): string {
+  const date = input.date;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عالجها نائب القبطان في ${date}.`;
+    case "de":
+      return `Dein erster Offizier hat es am ${date} bearbeitet.`;
+    case "es":
+      return `Tu primer oficial la atendió el ${date}.`;
+    case "fr":
+      return `Votre second l’a traitée le ${date}.`;
+    case "ja":
+      return `一等航海士が ${date} に対応しました。`;
+    case "ko":
+      return `일등항해사가 ${date}에 처리했어요.`;
+    case "pt-BR":
+      return `Seu imediato tratou dela em ${date}.`;
+    case "zh-Hans":
+      return `你的大副已在 ${date} 处理。`;
+    case "zh-Hant":
+      return `你的大副已在 ${date} 處理。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĥáñðļéð îţ öñ ${date}. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate handled it on \u202c${date}\u202e.\u202c`;
+  }
+  return `Your first mate handled it on ${date}.`;
+}
+
+export function settingsAutomationCancelEdited(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سُحبت قبل أن يقرأها نائب القبطان، لأن الأتمتة تغيّرت.`;
+    case "de":
+      return `Zurückgenommen, bevor dein erster Offizier es gelesen hat, weil die Automatisierung geändert wurde.`;
+    case "es":
+      return `Se retiró antes de que tu primer oficial la leyera, porque se cambió la automatización.`;
+    case "fr":
+      return `Retirée avant que votre second ne la lise, car l’automatisation a été modifiée.`;
+    case "ja":
+      return `自動化が変更されたため、一等航海士が読む前に取り消されました。`;
+    case "ko":
+      return `자동화가 바뀌어서 일등항해사가 읽기 전에 거둬들였어요.`;
+    case "pt-BR":
+      return `Retirada antes que seu imediato a lesse, porque a automação foi alterada.`;
+    case "zh-Hans":
+      return `在你的大副读到之前已收回，因为这项自动化被更改了。`;
+    case "zh-Hant":
+      return `在你的大副讀到之前已收回，因為這項自動化已變更。`;
+    case "en-XA":
+      return `[Ţáķéñ ƀáçķ ƀéƒöŕé ýöûŕ ƒîŕšţ ɱáţé ŕéáð îţ, ƀéçáûšé ţĥé áûţöɱáţîöñ ŵáš çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTaken back before your first mate read it, because the automation was changed.\u202c`;
+  }
+  return `Taken back before your first mate read it, because the automation was changed.`;
+}
+
+export function settingsAutomationCancelPaused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سُحبت قبل أن يقرأها نائب القبطان، لأن الأتمتة أُوقفت مؤقتًا.`;
+    case "de":
+      return `Zurückgenommen, bevor dein erster Offizier es gelesen hat, weil die Automatisierung pausiert wurde.`;
+    case "es":
+      return `Se retiró antes de que tu primer oficial la leyera, porque se pausó la automatización.`;
+    case "fr":
+      return `Retirée avant que votre second ne la lise, car l’automatisation a été mise en pause.`;
+    case "ja":
+      return `自動化が一時停止されたため、一等航海士が読む前に取り消されました。`;
+    case "ko":
+      return `자동화가 일시 정지되어서 일등항해사가 읽기 전에 거둬들였어요.`;
+    case "pt-BR":
+      return `Retirada antes que seu imediato a lesse, porque a automação foi pausada.`;
+    case "zh-Hans":
+      return `在你的大副读到之前已收回，因为这项自动化被暂停了。`;
+    case "zh-Hant":
+      return `在你的大副讀到之前已收回，因為這項自動化已暫停。`;
+    case "en-XA":
+      return `[Ţáķéñ ƀáçķ ƀéƒöŕé ýöûŕ ƒîŕšţ ɱáţé ŕéáð îţ, ƀéçáûšé ţĥé áûţöɱáţîöñ ŵáš þáûšéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTaken back before your first mate read it, because the automation was paused.\u202c`;
+  }
+  return `Taken back before your first mate read it, because the automation was paused.`;
+}
+
+export function settingsAutomationCancelCleared(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مُسحت محادثة نائب القبطان قبل أن يقرأ هذه.`;
+    case "de":
+      return `Die Unterhaltung deines ersten Offiziers wurde geleert, bevor er dies gelesen hat.`;
+    case "es":
+      return `La conversación de tu primer oficial se borró antes de que la leyera.`;
+    case "fr":
+      return `La conversation de votre second a été effacée avant qu’il ne lise ceci.`;
+    case "ja":
+      return `一等航海士がこれを読む前に、会話が消去されました。`;
+    case "ko":
+      return `일등항해사가 이것을 읽기 전에 일등항해사의 대화가 지워졌어요.`;
+    case "pt-BR":
+      return `A conversa do seu imediato foi apagada antes que ele lesse isto.`;
+    case "zh-Hans":
+      return `你的大副读到这条之前，它的对话已被清空。`;
+    case "zh-Hant":
+      return `你的大副讀到這則之前，它的對話已被清除。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé'š çöñṽéŕšáţîöñ ŵáš çļéáŕéð ƀéƒöŕé îţ ŕéáð ţĥîš. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate's conversation was cleared before it read this.\u202c`;
+  }
+  return `Your first mate's conversation was cleared before it read this.`;
+}
+
+export function settingsAutomationEventPreviewNoLook(input: { when: string }): string {
+  const when = input.when;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث.  لا يُرسَل شيء.`;
+    case "de":
+      return `${when}, bekommt dein erster Offizier diese Nachricht mit den Ereignissen.  Es wird nichts gesendet.`;
+    case "es":
+      return `${when}, tu primer oficial recibe esta indicación con los eventos. No se envía nada.`;
+    case "fr":
+      return `${when}, votre second reçoit cette consigne avec les événements. Rien n’est envoyé.`;
+    case "ja":
+      return `${when}、一等航海士はイベントと一緒にこのプロンプトを受け取ります。何も送信されません。`;
+    case "ko":
+      return `${when}, 일등항해사가 이벤트와 함께 이 메시지를 받아요.  보내지는 것은 없어요.`;
+    case "pt-BR":
+      return `${when}, seu imediato recebe este pedido com os eventos. Nada é enviado.`;
+    case "zh-Hans":
+      return `${when}，你的大副会收到这条提示和这些事件。不会发送任何内容。`;
+    case "zh-Hant":
+      return `${when}，你的大副會收到這段提示和這些事件。不會送出任何內容。`;
+    case "en-XA":
+      return `[${when}, ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵîţĥ ţĥé éṽéñţš.  Ñöţĥîñĝ îš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${when}\u202e, your first mate gets this prompt with the events.  Nothing is sent.\u202c`;
+  }
+  return `${when}, your first mate gets this prompt with the events.  Nothing is sent.`;
+}
+
+export function settingsAutomationEventPreview(input: { count: number; when: string }): string {
+  const count = formatNumber(input.count);
+  const when = input.when;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقة. لا يُرسَل شيء.`;
+        case "one":
+          return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل دقيقة. لا يُرسَل شيء.`;
+        case "two":
+          return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقتين. لا يُرسَل شيء.`;
+        case "few":
+          return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقائق. لا يُرسَل شيء.`;
+        case "many":
+          return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقة. لا يُرسَل شيء.`;
+        default:
+          return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقة. لا يُرسَل شيء.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${when}, bekommt dein erster Offizier diese Nachricht mit den Ereignissen. Infinitary schaut jede Minute nach. Es wird nichts gesendet.`;
+        default:
+          return `${when}, bekommt dein erster Offizier diese Nachricht mit den Ereignissen. Infinitary schaut alle ${count} Minuten nach. Es wird nichts gesendet.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${when}, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada minuto. No se envía nada.`;
+        case "many":
+          return `${when}, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada ${count} de minutos. No se envía nada.`;
+        default:
+          return `${when}, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada ${count} minutos. No se envía nada.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${when}, votre second reçoit cette consigne avec les événements. Infinitary vérifie chaque minute. Rien n’est envoyé.`;
+        case "many":
+          return `${when}, votre second reçoit cette consigne avec les événements. Infinitary vérifie toutes les ${count} minutes. Rien n’est envoyé.`;
+        default:
+          return `${when}, votre second reçoit cette consigne avec les événements. Infinitary vérifie toutes les ${count} minutes. Rien n’est envoyé.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${when}、一等航海士はイベントと一緒にこのプロンプトを受け取ります。Infinitary は${count}分ごとに確認します。何も送信されません。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${when}, 일등항해사가 이벤트와 함께 이 메시지를 받아요. Infinitary는 ${count}분마다 확인해요. 보내지는 것은 없어요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${when}, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada minuto. Nada é enviado.`;
+        case "many":
+          return `${when}, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada ${count} minutos. Nada é enviado.`;
+        default:
+          return `${when}, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada ${count} minutos. Nada é enviado.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${when}，你的大副会收到这条提示和这些事件。Infinitary 每 ${count} 分钟查看一次。不会发送任何内容。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${when}，你的大副會收到這段提示和這些事件。Infinitary 每 ${count} 分鐘查看一次。不會送出任何內容。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${when}, ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵîţĥ ţĥé éṽéñţš. Îñƒîñîţáŕý ļööķš éṽéŕý ɱîñûţé. Ñöţĥîñĝ îš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[${when}, ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵîţĥ ţĥé éṽéñţš. Îñƒîñîţáŕý ļööķš éṽéŕý ${count} ɱîñûţéš. Ñöţĥîñĝ îš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${when}\u202e, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.\u202c`;
+        default:
+          return `${when}\u202e, your first mate gets this prompt with the events. Infinitary looks every \u202c${count}\u202e minutes. Nothing is sent.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${when}, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.`;
+    default:
+      return `${when}, your first mate gets this prompt with the events. Infinitary looks every ${count} minutes. Nothing is sent.`;
+  }
+}
+
+export function settingsAutomationRunsEachTime(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في كل مرة تصل فيها أحداث جديدة.`;
+    case "de":
+      return `Jedes Mal, wenn neue Ereignisse eintreffen.`;
+    case "es":
+      return `Cada vez que llegan eventos nuevos.`;
+    case "fr":
+      return `Chaque fois que de nouveaux événements arrivent.`;
+    case "ja":
+      return `新しいイベントが届くたびに実行します。`;
+    case "ko":
+      return `새 이벤트가 올 때마다.`;
+    case "pt-BR":
+      return `Sempre que chegam novos eventos.`;
+    case "zh-Hans":
+      return `每次有新事件到达时。`;
+    case "zh-Hant":
+      return `每次有新事件到達時。`;
+    case "en-XA":
+      return `[Éáçĥ ţîɱé ñéŵ éṽéñţš áŕŕîṽé. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEach time new events arrive.\u202c`;
+  }
+  return `Each time new events arrive.`;
+}
+
+export function settingsAutomationRunsEachTimeLooks(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل ${count} دقيقة.`;
+        case "one":
+          return `في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل دقيقة.`;
+        case "two":
+          return `في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل ${count} دقيقتين.`;
+        case "few":
+          return `في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل ${count} دقائق.`;
+        case "many":
+          return `في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل ${count} دقيقة.`;
+        default:
+          return `في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل ${count} دقيقة.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Jedes Mal, wenn neue Ereignisse eintreffen. Infinitary schaut jede Minute nach.`;
+        default:
+          return `Jedes Mal, wenn neue Ereignisse eintreffen. Infinitary schaut alle ${count} Minuten nach.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Cada vez que llegan eventos nuevos. Infinitary revisa cada minuto.`;
+        case "many":
+          return `Cada vez que llegan eventos nuevos. Infinitary revisa cada ${count} de minutos.`;
+        default:
+          return `Cada vez que llegan eventos nuevos. Infinitary revisa cada ${count} minutos.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Chaque fois que de nouveaux événements arrivent. Infinitary vérifie chaque minute.`;
+        case "many":
+          return `Chaque fois que de nouveaux événements arrivent. Infinitary vérifie toutes les ${count} minutes.`;
+        default:
+          return `Chaque fois que de nouveaux événements arrivent. Infinitary vérifie toutes les ${count} minutes.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `新しいイベントが届くたびに実行します。Infinitary は${count}分ごとに確認します。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `새 이벤트가 올 때마다. Infinitary는 ${count}분마다 확인해요.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Sempre que chegam novos eventos. O Infinitary verifica a cada minuto.`;
+        case "many":
+          return `Sempre que chegam novos eventos. O Infinitary verifica a cada ${count} minutos.`;
+        default:
+          return `Sempre que chegam novos eventos. O Infinitary verifica a cada ${count} minutos.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `每次有新事件到达时。Infinitary 每 ${count} 分钟查看一次。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `每次有新事件到達時。Infinitary 每 ${count} 分鐘查看一次。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Éáçĥ ţîɱé ñéŵ éṽéñţš áŕŕîṽé. Îñƒîñîţáŕý ļööķš éṽéŕý ɱîñûţé. ~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[Éáçĥ ţîɱé ñéŵ éṽéñţš áŕŕîṽé. Îñƒîñîţáŕý ļööķš éṽéŕý ${count} ɱîñûţéš. ~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eEach time new events arrive. Infinitary looks every minute.\u202c`;
+        default:
+          return `\u202eEach time new events arrive. Infinitary looks every \u202c${count}\u202e minutes.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Each time new events arrive. Infinitary looks every minute.`;
+    default:
+      return `Each time new events arrive. Infinitary looks every ${count} minutes.`;
+  }
+}
+
+export function settingsAutomationMissedEventThere(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إذا كان Infinitary مغلقًا على ${where} أو كان الحاسوب نائمًا، يُرسَل ما وصل في أثناء ذلك مرة واحدة عند عودته.`;
+    case "de":
+      return `Wenn Infinitary auf ${where} geschlossen ist oder der Computer schläft, wird das in der Zwischenzeit Eingetroffene einmal gesendet, sobald er zurück ist.`;
+    case "es":
+      return `Si Infinitary está cerrado en ${where} o la computadora está en reposo, lo que llegó mientras tanto se envía una sola vez cuando vuelve.`;
+    case "fr":
+      return `Si Infinitary est fermé sur ${where} ou si l’ordinateur est en veille, ce qui est arrivé entre-temps est envoyé en une seule fois à son retour.`;
+    case "ja":
+      return `${where} の Infinitary が閉じているかコンピューターがスリープ中の場合、その間に届いたものは復帰時にまとめて1回送信されます。`;
+    case "ko":
+      return `${where}에서 Infinitary가 닫혀 있거나 컴퓨터가 잠자기 상태이면, 그동안 온 것은 돌아왔을 때 한 번에 보내요.`;
+    case "pt-BR":
+      return `Se o Infinitary estiver fechado em ${where} ou o computador estiver em repouso, o que chegou nesse meio-tempo é enviado uma vez quando ele voltar.`;
+    case "zh-Hans":
+      return `如果 ${where} 上的 Infinitary 已关闭或电脑处于睡眠状态，期间到达的内容会在它恢复后一次性发送。`;
+    case "zh-Hant":
+      return `如果 ${where} 上的 Infinitary 已關閉或電腦正在睡眠，期間到達的內容會在它恢復後一次送出。`;
+    case "en-XA":
+      return `[Îƒ Îñƒîñîţáŕý îš çļöšéð öñ ${where} öŕ ţĥé çöɱþûţéŕ îš ášļééþ, ŵĥáţ áŕŕîṽéð ɱéáñŵĥîļé îš šéñţ öñçé ŵĥéñ îţ ŕéţûŕñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIf Infinitary is closed on \u202c${where}\u202e or the computer is asleep, what arrived meanwhile is sent once when it returns.\u202c`;
+  }
+  return `If Infinitary is closed on ${where} or the computer is asleep, what arrived meanwhile is sent once when it returns.`;
+}
+
+export function settingsAutomationMissedEvent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إذا كان Infinitary مغلقًا أو كان الحاسوب نائمًا، يُرسَل ما وصل في أثناء ذلك مرة واحدة عند عودته.`;
+    case "de":
+      return `Wenn Infinitary geschlossen ist oder der Computer schläft, wird das in der Zwischenzeit Eingetroffene einmal gesendet, sobald er zurück ist.`;
+    case "es":
+      return `Si Infinitary está cerrado o la computadora está en reposo, lo que llegó mientras tanto se envía una sola vez cuando vuelve.`;
+    case "fr":
+      return `Si Infinitary est fermé ou si l’ordinateur est en veille, ce qui est arrivé entre-temps est envoyé en une seule fois à son retour.`;
+    case "ja":
+      return `Infinitary が閉じているかコンピューターがスリープ中の場合、その間に届いたものは復帰時にまとめて1回送信されます。`;
+    case "ko":
+      return `Infinitary가 닫혀 있거나 컴퓨터가 잠자기 상태이면, 그동안 온 것은 돌아왔을 때 한 번에 보내요.`;
+    case "pt-BR":
+      return `Se o Infinitary estiver fechado ou o computador estiver em repouso, o que chegou nesse meio-tempo é enviado uma vez quando ele voltar.`;
+    case "zh-Hans":
+      return `如果 Infinitary 已关闭或电脑处于睡眠状态，期间到达的内容会在它恢复后一次性发送。`;
+    case "zh-Hant":
+      return `如果 Infinitary 已關閉或電腦正在睡眠，期間到達的內容會在它恢復後一次送出。`;
+    case "en-XA":
+      return `[Îƒ Îñƒîñîţáŕý îš çļöšéð öŕ ţĥé çöɱþûţéŕ îš ášļééþ, ŵĥáţ áŕŕîṽéð ɱéáñŵĥîļé îš šéñţ öñçé ŵĥéñ îţ ŕéţûŕñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIf Infinitary is closed or the computer is asleep, what arrived meanwhile is sent once when it returns.\u202c`;
+  }
+  return `If Infinitary is closed or the computer is asleep, what arrived meanwhile is sent once when it returns.`;
+}
+
+export function settingsAutomationMissedOnceThere(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إذا كان Infinitary مغلقًا على ${where} في ذلك الوقت، فستعمل مرة واحدة عند فتح Infinitary.`;
+    case "de":
+      return `Wenn Infinitary zu dieser Zeit auf ${where} geschlossen ist, läuft es einmal, sobald Infinitary geöffnet wird.`;
+    case "es":
+      return `Si Infinitary está cerrado en ${where} a esa hora, se ejecuta en cuanto Infinitary se abre.`;
+    case "fr":
+      return `Si Infinitary est fermé sur ${where} à ce moment-là, elle s’exécute dès qu’Infinitary s’ouvre.`;
+    case "ja":
+      return `その時刻に ${where} の Infinitary が閉じていた場合は、Infinitary が開いたときに1回実行します。`;
+    case "ko":
+      return `그 시간에 ${where}에서 Infinitary가 닫혀 있으면, Infinitary가 열릴 때 한 번 실행해요.`;
+    case "pt-BR":
+      return `Se o Infinitary estiver fechado em ${where} nesse horário, ela roda assim que o Infinitary abrir.`;
+    case "zh-Hans":
+      return `如果当时 ${where} 上的 Infinitary 已关闭，它会在 Infinitary 打开后运行一次。`;
+    case "zh-Hant":
+      return `如果當時 ${where} 上的 Infinitary 已關閉，它會在 Infinitary 開啟後執行一次。`;
+    case "en-XA":
+      return `[Îƒ Îñƒîñîţáŕý îš çļöšéð öñ ${where} áţ ţĥáţ ţîɱé, îţ ŕûñš öñçé Îñƒîñîţáŕý öþéñš. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIf Infinitary is closed on \u202c${where}\u202e at that time, it runs once Infinitary opens.\u202c`;
+  }
+  return `If Infinitary is closed on ${where} at that time, it runs once Infinitary opens.`;
+}
+
+export function settingsAutomationMissedOnce(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إذا كان Infinitary مغلقًا في ذلك الوقت، فستعمل مرة واحدة عند فتح Infinitary.`;
+    case "de":
+      return `Wenn Infinitary zu dieser Zeit geschlossen ist, läuft es einmal, sobald Infinitary geöffnet wird.`;
+    case "es":
+      return `Si Infinitary está cerrado a esa hora, se ejecuta en cuanto Infinitary se abre.`;
+    case "fr":
+      return `Si Infinitary est fermé à ce moment-là, elle s’exécute dès qu’Infinitary s’ouvre.`;
+    case "ja":
+      return `その時刻に Infinitary が閉じていた場合は、Infinitary が開いたときに1回実行します。`;
+    case "ko":
+      return `그 시간에 Infinitary가 닫혀 있으면, Infinitary가 열릴 때 한 번 실행해요.`;
+    case "pt-BR":
+      return `Se o Infinitary estiver fechado nesse horário, ela roda assim que o Infinitary abrir.`;
+    case "zh-Hans":
+      return `如果当时 Infinitary 已关闭，它会在 Infinitary 打开后运行一次。`;
+    case "zh-Hant":
+      return `如果當時 Infinitary 已關閉，它會在 Infinitary 開啟後執行一次。`;
+    case "en-XA":
+      return `[Îƒ Îñƒîñîţáŕý îš çļöšéð áţ ţĥáţ ţîɱé, îţ ŕûñš öñçé Îñƒîñîţáŕý öþéñš. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIf Infinitary is closed at that time, it runs once Infinitary opens.\u202c`;
+  }
+  return `If Infinitary is closed at that time, it runs once Infinitary opens.`;
+}
+
+export function settingsAutomationMissedRepeatsThere(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إذا كان Infinitary مغلقًا على ${where} أو كان الحاسوب نائمًا، تُنفَّذ عمليات التشغيل الفائتة مرة واحدة عند عودته، مع عددها.`;
+    case "de":
+      return `Wenn Infinitary auf ${where} geschlossen ist oder der Computer schläft, werden die verpassten Läufe einmal nachgeholt, sobald er zurück ist, mit der Angabe, wie viele es waren.`;
+    case "es":
+      return `Si Infinitary está cerrado en ${where} o la computadora está en reposo, las ejecuciones perdidas se hacen una sola vez cuando vuelve, indicando cuántas se perdieron.`;
+    case "fr":
+      return `Si Infinitary est fermé sur ${where} ou si l’ordinateur est en veille, les exécutions manquées ont lieu une seule fois à son retour, avec leur nombre.`;
+    case "ja":
+      return `${where} の Infinitary が閉じているかコンピューターがスリープ中の場合、逃した実行は復帰時に、逃した回数を添えてまとめて1回行われます。`;
+    case "ko":
+      return `${where}에서 Infinitary가 닫혀 있거나 컴퓨터가 잠자기 상태이면, 놓친 실행은 돌아왔을 때 몇 번 놓쳤는지와 함께 한 번 실행해요.`;
+    case "pt-BR":
+      return `Se o Infinitary estiver fechado em ${where} ou o computador estiver em repouso, as execuções perdidas acontecem uma vez quando ele voltar, informando quantas foram perdidas.`;
+    case "zh-Hans":
+      return `如果 ${where} 上的 Infinitary 已关闭或电脑处于睡眠状态，错过的运行会在它恢复后合并运行一次，并注明错过了几次。`;
+    case "zh-Hant":
+      return `如果 ${where} 上的 Infinitary 已關閉或電腦正在睡眠，錯過的執行會在它恢復後合併執行一次，並註明錯過了幾次。`;
+    case "en-XA":
+      return `[Îƒ Îñƒîñîţáŕý îš çļöšéð öñ ${where} öŕ ţĥé çöɱþûţéŕ îš ášļééþ, ţĥé ŕûñš îţ ɱîššéð ĥáþþéñ öñçé ŵĥéñ îţ ŕéţûŕñš, ŵîţĥ ĥöŵ ɱáñý îţ ɱîššéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIf Infinitary is closed on \u202c${where}\u202e or the computer is asleep, the runs it missed happen once when it returns, with how many it missed.\u202c`;
+  }
+  return `If Infinitary is closed on ${where} or the computer is asleep, the runs it missed happen once when it returns, with how many it missed.`;
+}
+
+export function settingsAutomationMissedRepeats(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إذا كان Infinitary مغلقًا أو كان الحاسوب نائمًا، تُنفَّذ عمليات التشغيل الفائتة مرة واحدة عند عودته، مع عددها.`;
+    case "de":
+      return `Wenn Infinitary geschlossen ist oder der Computer schläft, werden die verpassten Läufe einmal nachgeholt, sobald er zurück ist, mit der Angabe, wie viele es waren.`;
+    case "es":
+      return `Si Infinitary está cerrado o la computadora está en reposo, las ejecuciones perdidas se hacen una sola vez cuando vuelve, indicando cuántas se perdieron.`;
+    case "fr":
+      return `Si Infinitary est fermé ou si l’ordinateur est en veille, les exécutions manquées ont lieu une seule fois à son retour, avec leur nombre.`;
+    case "ja":
+      return `Infinitary が閉じているかコンピューターがスリープ中の場合、逃した実行は復帰時に、逃した回数を添えてまとめて1回行われます。`;
+    case "ko":
+      return `Infinitary가 닫혀 있거나 컴퓨터가 잠자기 상태이면, 놓친 실행은 돌아왔을 때 몇 번 놓쳤는지와 함께 한 번 실행해요.`;
+    case "pt-BR":
+      return `Se o Infinitary estiver fechado ou o computador estiver em repouso, as execuções perdidas acontecem uma vez quando ele voltar, informando quantas foram perdidas.`;
+    case "zh-Hans":
+      return `如果 Infinitary 已关闭或电脑处于睡眠状态，错过的运行会在它恢复后合并运行一次，并注明错过了几次。`;
+    case "zh-Hant":
+      return `如果 Infinitary 已關閉或電腦正在睡眠，錯過的執行會在它恢復後合併執行一次，並註明錯過了幾次。`;
+    case "en-XA":
+      return `[Îƒ Îñƒîñîţáŕý îš çļöšéð öŕ ţĥé çöɱþûţéŕ îš ášļééþ, ţĥé ŕûñš îţ ɱîššéð ĥáþþéñ öñçé ŵĥéñ îţ ŕéţûŕñš, ŵîţĥ ĥöŵ ɱáñý îţ ɱîššéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIf Infinitary is closed or the computer is asleep, the runs it missed happen once when it returns, with how many it missed.\u202c`;
+  }
+  return `If Infinitary is closed or the computer is asleep, the runs it missed happen once when it returns, with how many it missed.`;
+}
+
+export function settingsAutomationMon(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إثنين`;
+    case "de":
+      return `Mo`;
+    case "es":
+      return `Lun`;
+    case "fr":
+      return `Lun`;
+    case "ja":
+      return `月`;
+    case "ko":
+      return `월`;
+    case "pt-BR":
+      return `Seg`;
+    case "zh-Hans":
+      return `周一`;
+    case "zh-Hant":
+      return `週一`;
+    case "en-XA":
+      return `[Ṁöñ ~]`;
+    case "ar-XB":
+      return `\u202eMon\u202c`;
+  }
+  return `Mon`;
+}
+
+export function settingsAutomationMonday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإثنين`;
+    case "de":
+      return `Montag`;
+    case "es":
+      return `Lunes`;
+    case "fr":
+      return `Lundi`;
+    case "ja":
+      return `月曜日`;
+    case "ko":
+      return `월요일`;
+    case "pt-BR":
+      return `Segunda-feira`;
+    case "zh-Hans":
+      return `星期一`;
+    case "zh-Hant":
+      return `星期一`;
+    case "en-XA":
+      return `[Ṁöñðáý ~~]`;
+    case "ar-XB":
+      return `\u202eMonday\u202c`;
+  }
+  return `Monday`;
+}
+
+export function settingsAutomationTue(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ثلاثاء`;
+    case "de":
+      return `Di`;
+    case "es":
+      return `Mar`;
+    case "fr":
+      return `Mar`;
+    case "ja":
+      return `火`;
+    case "ko":
+      return `화`;
+    case "pt-BR":
+      return `Ter`;
+    case "zh-Hans":
+      return `周二`;
+    case "zh-Hant":
+      return `週二`;
+    case "en-XA":
+      return `[Ţûé ~]`;
+    case "ar-XB":
+      return `\u202eTue\u202c`;
+  }
+  return `Tue`;
+}
+
+export function settingsAutomationTuesday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الثلاثاء`;
+    case "de":
+      return `Dienstag`;
+    case "es":
+      return `Martes`;
+    case "fr":
+      return `Mardi`;
+    case "ja":
+      return `火曜日`;
+    case "ko":
+      return `화요일`;
+    case "pt-BR":
+      return `Terça-feira`;
+    case "zh-Hans":
+      return `星期二`;
+    case "zh-Hant":
+      return `星期二`;
+    case "en-XA":
+      return `[Ţûéšðáý ~~~]`;
+    case "ar-XB":
+      return `\u202eTuesday\u202c`;
+  }
+  return `Tuesday`;
+}
+
+export function settingsAutomationWed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أربعاء`;
+    case "de":
+      return `Mi`;
+    case "es":
+      return `Mié`;
+    case "fr":
+      return `Mer`;
+    case "ja":
+      return `水`;
+    case "ko":
+      return `수`;
+    case "pt-BR":
+      return `Qua`;
+    case "zh-Hans":
+      return `周三`;
+    case "zh-Hant":
+      return `週三`;
+    case "en-XA":
+      return `[Ŵéð ~]`;
+    case "ar-XB":
+      return `\u202eWed\u202c`;
+  }
+  return `Wed`;
+}
+
+export function settingsAutomationWednesday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الأربعاء`;
+    case "de":
+      return `Mittwoch`;
+    case "es":
+      return `Miércoles`;
+    case "fr":
+      return `Mercredi`;
+    case "ja":
+      return `水曜日`;
+    case "ko":
+      return `수요일`;
+    case "pt-BR":
+      return `Quarta-feira`;
+    case "zh-Hans":
+      return `星期三`;
+    case "zh-Hant":
+      return `星期三`;
+    case "en-XA":
+      return `[Ŵéðñéšðáý ~~~]`;
+    case "ar-XB":
+      return `\u202eWednesday\u202c`;
+  }
+  return `Wednesday`;
+}
+
+export function settingsAutomationThu(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خميس`;
+    case "de":
+      return `Do`;
+    case "es":
+      return `Jue`;
+    case "fr":
+      return `Jeu`;
+    case "ja":
+      return `木`;
+    case "ko":
+      return `목`;
+    case "pt-BR":
+      return `Qui`;
+    case "zh-Hans":
+      return `周四`;
+    case "zh-Hant":
+      return `週四`;
+    case "en-XA":
+      return `[Ţĥû ~]`;
+    case "ar-XB":
+      return `\u202eThu\u202c`;
+  }
+  return `Thu`;
+}
+
+export function settingsAutomationThursday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الخميس`;
+    case "de":
+      return `Donnerstag`;
+    case "es":
+      return `Jueves`;
+    case "fr":
+      return `Jeudi`;
+    case "ja":
+      return `木曜日`;
+    case "ko":
+      return `목요일`;
+    case "pt-BR":
+      return `Quinta-feira`;
+    case "zh-Hans":
+      return `星期四`;
+    case "zh-Hant":
+      return `星期四`;
+    case "en-XA":
+      return `[Ţĥûŕšðáý ~~~]`;
+    case "ar-XB":
+      return `\u202eThursday\u202c`;
+  }
+  return `Thursday`;
+}
+
+export function settingsAutomationFri(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جمعة`;
+    case "de":
+      return `Fr`;
+    case "es":
+      return `Vie`;
+    case "fr":
+      return `Ven`;
+    case "ja":
+      return `金`;
+    case "ko":
+      return `금`;
+    case "pt-BR":
+      return `Sex`;
+    case "zh-Hans":
+      return `周五`;
+    case "zh-Hant":
+      return `週五`;
+    case "en-XA":
+      return `[Ƒŕî ~]`;
+    case "ar-XB":
+      return `\u202eFri\u202c`;
+  }
+  return `Fri`;
+}
+
+export function settingsAutomationFriday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الجمعة`;
+    case "de":
+      return `Freitag`;
+    case "es":
+      return `Viernes`;
+    case "fr":
+      return `Vendredi`;
+    case "ja":
+      return `金曜日`;
+    case "ko":
+      return `금요일`;
+    case "pt-BR":
+      return `Sexta-feira`;
+    case "zh-Hans":
+      return `星期五`;
+    case "zh-Hant":
+      return `星期五`;
+    case "en-XA":
+      return `[Ƒŕîðáý ~~]`;
+    case "ar-XB":
+      return `\u202eFriday\u202c`;
+  }
+  return `Friday`;
+}
+
+export function settingsAutomationSat(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سبت`;
+    case "de":
+      return `Sa`;
+    case "es":
+      return `Sáb`;
+    case "fr":
+      return `Sam`;
+    case "ja":
+      return `土`;
+    case "ko":
+      return `토`;
+    case "pt-BR":
+      return `Sáb`;
+    case "zh-Hans":
+      return `周六`;
+    case "zh-Hant":
+      return `週六`;
+    case "en-XA":
+      return `[Šáţ ~]`;
+    case "ar-XB":
+      return `\u202eSat\u202c`;
+  }
+  return `Sat`;
+}
+
+export function settingsAutomationSaturday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السبت`;
+    case "de":
+      return `Samstag`;
+    case "es":
+      return `Sábado`;
+    case "fr":
+      return `Samedi`;
+    case "ja":
+      return `土曜日`;
+    case "ko":
+      return `토요일`;
+    case "pt-BR":
+      return `Sábado`;
+    case "zh-Hans":
+      return `星期六`;
+    case "zh-Hant":
+      return `星期六`;
+    case "en-XA":
+      return `[Šáţûŕðáý ~~~]`;
+    case "ar-XB":
+      return `\u202eSaturday\u202c`;
+  }
+  return `Saturday`;
+}
+
+export function settingsAutomationSun(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أحد`;
+    case "de":
+      return `So`;
+    case "es":
+      return `Dom`;
+    case "fr":
+      return `Dim`;
+    case "ja":
+      return `日`;
+    case "ko":
+      return `일`;
+    case "pt-BR":
+      return `Dom`;
+    case "zh-Hans":
+      return `周日`;
+    case "zh-Hant":
+      return `週日`;
+    case "en-XA":
+      return `[Šûñ ~]`;
+    case "ar-XB":
+      return `\u202eSun\u202c`;
+  }
+  return `Sun`;
+}
+
+export function settingsAutomationSunday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الأحد`;
+    case "de":
+      return `Sonntag`;
+    case "es":
+      return `Domingo`;
+    case "fr":
+      return `Dimanche`;
+    case "ja":
+      return `日曜日`;
+    case "ko":
+      return `일요일`;
+    case "pt-BR":
+      return `Domingo`;
+    case "zh-Hans":
+      return `星期日`;
+    case "zh-Hant":
+      return `星期日`;
+    case "en-XA":
+      return `[Šûñðáý ~~]`;
+    case "ar-XB":
+      return `\u202eSunday\u202c`;
+  }
+  return `Sunday`;
+}
+
+export function settingsAutomationZoneNoteThere(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعمل في هذا الوقت حسب المنطقة الزمنية التي تختارها. تعمل الأتمتة على ${where}، فقط ما دام Infinitary مفتوحًا هناك والحاسوب مستيقظًا؛ وأي تشغيل يفوت في أثناء ذلك يُنفَّذ مرة واحدة عند عودته.`;
+    case "de":
+      return `Läuft zu dieser Uhrzeit in der gewählten Zeitzone. Die Automatisierung läuft auf ${where}, nur solange Infinitary dort geöffnet und der Computer wach ist; ein in der Zwischenzeit verpasster Lauf wird einmal nachgeholt, sobald er zurück ist.`;
+    case "es":
+      return `Se ejecuta a esta hora en la zona que elijas. La automatización se ejecuta en ${where}, solo mientras Infinitary está abierto allí y la computadora está activa; una ejecución perdida mientras tanto se hace una sola vez cuando vuelve.`;
+    case "fr":
+      return `S’exécute à cette heure dans le fuseau que vous choisissez. L’automatisation s’exécute sur ${where}, seulement quand Infinitary y est ouvert et que l’ordinateur est éveillé ; une exécution manquée entre-temps a lieu une seule fois à son retour.`;
+    case "ja":
+      return `選んだタイムゾーンのこの時刻に実行します。自動化は ${where} で、そこで Infinitary が開いていてスリープしていない間だけ実行されます。その間に逃した実行は、復帰時に1回行われます。`;
+    case "ko":
+      return `고른 시간대의 이 시각에 실행돼요. 자동화는 ${where}에서 실행되며, 그곳에서 Infinitary가 열려 있고 컴퓨터가 깨어 있을 때만 실행돼요. 그동안 놓친 실행은 돌아왔을 때 한 번 실행해요.`;
+    case "pt-BR":
+      return `Roda neste horário no fuso que você escolher. A automação roda em ${where}, só enquanto o Infinitary estiver aberto lá e o computador estiver ativo; uma execução perdida nesse meio-tempo acontece uma vez quando ele voltar.`;
+    case "zh-Hans":
+      return `按你选择的时区在这个时间运行。自动化在 ${where} 上运行，仅在那里的 Infinitary 打开且电脑未睡眠时运行；期间错过的运行会在它恢复后运行一次。`;
+    case "zh-Hant":
+      return `依你選擇的時區在這個時間執行。自動化在 ${where} 上執行，只在那裡的 Infinitary 開啟且電腦未睡眠時執行；期間錯過的執行會在它恢復後執行一次。`;
+    case "en-XA":
+      return `[Ŕûñš áţ ţĥîš ţîɱé îñ ţĥé žöñé ýöû þîçķ. Åûţöɱáţîöñ ŕûñš öñ ${where}, öñļý ŵĥîļé Îñƒîñîţáŕý îš öþéñ ţĥéŕé áñð îţ îš áŵáķé; á ŕûñ ɱîššéð ɱéáñŵĥîļé ĥáþþéñš öñçé ŵĥéñ îţ ŕéţûŕñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRuns at this time in the zone you pick. Automation runs on \u202c${where}\u202e, only while Infinitary is open there and it is awake; a run missed meanwhile happens once when it returns.\u202c`;
+  }
+  return `Runs at this time in the zone you pick. Automation runs on ${where}, only while Infinitary is open there and it is awake; a run missed meanwhile happens once when it returns.`;
+}
+
+export function settingsAutomationZoneNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعمل في هذا الوقت حسب المنطقة الزمنية التي تختارها، أينما كان هذا الحاسوب. تعمل الأتمتة فقط ما دام Infinitary مفتوحًا والحاسوب مستيقظًا؛ وأي تشغيل يفوت في أثناء ذلك يُنفَّذ مرة واحدة عند عودته.`;
+    case "de":
+      return `Läuft zu dieser Uhrzeit in der gewählten Zeitzone, wo auch immer dieser Computer ist. Die Automatisierung läuft nur, solange Infinitary geöffnet und der Computer wach ist; ein in der Zwischenzeit verpasster Lauf wird einmal nachgeholt, sobald er zurück ist.`;
+    case "es":
+      return `Se ejecuta a esta hora en la zona que elijas, esté donde esté esta computadora. La automatización se ejecuta solo mientras Infinitary está abierto y la computadora está activa; una ejecución perdida mientras tanto se hace una sola vez cuando vuelve.`;
+    case "fr":
+      return `S’exécute à cette heure dans le fuseau que vous choisissez, où que se trouve cet ordinateur. L’automatisation s’exécute seulement quand Infinitary est ouvert et que l’ordinateur est éveillé ; une exécution manquée entre-temps a lieu une seule fois à son retour.`;
+    case "ja":
+      return `このコンピューターがどこにあっても、選んだタイムゾーンのこの時刻に実行します。自動化は Infinitary が開いていてコンピューターがスリープしていない間だけ実行されます。その間に逃した実行は、復帰時に1回行われます。`;
+    case "ko":
+      return `이 컴퓨터가 어디에 있든 고른 시간대의 이 시각에 실행돼요. 자동화는 Infinitary가 열려 있고 컴퓨터가 깨어 있을 때만 실행돼요. 그동안 놓친 실행은 돌아왔을 때 한 번 실행해요.`;
+    case "pt-BR":
+      return `Roda neste horário no fuso que você escolher, onde quer que este computador esteja. A automação só roda enquanto o Infinitary estiver aberto e o computador estiver ativo; uma execução perdida nesse meio-tempo acontece uma vez quando ele voltar.`;
+    case "zh-Hans":
+      return `按你选择的时区在这个时间运行，无论这台电脑身在何处。自动化仅在 Infinitary 打开且电脑未睡眠时运行；期间错过的运行会在它恢复后运行一次。`;
+    case "zh-Hant":
+      return `依你選擇的時區在這個時間執行，不論這台電腦在哪裡。自動化只在 Infinitary 開啟且電腦未睡眠時執行；期間錯過的執行會在它恢復後執行一次。`;
+    case "en-XA":
+      return `[Ŕûñš áţ ţĥîš ţîɱé îñ ţĥé žöñé ýöû þîçķ, ŵĥéŕéṽéŕ ţĥîš çöɱþûţéŕ îš. Åûţöɱáţîöñ ŕûñš öñļý ŵĥîļé Îñƒîñîţáŕý îš öþéñ áñð ţĥé çöɱþûţéŕ îš áŵáķé; á ŕûñ ɱîššéð ɱéáñŵĥîļé ĥáþþéñš öñçé ŵĥéñ îţ ŕéţûŕñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRuns at this time in the zone you pick, wherever this computer is. Automation runs only while Infinitary is open and the computer is awake; a run missed meanwhile happens once when it returns.\u202c`;
+  }
+  return `Runs at this time in the zone you pick, wherever this computer is. Automation runs only while Infinitary is open and the computer is awake; a run missed meanwhile happens once when it returns.`;
+}
+
+export function settingsAutomationLocalTimeNoteThere(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تتبع هذه الأتمتة ساعة ${where}، لذا يتغير وقتها حين يسافر ذلك الحاسوب. اختر منطقة زمنية لتثبيته.`;
+    case "de":
+      return `Diese Automatisierung folgt der Uhr auf ${where} und verschiebt sich daher, wenn dieser Computer reist. Wähl eine Zeitzone, damit sie fest bleibt.`;
+    case "es":
+      return `Esta automatización sigue el reloj de ${where}, así que cambia cuando esa computadora viaja. Elige una zona horaria para dejarla fija.`;
+    case "fr":
+      return `Cette automatisation suit l’horloge de ${where} : elle se décale quand cet ordinateur voyage. Choisissez un fuseau horaire pour la garder fixe.`;
+    case "ja":
+      return `この自動化は ${where} の時計に従うため、そのコンピューターが移動すると時刻も変わります。固定するにはタイムゾーンを選んでください。`;
+    case "ko":
+      return `이 자동화는 ${where}의 시계를 따르므로, 그 컴퓨터가 이동하면 시각도 바뀌어요. 고정하려면 시간대를 고르세요.`;
+    case "pt-BR":
+      return `Esta automação segue o relógio de ${where}, então muda quando esse computador viaja. Escolha um fuso horário para mantê-la fixa.`;
+    case "zh-Hans":
+      return `这项自动化跟随 ${where} 上的时钟，所以那台电脑出行时它会跟着变。选择一个时区可以让它保持固定。`;
+    case "zh-Hant":
+      return `這項自動化跟隨 ${where} 上的時鐘，所以那台電腦移動到別的時區時它也會跟著變。選擇一個時區就能讓它固定。`;
+    case "en-XA":
+      return `[Ţĥîš áûţöɱáţîöñ ƒöļļöŵš ţĥé çļöçķ öñ ${where}, šö îţ ɱöṽéš ŵĥéñ ţĥáţ çöɱþûţéŕ ţŕáṽéļš. Þîçķ á ţîɱé žöñé ţö ķééþ îţ ƒîẋéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis automation follows the clock on \u202c${where}\u202e, so it moves when that computer travels. Pick a time zone to keep it fixed.\u202c`;
+  }
+  return `This automation follows the clock on ${where}, so it moves when that computer travels. Pick a time zone to keep it fixed.`;
+}
+
+export function settingsAutomationLocalTimeNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تتبع هذه الأتمتة ساعة هذا الحاسوب، لذا يتغير وقتها حين تسافر. اختر منطقة زمنية لتثبيته.`;
+    case "de":
+      return `Diese Automatisierung folgt der Uhr dieses Computers und verschiebt sich daher, wenn du reist. Wähl eine Zeitzone, damit sie fest bleibt.`;
+    case "es":
+      return `Esta automatización sigue el reloj de esta computadora, así que cambia cuando viajas. Elige una zona horaria para dejarla fija.`;
+    case "fr":
+      return `Cette automatisation suit l’horloge de cet ordinateur : elle se décale quand vous voyagez. Choisissez un fuseau horaire pour la garder fixe.`;
+    case "ja":
+      return `この自動化はこのコンピューターの時計に従うため、移動すると時刻も変わります。固定するにはタイムゾーンを選んでください。`;
+    case "ko":
+      return `이 자동화는 이 컴퓨터의 시계를 따르므로, 선장님이 이동하면 시각도 바뀌어요. 고정하려면 시간대를 고르세요.`;
+    case "pt-BR":
+      return `Esta automação segue o relógio deste computador, então muda quando você viaja. Escolha um fuso horário para mantê-la fixa.`;
+    case "zh-Hans":
+      return `这项自动化跟随这台电脑的时钟，所以你出行时它会跟着变。选择一个时区可以让它保持固定。`;
+    case "zh-Hant":
+      return `這項自動化跟隨這台電腦的時鐘，所以你旅行時它也會跟著變。選擇一個時區就能讓它固定。`;
+    case "en-XA":
+      return `[Ţĥîš áûţöɱáţîöñ ƒöļļöŵš ţĥîš çöɱþûţéŕ'š çļöçķ, šö îţ ɱöṽéš ŵĥéñ ýöû ţŕáṽéļ. Þîçķ á ţîɱé žöñé ţö ķééþ îţ ƒîẋéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis automation follows this computer's clock, so it moves when you travel. Pick a time zone to keep it fixed.\u202c`;
+  }
+  return `This automation follows this computer's clock, so it moves when you travel. Pick a time zone to keep it fixed.`;
+}
+
+export function settingsAutomationClockThere(input: { where: string }): string {
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ساعة ${where}`;
+    case "de":
+      return `Die Uhr auf ${where}`;
+    case "es":
+      return `El reloj de ${where}`;
+    case "fr":
+      return `L’horloge de ${where}`;
+    case "ja":
+      return `${where} の時計`;
+    case "ko":
+      return `${where}의 시계`;
+    case "pt-BR":
+      return `O relógio de ${where}`;
+    case "zh-Hans":
+      return `${where} 上的时钟`;
+    case "zh-Hant":
+      return `${where} 上的時鐘`;
+    case "en-XA":
+      return `[Ţĥé çļöçķ öñ ${where} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe clock on \u202c${where}`;
+  }
+  return `The clock on ${where}`;
+}
+
+export function settingsAutomationClockHere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ساعة هذا الحاسوب`;
+    case "de":
+      return `Die Uhr dieses Computers`;
+    case "es":
+      return `El reloj de esta computadora`;
+    case "fr":
+      return `L’horloge de cet ordinateur`;
+    case "ja":
+      return `このコンピューターの時計`;
+    case "ko":
+      return `이 컴퓨터의 시계`;
+    case "pt-BR":
+      return `O relógio deste computador`;
+    case "zh-Hans":
+      return `这台电脑的时钟`;
+    case "zh-Hant":
+      return `這台電腦的時鐘`;
+    case "en-XA":
+      return `[Ţĥîš çöɱþûţéŕ'š çļöçķ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis computer's clock\u202c`;
+  }
+  return `This computer's clock`;
+}
+
+export function settingsAutomationReviewSends(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تذهب هذه الرسالة وتفاصيل جدولها إلى اشتراكك في الذكاء الاصطناعي وتبقى في محادثة نائب القبطان. لا يحصل أي شيء آخر على صلاحية جديدة.`;
+    case "de":
+      return `Diese Nachricht und ihre Zeitplanangaben gehen an dein KI-Abo und bleiben in der Unterhaltung deines ersten Offiziers. Sonst bekommt nichts neuen Zugriff.`;
+    case "es":
+      return `Esta indicación y los datos de su programación van a tu suscripción de IA y quedan en la conversación de tu primer oficial. Nada más obtiene acceso nuevo.`;
+    case "fr":
+      return `Cette consigne et les détails de sa planification sont envoyés à votre abonnement d’IA et restent dans la conversation de votre second. Rien d’autre n’obtient de nouvel accès.`;
+    case "ja":
+      return `このプロンプトとスケジュールの詳細は AI サブスクリプションに送られ、一等航海士の会話に残ります。ほかに新しくアクセスできるようになるものはありません。`;
+    case "ko":
+      return `이 메시지와 일정 정보는 AI 구독으로 전달되고 일등항해사의 대화에 남아요. 그 밖에 새로 접근 권한을 얻는 것은 없어요.`;
+    case "pt-BR":
+      return `Este pedido e os detalhes do agendamento vão para sua assinatura de IA e ficam na conversa do seu imediato. Nada mais ganha novo acesso.`;
+    case "zh-Hans":
+      return `这条提示及其计划详情会发送到你的 AI 订阅，并保留在大副的对话中。不会有其他内容获得新的访问权限。`;
+    case "zh-Hant":
+      return `這段提示和它的排程詳細資料會送到你的 AI 訂閱方案，並保留在大副的對話中。其他內容都不會取得新的存取權。`;
+    case "en-XA":
+      return `[Ţĥîš þŕöɱþţ áñð îţš šçĥéðûļé ðéţáîļš ĝö ţö ýöûŕ ÅÎ šûƀšçŕîþţîöñ áñð šţáý îñ ýöûŕ ƒîŕšţ ɱáţé'š çöñṽéŕšáţîöñ. Ñöţĥîñĝ éļšé ĝéţš ñéŵ áççéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis prompt and its schedule details go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.\u202c`;
+  }
+  return `This prompt and its schedule details go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.`;
+}
+
+export function settingsAutomationReviewSendsEvents(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تذهب هذه الرسالة وملخص قصير لكل حدث إلى اشتراكك في الذكاء الاصطناعي وتبقى في محادثة نائب القبطان. لا يحصل أي شيء آخر على صلاحية جديدة.`;
+    case "de":
+      return `Diese Nachricht und eine kurze Zusammenfassung jedes Ereignisses gehen an dein KI-Abo und bleiben in der Unterhaltung deines ersten Offiziers. Sonst bekommt nichts neuen Zugriff.`;
+    case "es":
+      return `Esta indicación y un breve resumen de cada evento van a tu suscripción de IA y quedan en la conversación de tu primer oficial. Nada más obtiene acceso nuevo.`;
+    case "fr":
+      return `Cette consigne et un court résumé de chaque événement sont envoyés à votre abonnement d’IA et restent dans la conversation de votre second. Rien d’autre n’obtient de nouvel accès.`;
+    case "ja":
+      return `このプロンプトと各イベントの短い要約は AI サブスクリプションに送られ、一等航海士の会話に残ります。ほかに新しくアクセスできるようになるものはありません。`;
+    case "ko":
+      return `이 메시지와 각 이벤트의 짧은 요약은 AI 구독으로 전달되고 일등항해사의 대화에 남아요. 그 밖에 새로 접근 권한을 얻는 것은 없어요.`;
+    case "pt-BR":
+      return `Este pedido e um breve resumo de cada evento vão para sua assinatura de IA e ficam na conversa do seu imediato. Nada mais ganha novo acesso.`;
+    case "zh-Hans":
+      return `这条提示和每个事件的简短摘要会发送到你的 AI 订阅，并保留在大副的对话中。不会有其他内容获得新的访问权限。`;
+    case "zh-Hant":
+      return `這段提示和每個事件的簡短摘要會送到你的 AI 訂閱方案，並保留在大副的對話中。其他內容都不會取得新的存取權。`;
+    case "en-XA":
+      return `[Ţĥîš þŕöɱþţ áñð á šĥöŕţ šûɱɱáŕý öƒ éáçĥ éṽéñţ ĝö ţö ýöûŕ ÅÎ šûƀšçŕîþţîöñ áñð šţáý îñ ýöûŕ ƒîŕšţ ɱáţé'š çöñṽéŕšáţîöñ. Ñöţĥîñĝ éļšé ĝéţš ñéŵ áççéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis prompt and a short summary of each event go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.\u202c`;
+  }
+  return `This prompt and a short summary of each event go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.`;
+}
+
+export function settingsAutomationEventsPreview(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `- (ملخص لكل حدث وصل)`;
+    case "de":
+      return `- (eine Zusammenfassung jedes eingetroffenen Ereignisses)`;
+    case "es":
+      return `- (un resumen de cada evento que llegó)`;
+    case "fr":
+      return `- (un résumé de chaque événement arrivé)`;
+    case "ja":
+      return `-（届いた各イベントの要約）`;
+    case "ko":
+      return `- (도착한 각 이벤트의 요약)`;
+    case "pt-BR":
+      return `- (um resumo de cada evento que chegou)`;
+    case "zh-Hans":
+      return `- （每个到达事件的摘要）`;
+    case "zh-Hant":
+      return `- （每個到達事件的摘要）`;
+    case "en-XA":
+      return `[- (á šûɱɱáŕý öƒ éáçĥ éṽéñţ ţĥáţ áŕŕîṽéð) ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202e- (a summary of each event that arrived)\u202c`;
+  }
+  return `- (a summary of each event that arrived)`;
+}
+
+export function settingsAutomationSubmittedNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتلقى نائب القبطان هذه الرسالة حين يحين الوقت. تصل الرسالة والوقت إلى اشتراكك في الذكاء الاصطناعي وتبقى في محادثة نائب القبطان.`;
+    case "de":
+      return `Dein erster Offizier bekommt diese Nachricht, wenn es so weit ist. Nachricht und Uhrzeit gehen an dein KI-Abo und bleiben in der Unterhaltung deines ersten Offiziers.`;
+    case "es":
+      return `Tu primer oficial recibe esta indicación cuando llega la hora. La indicación y la hora llegan a tu suscripción de IA y quedan en la conversación de tu primer oficial.`;
+    case "fr":
+      return `Votre second reçoit cette consigne le moment venu. La consigne et l’heure parviennent à votre abonnement d’IA et restent dans la conversation de votre second.`;
+    case "ja":
+      return `時刻になると、一等航海士がこのプロンプトを受け取ります。プロンプトと時刻は AI サブスクリプションに送られ、一等航海士の会話に残ります。`;
+    case "ko":
+      return `때가 되면 일등항해사가 이 메시지를 받아요. 메시지와 시각은 AI 구독으로 전달되고 일등항해사의 대화에 남아요.`;
+    case "pt-BR":
+      return `Seu imediato recebe este pedido na hora marcada. O pedido e o horário chegam à sua assinatura de IA e ficam na conversa do seu imediato.`;
+    case "zh-Hans":
+      return `时间到了，你的大副会收到这条提示。提示和时间会发送到你的 AI 订阅，并保留在大副的对话中。`;
+    case "zh-Hant":
+      return `時間到了，你的大副就會收到這段提示。提示和時間會送到你的 AI 訂閱方案，並保留在大副的對話中。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵĥéñ ţĥé ţîɱé çöɱéš. Ţĥé þŕöɱþţ áñð ţîɱé ŕéáçĥ ýöûŕ ÅÎ šûƀšçŕîþţîöñ áñð šţáý îñ ýöûŕ ƒîŕšţ ɱáţé'š çöñṽéŕšáţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate gets this prompt when the time comes. The prompt and time reach your AI subscription and stay in your first mate's conversation.\u202c`;
+  }
+  return `Your first mate gets this prompt when the time comes. The prompt and time reach your AI subscription and stay in your first mate's conversation.`;
+}
+
+export function settingsAutomationSubmittedNoteEvents(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتلقى نائب القبطان هذه الرسالة في كل مرة تصل فيها أحداث جديدة، مع ملخص قصير لكل منها. تصل إلى اشتراكك في الذكاء الاصطناعي وتبقى في محادثة نائب القبطان.`;
+    case "de":
+      return `Dein erster Offizier bekommt diese Nachricht jedes Mal, wenn neue Ereignisse eintreffen, mit einer kurzen Zusammenfassung von jedem. Sie gehen an dein KI-Abo und bleiben in der Unterhaltung deines ersten Offiziers.`;
+    case "es":
+      return `Tu primer oficial recibe esta indicación cada vez que llegan eventos nuevos, con un breve resumen de cada uno. Todo eso llega a tu suscripción de IA y queda en la conversación de tu primer oficial.`;
+    case "fr":
+      return `Votre second reçoit cette consigne chaque fois que de nouveaux événements arrivent, avec un court résumé de chacun. Ils parviennent à votre abonnement d’IA et restent dans la conversation de votre second.`;
+    case "ja":
+      return `新しいイベントが届くたびに、一等航海士がこのプロンプトを各イベントの短い要約と一緒に受け取ります。これらは AI サブスクリプションに送られ、一等航海士の会話に残ります。`;
+    case "ko":
+      return `새 이벤트가 올 때마다 일등항해사가 각 이벤트의 짧은 요약과 함께 이 메시지를 받아요. 이것들은 AI 구독으로 전달되고 일등항해사의 대화에 남아요.`;
+    case "pt-BR":
+      return `Seu imediato recebe este pedido sempre que chegam novos eventos, com um breve resumo de cada um. Eles chegam à sua assinatura de IA e ficam na conversa do seu imediato.`;
+    case "zh-Hans":
+      return `每次有新事件到达，你的大副都会收到这条提示，并附上每个事件的简短摘要。它们会发送到你的 AI 订阅，并保留在大副的对话中。`;
+    case "zh-Hant":
+      return `每次有新事件到達，你的大副都會收到這段提示，並附上每個事件的簡短摘要。它們會送到你的 AI 訂閱方案，並保留在大副的對話中。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ éáçĥ ţîɱé ñéŵ éṽéñţš áŕŕîṽé, ŵîţĥ á šĥöŕţ šûɱɱáŕý öƒ éáçĥ. Ţĥéý ŕéáçĥ ýöûŕ ÅÎ šûƀšçŕîþţîöñ áñð šţáý îñ ýöûŕ ƒîŕšţ ɱáţé'š çöñṽéŕšáţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate gets this prompt each time new events arrive, with a short summary of each. They reach your AI subscription and stay in your first mate's conversation.\u202c`;
+  }
+  return `Your first mate gets this prompt each time new events arrive, with a short summary of each. They reach your AI subscription and stay in your first mate's conversation.`;
+}
+
+export function settingsAutomationDraftNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المسودة لا تعمل أبدًا. اختر «تفعيل» لفحصها وتشغيلها.`;
+    case "de":
+      return `Ein Entwurf läuft nie. Wähl „Aktivieren“, um ihn zu prüfen und einzuschalten.`;
+    case "es":
+      return `Un borrador nunca se ejecuta. Elige Activar para revisarlo y ponerlo en marcha.`;
+    case "fr":
+      return `Un brouillon ne s’exécute jamais. Choisissez Activer pour le vérifier et le mettre en marche.`;
+    case "ja":
+      return `下書きは実行されません。「有効にする」を選ぶと確認してオンにできます。`;
+    case "ko":
+      return `초안은 실행되지 않아요. 확인하고 켜려면 활성화를 고르세요.`;
+    case "pt-BR":
+      return `Um rascunho nunca roda. Escolha Ativar para verificá-lo e ligá-lo.`;
+    case "zh-Hans":
+      return `草稿从不运行。选择“启用”来检查并打开它。`;
+    case "zh-Hant":
+      return `草稿永遠不會執行。選擇「啟用」來檢查並開啟它。`;
+    case "en-XA":
+      return `[Å ðŕáƒţ ñéṽéŕ ŕûñš. Çĥööšé Éñáƀļé ţö çĥéçķ îţ áñð ţûŕñ îţ öñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA draft never runs. Choose Enable to check it and turn it on.\u202c`;
+  }
+  return `A draft never runs. Choose Enable to check it and turn it on.`;
+}
+
+export function settingsAutomationStoppedWhen(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في انتظار اختيار التكامل الخاص بها من جديد`;
+    case "de":
+      return `Wartet darauf, dass ihre Integration wieder gewählt wird`;
+    case "es":
+      return `Esperando a que vuelvas a elegir su integración`;
+    case "fr":
+      return `En attente d’un nouveau choix de son intégration`;
+    case "ja":
+      return `連携がもう一度選ばれるのを待っています`;
+    case "ko":
+      return `연동이 다시 선택되기를 기다리는 중`;
+    case "pt-BR":
+      return `Aguardando a integração ser escolhida de novo`;
+    case "zh-Hans":
+      return `正在等待重新选择它的集成`;
+    case "zh-Hant":
+      return `正在等待重新選擇它的整合`;
+    case "en-XA":
+      return `[Ŵáîţîñĝ ƒöŕ îţš îñţéĝŕáţîöñ ţö ƀé þîçķéð áĝáîñ ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWaiting for its integration to be picked again\u202c`;
+  }
+  return `Waiting for its integration to be picked again`;
+}
+
+export function settingsAutomationStoppedNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عند حفظها تستمع إلى التكامل المختار تحت «متى».`;
+    case "de":
+      return `Beim Speichern hört sie auf die unter „Wann“ gewählte Integration.`;
+    case "es":
+      return `Al guardarla, escucha la que esté elegida en Cuándo.`;
+    case "fr":
+      return `Une fois enregistrée, elle écoute celle choisie sous Quand.`;
+    case "ja":
+      return `保存すると、「タイミング」で選んだものを待ち受けます。`;
+    case "ko":
+      return `저장하면 '언제'에서 고른 연동을 지켜봐요.`;
+    case "pt-BR":
+      return `Ao salvar, ela passa a ouvir a que estiver escolhida em Quando.`;
+    case "zh-Hans":
+      return `保存后会监听“时间”下所选的那一个。`;
+    case "zh-Hant":
+      return `儲存後會監聽「時間」下所選的那一個。`;
+    case "en-XA":
+      return `[Šáṽîñĝ îţ ļîšţéñš ţö ţĥé öñé þîçķéð ûñðéŕ Ŵĥéñ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSaving it listens to the one picked under When.\u202c`;
+  }
+  return `Saving it listens to the one picked under When.`;
+}
+
+export function settingsAutomationDetailNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تُملأ كل تفصيلة عند إرسال الرسالة.`;
+    case "de":
+      return `Jede Angabe wird ausgefüllt, wenn die Nachricht gesendet wird.`;
+    case "es":
+      return `Cada dato se completa cuando se envía la indicación.`;
+    case "fr":
+      return `Chaque détail est rempli au moment où la consigne est envoyée.`;
+    case "ja":
+      return `各詳細はプロンプトを送るときに入ります。`;
+    case "ko":
+      return `각 정보는 메시지를 보낼 때 채워져요.`;
+    case "pt-BR":
+      return `Cada detalhe é preenchido quando o pedido é enviado.`;
+    case "zh-Hans":
+      return `每项详情会在发送提示时填入。`;
+    case "zh-Hant":
+      return `每項詳細資料會在送出提示時填入。`;
+    case "en-XA":
+      return `[Éáçĥ ðéţáîļ îš ƒîļļéð îñ ŵĥéñ ţĥé þŕöɱþţ îš šéñţ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEach detail is filled in when the prompt is sent.\u202c`;
+  }
+  return `Each detail is filled in when the prompt is sent.`;
+}
+
+export function settingsAutomationEventIn(input: { event: string; integration: string }): string {
+  const event = input.event;
+  const integration = input.integration;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${event} في ${integration}`;
+    case "de":
+      return `${event} in ${integration}`;
+    case "es":
+      return `${event} en ${integration}`;
+    case "fr":
+      return `${event} dans ${integration}`;
+    case "ja":
+      return `${integration} の ${event}`;
+    case "ko":
+      return `${integration}의 ${event}`;
+    case "pt-BR":
+      return `${event} em ${integration}`;
+    case "zh-Hans":
+      return `${integration} 中的 ${event}`;
+    case "zh-Hant":
+      return `${integration} 中的 ${event}`;
+    case "en-XA":
+      return `[${event} îñ ${integration} ~~]`;
+    case "ar-XB":
+      return `${event}\u202e in \u202c${integration}`;
+  }
+  return `${event} in ${integration}`;
+}
+
+export function settingsAutomationTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الأتمتة`;
+    case "de":
+      return `Automatisierung`;
+    case "es":
+      return `Automatización`;
+    case "fr":
+      return `Automatisation`;
+    case "ja":
+      return `自動化`;
+    case "ko":
+      return `자동화`;
+    case "pt-BR":
+      return `Automação`;
+    case "zh-Hans":
+      return `自动化`;
+    case "zh-Hant":
+      return `自動化`;
+    case "en-XA":
+      return `[Åûţöɱáţîöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAutomation\u202c`;
+  }
+  return `Automation`;
+}
+
+export function settingsAutomationDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رسائل يتلقاها نائب القبطان وفق جدول. يمكنك أيضًا أن تطلب من نائب القبطان إعداد واحدة.`;
+    case "de":
+      return `Nachrichten, die dein erster Offizier nach Zeitplan bekommt. Du kannst deinen ersten Offizier auch bitten, eine einzurichten.`;
+    case "es":
+      return `Indicaciones que tu primer oficial recibe según una programación. También puedes pedirle a tu primer oficial que configure una.`;
+    case "fr":
+      return `Des consignes que votre second reçoit selon une planification. Vous pouvez aussi demander à votre second d’en créer une.`;
+    case "ja":
+      return `スケジュールに沿って一等航海士に届くプロンプトです。一等航海士に設定を頼むこともできます。`;
+    case "ko":
+      return `일정에 따라 일등항해사가 받는 메시지예요. 일등항해사에게 설정해 달라고 부탁할 수도 있어요.`;
+    case "pt-BR":
+      return `Pedidos que seu imediato recebe em horários agendados. Você também pode pedir ao seu imediato para criar uma.`;
+    case "zh-Hans":
+      return `按计划发给你的大副的提示。你也可以让大副帮你设置一个。`;
+    case "zh-Hant":
+      return `依排程傳給你的大副的提示。你也可以請大副幫你設定一個。`;
+    case "en-XA":
+      return `[Þŕöɱþţš ýöûŕ ƒîŕšţ ɱáţé ĝéţš öñ á šçĥéðûļé. Ýöû çáñ áļšö ášķ ýöûŕ ƒîŕšţ ɱáţé ţö šéţ öñé ûþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrompts your first mate gets on a schedule. You can also ask your first mate to set one up.\u202c`;
+  }
+  return `Prompts your first mate gets on a schedule. You can also ask your first mate to set one up.`;
+}
+
+export function settingsAutomationPauseAll(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف الكل مؤقتًا`;
+    case "de":
+      return `Alle pausieren`;
+    case "es":
+      return `Pausar todas`;
+    case "fr":
+      return `Tout mettre en pause`;
+    case "ja":
+      return `すべて一時停止`;
+    case "ko":
+      return `모두 일시 정지`;
+    case "pt-BR":
+      return `Pausar todas`;
+    case "zh-Hans":
+      return `全部暂停`;
+    case "zh-Hant":
+      return `全部暫停`;
+    case "en-XA":
+      return `[Þáûšé áļļ ~~~]`;
+    case "ar-XB":
+      return `\u202ePause all\u202c`;
+  }
+  return `Pause all`;
+}
+
+export function settingsAutomationSearch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البحث في عمليات الأتمتة`;
+    case "de":
+      return `Automatisierungen durchsuchen`;
+    case "es":
+      return `Buscar automatizaciones`;
+    case "fr":
+      return `Rechercher des automatisations`;
+    case "ja":
+      return `自動化を検索`;
+    case "ko":
+      return `자동화 검색`;
+    case "pt-BR":
+      return `Buscar automações`;
+    case "zh-Hans":
+      return `搜索自动化`;
+    case "zh-Hant":
+      return `搜尋自動化`;
+    case "en-XA":
+      return `[Šéáŕçĥ áûţöɱáţîöñš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSearch automations\u202c`;
+  }
+  return `Search automations`;
+}
+
+export function settingsAutomationNew(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أتمتة جديدة`;
+    case "de":
+      return `Neue Automatisierung`;
+    case "es":
+      return `Nueva automatización`;
+    case "fr":
+      return `Nouvelle automatisation`;
+    case "ja":
+      return `新しい自動化`;
+    case "ko":
+      return `새 자동화`;
+    case "pt-BR":
+      return `Nova automação`;
+    case "zh-Hans":
+      return `新建自动化`;
+    case "zh-Hant":
+      return `新增自動化`;
+    case "en-XA":
+      return `[Ñéŵ áûţöɱáţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew automation\u202c`;
+  }
+  return `New automation`;
+}
+
+export function settingsAutomationList(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمليات الأتمتة`;
+    case "de":
+      return `Automatisierungen`;
+    case "es":
+      return `Automatizaciones`;
+    case "fr":
+      return `Automatisations`;
+    case "ja":
+      return `自動化`;
+    case "ko":
+      return `자동화`;
+    case "pt-BR":
+      return `Automações`;
+    case "zh-Hans":
+      return `自动化`;
+    case "zh-Hant":
+      return `自動化`;
+    case "en-XA":
+      return `[Åûţöɱáţîöñš ~~~~]`;
+    case "ar-XB":
+      return `\u202eAutomations\u202c`;
+  }
+  return `Automations`;
+}
+
+export function settingsAutomationEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا توجد عمليات أتمتة بعد. أنشئ واحدة هنا، أو أخبر نائب القبطان بما يجب تشغيله ومتى.`;
+    case "de":
+      return `Noch keine Automatisierungen. Erstell hier eine oder sag deinem ersten Offizier, was wann laufen soll.`;
+    case "es":
+      return `Todavía no hay automatizaciones. Crea una aquí o dile a tu primer oficial qué ejecutar y cuándo.`;
+    case "fr":
+      return `Aucune automatisation pour l’instant. Créez-en une ici, ou dites à votre second quoi lancer et quand.`;
+    case "ja":
+      return `自動化はまだありません。ここで作るか、何をいつ実行するかを一等航海士に伝えてください。`;
+    case "ko":
+      return `아직 자동화가 없어요. 여기서 만들거나, 일등항해사에게 무엇을 언제 실행할지 말해 주세요.`;
+    case "pt-BR":
+      return `Ainda não há automações. Crie uma aqui ou diga ao seu imediato o que rodar e quando.`;
+    case "zh-Hans":
+      return `还没有自动化。在这里新建一个，或告诉你的大副要运行什么、什么时候运行。`;
+    case "zh-Hant":
+      return `還沒有自動化。在這裡新增一個，或告訴你的大副要執行什麼、什麼時候執行。`;
+    case "en-XA":
+      return `[Ñö áûţöɱáţîöñš ýéţ. Ṁáķé öñé ĥéŕé, öŕ ţéļļ ýöûŕ ƒîŕšţ ɱáţé ŵĥáţ ţö ŕûñ áñð ŵĥéñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo automations yet. Make one here, or tell your first mate what to run and when.\u202c`;
+  }
+  return `No automations yet. Make one here, or tell your first mate what to run and when.`;
+}
+
+export function settingsAutomationNoMatch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء يطابق.`;
+    case "de":
+      return `Nichts gefunden.`;
+    case "es":
+      return `No hay coincidencias.`;
+    case "fr":
+      return `Aucun résultat.`;
+    case "ja":
+      return `一致するものはありません。`;
+    case "ko":
+      return `일치하는 항목이 없어요.`;
+    case "pt-BR":
+      return `Nada corresponde.`;
+    case "zh-Hans":
+      return `没有匹配项。`;
+    case "zh-Hant":
+      return `沒有符合的項目。`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ ɱáţçĥéš. ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing matches.\u202c`;
+  }
+  return `Nothing matches.`;
+}
+
+export function settingsAutomationPickOne(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر أتمتة لقراءتها أو تغييرها.`;
+    case "de":
+      return `Wähl eine Automatisierung, um sie zu lesen oder zu ändern.`;
+    case "es":
+      return `Elige una automatización para leerla o cambiarla.`;
+    case "fr":
+      return `Choisissez une automatisation pour la lire ou la modifier.`;
+    case "ja":
+      return `自動化を選ぶと、内容の確認や変更ができます。`;
+    case "ko":
+      return `읽거나 바꿀 자동화를 고르세요.`;
+    case "pt-BR":
+      return `Escolha uma automação para ler ou alterar.`;
+    case "zh-Hans":
+      return `选择一项自动化来查看或更改。`;
+    case "zh-Hant":
+      return `選擇一項自動化來查看或變更。`;
+    case "en-XA":
+      return `[Þîçķ áñ áûţöɱáţîöñ ţö ŕéáð öŕ çĥáñĝé îţ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePick an automation to read or change it.\u202c`;
+  }
+  return `Pick an automation to read or change it.`;
+}
+
+export function settingsAutomationSetUpByFirstMate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أعدّها نائب القبطان`;
+    case "de":
+      return `von deinem ersten Offizier eingerichtet`;
+    case "es":
+      return `creada por tu primer oficial`;
+    case "fr":
+      return `créée par votre second`;
+    case "ja":
+      return `一等航海士が設定`;
+    case "ko":
+      return `일등항해사가 설정함`;
+    case "pt-BR":
+      return `criada pelo seu imediato`;
+    case "zh-Hans":
+      return `由你的大副设置`;
+    case "zh-Hant":
+      return `由你的大副設定`;
+    case "en-XA":
+      return `[šéţ ûþ ƀý ýöûŕ ƒîŕšţ ɱáţé ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eset up by your first mate\u202c`;
+  }
+  return `set up by your first mate`;
+}
+
+export function settingsAutomationName(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاسم`;
+    case "de":
+      return `Name`;
+    case "es":
+      return `Nombre`;
+    case "fr":
+      return `Nom`;
+    case "ja":
+      return `名前`;
+    case "ko":
+      return `이름`;
+    case "pt-BR":
+      return `Nome`;
+    case "zh-Hans":
+      return `名称`;
+    case "zh-Hant":
+      return `名稱`;
+    case "en-XA":
+      return `[Ñáɱé ~~]`;
+    case "ar-XB":
+      return `\u202eName\u202c`;
+  }
+  return `Name`;
+}
+
+export function settingsAutomationNamePlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مراجعة أسبوعية`;
+    case "de":
+      return `Wochenrückblick`;
+    case "es":
+      return `Revisión semanal`;
+    case "fr":
+      return `Revue hebdomadaire`;
+    case "ja":
+      return `毎週の振り返り`;
+    case "ko":
+      return `주간 검토`;
+    case "pt-BR":
+      return `Revisão semanal`;
+    case "zh-Hans":
+      return `每周回顾`;
+    case "zh-Hant":
+      return `每週回顧`;
+    case "en-XA":
+      return `[Ŵééķļý ŕéṽîéŵ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eWeekly review\u202c`;
+  }
+  return `Weekly review`;
+}
+
+export function settingsAutomationWhen(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متى`;
+    case "de":
+      return `Wann`;
+    case "es":
+      return `Cuándo`;
+    case "fr":
+      return `Quand`;
+    case "ja":
+      return `タイミング`;
+    case "ko":
+      return `언제`;
+    case "pt-BR":
+      return `Quando`;
+    case "zh-Hans":
+      return `时间`;
+    case "zh-Hant":
+      return `時間`;
+    case "en-XA":
+      return `[Ŵĥéñ ~~]`;
+    case "ar-XB":
+      return `\u202eWhen\u202c`;
+  }
+  return `When`;
+}
+
+export function settingsAutomationKindEvery(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تكرار`;
+    case "de":
+      return `Wiederholt`;
+    case "es":
+      return `Se repite`;
+    case "fr":
+      return `Se répète`;
+    case "ja":
+      return `繰り返し`;
+    case "ko":
+      return `반복`;
+    case "pt-BR":
+      return `Repete`;
+    case "zh-Hans":
+      return `重复`;
+    case "zh-Hant":
+      return `重複`;
+    case "en-XA":
+      return `[Ŕéþéáţš ~~~]`;
+    case "ar-XB":
+      return `\u202eRepeats\u202c`;
+  }
+  return `Repeats`;
+}
+
+export function settingsAutomationKindDaily(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل يوم`;
+    case "de":
+      return `Jeden Tag`;
+    case "es":
+      return `Todos los días`;
+    case "fr":
+      return `Tous les jours`;
+    case "ja":
+      return `毎日`;
+    case "ko":
+      return `매일`;
+    case "pt-BR":
+      return `Todo dia`;
+    case "zh-Hans":
+      return `每天`;
+    case "zh-Hant":
+      return `每天`;
+    case "en-XA":
+      return `[Éṽéŕý ðáý ~~~]`;
+    case "ar-XB":
+      return `\u202eEvery day\u202c`;
+  }
+  return `Every day`;
+}
+
+export function settingsAutomationKindWeekly(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `في أيام مختارة`;
+    case "de":
+      return `An gewählten Tagen`;
+    case "es":
+      return `Los días elegidos`;
+    case "fr":
+      return `Les jours choisis`;
+    case "ja":
+      return `選んだ曜日`;
+    case "ko":
+      return `고른 요일에`;
+    case "pt-BR":
+      return `Nos dias escolhidos`;
+    case "zh-Hans":
+      return `在选定的日子`;
+    case "zh-Hant":
+      return `在選定的日子`;
+    case "en-XA":
+      return `[Öñ çĥöšéñ ðáýš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOn chosen days\u202c`;
+  }
+  return `On chosen days`;
+}
+
+export function settingsAutomationKindOnce(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مرة واحدة`;
+    case "de":
+      return `Einmal`;
+    case "es":
+      return `Una vez`;
+    case "fr":
+      return `Une fois`;
+    case "ja":
+      return `1回`;
+    case "ko":
+      return `한 번`;
+    case "pt-BR":
+      return `Uma vez`;
+    case "zh-Hans":
+      return `一次`;
+    case "zh-Hant":
+      return `一次`;
+    case "en-XA":
+      return `[Öñçé ~~]`;
+    case "ar-XB":
+      return `\u202eOnce\u202c`;
+  }
+  return `Once`;
+}
+
+export function settingsAutomationKindEvent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عند حدوث شيء`;
+    case "de":
+      return `Wenn etwas passiert`;
+    case "es":
+      return `Cuando pasa algo`;
+    case "fr":
+      return `Quand quelque chose se produit`;
+    case "ja":
+      return `何かが起きたとき`;
+    case "ko":
+      return `어떤 일이 일어날 때`;
+    case "pt-BR":
+      return `Quando algo acontece`;
+    case "zh-Hans":
+      return `当某事发生时`;
+    case "zh-Hant":
+      return `當某件事發生時`;
+    case "en-XA":
+      return `[Ŵĥéñ šöɱéţĥîñĝ ĥáþþéñš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhen something happens\u202c`;
+  }
+  return `When something happens`;
+}
+
+export function settingsAutomationWhatHappens(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما يحدث`;
+    case "de":
+      return `Was passiert`;
+    case "es":
+      return `Qué pasa`;
+    case "fr":
+      return `Ce qui se passe`;
+    case "ja":
+      return `起きること`;
+    case "ko":
+      return `일어나는 일`;
+    case "pt-BR":
+      return `O que acontece`;
+    case "zh-Hans":
+      return `发生什么`;
+    case "zh-Hant":
+      return `發生什麼事`;
+    case "en-XA":
+      return `[Ŵĥáţ ĥáþþéñš ~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat happens\u202c`;
+  }
+  return `What happens`;
+}
+
+export function settingsAutomationEventNotConnected(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تكامل غير متصل الآن`;
+    case "de":
+      return `Eine gerade nicht verbundene Integration`;
+    case "es":
+      return `Una integración que ahora no está conectada`;
+    case "fr":
+      return `Une intégration non connectée pour l’instant`;
+    case "ja":
+      return `現在接続されていない連携`;
+    case "ko":
+      return `지금 연결되지 않은 연동`;
+    case "pt-BR":
+      return `Uma integração não conectada agora`;
+    case "zh-Hans":
+      return `当前未连接的集成`;
+    case "zh-Hant":
+      return `目前未連結的整合`;
+    case "en-XA":
+      return `[Åñ îñţéĝŕáţîöñ ñöţ çöññéçţéð ñöŵ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAn integration not connected now\u202c`;
+  }
+  return `An integration not connected now`;
+}
+
+export function settingsAutomationNoEvents(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوجد تكامل متصل يُبلغ عن أحداث`;
+    case "de":
+      return `Nichts Verbundenes meldet Ereignisse`;
+    case "es":
+      return `Nada conectado avisa de eventos`;
+    case "fr":
+      return `Aucune intégration connectée ne signale d’événements`;
+    case "ja":
+      return `イベントを知らせる接続済みの連携はありません`;
+    case "ko":
+      return `이벤트를 알려 주는 연동이 연결되어 있지 않음`;
+    case "pt-BR":
+      return `Nada conectado avisa sobre eventos`;
+    case "zh-Hans":
+      return `没有已连接的集成会通知事件`;
+    case "zh-Hant":
+      return `沒有已連結的整合會通知事件`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ çöññéçţéð ţéļļš éṽéñţš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing connected tells events\u202c`;
+  }
+  return `Nothing connected tells events`;
+}
+
+export function settingsAutomationMinutesBetween(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدقائق بين عمليات التشغيل`;
+    case "de":
+      return `Minuten zwischen den Läufen`;
+    case "es":
+      return `Minutos entre ejecuciones`;
+    case "fr":
+      return `Minutes entre les exécutions`;
+    case "ja":
+      return `実行の間隔（分）`;
+    case "ko":
+      return `실행 간격(분)`;
+    case "pt-BR":
+      return `Minutos entre execuções`;
+    case "zh-Hans":
+      return `运行间隔分钟数`;
+    case "zh-Hant":
+      return `執行間隔分鐘數`;
+    case "en-XA":
+      return `[Ṁîñûţéš ƀéţŵééñ ŕûñš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMinutes between runs\u202c`;
+  }
+  return `Minutes between runs`;
+}
+
+export function settingsAutomationMinutes(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دقيقة`;
+    case "de":
+      return `Minuten`;
+    case "es":
+      return `minutos`;
+    case "fr":
+      return `minutes`;
+    case "ja":
+      return `分`;
+    case "ko":
+      return `분`;
+    case "pt-BR":
+      return `minutos`;
+    case "zh-Hans":
+      return `分钟`;
+    case "zh-Hant":
+      return `分鐘`;
+    case "en-XA":
+      return `[ɱîñûţéš ~~~]`;
+    case "ar-XB":
+      return `\u202eminutes\u202c`;
+  }
+  return `minutes`;
+}
+
+export function settingsAutomationTimeOfDay(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الوقت من اليوم`;
+    case "de":
+      return `Uhrzeit`;
+    case "es":
+      return `Hora del día`;
+    case "fr":
+      return `Heure de la journée`;
+    case "ja":
+      return `時刻`;
+    case "ko":
+      return `하루 중 시간`;
+    case "pt-BR":
+      return `Horário do dia`;
+    case "zh-Hans":
+      return `时间`;
+    case "zh-Hant":
+      return `時間`;
+    case "en-XA":
+      return `[Ţîɱé öƒ ðáý ~~~~]`;
+    case "ar-XB":
+      return `\u202eTime of day\u202c`;
+  }
+  return `Time of day`;
+}
+
+export function settingsAutomationDateAndTime(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التاريخ والوقت`;
+    case "de":
+      return `Datum und Uhrzeit`;
+    case "es":
+      return `Fecha y hora`;
+    case "fr":
+      return `Date et heure`;
+    case "ja":
+      return `日付と時刻`;
+    case "ko":
+      return `날짜와 시간`;
+    case "pt-BR":
+      return `Data e horário`;
+    case "zh-Hans":
+      return `日期和时间`;
+    case "zh-Hant":
+      return `日期和時間`;
+    case "en-XA":
+      return `[Ðáţé áñð ţîɱé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eDate and time\u202c`;
+  }
+  return `Date and time`;
+}
+
+export function settingsAutomationTimeZone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المنطقة الزمنية`;
+    case "de":
+      return `Zeitzone`;
+    case "es":
+      return `Zona horaria`;
+    case "fr":
+      return `Fuseau horaire`;
+    case "ja":
+      return `タイムゾーン`;
+    case "ko":
+      return `시간대`;
+    case "pt-BR":
+      return `Fuso horário`;
+    case "zh-Hans":
+      return `时区`;
+    case "zh-Hant":
+      return `時區`;
+    case "en-XA":
+      return `[Ţîɱé žöñé ~~~]`;
+    case "ar-XB":
+      return `\u202eTime zone\u202c`;
+  }
+  return `Time zone`;
+}
+
+export function settingsAutomationProject(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المشروع`;
+    case "de":
+      return `Projekt`;
+    case "es":
+      return `Proyecto`;
+    case "fr":
+      return `Projet`;
+    case "ja":
+      return `プロジェクト`;
+    case "ko":
+      return `프로젝트`;
+    case "pt-BR":
+      return `Projeto`;
+    case "zh-Hans":
+      return `项目`;
+    case "zh-Hant":
+      return `專案`;
+    case "en-XA":
+      return `[Þŕöĵéçţ ~~~]`;
+    case "ar-XB":
+      return `\u202eProject\u202c`;
+  }
+  return `Project`;
+}
+
+export function settingsAutomationNoProject(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلا مشروع`;
+    case "de":
+      return `Kein Projekt`;
+    case "es":
+      return `Sin proyecto`;
+    case "fr":
+      return `Aucun projet`;
+    case "ja":
+      return `プロジェクトなし`;
+    case "ko":
+      return `프로젝트 없음`;
+    case "pt-BR":
+      return `Sem projeto`;
+    case "zh-Hans":
+      return `无项目`;
+    case "zh-Hant":
+      return `沒有專案`;
+    case "en-XA":
+      return `[Ñö þŕöĵéçţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eNo project\u202c`;
+  }
+  return `No project`;
+}
+
+export function settingsAutomationRemovedProject(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مشروع أُزيل`;
+    case "de":
+      return `Ein entferntes Projekt`;
+    case "es":
+      return `Un proyecto eliminado`;
+    case "fr":
+      return `Un projet retiré`;
+    case "ja":
+      return `削除されたプロジェクト`;
+    case "ko":
+      return `제거된 프로젝트`;
+    case "pt-BR":
+      return `Um projeto removido`;
+    case "zh-Hans":
+      return `已移除的项目`;
+    case "zh-Hant":
+      return `已移除的專案`;
+    case "en-XA":
+      return `[Å ŕéɱöṽéð þŕöĵéçţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA removed project\u202c`;
+  }
+  return `A removed project`;
+}
+
+export function settingsAutomationPrompt(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما تقوله لنائب القبطان`;
+    case "de":
+      return `Sag deinem ersten Offizier`;
+    case "es":
+      return `Dile a tu primer oficial`;
+    case "fr":
+      return `Dites à votre second`;
+    case "ja":
+      return `一等航海士に伝えること`;
+    case "ko":
+      return `일등항해사에게 전할 말`;
+    case "pt-BR":
+      return `Diga ao seu imediato`;
+    case "zh-Hans":
+      return `告诉你的大副`;
+    case "zh-Hant":
+      return `告訴你的大副`;
+    case "en-XA":
+      return `[Ţéļļ ýöûŕ ƒîŕšţ ɱáţé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTell your first mate\u202c`;
+  }
+  return `Tell your first mate`;
+}
+
+export function settingsAutomationPromptPlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `راجع مهامي المفتوحة واقترح أولويات هذا الأسبوع.`;
+    case "de":
+      return `Sieh dir meine offenen Aufgaben an und schlag die Prioritäten für diese Woche vor.`;
+    case "es":
+      return `Revisa mis tareas abiertas y sugiere las prioridades de esta semana.`;
+    case "fr":
+      return `Passez en revue mes tâches ouvertes et proposez les priorités de cette semaine.`;
+    case "ja":
+      return `未完了のタスクを確認して、今週の優先事項を提案してください。`;
+    case "ko":
+      return `열려 있는 작업을 검토하고 이번 주 우선순위를 제안해 줘.`;
+    case "pt-BR":
+      return `Revise minhas tarefas abertas e sugira as prioridades desta semana.`;
+    case "zh-Hans":
+      return `查看我未完成的任务，并建议本周的优先事项。`;
+    case "zh-Hant":
+      return `看看我未完成的任務，並建議這週的優先事項。`;
+    case "en-XA":
+      return `[Ŕéṽîéŵ ɱý öþéñ ţášķš áñð šûĝĝéšţ ţĥîš ŵééķ'š þŕîöŕîţîéš. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReview my open tasks and suggest this week's priorities.\u202c`;
+  }
+  return `Review my open tasks and suggest this week's priorities.`;
+}
+
+export function settingsAutomationInsertDetail(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إدراج تفصيلة من الجدول`;
+    case "de":
+      return `Zeitplanangabe einfügen`;
+    case "es":
+      return `Insertar un dato de la programación`;
+    case "fr":
+      return `Insérer un détail de planification`;
+    case "ja":
+      return `スケジュールの詳細を挿入`;
+    case "ko":
+      return `일정 정보 넣기`;
+    case "pt-BR":
+      return `Inserir detalhe do agendamento`;
+    case "zh-Hans":
+      return `插入计划详情`;
+    case "zh-Hant":
+      return `插入排程詳細資料`;
+    case "en-XA":
+      return `[Îñšéŕţ šçĥéðûļé ðéţáîļ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInsert schedule detail\u202c`;
+  }
+  return `Insert schedule detail`;
+}
+
+export function settingsAutomationInsertDetailChoice(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إدراج تفصيلة من الجدول…`;
+    case "de":
+      return `Zeitplanangabe einfügen …`;
+    case "es":
+      return `Insertar un dato de la programación…`;
+    case "fr":
+      return `Insérer un détail de planification…`;
+    case "ja":
+      return `スケジュールの詳細を挿入…`;
+    case "ko":
+      return `일정 정보 넣기…`;
+    case "pt-BR":
+      return `Inserir detalhe do agendamento…`;
+    case "zh-Hans":
+      return `插入计划详情…`;
+    case "zh-Hant":
+      return `插入排程詳細資料…`;
+    case "en-XA":
+      return `[Îñšéŕţ šçĥéðûļé ðéţáîļ… ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInsert schedule detail…\u202c`;
+  }
+  return `Insert schedule detail…`;
+}
+
+export function settingsAutomationPassed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لقد مضى ذلك الوقت بالفعل.`;
+    case "de":
+      return `Diese Zeit ist schon vorbei.`;
+    case "es":
+      return `Esa hora ya pasó.`;
+    case "fr":
+      return `Cette heure est déjà passée.`;
+    case "ja":
+      return `その時刻はすでに過ぎています。`;
+    case "ko":
+      return `그 시간은 이미 지났어요.`;
+    case "pt-BR":
+      return `Esse horário já passou.`;
+    case "zh-Hans":
+      return `那个时间已经过去了。`;
+    case "zh-Hant":
+      return `那個時間已經過了。`;
+    case "en-XA":
+      return `[Ţĥáţ ţîɱé ĥáš áļŕéáðý þáššéð. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThat time has already passed.\u202c`;
+  }
+  return `That time has already passed.`;
+}
+
+export function settingsAutomationPreviewNext(input: { dates: string }): string {
+  const dates = input.dates;
+  switch (currentLanguage()) {
+    case "ar":
+      return `التالي: ${dates}. لا يُرسَل شيء.`;
+    case "de":
+      return `Als Nächstes: ${dates}. Es wird nichts gesendet.`;
+    case "es":
+      return `Próximas: ${dates}. No se envía nada.`;
+    case "fr":
+      return `Prochaines : ${dates}. Rien n’est envoyé.`;
+    case "ja":
+      return `次回：${dates}。何も送信されません。`;
+    case "ko":
+      return `다음: ${dates}. 보내지는 것은 없어요.`;
+    case "pt-BR":
+      return `Próximas: ${dates}. Nada é enviado.`;
+    case "zh-Hans":
+      return `下一次：${dates}。不会发送任何内容。`;
+    case "zh-Hant":
+      return `下一次：${dates}。不會送出任何內容。`;
+    case "en-XA":
+      return `[Ñéẋţ: ${dates}. Ñöţĥîñĝ îš šéñţ. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNext: \u202c${dates}\u202e. Nothing is sent.\u202c`;
+  }
+  return `Next: ${dates}. Nothing is sent.`;
+}
+
+export function settingsAutomationEnable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تفعيل…`;
+    case "de":
+      return `Aktivieren …`;
+    case "es":
+      return `Activar…`;
+    case "fr":
+      return `Activer…`;
+    case "ja":
+      return `有効にする…`;
+    case "ko":
+      return `활성화…`;
+    case "pt-BR":
+      return `Ativar…`;
+    case "zh-Hans":
+      return `启用…`;
+    case "zh-Hant":
+      return `啟用…`;
+    case "en-XA":
+      return `[Éñáƀļé… ~~~]`;
+    case "ar-XB":
+      return `\u202eEnable…\u202c`;
+  }
+  return `Enable…`;
+}
+
+export function settingsAutomationSaveDraft(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حفظ المسودة`;
+    case "de":
+      return `Entwurf speichern`;
+    case "es":
+      return `Guardar borrador`;
+    case "fr":
+      return `Enregistrer le brouillon`;
+    case "ja":
+      return `下書きを保存`;
+    case "ko":
+      return `초안 저장`;
+    case "pt-BR":
+      return `Salvar rascunho`;
+    case "zh-Hans":
+      return `保存草稿`;
+    case "zh-Hant":
+      return `儲存草稿`;
+    case "en-XA":
+      return `[Šáṽé ðŕáƒţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eSave draft\u202c`;
+  }
+  return `Save draft`;
+}
+
+export function settingsAutomationSave(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حفظ`;
+    case "de":
+      return `Speichern`;
+    case "es":
+      return `Guardar`;
+    case "fr":
+      return `Enregistrer`;
+    case "ja":
+      return `保存`;
+    case "ko":
+      return `저장`;
+    case "pt-BR":
+      return `Salvar`;
+    case "zh-Hans":
+      return `保存`;
+    case "zh-Hant":
+      return `儲存`;
+    case "en-XA":
+      return `[Šáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eSave\u202c`;
+  }
+  return `Save`;
+}
+
+export function settingsAutomationPreview(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معاينة`;
+    case "de":
+      return `Vorschau`;
+    case "es":
+      return `Vista previa`;
+    case "fr":
+      return `Aperçu`;
+    case "ja":
+      return `プレビュー`;
+    case "ko":
+      return `미리 보기`;
+    case "pt-BR":
+      return `Prévia`;
+    case "zh-Hans":
+      return `预览`;
+    case "zh-Hant":
+      return `預覽`;
+    case "en-XA":
+      return `[Þŕéṽîéŵ ~~~]`;
+    case "ar-XB":
+      return `\u202ePreview\u202c`;
+  }
+  return `Preview`;
+}
+
+export function settingsAutomationPause(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف مؤقت`;
+    case "de":
+      return `Pausieren`;
+    case "es":
+      return `Pausar`;
+    case "fr":
+      return `Mettre en pause`;
+    case "ja":
+      return `一時停止`;
+    case "ko":
+      return `일시 정지`;
+    case "pt-BR":
+      return `Pausar`;
+    case "zh-Hans":
+      return `暂停`;
+    case "zh-Hant":
+      return `暫停`;
+    case "en-XA":
+      return `[Þáûšé ~~]`;
+    case "ar-XB":
+      return `\u202ePause\u202c`;
+  }
+  return `Pause`;
+}
+
+export function settingsAutomationResume(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استئناف`;
+    case "de":
+      return `Fortsetzen`;
+    case "es":
+      return `Reanudar`;
+    case "fr":
+      return `Reprendre`;
+    case "ja":
+      return `再開`;
+    case "ko":
+      return `재개`;
+    case "pt-BR":
+      return `Retomar`;
+    case "zh-Hans":
+      return `恢复`;
+    case "zh-Hant":
+      return `繼續`;
+    case "en-XA":
+      return `[Ŕéšûɱé ~~]`;
+    case "ar-XB":
+      return `\u202eResume\u202c`;
+  }
+  return `Resume`;
+}
+
+export function settingsAutomationDeleteForGood(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حذف نهائي`;
+    case "de":
+      return `Endgültig löschen`;
+    case "es":
+      return `Eliminar para siempre`;
+    case "fr":
+      return `Supprimer définitivement`;
+    case "ja":
+      return `完全に削除`;
+    case "ko":
+      return `영구 삭제`;
+    case "pt-BR":
+      return `Excluir de vez`;
+    case "zh-Hans":
+      return `永久删除`;
+    case "zh-Hant":
+      return `永久刪除`;
+    case "en-XA":
+      return `[Ðéļéţé ƒöŕ ĝööð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eDelete for good\u202c`;
+  }
+  return `Delete for good`;
+}
+
+export function settingsAutomationDelete(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حذف`;
+    case "de":
+      return `Löschen`;
+    case "es":
+      return `Eliminar`;
+    case "fr":
+      return `Supprimer`;
+    case "ja":
+      return `削除`;
+    case "ko":
+      return `삭제`;
+    case "pt-BR":
+      return `Excluir`;
+    case "zh-Hans":
+      return `删除`;
+    case "zh-Hant":
+      return `刪除`;
+    case "en-XA":
+      return `[Ðéļéţé ~~]`;
+    case "ar-XB":
+      return `\u202eDelete\u202c`;
+  }
+  return `Delete`;
+}
+
+export function settingsAutomationNotSpecified(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير محدد`;
+    case "de":
+      return `Nicht angegeben`;
+    case "es":
+      return `Sin especificar`;
+    case "fr":
+      return `Non précisé`;
+    case "ja":
+      return `指定なし`;
+    case "ko":
+      return `지정 안 됨`;
+    case "pt-BR":
+      return `Não especificado`;
+    case "zh-Hans":
+      return `未指定`;
+    case "zh-Hant":
+      return `未指定`;
+    case "en-XA":
+      return `[Ñöţ šþéçîƒîéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot specified\u202c`;
+  }
+  return `Not specified`;
+}
+
+export function settingsAutomationRuns(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التشغيل`;
+    case "de":
+      return `Läuft`;
+    case "es":
+      return `Ejecuciones`;
+    case "fr":
+      return `Exécutions`;
+    case "ja":
+      return `実行`;
+    case "ko":
+      return `실행`;
+    case "pt-BR":
+      return `Execuções`;
+    case "zh-Hans":
+      return `运行`;
+    case "zh-Hant":
+      return `執行`;
+    case "en-XA":
+      return `[Ŕûñš ~~]`;
+    case "ar-XB":
+      return `\u202eRuns\u202c`;
+  }
+  return `Runs`;
+}
+
+export function settingsAutomationNextRuns(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمليات التشغيل التالية`;
+    case "de":
+      return `Nächste Läufe`;
+    case "es":
+      return `Próximas ejecuciones`;
+    case "fr":
+      return `Prochaines exécutions`;
+    case "ja":
+      return `次回以降の実行`;
+    case "ko":
+      return `다음 실행`;
+    case "pt-BR":
+      return `Próximas execuções`;
+    case "zh-Hans":
+      return `接下来的运行`;
+    case "zh-Hant":
+      return `接下來的執行`;
+    case "en-XA":
+      return `[Ñéẋţ ŕûñš ~~~]`;
+    case "ar-XB":
+      return `\u202eNext runs\u202c`;
+  }
+  return `Next runs`;
+}
+
+export function settingsAutomationFirstMateGets(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما يتلقاه نائب القبطان`;
+    case "de":
+      return `Dein erster Offizier bekommt`;
+    case "es":
+      return `Tu primer oficial recibe`;
+    case "fr":
+      return `Votre second reçoit`;
+    case "ja":
+      return `一等航海士が受け取る内容`;
+    case "ko":
+      return `일등항해사가 받는 것`;
+    case "pt-BR":
+      return `Seu imediato recebe`;
+    case "zh-Hans":
+      return `你的大副会收到`;
+    case "zh-Hant":
+      return `你的大副會收到`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ĝéţš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate gets\u202c`;
+  }
+  return `Your first mate gets`;
+}
+
+export function settingsAutomationWhatItSends(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما ترسله`;
+    case "de":
+      return `Was sie sendet`;
+    case "es":
+      return `Lo que envía`;
+    case "fr":
+      return `Ce qu’elle envoie`;
+    case "ja":
+      return `送信する内容`;
+    case "ko":
+      return `보내는 것`;
+    case "pt-BR":
+      return `O que ela envia`;
+    case "zh-Hans":
+      return `发送的内容`;
+    case "zh-Hant":
+      return `送出的內容`;
+    case "en-XA":
+      return `[Ŵĥáţ îţ šéñðš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat it sends\u202c`;
+  }
+  return `What it sends`;
+}
+
+export function settingsAutomationMissedTime(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `وقت فائت`;
+    case "de":
+      return `Eine verpasste Zeit`;
+    case "es":
+      return `Una ejecución perdida`;
+    case "fr":
+      return `Une exécution manquée`;
+    case "ja":
+      return `逃した時刻`;
+    case "ko":
+      return `놓친 시간`;
+    case "pt-BR":
+      return `Uma execução perdida`;
+    case "zh-Hans":
+      return `错过的时间`;
+    case "zh-Hant":
+      return `錯過的時間`;
+    case "en-XA":
+      return `[Å ɱîššéð ţîɱé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eA missed time\u202c`;
+  }
+  return `A missed time`;
+}
+
+export function settingsAutomationTurnOnLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تشغيل هذه الأتمتة`;
+    case "de":
+      return `Diese Automatisierung einschalten`;
+    case "es":
+      return `Activar esta automatización`;
+    case "fr":
+      return `Activer cette automatisation`;
+    case "ja":
+      return `この自動化をオンにする`;
+    case "ko":
+      return `이 자동화 켜기`;
+    case "pt-BR":
+      return `Ativar esta automação`;
+    case "zh-Hans":
+      return `打开这项自动化`;
+    case "zh-Hant":
+      return `開啟這項自動化`;
+    case "en-XA":
+      return `[Ţûŕñ öñ ţĥîš áûţöɱáţîöñ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurn on this automation\u202c`;
+  }
+  return `Turn on this automation`;
+}
+
+export function settingsAutomationTurnOnQuestion(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تشغيل هذه الأتمتة؟`;
+    case "de":
+      return `Diese Automatisierung einschalten?`;
+    case "es":
+      return `¿Activar esta automatización?`;
+    case "fr":
+      return `Activer cette automatisation ?`;
+    case "ja":
+      return `この自動化をオンにしますか？`;
+    case "ko":
+      return `이 자동화를 켤까요?`;
+    case "pt-BR":
+      return `Ativar esta automação?`;
+    case "zh-Hans":
+      return `打开这项自动化？`;
+    case "zh-Hant":
+      return `要開啟這項自動化嗎？`;
+    case "en-XA":
+      return `[Ţûŕñ öñ ţĥîš áûţöɱáţîöñ? ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurn on this automation?\u202c`;
+  }
+  return `Turn on this automation?`;
+}
+
+export function settingsAutomationTurnOn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تشغيل`;
+    case "de":
+      return `Einschalten`;
+    case "es":
+      return `Activar`;
+    case "fr":
+      return `Activer`;
+    case "ja":
+      return `オンにする`;
+    case "ko":
+      return `켜기`;
+    case "pt-BR":
+      return `Ativar`;
+    case "zh-Hans":
+      return `打开`;
+    case "zh-Hant":
+      return `開啟`;
+    case "en-XA":
+      return `[Ţûŕñ öñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTurn on\u202c`;
+  }
+  return `Turn on`;
+}
+
+export function settingsAutomationBack(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رجوع`;
+    case "de":
+      return `Zurück`;
+    case "es":
+      return `Atrás`;
+    case "fr":
+      return `Retour`;
+    case "ja":
+      return `戻る`;
+    case "ko":
+      return `뒤로`;
+    case "pt-BR":
+      return `Voltar`;
+    case "zh-Hans":
+      return `返回`;
+    case "zh-Hant":
+      return `返回`;
+    case "en-XA":
+      return `[Ɓáçķ ~~]`;
+    case "ar-XB":
+      return `\u202eBack\u202c`;
+  }
+  return `Back`;
+}
+
+export function settingsAutomationZoneThisComputer(input: { zone: string }): string {
+  const zone = input.zone;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${zone} · هذا الحاسوب`;
+    case "de":
+      return `${zone} · dieser Computer`;
+    case "es":
+      return `${zone} · esta computadora`;
+    case "fr":
+      return `${zone} · cet ordinateur`;
+    case "ja":
+      return `${zone} · このコンピューター`;
+    case "ko":
+      return `${zone} · 이 컴퓨터`;
+    case "pt-BR":
+      return `${zone} · este computador`;
+    case "zh-Hans":
+      return `${zone} · 这台电脑`;
+    case "zh-Hant":
+      return `${zone} · 這台電腦`;
+    case "en-XA":
+      return `[${zone} · ţĥîš çöɱþûţéŕ ~~~~~~]`;
+    case "ar-XB":
+      return `${zone}\u202e · this computer\u202c`;
+  }
+  return `${zone} · this computer`;
+}
+
+export function settingsAutomationHistory(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السجل`;
+    case "de":
+      return `Verlauf`;
+    case "es":
+      return `Historial`;
+    case "fr":
+      return `Historique`;
+    case "ja":
+      return `履歴`;
+    case "ko":
+      return `기록`;
+    case "pt-BR":
+      return `Histórico`;
+    case "zh-Hans":
+      return `历史`;
+    case "zh-Hant":
+      return `歷史紀錄`;
+    case "en-XA":
+      return `[Ĥîšţöŕý ~~~]`;
+    case "ar-XB":
+      return `\u202eHistory\u202c`;
+  }
+  return `History`;
+}
+
+export function settingsAutomationNothingRun(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يعمل شيء بعد.`;
+    case "de":
+      return `Bisher ist nichts gelaufen.`;
+    case "es":
+      return `Todavía no se ha ejecutado nada.`;
+    case "fr":
+      return `Rien ne s’est encore exécuté.`;
+    case "ja":
+      return `まだ何も実行されていません。`;
+    case "ko":
+      return `아직 실행된 것이 없어요.`;
+    case "pt-BR":
+      return `Nada foi executado ainda.`;
+    case "zh-Hans":
+      return `还没有运行过。`;
+    case "zh-Hant":
+      return `還沒有執行過。`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing has run yet.\u202c`;
+  }
+  return `Nothing has run yet.`;
+}
+
+export function settingsAutomationVersion(input: { version: string }): string {
+  const version = input.version;
+  switch (currentLanguage()) {
+    case "ar":
+      return `النسخة ${version}`;
+    case "de":
+      return `Version ${version}`;
+    case "es":
+      return `versión ${version}`;
+    case "fr":
+      return `version ${version}`;
+    case "ja":
+      return `バージョン ${version}`;
+    case "ko":
+      return `버전 ${version}`;
+    case "pt-BR":
+      return `versão ${version}`;
+    case "zh-Hans":
+      return `版本 ${version}`;
+    case "zh-Hant":
+      return `版本 ${version}`;
+    case "en-XA":
+      return `[ṽéŕšîöñ ${version} ~~~]`;
+    case "ar-XB":
+      return `\u202eversion \u202c${version}`;
+  }
+  return `version ${version}`;
+}
+
+export function settingsAutomationLedTo(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدّت إلى`;
+    case "de":
+      return `Führte zu`;
+    case "es":
+      return `Dio lugar a`;
+    case "fr":
+      return `A mené à`;
+    case "ja":
+      return `結果`;
+    case "ko":
+      return `결과`;
+    case "pt-BR":
+      return `Resultou em`;
+    case "zh-Hans":
+      return `带来了`;
+    case "zh-Hant":
+      return `帶來了`;
+    case "en-XA":
+      return `[Ļéð ţö ~~]`;
+    case "ar-XB":
+      return `\u202eLed to\u202c`;
+  }
+  return `Led to`;
+}
+
+export function settingsAutomationCard(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "ar":
+      return `بطاقة: ${title}`;
+    case "de":
+      return `Karte: ${title}`;
+    case "es":
+      return `Tarjeta: ${title}`;
+    case "fr":
+      return `Carte : ${title}`;
+    case "ja":
+      return `カード：${title}`;
+    case "ko":
+      return `카드: ${title}`;
+    case "pt-BR":
+      return `Cartão: ${title}`;
+    case "zh-Hans":
+      return `卡片：${title}`;
+    case "zh-Hant":
+      return `卡片：${title}`;
+    case "en-XA":
+      return `[Çáŕð: ${title} ~~]`;
+    case "ar-XB":
+      return `\u202eCard: \u202c${title}`;
+  }
+  return `Card: ${title}`;
+}
+
+export function settingsAutomationPastCard(input: { title: string }): string {
+  const title = input.title;
+  switch (currentLanguage()) {
+    case "ar":
+      return `بطاقة سابقة: ${title}`;
+    case "de":
+      return `Frühere Karte: ${title}`;
+    case "es":
+      return `Tarjeta anterior: ${title}`;
+    case "fr":
+      return `Ancienne carte : ${title}`;
+    case "ja":
+      return `過去のカード：${title}`;
+    case "ko":
+      return `지난 카드: ${title}`;
+    case "pt-BR":
+      return `Cartão anterior: ${title}`;
+    case "zh-Hans":
+      return `过去的卡片：${title}`;
+    case "zh-Hant":
+      return `過去的卡片：${title}`;
+    case "en-XA":
+      return `[Þášţ çáŕð: ${title} ~~~~]`;
+    case "ar-XB":
+      return `\u202ePast card: \u202c${title}`;
+  }
+  return `Past card: ${title}`;
+}
+
+export function settingsAutomationPromptAsSent(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الرسالة كما أُرسلت`;
+    case "de":
+      return `Nachricht wie gesendet`;
+    case "es":
+      return `Indicación tal como se envió`;
+    case "fr":
+      return `Consigne telle qu’envoyée`;
+    case "ja":
+      return `送信したプロンプト`;
+    case "ko":
+      return `보낸 그대로의 메시지`;
+    case "pt-BR":
+      return `Pedido como foi enviado`;
+    case "zh-Hans":
+      return `发送时的提示`;
+    case "zh-Hant":
+      return `送出時的提示`;
+    case "en-XA":
+      return `[Þŕöɱþţ áš šéñţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrompt as sent\u202c`;
+  }
+  return `Prompt as sent`;
+}
+
+export function settingsModelsStartingLevelsSummary(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم تُختر مستويات - تُستخدم المستويات الأولية`;
+    case "de":
+      return `keine Stufen gewählt – die Anfangsstufen werden verwendet`;
+    case "es":
+      return `ningún nivel elegido: se usan los niveles iniciales`;
+    case "fr":
+      return `aucun niveau choisi – niveaux de départ utilisés`;
+    case "ja":
+      return `レベル未選択 - 最初のレベルを使用中`;
+    case "ko":
+      return `고른 수준 없음 - 처음 수준 사용 중`;
+    case "pt-BR":
+      return `nenhum nível escolhido - usando os níveis iniciais`;
+    case "zh-Hans":
+      return `未选择级别 - 使用初始级别`;
+    case "zh-Hant":
+      return `未選擇等級 - 使用初始等級`;
+    case "en-XA":
+      return `[ñö ļéṽéļš çĥöšéñ - ûšîñĝ ţĥé šţáŕţîñĝ ļéṽéļš ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eno levels chosen - using the starting levels\u202c`;
+  }
+  return `no levels chosen - using the starting levels`;
+}
+
+export function settingsModelsNotInUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير مستخدم`;
+    case "de":
+      return `nicht in Gebrauch`;
+    case "es":
+      return `sin usar`;
+    case "fr":
+      return `inutilisé`;
+    case "ja":
+      return `未使用`;
+    case "ko":
+      return `사용 안 함`;
+    case "pt-BR":
+      return `sem uso`;
+    case "zh-Hans":
+      return `未使用`;
+    case "zh-Hant":
+      return `未使用`;
+    case "en-XA":
+      return `[ñöţ îñ ûšé ~~~~]`;
+    case "ar-XB":
+      return `\u202enot in use\u202c`;
+  }
+  return `not in use`;
+}
+
+export function settingsModelsHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النماذج`;
+    case "de":
+      return `Modelle`;
+    case "es":
+      return `Modelos`;
+    case "fr":
+      return `Modèles`;
+    case "ja":
+      return `モデル`;
+    case "ko":
+      return `모델`;
+    case "pt-BR":
+      return `Modelos`;
+    case "zh-Hans":
+      return `模型`;
+    case "zh-Hant":
+      return `模型`;
+    case "en-XA":
+      return `[Ṁöðéļš ~~]`;
+    case "ar-XB":
+      return `\u202eModels\u202c`;
+  }
+  return `Models`;
+}
+
+export function settingsModelsSummaryNotInUse(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير مستخدمة: ${count}`;
+    case "de":
+      return `${count} nicht in Gebrauch`;
+    case "es":
+      return `sin usar: ${count}`;
+    case "fr":
+      return `inutilisés : ${count}`;
+    case "ja":
+      return `${count}個が未使用`;
+    case "ko":
+      return `${count}개 사용 안 함`;
+    case "pt-BR":
+      return `sem uso: ${count}`;
+    case "zh-Hans":
+      return `${count} 个未使用`;
+    case "zh-Hant":
+      return `${count} 個未使用`;
+    case "en-XA":
+      return `[${count} ñöţ îñ ûšé ~~~~]`;
+    case "ar-XB":
+      return `${count}\u202e not in use\u202c`;
+  }
+  return `${count} not in use`;
+}
+
+export function settingsModelsSummaryAlwaysUse(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `«الاستخدام دائمًا» ✱: ${count}`;
+    case "de":
+      return `${count} immer verwenden ✱`;
+    case "es":
+      return `usar siempre ✱: ${count}`;
+    case "fr":
+      return `toujours utiliser ✱ : ${count}`;
+    case "ja":
+      return `${count}個が常に使う ✱`;
+    case "ko":
+      return `${count}개 항상 사용 ✱`;
+    case "pt-BR":
+      return `sempre usar ✱: ${count}`;
+    case "zh-Hans":
+      return `${count} 个始终使用 ✱`;
+    case "zh-Hant":
+      return `${count} 個一律使用 ✱`;
+    case "en-XA":
+      return `[${count} áļŵáýš ûšé ✱ ~~~~~]`;
+    case "ar-XB":
+      return `${count}\u202e always use ✱\u202c`;
+  }
+  return `${count} always use ✱`;
+}
+
+export function settingsModelsSummaryNew(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `جديدة: ${count}`;
+    case "de":
+      return `${count} neu`;
+    case "es":
+      return `nuevos: ${count}`;
+    case "fr":
+      return `nouveaux : ${count}`;
+    case "ja":
+      return `${count}個が新規`;
+    case "ko":
+      return `${count}개 새로 추가됨`;
+    case "pt-BR":
+      return `novos: ${count}`;
+    case "zh-Hans":
+      return `${count} 个新模型`;
+    case "zh-Hant":
+      return `${count} 個新模型`;
+    case "en-XA":
+      return `[${count} ñéŵ ~~]`;
+    case "ar-XB":
+      return `${count}\u202e new\u202c`;
+  }
+  return `${count} new`;
+}
+
+export function settingsModelsSummaryDecisions(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `القرارات: ${model}`;
+    case "de":
+      return `Entscheidungen ${model}`;
+    case "es":
+      return `decisiones: ${model}`;
+    case "fr":
+      return `décisions : ${model}`;
+    case "ja":
+      return `判断：${model}`;
+    case "ko":
+      return `결정: ${model}`;
+    case "pt-BR":
+      return `decisões: ${model}`;
+    case "zh-Hans":
+      return `决定：${model}`;
+    case "zh-Hant":
+      return `決定：${model}`;
+    case "en-XA":
+      return `[ðéçîšîöñš ${model} ~~~~]`;
+    case "ar-XB":
+      return `\u202edecisions \u202c${model}`;
+  }
+  return `decisions ${model}`;
+}
+
+export function settingsModelsSummaryDecisionsAuto(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `القرارات: تلقائي`;
+    case "de":
+      return `Entscheidungen automatisch`;
+    case "es":
+      return `decisiones: automático`;
+    case "fr":
+      return `décisions : automatique`;
+    case "ja":
+      return `判断：自動`;
+    case "ko":
+      return `결정: 자동`;
+    case "pt-BR":
+      return `decisões: automático`;
+    case "zh-Hans":
+      return `决定：自动`;
+    case "zh-Hant":
+      return `決定：自動`;
+    case "en-XA":
+      return `[ðéçîšîöñš áûţö ~~~~~]`;
+    case "ar-XB":
+      return `\u202edecisions auto\u202c`;
+  }
+  return `decisions auto`;
+}
+
+export function settingsModelsSummaryDecisionsUnanswered(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `القرارات: بلا إجابة`;
+    case "de":
+      return `Entscheidungen unbeantwortet`;
+    case "es":
+      return `decisiones sin responder`;
+    case "fr":
+      return `décisions sans réponse`;
+    case "ja":
+      return `判断：応答なし`;
+    case "ko":
+      return `결정: 답 없음`;
+    case "pt-BR":
+      return `decisões sem resposta`;
+    case "zh-Hans":
+      return `决定：无人作答`;
+    case "zh-Hant":
+      return `決定：無人回覆`;
+    case "en-XA":
+      return `[ðéçîšîöñš ûñáñšŵéŕéð ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202edecisions unanswered\u202c`;
+  }
+  return `decisions unanswered`;
+}
+
+export function settingsLevelsRemoveFromLevelOnly(input: { level: string }): string {
+  const level = input.level;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإزالة من ${level} فقط`;
+    case "de":
+      return `Nur aus ${level} entfernen`;
+    case "es":
+      return `Quitar solo de ${level}`;
+    case "fr":
+      return `Retirer seulement de ${level}`;
+    case "ja":
+      return `${level} からのみ外す`;
+    case "ko":
+      return `${level}에서만 빼기`;
+    case "pt-BR":
+      return `Remover só de ${level}`;
+    case "zh-Hans":
+      return `仅从 ${level} 中移除`;
+    case "zh-Hant":
+      return `只從 ${level} 移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ƒŕöɱ ${level} öñļý ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove from \u202c${level}\u202e only\u202c`;
+  }
+  return `Remove from ${level} only`;
+}
+
+export function settingsLevelsDropRemove(input: { levels: string }): string {
+  const levels = input.levels;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف الاستخدام لـ${levels}`;
+    case "de":
+      return `Nicht mehr für ${levels} verwenden`;
+    case "es":
+      return `Dejar de usar para ${levels}`;
+    case "fr":
+      return `Ne plus utiliser pour ${levels}`;
+    case "ja":
+      return `${levels}への使用をやめる`;
+    case "ko":
+      return `${levels}에 사용 중지`;
+    case "pt-BR":
+      return `Parar de usar para ${levels}`;
+    case "zh-Hans":
+      return `停止用于${levels}`;
+    case "zh-Hant":
+      return `停止用於${levels}`;
+    case "en-XA":
+      return `[Šţöþ ûšîñĝ ƒöŕ ${levels} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eStop using for \u202c${levels}`;
+  }
+  return `Stop using for ${levels}`;
+}
+
+export function settingsLevelsDropAlready(input: { level: string }): string {
+  const level = input.level;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتولى ${level} بالفعل`;
+    case "de":
+      return `Übernimmt bereits ${level}`;
+    case "es":
+      return `Ya realiza ${level}`;
+    case "fr":
+      return `Prend déjà en charge ${level}`;
+    case "ja":
+      return `すでに${level}を担当`;
+    case "ko":
+      return `이미 ${level} 담당`;
+    case "pt-BR":
+      return `Já executa ${level}`;
+    case "zh-Hans":
+      return `已处理${level}`;
+    case "zh-Hant":
+      return `已處理${level}`;
+    case "en-XA":
+      return `[Åļŕéáðý ţáķéš ${level} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eAlready takes \u202c${level}`;
+  }
+  return `Already takes ${level}`;
+}
+
+export function settingsLevelsDropUse(input: { level: string }): string {
+  const level = input.level;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام لـ${level}`;
+    case "de":
+      return `Für ${level} verwenden`;
+    case "es":
+      return `Usar para ${level}`;
+    case "fr":
+      return `Utiliser pour ${level}`;
+    case "ja":
+      return `${level}に使う`;
+    case "ko":
+      return `${level}에 사용`;
+    case "pt-BR":
+      return `Usar para ${level}`;
+    case "zh-Hans":
+      return `用于${level}`;
+    case "zh-Hant":
+      return `用於${level}`;
+    case "en-XA":
+      return `[Ûšé ƒöŕ ${level} ~~~]`;
+    case "ar-XB":
+      return `\u202eUse for \u202c${level}`;
+  }
+  return `Use for ${level}`;
+}
+
+export function settingsLevelsDropAlso(input: { level: string }): string {
+  const level = input.level;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام أيضًا لـ${level}`;
+    case "de":
+      return `Auch für ${level} verwenden`;
+    case "es":
+      return `Usar también para ${level}`;
+    case "fr":
+      return `Utiliser aussi pour ${level}`;
+    case "ja":
+      return `${level}にも使う`;
+    case "ko":
+      return `${level}에도 사용`;
+    case "pt-BR":
+      return `Usar também para ${level}`;
+    case "zh-Hans":
+      return `也用于${level}`;
+    case "zh-Hant":
+      return `也用於${level}`;
+    case "en-XA":
+      return `[Åļšö ûšé ƒöŕ ${level} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eAlso use for \u202c${level}`;
+  }
+  return `Also use for ${level}`;
+}
+
+export function settingsLevelsDropMove(input: { level: string }): string {
+  const level = input.level;
+  switch (currentLanguage()) {
+    case "ar":
+      return `نقل إلى ${level}`;
+    case "de":
+      return `Zu ${level} verschieben`;
+    case "es":
+      return `Mover a ${level}`;
+    case "fr":
+      return `Déplacer vers ${level}`;
+    case "ja":
+      return `${level}に移動`;
+    case "ko":
+      return `${level}으로 이동`;
+    case "pt-BR":
+      return `Mover para ${level}`;
+    case "zh-Hans":
+      return `移至${level}`;
+    case "zh-Hant":
+      return `移至${level}`;
+    case "en-XA":
+      return `[Ṁöṽé ţö ${level} ~~~]`;
+    case "ar-XB":
+      return `\u202eMove to \u202c${level}`;
+  }
+  return `Move to ${level}`;
+}
+
+export function settingsLevelsAlwaysUseBanner(input: { first: string }): string {
+  const first = input.first;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يذهب كل عمل الطاقم إلى ${first}. تُتخطى المستويات ما دام «الاستخدام دائمًا» مفعّلًا.`;
+    case "de":
+      return `Alle Crew-Arbeit geht an ${first}. Stufen werden übersprungen, solange „Immer verwenden“ an ist.`;
+    case "es":
+      return `Todo el trabajo de la tripulación va a ${first}. Los niveles se omiten mientras Usar siempre está activado.`;
+    case "fr":
+      return `Tout le travail de l’équipage va à ${first}. Les niveaux sont ignorés tant que « Toujours utiliser » est activé.`;
+    case "ja":
+      return `乗組員の作業はすべて ${first} に送られます。「常に使う」がオンの間はレベルは使われません。`;
+    case "ko":
+      return `선원들의 모든 작업이 ${first}(으)로 가요. 항상 사용이 켜져 있는 동안 수준은 건너뛰어요.`;
+    case "pt-BR":
+      return `Todo o trabalho da tripulação vai para ${first}. Os níveis são ignorados enquanto Sempre usar estiver ativado.`;
+    case "zh-Hans":
+      return `所有船员工作都交给 ${first}。开启“始终使用”时会跳过级别。`;
+    case "zh-Hant":
+      return `所有船員工作都交給 ${first}。開啟「一律使用」時會略過等級。`;
+    case "en-XA":
+      return `[Åļļ çŕéŵ ŵöŕķ ĝöéš ţö ${first}. Ļéṽéļš áŕé šķîþþéð ŵĥîļé áļŵáýš ûšé îš öñ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAll crew work goes to \u202c${first}\u202e. Levels are skipped while always use is on.\u202c`;
+  }
+  return `All crew work goes to ${first}. Levels are skipped while always use is on.`;
+}
+
+export function settingsLevelsAlwaysUseBannerTwo(input: { first: string; second: string }): string {
+  const first = input.first;
+  const second = input.second;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يذهب كل عمل الطاقم إلى ${first}، ثم إلى ${second} إن لم يستطع تولّي العمل. تُتخطى المستويات ما دام «الاستخدام دائمًا» مفعّلًا.`;
+    case "de":
+      return `Alle Crew-Arbeit geht an ${first}, dann an ${second}, wenn es die Arbeit nicht übernehmen kann. Stufen werden übersprungen, solange „Immer verwenden“ an ist.`;
+    case "es":
+      return `Todo el trabajo de la tripulación va a ${first}, y luego a ${second} si no puede asumirlo. Los niveles se omiten mientras Usar siempre está activado.`;
+    case "fr":
+      return `Tout le travail de l’équipage va à ${first}, puis à ${second} s’il ne peut pas le prendre. Les niveaux sont ignorés tant que « Toujours utiliser » est activé.`;
+    case "ja":
+      return `乗組員の作業はすべて ${first} に送られ、受けられないときは ${second} に送られます。「常に使う」がオンの間はレベルは使われません。`;
+    case "ko":
+      return `선원들의 모든 작업이 ${first}(으)로 가고, 그 모델이 받을 수 없으면 ${second}(으)로 가요. 항상 사용이 켜져 있는 동안 수준은 건너뛰어요.`;
+    case "pt-BR":
+      return `Todo o trabalho da tripulação vai para ${first} e depois para ${second} se ele não puder assumir o trabalho. Os níveis são ignorados enquanto Sempre usar estiver ativado.`;
+    case "zh-Hans":
+      return `所有船员工作都交给 ${first}；如果它无法接手，再交给 ${second}。开启“始终使用”时会跳过级别。`;
+    case "zh-Hant":
+      return `所有船員工作都交給 ${first}；如果它無法接手，再交給 ${second}。開啟「一律使用」時會略過等級。`;
+    case "en-XA":
+      return `[Åļļ çŕéŵ ŵöŕķ ĝöéš ţö ${first}, ţĥéñ ${second} îƒ îţ çáññöţ ţáķé ţĥé ŵöŕķ. Ļéṽéļš áŕé šķîþþéð ŵĥîļé áļŵáýš ûšé îš öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAll crew work goes to \u202c${first}\u202e, then \u202c${second}\u202e if it cannot take the work. Levels are skipped while always use is on.\u202c`;
+  }
+  return `All crew work goes to ${first}, then ${second} if it cannot take the work. Levels are skipped while always use is on.`;
+}
+
+export function settingsLevelsAlwaysUseSetFor(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `«الاستخدام دائمًا» مضبوط على ${model}. يسري حين يكون التوزيع الديناميكي مفعّلًا.`;
+    case "de":
+      return `„Immer verwenden“ ist für ${model} eingestellt. Es gilt, wenn die dynamische Verteilung an ist.`;
+    case "es":
+      return `Usar siempre está configurado para ${model}. Se aplica cuando Enrutamiento dinámico está activado.`;
+    case "fr":
+      return `« Toujours utiliser » est réglé pour ${model}. Il s’applique quand le Routage dynamique est activé.`;
+    case "ja":
+      return `${model} に「常に使う」が設定されています。動的な振り分けがオンのときに適用されます。`;
+    case "ko":
+      return `${model}에 항상 사용이 설정되어 있어요. 동적 배분이 켜져 있을 때 적용돼요.`;
+    case "pt-BR":
+      return `Sempre usar está definido para ${model}. Vale quando o Roteamento dinâmico está ativado.`;
+    case "zh-Hans":
+      return `已为 ${model} 设置“始终使用”。它在动态分配打开时生效。`;
+    case "zh-Hant":
+      return `已為 ${model} 設定「一律使用」。它會在動態分配開啟時生效。`;
+    case "en-XA":
+      return `[Åļŵáýš ûšé îš šéţ ƒöŕ ${model}. Îţ áþþļîéš ŵĥéñ Ðýñáɱîç ŕöûţîñĝ îš öñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAlways use is set for \u202c${model}\u202e. It applies when Dynamic routing is on.\u202c`;
+  }
+  return `Always use is set for ${model}. It applies when Dynamic routing is on.`;
+}
+
+export function settingsLevelsRemoveAllLine(input: { levels: string }): string {
+  const levels = input.levels;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتوقف عن تولي ${levels} فورًا.`;
+    case "de":
+      return `Es übernimmt sofort keine ${levels} mehr.`;
+    case "es":
+      return `Deja de realizar ${levels} de inmediato.`;
+    case "fr":
+      return `Il cesse immédiatement de prendre en charge ${levels}.`;
+    case "ja":
+      return `すぐに${levels}の担当をやめます。`;
+    case "ko":
+      return `즉시 ${levels} 담당을 중지합니다.`;
+    case "pt-BR":
+      return `Ele deixa de executar ${levels} imediatamente.`;
+    case "zh-Hans":
+      return `立即停止处理${levels}。`;
+    case "zh-Hant":
+      return `立即停止處理${levels}。`;
+    case "en-XA":
+      return `[Îţ šţöþš ţáķîñĝ ${levels} áţ öñçé. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt stops taking \u202c${levels}\u202e at once.\u202c`;
+  }
+  return `It stops taking ${levels} at once.`;
+}
+
+export function settingsLevelsRemoveAllNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ليس في أي مستوى.`;
+    case "de":
+      return `Es ist in keiner Stufe.`;
+    case "es":
+      return `No está en ningún nivel.`;
+    case "fr":
+      return `Il n’est dans aucun niveau.`;
+    case "ja":
+      return `どのレベルにも入っていません。`;
+    case "ko":
+      return `어느 수준에도 없어요.`;
+    case "pt-BR":
+      return `Ele não está em nenhum nível.`;
+    case "zh-Hans":
+      return `它不在任何级别中。`;
+    case "zh-Hant":
+      return `它不在任何等級中。`;
+    case "en-XA":
+      return `[Îţ îš ñöţ îñ áñý ļéṽéļ. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt is not in any level.\u202c`;
+  }
+  return `It is not in any level.`;
+}
+
+export function settingsLevelsNewUsedAt(input: { levels: string }): string {
+  const levels = input.levels;
+  switch (currentLanguage()) {
+    case "ar":
+      return `جديد هنا - يتولى ${levels}.`;
+    case "de":
+      return `Neu hier – übernimmt ${levels}.`;
+    case "es":
+      return `Nuevo aquí: realiza ${levels}.`;
+    case "fr":
+      return `Nouveau ici : prend en charge ${levels}.`;
+    case "ja":
+      return `新着 - ${levels}を担当します。`;
+    case "ko":
+      return `새 모델 - ${levels}을 담당합니다.`;
+    case "pt-BR":
+      return `Novo aqui: executa ${levels}.`;
+    case "zh-Hans":
+      return `新加入 - 处理${levels}。`;
+    case "zh-Hant":
+      return `新加入 - 處理${levels}。`;
+    case "en-XA":
+      return `[Ñéŵ ĥéŕé - îţ ţáķéš ${levels}. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew here - it takes \u202c${levels}\u202e.\u202c`;
+  }
+  return `New here - it takes ${levels}.`;
+}
+
+export function settingsLevelsNewNotInUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جديد هنا - لا يُستخدم حتى تمنحه مستوى.`;
+    case "de":
+      return `Neu hier – es ist nicht in Gebrauch, bis du ihm eine Stufe gibst.`;
+    case "es":
+      return `Nuevo aquí: no se usa hasta que le asignes un nivel.`;
+    case "fr":
+      return `Nouveau ici – inutilisé tant que vous ne lui donnez pas de niveau.`;
+    case "ja":
+      return `新規 - レベルを割り当てるまで使われません。`;
+    case "ko":
+      return `새로 추가됨 - 수준을 정해 주기 전까지는 사용되지 않아요.`;
+    case "pt-BR":
+      return `Novo aqui - não é usado até você dar um nível a ele.`;
+    case "zh-Hans":
+      return `新加入 - 在你为它指定级别之前不会使用。`;
+    case "zh-Hant":
+      return `新加入 - 在你為它指定等級之前不會使用。`;
+    case "en-XA":
+      return `[Ñéŵ ĥéŕé - îţ îš ñöţ îñ ûšé ûñţîļ ýöû ĝîṽé îţ á ļéṽéļ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew here - it is not in use until you give it a level.\u202c`;
+  }
+  return `New here - it is not in use until you give it a level.`;
+}
+
+export function settingsLevelsUsedAt(input: { levels: string }): string {
+  const levels = input.levels;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يتولى ${levels}.`;
+    case "de":
+      return `Übernimmt ${levels}.`;
+    case "es":
+      return `Realiza ${levels}.`;
+    case "fr":
+      return `Prend en charge ${levels}.`;
+    case "ja":
+      return `${levels}を担当します。`;
+    case "ko":
+      return `${levels}을 담당합니다.`;
+    case "pt-BR":
+      return `Executa ${levels}.`;
+    case "zh-Hans":
+      return `处理${levels}。`;
+    case "zh-Hant":
+      return `處理${levels}。`;
+    case "en-XA":
+      return `[Ţáķéš ${levels}. ~~~]`;
+    case "ar-XB":
+      return `\u202eTakes \u202c${levels}\u202e.\u202c`;
+  }
+  return `Takes ${levels}.`;
+}
+
+export function settingsLevelsUsedNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير مستخدم. لا يُختار أبدًا من تلقاء نفسه.`;
+    case "de":
+      return `Nicht in Gebrauch. Es wird nie von selbst gewählt.`;
+    case "es":
+      return `Sin usar. Nunca se elige por sí solo.`;
+    case "fr":
+      return `Inutilisé. Il n’est jamais choisi de lui-même.`;
+    case "ja":
+      return `未使用です。単独で選ばれることはありません。`;
+    case "ko":
+      return `사용 안 함. 저절로 선택되는 일은 없어요.`;
+    case "pt-BR":
+      return `Sem uso. Nunca é escolhido sozinho.`;
+    case "zh-Hans":
+      return `未使用。它不会被单独选中。`;
+    case "zh-Hant":
+      return `未使用。它不會單獨被選中。`;
+    case "en-XA":
+      return `[Ñöţ îñ ûšé. Îţ îš ñéṽéŕ þîçķéð öñ îţš öŵñ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot in use. It is never picked on its own.\u202c`;
+  }
+  return `Not in use. It is never picked on its own.`;
+}
+
+export function settingsLevelsHintPremium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يختار الطاقم هذا النموذج تلقائيًا؛ قد يعود الاختيار التلقائي لنائب القبطان إليه بعد نماذج المهام الصعبة والعادية.`;
+    case "de":
+      return `Die Crew wählt dies nie automatisch; Auto kann nach deinen Modellen für schwierige und normale Aufgaben darauf zurückfallen.`;
+    case "es":
+      return `La tripulación nunca elige este modelo automáticamente; Auto puede recurrir a él después de tus modelos para tareas difíciles y normales.`;
+    case "fr":
+      return `L’équipage ne choisit jamais ce modèle automatiquement ; Auto peut y recourir après vos modèles pour les tâches difficiles et normales.`;
+    case "ja":
+      return `乗組員はこれを自動では選びません。一等航海士の自動選択は、難しいタスク用と通常のタスク用のモデルの次にこれを使う場合があります。`;
+    case "ko":
+      return `선원은 이를 자동으로 선택하지 않아요. 일등항해사의 자동 선택은 어려운 작업과 일반 작업용 모델 다음으로 이를 사용할 수 있어요.`;
+    case "pt-BR":
+      return `A tripulação nunca escolhe este modelo automaticamente; Auto pode recorrer a ele depois dos seus modelos para tarefas difíceis e normais.`;
+    case "zh-Hans":
+      return `船员不会自动选择此模型；大副的自动选择可能在困难和普通任务的模型之后使用它。`;
+    case "zh-Hant":
+      return `船員不會自動選擇此模型；大副的自動選擇可能在困難和一般任務的模型之後使用它。`;
+    case "en-XA":
+      return `[Çŕéŵ ñéṽéŕ þîçķš ţĥîš áûţöɱáţîçáļļý; ýöûŕ ƒîŕšţ ɱáţé'š Åûţö ɱáý ƒáļļ ƀáçķ ţö îţ áƒţéŕ ýöûŕ ɱöðéļš ƒöŕ ĥáŕð áñð ñöŕɱáļ ţášķš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew never picks this automatically; your first mate's Auto may fall back to it after your models for hard and normal tasks.\u202c`;
+  }
+  return `Crew never picks this automatically; your first mate's Auto may fall back to it after your models for hard and normal tasks.`;
+}
+
+export function settingsLevelsHintHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الخطط والبحث وإعادة الإنتاج والعمل دون أساس مُتحقَّق منه`;
+    case "de":
+      return `Pläne, Recherche, Nachstellen und Arbeit ohne geprüfte Grundlage`;
+    case "es":
+      return `Planes, investigación, reproducción y trabajo sin una base verificada`;
+    case "fr":
+      return `Plans, recherche, reproduction et travail sans base vérifiée`;
+    case "ja":
+      return `計画、調査、再現、検証済みの根拠がない作業`;
+    case "ko":
+      return `계획, 조사, 재현, 그리고 확인된 근거 없이 하는 작업`;
+    case "pt-BR":
+      return `Planos, pesquisa, reprodução e trabalho sem base verificada`;
+    case "zh-Hans":
+      return `计划、调研、复现，以及没有经过验证的依据的工作`;
+    case "zh-Hant":
+      return `計畫、研究、重現，以及沒有經過驗證依據的工作`;
+    case "en-XA":
+      return `[Þļáñš, ŕéšéáŕçĥ, ŕéþŕöðûçţîöñ, áñð ŵöŕķ ŵîţĥöûţ á ṽéŕîƒîéð ƀášîš ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePlans, research, reproduction, and work without a verified basis\u202c`;
+  }
+  return `Plans, research, reproduction, and work without a verified basis`;
+}
+
+export function settingsLevelsHintMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البناء أو الإصلاح وفق خطة أو مواصفات أو إعادة إنتاج مُتحقَّق منها`;
+    case "de":
+      return `Bauen oder Korrigieren nach einem geprüften Plan, einer Spezifikation oder einer Nachstellung`;
+    case "es":
+      return `Construir o corregir a partir de un plan, una especificación o una reproducción verificados`;
+    case "fr":
+      return `Construire ou corriger à partir d’un plan, d’une spécification ou d’une reproduction vérifiés`;
+    case "ja":
+      return `検証済みの計画、仕様、再現にもとづく作成や修正`;
+    case "ko":
+      return `확인된 계획, 명세, 재현을 바탕으로 만들거나 고치는 작업`;
+    case "pt-BR":
+      return `Construir ou corrigir a partir de um plano, especificação ou reprodução verificados`;
+    case "zh-Hans":
+      return `根据经过验证的计划、规格或复现来构建或修复`;
+    case "zh-Hant":
+      return `依照經過驗證的計畫、規格或重現來建置或修正`;
+    case "en-XA":
+      return `[Ɓûîļðîñĝ öŕ ƒîẋîñĝ ƒŕöɱ á ṽéŕîƒîéð þļáñ, šþéç, öŕ ŕéþŕöðûçţîöñ ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBuilding or fixing from a verified plan, spec, or reproduction\u202c`;
+  }
+  return `Building or fixing from a verified plan, spec, or reproduction`;
+}
+
+export function settingsLevelsHintLow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإعدادات والمستندات والتحسينات الشكلية`;
+    case "de":
+      return `Konfiguration, Dokumentation, optische Kleinigkeiten`;
+    case "es":
+      return `Configuración, documentación, retoques visuales`;
+    case "fr":
+      return `Configuration, documentation, retouches visuelles`;
+    case "ja":
+      return `設定、ドキュメント、見た目の細かな作業`;
+    case "ko":
+      return `설정, 문서, 겉모습 다듬기`;
+    case "pt-BR":
+      return `Configuração, documentação, ajustes visuais`;
+    case "zh-Hans":
+      return `配置、文档、外观上的杂项`;
+    case "zh-Hant":
+      return `設定、文件、外觀上的雜項`;
+    case "en-XA":
+      return `[Çöñƒîĝ, ðöçš, çöšɱéţîç çĥöŕéš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eConfig, docs, cosmetic chores\u202c`;
+  }
+  return `Config, docs, cosmetic chores`;
+}
+
+export function settingsLevelsEmptyPremium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فارغ. العمل الذي يطلب الممتاز ينتظر حتى تضيف نموذجًا هنا أو تختار تشغيله بمستوى أدنى.`;
+    case "de":
+      return `Leer. Arbeit, die Premium verlangt, wartet, bis du hier ein Modell hinzufügst oder sie niedriger laufen lässt.`;
+    case "es":
+      return `Vacío. El trabajo que pide premium espera hasta que agregues un modelo aquí o decidas ejecutarlo en un nivel inferior.`;
+    case "fr":
+      return `Vide. Le travail qui demande premium attend que vous ajoutiez un modèle ici ou choisissiez de l’exécuter à un niveau inférieur.`;
+    case "ja":
+      return `空です。プレミアムを求める作業は、ここにモデルを追加するか、低いレベルで実行することを選ぶまで待機します。`;
+    case "ko":
+      return `비어 있어요. 프리미엄을 요구하는 작업은 여기에 모델을 추가하거나 더 낮은 수준에서 실행하기로 할 때까지 기다려요.`;
+    case "pt-BR":
+      return `Vazio. O trabalho que pede premium espera até você adicionar um modelo aqui ou escolher rodá-lo em um nível abaixo.`;
+    case "zh-Hans":
+      return `空。需要顶级的工作会等待，直到你在这里添加模型，或选择以更低级别运行。`;
+    case "zh-Hant":
+      return `空白。需要頂級的工作會等待，直到你在這裡新增模型，或選擇以較低等級執行。`;
+    case "en-XA":
+      return `[Éɱþţý. Ŵöŕķ ţĥáţ ášķš ƒöŕ þŕéɱîûɱ ŵáîţš ûñţîļ ýöû áðð á ɱöðéļ ĥéŕé öŕ çĥööšé ţö ŕûñ îţ ļöŵéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEmpty. Work that asks for premium waits until you add a model here or choose to run it lower.\u202c`;
+  }
+  return `Empty. Work that asks for premium waits until you add a model here or choose to run it lower.`;
+}
+
+export function settingsLevelsEmptyRunsOnMedium(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فارغ. تعمل المهام الصعبة على نماذج المهام العادية.`;
+    case "de":
+      return `Leer. Schwierige Aufgaben laufen auf deinen Modellen für normale Aufgaben.`;
+    case "es":
+      return `Vacío. Las tareas difíciles usan tus modelos para tareas normales.`;
+    case "fr":
+      return `Vide. Les tâches difficiles utilisent vos modèles pour les tâches normales.`;
+    case "ja":
+      return `空です。難しいタスクは通常のタスク用モデルで実行されます。`;
+    case "ko":
+      return `비어 있음. 어려운 작업은 일반 작업용 모델에서 실행됩니다.`;
+    case "pt-BR":
+      return `Vazio. Tarefas difíceis usam seus modelos para tarefas normais.`;
+    case "zh-Hans":
+      return `空。困难任务使用普通任务的模型运行。`;
+    case "zh-Hant":
+      return `空。困難任務使用一般任務的模型執行。`;
+    case "en-XA":
+      return `[Éɱþţý. Ĥáŕð ţášķš ŕûñ öñ ýöûŕ ɱöðéļš ƒöŕ ñöŕɱáļ ţášķš. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEmpty. Hard tasks run on your models for normal tasks.\u202c`;
+  }
+  return `Empty. Hard tasks run on your models for normal tasks.`;
+}
+
+export function settingsLevelsEmptyRunsOnHigh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فارغ. تعمل المهام العادية على نماذج المهام الصعبة.`;
+    case "de":
+      return `Leer. Normale Aufgaben laufen auf deinen Modellen für schwierige Aufgaben.`;
+    case "es":
+      return `Vacío. Las tareas normales usan tus modelos para tareas difíciles.`;
+    case "fr":
+      return `Vide. Les tâches normales utilisent vos modèles pour les tâches difficiles.`;
+    case "ja":
+      return `空です。通常のタスクは難しいタスク用モデルで実行されます。`;
+    case "ko":
+      return `비어 있음. 일반 작업은 어려운 작업용 모델에서 실행됩니다.`;
+    case "pt-BR":
+      return `Vazio. Tarefas normais usam seus modelos para tarefas difíceis.`;
+    case "zh-Hans":
+      return `空。普通任务使用困难任务的模型运行。`;
+    case "zh-Hant":
+      return `空。一般任務使用困難任務的模型執行。`;
+    case "en-XA":
+      return `[Éɱþţý. Ñöŕɱáļ ţášķš ŕûñ öñ ýöûŕ ɱöðéļš ƒöŕ ĥáŕð ţášķš. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEmpty. Normal tasks run on your models for hard tasks.\u202c`;
+  }
+  return `Empty. Normal tasks run on your models for hard tasks.`;
+}
+
+export function settingsLevelTasks(input: { levels: string }): string {
+  const levels = input.levels;
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهام ${levels}`;
+    case "de":
+      return `${levels} Aufgaben`;
+    case "es":
+      return `tareas ${levels}`;
+    case "fr":
+      return `tâches ${levels}`;
+    case "ja":
+      return `${levels}タスク`;
+    case "ko":
+      return `${levels} 작업`;
+    case "pt-BR":
+      return `tarefas ${levels}`;
+    case "zh-Hans":
+      return `${levels}任务`;
+    case "zh-Hant":
+      return `${levels}任務`;
+    case "en-XA":
+      return `[${levels} ţášķš ~~]`;
+    case "ar-XB":
+      return `${levels}\u202e tasks\u202c`;
+  }
+  return `${levels} tasks`;
+}
+
+export function settingsLevelsEmptySimple(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فارغ. تعمل المهام البسيطة على نماذج المهام العادية.`;
+    case "de":
+      return `Leer. Einfache Aufgaben laufen auf deinen Modellen für normale Aufgaben.`;
+    case "es":
+      return `Vacío. Las tareas sencillas usan tus modelos para tareas normales.`;
+    case "fr":
+      return `Vide. Les tâches simples utilisent vos modèles pour les tâches normales.`;
+    case "ja":
+      return `空です。簡単なタスクは通常のタスク用モデルで実行されます。`;
+    case "ko":
+      return `비어 있음. 간단한 작업은 일반 작업용 모델에서 실행됩니다.`;
+    case "pt-BR":
+      return `Vazio. Tarefas simples usam seus modelos para tarefas normais.`;
+    case "zh-Hans":
+      return `空。简单任务使用普通任务的模型运行。`;
+    case "zh-Hant":
+      return `空。簡單任務使用一般任務的模型執行。`;
+    case "en-XA":
+      return `[Éɱþţý. Šîɱþļé ţášķš ŕûñ öñ ýöûŕ ɱöðéļš ƒöŕ ñöŕɱáļ ţášķš. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEmpty. Simple tasks run on your models for normal tasks.\u202c`;
+  }
+  return `Empty. Simple tasks run on your models for normal tasks.`;
+}
+
+export function settingsLevelsNew(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جديد`;
+    case "de":
+      return `neu`;
+    case "es":
+      return `nuevo`;
+    case "fr":
+      return `nouveau`;
+    case "ja":
+      return `新規`;
+    case "ko":
+      return `새로 추가됨`;
+    case "pt-BR":
+      return `novo`;
+    case "zh-Hans":
+      return `新`;
+    case "zh-Hant":
+      return `新`;
+    case "en-XA":
+      return `[ñéŵ ~]`;
+    case "ar-XB":
+      return `\u202enew\u202c`;
+  }
+  return `new`;
+}
+
+export function settingsLevelsPillNew(input: { provider: string }): string {
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${provider}، جديد`;
+    case "de":
+      return `${provider}, neu`;
+    case "es":
+      return `${provider}, nuevo`;
+    case "fr":
+      return `${provider}, nouveau`;
+    case "ja":
+      return `${provider}、新規`;
+    case "ko":
+      return `${provider}, 새로 추가됨`;
+    case "pt-BR":
+      return `${provider}, novo`;
+    case "zh-Hans":
+      return `${provider}，新`;
+    case "zh-Hant":
+      return `${provider}，新`;
+    case "en-XA":
+      return `[${provider}, ñéŵ ~~]`;
+    case "ar-XB":
+      return `${provider}\u202e, new\u202c`;
+  }
+  return `${provider}, new`;
+}
+
+export function settingsLevelsPillRemove(input: { level: string; model: string }): string {
+  const level = input.level;
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${model} من ${level}`;
+    case "de":
+      return `${model} aus ${level} entfernen`;
+    case "es":
+      return `Quitar ${model} de ${level}`;
+    case "fr":
+      return `Retirer ${model} de ${level}`;
+    case "ja":
+      return `${level} から ${model} を外す`;
+    case "ko":
+      return `${level}에서 ${model} 빼기`;
+    case "pt-BR":
+      return `Remover ${model} de ${level}`;
+    case "zh-Hans":
+      return `从 ${level} 中移除 ${model}`;
+    case "zh-Hant":
+      return `從 ${level} 移除 ${model}`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${model} ƒŕöɱ ${level} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${model}\u202e from \u202c${level}`;
+  }
+  return `Remove ${model} from ${level}`;
+}
+
+export function settingsLevelsPickerAdd(input: { level: string; model: string }): string {
+  const level = input.level;
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة ${model} إلى ${level}`;
+    case "de":
+      return `${model} zu ${level} hinzufügen`;
+    case "es":
+      return `Agregar ${model} a ${level}`;
+    case "fr":
+      return `Ajouter ${model} en ${level}`;
+    case "ja":
+      return `${model} を ${level} に追加`;
+    case "ko":
+      return `${level}에 ${model} 추가`;
+    case "pt-BR":
+      return `Adicionar ${model} a ${level}`;
+    case "zh-Hans":
+      return `将 ${model} 添加到 ${level}`;
+    case "zh-Hant":
+      return `將 ${model} 新增到 ${level}`;
+    case "en-XA":
+      return `[Åðð ${model} ţö ${level} ~~~]`;
+    case "ar-XB":
+      return `\u202eAdd \u202c${model}\u202e to \u202c${level}`;
+  }
+  return `Add ${model} to ${level}`;
+}
+
+export function settingsLevelsPickerIn(input: { levels: string }): string {
+  const levels = input.levels;
+  switch (currentLanguage()) {
+    case "ar":
+      return `في ${levels}`;
+    case "de":
+      return `in ${levels}`;
+    case "es":
+      return `en ${levels}`;
+    case "fr":
+      return `en ${levels}`;
+    case "ja":
+      return `${levels} に配置`;
+    case "ko":
+      return `${levels}에 있음`;
+    case "pt-BR":
+      return `em ${levels}`;
+    case "zh-Hans":
+      return `在 ${levels} 中`;
+    case "zh-Hant":
+      return `在 ${levels} 中`;
+    case "en-XA":
+      return `[îñ ${levels} ~]`;
+    case "ar-XB":
+      return `\u202ein \u202c${levels}`;
+  }
+  return `in ${levels}`;
+}
+
+export function settingsLevelsDefaultReasoning(input: { reasoning: string }): string {
+  const reasoning = input.reasoning;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاستدلال الافتراضي · ${reasoning}`;
+    case "de":
+      return `Standard-Denkaufwand · ${reasoning}`;
+    case "es":
+      return `Razonamiento predeterminado · ${reasoning}`;
+    case "fr":
+      return `Raisonnement par défaut · ${reasoning}`;
+    case "ja":
+      return `標準の推論 · ${reasoning}`;
+    case "ko":
+      return `기본 추론 · ${reasoning}`;
+    case "pt-BR":
+      return `Raciocínio padrão · ${reasoning}`;
+    case "zh-Hans":
+      return `默认推理 · ${reasoning}`;
+    case "zh-Hant":
+      return `預設推理 · ${reasoning}`;
+    case "en-XA":
+      return `[Ðéƒáûļţ ŕéášöñîñĝ · ${reasoning} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDefault reasoning · \u202c${reasoning}`;
+  }
+  return `Default reasoning · ${reasoning}`;
+}
+
+export function settingsLevelsAddModel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة نموذج`;
+    case "de":
+      return `Modell hinzufügen`;
+    case "es":
+      return `Agregar modelo`;
+    case "fr":
+      return `Ajouter un modèle`;
+    case "ja":
+      return `モデルを追加`;
+    case "ko":
+      return `모델 추가`;
+    case "pt-BR":
+      return `Adicionar modelo`;
+    case "zh-Hans":
+      return `添加模型`;
+    case "zh-Hant":
+      return `新增模型`;
+    case "en-XA":
+      return `[Åðð ɱöðéļ ~~~]`;
+    case "ar-XB":
+      return `\u202eAdd model\u202c`;
+  }
+  return `Add model`;
+}
+
+export function settingsLevelsPickerLabel(input: { level: string }): string {
+  const level = input.level;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة نموذج إلى ${level}`;
+    case "de":
+      return `Ein Modell zu ${level} hinzufügen`;
+    case "es":
+      return `Agregar un modelo a ${level}`;
+    case "fr":
+      return `Ajouter un modèle en ${level}`;
+    case "ja":
+      return `${level} にモデルを追加`;
+    case "ko":
+      return `${level}에 모델 추가`;
+    case "pt-BR":
+      return `Adicionar um modelo a ${level}`;
+    case "zh-Hans":
+      return `向 ${level} 添加模型`;
+    case "zh-Hant":
+      return `新增模型到 ${level}`;
+    case "en-XA":
+      return `[Åðð á ɱöðéļ ţö ${level} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd a model to \u202c${level}`;
+  }
+  return `Add a model to ${level}`;
+}
+
+export function settingsLevelsPickerFindLabel(input: { level: string }): string {
+  const level = input.level;
+  switch (currentLanguage()) {
+    case "ar":
+      return `البحث عن نموذج لإضافته إلى ${level}`;
+    case "de":
+      return `Ein Modell suchen, das zu ${level} hinzukommt`;
+    case "es":
+      return `Buscar un modelo para agregar a ${level}`;
+    case "fr":
+      return `Trouver un modèle à ajouter en ${level}`;
+    case "ja":
+      return `${level} に追加するモデルを探す`;
+    case "ko":
+      return `${level}에 추가할 모델 찾기`;
+    case "pt-BR":
+      return `Encontrar um modelo para adicionar a ${level}`;
+    case "zh-Hans":
+      return `查找要添加到 ${level} 的模型`;
+    case "zh-Hant":
+      return `尋找要新增到 ${level} 的模型`;
+    case "en-XA":
+      return `[Ƒîñð á ɱöðéļ ţö áðð ţö ${level} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFind a model to add to \u202c${level}`;
+  }
+  return `Find a model to add to ${level}`;
+}
+
+export function settingsLevelsPickerFind(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `البحث عن نموذج بالاسم`;
+    case "de":
+      return `Modell nach Namen suchen`;
+    case "es":
+      return `Buscar un modelo por nombre`;
+    case "fr":
+      return `Trouver un modèle par son nom`;
+    case "ja":
+      return `名前でモデルを探す`;
+    case "ko":
+      return `이름으로 모델 찾기`;
+    case "pt-BR":
+      return `Encontrar um modelo pelo nome`;
+    case "zh-Hans":
+      return `按名称查找模型`;
+    case "zh-Hant":
+      return `依名稱尋找模型`;
+    case "en-XA":
+      return `[Ƒîñð á ɱöðéļ ƀý ñáɱé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFind a model by name\u202c`;
+  }
+  return `Find a model by name`;
+}
+
+export function settingsLevelsPickerMore(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المزيد من اشتراكاتك`;
+    case "de":
+      return `Mehr aus deinen Abos`;
+    case "es":
+      return `Más de tus suscripciones`;
+    case "fr":
+      return `Plus dans vos abonnements`;
+    case "ja":
+      return `サブスクリプションのほかのモデル`;
+    case "ko":
+      return `구독에서 더 보기`;
+    case "pt-BR":
+      return `Mais das suas assinaturas`;
+    case "zh-Hans":
+      return `你订阅中的更多模型`;
+    case "zh-Hant":
+      return `你訂閱方案中的更多模型`;
+    case "en-XA":
+      return `[Ṁöŕé ƒŕöɱ ýöûŕ šûƀšçŕîþţîöñš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMore from your subscriptions\u202c`;
+  }
+  return `More from your subscriptions`;
+}
+
+export function settingsLevelsPickerNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوجد نموذج بهذا الاسم`;
+    case "de":
+      return `Kein Modell mit diesem Namen`;
+    case "es":
+      return `Ningún modelo con ese nombre`;
+    case "fr":
+      return `Aucun modèle de ce nom`;
+    case "ja":
+      return `その名前のモデルはありません`;
+    case "ko":
+      return `그 이름의 모델이 없어요`;
+    case "pt-BR":
+      return `Nenhum modelo com esse nome`;
+    case "zh-Hans":
+      return `没有这个名称的模型`;
+    case "zh-Hant":
+      return `沒有這個名稱的模型`;
+    case "en-XA":
+      return `[Ñö ɱöðéļ ƀý ţĥáţ ñáɱé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo model by that name\u202c`;
+  }
+  return `No model by that name`;
+}
+
+export function settingsLevelsPanelLabel(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مستويات ${model}`;
+    case "de":
+      return `Stufen von ${model}`;
+    case "es":
+      return `Niveles de ${model}`;
+    case "fr":
+      return `Niveaux de ${model}`;
+    case "ja":
+      return `${model} のレベル`;
+    case "ko":
+      return `${model} 수준`;
+    case "pt-BR":
+      return `Níveis de ${model}`;
+    case "zh-Hans":
+      return `${model} 的级别`;
+    case "zh-Hant":
+      return `${model} 的等級`;
+    case "en-XA":
+      return `[${model} ļéṽéļš ~~~]`;
+    case "ar-XB":
+      return `${model}\u202e levels\u202c`;
+  }
+  return `${model} levels`;
+}
+
+export function settingsLevelsPanelClose(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إغلاق ${model}`;
+    case "de":
+      return `${model} schließen`;
+    case "es":
+      return `Cerrar ${model}`;
+    case "fr":
+      return `Fermer ${model}`;
+    case "ja":
+      return `${model} を閉じる`;
+    case "ko":
+      return `${model} 닫기`;
+    case "pt-BR":
+      return `Fechar ${model}`;
+    case "zh-Hans":
+      return `关闭 ${model}`;
+    case "zh-Hant":
+      return `關閉 ${model}`;
+    case "en-XA":
+      return `[Çļöšé ${model} ~~]`;
+    case "ar-XB":
+      return `\u202eClose \u202c${model}`;
+  }
+  return `Close ${model}`;
+}
+
+export function settingsLevelsPanelLevels(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المستويات`;
+    case "de":
+      return `Stufen`;
+    case "es":
+      return `Niveles`;
+    case "fr":
+      return `Niveaux`;
+    case "ja":
+      return `レベル`;
+    case "ko":
+      return `수준`;
+    case "pt-BR":
+      return `Níveis`;
+    case "zh-Hans":
+      return `级别`;
+    case "zh-Hant":
+      return `等級`;
+    case "en-XA":
+      return `[Ļéṽéļš ~~]`;
+    case "ar-XB":
+      return `\u202eLevels\u202c`;
+  }
+  return `Levels`;
+}
+
+export function settingsLevelsPanelUseAt(input: { level: string; model: string }): string {
+  const level = input.level;
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام ${model} لـ${level}`;
+    case "de":
+      return `${model} für ${level} verwenden`;
+    case "es":
+      return `Usar ${model} para ${level}`;
+    case "fr":
+      return `Utiliser ${model} pour ${level}`;
+    case "ja":
+      return `${model}を${level}に使う`;
+    case "ko":
+      return `${model}을(를) ${level}에 사용`;
+    case "pt-BR":
+      return `Usar ${model} para ${level}`;
+    case "zh-Hans":
+      return `将${model}用于${level}`;
+    case "zh-Hant":
+      return `將${model}用於${level}`;
+    case "en-XA":
+      return `[Ûšé ${model} ƒöŕ ${level} ~~~]`;
+    case "ar-XB":
+      return `\u202eUse \u202c${model}\u202e for \u202c${level}`;
+  }
+  return `Use ${model} for ${level}`;
+}
+
+export function settingsLevelsAlwaysUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاستخدام دائمًا`;
+    case "de":
+      return `Immer verwenden`;
+    case "es":
+      return `Usar siempre`;
+    case "fr":
+      return `Toujours utiliser`;
+    case "ja":
+      return `常に使う`;
+    case "ko":
+      return `항상 사용`;
+    case "pt-BR":
+      return `Sempre usar`;
+    case "zh-Hans":
+      return `始终使用`;
+    case "zh-Hant":
+      return `一律使用`;
+    case "en-XA":
+      return `[Åļŵáýš ûšé ~~~~]`;
+    case "ar-XB":
+      return `\u202eAlways use\u202c`;
+  }
+  return `Always use`;
+}
+
+export function settingsLevelsAlwaysUseNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يذهب كل عمل الطاقم إلى هذا النموذج. تُتخطى المستويات.`;
+    case "de":
+      return `Alle Crew-Arbeit geht an dieses Modell. Stufen werden übersprungen.`;
+    case "es":
+      return `Todo el trabajo de la tripulación va a este modelo. Los niveles se omiten.`;
+    case "fr":
+      return `Tout le travail de l’équipage va à ce modèle. Les niveaux sont ignorés.`;
+    case "ja":
+      return `乗組員の作業はすべてこのモデルに送られます。レベルは使われません。`;
+    case "ko":
+      return `선원들의 모든 작업이 이 모델로 가요. 수준은 건너뛰어요.`;
+    case "pt-BR":
+      return `Todo o trabalho da tripulação vai para este modelo. Os níveis são ignorados.`;
+    case "zh-Hans":
+      return `所有船员工作都交给这个模型，跳过级别。`;
+    case "zh-Hant":
+      return `所有船員工作都交給這個模型，略過等級。`;
+    case "en-XA":
+      return `[Åļļ çŕéŵ ŵöŕķ ĝöéš ţö ţĥîš ɱöðéļ. Ļéṽéļš áŕé šķîþþéð. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAll crew work goes to this model. Levels are skipped.\u202c`;
+  }
+  return `All crew work goes to this model. Levels are skipped.`;
+}
+
+export function settingsLevelsAlwaysUseLabel(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام ${model} دائمًا`;
+    case "de":
+      return `${model} immer verwenden`;
+    case "es":
+      return `Usar siempre ${model}`;
+    case "fr":
+      return `Toujours utiliser ${model}`;
+    case "ja":
+      return `常に ${model} を使う`;
+    case "ko":
+      return `항상 ${model} 사용`;
+    case "pt-BR":
+      return `Sempre usar ${model}`;
+    case "zh-Hans":
+      return `始终使用 ${model}`;
+    case "zh-Hant":
+      return `一律使用 ${model}`;
+    case "en-XA":
+      return `[Åļŵáýš ûšé ${model} ~~~~]`;
+    case "ar-XB":
+      return `\u202eAlways use \u202c${model}`;
+  }
+  return `Always use ${model}`;
+}
+
+export function settingsLevelsRemoveAll(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإزالة من كل المستويات`;
+    case "de":
+      return `Aus allen Stufen entfernen`;
+    case "es":
+      return `Quitar de todos los niveles`;
+    case "fr":
+      return `Retirer de tous les niveaux`;
+    case "ja":
+      return `すべてのレベルから外す`;
+    case "ko":
+      return `모든 수준에서 빼기`;
+    case "pt-BR":
+      return `Remover de todos os níveis`;
+    case "zh-Hans":
+      return `从所有级别中移除`;
+    case "zh-Hant":
+      return `從所有等級移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ƒŕöɱ áļļ ļéṽéļš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove from all levels\u202c`;
+  }
+  return `Remove from all levels`;
+}
+
+export function settingsLevelsRemoveAllLabel(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${model} من كل المستويات`;
+    case "de":
+      return `${model} aus allen Stufen entfernen`;
+    case "es":
+      return `Quitar ${model} de todos los niveles`;
+    case "fr":
+      return `Retirer ${model} de tous les niveaux`;
+    case "ja":
+      return `${model} をすべてのレベルから外す`;
+    case "ko":
+      return `모든 수준에서 ${model} 빼기`;
+    case "pt-BR":
+      return `Remover ${model} de todos os níveis`;
+    case "zh-Hans":
+      return `从所有级别中移除 ${model}`;
+    case "zh-Hant":
+      return `從所有等級移除 ${model}`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${model} ƒŕöɱ áļļ ļéṽéļš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${model}\u202e from all levels\u202c`;
+  }
+  return `Remove ${model} from all levels`;
+}
+
+export function settingsLevelsRemove(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة`;
+    case "de":
+      return `Entfernen`;
+    case "es":
+      return `Quitar`;
+    case "fr":
+      return `Retirer`;
+    case "ja":
+      return `外す`;
+    case "ko":
+      return `빼기`;
+    case "pt-BR":
+      return `Remover`;
+    case "zh-Hans":
+      return `移除`;
+    case "zh-Hant":
+      return `移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ~~]`;
+    case "ar-XB":
+      return `\u202eRemove\u202c`;
+  }
+  return `Remove`;
+}
+
+export function settingsLevelsTurnOffLabel(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف «الاستخدام دائمًا» لـ ${model}`;
+    case "de":
+      return `„Immer verwenden“ für ${model} ausschalten`;
+    case "es":
+      return `Desactivar Usar siempre para ${model}`;
+    case "fr":
+      return `Désactiver « Toujours utiliser » pour ${model}`;
+    case "ja":
+      return `${model} の「常に使う」をオフにする`;
+    case "ko":
+      return `${model}의 항상 사용 끄기`;
+    case "pt-BR":
+      return `Desativar Sempre usar para ${model}`;
+    case "zh-Hans":
+      return `关闭 ${model} 的“始终使用”`;
+    case "zh-Hant":
+      return `關閉 ${model} 的「一律使用」`;
+    case "en-XA":
+      return `[Ţûŕñ öƒƒ áļŵáýš ûšé ƒöŕ ${model} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurn off always use for \u202c${model}`;
+  }
+  return `Turn off always use for ${model}`;
+}
+
+export function settingsLevelsTurnOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف`;
+    case "de":
+      return `Ausschalten`;
+    case "es":
+      return `Desactivar`;
+    case "fr":
+      return `Désactiver`;
+    case "ja":
+      return `オフにする`;
+    case "ko":
+      return `끄기`;
+    case "pt-BR":
+      return `Desativar`;
+    case "zh-Hans":
+      return `关闭`;
+    case "zh-Hant":
+      return `關閉`;
+    case "en-XA":
+      return `[Ţûŕñ öƒƒ ~~~]`;
+    case "ar-XB":
+      return `\u202eTurn off\u202c`;
+  }
+  return `Turn off`;
+}
+
+export function settingsLevelsBoardHint(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اسحب نموذجًا إلى مستوى آخر لنقله. اضغط ${key} مع الإفلات لاستخدامه في كليهما. أو اختره لتحديد مستوياته.`;
+    case "de":
+      return `Zieh ein Modell in eine andere Stufe, um es zu verschieben. Halte beim Loslassen ${key} gedrückt, um es in beiden zu verwenden. Oder wähl es aus, um seine Stufen festzulegen.`;
+    case "es":
+      return `Arrastra un modelo a otro nivel para moverlo. Mantén ${key} al soltarlo para usarlo en ambos. O elígelo para escoger sus niveles.`;
+    case "fr":
+      return `Faites glisser un modèle vers un autre niveau pour le déplacer. Maintenez ${key} en le déposant pour l’utiliser dans les deux. Ou choisissez-le pour sélectionner ses niveaux.`;
+    case "ja":
+      return `モデルを別のレベルへドラッグすると移動します。${key} を押しながらドロップすると両方で使えます。モデルを選んでレベルを選ぶこともできます。`;
+    case "ko":
+      return `모델을 다른 수준으로 끌어 옮기세요. 놓을 때 ${key}을(를) 누르고 있으면 두 곳에서 모두 사용해요. 모델을 골라서 수준을 정할 수도 있어요.`;
+    case "pt-BR":
+      return `Arraste um modelo para outro nível para movê-lo. Segure ${key} ao soltar para usá-lo nos dois. Ou escolha o modelo para definir os níveis dele.`;
+    case "zh-Hans":
+      return `把模型拖到另一个级别即可移动。放下时按住 ${key}，可同时在两个级别使用。也可以选择它来挑选级别。`;
+    case "zh-Hant":
+      return `把模型拖到另一個等級即可移動。放下時按住 ${key}，就能在兩個等級都使用。也可以選擇它來挑選等級。`;
+    case "en-XA":
+      return `[Ðŕáĝ á ɱöðéļ ţö áñöţĥéŕ ļéṽéļ ţö ɱöṽé îţ. Ĥöļð ${key} áš ýöû ðŕöþ ţö ûšé îţ áţ ƀöţĥ. Öŕ çĥööšé îţ ţö þîçķ îţš ļéṽéļš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDrag a model to another level to move it. Hold \u202c${key}\u202e as you drop to use it at both. Or choose it to pick its levels.\u202c`;
+  }
+  return `Drag a model to another level to move it. Hold ${key} as you drop to use it at both. Or choose it to pick its levels.`;
+}
+
+export function settingsLevelsNotInUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير مستخدمة`;
+    case "de":
+      return `Nicht in Gebrauch`;
+    case "es":
+      return `Sin usar`;
+    case "fr":
+      return `Inutilisés`;
+    case "ja":
+      return `未使用`;
+    case "ko":
+      return `사용 안 함`;
+    case "pt-BR":
+      return `Sem uso`;
+    case "zh-Hans":
+      return `未使用`;
+    case "zh-Hant":
+      return `未使用`;
+    case "en-XA":
+      return `[Ñöţ îñ ûšé ~~~~]`;
+    case "ar-XB":
+      return `\u202eNot in use\u202c`;
+  }
+  return `Not in use`;
+}
+
+export function settingsLevelsNotInUseHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا تُختار أبدًا من تلقاء نفسها. اسحب أحدها إلى مستوى لوضعه فيه.`;
+    case "de":
+      return `Werden nie von selbst gewählt. Zieh eines in eine Stufe, um es dort einzuordnen.`;
+    case "es":
+      return `Nunca se eligen por sí solos. Arrastra uno a un nivel para ubicarlo.`;
+    case "fr":
+      return `Jamais choisis d’eux-mêmes. Faites-en glisser un vers un niveau pour le placer.`;
+    case "ja":
+      return `単独で選ばれることはありません。レベルへドラッグすると配置できます。`;
+    case "ko":
+      return `저절로 선택되지 않아요. 하나를 수준으로 끌어 놓으세요.`;
+    case "pt-BR":
+      return `Nunca são escolhidos sozinhos. Arraste um para um nível para posicioná-lo.`;
+    case "zh-Hans":
+      return `不会被单独选中。把一个拖到某个级别即可放入。`;
+    case "zh-Hant":
+      return `不會單獨被選中。把其中一個拖到某個等級即可放入。`;
+    case "en-XA":
+      return `[Ñéṽéŕ þîçķéð öñ ţĥéîŕ öŵñ. Ðŕáĝ öñé ţö á ļéṽéļ ţö þļáçé îţ. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNever picked on their own. Drag one to a level to place it.\u202c`;
+  }
+  return `Never picked on their own. Drag one to a level to place it.`;
+}
+
+export function settingsLevelsAllPlacedShown(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل نموذج معروض موجود في مستوى. ابحث عن المزيد من اشتراكاتك بالاسم تحت «إضافة نموذج».`;
+    case "de":
+      return `Jedes angezeigte Modell ist in einer Stufe. Weitere aus deinen Abos findest du unter „Modell hinzufügen“ nach Namen.`;
+    case "es":
+      return `Cada modelo mostrado está en un nivel. Busca más de tus suscripciones por nombre en Agregar modelo.`;
+    case "fr":
+      return `Chaque modèle affiché est dans un niveau. Trouvez-en d’autres dans vos abonnements par leur nom sous Ajouter un modèle.`;
+    case "ja":
+      return `表示中のモデルはすべてレベルに入っています。サブスクリプションのほかのモデルは「モデルを追加」から名前で探せます。`;
+    case "ko":
+      return `보이는 모든 모델이 수준에 들어 있어요. 구독의 다른 모델은 모델 추가에서 이름으로 찾으세요.`;
+    case "pt-BR":
+      return `Todo modelo mostrado está em um nível. Encontre mais nas suas assinaturas pelo nome em Adicionar modelo.`;
+    case "zh-Hans":
+      return `显示的每个模型都已在某个级别中。可在“添加模型”下按名称查找你订阅中的更多模型。`;
+    case "zh-Hant":
+      return `顯示的每個模型都已在某個等級中。可在「新增模型」下依名稱尋找你訂閱方案中的更多模型。`;
+    case "en-XA":
+      return `[Éṽéŕý ɱöðéļ šĥöŵñ îš îñ á ļéṽéļ. Ƒîñð ɱöŕé ƒŕöɱ ýöûŕ šûƀšçŕîþţîöñš ƀý ñáɱé ûñðéŕ Åðð ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEvery model shown is in a level. Find more from your subscriptions by name under Add model.\u202c`;
+  }
+  return `Every model shown is in a level. Find more from your subscriptions by name under Add model.`;
+}
+
+export function settingsLevelsAllPlaced(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل نموذج موجود في مستوى.`;
+    case "de":
+      return `Jedes Modell ist in einer Stufe.`;
+    case "es":
+      return `Cada modelo está en un nivel.`;
+    case "fr":
+      return `Chaque modèle est dans un niveau.`;
+    case "ja":
+      return `すべてのモデルがレベルに入っています。`;
+    case "ko":
+      return `모든 모델이 수준에 들어 있어요.`;
+    case "pt-BR":
+      return `Todo modelo está em um nível.`;
+    case "zh-Hans":
+      return `每个模型都已在某个级别中。`;
+    case "zh-Hant":
+      return `每個模型都已在某個等級中。`;
+    case "en-XA":
+      return `[Éṽéŕý ɱöðéļ šîţš îñ á ļéṽéļ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEvery model sits in a level.\u202c`;
+  }
+  return `Every model sits in a level.`;
+}
+
+export function settingsDecisionsUseOpenRouter(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام نموذج قرارات من OpenRouter`;
+    case "de":
+      return `Ein Entscheidungsmodell von OpenRouter verwenden`;
+    case "es":
+      return `Usar un modelo de decisiones de OpenRouter`;
+    case "fr":
+      return `Utiliser un modèle de décision OpenRouter`;
+    case "ja":
+      return `OpenRouter の判断用モデルを使う`;
+    case "ko":
+      return `OpenRouter 결정 모델 사용`;
+    case "pt-BR":
+      return `Usar um modelo de decisão do OpenRouter`;
+    case "zh-Hans":
+      return `使用 OpenRouter 决定模型`;
+    case "zh-Hant":
+      return `使用 OpenRouter 決定模型`;
+    case "en-XA":
+      return `[Ûšé áñ ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUse an OpenRouter decision model\u202c`;
+  }
+  return `Use an OpenRouter decision model`;
+}
+
+export function settingsDecisionsDisclosureShared(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما يُشارَك`;
+    case "de":
+      return `Geteilt`;
+    case "es":
+      return `Compartido`;
+    case "fr":
+      return `Partagé`;
+    case "ja":
+      return `共有される内容`;
+    case "ko":
+      return `공유되는 것`;
+    case "pt-BR":
+      return `Compartilhado`;
+    case "zh-Hans":
+      return `共享内容`;
+    case "zh-Hant":
+      return `分享的內容`;
+    case "en-XA":
+      return `[Šĥáŕéð ~~]`;
+    case "ar-XB":
+      return `\u202eShared\u202c`;
+  }
+  return `Shared`;
+}
+
+export function settingsDecisionsDisclosureChoice(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختيارك`;
+    case "de":
+      return `Deine Wahl`;
+    case "es":
+      return `Tu elección`;
+    case "fr":
+      return `Votre choix`;
+    case "ja":
+      return `あなたの選択`;
+    case "ko":
+      return `선장님의 선택`;
+    case "pt-BR":
+      return `Sua escolha`;
+    case "zh-Hans":
+      return `你的选择`;
+    case "zh-Hant":
+      return `你的選擇`;
+    case "en-XA":
+      return `[Ýöûŕ çĥöîçé ~~~~]`;
+    case "ar-XB":
+      return `\u202eYour choice\u202c`;
+  }
+  return `Your choice`;
+}
+
+export function settingsDecisionsDisclosureCost(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التكلفة`;
+    case "de":
+      return `Kosten`;
+    case "es":
+      return `Costo`;
+    case "fr":
+      return `Coût`;
+    case "ja":
+      return `費用`;
+    case "ko":
+      return `비용`;
+    case "pt-BR":
+      return `Custo`;
+    case "zh-Hans":
+      return `费用`;
+    case "zh-Hant":
+      return `費用`;
+    case "en-XA":
+      return `[Çöšţ ~~]`;
+    case "ar-XB":
+      return `\u202eCost\u202c`;
+  }
+  return `Cost`;
+}
+
+export function settingsDecisionsUses(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاستخدامات`;
+    case "de":
+      return `Verwendungen`;
+    case "es":
+      return `Usos`;
+    case "fr":
+      return `Usages`;
+    case "ja":
+      return `用途`;
+    case "ko":
+      return `용도`;
+    case "pt-BR":
+      return `Usos`;
+    case "zh-Hans":
+      return `用途`;
+    case "zh-Hant":
+      return `用途`;
+    case "en-XA":
+      return `[Ûšéš ~~]`;
+    case "ar-XB":
+      return `\u202eUses\u202c`;
+  }
+  return `Uses`;
+}
+
+export function settingsDecisionsUsesLocked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفعّل دائمًا: يحتاج إليه Infinitary ليعمل.`;
+    case "de":
+      return `Immer an: Infinitary braucht es, um zu funktionieren.`;
+    case "es":
+      return `Siempre activado: Infinitary lo necesita para funcionar.`;
+    case "fr":
+      return `Toujours activé : Infinitary en a besoin pour fonctionner.`;
+    case "ja":
+      return `常にオン：Infinitary の動作に必要です。`;
+    case "ko":
+      return `항상 켜짐: Infinitary가 작동하는 데 필요해요.`;
+    case "pt-BR":
+      return `Sempre ativado: o Infinitary precisa disso para funcionar.`;
+    case "zh-Hans":
+      return `始终开启：Infinitary 需要它才能工作。`;
+    case "zh-Hant":
+      return `一律開啟：Infinitary 需要它才能運作。`;
+    case "en-XA":
+      return `[Åļŵáýš öñ: Îñƒîñîţáŕý ñééðš îţ ţö ŵöŕķ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAlways on: Infinitary needs it to work.\u202c`;
+  }
+  return `Always on: Infinitary needs it to work.`;
+}
+
+export function settingsDecisionsUsesNeedsApproval(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تفعيله يطلب موافقتك على ${model} مرة واحدة.`;
+    case "de":
+      return `Beim Einschalten wird einmal dein Okay für ${model} eingeholt.`;
+    case "es":
+      return `Al activarlo, se te pide permiso una vez para ${model}.`;
+    case "fr":
+      return `L’activer vous demande une seule fois votre accord pour ${model}.`;
+    case "ja":
+      return `オンにすると、${model} について一度だけ承認を求めます。`;
+    case "ko":
+      return `켜면 ${model}에 대해 한 번 승인을 요청해요.`;
+    case "pt-BR":
+      return `Ao ativar, seu OK para ${model} é pedido uma vez.`;
+    case "zh-Hans":
+      return `打开它会请你为 ${model} 确认一次。`;
+    case "zh-Hant":
+      return `開啟後會請你為 ${model} 同意一次。`;
+    case "en-XA":
+      return `[Ţûŕñîñĝ îţ öñ ášķš ýöûŕ ÖĶ ƒöŕ ${model} öñçé. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurning it on asks your OK for \u202c${model}\u202e once.\u202c`;
+  }
+  return `Turning it on asks your OK for ${model} once.`;
+}
+
+export function settingsDecisionsUsesAllowTitle(input: { model: string; use: string }): string {
+  const model = input.model;
+  const use = input.use;
+  switch (currentLanguage()) {
+    case "ar":
+      return `السماح بـ «${use}» مع ${model}`;
+    case "de":
+      return `„${use}“ mit ${model} erlauben`;
+    case "es":
+      return `Permitir «${use}» con ${model}`;
+    case "fr":
+      return `Autoriser « ${use} » avec ${model}`;
+    case "ja":
+      return `${model} で「${use}」を許可`;
+    case "ko":
+      return `${model}에 “${use}” 허용`;
+    case "pt-BR":
+      return `Permitir “${use}” com ${model}`;
+    case "zh-Hans":
+      return `允许 ${model} 用于“${use}”`;
+    case "zh-Hant":
+      return `允許 ${model} 用於「${use}」`;
+    case "en-XA":
+      return `[Åļļöŵ “${use}” ŵîţĥ ${model} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eAllow “\u202c${use}\u202e” with \u202c${model}`;
+  }
+  return `Allow “${use}” with ${model}`;
+}
+
+export function settingsDecisionsUsesAllow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سماح`;
+    case "de":
+      return `Erlauben`;
+    case "es":
+      return `Permitir`;
+    case "fr":
+      return `Autoriser`;
+    case "ja":
+      return `許可`;
+    case "ko":
+      return `허용`;
+    case "pt-BR":
+      return `Permitir`;
+    case "zh-Hans":
+      return `允许`;
+    case "zh-Hant":
+      return `允許`;
+    case "en-XA":
+      return `[Åļļöŵ ~~]`;
+    case "ar-XB":
+      return `\u202eAllow\u202c`;
+  }
+  return `Allow`;
+}
+
+export function settingsDecisionsUsesTurnOn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تفعيل`;
+    case "de":
+      return `Einschalten`;
+    case "es":
+      return `Activar`;
+    case "fr":
+      return `Activer`;
+    case "ja":
+      return `オンにする`;
+    case "ko":
+      return `켜기`;
+    case "pt-BR":
+      return `Ativar`;
+    case "zh-Hans":
+      return `打开`;
+    case "zh-Hant":
+      return `開啟`;
+    case "en-XA":
+      return `[Ţûŕñ öñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTurn on\u202c`;
+  }
+  return `Turn on`;
+}
+
+export function settingsDecisionsUsesTurnOnNamed(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تفعيل ${name}`;
+    case "de":
+      return `${name} einschalten`;
+    case "es":
+      return `Activar ${name}`;
+    case "fr":
+      return `Activer ${name}`;
+    case "ja":
+      return `${name} をオンにする`;
+    case "ko":
+      return `${name} 켜기`;
+    case "pt-BR":
+      return `Ativar ${name}`;
+    case "zh-Hans":
+      return `打开 ${name}`;
+    case "zh-Hant":
+      return `開啟 ${name}`;
+    case "en-XA":
+      return `[Ţûŕñ öñ ${name} ~~~]`;
+    case "ar-XB":
+      return `\u202eTurn on \u202c${name}`;
+  }
+  return `Turn on ${name}`;
+}
+
+export function settingsDecisionsUseAuto(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام الاختيار التلقائي`;
+    case "de":
+      return `Automatisch`;
+    case "es":
+      return `Usar automático`;
+    case "fr":
+      return `Utiliser le mode automatique`;
+    case "ja":
+      return `自動を使う`;
+    case "ko":
+      return `자동 사용`;
+    case "pt-BR":
+      return `Usar automático`;
+    case "zh-Hans":
+      return `使用自动`;
+    case "zh-Hant":
+      return `使用自動`;
+    case "en-XA":
+      return `[Ûšé áûţö ~~~]`;
+    case "ar-XB":
+      return `\u202eUse auto\u202c`;
+  }
+  return `Use auto`;
+}
+
+export function settingsDecisionsUseSpecific(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام نموذج محدد`;
+    case "de":
+      return `Ein bestimmtes Modell verwenden`;
+    case "es":
+      return `Usar un modelo específico`;
+    case "fr":
+      return `Utiliser un modèle précis`;
+    case "ja":
+      return `特定のモデルを使う`;
+    case "ko":
+      return `특정 모델 사용`;
+    case "pt-BR":
+      return `Usar um modelo específico`;
+    case "zh-Hans":
+      return `使用指定模型`;
+    case "zh-Hant":
+      return `使用指定模型`;
+    case "en-XA":
+      return `[Ûšé á šþéçîƒîç ɱöðéļ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUse a specific model\u202c`;
+  }
+  return `Use a specific model`;
+}
+
+export function settingsDecisionsTurnOff(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف ${model}`;
+    case "de":
+      return `${model} ausschalten`;
+    case "es":
+      return `Desactivar ${model}`;
+    case "fr":
+      return `Désactiver ${model}`;
+    case "ja":
+      return `${model} をオフにする`;
+    case "ko":
+      return `${model} 끄기`;
+    case "pt-BR":
+      return `Desativar ${model}`;
+    case "zh-Hans":
+      return `关闭 ${model}`;
+    case "zh-Hant":
+      return `關閉 ${model}`;
+    case "en-XA":
+      return `[Ţûŕñ öƒƒ ${model} ~~~]`;
+    case "ar-XB":
+      return `\u202eTurn off \u202c${model}`;
+  }
+  return `Turn off ${model}`;
+}
+
+export function settingsDecisionsUseNative(input: { model: string; vendor: string }): string {
+  const model = input.model;
+  const vendor = input.vendor;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام ${model} (${vendor})`;
+    case "de":
+      return `${model} verwenden (${vendor})`;
+    case "es":
+      return `Usar ${model} (${vendor})`;
+    case "fr":
+      return `Utiliser ${model} (${vendor})`;
+    case "ja":
+      return `${model}（${vendor}）を使う`;
+    case "ko":
+      return `${model} 사용(${vendor})`;
+    case "pt-BR":
+      return `Usar ${model} (${vendor})`;
+    case "zh-Hans":
+      return `使用 ${model}（${vendor}）`;
+    case "zh-Hant":
+      return `使用 ${model}（${vendor}）`;
+    case "en-XA":
+      return `[Ûšé ${model} (${vendor}) ~~~]`;
+    case "ar-XB":
+      return `\u202eUse \u202c${model}\u202e (\u202c${vendor}\u202e)\u202c`;
+  }
+  return `Use ${model} (${vendor})`;
+}
+
+export function settingsDecisionsReplaceKey(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استبدال مفتاح ${model}`;
+    case "de":
+      return `Schlüssel für ${model} ersetzen`;
+    case "es":
+      return `Reemplazar la clave de ${model}`;
+    case "fr":
+      return `Remplacer la clé ${model}`;
+    case "ja":
+      return `${model} キーを置き換える`;
+    case "ko":
+      return `${model} 키 바꾸기`;
+    case "pt-BR":
+      return `Substituir a chave do ${model}`;
+    case "zh-Hans":
+      return `替换 ${model} 密钥`;
+    case "zh-Hant":
+      return `更換 ${model} 金鑰`;
+    case "en-XA":
+      return `[Ŕéþļáçé ${model} ķéý ~~~~]`;
+    case "ar-XB":
+      return `\u202eReplace \u202c${model}\u202e key\u202c`;
+  }
+  return `Replace ${model} key`;
+}
+
+export function settingsDecisionsRemove(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${model}`;
+    case "de":
+      return `${model} entfernen`;
+    case "es":
+      return `Quitar ${model}`;
+    case "fr":
+      return `Retirer ${model}`;
+    case "ja":
+      return `${model} を削除`;
+    case "ko":
+      return `${model} 제거`;
+    case "pt-BR":
+      return `Remover ${model}`;
+    case "zh-Hans":
+      return `移除 ${model}`;
+    case "zh-Hant":
+      return `移除 ${model}`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${model} ~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${model}`;
+  }
+  return `Remove ${model}`;
+}
+
+export function settingsDecisionsOpenRouterUnavailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `OpenRouter غير متاح · يُستخدم أحد نماذجك`;
+    case "de":
+      return `OpenRouter nicht verfügbar · eines deiner eigenen Modelle wird verwendet`;
+    case "es":
+      return `OpenRouter no disponible · se usa uno de tus propios modelos`;
+    case "fr":
+      return `OpenRouter indisponible · un de vos propres modèles est utilisé`;
+    case "ja":
+      return `OpenRouter を利用できません · 自分のモデルの1つを使用中`;
+    case "ko":
+      return `OpenRouter 사용 불가 · 선장님의 모델 중 하나 사용 중`;
+    case "pt-BR":
+      return `OpenRouter indisponível · usando um dos seus próprios modelos`;
+    case "zh-Hans":
+      return `OpenRouter 不可用 · 正在使用你自己的一个模型`;
+    case "zh-Hant":
+      return `無法使用 OpenRouter · 正在使用你自己的一個模型`;
+    case "en-XA":
+      return `[ÖþéñŔöûţéŕ ûñáṽáîļáƀļé · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpenRouter unavailable · using one of your own models\u202c`;
+  }
+  return `OpenRouter unavailable · using one of your own models`;
+}
+
+export function settingsDecisionsLineNative(input: { model: string; vendor: string }): string {
+  const model = input.model;
+  const vendor = input.vendor;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${model} · ${vendor} · مفعّل`;
+    case "de":
+      return `${model} · ${vendor} · an`;
+    case "es":
+      return `${model} · ${vendor} · activado`;
+    case "fr":
+      return `${model} · ${vendor} · activé`;
+    case "ja":
+      return `${model} · ${vendor} · オン`;
+    case "ko":
+      return `${model} · ${vendor} · 켜짐`;
+    case "pt-BR":
+      return `${model} · ${vendor} · ativado`;
+    case "zh-Hans":
+      return `${model} · ${vendor} · 已开启`;
+    case "zh-Hant":
+      return `${model} · ${vendor} · 已開啟`;
+    case "en-XA":
+      return `[${model} · ${vendor} · öñ ~~~]`;
+    case "ar-XB":
+      return `${model}\u202e · \u202c${vendor}\u202e · on\u202c`;
+  }
+  return `${model} · ${vendor} · on`;
+}
+
+export function settingsDecisionsKeyRejected(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رُفض المفتاح · يُستخدم أحد نماذجك`;
+    case "de":
+      return `Schlüssel abgelehnt · eines deiner eigenen Modelle wird verwendet`;
+    case "es":
+      return `clave rechazada · se usa uno de tus propios modelos`;
+    case "fr":
+      return `clé refusée · un de vos propres modèles est utilisé`;
+    case "ja":
+      return `キーが拒否されました · 自分のモデルの1つを使用中`;
+    case "ko":
+      return `키 거부됨 · 선장님의 모델 중 하나 사용 중`;
+    case "pt-BR":
+      return `chave recusada · usando um dos seus próprios modelos`;
+    case "zh-Hans":
+      return `密钥被拒绝 · 正在使用你自己的一个模型`;
+    case "zh-Hant":
+      return `金鑰被拒 · 正在使用你自己的一個模型`;
+    case "en-XA":
+      return `[ķéý ŕéĵéçţéð · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ekey rejected · using one of your own models\u202c`;
+  }
+  return `key rejected · using one of your own models`;
+}
+
+export function settingsDecisionsChosenFallback(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج المختار غير متاح · يُستخدم أرخص نموذج وضعته في مستوى`;
+    case "de":
+      return `gewähltes Modell nicht verfügbar · dein günstigstes eingeordnetes Modell wird verwendet`;
+    case "es":
+      return `modelo elegido no disponible · se usa tu modelo más barato con nivel asignado`;
+    case "fr":
+      return `modèle choisi indisponible · votre modèle le moins cher placé dans un niveau est utilisé`;
+    case "ja":
+      return `選んだモデルを利用できません · レベル内で最も安いモデルを使用中`;
+    case "ko":
+      return `고른 모델 사용 불가 · 수준에 둔 모델 중 가장 저렴한 모델 사용 중`;
+    case "pt-BR":
+      return `modelo escolhido indisponível · usando seu modelo mais barato com nível`;
+    case "zh-Hans":
+      return `所选模型不可用 · 正在使用级别中最便宜的模型`;
+    case "zh-Hant":
+      return `無法使用所選模型 · 正在使用等級中最便宜的模型`;
+    case "en-XA":
+      return `[çĥöšéñ ɱöðéļ ûñáṽáîļáƀļé · ûšîñĝ ýöûŕ çĥéáþéšţ šļöţţéð ɱöðéļ ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202echosen model unavailable · using your cheapest slotted model\u202c`;
+  }
+  return `chosen model unavailable · using your cheapest slotted model`;
+}
+
+export function settingsDecisionsChosenHeld(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج المختار غير متاح · تبقى القرارات بلا إجابة`;
+    case "de":
+      return `gewähltes Modell nicht verfügbar · Entscheidungen bleiben unbeantwortet`;
+    case "es":
+      return `modelo elegido no disponible · las decisiones quedan sin respuesta`;
+    case "fr":
+      return `modèle choisi indisponible · les décisions restent sans réponse`;
+    case "ja":
+      return `選んだモデルを利用できません · 判断に応答がありません`;
+    case "ko":
+      return `고른 모델 사용 불가 · 결정에 답하지 않음`;
+    case "pt-BR":
+      return `modelo escolhido indisponível · as decisões ficam sem resposta`;
+    case "zh-Hans":
+      return `所选模型不可用 · 决定暂无人作答`;
+    case "zh-Hant":
+      return `無法使用所選模型 · 決定暫時無人回覆`;
+    case "en-XA":
+      return `[çĥöšéñ ɱöðéļ ûñáṽáîļáƀļé · ðéçîšîöñš ĝö ûñáñšŵéŕéð ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202echosen model unavailable · decisions go unanswered\u202c`;
+  }
+  return `chosen model unavailable · decisions go unanswered`;
+}
+
+export function settingsDecisionsAuto(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تلقائي · أرخص نموذج وضعته في مستوى`;
+    case "de":
+      return `automatisch · dein günstigstes eingeordnetes Modell`;
+    case "es":
+      return `automático · tu modelo más barato con nivel asignado`;
+    case "fr":
+      return `automatique · votre modèle le moins cher placé dans un niveau`;
+    case "ja":
+      return `自動 · レベル内で最も安いモデル`;
+    case "ko":
+      return `자동 · 수준에 둔 모델 중 가장 저렴한 모델`;
+    case "pt-BR":
+      return `automático · seu modelo mais barato com nível`;
+    case "zh-Hans":
+      return `自动 · 级别中最便宜的模型`;
+    case "zh-Hant":
+      return `自動 · 等級中最便宜的模型`;
+    case "en-XA":
+      return `[áûţö · ýöûŕ çĥéáþéšţ šļöţţéð ɱöðéļ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eauto · your cheapest slotted model\u202c`;
+  }
+  return `auto · your cheapest slotted model`;
+}
+
+export function settingsDecisionsKeyLabel(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاح ${model}`;
+    case "de":
+      return `Schlüssel für ${model}`;
+    case "es":
+      return `Clave de ${model}`;
+    case "fr":
+      return `Clé ${model}`;
+    case "ja":
+      return `${model} キー`;
+    case "ko":
+      return `${model} 키`;
+    case "pt-BR":
+      return `Chave do ${model}`;
+    case "zh-Hans":
+      return `${model} 密钥`;
+    case "zh-Hant":
+      return `${model} 金鑰`;
+    case "en-XA":
+      return `[${model} ķéý ~~]`;
+    case "ar-XB":
+      return `${model}\u202e key\u202c`;
+  }
+  return `${model} key`;
+}
+
+export function settingsDecisionsKeyPlaceholder(input: { vendor: string }): string {
+  const vendor = input.vendor;
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاحك من ${vendor}`;
+    case "de":
+      return `Dein ${vendor}-Schlüssel`;
+    case "es":
+      return `Tu clave de ${vendor}`;
+    case "fr":
+      return `Votre clé ${vendor}`;
+    case "ja":
+      return `${vendor} のキー`;
+    case "ko":
+      return `${vendor} 키`;
+    case "pt-BR":
+      return `Sua chave do ${vendor}`;
+    case "zh-Hans":
+      return `你的 ${vendor} 密钥`;
+    case "zh-Hant":
+      return `你的 ${vendor} 金鑰`;
+    case "en-XA":
+      return `[Ýöûŕ ${vendor} ķéý ~~~]`;
+    case "ar-XB":
+      return `\u202eYour \u202c${vendor}\u202e key\u202c`;
+  }
+  return `Your ${vendor} key`;
+}
+
+export function settingsDecisionsKeysFrom(input: { url: string }): string {
+  const url = input.url;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تأتي المفاتيح من ${url}`;
+    case "de":
+      return `Schlüssel bekommst du unter ${url}`;
+    case "es":
+      return `Las claves se obtienen en ${url}`;
+    case "fr":
+      return `Les clés s’obtiennent sur ${url}`;
+    case "ja":
+      return `キーは ${url} で取得できます`;
+    case "ko":
+      return `키는 ${url}에서 받아요`;
+    case "pt-BR":
+      return `As chaves vêm de ${url}`;
+    case "zh-Hans":
+      return `密钥可在 ${url} 获取`;
+    case "zh-Hant":
+      return `金鑰可在 ${url} 取得`;
+    case "en-XA":
+      return `[Ķéýš çöɱé ƒŕöɱ ${url} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eKeys come from \u202c${url}`;
+  }
+  return `Keys come from ${url}`;
+}
+
+export function settingsDecisionsTurnOnOpenRouter(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تفعيل ${model} عبر OpenRouter`;
+    case "de":
+      return `${model} über OpenRouter einschalten`;
+    case "es":
+      return `Activar ${model} a través de OpenRouter`;
+    case "fr":
+      return `Activer ${model} via OpenRouter`;
+    case "ja":
+      return `OpenRouter 経由で ${model} をオンにする`;
+    case "ko":
+      return `OpenRouter로 ${model} 켜기`;
+    case "pt-BR":
+      return `Ativar ${model} pelo OpenRouter`;
+    case "zh-Hans":
+      return `通过 OpenRouter 打开 ${model}`;
+    case "zh-Hant":
+      return `透過 OpenRouter 開啟 ${model}`;
+    case "en-XA":
+      return `[Ţûŕñ öñ ${model} ţĥŕöûĝĥ ÖþéñŔöûţéŕ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTurn on \u202c${model}\u202e through OpenRouter\u202c`;
+  }
+  return `Turn on ${model} through OpenRouter`;
+}
+
+export function settingsDecisionsHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `القرارات`;
+    case "de":
+      return `Entscheidungen`;
+    case "es":
+      return `Decisiones`;
+    case "fr":
+      return `Décisions`;
+    case "ja":
+      return `判断`;
+    case "ko":
+      return `결정`;
+    case "pt-BR":
+      return `Decisões`;
+    case "zh-Hans":
+      return `决定`;
+    case "zh-Hant":
+      return `決定`;
+    case "en-XA":
+      return `[Ðéçîšîöñš ~~~]`;
+    case "ar-XB":
+      return `\u202eDecisions\u202c`;
+  }
+  return `Decisions`;
+}
+
+export function settingsDecisionsSubtitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اتخاذ قرارات بكفاءة`;
+    case "de":
+      return `Effizient entscheiden`;
+    case "es":
+      return `Decisiones eficientes`;
+    case "fr":
+      return `Prise de décision efficace`;
+    case "ja":
+      return `効率的な判断`;
+    case "ko":
+      return `효율적인 결정`;
+    case "pt-BR":
+      return `Decisões eficientes`;
+    case "zh-Hans":
+      return `高效做出决定`;
+    case "zh-Hant":
+      return `有效率地做出決定`;
+    case "en-XA":
+      return `[Éƒƒîçîéñţ ðéçîšîöñ ɱáķîñĝ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEfficient decision making\u202c`;
+  }
+  return `Efficient decision making`;
+}
+
+export function settingsDecisionsOpenRouterModels(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نماذج القرارات من OpenRouter`;
+    case "de":
+      return `Entscheidungsmodelle von OpenRouter`;
+    case "es":
+      return `Modelos de decisiones de OpenRouter`;
+    case "fr":
+      return `Modèles de décision OpenRouter`;
+    case "ja":
+      return `OpenRouter の判断用モデル`;
+    case "ko":
+      return `OpenRouter 결정 모델`;
+    case "pt-BR":
+      return `Modelos de decisão do OpenRouter`;
+    case "zh-Hans":
+      return `OpenRouter 决定模型`;
+    case "zh-Hant":
+      return `OpenRouter 決定模型`;
+    case "en-XA":
+      return `[ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļš ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpenRouter decision models\u202c`;
+  }
+  return `OpenRouter decision models`;
+}
+
+export function settingsDecisionsOpenRouterPrice(input: {
+  model: string;
+  price: string;
+  vendor: string;
+}): string {
+  const model = input.model;
+  const price = input.price;
+  const vendor = input.vendor;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${model} · ${vendor} · $${price} / مليون رمز إدخال`;
+    case "de":
+      return `${model} · ${vendor} · $${price} / Million Eingabe-Tokens`;
+    case "es":
+      return `${model} · ${vendor} · $${price} / millón de tokens de entrada`;
+    case "fr":
+      return `${model} · ${vendor} · $${price} / million de jetons en entrée`;
+    case "ja":
+      return `${model} · ${vendor} · 入力100万トークンあたり $${price}`;
+    case "ko":
+      return `${model} · ${vendor} · 입력 토큰 100만 개당 $${price}`;
+    case "pt-BR":
+      return `${model} · ${vendor} · $${price} / milhão de tokens de entrada`;
+    case "zh-Hans":
+      return `${model} · ${vendor} · $${price} / 百万输入 token`;
+    case "zh-Hant":
+      return `${model} · ${vendor} · $${price} / 百萬輸入 token`;
+    case "en-XA":
+      return `[${model} · ${vendor} · $${price} / ɱîļļîöñ îñþûţ ţöķéñš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${model}\u202e · \u202c${vendor}\u202e · $\u202c${price}\u202e / million input tokens\u202c`;
+  }
+  return `${model} · ${vendor} · $${price} / million input tokens`;
+}
+
+export function settingsDecisionsPicker(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختيار النموذج الذي يجيب عن القرارات`;
+    case "de":
+      return `Modell wählen, das Entscheidungen beantwortet`;
+    case "es":
+      return `Elige el modelo que responde las decisiones`;
+    case "fr":
+      return `Choisir le modèle qui répond aux décisions`;
+    case "ja":
+      return `判断に応答するモデルを選ぶ`;
+    case "ko":
+      return `결정에 답할 모델 고르기`;
+    case "pt-BR":
+      return `Escolha o modelo que responde às decisões`;
+    case "zh-Hans":
+      return `选择回答决定的模型`;
+    case "zh-Hant":
+      return `選擇回覆決定的模型`;
+    case "en-XA":
+      return `[Çĥööšé ţĥé ɱöðéļ ţĥáţ áñšŵéŕš ðéçîšîöñš ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose the model that answers decisions\u202c`;
+  }
+  return `Choose the model that answers decisions`;
+}
+
+export function settingsDecisionsAnswerWith(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإجابة عن القرارات بـ ${model}`;
+    case "de":
+      return `Entscheidungen mit ${model} beantworten`;
+    case "es":
+      return `Responder las decisiones con ${model}`;
+    case "fr":
+      return `Répondre aux décisions avec ${model}`;
+    case "ja":
+      return `${model} で判断に応答`;
+    case "ko":
+      return `${model}(으)로 결정에 답하기`;
+    case "pt-BR":
+      return `Responder decisões com ${model}`;
+    case "zh-Hans":
+      return `用 ${model} 回答决定`;
+    case "zh-Hant":
+      return `用 ${model} 回覆決定`;
+    case "en-XA":
+      return `[Åñšŵéŕ ðéçîšîöñš ŵîţĥ ${model} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAnswer decisions with \u202c${model}`;
+  }
+  return `Answer decisions with ${model}`;
+}
+
+export function settingsDecisionsLastAnswer(input: { tokens: string; value: string }): string {
+  const tokens = input.tokens;
+  const value = input.value;
+  switch (currentLanguage()) {
+    case "ar":
+      return `آخر إجابة ${value} · ${tokens} رمز`;
+    case "de":
+      return `letzte Antwort ${value} · ${tokens} Tokens`;
+    case "es":
+      return `última respuesta ${value} · ${tokens} tokens`;
+    case "fr":
+      return `dernière réponse ${value} · ${tokens} jetons`;
+    case "ja":
+      return `前回の応答 ${value} · ${tokens}トークン`;
+    case "ko":
+      return `마지막 답 ${value} · 토큰 ${tokens}개`;
+    case "pt-BR":
+      return `última resposta ${value} · ${tokens} tokens`;
+    case "zh-Hans":
+      return `上次回答 ${value} · ${tokens} 个 token`;
+    case "zh-Hant":
+      return `上次回覆 ${value} · ${tokens} 個 token`;
+    case "en-XA":
+      return `[ļášţ áñšŵéŕ ${value} · ${tokens} ţöķéñš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202elast answer \u202c${value}\u202e · \u202c${tokens}\u202e tokens\u202c`;
+  }
+  return `last answer ${value} · ${tokens} tokens`;
+}
+
+export function settingsDecisionsActions(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إجراءات نموذج القرارات`;
+    case "de":
+      return `Aktionen für das Entscheidungsmodell`;
+    case "es":
+      return `Acciones del modelo de decisiones`;
+    case "fr":
+      return `Actions du modèle de décision`;
+    case "ja":
+      return `判断用モデルの操作`;
+    case "ko":
+      return `결정 모델 동작`;
+    case "pt-BR":
+      return `Ações do modelo de decisão`;
+    case "zh-Hans":
+      return `决定模型操作`;
+    case "zh-Hant":
+      return `決定模型動作`;
+    case "en-XA":
+      return `[Ðéçîšîöñ ɱöðéļ áçţîöñš ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDecision model actions\u202c`;
+  }
+  return `Decision model actions`;
+}
+
+export function settingsReasoningAuto(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تلقائي`;
+    case "de":
+      return `Automatisch`;
+    case "es":
+      return `Automático`;
+    case "fr":
+      return `Automatique`;
+    case "ja":
+      return `自動`;
+    case "ko":
+      return `자동`;
+    case "pt-BR":
+      return `Automático`;
+    case "zh-Hans":
+      return `自动`;
+    case "zh-Hant":
+      return `自動`;
+    case "en-XA":
+      return `[Åûţö ~~]`;
+    case "ar-XB":
+      return `\u202eAuto\u202c`;
+  }
+  return `Auto`;
+}
+
+export function settingsReasoningLabel(input: {
+  model: string;
+  provider: string;
+  slot: string;
+}): string {
+  const model = input.model;
+  const provider = input.provider;
+  const slot = input.slot;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استدلال ${provider} ${model} لـ${slot}`;
+    case "de":
+      return `${provider} ${model} Denken für ${slot}`;
+    case "es":
+      return `Razonamiento de ${provider} ${model} para ${slot}`;
+    case "fr":
+      return `Raisonnement de ${provider} ${model} pour ${slot}`;
+    case "ja":
+      return `${provider} ${model}の${slot}向け推論`;
+    case "ko":
+      return `${provider} ${model}의 ${slot} 추론`;
+    case "pt-BR":
+      return `Raciocínio de ${provider} ${model} para ${slot}`;
+    case "zh-Hans":
+      return `${provider} ${model}用于${slot}的推理`;
+    case "zh-Hant":
+      return `${provider} ${model}用於${slot}的推理`;
+    case "en-XA":
+      return `[${provider} ${model} ŕéášöñîñĝ ƒöŕ ${slot} ~~~~~~]`;
+    case "ar-XB":
+      return `${provider}\u202e \u202c${model}\u202e reasoning for \u202c${slot}`;
+  }
+  return `${provider} ${model} reasoning for ${slot}`;
+}
+
+export function settingsReasoningSavedUnavailable(input: { reasoning: string }): string {
+  const reasoning = input.reasoning;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${reasoning} · محفوظ، غير متاح`;
+    case "de":
+      return `${reasoning} · gespeichert, nicht verfügbar`;
+    case "es":
+      return `${reasoning} · guardado, no disponible`;
+    case "fr":
+      return `${reasoning} · enregistré, indisponible`;
+    case "ja":
+      return `${reasoning} · 保存済み、利用不可`;
+    case "ko":
+      return `${reasoning} · 저장됨, 사용 불가`;
+    case "pt-BR":
+      return `${reasoning} · salvo, indisponível`;
+    case "zh-Hans":
+      return `${reasoning} · 已保存，不可用`;
+    case "zh-Hant":
+      return `${reasoning} · 已儲存，無法使用`;
+    case "en-XA":
+      return `[${reasoning} · šáṽéð, ûñáṽáîļáƀļé ~~~~~~~]`;
+    case "ar-XB":
+      return `${reasoning}\u202e · saved, unavailable\u202c`;
+  }
+  return `${reasoning} · saved, unavailable`;
+}
+
+export function settingsReasoningUnavailable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `خيارات الاستدلال غير متاحة`;
+    case "de":
+      return `Denkaufwand-Optionen nicht verfügbar`;
+    case "es":
+      return `Opciones de razonamiento no disponibles`;
+    case "fr":
+      return `Choix de raisonnement indisponibles`;
+    case "ja":
+      return `推論の選択肢を利用できません`;
+    case "ko":
+      return `추론 선택지를 쓸 수 없음`;
+    case "pt-BR":
+      return `Opções de raciocínio indisponíveis`;
+    case "zh-Hans":
+      return `推理选项不可用`;
+    case "zh-Hant":
+      return `無法使用推理選項`;
+    case "en-XA":
+      return `[Ŕéášöñîñĝ çĥöîçéš ûñáṽáîļáƀļé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReasoning choices unavailable\u202c`;
+  }
+  return `Reasoning choices unavailable`;
+}
+
+export function settingsReasoningSaveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر حفظ الاستدلال. لا يزال اختيارك السابق معروضًا. أعِد المحاولة.`;
+    case "de":
+      return `Der Denkaufwand konnte nicht gespeichert werden. Deine vorherige Wahl wird weiter angezeigt. Versuch es noch einmal.`;
+    case "es":
+      return `No se pudo guardar el razonamiento. Se sigue mostrando tu elección anterior. Inténtalo de nuevo.`;
+    case "fr":
+      return `Impossible d’enregistrer le raisonnement. Votre choix précédent reste affiché. Réessayez.`;
+    case "ja":
+      return `推論を保存できませんでした。以前の選択が表示されたままです。もう一度お試しください。`;
+    case "ko":
+      return `추론을 저장할 수 없었어요. 이전 선택이 그대로 보여요. 다시 시도하세요.`;
+    case "pt-BR":
+      return `Não foi possível salvar o raciocínio. Sua escolha anterior continua aparecendo. Tente de novo.`;
+    case "zh-Hans":
+      return `无法保存推理设置。仍显示你之前的选择。请重试。`;
+    case "zh-Hant":
+      return `無法儲存推理設定。仍顯示你先前的選擇。請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ šáṽé ŕéášöñîñĝ. Ýöûŕ þŕéṽîöûš çĥöîçé îš šţîļļ šĥöŵñ. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not save reasoning. Your previous choice is still shown. Try again.\u202c`;
+  }
+  return `Could not save reasoning. Your previous choice is still shown. Try again.`;
+}
+
+export function settingsSpeedCrewSpeed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سرعة الطاقم`;
+    case "de":
+      return `Crew-Tempo`;
+    case "es":
+      return `Velocidad de la tripulación`;
+    case "fr":
+      return `Vitesse de l’équipage`;
+    case "ja":
+      return `乗組員の速度`;
+    case "ko":
+      return `선원 속도`;
+    case "pt-BR":
+      return `Velocidade da tripulação`;
+    case "zh-Hans":
+      return `船员速度`;
+    case "zh-Hant":
+      return `船員速度`;
+    case "en-XA":
+      return `[Çŕéŵ šþééð ~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew speed\u202c`;
+  }
+  return `Crew speed`;
+}
+
+export function settingsSpeedLabel(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `سرعة الطاقم لـ ${model}`;
+    case "de":
+      return `Crew-Tempo für ${model}`;
+    case "es":
+      return `Velocidad de la tripulación con ${model}`;
+    case "fr":
+      return `Vitesse de l’équipage pour ${model}`;
+    case "ja":
+      return `${model} の乗組員の速度`;
+    case "ko":
+      return `${model} 선원 속도`;
+    case "pt-BR":
+      return `Velocidade da tripulação com ${model}`;
+    case "zh-Hans":
+      return `${model} 船员速度`;
+    case "zh-Hant":
+      return `${model} 船員速度`;
+    case "en-XA":
+      return `[${model} çŕéŵ šþééð ~~~~]`;
+    case "ar-XB":
+      return `${model}\u202e crew speed\u202c`;
+  }
+  return `${model} crew speed`;
+}
+
+export function settingsSpeedSavedUnavailable(input: { speed: string }): string {
+  const speed = input.speed;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${speed} · محفوظة، غير متاحة`;
+    case "de":
+      return `${speed} · gespeichert, nicht verfügbar`;
+    case "es":
+      return `${speed} · guardada, no disponible`;
+    case "fr":
+      return `${speed} · enregistrée, indisponible`;
+    case "ja":
+      return `${speed} · 保存済み、利用不可`;
+    case "ko":
+      return `${speed} · 저장됨, 사용 불가`;
+    case "pt-BR":
+      return `${speed} · salva, indisponível`;
+    case "zh-Hans":
+      return `${speed} · 已保存，不可用`;
+    case "zh-Hant":
+      return `${speed} · 已儲存，無法使用`;
+    case "en-XA":
+      return `[${speed} · šáṽéð, ûñáṽáîļáƀļé ~~~~~~~]`;
+    case "ar-XB":
+      return `${speed}\u202e · saved, unavailable\u202c`;
+  }
+  return `${speed} · saved, unavailable`;
+}
+
+export function settingsSpeedUnavailable(input: { speed: string }): string {
+  const speed = input.speed;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${speed} · غير متاحة`;
+    case "de":
+      return `${speed} · nicht verfügbar`;
+    case "es":
+      return `${speed} · no disponible`;
+    case "fr":
+      return `${speed} · indisponible`;
+    case "ja":
+      return `${speed} · 利用不可`;
+    case "ko":
+      return `${speed} · 사용 불가`;
+    case "pt-BR":
+      return `${speed} · indisponível`;
+    case "zh-Hans":
+      return `${speed} · 不可用`;
+    case "zh-Hant":
+      return `${speed} · 無法使用`;
+    case "en-XA":
+      return `[${speed} · ûñáṽáîļáƀļé ~~~~~]`;
+    case "ar-XB":
+      return `${speed}\u202e · unavailable\u202c`;
+  }
+  return `${speed} · unavailable`;
+}
+
+export function settingsSpeedShared(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تُشارَك بين الحسابات التي توفّر هذه السرعة. وإلا يستخدم العمل السرعة القياسية على النموذج والحساب نفسيهما.`;
+    case "de":
+      return `Gilt für alle Konten, die dieses Tempo anbieten. Sonst nutzt die Arbeit Standard mit demselben Modell und Konto.`;
+    case "es":
+      return `Se comparte entre las cuentas que ofrecen esta velocidad. Si no, el trabajo usa Estándar en el mismo modelo y la misma cuenta.`;
+    case "fr":
+      return `Partagée entre les comptes qui proposent cette vitesse. Sinon, le travail utilise Standard sur le même modèle et le même compte.`;
+    case "ja":
+      return `この速度を提供するアカウント間で共通です。それ以外の場合、作業は同じモデルとアカウントで標準の速度を使います。`;
+    case "ko":
+      return `이 속도를 제공하는 계정끼리 공유돼요. 그렇지 않으면 같은 모델과 계정에서 표준 속도로 작업해요.`;
+    case "pt-BR":
+      return `Compartilhada entre as contas que oferecem esta velocidade. Caso contrário, o trabalho usa Padrão no mesmo modelo e na mesma conta.`;
+    case "zh-Hans":
+      return `在提供此速度的账户之间共享。否则，工作会在同一模型和账户上使用标准速度。`;
+    case "zh-Hant":
+      return `在提供這個速度的帳號之間共用。否則，工作會在同一個模型和帳號上使用標準速度。`;
+    case "en-XA":
+      return `[Šĥáŕéð áçŕöšš áççöûñţš ţĥáţ öƒƒéŕ ţĥîš šþééð. Öţĥéŕŵîšé, ŵöŕķ ûšéš Šţáñðáŕð öñ ţĥé šáɱé ɱöðéļ áñð áççöûñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eShared across accounts that offer this speed. Otherwise, work uses Standard on the same model and account.\u202c`;
+  }
+  return `Shared across accounts that offer this speed. Otherwise, work uses Standard on the same model and account.`;
+}
+
+export function settingsSpeedUnknown(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التوفّر غير معروف. يستخدم العمل السرعة القياسية حتى يؤكد حساب أنه يدعمها.`;
+    case "de":
+      return `Die Verfügbarkeit ist unbekannt. Die Arbeit nutzt Standard, bis ein Konto die Unterstützung bestätigt.`;
+    case "es":
+      return `Se desconoce la disponibilidad. El trabajo usa Estándar hasta que una cuenta confirme que la admite.`;
+    case "fr":
+      return `La disponibilité est inconnue. Le travail utilise Standard jusqu’à ce qu’un compte confirme sa prise en charge.`;
+    case "ja":
+      return `利用できるかどうかは不明です。アカウントが対応を確認するまで、作業は標準の速度を使います。`;
+    case "ko":
+      return `사용 가능 여부를 알 수 없어요. 계정이 지원을 확인할 때까지 표준 속도로 작업해요.`;
+    case "pt-BR":
+      return `A disponibilidade é desconhecida. O trabalho usa Padrão até uma conta confirmar o suporte.`;
+    case "zh-Hans":
+      return `可用性未知。在有账户确认支持之前，工作会使用标准速度。`;
+    case "zh-Hant":
+      return `目前不確定能否使用。在有帳號確認支援之前，工作會使用標準速度。`;
+    case "en-XA":
+      return `[Åṽáîļáƀîļîţý îš ûñķñöŵñ. Ŵöŕķ ûšéš Šţáñðáŕð ûñţîļ áñ áççöûñţ çöñƒîŕɱš šûþþöŕţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAvailability is unknown. Work uses Standard until an account confirms support.\u202c`;
+  }
+  return `Availability is unknown. Work uses Standard until an account confirms support.`;
+}
+
+export function settingsSpeedSaveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر حفظ سرعة الطاقم. لا يزال اختيارك السابق معروضًا. أعِد المحاولة.`;
+    case "de":
+      return `Das Crew-Tempo konnte nicht gespeichert werden. Deine vorherige Wahl wird weiter angezeigt. Versuch es noch einmal.`;
+    case "es":
+      return `No se pudo guardar la velocidad de la tripulación. Se sigue mostrando tu elección anterior. Inténtalo de nuevo.`;
+    case "fr":
+      return `Impossible d’enregistrer la vitesse de l’équipage. Votre choix précédent reste affiché. Réessayez.`;
+    case "ja":
+      return `乗組員の速度を保存できませんでした。以前の選択が表示されたままです。もう一度お試しください。`;
+    case "ko":
+      return `선원 속도를 저장할 수 없었어요. 이전 선택이 그대로 보여요. 다시 시도하세요.`;
+    case "pt-BR":
+      return `Não foi possível salvar a velocidade da tripulação. Sua escolha anterior continua aparecendo. Tente de novo.`;
+    case "zh-Hans":
+      return `无法保存船员速度。仍显示你之前的选择。请重试。`;
+    case "zh-Hant":
+      return `無法儲存船員速度。仍顯示你先前的選擇。請再試一次。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ šáṽé çŕéŵ šþééð. Ýöûŕ þŕéṽîöûš çĥöîçé îš šţîļļ šĥöŵñ. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not save crew speed. Your previous choice is still shown. Try again.\u202c`;
+  }
+  return `Could not save crew speed. Your previous choice is still shown. Try again.`;
+}
+
+export function settingsSubscriptionsClaudeFirstRun(input: { here: string }): string {
+  const here = input.here;
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول بـ Claude على ${here}.`;
+    case "de":
+      return `Melde dich auf ${here} mit Claude an.`;
+    case "es":
+      return `Inicia sesión con Claude en ${here}.`;
+    case "fr":
+      return `Connectez-vous avec Claude sur ${here}.`;
+    case "ja":
+      return `${here} で Claude にサインインしてください。`;
+    case "ko":
+      return `${here}에서 Claude로 로그인하세요.`;
+    case "pt-BR":
+      return `Faça login com o Claude em ${here}.`;
+    case "zh-Hans":
+      return `在 ${here} 上用 Claude 登录。`;
+    case "zh-Hant":
+      return `在 ${here} 上使用 Claude 登入。`;
+    case "en-XA":
+      return `[Šîĝñ îñ ŵîţĥ Çļáûðé öñ ${here}. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in with Claude on \u202c${here}\u202e.\u202c`;
+  }
+  return `Sign in with Claude on ${here}.`;
+}
+
+export function settingsSubscriptionsNoReader(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يقرأ Infinitary الرصيد لدى هذا المزوّد.`;
+    case "de":
+      return `Infinitary liest das Kontingent dieses Anbieters nicht.`;
+    case "es":
+      return `Infinitary no lee la asignación de este proveedor.`;
+    case "fr":
+      return `Infinitary ne lit pas l’allocation de ce fournisseur.`;
+    case "ja":
+      return `Infinitary はこのプロバイダーの利用枠を読み取りません。`;
+    case "ko":
+      return `Infinitary는 이 제공자의 사용 한도를 읽지 않아요.`;
+    case "pt-BR":
+      return `O Infinitary não lê a franquia deste provedor.`;
+    case "zh-Hans":
+      return `Infinitary 不读取这个服务商的额度。`;
+    case "zh-Hant":
+      return `Infinitary 不會讀取這個供應商的方案額度。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý ðöéšñ'ţ ŕéáð ţĥé áļļöŵáñçé ƒöŕ ţĥîš þŕöṽîðéŕ. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary doesn't read the allowance for this provider.\u202c`;
+  }
+  return `Infinitary doesn't read the allowance for this provider.`;
+}
+
+export function settingsSubscriptionsNoReaderKey(input: { apiKey: string }): string {
+  const apiKey = input.apiKey;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${apiKey} مضبوط · لا يقرأ Infinitary الرصيد لدى هذا المزوّد.`;
+    case "de":
+      return `${apiKey} gesetzt · Infinitary liest das Kontingent dieses Anbieters nicht.`;
+    case "es":
+      return `${apiKey} configurada · Infinitary no lee la asignación de este proveedor.`;
+    case "fr":
+      return `${apiKey} définie · Infinitary ne lit pas l’allocation de ce fournisseur.`;
+    case "ja":
+      return `${apiKey} 設定済み · Infinitary はこのプロバイダーの利用枠を読み取りません。`;
+    case "ko":
+      return `${apiKey} 설정됨 · Infinitary는 이 제공자의 사용 한도를 읽지 않아요.`;
+    case "pt-BR":
+      return `${apiKey} definida · O Infinitary não lê a franquia deste provedor.`;
+    case "zh-Hans":
+      return `${apiKey} 已设置 · Infinitary 不读取这个服务商的额度。`;
+    case "zh-Hant":
+      return `已設定 ${apiKey} · Infinitary 不會讀取這個供應商的方案額度。`;
+    case "en-XA":
+      return `[${apiKey} šéţ · Îñƒîñîţáŕý ðöéšñ'ţ ŕéáð ţĥé áļļöŵáñçé ƒöŕ ţĥîš þŕöṽîðéŕ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${apiKey}\u202e set · Infinitary doesn't read the allowance for this provider.\u202c`;
+  }
+  return `${apiKey} set · Infinitary doesn't read the allowance for this provider.`;
+}
+
+export function settingsSubscriptionsSignedOutHoldLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معلّق`;
+    case "de":
+      return `angehalten`;
+    case "es":
+      return `en espera`;
+    case "fr":
+      return `en suspens`;
+    case "ja":
+      return `保留中`;
+    case "ko":
+      return `보류 중`;
+    case "pt-BR":
+      return `em espera`;
+    case "zh-Hans":
+      return `已暂停`;
+    case "zh-Hant":
+      return `已暫停`;
+    case "en-XA":
+      return `[öñ ĥöļð ~~~]`;
+    case "ar-XB":
+      return `\u202eon hold\u202c`;
+  }
+  return `on hold`;
+}
+
+export function settingsSubscriptionsSignedOutHoldText(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العمل متوقف مؤقتًا حتى تسجّل الدخول مجددًا.`;
+    case "de":
+      return `Die Arbeit ist pausiert, bis du dich erneut anmeldest.`;
+    case "es":
+      return `El trabajo está en pausa hasta que vuelvas a iniciar sesión.`;
+    case "fr":
+      return `Le travail est en pause jusqu’à ce que vous vous reconnectiez.`;
+    case "ja":
+      return `もう一度サインインするまで作業は一時停止します。`;
+    case "ko":
+      return `다시 로그인할 때까지 작업이 일시 정지돼요.`;
+    case "pt-BR":
+      return `O trabalho está pausado até você fazer login de novo.`;
+    case "zh-Hans":
+      return `工作已暂停，直到你重新登录。`;
+    case "zh-Hant":
+      return `工作已暫停，直到你重新登入。`;
+    case "en-XA":
+      return `[Ŵöŕķ îš þáûšéð ûñţîļ ýöû šîĝñ îñ áĝáîñ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWork is paused until you sign in again.\u202c`;
+  }
+  return `Work is paused until you sign in again.`;
+}
+
+export function settingsSubscriptionsRefusedHoldLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مرفوض`;
+    case "de":
+      return `abgelehnt`;
+    case "es":
+      return `rechazado`;
+    case "fr":
+      return `refusée`;
+    case "ja":
+      return `拒否されています`;
+    case "ko":
+      return `거부 중`;
+    case "pt-BR":
+      return `recusado`;
+    case "zh-Hans":
+      return `被拒绝`;
+    case "zh-Hant":
+      return `被拒`;
+    case "en-XA":
+      return `[ŕéƒûšîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202erefusing\u202c`;
+  }
+  return `refusing`;
+}
+
+export function settingsSubscriptionsRefusedHoldText(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُرفض تسجيل الدخول هذا.`;
+    case "de":
+      return `Diese Anmeldung wird abgelehnt.`;
+    case "es":
+      return `Este inicio de sesión está siendo rechazado.`;
+    case "fr":
+      return `Cette connexion est refusée.`;
+    case "ja":
+      return `このサインインは拒否されています。`;
+    case "ko":
+      return `이 로그인이 거부되고 있어요.`;
+    case "pt-BR":
+      return `Este login está sendo recusado.`;
+    case "zh-Hans":
+      return `这个登录正在被拒绝。`;
+    case "zh-Hant":
+      return `這個登入正在被拒絕。`;
+    case "en-XA":
+      return `[Ţĥîš šîĝñ-îñ îš ƀéîñĝ ŕéƒûšéð. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis sign-in is being refused.\u202c`;
+  }
+  return `This sign-in is being refused.`;
+}
+
+export function settingsSubscriptionsFirstmateAccountTag(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النائب`;
+    case "de":
+      return `Offizier`;
+    case "es":
+      return `primer oficial`;
+    case "fr":
+      return `second`;
+    case "ja":
+      return `航海士`;
+    case "ko":
+      return `일등항해사`;
+    case "pt-BR":
+      return `imediato`;
+    case "zh-Hans":
+      return `大副`;
+    case "zh-Hant":
+      return `大副`;
+    case "en-XA":
+      return `[ƒîŕšţɱáţé ~~~]`;
+    case "ar-XB":
+      return `\u202efirstmate\u202c`;
+  }
+  return `firstmate`;
+}
+
+export function settingsSubscriptionsFirstmateAccountTagTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل نائب القبطان على هذا الحساب`;
+    case "de":
+      return `Dein erster Offizier läuft mit diesem Konto`;
+    case "es":
+      return `Tu primer oficial funciona con esta cuenta`;
+    case "fr":
+      return `Votre second fonctionne avec ce compte`;
+    case "ja":
+      return `一等航海士はこのアカウントで動いています`;
+    case "ko":
+      return `일등항해사가 이 계정에서 실행돼요`;
+    case "pt-BR":
+      return `Seu imediato roda nesta conta`;
+    case "zh-Hans":
+      return `你的大副在这个账户上运行`;
+    case "zh-Hant":
+      return `你的大副在這個帳號上運作`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé ŕûñš öñ ţĥîš áççöûñţ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate runs on this account\u202c`;
+  }
+  return `Your first mate runs on this account`;
+}
+
+export function settingsSubscriptionsCrewPreferredMarkTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يفضّل عمل الطاقم هذا الحساب`;
+    case "de":
+      return `Crew-Arbeit bevorzugt dieses Konto`;
+    case "es":
+      return `El trabajo de la tripulación prefiere esta cuenta`;
+    case "fr":
+      return `Le travail de l’équipage privilégie ce compte`;
+    case "ja":
+      return `乗組員の作業はこのアカウントを優先します`;
+    case "ko":
+      return `선원들의 작업은 이 계정을 우선해요`;
+    case "pt-BR":
+      return `O trabalho da tripulação prefere esta conta`;
+    case "zh-Hans":
+      return `船员工作优先使用这个账户`;
+    case "zh-Hant":
+      return `船員工作優先使用這個帳號`;
+    case "en-XA":
+      return `[Çŕéŵ ŵöŕķ þŕéƒéŕš ţĥîš áççöûñţ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew work prefers this account\u202c`;
+  }
+  return `Crew work prefers this account`;
+}
+
+export function settingsSubscriptionsEmptySignInAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول مجددًا لترى رصيد باقتك.`;
+    case "de":
+      return `Melde dich erneut an, um dein Kontingent zu sehen.`;
+    case "es":
+      return `Vuelve a iniciar sesión para ver tu asignación.`;
+    case "fr":
+      return `Reconnectez-vous pour voir votre allocation.`;
+    case "ja":
+      return `利用枠を見るには、もう一度サインインしてください。`;
+    case "ko":
+      return `사용 한도를 보려면 다시 로그인하세요.`;
+    case "pt-BR":
+      return `Faça login de novo para ver sua franquia.`;
+    case "zh-Hans":
+      return `重新登录以查看你的额度。`;
+    case "zh-Hant":
+      return `重新登入以查看你的方案額度。`;
+    case "en-XA":
+      return `[Šîĝñ îñ áĝáîñ ţö šéé ýöûŕ áļļöŵáñçé. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in again to see your allowance.\u202c`;
+  }
+  return `Sign in again to see your allowance.`;
+}
+
+export function settingsSubscriptionsEmptySlowDown(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تتعذّر قراءة رصيد باقتك الآن - طلب المزوّد منّا التمهّل.`;
+    case "de":
+      return `Dein Kontingent kann gerade nicht gelesen werden – der Anbieter hat uns gebeten, langsamer zu machen.`;
+    case "es":
+      return `Ahora no se puede leer tu asignación: el proveedor pidió que vayamos más despacio.`;
+    case "fr":
+      return `Votre allocation ne peut pas être lue pour l’instant – le fournisseur nous a demandé de ralentir.`;
+    case "ja":
+      return `現在、利用枠を読み取れません - プロバイダーから間隔をあけるよう求められました。`;
+    case "ko":
+      return `지금은 사용 한도를 읽을 수 없어요 - 제공자가 요청 속도를 늦춰 달라고 했어요.`;
+    case "pt-BR":
+      return `Não dá para ler sua franquia agora - o provedor pediu para irmos mais devagar.`;
+    case "zh-Hans":
+      return `暂时无法读取你的额度 - 服务商要求我们放慢速度。`;
+    case "zh-Hant":
+      return `目前無法讀取你的方案額度 - 供應商要求我們放慢速度。`;
+    case "en-XA":
+      return `[Ýöûŕ áļļöŵáñçé çáñ'ţ ƀé ŕéáð ŕîĝĥţ ñöŵ - ţĥé þŕöṽîðéŕ ášķéð ûš ţö šļöŵ ðöŵñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour allowance can't be read right now - the provider asked us to slow down.\u202c`;
+  }
+  return `Your allowance can't be read right now - the provider asked us to slow down.`;
+}
+
+export function settingsSubscriptionsEmptyUnread(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة رصيد باقتك الآن.`;
+    case "de":
+      return `Dein Kontingent konnte gerade nicht gelesen werden.`;
+    case "es":
+      return `No se pudo leer tu asignación en este momento.`;
+    case "fr":
+      return `Votre allocation n’a pas pu être lue pour l’instant.`;
+    case "ja":
+      return `現在、利用枠を読み取れませんでした。`;
+    case "ko":
+      return `지금은 사용 한도를 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler sua franquia agora.`;
+    case "zh-Hans":
+      return `暂时无法读取你的额度。`;
+    case "zh-Hant":
+      return `目前無法讀取你的方案額度。`;
+    case "en-XA":
+      return `[Ýöûŕ áļļöŵáñçé çöûļðñ'ţ ƀé ŕéáð ĵûšţ ñöŵ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour allowance couldn't be read just now.\u202c`;
+  }
+  return `Your allowance couldn't be read just now.`;
+}
+
+export function settingsSubscriptionsEmptyNotYet(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا قراءة للرصيد بعد.`;
+    case "de":
+      return `Noch kein Kontingent gelesen.`;
+    case "es":
+      return `Todavía no hay lectura de la asignación.`;
+    case "fr":
+      return `Aucune lecture de l’allocation pour l’instant.`;
+    case "ja":
+      return `利用枠はまだ読み取っていません。`;
+    case "ko":
+      return `아직 읽은 사용 한도가 없어요.`;
+    case "pt-BR":
+      return `Ainda não há leitura da franquia.`;
+    case "zh-Hans":
+      return `还没有读取到额度。`;
+    case "zh-Hant":
+      return `還沒有讀取到方案額度。`;
+    case "en-XA":
+      return `[Ñö áļļöŵáñçé ŕéáðîñĝ ýéţ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo allowance reading yet.\u202c`;
+  }
+  return `No allowance reading yet.`;
+}
+
+export function settingsSubscriptionsPersonalResourcesTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التعليمات والمهارات العامة`;
+    case "de":
+      return `Globale Anweisungen und Skills`;
+    case "es":
+      return `Instrucciones y habilidades globales`;
+    case "fr":
+      return `Instructions et compétences globales`;
+    case "ja":
+      return `全体の指示とスキル`;
+    case "ko":
+      return `전역 지침과 스킬`;
+    case "pt-BR":
+      return `Instruções e habilidades globais`;
+    case "zh-Hans":
+      return `全局说明和技能`;
+    case "zh-Hant":
+      return `全域指示和技能`;
+    case "en-XA":
+      return `[Ĝļöƀáļ îñšţŕûçţîöñš áñð šķîļļš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eGlobal instructions and skills\u202c`;
+  }
+  return `Global instructions and skills`;
+}
+
+export function settingsSubscriptionsPersonalResourcesDescription(input: {
+  computer: string;
+  computers: string;
+}): string {
+  const computer = input.computer;
+  const computers = input.computers;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تستخدم محادثات أفراد الطاقم الجديدة التعليمات والمهارات العامة على ${computer} الذي تعمل عليه. لا يُنسخ شيء بين ${computers}. قواعد الطاقم تحكم التسليم؛ وملفك يوجّه الأسلوب والتقدير.`;
+    case "de":
+      return `Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem ${computer}, auf dem sie laufen. Zwischen ${computers} wird nichts kopiert. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.`;
+    case "es":
+      return `Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la ${computer} donde se ejecutan. No se copia nada entre ${computers}. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.`;
+    case "fr":
+      return `Les nouvelles conversations des équipiers utilisent les instructions et compétences globales de leur ${computer}. Rien n’est copié entre ${computers}. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.`;
+    case "ja":
+      return `新しい乗組員の会話では、実行される ${computer} の全体の指示とスキルを使います。${computers} 間で何もコピーされません。届け方は乗組員のルールが決め、あなたのファイルは書き方と判断の指針になります。`;
+    case "ko":
+      return `새 선원 대화는 자신이 실행되는 ${computer}의 전역 지침과 스킬을 써요. ${computers} 사이에서는 아무것도 복사되지 않아요. 전달 방식은 선원 규칙이 정하고, 선장님의 파일은 스타일과 판단을 이끌어요.`;
+    case "pt-BR":
+      return `As novas conversas dos tripulantes usam as instruções e habilidades globais do ${computer} em que rodam. Nada é copiado entre ${computers}. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.`;
+    case "zh-Hans":
+      return `新的船员对话使用其所在 ${computer} 上的全局说明和技能。${computers} 之间不会复制任何内容。船员规则决定交付方式；你的文件引导风格和判断。`;
+    case "zh-Hant":
+      return `新的船員對話會使用其所在 ${computer} 上的全域指示和技能。${computers} 之間不會複製任何內容。船員規則決定交付方式；你的檔案引導風格和判斷。`;
+    case "en-XA":
+      return `[Ñéŵ çŕéŵɱáţé šéššîöñš ûšé ţĥé ĝļöƀáļ îñšţŕûçţîöñš áñð šķîļļš öƒ ţĥé ${computer} ţĥéý ŕûñ öñ. Ñöţĥîñĝ îš çöþîéð ƀéţŵééñ ${computers}. Çŕéŵ ŕûļéš ĝöṽéŕñ ðéļîṽéŕý; ýöûŕ ƒîļé ĝûîðéš šţýļé áñð ĵûðĝɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNew crewmate sessions use the global instructions and skills of the \u202c${computer}\u202e they run on. Nothing is copied between \u202c${computers}\u202e. Crew rules govern delivery; your file guides style and judgment.\u202c`;
+  }
+  return `New crewmate sessions use the global instructions and skills of the ${computer} they run on. Nothing is copied between ${computers}. Crew rules govern delivery; your file guides style and judgment.`;
+}
+
+export function settingsSubscriptionsKindSubscription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اشتراك`;
+    case "de":
+      return `Abo`;
+    case "es":
+      return `suscripción`;
+    case "fr":
+      return `abonnement`;
+    case "ja":
+      return `サブスクリプション`;
+    case "ko":
+      return `구독`;
+    case "pt-BR":
+      return `assinatura`;
+    case "zh-Hans":
+      return `订阅`;
+    case "zh-Hant":
+      return `訂閱方案`;
+    case "en-XA":
+      return `[šûƀšçŕîþţîöñ ~~~~]`;
+    case "ar-XB":
+      return `\u202esubscription\u202c`;
+  }
+  return `subscription`;
+}
+
+export function settingsSubscriptionsFirstmateAccountLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حساب نائب القبطان`;
+    case "de":
+      return `Konto des ersten Offiziers`;
+    case "es":
+      return `Cuenta del primer oficial`;
+    case "fr":
+      return `Compte du second`;
+    case "ja":
+      return `一等航海士のアカウント`;
+    case "ko":
+      return `일등항해사 계정`;
+    case "pt-BR":
+      return `Conta do imediato`;
+    case "zh-Hans":
+      return `大副账户`;
+    case "zh-Hant":
+      return `大副帳號`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé áççöûñţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate account\u202c`;
+  }
+  return `First mate account`;
+}
+
+export function settingsSubscriptionsNotChosenYet(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُختر بعد`;
+    case "de":
+      return `Noch nicht gewählt`;
+    case "es":
+      return `Sin elegir todavía`;
+    case "fr":
+      return `Pas encore choisi`;
+    case "ja":
+      return `未選択`;
+    case "ko":
+      return `아직 고르지 않음`;
+    case "pt-BR":
+      return `Ainda não escolhida`;
+    case "zh-Hans":
+      return `尚未选择`;
+    case "zh-Hant":
+      return `尚未選擇`;
+    case "en-XA":
+      return `[Ñöţ çĥöšéñ ýéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot chosen yet\u202c`;
+  }
+  return `Not chosen yet`;
+}
+
+export function settingsSubscriptionsAsOfJustNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قبل لحظات`;
+    case "de":
+      return `Stand: gerade eben`;
+    case "es":
+      return `hace un momento`;
+    case "fr":
+      return `à l’instant`;
+    case "ja":
+      return `たった今の時点`;
+    case "ko":
+      return `방금 기준`;
+    case "pt-BR":
+      return `agora mesmo`;
+    case "zh-Hans":
+      return `截至刚才`;
+    case "zh-Hant":
+      return `截至剛才`;
+    case "en-XA":
+      return `[áš öƒ ĵûšţ ñöŵ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eas of just now\u202c`;
+  }
+  return `as of just now`;
+}
+
+export function settingsSubscriptionsAsOfMinutes(input: { minutes: string }): string {
+  const minutes = input.minutes;
+  switch (currentLanguage()) {
+    case "ar":
+      return `قبل ${minutes} د`;
+    case "de":
+      return `Stand: vor ${minutes} Min.`;
+    case "es":
+      return `hace ${minutes} min`;
+    case "fr":
+      return `il y a ${minutes} min`;
+    case "ja":
+      return `${minutes}分前の時点`;
+    case "ko":
+      return `${minutes}분 전 기준`;
+    case "pt-BR":
+      return `há ${minutes} min`;
+    case "zh-Hans":
+      return `截至 ${minutes} 分钟前`;
+    case "zh-Hant":
+      return `截至 ${minutes} 分鐘前`;
+    case "en-XA":
+      return `[áš öƒ ${minutes}ɱ áĝö ~~~~]`;
+    case "ar-XB":
+      return `\u202eas of \u202c${minutes}\u202em ago\u202c`;
+  }
+  return `as of ${minutes}m ago`;
+}
+
+export function settingsSubscriptionsAsOfHours(input: { hours: string }): string {
+  const hours = input.hours;
+  switch (currentLanguage()) {
+    case "ar":
+      return `قبل ${hours} س`;
+    case "de":
+      return `Stand: vor ${hours} Std.`;
+    case "es":
+      return `hace ${hours} h`;
+    case "fr":
+      return `il y a ${hours} h`;
+    case "ja":
+      return `${hours}時間前の時点`;
+    case "ko":
+      return `${hours}시간 전 기준`;
+    case "pt-BR":
+      return `há ${hours} h`;
+    case "zh-Hans":
+      return `截至 ${hours} 小时前`;
+    case "zh-Hant":
+      return `截至 ${hours} 小時前`;
+    case "en-XA":
+      return `[áš öƒ ${hours}ĥ áĝö ~~~~]`;
+    case "ar-XB":
+      return `\u202eas of \u202c${hours}\u202eh ago\u202c`;
+  }
+  return `as of ${hours}h ago`;
+}
+
+export function settingsSubscriptionsAsOfDays(input: { days: string }): string {
+  const days = input.days;
+  switch (currentLanguage()) {
+    case "ar":
+      return `قبل ${days} ي`;
+    case "de":
+      return `Stand: vor ${days} T.`;
+    case "es":
+      return `hace ${days} d`;
+    case "fr":
+      return `il y a ${days} j`;
+    case "ja":
+      return `${days}日前の時点`;
+    case "ko":
+      return `${days}일 전 기준`;
+    case "pt-BR":
+      return `há ${days} d`;
+    case "zh-Hans":
+      return `截至 ${days} 天前`;
+    case "zh-Hant":
+      return `截至 ${days} 天前`;
+    case "en-XA":
+      return `[áš öƒ ${days}ð áĝö ~~~~]`;
+    case "ar-XB":
+      return `\u202eas of \u202c${days}\u202ed ago\u202c`;
+  }
+  return `as of ${days}d ago`;
+}
+
+export function settingsSubscriptionsOnPaceAll(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الوتيرة مناسبة ✓`;
+    case "de":
+      return `im Plan ✓`;
+    case "es":
+      return `al ritmo ✓`;
+    case "fr":
+      return `dans le rythme ✓`;
+    case "ja":
+      return `ペースどおり ✓`;
+    case "ko":
+      return `속도 적정 ✓`;
+    case "pt-BR":
+      return `no ritmo ✓`;
+    case "zh-Hans":
+      return `正常 ✓`;
+    case "zh-Hant":
+      return `剛好 ✓`;
+    case "en-XA":
+      return `[öñ þáçé ✓ ~~~]`;
+    case "ar-XB":
+      return `\u202eon pace ✓\u202c`;
+  }
+  return `on pace ✓`;
+}
+
+export function settingsSubscriptionsOnPace(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الوتيرة مناسبة`;
+    case "de":
+      return `im Plan`;
+    case "es":
+      return `al ritmo`;
+    case "fr":
+      return `dans le rythme`;
+    case "ja":
+      return `ペースどおり`;
+    case "ko":
+      return `속도 적정`;
+    case "pt-BR":
+      return `no ritmo`;
+    case "zh-Hans":
+      return `正常`;
+    case "zh-Hant":
+      return `剛好`;
+    case "en-XA":
+      return `[öñ þáçé ~~~]`;
+    case "ar-XB":
+      return `\u202eon pace\u202c`;
+  }
+  return `on pace`;
+}
+
+export function settingsSubscriptionsEmptyIn(input: { duration: string }): string {
+  const duration = input.duration;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ينفد خلال ${duration}`;
+    case "de":
+      return `leer in ${duration}`;
+    case "es":
+      return `se agota en ${duration}`;
+    case "fr":
+      return `épuisée dans ${duration}`;
+    case "ja":
+      return `${duration} で使い切り`;
+    case "ko":
+      return `${duration} 후 소진`;
+    case "pt-BR":
+      return `esgota em ${duration}`;
+    case "zh-Hans":
+      return `${duration} 后用完`;
+    case "zh-Hant":
+      return `${duration} 後用完`;
+    case "en-XA":
+      return `[éɱþţý îñ ${duration} ~~~]`;
+    case "ar-XB":
+      return `\u202eempty in \u202c${duration}`;
+  }
+  return `empty in ${duration}`;
+}
+
+export function settingsSubscriptionsEmptyNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نفد الآن`;
+    case "de":
+      return `jetzt leer`;
+    case "es":
+      return `agotada`;
+    case "fr":
+      return `épuisée`;
+    case "ja":
+      return `使い切りました`;
+    case "ko":
+      return `지금 소진됨`;
+    case "pt-BR":
+      return `esgotada`;
+    case "zh-Hans":
+      return `已用完`;
+    case "zh-Hant":
+      return `已用完`;
+    case "en-XA":
+      return `[éɱþţý ñöŵ ~~~]`;
+    case "ar-XB":
+      return `\u202eempty now\u202c`;
+  }
+  return `empty now`;
+}
+
+export function settingsSubscriptionsPaused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف مؤقتًا`;
+    case "de":
+      return `pausiert`;
+    case "es":
+      return `en pausa`;
+    case "fr":
+      return `en pause`;
+    case "ja":
+      return `一時停止中`;
+    case "ko":
+      return `일시 정지됨`;
+    case "pt-BR":
+      return `pausada`;
+    case "zh-Hans":
+      return `已暂停`;
+    case "zh-Hant":
+      return `已暫停`;
+    case "en-XA":
+      return `[þáûšéð ~~]`;
+    case "ar-XB":
+      return `\u202epaused\u202c`;
+  }
+  return `paused`;
+}
+
+export function settingsSubscriptionsStale(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قديم`;
+    case "de":
+      return `veraltet`;
+    case "es":
+      return `desactualizada`;
+    case "fr":
+      return `pas à jour`;
+    case "ja":
+      return `古い情報`;
+    case "ko":
+      return `오래됨`;
+    case "pt-BR":
+      return `desatualizada`;
+    case "zh-Hans":
+      return `已过时`;
+    case "zh-Hant":
+      return `已過時`;
+    case "en-XA":
+      return `[šţáļé ~~]`;
+    case "ar-XB":
+      return `\u202estale\u202c`;
+  }
+  return `stale`;
+}
+
+export function settingsSubscriptionsApiKeySet(input: { apiKey: string }): string {
+  const apiKey = input.apiKey;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${apiKey} مضبوط`;
+    case "de":
+      return `${apiKey} gesetzt`;
+    case "es":
+      return `${apiKey} configurada`;
+    case "fr":
+      return `${apiKey} définie`;
+    case "ja":
+      return `${apiKey} 設定済み`;
+    case "ko":
+      return `${apiKey} 설정됨`;
+    case "pt-BR":
+      return `${apiKey} definida`;
+    case "zh-Hans":
+      return `${apiKey} 已设置`;
+    case "zh-Hant":
+      return `已設定 ${apiKey}`;
+    case "en-XA":
+      return `[${apiKey} šéţ ~~]`;
+    case "ar-XB":
+      return `${apiKey}\u202e set\u202c`;
+  }
+  return `${apiKey} set`;
+}
+
+export function settingsSubscriptionsSignedIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مسجّل الدخول`;
+    case "de":
+      return `angemeldet`;
+    case "es":
+      return `sesión iniciada`;
+    case "fr":
+      return `connecté`;
+    case "ja":
+      return `サインイン済み`;
+    case "ko":
+      return `로그인됨`;
+    case "pt-BR":
+      return `login feito`;
+    case "zh-Hans":
+      return `已登录`;
+    case "zh-Hant":
+      return `已登入`;
+    case "en-XA":
+      return `[šîĝñéð îñ ~~~]`;
+    case "ar-XB":
+      return `\u202esigned in\u202c`;
+  }
+  return `signed in`;
+}
+
+export function settingsSubscriptionsDotStale(input: { signedIn: string }): string {
+  const signedIn = input.signedIn;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${signedIn} · آخر قراءة قديمة`;
+    case "de":
+      return `${signedIn} · letzter Stand veraltet`;
+    case "es":
+      return `${signedIn} · la última lectura está desactualizada`;
+    case "fr":
+      return `${signedIn} · la dernière lecture n’est plus à jour`;
+    case "ja":
+      return `${signedIn} · 前回の読み取りは古くなっています`;
+    case "ko":
+      return `${signedIn} · 마지막으로 읽은 값이 오래됨`;
+    case "pt-BR":
+      return `${signedIn} · a última leitura está desatualizada`;
+    case "zh-Hans":
+      return `${signedIn} · 上次读取已过时`;
+    case "zh-Hant":
+      return `${signedIn} · 上次讀取已過時`;
+    case "en-XA":
+      return `[${signedIn} · ļášţ ŕéáðîñĝ îš šţáļé ~~~~~~~~]`;
+    case "ar-XB":
+      return `${signedIn}\u202e · last reading is stale\u202c`;
+  }
+  return `${signedIn} · last reading is stale`;
+}
+
+export function settingsSubscriptionsDotNotSignedInYet(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُسجَّل الدخول بعد`;
+    case "de":
+      return `noch nicht angemeldet`;
+    case "es":
+      return `todavía sin iniciar sesión`;
+    case "fr":
+      return `pas encore connecté`;
+    case "ja":
+      return `まだサインインしていません`;
+    case "ko":
+      return `아직 로그인 안 함`;
+    case "pt-BR":
+      return `login ainda não feito`;
+    case "zh-Hans":
+      return `尚未登录`;
+    case "zh-Hant":
+      return `尚未登入`;
+    case "en-XA":
+      return `[ñöţ šîĝñéð îñ ýéţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202enot signed in yet\u202c`;
+  }
+  return `not signed in yet`;
+}
+
+export function settingsSubscriptionsDotSignInAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول مجددًا`;
+    case "de":
+      return `erneut anmelden`;
+    case "es":
+      return `vuelve a iniciar sesión`;
+    case "fr":
+      return `reconnectez-vous`;
+    case "ja":
+      return `もう一度サインイン`;
+    case "ko":
+      return `다시 로그인`;
+    case "pt-BR":
+      return `faça login de novo`;
+    case "zh-Hans":
+      return `重新登录`;
+    case "zh-Hant":
+      return `重新登入`;
+    case "en-XA":
+      return `[šîĝñ îñ áĝáîñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202esign in again\u202c`;
+  }
+  return `sign in again`;
+}
+
+export function settingsSubscriptionsDotReading(input: { signedIn: string }): string {
+  const signedIn = input.signedIn;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${signedIn} · جارٍ القراءة…`;
+    case "de":
+      return `${signedIn} · wird gelesen …`;
+    case "es":
+      return `${signedIn} · leyendo…`;
+    case "fr":
+      return `${signedIn} · lecture…`;
+    case "ja":
+      return `${signedIn} · 読み取り中…`;
+    case "ko":
+      return `${signedIn} · 읽는 중…`;
+    case "pt-BR":
+      return `${signedIn} · lendo…`;
+    case "zh-Hans":
+      return `${signedIn} · 正在读取…`;
+    case "zh-Hant":
+      return `${signedIn} · 讀取中…`;
+    case "en-XA":
+      return `[${signedIn} · ŕéáðîñĝ… ~~~~]`;
+    case "ar-XB":
+      return `${signedIn}\u202e · reading…\u202c`;
+  }
+  return `${signedIn} · reading…`;
+}
+
+export function settingsSubscriptionsDotNoReading(input: { signedIn: string }): string {
+  const signedIn = input.signedIn;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${signedIn} · لا قراءة للرصيد`;
+    case "de":
+      return `${signedIn} · kein Kontingent gelesen`;
+    case "es":
+      return `${signedIn} · sin lectura de la asignación`;
+    case "fr":
+      return `${signedIn} · aucune lecture de l’allocation`;
+    case "ja":
+      return `${signedIn} · 利用枠の読み取りなし`;
+    case "ko":
+      return `${signedIn} · 읽은 사용 한도 없음`;
+    case "pt-BR":
+      return `${signedIn} · sem leitura da franquia`;
+    case "zh-Hans":
+      return `${signedIn} · 没有额度读数`;
+    case "zh-Hant":
+      return `${signedIn} · 沒有方案額度讀數`;
+    case "en-XA":
+      return `[${signedIn} · ñö áļļöŵáñçé ŕéáðîñĝ ~~~~~~~~]`;
+    case "ar-XB":
+      return `${signedIn}\u202e · no allowance reading\u202c`;
+  }
+  return `${signedIn} · no allowance reading`;
+}
+
+export function settingsSubscriptionsSignInAgainState(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سجّل الدخول مجددًا.`;
+    case "de":
+      return `Melde dich erneut an.`;
+    case "es":
+      return `Vuelve a iniciar sesión.`;
+    case "fr":
+      return `Reconnectez-vous.`;
+    case "ja":
+      return `もう一度サインインしてください。`;
+    case "ko":
+      return `다시 로그인하세요.`;
+    case "pt-BR":
+      return `Faça login de novo.`;
+    case "zh-Hans":
+      return `请重新登录。`;
+    case "zh-Hant":
+      return `請重新登入。`;
+    case "en-XA":
+      return `[Šîĝñ îñ áĝáîñ. ~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in again.\u202c`;
+  }
+  return `Sign in again.`;
+}
+
+export function settingsSubscriptionsNotReady(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير جاهز`;
+    case "de":
+      return `nicht bereit`;
+    case "es":
+      return `no está lista`;
+    case "fr":
+      return `pas prêt`;
+    case "ja":
+      return `準備中`;
+    case "ko":
+      return `준비 안 됨`;
+    case "pt-BR":
+      return `não está pronta`;
+    case "zh-Hans":
+      return `未就绪`;
+    case "zh-Hant":
+      return `尚未就緒`;
+    case "en-XA":
+      return `[ñöţ ŕéáðý ~~~]`;
+    case "ar-XB":
+      return `\u202enot ready\u202c`;
+  }
+  return `not ready`;
+}
+
+export function settingsSubscriptionsReading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ القراءة…`;
+    case "de":
+      return `wird gelesen …`;
+    case "es":
+      return `leyendo…`;
+    case "fr":
+      return `lecture…`;
+    case "ja":
+      return `読み取り中…`;
+    case "ko":
+      return `읽는 중…`;
+    case "pt-BR":
+      return `lendo…`;
+    case "zh-Hans":
+      return `正在读取…`;
+    case "zh-Hant":
+      return `讀取中…`;
+    case "en-XA":
+      return `[ŕéáðîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202ereading…\u202c`;
+  }
+  return `reading…`;
+}
+
+export function settingsSubscriptionsMenuStopPreferring(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف التفضيل لعمل الطاقم`;
+    case "de":
+      return `Nicht mehr für Crew-Arbeit bevorzugen`;
+    case "es":
+      return `Dejar de preferir para el trabajo de la tripulación`;
+    case "fr":
+      return `Ne plus privilégier pour le travail de l’équipage`;
+    case "ja":
+      return `乗組員の作業での優先をやめる`;
+    case "ko":
+      return `선원 작업에 우선 사용 그만하기`;
+    case "pt-BR":
+      return `Deixar de preferir para o trabalho da tripulação`;
+    case "zh-Hans":
+      return `不再优先用于船员工作`;
+    case "zh-Hant":
+      return `不再優先用於船員工作`;
+    case "en-XA":
+      return `[Šţöþ þŕéƒéŕŕîñĝ ƒöŕ çŕéŵ ŵöŕķ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStop preferring for crew work\u202c`;
+  }
+  return `Stop preferring for crew work`;
+}
+
+export function settingsSubscriptionsMenuPrefer(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التفضيل لعمل الطاقم`;
+    case "de":
+      return `Für Crew-Arbeit bevorzugen`;
+    case "es":
+      return `Preferir para el trabajo de la tripulación`;
+    case "fr":
+      return `Privilégier pour le travail de l’équipage`;
+    case "ja":
+      return `乗組員の作業で優先`;
+    case "ko":
+      return `선원 작업에 우선 사용`;
+    case "pt-BR":
+      return `Preferir para o trabalho da tripulação`;
+    case "zh-Hans":
+      return `优先用于船员工作`;
+    case "zh-Hant":
+      return `優先用於船員工作`;
+    case "en-XA":
+      return `[Þŕéƒéŕ ƒöŕ çŕéŵ ŵöŕķ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePrefer for crew work\u202c`;
+  }
+  return `Prefer for crew work`;
+}
+
+export function settingsSubscriptionsMenuRename(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة التسمية`;
+    case "de":
+      return `Umbenennen`;
+    case "es":
+      return `Cambiar nombre`;
+    case "fr":
+      return `Renommer`;
+    case "ja":
+      return `名前を変更`;
+    case "ko":
+      return `이름 바꾸기`;
+    case "pt-BR":
+      return `Renomear`;
+    case "zh-Hans":
+      return `重命名`;
+    case "zh-Hant":
+      return `重新命名`;
+    case "en-XA":
+      return `[Ŕéñáɱé ~~]`;
+    case "ar-XB":
+      return `\u202eRename\u202c`;
+  }
+  return `Rename`;
+}
+
+export function settingsSubscriptionsMenuPause(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف مؤقت`;
+    case "de":
+      return `Pausieren`;
+    case "es":
+      return `Pausar`;
+    case "fr":
+      return `Mettre en pause`;
+    case "ja":
+      return `一時停止`;
+    case "ko":
+      return `일시 정지`;
+    case "pt-BR":
+      return `Pausar`;
+    case "zh-Hans":
+      return `暂停`;
+    case "zh-Hant":
+      return `暫停`;
+    case "en-XA":
+      return `[Þáûšé ~~]`;
+    case "ar-XB":
+      return `\u202ePause\u202c`;
+  }
+  return `Pause`;
+}
+
+export function settingsSubscriptionsMenuResume(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استئناف`;
+    case "de":
+      return `Fortsetzen`;
+    case "es":
+      return `Reanudar`;
+    case "fr":
+      return `Reprendre`;
+    case "ja":
+      return `再開`;
+    case "ko":
+      return `재개`;
+    case "pt-BR":
+      return `Retomar`;
+    case "zh-Hans":
+      return `恢复`;
+    case "zh-Hant":
+      return `繼續`;
+    case "en-XA":
+      return `[Ŕéšûɱé ~~]`;
+    case "ar-XB":
+      return `\u202eResume\u202c`;
+  }
+  return `Resume`;
+}
+
+export function settingsSubscriptionsMenuModelSlots(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مستويات النماذج`;
+    case "de":
+      return `Modellstufen`;
+    case "es":
+      return `Niveles de modelos`;
+    case "fr":
+      return `Niveaux des modèles`;
+    case "ja":
+      return `モデルのレベル`;
+    case "ko":
+      return `모델 수준`;
+    case "pt-BR":
+      return `Níveis dos modelos`;
+    case "zh-Hans":
+      return `模型级别`;
+    case "zh-Hant":
+      return `模型等級`;
+    case "en-XA":
+      return `[Ṁöðéļ šļöţš ~~~~]`;
+    case "ar-XB":
+      return `\u202eModel slots\u202c`;
+  }
+  return `Model slots`;
+}
+
+export function settingsSubscriptionsMenuResetSlots(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة تعيين مستويات النماذج`;
+    case "de":
+      return `Modellstufen zurücksetzen`;
+    case "es":
+      return `Restablecer los niveles de modelos`;
+    case "fr":
+      return `Réinitialiser les niveaux des modèles`;
+    case "ja":
+      return `モデルのレベルをリセット`;
+    case "ko":
+      return `모델 수준 재설정`;
+    case "pt-BR":
+      return `Redefinir níveis dos modelos`;
+    case "zh-Hans":
+      return `重置模型级别`;
+    case "zh-Hant":
+      return `重設模型等級`;
+    case "en-XA":
+      return `[Ŕéšéţ ɱöðéļ šļöţš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset model slots\u202c`;
+  }
+  return `Reset model slots`;
+}
+
+export function settingsSubscriptionsMenuDisconnect(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قطع الاتصال`;
+    case "de":
+      return `Trennen`;
+    case "es":
+      return `Desconectar`;
+    case "fr":
+      return `Déconnecter`;
+    case "ja":
+      return `接続を解除`;
+    case "ko":
+      return `연결 해제`;
+    case "pt-BR":
+      return `Desconectar`;
+    case "zh-Hans":
+      return `断开连接`;
+    case "zh-Hant":
+      return `中斷連結`;
+    case "en-XA":
+      return `[Ðîšçöññéçţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eDisconnect\u202c`;
+  }
+  return `Disconnect`;
+}
+
+export function settingsSubscriptionsRenamePlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اسم الحساب`;
+    case "de":
+      return `Kontoname`;
+    case "es":
+      return `Nombre de la cuenta`;
+    case "fr":
+      return `Nom du compte`;
+    case "ja":
+      return `アカウント名`;
+    case "ko":
+      return `계정 이름`;
+    case "pt-BR":
+      return `Nome da conta`;
+    case "zh-Hans":
+      return `账户名称`;
+    case "zh-Hant":
+      return `帳號名稱`;
+    case "en-XA":
+      return `[Åççöûñţ ñáɱé ~~~~]`;
+    case "ar-XB":
+      return `\u202eAccount name\u202c`;
+  }
+  return `Account name`;
+}
+
+export function settingsSubscriptionsRenameSave(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حفظ`;
+    case "de":
+      return `Speichern`;
+    case "es":
+      return `Guardar`;
+    case "fr":
+      return `Enregistrer`;
+    case "ja":
+      return `保存`;
+    case "ko":
+      return `저장`;
+    case "pt-BR":
+      return `Salvar`;
+    case "zh-Hans":
+      return `保存`;
+    case "zh-Hant":
+      return `儲存`;
+    case "en-XA":
+      return `[Šáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eSave\u202c`;
+  }
+  return `Save`;
+}
+
+export function settingsSubscriptionsRenameCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsSubscriptionsConnecting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الاتصال...`;
+    case "de":
+      return `Verbinden …`;
+    case "es":
+      return `Conectando...`;
+    case "fr":
+      return `Connexion...`;
+    case "ja":
+      return `接続中...`;
+    case "ko":
+      return `연결 중...`;
+    case "pt-BR":
+      return `Conectando...`;
+    case "zh-Hans":
+      return `正在连接...`;
+    case "zh-Hant":
+      return `連結中...`;
+    case "en-XA":
+      return `[Çöññéçţîñĝ... ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConnecting...\u202c`;
+  }
+  return `Connecting...`;
+}
+
+export function settingsSubscriptionsSignIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول`;
+    case "de":
+      return `Anmelden`;
+    case "es":
+      return `Iniciar sesión`;
+    case "fr":
+      return `Se connecter`;
+    case "ja":
+      return `サインイン`;
+    case "ko":
+      return `로그인`;
+    case "pt-BR":
+      return `Fazer login`;
+    case "zh-Hans":
+      return `登录`;
+    case "zh-Hant":
+      return `登入`;
+    case "en-XA":
+      return `[Šîĝñ îñ ~~~]`;
+    case "ar-XB":
+      return `\u202eSign in\u202c`;
+  }
+  return `Sign in`;
+}
+
+export function settingsSubscriptionsRetrying(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ إعادة المحاولة...`;
+    case "de":
+      return `Neuer Versuch …`;
+    case "es":
+      return `Reintentando...`;
+    case "fr":
+      return `Nouvel essai...`;
+    case "ja":
+      return `再試行中...`;
+    case "ko":
+      return `다시 시도 중...`;
+    case "pt-BR":
+      return `Tentando de novo...`;
+    case "zh-Hans":
+      return `正在重试...`;
+    case "zh-Hant":
+      return `重試中...`;
+    case "en-XA":
+      return `[Ŕéţŕýîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eRetrying...\u202c`;
+  }
+  return `Retrying...`;
+}
+
+export function settingsSubscriptionsRetry(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة المحاولة`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Reintentar`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `再試行`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `重試`;
+    case "en-XA":
+      return `[Ŕéţŕý ~~]`;
+    case "ar-XB":
+      return `\u202eRetry\u202c`;
+  }
+  return `Retry`;
+}
+
+export function settingsSubscriptionsRowActions(input: { account: string }): string {
+  const account = input.account;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إجراءات ${account}`;
+    case "de":
+      return `Aktionen für ${account}`;
+    case "es":
+      return `Acciones de ${account}`;
+    case "fr":
+      return `Actions pour ${account}`;
+    case "ja":
+      return `${account} の操作`;
+    case "ko":
+      return `${account} 동작`;
+    case "pt-BR":
+      return `Ações de ${account}`;
+    case "zh-Hans":
+      return `${account} 操作`;
+    case "zh-Hant":
+      return `${account} 動作`;
+    case "en-XA":
+      return `[${account} áçţîöñš ~~~]`;
+    case "ar-XB":
+      return `${account}\u202e actions\u202c`;
+  }
+  return `${account} actions`;
+}
+
+export function settingsSubscriptionsResetSlotsNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعادة مستويات هذا المزوّد إلى التوزيع الأولي. خيارات «الاستخدام دائمًا» لا تتأثر.`;
+    case "de":
+      return `Setzt die Stufen dieses Anbieters auf die Anfangsverteilung zurück. „Immer verwenden“-Auswahlen bleiben unverändert.`;
+    case "es":
+      return `Restablece los niveles de este proveedor a la distribución inicial. Las opciones de Usar siempre no cambian.`;
+    case "fr":
+      return `Rétablit les niveaux de ce fournisseur selon la répartition de départ. Les choix « Toujours utiliser » restent inchangés.`;
+    case "ja":
+      return `このプロバイダーのレベルを最初の割り当てに戻します。「常に使う」の選択は変更されません。`;
+    case "ko":
+      return `이 제공자의 모델 수준을 처음 배치로 되돌려요. 항상 사용 선택은 그대로 유지돼요.`;
+    case "pt-BR":
+      return `Volta os níveis deste provedor para a distribuição inicial. As escolhas de Sempre usar não são alteradas.`;
+    case "zh-Hans":
+      return `将这个服务商的级别重置为初始分配。“始终使用”的选择不受影响。`;
+    case "zh-Hant":
+      return `將這個供應商的等級重設為初始配置。「一律使用」的選擇不受影響。`;
+    case "en-XA":
+      return `[Ŕéšéţ ţĥîš þŕöṽîðéŕ'š šļöţš ţö ţĥé šţáŕţéŕ ɱáþ. Åļŵáýš ûšé çĥöîçéš áŕé ûñţöûçĥéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset this provider's slots to the starter map. Always use choices are untouched.\u202c`;
+  }
+  return `Reset this provider's slots to the starter map. Always use choices are untouched.`;
+}
+
+export function settingsSubscriptionsResetSlotsConfirm(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تأكيد إعادة التعيين`;
+    case "de":
+      return `Zurücksetzen bestätigen`;
+    case "es":
+      return `Confirmar el restablecimiento`;
+    case "fr":
+      return `Confirmer la réinitialisation`;
+    case "ja":
+      return `リセットを確定`;
+    case "ko":
+      return `재설정 확인`;
+    case "pt-BR":
+      return `Confirmar redefinição`;
+    case "zh-Hans":
+      return `确认重置`;
+    case "zh-Hant":
+      return `確認重設`;
+    case "en-XA":
+      return `[Çöñƒîŕɱ ŕéšéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConfirm reset\u202c`;
+  }
+  return `Confirm reset`;
+}
+
+export function settingsSubscriptionsResetSlotsCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function settingsSubscriptionsHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اشتراكات الذكاء الاصطناعي`;
+    case "de":
+      return `KI-Abos`;
+    case "es":
+      return `Suscripciones de IA`;
+    case "fr":
+      return `Abonnements d’IA`;
+    case "ja":
+      return `AI サブスクリプション`;
+    case "ko":
+      return `AI 구독`;
+    case "pt-BR":
+      return `Assinaturas de IA`;
+    case "zh-Hans":
+      return `AI 订阅`;
+    case "zh-Hant":
+      return `AI 訂閱方案`;
+    case "en-XA":
+      return `[ÅÎ šûƀšçŕîþţîöñš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAI subscriptions\u202c`;
+  }
+  return `AI subscriptions`;
+}
+
+export function settingsSubscriptionsAsOfTime(input: { time: string }): string {
+  const time = input.time;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عند ${time}`;
+    case "de":
+      return `Stand: ${time}`;
+    case "es":
+      return `a las ${time}`;
+    case "fr":
+      return `à ${time}`;
+    case "ja":
+      return `${time} の時点`;
+    case "ko":
+      return `${time} 기준`;
+    case "pt-BR":
+      return `às ${time}`;
+    case "zh-Hans":
+      return `截至 ${time}`;
+    case "zh-Hant":
+      return `截至 ${time}`;
+    case "en-XA":
+      return `[áš öƒ ${time} ~~]`;
+    case "ar-XB":
+      return `\u202eas of \u202c${time}`;
+  }
+  return `as of ${time}`;
+}
+
+export function settingsSubscriptionsRefreshing(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ التحديث...`;
+    case "de":
+      return `Aktualisieren …`;
+    case "es":
+      return `Actualizando...`;
+    case "fr":
+      return `Actualisation...`;
+    case "ja":
+      return `更新中...`;
+    case "ko":
+      return `새로 고치는 중...`;
+    case "pt-BR":
+      return `Atualizando...`;
+    case "zh-Hans":
+      return `正在刷新...`;
+    case "zh-Hant":
+      return `重新整理中...`;
+    case "en-XA":
+      return `[Ŕéƒŕéšĥîñĝ... ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRefreshing...\u202c`;
+  }
+  return `Refreshing...`;
+}
+
+export function settingsSubscriptionsRefresh(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تحديث`;
+    case "de":
+      return `Aktualisieren`;
+    case "es":
+      return `Actualizar`;
+    case "fr":
+      return `Actualiser`;
+    case "ja":
+      return `更新`;
+    case "ko":
+      return `새로 고침`;
+    case "pt-BR":
+      return `Atualizar`;
+    case "zh-Hans":
+      return `刷新`;
+    case "zh-Hant":
+      return `重新整理`;
+    case "en-XA":
+      return `[Ŕéƒŕéšĥ ~~~]`;
+    case "ar-XB":
+      return `\u202eRefresh\u202c`;
+  }
+  return `Refresh`;
+}
+
+export function settingsSubscriptionsAddAccount(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة حساب`;
+    case "de":
+      return `Konto hinzufügen`;
+    case "es":
+      return `Agregar cuenta`;
+    case "fr":
+      return `Ajouter un compte`;
+    case "ja":
+      return `アカウントを追加`;
+    case "ko":
+      return `계정 추가`;
+    case "pt-BR":
+      return `Adicionar conta`;
+    case "zh-Hans":
+      return `添加账户`;
+    case "zh-Hant":
+      return `新增帳號`;
+    case "en-XA":
+      return `[Åðð áççöûñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd account\u202c`;
+  }
+  return `Add account`;
+}
+
+export function settingsSubscriptionsDynamicRouting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التوزيع الديناميكي`;
+    case "de":
+      return `Dynamische Verteilung`;
+    case "es":
+      return `Enrutamiento dinámico`;
+    case "fr":
+      return `Routage dynamique`;
+    case "ja":
+      return `動的な振り分け`;
+    case "ko":
+      return `동적 배분`;
+    case "pt-BR":
+      return `Roteamento dinâmico`;
+    case "zh-Hans":
+      return `动态分配`;
+    case "zh-Hant":
+      return `動態分配`;
+    case "en-XA":
+      return `[Ðýñáɱîç ŕöûţîñĝ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eDynamic routing\u202c`;
+  }
+  return `Dynamic routing`;
+}
+
+export function settingsSubscriptionsDynamicRoutingDescription(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إرسال العمل إلى المستوى الذي تتطلبه طبيعته، ثم إلى النموذج الذي بقي له أكبر رصيد في باقته. النموذج المضبوط على «الاستخدام دائمًا» ✱ تكون له الأولوية.`;
+    case "de":
+      return `Schickt Arbeit an die Stufe, die zu ihrer Art passt, und dann an das Modell, dessen Tarif am meisten Kontingent übrig hat. Ein Modell mit „Immer verwenden ✱“ hat Vorrang.`;
+    case "es":
+      return `Envía el trabajo al nivel que pide su tipo y luego al modelo al que le quede más asignación de su plan. Un modelo configurado como Usar siempre ✱ tiene prioridad.`;
+    case "fr":
+      return `Envoie le travail au niveau que demande sa nature, puis au modèle à qui il reste le plus d’allocation de son forfait. Un modèle réglé sur « Toujours utiliser » ✱ l’emporte.`;
+    case "ja":
+      return `作業の種類に合ったレベルへ送り、その中でプランの利用枠が最も多く残っているモデルへ送ります。「常に使う ✱」に設定したモデルが優先されます。`;
+    case "ko":
+      return `작업의 성격에 맞는 수준으로 보내고, 그다음 요금제 사용 한도가 가장 많이 남은 모델로 보내요. 항상 사용 ✱으로 설정한 모델이 우선해요.`;
+    case "pt-BR":
+      return `Envia o trabalho ao nível que o tipo dele pede e depois ao modelo com mais franquia restante no plano. Um modelo definido como Sempre usar ✱ tem prioridade.`;
+    case "zh-Hans":
+      return `先把工作交给与其类型相符的级别，再交给套餐额度剩余最多的模型。设为始终使用 ✱ 的模型优先。`;
+    case "zh-Hant":
+      return `先把工作交給符合其類型的等級，再交給方案額度剩餘最多的模型。設為一律使用 ✱ 的模型優先。`;
+    case "en-XA":
+      return `[Šéñð ŵöŕķ ţö ţĥé šļöţ ţĥé ŵöŕķ'š šĥáþé çáļļš ƒöŕ, ţĥéñ ţö ţĥé ɱöðéļ ŵîţĥ ţĥé ɱöšţ öƒ îţš þļáñ'š áļļöŵáñçé ļéƒţ. Å ɱöðéļ šéţ ţö áļŵáýš ûšé ✱ ŵîñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSend work to the slot the work's shape calls for, then to the model with the most of its plan's allowance left. A model set to always use ✱ wins.\u202c`;
+  }
+  return `Send work to the slot the work's shape calls for, then to the model with the most of its plan's allowance left. A model set to always use ✱ wins.`;
+}
+
+export function settingsLocalSeatHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نموذج محلي (نسخة تطوير)`;
+    case "de":
+      return `Lokales Modell (Entwicklungs-Checkout)`;
+    case "es":
+      return `Modelo local (copia de desarrollo)`;
+    case "fr":
+      return `Modèle local (copie de développement)`;
+    case "ja":
+      return `ローカルモデル（開発版）`;
+    case "ko":
+      return `로컬 모델(개발용 체크아웃)`;
+    case "pt-BR":
+      return `Modelo local (cópia de desenvolvimento)`;
+    case "zh-Hans":
+      return `本地模型（开发版）`;
+    case "zh-Hant":
+      return `本機模型（開發版本）`;
+    case "en-XA":
+      return `[Ļöçáļ ɱöðéļ (ðéṽ çĥéçķöûţ) ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal model (dev checkout)\u202c`;
+  }
+  return `Local model (dev checkout)`;
+}
+
+export function settingsLocalSeatRun(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تشغيل نائب القبطان على نموذج محلي`;
+    case "de":
+      return `Deinen ersten Offizier mit einem lokalen Modell laufen lassen`;
+    case "es":
+      return `Ejecutar tu primer oficial en un modelo local`;
+    case "fr":
+      return `Faire tourner votre second sur un modèle local`;
+    case "ja":
+      return `一等航海士をローカルモデルで動かす`;
+    case "ko":
+      return `일등항해사를 로컬 모델에서 실행`;
+    case "pt-BR":
+      return `Rodar seu imediato em um modelo local`;
+    case "zh-Hans":
+      return `让你的大副在本地模型上运行`;
+    case "zh-Hant":
+      return `讓你的大副在本機模型上運作`;
+    case "en-XA":
+      return `[Ŕûñ ýöûŕ ƒîŕšţ ɱáţé öñ á ļöçáļ ɱöðéļ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRun your first mate on a local model\u202c`;
+  }
+  return `Run your first mate on a local model`;
+}
+
+export function settingsLocalSeatEndpoint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نقطة الاتصال`;
+    case "de":
+      return `Endpunkt`;
+    case "es":
+      return `Punto de conexión`;
+    case "fr":
+      return `Point d’accès`;
+    case "ja":
+      return `エンドポイント`;
+    case "ko":
+      return `엔드포인트`;
+    case "pt-BR":
+      return `Endereço`;
+    case "zh-Hans":
+      return `端点`;
+    case "zh-Hant":
+      return `端點`;
+    case "en-XA":
+      return `[Éñðþöîñţ ~~~]`;
+    case "ar-XB":
+      return `\u202eEndpoint\u202c`;
+  }
+  return `Endpoint`;
+}
+
+export function settingsLocalSeatEndpointDescription(input: { url: string }): string {
+  const url = input.url;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عنوان URL أساسي متوافق مع OpenAI، مثل ${url} في Ollama.`;
+    case "de":
+      return `Eine OpenAI-kompatible Basis-URL, etwa ${url} von Ollama.`;
+    case "es":
+      return `Una URL base compatible con OpenAI, como ${url} de Ollama.`;
+    case "fr":
+      return `Une URL de base compatible OpenAI, comme ${url} d’Ollama.`;
+    case "ja":
+      return `OpenAI 互換のベース URL です（例：Ollama の ${url}）。`;
+    case "ko":
+      return `OpenAI 호환 기본 URL이에요. 예: Ollama의 ${url}`;
+    case "pt-BR":
+      return `Uma URL base compatível com OpenAI, como ${url} do Ollama.`;
+    case "zh-Hans":
+      return `兼容 OpenAI 的基础 URL，例如 Ollama 的 ${url}。`;
+    case "zh-Hant":
+      return `相容於 OpenAI 的基本 URL，例如 Ollama 的 ${url}。`;
+    case "en-XA":
+      return `[Åñ ÖþéñÅÎ-çöɱþáţîƀļé ƀášé ÛŔĻ, šûçĥ áš Öļļáɱá'š ${url}. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAn OpenAI-compatible base URL, such as Ollama's \u202c${url}\u202e.\u202c`;
+  }
+  return `An OpenAI-compatible base URL, such as Ollama's ${url}.`;
+}
+
+export function settingsLocalSeatEndpointLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نقطة الاتصال المحلية`;
+    case "de":
+      return `Lokaler Endpunkt`;
+    case "es":
+      return `Punto de conexión local`;
+    case "fr":
+      return `Point d’accès local`;
+    case "ja":
+      return `ローカルのエンドポイント`;
+    case "ko":
+      return `로컬 엔드포인트`;
+    case "pt-BR":
+      return `Endereço local`;
+    case "zh-Hans":
+      return `本地端点`;
+    case "zh-Hant":
+      return `本機端點`;
+    case "en-XA":
+      return `[Ļöçáļ éñðþöîñţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal endpoint\u202c`;
+  }
+  return `Local endpoint`;
+}
+
+export function settingsLocalSeatModel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج`;
+    case "de":
+      return `Modell`;
+    case "es":
+      return `Modelo`;
+    case "fr":
+      return `Modèle`;
+    case "ja":
+      return `モデル`;
+    case "ko":
+      return `모델`;
+    case "pt-BR":
+      return `Modelo`;
+    case "zh-Hans":
+      return `模型`;
+    case "zh-Hant":
+      return `模型`;
+    case "en-XA":
+      return `[Ṁöðéļ ~~]`;
+    case "ar-XB":
+      return `\u202eModel\u202c`;
+  }
+  return `Model`;
+}
+
+export function settingsLocalSeatModelDescription(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `معرّف النموذج الذي تقدّمه نقطة الاتصال، مثل ${model}.`;
+    case "de":
+      return `Die Modell-ID, die der Endpunkt bereitstellt, etwa ${model}.`;
+    case "es":
+      return `El id del modelo que sirve el punto de conexión, como ${model}.`;
+    case "fr":
+      return `L’identifiant du modèle servi par le point d’accès, comme ${model}.`;
+    case "ja":
+      return `エンドポイントが提供するモデル ID です（例：${model}）。`;
+    case "ko":
+      return `엔드포인트가 제공하는 모델 ID예요. 예: ${model}`;
+    case "pt-BR":
+      return `O id do modelo que o endereço serve, como ${model}.`;
+    case "zh-Hans":
+      return `端点提供的模型 ID，例如 ${model}。`;
+    case "zh-Hant":
+      return `端點提供的模型 ID，例如 ${model}。`;
+    case "en-XA":
+      return `[Ţĥé ɱöðéļ îð ţĥé éñðþöîñţ šéŕṽéš, šûçĥ áš ${model}. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe model id the endpoint serves, such as \u202c${model}\u202e.\u202c`;
+  }
+  return `The model id the endpoint serves, such as ${model}.`;
+}
+
+export function settingsLocalSeatModelLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج المحلي`;
+    case "de":
+      return `Lokales Modell`;
+    case "es":
+      return `Modelo local`;
+    case "fr":
+      return `Modèle local`;
+    case "ja":
+      return `ローカルモデル`;
+    case "ko":
+      return `로컬 모델`;
+    case "pt-BR":
+      return `Modelo local`;
+    case "zh-Hans":
+      return `本地模型`;
+    case "zh-Hant":
+      return `本機模型`;
+    case "en-XA":
+      return `[Ļöçáļ ɱöðéļ ~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal model\u202c`;
+  }
+  return `Local model`;
+}
+
+export function settingsLocalSeatSaveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر حفظ إعداد النموذج المحلي. أعِد المحاولة.`;
+    case "de":
+      return `Die Einstellung für das lokale Modell konnte nicht gespeichert werden. Versuch es noch einmal.`;
+    case "es":
+      return `No se pudo guardar el ajuste del modelo local. Inténtalo de nuevo.`;
+    case "fr":
+      return `Le réglage du modèle local n’a pas pu être enregistré. Réessayez.`;
+    case "ja":
+      return `ローカルモデルの設定を保存できませんでした。もう一度お試しください。`;
+    case "ko":
+      return `로컬 모델 설정을 저장할 수 없었어요. 다시 시도하세요.`;
+    case "pt-BR":
+      return `Não foi possível salvar o ajuste do modelo local. Tente de novo.`;
+    case "zh-Hans":
+      return `无法保存本地模型设置。请重试。`;
+    case "zh-Hant":
+      return `無法儲存本機模型設定。請再試一次。`;
+    case "en-XA":
+      return `[Ţĥé ļöçáļ ɱöðéļ šéţţîñĝ çöûļð ñöţ ƀé šáṽéð. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe local model setting could not be saved. Try again.\u202c`;
+  }
+  return `The local model setting could not be saved. Try again.`;
+}
+
+export function settingsWebsiteSignInsSavedToday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حُفظ اليوم`;
+    case "de":
+      return `heute gespeichert`;
+    case "es":
+      return `guardado hoy`;
+    case "fr":
+      return `enregistrée aujourd’hui`;
+    case "ja":
+      return `今日保存`;
+    case "ko":
+      return `오늘 저장함`;
+    case "pt-BR":
+      return `salvo hoje`;
+    case "zh-Hans":
+      return `今天保存`;
+    case "zh-Hant":
+      return `今天儲存`;
+    case "en-XA":
+      return `[šáṽéð ţöðáý ~~~~]`;
+    case "ar-XB":
+      return `\u202esaved today\u202c`;
+  }
+  return `saved today`;
+}
+
+export function settingsWebsiteSignInsSavedYesterday(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حُفظ أمس`;
+    case "de":
+      return `gestern gespeichert`;
+    case "es":
+      return `guardado ayer`;
+    case "fr":
+      return `enregistrée hier`;
+    case "ja":
+      return `昨日保存`;
+    case "ko":
+      return `어제 저장함`;
+    case "pt-BR":
+      return `salvo ontem`;
+    case "zh-Hans":
+      return `昨天保存`;
+    case "zh-Hant":
+      return `昨天儲存`;
+    case "en-XA":
+      return `[šáṽéð ýéšţéŕðáý ~~~~~]`;
+    case "ar-XB":
+      return `\u202esaved yesterday\u202c`;
+  }
+  return `saved yesterday`;
+}
+
+export function settingsWebsiteSignInsSavedOn(input: { date: string }): string {
+  const date = input.date;
+  switch (currentLanguage()) {
+    case "ar":
+      return `حُفظ في ${date}`;
+    case "de":
+      return `gespeichert am ${date}`;
+    case "es":
+      return `guardado el ${date}`;
+    case "fr":
+      return `enregistrée le ${date}`;
+    case "ja":
+      return `${date} に保存`;
+    case "ko":
+      return `${date}에 저장함`;
+    case "pt-BR":
+      return `salvo em ${date}`;
+    case "zh-Hans":
+      return `保存于 ${date}`;
+    case "zh-Hant":
+      return `儲存於 ${date}`;
+    case "en-XA":
+      return `[šáṽéð ${date} ~~]`;
+    case "ar-XB":
+      return `\u202esaved \u202c${date}`;
+  }
+  return `saved ${date}`;
+}
+
+export function settingsWebsiteSignInsLead(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عمليات تسجيل الدخول التي حفظتها حين أعدت متصفح مهمة. اسمح للمهام المستقبلية لكل موقع على حدة، أو اختر الوصول عند كل طلب من مهمة.`;
+    case "de":
+      return `Anmeldungen, die du gespeichert hast, als du den Browser einer Aufgabe zurückgegeben hast. Erlaube künftige Aufgaben für jede Website einzeln oder entscheide bei jeder Anfrage einer Aufgabe über den Zugriff.`;
+    case "es":
+      return `Inicios de sesión que guardaste al devolver el navegador de una tarea. Permite las tareas futuras por separado para cada sitio, o elige el acceso en cada solicitud de una tarea.`;
+    case "fr":
+      return `Les connexions que vous avez enregistrées en rendant le navigateur d’une tâche. Autorisez les tâches futures site par site, ou choisissez l’accès à chaque demande d’une tâche.`;
+    case "ja":
+      return `タスクのブラウザを返すときに保存したサインインです。今後のタスクにはサイトごとに許可するか、タスクが求めるたびにアクセスを選べます。`;
+    case "ko":
+      return `작업의 브라우저를 돌려줄 때 저장한 로그인이에요. 이후 작업에 사이트마다 따로 허용하거나, 작업이 요청할 때마다 접근을 정하세요.`;
+    case "pt-BR":
+      return `Logins que você salvou ao devolver o navegador de uma tarefa. Permita tarefas futuras separadamente para cada site ou escolha o acesso a cada pedido de uma tarefa.`;
+    case "zh-Hans":
+      return `你在交还任务浏览器时保存的登录。可以按网站分别允许以后的任务使用，或在每个任务请求时选择访问权限。`;
+    case "zh-Hant":
+      return `你在交還任務的瀏覽器時儲存的登入資訊。可以依網站分別允許之後的任務使用，或在每項任務提出要求時選擇存取權。`;
+    case "en-XA":
+      return `[Šîĝñ-îñš ýöû šáṽéð áš ýöû ĥáñðéð á ţášķ'š ƀŕöŵšéŕ ƀáçķ. Åļļöŵ ƒûţûŕé ţášķš šéþáŕáţéļý ƒöŕ éáçĥ šîţé, öŕ çĥööšé áççéšš öñ éáçĥ ţášķ’š ŕéǫûéšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign-ins you saved as you handed a task's browser back. Allow future tasks separately for each site, or choose access on each task’s request.\u202c`;
+  }
+  return `Sign-ins you saved as you handed a task's browser back. Allow future tasks separately for each site, or choose access on each task’s request.`;
+}
+
+export function settingsWebsiteSignInsEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء بعد. حدّد «تذكّر» حين تعيد التحكم في متصفح مهمة لحفظ واحد.`;
+    case "de":
+      return `Noch keine. Hak „Merken“ an, wenn du die Kontrolle über den Browser einer Aufgabe zurückgibst, um eine zu speichern.`;
+    case "es":
+      return `Todavía no hay ninguno. Marca Recordar al devolver el control del navegador de una tarea para guardar uno.`;
+    case "fr":
+      return `Aucune pour l’instant. Cochez Mémoriser en rendant le contrôle du navigateur d’une tâche pour en enregistrer une.`;
+    case "ja":
+      return `まだありません。タスクのブラウザの操作を戻すときに「記憶する」にチェックを入れると保存できます。`;
+    case "ko":
+      return `아직 없어요. 작업의 브라우저 제어를 돌려줄 때 기억하기를 체크하면 저장돼요.`;
+    case "pt-BR":
+      return `Nenhum ainda. Marque Lembrar ao devolver o controle do navegador de uma tarefa para salvar um.`;
+    case "zh-Hans":
+      return `还没有。交还任务浏览器的控制权时勾选“记住”即可保存一个。`;
+    case "zh-Hant":
+      return `還沒有。交還任務瀏覽器的控制權時勾選「記住」，就能儲存一個。`;
+    case "en-XA":
+      return `[Ñöñé ýéţ. Ţîçķ Ŕéɱéɱƀéŕ áš ýöû ŕéţûŕñ çöñţŕöļ öƒ á ţášķ'š ƀŕöŵšéŕ ţö šáṽé öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNone yet. Tick Remember as you return control of a task's browser to save one.\u202c`;
+  }
+  return `None yet. Tick Remember as you return control of a task's browser to save one.`;
+}
+
+export function settingsWebsiteSignInsHeading(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيلات الدخول إلى المواقع`;
+    case "de":
+      return `Website-Anmeldungen`;
+    case "es":
+      return `Inicios de sesión en sitios web`;
+    case "fr":
+      return `Connexions aux sites web`;
+    case "ja":
+      return `Web サイトのサインイン`;
+    case "ko":
+      return `웹사이트 로그인`;
+    case "pt-BR":
+      return `Logins em sites`;
+    case "zh-Hans":
+      return `网站登录`;
+    case "zh-Hant":
+      return `網站登入`;
+    case "en-XA":
+      return `[Ŵéƀšîţé šîĝñ-îñš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWebsite sign-ins\u202c`;
+  }
+  return `Website sign-ins`;
+}
+
+export function settingsWebsiteSignInsRemove(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة`;
+    case "de":
+      return `Entfernen`;
+    case "es":
+      return `Quitar`;
+    case "fr":
+      return `Retirer`;
+    case "ja":
+      return `削除`;
+    case "ko":
+      return `제거`;
+    case "pt-BR":
+      return `Remover`;
+    case "zh-Hans":
+      return `移除`;
+    case "zh-Hant":
+      return `移除`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ~~]`;
+    case "ar-XB":
+      return `\u202eRemove\u202c`;
+  }
+  return `Remove`;
+}
+
+export function settingsWebsiteSignInsRemoveFailed(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر على ${place} إزالة تسجيل الدخول هذا الآن. أعِد المحاولة.`;
+    case "de":
+      return `${place} konnte diese Anmeldung gerade nicht entfernen. Versuch es noch einmal.`;
+    case "es":
+      return `${place} no pudo quitar ese inicio de sesión en este momento. Inténtalo de nuevo.`;
+    case "fr":
+      return `${place} n’a pas pu retirer cette connexion pour l’instant. Réessayez.`;
+    case "ja":
+      return `${place} は現在そのサインインを削除できませんでした。もう一度お試しください。`;
+    case "ko":
+      return `${place}에서 지금 그 로그인을 제거할 수 없었어요. 다시 시도하세요.`;
+    case "pt-BR":
+      return `${place} não conseguiu remover esse login agora. Tente de novo.`;
+    case "zh-Hans":
+      return `${place} 暂时无法移除这个登录。请重试。`;
+    case "zh-Hant":
+      return `${place} 目前無法移除這個登入資訊。請再試一次。`;
+    case "en-XA":
+      return `[${place} çöûļð ñöţ ŕéɱöṽé ţĥáţ šîĝñ-îñ ŕîĝĥţ ñöŵ. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${place}\u202e could not remove that sign-in right now. Try again.\u202c`;
+  }
+  return `${place} could not remove that sign-in right now. Try again.`;
+}
+
+export function settingsWebsiteSignInsAutomaticFailed(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر على ${place} تغيير هذا الإذن الآن.`;
+    case "de":
+      return `${place} konnte diese Berechtigung gerade nicht ändern.`;
+    case "es":
+      return `${place} no pudo cambiar ese permiso en este momento.`;
+    case "fr":
+      return `${place} n’a pas pu modifier cette autorisation pour l’instant.`;
+    case "ja":
+      return `${place} は現在その権限を変更できませんでした。`;
+    case "ko":
+      return `${place}에서 지금 그 권한을 바꿀 수 없었어요.`;
+    case "pt-BR":
+      return `${place} não conseguiu alterar essa permissão agora.`;
+    case "zh-Hans":
+      return `${place} 暂时无法更改这项权限。`;
+    case "zh-Hant":
+      return `${place} 目前無法變更這項權限。`;
+    case "en-XA":
+      return `[${place} çöûļð ñöţ çĥáñĝé ţĥáţ þéŕɱîššîöñ ŕîĝĥţ ñöŵ. ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${place}\u202e could not change that permission right now.\u202c`;
+  }
+  return `${place} could not change that permission right now.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -49595,6 +62596,455 @@ export const MESSAGES = {
   devicesJoinYourAccount,
   devicesJoinPickHint,
   automationRunFound,
+  settingsCostLimitTitle,
+  settingsCostLimitSwitchLabel,
+  settingsCostLimitAmountLabel,
+  settingsCostLimitDescriptionUnread,
+  settingsCostLimitDescriptionOff,
+  settingsCostLimitDescription,
+  settingsCostLimitDescriptionRecent,
+  settingsUsageNotAvailable,
+  settingsUsagePeriod7d,
+  settingsUsagePeriod30d,
+  settingsUsagePeriodAll,
+  settingsUsageScopeAll,
+  settingsUsageScopeTask,
+  settingsUsageScopeFirstmate,
+  settingsUsageScopeOther,
+  settingsUsageUnitTokens,
+  settingsUsageUnitUsd,
+  settingsUsageHeadingTokens,
+  settingsUsageHeadingUsd,
+  settingsUsageNoActivity,
+  settingsUsageNothingRecorded,
+  settingsUsagePeriodSince,
+  settingsUsagePeriodRange,
+  settingsUsagePriced,
+  settingsUsageCoverageUnavailable,
+  settingsUsageRecordsOf,
+  settingsUsagePricedRecordsOf,
+  settingsUsageReadoutTokens,
+  settingsUsageReadoutTokensComplete,
+  settingsUsageReadoutTokensPartial,
+  settingsUsageReadoutKnownEstimate,
+  settingsUsageReadoutEstimate,
+  settingsUsageReadoutFinished,
+  settingsUsageReadoutFinishedNote,
+  settingsUsageReadoutRecordedModels,
+  settingsUsageReadoutModelsUsed,
+  settingsUsageReadoutModelsNote,
+  settingsUsageModelNotRecorded,
+  settingsUsageProviderNotRecorded,
+  settingsUsageModelLineRecorded,
+  settingsUsageAttributionServed,
+  settingsUsageAttributionRequested,
+  settingsUsageAttributionRecorded,
+  settingsUsagePriceListed,
+  settingsUsagePriceClaude,
+  settingsUsagePriceReported,
+  settingsUsagePriceUnrecorded,
+  settingsUsageProvenanceCache,
+  settingsUsageProvenanceUnpriced,
+  settingsUsagePricedSentence,
+  settingsUsageNoSplit,
+  settingsUsageSplitFor,
+  settingsUsageKindPlan,
+  settingsUsageKindResearch,
+  settingsUsageKindRetrieval,
+  settingsUsageKindReproduce,
+  settingsUsageKindImplement,
+  settingsUsageKindFix,
+  settingsUsageKindChore,
+  settingsUsageKindReview,
+  settingsUsageKindOperation,
+  settingsUsageKindOther,
+  settingsUsageProjectUnavailable,
+  settingsUsageFigureInput,
+  settingsUsageFigureOutput,
+  settingsUsageFigureCacheRead,
+  settingsUsageFigureCacheWrite,
+  settingsUsageFigureTotal,
+  settingsUsageTaskNoTokens,
+  settingsUsageTaskTokensPartial,
+  settingsUsageTaskUnpriced,
+  settingsUsageTaskLeavesOut,
+  settingsUsageTaskLeavesOutNoSplit,
+  settingsUsageTaskFewerRecords,
+  settingsUsageTaskLeavesOutFewerRecords,
+  settingsUsageCreated,
+  settingsUsageTaskCountOne,
+  settingsUsageTaskCountAll,
+  settingsUsageTaskCountSome,
+  settingsUsageMilestoneNone,
+  settingsUsageMilestoneFinishedOne,
+  settingsUsageMilestoneFinished,
+  settingsUsageMilestoneReached,
+  settingsUsageMilestoneFirst,
+  settingsUsageMilestoneNext,
+  settingsUsageMilestoneTitle,
+  settingsUsageMilestoneNote,
+  settingsUsageTitle,
+  settingsUsageLead,
+  settingsUsageShowAs,
+  settingsUsagePeriodLabel,
+  settingsUsageWorkLabel,
+  settingsUsageReadFailed,
+  settingsUsageReading,
+  settingsUsageEmptyTitle,
+  settingsUsageEmptyLead,
+  settingsUsageEmptyNote,
+  settingsUsageWhereLegend,
+  settingsUsageDailyHeading,
+  settingsUsageDailyPartial,
+  settingsUsageDailyChartTokens,
+  settingsUsageDailyChartUsd,
+  settingsUsageToday,
+  settingsUsageDayValue,
+  settingsUsageBarsPriced,
+  settingsUsageOpenModel,
+  settingsUsageDailyValues,
+  settingsUsageLocalDate,
+  settingsUsageModelsUsd,
+  settingsUsageModelsTokens,
+  settingsUsageWhereHeading,
+  settingsUsageWhereFirstmate,
+  settingsUsageWhereFirstmateNote,
+  settingsUsageSubtotal,
+  settingsUsageWhereOther,
+  settingsUsageWhereOtherNote,
+  settingsUsageModelDetails,
+  settingsUsageModelBreakdownTokens,
+  settingsUsageModelBreakdownUsd,
+  settingsUsageCloseDetails,
+  settingsUsageItsWork,
+  settingsUsageRecentHeading,
+  settingsUsageRecentLead,
+  settingsUsageRecentTokensLegend,
+  settingsUsageRecentUsdLegend,
+  settingsUsageRecentFailed,
+  settingsUsageRecentReading,
+  settingsUsageRecentEmpty,
+  settingsUsageTaskColumn,
+  settingsUsageRecentList,
+  settingsUsageMoreFailed,
+  settingsUsageSeeMore,
+  settingsUsageTryAgain,
+  settingsAutomationPickEvent,
+  settingsAutomationRepeatsAtMost,
+  settingsAutomationPickTime,
+  settingsAutomationPickDays,
+  settingsAutomationPickDateTime,
+  settingsAutomationWritePrompt,
+  settingsAutomationRunEvents,
+  settingsAutomationRunCatchingUpMissed,
+  settingsAutomationRunCatchingUp,
+  settingsAutomationRunPlanned,
+  settingsAutomationDeliveryWaiting,
+  settingsAutomationDeliveryRetrying,
+  settingsAutomationDeliveryHandled,
+  settingsAutomationDeliveryCancelled,
+  settingsAutomationDeliverySent,
+  settingsAutomationNoteWaiting,
+  settingsAutomationNoteRetrying,
+  settingsAutomationNoteCancelled,
+  settingsAutomationNoteHandledAt,
+  settingsAutomationNoteHandledOn,
+  settingsAutomationCancelEdited,
+  settingsAutomationCancelPaused,
+  settingsAutomationCancelCleared,
+  settingsAutomationEventPreviewNoLook,
+  settingsAutomationEventPreview,
+  settingsAutomationRunsEachTime,
+  settingsAutomationRunsEachTimeLooks,
+  settingsAutomationMissedEventThere,
+  settingsAutomationMissedEvent,
+  settingsAutomationMissedOnceThere,
+  settingsAutomationMissedOnce,
+  settingsAutomationMissedRepeatsThere,
+  settingsAutomationMissedRepeats,
+  settingsAutomationMon,
+  settingsAutomationMonday,
+  settingsAutomationTue,
+  settingsAutomationTuesday,
+  settingsAutomationWed,
+  settingsAutomationWednesday,
+  settingsAutomationThu,
+  settingsAutomationThursday,
+  settingsAutomationFri,
+  settingsAutomationFriday,
+  settingsAutomationSat,
+  settingsAutomationSaturday,
+  settingsAutomationSun,
+  settingsAutomationSunday,
+  settingsAutomationZoneNoteThere,
+  settingsAutomationZoneNote,
+  settingsAutomationLocalTimeNoteThere,
+  settingsAutomationLocalTimeNote,
+  settingsAutomationClockThere,
+  settingsAutomationClockHere,
+  settingsAutomationReviewSends,
+  settingsAutomationReviewSendsEvents,
+  settingsAutomationEventsPreview,
+  settingsAutomationSubmittedNote,
+  settingsAutomationSubmittedNoteEvents,
+  settingsAutomationDraftNote,
+  settingsAutomationStoppedWhen,
+  settingsAutomationStoppedNote,
+  settingsAutomationDetailNote,
+  settingsAutomationEventIn,
+  settingsAutomationTitle,
+  settingsAutomationDescription,
+  settingsAutomationPauseAll,
+  settingsAutomationSearch,
+  settingsAutomationNew,
+  settingsAutomationList,
+  settingsAutomationEmpty,
+  settingsAutomationNoMatch,
+  settingsAutomationPickOne,
+  settingsAutomationSetUpByFirstMate,
+  settingsAutomationName,
+  settingsAutomationNamePlaceholder,
+  settingsAutomationWhen,
+  settingsAutomationKindEvery,
+  settingsAutomationKindDaily,
+  settingsAutomationKindWeekly,
+  settingsAutomationKindOnce,
+  settingsAutomationKindEvent,
+  settingsAutomationWhatHappens,
+  settingsAutomationEventNotConnected,
+  settingsAutomationNoEvents,
+  settingsAutomationMinutesBetween,
+  settingsAutomationMinutes,
+  settingsAutomationTimeOfDay,
+  settingsAutomationDateAndTime,
+  settingsAutomationTimeZone,
+  settingsAutomationProject,
+  settingsAutomationNoProject,
+  settingsAutomationRemovedProject,
+  settingsAutomationPrompt,
+  settingsAutomationPromptPlaceholder,
+  settingsAutomationInsertDetail,
+  settingsAutomationInsertDetailChoice,
+  settingsAutomationPassed,
+  settingsAutomationPreviewNext,
+  settingsAutomationEnable,
+  settingsAutomationSaveDraft,
+  settingsAutomationSave,
+  settingsAutomationPreview,
+  settingsAutomationPause,
+  settingsAutomationResume,
+  settingsAutomationDeleteForGood,
+  settingsAutomationDelete,
+  settingsAutomationNotSpecified,
+  settingsAutomationRuns,
+  settingsAutomationNextRuns,
+  settingsAutomationFirstMateGets,
+  settingsAutomationWhatItSends,
+  settingsAutomationMissedTime,
+  settingsAutomationTurnOnLabel,
+  settingsAutomationTurnOnQuestion,
+  settingsAutomationTurnOn,
+  settingsAutomationBack,
+  settingsAutomationZoneThisComputer,
+  settingsAutomationHistory,
+  settingsAutomationNothingRun,
+  settingsAutomationVersion,
+  settingsAutomationLedTo,
+  settingsAutomationCard,
+  settingsAutomationPastCard,
+  settingsAutomationPromptAsSent,
+  settingsModelsStartingLevelsSummary,
+  settingsModelsNotInUse,
+  settingsModelsHeading,
+  settingsModelsSummaryNotInUse,
+  settingsModelsSummaryAlwaysUse,
+  settingsModelsSummaryNew,
+  settingsModelsSummaryDecisions,
+  settingsModelsSummaryDecisionsAuto,
+  settingsModelsSummaryDecisionsUnanswered,
+  settingsLevelsRemoveFromLevelOnly,
+  settingsLevelsDropRemove,
+  settingsLevelsDropAlready,
+  settingsLevelsDropUse,
+  settingsLevelsDropAlso,
+  settingsLevelsDropMove,
+  settingsLevelsAlwaysUseBanner,
+  settingsLevelsAlwaysUseBannerTwo,
+  settingsLevelsAlwaysUseSetFor,
+  settingsLevelsRemoveAllLine,
+  settingsLevelsRemoveAllNone,
+  settingsLevelsNewUsedAt,
+  settingsLevelsNewNotInUse,
+  settingsLevelsUsedAt,
+  settingsLevelsUsedNone,
+  settingsLevelsHintPremium,
+  settingsLevelsHintHigh,
+  settingsLevelsHintMedium,
+  settingsLevelsHintLow,
+  settingsLevelsEmptyPremium,
+  settingsLevelsEmptyRunsOnMedium,
+  settingsLevelsEmptyRunsOnHigh,
+  settingsLevelTasks,
+  settingsLevelsEmptySimple,
+  settingsLevelsNew,
+  settingsLevelsPillNew,
+  settingsLevelsPillRemove,
+  settingsLevelsPickerAdd,
+  settingsLevelsPickerIn,
+  settingsLevelsDefaultReasoning,
+  settingsLevelsAddModel,
+  settingsLevelsPickerLabel,
+  settingsLevelsPickerFindLabel,
+  settingsLevelsPickerFind,
+  settingsLevelsPickerMore,
+  settingsLevelsPickerNone,
+  settingsLevelsPanelLabel,
+  settingsLevelsPanelClose,
+  settingsLevelsPanelLevels,
+  settingsLevelsPanelUseAt,
+  settingsLevelsAlwaysUse,
+  settingsLevelsAlwaysUseNote,
+  settingsLevelsAlwaysUseLabel,
+  settingsLevelsRemoveAll,
+  settingsLevelsRemoveAllLabel,
+  settingsLevelsRemove,
+  settingsLevelsTurnOffLabel,
+  settingsLevelsTurnOff,
+  settingsLevelsBoardHint,
+  settingsLevelsNotInUse,
+  settingsLevelsNotInUseHint,
+  settingsLevelsAllPlacedShown,
+  settingsLevelsAllPlaced,
+  settingsDecisionsUseOpenRouter,
+  settingsDecisionsDisclosureShared,
+  settingsDecisionsDisclosureChoice,
+  settingsDecisionsDisclosureCost,
+  settingsDecisionsUses,
+  settingsDecisionsUsesLocked,
+  settingsDecisionsUsesNeedsApproval,
+  settingsDecisionsUsesAllowTitle,
+  settingsDecisionsUsesAllow,
+  settingsDecisionsUsesTurnOn,
+  settingsDecisionsUsesTurnOnNamed,
+  settingsDecisionsUseAuto,
+  settingsDecisionsUseSpecific,
+  settingsDecisionsTurnOff,
+  settingsDecisionsUseNative,
+  settingsDecisionsReplaceKey,
+  settingsDecisionsRemove,
+  settingsDecisionsOpenRouterUnavailable,
+  settingsDecisionsLineNative,
+  settingsDecisionsKeyRejected,
+  settingsDecisionsChosenFallback,
+  settingsDecisionsChosenHeld,
+  settingsDecisionsAuto,
+  settingsDecisionsKeyLabel,
+  settingsDecisionsKeyPlaceholder,
+  settingsDecisionsKeysFrom,
+  settingsDecisionsTurnOnOpenRouter,
+  settingsDecisionsHeading,
+  settingsDecisionsSubtitle,
+  settingsDecisionsOpenRouterModels,
+  settingsDecisionsOpenRouterPrice,
+  settingsDecisionsPicker,
+  settingsDecisionsAnswerWith,
+  settingsDecisionsLastAnswer,
+  settingsDecisionsActions,
+  settingsReasoningAuto,
+  settingsReasoningLabel,
+  settingsReasoningSavedUnavailable,
+  settingsReasoningUnavailable,
+  settingsReasoningSaveFailed,
+  settingsSpeedCrewSpeed,
+  settingsSpeedLabel,
+  settingsSpeedSavedUnavailable,
+  settingsSpeedUnavailable,
+  settingsSpeedShared,
+  settingsSpeedUnknown,
+  settingsSpeedSaveFailed,
+  settingsSubscriptionsClaudeFirstRun,
+  settingsSubscriptionsNoReader,
+  settingsSubscriptionsNoReaderKey,
+  settingsSubscriptionsSignedOutHoldLabel,
+  settingsSubscriptionsSignedOutHoldText,
+  settingsSubscriptionsRefusedHoldLabel,
+  settingsSubscriptionsRefusedHoldText,
+  settingsSubscriptionsFirstmateAccountTag,
+  settingsSubscriptionsFirstmateAccountTagTitle,
+  settingsSubscriptionsCrewPreferredMarkTitle,
+  settingsSubscriptionsEmptySignInAgain,
+  settingsSubscriptionsEmptySlowDown,
+  settingsSubscriptionsEmptyUnread,
+  settingsSubscriptionsEmptyNotYet,
+  settingsSubscriptionsPersonalResourcesTitle,
+  settingsSubscriptionsPersonalResourcesDescription,
+  settingsSubscriptionsKindSubscription,
+  settingsSubscriptionsFirstmateAccountLabel,
+  settingsSubscriptionsNotChosenYet,
+  settingsSubscriptionsAsOfJustNow,
+  settingsSubscriptionsAsOfMinutes,
+  settingsSubscriptionsAsOfHours,
+  settingsSubscriptionsAsOfDays,
+  settingsSubscriptionsOnPaceAll,
+  settingsSubscriptionsOnPace,
+  settingsSubscriptionsEmptyIn,
+  settingsSubscriptionsEmptyNow,
+  settingsSubscriptionsPaused,
+  settingsSubscriptionsStale,
+  settingsSubscriptionsApiKeySet,
+  settingsSubscriptionsSignedIn,
+  settingsSubscriptionsDotStale,
+  settingsSubscriptionsDotNotSignedInYet,
+  settingsSubscriptionsDotSignInAgain,
+  settingsSubscriptionsDotReading,
+  settingsSubscriptionsDotNoReading,
+  settingsSubscriptionsSignInAgainState,
+  settingsSubscriptionsNotReady,
+  settingsSubscriptionsReading,
+  settingsSubscriptionsMenuStopPreferring,
+  settingsSubscriptionsMenuPrefer,
+  settingsSubscriptionsMenuRename,
+  settingsSubscriptionsMenuPause,
+  settingsSubscriptionsMenuResume,
+  settingsSubscriptionsMenuModelSlots,
+  settingsSubscriptionsMenuResetSlots,
+  settingsSubscriptionsMenuDisconnect,
+  settingsSubscriptionsRenamePlaceholder,
+  settingsSubscriptionsRenameSave,
+  settingsSubscriptionsRenameCancel,
+  settingsSubscriptionsConnecting,
+  settingsSubscriptionsSignIn,
+  settingsSubscriptionsRetrying,
+  settingsSubscriptionsRetry,
+  settingsSubscriptionsRowActions,
+  settingsSubscriptionsResetSlotsNote,
+  settingsSubscriptionsResetSlotsConfirm,
+  settingsSubscriptionsResetSlotsCancel,
+  settingsSubscriptionsHeading,
+  settingsSubscriptionsAsOfTime,
+  settingsSubscriptionsRefreshing,
+  settingsSubscriptionsRefresh,
+  settingsSubscriptionsAddAccount,
+  settingsSubscriptionsDynamicRouting,
+  settingsSubscriptionsDynamicRoutingDescription,
+  settingsLocalSeatHeading,
+  settingsLocalSeatRun,
+  settingsLocalSeatEndpoint,
+  settingsLocalSeatEndpointDescription,
+  settingsLocalSeatEndpointLabel,
+  settingsLocalSeatModel,
+  settingsLocalSeatModelDescription,
+  settingsLocalSeatModelLabel,
+  settingsLocalSeatSaveFailed,
+  settingsWebsiteSignInsSavedToday,
+  settingsWebsiteSignInsSavedYesterday,
+  settingsWebsiteSignInsSavedOn,
+  settingsWebsiteSignInsLead,
+  settingsWebsiteSignInsEmpty,
+  settingsWebsiteSignInsHeading,
+  settingsWebsiteSignInsRemove,
+  settingsWebsiteSignInsRemoveFailed,
+  settingsWebsiteSignInsAutomaticFailed,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -51218,4 +64668,453 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   devicesJoinYourAccount: [],
   devicesJoinPickHint: ["computer"],
   automationRunFound: ["words"],
+  settingsCostLimitTitle: [],
+  settingsCostLimitSwitchLabel: [],
+  settingsCostLimitAmountLabel: [],
+  settingsCostLimitDescriptionUnread: [],
+  settingsCostLimitDescriptionOff: [],
+  settingsCostLimitDescription: ["limit"],
+  settingsCostLimitDescriptionRecent: ["asked", "days", "limit", "tasks"],
+  settingsUsageNotAvailable: [],
+  settingsUsagePeriod7d: [],
+  settingsUsagePeriod30d: [],
+  settingsUsagePeriodAll: [],
+  settingsUsageScopeAll: [],
+  settingsUsageScopeTask: [],
+  settingsUsageScopeFirstmate: [],
+  settingsUsageScopeOther: [],
+  settingsUsageUnitTokens: [],
+  settingsUsageUnitUsd: [],
+  settingsUsageHeadingTokens: [],
+  settingsUsageHeadingUsd: [],
+  settingsUsageNoActivity: [],
+  settingsUsageNothingRecorded: [],
+  settingsUsagePeriodSince: ["date"],
+  settingsUsagePeriodRange: ["first", "last"],
+  settingsUsagePriced: ["priced", "records"],
+  settingsUsageCoverageUnavailable: [],
+  settingsUsageRecordsOf: ["count", "records"],
+  settingsUsagePricedRecordsOf: ["count", "priced"],
+  settingsUsageReadoutTokens: [],
+  settingsUsageReadoutTokensComplete: [],
+  settingsUsageReadoutTokensPartial: [],
+  settingsUsageReadoutKnownEstimate: [],
+  settingsUsageReadoutEstimate: [],
+  settingsUsageReadoutFinished: [],
+  settingsUsageReadoutFinishedNote: [],
+  settingsUsageReadoutRecordedModels: [],
+  settingsUsageReadoutModelsUsed: [],
+  settingsUsageReadoutModelsNote: [],
+  settingsUsageModelNotRecorded: [],
+  settingsUsageProviderNotRecorded: [],
+  settingsUsageModelLineRecorded: ["provider"],
+  settingsUsageAttributionServed: [],
+  settingsUsageAttributionRequested: [],
+  settingsUsageAttributionRecorded: [],
+  settingsUsagePriceListed: [],
+  settingsUsagePriceClaude: [],
+  settingsUsagePriceReported: [],
+  settingsUsagePriceUnrecorded: [],
+  settingsUsageProvenanceCache: [],
+  settingsUsageProvenanceUnpriced: [],
+  settingsUsagePricedSentence: ["priced", "records"],
+  settingsUsageNoSplit: [],
+  settingsUsageSplitFor: ["priced", "split"],
+  settingsUsageKindPlan: [],
+  settingsUsageKindResearch: [],
+  settingsUsageKindRetrieval: [],
+  settingsUsageKindReproduce: [],
+  settingsUsageKindImplement: [],
+  settingsUsageKindFix: [],
+  settingsUsageKindChore: [],
+  settingsUsageKindReview: [],
+  settingsUsageKindOperation: [],
+  settingsUsageKindOther: [],
+  settingsUsageProjectUnavailable: [],
+  settingsUsageFigureInput: [],
+  settingsUsageFigureOutput: [],
+  settingsUsageFigureCacheRead: [],
+  settingsUsageFigureCacheWrite: [],
+  settingsUsageFigureTotal: [],
+  settingsUsageTaskNoTokens: [],
+  settingsUsageTaskTokensPartial: [],
+  settingsUsageTaskUnpriced: [],
+  settingsUsageTaskLeavesOut: [],
+  settingsUsageTaskLeavesOutNoSplit: [],
+  settingsUsageTaskFewerRecords: [],
+  settingsUsageTaskLeavesOutFewerRecords: [],
+  settingsUsageCreated: ["when"],
+  settingsUsageTaskCountOne: [],
+  settingsUsageTaskCountAll: ["count"],
+  settingsUsageTaskCountSome: ["count", "shown"],
+  settingsUsageMilestoneNone: [],
+  settingsUsageMilestoneFinishedOne: [],
+  settingsUsageMilestoneFinished: ["count"],
+  settingsUsageMilestoneReached: ["count"],
+  settingsUsageMilestoneFirst: [],
+  settingsUsageMilestoneNext: ["count"],
+  settingsUsageMilestoneTitle: ["finished", "where"],
+  settingsUsageMilestoneNote: [],
+  settingsUsageTitle: [],
+  settingsUsageLead: [],
+  settingsUsageShowAs: [],
+  settingsUsagePeriodLabel: [],
+  settingsUsageWorkLabel: [],
+  settingsUsageReadFailed: [],
+  settingsUsageReading: [],
+  settingsUsageEmptyTitle: [],
+  settingsUsageEmptyLead: [],
+  settingsUsageEmptyNote: [],
+  settingsUsageWhereLegend: [],
+  settingsUsageDailyHeading: [],
+  settingsUsageDailyPartial: ["unit"],
+  settingsUsageDailyChartTokens: [],
+  settingsUsageDailyChartUsd: [],
+  settingsUsageToday: [],
+  settingsUsageDayValue: ["date", "value"],
+  settingsUsageBarsPriced: [],
+  settingsUsageOpenModel: [],
+  settingsUsageDailyValues: [],
+  settingsUsageLocalDate: [],
+  settingsUsageModelsUsd: [],
+  settingsUsageModelsTokens: [],
+  settingsUsageWhereHeading: [],
+  settingsUsageWhereFirstmate: [],
+  settingsUsageWhereFirstmateNote: [],
+  settingsUsageSubtotal: [],
+  settingsUsageWhereOther: [],
+  settingsUsageWhereOtherNote: [],
+  settingsUsageModelDetails: ["model"],
+  settingsUsageModelBreakdownTokens: ["line"],
+  settingsUsageModelBreakdownUsd: ["line"],
+  settingsUsageCloseDetails: [],
+  settingsUsageItsWork: [],
+  settingsUsageRecentHeading: [],
+  settingsUsageRecentLead: [],
+  settingsUsageRecentTokensLegend: [],
+  settingsUsageRecentUsdLegend: [],
+  settingsUsageRecentFailed: [],
+  settingsUsageRecentReading: [],
+  settingsUsageRecentEmpty: [],
+  settingsUsageTaskColumn: [],
+  settingsUsageRecentList: [],
+  settingsUsageMoreFailed: [],
+  settingsUsageSeeMore: [],
+  settingsUsageTryAgain: [],
+  settingsAutomationPickEvent: [],
+  settingsAutomationRepeatsAtMost: ["minutes"],
+  settingsAutomationPickTime: [],
+  settingsAutomationPickDays: [],
+  settingsAutomationPickDateTime: [],
+  settingsAutomationWritePrompt: [],
+  settingsAutomationRunEvents: ["count", "sent"],
+  settingsAutomationRunCatchingUpMissed: ["count", "planned", "sent"],
+  settingsAutomationRunCatchingUp: ["planned", "sent"],
+  settingsAutomationRunPlanned: ["planned", "sent"],
+  settingsAutomationDeliveryWaiting: [],
+  settingsAutomationDeliveryRetrying: [],
+  settingsAutomationDeliveryHandled: [],
+  settingsAutomationDeliveryCancelled: [],
+  settingsAutomationDeliverySent: [],
+  settingsAutomationNoteWaiting: [],
+  settingsAutomationNoteRetrying: [],
+  settingsAutomationNoteCancelled: [],
+  settingsAutomationNoteHandledAt: ["time"],
+  settingsAutomationNoteHandledOn: ["date"],
+  settingsAutomationCancelEdited: [],
+  settingsAutomationCancelPaused: [],
+  settingsAutomationCancelCleared: [],
+  settingsAutomationEventPreviewNoLook: ["when"],
+  settingsAutomationEventPreview: ["count", "when"],
+  settingsAutomationRunsEachTime: [],
+  settingsAutomationRunsEachTimeLooks: ["count"],
+  settingsAutomationMissedEventThere: ["where"],
+  settingsAutomationMissedEvent: [],
+  settingsAutomationMissedOnceThere: ["where"],
+  settingsAutomationMissedOnce: [],
+  settingsAutomationMissedRepeatsThere: ["where"],
+  settingsAutomationMissedRepeats: [],
+  settingsAutomationMon: [],
+  settingsAutomationMonday: [],
+  settingsAutomationTue: [],
+  settingsAutomationTuesday: [],
+  settingsAutomationWed: [],
+  settingsAutomationWednesday: [],
+  settingsAutomationThu: [],
+  settingsAutomationThursday: [],
+  settingsAutomationFri: [],
+  settingsAutomationFriday: [],
+  settingsAutomationSat: [],
+  settingsAutomationSaturday: [],
+  settingsAutomationSun: [],
+  settingsAutomationSunday: [],
+  settingsAutomationZoneNoteThere: ["where"],
+  settingsAutomationZoneNote: [],
+  settingsAutomationLocalTimeNoteThere: ["where"],
+  settingsAutomationLocalTimeNote: [],
+  settingsAutomationClockThere: ["where"],
+  settingsAutomationClockHere: [],
+  settingsAutomationReviewSends: [],
+  settingsAutomationReviewSendsEvents: [],
+  settingsAutomationEventsPreview: [],
+  settingsAutomationSubmittedNote: [],
+  settingsAutomationSubmittedNoteEvents: [],
+  settingsAutomationDraftNote: [],
+  settingsAutomationStoppedWhen: [],
+  settingsAutomationStoppedNote: [],
+  settingsAutomationDetailNote: [],
+  settingsAutomationEventIn: ["event", "integration"],
+  settingsAutomationTitle: [],
+  settingsAutomationDescription: [],
+  settingsAutomationPauseAll: [],
+  settingsAutomationSearch: [],
+  settingsAutomationNew: [],
+  settingsAutomationList: [],
+  settingsAutomationEmpty: [],
+  settingsAutomationNoMatch: [],
+  settingsAutomationPickOne: [],
+  settingsAutomationSetUpByFirstMate: [],
+  settingsAutomationName: [],
+  settingsAutomationNamePlaceholder: [],
+  settingsAutomationWhen: [],
+  settingsAutomationKindEvery: [],
+  settingsAutomationKindDaily: [],
+  settingsAutomationKindWeekly: [],
+  settingsAutomationKindOnce: [],
+  settingsAutomationKindEvent: [],
+  settingsAutomationWhatHappens: [],
+  settingsAutomationEventNotConnected: [],
+  settingsAutomationNoEvents: [],
+  settingsAutomationMinutesBetween: [],
+  settingsAutomationMinutes: [],
+  settingsAutomationTimeOfDay: [],
+  settingsAutomationDateAndTime: [],
+  settingsAutomationTimeZone: [],
+  settingsAutomationProject: [],
+  settingsAutomationNoProject: [],
+  settingsAutomationRemovedProject: [],
+  settingsAutomationPrompt: [],
+  settingsAutomationPromptPlaceholder: [],
+  settingsAutomationInsertDetail: [],
+  settingsAutomationInsertDetailChoice: [],
+  settingsAutomationPassed: [],
+  settingsAutomationPreviewNext: ["dates"],
+  settingsAutomationEnable: [],
+  settingsAutomationSaveDraft: [],
+  settingsAutomationSave: [],
+  settingsAutomationPreview: [],
+  settingsAutomationPause: [],
+  settingsAutomationResume: [],
+  settingsAutomationDeleteForGood: [],
+  settingsAutomationDelete: [],
+  settingsAutomationNotSpecified: [],
+  settingsAutomationRuns: [],
+  settingsAutomationNextRuns: [],
+  settingsAutomationFirstMateGets: [],
+  settingsAutomationWhatItSends: [],
+  settingsAutomationMissedTime: [],
+  settingsAutomationTurnOnLabel: [],
+  settingsAutomationTurnOnQuestion: [],
+  settingsAutomationTurnOn: [],
+  settingsAutomationBack: [],
+  settingsAutomationZoneThisComputer: ["zone"],
+  settingsAutomationHistory: [],
+  settingsAutomationNothingRun: [],
+  settingsAutomationVersion: ["version"],
+  settingsAutomationLedTo: [],
+  settingsAutomationCard: ["title"],
+  settingsAutomationPastCard: ["title"],
+  settingsAutomationPromptAsSent: [],
+  settingsModelsStartingLevelsSummary: [],
+  settingsModelsNotInUse: [],
+  settingsModelsHeading: [],
+  settingsModelsSummaryNotInUse: ["count"],
+  settingsModelsSummaryAlwaysUse: ["count"],
+  settingsModelsSummaryNew: ["count"],
+  settingsModelsSummaryDecisions: ["model"],
+  settingsModelsSummaryDecisionsAuto: [],
+  settingsModelsSummaryDecisionsUnanswered: [],
+  settingsLevelsRemoveFromLevelOnly: ["level"],
+  settingsLevelsDropRemove: ["levels"],
+  settingsLevelsDropAlready: ["level"],
+  settingsLevelsDropUse: ["level"],
+  settingsLevelsDropAlso: ["level"],
+  settingsLevelsDropMove: ["level"],
+  settingsLevelsAlwaysUseBanner: ["first"],
+  settingsLevelsAlwaysUseBannerTwo: ["first", "second"],
+  settingsLevelsAlwaysUseSetFor: ["model"],
+  settingsLevelsRemoveAllLine: ["levels"],
+  settingsLevelsRemoveAllNone: [],
+  settingsLevelsNewUsedAt: ["levels"],
+  settingsLevelsNewNotInUse: [],
+  settingsLevelsUsedAt: ["levels"],
+  settingsLevelsUsedNone: [],
+  settingsLevelsHintPremium: [],
+  settingsLevelsHintHigh: [],
+  settingsLevelsHintMedium: [],
+  settingsLevelsHintLow: [],
+  settingsLevelsEmptyPremium: [],
+  settingsLevelsEmptyRunsOnMedium: [],
+  settingsLevelsEmptyRunsOnHigh: [],
+  settingsLevelTasks: ["levels"],
+  settingsLevelsEmptySimple: [],
+  settingsLevelsNew: [],
+  settingsLevelsPillNew: ["provider"],
+  settingsLevelsPillRemove: ["level", "model"],
+  settingsLevelsPickerAdd: ["level", "model"],
+  settingsLevelsPickerIn: ["levels"],
+  settingsLevelsDefaultReasoning: ["reasoning"],
+  settingsLevelsAddModel: [],
+  settingsLevelsPickerLabel: ["level"],
+  settingsLevelsPickerFindLabel: ["level"],
+  settingsLevelsPickerFind: [],
+  settingsLevelsPickerMore: [],
+  settingsLevelsPickerNone: [],
+  settingsLevelsPanelLabel: ["model"],
+  settingsLevelsPanelClose: ["model"],
+  settingsLevelsPanelLevels: [],
+  settingsLevelsPanelUseAt: ["level", "model"],
+  settingsLevelsAlwaysUse: [],
+  settingsLevelsAlwaysUseNote: [],
+  settingsLevelsAlwaysUseLabel: ["model"],
+  settingsLevelsRemoveAll: [],
+  settingsLevelsRemoveAllLabel: ["model"],
+  settingsLevelsRemove: [],
+  settingsLevelsTurnOffLabel: ["model"],
+  settingsLevelsTurnOff: [],
+  settingsLevelsBoardHint: ["key"],
+  settingsLevelsNotInUse: [],
+  settingsLevelsNotInUseHint: [],
+  settingsLevelsAllPlacedShown: [],
+  settingsLevelsAllPlaced: [],
+  settingsDecisionsUseOpenRouter: [],
+  settingsDecisionsDisclosureShared: [],
+  settingsDecisionsDisclosureChoice: [],
+  settingsDecisionsDisclosureCost: [],
+  settingsDecisionsUses: [],
+  settingsDecisionsUsesLocked: [],
+  settingsDecisionsUsesNeedsApproval: ["model"],
+  settingsDecisionsUsesAllowTitle: ["model", "use"],
+  settingsDecisionsUsesAllow: [],
+  settingsDecisionsUsesTurnOn: [],
+  settingsDecisionsUsesTurnOnNamed: ["name"],
+  settingsDecisionsUseAuto: [],
+  settingsDecisionsUseSpecific: [],
+  settingsDecisionsTurnOff: ["model"],
+  settingsDecisionsUseNative: ["model", "vendor"],
+  settingsDecisionsReplaceKey: ["model"],
+  settingsDecisionsRemove: ["model"],
+  settingsDecisionsOpenRouterUnavailable: [],
+  settingsDecisionsLineNative: ["model", "vendor"],
+  settingsDecisionsKeyRejected: [],
+  settingsDecisionsChosenFallback: [],
+  settingsDecisionsChosenHeld: [],
+  settingsDecisionsAuto: [],
+  settingsDecisionsKeyLabel: ["model"],
+  settingsDecisionsKeyPlaceholder: ["vendor"],
+  settingsDecisionsKeysFrom: ["url"],
+  settingsDecisionsTurnOnOpenRouter: ["model"],
+  settingsDecisionsHeading: [],
+  settingsDecisionsSubtitle: [],
+  settingsDecisionsOpenRouterModels: [],
+  settingsDecisionsOpenRouterPrice: ["model", "price", "vendor"],
+  settingsDecisionsPicker: [],
+  settingsDecisionsAnswerWith: ["model"],
+  settingsDecisionsLastAnswer: ["tokens", "value"],
+  settingsDecisionsActions: [],
+  settingsReasoningAuto: [],
+  settingsReasoningLabel: ["model", "provider", "slot"],
+  settingsReasoningSavedUnavailable: ["reasoning"],
+  settingsReasoningUnavailable: [],
+  settingsReasoningSaveFailed: [],
+  settingsSpeedCrewSpeed: [],
+  settingsSpeedLabel: ["model"],
+  settingsSpeedSavedUnavailable: ["speed"],
+  settingsSpeedUnavailable: ["speed"],
+  settingsSpeedShared: [],
+  settingsSpeedUnknown: [],
+  settingsSpeedSaveFailed: [],
+  settingsSubscriptionsClaudeFirstRun: ["here"],
+  settingsSubscriptionsNoReader: [],
+  settingsSubscriptionsNoReaderKey: ["apiKey"],
+  settingsSubscriptionsSignedOutHoldLabel: [],
+  settingsSubscriptionsSignedOutHoldText: [],
+  settingsSubscriptionsRefusedHoldLabel: [],
+  settingsSubscriptionsRefusedHoldText: [],
+  settingsSubscriptionsFirstmateAccountTag: [],
+  settingsSubscriptionsFirstmateAccountTagTitle: [],
+  settingsSubscriptionsCrewPreferredMarkTitle: [],
+  settingsSubscriptionsEmptySignInAgain: [],
+  settingsSubscriptionsEmptySlowDown: [],
+  settingsSubscriptionsEmptyUnread: [],
+  settingsSubscriptionsEmptyNotYet: [],
+  settingsSubscriptionsPersonalResourcesTitle: [],
+  settingsSubscriptionsPersonalResourcesDescription: ["computer", "computers"],
+  settingsSubscriptionsKindSubscription: [],
+  settingsSubscriptionsFirstmateAccountLabel: [],
+  settingsSubscriptionsNotChosenYet: [],
+  settingsSubscriptionsAsOfJustNow: [],
+  settingsSubscriptionsAsOfMinutes: ["minutes"],
+  settingsSubscriptionsAsOfHours: ["hours"],
+  settingsSubscriptionsAsOfDays: ["days"],
+  settingsSubscriptionsOnPaceAll: [],
+  settingsSubscriptionsOnPace: [],
+  settingsSubscriptionsEmptyIn: ["duration"],
+  settingsSubscriptionsEmptyNow: [],
+  settingsSubscriptionsPaused: [],
+  settingsSubscriptionsStale: [],
+  settingsSubscriptionsApiKeySet: ["apiKey"],
+  settingsSubscriptionsSignedIn: [],
+  settingsSubscriptionsDotStale: ["signedIn"],
+  settingsSubscriptionsDotNotSignedInYet: [],
+  settingsSubscriptionsDotSignInAgain: [],
+  settingsSubscriptionsDotReading: ["signedIn"],
+  settingsSubscriptionsDotNoReading: ["signedIn"],
+  settingsSubscriptionsSignInAgainState: [],
+  settingsSubscriptionsNotReady: [],
+  settingsSubscriptionsReading: [],
+  settingsSubscriptionsMenuStopPreferring: [],
+  settingsSubscriptionsMenuPrefer: [],
+  settingsSubscriptionsMenuRename: [],
+  settingsSubscriptionsMenuPause: [],
+  settingsSubscriptionsMenuResume: [],
+  settingsSubscriptionsMenuModelSlots: [],
+  settingsSubscriptionsMenuResetSlots: [],
+  settingsSubscriptionsMenuDisconnect: [],
+  settingsSubscriptionsRenamePlaceholder: [],
+  settingsSubscriptionsRenameSave: [],
+  settingsSubscriptionsRenameCancel: [],
+  settingsSubscriptionsConnecting: [],
+  settingsSubscriptionsSignIn: [],
+  settingsSubscriptionsRetrying: [],
+  settingsSubscriptionsRetry: [],
+  settingsSubscriptionsRowActions: ["account"],
+  settingsSubscriptionsResetSlotsNote: [],
+  settingsSubscriptionsResetSlotsConfirm: [],
+  settingsSubscriptionsResetSlotsCancel: [],
+  settingsSubscriptionsHeading: [],
+  settingsSubscriptionsAsOfTime: ["time"],
+  settingsSubscriptionsRefreshing: [],
+  settingsSubscriptionsRefresh: [],
+  settingsSubscriptionsAddAccount: [],
+  settingsSubscriptionsDynamicRouting: [],
+  settingsSubscriptionsDynamicRoutingDescription: [],
+  settingsLocalSeatHeading: [],
+  settingsLocalSeatRun: [],
+  settingsLocalSeatEndpoint: [],
+  settingsLocalSeatEndpointDescription: ["url"],
+  settingsLocalSeatEndpointLabel: [],
+  settingsLocalSeatModel: [],
+  settingsLocalSeatModelDescription: ["model"],
+  settingsLocalSeatModelLabel: [],
+  settingsLocalSeatSaveFailed: [],
+  settingsWebsiteSignInsSavedToday: [],
+  settingsWebsiteSignInsSavedYesterday: [],
+  settingsWebsiteSignInsSavedOn: ["date"],
+  settingsWebsiteSignInsLead: [],
+  settingsWebsiteSignInsEmpty: [],
+  settingsWebsiteSignInsHeading: [],
+  settingsWebsiteSignInsRemove: [],
+  settingsWebsiteSignInsRemoveFailed: ["place"],
+  settingsWebsiteSignInsAutomaticFailed: ["place"],
 };

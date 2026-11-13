@@ -7,6 +7,7 @@ import {
 } from "@shared/claudeAccess";
 import { isCustomApiProvider } from "@shared/customApi";
 import { hereAs } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import { API_KEY_LABEL, CLAUDE_PROVIDER_ID, catalogEntry } from "@shared/providers";
 import {
@@ -49,17 +50,10 @@ import { FIRSTMATE_SELECT_STYLE, FirstmateModelRow, SettingRow } from "./General
 import { ModelsSection } from "./ModelsSection";
 import { ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
 import {
-  CLAUDE_FIRST_RUN_TEXT,
-  CREW_PREFERRED_MARK_TITLE,
   EMPTY_QUOTA_TEXT,
-  FIRSTMATE_ACCOUNT_TAG,
-  FIRSTMATE_ACCOUNT_TAG_TITLE,
   noReaderText,
   PERSONAL_RESOURCES_WORDS,
-  REFUSED_HOLD_LABEL,
-  REFUSED_HOLD_TEXT,
-  SIGNED_OUT_HOLD_LABEL,
-  SIGNED_OUT_HOLD_TEXT,
+  SUBSCRIPTIONS_WORDS,
 } from "./subscriptionsWords";
 import { useSettingSave } from "./useSettingSave";
 import "./subscriptions.css";
@@ -88,10 +82,9 @@ import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
  * on this Mac"), not an error and not a blank meter (CD-1=B).
  */
 
-const kindCopy: Record<AccountView["kind"], string> = {
-  subscription_oauth: "subscription",
-  api_key: API_KEY_LABEL,
-};
+function kindCopy(kind: AccountView["kind"]): string {
+  return kind === "api_key" ? API_KEY_LABEL : m.settingsSubscriptionsKindSubscription();
+}
 
 export const LABEL_STYLE = {
   fontSize: "var(--text-xs)",
@@ -200,7 +193,7 @@ export function FirstmateAccountSelect({
   const current = choices.some((choice) => choice.id === chosen) ? (chosen as string) : "";
   return (
     <select
-      aria-label="First mate account"
+      aria-label={m.settingsSubscriptionsFirstmateAccountLabel()}
       value={current}
       disabled={saving}
       onChange={(event) => {
@@ -210,7 +203,7 @@ export function FirstmateAccountSelect({
     >
       {current === "" ? (
         <option value="" disabled>
-          Not chosen yet
+          {m.settingsSubscriptionsNotChosenYet()}
         </option>
       ) : null}
       {choices.map((choice) => (
@@ -245,11 +238,11 @@ function emptyQuotaText(status: QuotaProviderView["status"]): string {
 /** How old a carried-forward reading is, in the words a person would use. */
 function measuredAgeText(measuredAt: number, now: number): string {
   const minutes = Math.floor((now - measuredAt) / 60_000);
-  if (minutes < 1) return "as of just now";
-  if (minutes < 60) return `as of ${minutes}m ago`;
+  if (minutes < 1) return m.settingsSubscriptionsAsOfJustNow();
+  if (minutes < 60) return m.settingsSubscriptionsAsOfMinutes({ minutes: String(minutes) });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `as of ${hours}h ago`;
-  return `as of ${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return m.settingsSubscriptionsAsOfHours({ hours: String(hours) });
+  return m.settingsSubscriptionsAsOfDays({ days: String(Math.floor(hours / 24)) });
 }
 
 function timeOf(at: number): string {
@@ -332,15 +325,21 @@ function runwayVerdict(
 ): Verdict | undefined {
   if (runway.status === "through_reset") {
     // The check mark is the all-models claim; a narrower scope is just "on pace".
-    return { text: allModels ? "on pace ✓" : "on pace", tone: "ok" };
+    return {
+      text: allModels ? m.settingsSubscriptionsOnPaceAll() : m.settingsSubscriptionsOnPace(),
+      tone: "ok",
+    };
   }
   if (runway.status === "projected_exhaustion" && runway.projectedExhaustedAtMs !== undefined) {
     return {
-      text: `empty in ${formatDurationShort(runway.projectedExhaustedAtMs - now)}`,
+      text: m.settingsSubscriptionsEmptyIn({
+        duration: formatDurationShort(runway.projectedExhaustedAtMs - now),
+      }),
       tone: "danger",
     };
   }
-  if (runway.status === "exhausted_now") return { text: "empty now", tone: "danger" };
+  if (runway.status === "exhausted_now")
+    return { text: m.settingsSubscriptionsEmptyNow(), tone: "danger" };
   return undefined;
 }
 
@@ -350,10 +349,14 @@ function runwayVerdict(
  * nothing for it).
  */
 function verdictFor(kind: RowKind, row: QuotaProviderView | undefined, now: number) {
-  if (kind === "paused") return { text: "paused", tone: "neutral" } as Verdict;
+  if (kind === "paused")
+    return { text: m.settingsSubscriptionsPaused(), tone: "neutral" } as Verdict;
   if (kind === "stale" && row) {
     return {
-      text: row.measuredAt !== undefined ? measuredAgeText(row.measuredAt, now) : "stale",
+      text:
+        row.measuredAt !== undefined
+          ? measuredAgeText(row.measuredAt, now)
+          : m.settingsSubscriptionsStale(),
       tone: "warn",
     } as Verdict;
   }
@@ -390,28 +393,31 @@ export function rowView(
   const sub = account.access
     ? CLAUDE_ACCESS_LABEL[account.access]
     : [
-        plan ?? kindCopy[account.kind],
+        plan ?? kindCopy(account.kind),
         identity,
         account.gateway ? CLAUDE_GATEWAY_LABEL[account.gateway] : undefined,
       ]
         .filter(Boolean)
         .join(" · ");
-  const signedIn = account.kind === "api_key" ? `${API_KEY_LABEL} set` : "signed in";
+  const signedIn =
+    account.kind === "api_key"
+      ? m.settingsSubscriptionsApiKeySet({ apiKey: API_KEY_LABEL })
+      : m.settingsSubscriptionsSignedIn();
   const claudeFirstRun = kind === "disconnected" && account.providerId === CLAUDE_PROVIDER_ID;
   const dot: { tone: StatusDotTone; label: string } =
     kind === "ok"
       ? { tone: "ok", label: signedIn }
       : kind === "stale"
-        ? { tone: "warn", label: `${signedIn} · last reading is stale` }
+        ? { tone: "warn", label: m.settingsSubscriptionsDotStale({ signedIn }) }
         : claudeFirstRun
-          ? { tone: "ring", label: "not signed in yet" }
+          ? { tone: "ring", label: m.settingsSubscriptionsDotNotSignedInYet() }
           : kind === "auth" || kind === "disconnected"
-            ? { tone: "danger", label: "sign in again" }
+            ? { tone: "danger", label: m.settingsSubscriptionsDotSignInAgain() }
             : kind === "paused"
-              ? { tone: "idle", label: "paused" }
+              ? { tone: "idle", label: m.settingsSubscriptionsPaused() }
               : kind === "pending"
-                ? { tone: "ring", label: `${signedIn} · reading…` }
-                : { tone: "ring", label: `${signedIn} · no allowance reading` };
+                ? { tone: "ring", label: m.settingsSubscriptionsDotReading({ signedIn }) }
+                : { tone: "ring", label: m.settingsSubscriptionsDotNoReading({ signedIn }) };
   const view: RowView = {
     kind,
     dot: dot.tone,
@@ -430,11 +436,11 @@ export function rowView(
   if (kind === "disconnected") {
     if (account.providerId === CLAUDE_PROVIDER_ID) {
       // First-run, not a failed re-auth: the machine has no Claude login yet.
-      view.stateText = CLAUDE_FIRST_RUN_TEXT;
+      view.stateText = SUBSCRIPTIONS_WORDS.claudeFirstRun;
       view.signIn = true;
       return view;
     }
-    view.stateText = "Sign in again.";
+    view.stateText = m.settingsSubscriptionsSignInAgainState();
     view.stateTone = "danger";
     view.signIn = true;
     return view;
@@ -444,14 +450,14 @@ export function rowView(
     // Code, or one too old). The backend's sentence says what to do; no
     // meter and no sign-in, because neither is the remedy.
     view.dot = "warn";
-    view.dotLabel = "not ready";
+    view.dotLabel = m.settingsSubscriptionsNotReady();
     view.stateText = account.detail;
     return view;
   }
   if (kind === "pending") {
     // First read in flight (or about to be). Muted mono like other empty
     // states; a failed read replaces this with the sensor's own status.
-    view.stateText = "reading…";
+    view.stateText = m.settingsSubscriptionsReading();
     return withHold(view, account, now);
   }
   if (kind === "no_row") {
@@ -497,8 +503,14 @@ function withHold(view: RowView, account: AccountView, now: number): RowView {
   if (!account.enabled || !account.connected) return view;
   if (hold?.class !== "signed_out" && hold?.class !== "refused") return view;
   view.dot = "warn";
-  view.dotLabel = hold.class === "signed_out" ? SIGNED_OUT_HOLD_LABEL : REFUSED_HOLD_LABEL;
-  view.stateText = hold.class === "signed_out" ? SIGNED_OUT_HOLD_TEXT : REFUSED_HOLD_TEXT;
+  view.dotLabel =
+    hold.class === "signed_out"
+      ? SUBSCRIPTIONS_WORDS.signedOutHoldLabel
+      : SUBSCRIPTIONS_WORDS.refusedHoldLabel;
+  view.stateText =
+    hold.class === "signed_out"
+      ? SUBSCRIPTIONS_WORDS.signedOutHoldText
+      : SUBSCRIPTIONS_WORDS.refusedHoldText;
   view.stateTone = "danger";
   if (hold.class === "signed_out") {
     view.signIn = true;
@@ -607,9 +619,10 @@ export function AccountRow({
   if (view.stateText)
     view.stateText = place === undefined ? here(view.stateText) : hereAs(view.stateText, place);
   const repeated =
-    view.dotLabel === "paused" && view.verdict?.text === "paused"
+    view.dotLabel === m.settingsSubscriptionsPaused() &&
+    view.verdict?.text === m.settingsSubscriptionsPaused()
       ? view.verdict.text
-      : view.dotLabel === "sign in again" && view.stateText
+      : view.dotLabel === m.settingsSubscriptionsDotSignInAgain() && view.stateText
         ? view.stateText
         : undefined;
   const repeatedFit = useOverflowTitle(repeated);
@@ -617,30 +630,39 @@ export function AccountRow({
   const items: RowMenuItem[] = menu ?? [
     {
       id: "prefer",
-      label: account.pinned ? "Stop preferring for crew work" : "Prefer for crew work",
+      label: account.pinned
+        ? m.settingsSubscriptionsMenuStopPreferring()
+        : m.settingsSubscriptionsMenuPrefer(),
       trailing: <span style={{ color: "var(--accent)", fontFamily: "var(--font-mono)" }}>✱</span>,
       onSelect: onTogglePin,
     },
     ...(account.providerId === CLAUDE_PROVIDER_ID
       ? []
-      : [{ id: "rename", label: "Rename", onSelect: onStartRename }]),
+      : [{ id: "rename", label: m.settingsSubscriptionsMenuRename(), onSelect: onStartRename }]),
     {
       id: "pause",
-      label: account.enabled ? "Pause" : "Resume",
+      label: account.enabled
+        ? m.settingsSubscriptionsMenuPause()
+        : m.settingsSubscriptionsMenuResume(),
       onSelect: () => onSetEnabled(!account.enabled),
     },
     ...(hasModels
       ? [
-          { id: "models", label: "Model slots", onSelect: onShowModels },
+          { id: "models", label: m.settingsSubscriptionsMenuModelSlots(), onSelect: onShowModels },
           {
             id: "reset-slots",
-            label: "Reset model slots",
+            label: m.settingsSubscriptionsMenuResetSlots(),
             onSelect: () => setResetArmed(true),
           },
         ]
       : []),
     { separator: true },
-    { id: "disconnect", label: "Disconnect", tone: "danger", onSelect: onDisconnect },
+    {
+      id: "disconnect",
+      label: m.settingsSubscriptionsMenuDisconnect(),
+      tone: "danger",
+      onSelect: onDisconnect,
+    },
   ];
 
   return (
@@ -675,16 +697,16 @@ export function AccountRow({
               <Input
                 value={renameValue}
                 onChange={(event) => setRenameValue(event.target.value)}
-                placeholder="Account name"
+                placeholder={m.settingsSubscriptionsRenamePlaceholder()}
                 maxLength={ACCOUNT_LABEL_MAX}
                 autoFocus
                 style={{ width: 140 }}
               />
               <Button variant="primary" size="sm" type="submit">
-                Save
+                {m.settingsSubscriptionsRenameSave()}
               </Button>
               <Button variant="ghost" size="sm" onClick={onCancelRename}>
-                Cancel
+                {m.settingsSubscriptionsRenameCancel()}
               </Button>
             </form>
           ) : (
@@ -696,7 +718,7 @@ export function AccountRow({
                 </span>
                 {account.pinned && (
                   <AccountMark
-                    words={CREW_PREFERRED_MARK_TITLE}
+                    words={SUBSCRIPTIONS_WORDS.crewPreferredMarkTitle}
                     data-crew-preferred=""
                     style={{
                       fontFamily: "var(--font-mono)",
@@ -709,7 +731,7 @@ export function AccountRow({
                 )}
                 {isFlagship && (
                   <AccountMark
-                    words={FIRSTMATE_ACCOUNT_TAG_TITLE}
+                    words={SUBSCRIPTIONS_WORDS.firstmateAccountTagTitle}
                     data-firstmate-account=""
                     style={{
                       fontFamily: "var(--font-mono)",
@@ -724,7 +746,7 @@ export function AccountRow({
                       lineHeight: 1.4,
                     }}
                   >
-                    {FIRSTMATE_ACCOUNT_TAG}
+                    {SUBSCRIPTIONS_WORDS.firstmateAccountTag}
                   </AccountMark>
                 )}
               </span>
@@ -770,9 +792,9 @@ export function AccountRow({
               off={Boolean(signInOff)}
               note={signInOff}
               pending={signingIn}
-              pendingLabel="Connecting..."
+              pendingLabel={m.settingsSubscriptionsConnecting()}
             >
-              {view.signInLabel ?? "Sign in"}
+              {view.signInLabel ?? m.settingsSubscriptionsSignIn()}
             </Button>
           )}
           {view.retry && onRetry && (
@@ -781,14 +803,17 @@ export function AccountRow({
               size="sm"
               onClick={onRetry}
               pending={refreshing}
-              pendingLabel="Retrying..."
+              pendingLabel={m.settingsSubscriptionsRetrying()}
             >
-              Retry
+              {m.settingsSubscriptionsRetry()}
             </Button>
           )}
         </div>
         <span className="fm-subs-menu">
-          <RowMenu label={`${account.label} actions`} items={items} />
+          <RowMenu
+            label={m.settingsSubscriptionsRowActions({ account: account.label })}
+            items={items}
+          />
         </span>
       </div>
       {resetArmed && (
@@ -804,7 +829,7 @@ export function AccountRow({
           }}
         >
           <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)", flex: 1, minWidth: 0 }}>
-            Reset this provider's slots to the starter map. Always use choices are untouched.
+            {m.settingsSubscriptionsResetSlotsNote()}
           </span>
           <Button
             variant="danger"
@@ -814,10 +839,10 @@ export function AccountRow({
               setResetArmed(false);
             }}
           >
-            Confirm reset
+            {m.settingsSubscriptionsResetSlotsConfirm()}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setResetArmed(false)}>
-            Cancel
+            {m.settingsSubscriptionsResetSlotsCancel()}
           </Button>
         </div>
       )}
@@ -1254,7 +1279,7 @@ export function SubscriptionsTab() {
           marginBottom: ROW_GAP,
         }}
       >
-        <div style={LABEL_STYLE}>AI subscriptions</div>
+        <div style={LABEL_STYLE}>{m.settingsSubscriptionsHeading()}</div>
         {snapshot && snapshot.providers.length > 0 && (
           <div
             style={{
@@ -1268,16 +1293,16 @@ export function SubscriptionsTab() {
               whiteSpace: "nowrap",
             }}
           >
-            <span>as of {timeOf(snapshot.fetchedAt)}</span>
+            <span>{m.settingsSubscriptionsAsOfTime({ time: timeOf(snapshot.fetchedAt) })}</span>
             <Button
               variant="ghost"
               size="sm"
               onClick={refreshQuota}
               {...recheckKeys}
               pending={refreshing}
-              pendingLabel="Refreshing..."
+              pendingLabel={m.settingsSubscriptionsRefreshing()}
             >
-              Refresh
+              {m.settingsSubscriptionsRefresh()}
             </Button>
           </div>
         )}
@@ -1339,7 +1364,7 @@ export function SubscriptionsTab() {
             );
           })}
         <div className="fm-subs-add">
-          <span style={LABEL_STYLE}>Add account</span>
+          <span style={LABEL_STYLE}>{m.settingsSubscriptionsAddAccount()}</span>
           <ProviderChips
             providers={providers}
             accounts={accounts}
@@ -1414,8 +1439,8 @@ export function SubscriptionsTab() {
             <SettingRow
               id="dynamic-routing"
               error={routingSave.error}
-              title="Dynamic routing"
-              description="Send work to the slot the work's shape calls for, then to the model with the most of its plan's allowance left. A model set to always use ✱ wins."
+              title={m.settingsSubscriptionsDynamicRouting()}
+              description={m.settingsSubscriptionsDynamicRoutingDescription()}
               control={
                 <Switch
                   checked={routing.dynamicRouting}

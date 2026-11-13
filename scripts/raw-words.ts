@@ -310,23 +310,6 @@ export function isCheckedFile(path: string): boolean {
 export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/panels/now/words.ts": 13,
   "src/renderer/src/devices/viewWords.ts": 38,
-  "src/renderer/src/settings/AutomationTab.tsx": 71,
-  "src/renderer/src/settings/DecisionsGroup.tsx": 24,
-  "src/renderer/src/settings/LocalSeatSection.tsx": 9,
-  "src/renderer/src/settings/ModelLevels.tsx": 43,
-  "src/renderer/src/settings/ModelsSection.tsx": 9,
-  "src/renderer/src/settings/ReasoningControl.tsx": 3,
-  "src/renderer/src/settings/SpeedControl.tsx": 6,
-  "src/renderer/src/settings/SubscriptionsTab.tsx": 40,
-  "src/renderer/src/settings/UsageTab.tsx": 43,
-  "src/renderer/src/settings/WebsiteSignInsSection.tsx": 8,
-  "src/renderer/src/settings/automationWords.ts": 57,
-  "src/renderer/src/settings/costLimitWords.ts": 7,
-  "src/renderer/src/settings/levelDrops.ts": 12,
-  "src/renderer/src/settings/modelsWords.ts": 13,
-  "src/renderer/src/settings/reasoningWords.ts": 1,
-  "src/renderer/src/settings/subscriptionsWords.ts": 14,
-  "src/renderer/src/settings/usageWords.ts": 78,
 };
 
 /** Each problem with the files' raw words against the ledger, as one line. */

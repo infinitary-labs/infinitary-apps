@@ -102,6 +102,14 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | font (Settings → Appearance) | خط | |
 | task key (a project's task numbering, "INF") | رمز المهام | "رمزه" for a project's own; kept apart from "مفتاح", which unlocks something. |
 | batch / batch run (the queue's) | دفعة / تشغيل الدفعة | Matches "طلب سحب مجمّع" and "فحص الدفعة". |
+| level (premium / high / medium / low) | مستوى | Plural "مستويات"; "model slots" is "مستويات النماذج", never a word for slot. |
+| Always use | الاستخدام دائمًا | Quoted «الاستخدام دائمًا» mid-sentence. |
+| Dynamic routing | التوزيع الديناميكي | |
+| decisions / decision model | القرارات / نموذج القرارات | |
+| prompt (an automation's words) | الرسالة | What the first mate gets. |
+| record (a Usage record) | سجل | Plural "سجلات". |
+| Reasoning | الاستدلال | As the task facts already say it. |
+| estimated (Usage) | تقديري | |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | Knowledge (panel) | المعرفة | "فتح المعرفة" for Open Knowledge. |
 | concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |

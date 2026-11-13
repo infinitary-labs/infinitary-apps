@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import {
-  ALWAYS_USE_LEAD,
+  alwaysUseBanner,
   dropPlan,
   removeAllLine,
   usedLine,
@@ -220,7 +220,7 @@ test("a connected provider's models are pinnable from the section", async () => 
   await alwaysUseSwitch(panel, opus).click();
   await expect(modelName(models, opus, true).first()).toBeVisible();
   // The board says out loud what that does to every level.
-  await expect(banner).toContainText(`${ALWAYS_USE_LEAD} ${opus}`);
+  await expect(banner).toContainText(alwaysUseBanner(opus));
   await alwaysUseSwitch(panel, opus).click();
   await expect(modelName(models, opus, true)).toHaveCount(0);
   await expect(banner).toHaveCount(0);

@@ -12,8 +12,8 @@ import {
 } from "../../src/core/quota/providers/grok";
 import { KIMI_NO_WINDOW_DETAIL } from "../../src/core/quota/providers/kimi";
 import {
-  CLAUDE_FIRST_RUN_TEXT,
   EMPTY_QUOTA_TEXT,
+  SUBSCRIPTIONS_WORDS,
 } from "../../src/renderer/src/settings/subscriptionsWords";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
@@ -745,7 +745,7 @@ test.describe("the real quota sensor, end to end", () => {
     });
     await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toHaveCount(0);
     await expect(row.getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
-    await expect(row.getByText(CLAUDE_FIRST_RUN_TEXT)).toHaveCount(0);
+    await expect(row.getByText(SUBSCRIPTIONS_WORDS.claudeFirstRun)).toHaveCount(0);
     expect(stub.seen).toContain("lapsed-token");
     expect(readNewestSnapshotRow(userDataDir, "claude")).toMatchObject({ status: "ok" });
     expect(

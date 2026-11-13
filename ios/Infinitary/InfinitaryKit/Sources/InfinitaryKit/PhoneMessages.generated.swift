@@ -1620,6 +1620,455 @@ public enum PhoneMessages {
     public static func `devicesJoinYourAccount`() -> String { PhoneWords.format("devicesJoinYourAccount", []) }
     public static func `devicesJoinPickHint`(`computer`: String) -> String { PhoneWords.format("devicesJoinPickHint", [`computer`]) }
     public static func `automationRunFound`(`words`: String) -> String { PhoneWords.format("automationRunFound", [`words`]) }
+    public static func `settingsCostLimitTitle`() -> String { PhoneWords.format("settingsCostLimitTitle", []) }
+    public static func `settingsCostLimitSwitchLabel`() -> String { PhoneWords.format("settingsCostLimitSwitchLabel", []) }
+    public static func `settingsCostLimitAmountLabel`() -> String { PhoneWords.format("settingsCostLimitAmountLabel", []) }
+    public static func `settingsCostLimitDescriptionUnread`() -> String { PhoneWords.format("settingsCostLimitDescriptionUnread", []) }
+    public static func `settingsCostLimitDescriptionOff`() -> String { PhoneWords.format("settingsCostLimitDescriptionOff", []) }
+    public static func `settingsCostLimitDescription`(`limit`: String) -> String { PhoneWords.format("settingsCostLimitDescription", [`limit`]) }
+    public static func `settingsCostLimitDescriptionRecent`(`asked`: String, `days`: String, `limit`: String, `tasks`: String) -> String { PhoneWords.format("settingsCostLimitDescriptionRecent", [`asked`, `days`, `limit`, `tasks`]) }
+    public static func `settingsUsageNotAvailable`() -> String { PhoneWords.format("settingsUsageNotAvailable", []) }
+    public static func `settingsUsagePeriod7d`() -> String { PhoneWords.format("settingsUsagePeriod7d", []) }
+    public static func `settingsUsagePeriod30d`() -> String { PhoneWords.format("settingsUsagePeriod30d", []) }
+    public static func `settingsUsagePeriodAll`() -> String { PhoneWords.format("settingsUsagePeriodAll", []) }
+    public static func `settingsUsageScopeAll`() -> String { PhoneWords.format("settingsUsageScopeAll", []) }
+    public static func `settingsUsageScopeTask`() -> String { PhoneWords.format("settingsUsageScopeTask", []) }
+    public static func `settingsUsageScopeFirstmate`() -> String { PhoneWords.format("settingsUsageScopeFirstmate", []) }
+    public static func `settingsUsageScopeOther`() -> String { PhoneWords.format("settingsUsageScopeOther", []) }
+    public static func `settingsUsageUnitTokens`() -> String { PhoneWords.format("settingsUsageUnitTokens", []) }
+    public static func `settingsUsageUnitUsd`() -> String { PhoneWords.format("settingsUsageUnitUsd", []) }
+    public static func `settingsUsageHeadingTokens`() -> String { PhoneWords.format("settingsUsageHeadingTokens", []) }
+    public static func `settingsUsageHeadingUsd`() -> String { PhoneWords.format("settingsUsageHeadingUsd", []) }
+    public static func `settingsUsageNoActivity`() -> String { PhoneWords.format("settingsUsageNoActivity", []) }
+    public static func `settingsUsageNothingRecorded`() -> String { PhoneWords.format("settingsUsageNothingRecorded", []) }
+    public static func `settingsUsagePeriodSince`(`date`: String) -> String { PhoneWords.format("settingsUsagePeriodSince", [`date`]) }
+    public static func `settingsUsagePeriodRange`(`first`: String, `last`: String) -> String { PhoneWords.format("settingsUsagePeriodRange", [`first`, `last`]) }
+    public static func `settingsUsagePriced`(`priced`: String, `records`: String) -> String { PhoneWords.format("settingsUsagePriced", [`priced`, `records`]) }
+    public static func `settingsUsageCoverageUnavailable`() -> String { PhoneWords.format("settingsUsageCoverageUnavailable", []) }
+    public static func `settingsUsageRecordsOf`(`count`: String, `records`: String) -> String { PhoneWords.format("settingsUsageRecordsOf", [`count`, `records`]) }
+    public static func `settingsUsagePricedRecordsOf`(`count`: String, `priced`: String) -> String { PhoneWords.format("settingsUsagePricedRecordsOf", [`count`, `priced`]) }
+    public static func `settingsUsageReadoutTokens`() -> String { PhoneWords.format("settingsUsageReadoutTokens", []) }
+    public static func `settingsUsageReadoutTokensComplete`() -> String { PhoneWords.format("settingsUsageReadoutTokensComplete", []) }
+    public static func `settingsUsageReadoutTokensPartial`() -> String { PhoneWords.format("settingsUsageReadoutTokensPartial", []) }
+    public static func `settingsUsageReadoutKnownEstimate`() -> String { PhoneWords.format("settingsUsageReadoutKnownEstimate", []) }
+    public static func `settingsUsageReadoutEstimate`() -> String { PhoneWords.format("settingsUsageReadoutEstimate", []) }
+    public static func `settingsUsageReadoutFinished`() -> String { PhoneWords.format("settingsUsageReadoutFinished", []) }
+    public static func `settingsUsageReadoutFinishedNote`() -> String { PhoneWords.format("settingsUsageReadoutFinishedNote", []) }
+    public static func `settingsUsageReadoutRecordedModels`() -> String { PhoneWords.format("settingsUsageReadoutRecordedModels", []) }
+    public static func `settingsUsageReadoutModelsUsed`() -> String { PhoneWords.format("settingsUsageReadoutModelsUsed", []) }
+    public static func `settingsUsageReadoutModelsNote`() -> String { PhoneWords.format("settingsUsageReadoutModelsNote", []) }
+    public static func `settingsUsageModelNotRecorded`() -> String { PhoneWords.format("settingsUsageModelNotRecorded", []) }
+    public static func `settingsUsageProviderNotRecorded`() -> String { PhoneWords.format("settingsUsageProviderNotRecorded", []) }
+    public static func `settingsUsageModelLineRecorded`(`provider`: String) -> String { PhoneWords.format("settingsUsageModelLineRecorded", [`provider`]) }
+    public static func `settingsUsageAttributionServed`() -> String { PhoneWords.format("settingsUsageAttributionServed", []) }
+    public static func `settingsUsageAttributionRequested`() -> String { PhoneWords.format("settingsUsageAttributionRequested", []) }
+    public static func `settingsUsageAttributionRecorded`() -> String { PhoneWords.format("settingsUsageAttributionRecorded", []) }
+    public static func `settingsUsagePriceListed`() -> String { PhoneWords.format("settingsUsagePriceListed", []) }
+    public static func `settingsUsagePriceClaude`() -> String { PhoneWords.format("settingsUsagePriceClaude", []) }
+    public static func `settingsUsagePriceReported`() -> String { PhoneWords.format("settingsUsagePriceReported", []) }
+    public static func `settingsUsagePriceUnrecorded`() -> String { PhoneWords.format("settingsUsagePriceUnrecorded", []) }
+    public static func `settingsUsageProvenanceCache`() -> String { PhoneWords.format("settingsUsageProvenanceCache", []) }
+    public static func `settingsUsageProvenanceUnpriced`() -> String { PhoneWords.format("settingsUsageProvenanceUnpriced", []) }
+    public static func `settingsUsagePricedSentence`(`priced`: String, `records`: String) -> String { PhoneWords.format("settingsUsagePricedSentence", [`priced`, `records`]) }
+    public static func `settingsUsageNoSplit`() -> String { PhoneWords.format("settingsUsageNoSplit", []) }
+    public static func `settingsUsageSplitFor`(`priced`: String, `split`: String) -> String { PhoneWords.format("settingsUsageSplitFor", [`priced`, `split`]) }
+    public static func `settingsUsageKindPlan`() -> String { PhoneWords.format("settingsUsageKindPlan", []) }
+    public static func `settingsUsageKindResearch`() -> String { PhoneWords.format("settingsUsageKindResearch", []) }
+    public static func `settingsUsageKindRetrieval`() -> String { PhoneWords.format("settingsUsageKindRetrieval", []) }
+    public static func `settingsUsageKindReproduce`() -> String { PhoneWords.format("settingsUsageKindReproduce", []) }
+    public static func `settingsUsageKindImplement`() -> String { PhoneWords.format("settingsUsageKindImplement", []) }
+    public static func `settingsUsageKindFix`() -> String { PhoneWords.format("settingsUsageKindFix", []) }
+    public static func `settingsUsageKindChore`() -> String { PhoneWords.format("settingsUsageKindChore", []) }
+    public static func `settingsUsageKindReview`() -> String { PhoneWords.format("settingsUsageKindReview", []) }
+    public static func `settingsUsageKindOperation`() -> String { PhoneWords.format("settingsUsageKindOperation", []) }
+    public static func `settingsUsageKindOther`() -> String { PhoneWords.format("settingsUsageKindOther", []) }
+    public static func `settingsUsageProjectUnavailable`() -> String { PhoneWords.format("settingsUsageProjectUnavailable", []) }
+    public static func `settingsUsageFigureInput`() -> String { PhoneWords.format("settingsUsageFigureInput", []) }
+    public static func `settingsUsageFigureOutput`() -> String { PhoneWords.format("settingsUsageFigureOutput", []) }
+    public static func `settingsUsageFigureCacheRead`() -> String { PhoneWords.format("settingsUsageFigureCacheRead", []) }
+    public static func `settingsUsageFigureCacheWrite`() -> String { PhoneWords.format("settingsUsageFigureCacheWrite", []) }
+    public static func `settingsUsageFigureTotal`() -> String { PhoneWords.format("settingsUsageFigureTotal", []) }
+    public static func `settingsUsageTaskNoTokens`() -> String { PhoneWords.format("settingsUsageTaskNoTokens", []) }
+    public static func `settingsUsageTaskTokensPartial`() -> String { PhoneWords.format("settingsUsageTaskTokensPartial", []) }
+    public static func `settingsUsageTaskUnpriced`() -> String { PhoneWords.format("settingsUsageTaskUnpriced", []) }
+    public static func `settingsUsageTaskLeavesOut`() -> String { PhoneWords.format("settingsUsageTaskLeavesOut", []) }
+    public static func `settingsUsageTaskLeavesOutNoSplit`() -> String { PhoneWords.format("settingsUsageTaskLeavesOutNoSplit", []) }
+    public static func `settingsUsageTaskFewerRecords`() -> String { PhoneWords.format("settingsUsageTaskFewerRecords", []) }
+    public static func `settingsUsageTaskLeavesOutFewerRecords`() -> String { PhoneWords.format("settingsUsageTaskLeavesOutFewerRecords", []) }
+    public static func `settingsUsageCreated`(`when`: String) -> String { PhoneWords.format("settingsUsageCreated", [`when`]) }
+    public static func `settingsUsageTaskCountOne`() -> String { PhoneWords.format("settingsUsageTaskCountOne", []) }
+    public static func `settingsUsageTaskCountAll`(`count`: String) -> String { PhoneWords.format("settingsUsageTaskCountAll", [`count`]) }
+    public static func `settingsUsageTaskCountSome`(`count`: String, `shown`: String) -> String { PhoneWords.format("settingsUsageTaskCountSome", [`count`, `shown`]) }
+    public static func `settingsUsageMilestoneNone`() -> String { PhoneWords.format("settingsUsageMilestoneNone", []) }
+    public static func `settingsUsageMilestoneFinishedOne`() -> String { PhoneWords.format("settingsUsageMilestoneFinishedOne", []) }
+    public static func `settingsUsageMilestoneFinished`(`count`: String) -> String { PhoneWords.format("settingsUsageMilestoneFinished", [`count`]) }
+    public static func `settingsUsageMilestoneReached`(`count`: String) -> String { PhoneWords.format("settingsUsageMilestoneReached", [`count`]) }
+    public static func `settingsUsageMilestoneFirst`() -> String { PhoneWords.format("settingsUsageMilestoneFirst", []) }
+    public static func `settingsUsageMilestoneNext`(`count`: String) -> String { PhoneWords.format("settingsUsageMilestoneNext", [`count`]) }
+    public static func `settingsUsageMilestoneTitle`(`finished`: String, `where`: String) -> String { PhoneWords.format("settingsUsageMilestoneTitle", [`finished`, `where`]) }
+    public static func `settingsUsageMilestoneNote`() -> String { PhoneWords.format("settingsUsageMilestoneNote", []) }
+    public static func `settingsUsageTitle`() -> String { PhoneWords.format("settingsUsageTitle", []) }
+    public static func `settingsUsageLead`() -> String { PhoneWords.format("settingsUsageLead", []) }
+    public static func `settingsUsageShowAs`() -> String { PhoneWords.format("settingsUsageShowAs", []) }
+    public static func `settingsUsagePeriodLabel`() -> String { PhoneWords.format("settingsUsagePeriodLabel", []) }
+    public static func `settingsUsageWorkLabel`() -> String { PhoneWords.format("settingsUsageWorkLabel", []) }
+    public static func `settingsUsageReadFailed`() -> String { PhoneWords.format("settingsUsageReadFailed", []) }
+    public static func `settingsUsageReading`() -> String { PhoneWords.format("settingsUsageReading", []) }
+    public static func `settingsUsageEmptyTitle`() -> String { PhoneWords.format("settingsUsageEmptyTitle", []) }
+    public static func `settingsUsageEmptyLead`() -> String { PhoneWords.format("settingsUsageEmptyLead", []) }
+    public static func `settingsUsageEmptyNote`() -> String { PhoneWords.format("settingsUsageEmptyNote", []) }
+    public static func `settingsUsageWhereLegend`() -> String { PhoneWords.format("settingsUsageWhereLegend", []) }
+    public static func `settingsUsageDailyHeading`() -> String { PhoneWords.format("settingsUsageDailyHeading", []) }
+    public static func `settingsUsageDailyPartial`(`unit`: String) -> String { PhoneWords.format("settingsUsageDailyPartial", [`unit`]) }
+    public static func `settingsUsageDailyChartTokens`() -> String { PhoneWords.format("settingsUsageDailyChartTokens", []) }
+    public static func `settingsUsageDailyChartUsd`() -> String { PhoneWords.format("settingsUsageDailyChartUsd", []) }
+    public static func `settingsUsageToday`() -> String { PhoneWords.format("settingsUsageToday", []) }
+    public static func `settingsUsageDayValue`(`date`: String, `value`: String) -> String { PhoneWords.format("settingsUsageDayValue", [`date`, `value`]) }
+    public static func `settingsUsageBarsPriced`() -> String { PhoneWords.format("settingsUsageBarsPriced", []) }
+    public static func `settingsUsageOpenModel`() -> String { PhoneWords.format("settingsUsageOpenModel", []) }
+    public static func `settingsUsageDailyValues`() -> String { PhoneWords.format("settingsUsageDailyValues", []) }
+    public static func `settingsUsageLocalDate`() -> String { PhoneWords.format("settingsUsageLocalDate", []) }
+    public static func `settingsUsageModelsUsd`() -> String { PhoneWords.format("settingsUsageModelsUsd", []) }
+    public static func `settingsUsageModelsTokens`() -> String { PhoneWords.format("settingsUsageModelsTokens", []) }
+    public static func `settingsUsageWhereHeading`() -> String { PhoneWords.format("settingsUsageWhereHeading", []) }
+    public static func `settingsUsageWhereFirstmate`() -> String { PhoneWords.format("settingsUsageWhereFirstmate", []) }
+    public static func `settingsUsageWhereFirstmateNote`() -> String { PhoneWords.format("settingsUsageWhereFirstmateNote", []) }
+    public static func `settingsUsageSubtotal`() -> String { PhoneWords.format("settingsUsageSubtotal", []) }
+    public static func `settingsUsageWhereOther`() -> String { PhoneWords.format("settingsUsageWhereOther", []) }
+    public static func `settingsUsageWhereOtherNote`() -> String { PhoneWords.format("settingsUsageWhereOtherNote", []) }
+    public static func `settingsUsageModelDetails`(`model`: String) -> String { PhoneWords.format("settingsUsageModelDetails", [`model`]) }
+    public static func `settingsUsageModelBreakdownTokens`(`line`: String) -> String { PhoneWords.format("settingsUsageModelBreakdownTokens", [`line`]) }
+    public static func `settingsUsageModelBreakdownUsd`(`line`: String) -> String { PhoneWords.format("settingsUsageModelBreakdownUsd", [`line`]) }
+    public static func `settingsUsageCloseDetails`() -> String { PhoneWords.format("settingsUsageCloseDetails", []) }
+    public static func `settingsUsageItsWork`() -> String { PhoneWords.format("settingsUsageItsWork", []) }
+    public static func `settingsUsageRecentHeading`() -> String { PhoneWords.format("settingsUsageRecentHeading", []) }
+    public static func `settingsUsageRecentLead`() -> String { PhoneWords.format("settingsUsageRecentLead", []) }
+    public static func `settingsUsageRecentTokensLegend`() -> String { PhoneWords.format("settingsUsageRecentTokensLegend", []) }
+    public static func `settingsUsageRecentUsdLegend`() -> String { PhoneWords.format("settingsUsageRecentUsdLegend", []) }
+    public static func `settingsUsageRecentFailed`() -> String { PhoneWords.format("settingsUsageRecentFailed", []) }
+    public static func `settingsUsageRecentReading`() -> String { PhoneWords.format("settingsUsageRecentReading", []) }
+    public static func `settingsUsageRecentEmpty`() -> String { PhoneWords.format("settingsUsageRecentEmpty", []) }
+    public static func `settingsUsageTaskColumn`() -> String { PhoneWords.format("settingsUsageTaskColumn", []) }
+    public static func `settingsUsageRecentList`() -> String { PhoneWords.format("settingsUsageRecentList", []) }
+    public static func `settingsUsageMoreFailed`() -> String { PhoneWords.format("settingsUsageMoreFailed", []) }
+    public static func `settingsUsageSeeMore`() -> String { PhoneWords.format("settingsUsageSeeMore", []) }
+    public static func `settingsUsageTryAgain`() -> String { PhoneWords.format("settingsUsageTryAgain", []) }
+    public static func `settingsAutomationPickEvent`() -> String { PhoneWords.format("settingsAutomationPickEvent", []) }
+    public static func `settingsAutomationRepeatsAtMost`(`minutes`: String) -> String { PhoneWords.format("settingsAutomationRepeatsAtMost", [`minutes`]) }
+    public static func `settingsAutomationPickTime`() -> String { PhoneWords.format("settingsAutomationPickTime", []) }
+    public static func `settingsAutomationPickDays`() -> String { PhoneWords.format("settingsAutomationPickDays", []) }
+    public static func `settingsAutomationPickDateTime`() -> String { PhoneWords.format("settingsAutomationPickDateTime", []) }
+    public static func `settingsAutomationWritePrompt`() -> String { PhoneWords.format("settingsAutomationWritePrompt", []) }
+    public static func `settingsAutomationRunEvents`(`count`: Int, `sent`: String) -> String { PhoneWords.format("settingsAutomationRunEvents", [`count`, `sent`]) }
+    public static func `settingsAutomationRunCatchingUpMissed`(`count`: Int, `planned`: String, `sent`: String) -> String { PhoneWords.format("settingsAutomationRunCatchingUpMissed", [`count`, `planned`, `sent`]) }
+    public static func `settingsAutomationRunCatchingUp`(`planned`: String, `sent`: String) -> String { PhoneWords.format("settingsAutomationRunCatchingUp", [`planned`, `sent`]) }
+    public static func `settingsAutomationRunPlanned`(`planned`: String, `sent`: String) -> String { PhoneWords.format("settingsAutomationRunPlanned", [`planned`, `sent`]) }
+    public static func `settingsAutomationDeliveryWaiting`() -> String { PhoneWords.format("settingsAutomationDeliveryWaiting", []) }
+    public static func `settingsAutomationDeliveryRetrying`() -> String { PhoneWords.format("settingsAutomationDeliveryRetrying", []) }
+    public static func `settingsAutomationDeliveryHandled`() -> String { PhoneWords.format("settingsAutomationDeliveryHandled", []) }
+    public static func `settingsAutomationDeliveryCancelled`() -> String { PhoneWords.format("settingsAutomationDeliveryCancelled", []) }
+    public static func `settingsAutomationDeliverySent`() -> String { PhoneWords.format("settingsAutomationDeliverySent", []) }
+    public static func `settingsAutomationNoteWaiting`() -> String { PhoneWords.format("settingsAutomationNoteWaiting", []) }
+    public static func `settingsAutomationNoteRetrying`() -> String { PhoneWords.format("settingsAutomationNoteRetrying", []) }
+    public static func `settingsAutomationNoteCancelled`() -> String { PhoneWords.format("settingsAutomationNoteCancelled", []) }
+    public static func `settingsAutomationNoteHandledAt`(`time`: String) -> String { PhoneWords.format("settingsAutomationNoteHandledAt", [`time`]) }
+    public static func `settingsAutomationNoteHandledOn`(`date`: String) -> String { PhoneWords.format("settingsAutomationNoteHandledOn", [`date`]) }
+    public static func `settingsAutomationCancelEdited`() -> String { PhoneWords.format("settingsAutomationCancelEdited", []) }
+    public static func `settingsAutomationCancelPaused`() -> String { PhoneWords.format("settingsAutomationCancelPaused", []) }
+    public static func `settingsAutomationCancelCleared`() -> String { PhoneWords.format("settingsAutomationCancelCleared", []) }
+    public static func `settingsAutomationEventPreviewNoLook`(`when`: String) -> String { PhoneWords.format("settingsAutomationEventPreviewNoLook", [`when`]) }
+    public static func `settingsAutomationEventPreview`(`count`: Int, `when`: String) -> String { PhoneWords.format("settingsAutomationEventPreview", [`count`, `when`]) }
+    public static func `settingsAutomationRunsEachTime`() -> String { PhoneWords.format("settingsAutomationRunsEachTime", []) }
+    public static func `settingsAutomationRunsEachTimeLooks`(`count`: Int) -> String { PhoneWords.format("settingsAutomationRunsEachTimeLooks", [`count`]) }
+    public static func `settingsAutomationMissedEventThere`(`where`: String) -> String { PhoneWords.format("settingsAutomationMissedEventThere", [`where`]) }
+    public static func `settingsAutomationMissedEvent`() -> String { PhoneWords.format("settingsAutomationMissedEvent", []) }
+    public static func `settingsAutomationMissedOnceThere`(`where`: String) -> String { PhoneWords.format("settingsAutomationMissedOnceThere", [`where`]) }
+    public static func `settingsAutomationMissedOnce`() -> String { PhoneWords.format("settingsAutomationMissedOnce", []) }
+    public static func `settingsAutomationMissedRepeatsThere`(`where`: String) -> String { PhoneWords.format("settingsAutomationMissedRepeatsThere", [`where`]) }
+    public static func `settingsAutomationMissedRepeats`() -> String { PhoneWords.format("settingsAutomationMissedRepeats", []) }
+    public static func `settingsAutomationMon`() -> String { PhoneWords.format("settingsAutomationMon", []) }
+    public static func `settingsAutomationMonday`() -> String { PhoneWords.format("settingsAutomationMonday", []) }
+    public static func `settingsAutomationTue`() -> String { PhoneWords.format("settingsAutomationTue", []) }
+    public static func `settingsAutomationTuesday`() -> String { PhoneWords.format("settingsAutomationTuesday", []) }
+    public static func `settingsAutomationWed`() -> String { PhoneWords.format("settingsAutomationWed", []) }
+    public static func `settingsAutomationWednesday`() -> String { PhoneWords.format("settingsAutomationWednesday", []) }
+    public static func `settingsAutomationThu`() -> String { PhoneWords.format("settingsAutomationThu", []) }
+    public static func `settingsAutomationThursday`() -> String { PhoneWords.format("settingsAutomationThursday", []) }
+    public static func `settingsAutomationFri`() -> String { PhoneWords.format("settingsAutomationFri", []) }
+    public static func `settingsAutomationFriday`() -> String { PhoneWords.format("settingsAutomationFriday", []) }
+    public static func `settingsAutomationSat`() -> String { PhoneWords.format("settingsAutomationSat", []) }
+    public static func `settingsAutomationSaturday`() -> String { PhoneWords.format("settingsAutomationSaturday", []) }
+    public static func `settingsAutomationSun`() -> String { PhoneWords.format("settingsAutomationSun", []) }
+    public static func `settingsAutomationSunday`() -> String { PhoneWords.format("settingsAutomationSunday", []) }
+    public static func `settingsAutomationZoneNoteThere`(`where`: String) -> String { PhoneWords.format("settingsAutomationZoneNoteThere", [`where`]) }
+    public static func `settingsAutomationZoneNote`() -> String { PhoneWords.format("settingsAutomationZoneNote", []) }
+    public static func `settingsAutomationLocalTimeNoteThere`(`where`: String) -> String { PhoneWords.format("settingsAutomationLocalTimeNoteThere", [`where`]) }
+    public static func `settingsAutomationLocalTimeNote`() -> String { PhoneWords.format("settingsAutomationLocalTimeNote", []) }
+    public static func `settingsAutomationClockThere`(`where`: String) -> String { PhoneWords.format("settingsAutomationClockThere", [`where`]) }
+    public static func `settingsAutomationClockHere`() -> String { PhoneWords.format("settingsAutomationClockHere", []) }
+    public static func `settingsAutomationReviewSends`() -> String { PhoneWords.format("settingsAutomationReviewSends", []) }
+    public static func `settingsAutomationReviewSendsEvents`() -> String { PhoneWords.format("settingsAutomationReviewSendsEvents", []) }
+    public static func `settingsAutomationEventsPreview`() -> String { PhoneWords.format("settingsAutomationEventsPreview", []) }
+    public static func `settingsAutomationSubmittedNote`() -> String { PhoneWords.format("settingsAutomationSubmittedNote", []) }
+    public static func `settingsAutomationSubmittedNoteEvents`() -> String { PhoneWords.format("settingsAutomationSubmittedNoteEvents", []) }
+    public static func `settingsAutomationDraftNote`() -> String { PhoneWords.format("settingsAutomationDraftNote", []) }
+    public static func `settingsAutomationStoppedWhen`() -> String { PhoneWords.format("settingsAutomationStoppedWhen", []) }
+    public static func `settingsAutomationStoppedNote`() -> String { PhoneWords.format("settingsAutomationStoppedNote", []) }
+    public static func `settingsAutomationDetailNote`() -> String { PhoneWords.format("settingsAutomationDetailNote", []) }
+    public static func `settingsAutomationEventIn`(`event`: String, `integration`: String) -> String { PhoneWords.format("settingsAutomationEventIn", [`event`, `integration`]) }
+    public static func `settingsAutomationTitle`() -> String { PhoneWords.format("settingsAutomationTitle", []) }
+    public static func `settingsAutomationDescription`() -> String { PhoneWords.format("settingsAutomationDescription", []) }
+    public static func `settingsAutomationPauseAll`() -> String { PhoneWords.format("settingsAutomationPauseAll", []) }
+    public static func `settingsAutomationSearch`() -> String { PhoneWords.format("settingsAutomationSearch", []) }
+    public static func `settingsAutomationNew`() -> String { PhoneWords.format("settingsAutomationNew", []) }
+    public static func `settingsAutomationList`() -> String { PhoneWords.format("settingsAutomationList", []) }
+    public static func `settingsAutomationEmpty`() -> String { PhoneWords.format("settingsAutomationEmpty", []) }
+    public static func `settingsAutomationNoMatch`() -> String { PhoneWords.format("settingsAutomationNoMatch", []) }
+    public static func `settingsAutomationPickOne`() -> String { PhoneWords.format("settingsAutomationPickOne", []) }
+    public static func `settingsAutomationSetUpByFirstMate`() -> String { PhoneWords.format("settingsAutomationSetUpByFirstMate", []) }
+    public static func `settingsAutomationName`() -> String { PhoneWords.format("settingsAutomationName", []) }
+    public static func `settingsAutomationNamePlaceholder`() -> String { PhoneWords.format("settingsAutomationNamePlaceholder", []) }
+    public static func `settingsAutomationWhen`() -> String { PhoneWords.format("settingsAutomationWhen", []) }
+    public static func `settingsAutomationKindEvery`() -> String { PhoneWords.format("settingsAutomationKindEvery", []) }
+    public static func `settingsAutomationKindDaily`() -> String { PhoneWords.format("settingsAutomationKindDaily", []) }
+    public static func `settingsAutomationKindWeekly`() -> String { PhoneWords.format("settingsAutomationKindWeekly", []) }
+    public static func `settingsAutomationKindOnce`() -> String { PhoneWords.format("settingsAutomationKindOnce", []) }
+    public static func `settingsAutomationKindEvent`() -> String { PhoneWords.format("settingsAutomationKindEvent", []) }
+    public static func `settingsAutomationWhatHappens`() -> String { PhoneWords.format("settingsAutomationWhatHappens", []) }
+    public static func `settingsAutomationEventNotConnected`() -> String { PhoneWords.format("settingsAutomationEventNotConnected", []) }
+    public static func `settingsAutomationNoEvents`() -> String { PhoneWords.format("settingsAutomationNoEvents", []) }
+    public static func `settingsAutomationMinutesBetween`() -> String { PhoneWords.format("settingsAutomationMinutesBetween", []) }
+    public static func `settingsAutomationMinutes`() -> String { PhoneWords.format("settingsAutomationMinutes", []) }
+    public static func `settingsAutomationTimeOfDay`() -> String { PhoneWords.format("settingsAutomationTimeOfDay", []) }
+    public static func `settingsAutomationDateAndTime`() -> String { PhoneWords.format("settingsAutomationDateAndTime", []) }
+    public static func `settingsAutomationTimeZone`() -> String { PhoneWords.format("settingsAutomationTimeZone", []) }
+    public static func `settingsAutomationProject`() -> String { PhoneWords.format("settingsAutomationProject", []) }
+    public static func `settingsAutomationNoProject`() -> String { PhoneWords.format("settingsAutomationNoProject", []) }
+    public static func `settingsAutomationRemovedProject`() -> String { PhoneWords.format("settingsAutomationRemovedProject", []) }
+    public static func `settingsAutomationPrompt`() -> String { PhoneWords.format("settingsAutomationPrompt", []) }
+    public static func `settingsAutomationPromptPlaceholder`() -> String { PhoneWords.format("settingsAutomationPromptPlaceholder", []) }
+    public static func `settingsAutomationInsertDetail`() -> String { PhoneWords.format("settingsAutomationInsertDetail", []) }
+    public static func `settingsAutomationInsertDetailChoice`() -> String { PhoneWords.format("settingsAutomationInsertDetailChoice", []) }
+    public static func `settingsAutomationPassed`() -> String { PhoneWords.format("settingsAutomationPassed", []) }
+    public static func `settingsAutomationPreviewNext`(`dates`: String) -> String { PhoneWords.format("settingsAutomationPreviewNext", [`dates`]) }
+    public static func `settingsAutomationEnable`() -> String { PhoneWords.format("settingsAutomationEnable", []) }
+    public static func `settingsAutomationSaveDraft`() -> String { PhoneWords.format("settingsAutomationSaveDraft", []) }
+    public static func `settingsAutomationSave`() -> String { PhoneWords.format("settingsAutomationSave", []) }
+    public static func `settingsAutomationPreview`() -> String { PhoneWords.format("settingsAutomationPreview", []) }
+    public static func `settingsAutomationPause`() -> String { PhoneWords.format("settingsAutomationPause", []) }
+    public static func `settingsAutomationResume`() -> String { PhoneWords.format("settingsAutomationResume", []) }
+    public static func `settingsAutomationDeleteForGood`() -> String { PhoneWords.format("settingsAutomationDeleteForGood", []) }
+    public static func `settingsAutomationDelete`() -> String { PhoneWords.format("settingsAutomationDelete", []) }
+    public static func `settingsAutomationNotSpecified`() -> String { PhoneWords.format("settingsAutomationNotSpecified", []) }
+    public static func `settingsAutomationRuns`() -> String { PhoneWords.format("settingsAutomationRuns", []) }
+    public static func `settingsAutomationNextRuns`() -> String { PhoneWords.format("settingsAutomationNextRuns", []) }
+    public static func `settingsAutomationFirstMateGets`() -> String { PhoneWords.format("settingsAutomationFirstMateGets", []) }
+    public static func `settingsAutomationWhatItSends`() -> String { PhoneWords.format("settingsAutomationWhatItSends", []) }
+    public static func `settingsAutomationMissedTime`() -> String { PhoneWords.format("settingsAutomationMissedTime", []) }
+    public static func `settingsAutomationTurnOnLabel`() -> String { PhoneWords.format("settingsAutomationTurnOnLabel", []) }
+    public static func `settingsAutomationTurnOnQuestion`() -> String { PhoneWords.format("settingsAutomationTurnOnQuestion", []) }
+    public static func `settingsAutomationTurnOn`() -> String { PhoneWords.format("settingsAutomationTurnOn", []) }
+    public static func `settingsAutomationBack`() -> String { PhoneWords.format("settingsAutomationBack", []) }
+    public static func `settingsAutomationZoneThisComputer`(`zone`: String) -> String { PhoneWords.format("settingsAutomationZoneThisComputer", [`zone`]) }
+    public static func `settingsAutomationHistory`() -> String { PhoneWords.format("settingsAutomationHistory", []) }
+    public static func `settingsAutomationNothingRun`() -> String { PhoneWords.format("settingsAutomationNothingRun", []) }
+    public static func `settingsAutomationVersion`(`version`: String) -> String { PhoneWords.format("settingsAutomationVersion", [`version`]) }
+    public static func `settingsAutomationLedTo`() -> String { PhoneWords.format("settingsAutomationLedTo", []) }
+    public static func `settingsAutomationCard`(`title`: String) -> String { PhoneWords.format("settingsAutomationCard", [`title`]) }
+    public static func `settingsAutomationPastCard`(`title`: String) -> String { PhoneWords.format("settingsAutomationPastCard", [`title`]) }
+    public static func `settingsAutomationPromptAsSent`() -> String { PhoneWords.format("settingsAutomationPromptAsSent", []) }
+    public static func `settingsModelsStartingLevelsSummary`() -> String { PhoneWords.format("settingsModelsStartingLevelsSummary", []) }
+    public static func `settingsModelsNotInUse`() -> String { PhoneWords.format("settingsModelsNotInUse", []) }
+    public static func `settingsModelsHeading`() -> String { PhoneWords.format("settingsModelsHeading", []) }
+    public static func `settingsModelsSummaryNotInUse`(`count`: String) -> String { PhoneWords.format("settingsModelsSummaryNotInUse", [`count`]) }
+    public static func `settingsModelsSummaryAlwaysUse`(`count`: String) -> String { PhoneWords.format("settingsModelsSummaryAlwaysUse", [`count`]) }
+    public static func `settingsModelsSummaryNew`(`count`: String) -> String { PhoneWords.format("settingsModelsSummaryNew", [`count`]) }
+    public static func `settingsModelsSummaryDecisions`(`model`: String) -> String { PhoneWords.format("settingsModelsSummaryDecisions", [`model`]) }
+    public static func `settingsModelsSummaryDecisionsAuto`() -> String { PhoneWords.format("settingsModelsSummaryDecisionsAuto", []) }
+    public static func `settingsModelsSummaryDecisionsUnanswered`() -> String { PhoneWords.format("settingsModelsSummaryDecisionsUnanswered", []) }
+    public static func `settingsLevelsRemoveFromLevelOnly`(`level`: String) -> String { PhoneWords.format("settingsLevelsRemoveFromLevelOnly", [`level`]) }
+    public static func `settingsLevelsDropRemove`(`levels`: String) -> String { PhoneWords.format("settingsLevelsDropRemove", [`levels`]) }
+    public static func `settingsLevelsDropAlready`(`level`: String) -> String { PhoneWords.format("settingsLevelsDropAlready", [`level`]) }
+    public static func `settingsLevelsDropUse`(`level`: String) -> String { PhoneWords.format("settingsLevelsDropUse", [`level`]) }
+    public static func `settingsLevelsDropAlso`(`level`: String) -> String { PhoneWords.format("settingsLevelsDropAlso", [`level`]) }
+    public static func `settingsLevelsDropMove`(`level`: String) -> String { PhoneWords.format("settingsLevelsDropMove", [`level`]) }
+    public static func `settingsLevelsAlwaysUseBanner`(`first`: String) -> String { PhoneWords.format("settingsLevelsAlwaysUseBanner", [`first`]) }
+    public static func `settingsLevelsAlwaysUseBannerTwo`(`first`: String, `second`: String) -> String { PhoneWords.format("settingsLevelsAlwaysUseBannerTwo", [`first`, `second`]) }
+    public static func `settingsLevelsAlwaysUseSetFor`(`model`: String) -> String { PhoneWords.format("settingsLevelsAlwaysUseSetFor", [`model`]) }
+    public static func `settingsLevelsRemoveAllLine`(`levels`: String) -> String { PhoneWords.format("settingsLevelsRemoveAllLine", [`levels`]) }
+    public static func `settingsLevelsRemoveAllNone`() -> String { PhoneWords.format("settingsLevelsRemoveAllNone", []) }
+    public static func `settingsLevelsNewUsedAt`(`levels`: String) -> String { PhoneWords.format("settingsLevelsNewUsedAt", [`levels`]) }
+    public static func `settingsLevelsNewNotInUse`() -> String { PhoneWords.format("settingsLevelsNewNotInUse", []) }
+    public static func `settingsLevelsUsedAt`(`levels`: String) -> String { PhoneWords.format("settingsLevelsUsedAt", [`levels`]) }
+    public static func `settingsLevelsUsedNone`() -> String { PhoneWords.format("settingsLevelsUsedNone", []) }
+    public static func `settingsLevelsHintPremium`() -> String { PhoneWords.format("settingsLevelsHintPremium", []) }
+    public static func `settingsLevelsHintHigh`() -> String { PhoneWords.format("settingsLevelsHintHigh", []) }
+    public static func `settingsLevelsHintMedium`() -> String { PhoneWords.format("settingsLevelsHintMedium", []) }
+    public static func `settingsLevelsHintLow`() -> String { PhoneWords.format("settingsLevelsHintLow", []) }
+    public static func `settingsLevelsEmptyPremium`() -> String { PhoneWords.format("settingsLevelsEmptyPremium", []) }
+    public static func `settingsLevelsEmptyRunsOnMedium`() -> String { PhoneWords.format("settingsLevelsEmptyRunsOnMedium", []) }
+    public static func `settingsLevelsEmptyRunsOnHigh`() -> String { PhoneWords.format("settingsLevelsEmptyRunsOnHigh", []) }
+    public static func `settingsLevelTasks`(`levels`: String) -> String { PhoneWords.format("settingsLevelTasks", [`levels`]) }
+    public static func `settingsLevelsEmptySimple`() -> String { PhoneWords.format("settingsLevelsEmptySimple", []) }
+    public static func `settingsLevelsNew`() -> String { PhoneWords.format("settingsLevelsNew", []) }
+    public static func `settingsLevelsPillNew`(`provider`: String) -> String { PhoneWords.format("settingsLevelsPillNew", [`provider`]) }
+    public static func `settingsLevelsPillRemove`(`level`: String, `model`: String) -> String { PhoneWords.format("settingsLevelsPillRemove", [`level`, `model`]) }
+    public static func `settingsLevelsPickerAdd`(`level`: String, `model`: String) -> String { PhoneWords.format("settingsLevelsPickerAdd", [`level`, `model`]) }
+    public static func `settingsLevelsPickerIn`(`levels`: String) -> String { PhoneWords.format("settingsLevelsPickerIn", [`levels`]) }
+    public static func `settingsLevelsDefaultReasoning`(`reasoning`: String) -> String { PhoneWords.format("settingsLevelsDefaultReasoning", [`reasoning`]) }
+    public static func `settingsLevelsAddModel`() -> String { PhoneWords.format("settingsLevelsAddModel", []) }
+    public static func `settingsLevelsPickerLabel`(`level`: String) -> String { PhoneWords.format("settingsLevelsPickerLabel", [`level`]) }
+    public static func `settingsLevelsPickerFindLabel`(`level`: String) -> String { PhoneWords.format("settingsLevelsPickerFindLabel", [`level`]) }
+    public static func `settingsLevelsPickerFind`() -> String { PhoneWords.format("settingsLevelsPickerFind", []) }
+    public static func `settingsLevelsPickerMore`() -> String { PhoneWords.format("settingsLevelsPickerMore", []) }
+    public static func `settingsLevelsPickerNone`() -> String { PhoneWords.format("settingsLevelsPickerNone", []) }
+    public static func `settingsLevelsPanelLabel`(`model`: String) -> String { PhoneWords.format("settingsLevelsPanelLabel", [`model`]) }
+    public static func `settingsLevelsPanelClose`(`model`: String) -> String { PhoneWords.format("settingsLevelsPanelClose", [`model`]) }
+    public static func `settingsLevelsPanelLevels`() -> String { PhoneWords.format("settingsLevelsPanelLevels", []) }
+    public static func `settingsLevelsPanelUseAt`(`level`: String, `model`: String) -> String { PhoneWords.format("settingsLevelsPanelUseAt", [`level`, `model`]) }
+    public static func `settingsLevelsAlwaysUse`() -> String { PhoneWords.format("settingsLevelsAlwaysUse", []) }
+    public static func `settingsLevelsAlwaysUseNote`() -> String { PhoneWords.format("settingsLevelsAlwaysUseNote", []) }
+    public static func `settingsLevelsAlwaysUseLabel`(`model`: String) -> String { PhoneWords.format("settingsLevelsAlwaysUseLabel", [`model`]) }
+    public static func `settingsLevelsRemoveAll`() -> String { PhoneWords.format("settingsLevelsRemoveAll", []) }
+    public static func `settingsLevelsRemoveAllLabel`(`model`: String) -> String { PhoneWords.format("settingsLevelsRemoveAllLabel", [`model`]) }
+    public static func `settingsLevelsRemove`() -> String { PhoneWords.format("settingsLevelsRemove", []) }
+    public static func `settingsLevelsTurnOffLabel`(`model`: String) -> String { PhoneWords.format("settingsLevelsTurnOffLabel", [`model`]) }
+    public static func `settingsLevelsTurnOff`() -> String { PhoneWords.format("settingsLevelsTurnOff", []) }
+    public static func `settingsLevelsBoardHint`(`key`: String) -> String { PhoneWords.format("settingsLevelsBoardHint", [`key`]) }
+    public static func `settingsLevelsNotInUse`() -> String { PhoneWords.format("settingsLevelsNotInUse", []) }
+    public static func `settingsLevelsNotInUseHint`() -> String { PhoneWords.format("settingsLevelsNotInUseHint", []) }
+    public static func `settingsLevelsAllPlacedShown`() -> String { PhoneWords.format("settingsLevelsAllPlacedShown", []) }
+    public static func `settingsLevelsAllPlaced`() -> String { PhoneWords.format("settingsLevelsAllPlaced", []) }
+    public static func `settingsDecisionsUseOpenRouter`() -> String { PhoneWords.format("settingsDecisionsUseOpenRouter", []) }
+    public static func `settingsDecisionsDisclosureShared`() -> String { PhoneWords.format("settingsDecisionsDisclosureShared", []) }
+    public static func `settingsDecisionsDisclosureChoice`() -> String { PhoneWords.format("settingsDecisionsDisclosureChoice", []) }
+    public static func `settingsDecisionsDisclosureCost`() -> String { PhoneWords.format("settingsDecisionsDisclosureCost", []) }
+    public static func `settingsDecisionsUses`() -> String { PhoneWords.format("settingsDecisionsUses", []) }
+    public static func `settingsDecisionsUsesLocked`() -> String { PhoneWords.format("settingsDecisionsUsesLocked", []) }
+    public static func `settingsDecisionsUsesNeedsApproval`(`model`: String) -> String { PhoneWords.format("settingsDecisionsUsesNeedsApproval", [`model`]) }
+    public static func `settingsDecisionsUsesAllowTitle`(`model`: String, `use`: String) -> String { PhoneWords.format("settingsDecisionsUsesAllowTitle", [`model`, `use`]) }
+    public static func `settingsDecisionsUsesAllow`() -> String { PhoneWords.format("settingsDecisionsUsesAllow", []) }
+    public static func `settingsDecisionsUsesTurnOn`() -> String { PhoneWords.format("settingsDecisionsUsesTurnOn", []) }
+    public static func `settingsDecisionsUsesTurnOnNamed`(`name`: String) -> String { PhoneWords.format("settingsDecisionsUsesTurnOnNamed", [`name`]) }
+    public static func `settingsDecisionsUseAuto`() -> String { PhoneWords.format("settingsDecisionsUseAuto", []) }
+    public static func `settingsDecisionsUseSpecific`() -> String { PhoneWords.format("settingsDecisionsUseSpecific", []) }
+    public static func `settingsDecisionsTurnOff`(`model`: String) -> String { PhoneWords.format("settingsDecisionsTurnOff", [`model`]) }
+    public static func `settingsDecisionsUseNative`(`model`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsUseNative", [`model`, `vendor`]) }
+    public static func `settingsDecisionsReplaceKey`(`model`: String) -> String { PhoneWords.format("settingsDecisionsReplaceKey", [`model`]) }
+    public static func `settingsDecisionsRemove`(`model`: String) -> String { PhoneWords.format("settingsDecisionsRemove", [`model`]) }
+    public static func `settingsDecisionsOpenRouterUnavailable`() -> String { PhoneWords.format("settingsDecisionsOpenRouterUnavailable", []) }
+    public static func `settingsDecisionsLineNative`(`model`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsLineNative", [`model`, `vendor`]) }
+    public static func `settingsDecisionsKeyRejected`() -> String { PhoneWords.format("settingsDecisionsKeyRejected", []) }
+    public static func `settingsDecisionsChosenFallback`() -> String { PhoneWords.format("settingsDecisionsChosenFallback", []) }
+    public static func `settingsDecisionsChosenHeld`() -> String { PhoneWords.format("settingsDecisionsChosenHeld", []) }
+    public static func `settingsDecisionsAuto`() -> String { PhoneWords.format("settingsDecisionsAuto", []) }
+    public static func `settingsDecisionsKeyLabel`(`model`: String) -> String { PhoneWords.format("settingsDecisionsKeyLabel", [`model`]) }
+    public static func `settingsDecisionsKeyPlaceholder`(`vendor`: String) -> String { PhoneWords.format("settingsDecisionsKeyPlaceholder", [`vendor`]) }
+    public static func `settingsDecisionsKeysFrom`(`url`: String) -> String { PhoneWords.format("settingsDecisionsKeysFrom", [`url`]) }
+    public static func `settingsDecisionsTurnOnOpenRouter`(`model`: String) -> String { PhoneWords.format("settingsDecisionsTurnOnOpenRouter", [`model`]) }
+    public static func `settingsDecisionsHeading`() -> String { PhoneWords.format("settingsDecisionsHeading", []) }
+    public static func `settingsDecisionsSubtitle`() -> String { PhoneWords.format("settingsDecisionsSubtitle", []) }
+    public static func `settingsDecisionsOpenRouterModels`() -> String { PhoneWords.format("settingsDecisionsOpenRouterModels", []) }
+    public static func `settingsDecisionsOpenRouterPrice`(`model`: String, `price`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsOpenRouterPrice", [`model`, `price`, `vendor`]) }
+    public static func `settingsDecisionsPicker`() -> String { PhoneWords.format("settingsDecisionsPicker", []) }
+    public static func `settingsDecisionsAnswerWith`(`model`: String) -> String { PhoneWords.format("settingsDecisionsAnswerWith", [`model`]) }
+    public static func `settingsDecisionsLastAnswer`(`tokens`: String, `value`: String) -> String { PhoneWords.format("settingsDecisionsLastAnswer", [`tokens`, `value`]) }
+    public static func `settingsDecisionsActions`() -> String { PhoneWords.format("settingsDecisionsActions", []) }
+    public static func `settingsReasoningAuto`() -> String { PhoneWords.format("settingsReasoningAuto", []) }
+    public static func `settingsReasoningLabel`(`model`: String, `provider`: String, `slot`: String) -> String { PhoneWords.format("settingsReasoningLabel", [`model`, `provider`, `slot`]) }
+    public static func `settingsReasoningSavedUnavailable`(`reasoning`: String) -> String { PhoneWords.format("settingsReasoningSavedUnavailable", [`reasoning`]) }
+    public static func `settingsReasoningUnavailable`() -> String { PhoneWords.format("settingsReasoningUnavailable", []) }
+    public static func `settingsReasoningSaveFailed`() -> String { PhoneWords.format("settingsReasoningSaveFailed", []) }
+    public static func `settingsSpeedCrewSpeed`() -> String { PhoneWords.format("settingsSpeedCrewSpeed", []) }
+    public static func `settingsSpeedLabel`(`model`: String) -> String { PhoneWords.format("settingsSpeedLabel", [`model`]) }
+    public static func `settingsSpeedSavedUnavailable`(`speed`: String) -> String { PhoneWords.format("settingsSpeedSavedUnavailable", [`speed`]) }
+    public static func `settingsSpeedUnavailable`(`speed`: String) -> String { PhoneWords.format("settingsSpeedUnavailable", [`speed`]) }
+    public static func `settingsSpeedShared`() -> String { PhoneWords.format("settingsSpeedShared", []) }
+    public static func `settingsSpeedUnknown`() -> String { PhoneWords.format("settingsSpeedUnknown", []) }
+    public static func `settingsSpeedSaveFailed`() -> String { PhoneWords.format("settingsSpeedSaveFailed", []) }
+    public static func `settingsSubscriptionsClaudeFirstRun`(`here`: String) -> String { PhoneWords.format("settingsSubscriptionsClaudeFirstRun", [`here`]) }
+    public static func `settingsSubscriptionsNoReader`() -> String { PhoneWords.format("settingsSubscriptionsNoReader", []) }
+    public static func `settingsSubscriptionsNoReaderKey`(`apiKey`: String) -> String { PhoneWords.format("settingsSubscriptionsNoReaderKey", [`apiKey`]) }
+    public static func `settingsSubscriptionsSignedOutHoldLabel`() -> String { PhoneWords.format("settingsSubscriptionsSignedOutHoldLabel", []) }
+    public static func `settingsSubscriptionsSignedOutHoldText`() -> String { PhoneWords.format("settingsSubscriptionsSignedOutHoldText", []) }
+    public static func `settingsSubscriptionsRefusedHoldLabel`() -> String { PhoneWords.format("settingsSubscriptionsRefusedHoldLabel", []) }
+    public static func `settingsSubscriptionsRefusedHoldText`() -> String { PhoneWords.format("settingsSubscriptionsRefusedHoldText", []) }
+    public static func `settingsSubscriptionsFirstmateAccountTag`() -> String { PhoneWords.format("settingsSubscriptionsFirstmateAccountTag", []) }
+    public static func `settingsSubscriptionsFirstmateAccountTagTitle`() -> String { PhoneWords.format("settingsSubscriptionsFirstmateAccountTagTitle", []) }
+    public static func `settingsSubscriptionsCrewPreferredMarkTitle`() -> String { PhoneWords.format("settingsSubscriptionsCrewPreferredMarkTitle", []) }
+    public static func `settingsSubscriptionsEmptySignInAgain`() -> String { PhoneWords.format("settingsSubscriptionsEmptySignInAgain", []) }
+    public static func `settingsSubscriptionsEmptySlowDown`() -> String { PhoneWords.format("settingsSubscriptionsEmptySlowDown", []) }
+    public static func `settingsSubscriptionsEmptyUnread`() -> String { PhoneWords.format("settingsSubscriptionsEmptyUnread", []) }
+    public static func `settingsSubscriptionsEmptyNotYet`() -> String { PhoneWords.format("settingsSubscriptionsEmptyNotYet", []) }
+    public static func `settingsSubscriptionsPersonalResourcesTitle`() -> String { PhoneWords.format("settingsSubscriptionsPersonalResourcesTitle", []) }
+    public static func `settingsSubscriptionsPersonalResourcesDescription`(`computer`: String, `computers`: String) -> String { PhoneWords.format("settingsSubscriptionsPersonalResourcesDescription", [`computer`, `computers`]) }
+    public static func `settingsSubscriptionsKindSubscription`() -> String { PhoneWords.format("settingsSubscriptionsKindSubscription", []) }
+    public static func `settingsSubscriptionsFirstmateAccountLabel`() -> String { PhoneWords.format("settingsSubscriptionsFirstmateAccountLabel", []) }
+    public static func `settingsSubscriptionsNotChosenYet`() -> String { PhoneWords.format("settingsSubscriptionsNotChosenYet", []) }
+    public static func `settingsSubscriptionsAsOfJustNow`() -> String { PhoneWords.format("settingsSubscriptionsAsOfJustNow", []) }
+    public static func `settingsSubscriptionsAsOfMinutes`(`minutes`: String) -> String { PhoneWords.format("settingsSubscriptionsAsOfMinutes", [`minutes`]) }
+    public static func `settingsSubscriptionsAsOfHours`(`hours`: String) -> String { PhoneWords.format("settingsSubscriptionsAsOfHours", [`hours`]) }
+    public static func `settingsSubscriptionsAsOfDays`(`days`: String) -> String { PhoneWords.format("settingsSubscriptionsAsOfDays", [`days`]) }
+    public static func `settingsSubscriptionsOnPaceAll`() -> String { PhoneWords.format("settingsSubscriptionsOnPaceAll", []) }
+    public static func `settingsSubscriptionsOnPace`() -> String { PhoneWords.format("settingsSubscriptionsOnPace", []) }
+    public static func `settingsSubscriptionsEmptyIn`(`duration`: String) -> String { PhoneWords.format("settingsSubscriptionsEmptyIn", [`duration`]) }
+    public static func `settingsSubscriptionsEmptyNow`() -> String { PhoneWords.format("settingsSubscriptionsEmptyNow", []) }
+    public static func `settingsSubscriptionsPaused`() -> String { PhoneWords.format("settingsSubscriptionsPaused", []) }
+    public static func `settingsSubscriptionsStale`() -> String { PhoneWords.format("settingsSubscriptionsStale", []) }
+    public static func `settingsSubscriptionsApiKeySet`(`apiKey`: String) -> String { PhoneWords.format("settingsSubscriptionsApiKeySet", [`apiKey`]) }
+    public static func `settingsSubscriptionsSignedIn`() -> String { PhoneWords.format("settingsSubscriptionsSignedIn", []) }
+    public static func `settingsSubscriptionsDotStale`(`signedIn`: String) -> String { PhoneWords.format("settingsSubscriptionsDotStale", [`signedIn`]) }
+    public static func `settingsSubscriptionsDotNotSignedInYet`() -> String { PhoneWords.format("settingsSubscriptionsDotNotSignedInYet", []) }
+    public static func `settingsSubscriptionsDotSignInAgain`() -> String { PhoneWords.format("settingsSubscriptionsDotSignInAgain", []) }
+    public static func `settingsSubscriptionsDotReading`(`signedIn`: String) -> String { PhoneWords.format("settingsSubscriptionsDotReading", [`signedIn`]) }
+    public static func `settingsSubscriptionsDotNoReading`(`signedIn`: String) -> String { PhoneWords.format("settingsSubscriptionsDotNoReading", [`signedIn`]) }
+    public static func `settingsSubscriptionsSignInAgainState`() -> String { PhoneWords.format("settingsSubscriptionsSignInAgainState", []) }
+    public static func `settingsSubscriptionsNotReady`() -> String { PhoneWords.format("settingsSubscriptionsNotReady", []) }
+    public static func `settingsSubscriptionsReading`() -> String { PhoneWords.format("settingsSubscriptionsReading", []) }
+    public static func `settingsSubscriptionsMenuStopPreferring`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopPreferring", []) }
+    public static func `settingsSubscriptionsMenuPrefer`() -> String { PhoneWords.format("settingsSubscriptionsMenuPrefer", []) }
+    public static func `settingsSubscriptionsMenuRename`() -> String { PhoneWords.format("settingsSubscriptionsMenuRename", []) }
+    public static func `settingsSubscriptionsMenuPause`() -> String { PhoneWords.format("settingsSubscriptionsMenuPause", []) }
+    public static func `settingsSubscriptionsMenuResume`() -> String { PhoneWords.format("settingsSubscriptionsMenuResume", []) }
+    public static func `settingsSubscriptionsMenuModelSlots`() -> String { PhoneWords.format("settingsSubscriptionsMenuModelSlots", []) }
+    public static func `settingsSubscriptionsMenuResetSlots`() -> String { PhoneWords.format("settingsSubscriptionsMenuResetSlots", []) }
+    public static func `settingsSubscriptionsMenuDisconnect`() -> String { PhoneWords.format("settingsSubscriptionsMenuDisconnect", []) }
+    public static func `settingsSubscriptionsRenamePlaceholder`() -> String { PhoneWords.format("settingsSubscriptionsRenamePlaceholder", []) }
+    public static func `settingsSubscriptionsRenameSave`() -> String { PhoneWords.format("settingsSubscriptionsRenameSave", []) }
+    public static func `settingsSubscriptionsRenameCancel`() -> String { PhoneWords.format("settingsSubscriptionsRenameCancel", []) }
+    public static func `settingsSubscriptionsConnecting`() -> String { PhoneWords.format("settingsSubscriptionsConnecting", []) }
+    public static func `settingsSubscriptionsSignIn`() -> String { PhoneWords.format("settingsSubscriptionsSignIn", []) }
+    public static func `settingsSubscriptionsRetrying`() -> String { PhoneWords.format("settingsSubscriptionsRetrying", []) }
+    public static func `settingsSubscriptionsRetry`() -> String { PhoneWords.format("settingsSubscriptionsRetry", []) }
+    public static func `settingsSubscriptionsRowActions`(`account`: String) -> String { PhoneWords.format("settingsSubscriptionsRowActions", [`account`]) }
+    public static func `settingsSubscriptionsResetSlotsNote`() -> String { PhoneWords.format("settingsSubscriptionsResetSlotsNote", []) }
+    public static func `settingsSubscriptionsResetSlotsConfirm`() -> String { PhoneWords.format("settingsSubscriptionsResetSlotsConfirm", []) }
+    public static func `settingsSubscriptionsResetSlotsCancel`() -> String { PhoneWords.format("settingsSubscriptionsResetSlotsCancel", []) }
+    public static func `settingsSubscriptionsHeading`() -> String { PhoneWords.format("settingsSubscriptionsHeading", []) }
+    public static func `settingsSubscriptionsAsOfTime`(`time`: String) -> String { PhoneWords.format("settingsSubscriptionsAsOfTime", [`time`]) }
+    public static func `settingsSubscriptionsRefreshing`() -> String { PhoneWords.format("settingsSubscriptionsRefreshing", []) }
+    public static func `settingsSubscriptionsRefresh`() -> String { PhoneWords.format("settingsSubscriptionsRefresh", []) }
+    public static func `settingsSubscriptionsAddAccount`() -> String { PhoneWords.format("settingsSubscriptionsAddAccount", []) }
+    public static func `settingsSubscriptionsDynamicRouting`() -> String { PhoneWords.format("settingsSubscriptionsDynamicRouting", []) }
+    public static func `settingsSubscriptionsDynamicRoutingDescription`() -> String { PhoneWords.format("settingsSubscriptionsDynamicRoutingDescription", []) }
+    public static func `settingsLocalSeatHeading`() -> String { PhoneWords.format("settingsLocalSeatHeading", []) }
+    public static func `settingsLocalSeatRun`() -> String { PhoneWords.format("settingsLocalSeatRun", []) }
+    public static func `settingsLocalSeatEndpoint`() -> String { PhoneWords.format("settingsLocalSeatEndpoint", []) }
+    public static func `settingsLocalSeatEndpointDescription`(`url`: String) -> String { PhoneWords.format("settingsLocalSeatEndpointDescription", [`url`]) }
+    public static func `settingsLocalSeatEndpointLabel`() -> String { PhoneWords.format("settingsLocalSeatEndpointLabel", []) }
+    public static func `settingsLocalSeatModel`() -> String { PhoneWords.format("settingsLocalSeatModel", []) }
+    public static func `settingsLocalSeatModelDescription`(`model`: String) -> String { PhoneWords.format("settingsLocalSeatModelDescription", [`model`]) }
+    public static func `settingsLocalSeatModelLabel`() -> String { PhoneWords.format("settingsLocalSeatModelLabel", []) }
+    public static func `settingsLocalSeatSaveFailed`() -> String { PhoneWords.format("settingsLocalSeatSaveFailed", []) }
+    public static func `settingsWebsiteSignInsSavedToday`() -> String { PhoneWords.format("settingsWebsiteSignInsSavedToday", []) }
+    public static func `settingsWebsiteSignInsSavedYesterday`() -> String { PhoneWords.format("settingsWebsiteSignInsSavedYesterday", []) }
+    public static func `settingsWebsiteSignInsSavedOn`(`date`: String) -> String { PhoneWords.format("settingsWebsiteSignInsSavedOn", [`date`]) }
+    public static func `settingsWebsiteSignInsLead`() -> String { PhoneWords.format("settingsWebsiteSignInsLead", []) }
+    public static func `settingsWebsiteSignInsEmpty`() -> String { PhoneWords.format("settingsWebsiteSignInsEmpty", []) }
+    public static func `settingsWebsiteSignInsHeading`() -> String { PhoneWords.format("settingsWebsiteSignInsHeading", []) }
+    public static func `settingsWebsiteSignInsRemove`() -> String { PhoneWords.format("settingsWebsiteSignInsRemove", []) }
+    public static func `settingsWebsiteSignInsRemoveFailed`(`place`: String) -> String { PhoneWords.format("settingsWebsiteSignInsRemoveFailed", [`place`]) }
+    public static func `settingsWebsiteSignInsAutomaticFailed`(`place`: String) -> String { PhoneWords.format("settingsWebsiteSignInsAutomaticFailed", [`place`]) }
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
@@ -3815,6 +4264,455 @@ extension PhoneWords {
         "devicesJoinYourAccount": [],
         "devicesJoinPickHint": ["computer"],
         "automationRunFound": ["words"],
+        "settingsCostLimitTitle": [],
+        "settingsCostLimitSwitchLabel": [],
+        "settingsCostLimitAmountLabel": [],
+        "settingsCostLimitDescriptionUnread": [],
+        "settingsCostLimitDescriptionOff": [],
+        "settingsCostLimitDescription": ["limit"],
+        "settingsCostLimitDescriptionRecent": ["asked", "days", "limit", "tasks"],
+        "settingsUsageNotAvailable": [],
+        "settingsUsagePeriod7d": [],
+        "settingsUsagePeriod30d": [],
+        "settingsUsagePeriodAll": [],
+        "settingsUsageScopeAll": [],
+        "settingsUsageScopeTask": [],
+        "settingsUsageScopeFirstmate": [],
+        "settingsUsageScopeOther": [],
+        "settingsUsageUnitTokens": [],
+        "settingsUsageUnitUsd": [],
+        "settingsUsageHeadingTokens": [],
+        "settingsUsageHeadingUsd": [],
+        "settingsUsageNoActivity": [],
+        "settingsUsageNothingRecorded": [],
+        "settingsUsagePeriodSince": ["date"],
+        "settingsUsagePeriodRange": ["first", "last"],
+        "settingsUsagePriced": ["priced", "records"],
+        "settingsUsageCoverageUnavailable": [],
+        "settingsUsageRecordsOf": ["count", "records"],
+        "settingsUsagePricedRecordsOf": ["count", "priced"],
+        "settingsUsageReadoutTokens": [],
+        "settingsUsageReadoutTokensComplete": [],
+        "settingsUsageReadoutTokensPartial": [],
+        "settingsUsageReadoutKnownEstimate": [],
+        "settingsUsageReadoutEstimate": [],
+        "settingsUsageReadoutFinished": [],
+        "settingsUsageReadoutFinishedNote": [],
+        "settingsUsageReadoutRecordedModels": [],
+        "settingsUsageReadoutModelsUsed": [],
+        "settingsUsageReadoutModelsNote": [],
+        "settingsUsageModelNotRecorded": [],
+        "settingsUsageProviderNotRecorded": [],
+        "settingsUsageModelLineRecorded": ["provider"],
+        "settingsUsageAttributionServed": [],
+        "settingsUsageAttributionRequested": [],
+        "settingsUsageAttributionRecorded": [],
+        "settingsUsagePriceListed": [],
+        "settingsUsagePriceClaude": [],
+        "settingsUsagePriceReported": [],
+        "settingsUsagePriceUnrecorded": [],
+        "settingsUsageProvenanceCache": [],
+        "settingsUsageProvenanceUnpriced": [],
+        "settingsUsagePricedSentence": ["priced", "records"],
+        "settingsUsageNoSplit": [],
+        "settingsUsageSplitFor": ["priced", "split"],
+        "settingsUsageKindPlan": [],
+        "settingsUsageKindResearch": [],
+        "settingsUsageKindRetrieval": [],
+        "settingsUsageKindReproduce": [],
+        "settingsUsageKindImplement": [],
+        "settingsUsageKindFix": [],
+        "settingsUsageKindChore": [],
+        "settingsUsageKindReview": [],
+        "settingsUsageKindOperation": [],
+        "settingsUsageKindOther": [],
+        "settingsUsageProjectUnavailable": [],
+        "settingsUsageFigureInput": [],
+        "settingsUsageFigureOutput": [],
+        "settingsUsageFigureCacheRead": [],
+        "settingsUsageFigureCacheWrite": [],
+        "settingsUsageFigureTotal": [],
+        "settingsUsageTaskNoTokens": [],
+        "settingsUsageTaskTokensPartial": [],
+        "settingsUsageTaskUnpriced": [],
+        "settingsUsageTaskLeavesOut": [],
+        "settingsUsageTaskLeavesOutNoSplit": [],
+        "settingsUsageTaskFewerRecords": [],
+        "settingsUsageTaskLeavesOutFewerRecords": [],
+        "settingsUsageCreated": ["when"],
+        "settingsUsageTaskCountOne": [],
+        "settingsUsageTaskCountAll": ["count"],
+        "settingsUsageTaskCountSome": ["count", "shown"],
+        "settingsUsageMilestoneNone": [],
+        "settingsUsageMilestoneFinishedOne": [],
+        "settingsUsageMilestoneFinished": ["count"],
+        "settingsUsageMilestoneReached": ["count"],
+        "settingsUsageMilestoneFirst": [],
+        "settingsUsageMilestoneNext": ["count"],
+        "settingsUsageMilestoneTitle": ["finished", "where"],
+        "settingsUsageMilestoneNote": [],
+        "settingsUsageTitle": [],
+        "settingsUsageLead": [],
+        "settingsUsageShowAs": [],
+        "settingsUsagePeriodLabel": [],
+        "settingsUsageWorkLabel": [],
+        "settingsUsageReadFailed": [],
+        "settingsUsageReading": [],
+        "settingsUsageEmptyTitle": [],
+        "settingsUsageEmptyLead": [],
+        "settingsUsageEmptyNote": [],
+        "settingsUsageWhereLegend": [],
+        "settingsUsageDailyHeading": [],
+        "settingsUsageDailyPartial": ["unit"],
+        "settingsUsageDailyChartTokens": [],
+        "settingsUsageDailyChartUsd": [],
+        "settingsUsageToday": [],
+        "settingsUsageDayValue": ["date", "value"],
+        "settingsUsageBarsPriced": [],
+        "settingsUsageOpenModel": [],
+        "settingsUsageDailyValues": [],
+        "settingsUsageLocalDate": [],
+        "settingsUsageModelsUsd": [],
+        "settingsUsageModelsTokens": [],
+        "settingsUsageWhereHeading": [],
+        "settingsUsageWhereFirstmate": [],
+        "settingsUsageWhereFirstmateNote": [],
+        "settingsUsageSubtotal": [],
+        "settingsUsageWhereOther": [],
+        "settingsUsageWhereOtherNote": [],
+        "settingsUsageModelDetails": ["model"],
+        "settingsUsageModelBreakdownTokens": ["line"],
+        "settingsUsageModelBreakdownUsd": ["line"],
+        "settingsUsageCloseDetails": [],
+        "settingsUsageItsWork": [],
+        "settingsUsageRecentHeading": [],
+        "settingsUsageRecentLead": [],
+        "settingsUsageRecentTokensLegend": [],
+        "settingsUsageRecentUsdLegend": [],
+        "settingsUsageRecentFailed": [],
+        "settingsUsageRecentReading": [],
+        "settingsUsageRecentEmpty": [],
+        "settingsUsageTaskColumn": [],
+        "settingsUsageRecentList": [],
+        "settingsUsageMoreFailed": [],
+        "settingsUsageSeeMore": [],
+        "settingsUsageTryAgain": [],
+        "settingsAutomationPickEvent": [],
+        "settingsAutomationRepeatsAtMost": ["minutes"],
+        "settingsAutomationPickTime": [],
+        "settingsAutomationPickDays": [],
+        "settingsAutomationPickDateTime": [],
+        "settingsAutomationWritePrompt": [],
+        "settingsAutomationRunEvents": ["count", "sent"],
+        "settingsAutomationRunCatchingUpMissed": ["count", "planned", "sent"],
+        "settingsAutomationRunCatchingUp": ["planned", "sent"],
+        "settingsAutomationRunPlanned": ["planned", "sent"],
+        "settingsAutomationDeliveryWaiting": [],
+        "settingsAutomationDeliveryRetrying": [],
+        "settingsAutomationDeliveryHandled": [],
+        "settingsAutomationDeliveryCancelled": [],
+        "settingsAutomationDeliverySent": [],
+        "settingsAutomationNoteWaiting": [],
+        "settingsAutomationNoteRetrying": [],
+        "settingsAutomationNoteCancelled": [],
+        "settingsAutomationNoteHandledAt": ["time"],
+        "settingsAutomationNoteHandledOn": ["date"],
+        "settingsAutomationCancelEdited": [],
+        "settingsAutomationCancelPaused": [],
+        "settingsAutomationCancelCleared": [],
+        "settingsAutomationEventPreviewNoLook": ["when"],
+        "settingsAutomationEventPreview": ["count", "when"],
+        "settingsAutomationRunsEachTime": [],
+        "settingsAutomationRunsEachTimeLooks": ["count"],
+        "settingsAutomationMissedEventThere": ["where"],
+        "settingsAutomationMissedEvent": [],
+        "settingsAutomationMissedOnceThere": ["where"],
+        "settingsAutomationMissedOnce": [],
+        "settingsAutomationMissedRepeatsThere": ["where"],
+        "settingsAutomationMissedRepeats": [],
+        "settingsAutomationMon": [],
+        "settingsAutomationMonday": [],
+        "settingsAutomationTue": [],
+        "settingsAutomationTuesday": [],
+        "settingsAutomationWed": [],
+        "settingsAutomationWednesday": [],
+        "settingsAutomationThu": [],
+        "settingsAutomationThursday": [],
+        "settingsAutomationFri": [],
+        "settingsAutomationFriday": [],
+        "settingsAutomationSat": [],
+        "settingsAutomationSaturday": [],
+        "settingsAutomationSun": [],
+        "settingsAutomationSunday": [],
+        "settingsAutomationZoneNoteThere": ["where"],
+        "settingsAutomationZoneNote": [],
+        "settingsAutomationLocalTimeNoteThere": ["where"],
+        "settingsAutomationLocalTimeNote": [],
+        "settingsAutomationClockThere": ["where"],
+        "settingsAutomationClockHere": [],
+        "settingsAutomationReviewSends": [],
+        "settingsAutomationReviewSendsEvents": [],
+        "settingsAutomationEventsPreview": [],
+        "settingsAutomationSubmittedNote": [],
+        "settingsAutomationSubmittedNoteEvents": [],
+        "settingsAutomationDraftNote": [],
+        "settingsAutomationStoppedWhen": [],
+        "settingsAutomationStoppedNote": [],
+        "settingsAutomationDetailNote": [],
+        "settingsAutomationEventIn": ["event", "integration"],
+        "settingsAutomationTitle": [],
+        "settingsAutomationDescription": [],
+        "settingsAutomationPauseAll": [],
+        "settingsAutomationSearch": [],
+        "settingsAutomationNew": [],
+        "settingsAutomationList": [],
+        "settingsAutomationEmpty": [],
+        "settingsAutomationNoMatch": [],
+        "settingsAutomationPickOne": [],
+        "settingsAutomationSetUpByFirstMate": [],
+        "settingsAutomationName": [],
+        "settingsAutomationNamePlaceholder": [],
+        "settingsAutomationWhen": [],
+        "settingsAutomationKindEvery": [],
+        "settingsAutomationKindDaily": [],
+        "settingsAutomationKindWeekly": [],
+        "settingsAutomationKindOnce": [],
+        "settingsAutomationKindEvent": [],
+        "settingsAutomationWhatHappens": [],
+        "settingsAutomationEventNotConnected": [],
+        "settingsAutomationNoEvents": [],
+        "settingsAutomationMinutesBetween": [],
+        "settingsAutomationMinutes": [],
+        "settingsAutomationTimeOfDay": [],
+        "settingsAutomationDateAndTime": [],
+        "settingsAutomationTimeZone": [],
+        "settingsAutomationProject": [],
+        "settingsAutomationNoProject": [],
+        "settingsAutomationRemovedProject": [],
+        "settingsAutomationPrompt": [],
+        "settingsAutomationPromptPlaceholder": [],
+        "settingsAutomationInsertDetail": [],
+        "settingsAutomationInsertDetailChoice": [],
+        "settingsAutomationPassed": [],
+        "settingsAutomationPreviewNext": ["dates"],
+        "settingsAutomationEnable": [],
+        "settingsAutomationSaveDraft": [],
+        "settingsAutomationSave": [],
+        "settingsAutomationPreview": [],
+        "settingsAutomationPause": [],
+        "settingsAutomationResume": [],
+        "settingsAutomationDeleteForGood": [],
+        "settingsAutomationDelete": [],
+        "settingsAutomationNotSpecified": [],
+        "settingsAutomationRuns": [],
+        "settingsAutomationNextRuns": [],
+        "settingsAutomationFirstMateGets": [],
+        "settingsAutomationWhatItSends": [],
+        "settingsAutomationMissedTime": [],
+        "settingsAutomationTurnOnLabel": [],
+        "settingsAutomationTurnOnQuestion": [],
+        "settingsAutomationTurnOn": [],
+        "settingsAutomationBack": [],
+        "settingsAutomationZoneThisComputer": ["zone"],
+        "settingsAutomationHistory": [],
+        "settingsAutomationNothingRun": [],
+        "settingsAutomationVersion": ["version"],
+        "settingsAutomationLedTo": [],
+        "settingsAutomationCard": ["title"],
+        "settingsAutomationPastCard": ["title"],
+        "settingsAutomationPromptAsSent": [],
+        "settingsModelsStartingLevelsSummary": [],
+        "settingsModelsNotInUse": [],
+        "settingsModelsHeading": [],
+        "settingsModelsSummaryNotInUse": ["count"],
+        "settingsModelsSummaryAlwaysUse": ["count"],
+        "settingsModelsSummaryNew": ["count"],
+        "settingsModelsSummaryDecisions": ["model"],
+        "settingsModelsSummaryDecisionsAuto": [],
+        "settingsModelsSummaryDecisionsUnanswered": [],
+        "settingsLevelsRemoveFromLevelOnly": ["level"],
+        "settingsLevelsDropRemove": ["levels"],
+        "settingsLevelsDropAlready": ["level"],
+        "settingsLevelsDropUse": ["level"],
+        "settingsLevelsDropAlso": ["level"],
+        "settingsLevelsDropMove": ["level"],
+        "settingsLevelsAlwaysUseBanner": ["first"],
+        "settingsLevelsAlwaysUseBannerTwo": ["first", "second"],
+        "settingsLevelsAlwaysUseSetFor": ["model"],
+        "settingsLevelsRemoveAllLine": ["levels"],
+        "settingsLevelsRemoveAllNone": [],
+        "settingsLevelsNewUsedAt": ["levels"],
+        "settingsLevelsNewNotInUse": [],
+        "settingsLevelsUsedAt": ["levels"],
+        "settingsLevelsUsedNone": [],
+        "settingsLevelsHintPremium": [],
+        "settingsLevelsHintHigh": [],
+        "settingsLevelsHintMedium": [],
+        "settingsLevelsHintLow": [],
+        "settingsLevelsEmptyPremium": [],
+        "settingsLevelsEmptyRunsOnMedium": [],
+        "settingsLevelsEmptyRunsOnHigh": [],
+        "settingsLevelTasks": ["levels"],
+        "settingsLevelsEmptySimple": [],
+        "settingsLevelsNew": [],
+        "settingsLevelsPillNew": ["provider"],
+        "settingsLevelsPillRemove": ["level", "model"],
+        "settingsLevelsPickerAdd": ["level", "model"],
+        "settingsLevelsPickerIn": ["levels"],
+        "settingsLevelsDefaultReasoning": ["reasoning"],
+        "settingsLevelsAddModel": [],
+        "settingsLevelsPickerLabel": ["level"],
+        "settingsLevelsPickerFindLabel": ["level"],
+        "settingsLevelsPickerFind": [],
+        "settingsLevelsPickerMore": [],
+        "settingsLevelsPickerNone": [],
+        "settingsLevelsPanelLabel": ["model"],
+        "settingsLevelsPanelClose": ["model"],
+        "settingsLevelsPanelLevels": [],
+        "settingsLevelsPanelUseAt": ["level", "model"],
+        "settingsLevelsAlwaysUse": [],
+        "settingsLevelsAlwaysUseNote": [],
+        "settingsLevelsAlwaysUseLabel": ["model"],
+        "settingsLevelsRemoveAll": [],
+        "settingsLevelsRemoveAllLabel": ["model"],
+        "settingsLevelsRemove": [],
+        "settingsLevelsTurnOffLabel": ["model"],
+        "settingsLevelsTurnOff": [],
+        "settingsLevelsBoardHint": ["key"],
+        "settingsLevelsNotInUse": [],
+        "settingsLevelsNotInUseHint": [],
+        "settingsLevelsAllPlacedShown": [],
+        "settingsLevelsAllPlaced": [],
+        "settingsDecisionsUseOpenRouter": [],
+        "settingsDecisionsDisclosureShared": [],
+        "settingsDecisionsDisclosureChoice": [],
+        "settingsDecisionsDisclosureCost": [],
+        "settingsDecisionsUses": [],
+        "settingsDecisionsUsesLocked": [],
+        "settingsDecisionsUsesNeedsApproval": ["model"],
+        "settingsDecisionsUsesAllowTitle": ["model", "use"],
+        "settingsDecisionsUsesAllow": [],
+        "settingsDecisionsUsesTurnOn": [],
+        "settingsDecisionsUsesTurnOnNamed": ["name"],
+        "settingsDecisionsUseAuto": [],
+        "settingsDecisionsUseSpecific": [],
+        "settingsDecisionsTurnOff": ["model"],
+        "settingsDecisionsUseNative": ["model", "vendor"],
+        "settingsDecisionsReplaceKey": ["model"],
+        "settingsDecisionsRemove": ["model"],
+        "settingsDecisionsOpenRouterUnavailable": [],
+        "settingsDecisionsLineNative": ["model", "vendor"],
+        "settingsDecisionsKeyRejected": [],
+        "settingsDecisionsChosenFallback": [],
+        "settingsDecisionsChosenHeld": [],
+        "settingsDecisionsAuto": [],
+        "settingsDecisionsKeyLabel": ["model"],
+        "settingsDecisionsKeyPlaceholder": ["vendor"],
+        "settingsDecisionsKeysFrom": ["url"],
+        "settingsDecisionsTurnOnOpenRouter": ["model"],
+        "settingsDecisionsHeading": [],
+        "settingsDecisionsSubtitle": [],
+        "settingsDecisionsOpenRouterModels": [],
+        "settingsDecisionsOpenRouterPrice": ["model", "price", "vendor"],
+        "settingsDecisionsPicker": [],
+        "settingsDecisionsAnswerWith": ["model"],
+        "settingsDecisionsLastAnswer": ["tokens", "value"],
+        "settingsDecisionsActions": [],
+        "settingsReasoningAuto": [],
+        "settingsReasoningLabel": ["model", "provider", "slot"],
+        "settingsReasoningSavedUnavailable": ["reasoning"],
+        "settingsReasoningUnavailable": [],
+        "settingsReasoningSaveFailed": [],
+        "settingsSpeedCrewSpeed": [],
+        "settingsSpeedLabel": ["model"],
+        "settingsSpeedSavedUnavailable": ["speed"],
+        "settingsSpeedUnavailable": ["speed"],
+        "settingsSpeedShared": [],
+        "settingsSpeedUnknown": [],
+        "settingsSpeedSaveFailed": [],
+        "settingsSubscriptionsClaudeFirstRun": ["here"],
+        "settingsSubscriptionsNoReader": [],
+        "settingsSubscriptionsNoReaderKey": ["apiKey"],
+        "settingsSubscriptionsSignedOutHoldLabel": [],
+        "settingsSubscriptionsSignedOutHoldText": [],
+        "settingsSubscriptionsRefusedHoldLabel": [],
+        "settingsSubscriptionsRefusedHoldText": [],
+        "settingsSubscriptionsFirstmateAccountTag": [],
+        "settingsSubscriptionsFirstmateAccountTagTitle": [],
+        "settingsSubscriptionsCrewPreferredMarkTitle": [],
+        "settingsSubscriptionsEmptySignInAgain": [],
+        "settingsSubscriptionsEmptySlowDown": [],
+        "settingsSubscriptionsEmptyUnread": [],
+        "settingsSubscriptionsEmptyNotYet": [],
+        "settingsSubscriptionsPersonalResourcesTitle": [],
+        "settingsSubscriptionsPersonalResourcesDescription": ["computer", "computers"],
+        "settingsSubscriptionsKindSubscription": [],
+        "settingsSubscriptionsFirstmateAccountLabel": [],
+        "settingsSubscriptionsNotChosenYet": [],
+        "settingsSubscriptionsAsOfJustNow": [],
+        "settingsSubscriptionsAsOfMinutes": ["minutes"],
+        "settingsSubscriptionsAsOfHours": ["hours"],
+        "settingsSubscriptionsAsOfDays": ["days"],
+        "settingsSubscriptionsOnPaceAll": [],
+        "settingsSubscriptionsOnPace": [],
+        "settingsSubscriptionsEmptyIn": ["duration"],
+        "settingsSubscriptionsEmptyNow": [],
+        "settingsSubscriptionsPaused": [],
+        "settingsSubscriptionsStale": [],
+        "settingsSubscriptionsApiKeySet": ["apiKey"],
+        "settingsSubscriptionsSignedIn": [],
+        "settingsSubscriptionsDotStale": ["signedIn"],
+        "settingsSubscriptionsDotNotSignedInYet": [],
+        "settingsSubscriptionsDotSignInAgain": [],
+        "settingsSubscriptionsDotReading": ["signedIn"],
+        "settingsSubscriptionsDotNoReading": ["signedIn"],
+        "settingsSubscriptionsSignInAgainState": [],
+        "settingsSubscriptionsNotReady": [],
+        "settingsSubscriptionsReading": [],
+        "settingsSubscriptionsMenuStopPreferring": [],
+        "settingsSubscriptionsMenuPrefer": [],
+        "settingsSubscriptionsMenuRename": [],
+        "settingsSubscriptionsMenuPause": [],
+        "settingsSubscriptionsMenuResume": [],
+        "settingsSubscriptionsMenuModelSlots": [],
+        "settingsSubscriptionsMenuResetSlots": [],
+        "settingsSubscriptionsMenuDisconnect": [],
+        "settingsSubscriptionsRenamePlaceholder": [],
+        "settingsSubscriptionsRenameSave": [],
+        "settingsSubscriptionsRenameCancel": [],
+        "settingsSubscriptionsConnecting": [],
+        "settingsSubscriptionsSignIn": [],
+        "settingsSubscriptionsRetrying": [],
+        "settingsSubscriptionsRetry": [],
+        "settingsSubscriptionsRowActions": ["account"],
+        "settingsSubscriptionsResetSlotsNote": [],
+        "settingsSubscriptionsResetSlotsConfirm": [],
+        "settingsSubscriptionsResetSlotsCancel": [],
+        "settingsSubscriptionsHeading": [],
+        "settingsSubscriptionsAsOfTime": ["time"],
+        "settingsSubscriptionsRefreshing": [],
+        "settingsSubscriptionsRefresh": [],
+        "settingsSubscriptionsAddAccount": [],
+        "settingsSubscriptionsDynamicRouting": [],
+        "settingsSubscriptionsDynamicRoutingDescription": [],
+        "settingsLocalSeatHeading": [],
+        "settingsLocalSeatRun": [],
+        "settingsLocalSeatEndpoint": [],
+        "settingsLocalSeatEndpointDescription": ["url"],
+        "settingsLocalSeatEndpointLabel": [],
+        "settingsLocalSeatModel": [],
+        "settingsLocalSeatModelDescription": ["model"],
+        "settingsLocalSeatModelLabel": [],
+        "settingsLocalSeatSaveFailed": [],
+        "settingsWebsiteSignInsSavedToday": [],
+        "settingsWebsiteSignInsSavedYesterday": [],
+        "settingsWebsiteSignInsSavedOn": ["date"],
+        "settingsWebsiteSignInsLead": [],
+        "settingsWebsiteSignInsEmpty": [],
+        "settingsWebsiteSignInsHeading": [],
+        "settingsWebsiteSignInsRemove": [],
+        "settingsWebsiteSignInsRemoveFailed": ["place"],
+        "settingsWebsiteSignInsAutomaticFailed": ["place"],
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],
@@ -4425,6 +5323,10 @@ extension PhoneWords {
         "settingsDevicesTasks": "count",
         "settingsProjectsPauseSummary": "count",
         "accountsCustomApiListed": "count",
+        "settingsAutomationRunEvents": "count",
+        "settingsAutomationRunCatchingUpMissed": "count",
+        "settingsAutomationEventPreview": "count",
+        "settingsAutomationRunsEachTimeLooks": "count",
         "phoneMediaPicturePosition": "count",
         "phoneAddressSweeping": "count",
         "phoneSceneProgramParts": "count",

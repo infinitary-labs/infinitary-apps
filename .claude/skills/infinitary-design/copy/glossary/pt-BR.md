@@ -129,3 +129,6 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | server, address (a custom API's) | servidor, endereço | Said only where English names the person's own server and its address. |
 | header (a request's) | cabeçalho | |
 | fetch (a server's list of models) | buscar | "Buscar no servidor", "Buscando…". |
+| automation | automação | The Settings section and each scheduled prompt in it; feminine ("criada pelo seu imediato"). |
+| prompt (an automation's) | pedido | What the first mate is told on a schedule, as in "Pedido da tarefa". |
+| level (a model's slot) | nível | "slot" is never said: "Níveis dos modelos", "seu modelo mais barato com nível". |

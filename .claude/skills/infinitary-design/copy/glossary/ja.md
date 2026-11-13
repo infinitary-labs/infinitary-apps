@@ -145,3 +145,8 @@ A number placeholder sits directly against its counter with no space (「{count}
 | header (an extra request header) | ヘッダー | Long-vowel mark. |
 | certificate | 証明書 | Only where the person chooses an organization's CA certificate. |
 | token (a custom API's token command and model sizes) | トークン | Only where the person chose a command that prints one, and for context and output sizes. |
+| level (a model's level; also "slot") | レベル | The Models board's Premium / High / Med / Low; "slot" and "slotted model" say the same thing. |
+| Always use | 常に使う | The setting that sends all crew work to one model; quoted as 「常に使う」 in sentences. |
+| Dynamic routing | 動的な振り分け | Plain words for sending work to a level and then to the model with the most allowance left; ルーティング would be jargon. |
+| estimate / estimated (cost) | 推定 | As in 推定値 and 推定（米ドル）; the command search keeps 見積もり as a search word. |
+| decision model | 判断用モデル | The model that answers decision cards. |

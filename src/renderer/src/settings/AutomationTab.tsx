@@ -35,32 +35,24 @@ import { isView, waitsForUpdate } from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import {
   AUTOMATION_MIN_MINUTES,
+  AUTOMATION_SHEET_WORDS,
   blankForm,
   DELIVERY_TONES,
   DELIVERY_WORDS,
-  DETAIL_NOTE,
-  DRAFT_NOTE,
   deliveryNote,
-  EVENTS_PREVIEW,
   eventPreviewWords,
+  eventRunsWords,
   formOf,
   hereZone,
   knownZones,
   localClockWords,
   localTimeNote,
-  lookWords,
-  REVIEW_SENDS,
-  REVIEW_SENDS_EVENTS,
   type RuleForm,
   reviewMissedWords,
   runWords,
-  STOPPED_NOTE,
-  STOPPED_WHEN,
-  SUBMITTED_NOTE,
-  SUBMITTED_NOTE_EVENTS,
   saveOf,
   specOf,
-  WEEKDAY_TOGGLES,
+  weekdayToggles,
   zoneNote,
 } from "./automationWords";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
@@ -110,7 +102,7 @@ function useListenable(): Listenable[] {
     (integration.events ?? []).map((event) => ({
       value: `${integration.id}/${event.name}`,
       when: automationEventWords(event.label, integration.name),
-      label: `${event.label} in ${integration.name}`,
+      label: m.settingsAutomationEventIn({ event: event.label, integration: integration.name }),
       every: event.every,
       filters: event.filters,
     })),
@@ -210,11 +202,10 @@ export function AutomationTab() {
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: "var(--text-md)", color: "var(--fg-1)", fontWeight: 500 }}>
-            Automation
+            {m.settingsAutomationTitle()}
           </div>
           <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-            Prompts your first mate gets on a schedule. You can also ask your first mate to set one
-            up.
+            {m.settingsAutomationDescription()}
           </div>
         </div>
         <Button
@@ -224,7 +215,7 @@ export function AutomationTab() {
           {...pauseAllKeys}
           data-automation-pause-all
         >
-          Pause all
+          {m.settingsAutomationPauseAll()}
         </Button>
       </div>
       <SettingError error={error} />
@@ -232,8 +223,8 @@ export function AutomationTab() {
       <div style={{ display: "grid", gridTemplateColumns: "300px minmax(0, 1fr)", gap: 20 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: LABEL_GAP, minWidth: 0 }}>
           <Input
-            aria-label="Search automations"
-            placeholder="Search automations"
+            aria-label={m.settingsAutomationSearch()}
+            placeholder={m.settingsAutomationSearch()}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -243,10 +234,10 @@ export function AutomationTab() {
             data-automation-new
             style={{ justifyContent: "center" }}
           >
-            New automation
+            {m.settingsAutomationNew()}
           </Button>
           <ul
-            aria-label="Automations"
+            aria-label={m.settingsAutomationList()}
             style={{
               display: "flex",
               flexDirection: "column",
@@ -273,11 +264,13 @@ export function AutomationTab() {
           </ul>
           {rules !== null && rules.length === 0 && (
             <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-              No automations yet. Make one here, or tell your first mate what to run and when.
+              {m.settingsAutomationEmpty()}
             </div>
           )}
           {rules !== null && rules.length > 0 && shown.length === 0 && (
-            <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>Nothing matches.</div>
+            <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
+              {m.settingsAutomationNoMatch()}
+            </div>
           )}
         </div>
         <div ref={sheetRef} style={{ minWidth: 0 }}>
@@ -304,7 +297,7 @@ export function AutomationTab() {
           {/* Nothing picked, or the picked rule is gone: a one-time rule leaves once it ran. */}
           {selected !== "new" && !current && (
             <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-              Pick an automation to read or change it.
+              {m.settingsAutomationPickOne()}
             </div>
           )}
         </div>
@@ -396,7 +389,7 @@ function Sheet({
               plannedAt: first,
               timeZone: timeZone ?? hereZone(),
               missed: 0,
-              ...(spec.kind === "event" ? { events: EVENTS_PREVIEW } : {}),
+              ...(spec.kind === "event" ? { events: AUTOMATION_SHEET_WORDS.eventsPreview } : {}),
             }),
     };
   };
@@ -467,7 +460,7 @@ function Sheet({
   const calendar = form.kind === "daily" || form.kind === "weekly";
   return (
     <form
-      aria-label="Automation"
+      aria-label={m.settingsAutomationTitle()}
       data-automation-sheet={rule?.id ?? "new"}
       onSubmit={(event) => {
         event.preventDefault();
@@ -486,35 +479,37 @@ function Sheet({
       {rule && (
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
           {AUTOMATION_STATE_WORDS[rule.state]} ·{" "}
-          {rule.stopped ? STOPPED_WHEN : automationWhenWords(rule.spec, rule.when)}
-          {rule.captainRequested ? "" : " · set up by your first mate"}
+          {rule.stopped
+            ? AUTOMATION_SHEET_WORDS.stoppedWhen
+            : automationWhenWords(rule.spec, rule.when)}
+          {rule.captainRequested ? "" : ` · ${m.settingsAutomationSetUpByFirstMate()}`}
         </div>
       )}
       {rule?.stopped && (
         <div data-automation-stopped role="status" style={NOTE_STYLE}>
-          {rule.stopped} {STOPPED_NOTE}
+          {rule.stopped} {AUTOMATION_SHEET_WORDS.stoppedNote}
         </div>
       )}
       {drafting && (
         <div data-automation-draft-note style={NOTE_STYLE}>
-          {DRAFT_NOTE}
+          {AUTOMATION_SHEET_WORDS.draftNote}
         </div>
       )}
       <div style={FIELD_STYLE}>
         <label htmlFor="automation-name" style={LABEL_STYLE}>
-          Name
+          {m.settingsAutomationName()}
         </label>
         <Input
           id="automation-name"
           value={form.name}
           maxLength={80}
-          placeholder="Weekly review"
+          placeholder={m.settingsAutomationNamePlaceholder()}
           onChange={(event) => set("name", event.target.value)}
         />
       </div>
       <div style={FIELD_STYLE}>
         <label htmlFor="automation-when" style={LABEL_STYLE}>
-          When
+          {m.settingsAutomationWhen()}
         </label>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <select
@@ -536,17 +531,17 @@ function Sheet({
             }}
             style={SELECT_STYLE}
           >
-            <option value="every">Repeats</option>
-            <option value="daily">Every day</option>
-            <option value="weekly">On chosen days</option>
-            <option value="once">Once</option>
+            <option value="every">{m.settingsAutomationKindEvery()}</option>
+            <option value="daily">{m.settingsAutomationKindDaily()}</option>
+            <option value="weekly">{m.settingsAutomationKindWeekly()}</option>
+            <option value="once">{m.settingsAutomationKindOnce()}</option>
             {(listenable.length > 0 || form.kind === "event") && (
-              <option value="event">When something happens</option>
+              <option value="event">{m.settingsAutomationKindEvent()}</option>
             )}
           </select>
           {form.kind === "event" && (
             <select
-              aria-label="What happens"
+              aria-label={m.settingsAutomationWhatHappens()}
               data-automation-event
               value={form.event}
               onChange={(event) =>
@@ -562,8 +557,8 @@ function Sheet({
               {!listened && (
                 <option value={form.event}>
                   {form.event
-                    ? "An integration not connected now"
-                    : "Nothing connected tells events"}
+                    ? m.settingsAutomationEventNotConnected()
+                    : m.settingsAutomationNoEvents()}
                 </option>
               )}
             </select>
@@ -590,19 +585,21 @@ function Sheet({
           {form.kind === "every" && (
             <>
               <Input
-                aria-label="Minutes between runs"
+                aria-label={m.settingsAutomationMinutesBetween()}
                 type="number"
                 min={AUTOMATION_MIN_MINUTES}
                 value={form.minutes}
                 onChange={(event) => set("minutes", event.target.value)}
                 style={{ width: 90 }}
               />
-              <span style={{ color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>minutes</span>
+              <span style={{ color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
+                {m.settingsAutomationMinutes()}
+              </span>
             </>
           )}
           {calendar && (
             <Input
-              aria-label="Time of day"
+              aria-label={m.settingsAutomationTimeOfDay()}
               type="time"
               value={form.time}
               onChange={(event) => set("time", event.target.value)}
@@ -611,7 +608,7 @@ function Sheet({
           )}
           {form.kind === "once" && (
             <Input
-              aria-label="Date and time"
+              aria-label={m.settingsAutomationDateAndTime()}
               type="datetime-local"
               value={form.at}
               onChange={(event) => set("at", event.target.value)}
@@ -626,7 +623,7 @@ function Sheet({
       {calendar && (
         <div style={FIELD_STYLE}>
           <label htmlFor="automation-zone" style={LABEL_STYLE}>
-            Time zone
+            {m.settingsAutomationTimeZone()}
           </label>
           <ZoneSelect
             value={form.timeZone}
@@ -638,7 +635,7 @@ function Sheet({
       )}
       <div style={FIELD_STYLE}>
         <label htmlFor="automation-project" style={LABEL_STYLE}>
-          Project
+          {m.settingsAutomationProject()}
         </label>
         <select
           id="automation-project"
@@ -646,27 +643,27 @@ function Sheet({
           onChange={(event) => set("projectId", event.target.value)}
           style={SELECT_STYLE}
         >
-          <option value="">No project</option>
+          <option value="">{m.settingsAutomationNoProject()}</option>
           {projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>
           ))}
           {form.projectId && !projects.some((project) => project.id === form.projectId) && (
-            <option value={form.projectId}>A removed project</option>
+            <option value={form.projectId}>{m.settingsAutomationRemovedProject()}</option>
           )}
         </select>
       </div>
       <div style={FIELD_STYLE}>
         <label htmlFor="automation-prompt" style={LABEL_STYLE}>
-          Tell your first mate
+          {m.settingsAutomationPrompt()}
         </label>
         <textarea
           id="automation-prompt"
           ref={promptRef}
           value={form.prompt}
           rows={4}
-          placeholder="Review my open tasks and suggest this week's priorities."
+          placeholder={m.settingsAutomationPromptPlaceholder()}
           onChange={(event) => set("prompt", event.target.value)}
           style={{
             fontFamily: "var(--font-ui)",
@@ -681,7 +678,7 @@ function Sheet({
         />
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <select
-            aria-label="Insert schedule detail"
+            aria-label={m.settingsAutomationInsertDetail()}
             data-automation-detail
             value=""
             onChange={(event) => {
@@ -690,17 +687,19 @@ function Sheet({
             }}
             style={{ ...SELECT_STYLE, fontSize: "var(--text-sm)", padding: "5px 8px" }}
           >
-            <option value="">Insert schedule detail…</option>
+            <option value="">{m.settingsAutomationInsertDetailChoice()}</option>
             {scheduleDetailsFor(form.kind).map((detail) => (
               <option key={detail.id} value={detail.id}>
                 {detail.label}
               </option>
             ))}
           </select>
-          <span style={NOTE_STYLE}>{DETAIL_NOTE}</span>
+          <span style={NOTE_STYLE}>{AUTOMATION_SHEET_WORDS.detailNote}</span>
         </div>
         <span style={NOTE_STYLE}>
-          {form.kind === "event" ? SUBMITTED_NOTE_EVENTS : SUBMITTED_NOTE}
+          {form.kind === "event"
+            ? AUTOMATION_SHEET_WORDS.submittedNoteEvents
+            : AUTOMATION_SHEET_WORDS.submittedNote}
         </span>
       </div>
       {preview !== null && (
@@ -712,8 +711,12 @@ function Sheet({
             {form.kind === "event"
               ? eventPreviewWords(listened?.when ?? AUTOMATION_EVENT_UNKNOWN, listened?.every)
               : preview.dates.length === 0
-                ? "That time has already passed."
-                : `Next: ${preview.dates.map((at) => automationDateWords(at, preview.timeZone)).join(" · ")}. Nothing is sent.`}
+                ? m.settingsAutomationPassed()
+                : m.settingsAutomationPreviewNext({
+                    dates: preview.dates
+                      .map((at) => automationDateWords(at, preview.timeZone))
+                      .join(" · "),
+                  })}
           </div>
           {preview.prompt && <PromptBox prompt={preview.prompt} preview />}
         </div>
@@ -741,15 +744,15 @@ function Sheet({
                 onClick={() => void openReview()}
                 data-automation-enable
               >
-                Enable…
+                {m.settingsAutomationEnable()}
               </Button>
               <Button type="submit" variant="secondary" disabled={busy} data-automation-save>
-                Save draft
+                {m.settingsAutomationSaveDraft()}
               </Button>
             </>
           ) : (
             <Button type="submit" variant="primary" disabled={busy} data-automation-save>
-              Save
+              {m.settingsAutomationSave()}
             </Button>
           )}
           <Button
@@ -758,17 +761,19 @@ function Sheet({
             disabled={busy}
             onClick={() => void showPreview()}
           >
-            Preview
+            {m.settingsAutomationPreview()}
           </Button>
           {rule && (rule.state === "enabled" || rule.state === "paused") && (
             <Button type="button" variant="secondary" disabled={busy} onClick={() => void toggle()}>
-              {rule.state === "enabled" ? "Pause" : "Resume"}
+              {rule.state === "enabled"
+                ? m.settingsAutomationPause()
+                : m.settingsAutomationResume()}
             </Button>
           )}
           {rule &&
             (confirmDelete ? (
               <Button type="button" variant="danger" disabled={busy} onClick={() => void remove()}>
-                Delete for good
+                {m.settingsAutomationDeleteForGood()}
               </Button>
             ) : (
               <Button
@@ -777,7 +782,7 @@ function Sheet({
                 disabled={busy}
                 onClick={() => setConfirmDelete(true)}
               >
-                Delete
+                {m.settingsAutomationDelete()}
               </Button>
             ))}
         </div>
@@ -835,16 +840,19 @@ function ReviewPanel({
   const zone = automationZoneOf(review.spec);
   const calendar = review.spec.kind === "daily" || review.spec.kind === "weekly";
   const project = review.save.projectId
-    ? (projects.find((one) => one.id === review.save.projectId)?.name ?? "A removed project")
-    : "No project";
+    ? (projects.find((one) => one.id === review.save.projectId)?.name ??
+      m.settingsAutomationRemovedProject())
+    : m.settingsAutomationNoProject();
   const event = review.spec.kind === "event";
   const facts: [string, React.ReactNode][] = [
-    ["When", automationWhenWords(review.spec, review.listened?.when)],
+    [m.settingsAutomationWhen(), automationWhenWords(review.spec, review.listened?.when)],
     ...(calendar
-      ? ([["Time zone", zone ? automationZoneWords(zone) : localClockWords(where)]] as [
-          string,
-          React.ReactNode,
-        ][])
+      ? ([
+          [
+            m.settingsAutomationTimeZone(),
+            zone ? automationZoneWords(zone) : localClockWords(where),
+          ],
+        ] as [string, React.ReactNode][])
       : []),
     ...(review.spec.kind === "event"
       ? (review.listened?.filters ?? []).map(
@@ -852,27 +860,32 @@ function ReviewPanel({
             [
               field.label,
               review.spec.kind === "event"
-                ? review.spec.filter?.[field.name] || field.defaultValue || "Not specified"
+                ? review.spec.filter?.[field.name] ||
+                  field.defaultValue ||
+                  m.settingsAutomationNotSpecified()
                 : "",
             ] as [string, React.ReactNode],
         )
       : []),
-    ["Project", project],
+    [m.settingsAutomationProject(), project],
     event
-      ? ["Runs", `Each time new events arrive. ${lookWords(review.listened?.every)}`.trim()]
+      ? [m.settingsAutomationRuns(), eventRunsWords(review.listened?.every)]
       : [
-          review.spec.kind === "once" ? "Runs" : "Next runs",
+          review.spec.kind === "once" ? m.settingsAutomationRuns() : m.settingsAutomationNextRuns(),
           review.dates.length === 0
-            ? "That time has already passed."
+            ? m.settingsAutomationPassed()
             : review.dates.map((at) => automationDateWords(at, review.timeZone)).join(" · "),
         ],
-    ["Your first mate gets", <PromptBox key="prompt" prompt={review.prompt} />],
-    ["What it sends", event ? REVIEW_SENDS_EVENTS : REVIEW_SENDS],
-    ["A missed time", reviewMissedWords(review.spec, where)],
+    [m.settingsAutomationFirstMateGets(), <PromptBox key="prompt" prompt={review.prompt} />],
+    [
+      m.settingsAutomationWhatItSends(),
+      event ? AUTOMATION_SHEET_WORDS.reviewSendsEvents : AUTOMATION_SHEET_WORDS.reviewSends,
+    ],
+    [m.settingsAutomationMissedTime(), reviewMissedWords(review.spec, where)],
   ];
   return (
     <section
-      aria-label="Turn on this automation"
+      aria-label={m.settingsAutomationTurnOnLabel()}
       data-automation-review
       style={{
         display: "flex",
@@ -885,7 +898,7 @@ function ReviewPanel({
       }}
     >
       <div style={{ fontSize: "var(--text-md)", color: "var(--fg-1)", fontWeight: 500 }}>
-        Turn on this automation?
+        {m.settingsAutomationTurnOnQuestion()}
       </div>
       <dl
         style={{
@@ -912,10 +925,10 @@ function ReviewPanel({
           onClick={onTurnOn}
           data-automation-turn-on
         >
-          Turn on
+          {m.settingsAutomationTurnOn()}
         </Button>
         <Button type="button" variant="ghost" disabled={busy} onClick={onBack}>
-          Back
+          {m.settingsAutomationBack()}
         </Button>
       </div>
     </section>
@@ -929,7 +942,7 @@ function Weekdays({ days, onChange }: { days: number[]; onChange: (days: number[
       <GroupedChecks
         name="Days"
         values={days.map(String)}
-        options={WEEKDAY_TOGGLES.map(({ day, label, name }) => ({
+        options={weekdayToggles().map(({ day, label, name }) => ({
           value: String(day),
           label,
           ariaLabel: name,
@@ -971,7 +984,9 @@ function ZoneSelect({
       style={{ ...SELECT_STYLE, alignSelf: "flex-start" }}
     >
       {value === "" && <option value="">{localClockWords(where)}</option>}
-      <option value={here}>{automationZoneWords(here)} · this computer</option>
+      <option value={here}>
+        {m.settingsAutomationZoneThisComputer({ zone: automationZoneWords(here) })}
+      </option>
       {value !== "" && value !== here && !zones.some((one) => one.zone === value) && (
         <option value={value}>{automationZoneWords(value)}</option>
       )}
@@ -1003,10 +1018,12 @@ function History({ id }: { id: string }) {
   return (
     <div data-automation-history>
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)", fontWeight: 500 }}>
-        History
+        {m.settingsAutomationHistory()}
       </div>
       {runs === null || runs.length === 0 ? (
-        <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>Nothing has run yet.</div>
+        <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
+          {m.settingsAutomationNothingRun()}
+        </div>
       ) : (
         <ul
           style={{
@@ -1053,7 +1070,7 @@ function HistoryRow({ run }: { run: AutomationRun }) {
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         <div>
           <span style={{ color: "var(--fg-1)" }}>{DELIVERY_WORDS[run.delivery]}</span> ·{" "}
-          {runWords(run)} · version {run.revision}
+          {runWords(run)} · {m.settingsAutomationVersion({ version: String(run.revision) })}
         </div>
         {note && <div>{note}</div>}
         {run.found && (
@@ -1071,7 +1088,7 @@ function HistoryRow({ run }: { run: AutomationRun }) {
               alignItems: "baseline",
             }}
           >
-            <span>Led to</span>
+            <span>{m.settingsAutomationLedTo()}</span>
             {run.tasks.map((task) => (
               <span key={task.id} data-automation-run-task={task.id}>
                 <KeyedText text={`${task.key} ${task.title}`} />
@@ -1086,13 +1103,17 @@ function HistoryRow({ run }: { run: AutomationRun }) {
                 data-automation-run-card={card.id}
                 onClick={() => openCard(card)}
               >
-                {card.open ? `Card: ${card.title}` : `Past card: ${card.title}`}
+                {card.open
+                  ? m.settingsAutomationCard({ title: card.title })
+                  : m.settingsAutomationPastCard({ title: card.title })}
               </Button>
             ))}
           </div>
         )}
         <details data-automation-run-prompt>
-          <summary style={{ cursor: "pointer", width: "fit-content" }}>Prompt as sent</summary>
+          <summary style={{ cursor: "pointer", width: "fit-content" }}>
+            {m.settingsAutomationPromptAsSent()}
+          </summary>
           <div style={{ marginTop: "var(--space-1)" }}>
             <PromptBox prompt={run.prompt} />
           </div>

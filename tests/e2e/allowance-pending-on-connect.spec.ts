@@ -1,5 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
-import { NO_READER_TEXT, noReaderText } from "../../src/renderer/src/settings/subscriptionsWords";
+import {
+  noReaderText,
+  SUBSCRIPTIONS_WORDS,
+} from "../../src/renderer/src/settings/subscriptionsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountRoot } from "./accountFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -73,7 +76,7 @@ test("a newly connected sensed account shows reading…, never the no-reader sen
     }
     await expect(row).toHaveAttribute("data-row-kind", "pending", { timeout: 10_000 });
     await expect(row.getByText("reading…")).toBeVisible();
-    await expect(row.getByText(NO_READER_TEXT)).toHaveCount(0);
+    await expect(row.getByText(SUBSCRIPTIONS_WORDS.noReader)).toHaveCount(0);
     await expect(row.getByRole("img", { name: /reading…$/ })).toBeVisible();
 
     // Dark + light screenshots of the pending row (PR assets).

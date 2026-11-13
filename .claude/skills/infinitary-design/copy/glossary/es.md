@@ -130,3 +130,6 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | server, address (a custom API's) | servidor, dirección | Said only where English names the person's own server and its address. |
 | header (a request's) | encabezado | |
 | fetch (a server's list of models) | obtener | "Obtener del servidor", "Obteniendo…". |
+| automation | automatización | The Settings section and each scheduled prompt in it; feminine ("creada por tu primer oficial"). |
+| prompt (an automation's) | indicación | What the first mate is told on a schedule, as in "Indicación de la tarea"; never "prompt". |
+| level (a model's slot) | nivel | "slot" is never said: "Niveles de modelos", "tu modelo más barato con nivel asignado". |

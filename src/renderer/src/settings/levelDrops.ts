@@ -1,5 +1,7 @@
-import { levelList } from "../../../shared/levelWords";
-import type { Slot, SlotModelView } from "../../../shared/modelSlots";
+import { formatList } from "../../../shared/i18n/format";
+import * as m from "../../../shared/i18n/messages.generated";
+import { levelWord } from "../../../shared/levelWords";
+import { SLOTS, type Slot, type SlotModelView } from "../../../shared/modelSlots";
 
 /**
  * What a drag on the Models board means (Settings → Intelligence → Models).
@@ -21,8 +23,13 @@ export type DropPlan =
   /** Nothing to do, said out loud so the drop is not a surprise. */
   | { kind: "none"; label: string };
 
-/** The levels in board order, as the work they take (`levelList`, the one wording). */
-export { levelList };
+/** The task difficulty wording in the selected language, in board order. */
+export function levelList(slots: readonly Slot[]): string {
+  const names = SLOTS.filter((slot) => slots.includes(slot)).map((slot) =>
+    levelWord(slot).toLocaleLowerCase(),
+  );
+  return names.length === 0 ? "" : m.settingsLevelTasks({ levels: formatList(names) });
+}
 
 /**
  * What dropping `model` on `to` does when it was picked up from `from`.
@@ -37,12 +44,18 @@ export function dropPlan(
 ): DropPlan | null {
   if (to === from) return null;
   if (to === "off") {
-    return { kind: "remove-all", label: `Stop using for ${levelList(model.slots)}` };
+    return {
+      kind: "remove-all",
+      label: m.settingsLevelsDropRemove({ levels: levelList(model.slots) }),
+    };
   }
-  if (model.slots.includes(to)) return { kind: "none", label: `Already takes ${levelList([to])}` };
-  if (from === "off") return { kind: "add", to, label: `Use for ${levelList([to])}` };
-  if (keepBoth) return { kind: "add", to, label: `Also use for ${levelList([to])}` };
-  return { kind: "move", from, to, label: `Move to ${levelList([to])}` };
+  if (model.slots.includes(to))
+    return { kind: "none", label: m.settingsLevelsDropAlready({ level: levelList([to]) }) };
+  if (from === "off")
+    return { kind: "add", to, label: m.settingsLevelsDropUse({ level: levelList([to]) }) };
+  if (keepBoth)
+    return { kind: "add", to, label: m.settingsLevelsDropAlso({ level: levelList([to]) }) };
+  return { kind: "move", from, to, label: m.settingsLevelsDropMove({ level: levelList([to]) }) };
 }
 
 /**
@@ -71,14 +84,21 @@ export function chipDisplayParts(model: Pick<SlotModelView, "providerLabel" | "l
   return { provider, label: matches ? rest.trimStart() : label };
 }
 
-/** How the always-use banner opens, before the model's name. */
-export const ALWAYS_USE_LEAD = "All crew work goes to";
+/**
+ * The always-use banner while Dynamic routing is on: every crew task goes to
+ * `first`, or to `second` when `first` cannot take the work.
+ */
+export function alwaysUseBanner(first: string, second?: string): string {
+  return second === undefined
+    ? m.settingsLevelsAlwaysUseBanner({ first })
+    : m.settingsLevelsAlwaysUseBannerTwo({ first, second });
+}
 
 /** What the panel's Remove from all levels takes the model out of. */
 export function removeAllLine(model: Pick<SlotModelView, "slots">): string {
   return model.slots.length > 0
-    ? `It stops taking ${levelList(model.slots)} at once.`
-    : "It is not in any level.";
+    ? m.settingsLevelsRemoveAllLine({ levels: levelList(model.slots) })
+    : m.settingsLevelsRemoveAllNone();
 }
 
 /**
@@ -88,14 +108,14 @@ export function removeAllLine(model: Pick<SlotModelView, "slots">): string {
  */
 export function newModelNote(model: Pick<SlotModelView, "slots">): string {
   return model.slots.length > 0
-    ? `New here - it takes ${levelList(model.slots)}.`
-    : "New here - it is not in use until you give it a level.";
+    ? m.settingsLevelsNewUsedAt({ levels: levelList(model.slots) })
+    : m.settingsLevelsNewNotInUse();
 }
 
 /** One line on where a model is used, for its panel. */
 export function usedLine(model: Pick<SlotModelView, "slots" | "isNew">): string {
   if (model.isNew) return newModelNote(model);
   return model.slots.length > 0
-    ? `Takes ${levelList(model.slots)}.`
-    : "Not in use. It is never picked on its own.";
+    ? m.settingsLevelsUsedAt({ levels: levelList(model.slots) })
+    : m.settingsLevelsUsedNone();
 }

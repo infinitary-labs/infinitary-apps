@@ -26,11 +26,7 @@ import { Button, Input, RowMenu, type RowMenuItem, StatusDot, type StatusDotTone
 import { ConsentDialog } from "../design/core/ConsentDialog";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { Switch } from "../design/core/Switch";
-import {
-  DECISION_DISCLOSURE_LABELS,
-  DECISION_USES_WORDS,
-  USE_OPENROUTER_DECISION_MODEL,
-} from "./modelsWords";
+import { DECISION_USES_WORDS, MODELS_WORDS } from "./modelsWords";
 
 const CARD_MAX_ROWS_HEIGHT = 232;
 
@@ -49,7 +45,9 @@ type Consent =
   | { kind: "use"; use: DecisionUseView };
 
 function rows(text: DecisionConsentText | readonly string[]) {
-  return DECISION_DISCLOSURE_LABELS.map((label, index) => [label, text[index] ?? ""] as const);
+  return MODELS_WORDS.decisionDisclosureLabels.map(
+    (label, index) => [label, text[index] ?? ""] as const,
+  );
 }
 
 /**
@@ -154,7 +152,7 @@ export function DecisionsGroup({
       ? [
           {
             id: "openrouter",
-            label: USE_OPENROUTER_DECISION_MODEL,
+            label: MODELS_WORDS.useOpenRouterDecisionModel,
             onSelect: () => {
               setPickingOpenRouter((open) => !open);
               setPickingDecisionModel(false);
@@ -164,17 +162,23 @@ export function DecisionsGroup({
       : []),
     ...(answerer.kind === "adapted" && answerer.offering === "auto"
       ? []
-      : [{ id: "auto", label: "Use auto", onSelect: () => chooseAdapted("auto") }]),
+      : [
+          {
+            id: "auto",
+            label: m.settingsDecisionsUseAuto(),
+            onSelect: () => chooseAdapted("auto"),
+          },
+        ]),
     {
       id: "specific",
-      label: "Use a specific model",
+      label: m.settingsDecisionsUseSpecific(),
       onSelect: () => setPickingDecisionModel((open) => !open),
     },
     ...natives.map((entry) => ({
       id: `native-${entry.row.id}`,
       label: entry.chosen
-        ? `Turn off ${entry.row.name}`
-        : `Use ${entry.row.name} (${entry.row.vendor})`,
+        ? m.settingsDecisionsTurnOff({ model: entry.row.name })
+        : m.settingsDecisionsUseNative({ model: entry.row.name, vendor: entry.row.vendor }),
       onSelect: () => {
         if (entry.chosen) {
           chooseAdapted("auto");
@@ -196,12 +200,12 @@ export function DecisionsGroup({
       .flatMap((entry) => [
         {
           id: `replace-${entry.row.id}`,
-          label: `Replace ${entry.row.name} key`,
+          label: m.settingsDecisionsReplaceKey({ model: entry.row.name }),
           onSelect: () => setConsent({ kind: "native", id: entry.row.id }),
         },
         {
           id: `remove-${entry.row.id}`,
-          label: `Remove ${entry.row.name}`,
+          label: m.settingsDecisionsRemove({ model: entry.row.name }),
           onSelect: () => onRemoveDecisionKey(entry.row.id),
         },
       ]),
@@ -211,18 +215,21 @@ export function DecisionsGroup({
     answerer.kind === "openrouter"
       ? openRouterReady
         ? openRouterDecisionLine(openRouterModel)
-        : "OpenRouter unavailable · using one of your own models"
+        : m.settingsDecisionsOpenRouterUnavailable()
       : activeNative
-        ? `${activeNative.row.name} · ${activeNative.row.vendor} · on`
+        ? m.settingsDecisionsLineNative({
+            model: activeNative.row.name,
+            vendor: activeNative.row.vendor,
+          })
         : rejected
-          ? `key rejected · using one of your own models`
+          ? m.settingsDecisionsKeyRejected()
           : pinned === "ready" && answerer.kind === "adapted"
             ? modelNames([...models, ...byName])(answerer.offering)
             : pinned === "fallback"
-              ? "chosen model unavailable · using your cheapest slotted model"
+              ? m.settingsDecisionsChosenFallback()
               : pinned === "held"
-                ? "chosen model unavailable · decisions go unanswered"
-                : "auto · your cheapest slotted model";
+                ? m.settingsDecisionsChosenHeld()
+                : m.settingsDecisionsAuto();
   const tone = rejected
     ? "danger"
     : pinned === "held"
@@ -257,7 +264,7 @@ export function DecisionsGroup({
       if (!row) return null;
       return (
         <ConsentDialog
-          title={`${DECISION_USES_WORDS.turnOn} ${row.name}`}
+          title={DECISION_USES_WORDS.turnOnNamed(row.name)}
           facts={rows(decisionConsent(row))}
           act={DECISION_USES_WORDS.turnOn}
           actDisabled={!keyDraft.trim()}
@@ -287,13 +294,13 @@ export function DecisionsGroup({
               type="password"
               mono
               autoComplete="off"
-              aria-label={`${row.name} key`}
-              placeholder={`Your ${row.vendor} key`}
+              aria-label={m.settingsDecisionsKeyLabel({ model: row.name })}
+              placeholder={m.settingsDecisionsKeyPlaceholder({ vendor: row.vendor })}
               value={keyDraft}
               onChange={(event) => setKeyDraft(event.target.value)}
             />
             <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
-              Keys come from {row.keysUrl}
+              {m.settingsDecisionsKeysFrom({ url: row.keysUrl })}
             </span>
           </div>
         </ConsentDialog>
@@ -303,7 +310,7 @@ export function DecisionsGroup({
       const model = consent.model;
       return (
         <ConsentDialog
-          title={`${DECISION_USES_WORDS.turnOn} ${model.name} through OpenRouter`}
+          title={m.settingsDecisionsTurnOnOpenRouter({ model: model.name })}
           facts={rows(openRouterDecisionConsent(model))}
           act={DECISION_USES_WORDS.turnOn}
           onClose={closeConsent}
@@ -321,7 +328,7 @@ export function DecisionsGroup({
         title={
           approval
             ? DECISION_USES_WORDS.allowTitle(use.name, approval.name)
-            : `${DECISION_USES_WORDS.turnOn} ${use.name}`
+            : DECISION_USES_WORDS.turnOnNamed(use.name)
         }
         facts={[
           ...(approval ? rows(approval.consent) : []),
@@ -357,9 +364,9 @@ export function DecisionsGroup({
       }}
     >
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, minWidth: 0 }}>
-        <span style={{ ...LABEL_STYLE }}>Decisions</span>
+        <span style={{ ...LABEL_STYLE }}>{m.settingsDecisionsHeading()}</span>
         <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)", minWidth: 0, flex: 1 }}>
-          Efficient decision making
+          {m.settingsDecisionsSubtitle()}
         </span>
       </div>
       <DecisionAnswerer
@@ -371,7 +378,7 @@ export function DecisionsGroup({
       />
       {pickingOpenRouter && !!decisions.openrouter?.models.length && (
         <fieldset
-          aria-label="OpenRouter decision models"
+          aria-label={m.settingsDecisionsOpenRouterModels()}
           style={{
             border: 0,
             borderTop: "1px solid var(--line-1)",
@@ -392,7 +399,11 @@ export function DecisionsGroup({
                 else setConsent({ kind: "openrouter", model });
               }}
             >
-              {model.name} · {model.vendor} · ${model.inputPrice} / million input tokens
+              {m.settingsDecisionsOpenRouterPrice({
+                model: model.name,
+                vendor: model.vendor,
+                price: String(model.inputPrice),
+              })}
             </Button>
           ))}
         </fieldset>
@@ -400,7 +411,7 @@ export function DecisionsGroup({
       {pickingDecisionModel && (
         <fieldset
           id="fm-decision-picker"
-          aria-label="Choose the model that answers decisions"
+          aria-label={m.settingsDecisionsPicker()}
           className="fm-subs-scroll"
           style={{
             borderTop: "1px solid var(--line-1)",
@@ -417,7 +428,7 @@ export function DecisionsGroup({
             <button
               key={offeringKey(model)}
               type="button"
-              aria-label={`Answer decisions with ${model.label}`}
+              aria-label={m.settingsDecisionsAnswerWith({ model: model.label })}
               onClick={() => {
                 chooseAdapted(offeringKey(model));
                 setPickingDecisionModel(false);
@@ -588,10 +599,10 @@ function DecisionAnswerer({
             color: "var(--fg-3)",
           }}
         >
-          last answer {last.value} · {last.tokens} tokens
+          {m.settingsDecisionsLastAnswer({ value: last.value, tokens: String(last.tokens) })}
         </span>
       )}
-      <RowMenu label="Decision model actions" items={items} size={24} />
+      <RowMenu label={m.settingsDecisionsActions()} items={items} size={24} />
     </div>
   );
 }

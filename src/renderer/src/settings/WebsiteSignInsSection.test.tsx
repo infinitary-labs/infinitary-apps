@@ -4,8 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   savedWhen,
   signInsInSecrets,
-  WEBSITE_SIGN_INS_EMPTY,
-  WEBSITE_SIGN_INS_LEAD,
+  WEBSITE_SIGN_INS_WORDS,
   WebsiteSignInsSectionView,
 } from "./WebsiteSignInsSection";
 
@@ -48,17 +47,17 @@ describe("the website sign-ins saved on this Mac, in Settings", () => {
       ],
     });
     expect(html).toContain("Website sign-ins");
-    expect(html).toContain(markup(WEBSITE_SIGN_INS_LEAD));
+    expect(html).toContain(markup(WEBSITE_SIGN_INS_WORDS.lead));
     expect(html).toContain('data-website-sign-in="aurora.example"');
     expect(html).toContain('data-website-sign-in="localhost:5173"');
     expect(html).toContain("saved today");
     expect(html.match(/>Remove</g)).toHaveLength(2);
-    expect(html).not.toContain(markup(WEBSITE_SIGN_INS_EMPTY));
+    expect(html).not.toContain(markup(WEBSITE_SIGN_INS_WORDS.empty));
   });
 
   it("says how one is saved while none is", () => {
     const html = render({ available: true, signIns: [] });
-    expect(html).toContain(markup(WEBSITE_SIGN_INS_EMPTY));
+    expect(html).toContain(markup(WEBSITE_SIGN_INS_WORDS.empty));
     expect(html).not.toContain(">Remove<");
   });
 

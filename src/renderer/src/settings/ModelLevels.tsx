@@ -1,16 +1,17 @@
 import type { CrewSpeed } from "@shared/crewSpeed";
+import * as m from "@shared/i18n/messages.generated";
 import type { ReasoningChoice, Slot, SlotModelView } from "@shared/modelSlots";
 import { offeringKey, SLOTS } from "@shared/modelSlots";
 import { reasoningWord } from "@shared/reasoning";
 import { levelDefaultReasoning } from "@shared/routingPolicy";
 import type React from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, IconButton, Input, SlotBadge, Switch, useRestLabel } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { fixedKeys } from "../design/core/fixedKeys";
 import {
-  ALWAYS_USE_LEAD,
+  alwaysUseBanner,
   chipDisplayParts,
   type DropPlan,
   dropPlan,
@@ -21,7 +22,7 @@ import {
   removeAllLine,
   usedLine,
 } from "./levelDrops";
-import { removeFromLevelOnly } from "./modelsWords";
+import { MODELS_WORDS, removeFromLevelOnly } from "./modelsWords";
 import { ReasoningControl } from "./ReasoningControl";
 import { SpeedControl } from "./SpeedControl";
 import "./models.css";
@@ -39,12 +40,11 @@ import "./models.css";
  * clicked.
  */
 
-const SLOT_HINT: Record<Slot, string> = {
-  premium:
-    "Crew never picks this automatically; your first mate's Auto may fall back to it after your models for hard and normal tasks.",
-  high: "Plans, research, reproduction, and work without a verified basis",
-  medium: "Building or fixing from a verified plan, spec, or reproduction",
-  low: "Config, docs, cosmetic chores",
+const SLOT_HINT: Record<Slot, () => string> = {
+  premium: m.settingsLevelsHintPremium,
+  high: m.settingsLevelsHintHigh,
+  medium: m.settingsLevelsHintMedium,
+  low: m.settingsLevelsHintLow,
 };
 
 /**
@@ -52,13 +52,16 @@ const SLOT_HINT: Record<Slot, string> = {
  * falls lower on its own: an ask for it waits until a premium model can
  * serve it or the captain starts it lower (docs/architecture.md §6, "Degradation").
  */
-const EMPTY_HINT: Record<Slot, string> = {
-  premium:
-    "Empty. Work that asks for premium waits until you add a model here or choose to run it lower.",
-  high: "Empty. Hard tasks run on your models for normal tasks.",
-  medium: "Empty. Normal tasks run on your models for hard tasks.",
-  low: "Empty. Simple tasks run on your models for normal tasks.",
+const EMPTY_HINT: Record<Slot, () => string> = {
+  premium: m.settingsLevelsEmptyPremium,
+  high: m.settingsLevelsEmptyRunsOnMedium,
+  medium: m.settingsLevelsEmptyRunsOnHigh,
+  low: m.settingsLevelsEmptySimple,
 };
+
+/** Where the first and second always-use models sit in the banner's sentence. */
+const FIRST_MARK = "\uE000";
+const SECOND_MARK = "\uE001";
 
 const SLOT_COLOR: Record<Slot, string> = {
   premium: "var(--slot-premium)",
@@ -338,7 +341,7 @@ export function ModelLevels({
           </span>
         )}
         {model.place && <span className="fm-models-place">{model.place}</span>}
-        {model.isNew && <span className="fm-models-new">new</span>}
+        {model.isNew && <span className="fm-models-new">{m.settingsLevelsNew()}</span>}
       </>
     );
   };
@@ -358,7 +361,11 @@ export function ModelLevels({
         <PillName
           className="fm-models-chip-name"
           aria-label={pinned ? `${model.label} ✱` : model.label}
-          words={model.isNew ? `${model.providerLabel}, new` : model.providerLabel}
+          words={
+            model.isNew
+              ? m.settingsLevelsPillNew({ provider: model.providerLabel })
+              : model.providerLabel
+          }
           aria-pressed={selectedKey === key}
           note={model.isNew ? newModelNote(model) : undefined}
           onPointerDown={(event) => beginPress(event, key, level)}
@@ -376,7 +383,10 @@ export function ModelLevels({
         {level !== "off" && (
           <PillRemove
             className="fm-models-chip-x"
-            aria-label={`Remove ${model.label} from ${levelList([level])}`}
+            aria-label={m.settingsLevelsPillRemove({
+              model: model.label,
+              level: levelList([level]),
+            })}
             words={removeFromLevelOnly(level)}
             onClick={() => void onSetSlotMembership(key, level, false)}
           >
@@ -414,7 +424,7 @@ export function ModelLevels({
       <button
         key={offeringKey(model)}
         type="button"
-        aria-label={`Add ${model.label} to ${levelList([slot])}`}
+        aria-label={m.settingsLevelsPickerAdd({ model: model.label, level: levelList([slot]) })}
         onClick={() => {
           void onSetSlotMembership(offeringKey(model), slot, true);
           setAddingTo(null);
@@ -443,7 +453,7 @@ export function ModelLevels({
         </span>
         {/* Where else it sits, if anywhere. */}
         <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)", flexShrink: 0 }}>
-          {model.slots.length > 0 ? levelList(model.slots) : "not in use"}
+          {model.slots.length > 0 ? levelList(model.slots) : MODELS_WORDS.notInUse}
         </span>
       </button>
     );
@@ -459,9 +469,11 @@ export function ModelLevels({
         <div className="fm-models-lane-head">
           <SlotBadge slot={slot} />
           <span className="fm-models-hint">
-            {SLOT_HINT[slot]}
+            {SLOT_HINT[slot]()}
             <br />
-            Default reasoning · {reasoningWord({ level: levelDefaultReasoning(slot) })}
+            {m.settingsLevelsDefaultReasoning({
+              reasoning: reasoningWord({ level: levelDefaultReasoning(slot) }),
+            })}
           </span>
           <Button
             variant="ghost"
@@ -474,7 +486,7 @@ export function ModelLevels({
               setPickerQuery("");
             }}
           >
-            Add model
+            {m.settingsLevelsAddModel()}
           </Button>
         </div>
         <div className="fm-models-chips">
@@ -484,13 +496,15 @@ export function ModelLevels({
               <ReasoningControl model={model} slot={slot} onSave={onSetReasoning} />
             </div>
           ))}
-          {rows.length === 0 && !plan && <span className="fm-models-hint">{EMPTY_HINT[slot]}</span>}
+          {rows.length === 0 && !plan && (
+            <span className="fm-models-hint">{EMPTY_HINT[slot]()}</span>
+          )}
           {dropHint(plan)}
         </div>
         {pickerOpen && (
           <fieldset
             id={`fm-slot-picker-${slot}`}
-            aria-label={`Add a model to ${levelList([slot])}`}
+            aria-label={m.settingsLevelsPickerLabel({ level: levelList([slot]) })}
             className="fm-subs-scroll"
             style={{
               border: 0,
@@ -516,8 +530,8 @@ export function ModelLevels({
               <Input
                 mono
                 autoFocus
-                aria-label={`Find a model to add to ${levelList([slot])}`}
-                placeholder="Find a model by name"
+                aria-label={m.settingsLevelsPickerFindLabel({ level: levelList([slot]) })}
+                placeholder={m.settingsLevelsPickerFind()}
                 value={pickerQuery}
                 onChange={(event) => setPickerQuery(event.target.value)}
                 style={{ fontSize: "var(--text-sm)", padding: "var(--space-2) var(--space-3)" }}
@@ -530,14 +544,14 @@ export function ModelLevels({
                   className="fm-models-label"
                   style={{ padding: "var(--space-2) var(--space-2) var(--space-1)" }}
                 >
-                  More from your subscriptions
+                  {m.settingsLevelsPickerMore()}
                 </span>
                 {moreMatches.map(pickerRow)}
               </>
             )}
             {query && listedMatches.length === 0 && moreMatches.length === 0 && (
               <div className="fm-models-hint" style={{ padding: "var(--space-1) var(--space-2)" }}>
-                No model by that name
+                {m.settingsLevelsPickerNone()}
               </div>
             )}
           </fieldset>
@@ -552,7 +566,7 @@ export function ModelLevels({
       <aside
         className="fm-models-panel"
         data-model-panel={key}
-        aria-label={`${model.label} levels`}
+        aria-label={m.settingsLevelsPanelLabel({ model: model.label })}
         onKeyDown={(event) => {
           if (event.key !== "Escape") return;
           // Escape closes the levels alone, not Settings around them.
@@ -567,7 +581,7 @@ export function ModelLevels({
             <span>{model.label}</span>
           </div>
           <IconButton
-            label={`Close ${model.label}`}
+            label={m.settingsLevelsPanelClose({ model: model.label })}
             {...fixedKeys("Escape")}
             size={24}
             onClick={() => setSelectedKey(null)}
@@ -577,11 +591,11 @@ export function ModelLevels({
         </div>
         <p className="fm-models-panel-used">{usedLine(model)}</p>
         <fieldset
-          aria-label="Levels"
+          aria-label={m.settingsLevelsPanelLevels()}
           className="fm-models-checks"
           style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}
         >
-          <span className="fm-models-label">Levels</span>
+          <span className="fm-models-label">{m.settingsLevelsPanelLevels()}</span>
           {SLOTS.map((slot) => {
             const used = model.slots.includes(slot);
             return (
@@ -591,7 +605,10 @@ export function ModelLevels({
                 type="button"
                 role="checkbox"
                 aria-checked={used}
-                aria-label={`Use ${model.label} for ${levelList([slot])}`}
+                aria-label={m.settingsLevelsPanelUseAt({
+                  model: model.label,
+                  level: levelList([slot]),
+                })}
                 className="fm-models-check"
                 style={{ "--level": SLOT_COLOR[slot] } as React.CSSProperties}
                 onClick={() => void onSetSlotMembership(key, slot, !used)}
@@ -606,29 +623,29 @@ export function ModelLevels({
         <div className="fm-models-panel-row">
           <div>
             <span>
-              Always use <span className="fm-models-star">✱</span>
+              {m.settingsLevelsAlwaysUse()} <span className="fm-models-star">✱</span>
             </span>
-            <span>All crew work goes to this model. Levels are skipped.</span>
+            <span>{m.settingsLevelsAlwaysUseNote()}</span>
           </div>
           <Switch
             checked={isPinned(model)}
-            aria-label={`Always use ${model.label}`}
+            aria-label={m.settingsLevelsAlwaysUseLabel({ model: model.label })}
             onChange={() => onTogglePin(model)}
           />
         </div>
         <div className="fm-models-panel-row">
           <div>
-            <span>Remove from all levels</span>
+            <span>{m.settingsLevelsRemoveAll()}</span>
             <span>{removeAllLine(model)}</span>
           </div>
           <Button
             variant="secondary"
             size="sm"
             disabled={model.slots.length === 0}
-            aria-label={`Remove ${model.label} from all levels`}
+            aria-label={m.settingsLevelsRemoveAllLabel({ model: model.label })}
             onClick={() => apply(model, { kind: "remove-all", label: "" })}
           >
-            Remove
+            {m.settingsLevelsRemove()}
           </Button>
         </div>
       </aside>
@@ -641,6 +658,13 @@ export function ModelLevels({
   const named = (model: SlotModelView) => (
     <span className="fm-models-mono">{`${providerPrefix(model)} ${model.label}`.trim()}</span>
   );
+  /** A banner sentence with each model's name drawn in its own type where its mark sits. */
+  const withModels = (sentence: string) =>
+    sentence.split(/(\uE000|\uE001)/).map((part, index) => {
+      const model = part === FIRST_MARK ? first : part === SECOND_MARK ? second : undefined;
+      // biome-ignore lint/suspicious/noArrayIndexKey: the sentence's parts never reorder
+      return model ? <Fragment key={index}>{named(model)}</Fragment> : part;
+    });
 
   return (
     <div className="fm-models-wrap">
@@ -648,23 +672,17 @@ export function ModelLevels({
         <div className="fm-models-banner" data-models-banner="">
           <span className="fm-models-star">✱</span>
           {dynamicRouting ? (
-            <span>
-              {ALWAYS_USE_LEAD} {named(first)}
-              {second && <>, then {named(second)} if it cannot take the work</>}. Levels are skipped
-              while always use is on.
-            </span>
+            <span>{withModels(alwaysUseBanner(FIRST_MARK, second ? SECOND_MARK : undefined))}</span>
           ) : (
-            <span>
-              Always use is set for {named(first)}. It applies when Dynamic routing is on.
-            </span>
+            <span>{withModels(m.settingsLevelsAlwaysUseSetFor({ model: FIRST_MARK }))}</span>
           )}
           <Button
             variant="ghost"
             size="sm"
-            aria-label={`Turn off always use for ${first.label}`}
+            aria-label={m.settingsLevelsTurnOffLabel({ model: first.label })}
             onClick={() => onTogglePin(first)}
           >
-            Turn off
+            {m.settingsLevelsTurnOff()}
           </Button>
         </div>
       )}
@@ -676,8 +694,7 @@ export function ModelLevels({
       >
         <div className="fm-models-lanes">
           <span className="fm-models-hint" id={BOARD_HINT_ID}>
-            Drag a model to another level to move it. Hold {thisDesktop().mac ? "⌥" : "Alt"} as you
-            drop to use it at both. Or choose it to pick its levels.
+            {m.settingsLevelsBoardHint({ key: thisDesktop().mac ? "⌥" : "Alt" })}
           </span>
           {SLOTS.map(lane)}
           <div
@@ -687,10 +704,8 @@ export function ModelLevels({
             data-drop={offPlan?.kind}
           >
             <div className="fm-models-lane-head">
-              <span className="fm-models-label">Not in use</span>
-              <span className="fm-models-hint">
-                Never picked on their own. Drag one to a level to place it.
-              </span>
+              <span className="fm-models-label">{m.settingsLevelsNotInUse()}</span>
+              <span className="fm-models-hint">{m.settingsLevelsNotInUseHint()}</span>
             </div>
             <div className="fm-models-chips">
               {notInUse.map((model) => pill(model, "off"))}
@@ -698,8 +713,8 @@ export function ModelLevels({
                 <span className="fm-models-hint">
                   {/* Unlisted models are in no level either, so never claim all are placed. */}
                   {byName.length > 0
-                    ? "Every model shown is in a level. Find more from your subscriptions by name under Add model."
-                    : "Every model sits in a level."}
+                    ? m.settingsLevelsAllPlacedShown()
+                    : m.settingsLevelsAllPlaced()}
                 </span>
               )}
               {dropHint(offPlan)}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "settings-languages-intelligence-usage",
+      "kind": "improvement",
+      "title": "Intelligence, Usage and Automation in your language",
+      "body": "The Intelligence, Usage and Automation tabs of Settings, with their model levels, decisions, reasoning and speed choices and the saved website sign-ins, now show their words in the language you chose in Settings → Appearance.",
+      "area": "settings",
+      "picture": {
+        "dark": "settings-languages-intelligence-usage-dark.webp",
+        "light": "settings-languages-intelligence-usage-light.webp",
+        "alt": "Settings → Usage in Japanese, with its period and work pickers, the empty-state words and the recent tasks heading translated"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

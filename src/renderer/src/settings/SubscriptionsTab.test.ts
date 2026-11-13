@@ -11,12 +11,7 @@ import type { QuotaProviderView } from "@shared/quota";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "@shared/quota";
 import { describe, expect, it } from "vitest";
 import { firstmateAccountChoices, rowView } from "./SubscriptionsTab";
-import {
-  CLAUDE_FIRST_RUN_TEXT,
-  REFUSED_HOLD_TEXT,
-  SIGNED_OUT_HOLD_LABEL,
-  SIGNED_OUT_HOLD_TEXT,
-} from "./subscriptionsWords";
+import { SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
 
 const account: AccountView = {
   id: "acct_cl1",
@@ -225,7 +220,7 @@ describe("Subscriptions rowView: the machine has no Claude Code (F14)", () => {
       Date.now(),
     );
     expect(view.kind).toBe("disconnected");
-    expect(view.stateText).toBe(CLAUDE_FIRST_RUN_TEXT);
+    expect(view.stateText).toBe(SUBSCRIPTIONS_WORDS.claudeFirstRun);
   });
 });
 
@@ -235,7 +230,7 @@ describe("Subscriptions rowView: Claude first-run", () => {
   it("treats a missing Claude login as first-run, not a failed re-auth", () => {
     const view = rowView(unsigned, undefined, Date.now());
     expect(view.kind).toBe("disconnected");
-    expect(view.stateText).toBe(CLAUDE_FIRST_RUN_TEXT);
+    expect(view.stateText).toBe(SUBSCRIPTIONS_WORDS.claudeFirstRun);
     expect(view.signIn).toBe(true);
     expect(view.stateTone).toBeUndefined();
     expect(view.dot).toBe("ring");
@@ -515,14 +510,14 @@ describe("Subscriptions rowView: a withholding cut-off", () => {
   it("shows a sign-out hold, and Sign in, while the allowance still reads", () => {
     const view = rowView({ ...account, cutOff: { class: "signed_out", since: 1 } }, ok, Date.now());
     expect(view.meters).toHaveLength(1);
-    expect(view.dotLabel).toBe(SIGNED_OUT_HOLD_LABEL);
-    expect(view.stateText).toBe(SIGNED_OUT_HOLD_TEXT);
+    expect(view.dotLabel).toBe(SUBSCRIPTIONS_WORDS.signedOutHoldLabel);
+    expect(view.stateText).toBe(SUBSCRIPTIONS_WORDS.signedOutHoldText);
     expect(view.signIn).toBe(true);
   });
 
   it("shows a refusal without offering Sign in", () => {
     const view = rowView({ ...account, cutOff: { class: "refused", since: 1 } }, ok, Date.now());
-    expect(view.stateText).toBe(REFUSED_HOLD_TEXT);
+    expect(view.stateText).toBe(SUBSCRIPTIONS_WORDS.refusedHoldText);
     expect(view.signIn).toBe(false);
     expect(view.meters).toHaveLength(1);
   });

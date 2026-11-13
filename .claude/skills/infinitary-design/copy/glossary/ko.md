@@ -106,6 +106,12 @@ Particles after a filled value are avoided by word order, or written in the pair
 | font (Settings → Appearance) | 글꼴 | |
 | task key (a project's task numbering, "INF") | 작업 키 | The project's own key is 프로젝트의 키 |
 | batch / batch run (the queue's) | 일괄 실행 | Matches 일괄 끌어오기 요청 and 일괄 검사 |
+| level (premium / high / medium / low) | 수준 | Settings → Models places; "Reset model slots" is 모델 수준 재설정, never 슬롯 |
+| Always use | 항상 사용 | The model setting that skips levels |
+| Dynamic routing | 동적 배분 | Sending work by level, then by allowance left |
+| decisions / decision model | 결정 / 결정 모델 | The Decisions section |
+| prompt (an automation's words) | 메시지 | What the first mate gets; "Prompt as sent" is 보낸 그대로의 메시지 |
+| record (a Usage record) | 기록 | "{priced} of {records} records priced" is 기록 {records}개 중 {priced}개에 가격 있음 |
 | Infinitary | Infinitary | Never translated |
 | Knowledge (panel) | 지식 | "Open Knowledge" is 지식 열기 |
 | concept / finding | 개념 / 발견 | As the card references already say |

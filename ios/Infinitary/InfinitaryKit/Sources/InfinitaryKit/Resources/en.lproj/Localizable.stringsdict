@@ -515,6 +515,70 @@
       <string>This server lists %1$ld models. Pick the ones you would like to use:</string>
     </dict>
   </dict>
+  <key>settingsAutomationRunEvents</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld event, sent %2$@</string>
+      <key>other</key>
+      <string>%1$ld events, sent %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsAutomationRunCatchingUpMissed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Planned %2$@, sent %3$@, catching up %1$ld missed run</string>
+      <key>other</key>
+      <string>Planned %2$@, sent %3$@, catching up %1$ld missed runs</string>
+    </dict>
+  </dict>
+  <key>settingsAutomationEventPreview</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.</string>
+      <key>other</key>
+      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every %1$ld minutes. Nothing is sent.</string>
+    </dict>
+  </dict>
+  <key>settingsAutomationRunsEachTimeLooks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Each time new events arrive. Infinitary looks every minute.</string>
+      <key>other</key>
+      <string>Each time new events arrive. Infinitary looks every %1$ld minutes.</string>
+    </dict>
+  </dict>
   <key>phoneMediaPicturePosition</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

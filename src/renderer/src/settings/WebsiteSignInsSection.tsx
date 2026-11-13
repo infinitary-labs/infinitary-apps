@@ -43,16 +43,23 @@ export function useSignInsInSecrets(): boolean {
 export function savedWhen(at: number, now: number): string {
   const date = new Date(at);
   const day = new Date(now);
-  if (date.toDateString() === day.toDateString()) return "saved today";
+  if (date.toDateString() === day.toDateString()) return m.settingsWebsiteSignInsSavedToday();
   day.setDate(day.getDate() - 1);
-  if (date.toDateString() === day.toDateString()) return "saved yesterday";
-  return `saved ${formatDate(date, { month: "short", day: "numeric" })}`;
+  if (date.toDateString() === day.toDateString()) return m.settingsWebsiteSignInsSavedYesterday();
+  return m.settingsWebsiteSignInsSavedOn({
+    date: formatDate(date, { month: "short", day: "numeric" }),
+  });
 }
 
-export const WEBSITE_SIGN_INS_LEAD =
-  "Sign-ins you saved as you handed a task's browser back. Allow future tasks separately for each site, or choose access on each task’s request.";
-export const WEBSITE_SIGN_INS_EMPTY =
-  "None yet. Tick Remember as you return control of a task's browser to save one.";
+/** The section's lead and its empty line. */
+export const WEBSITE_SIGN_INS_WORDS = {
+  get lead() {
+    return m.settingsWebsiteSignInsLead();
+  },
+  get empty() {
+    return m.settingsWebsiteSignInsEmpty();
+  },
+} as const;
 
 export function WebsiteSignInsSectionView({
   view,
@@ -77,7 +84,7 @@ export function WebsiteSignInsSectionView({
   if (!view?.available) return null;
   return (
     <div data-website-sign-ins="" tabIndex={-1} style={{ marginTop: SECTION_GAP, outline: "none" }}>
-      <SectionLabel>Website sign-ins</SectionLabel>
+      <SectionLabel>{m.settingsWebsiteSignInsHeading()}</SectionLabel>
       <div
         style={{
           fontSize: "var(--text-sm)",
@@ -86,12 +93,12 @@ export function WebsiteSignInsSectionView({
           marginBottom: ROW_GAP,
         }}
       >
-        {WEBSITE_SIGN_INS_LEAD}
+        {WEBSITE_SIGN_INS_WORDS.lead}
         {/* Said in Secrets, beside the protected secrets these sign-ins are not. */}
         {inSecrets && ` ${m.settingsWebsiteSignInsStorage()}`}
       </div>
       <ul
-        aria-label="Website sign-ins"
+        aria-label={m.settingsWebsiteSignInsHeading()}
         style={{
           listStyle: "none",
           margin: 0,
@@ -111,7 +118,7 @@ export function WebsiteSignInsSectionView({
               color: "var(--fg-3)",
             }}
           >
-            {WEBSITE_SIGN_INS_EMPTY}
+            {WEBSITE_SIGN_INS_WORDS.empty}
           </li>
         ) : (
           view.signIns.map((signIn: SavedSignIn, index) => (
@@ -158,7 +165,7 @@ export function WebsiteSignInsSectionView({
                 pending={removing === signIn.site}
                 onClick={() => onRemove(signIn.site)}
               >
-                Remove
+                {m.settingsWebsiteSignInsRemove()}
               </Button>
               <label
                 style={{
@@ -212,7 +219,7 @@ export function WebsiteSignInsSection({ inSecrets = false }: { inSecrets?: boole
       const result = await window.infinitary.browser.removeSignIn(site);
       if (!result.ok) setError(result.text);
     } catch {
-      setError(`${place.This} could not remove that sign-in right now. Try again.`);
+      setError(m.settingsWebsiteSignInsRemoveFailed({ place: place.This }));
     } finally {
       setRemoving(null);
       await load();
@@ -230,7 +237,7 @@ export function WebsiteSignInsSection({ inSecrets = false }: { inSecrets?: boole
       );
       if (!result.ok) setError(result.text);
     } catch {
-      setError(`${place.This} could not change that permission right now.`);
+      setError(m.settingsWebsiteSignInsAutomaticFailed({ place: place.This }));
     } finally {
       setRemoving(null);
       await load();

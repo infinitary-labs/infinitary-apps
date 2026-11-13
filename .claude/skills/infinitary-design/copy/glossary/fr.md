@@ -134,3 +134,8 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | header (a request's) | en-tête | Masculine: "un en-tête". |
 | fetch (a server's list of models) | récupérer | "Récupérer depuis le serveur", "Récupération…". |
 | token (a custom API's sign-in token) | jeton | "Commande de jeton"; the same word as billable model tokens. |
+| Usage (Settings section) | Utilisation | The section's name, as in "Ouvrir Utilisation". |
+| usage record | entrée | One recorded model response in Usage ("entrées avec prix"); "fiche" stays for a task's record and "enregistrement" for a recording. |
+| automation | automatisation | The Settings section and each scheduled prompt in it; feminine ("créée par votre second"). |
+| prompt (an automation's) | consigne | What the second is told on a schedule, as in "Consigne de la tâche". |
+| level (a model's slot) | niveau | "slot" is never said: "Niveaux des modèles", "en {level}". |

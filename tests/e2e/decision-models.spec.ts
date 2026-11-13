@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../../src/core/orchestrator/seat";
 import { KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
-import { USE_OPENROUTER_DECISION_MODEL } from "../../src/renderer/src/settings/modelsWords";
+import { MODELS_WORDS } from "../../src/renderer/src/settings/modelsWords";
 import {
   DECISION_MODEL_CATALOG,
   decisionConsent,
@@ -783,7 +783,9 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     const kev = offering("jaredpalmer/kev-4b");
     expect(local.seen).toHaveLength(0);
     await group.getByRole("button", { name: "Decision model actions" }).click();
-    await launched.page.getByRole("menuitem", { name: USE_OPENROUTER_DECISION_MODEL }).click();
+    await launched.page
+      .getByRole("menuitem", { name: MODELS_WORDS.useOpenRouterDecisionModel })
+      .click();
     const picker = group.getByRole("group", { name: "OpenRouter decision models" });
     await expect(picker.getByRole("button")).toHaveCount(offered?.length ?? 0);
     await expect(picker).not.toContainText("Span-01");
@@ -852,7 +854,9 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     group = await open();
     await expect(group).toContainText(openRouterDecisionLine(jev));
     await group.getByRole("button", { name: "Decision model actions" }).click();
-    await launched.page.getByRole("menuitem", { name: USE_OPENROUTER_DECISION_MODEL }).click();
+    await launched.page
+      .getByRole("menuitem", { name: MODELS_WORDS.useOpenRouterDecisionModel })
+      .click();
     await group.getByRole("button", { name: /^Kev 4B/ }).click();
     await expect(group).toContainText(openRouterDecisionLine(kev));
     await expect(launched.page.getByRole("dialog")).toHaveCount(0);
@@ -886,7 +890,10 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     await launched.page.getByRole("button", { name: "Settings", exact: true }).click();
     await launched.page.getByRole("tab", { name: "Intelligence" }).click();
     await expect(
-      launched.page.getByRole("menuitem", { name: USE_OPENROUTER_DECISION_MODEL, exact: true }),
+      launched.page.getByRole("menuitem", {
+        name: MODELS_WORDS.useOpenRouterDecisionModel,
+        exact: true,
+      }),
     ).toHaveCount(0);
   } finally {
     await launched.close();

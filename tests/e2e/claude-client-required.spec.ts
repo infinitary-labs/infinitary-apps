@@ -5,7 +5,7 @@ import {
   firstmatePauseTitle,
   PROVIDER_SIGN_IN_TITLE,
 } from "../../src/core/orchestrator/hostCards";
-import { CLAUDE_FIRST_RUN_TEXT } from "../../src/renderer/src/settings/subscriptionsWords";
+import { SUBSCRIPTIONS_WORDS } from "../../src/renderer/src/settings/subscriptionsWords";
 import {
   CLAUDE_CHIP_INSTALL_NOTE,
   CLAUDE_CLIENT_MISSING_TEXT,
@@ -88,7 +88,7 @@ test("a signed-in Claude account on a Mac with no Claude Code is not ready, not 
     // Every sign-out state draws a Sign in button beside its words, so a row
     // whose one button is its menu shows no sign-out and no Retry.
     await expect(row).not.toHaveAttribute("data-hold", /.+/);
-    await expect(row.getByText(CLAUDE_FIRST_RUN_TEXT)).toHaveCount(0);
+    await expect(row.getByText(SUBSCRIPTIONS_WORDS.claudeFirstRun)).toHaveCount(0);
     await expect(row.getByTestId("quota-micro-meter")).toHaveCount(0);
     await expect(row.getByRole("button")).toHaveCount(1);
     const titles = await app.page.evaluate(async () =>

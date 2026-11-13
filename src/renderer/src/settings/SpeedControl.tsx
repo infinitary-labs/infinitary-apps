@@ -5,6 +5,7 @@ import {
   SPEED_NAMES,
   SPEED_SCOPE,
 } from "@shared/crewSpeed";
+import * as m from "@shared/i18n/messages.generated";
 import { offeringKey, type SlotModelView } from "@shared/modelSlots";
 import { useEffect, useRef, useState } from "react";
 import { focusWithRing } from "../design/focus";
@@ -46,10 +47,10 @@ export function SpeedControl({
   return (
     <div className="fm-models-speed">
       <label>
-        <span>Crew speed</span>
+        <span>{m.settingsSpeedCrewSpeed()}</span>
         <select
           ref={select}
-          aria-label={`${model.label} crew speed`}
+          aria-label={m.settingsSpeedLabel({ model: model.label })}
           aria-busy={saving}
           disabled={saving}
           value={chosen}
@@ -61,28 +62,19 @@ export function SpeedControl({
               value={speed}
               disabled={speed !== "standard" && !offered?.includes(speed)}
             >
-              {SPEED_NAMES[speed]}
               {speed !== "standard" && !offered?.includes(speed)
                 ? chosen === speed
-                  ? " · saved, unavailable"
-                  : " · unavailable"
-                : ""}
+                  ? m.settingsSpeedSavedUnavailable({ speed: SPEED_NAMES[speed] })
+                  : m.settingsSpeedUnavailable({ speed: SPEED_NAMES[speed] })
+                : SPEED_NAMES[speed]}
             </option>
           ))}
         </select>
       </label>
       <p>{SPEED_ALLOWANCE_WARNING}</p>
       <p>{SPEED_SCOPE}</p>
-      <p>
-        {offered
-          ? "Shared across accounts that offer this speed. Otherwise, work uses Standard on the same model and account."
-          : "Availability is unknown. Work uses Standard until an account confirms support."}
-      </p>
-      {error && (
-        <p role="alert">
-          Could not save crew speed. Your previous choice is still shown. Try again.
-        </p>
-      )}
+      <p>{offered ? m.settingsSpeedShared() : m.settingsSpeedUnknown()}</p>
+      {error && <p role="alert">{m.settingsSpeedSaveFailed()}</p>}
     </div>
   );
 }

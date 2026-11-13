@@ -111,8 +111,10 @@ export function CardTaskKey({
 /**
  * Words the window draws with every recorded task's key in them linked
  * (`TaskKeyLink`): a key that names no task stays text, and so does `own`'s,
- * the task whose card or record the words are on - a task's own key on its
- * own card stays text, as the captain asked.
+ * the task whose record the words are on, since opening it would only bring
+ * that record forward. A card passes no `own`: every key on a card links,
+ * its own task's included, as the captain asked, so the same key never
+ * reads as a link in one place and as text in another.
  */
 export function KeyedText({
   text,
@@ -120,7 +122,7 @@ export function KeyedText({
   look,
 }: {
   text: string;
-  /** The id of the task whose card or record this is. */
+  /** The id of the task whose record this is; a card passes none. */
   own?: string | undefined;
   look?: TaskKeyLook;
 }) {

@@ -132,7 +132,7 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  * A card body's TASK KEYS are the bridge's to link (FI3-594, FI3-1271; the
  * design skill's core rule "Task keys"). The host scans the body - or a
  * task's record, its read - for text shaped like a key, finds which are
- * recorded tasks other than the card's own, and tells the document those -
+ * recorded tasks, a record's own task aside, and tells the document those -
  * a `tasks` message, which only a card or a record mount sends. The bridge
  * wraps each one where text writes it, outside links, controls (a toggle's
  * summary, a role=button element and a draft button among them), scripts,

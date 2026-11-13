@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * Which task keys link, for every place the window draws one (FI3-1271):
  * one store for the window reads the board once while anything asks, looks
  * up every key the board does not list once, all of them in one exact-key
- * read (INF-3896); a task's own key on its own card or record stays text.
+ * read (INF-3896); a task's own key on its own record stays text, while a
+ * card links every key, its own task's included.
  */
 
 const row = (id: string, key: string) => ({ id, key, waitingCardId: null }) as unknown as TaskView;
@@ -103,7 +104,7 @@ describe("which keys link", () => {
     expect(linkedKeys(["SCR-2", "F13-572", "SCR-1"], task)).toEqual(["SCR-2", "SCR-1"]);
   });
 
-  it("leaves the task's own key on its own card or record as text", () => {
+  it("leaves the task's own key on its own record as text", () => {
     expect(linkedKeys(["SCR-1", "SCR-2"], task, "t1")).toEqual(["SCR-2"]);
   });
 });

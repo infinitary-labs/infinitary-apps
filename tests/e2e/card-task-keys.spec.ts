@@ -42,7 +42,9 @@ import { pressKey, runFromSearch } from "./windowKeys";
  * it opens the same summary a Tasks row opens, beside the card, and a click
  * opens the task’s record. Only a key that is
  * exactly a recorded task's links; key-shaped words that name no task -
- * the captain's own example spelling among them - stay text.
+ * the captain's own example spelling among them - stay text. The card's own
+ * task's key links like any other, so a card never shows some keys as links
+ * and others as text (the captain: "we should make it a link consistently").
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -126,7 +128,7 @@ function seed(userDataDir: string): Seeded {
         `<p>The older notes are in <span class="inf-mono">${earlier.key}</span>.</p>` +
         "<p>F13-572 and ZZ9-404 name no task, so they stay plain text.</p>" +
         `<p>The author's own link stays one: <a href="https://example.com/">${ledger.key}</a>.</p>` +
-        // The card's own task: opening it would only bring this card forward.
+        // The card's own task's key, which links like any other.
         `<p>Written for ${author.key}.</p>` +
         // A toggle is a control of its own; what it opens to is words.
         `<details><summary>About ${ledger.key}</summary><p>It waits on ${format.key}.</p></details>`,
@@ -139,7 +141,12 @@ function seed(userDataDir: string): Seeded {
       format: format.key,
       earlier: earlier.key,
       author: author.key,
-      ids: { [ledger.key]: ledger.id, [format.key]: format.id, [earlier.key]: earlier.id },
+      ids: {
+        [ledger.key]: ledger.id,
+        [format.key]: format.id,
+        [earlier.key]: earlier.id,
+        [author.key]: author.id,
+      },
     };
   } finally {
     db.close();
@@ -178,15 +185,15 @@ test("a task key in a card body opens its task's summary on a rest and the task 
 
     await test.step("only keys that name recorded tasks become links, wherever the body writes them", async () => {
       await showCard(page, SUMMARY_CARD);
+      // The card's own task's key among them.
       await expect(linkedTaskKeys(body)).toHaveText([
         seeded.ledger,
         seeded.format,
         seeded.earlier,
+        seeded.author,
         seeded.format,
       ]);
-      // The card's own task's key, and a key in a toggle's summary, stay as written.
-      await expect(body.getByText(`Written for ${seeded.author}.`)).toBeVisible();
-      await expect(linkedTaskKeys(body).filter({ hasText: seeded.author })).toHaveCount(0);
+      // A key in a toggle's summary stays as written.
       await expect(linkedTaskKeys(body.locator("summary"))).toHaveCount(0);
       // A key-shaped word that names no task, and the author's own link, stay as written.
       await expect(body.getByText("F13-572 and ZZ9-404 name no task")).toBeVisible();
@@ -296,6 +303,19 @@ test("a task key in a card body opens its task's summary on a rest and the task 
       await hideRecord(page).click();
       await expect(shownCard(page, SUMMARY_CARD)).toBeVisible();
     });
+
+    await test.step("the card's own task's key opens that task's record in front of the card, and Hide returns to the card", async () => {
+      await expect.poll(() => onTop(page, keyLink(seeded.author))).toBe(true);
+      await clickInBody(keyLink(seeded.author));
+      await expect(recordCard(page)).toHaveAttribute(
+        "data-task-record",
+        seeded.ids[seeded.author] ?? "",
+      );
+      await expectRecordBody(page);
+      await hideRecord(page).click();
+      await expect(recordCard(page)).toHaveCount(0);
+      await expect(shownCard(page, SUMMARY_CARD)).toBeVisible();
+    });
   } finally {
     await launched.close();
   }
@@ -347,13 +367,14 @@ test("a task key and its Tasks row light each other, and every other key of that
       await expect(keyLinks(seeded.format).first()).not.toHaveAttribute("data-inf-lit", "");
     });
 
-    await test.step("the key the card's own head draws lights too, and lights the row", async () => {
+    await test.step("the card's own task's keys, in its head and its body, light too, and light the row", async () => {
       // The summary card's own task is its author's.
       const head = taskKeyLinks(shownCard(page, SUMMARY_CARD)).filter({ hasText: seeded.author });
       await expect(head).toHaveCount(1);
       await restOnRow(page, seeded.author);
       await expect(nowRow(page, seeded.author)).toHaveAttribute("data-now-lit", "");
       await expect(head).toHaveAttribute("data-task-lit", "");
+      await expect(keyLinks(seeded.author)).toHaveAttribute("data-inf-lit", "");
       await page.mouse.move(4, 400);
       await expect(head).not.toHaveAttribute("data-task-lit", "");
       await restOnTaskKey(page, head);
@@ -400,6 +421,10 @@ test("sliding into a task key from beside the card opens its summary", async () 
     await launched.close();
   }
 });
+
+/** The audit task's card's title, which names the task it waits on and the card's own task. */
+const namedCardTitle = (format: string, audit: string) =>
+  `${format} holds up the walrus ledger for ${audit}`;
 
 /**
  * Work that names other work everywhere the app draws it (FI3-1271): a
@@ -448,7 +473,7 @@ function seedNamedWork(userDataDir: string) {
       taskId: audit.id,
       author: "crewmate",
       priority: 30,
-      title: `${format.key} holds up the walrus ledger`,
+      title: namedCardTitle(format.key, audit.key),
       meta: "crewmate 1",
       body: "<p>The ledger cannot start yet.</p>",
       status: "ready",
@@ -552,23 +577,24 @@ test("a task key in a thread line or a card's title opens its summary on a rest 
   try {
     const { app, page } = launched;
     await resizeWindow(app, page, { width: 1640, height: 900 });
-    await showCard(page, `${work.format.key} holds up the walrus ledger`);
+    await showCard(page, namedCardTitle(work.format.key, work.audit.key));
     const cue = shownEntry(page).locator("[data-thread-cue]");
     if ((await cue.count()) > 0) await cue.click();
     const thread = shownEntry(page).locator("[data-thread-messages]");
     await expect(thread.locator('[data-thread-message="crewmate"]')).toBeVisible();
 
-    await test.step("every author's line links other work's keys; the card's own task's stays text", async () => {
+    await test.step("every author's line and the title link every key they write, the card's own task's included", async () => {
       await expect(taskKeyLinks(thread.locator('[data-thread-message="captain"]'))).toHaveText([
         work.ledger.key,
         work.format.key,
       ]);
       await expect(taskKeyLinks(thread.locator('[data-thread-message="crewmate"]'))).toHaveText([
         work.format.key,
+        work.audit.key,
       ]);
-      await expect(thread.getByText(work.audit.key)).toBeVisible();
       await expect(taskKeyLinks(shownEntry(page).locator("[data-card-title]"))).toHaveText([
         work.format.key,
+        work.audit.key,
       ]);
     });
 
@@ -608,7 +634,7 @@ test("the key in a card's head opens its task's record, and Hide returns to the 
   try {
     const { app, page } = launched;
     await resizeWindow(app, page, { width: 1440, height: 900 });
-    const title = `${work.format.key} holds up the walrus ledger`;
+    const title = namedCardTitle(work.format.key, work.audit.key);
     await showCard(page, title);
     const head = shownCard(page, title).locator("[data-card-head]");
     const headKey = taskKeyLinks(head.locator("[data-card-key]"));
@@ -616,9 +642,10 @@ test("the key in a card's head opens its task's record, and Hide returns to the 
     await test.step("the head leads with the card's own task's key, before the meta line and the model chip", async () => {
       await expect(headKey).toHaveText([work.audit.key]);
       await expect(head.locator("[data-card-meta]")).toHaveText("crewmate 1");
-      // The title still links only the other task's key; the card's own stays out of it.
+      // The title links both keys it writes, the card's own task's among them.
       await expect(taskKeyLinks(shownEntry(page).locator("[data-card-title]"))).toHaveText([
         work.format.key,
+        work.audit.key,
       ]);
       await cardSurface(page).screenshot({ path: test.info().outputPath("card-head-key.png") });
     });

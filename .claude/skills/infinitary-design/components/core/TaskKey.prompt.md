@@ -7,8 +7,8 @@ One rule, one summary and one way of opening serve every place; a card body's ke
 - **Which words.**
   Only a key that is exactly a recorded task's key: a word shaped like a key that names no task (`F13-572` where no project F13 exists), a lowercase key, or part of a longer word (`FI3-594-plan`) stays text.
   Nothing near is guessed.
-  A task's own key on its own card, record, summary or task browser stays text: opening it would only bring the same task forward.
-  The one exception is the card's head (next), whose key is the card's door to the task's record.
+  A task's own key on its own record, summary or task browser stays text: opening it would only bring the same task forward.
+  On a card every key links, the card's own task's included - in its head (next), its title, its body and its thread - so the same key never reads as a link in one place and as text in another.
 - **The card's own key (INF-358).**
   A card about a task leads its head's meta line with that task's key, in the quiet look, then a middle dot and the meta words: `INF-358 · Open the waiting decision from the Tasks panel`.
   Every card about a task has it the same way - a crewmate's card and the app's own cards about a task, the stuck-task card, a required action, a closing note and a sign-in asked for a task.
@@ -19,7 +19,7 @@ One rule, one summary and one way of opening serve every place; a card body's ke
   Resting on it or focusing it opens the task's summary as any key does.
   A click or Enter on it opens the task's record in front of the card, never the task's waiting decision - that is the card itself - and Hide or Esc on that record comes back to the card while it is still up (`../cards/TaskRecord`, "From a card").
   Show Info on the card, by name in command search, opens the same record; Show Crewmate and Show Browser open the task's other tabs where it has them.
-  Everywhere else on the card - its title, its body, its thread - the card's own key stays text.
+  Everywhere else on the card - its title, its body, its thread - the card's own key is a link like any other key, and a click or Enter on it opens the same record in front of the card.
 - **Where a key stays text.**
   A key inside a control that already does one thing stays text, so the control keeps its one action: a button, a toggle's summary (an Activity line's, whose opened text links), a `role=button` element, a draft button, a link, a Tasks row or a board tile, a Knowledge list row, a Cards row title, an action label, a collapsed panel's newest line and a thread's collapsed cue.
   A choice's label in a card body is not such a control: its key links, a click on the key opens the task and leaves the choice as it was, and the label's other words still pick it.

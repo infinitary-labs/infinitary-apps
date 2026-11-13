@@ -263,7 +263,7 @@ A task record supplies its host header and lifecycle footer to the same surface 
 ## Task keys in a body (FI3-594)
 
 A task key a body writes as text - `FI3-572` in a sentence, in `inf-mono`, or in the "Filed while working on this" rows - is a link to that task, with no markup from the author, by the core rule (`../core/TaskKey`): which words link, how a key reads in words, the keyboard, closing and the click.
-The same rule links the keys in a card's title, its action error line and every line of its thread, and leaves the card's own task's key as text in all of them.
+The same rule links the keys in a card's title, its action error line and every line of its thread, the card's own task's key included in all of them.
 
 - **Rest.**
   Resting on a key opens the crew summary for its task outside the card, level with the key, on the side facing the stage's middle, 14px clear of the card's edge, with the `--line-2` hairline running from the card's edge on the key's line - never across the card's words.

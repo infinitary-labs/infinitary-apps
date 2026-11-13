@@ -11,9 +11,9 @@ import { appReadExecutor } from "../plugins/reads/appExecutor";
 /**
  * The tasks a body or a line names (FI3-594, FI3-1271; the design skill's
  * core rule "Task keys"): `keys` are the keys the words write that are
- * exactly a recorded task's key, other than the task they are about, and
- * `task` reads that task as it is now. `lit` is the one of those keys a rest
- * elsewhere in the window lights (INF-237), or null.
+ * exactly a recorded task's key - on a task's record, other than that
+ * task's own - and `task` reads that task as it is now. `lit` is the one
+ * of those keys a rest elsewhere in the window lights (INF-237), or null.
  */
 export type TaskLinks = {
   keys: readonly string[];
@@ -186,8 +186,11 @@ export const taskKeyIndex = {
 
 /**
  * Which of `wanted` link: each that is exactly a recorded task's key, other
- * than `own`'s, the task the words are about - a task's own key on its own
- * record or card stays text (FI3-1271).
+ * than `own`'s, the task whose record the words are on - a task's own key
+ * on its own record stays text, since opening it would only bring that
+ * record forward (FI3-1271). A card names no `own`: every recorded key on a
+ * card links, its own task's included, so a card never links some keys and
+ * leaves others as text.
  */
 export function linkedKeys(
   wanted: readonly string[],
@@ -200,7 +203,7 @@ export function linkedKeys(
   });
 }
 
-/** Finds which of the keys `text` writes are recorded tasks, leaving out `own`'s (`linkedKeys`). */
+/** Finds which of the keys `text` writes are recorded tasks, leaving out `own`'s on its record (`linkedKeys`). */
 export function useTaskLinks(text: string, own?: string): TaskLinks {
   const wanted = useMemo(() => taskKeysIn(text).join(" "), [text]);
   useEffect(() => (wanted ? taskKeyIndex.watch(wanted.split(" ")) : undefined), [wanted]);

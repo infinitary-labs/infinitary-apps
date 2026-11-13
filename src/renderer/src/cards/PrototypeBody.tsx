@@ -72,11 +72,6 @@ type BodyProps = {
   theme: FrameTheme;
   title: string;
   /**
-   * The id of the card's own task: its key stays text in the body, since
-   * opening it would only bring this card forward (FI3-1271).
-   */
-  ownTaskId?: string | undefined;
-  /**
    * The action ids this body may raise over the bridge: its card's actions
    * minus the effect-bearing ones, which are the host chrome's alone
    * (`bridgeActionIds`).
@@ -279,8 +274,8 @@ export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
       }
     : input;
   // The task keys it writes link to their tasks (FI3-594), in either
-  // vehicle - every key but the card's own task's (FI3-1271).
-  const links = useTaskLinks(given.body, given.ownTaskId);
+  // vehicle - every recorded task's key, the card's own task's included.
+  const links = useTaskLinks(given.body);
   // The knowledge it cites opens the Knowledge browser's inspector, where a build keeps knowledge.
   const knowledge = useKnowledgeLinks(given.body);
   const wrapperRef = useRef<HTMLDivElement>(null);

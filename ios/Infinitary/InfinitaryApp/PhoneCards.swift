@@ -559,10 +559,9 @@ private struct PhoneCardPane: View {
     }
     static func bodyHost(_ card: PhoneCard, _ session: ReadOnlySession, _ fill: PhoneJSON,
                                  heightLag: TimeInterval = 0) -> CardWebHost {
-        // The body links the keys of the tasks the phone holds, besides the card's own, as the Mac's does.
-        // A first mate card is its own (INF-2714), so every key in its words links.
-        let own = card.isFirstmateOwn ? nil : card.value["taskId"].text
-        let keys = (session.board?.tasks ?? []).filter { $0.id != own }.map(\.key)
+        // The body links the key of every task the phone holds, the card's own task's included, as the Mac's does,
+        // so a card never links some keys and leaves others as text.
+        let keys = (session.board?.tasks ?? []).map(\.key)
         return CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
     }
     private static func messages(_ card: PhoneCard, _ session: ReadOnlySession) -> [PhoneJSON] {

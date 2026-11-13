@@ -22,8 +22,8 @@ declare global {
   }
 }
 /**
- * INF-1524: `marks` are the starts of the parts new since the captain last saw the card, `keys` the recorded tasks other
- * than the card's own, and `card` what decides whether the body's last fact strip stands apart, as on the Mac.
+ * INF-1524: `marks` are the starts of the parts new since the captain last saw the card, `keys` the recorded tasks, the
+ * card's own included, and `card` what decides whether the body's last fact strip stands apart, as on the Mac.
  */
 type Input = {
   body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";

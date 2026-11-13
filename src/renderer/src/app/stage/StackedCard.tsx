@@ -229,12 +229,11 @@ export function StackedCard({
   const closeRef = useRef<HTMLButtonElement>(null);
   // The task the card is about leads its head as the card's door to the
   // task's record (INF-358); a card about no task draws no key. A first mate
-  // card is its own (INF-2714): its head says first mate, and every task key
-  // in its words is a link, the one its buttons act on included.
+  // card is its own (INF-2714): its head says first mate. Every task key in
+  // the card's words is a link on every card, its own task's included.
   const firstmate = firstmateOwnCard(card);
   const found = useCardTask(card);
   const task = firstmate ? null : found;
-  const ownTaskId = firstmate ? undefined : card.taskId;
   const groups = footerGroups(card.actions);
   // Every live note's one button sits where a decision's default does, on ⌘1
   // (INF-2794); a core from before it still sends only an answer's Done.
@@ -427,7 +426,7 @@ export function StackedCard({
         kind={card.ended ? "ended" : chrome}
         bodyRef={bodyRef}
         title={shownTitle}
-        titleWords={<KeyedText text={shownTitle} own={ownTaskId} />}
+        titleWords={<KeyedText text={shownTitle} />}
         taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
         meta={cardMetaWords(card.meta)}
         reviewFinding={Boolean(card.reviewTaskId)}
@@ -473,7 +472,7 @@ export function StackedCard({
       >
         {error && (
           <p role="alert" style={{ color: "var(--danger)", fontSize: "var(--text-sm)" }}>
-            <KeyedText text={error} own={ownTaskId} />
+            <KeyedText text={error} />
           </p>
         )}
         {bodyPending ? (
@@ -486,7 +485,6 @@ export function StackedCard({
             // What happens after the merge leads the body and scrolls away with it (INF-3149).
             lead={afterMergeStrip(card.requiredActions, card.afterMerge)}
             body={body}
-            ownTaskId={ownTaskId}
             reveal={bodyEntrance.reveal}
             onDrawn={() => {
               bodyEntrance.onDrawn();

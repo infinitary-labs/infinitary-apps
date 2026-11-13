@@ -181,10 +181,10 @@ export function PastCardColumn({
           >
             {risk ? (
               <span>
-                <KeyedText text={shownTitle} own={past.taskId} />
+                <KeyedText text={shownTitle} />
               </span>
             ) : (
-              <KeyedText text={shownTitle} own={past.taskId} />
+              <KeyedText text={shownTitle} />
             )}
             {risk && (
               <div
@@ -259,7 +259,6 @@ export function PastCardColumn({
           lead={afterMergeStrip(past.requiredActions, past.afterMerge)}
           theme={theme}
           title={past.title}
-          ownTaskId={past.taskId}
           // Nothing a past body raises is declared, so the bridge refuses it.
           declaredActionIds={[]}
           width={size}
@@ -313,7 +312,7 @@ export function PastThreadColumn({ past, width }: { past: PastCard; width: numbe
       >
         <MicroLabel>{m.cardThreadLabel()}</MicroLabel>
       </div>
-      <MessageList messages={past.messages} own={past.taskId} />
+      <MessageList messages={past.messages} />
     </div>
   );
 }

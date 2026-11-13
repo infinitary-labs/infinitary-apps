@@ -753,7 +753,6 @@ export function LiveMessageList({
       working={working}
       doing={doing}
       waiting={waiting}
-      own={card.taskId}
       ended={card.ended && card.id ? <EndedLine card={{ ...card, id: card.id }} /> : undefined}
       endedAt={card.ended?.at}
     />
@@ -847,7 +846,6 @@ export function MessageList({
   working = false,
   doing,
   waiting,
-  own,
   ended,
   endedAt,
 }: {
@@ -859,8 +857,6 @@ export function MessageList({
   doing?: string | undefined;
   /** The waiting line; `working` wins while a turn runs. */
   waiting?: ThreadWaitLine;
-  /** The id of the card's own task, whose key stays text in its lines (FI3-1271). */
-  own?: string | undefined;
   /** An ended card's app line, in place of any wait (INF-3071). */
   ended?: ReactNode;
   /**
@@ -1004,11 +1000,11 @@ export function MessageList({
         }}
       >
         {earlier.map((message) => (
-          <Message key={message.id} message={message} own={own} />
+          <Message key={message.id} message={message} />
         ))}
         {ended}
         {later.map((message) => (
-          <Message key={message.id} message={message} own={own} />
+          <Message key={message.id} message={message} />
         ))}
         {pending}
         {working ? (
@@ -1114,10 +1110,11 @@ function WorkingRow({ entrance, doing }: { entrance: boolean; doing?: string | u
 }
 
 /**
- * One line of the thread, from any author: its words, with every other
- * task's key in them a link to that task (FI3-1271).
+ * One line of the thread, from any author: its words, with every recorded
+ * task's key in them a link to that task, the card's own task's included
+ * (FI3-1271).
  */
-function Message({ message, own }: { message: CardMessage; own: string | undefined }) {
+function Message({ message }: { message: CardMessage }) {
   const reveal = useMessageEntrance(message.id, message.at);
   const who = WHO[message.who];
   const host = message.who === "host";
@@ -1156,7 +1153,7 @@ function Message({ message, own }: { message: CardMessage; own: string | undefin
       >
         {/* Line breaks kept: a multi-line reply reads the way it was typed. */}
         <span style={{ alignSelf: "stretch", overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>
-          <KeyedText text={message.text} own={own} />
+          <KeyedText text={message.text} />
           <span
             style={{
               fontFamily: "var(--font-mono)",

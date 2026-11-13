@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HandoverOffer } from "@shared/actions";
 import type { Card } from "@shared/cards";
-import { CONNECTION_CLOSE, CONNECTION_PORT } from "@shared/connection";
+import { CONNECTION_CLOSE, CONNECTION_PORT, REPLACED_PUSH_CHANNEL } from "@shared/connection";
 import { deviceJoinedLine, PAIRING_LINK_PREFIX, parsePairingLink } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { NOTICE_ACCEPTED } from "@shared/integrations";
@@ -55,6 +55,7 @@ import { scratchDir } from "../../tests/helpers/scratchDirs";
 import type { BrowserViewer } from "./browser/browserViews";
 import { startConnection } from "./connection/connection";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
+import { replayOf } from "./connection/journal";
 import { claimLink } from "./devices/dial";
 import { type Core, startCore } from "./index";
 import { createAppTools } from "./pi/appTools";
@@ -170,7 +171,17 @@ describe("the connection serves the core to paired devices", () => {
     expect(back.welcome).toMatchObject({ catchUp: "replay", epoch: cursor.epoch });
     await a.push((push) => push.seq >= back.welcome.seq);
     const missed = a.pushes.filter((push) => push.seq > cursor.seq && push.seq <= back.welcome.seq);
-    expect(back.pushes.filter((push) => push.seq <= back.welcome.seq)).toEqual(missed);
+    // A board can land while B is away, and a whole list a later one in the
+    // catch-up replaces comes as an empty push under its own number
+    // (docs/connection.md, "Catching up"): B gets that of what A saw.
+    const replay = replayOf(missed.map(({ seq, channel }) => ({ seq, channel, frame: "" })));
+    expect(back.pushes.filter((push) => push.seq <= back.welcome.seq)).toEqual(
+      missed.map((push, at) =>
+        replay[at]?.replaced
+          ? { seq: push.seq, channel: REPLACED_PUSH_CHANNEL, payload: null }
+          : push,
+      ),
+    );
     expect(missed.some(shows("card-connection-2"))).toBe(true);
     expect(missed.some(shows("card-connection-3"))).toBe(true);
 

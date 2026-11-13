@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "connection-catch-up-test",
+      "reason": "A connection test now expects the documented catch-up, where a board replaced by a later one arrives as an empty push, so it no longer fails when a board lands while a device is away; the app is unchanged."
+    }
+  ]
+}

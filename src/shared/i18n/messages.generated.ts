@@ -21271,6 +21271,34 @@ export function settingsLanguagePartial(): string {
   return `Some parts of Infinitary still show English.`;
 }
 
+export function settingsDecisionUseKindReads(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعمل كل مهمة جديدة على نموذج يناسب العمل، فتستهلك المهام السهلة قدرًا أقل من رصيد باقتك. ويقرأ لذلك عنوان المهمة وهدفها وكلماتك ومشروعها والأعمال المرتبطة بها.`;
+    case "de":
+      return `Jede neue Aufgabe läuft auf einem Modell, das zur Arbeit passt, damit einfache Aufgaben weniger vom Kontingent deines Tarifs verbrauchen. Gelesen werden Titel und Ziel der Aufgabe, deine Worte, ihr Projekt und verwandte Arbeit.`;
+    case "es":
+      return `Cada tarea nueva se ejecuta con un modelo adecuado al trabajo, así que las tareas sencillas gastan menos de la asignación de tu plan. Para ello, lee el título y el objetivo de la tarea, tus palabras, su proyecto y el trabajo relacionado.`;
+    case "fr":
+      return `Chaque nouvelle tâche s’exécute sur un modèle adapté au travail, pour que les tâches simples consomment moins de l’allocation de votre forfait. Pour cela, elle lit le titre et l’objectif de la tâche, vos mots, son projet et le travail lié.`;
+    case "ja":
+      return `新しいタスクはそれぞれ作業に合ったモデルで実行されるため、簡単なタスクではプランの利用枠の消費が少なくなります。タスクのタイトル、ゴール、あなたの言葉、そのプロジェクトと関連する作業を読み取ります。`;
+    case "ko":
+      return `새 작업마다 작업에 맞는 모델로 실행돼서, 쉬운 작업은 사용 한도를 덜 써요. 작업의 제목과 목표, 직접 쓴 말, 프로젝트와 관련 작업을 읽어요.`;
+    case "pt-BR":
+      return `Cada tarefa nova roda em um modelo adequado ao trabalho, então tarefas simples gastam menos da franquia do seu plano. Para isso, lê o título e o objetivo da tarefa, suas palavras, o projeto dela e o trabalho relacionado.`;
+    case "zh-Hans":
+      return `每个新任务都会用适合这项工作的模型来运行，简单的任务因此更省你的套餐额度。它会读取任务的标题、目标和你的原话，以及所属项目和相关工作。`;
+    case "zh-Hant":
+      return `每項新任務都會用適合這項工作的模型執行，簡單的任務因此更省方案額度。它會讀取任務的標題、目標和你的原話，以及所屬專案和相關工作。`;
+    case "en-XA":
+      return `[Éáçĥ ñéŵ ţášķ ŕûñš öñ á ɱöðéļ ţĥáţ ƒîţš ţĥé ŵöŕķ, šö éášý ţášķš šþéñð ļéšš öƒ ýöûŕ þļáñ'š áļļöŵáñçé. Îţ ŕéáðš ţĥé ţášķ'š ţîţļé, ĝöáļ áñð ýöûŕ ŵöŕðš, îţš þŕöĵéçţ áñð ŕéļáţéð ŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEach new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.\u202c`;
+  }
+  return `Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.`;
+}
+
 export function settingsKeyboardPreset(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -22967,6 +22995,7 @@ export const MESSAGES = {
   settingsLanguageDefault,
   settingsLanguageFollow,
   settingsLanguagePartial,
+  settingsDecisionUseKindReads,
   settingsKeyboardPreset,
   settingsKeyboardPresetDescription,
   settingsKeyboardPrefix,
@@ -23721,6 +23750,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsLanguageDefault: ["language"],
   settingsLanguageFollow: ["language"],
   settingsLanguagePartial: [],
+  settingsDecisionUseKindReads: [],
   settingsKeyboardPreset: [],
   settingsKeyboardPresetDescription: [],
   settingsKeyboardPrefix: [],

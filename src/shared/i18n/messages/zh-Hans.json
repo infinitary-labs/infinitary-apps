@@ -759,6 +759,7 @@
   "settingsLanguageDefault": "{language}（默认）",
   "settingsLanguageFollow": "跟随这台电脑（{language}）",
   "settingsLanguagePartial": "Infinitary 的部分地方仍显示英文。",
+  "settingsDecisionUseKindReads": "每个新任务都会用适合这项工作的模型来运行，简单的任务因此更省你的套餐额度。它会读取任务的标题、目标和你的原话，以及所属项目和相关工作。",
   "settingsKeyboardPreset": "预设",
   "settingsKeyboardPresetDescription": "一整套可作为起点的按键。每套预设都会保留你在其中改过的按键。",
   "settingsKeyboardPrefix": "前缀键",

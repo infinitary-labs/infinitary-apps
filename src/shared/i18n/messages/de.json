@@ -767,6 +767,7 @@
   "settingsLanguageDefault": "{language} (Standard)",
   "settingsLanguageFollow": "Wie dieser Computer ({language})",
   "settingsLanguagePartial": "Manche Teile von Infinitary sind noch auf Englisch.",
+  "settingsDecisionUseKindReads": "Jede neue Aufgabe läuft auf einem Modell, das zur Arbeit passt, damit einfache Aufgaben weniger vom Kontingent deines Tarifs verbrauchen. Gelesen werden Titel und Ziel der Aufgabe, deine Worte, ihr Projekt und verwandte Arbeit.",
   "settingsKeyboardPreset": "Vorlage",
   "settingsKeyboardPresetDescription": "Ein vollständiger Tastensatz als Ausgangspunkt. Jede Vorlage behält die Tasten, die du darin änderst.",
   "settingsKeyboardPrefix": "Präfix",

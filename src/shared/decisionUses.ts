@@ -57,7 +57,7 @@ export const DECISION_USES: readonly DecisionUse[] = [
     id: "kind",
     name: "Task classification",
     reads:
-      "A new task's title, goal and your words, its project and related work, to tell what kind of task it is.",
+      "Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.",
     kind: "always-on",
     // The first approval screen described exactly these facts.
     approval: DECISION_FIRST_APPROVAL_VERSION,

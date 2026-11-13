@@ -791,6 +791,7 @@
   "settingsLanguageDefault": "{language} (padrão)",
   "settingsLanguageFollow": "Seguir este computador ({language})",
   "settingsLanguagePartial": "Algumas partes do Infinitary ainda aparecem em inglês.",
+  "settingsDecisionUseKindReads": "Cada tarefa nova roda em um modelo adequado ao trabalho, então tarefas simples gastam menos da franquia do seu plano. Para isso, lê o título e o objetivo da tarefa, suas palavras, o projeto dela e o trabalho relacionado.",
   "settingsKeyboardPreset": "Predefinição",
   "settingsKeyboardPresetDescription": "Um conjunto completo de teclas para começar. Cada um guarda as teclas que você muda nele.",
   "settingsKeyboardPrefix": "Prefixo",

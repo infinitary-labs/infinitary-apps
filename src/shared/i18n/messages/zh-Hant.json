@@ -759,6 +759,7 @@
   "settingsLanguageDefault": "{language}（預設）",
   "settingsLanguageFollow": "跟隨這台電腦（{language}）",
   "settingsLanguagePartial": "Infinitary 的部分地方仍顯示英文。",
+  "settingsDecisionUseKindReads": "每項新任務都會用適合這項工作的模型執行，簡單的任務因此更省方案額度。它會讀取任務的標題、目標和你的原話，以及所屬專案和相關工作。",
   "settingsKeyboardPreset": "配置",
   "settingsKeyboardPresetDescription": "一整組可以當作起點的按鍵。每組都會保留你在其中改過的按鍵。",
   "settingsKeyboardPrefix": "前置鍵",

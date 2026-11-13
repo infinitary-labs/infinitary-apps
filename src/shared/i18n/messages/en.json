@@ -759,6 +759,7 @@
   "settingsLanguageDefault": "{language} (default)",
   "settingsLanguageFollow": "Follow this computer ({language})",
   "settingsLanguagePartial": "Some parts of Infinitary still show English.",
+  "settingsDecisionUseKindReads": "Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.",
   "settingsKeyboardPreset": "Preset",
   "settingsKeyboardPresetDescription": "A whole set of keys to start from. Each keeps the keys you change in it.",
   "settingsKeyboardPrefix": "Prefix",

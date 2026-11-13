@@ -791,6 +791,7 @@
   "settingsLanguageDefault": "{language} (par défaut)",
   "settingsLanguageFollow": "Comme cet ordinateur ({language})",
   "settingsLanguagePartial": "Certaines parties d’Infinitary sont encore en anglais.",
+  "settingsDecisionUseKindReads": "Chaque nouvelle tâche s’exécute sur un modèle adapté au travail, pour que les tâches simples consomment moins de l’allocation de votre forfait. Pour cela, elle lit le titre et l’objectif de la tâche, vos mots, son projet et le travail lié.",
   "settingsKeyboardPreset": "Préréglage",
   "settingsKeyboardPresetDescription": "Un ensemble complet de raccourcis comme point de départ. Chacun conserve les raccourcis que vous y modifiez.",
   "settingsKeyboardPrefix": "Préfixe",

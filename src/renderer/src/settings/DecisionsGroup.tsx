@@ -17,6 +17,7 @@ import {
   type DecisionUseRequest,
   type DecisionUseView,
 } from "@shared/decisionUses";
+import * as m from "@shared/i18n/messages.generated";
 import { modelNames } from "@shared/modelDisplayName";
 import type { ModelSlotsView } from "@shared/modelSlots";
 import { offeringKey } from "@shared/modelSlots";
@@ -506,7 +507,7 @@ function DecisionUseRow({
             lineHeight: "var(--leading-body)",
           }}
         >
-          {use.reads}
+          {use.id === "kind" ? m.settingsDecisionUseKindReads() : use.reads}
         </div>
         {approvalFor && (
           <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>

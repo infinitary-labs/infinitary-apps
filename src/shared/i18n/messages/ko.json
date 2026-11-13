@@ -759,6 +759,7 @@
   "settingsLanguageDefault": "{language}(기본)",
   "settingsLanguageFollow": "이 컴퓨터를 따르기({language})",
   "settingsLanguagePartial": "Infinitary의 일부 화면은 아직 영어로 보여요.",
+  "settingsDecisionUseKindReads": "새 작업마다 작업에 맞는 모델로 실행돼서, 쉬운 작업은 사용 한도를 덜 써요. 작업의 제목과 목표, 직접 쓴 말, 프로젝트와 관련 작업을 읽어요.",
   "settingsKeyboardPreset": "프리셋",
   "settingsKeyboardPresetDescription": "처음 시작할 키 묶음 전체예요. 각 프리셋은 그 안에서 바꾼 키를 기억해요.",
   "settingsKeyboardPrefix": "접두 키",

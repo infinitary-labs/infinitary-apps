@@ -839,6 +839,7 @@
   "settingsLanguageDefault": "{language} (الافتراضية)",
   "settingsLanguageFollow": "اتباع لغة هذا الحاسوب ({language})",
   "settingsLanguagePartial": "لا تزال بعض أجزاء Infinitary تُعرض بالإنجليزية.",
+  "settingsDecisionUseKindReads": "تعمل كل مهمة جديدة على نموذج يناسب العمل، فتستهلك المهام السهلة قدرًا أقل من رصيد باقتك. ويقرأ لذلك عنوان المهمة وهدفها وكلماتك ومشروعها والأعمال المرتبطة بها.",
   "settingsKeyboardPreset": "الإعداد المسبق",
   "settingsKeyboardPresetDescription": "مجموعة كاملة من المفاتيح للبدء منها. يحتفظ كل منها بالمفاتيح التي تغيّرها فيه.",
   "settingsKeyboardPrefix": "البادئة",

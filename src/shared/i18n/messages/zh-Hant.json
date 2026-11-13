@@ -818,15 +818,30 @@
   "activityPanelLinesLabel": "動態項目",
   "automationPanelUnreadableSummary": "無法讀取",
   "automationPanelEmpty": "還沒有自動化",
-  "automationPanelActiveCount": { "plural": "count", "other": "{count} 個啟用中" },
-  "automationPanelPausedCount": { "plural": "count", "other": "{count} 個已暫停" },
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "other": "{count} 個啟用中"
+  },
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "other": "{count} 個已暫停"
+  },
   "automationPanelListLabel": "自動化",
   "knowledgePanelPrivateCollection": "私人",
   "knowledgePanelDirectionsEverywhere": "所有地方，僅限大副",
   "knowledgePanelUnreadableSummary": "無法讀取",
-  "knowledgePanelConceptCount": { "plural": "count", "other": "{count} 個概念" },
-  "knowledgePanelFindingCount": { "plural": "count", "other": "{count} 項發現" },
-  "knowledgePanelDirectionCount": { "plural": "count", "other": "{count} 項指引" },
+  "knowledgePanelConceptCount": {
+    "plural": "count",
+    "other": "{count} 個概念"
+  },
+  "knowledgePanelFindingCount": {
+    "plural": "count",
+    "other": "{count} 項發現"
+  },
+  "knowledgePanelDirectionCount": {
+    "plural": "count",
+    "other": "{count} 項指引"
+  },
   "knowledgePanelCounts": "{concepts} · {findings}",
   "knowledgePanelCountsWithDirections": "{concepts} · {findings} · {directions}",
   "knowledgePanelOriginYourWords": "你的原話",
@@ -879,8 +894,14 @@
   "knowledgePanelNothingRecorded": "還沒有記錄任何內容",
   "knowledgePanelBrowserTitle": "知識",
   "knowledgePanelEmpty": "跟你的大副說說你自己，或分享一篇你想保存的文章。",
-  "knowledgePanelAllDirections": { "plural": "count", "other": "全部 {count} 項指引" },
-  "knowledgePanelGraphLink": { "plural": "count", "other": "圖譜 · {count} 個概念" },
+  "knowledgePanelAllDirections": {
+    "plural": "count",
+    "other": "全部 {count} 項指引"
+  },
+  "knowledgePanelGraphLink": {
+    "plural": "count",
+    "other": "圖譜 · {count} 個概念"
+  },
   "knowledgePanelDirectionLabel": "{text} · 開啟知識",
   "knowledgePanelDirectionScopedLabel": "{text} · {scope} · 開啟知識",
   "knowledgePanelSectionOverview": "概覽",
@@ -927,7 +948,10 @@
   "knowledgePanelContextDetail": "{reason} · 一起閱讀",
   "knowledgePanelSupportingFindings": "支持的發現",
   "knowledgePanelNoFindings": "還沒有關於它的發現。",
-  "knowledgePanelMoreFindings": { "plural": "count", "other": "還有 {count} 項在「發現」中。" },
+  "knowledgePanelMoreFindings": {
+    "plural": "count",
+    "other": "還有 {count} 項在「發現」中。"
+  },
   "knowledgePanelShowOnGraph": "在圖譜中顯示",
   "knowledgePanelReasonedBy": "推論得出 · 由 {author}",
   "knowledgePanelObservedBy": "觀察得出 · 由 {author}",
@@ -950,7 +974,10 @@
   "knowledgePanelCurrentShownHere": "目前的修訂，顯示在這裡",
   "knowledgePanelReadCurrent": "閱讀目前的修訂",
   "knowledgePanelReadRevision": "閱讀修訂 {revision}",
-  "knowledgePanelEarlierRevisions": { "plural": "count", "other": "還有 {count} 個較早的修訂。" },
+  "knowledgePanelEarlierRevisions": {
+    "plural": "count",
+    "other": "還有 {count} 個較早的修訂。"
+  },
   "knowledgePanelDisagreements": "分歧",
   "knowledgePanelNoDisagreements": "沒有其他發現與它矛盾、取代它或重複它。",
   "knowledgePanelRelationTitle": "{relation}：{title}",
@@ -958,7 +985,10 @@
   "knowledgePanelNoUses": "還沒有工作申報用到它。",
   "knowledgePanelDeclaredUseNote": "這是申報的使用，不能證明推理正確。",
   "knowledgePanelUseHead": "{by} · 修訂 {revision} · {when}",
-  "knowledgePanelEarlierUses": { "plural": "count", "other": "還有 {count} 次較早的使用。" },
+  "knowledgePanelEarlierUses": {
+    "plural": "count",
+    "other": "還有 {count} 次較早的使用。"
+  },
   "knowledgePanelEarlierRevision": "較早的修訂",
   "knowledgePanelSourceChangedNote": "它引用的一個來源在保存後有了變更。",
   "knowledgePanelInspectorSections": "檢閱器區段",
@@ -975,7 +1005,10 @@
   "knowledgePanelDirectionRetiredRevision": "此修訂停用了這筆紀錄，沒有新的措辭。",
   "knowledgePanelPrevious": "上一頁",
   "knowledgePanelNext": "下一頁",
-  "knowledgePanelConceptMatches": { "plural": "count", "other": "{count} 個概念相符" },
+  "knowledgePanelConceptMatches": {
+    "plural": "count",
+    "other": "{count} 個概念相符"
+  },
   "knowledgePanelNoMatch": "這裡沒有與「{query}」相符的內容。",
   "knowledgePanelNoConcepts": "這裡還沒有記錄任何概念。",
   "knowledgePanelConceptsLabel": "概念",
@@ -989,17 +1022,29 @@
   "knowledgePanelFindingsLabel": "發現",
   "knowledgePanelFindingColumn": "發現與背景",
   "knowledgePanelEvidenceColumn": "證據與注意事項",
-  "knowledgePanelSourceCount": { "plural": "count", "other": "{count} 個來源" },
-  "knowledgePanelCheckCount": { "plural": "count", "other": "{count} 次查證" },
+  "knowledgePanelSourceCount": {
+    "plural": "count",
+    "other": "{count} 個來源"
+  },
+  "knowledgePanelCheckCount": {
+    "plural": "count",
+    "other": "{count} 次查證"
+  },
   "knowledgePanelDirectionsNote": "知識在每一輪都會提供這些指引。閱讀它們不會改變任何東西，也不會授予許可。",
   "knowledgePanelNoDirections": "沒有符合此檢視的指引。",
   "knowledgePanelDirectionsLabel": "指引",
-  "knowledgePanelGraphConceptsOf": { "plural": "count", "other": "{count} 個概念中的 {shown} 個" },
+  "knowledgePanelGraphConceptsOf": {
+    "plural": "count",
+    "other": "{count} 個概念中的 {shown} 個"
+  },
   "knowledgePanelGraphConnectionsOf": {
     "plural": "count",
     "other": "{count} 條關聯中的 {shown} 條"
   },
-  "knowledgePanelConnectionCount": { "plural": "count", "other": "{count} 條關聯" },
+  "knowledgePanelConnectionCount": {
+    "plural": "count",
+    "other": "{count} 條關聯"
+  },
   "knowledgePanelCameraOrbited": "視角已旋轉。選取的內容不變。",
   "knowledgePanelZoomSaid": "縮放 {percent}%。",
   "knowledgePanelCameraOrbitedLeft": "視角已向左旋轉。",
@@ -1011,7 +1056,10 @@
   "knowledgePanelConceptNotDrawn": "一個未繪製的概念",
   "knowledgePanelFocusNearby": "聚焦附近",
   "knowledgePanelNearbyReach": "「附近」的範圍",
-  "knowledgePanelHops": { "plural": "count", "other": "{count} 步" },
+  "knowledgePanelHops": {
+    "plural": "count",
+    "other": "{count} 步"
+  },
   "knowledgePanelConceptsNotDrawn": {
     "plural": "count",
     "other": "還有 {count} 個概念未繪製。用「聚焦附近」或「搜尋」可以把圖譜縮小到你需要的部分。"
@@ -1126,9 +1174,18 @@
   "nowPanelBoardTileFoundOn": "在 {key} 中發現",
   "nowPanelBoardTilePartOf": "{key} 的一部分",
   "nowPanelBoardAllProjects": "所有專案",
-  "nowPanelSummaryWaiting": { "plural": "count", "other": "{count} 項等你處理" },
-  "nowPanelSummaryWorking": { "plural": "count", "other": "{count} 項進行中" },
-  "nowPanelSummaryFailed": { "plural": "count", "other": "{count} 項無法開始" },
+  "nowPanelSummaryWaiting": {
+    "plural": "count",
+    "other": "{count} 項等你處理"
+  },
+  "nowPanelSummaryWorking": {
+    "plural": "count",
+    "other": "{count} 項進行中"
+  },
+  "nowPanelSummaryFailed": {
+    "plural": "count",
+    "other": "{count} 項無法開始"
+  },
   "nowPanelNoTasks": "還沒有任務",
   "nowPanelFilterPlaceholder": "編號或標題",
   "nowPanelFilterLabel": "篩選任務",
@@ -1158,8 +1215,14 @@
   "nowPanelBoardEarlierUnavailable": "目前無法取得較早的結果。「已完成 · 7 天」仍會列出本週的任務。",
   "nowPanelBoardEarlierReading": "正在尋找較早的任務…",
   "nowPanelBoardEarlierCapped": "搜尋只會顯示最新的相符項目。多輸入一些編號或標題來縮小範圍。",
-  "nowPanelBoardListLabel": { "plural": "count", "other": "{lane}，{count} 項任務" },
-  "nowPanelBoardNewCount": { "plural": "count", "other": "新增 {count} 項" },
+  "nowPanelBoardListLabel": {
+    "plural": "count",
+    "other": "{lane}，{count} 項任務"
+  },
+  "nowPanelBoardNewCount": {
+    "plural": "count",
+    "other": "新增 {count} 項"
+  },
   "nowPanelBoardReadOnly": "唯讀",
   "nowPanelBoardLabel": "任務看板",
   "nowPanelBoardFindPlaceholder": "搜尋任務",
@@ -1170,8 +1233,14 @@
   "nowPanelBoardViewLanded": "已完成 · 7 天",
   "nowPanelBoardViewEarlier": "較早的相符項目",
   "nowPanelBoardWaitingNote": "等你處理的卡片",
-  "nowPanelBoardShowAll": { "plural": "count", "other": "顯示全部 {count} 項" },
-  "nowPanelBoardDroppedToggle": { "plural": "count", "other": "已放棄 · {count}" },
+  "nowPanelBoardShowAll": {
+    "plural": "count",
+    "other": "顯示全部 {count} 項"
+  },
+  "nowPanelBoardDroppedToggle": {
+    "plural": "count",
+    "other": "已放棄 · {count}"
+  },
   "nowPanelBoardHint": "方向鍵移動 · {enter} 開啟 · {space} 選單",
   "settingsKeyboardSaveFailed": "無法儲存這些按鍵。",
   "settingsKeyboardHeading": "鍵盤",
@@ -1205,7 +1274,10 @@
   "settingsKeyboardCancel": "取消",
   "settingsKeyboardClashMovesNoKey": "{clash}。儲存後它會移到這裡，「{command}」將沒有按鍵。",
   "settingsKeyboardClashMovesKeeps": "{clash}。儲存後它會移到這裡，「{command}」會保留它的其他按鍵。",
-  "settingsGeneralTasksPurged": { "plural": "count", "other": "已清除 {count} 項任務。" },
+  "settingsGeneralTasksPurged": {
+    "plural": "count",
+    "other": "已清除 {count} 項任務。"
+  },
   "settingsGeneralYourPanels": "你的面板",
   "settingsGeneralYourPanelsOn": "你的大副為你製作的面板，以及你加入的面板。關閉後會把它們全部撤下，直到你重新開啟。",
   "settingsGeneralYourPanelsSafeMode": "程式兩次在啟動後不久就關閉，所以已將它們關閉。準備好時再重新開啟。",
@@ -1360,7 +1432,10 @@
   "settingsAppearanceWashValue": "{percent}% 不透明度",
   "settingsAppearanceCrewModelNames": "船員模型名稱",
   "settingsAppearanceCrewModelNamesDescription": "船員只使用一個軌道時，顯示模型名稱。",
-  "settingsIntegrationsActionCount": { "plural": "count", "other": "{count} 個動作" },
+  "settingsIntegrationsActionCount": {
+    "plural": "count",
+    "other": "{count} 個動作"
+  },
   "settingsIntegrationsAs": "以 {account} 身分",
   "settingsIntegrationsPaused": "已暫停",
   "settingsIntegrationsSignedIn": "已登入",
@@ -2014,5 +2089,97 @@
   "phoneChecksAfterDuration": "{duration}後{words}",
   "phoneReviewFindings": "有待修正",
   "phoneReviewBlocked": "受阻",
-  "phoneReviewWithRisk": "{words} · 風險：{risk}"
+  "phoneReviewWithRisk": "{words} · 風險：{risk}",
+  "recordHelperClosed": "這項任務已關閉。它的規則會保留為歷史紀錄。",
+  "recordMergingOnItsOwn": "自行合併",
+  "recordFactCrewmate": "船員",
+  "recordCareCareful": "謹慎",
+  "recordUseRetired": "之後已停用",
+  "recordLandsCare": "謹慎度：{care}",
+  "recordMoreDelivery": "交付方式",
+  "recordOpenKeptEvidence": "開啟保存的證據",
+  "recordValidationEvidence": "證據",
+  "recordMergingAsksFirst": "先問過你",
+  "recordCareDefault": "預設",
+  "recordUsesMore": {
+    "plural": "count",
+    "other": "還有 {count} 項。"
+  },
+  "recordSourceGone": "這個歷史來源已經無法取得。",
+  "recordCrewmateOnModel": "{crewmate}，使用 {model}",
+  "recordAgeMinutes": {
+    "plural": "count",
+    "other": "{count} 分鐘前"
+  },
+  "recordCardOnStage": "顯示中",
+  "recordDeliveryPullRequest": "Pull request",
+  "recordPolicyProject": "專案設定",
+  "recordMoreComputerChoice": "電腦的選擇",
+  "recordCardPutAside": "已放到一旁",
+  "recordUseEarlierRevision": "使用了修訂 {revision} · 目前修訂 {current}",
+  "recordModeDirectPr": "以 pull request 交付",
+  "recordAgeHours": {
+    "plural": "count",
+    "other": "{count} 小時前"
+  },
+  "recordAgeShortHours": "{hours} 小時",
+  "recordUseConcept": "概念",
+  "recordDeliveryBatched": "批次 pull request",
+  "recordModeQueuePr": "以批次 pull request 交付，由你專案的佇列測試",
+  "recordFactDelivery": "交付方式",
+  "recordModeInPlace": "就地建置",
+  "recordFactResult": "成果",
+  "recordCardNote": "筆記",
+  "recordAgeDays": {
+    "plural": "count",
+    "other": "{count} 天前"
+  },
+  "recordMoreValidation": "實際驗證",
+  "recordFactMerging": "合併",
+  "recordHelperAskFirstMate": "想為這項任務更改這些設定，請告訴你的大副。",
+  "recordComparedComputers": "開始時比較過的電腦",
+  "recordMoreKnowledge": {
+    "plural": "count",
+    "other": "知識 {count}"
+  },
+  "recordFactBranch": "分支",
+  "recordMoreBranch": "分支",
+  "recordDeliveryLocalMerge": "本機合併",
+  "recordValidationScenario": "情境",
+  "recordValidationSupplementary": "{action}（補充）",
+  "recordFromTask": "來自 {key}",
+  "recordAgeShortDays": "{days} 天",
+  "recordAgeJustNow": "剛剛",
+  "recordUseCurrentRevision": "使用了修訂 {revision}，也就是目前的修訂",
+  "recordLandsMerged": "已合併",
+  "recordUndated": "無日期 · {summary}",
+  "recordFactOperation": "操作",
+  "recordPolicyThisTask": "這項任務",
+  "recordValidationResult": "結果",
+  "recordAgeShortNow": "現在",
+  "recordFactCare": "謹慎度",
+  "recordPolicyParentTask": "上層任務",
+  "recordFactRunsOn": "執行於",
+  "recordCareQuick": "快速",
+  "recordModeLocalOnly": "本機合併，沒有 pull request",
+  "recordRecordedDetails": "記錄的詳細資料",
+  "recordAgeShortMinutes": "{minutes} 分鐘",
+  "recordUnreadable": "無法讀取這份紀錄。",
+  "recordHelperLocalCare": "本機合併使用預設謹慎度；pull request 仍要求謹慎。",
+  "recordUseFinding": "發現",
+  "recordShowEarlier": {
+    "plural": "count",
+    "other": "顯示較早的項目 · {count}"
+  },
+  "recordFoldedMore": {
+    "plural": "count",
+    "other": "還有 {count} 項"
+  },
+  "recordFactComputerChoice": "電腦的選擇",
+  "recordCardClosed": "已關閉",
+  "recordCardDecision": "決定",
+  "recordLabelLiveValidation": "實際驗證",
+  "recordLabelKnowledgeUsed": "用到的知識",
+  "recordLabelMore": "更多",
+  "recordKnowledgeUsedNote": "這項工作宣告所依據的知識，依它使用的修訂列出。開啟其中一項不會記錄為使用。"
 }

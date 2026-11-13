@@ -118,3 +118,4 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | Approves secret uses (switch) | Aprova usos de segredos | The computer's Settings → Devices should show the same words. |
 | Steer (button) | Orientar |  |
 | Theme: Device / Dark / Light | Tema: Dispositivo / Escuro / Claro |  |
+| live validation | validação ao vivo | Trying the change for real; kept apart from the checks. |

@@ -120,3 +120,4 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Approves secret uses (switch) | Aprueba usos de secretos | The computer's Settings → Devices should show the same words. |
 | Steer (button) | Orientar |  |
 | Theme: Device / Dark / Light | Dispositivo / Oscuro / Claro |  |
+| live validation | validación en vivo | Trying the change for real; kept apart from the checks. |

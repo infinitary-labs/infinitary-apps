@@ -42,6 +42,7 @@ import observeScript from "./observe/observe.frame.js?raw";
 import observeHtml from "./observe/observe.html?raw";
 import recordHtml from "./record/record.html?raw";
 import { recordScript } from "./record/recordScript";
+import { recordWords } from "./record/recordWords";
 
 /**
  * Binds the built-in manifest to the code that serves it. Called once from
@@ -89,6 +90,17 @@ function always<T>(value: T): PanelSource<T> {
 const RECORD_TASK_ID_SLOT = "__TASK_ID__";
 /** And whether the window has knowledge, so the record reads what the work used. */
 const RECORD_KNOWLEDGE_SLOT = "__KNOWLEDGE__";
+/** And the record's words in the window's language (docs/i18n.md, "The task record's frame"). */
+const RECORD_WORDS_SLOT = "__RECORD_WORDS__";
+
+/** Text written into a double-quoted attribute. */
+function attributeEscaped(text: string): string {
+  return text.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char,
+  );
+}
 
 /**
  * The task-record card's body for one task: the record template with the
@@ -97,17 +109,17 @@ const RECORD_KNOWLEDGE_SLOT = "__KNOWLEDGE__";
  * ids are plain hex - the frame boundary is not the place to assume that.
  * `knowledge` says the window has the Knowledge browser (docs/knowledge.md,
  * "Knowledge used on a task"): only then does the record read and list what
- * the work declared it used.
+ * the work declared it used. The record's words are worded here, in the
+ * window's language as it draws, since the frame cannot read the catalog.
  */
 export function recordTemplate(taskId: string, knowledge = false): FrameTemplate {
-  const escaped = taskId.replace(
-    /[&<>"']/g,
-    (char) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char,
-  );
+  const escaped = attributeEscaped(taskId);
+  const words = attributeEscaped(JSON.stringify(recordWords()));
   return {
+    // The words first, so a task id that names their slot never takes their place.
     html: recordHtml
-      .replace(RECORD_TASK_ID_SLOT, escaped)
+      .replace(RECORD_WORDS_SLOT, () => words)
+      .replace(RECORD_TASK_ID_SLOT, () => escaped)
       .replace(RECORD_KNOWLEDGE_SLOT, knowledge ? "on" : "off"),
     script: recordScript,
   };

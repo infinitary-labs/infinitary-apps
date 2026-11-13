@@ -2,6 +2,7 @@ import type { RecordFact } from "@shared/recordFacts";
 import type { TaskActivityRow, TaskDetail, TaskEventView } from "@shared/tasks";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { recordScript as script } from "./recordScript";
+import { recordWords } from "./recordWords";
 
 class Node {
   #text = "";
@@ -104,6 +105,8 @@ function mount(options: { knowledge?: boolean; state?: unknown } = {}) {
   };
   // The root as the template stamps it: whether the window has knowledge.
   node("[data-record]").setAttribute("data-knowledge", options.knowledge ? "on" : "off");
+  // And the record's words, as the window words them in English.
+  node("[data-record]").setAttribute("data-record-words", JSON.stringify(recordWords()));
   const listeners = new Map<string, (value: unknown) => void>();
   /** Reads of other tasks' records (a parent the board does not list), by id. */
   const others = new Map<string, { callback: (value: unknown) => void; stopped: boolean }>();

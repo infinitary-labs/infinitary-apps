@@ -818,15 +818,30 @@
   "activityPanelLinesLabel": "动态条目",
   "automationPanelUnreadableSummary": "无法读取",
   "automationPanelEmpty": "还没有自动化",
-  "automationPanelActiveCount": { "plural": "count", "other": "{count} 个启用中" },
-  "automationPanelPausedCount": { "plural": "count", "other": "{count} 个已暂停" },
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "other": "{count} 个启用中"
+  },
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "other": "{count} 个已暂停"
+  },
   "automationPanelListLabel": "自动化",
   "knowledgePanelPrivateCollection": "私人",
   "knowledgePanelDirectionsEverywhere": "所有地方，仅限大副",
   "knowledgePanelUnreadableSummary": "无法读取",
-  "knowledgePanelConceptCount": { "plural": "count", "other": "{count} 个概念" },
-  "knowledgePanelFindingCount": { "plural": "count", "other": "{count} 条发现" },
-  "knowledgePanelDirectionCount": { "plural": "count", "other": "{count} 条指引" },
+  "knowledgePanelConceptCount": {
+    "plural": "count",
+    "other": "{count} 个概念"
+  },
+  "knowledgePanelFindingCount": {
+    "plural": "count",
+    "other": "{count} 条发现"
+  },
+  "knowledgePanelDirectionCount": {
+    "plural": "count",
+    "other": "{count} 条指引"
+  },
   "knowledgePanelCounts": "{concepts} · {findings}",
   "knowledgePanelCountsWithDirections": "{concepts} · {findings} · {directions}",
   "knowledgePanelOriginYourWords": "你的原话",
@@ -879,8 +894,14 @@
   "knowledgePanelNothingRecorded": "还没有记录任何内容",
   "knowledgePanelBrowserTitle": "知识",
   "knowledgePanelEmpty": "告诉你的大副关于你自己的事，或分享一篇你想保存的文章。",
-  "knowledgePanelAllDirections": { "plural": "count", "other": "全部 {count} 条指引" },
-  "knowledgePanelGraphLink": { "plural": "count", "other": "图谱 · {count} 个概念" },
+  "knowledgePanelAllDirections": {
+    "plural": "count",
+    "other": "全部 {count} 条指引"
+  },
+  "knowledgePanelGraphLink": {
+    "plural": "count",
+    "other": "图谱 · {count} 个概念"
+  },
   "knowledgePanelDirectionLabel": "{text} · 打开知识",
   "knowledgePanelDirectionScopedLabel": "{text} · {scope} · 打开知识",
   "knowledgePanelSectionOverview": "概览",
@@ -927,7 +948,10 @@
   "knowledgePanelContextDetail": "{reason} · 一起阅读",
   "knowledgePanelSupportingFindings": "支持的发现",
   "knowledgePanelNoFindings": "还没有关于它的发现。",
-  "knowledgePanelMoreFindings": { "plural": "count", "other": "还有 {count} 条在“发现”中。" },
+  "knowledgePanelMoreFindings": {
+    "plural": "count",
+    "other": "还有 {count} 条在“发现”中。"
+  },
   "knowledgePanelShowOnGraph": "在图谱中显示",
   "knowledgePanelReasonedBy": "推断得出 · 由 {author}",
   "knowledgePanelObservedBy": "观察得出 · 由 {author}",
@@ -950,7 +974,10 @@
   "knowledgePanelCurrentShownHere": "当前修订，显示在此处",
   "knowledgePanelReadCurrent": "阅读当前修订",
   "knowledgePanelReadRevision": "阅读修订 {revision}",
-  "knowledgePanelEarlierRevisions": { "plural": "count", "other": "还有 {count} 个更早的修订。" },
+  "knowledgePanelEarlierRevisions": {
+    "plural": "count",
+    "other": "还有 {count} 个更早的修订。"
+  },
   "knowledgePanelDisagreements": "分歧",
   "knowledgePanelNoDisagreements": "没有其他发现与它矛盾、取代它或重复它。",
   "knowledgePanelRelationTitle": "{relation}：{title}",
@@ -958,7 +985,10 @@
   "knowledgePanelNoUses": "还没有工作申报用到了它。",
   "knowledgePanelDeclaredUseNote": "这是申报的使用，不能证明推理正确。",
   "knowledgePanelUseHead": "{by} · 修订 {revision} · {when}",
-  "knowledgePanelEarlierUses": { "plural": "count", "other": "还有 {count} 次更早的使用。" },
+  "knowledgePanelEarlierUses": {
+    "plural": "count",
+    "other": "还有 {count} 次更早的使用。"
+  },
   "knowledgePanelEarlierRevision": "较早的修订",
   "knowledgePanelSourceChangedNote": "它引用的一个来源在保存后发生了改变。",
   "knowledgePanelInspectorSections": "检查器分区",
@@ -975,7 +1005,10 @@
   "knowledgePanelDirectionRetiredRevision": "此修订停用了这条记录，没有新的措辞。",
   "knowledgePanelPrevious": "上一页",
   "knowledgePanelNext": "下一页",
-  "knowledgePanelConceptMatches": { "plural": "count", "other": "{count} 个概念匹配" },
+  "knowledgePanelConceptMatches": {
+    "plural": "count",
+    "other": "{count} 个概念匹配"
+  },
   "knowledgePanelNoMatch": "这里没有与“{query}”匹配的内容。",
   "knowledgePanelNoConcepts": "这里还没有记录任何概念。",
   "knowledgePanelConceptsLabel": "概念",
@@ -989,17 +1022,29 @@
   "knowledgePanelFindingsLabel": "发现",
   "knowledgePanelFindingColumn": "发现与背景",
   "knowledgePanelEvidenceColumn": "证据与需注意事项",
-  "knowledgePanelSourceCount": { "plural": "count", "other": "{count} 个来源" },
-  "knowledgePanelCheckCount": { "plural": "count", "other": "{count} 次核实" },
+  "knowledgePanelSourceCount": {
+    "plural": "count",
+    "other": "{count} 个来源"
+  },
+  "knowledgePanelCheckCount": {
+    "plural": "count",
+    "other": "{count} 次核实"
+  },
   "knowledgePanelDirectionsNote": "知识在每一轮都会提供这些指引。阅读它们不会改变任何东西，也不会授予许可。",
   "knowledgePanelNoDirections": "没有符合此视图的指引。",
   "knowledgePanelDirectionsLabel": "指引",
-  "knowledgePanelGraphConceptsOf": { "plural": "count", "other": "{count} 个概念中的 {shown} 个" },
+  "knowledgePanelGraphConceptsOf": {
+    "plural": "count",
+    "other": "{count} 个概念中的 {shown} 个"
+  },
   "knowledgePanelGraphConnectionsOf": {
     "plural": "count",
     "other": "{count} 个关联中的 {shown} 个"
   },
-  "knowledgePanelConnectionCount": { "plural": "count", "other": "{count} 个关联" },
+  "knowledgePanelConnectionCount": {
+    "plural": "count",
+    "other": "{count} 个关联"
+  },
   "knowledgePanelCameraOrbited": "视角已旋转。所选内容不变。",
   "knowledgePanelZoomSaid": "缩放 {percent}%。",
   "knowledgePanelCameraOrbitedLeft": "视角已向左旋转。",
@@ -1011,7 +1056,10 @@
   "knowledgePanelConceptNotDrawn": "一个未绘制的概念",
   "knowledgePanelFocusNearby": "聚焦附近",
   "knowledgePanelNearbyReach": "“附近”的范围",
-  "knowledgePanelHops": { "plural": "count", "other": "{count} 步" },
+  "knowledgePanelHops": {
+    "plural": "count",
+    "other": "{count} 步"
+  },
   "knowledgePanelConceptsNotDrawn": {
     "plural": "count",
     "other": "还有 {count} 个概念未绘制。用“聚焦附近”或“查找”可以把图谱缩小到你需要的部分。"
@@ -1126,9 +1174,18 @@
   "nowPanelBoardTileFoundOn": "在 {key} 中发现",
   "nowPanelBoardTilePartOf": "{key} 的一部分",
   "nowPanelBoardAllProjects": "所有项目",
-  "nowPanelSummaryWaiting": { "plural": "count", "other": "{count} 个等你处理" },
-  "nowPanelSummaryWorking": { "plural": "count", "other": "{count} 个进行中" },
-  "nowPanelSummaryFailed": { "plural": "count", "other": "{count} 个无法开始" },
+  "nowPanelSummaryWaiting": {
+    "plural": "count",
+    "other": "{count} 个等你处理"
+  },
+  "nowPanelSummaryWorking": {
+    "plural": "count",
+    "other": "{count} 个进行中"
+  },
+  "nowPanelSummaryFailed": {
+    "plural": "count",
+    "other": "{count} 个无法开始"
+  },
   "nowPanelNoTasks": "还没有任务",
   "nowPanelFilterPlaceholder": "编号或标题",
   "nowPanelFilterLabel": "筛选任务",
@@ -1158,8 +1215,14 @@
   "nowPanelBoardEarlierUnavailable": "目前无法获取更早的结果。“已完成 · 7 天”仍会列出本周的任务。",
   "nowPanelBoardEarlierReading": "正在查找更早的任务…",
   "nowPanelBoardEarlierCapped": "搜索只显示最新的匹配。多输入一些编号或标题来缩小范围。",
-  "nowPanelBoardListLabel": { "plural": "count", "other": "{lane}，{count} 个任务" },
-  "nowPanelBoardNewCount": { "plural": "count", "other": "新增 {count} 个" },
+  "nowPanelBoardListLabel": {
+    "plural": "count",
+    "other": "{lane}，{count} 个任务"
+  },
+  "nowPanelBoardNewCount": {
+    "plural": "count",
+    "other": "新增 {count} 个"
+  },
   "nowPanelBoardReadOnly": "只读",
   "nowPanelBoardLabel": "任务看板",
   "nowPanelBoardFindPlaceholder": "查找任务",
@@ -1170,8 +1233,14 @@
   "nowPanelBoardViewLanded": "已完成 · 7 天",
   "nowPanelBoardViewEarlier": "更早的匹配",
   "nowPanelBoardWaitingNote": "等你处理的卡片",
-  "nowPanelBoardShowAll": { "plural": "count", "other": "显示全部 {count} 个" },
-  "nowPanelBoardDroppedToggle": { "plural": "count", "other": "已放弃 · {count}" },
+  "nowPanelBoardShowAll": {
+    "plural": "count",
+    "other": "显示全部 {count} 个"
+  },
+  "nowPanelBoardDroppedToggle": {
+    "plural": "count",
+    "other": "已放弃 · {count}"
+  },
   "nowPanelBoardHint": "方向键移动 · {enter} 打开 · {space} 菜单",
   "settingsKeyboardSaveFailed": "无法保存这些按键。",
   "settingsKeyboardHeading": "键盘",
@@ -1205,7 +1274,10 @@
   "settingsKeyboardCancel": "取消",
   "settingsKeyboardClashMovesNoKey": "{clash}。保存后它会移到这里，“{command}”将没有按键。",
   "settingsKeyboardClashMovesKeeps": "{clash}。保存后它会移到这里，“{command}”会保留它的其他按键。",
-  "settingsGeneralTasksPurged": { "plural": "count", "other": "已清除 {count} 个任务。" },
+  "settingsGeneralTasksPurged": {
+    "plural": "count",
+    "other": "已清除 {count} 个任务。"
+  },
   "settingsGeneralYourPanels": "你的面板",
   "settingsGeneralYourPanelsOn": "你的大副为你制作的面板，以及你添加的面板。关闭后会把它们全部撤下，直到你重新打开。",
   "settingsGeneralYourPanelsSafeMode": "应用两次在启动后不久就关闭，因此已将它们关闭。准备好后再重新打开。",
@@ -1360,7 +1432,10 @@
   "settingsAppearanceWashValue": "{percent}% 不透明度",
   "settingsAppearanceCrewModelNames": "船员模型名称",
   "settingsAppearanceCrewModelNamesDescription": "船员只使用一个轨道时显示模型名称。",
-  "settingsIntegrationsActionCount": { "plural": "count", "other": "{count} 个操作" },
+  "settingsIntegrationsActionCount": {
+    "plural": "count",
+    "other": "{count} 个操作"
+  },
   "settingsIntegrationsAs": "以 {account} 身份",
   "settingsIntegrationsPaused": "已暂停",
   "settingsIntegrationsSignedIn": "已登录",
@@ -2014,5 +2089,97 @@
   "phoneChecksAfterDuration": "{words}，历时 {duration}",
   "phoneReviewFindings": "有待修复",
   "phoneReviewBlocked": "受阻",
-  "phoneReviewWithRisk": "{words} · 风险 {risk}"
+  "phoneReviewWithRisk": "{words} · 风险 {risk}",
+  "recordHelperClosed": "这个任务已关闭。它的策略作为历史保留。",
+  "recordMergingOnItsOwn": "自动合并",
+  "recordFactCrewmate": "船员",
+  "recordCareCareful": "谨慎",
+  "recordUseRetired": "之后已停用",
+  "recordLandsCare": "把关：{care}",
+  "recordMoreDelivery": "交付方式",
+  "recordOpenKeptEvidence": "打开保存的证据",
+  "recordValidationEvidence": "证据",
+  "recordMergingAsksFirst": "先询问",
+  "recordCareDefault": "默认",
+  "recordUsesMore": {
+    "plural": "count",
+    "other": "还有 {count} 项。"
+  },
+  "recordSourceGone": "这个历史来源已不可用。",
+  "recordCrewmateOnModel": "{crewmate}，使用 {model}",
+  "recordAgeMinutes": {
+    "plural": "count",
+    "other": "{count} 分钟前"
+  },
+  "recordCardOnStage": "显示中",
+  "recordDeliveryPullRequest": "拉取请求",
+  "recordPolicyProject": "项目设置",
+  "recordMoreComputerChoice": "电脑的选择",
+  "recordCardPutAside": "已放到一边",
+  "recordUseEarlierRevision": "使用了修订 {revision} · 当前修订 {current}",
+  "recordModeDirectPr": "以拉取请求交付",
+  "recordAgeHours": {
+    "plural": "count",
+    "other": "{count} 小时前"
+  },
+  "recordAgeShortHours": "{hours} 小时",
+  "recordUseConcept": "概念",
+  "recordDeliveryBatched": "批量拉取请求",
+  "recordModeQueuePr": "以批量拉取请求交付，由你项目的队列测试",
+  "recordFactDelivery": "交付方式",
+  "recordModeInPlace": "就地构建",
+  "recordFactResult": "成果",
+  "recordCardNote": "便笺",
+  "recordAgeDays": {
+    "plural": "count",
+    "other": "{count} 天前"
+  },
+  "recordMoreValidation": "实测验证",
+  "recordFactMerging": "合并",
+  "recordHelperAskFirstMate": "如需为这个任务更改这些设置，请告诉你的大副。",
+  "recordComparedComputers": "开始时比较过的电脑",
+  "recordMoreKnowledge": {
+    "plural": "count",
+    "other": "知识 {count}"
+  },
+  "recordFactBranch": "分支",
+  "recordMoreBranch": "分支",
+  "recordDeliveryLocalMerge": "本地合并",
+  "recordValidationScenario": "场景",
+  "recordValidationSupplementary": "{action}（补充）",
+  "recordFromTask": "来自 {key}",
+  "recordAgeShortDays": "{days} 天",
+  "recordAgeJustNow": "刚刚",
+  "recordUseCurrentRevision": "使用了修订 {revision}，即当前修订",
+  "recordLandsMerged": "已合并",
+  "recordUndated": "无日期 · {summary}",
+  "recordFactOperation": "操作",
+  "recordPolicyThisTask": "本任务",
+  "recordValidationResult": "结果",
+  "recordAgeShortNow": "现在",
+  "recordFactCare": "把关",
+  "recordPolicyParentTask": "上级任务",
+  "recordFactRunsOn": "运行于",
+  "recordCareQuick": "快速",
+  "recordModeLocalOnly": "本地合并，没有拉取请求",
+  "recordRecordedDetails": "记录的详情",
+  "recordAgeShortMinutes": "{minutes} 分钟",
+  "recordUnreadable": "无法读取此记录。",
+  "recordHelperLocalCare": "本地合并使用默认把关；拉取请求仍要求谨慎把关。",
+  "recordUseFinding": "发现",
+  "recordShowEarlier": {
+    "plural": "count",
+    "other": "显示更早的 · {count}"
+  },
+  "recordFoldedMore": {
+    "plural": "count",
+    "other": "还有 {count} 项"
+  },
+  "recordFactComputerChoice": "电脑的选择",
+  "recordCardClosed": "已关闭",
+  "recordCardDecision": "决定",
+  "recordLabelLiveValidation": "实测验证",
+  "recordLabelKnowledgeUsed": "用到的知识",
+  "recordLabelMore": "更多",
+  "recordKnowledgeUsedNote": "这项工作声明所依据的知识，按它使用的修订列出。打开其中一项不会记录为使用。"
 }

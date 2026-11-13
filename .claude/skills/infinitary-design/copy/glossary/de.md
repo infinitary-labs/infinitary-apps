@@ -123,3 +123,4 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Approves secret uses (switch) | Gibt Geheimnisse frei | The computer's Settings → Devices should show the same words. |
 | Steer (button) | Lenken |  |
 | Theme: Device / Dark / Light | Darstellung: Gerät / Dunkel / Hell | Kept apart from "Erscheinungsbild" (Appearance). |
+| live validation | Live-Prüfung | Trying the change for real; kept apart from "Überprüfungen". |

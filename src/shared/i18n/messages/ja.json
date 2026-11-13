@@ -1,5 +1,8 @@
 {
-  "composerLines": { "plural": "count", "other": "{count}行" },
+  "composerLines": {
+    "plural": "count",
+    "other": "{count}行"
+  },
   "pastedFileMeta": "ファイル · {lines} · {kilobytes} KB",
   "pastedFileRemove": "ファイルを削除（{lines}）",
   "pastedFileRemoveNamed": "{name} を削除",
@@ -305,7 +308,10 @@
   "uiCardStackNext": "次のカード",
   "uiCardPreviousQuestion": "前の質問",
   "uiCardNextQuestion": "次の質問",
-  "uiCardStackNew": { "plural": "count", "other": "{count}件の新着" },
+  "uiCardStackNew": {
+    "plural": "count",
+    "other": "{count}件の新着"
+  },
   "uiPictureViewerDemoFrom": "{title} のデモ",
   "uiPictureViewerPicturesFrom": "{title} の画像",
   "uiPictureViewerClose": "ビューアを閉じる",
@@ -333,9 +339,18 @@
   "uiConsentNotNow": "今はしない",
   "uiTaskFactsProgress": "進捗",
   "uiTaskFactsPlanCount": "{done}/{total}",
-  "uiTaskFactsPlanSkipped": { "plural": "count", "other": "· {count}件スキップ" },
-  "uiTaskFactsFoldedDone": { "plural": "count", "other": "{count}件完了" },
-  "uiTaskFactsFoldedMore": { "plural": "count", "other": "ほか{count}件" },
+  "uiTaskFactsPlanSkipped": {
+    "plural": "count",
+    "other": "· {count}件スキップ"
+  },
+  "uiTaskFactsFoldedDone": {
+    "plural": "count",
+    "other": "{count}件完了"
+  },
+  "uiTaskFactsFoldedMore": {
+    "plural": "count",
+    "other": "ほか{count}件"
+  },
   "uiTaskFactsPlanDotsName": "進捗：{total}件中{done}件完了",
   "uiTaskFactsShowEarlier": "以前の項目を表示 · {count}",
   "uiTaskFactsSkipped": "スキップ",
@@ -434,7 +449,10 @@
   "cardAskedYouChose": "あなたの選択",
   "cardAskedAutomation": "自動化による実行",
   "cardAskedChoseOn": "「{card}」で選択",
-  "cardAskedThrough": { "plural": "count", "other": "· {count}件のタスク経由" },
+  "cardAskedThrough": {
+    "plural": "count",
+    "other": "· {count}件のタスク経由"
+  },
   "cardAskedFrom": "{key} から",
   "cardAskedShowAll": "すべて表示",
   "cardAskedShowLess": "表示を減らす",
@@ -464,12 +482,21 @@
   "cardThreadWorking": "作業中",
   "cardThreadCard": "カード",
   "cardThreadCardUpdated": "更新",
-  "cardThreadSettingsCount": { "plural": "count", "other": "設定 · {count}項目" },
-  "cardThreadMessageCount": { "plural": "count", "other": "{count}件のメッセージ" },
+  "cardThreadSettingsCount": {
+    "plural": "count",
+    "other": "設定 · {count}項目"
+  },
+  "cardThreadMessageCount": {
+    "plural": "count",
+    "other": "{count}件のメッセージ"
+  },
   "cardThreadCue": "スレッドを表示、{count}",
   "cardThreadCueWorking": "スレッドを表示、作成者が作業中",
   "cardThreadNewCount": "{count}件の新着",
-  "cardThreadJumpNew": { "plural": "count", "other": "{count}件の新着メッセージへ移動" },
+  "cardThreadJumpNew": {
+    "plural": "count",
+    "other": "{count}件の新着メッセージへ移動"
+  },
   "cardThreadJumpLatest": "最新のメッセージへ移動",
   "cardThreadCount": "スレッド · {count}",
   "cardThreadRevisedBy": "{label} が改訂",
@@ -510,7 +537,10 @@
   "cardRecordChildrenClosed": "{total}件中{closed}件終了",
   "cardRecordFiledWhy": "登録した理由",
   "cardRecordFoldNoPlan": "計画がなかった理由",
-  "cardRecordFoldMessages": { "plural": "count", "other": "あなたの{count}件のメッセージ" },
+  "cardRecordFoldMessages": {
+    "plural": "count",
+    "other": "あなたの{count}件のメッセージ"
+  },
   "cardRecordGoal": "目標",
   "cardRecordNoPlanWhy": "一等航海士が計画なしで作成した理由",
   "cardRecordYouSaid": "あなたの発言",
@@ -518,9 +548,15 @@
   "cardRequiredActionsLead": "マージ後、次の作業が必要です…",
   "cardRevisedRewritten": "{time} に書き直し",
   "cardRevisedRevised": "{time} に改訂",
-  "cardRevisedPartsNew": { "plural": "count", "other": "{count}か所追加" },
+  "cardRevisedPartsNew": {
+    "plural": "count",
+    "other": "{count}か所追加"
+  },
   "cardRevisedRemoved": "{count}か所削除",
-  "cardRevisedPartsRemoved": { "plural": "count", "other": "{count}か所削除" },
+  "cardRevisedPartsRemoved": {
+    "plural": "count",
+    "other": "{count}か所削除"
+  },
   "cardRevisionLinksUnavailable": "変更箇所へのリンクは利用できません",
   "cardRevisionShowFewer": "表示を減らす",
   "cardRevisionMore": "ほか{count}件",
@@ -589,7 +625,10 @@
   "shellProjectAll": "すべてのプロジェクト",
   "shellProjectShowAll": "すべてのプロジェクトを表示",
   "shellProjectFocusRow": "プロジェクトに絞り込む",
-  "shellProjectMoreCount": { "plural": "count", "other": "ほか{count}件のプロジェクト" },
+  "shellProjectMoreCount": {
+    "plural": "count",
+    "other": "ほか{count}件のプロジェクト"
+  },
   "shellProjectCloseRow": "プロジェクトの列を閉じる",
   "shellProjectFocusPill": "プロジェクトに絞り込む：{words}",
   "shellProjectMoreMenu": "その他のプロジェクト",
@@ -779,15 +818,30 @@
   "activityPanelLinesLabel": "アクティビティの行",
   "automationPanelUnreadableSummary": "読み取れません",
   "automationPanelEmpty": "自動化はまだありません",
-  "automationPanelActiveCount": { "plural": "count", "other": "{count}件が有効" },
-  "automationPanelPausedCount": { "plural": "count", "other": "{count}件が一時停止中" },
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "other": "{count}件が有効"
+  },
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "other": "{count}件が一時停止中"
+  },
   "automationPanelListLabel": "自動化",
   "knowledgePanelPrivateCollection": "個人用",
   "knowledgePanelDirectionsEverywhere": "すべての場所、一等航海士のみ",
   "knowledgePanelUnreadableSummary": "読み取れません",
-  "knowledgePanelConceptCount": { "plural": "count", "other": "概念{count}件" },
-  "knowledgePanelFindingCount": { "plural": "count", "other": "知見{count}件" },
-  "knowledgePanelDirectionCount": { "plural": "count", "other": "方針{count}件" },
+  "knowledgePanelConceptCount": {
+    "plural": "count",
+    "other": "概念{count}件"
+  },
+  "knowledgePanelFindingCount": {
+    "plural": "count",
+    "other": "知見{count}件"
+  },
+  "knowledgePanelDirectionCount": {
+    "plural": "count",
+    "other": "方針{count}件"
+  },
   "knowledgePanelCounts": "{concepts} · {findings}",
   "knowledgePanelCountsWithDirections": "{concepts} · {findings} · {directions}",
   "knowledgePanelOriginYourWords": "あなたの言葉",
@@ -840,8 +894,14 @@
   "knowledgePanelNothingRecorded": "まだ何も記録されていません",
   "knowledgePanelBrowserTitle": "ナレッジ",
   "knowledgePanelEmpty": "一等航海士に自分のことを話すか、残しておきたい記事を共有してください。",
-  "knowledgePanelAllDirections": { "plural": "count", "other": "すべての方針（{count}件）" },
-  "knowledgePanelGraphLink": { "plural": "count", "other": "グラフ · 概念{count}件" },
+  "knowledgePanelAllDirections": {
+    "plural": "count",
+    "other": "すべての方針（{count}件）"
+  },
+  "knowledgePanelGraphLink": {
+    "plural": "count",
+    "other": "グラフ · 概念{count}件"
+  },
   "knowledgePanelDirectionLabel": "{text} · ナレッジを開く",
   "knowledgePanelDirectionScopedLabel": "{text} · {scope} · ナレッジを開く",
   "knowledgePanelSectionOverview": "概要",
@@ -945,7 +1005,10 @@
   "knowledgePanelDirectionRetiredRevision": "この改訂は、新しい文言なしで記録を廃止しました。",
   "knowledgePanelPrevious": "前へ",
   "knowledgePanelNext": "次へ",
-  "knowledgePanelConceptMatches": { "plural": "count", "other": "{count}件の概念が一致" },
+  "knowledgePanelConceptMatches": {
+    "plural": "count",
+    "other": "{count}件の概念が一致"
+  },
   "knowledgePanelNoMatch": "「{query}」に一致するものはありません。",
   "knowledgePanelNoConcepts": "ここにはまだ概念が記録されていません。",
   "knowledgePanelConceptsLabel": "概念",
@@ -959,17 +1022,29 @@
   "knowledgePanelFindingsLabel": "知見",
   "knowledgePanelFindingColumn": "知見と背景",
   "knowledgePanelEvidenceColumn": "根拠と要注意点",
-  "knowledgePanelSourceCount": { "plural": "count", "other": "出典{count}件" },
-  "knowledgePanelCheckCount": { "plural": "count", "other": "検証{count}件" },
+  "knowledgePanelSourceCount": {
+    "plural": "count",
+    "other": "出典{count}件"
+  },
+  "knowledgePanelCheckCount": {
+    "plural": "count",
+    "other": "検証{count}件"
+  },
   "knowledgePanelDirectionsNote": "ナレッジは毎回の応答でこれらの方針を提供します。読んでも何も変わらず、許可も与えません。",
   "knowledgePanelNoDirections": "この表示に一致する方針はありません。",
   "knowledgePanelDirectionsLabel": "方針",
-  "knowledgePanelGraphConceptsOf": { "plural": "count", "other": "概念{count}件中{shown}件" },
+  "knowledgePanelGraphConceptsOf": {
+    "plural": "count",
+    "other": "概念{count}件中{shown}件"
+  },
   "knowledgePanelGraphConnectionsOf": {
     "plural": "count",
     "other": "つながり{count}件中{shown}件"
   },
-  "knowledgePanelConnectionCount": { "plural": "count", "other": "つながり{count}件" },
+  "knowledgePanelConnectionCount": {
+    "plural": "count",
+    "other": "つながり{count}件"
+  },
   "knowledgePanelCameraOrbited": "カメラを回転しました。選択は変わっていません。",
   "knowledgePanelZoomSaid": "ズーム {percent}%。",
   "knowledgePanelCameraOrbitedLeft": "カメラを左に回転しました。",
@@ -981,7 +1056,10 @@
   "knowledgePanelConceptNotDrawn": "描画されていない概念",
   "knowledgePanelFocusNearby": "近くに絞る",
   "knowledgePanelNearbyReach": "「近く」の範囲",
-  "knowledgePanelHops": { "plural": "count", "other": "{count}ステップ" },
+  "knowledgePanelHops": {
+    "plural": "count",
+    "other": "{count}ステップ"
+  },
   "knowledgePanelConceptsNotDrawn": {
     "plural": "count",
     "other": "ほか{count}件の概念は描画されていません。「近くに絞る」または「検索」で、グラフを必要な範囲に絞れます。"
@@ -1096,9 +1174,18 @@
   "nowPanelBoardTileFoundOn": "{key} で発見",
   "nowPanelBoardTilePartOf": "{key} のパート",
   "nowPanelBoardAllProjects": "すべてのプロジェクト",
-  "nowPanelSummaryWaiting": { "plural": "count", "other": "{count}件があなた待ち" },
-  "nowPanelSummaryWorking": { "plural": "count", "other": "{count}件が作業中" },
-  "nowPanelSummaryFailed": { "plural": "count", "other": "{count}件が開始できませんでした" },
+  "nowPanelSummaryWaiting": {
+    "plural": "count",
+    "other": "{count}件があなた待ち"
+  },
+  "nowPanelSummaryWorking": {
+    "plural": "count",
+    "other": "{count}件が作業中"
+  },
+  "nowPanelSummaryFailed": {
+    "plural": "count",
+    "other": "{count}件が開始できませんでした"
+  },
   "nowPanelNoTasks": "タスクはまだありません",
   "nowPanelFilterPlaceholder": "キーまたはタイトル",
   "nowPanelFilterLabel": "タスクを絞り込む",
@@ -1113,7 +1200,10 @@
   "nowPanelBoardDropAsks": "「タスクを取りやめ」は一度だけ確認します。キャンセルしても何も書き込まれません。",
   "nowPanelBoardLandedAsks": "タイルをドロップしました。一度だけ確認します。キャンセルすると元に戻ります。",
   "nowPanelBoardCannotPin": "このボードでは、ここでタスクを固定できません。",
-  "nowPanelBoardPartsFinished": { "plural": "count", "other": "パート{count}件中{closed}件が完了" },
+  "nowPanelBoardPartsFinished": {
+    "plural": "count",
+    "other": "パート{count}件中{closed}件が完了"
+  },
   "nowPanelBoardWaitRecorded": "{when} に待ちを記録",
   "nowPanelBoardTileActions": "{key} の操作",
   "nowPanelBoardCancel": "キャンセル",
@@ -1125,8 +1215,14 @@
   "nowPanelBoardEarlierUnavailable": "以前の結果は現在利用できません。「完了 · 7日」には今週の分が引き続き表示されます。",
   "nowPanelBoardEarlierReading": "以前のタスクを探しています…",
   "nowPanelBoardEarlierCapped": "検索は最新の一致で止まります。キーやタイトルをもっと入力して絞り込んでください。",
-  "nowPanelBoardListLabel": { "plural": "count", "other": "{lane}、{count}件のタスク" },
-  "nowPanelBoardNewCount": { "plural": "count", "other": "{count}件の新着" },
+  "nowPanelBoardListLabel": {
+    "plural": "count",
+    "other": "{lane}、{count}件のタスク"
+  },
+  "nowPanelBoardNewCount": {
+    "plural": "count",
+    "other": "{count}件の新着"
+  },
   "nowPanelBoardReadOnly": "読み取り専用",
   "nowPanelBoardLabel": "タスクボード",
   "nowPanelBoardFindPlaceholder": "タスクを検索",
@@ -1137,8 +1233,14 @@
   "nowPanelBoardViewLanded": "完了 · 7日",
   "nowPanelBoardViewEarlier": "以前の該当タスク",
   "nowPanelBoardWaitingNote": "あなたを待っているカード",
-  "nowPanelBoardShowAll": { "plural": "count", "other": "{count}件すべて表示" },
-  "nowPanelBoardDroppedToggle": { "plural": "count", "other": "取りやめ · {count}" },
+  "nowPanelBoardShowAll": {
+    "plural": "count",
+    "other": "{count}件すべて表示"
+  },
+  "nowPanelBoardDroppedToggle": {
+    "plural": "count",
+    "other": "取りやめ · {count}"
+  },
   "nowPanelBoardHint": "矢印キーで移動 · {enter} で開く · {space} でメニュー",
   "settingsKeyboardSaveFailed": "これらのキーを保存できませんでした。",
   "settingsKeyboardHeading": "キーボード",
@@ -1172,7 +1274,10 @@
   "settingsKeyboardCancel": "キャンセル",
   "settingsKeyboardClashMovesNoKey": "{clash}。保存するとこちらに移り、「{command}」にはキーがなくなります。",
   "settingsKeyboardClashMovesKeeps": "{clash}。保存するとこちらに移り、「{command}」はほかのキーをそのまま使います。",
-  "settingsGeneralTasksPurged": { "plural": "count", "other": "{count}件のタスクを消去しました。" },
+  "settingsGeneralTasksPurged": {
+    "plural": "count",
+    "other": "{count}件のタスクを消去しました。"
+  },
   "settingsGeneralYourPanels": "あなたのパネル",
   "settingsGeneralYourPanelsOn": "一等航海士があなたのために作ったパネルと、あなたが追加したパネルです。オフにすると、オンに戻すまですべて取り下げられます。",
   "settingsGeneralYourPanelsSafeMode": "起動直後にアプリが2回閉じたため、オフにしました。準備ができたらオンに戻してください。",
@@ -1327,7 +1432,10 @@
   "settingsAppearanceWashValue": "不透明度{percent}%",
   "settingsAppearanceCrewModelNames": "乗組員のモデル名",
   "settingsAppearanceCrewModelNamesDescription": "乗組員が1つの軌道だけを使うとき、モデル名を表示します。",
-  "settingsIntegrationsActionCount": { "plural": "count", "other": "{count}件の操作" },
+  "settingsIntegrationsActionCount": {
+    "plural": "count",
+    "other": "{count}件の操作"
+  },
   "settingsIntegrationsAs": "{account} として",
   "settingsIntegrationsPaused": "一時停止中",
   "settingsIntegrationsSignedIn": "サインイン済み",
@@ -1981,5 +2089,97 @@
   "phoneChecksAfterDuration": "{words}（{duration}後）",
   "phoneReviewFindings": "指摘あり",
   "phoneReviewBlocked": "ブロック",
-  "phoneReviewWithRisk": "{words} · リスク {risk}"
+  "phoneReviewWithRisk": "{words} · リスク {risk}",
+  "recordHelperClosed": "このタスクは終了しています。方針は履歴として残ります。",
+  "recordMergingOnItsOwn": "自動でマージ",
+  "recordFactCrewmate": "乗組員",
+  "recordCareCareful": "慎重",
+  "recordUseRetired": "その後廃止",
+  "recordLandsCare": "慎重さ：{care}",
+  "recordMoreDelivery": "届け方",
+  "recordOpenKeptEvidence": "保存された証拠を開く",
+  "recordValidationEvidence": "証拠",
+  "recordMergingAsksFirst": "先に確認",
+  "recordCareDefault": "標準",
+  "recordUsesMore": {
+    "plural": "count",
+    "other": "ほか{count}件。"
+  },
+  "recordSourceGone": "この過去の出典はもう利用できません。",
+  "recordCrewmateOnModel": "{crewmate}（{model}）",
+  "recordAgeMinutes": {
+    "plural": "count",
+    "other": "{count}分前"
+  },
+  "recordCardOnStage": "表示中",
+  "recordDeliveryPullRequest": "プルリクエスト",
+  "recordPolicyProject": "プロジェクトの設定",
+  "recordMoreComputerChoice": "コンピューターの選択",
+  "recordCardPutAside": "脇に置いてある",
+  "recordUseEarlierRevision": "改訂{revision}を使用 · 現在は改訂{current}",
+  "recordModeDirectPr": "プルリクエストとして",
+  "recordAgeHours": {
+    "plural": "count",
+    "other": "{count}時間前"
+  },
+  "recordAgeShortHours": "{hours}時間",
+  "recordUseConcept": "概念",
+  "recordDeliveryBatched": "一括プルリクエスト",
+  "recordModeQueuePr": "プロジェクトのキューがテストする一括プルリクエストとして",
+  "recordFactDelivery": "届け方",
+  "recordModeInPlace": "その場で作成",
+  "recordFactResult": "成果",
+  "recordCardNote": "お知らせ",
+  "recordAgeDays": {
+    "plural": "count",
+    "other": "{count}日前"
+  },
+  "recordMoreValidation": "実地検証",
+  "recordFactMerging": "マージ",
+  "recordHelperAskFirstMate": "このタスクのこれらの設定を変えるには、一等航海士に頼んでください。",
+  "recordComparedComputers": "開始時に比較したコンピューター",
+  "recordMoreKnowledge": {
+    "plural": "count",
+    "other": "ナレッジ{count}件"
+  },
+  "recordFactBranch": "ブランチ",
+  "recordMoreBranch": "ブランチ",
+  "recordDeliveryLocalMerge": "ローカルマージ",
+  "recordValidationScenario": "シナリオ",
+  "recordValidationSupplementary": "{action}（補足）",
+  "recordFromTask": "{key} から",
+  "recordAgeShortDays": "{days}日",
+  "recordAgeJustNow": "たった今",
+  "recordUseCurrentRevision": "改訂{revision}を使用（現在の改訂）",
+  "recordLandsMerged": "マージ済み",
+  "recordUndated": "日付なし · {summary}",
+  "recordFactOperation": "操作",
+  "recordPolicyThisTask": "このタスク",
+  "recordValidationResult": "結果",
+  "recordAgeShortNow": "今",
+  "recordFactCare": "慎重さ",
+  "recordPolicyParentTask": "親タスク",
+  "recordFactRunsOn": "実行先",
+  "recordCareQuick": "クイック",
+  "recordModeLocalOnly": "ローカルでマージ、プルリクエストなし",
+  "recordRecordedDetails": "記録された詳細",
+  "recordAgeShortMinutes": "{minutes}分",
+  "recordUnreadable": "この記録を読み取れませんでした。",
+  "recordHelperLocalCare": "ローカルマージでは慎重さが「標準」になります。プルリクエストには引き続き「慎重」を求めます。",
+  "recordUseFinding": "知見",
+  "recordShowEarlier": {
+    "plural": "count",
+    "other": "以前の項目を表示 · {count}"
+  },
+  "recordFoldedMore": {
+    "plural": "count",
+    "other": "ほか{count}件"
+  },
+  "recordFactComputerChoice": "コンピューターの選択",
+  "recordCardClosed": "終了",
+  "recordCardDecision": "判断",
+  "recordLabelLiveValidation": "実地検証",
+  "recordLabelKnowledgeUsed": "使用したナレッジ",
+  "recordLabelMore": "その他",
+  "recordKnowledgeUsedNote": "この作業が拠り所にしたと宣言したナレッジを、使用した改訂ごとに示します。開いても使用は記録されません。"
 }

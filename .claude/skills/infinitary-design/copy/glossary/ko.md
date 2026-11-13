@@ -131,3 +131,6 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Approves secret uses (switch) | 비밀 정보 사용 승인 | The computer's Settings → Devices should show the same words. |
 | Steer (button) | 지시 보내기 |  |
 | Theme: Device / Dark / Light | 테마: 기기 설정 / 다크 / 라이트 |  |
+| knowledge (Knowledge used) | 지식 | 사용한 지식; a finding is 발견 and a concept 개념 |
+| live validation | 실제 검증 | Trying the change for real; kept apart from the checks |
+| revision (of a knowledge entry) | 수정본 | 수정본 {revision}; 버전 stays for a project version |

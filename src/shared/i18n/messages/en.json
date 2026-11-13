@@ -1,5 +1,9 @@
 {
-  "composerLines": { "plural": "count", "one": "{count} line", "other": "{count} lines" },
+  "composerLines": {
+    "plural": "count",
+    "one": "{count} line",
+    "other": "{count} lines"
+  },
   "pastedFileMeta": "file · {lines} · {kilobytes} KB",
   "pastedFileRemove": "Remove file, {lines}",
   "pastedFileRemoveNamed": "Remove {name}",
@@ -307,7 +311,11 @@
   "uiCardStackNext": "Next card",
   "uiCardPreviousQuestion": "Previous question",
   "uiCardNextQuestion": "Next question",
-  "uiCardStackNew": { "plural": "count", "one": "{count} new", "other": "{count} new" },
+  "uiCardStackNew": {
+    "plural": "count",
+    "one": "{count} new",
+    "other": "{count} new"
+  },
   "uiPictureViewerDemoFrom": "Demo from {title}",
   "uiPictureViewerPicturesFrom": "Pictures from {title}",
   "uiPictureViewerClose": "Close the viewer",
@@ -340,8 +348,16 @@
     "one": "· {count} skipped",
     "other": "· {count} skipped"
   },
-  "uiTaskFactsFoldedDone": { "plural": "count", "one": "{count} done", "other": "{count} done" },
-  "uiTaskFactsFoldedMore": { "plural": "count", "one": "{count} more", "other": "{count} more" },
+  "uiTaskFactsFoldedDone": {
+    "plural": "count",
+    "one": "{count} done",
+    "other": "{count} done"
+  },
+  "uiTaskFactsFoldedMore": {
+    "plural": "count",
+    "one": "{count} more",
+    "other": "{count} more"
+  },
   "uiTaskFactsPlanDotsName": "Progress: {done} of {total} done",
   "uiTaskFactsShowEarlier": "Show earlier · {count}",
   "uiTaskFactsSkipped": "skipped",
@@ -1072,7 +1088,11 @@
   "knowledgePanelConceptNotDrawn": "a concept not drawn",
   "knowledgePanelFocusNearby": "Focus nearby",
   "knowledgePanelNearbyReach": "How far nearby reaches",
-  "knowledgePanelHops": { "plural": "count", "one": "{count} hop", "other": "{count} hops" },
+  "knowledgePanelHops": {
+    "plural": "count",
+    "one": "{count} hop",
+    "other": "{count} hops"
+  },
   "knowledgePanelConceptsNotDrawn": {
     "plural": "count",
     "one": "{count} more concepts are not drawn. Focus nearby or Find narrows the graph to what you need.",
@@ -1238,7 +1258,11 @@
     "one": "{lane}, {count} task",
     "other": "{lane}, {count} tasks"
   },
-  "nowPanelBoardNewCount": { "plural": "count", "one": "{count} new", "other": "{count} new" },
+  "nowPanelBoardNewCount": {
+    "plural": "count",
+    "one": "{count} new",
+    "other": "{count} new"
+  },
   "nowPanelBoardReadOnly": "Read-only",
   "nowPanelBoardLabel": "Task board",
   "nowPanelBoardFindPlaceholder": "Find a task",
@@ -2130,5 +2154,104 @@
   "phoneChecksAfterDuration": "{words} after {duration}",
   "phoneReviewFindings": "findings",
   "phoneReviewBlocked": "blocked",
-  "phoneReviewWithRisk": "{words} · risk {risk}"
+  "phoneReviewWithRisk": "{words} · risk {risk}",
+  "recordHelperClosed": "This task is closed. Its policies are kept as history.",
+  "recordMergingOnItsOwn": "Merges on its own",
+  "recordFactCrewmate": "Crewmate",
+  "recordCareCareful": "Careful",
+  "recordUseRetired": "retired since",
+  "recordLandsCare": "rigor: {care}",
+  "recordMoreDelivery": "delivery",
+  "recordOpenKeptEvidence": "Open kept evidence",
+  "recordValidationEvidence": "Evidence",
+  "recordMergingAsksFirst": "Asks first",
+  "recordCareDefault": "Default",
+  "recordUsesMore": {
+    "plural": "count",
+    "one": "And {count} more.",
+    "other": "And {count} more."
+  },
+  "recordSourceGone": "This historical source is no longer available.",
+  "recordCrewmateOnModel": "{crewmate} on {model}",
+  "recordAgeMinutes": {
+    "plural": "count",
+    "one": "{count} min ago",
+    "other": "{count} min ago"
+  },
+  "recordCardOnStage": "On the stage",
+  "recordDeliveryPullRequest": "Pull request",
+  "recordPolicyProject": "Project setting",
+  "recordMoreComputerChoice": "the computer's choice",
+  "recordCardPutAside": "Put aside",
+  "recordUseEarlierRevision": "used revision {revision} · current revision {current}",
+  "recordModeDirectPr": "As a pull request",
+  "recordAgeHours": {
+    "plural": "count",
+    "one": "{count} hr ago",
+    "other": "{count} hr ago"
+  },
+  "recordAgeShortHours": "{hours}h",
+  "recordUseConcept": "Concept",
+  "recordDeliveryBatched": "Batched pull request",
+  "recordModeQueuePr": "As a batched pull request your project's queue tests",
+  "recordFactDelivery": "Delivery",
+  "recordModeInPlace": "Built in place",
+  "recordFactResult": "Result",
+  "recordCardNote": "Note",
+  "recordAgeDays": {
+    "plural": "count",
+    "one": "{count} day ago",
+    "other": "{count} days ago"
+  },
+  "recordMoreValidation": "live validation",
+  "recordFactMerging": "Merging",
+  "recordHelperAskFirstMate": "Ask your first mate to change these for this task.",
+  "recordComparedComputers": "Compared computers at start",
+  "recordMoreKnowledge": {
+    "plural": "count",
+    "one": "knowledge {count}",
+    "other": "knowledge {count}"
+  },
+  "recordFactBranch": "Branch",
+  "recordMoreBranch": "branch",
+  "recordDeliveryLocalMerge": "Local merge",
+  "recordValidationScenario": "Scenario",
+  "recordValidationSupplementary": "{action} (supplementary)",
+  "recordFromTask": "from {key}",
+  "recordAgeShortDays": "{days}d",
+  "recordAgeJustNow": "just now",
+  "recordUseCurrentRevision": "used revision {revision}, the current one",
+  "recordLandsMerged": "merged",
+  "recordUndated": "Undated · {summary}",
+  "recordFactOperation": "Operation",
+  "recordPolicyThisTask": "This task",
+  "recordValidationResult": "Result",
+  "recordAgeShortNow": "now",
+  "recordFactCare": "Rigor",
+  "recordPolicyParentTask": "Parent task",
+  "recordFactRunsOn": "Runs on",
+  "recordCareQuick": "Quick",
+  "recordModeLocalOnly": "Merged locally, no pull request",
+  "recordRecordedDetails": "Recorded details",
+  "recordAgeShortMinutes": "{minutes}m",
+  "recordUnreadable": "This record could not be read.",
+  "recordHelperLocalCare": "Local merge uses Default rigor; Careful remains requested for pull requests.",
+  "recordUseFinding": "Finding",
+  "recordShowEarlier": {
+    "plural": "count",
+    "one": "Show earlier · {count}",
+    "other": "Show earlier · {count}"
+  },
+  "recordFoldedMore": {
+    "plural": "count",
+    "one": "{count} more",
+    "other": "{count} more"
+  },
+  "recordFactComputerChoice": "Computer choice",
+  "recordCardClosed": "Closed",
+  "recordCardDecision": "Decision",
+  "recordLabelLiveValidation": "Live validation",
+  "recordLabelKnowledgeUsed": "Knowledge used",
+  "recordLabelMore": "More",
+  "recordKnowledgeUsedNote": "What this work declared it relied on, by the revision it used. Opening one records no use."
 }

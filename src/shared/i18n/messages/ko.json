@@ -818,15 +818,30 @@
   "activityPanelLinesLabel": "활동 줄",
   "automationPanelUnreadableSummary": "읽을 수 없음",
   "automationPanelEmpty": "아직 자동화가 없어요",
-  "automationPanelActiveCount": { "plural": "count", "other": "{count}개 실행 중" },
-  "automationPanelPausedCount": { "plural": "count", "other": "{count}개 일시 정지됨" },
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "other": "{count}개 실행 중"
+  },
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "other": "{count}개 일시 정지됨"
+  },
   "automationPanelListLabel": "자동화",
   "knowledgePanelPrivateCollection": "개인",
   "knowledgePanelDirectionsEverywhere": "모든 곳, 일등항해사만",
   "knowledgePanelUnreadableSummary": "읽을 수 없음",
-  "knowledgePanelConceptCount": { "plural": "count", "other": "개념 {count}개" },
-  "knowledgePanelFindingCount": { "plural": "count", "other": "발견 {count}개" },
-  "knowledgePanelDirectionCount": { "plural": "count", "other": "지침 {count}개" },
+  "knowledgePanelConceptCount": {
+    "plural": "count",
+    "other": "개념 {count}개"
+  },
+  "knowledgePanelFindingCount": {
+    "plural": "count",
+    "other": "발견 {count}개"
+  },
+  "knowledgePanelDirectionCount": {
+    "plural": "count",
+    "other": "지침 {count}개"
+  },
   "knowledgePanelCounts": "{concepts} · {findings}",
   "knowledgePanelCountsWithDirections": "{concepts} · {findings} · {directions}",
   "knowledgePanelOriginYourWords": "선장님의 말",
@@ -879,8 +894,14 @@
   "knowledgePanelNothingRecorded": "아직 기록된 것이 없어요",
   "knowledgePanelBrowserTitle": "지식",
   "knowledgePanelEmpty": "일등항해사에게 선장님에 대해 알려 주거나 간직하고 싶은 글을 공유하세요.",
-  "knowledgePanelAllDirections": { "plural": "count", "other": "지침 {count}개 모두" },
-  "knowledgePanelGraphLink": { "plural": "count", "other": "그래프 · 개념 {count}개" },
+  "knowledgePanelAllDirections": {
+    "plural": "count",
+    "other": "지침 {count}개 모두"
+  },
+  "knowledgePanelGraphLink": {
+    "plural": "count",
+    "other": "그래프 · 개념 {count}개"
+  },
   "knowledgePanelDirectionLabel": "{text} · 지식 열기",
   "knowledgePanelDirectionScopedLabel": "{text} · {scope} · 지식 열기",
   "knowledgePanelSectionOverview": "개요",
@@ -927,7 +948,10 @@
   "knowledgePanelContextDetail": "{reason} · 함께 읽기",
   "knowledgePanelSupportingFindings": "뒷받침하는 발견",
   "knowledgePanelNoFindings": "아직 이에 관한 발견이 없어요.",
-  "knowledgePanelMoreFindings": { "plural": "count", "other": "발견에 {count}개 더 있어요." },
+  "knowledgePanelMoreFindings": {
+    "plural": "count",
+    "other": "발견에 {count}개 더 있어요."
+  },
   "knowledgePanelShowOnGraph": "그래프에서 보기",
   "knowledgePanelReasonedBy": "추론함 · {author}",
   "knowledgePanelObservedBy": "관찰함 · {author}",
@@ -961,7 +985,10 @@
   "knowledgePanelNoUses": "아직 이것을 사용했다고 밝힌 작업이 없어요.",
   "knowledgePanelDeclaredUseNote": "사용했다고 밝힌 것일 뿐, 추론이 옳았다는 증명은 아니에요.",
   "knowledgePanelUseHead": "{by} · 수정본 {revision} · {when}",
-  "knowledgePanelEarlierUses": { "plural": "count", "other": "이전 사용이 {count}건 더 있어요." },
+  "knowledgePanelEarlierUses": {
+    "plural": "count",
+    "other": "이전 사용이 {count}건 더 있어요."
+  },
   "knowledgePanelEarlierRevision": "이전 수정본",
   "knowledgePanelSourceChangedNote": "인용한 출처가 보관한 뒤로 바뀌었어요.",
   "knowledgePanelInspectorSections": "상세 보기 구역",
@@ -978,7 +1005,10 @@
   "knowledgePanelDirectionRetiredRevision": "이 수정본은 새 문구 없이 기록을 폐기했어요.",
   "knowledgePanelPrevious": "이전",
   "knowledgePanelNext": "다음",
-  "knowledgePanelConceptMatches": { "plural": "count", "other": "일치하는 개념 {count}개" },
+  "knowledgePanelConceptMatches": {
+    "plural": "count",
+    "other": "일치하는 개념 {count}개"
+  },
   "knowledgePanelNoMatch": "여기에는 “{query}”와(과) 일치하는 것이 없어요.",
   "knowledgePanelNoConcepts": "아직 여기에 기록된 개념이 없어요.",
   "knowledgePanelConceptsLabel": "개념",
@@ -992,17 +1022,29 @@
   "knowledgePanelFindingsLabel": "발견",
   "knowledgePanelFindingColumn": "발견과 맥락",
   "knowledgePanelEvidenceColumn": "근거와 주의할 점",
-  "knowledgePanelSourceCount": { "plural": "count", "other": "출처 {count}개" },
-  "knowledgePanelCheckCount": { "plural": "count", "other": "확인 {count}건" },
+  "knowledgePanelSourceCount": {
+    "plural": "count",
+    "other": "출처 {count}개"
+  },
+  "knowledgePanelCheckCount": {
+    "plural": "count",
+    "other": "확인 {count}건"
+  },
   "knowledgePanelDirectionsNote": "이 지침은 지식에서 매 차례 제공해요. 읽어도 바뀌는 것은 없고 권한도 주지 않아요.",
   "knowledgePanelNoDirections": "이 보기와 일치하는 지침이 없어요.",
   "knowledgePanelDirectionsLabel": "지침",
-  "knowledgePanelGraphConceptsOf": { "plural": "count", "other": "개념 {count}개 중 {shown}개" },
+  "knowledgePanelGraphConceptsOf": {
+    "plural": "count",
+    "other": "개념 {count}개 중 {shown}개"
+  },
   "knowledgePanelGraphConnectionsOf": {
     "plural": "count",
     "other": "연결 {count}개 중 {shown}개"
   },
-  "knowledgePanelConnectionCount": { "plural": "count", "other": "연결 {count}개" },
+  "knowledgePanelConnectionCount": {
+    "plural": "count",
+    "other": "연결 {count}개"
+  },
   "knowledgePanelCameraOrbited": "카메라를 돌렸어요. 선택은 그대로예요.",
   "knowledgePanelZoomSaid": "확대 {percent}%.",
   "knowledgePanelCameraOrbitedLeft": "카메라를 왼쪽으로 돌렸어요.",
@@ -1014,7 +1056,10 @@
   "knowledgePanelConceptNotDrawn": "그려지지 않은 개념",
   "knowledgePanelFocusNearby": "주변에 집중",
   "knowledgePanelNearbyReach": "주변 범위",
-  "knowledgePanelHops": { "plural": "count", "other": "{count}단계" },
+  "knowledgePanelHops": {
+    "plural": "count",
+    "other": "{count}단계"
+  },
   "knowledgePanelConceptsNotDrawn": {
     "plural": "count",
     "other": "개념 {count}개가 더 그려지지 않았어요. 주변에 집중이나 찾기로 필요한 부분만 그래프에 남길 수 있어요."
@@ -1129,9 +1174,18 @@
   "nowPanelBoardTileFoundOn": "{key}에서 발견",
   "nowPanelBoardTilePartOf": "{key}의 부분",
   "nowPanelBoardAllProjects": "모든 프로젝트",
-  "nowPanelSummaryWaiting": { "plural": "count", "other": "{count}개 대기 중" },
-  "nowPanelSummaryWorking": { "plural": "count", "other": "{count}개 작업 중" },
-  "nowPanelSummaryFailed": { "plural": "count", "other": "{count}개 시작 못 함" },
+  "nowPanelSummaryWaiting": {
+    "plural": "count",
+    "other": "{count}개 대기 중"
+  },
+  "nowPanelSummaryWorking": {
+    "plural": "count",
+    "other": "{count}개 작업 중"
+  },
+  "nowPanelSummaryFailed": {
+    "plural": "count",
+    "other": "{count}개 시작 못 함"
+  },
   "nowPanelNoTasks": "아직 작업이 없어요",
   "nowPanelFilterPlaceholder": "키 또는 제목",
   "nowPanelFilterLabel": "작업 필터",
@@ -1161,8 +1215,14 @@
   "nowPanelBoardEarlierUnavailable": "지금은 이전 결과를 볼 수 없어요. 완료 · 7일에는 이번 주 작업이 그대로 나와요.",
   "nowPanelBoardEarlierReading": "이전 작업을 찾는 중…",
   "nowPanelBoardEarlierCapped": "검색은 가장 최근 결과까지만 보여 줘요. 키나 제목을 더 입력해 범위를 좁히세요.",
-  "nowPanelBoardListLabel": { "plural": "count", "other": "{lane}, 작업 {count}개" },
-  "nowPanelBoardNewCount": { "plural": "count", "other": "{count}개 새로 옴" },
+  "nowPanelBoardListLabel": {
+    "plural": "count",
+    "other": "{lane}, 작업 {count}개"
+  },
+  "nowPanelBoardNewCount": {
+    "plural": "count",
+    "other": "{count}개 새로 옴"
+  },
   "nowPanelBoardReadOnly": "읽기 전용",
   "nowPanelBoardLabel": "작업 보드",
   "nowPanelBoardFindPlaceholder": "작업 찾기",
@@ -1173,8 +1233,14 @@
   "nowPanelBoardViewLanded": "완료 · 7일",
   "nowPanelBoardViewEarlier": "이전 검색 결과",
   "nowPanelBoardWaitingNote": "선장님을 기다리는 카드",
-  "nowPanelBoardShowAll": { "plural": "count", "other": "{count}개 모두 보기" },
-  "nowPanelBoardDroppedToggle": { "plural": "count", "other": "중단됨 · {count}" },
+  "nowPanelBoardShowAll": {
+    "plural": "count",
+    "other": "{count}개 모두 보기"
+  },
+  "nowPanelBoardDroppedToggle": {
+    "plural": "count",
+    "other": "중단됨 · {count}"
+  },
   "nowPanelBoardHint": "화살표로 이동 · {enter} 열기 · {space} 메뉴",
   "settingsKeyboardSaveFailed": "이 키를 저장할 수 없었어요.",
   "settingsKeyboardHeading": "키보드",
@@ -1366,7 +1432,10 @@
   "settingsAppearanceWashValue": "불투명도 {percent}%",
   "settingsAppearanceCrewModelNames": "선원 모델 이름",
   "settingsAppearanceCrewModelNamesDescription": "선원들이 궤도 하나만 쓸 때 모델 이름을 보여 줘요.",
-  "settingsIntegrationsActionCount": { "plural": "count", "other": "동작 {count}개" },
+  "settingsIntegrationsActionCount": {
+    "plural": "count",
+    "other": "동작 {count}개"
+  },
   "settingsIntegrationsAs": "{account} 계정으로",
   "settingsIntegrationsPaused": "일시 정지됨",
   "settingsIntegrationsSignedIn": "로그인됨",
@@ -2020,5 +2089,97 @@
   "phoneChecksAfterDuration": "{duration} 후 {words}",
   "phoneReviewFindings": "고칠 점 있음",
   "phoneReviewBlocked": "막힘",
-  "phoneReviewWithRisk": "{words} · 위험도 {risk}"
+  "phoneReviewWithRisk": "{words} · 위험도 {risk}",
+  "recordHelperClosed": "이 작업은 닫혔어요. 정책은 기록으로 남아요.",
+  "recordMergingOnItsOwn": "알아서 병합",
+  "recordFactCrewmate": "선원",
+  "recordCareCareful": "신중하게",
+  "recordUseRetired": "이후 폐기됨",
+  "recordLandsCare": "주의 수준: {care}",
+  "recordMoreDelivery": "전달 방식",
+  "recordOpenKeptEvidence": "보관된 증거 열기",
+  "recordValidationEvidence": "증거",
+  "recordMergingAsksFirst": "먼저 물어봄",
+  "recordCareDefault": "기본",
+  "recordUsesMore": {
+    "plural": "count",
+    "other": "그 밖에 {count}개."
+  },
+  "recordSourceGone": "이 이전 출처는 더 이상 볼 수 없어요.",
+  "recordCrewmateOnModel": "{crewmate}, {model} 사용",
+  "recordAgeMinutes": {
+    "plural": "count",
+    "other": "{count}분 전"
+  },
+  "recordCardOnStage": "표시 중",
+  "recordDeliveryPullRequest": "끌어오기 요청",
+  "recordPolicyProject": "프로젝트 설정",
+  "recordMoreComputerChoice": "컴퓨터 선택",
+  "recordCardPutAside": "치워 둠",
+  "recordUseEarlierRevision": "수정본 {revision} 사용 · 현재 수정본 {current}",
+  "recordModeDirectPr": "끌어오기 요청으로",
+  "recordAgeHours": {
+    "plural": "count",
+    "other": "{count}시간 전"
+  },
+  "recordAgeShortHours": "{hours}시간",
+  "recordUseConcept": "개념",
+  "recordDeliveryBatched": "일괄 끌어오기 요청",
+  "recordModeQueuePr": "프로젝트 대기열이 테스트하는 일괄 끌어오기 요청으로",
+  "recordFactDelivery": "전달 방식",
+  "recordModeInPlace": "그 자리에서 만듦",
+  "recordFactResult": "결과물",
+  "recordCardNote": "알림",
+  "recordAgeDays": {
+    "plural": "count",
+    "other": "{count}일 전"
+  },
+  "recordMoreValidation": "실제 검증",
+  "recordFactMerging": "병합",
+  "recordHelperAskFirstMate": "이 작업의 설정을 바꾸려면 일등항해사에게 요청하세요.",
+  "recordComparedComputers": "시작할 때 비교한 컴퓨터",
+  "recordMoreKnowledge": {
+    "plural": "count",
+    "other": "지식 {count}"
+  },
+  "recordFactBranch": "분기",
+  "recordMoreBranch": "분기",
+  "recordDeliveryLocalMerge": "로컬 병합",
+  "recordValidationScenario": "시나리오",
+  "recordValidationSupplementary": "{action} (보충)",
+  "recordFromTask": "{key}에서",
+  "recordAgeShortDays": "{days}일",
+  "recordAgeJustNow": "방금",
+  "recordUseCurrentRevision": "수정본 {revision} 사용, 현재 수정본",
+  "recordLandsMerged": "병합됨",
+  "recordUndated": "날짜 없음 · {summary}",
+  "recordFactOperation": "실행",
+  "recordPolicyThisTask": "이 작업",
+  "recordValidationResult": "결과",
+  "recordAgeShortNow": "지금",
+  "recordFactCare": "주의 수준",
+  "recordPolicyParentTask": "상위 작업",
+  "recordFactRunsOn": "실행 위치",
+  "recordCareQuick": "빠르게",
+  "recordModeLocalOnly": "로컬에서 병합, 끌어오기 요청 없음",
+  "recordRecordedDetails": "기록된 세부 정보",
+  "recordAgeShortMinutes": "{minutes}분",
+  "recordUnreadable": "이 기록을 읽을 수 없었어요.",
+  "recordHelperLocalCare": "로컬 병합에는 기본 주의 수준이 적용되고, 끌어오기 요청에는 여전히 신중하게가 요청돼요.",
+  "recordUseFinding": "발견",
+  "recordShowEarlier": {
+    "plural": "count",
+    "other": "이전 항목 보기 · {count}"
+  },
+  "recordFoldedMore": {
+    "plural": "count",
+    "other": "{count}개 더"
+  },
+  "recordFactComputerChoice": "컴퓨터 선택",
+  "recordCardClosed": "닫힘",
+  "recordCardDecision": "결정",
+  "recordLabelLiveValidation": "실제 검증",
+  "recordLabelKnowledgeUsed": "사용한 지식",
+  "recordLabelMore": "더 보기",
+  "recordKnowledgeUsedNote": "이 작업이 근거로 삼았다고 밝힌 지식을 사용한 수정본 기준으로 보여 줘요. 열어 봐도 사용으로 기록되지 않아요."
 }

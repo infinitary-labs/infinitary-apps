@@ -317,7 +317,6 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/renderer/src/devices/NearbyList.tsx": 4,
   "src/renderer/src/devices/RemoteControl.tsx": 6,
   "src/renderer/src/devices/viewWords.ts": 38,
-  "src/renderer/src/plugins/builtin/record/record.frame.js": 60,
   "src/renderer/src/settings/AddProject.tsx": 28,
   "src/renderer/src/settings/AutomationTab.tsx": 71,
   "src/renderer/src/settings/ControllingTab.tsx": 14,

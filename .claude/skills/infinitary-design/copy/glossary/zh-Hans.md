@@ -119,3 +119,4 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Approves secret uses (switch) | 批准机密使用 | The computer's Settings → Devices should show the same words. |
 | Steer (button) | 引导 |  |
 | Theme: Device / Dark / Light | 主题：跟随设备 / 深色 / 浅色 |  |
+| live validation | 实测验证 | Trying the change for real; kept apart from the checks. |

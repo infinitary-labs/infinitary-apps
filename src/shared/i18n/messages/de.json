@@ -1,5 +1,9 @@
 {
-  "composerLines": { "plural": "count", "one": "{count} Zeile", "other": "{count} Zeilen" },
+  "composerLines": {
+    "plural": "count",
+    "one": "{count} Zeile",
+    "other": "{count} Zeilen"
+  },
   "pastedFileMeta": "Datei · {lines} · {kilobytes} KB",
   "pastedFileRemove": "Datei entfernen, {lines}",
   "pastedFileRemoveNamed": "{name} entfernen",
@@ -307,7 +311,11 @@
   "uiCardStackNext": "Nächste Karte",
   "uiCardPreviousQuestion": "Vorherige Frage",
   "uiCardNextQuestion": "Nächste Frage",
-  "uiCardStackNew": { "plural": "count", "one": "{count} neu", "other": "{count} neu" },
+  "uiCardStackNew": {
+    "plural": "count",
+    "one": "{count} neu",
+    "other": "{count} neu"
+  },
   "uiPictureViewerDemoFrom": "Demo aus {title}",
   "uiPictureViewerPicturesFrom": "Bilder aus {title}",
   "uiPictureViewerClose": "Betrachter schließen",
@@ -1250,7 +1258,11 @@
     "one": "{lane}, {count} Aufgabe",
     "other": "{lane}, {count} Aufgaben"
   },
-  "nowPanelBoardNewCount": { "plural": "count", "one": "{count} neu", "other": "{count} neu" },
+  "nowPanelBoardNewCount": {
+    "plural": "count",
+    "one": "{count} neu",
+    "other": "{count} neu"
+  },
   "nowPanelBoardReadOnly": "Nur lesen",
   "nowPanelBoardLabel": "Aufgabenboard",
   "nowPanelBoardFindPlaceholder": "Aufgabe suchen",
@@ -2142,5 +2154,104 @@
   "phoneChecksAfterDuration": "{words} nach {duration}",
   "phoneReviewFindings": "Anmerkungen",
   "phoneReviewBlocked": "blockiert",
-  "phoneReviewWithRisk": "{words} · Risiko {risk}"
+  "phoneReviewWithRisk": "{words} · Risiko {risk}",
+  "recordHelperClosed": "Diese Aufgabe ist geschlossen. Ihre Regeln bleiben zur Nachverfolgung erhalten.",
+  "recordMergingOnItsOwn": "Führt selbst zusammen",
+  "recordFactCrewmate": "Crewmitglied",
+  "recordCareCareful": "Sorgfältig",
+  "recordUseRetired": "inzwischen zurückgezogen",
+  "recordLandsCare": "Sorgfalt: {care}",
+  "recordMoreDelivery": "Lieferung",
+  "recordOpenKeptEvidence": "Aufbewahrten Nachweis öffnen",
+  "recordValidationEvidence": "Nachweis",
+  "recordMergingAsksFirst": "Fragt vorher",
+  "recordCareDefault": "Standard",
+  "recordUsesMore": {
+    "plural": "count",
+    "one": "Und {count} weiterer.",
+    "other": "Und {count} weitere."
+  },
+  "recordSourceGone": "Diese frühere Quelle ist nicht mehr verfügbar.",
+  "recordCrewmateOnModel": "{crewmate} mit {model}",
+  "recordAgeMinutes": {
+    "plural": "count",
+    "one": "vor {count} Min.",
+    "other": "vor {count} Min."
+  },
+  "recordCardOnStage": "Angezeigt",
+  "recordDeliveryPullRequest": "Pull Request",
+  "recordPolicyProject": "Projekteinstellung",
+  "recordMoreComputerChoice": "Wahl des Computers",
+  "recordCardPutAside": "Beiseitegelegt",
+  "recordUseEarlierRevision": "Revision {revision} genutzt · aktuelle Revision {current}",
+  "recordModeDirectPr": "Als Pull Request",
+  "recordAgeHours": {
+    "plural": "count",
+    "one": "vor {count} Std.",
+    "other": "vor {count} Std."
+  },
+  "recordAgeShortHours": "{hours} Std.",
+  "recordUseConcept": "Begriff",
+  "recordDeliveryBatched": "Gebündelter Pull Request",
+  "recordModeQueuePr": "Als gebündelter Pull Request, den die Warteschlange deines Projekts testet",
+  "recordFactDelivery": "Lieferung",
+  "recordModeInPlace": "Direkt im Ordner gebaut",
+  "recordFactResult": "Ergebnis",
+  "recordCardNote": "Notiz",
+  "recordAgeDays": {
+    "plural": "count",
+    "one": "vor {count} Tag",
+    "other": "vor {count} Tagen"
+  },
+  "recordMoreValidation": "Live-Prüfung",
+  "recordFactMerging": "Zusammenführen",
+  "recordHelperAskFirstMate": "Bitte deinen ersten Offizier, sie für diese Aufgabe zu ändern.",
+  "recordComparedComputers": "Beim Start verglichene Computer",
+  "recordMoreKnowledge": {
+    "plural": "count",
+    "one": "Wissen {count}",
+    "other": "Wissen {count}"
+  },
+  "recordFactBranch": "Branch",
+  "recordMoreBranch": "Branch",
+  "recordDeliveryLocalMerge": "Lokal zusammengeführt",
+  "recordValidationScenario": "Szenario",
+  "recordValidationSupplementary": "{action} (ergänzend)",
+  "recordFromTask": "aus {key}",
+  "recordAgeShortDays": "{days} Tg.",
+  "recordAgeJustNow": "gerade eben",
+  "recordUseCurrentRevision": "Revision {revision} genutzt, die aktuelle",
+  "recordLandsMerged": "zusammengeführt",
+  "recordUndated": "Ohne Datum · {summary}",
+  "recordFactOperation": "Vorgang",
+  "recordPolicyThisTask": "Diese Aufgabe",
+  "recordValidationResult": "Ergebnis",
+  "recordAgeShortNow": "jetzt",
+  "recordFactCare": "Sorgfalt",
+  "recordPolicyParentTask": "Übergeordnete Aufgabe",
+  "recordFactRunsOn": "Läuft auf",
+  "recordCareQuick": "Schnell",
+  "recordModeLocalOnly": "Lokal zusammengeführt, ohne Pull Request",
+  "recordRecordedDetails": "Erfasste Details",
+  "recordAgeShortMinutes": "{minutes} Min.",
+  "recordUnreadable": "Dieses Protokoll konnte nicht gelesen werden.",
+  "recordHelperLocalCare": "Lokales Zusammenführen nutzt die Sorgfalt „Standard“; für Pull Requests bleibt „Sorgfältig“ angefordert.",
+  "recordUseFinding": "Erkenntnis",
+  "recordShowEarlier": {
+    "plural": "count",
+    "one": "Früheres anzeigen · {count}",
+    "other": "Früheres anzeigen · {count}"
+  },
+  "recordFoldedMore": {
+    "plural": "count",
+    "one": "{count} weiterer",
+    "other": "{count} weitere"
+  },
+  "recordFactComputerChoice": "Wahl des Computers",
+  "recordCardClosed": "Geschlossen",
+  "recordCardDecision": "Entscheidung",
+  "recordLabelLiveValidation": "Live-Prüfung",
+  "recordLabelKnowledgeUsed": "Genutztes Wissen",
+  "recordLabelMore": "Mehr",
+  "recordKnowledgeUsedNote": "Worauf sich diese Arbeit nach eigener Angabe gestützt hat, in der Revision, die sie genutzt hat. Öffnen zählt nicht als Nutzung."
 }

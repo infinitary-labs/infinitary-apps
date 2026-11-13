@@ -132,3 +132,4 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Approves secret uses (switch) | シークレットの使用を承認 | The computer's Settings → Devices should show the same words. |
 | Steer (button) | 伝える | 指示 is the Instruction kind. |
 | Theme: Device / Dark / Light | テーマ: デバイスに合わせる / ダーク / ライト |  |
+| live validation | 実地検証 | Trying the change for real; kept apart from チェック. |

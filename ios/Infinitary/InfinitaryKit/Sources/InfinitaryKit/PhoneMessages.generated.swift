@@ -977,6 +977,77 @@ public enum PhoneMessages {
     public static func `settingsIntegrationsRuleNote`() -> String { PhoneWords.format("settingsIntegrationsRuleNote", []) }
     public static func `settingsIntegrationsRuleOff`() -> String { PhoneWords.format("settingsIntegrationsRuleOff", []) }
     public static func `settingsIntegrationsCopying`() -> String { PhoneWords.format("settingsIntegrationsCopying", []) }
+    public static func `recordHelperClosed`() -> String { PhoneWords.format("recordHelperClosed", []) }
+    public static func `recordMergingOnItsOwn`() -> String { PhoneWords.format("recordMergingOnItsOwn", []) }
+    public static func `recordFactCrewmate`() -> String { PhoneWords.format("recordFactCrewmate", []) }
+    public static func `recordCareCareful`() -> String { PhoneWords.format("recordCareCareful", []) }
+    public static func `recordUseRetired`() -> String { PhoneWords.format("recordUseRetired", []) }
+    public static func `recordLandsCare`(`care`: String) -> String { PhoneWords.format("recordLandsCare", [`care`]) }
+    public static func `recordMoreDelivery`() -> String { PhoneWords.format("recordMoreDelivery", []) }
+    public static func `recordOpenKeptEvidence`() -> String { PhoneWords.format("recordOpenKeptEvidence", []) }
+    public static func `recordValidationEvidence`() -> String { PhoneWords.format("recordValidationEvidence", []) }
+    public static func `recordMergingAsksFirst`() -> String { PhoneWords.format("recordMergingAsksFirst", []) }
+    public static func `recordCareDefault`() -> String { PhoneWords.format("recordCareDefault", []) }
+    public static func `recordUsesMore`(`count`: Int) -> String { PhoneWords.format("recordUsesMore", [`count`]) }
+    public static func `recordSourceGone`() -> String { PhoneWords.format("recordSourceGone", []) }
+    public static func `recordCrewmateOnModel`(`crewmate`: String, `model`: String) -> String { PhoneWords.format("recordCrewmateOnModel", [`crewmate`, `model`]) }
+    public static func `recordAgeMinutes`(`count`: Int) -> String { PhoneWords.format("recordAgeMinutes", [`count`]) }
+    public static func `recordCardOnStage`() -> String { PhoneWords.format("recordCardOnStage", []) }
+    public static func `recordDeliveryPullRequest`() -> String { PhoneWords.format("recordDeliveryPullRequest", []) }
+    public static func `recordPolicyProject`() -> String { PhoneWords.format("recordPolicyProject", []) }
+    public static func `recordMoreComputerChoice`() -> String { PhoneWords.format("recordMoreComputerChoice", []) }
+    public static func `recordCardPutAside`() -> String { PhoneWords.format("recordCardPutAside", []) }
+    public static func `recordUseEarlierRevision`(`current`: String, `revision`: String) -> String { PhoneWords.format("recordUseEarlierRevision", [`current`, `revision`]) }
+    public static func `recordModeDirectPr`() -> String { PhoneWords.format("recordModeDirectPr", []) }
+    public static func `recordAgeHours`(`count`: Int) -> String { PhoneWords.format("recordAgeHours", [`count`]) }
+    public static func `recordAgeShortHours`(`hours`: String) -> String { PhoneWords.format("recordAgeShortHours", [`hours`]) }
+    public static func `recordUseConcept`() -> String { PhoneWords.format("recordUseConcept", []) }
+    public static func `recordDeliveryBatched`() -> String { PhoneWords.format("recordDeliveryBatched", []) }
+    public static func `recordModeQueuePr`() -> String { PhoneWords.format("recordModeQueuePr", []) }
+    public static func `recordFactDelivery`() -> String { PhoneWords.format("recordFactDelivery", []) }
+    public static func `recordModeInPlace`() -> String { PhoneWords.format("recordModeInPlace", []) }
+    public static func `recordFactResult`() -> String { PhoneWords.format("recordFactResult", []) }
+    public static func `recordCardNote`() -> String { PhoneWords.format("recordCardNote", []) }
+    public static func `recordAgeDays`(`count`: Int) -> String { PhoneWords.format("recordAgeDays", [`count`]) }
+    public static func `recordMoreValidation`() -> String { PhoneWords.format("recordMoreValidation", []) }
+    public static func `recordFactMerging`() -> String { PhoneWords.format("recordFactMerging", []) }
+    public static func `recordHelperAskFirstMate`() -> String { PhoneWords.format("recordHelperAskFirstMate", []) }
+    public static func `recordComparedComputers`() -> String { PhoneWords.format("recordComparedComputers", []) }
+    public static func `recordMoreKnowledge`(`count`: Int) -> String { PhoneWords.format("recordMoreKnowledge", [`count`]) }
+    public static func `recordFactBranch`() -> String { PhoneWords.format("recordFactBranch", []) }
+    public static func `recordMoreBranch`() -> String { PhoneWords.format("recordMoreBranch", []) }
+    public static func `recordDeliveryLocalMerge`() -> String { PhoneWords.format("recordDeliveryLocalMerge", []) }
+    public static func `recordValidationScenario`() -> String { PhoneWords.format("recordValidationScenario", []) }
+    public static func `recordValidationSupplementary`(`action`: String) -> String { PhoneWords.format("recordValidationSupplementary", [`action`]) }
+    public static func `recordFromTask`(`key`: String) -> String { PhoneWords.format("recordFromTask", [`key`]) }
+    public static func `recordAgeShortDays`(`days`: String) -> String { PhoneWords.format("recordAgeShortDays", [`days`]) }
+    public static func `recordAgeJustNow`() -> String { PhoneWords.format("recordAgeJustNow", []) }
+    public static func `recordUseCurrentRevision`(`revision`: String) -> String { PhoneWords.format("recordUseCurrentRevision", [`revision`]) }
+    public static func `recordLandsMerged`() -> String { PhoneWords.format("recordLandsMerged", []) }
+    public static func `recordUndated`(`summary`: String) -> String { PhoneWords.format("recordUndated", [`summary`]) }
+    public static func `recordFactOperation`() -> String { PhoneWords.format("recordFactOperation", []) }
+    public static func `recordPolicyThisTask`() -> String { PhoneWords.format("recordPolicyThisTask", []) }
+    public static func `recordValidationResult`() -> String { PhoneWords.format("recordValidationResult", []) }
+    public static func `recordAgeShortNow`() -> String { PhoneWords.format("recordAgeShortNow", []) }
+    public static func `recordFactCare`() -> String { PhoneWords.format("recordFactCare", []) }
+    public static func `recordPolicyParentTask`() -> String { PhoneWords.format("recordPolicyParentTask", []) }
+    public static func `recordFactRunsOn`() -> String { PhoneWords.format("recordFactRunsOn", []) }
+    public static func `recordCareQuick`() -> String { PhoneWords.format("recordCareQuick", []) }
+    public static func `recordModeLocalOnly`() -> String { PhoneWords.format("recordModeLocalOnly", []) }
+    public static func `recordRecordedDetails`() -> String { PhoneWords.format("recordRecordedDetails", []) }
+    public static func `recordAgeShortMinutes`(`minutes`: String) -> String { PhoneWords.format("recordAgeShortMinutes", [`minutes`]) }
+    public static func `recordUnreadable`() -> String { PhoneWords.format("recordUnreadable", []) }
+    public static func `recordHelperLocalCare`() -> String { PhoneWords.format("recordHelperLocalCare", []) }
+    public static func `recordUseFinding`() -> String { PhoneWords.format("recordUseFinding", []) }
+    public static func `recordShowEarlier`(`count`: Int) -> String { PhoneWords.format("recordShowEarlier", [`count`]) }
+    public static func `recordFoldedMore`(`count`: Int) -> String { PhoneWords.format("recordFoldedMore", [`count`]) }
+    public static func `recordFactComputerChoice`() -> String { PhoneWords.format("recordFactComputerChoice", []) }
+    public static func `recordCardClosed`() -> String { PhoneWords.format("recordCardClosed", []) }
+    public static func `recordCardDecision`() -> String { PhoneWords.format("recordCardDecision", []) }
+    public static func `recordLabelLiveValidation`() -> String { PhoneWords.format("recordLabelLiveValidation", []) }
+    public static func `recordLabelKnowledgeUsed`() -> String { PhoneWords.format("recordLabelKnowledgeUsed", []) }
+    public static func `recordLabelMore`() -> String { PhoneWords.format("recordLabelMore", []) }
+    public static func `recordKnowledgeUsedNote`() -> String { PhoneWords.format("recordKnowledgeUsedNote", []) }
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
@@ -2529,6 +2600,77 @@ extension PhoneWords {
         "settingsIntegrationsRuleNote": [],
         "settingsIntegrationsRuleOff": [],
         "settingsIntegrationsCopying": [],
+        "recordHelperClosed": [],
+        "recordMergingOnItsOwn": [],
+        "recordFactCrewmate": [],
+        "recordCareCareful": [],
+        "recordUseRetired": [],
+        "recordLandsCare": ["care"],
+        "recordMoreDelivery": [],
+        "recordOpenKeptEvidence": [],
+        "recordValidationEvidence": [],
+        "recordMergingAsksFirst": [],
+        "recordCareDefault": [],
+        "recordUsesMore": ["count"],
+        "recordSourceGone": [],
+        "recordCrewmateOnModel": ["crewmate", "model"],
+        "recordAgeMinutes": ["count"],
+        "recordCardOnStage": [],
+        "recordDeliveryPullRequest": [],
+        "recordPolicyProject": [],
+        "recordMoreComputerChoice": [],
+        "recordCardPutAside": [],
+        "recordUseEarlierRevision": ["current", "revision"],
+        "recordModeDirectPr": [],
+        "recordAgeHours": ["count"],
+        "recordAgeShortHours": ["hours"],
+        "recordUseConcept": [],
+        "recordDeliveryBatched": [],
+        "recordModeQueuePr": [],
+        "recordFactDelivery": [],
+        "recordModeInPlace": [],
+        "recordFactResult": [],
+        "recordCardNote": [],
+        "recordAgeDays": ["count"],
+        "recordMoreValidation": [],
+        "recordFactMerging": [],
+        "recordHelperAskFirstMate": [],
+        "recordComparedComputers": [],
+        "recordMoreKnowledge": ["count"],
+        "recordFactBranch": [],
+        "recordMoreBranch": [],
+        "recordDeliveryLocalMerge": [],
+        "recordValidationScenario": [],
+        "recordValidationSupplementary": ["action"],
+        "recordFromTask": ["key"],
+        "recordAgeShortDays": ["days"],
+        "recordAgeJustNow": [],
+        "recordUseCurrentRevision": ["revision"],
+        "recordLandsMerged": [],
+        "recordUndated": ["summary"],
+        "recordFactOperation": [],
+        "recordPolicyThisTask": [],
+        "recordValidationResult": [],
+        "recordAgeShortNow": [],
+        "recordFactCare": [],
+        "recordPolicyParentTask": [],
+        "recordFactRunsOn": [],
+        "recordCareQuick": [],
+        "recordModeLocalOnly": [],
+        "recordRecordedDetails": [],
+        "recordAgeShortMinutes": ["minutes"],
+        "recordUnreadable": [],
+        "recordHelperLocalCare": [],
+        "recordUseFinding": [],
+        "recordShowEarlier": ["count"],
+        "recordFoldedMore": ["count"],
+        "recordFactComputerChoice": [],
+        "recordCardClosed": [],
+        "recordCardDecision": [],
+        "recordLabelLiveValidation": [],
+        "recordLabelKnowledgeUsed": [],
+        "recordLabelMore": [],
+        "recordKnowledgeUsedNote": [],
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],
@@ -3125,6 +3267,13 @@ extension PhoneWords {
         "shellProjectMoreCount": "count",
         "settingsGeneralTasksPurged": "count",
         "settingsIntegrationsActionCount": "count",
+        "recordUsesMore": "count",
+        "recordAgeMinutes": "count",
+        "recordAgeHours": "count",
+        "recordAgeDays": "count",
+        "recordMoreKnowledge": "count",
+        "recordShowEarlier": "count",
+        "recordFoldedMore": "count",
         "phoneMediaPicturePosition": "count",
         "phoneAddressSweeping": "count",
         "phoneSceneProgramParts": "count",

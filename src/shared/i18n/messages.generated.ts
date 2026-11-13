@@ -28772,6 +28772,2475 @@ export function settingsIntegrationsCopying(): string {
   return `Copying...`;
 }
 
+export function recordHelperClosed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذه المهمة مغلقة. تبقى سياساتها محفوظة كسجل.`;
+    case "de":
+      return `Diese Aufgabe ist geschlossen. Ihre Regeln bleiben zur Nachverfolgung erhalten.`;
+    case "es":
+      return `Esta tarea está cerrada. Sus políticas se conservan como historial.`;
+    case "fr":
+      return `Cette tâche est fermée. Ses règles sont conservées comme historique.`;
+    case "ja":
+      return `このタスクは終了しています。方針は履歴として残ります。`;
+    case "ko":
+      return `이 작업은 닫혔어요. 정책은 기록으로 남아요.`;
+    case "pt-BR":
+      return `Esta tarefa está fechada. Suas políticas ficam guardadas como histórico.`;
+    case "zh-Hans":
+      return `这个任务已关闭。它的策略作为历史保留。`;
+    case "zh-Hant":
+      return `這項任務已關閉。它的規則會保留為歷史紀錄。`;
+    case "en-XA":
+      return `[Ţĥîš ţášķ îš çļöšéð. Îţš þöļîçîéš áŕé ķéþţ áš ĥîšţöŕý. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis task is closed. Its policies are kept as history.\u202c`;
+  }
+  return `This task is closed. Its policies are kept as history.`;
+}
+
+export function recordMergingOnItsOwn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يدمج تلقائيًا`;
+    case "de":
+      return `Führt selbst zusammen`;
+    case "es":
+      return `Fusiona por su cuenta`;
+    case "fr":
+      return `Fusionne seul`;
+    case "ja":
+      return `自動でマージ`;
+    case "ko":
+      return `알아서 병합`;
+    case "pt-BR":
+      return `Mescla por conta própria`;
+    case "zh-Hans":
+      return `自动合并`;
+    case "zh-Hant":
+      return `自行合併`;
+    case "en-XA":
+      return `[Ṁéŕĝéš öñ îţš öŵñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerges on its own\u202c`;
+  }
+  return `Merges on its own`;
+}
+
+export function recordFactCrewmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فرد الطاقم`;
+    case "de":
+      return `Crewmitglied`;
+    case "es":
+      return `Tripulante`;
+    case "fr":
+      return `Équipier`;
+    case "ja":
+      return `乗組員`;
+    case "ko":
+      return `선원`;
+    case "pt-BR":
+      return `Tripulante`;
+    case "zh-Hans":
+      return `船员`;
+    case "zh-Hant":
+      return `船員`;
+    case "en-XA":
+      return `[Çŕéŵɱáţé ~~~]`;
+    case "ar-XB":
+      return `\u202eCrewmate\u202c`;
+  }
+  return `Crewmate`;
+}
+
+export function recordCareCareful(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متأنٍّ`;
+    case "de":
+      return `Sorgfältig`;
+    case "es":
+      return `Cuidadoso`;
+    case "fr":
+      return `Minutieux`;
+    case "ja":
+      return `慎重`;
+    case "ko":
+      return `신중하게`;
+    case "pt-BR":
+      return `Cuidadoso`;
+    case "zh-Hans":
+      return `谨慎`;
+    case "zh-Hant":
+      return `謹慎`;
+    case "en-XA":
+      return `[Çáŕéƒûļ ~~~]`;
+    case "ar-XB":
+      return `\u202eCareful\u202c`;
+  }
+  return `Careful`;
+}
+
+export function recordUseRetired(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مُستبعَد منذ ذلك`;
+    case "de":
+      return `inzwischen zurückgezogen`;
+    case "es":
+      return `retirado desde entonces`;
+    case "fr":
+      return `retiré depuis`;
+    case "ja":
+      return `その後廃止`;
+    case "ko":
+      return `이후 폐기됨`;
+    case "pt-BR":
+      return `desativado desde então`;
+    case "zh-Hans":
+      return `之后已停用`;
+    case "zh-Hant":
+      return `之後已停用`;
+    case "en-XA":
+      return `[ŕéţîŕéð šîñçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eretired since\u202c`;
+  }
+  return `retired since`;
+}
+
+export function recordLandsCare(input: { care: string }): string {
+  const care = input.care;
+  switch (currentLanguage()) {
+    case "ar":
+      return `العناية: ${care}`;
+    case "de":
+      return `Sorgfalt: ${care}`;
+    case "es":
+      return `cuidado: ${care}`;
+    case "fr":
+      return `soin : ${care}`;
+    case "ja":
+      return `慎重さ：${care}`;
+    case "ko":
+      return `주의 수준: ${care}`;
+    case "pt-BR":
+      return `cuidado: ${care}`;
+    case "zh-Hans":
+      return `把关：${care}`;
+    case "zh-Hant":
+      return `謹慎度：${care}`;
+    case "en-XA":
+      return `[ŕîĝöŕ: ${care} ~~~]`;
+    case "ar-XB":
+      return `\u202erigor: \u202c${care}`;
+  }
+  return `rigor: ${care}`;
+}
+
+export function recordMoreDelivery(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التسليم`;
+    case "de":
+      return `Lieferung`;
+    case "es":
+      return `entrega`;
+    case "fr":
+      return `livraison`;
+    case "ja":
+      return `届け方`;
+    case "ko":
+      return `전달 방식`;
+    case "pt-BR":
+      return `entrega`;
+    case "zh-Hans":
+      return `交付方式`;
+    case "zh-Hant":
+      return `交付方式`;
+    case "en-XA":
+      return `[ðéļîṽéŕý ~~~]`;
+    case "ar-XB":
+      return `\u202edelivery\u202c`;
+  }
+  return `delivery`;
+}
+
+export function recordOpenKeptEvidence(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح الدليل المحفوظ`;
+    case "de":
+      return `Aufbewahrten Nachweis öffnen`;
+    case "es":
+      return `Abrir la evidencia guardada`;
+    case "fr":
+      return `Ouvrir la preuve conservée`;
+    case "ja":
+      return `保存された証拠を開く`;
+    case "ko":
+      return `보관된 증거 열기`;
+    case "pt-BR":
+      return `Abrir a evidência guardada`;
+    case "zh-Hans":
+      return `打开保存的证据`;
+    case "zh-Hant":
+      return `開啟保存的證據`;
+    case "en-XA":
+      return `[Öþéñ ķéþţ éṽîðéñçé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen kept evidence\u202c`;
+  }
+  return `Open kept evidence`;
+}
+
+export function recordValidationEvidence(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدليل`;
+    case "de":
+      return `Nachweis`;
+    case "es":
+      return `Evidencia`;
+    case "fr":
+      return `Preuve`;
+    case "ja":
+      return `証拠`;
+    case "ko":
+      return `증거`;
+    case "pt-BR":
+      return `Evidência`;
+    case "zh-Hans":
+      return `证据`;
+    case "zh-Hant":
+      return `證據`;
+    case "en-XA":
+      return `[Éṽîðéñçé ~~~]`;
+    case "ar-XB":
+      return `\u202eEvidence\u202c`;
+  }
+  return `Evidence`;
+}
+
+export function recordMergingAsksFirst(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يسأل أولًا`;
+    case "de":
+      return `Fragt vorher`;
+    case "es":
+      return `Pregunta antes`;
+    case "fr":
+      return `Demande d’abord`;
+    case "ja":
+      return `先に確認`;
+    case "ko":
+      return `먼저 물어봄`;
+    case "pt-BR":
+      return `Pergunta antes`;
+    case "zh-Hans":
+      return `先询问`;
+    case "zh-Hant":
+      return `先問過你`;
+    case "en-XA":
+      return `[Åšķš ƒîŕšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAsks first\u202c`;
+  }
+  return `Asks first`;
+}
+
+export function recordCareDefault(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `افتراضي`;
+    case "de":
+      return `Standard`;
+    case "es":
+      return `Predeterminado`;
+    case "fr":
+      return `Par défaut`;
+    case "ja":
+      return `標準`;
+    case "ko":
+      return `기본`;
+    case "pt-BR":
+      return `Padrão`;
+    case "zh-Hans":
+      return `默认`;
+    case "zh-Hant":
+      return `預設`;
+    case "en-XA":
+      return `[Ðéƒáûļţ ~~~]`;
+    case "ar-XB":
+      return `\u202eDefault\u202c`;
+  }
+  return `Default`;
+}
+
+export function recordUsesMore(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `و${count} أخرى.`;
+        case "one":
+          return `و${count} أخرى.`;
+        case "two":
+          return `و${count} أخريان.`;
+        case "few":
+          return `و${count} أخرى.`;
+        case "many":
+          return `و${count} أخرى.`;
+        default:
+          return `و${count} أخرى.`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Und ${count} weiterer.`;
+        default:
+          return `Und ${count} weitere.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Y ${count} más.`;
+        case "many":
+          return `Y ${count} más.`;
+        default:
+          return `Y ${count} más.`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Et ${count} de plus.`;
+        case "many":
+          return `Et ${count} de plus.`;
+        default:
+          return `Et ${count} de plus.`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `ほか${count}件。`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `그 밖에 ${count}개.`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `E mais ${count}.`;
+        case "many":
+          return `E mais ${count}.`;
+        default:
+          return `E mais ${count}.`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `还有 ${count} 项。`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `還有 ${count} 項。`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Åñð ${count} ɱöŕé. ~~~~]`;
+        default:
+          return `[Åñð ${count} ɱöŕé. ~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eAnd \u202c${count}\u202e more.\u202c`;
+        default:
+          return `\u202eAnd \u202c${count}\u202e more.\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `And ${count} more.`;
+    default:
+      return `And ${count} more.`;
+  }
+}
+
+export function recordSourceGone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يعد هذا المصدر التاريخي متاحًا.`;
+    case "de":
+      return `Diese frühere Quelle ist nicht mehr verfügbar.`;
+    case "es":
+      return `Esta fuente histórica ya no está disponible.`;
+    case "fr":
+      return `Cette source historique n’est plus disponible.`;
+    case "ja":
+      return `この過去の出典はもう利用できません。`;
+    case "ko":
+      return `이 이전 출처는 더 이상 볼 수 없어요.`;
+    case "pt-BR":
+      return `Esta fonte histórica não está mais disponível.`;
+    case "zh-Hans":
+      return `这个历史来源已不可用。`;
+    case "zh-Hant":
+      return `這個歷史來源已經無法取得。`;
+    case "en-XA":
+      return `[Ţĥîš ĥîšţöŕîçáļ šöûŕçé îš ñö ļöñĝéŕ áṽáîļáƀļé. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis historical source is no longer available.\u202c`;
+  }
+  return `This historical source is no longer available.`;
+}
+
+export function recordCrewmateOnModel(input: { crewmate: string; model: string }): string {
+  const crewmate = input.crewmate;
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${crewmate} باستخدام ${model}`;
+    case "de":
+      return `${crewmate} mit ${model}`;
+    case "es":
+      return `${crewmate} con ${model}`;
+    case "fr":
+      return `${crewmate} avec ${model}`;
+    case "ja":
+      return `${crewmate}（${model}）`;
+    case "ko":
+      return `${crewmate}, ${model} 사용`;
+    case "pt-BR":
+      return `${crewmate} com ${model}`;
+    case "zh-Hans":
+      return `${crewmate}，使用 ${model}`;
+    case "zh-Hant":
+      return `${crewmate}，使用 ${model}`;
+    case "en-XA":
+      return `[${crewmate} öñ ${model} ~~]`;
+    case "ar-XB":
+      return `${crewmate}\u202e on \u202c${model}`;
+  }
+  return `${crewmate} on ${model}`;
+}
+
+export function recordAgeMinutes(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `قبل ${count} دقيقة`;
+        case "one":
+          return `قبل ${count} دقيقة`;
+        case "two":
+          return `قبل ${count} دقيقتين`;
+        case "few":
+          return `قبل ${count} دقائق`;
+        case "many":
+          return `قبل ${count} دقيقةً`;
+        default:
+          return `قبل ${count} دقيقة`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `vor ${count} Min.`;
+        default:
+          return `vor ${count} Min.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `hace ${count} min`;
+        case "many":
+          return `hace ${count} min`;
+        default:
+          return `hace ${count} min`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `il y a ${count} min`;
+        case "many":
+          return `il y a ${count} min`;
+        default:
+          return `il y a ${count} min`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}分前`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}분 전`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `há ${count} min`;
+        case "many":
+          return `há ${count} min`;
+        default:
+          return `há ${count} min`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 分钟前`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 分鐘前`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ɱîñ áĝö ~~~]`;
+        default:
+          return `[${count} ɱîñ áĝö ~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e min ago\u202c`;
+        default:
+          return `${count}\u202e min ago\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} min ago`;
+    default:
+      return `${count} min ago`;
+  }
+}
+
+export function recordCardOnStage(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معروضة`;
+    case "de":
+      return `Angezeigt`;
+    case "es":
+      return `En pantalla`;
+    case "fr":
+      return `À l’écran`;
+    case "ja":
+      return `表示中`;
+    case "ko":
+      return `표시 중`;
+    case "pt-BR":
+      return `Em exibição`;
+    case "zh-Hans":
+      return `显示中`;
+    case "zh-Hant":
+      return `顯示中`;
+    case "en-XA":
+      return `[Öñ ţĥé šţáĝé ~~~~]`;
+    case "ar-XB":
+      return `\u202eOn the stage\u202c`;
+  }
+  return `On the stage`;
+}
+
+export function recordDeliveryPullRequest(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `طلب سحب`;
+    case "de":
+      return `Pull Request`;
+    case "es":
+      return `Solicitud de incorporación de cambios`;
+    case "fr":
+      return `Demande de tirage`;
+    case "ja":
+      return `プルリクエスト`;
+    case "ko":
+      return `끌어오기 요청`;
+    case "pt-BR":
+      return `Solicitação de pull`;
+    case "zh-Hans":
+      return `拉取请求`;
+    case "zh-Hant":
+      return `Pull request`;
+    case "en-XA":
+      return `[Þûļļ ŕéǫûéšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202ePull request\u202c`;
+  }
+  return `Pull request`;
+}
+
+export function recordPolicyProject(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إعداد المشروع`;
+    case "de":
+      return `Projekteinstellung`;
+    case "es":
+      return `Configuración del proyecto`;
+    case "fr":
+      return `Réglage du projet`;
+    case "ja":
+      return `プロジェクトの設定`;
+    case "ko":
+      return `프로젝트 설정`;
+    case "pt-BR":
+      return `Configuração do projeto`;
+    case "zh-Hans":
+      return `项目设置`;
+    case "zh-Hant":
+      return `專案設定`;
+    case "en-XA":
+      return `[Þŕöĵéçţ šéţţîñĝ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eProject setting\u202c`;
+  }
+  return `Project setting`;
+}
+
+export function recordMoreComputerChoice(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختيار الحاسوب`;
+    case "de":
+      return `Wahl des Computers`;
+    case "es":
+      return `la elección de computadora`;
+    case "fr":
+      return `le choix de l’ordinateur`;
+    case "ja":
+      return `コンピューターの選択`;
+    case "ko":
+      return `컴퓨터 선택`;
+    case "pt-BR":
+      return `a escolha do computador`;
+    case "zh-Hans":
+      return `电脑的选择`;
+    case "zh-Hant":
+      return `電腦的選擇`;
+    case "en-XA":
+      return `[ţĥé çöɱþûţéŕ'š çĥöîçé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethe computer's choice\u202c`;
+  }
+  return `the computer's choice`;
+}
+
+export function recordCardPutAside(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `موضوعة جانبًا`;
+    case "de":
+      return `Beiseitegelegt`;
+    case "es":
+      return `Apartada`;
+    case "fr":
+      return `Mise de côté`;
+    case "ja":
+      return `脇に置いてある`;
+    case "ko":
+      return `치워 둠`;
+    case "pt-BR":
+      return `Deixado de lado`;
+    case "zh-Hans":
+      return `已放到一边`;
+    case "zh-Hant":
+      return `已放到一旁`;
+    case "en-XA":
+      return `[Þûţ ášîðé ~~~]`;
+    case "ar-XB":
+      return `\u202ePut aside\u202c`;
+  }
+  return `Put aside`;
+}
+
+export function recordUseEarlierRevision(input: { current: string; revision: string }): string {
+  const current = input.current;
+  const revision = input.revision;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استُخدم التعديل ${revision} · التعديل الحالي ${current}`;
+    case "de":
+      return `Revision ${revision} genutzt · aktuelle Revision ${current}`;
+    case "es":
+      return `usó la versión ${revision} · versión actual ${current}`;
+    case "fr":
+      return `révision ${revision} utilisée · révision actuelle ${current}`;
+    case "ja":
+      return `改訂${revision}を使用 · 現在は改訂${current}`;
+    case "ko":
+      return `수정본 ${revision} 사용 · 현재 수정본 ${current}`;
+    case "pt-BR":
+      return `usou a versão ${revision} · versão atual ${current}`;
+    case "zh-Hans":
+      return `使用了修订 ${revision} · 当前修订 ${current}`;
+    case "zh-Hant":
+      return `使用了修訂 ${revision} · 目前修訂 ${current}`;
+    case "en-XA":
+      return `[ûšéð ŕéṽîšîöñ ${revision} · çûŕŕéñţ ŕéṽîšîöñ ${current} ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eused revision \u202c${revision}\u202e · current revision \u202c${current}`;
+  }
+  return `used revision ${revision} · current revision ${current}`;
+}
+
+export function recordModeDirectPr(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كطلب سحب`;
+    case "de":
+      return `Als Pull Request`;
+    case "es":
+      return `Como solicitud de incorporación de cambios`;
+    case "fr":
+      return `En demande de tirage`;
+    case "ja":
+      return `プルリクエストとして`;
+    case "ko":
+      return `끌어오기 요청으로`;
+    case "pt-BR":
+      return `Como solicitação de pull`;
+    case "zh-Hans":
+      return `以拉取请求交付`;
+    case "zh-Hant":
+      return `以 pull request 交付`;
+    case "en-XA":
+      return `[Åš á þûļļ ŕéǫûéšţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAs a pull request\u202c`;
+  }
+  return `As a pull request`;
+}
+
+export function recordAgeHours(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `قبل ${count} ساعة`;
+        case "one":
+          return `قبل ${count} ساعة`;
+        case "two":
+          return `قبل ${count} ساعتين`;
+        case "few":
+          return `قبل ${count} ساعات`;
+        case "many":
+          return `قبل ${count} ساعةً`;
+        default:
+          return `قبل ${count} ساعة`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `vor ${count} Std.`;
+        default:
+          return `vor ${count} Std.`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `hace ${count} h`;
+        case "many":
+          return `hace ${count} h`;
+        default:
+          return `hace ${count} h`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `il y a ${count} h`;
+        case "many":
+          return `il y a ${count} h`;
+        default:
+          return `il y a ${count} h`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}時間前`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}시간 전`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `há ${count} h`;
+        case "many":
+          return `há ${count} h`;
+        default:
+          return `há ${count} h`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 小时前`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 小時前`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ĥŕ áĝö ~~~]`;
+        default:
+          return `[${count} ĥŕ áĝö ~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e hr ago\u202c`;
+        default:
+          return `${count}\u202e hr ago\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} hr ago`;
+    default:
+      return `${count} hr ago`;
+  }
+}
+
+export function recordAgeShortHours(input: { hours: string }): string {
+  const hours = input.hours;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${hours} س`;
+    case "de":
+      return `${hours} Std.`;
+    case "es":
+      return `${hours} h`;
+    case "fr":
+      return `${hours} h`;
+    case "ja":
+      return `${hours}時間`;
+    case "ko":
+      return `${hours}시간`;
+    case "pt-BR":
+      return `${hours} h`;
+    case "zh-Hans":
+      return `${hours} 小时`;
+    case "zh-Hant":
+      return `${hours} 小時`;
+    case "en-XA":
+      return `[${hours}ĥ ~]`;
+    case "ar-XB":
+      return `${hours}\u202eh\u202c`;
+  }
+  return `${hours}h`;
+}
+
+export function recordUseConcept(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفهوم`;
+    case "de":
+      return `Begriff`;
+    case "es":
+      return `Concepto`;
+    case "fr":
+      return `Concept`;
+    case "ja":
+      return `概念`;
+    case "ko":
+      return `개념`;
+    case "pt-BR":
+      return `Conceito`;
+    case "zh-Hans":
+      return `概念`;
+    case "zh-Hant":
+      return `概念`;
+    case "en-XA":
+      return `[Çöñçéþţ ~~~]`;
+    case "ar-XB":
+      return `\u202eConcept\u202c`;
+  }
+  return `Concept`;
+}
+
+export function recordDeliveryBatched(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `طلب سحب مجمّع`;
+    case "de":
+      return `Gebündelter Pull Request`;
+    case "es":
+      return `Solicitud de incorporación de cambios por lotes`;
+    case "fr":
+      return `Demande de tirage groupée`;
+    case "ja":
+      return `一括プルリクエスト`;
+    case "ko":
+      return `일괄 끌어오기 요청`;
+    case "pt-BR":
+      return `Solicitação de pull em lote`;
+    case "zh-Hans":
+      return `批量拉取请求`;
+    case "zh-Hant":
+      return `批次 pull request`;
+    case "en-XA":
+      return `[Ɓáţçĥéð þûļļ ŕéǫûéšţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eBatched pull request\u202c`;
+  }
+  return `Batched pull request`;
+}
+
+export function recordModeQueuePr(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كطلب سحب مجمّع يختبره طابور مشروعك`;
+    case "de":
+      return `Als gebündelter Pull Request, den die Warteschlange deines Projekts testet`;
+    case "es":
+      return `Como solicitud de incorporación de cambios por lotes que prueba la cola de tu proyecto`;
+    case "fr":
+      return `En demande de tirage groupée, testée par la file de votre projet`;
+    case "ja":
+      return `プロジェクトのキューがテストする一括プルリクエストとして`;
+    case "ko":
+      return `프로젝트 대기열이 테스트하는 일괄 끌어오기 요청으로`;
+    case "pt-BR":
+      return `Como solicitação de pull em lote, testada pela fila do seu projeto`;
+    case "zh-Hans":
+      return `以批量拉取请求交付，由你项目的队列测试`;
+    case "zh-Hant":
+      return `以批次 pull request 交付，由你專案的佇列測試`;
+    case "en-XA":
+      return `[Åš á ƀáţçĥéð þûļļ ŕéǫûéšţ ýöûŕ þŕöĵéçţ'š ǫûéûé ţéšţš ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAs a batched pull request your project's queue tests\u202c`;
+  }
+  return `As a batched pull request your project's queue tests`;
+}
+
+export function recordFactDelivery(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التسليم`;
+    case "de":
+      return `Lieferung`;
+    case "es":
+      return `Entrega`;
+    case "fr":
+      return `Livraison`;
+    case "ja":
+      return `届け方`;
+    case "ko":
+      return `전달 방식`;
+    case "pt-BR":
+      return `Entrega`;
+    case "zh-Hans":
+      return `交付方式`;
+    case "zh-Hant":
+      return `交付方式`;
+    case "en-XA":
+      return `[Ðéļîṽéŕý ~~~]`;
+    case "ar-XB":
+      return `\u202eDelivery\u202c`;
+  }
+  return `Delivery`;
+}
+
+export function recordModeInPlace(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بناء في المكان`;
+    case "de":
+      return `Direkt im Ordner gebaut`;
+    case "es":
+      return `Construido en el lugar`;
+    case "fr":
+      return `Construit sur place`;
+    case "ja":
+      return `その場で作成`;
+    case "ko":
+      return `그 자리에서 만듦`;
+    case "pt-BR":
+      return `Feito no local`;
+    case "zh-Hans":
+      return `就地构建`;
+    case "zh-Hant":
+      return `就地建置`;
+    case "en-XA":
+      return `[Ɓûîļţ îñ þļáçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eBuilt in place\u202c`;
+  }
+  return `Built in place`;
+}
+
+export function recordFactResult(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الناتج`;
+    case "de":
+      return `Ergebnis`;
+    case "es":
+      return `Resultado`;
+    case "fr":
+      return `Résultat`;
+    case "ja":
+      return `成果`;
+    case "ko":
+      return `결과물`;
+    case "pt-BR":
+      return `Resultado`;
+    case "zh-Hans":
+      return `成果`;
+    case "zh-Hant":
+      return `成果`;
+    case "en-XA":
+      return `[Ŕéšûļţ ~~]`;
+    case "ar-XB":
+      return `\u202eResult\u202c`;
+  }
+  return `Result`;
+}
+
+export function recordCardNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ملاحظة`;
+    case "de":
+      return `Notiz`;
+    case "es":
+      return `Nota`;
+    case "fr":
+      return `Note`;
+    case "ja":
+      return `お知らせ`;
+    case "ko":
+      return `알림`;
+    case "pt-BR":
+      return `Nota`;
+    case "zh-Hans":
+      return `便笺`;
+    case "zh-Hant":
+      return `筆記`;
+    case "en-XA":
+      return `[Ñöţé ~~]`;
+    case "ar-XB":
+      return `\u202eNote\u202c`;
+  }
+  return `Note`;
+}
+
+export function recordAgeDays(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `قبل ${count} يوم`;
+        case "one":
+          return `قبل ${count} يوم`;
+        case "two":
+          return `قبل ${count} يومين`;
+        case "few":
+          return `قبل ${count} أيام`;
+        case "many":
+          return `قبل ${count} يومًا`;
+        default:
+          return `قبل ${count} يوم`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `vor ${count} Tag`;
+        default:
+          return `vor ${count} Tagen`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `hace ${count} día`;
+        case "many":
+          return `hace ${count} de días`;
+        default:
+          return `hace ${count} días`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `il y a ${count} jour`;
+        case "many":
+          return `il y a ${count} jours`;
+        default:
+          return `il y a ${count} jours`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}日前`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}일 전`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `há ${count} dia`;
+        case "many":
+          return `há ${count} dias`;
+        default:
+          return `há ${count} dias`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 天前`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 天前`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ðáý áĝö ~~~]`;
+        default:
+          return `[${count} ðáýš áĝö ~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e day ago\u202c`;
+        default:
+          return `${count}\u202e days ago\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} day ago`;
+    default:
+      return `${count} days ago`;
+  }
+}
+
+export function recordMoreValidation(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التحقق المباشر`;
+    case "de":
+      return `Live-Prüfung`;
+    case "es":
+      return `validación en vivo`;
+    case "fr":
+      return `validation en direct`;
+    case "ja":
+      return `実地検証`;
+    case "ko":
+      return `실제 검증`;
+    case "pt-BR":
+      return `validação ao vivo`;
+    case "zh-Hans":
+      return `实测验证`;
+    case "zh-Hant":
+      return `實際驗證`;
+    case "en-XA":
+      return `[ļîṽé ṽáļîðáţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202elive validation\u202c`;
+  }
+  return `live validation`;
+}
+
+export function recordFactMerging(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الدمج`;
+    case "de":
+      return `Zusammenführen`;
+    case "es":
+      return `Fusión`;
+    case "fr":
+      return `Fusion`;
+    case "ja":
+      return `マージ`;
+    case "ko":
+      return `병합`;
+    case "pt-BR":
+      return `Mesclagem`;
+    case "zh-Hans":
+      return `合并`;
+    case "zh-Hant":
+      return `合併`;
+    case "en-XA":
+      return `[Ṁéŕĝîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eMerging\u202c`;
+  }
+  return `Merging`;
+}
+
+export function recordHelperAskFirstMate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اطلب من نائب القبطان تغيير هذه الإعدادات لهذه المهمة.`;
+    case "de":
+      return `Bitte deinen ersten Offizier, sie für diese Aufgabe zu ändern.`;
+    case "es":
+      return `Pídele a tu primer oficial que cambie esto para esta tarea.`;
+    case "fr":
+      return `Demandez à votre second de les modifier pour cette tâche.`;
+    case "ja":
+      return `このタスクのこれらの設定を変えるには、一等航海士に頼んでください。`;
+    case "ko":
+      return `이 작업의 설정을 바꾸려면 일등항해사에게 요청하세요.`;
+    case "pt-BR":
+      return `Peça ao seu imediato para mudar isso nesta tarefa.`;
+    case "zh-Hans":
+      return `如需为这个任务更改这些设置，请告诉你的大副。`;
+    case "zh-Hant":
+      return `想為這項任務更改這些設定，請告訴你的大副。`;
+    case "en-XA":
+      return `[Åšķ ýöûŕ ƒîŕšţ ɱáţé ţö çĥáñĝé ţĥéšé ƒöŕ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAsk your first mate to change these for this task.\u202c`;
+  }
+  return `Ask your first mate to change these for this task.`;
+}
+
+export function recordComparedComputers(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحواسيب التي قورنت عند البدء`;
+    case "de":
+      return `Beim Start verglichene Computer`;
+    case "es":
+      return `Computadoras comparadas al inicio`;
+    case "fr":
+      return `Ordinateurs comparés au démarrage`;
+    case "ja":
+      return `開始時に比較したコンピューター`;
+    case "ko":
+      return `시작할 때 비교한 컴퓨터`;
+    case "pt-BR":
+      return `Computadores comparados no início`;
+    case "zh-Hans":
+      return `开始时比较过的电脑`;
+    case "zh-Hant":
+      return `開始時比較過的電腦`;
+    case "en-XA":
+      return `[Çöɱþáŕéð çöɱþûţéŕš áţ šţáŕţ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCompared computers at start\u202c`;
+  }
+  return `Compared computers at start`;
+}
+
+export function recordMoreKnowledge(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `المعرفة: ${count}`;
+        case "one":
+          return `المعرفة: ${count}`;
+        case "two":
+          return `المعرفة: ${count}`;
+        case "few":
+          return `المعرفة: ${count}`;
+        case "many":
+          return `المعرفة: ${count}`;
+        default:
+          return `المعرفة: ${count}`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Wissen ${count}`;
+        default:
+          return `Wissen ${count}`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `conocimiento: ${count}`;
+        case "many":
+          return `conocimiento: ${count}`;
+        default:
+          return `conocimiento: ${count}`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `connaissances : ${count}`;
+        case "many":
+          return `connaissances : ${count}`;
+        default:
+          return `connaissances : ${count}`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `ナレッジ${count}件`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `지식 ${count}`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `conhecimento ${count}`;
+        case "many":
+          return `conhecimento ${count}`;
+        default:
+          return `conhecimento ${count}`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `知识 ${count}`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `知識 ${count}`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[ķñöŵļéðĝé ${count} ~~~~]`;
+        default:
+          return `[ķñöŵļéðĝé ${count} ~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eknowledge \u202c${count}`;
+        default:
+          return `\u202eknowledge \u202c${count}`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `knowledge ${count}`;
+    default:
+      return `knowledge ${count}`;
+  }
+}
+
+export function recordFactBranch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الفرع`;
+    case "de":
+      return `Branch`;
+    case "es":
+      return `Rama`;
+    case "fr":
+      return `Branche`;
+    case "ja":
+      return `ブランチ`;
+    case "ko":
+      return `분기`;
+    case "pt-BR":
+      return `Branch`;
+    case "zh-Hans":
+      return `分支`;
+    case "zh-Hant":
+      return `分支`;
+    case "en-XA":
+      return `[Ɓŕáñçĥ ~~]`;
+    case "ar-XB":
+      return `\u202eBranch\u202c`;
+  }
+  return `Branch`;
+}
+
+export function recordMoreBranch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الفرع`;
+    case "de":
+      return `Branch`;
+    case "es":
+      return `rama`;
+    case "fr":
+      return `branche`;
+    case "ja":
+      return `ブランチ`;
+    case "ko":
+      return `분기`;
+    case "pt-BR":
+      return `branch`;
+    case "zh-Hans":
+      return `分支`;
+    case "zh-Hant":
+      return `分支`;
+    case "en-XA":
+      return `[ƀŕáñçĥ ~~]`;
+    case "ar-XB":
+      return `\u202ebranch\u202c`;
+  }
+  return `branch`;
+}
+
+export function recordDeliveryLocalMerge(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دمج محلي`;
+    case "de":
+      return `Lokal zusammengeführt`;
+    case "es":
+      return `Fusión local`;
+    case "fr":
+      return `Fusion locale`;
+    case "ja":
+      return `ローカルマージ`;
+    case "ko":
+      return `로컬 병합`;
+    case "pt-BR":
+      return `Mesclagem local`;
+    case "zh-Hans":
+      return `本地合并`;
+    case "zh-Hant":
+      return `本機合併`;
+    case "en-XA":
+      return `[Ļöçáļ ɱéŕĝé ~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal merge\u202c`;
+  }
+  return `Local merge`;
+}
+
+export function recordValidationScenario(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السيناريو`;
+    case "de":
+      return `Szenario`;
+    case "es":
+      return `Escenario`;
+    case "fr":
+      return `Scénario`;
+    case "ja":
+      return `シナリオ`;
+    case "ko":
+      return `시나리오`;
+    case "pt-BR":
+      return `Cenário`;
+    case "zh-Hans":
+      return `场景`;
+    case "zh-Hant":
+      return `情境`;
+    case "en-XA":
+      return `[Šçéñáŕîö ~~~]`;
+    case "ar-XB":
+      return `\u202eScenario\u202c`;
+  }
+  return `Scenario`;
+}
+
+export function recordValidationSupplementary(input: { action: string }): string {
+  const action = input.action;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${action} (تكميلي)`;
+    case "de":
+      return `${action} (ergänzend)`;
+    case "es":
+      return `${action} (complementario)`;
+    case "fr":
+      return `${action} (complémentaire)`;
+    case "ja":
+      return `${action}（補足）`;
+    case "ko":
+      return `${action} (보충)`;
+    case "pt-BR":
+      return `${action} (complementar)`;
+    case "zh-Hans":
+      return `${action}（补充）`;
+    case "zh-Hant":
+      return `${action}（補充）`;
+    case "en-XA":
+      return `[${action} (šûþþļéɱéñţáŕý) ~~~~~~]`;
+    case "ar-XB":
+      return `${action}\u202e (supplementary)\u202c`;
+  }
+  return `${action} (supplementary)`;
+}
+
+export function recordFromTask(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "ar":
+      return `من ${key}`;
+    case "de":
+      return `aus ${key}`;
+    case "es":
+      return `de ${key}`;
+    case "fr":
+      return `de ${key}`;
+    case "ja":
+      return `${key} から`;
+    case "ko":
+      return `${key}에서`;
+    case "pt-BR":
+      return `de ${key}`;
+    case "zh-Hans":
+      return `来自 ${key}`;
+    case "zh-Hant":
+      return `來自 ${key}`;
+    case "en-XA":
+      return `[ƒŕöɱ ${key} ~~]`;
+    case "ar-XB":
+      return `\u202efrom \u202c${key}`;
+  }
+  return `from ${key}`;
+}
+
+export function recordAgeShortDays(input: { days: string }): string {
+  const days = input.days;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${days} ي`;
+    case "de":
+      return `${days} Tg.`;
+    case "es":
+      return `${days} d`;
+    case "fr":
+      return `${days} j`;
+    case "ja":
+      return `${days}日`;
+    case "ko":
+      return `${days}일`;
+    case "pt-BR":
+      return `${days} d`;
+    case "zh-Hans":
+      return `${days} 天`;
+    case "zh-Hant":
+      return `${days} 天`;
+    case "en-XA":
+      return `[${days}ð ~]`;
+    case "ar-XB":
+      return `${days}\u202ed\u202c`;
+  }
+  return `${days}d`;
+}
+
+export function recordAgeJustNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قبل لحظات`;
+    case "de":
+      return `gerade eben`;
+    case "es":
+      return `justo ahora`;
+    case "fr":
+      return `à l’instant`;
+    case "ja":
+      return `たった今`;
+    case "ko":
+      return `방금`;
+    case "pt-BR":
+      return `agora mesmo`;
+    case "zh-Hans":
+      return `刚刚`;
+    case "zh-Hant":
+      return `剛剛`;
+    case "en-XA":
+      return `[ĵûšţ ñöŵ ~~~]`;
+    case "ar-XB":
+      return `\u202ejust now\u202c`;
+  }
+  return `just now`;
+}
+
+export function recordUseCurrentRevision(input: { revision: string }): string {
+  const revision = input.revision;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استُخدم التعديل ${revision}، وهو الحالي`;
+    case "de":
+      return `Revision ${revision} genutzt, die aktuelle`;
+    case "es":
+      return `usó la versión ${revision}, la actual`;
+    case "fr":
+      return `révision ${revision} utilisée, l’actuelle`;
+    case "ja":
+      return `改訂${revision}を使用（現在の改訂）`;
+    case "ko":
+      return `수정본 ${revision} 사용, 현재 수정본`;
+    case "pt-BR":
+      return `usou a versão ${revision}, a atual`;
+    case "zh-Hans":
+      return `使用了修订 ${revision}，即当前修订`;
+    case "zh-Hant":
+      return `使用了修訂 ${revision}，也就是目前的修訂`;
+    case "en-XA":
+      return `[ûšéð ŕéṽîšîöñ ${revision}, ţĥé çûŕŕéñţ öñé ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eused revision \u202c${revision}\u202e, the current one\u202c`;
+  }
+  return `used revision ${revision}, the current one`;
+}
+
+export function recordLandsMerged(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دُمج`;
+    case "de":
+      return `zusammengeführt`;
+    case "es":
+      return `fusionada`;
+    case "fr":
+      return `fusionnée`;
+    case "ja":
+      return `マージ済み`;
+    case "ko":
+      return `병합됨`;
+    case "pt-BR":
+      return `mesclada`;
+    case "zh-Hans":
+      return `已合并`;
+    case "zh-Hant":
+      return `已合併`;
+    case "en-XA":
+      return `[ɱéŕĝéð ~~]`;
+    case "ar-XB":
+      return `\u202emerged\u202c`;
+  }
+  return `merged`;
+}
+
+export function recordUndated(input: { summary: string }): string {
+  const summary = input.summary;
+  switch (currentLanguage()) {
+    case "ar":
+      return `بلا تاريخ · ${summary}`;
+    case "de":
+      return `Ohne Datum · ${summary}`;
+    case "es":
+      return `Sin fecha · ${summary}`;
+    case "fr":
+      return `Sans date · ${summary}`;
+    case "ja":
+      return `日付なし · ${summary}`;
+    case "ko":
+      return `날짜 없음 · ${summary}`;
+    case "pt-BR":
+      return `Sem data · ${summary}`;
+    case "zh-Hans":
+      return `无日期 · ${summary}`;
+    case "zh-Hant":
+      return `無日期 · ${summary}`;
+    case "en-XA":
+      return `[Ûñðáţéð · ${summary} ~~~~]`;
+    case "ar-XB":
+      return `\u202eUndated · \u202c${summary}`;
+  }
+  return `Undated · ${summary}`;
+}
+
+export function recordFactOperation(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عملية`;
+    case "de":
+      return `Vorgang`;
+    case "es":
+      return `Operación`;
+    case "fr":
+      return `Opération`;
+    case "ja":
+      return `操作`;
+    case "ko":
+      return `실행`;
+    case "pt-BR":
+      return `Operação`;
+    case "zh-Hans":
+      return `操作`;
+    case "zh-Hant":
+      return `操作`;
+    case "en-XA":
+      return `[Öþéŕáţîöñ ~~~]`;
+    case "ar-XB":
+      return `\u202eOperation\u202c`;
+  }
+  return `Operation`;
+}
+
+export function recordPolicyThisTask(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذه المهمة`;
+    case "de":
+      return `Diese Aufgabe`;
+    case "es":
+      return `Esta tarea`;
+    case "fr":
+      return `Cette tâche`;
+    case "ja":
+      return `このタスク`;
+    case "ko":
+      return `이 작업`;
+    case "pt-BR":
+      return `Esta tarefa`;
+    case "zh-Hans":
+      return `本任务`;
+    case "zh-Hant":
+      return `這項任務`;
+    case "en-XA":
+      return `[Ţĥîš ţášķ ~~~]`;
+    case "ar-XB":
+      return `\u202eThis task\u202c`;
+  }
+  return `This task`;
+}
+
+export function recordValidationResult(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النتيجة`;
+    case "de":
+      return `Ergebnis`;
+    case "es":
+      return `Resultado`;
+    case "fr":
+      return `Résultat`;
+    case "ja":
+      return `結果`;
+    case "ko":
+      return `결과`;
+    case "pt-BR":
+      return `Resultado`;
+    case "zh-Hans":
+      return `结果`;
+    case "zh-Hant":
+      return `結果`;
+    case "en-XA":
+      return `[Ŕéšûļţ ~~]`;
+    case "ar-XB":
+      return `\u202eResult\u202c`;
+  }
+  return `Result`;
+}
+
+export function recordAgeShortNow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الآن`;
+    case "de":
+      return `jetzt`;
+    case "es":
+      return `ahora`;
+    case "fr":
+      return `maintenant`;
+    case "ja":
+      return `今`;
+    case "ko":
+      return `지금`;
+    case "pt-BR":
+      return `agora`;
+    case "zh-Hans":
+      return `现在`;
+    case "zh-Hant":
+      return `現在`;
+    case "en-XA":
+      return `[ñöŵ ~]`;
+    case "ar-XB":
+      return `\u202enow\u202c`;
+  }
+  return `now`;
+}
+
+export function recordFactCare(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العناية`;
+    case "de":
+      return `Sorgfalt`;
+    case "es":
+      return `Cuidado`;
+    case "fr":
+      return `Soin`;
+    case "ja":
+      return `慎重さ`;
+    case "ko":
+      return `주의 수준`;
+    case "pt-BR":
+      return `Cuidado`;
+    case "zh-Hans":
+      return `把关`;
+    case "zh-Hant":
+      return `謹慎度`;
+    case "en-XA":
+      return `[Ŕîĝöŕ ~~]`;
+    case "ar-XB":
+      return `\u202eRigor\u202c`;
+  }
+  return `Rigor`;
+}
+
+export function recordPolicyParentTask(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المهمة الأم`;
+    case "de":
+      return `Übergeordnete Aufgabe`;
+    case "es":
+      return `Tarea principal`;
+    case "fr":
+      return `Tâche parente`;
+    case "ja":
+      return `親タスク`;
+    case "ko":
+      return `상위 작업`;
+    case "pt-BR":
+      return `Tarefa principal`;
+    case "zh-Hans":
+      return `上级任务`;
+    case "zh-Hant":
+      return `上層任務`;
+    case "en-XA":
+      return `[Þáŕéñţ ţášķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eParent task\u202c`;
+  }
+  return `Parent task`;
+}
+
+export function recordFactRunsOn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعمل على`;
+    case "de":
+      return `Läuft auf`;
+    case "es":
+      return `Se ejecuta en`;
+    case "fr":
+      return `S’exécute sur`;
+    case "ja":
+      return `実行先`;
+    case "ko":
+      return `실행 위치`;
+    case "pt-BR":
+      return `Roda em`;
+    case "zh-Hans":
+      return `运行于`;
+    case "zh-Hant":
+      return `執行於`;
+    case "en-XA":
+      return `[Ŕûñš öñ ~~~]`;
+    case "ar-XB":
+      return `\u202eRuns on\u202c`;
+  }
+  return `Runs on`;
+}
+
+export function recordCareQuick(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سريع`;
+    case "de":
+      return `Schnell`;
+    case "es":
+      return `Rápido`;
+    case "fr":
+      return `Rapide`;
+    case "ja":
+      return `クイック`;
+    case "ko":
+      return `빠르게`;
+    case "pt-BR":
+      return `Rápido`;
+    case "zh-Hans":
+      return `快速`;
+    case "zh-Hant":
+      return `快速`;
+    case "en-XA":
+      return `[Ǫûîçķ ~~]`;
+    case "ar-XB":
+      return `\u202eQuick\u202c`;
+  }
+  return `Quick`;
+}
+
+export function recordModeLocalOnly(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دُمج محليًا، دون طلب سحب`;
+    case "de":
+      return `Lokal zusammengeführt, ohne Pull Request`;
+    case "es":
+      return `Fusión local, sin solicitud de incorporación de cambios`;
+    case "fr":
+      return `Fusion locale, sans demande de tirage`;
+    case "ja":
+      return `ローカルでマージ、プルリクエストなし`;
+    case "ko":
+      return `로컬에서 병합, 끌어오기 요청 없음`;
+    case "pt-BR":
+      return `Mesclagem local, sem solicitação de pull`;
+    case "zh-Hans":
+      return `本地合并，没有拉取请求`;
+    case "zh-Hant":
+      return `本機合併，沒有 pull request`;
+    case "en-XA":
+      return `[Ṁéŕĝéð ļöçáļļý, ñö þûļļ ŕéǫûéšţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged locally, no pull request\u202c`;
+  }
+  return `Merged locally, no pull request`;
+}
+
+export function recordRecordedDetails(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التفاصيل المسجّلة`;
+    case "de":
+      return `Erfasste Details`;
+    case "es":
+      return `Detalles registrados`;
+    case "fr":
+      return `Détails enregistrés`;
+    case "ja":
+      return `記録された詳細`;
+    case "ko":
+      return `기록된 세부 정보`;
+    case "pt-BR":
+      return `Detalhes registrados`;
+    case "zh-Hans":
+      return `记录的详情`;
+    case "zh-Hant":
+      return `記錄的詳細資料`;
+    case "en-XA":
+      return `[Ŕéçöŕðéð ðéţáîļš ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRecorded details\u202c`;
+  }
+  return `Recorded details`;
+}
+
+export function recordAgeShortMinutes(input: { minutes: string }): string {
+  const minutes = input.minutes;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${minutes} د`;
+    case "de":
+      return `${minutes} Min.`;
+    case "es":
+      return `${minutes} min`;
+    case "fr":
+      return `${minutes} min`;
+    case "ja":
+      return `${minutes}分`;
+    case "ko":
+      return `${minutes}분`;
+    case "pt-BR":
+      return `${minutes} min`;
+    case "zh-Hans":
+      return `${minutes} 分钟`;
+    case "zh-Hant":
+      return `${minutes} 分鐘`;
+    case "en-XA":
+      return `[${minutes}ɱ ~]`;
+    case "ar-XB":
+      return `${minutes}\u202em\u202c`;
+  }
+  return `${minutes}m`;
+}
+
+export function recordUnreadable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة هذا السجل.`;
+    case "de":
+      return `Dieses Protokoll konnte nicht gelesen werden.`;
+    case "es":
+      return `No se pudo leer este registro.`;
+    case "fr":
+      return `Cette fiche n’a pas pu être lue.`;
+    case "ja":
+      return `この記録を読み取れませんでした。`;
+    case "ko":
+      return `이 기록을 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler este registro.`;
+    case "zh-Hans":
+      return `无法读取此记录。`;
+    case "zh-Hant":
+      return `無法讀取這份紀錄。`;
+    case "en-XA":
+      return `[Ţĥîš ŕéçöŕð çöûļð ñöţ ƀé ŕéáð. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis record could not be read.\u202c`;
+  }
+  return `This record could not be read.`;
+}
+
+export function recordHelperLocalCare(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستخدم الدمج المحلي العناية «افتراضي»؛ وتبقى العناية «متأنٍّ» مطلوبة لطلبات السحب.`;
+    case "de":
+      return `Lokales Zusammenführen nutzt die Sorgfalt „Standard“; für Pull Requests bleibt „Sorgfältig“ angefordert.`;
+    case "es":
+      return `La fusión local usa el cuidado Predeterminado; para las solicitudes de incorporación de cambios se sigue pidiendo Cuidadoso.`;
+    case "fr":
+      return `La fusion locale utilise le soin Par défaut ; Minutieux reste demandé pour les demandes de tirage.`;
+    case "ja":
+      return `ローカルマージでは慎重さが「標準」になります。プルリクエストには引き続き「慎重」を求めます。`;
+    case "ko":
+      return `로컬 병합에는 기본 주의 수준이 적용되고, 끌어오기 요청에는 여전히 신중하게가 요청돼요.`;
+    case "pt-BR":
+      return `A mesclagem local usa o cuidado Padrão; para solicitações de pull, o pedido continua sendo Cuidadoso.`;
+    case "zh-Hans":
+      return `本地合并使用默认把关；拉取请求仍要求谨慎把关。`;
+    case "zh-Hant":
+      return `本機合併使用預設謹慎度；pull request 仍要求謹慎。`;
+    case "en-XA":
+      return `[Ļöçáļ ɱéŕĝé ûšéš Ðéƒáûļţ ŕîĝöŕ; Çáŕéƒûļ ŕéɱáîñš ŕéǫûéšţéð ƒöŕ þûļļ ŕéǫûéšţš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLocal merge uses Default rigor; Careful remains requested for pull requests.\u202c`;
+  }
+  return `Local merge uses Default rigor; Careful remains requested for pull requests.`;
+}
+
+export function recordUseFinding(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نتيجة`;
+    case "de":
+      return `Erkenntnis`;
+    case "es":
+      return `Hallazgo`;
+    case "fr":
+      return `Constat`;
+    case "ja":
+      return `知見`;
+    case "ko":
+      return `발견`;
+    case "pt-BR":
+      return `Constatação`;
+    case "zh-Hans":
+      return `发现`;
+    case "zh-Hant":
+      return `發現`;
+    case "en-XA":
+      return `[Ƒîñðîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eFinding\u202c`;
+  }
+  return `Finding`;
+}
+
+export function recordShowEarlier(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `عرض الأقدم · ${count}`;
+        case "one":
+          return `عرض الأقدم · ${count}`;
+        case "two":
+          return `عرض الأقدم · ${count}`;
+        case "few":
+          return `عرض الأقدم · ${count}`;
+        case "many":
+          return `عرض الأقدم · ${count}`;
+        default:
+          return `عرض الأقدم · ${count}`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Früheres anzeigen · ${count}`;
+        default:
+          return `Früheres anzeigen · ${count}`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Mostrar anteriores · ${count}`;
+        case "many":
+          return `Mostrar anteriores · ${count}`;
+        default:
+          return `Mostrar anteriores · ${count}`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Afficher les précédentes · ${count}`;
+        case "many":
+          return `Afficher les précédentes · ${count}`;
+        default:
+          return `Afficher les précédentes · ${count}`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `以前の項目を表示 · ${count}`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `이전 항목 보기 · ${count}`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Mostrar anteriores · ${count}`;
+        case "many":
+          return `Mostrar anteriores · ${count}`;
+        default:
+          return `Mostrar anteriores · ${count}`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `显示更早的 · ${count}`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `顯示較早的項目 · ${count}`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Šĥöŵ éáŕļîéŕ · ${count} ~~~~~]`;
+        default:
+          return `[Šĥöŵ éáŕļîéŕ · ${count} ~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eShow earlier · \u202c${count}`;
+        default:
+          return `\u202eShow earlier · \u202c${count}`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `Show earlier · ${count}`;
+    default:
+      return `Show earlier · ${count}`;
+  }
+}
+
+export function recordFoldedMore(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `${count} أخرى`;
+        case "one":
+          return `${count} أخرى`;
+        case "two":
+          return `${count} أخريان`;
+        case "few":
+          return `${count} أخرى`;
+        case "many":
+          return `${count} أخرى`;
+        default:
+          return `${count} أخرى`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} weiterer`;
+        default:
+          return `${count} weitere`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} más`;
+        case "many":
+          return `${count} más`;
+        default:
+          return `${count} más`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} de plus`;
+        case "many":
+          return `${count} de plus`;
+        default:
+          return `${count} de plus`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `ほか${count}件`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}개 더`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `mais ${count}`;
+        case "many":
+          return `mais ${count}`;
+        default:
+          return `mais ${count}`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `还有 ${count} 项`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `還有 ${count} 項`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} ɱöŕé ~~]`;
+        default:
+          return `[${count} ɱöŕé ~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e more\u202c`;
+        default:
+          return `${count}\u202e more\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} more`;
+    default:
+      return `${count} more`;
+  }
+}
+
+export function recordFactComputerChoice(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختيار الحاسوب`;
+    case "de":
+      return `Wahl des Computers`;
+    case "es":
+      return `Elección de computadora`;
+    case "fr":
+      return `Choix de l’ordinateur`;
+    case "ja":
+      return `コンピューターの選択`;
+    case "ko":
+      return `컴퓨터 선택`;
+    case "pt-BR":
+      return `Escolha do computador`;
+    case "zh-Hans":
+      return `电脑的选择`;
+    case "zh-Hant":
+      return `電腦的選擇`;
+    case "en-XA":
+      return `[Çöɱþûţéŕ çĥöîçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eComputer choice\u202c`;
+  }
+  return `Computer choice`;
+}
+
+export function recordCardClosed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مغلقة`;
+    case "de":
+      return `Geschlossen`;
+    case "es":
+      return `Cerrada`;
+    case "fr":
+      return `Fermée`;
+    case "ja":
+      return `終了`;
+    case "ko":
+      return `닫힘`;
+    case "pt-BR":
+      return `Fechado`;
+    case "zh-Hans":
+      return `已关闭`;
+    case "zh-Hant":
+      return `已關閉`;
+    case "en-XA":
+      return `[Çļöšéð ~~]`;
+    case "ar-XB":
+      return `\u202eClosed\u202c`;
+  }
+  return `Closed`;
+}
+
+export function recordCardDecision(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قرار`;
+    case "de":
+      return `Entscheidung`;
+    case "es":
+      return `Decisión`;
+    case "fr":
+      return `Décision`;
+    case "ja":
+      return `判断`;
+    case "ko":
+      return `결정`;
+    case "pt-BR":
+      return `Decisão`;
+    case "zh-Hans":
+      return `决定`;
+    case "zh-Hant":
+      return `決定`;
+    case "en-XA":
+      return `[Ðéçîšîöñ ~~~]`;
+    case "ar-XB":
+      return `\u202eDecision\u202c`;
+  }
+  return `Decision`;
+}
+
+export function recordLabelLiveValidation(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التحقق المباشر`;
+    case "de":
+      return `Live-Prüfung`;
+    case "es":
+      return `Validación en vivo`;
+    case "fr":
+      return `Validation en direct`;
+    case "ja":
+      return `実地検証`;
+    case "ko":
+      return `실제 검증`;
+    case "pt-BR":
+      return `Validação ao vivo`;
+    case "zh-Hans":
+      return `实测验证`;
+    case "zh-Hant":
+      return `實際驗證`;
+    case "en-XA":
+      return `[Ļîṽé ṽáļîðáţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eLive validation\u202c`;
+  }
+  return `Live validation`;
+}
+
+export function recordLabelKnowledgeUsed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المعرفة المستخدمة`;
+    case "de":
+      return `Genutztes Wissen`;
+    case "es":
+      return `Conocimiento usado`;
+    case "fr":
+      return `Connaissances utilisées`;
+    case "ja":
+      return `使用したナレッジ`;
+    case "ko":
+      return `사용한 지식`;
+    case "pt-BR":
+      return `Conhecimento usado`;
+    case "zh-Hans":
+      return `用到的知识`;
+    case "zh-Hant":
+      return `用到的知識`;
+    case "en-XA":
+      return `[Ķñöŵļéðĝé ûšéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eKnowledge used\u202c`;
+  }
+  return `Knowledge used`;
+}
+
+export function recordLabelMore(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المزيد`;
+    case "de":
+      return `Mehr`;
+    case "es":
+      return `Más`;
+    case "fr":
+      return `Plus`;
+    case "ja":
+      return `その他`;
+    case "ko":
+      return `더 보기`;
+    case "pt-BR":
+      return `Mais`;
+    case "zh-Hans":
+      return `更多`;
+    case "zh-Hant":
+      return `更多`;
+    case "en-XA":
+      return `[Ṁöŕé ~~]`;
+    case "ar-XB":
+      return `\u202eMore\u202c`;
+  }
+  return `More`;
+}
+
+export function recordKnowledgeUsedNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ما أعلن هذا العمل أنه اعتمد عليه، بحسب التعديل الذي استخدمه. فتح أي منها لا يسجّل استخدامًا.`;
+    case "de":
+      return `Worauf sich diese Arbeit nach eigener Angabe gestützt hat, in der Revision, die sie genutzt hat. Öffnen zählt nicht als Nutzung.`;
+    case "es":
+      return `En qué declaró apoyarse este trabajo, según la versión que usó. Abrir uno no registra ningún uso.`;
+    case "fr":
+      return `Ce sur quoi ce travail a déclaré s’appuyer, selon la révision utilisée. En ouvrir une n’enregistre aucune utilisation.`;
+    case "ja":
+      return `この作業が拠り所にしたと宣言したナレッジを、使用した改訂ごとに示します。開いても使用は記録されません。`;
+    case "ko":
+      return `이 작업이 근거로 삼았다고 밝힌 지식을 사용한 수정본 기준으로 보여 줘요. 열어 봐도 사용으로 기록되지 않아요.`;
+    case "pt-BR":
+      return `Aquilo em que este trabalho declarou se apoiar, pela versão que usou. Abrir um não registra uso.`;
+    case "zh-Hans":
+      return `这项工作声明所依据的知识，按它使用的修订列出。打开其中一项不会记录为使用。`;
+    case "zh-Hant":
+      return `這項工作宣告所依據的知識，依它使用的修訂列出。開啟其中一項不會記錄為使用。`;
+    case "en-XA":
+      return `[Ŵĥáţ ţĥîš ŵöŕķ ðéçļáŕéð îţ ŕéļîéð öñ, ƀý ţĥé ŕéṽîšîöñ îţ ûšéð. Öþéñîñĝ öñé ŕéçöŕðš ñö ûšé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat this work declared it relied on, by the revision it used. Opening one records no use.\u202c`;
+  }
+  return `What this work declared it relied on, by the revision it used. Opening one records no use.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -29747,6 +32216,77 @@ export const MESSAGES = {
   settingsIntegrationsRuleNote,
   settingsIntegrationsRuleOff,
   settingsIntegrationsCopying,
+  recordHelperClosed,
+  recordMergingOnItsOwn,
+  recordFactCrewmate,
+  recordCareCareful,
+  recordUseRetired,
+  recordLandsCare,
+  recordMoreDelivery,
+  recordOpenKeptEvidence,
+  recordValidationEvidence,
+  recordMergingAsksFirst,
+  recordCareDefault,
+  recordUsesMore,
+  recordSourceGone,
+  recordCrewmateOnModel,
+  recordAgeMinutes,
+  recordCardOnStage,
+  recordDeliveryPullRequest,
+  recordPolicyProject,
+  recordMoreComputerChoice,
+  recordCardPutAside,
+  recordUseEarlierRevision,
+  recordModeDirectPr,
+  recordAgeHours,
+  recordAgeShortHours,
+  recordUseConcept,
+  recordDeliveryBatched,
+  recordModeQueuePr,
+  recordFactDelivery,
+  recordModeInPlace,
+  recordFactResult,
+  recordCardNote,
+  recordAgeDays,
+  recordMoreValidation,
+  recordFactMerging,
+  recordHelperAskFirstMate,
+  recordComparedComputers,
+  recordMoreKnowledge,
+  recordFactBranch,
+  recordMoreBranch,
+  recordDeliveryLocalMerge,
+  recordValidationScenario,
+  recordValidationSupplementary,
+  recordFromTask,
+  recordAgeShortDays,
+  recordAgeJustNow,
+  recordUseCurrentRevision,
+  recordLandsMerged,
+  recordUndated,
+  recordFactOperation,
+  recordPolicyThisTask,
+  recordValidationResult,
+  recordAgeShortNow,
+  recordFactCare,
+  recordPolicyParentTask,
+  recordFactRunsOn,
+  recordCareQuick,
+  recordModeLocalOnly,
+  recordRecordedDetails,
+  recordAgeShortMinutes,
+  recordUnreadable,
+  recordHelperLocalCare,
+  recordUseFinding,
+  recordShowEarlier,
+  recordFoldedMore,
+  recordFactComputerChoice,
+  recordCardClosed,
+  recordCardDecision,
+  recordLabelLiveValidation,
+  recordLabelKnowledgeUsed,
+  recordLabelMore,
+  recordKnowledgeUsedNote,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -30727,4 +33267,75 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsIntegrationsRuleNote: [],
   settingsIntegrationsRuleOff: [],
   settingsIntegrationsCopying: [],
+  recordHelperClosed: [],
+  recordMergingOnItsOwn: [],
+  recordFactCrewmate: [],
+  recordCareCareful: [],
+  recordUseRetired: [],
+  recordLandsCare: ["care"],
+  recordMoreDelivery: [],
+  recordOpenKeptEvidence: [],
+  recordValidationEvidence: [],
+  recordMergingAsksFirst: [],
+  recordCareDefault: [],
+  recordUsesMore: ["count"],
+  recordSourceGone: [],
+  recordCrewmateOnModel: ["crewmate", "model"],
+  recordAgeMinutes: ["count"],
+  recordCardOnStage: [],
+  recordDeliveryPullRequest: [],
+  recordPolicyProject: [],
+  recordMoreComputerChoice: [],
+  recordCardPutAside: [],
+  recordUseEarlierRevision: ["current", "revision"],
+  recordModeDirectPr: [],
+  recordAgeHours: ["count"],
+  recordAgeShortHours: ["hours"],
+  recordUseConcept: [],
+  recordDeliveryBatched: [],
+  recordModeQueuePr: [],
+  recordFactDelivery: [],
+  recordModeInPlace: [],
+  recordFactResult: [],
+  recordCardNote: [],
+  recordAgeDays: ["count"],
+  recordMoreValidation: [],
+  recordFactMerging: [],
+  recordHelperAskFirstMate: [],
+  recordComparedComputers: [],
+  recordMoreKnowledge: ["count"],
+  recordFactBranch: [],
+  recordMoreBranch: [],
+  recordDeliveryLocalMerge: [],
+  recordValidationScenario: [],
+  recordValidationSupplementary: ["action"],
+  recordFromTask: ["key"],
+  recordAgeShortDays: ["days"],
+  recordAgeJustNow: [],
+  recordUseCurrentRevision: ["revision"],
+  recordLandsMerged: [],
+  recordUndated: ["summary"],
+  recordFactOperation: [],
+  recordPolicyThisTask: [],
+  recordValidationResult: [],
+  recordAgeShortNow: [],
+  recordFactCare: [],
+  recordPolicyParentTask: [],
+  recordFactRunsOn: [],
+  recordCareQuick: [],
+  recordModeLocalOnly: [],
+  recordRecordedDetails: [],
+  recordAgeShortMinutes: ["minutes"],
+  recordUnreadable: [],
+  recordHelperLocalCare: [],
+  recordUseFinding: [],
+  recordShowEarlier: ["count"],
+  recordFoldedMore: ["count"],
+  recordFactComputerChoice: [],
+  recordCardClosed: [],
+  recordCardDecision: [],
+  recordLabelLiveValidation: [],
+  recordLabelKnowledgeUsed: [],
+  recordLabelMore: [],
+  recordKnowledgeUsedNote: [],
 };

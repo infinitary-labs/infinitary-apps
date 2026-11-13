@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "record-languages",
+      "kind": "improvement",
+      "title": "A task's details in your language",
+      "body": "The details on a task's Info tab, such as how it is delivered, its care and its policies, now show in the language you chose in Settings → Appearance. The tab names, the usage line and the Activity entries still show English for now.",
+      "area": "tasks",
+      "picture": {
+        "dark": "record-languages-dark.webp",
+        "light": "record-languages-light.webp",
+        "alt": "A finished task's Info tab in Japanese, with its More section open and its policies translated"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

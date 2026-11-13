@@ -291,6 +291,118 @@
       <string>%1$ld actions</string>
     </dict>
   </dict>
+  <key>recordUsesMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>And %1$ld more.</string>
+      <key>other</key>
+      <string>And %1$ld more.</string>
+    </dict>
+  </dict>
+  <key>recordAgeMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld min ago</string>
+      <key>other</key>
+      <string>%1$ld min ago</string>
+    </dict>
+  </dict>
+  <key>recordAgeHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld hr ago</string>
+      <key>other</key>
+      <string>%1$ld hr ago</string>
+    </dict>
+  </dict>
+  <key>recordAgeDays</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld day ago</string>
+      <key>other</key>
+      <string>%1$ld days ago</string>
+    </dict>
+  </dict>
+  <key>recordMoreKnowledge</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>knowledge %1$ld</string>
+      <key>other</key>
+      <string>knowledge %1$ld</string>
+    </dict>
+  </dict>
+  <key>recordShowEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Show earlier · %1$ld</string>
+      <key>other</key>
+      <string>Show earlier · %1$ld</string>
+    </dict>
+  </dict>
+  <key>recordFoldedMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld more</string>
+      <key>other</key>
+      <string>%1$ld more</string>
+    </dict>
+  </dict>
   <key>phoneMediaPicturePosition</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

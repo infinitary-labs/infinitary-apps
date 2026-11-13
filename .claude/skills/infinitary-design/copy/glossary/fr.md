@@ -122,3 +122,4 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Approves secret uses (switch) | Approuve l’utilisation des secrets | The computer's Settings → Devices should show the same words. |
 | Steer (button) | Orienter |  |
 | Theme: Device / Dark / Light | Thème : Appareil / Sombre / Clair |  |
+| live validation | validation en direct | Trying the change for real; kept apart from the checks. |

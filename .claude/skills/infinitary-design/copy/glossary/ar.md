@@ -125,3 +125,6 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | A phone (the item under Devices) | «هاتف» |  |
 | Theme: Device / Dark / Light | السمة: الجهاز / داكن / فاتح |  |
 | seconds (short unit) | ث | Durations read "{minutes} د {seconds} ث". |
+| knowledge (Knowledge used) | المعرفة | "المعرفة المستخدمة"; a finding is "نتيجة" and a concept "مفهوم". |
+| live validation | التحقق المباشر | Trying the change for real; kept apart from the checks. |
+| revision (of a knowledge entry) | التعديل | "التعديل {revision}"; "المراجعة" is the review and "نسخة" a version. |

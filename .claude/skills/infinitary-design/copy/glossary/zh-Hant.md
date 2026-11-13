@@ -131,3 +131,4 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | Approves secret uses (switch) | 核准使用機密 | The computer's Settings → Devices should show the same words. |
 | Steer (button) | 引導 | 指引 is a standing direction. |
 | Theme: Device / Dark / Light | 主題：跟隨裝置 / 深色 / 淺色 |  |
+| live validation | 實際驗證 | Trying the change for real; kept apart from the checks. |

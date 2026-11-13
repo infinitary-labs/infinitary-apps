@@ -116,7 +116,7 @@
   [data-record-label][hidden] { display: none; }
   @keyframes record-label-in { from { opacity: 0; transform: translateY(-2px); } }
 </style>
-<div data-record data-task-id="__TASK_ID__" data-knowledge="__KNOWLEDGE__" data-view="info">
+<div data-record data-task-id="__TASK_ID__" data-knowledge="__KNOWLEDGE__" data-record-words="__RECORD_WORDS__" data-view="info">
   <!-- Stay zero-height until the first detail read; the host reveals the
        pane only once the populated body has been measured. -->
   <p data-record-note hidden></p>
@@ -130,20 +130,20 @@
     </section>
     <div class="rows" data-record-view="info">
       <details class="row" data-record-section="details" hidden>
-        <summary><span class="label">More</span><span class="preview" data-record-more-preview></span><span class="caret"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></summary>
+        <summary><span class="label" data-record-word="recordLabelMore"></span><span class="preview" data-record-more-preview></span><span class="caret"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></summary>
         <div class="row-body">
           <dl class="facts" data-record-facts></dl>
           <p class="policy-helper" data-policy-helper></p>
           <details class="row" data-record-section="knowledge" hidden>
-            <summary><span class="label">Knowledge used</span><span class="count" data-record-knowledge-count></span><span class="caret"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></summary>
+            <summary><span class="label" data-record-word="recordLabelKnowledgeUsed"></span><span class="count" data-record-knowledge-count></span><span class="caret"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></summary>
             <div class="row-body">
-              <p class="verdict">What this work declared it relied on, by the revision it used. Opening one records no use.</p>
+              <p class="verdict" data-record-word="recordKnowledgeUsedNote"></p>
               <div class="uses" data-record-knowledge></div>
               <p class="verdict" data-record-knowledge-more hidden></p>
             </div>
           </details>
           <section data-record-section="validation" hidden>
-            <h3 class="label">Live validation</h3>
+            <h3 class="label" data-record-word="recordLabelLiveValidation">Live validation</h3>
             <p class="goal" data-validation-label></p>
             <p class="verdict" data-validation-reason></p>
             <div class="rows" data-validation-rows></div>

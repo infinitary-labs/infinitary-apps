@@ -46,6 +46,25 @@
   const taskId = root.getAttribute("data-task-id") ?? "";
   // Only where the window has knowledge does the record read what the work used.
   const knowledge = root.getAttribute("data-knowledge") === "on";
+  /**
+   * The record's words, worded by the window in its language and stamped on
+   * the root (`recordWords` beside this file; docs/i18n.md, "The task
+   * record's frame"): this page cannot read the catalog itself.
+   * @type {{ locale?: string, words?: Record<string, string | Record<string, string>> }}
+   */
+  const recordWords = (() => {
+    try {
+      return JSON.parse(root.getAttribute("data-record-words") ?? "{}") ?? {};
+    } catch {
+      return {};
+    }
+  })();
+  const wordsLocale = recordWords.locale;
+  const pluralRules = new Intl.PluralRules(wordsLocale);
+  // The template's fixed headings name their word; the frame writes it.
+  for (const el of document.querySelectorAll("[data-record-word]")) {
+    el.textContent = word(el.getAttribute("data-record-word") ?? "");
+  }
   const noteEl = /** @type {HTMLElement} */ (must(document.querySelector("[data-record-note]")));
   const contentEl = /** @type {HTMLElement} */ (
     must(document.querySelector("[data-record-content]"))
@@ -148,23 +167,45 @@
     return node;
   }
 
+  /**
+   * One of the record's words by its catalog name, its `{placeholder}`s
+   * filled: a plural word takes the form `count` picks and writes the count
+   * in the words' locale. A name the template lacks answers itself.
+   * @param {string} name
+   * @param {Record<string, string | number>} [fills]
+   */
+  function word(name, fills = {}) {
+    const entry = recordWords.words?.[name];
+    const count = fills.count;
+    const template =
+      typeof entry === "object" && entry !== null
+        ? (entry[pluralRules.select(Number(count ?? 0))] ?? entry.other)
+        : entry;
+    if (typeof template !== "string") return name;
+    return template.replace(/\{(\w+)\}/g, (whole, key) => {
+      const fill = fills[key];
+      if (fill === undefined) return whole;
+      return typeof fill === "number" ? fill.toLocaleString(wordsLocale) : fill;
+    });
+  }
+
   /** @param {number} at */
   function ago(at) {
     const minutes = Math.max(0, Math.floor((Date.now() - at) / 60_000));
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes} min ago`;
-    if (minutes < 1440) return `${Math.floor(minutes / 60)} hr ago`;
-    const days = Math.floor(minutes / 1440);
-    return `${days} ${days === 1 ? "day" : "days"} ago`;
+    if (minutes < 1) return word("recordAgeJustNow");
+    if (minutes < 60) return word("recordAgeMinutes", { count: minutes });
+    if (minutes < 1440) return word("recordAgeHours", { count: Math.floor(minutes / 60) });
+    return word("recordAgeDays", { count: Math.floor(minutes / 1440) });
   }
 
   /** The activity gutter's short form, as the feed paints its ages. @param {number} at */
   function short(at) {
     const minutes = Math.max(0, Math.floor((Date.now() - at) / 60_000));
-    if (minutes < 1) return "now";
-    if (minutes < 60) return `${minutes}m`;
-    if (minutes < 1440) return `${Math.floor(minutes / 60)}h`;
-    return `${Math.floor(minutes / 1440)}d`;
+    if (minutes < 1) return word("recordAgeShortNow");
+    if (minutes < 60) return word("recordAgeShortMinutes", { minutes: String(minutes) });
+    if (minutes < 1440)
+      return word("recordAgeShortHours", { hours: String(Math.floor(minutes / 60)) });
+    return word("recordAgeShortDays", { days: String(Math.floor(minutes / 1440)) });
   }
 
   /**
@@ -437,12 +478,17 @@
           bridge.action("open-card", { id: card.id }).catch(() => {});
         });
         const how = span("how", "");
-        if (card.state === "open") how.textContent = card.minimized ? "Put aside" : "On the stage";
+        if (card.state === "open")
+          how.textContent = card.minimized ? word("recordCardPutAside") : word("recordCardOnStage");
         else {
-          const text = card.ending ?? "Closed";
+          const text = card.ending ?? word("recordCardClosed");
           aged(how, card.at, (at) => `${text} · ${short(at)}`);
         }
-        node.append(span("mono", card.kind === "note" ? "Note" : "Decision"), link, how);
+        node.append(
+          span("mono", card.kind === "note" ? word("recordCardNote") : word("recordCardDecision")),
+          link,
+          how,
+        );
         return node;
       }),
     );
@@ -479,12 +525,18 @@
             })
             .catch(() => {});
         });
-        const kind = use.kind === "finding" ? "Finding" : "Concept";
+        const kind = use.kind === "finding" ? word("recordUseFinding") : word("recordUseConcept");
         const revisions =
           use.revision === use.current
-            ? `used revision ${use.revision}, the current one`
-            : `used revision ${use.revision} · current revision ${use.current}`;
-        const how = span("how", `${kind} · ${revisions}${use.retired ? " · retired since" : ""}`);
+            ? word("recordUseCurrentRevision", { revision: String(use.revision) })
+            : word("recordUseEarlierRevision", {
+                revision: String(use.revision),
+                current: String(use.current),
+              });
+        const how = span(
+          "how",
+          [kind, revisions, ...(use.retired ? [word("recordUseRetired")] : [])].join(" · "),
+        );
         how.setAttribute("data-record-use-revisions", "");
         node.append(link, how);
         if (use.purpose) node.append(span("why", use.purpose));
@@ -492,7 +544,7 @@
       }),
     );
     const more = ready ? ready.total - rows.length : 0;
-    usesMoreEl.textContent = more > 0 ? `And ${more} more.` : "";
+    usesMoreEl.textContent = more > 0 ? word("recordUsesMore", { count: more }) : "";
     usesMoreEl.hidden = more <= 0;
     section("knowledge", rows.length > 0);
   }
@@ -568,8 +620,7 @@
     const text = document.createElement("p");
     text.className = "whole";
     text.setAttribute("data-record-whole", "");
-    text.textContent =
-      override ?? reading?.text ?? "This historical source is no longer available.";
+    text.textContent = override ?? reading?.text ?? word("recordSourceGone");
     node.append(text);
     if (reading?.details !== undefined) {
       const raw = document.createElement("details");
@@ -588,7 +639,7 @@
         shown.open = raw.open;
       });
       const summary = document.createElement("summary");
-      summary.append(words("Recorded details"), caretEl.cloneNode(true));
+      summary.append(words(word("recordRecordedDetails")), caretEl.cloneNode(true));
       const content = document.createElement("pre");
       content.textContent = reading.details;
       raw.append(summary, content);
@@ -633,7 +684,7 @@
     const end = span("end", "");
     const count = span("count", `+${folded.length}`);
     count.setAttribute("data-record-folded-count", "");
-    count.setAttribute("aria-label", `${folded.length} more`);
+    count.setAttribute("aria-label", word("recordFoldedMore", { count: folded.length }));
     count.hidden = folded.length === 0;
     end.append(count);
     end.append(caretEl.cloneNode(true));
@@ -653,9 +704,11 @@
           : event.id === undefined
             ? undefined
             : sourceByEvent.get(event.id);
+        // i18n-exempt: class names, not shown
         const node = source
           ? sourceDisclosure(source)
           : line("event folded", event.at, event.text, event.change);
+        // i18n-exempt: class names, not shown
         node.className = "event folded";
         node.setAttribute("data-record-folded", event.kind);
         return node;
@@ -681,7 +734,7 @@
       wrapper.setAttribute("data-record-event", row.kind);
       wrapper.setAttribute("data-record-from", row.from.key);
       node.removeAttribute("data-record-event");
-      const from = span("from", `from ${row.from.key}`);
+      const from = span("from", word("recordFromTask", { key: row.from.key }));
       from.setAttribute("data-record-from-key", "");
       wrapper.append(node, from);
       return wrapper;
@@ -709,7 +762,7 @@
     const summary = document.createElement("summary");
     summary.append(
       entry.at === null ? span("mono", "") : aged(span("mono", ""), entry.at, short, summary),
-      words(entry.at === null ? `Undated · ${summaryText}` : summaryText),
+      words(entry.at === null ? word("recordUndated", { summary: summaryText }) : summaryText),
       caretEl.cloneNode(true),
     );
     node.append(summary, span("whole", reading.actorLabel));
@@ -800,10 +853,11 @@
    * @param {{ id: string, key: string }} from
    */
   function linkedLine(row, from) {
+    // i18n-exempt: class names, not shown
     const node = line("event linked", row.at, row.text, row.change);
     node.setAttribute("data-record-event", row.kind);
     node.setAttribute("data-record-from", from.key);
-    const source = span("from", `from ${from.key}`);
+    const source = span("from", word("recordFromTask", { key: from.key }));
     source.setAttribute("data-record-from-key", "");
     node.append(source);
     return node;
@@ -830,28 +884,41 @@
     /** @type {Node[]} */
     const facts = [];
     if (current.deliverable === "operation")
-      facts.push(...fact("deliverable", "Result", "Operation"));
+      facts.push(...fact("deliverable", word("recordFactResult"), word("recordFactOperation")));
     if (current.assignee) {
-      const model = current.modelLabel ? ` on ${current.modelLabel}` : "";
-      facts.push(...fact("crewmate", "Crewmate", `${current.assignee}${model}`));
+      const crewmate = current.modelLabel
+        ? word("recordCrewmateOnModel", { crewmate: current.assignee, model: current.modelLabel })
+        : current.assignee;
+      facts.push(...fact("crewmate", word("recordFactCrewmate"), crewmate));
     }
     // The project is the Info tab's own row, above.
-    if (current.repo?.branch) facts.push(...fact("branch", "Branch", current.repo.branch, true));
+    if (current.repo?.branch)
+      facts.push(...fact("branch", word("recordFactBranch"), current.repo.branch, true));
     const delivery = current.delivery;
     const modeWords = {
-      "direct-pr": "As a pull request",
-      "queue-pr": "As a batched pull request your project's queue tests",
-      "local-only": "Merged locally, no pull request",
-      "in-place": "Built in place",
+      "direct-pr": word("recordModeDirectPr"),
+      "queue-pr": word("recordModeQueuePr"),
+      "local-only": word("recordModeLocalOnly"),
+      "in-place": word("recordModeInPlace"),
     };
-    const careWords = { quick: "Quick", standard: "Default", reviewed: "Careful" };
+    const careWords = {
+      quick: word("recordCareQuick"),
+      standard: word("recordCareDefault"),
+      reviewed: word("recordCareCareful"),
+    };
     const lands = [
       ...(delivery ? [modeWords[delivery.mode] ?? delivery.mode] : []),
-      ...(delivery?.landedMode ? ["merged"] : []),
-      ...(current.rigor ? [`rigor: ${careWords[current.rigor] ?? current.rigor}`] : []),
+      ...(delivery?.landedMode ? [word("recordLandsMerged")] : []),
+      ...(current.rigor
+        ? [word("recordLandsCare", { care: careWords[current.rigor] ?? current.rigor })]
+        : []),
     ];
     const policies = current.policies;
-    const sourceWords = { task: "This task", parent: "Parent task", project: "Project setting" };
+    const sourceWords = {
+      task: word("recordPolicyThisTask"),
+      parent: word("recordPolicyParentTask"),
+      project: word("recordPolicyProject"),
+    };
     /** @param {"delivery" | "merging" | "care" | "runs-on"} id
      * @param {string} label
      * @param {string} value
@@ -867,33 +934,43 @@
     if (policies) {
       policy(
         "delivery",
-        "Delivery",
+        word("recordFactDelivery"),
         policies.delivery.value === "direct-pr"
-          ? "Pull request"
+          ? word("recordDeliveryPullRequest")
           : policies.delivery.value === "queue-pr"
-            ? "Batched pull request"
-            : "Local merge",
+            ? word("recordDeliveryBatched")
+            : word("recordDeliveryLocalMerge"),
         policies.delivery.source,
       );
       policy(
         "merging",
-        "Merging",
-        policies.autonomy.value ? "Merges on its own" : "Asks first",
+        word("recordFactMerging"),
+        policies.autonomy.value ? word("recordMergingOnItsOwn") : word("recordMergingAsksFirst"),
         policies.autonomy.source,
       );
-      policy("care", "Rigor", careWords[policies.rigor.value], policies.rigor.source);
-    } else if (lands.length > 0) facts.push(...fact("delivery", "Delivery", lands.join(" · ")));
+      policy(
+        "care",
+        word("recordFactCare"),
+        careWords[policies.rigor.value],
+        policies.rigor.source,
+      );
+    } else if (lands.length > 0)
+      facts.push(...fact("delivery", word("recordFactDelivery"), lands.join(" · ")));
     // Where it runs (docs/helper.md, "A task's own Runs on"), once another Mac runs work.
     if (current.runsOn) {
-      policy("runs-on", "Runs on", current.runsOn.label, current.runsOn.source);
+      policy("runs-on", word("recordFactRunsOn"), current.runsOn.label, current.runsOn.source);
       if (current.runsOn.reason) {
-        const nodes = fact("computer-choice", "Computer choice", current.runsOn.reason);
+        const nodes = fact(
+          "computer-choice",
+          word("recordFactComputerChoice"),
+          current.runsOn.reason,
+        );
         if (current.runsOn.candidates?.length) {
           const comparison = document.createElement("details");
           comparison.className = "row";
           comparison.dataset.placementComparison = "";
           const summary = document.createElement("summary");
-          summary.append("Compared computers at start", caretEl.cloneNode(true));
+          summary.append(word("recordComparedComputers"), caretEl.cloneNode(true));
           const body = document.createElement("div");
           body.className = "row-body";
           for (const text of current.runsOn.candidates) {
@@ -916,12 +993,10 @@
     const helper = must(document.querySelector("[data-policy-helper]"));
     helper.textContent = [
       ...(policies && policies.rigor.requested !== policies.rigor.value
-        ? ["Local merge uses Default rigor; Careful remains requested for pull requests."]
+        ? [word("recordHelperLocalCare")]
         : []),
-      ...(closed && policies ? ["This task is closed. Its policies are kept as history."] : []),
-      ...(!closed && (policies || current.runsOn)
-        ? ["Ask your first mate to change these for this task."]
-        : []),
+      ...(closed && policies ? [word("recordHelperClosed")] : []),
+      ...(!closed && (policies || current.runsOn) ? [word("recordHelperAskFirstMate")] : []),
     ].join(" ");
     // Part of, Waits on, Holds up and Parts are the Info tab's rows of keys, above the goal.
     factsEl.replaceChildren(...facts);
@@ -929,11 +1004,11 @@
     const used = uses?.state === "ready" ? uses.total : 0;
     // What the closed More row holds, named beside it.
     morePreviewEl.textContent = [
-      ...(used > 0 ? [`knowledge ${used}`] : []),
-      ...(validation ? ["live validation"] : []),
-      ...(current.repo?.branch ? ["branch"] : []),
-      ...(current.runsOn?.reason ? ["the computer's choice"] : []),
-      ...(policies || lands.length > 0 ? ["delivery"] : []),
+      ...(used > 0 ? [word("recordMoreKnowledge", { count: used })] : []),
+      ...(validation ? [word("recordMoreValidation")] : []),
+      ...(current.repo?.branch ? [word("recordMoreBranch")] : []),
+      ...(current.runsOn?.reason ? [word("recordMoreComputerChoice")] : []),
+      ...(policies || lands.length > 0 ? [word("recordMoreDelivery")] : []),
     ].join(" · ");
     section("details", facts.length > 0 || used > 0 || validation);
   }
@@ -1020,10 +1095,14 @@
     const table = document.createElement("table");
     const header = document.createElement("thead");
     const heading = document.createElement("tr");
-    for (const word of ["Scenario", "Result", "Evidence"]) {
+    for (const term of [
+      word("recordValidationScenario"),
+      word("recordValidationResult"),
+      word("recordValidationEvidence"),
+    ]) {
       const cell = document.createElement("th");
       cell.scope = "col";
-      cell.textContent = word;
+      cell.textContent = term;
       heading.append(cell);
     }
     header.append(heading);
@@ -1041,10 +1120,12 @@
           else openProof.delete(row.id);
         });
         const summary = document.createElement("summary");
-        summary.textContent = "Open kept evidence";
+        summary.textContent = word("recordOpenKeptEvidence");
         const tr = document.createElement("tr");
         const action = document.createElement("td");
-        action.textContent = row.action + (row.supplementary ? " (supplementary)" : "");
+        action.textContent = row.supplementary
+          ? word("recordValidationSupplementary", { action: row.action })
+          : row.action;
         const result = document.createElement("td");
         result.className = "count";
         result.textContent = row.result;
@@ -1160,7 +1241,7 @@
     const tail = shown.slice(-TIMELINE_TAIL);
     const earlier = shown.length - tail.length;
     earlierEl.hidden = earlier === 0;
-    earlierLabelEl.textContent = `Show earlier · ${earlier}`;
+    earlierLabelEl.textContent = word("recordShowEarlier", { count: earlier });
     placeActivity(historyEl, shown.slice(0, earlier));
     placeActivity(timelineEl, tail);
     const ids = new Set(rows.map((row) => row.id));
@@ -1192,7 +1273,7 @@
       readable = true;
       paint();
     },
-    () => note("This record could not be read."),
+    () => note(word("recordUnreadable")),
   );
   if (knowledge) {
     bridge.subscribe(

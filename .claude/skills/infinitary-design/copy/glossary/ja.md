@@ -107,3 +107,15 @@ A number placeholder sits directly against its counter with no space (「{count}
 | version (for a SHA) | バージョン | Never ハッシュ or SHA in a sentence. |
 | window | ウインドウ | Apple's Japanese spelling. |
 | Infinitary | Infinitary | Never translated or written in katakana. |
+| Knowledge (the panel) | ナレッジ | The panel's name; 知識 reads as schooling. |
+| concept | 概念 | A Knowledge entry, as on cards. |
+| finding | 知見 | A recorded claim with evidence, as on cards. |
+| direction (a standing direction) | 方針 | Kept apart from 指示, which is the Instruction kind. |
+| check (of a finding) | 検証 | 「検証済み」「再検証が必要」; チェック stays for a pull request's checks. |
+| evidence / source | 根拠 / 出典 | A finding's support and what it cites. |
+| revision (of a record) | 改訂 | 「改訂 {revision}」. |
+| connection (between concepts) | つながり | Plain word for a graph link. |
+| inspector | インスペクター | The Knowledge pane that reads one entry. |
+| pin (a task) | 固定 | 「タスクの先頭に固定」, as for a pinned model. |
+| hold (on a task) | 保留 | 「保留が解ける」 for a hold ending. |
+| task board | タスクボード | The Tasks panel's board; 列 for its columns. |

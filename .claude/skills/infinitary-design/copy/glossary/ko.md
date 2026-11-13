@@ -94,6 +94,18 @@ Particles after a filled value are avoided by word order, or written in the pair
 | demo / recording | 데모 / 녹화본 | Replaces video and clip |
 | preset | 프리셋 | |
 | Infinitary | Infinitary | Never translated |
+| Knowledge (panel) | 지식 | "Open Knowledge" is 지식 열기 |
+| concept / finding | 개념 / 발견 | As the card references already say |
+| direction (a standing knowledge entry) | 지침 | Its kinds: instruction 지시, advice 조언 |
+| claim (recorded claim) | 주장 | "Recorded claim" is 기록된 주장 |
+| evidence | 근거 | "Differing evidence" is 엇갈리는 근거 |
+| revision (of a knowledge entry) | 수정본 | "Revision 3" is 수정본 3; kept apart from 버전 |
+| collection | 모음 | |
+| inspector | 상세 보기 | Avoids 검사, which is the checks |
+| pin / unpin (a task) | 고정 / 고정 해제 | |
+| hold (on a task) | 보류 | "once its hold ends" is 보류가 풀리면 |
+| drop (a task) | 중단 | As the feed already says 중단됨 |
+| Waiting on you (board lane) | 선장님을 기다림 | |
 | repo | (not used) | 프로젝트 instead |
 | worktree | (not used) | 작업 사본 instead |
 | land, ship | (not used) | 병합 instead |

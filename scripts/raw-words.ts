@@ -308,20 +308,6 @@ export function isCheckedFile(path: string): boolean {
  * its files' entries in the same pull request, until the ledger is empty.
  */
 export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
-  "src/panels/activity/panel.tsx": 1,
-  "src/panels/automation/panel.tsx": 5,
-  "src/panels/knowledge/cards/browser.tsx": 31,
-  "src/panels/knowledge/directionInspector.tsx": 18,
-  "src/panels/knowledge/graphView.tsx": 39,
-  "src/panels/knowledge/inspector.tsx": 86,
-  "src/panels/knowledge/lists.tsx": 25,
-  "src/panels/knowledge/panel.tsx": 6,
-  "src/panels/knowledge/words.ts": 45,
-  "src/panels/now/boardMoves.ts": 63,
-  "src/panels/now/boardTiles.ts": 12,
-  "src/panels/now/cards/board.tsx": 43,
-  "src/panels/now/panel.tsx": 5,
-  "src/panels/now/rows.ts": 3,
   "src/panels/now/words.ts": 13,
   "src/renderer/src/accounts/ConnectChips.tsx": 22,
   "src/renderer/src/accounts/CopyCode.tsx": 1,

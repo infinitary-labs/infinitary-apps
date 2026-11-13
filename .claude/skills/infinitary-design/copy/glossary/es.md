@@ -100,3 +100,10 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | plugin, extension (never said) | panel | |
 | escalate (never said) | un modelo más potente | |
 | session, transcript (never said) | conversación, notas | |
+| Knowledge (the panel) | Conocimiento | The panel's name: "Abrir Conocimiento". |
+| concept / finding | concepto / hallazgo | "hallazgo" keeps the card's "Hallazgo {id}". |
+| direction (a standing instruction in Knowledge) | directriz | Feminine; "directrices" in the plural. |
+| claim (a recorded relationship) | afirmación | "Afirmación registrada". |
+| revision (of a knowledge record) | versión | Kept apart from "revisión", which is review. |
+| hold (on a task) | retención | "está retenida", "cuando termine su retención"; as in "lo retiene" for a merge. |
+| task board / its lanes | tablero de tareas / Esperándote, Pendientes, En cola, Trabajando, Terminadas · 7 d | |

@@ -8,6 +8,7 @@ import {
   nowGroupsOf,
   taskStatusOf,
 } from "@infinitary/ui";
+import * as m from "./messages.generated";
 import {
   EARLIER_LABEL,
   foundOnWords,
@@ -448,9 +449,12 @@ export function summaryOf(
   }
   const failed = failedStartCount(tasks);
   return [
-    { text: `${waiting} waiting`, ...(waiting > 0 ? { strong: true } : {}) },
-    { text: `${working} working` },
-    ...(failed > 0 ? [{ text: `${failed} could not start` }] : []),
+    {
+      text: m.nowPanelSummaryWaiting({ count: waiting }),
+      ...(waiting > 0 ? { strong: true } : {}),
+    },
+    { text: m.nowPanelSummaryWorking({ count: working }) },
+    ...(failed > 0 ? [{ text: m.nowPanelSummaryFailed({ count: failed }) }] : []),
   ];
 }
 

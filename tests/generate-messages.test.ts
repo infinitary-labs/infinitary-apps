@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { compileCatalogs, readCatalogs } from "../scripts/generate-messages";
+import * as knowledgeWords from "../src/panels/knowledge/messages.generated";
 
 // The approved plan (INF-3674, question 5 and "What done looks like"): the
 // crewmate that changes the English writes every language's version in the
@@ -93,5 +94,27 @@ describe("the message compiler", () => {
       expect.stringContaining("en.json: fileAdd: {file name} is not a placeholder"),
       expect.stringContaining("en-XA.json: en-XA is compiled from English; remove the file"),
     ]);
+  });
+});
+
+// This task's ask: the app's own panels show their words in the chosen
+// language. A panel's frame cannot import the shared catalog, so its words
+// are compiled into its own folder and follow the frame's `<html lang>`.
+describe("an app panel's own messages", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const japanese = JSON.parse(readFileSync("src/shared/i18n/messages/ja.json", "utf8")) as Record<
+    string,
+    unknown
+  >;
+
+  it("speak the language the panel's frame opened in", () => {
+    vi.stubGlobal("document", { documentElement: { lang: "ja" } });
+    expect(knowledgeWords.knowledgePanelTabConcepts()).toBe(japanese.knowledgePanelTabConcepts);
+  });
+
+  it("speak English in a frame that names no language", () => {
+    vi.stubGlobal("document", { documentElement: { lang: "" } });
+    expect(knowledgeWords.knowledgePanelTabConcepts()).toBe(catalog.knowledgePanelTabConcepts);
   });
 });

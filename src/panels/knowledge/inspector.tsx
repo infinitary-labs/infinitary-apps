@@ -20,13 +20,16 @@ import {
   type ReactNode,
   useContext,
 } from "react";
+import * as m from "./messages.generated";
 import { SECTIONS, type Section, type Selection } from "./place";
 import {
+  aroundSlot,
   CHECK_WORDS,
   connectionSentence,
   OP_WORDS,
   originLine,
   relationLine,
+  SLOT,
   STANDING_WORDS,
   standingWarns,
   VERDICT_WORDS,
@@ -76,11 +79,19 @@ export function Words({ text, look }: { text: string; look?: TaskKeyLook }) {
   );
 }
 
-const SECTION_WORDS: Record<Section, string> = {
-  overview: "Overview",
-  evidence: "Evidence",
-  history: "History",
-  used: "Used in",
+const SECTION_WORDS: Readonly<Record<Section, string>> = {
+  get overview() {
+    return m.knowledgePanelSectionOverview();
+  },
+  get evidence() {
+    return m.knowledgePanelSectionEvidence();
+  },
+  get history() {
+    return m.knowledgePanelSectionHistory();
+  },
+  get used() {
+    return m.knowledgePanelSectionUsed();
+  },
 };
 
 export type InspectorProps = {
@@ -155,7 +166,10 @@ function sourceBlock(source: PanelKnowledgeSource) {
           source.check.state === "changed" || source.check.state === "missing" ? "" : undefined
         }
       >
-        {CHECK_WORDS[source.check.state]} · kept {whenOf(source.capturedAt)}
+        {m.knowledgePanelSourceCheckLine({
+          check: CHECK_WORDS[source.check.state],
+          when: whenOf(source.capturedAt),
+        })}
       </div>
       <pre className="fm-kb-source-text">{source.text}</pre>
     </div>
@@ -189,7 +203,7 @@ export function AskButton({ onAsk }: { onAsk: (() => void) | null }) {
   return (
     <div className="fm-kb-actions fm-kb-ask">
       <Button variant="secondary" size="sm" data-knowledge-ask="" onClick={onAsk}>
-        Ask about this
+        {m.knowledgePanelAskAboutThis()}
       </Button>
     </div>
   );
@@ -219,17 +233,25 @@ function CompareRow({
       data-changed={same ? undefined : ""}
     >
       <div className="fm-kb-check-head">
-        {label} · {same ? "unchanged" : "changed"}
+        {same
+          ? m.knowledgePanelCompareUnchanged({ label })
+          : m.knowledgePanelCompareChanged({ label })}
       </div>
       {same ? (
-        <p>{then || "None"}</p>
+        <p>{then || m.knowledgePanelNone()}</p>
       ) : (
         <>
           <p>
-            <span className="fm-kb-label">Revision {revision}</span> {then || "None"}
+            <span className="fm-kb-label">
+              {m.knowledgePanelRevisionLabel({ revision: String(revision) })}
+            </span>{" "}
+            {then || m.knowledgePanelNone()}
           </p>
           <p data-knowledge-compare-now="">
-            <span className="fm-kb-label">Revision {current}</span> {now || "None"}
+            <span className="fm-kb-label">
+              {m.knowledgePanelRevisionLabel({ revision: String(current) })}
+            </span>{" "}
+            {now || m.knowledgePanelNone()}
           </p>
         </>
       )}
@@ -239,11 +261,17 @@ function CompareRow({
 
 function eyebrowOf(selection: Selection, entry: PanelKnowledgeEntry): string {
   if (selection.kind === "connection") {
-    return selection.id.startsWith("claim:") ? "Recorded claim" : "Read together · not a claim";
+    return selection.id.startsWith("claim:")
+      ? m.knowledgePanelRecordedClaim()
+      : m.knowledgePanelContextKindLine();
   }
-  if (entry.kind === "concept") return "Concept";
-  const revision = `Finding · revision ${entry.revision}`;
-  return entry.revision === entry.current ? revision : `${revision} of ${entry.current}`;
+  if (entry.kind === "concept") return m.knowledgePanelConceptEyebrow();
+  return entry.revision === entry.current
+    ? m.knowledgePanelFindingEyebrow({ revision: String(entry.revision) })
+    : m.knowledgePanelFindingEarlierEyebrow({
+        revision: String(entry.revision),
+        current: String(entry.current),
+      });
 }
 
 export function Inspector({
@@ -260,7 +288,7 @@ export function Inspector({
   const back = onBack ? (
     <div className="fm-kb-back">
       <Button variant="secondary" size="sm" onClick={onBack}>
-        Back
+        {m.knowledgePanelBack()}
       </Button>
     </div>
   ) : null;
@@ -268,7 +296,7 @@ export function Inspector({
     return (
       <div className="fm-kb-inspector-inner" data-knowledge-inspector="">
         {back}
-        <p className="fm-kb-quiet">Select a concept, a connection or a finding to read it here.</p>
+        <p className="fm-kb-quiet">{m.knowledgePanelSelectPrompt()}</p>
       </div>
     );
   }
@@ -276,7 +304,7 @@ export function Inspector({
     return (
       <div className="fm-kb-inspector-inner" data-knowledge-inspector="">
         {back}
-        <p className="fm-kb-quiet">Reading…</p>
+        <p className="fm-kb-quiet">{m.knowledgePanelReading()}</p>
       </div>
     );
   }
@@ -285,9 +313,7 @@ export function Inspector({
       <div className="fm-kb-inspector-inner" data-knowledge-inspector="">
         {back}
         <p className="fm-kb-quiet">
-          {read.state === "missing"
-            ? "This is no longer in a collection you can read."
-            : read.reason}
+          {read.state === "missing" ? m.knowledgePanelEntryMissing() : read.reason}
         </p>
       </div>
     );
@@ -299,7 +325,7 @@ export function Inspector({
       key={named.id}
       testId={named.id}
       title={named.title}
-      detail={named.retired ? "Retired" : undefined}
+      detail={named.retired ? m.knowledgePanelRetired() : undefined}
       onOpen={() => onSelect({ kind: named.kind, id: named.id })}
     />
   );
@@ -316,16 +342,22 @@ export function Inspector({
 
   const compare = (): ReactNode => (
     <section className="fm-kb-block fm-kb-compare" data-knowledge-compare="">
-      <h4>Compared with the current revision</h4>
+      <h4>{m.knowledgePanelCompareHeading()}</h4>
       <p className="fm-kb-note">
-        This is revision {entry.revision}. The current revision is {entry.current}, and reading
-        either changes nothing.
+        {m.knowledgePanelCompareNote({
+          revision: String(entry.revision),
+          current: String(entry.current),
+        })}
       </p>
       {now ? (
         <>
           <CompareRow
             name="title"
-            label={entry.kind === "finding" ? "What it says" : "Its name"}
+            label={
+              entry.kind === "finding"
+                ? m.knowledgePanelCompareStatement()
+                : m.knowledgePanelCompareName()
+            }
             then={entry.title}
             now={now.title}
             revision={entry.revision}
@@ -334,7 +366,7 @@ export function Inspector({
           {entry.kind === "finding" ? (
             <CompareRow
               name="conditions"
-              label="Where it holds"
+              label={m.knowledgePanelWhereItHolds()}
               then={entry.conditions}
               now={now.conditions}
               revision={entry.revision}
@@ -343,7 +375,7 @@ export function Inspector({
           ) : (
             <CompareRow
               name="explanation"
-              label="Its explanation"
+              label={m.knowledgePanelCompareExplanation()}
               then={entry.explanation}
               now={now.explanation}
               revision={entry.revision}
@@ -356,21 +388,29 @@ export function Inspector({
             data-changed={sourcesOf(entry) === sourcesOf(now) ? undefined : ""}
           >
             <div className="fm-kb-check-head">
-              Kept sources · {sourcesOf(entry) === sourcesOf(now) ? "the same" : "changed"}
+              {sourcesOf(entry) === sourcesOf(now)
+                ? m.knowledgePanelCompareSourcesSame()
+                : m.knowledgePanelCompareSourcesChanged()}
             </div>
             <p>
-              Revision {entry.revision} cites {entry.sources.length}; revision {entry.current} cites{" "}
-              {now.sources.length}.
+              {m.knowledgePanelCompareSourcesCounts({
+                revision: String(entry.revision),
+                earlierCount: String(entry.sources.length),
+                current: String(entry.current),
+                currentCount: String(now.sources.length),
+              })}
             </p>
           </div>
           {now.standing ? (
             <p className="fm-kb-note" data-knowledge-standing-now="">
-              Now: <Chip standing={now.standing} />
+              {aroundSlot(m.knowledgePanelStandingNow({ standing: SLOT }))[0]}
+              <Chip standing={now.standing} />
+              {aroundSlot(m.knowledgePanelStandingNow({ standing: SLOT }))[1]}
             </p>
           ) : null}
         </>
       ) : (
-        <p className="fm-kb-quiet">Reading the current revision…</p>
+        <p className="fm-kb-quiet">{m.knowledgePanelReadingCurrent()}</p>
       )}
       <div className="fm-kb-actions">
         <Button
@@ -379,7 +419,7 @@ export function Inspector({
           data-knowledge-current=""
           onClick={() => onSelect({ kind: entry.kind, id: entry.id })}
         >
-          Show the current revision
+          {m.knowledgePanelShowCurrent()}
         </Button>
       </div>
     </section>
@@ -409,16 +449,16 @@ export function Inspector({
       };
       return (
         <>
-          <Block title="Supporting finding">
+          <Block title={m.knowledgePanelSupportingFinding()}>
             <LinkRow
               testId={entry.id}
               title={finding.title}
               detail={STANDING_WORDS[entry.standing ?? "unchecked"]}
               onOpen={() => onSelect({ kind: "finding", id: entry.id })}
             />
-            <p className="fm-kb-note">Open its evidence before relying on this relationship.</p>
+            <p className="fm-kb-note">{m.knowledgePanelOpenEvidenceNote()}</p>
           </Block>
-          <Block title="Connected concepts">
+          <Block title={m.knowledgePanelConnectedConcepts()}>
             {concept(connection.from)}
             {concept(connection.to)}
           </Block>
@@ -428,13 +468,11 @@ export function Inspector({
     if (connection?.kind === "context") {
       return (
         <>
-          <Block title="Why these connect">
+          <Block title={m.knowledgePanelWhyConnect()}>
             <p>{connection.reason}</p>
-            <p className="fm-kb-note">
-              This is a reading suggestion, not proof of a relationship or a causal claim.
-            </p>
+            <p className="fm-kb-note">{m.knowledgePanelReadingSuggestionNote()}</p>
           </Block>
-          <Block title="Connected concepts">
+          <Block title={m.knowledgePanelConnectedConcepts()}>
             {concept(connection.from)}
             {concept(connection.to)}
           </Block>
@@ -442,7 +480,7 @@ export function Inspector({
       );
     }
     if (selection.kind === "connection") {
-      return <p className="fm-kb-quiet">This connection is no longer recorded.</p>;
+      return <p className="fm-kb-quiet">{m.knowledgePanelConnectionMissing()}</p>;
     }
     if (entry.kind === "concept") {
       return (
@@ -456,12 +494,12 @@ export function Inspector({
           )}
           {entry.aliases.length > 0 ? (
             <p className="fm-kb-note" data-knowledge-aliases="">
-              Also found as: {entry.aliases.join(", ")}
+              {m.knowledgePanelAliases({ aliases: entry.aliases.join(", ") })}
             </p>
           ) : null}
-          <Block title="Connected ideas">
+          <Block title={m.knowledgePanelConnectedIdeas()}>
             {entry.connections.length === 0 ? (
-              <p className="fm-kb-quiet">No connections are recorded for it yet.</p>
+              <p className="fm-kb-quiet">{m.knowledgePanelNoConnections()}</p>
             ) : (
               entry.connections.map((link) => {
                 const other = link.from.id === entry.id ? link.to : link.from;
@@ -472,8 +510,11 @@ export function Inspector({
                     title={other.title}
                     detail={
                       link.kind === "claim"
-                        ? `${link.predicate} · recorded claim · ${STANDING_WORDS[link.standing]}`
-                        : `${link.reason} · read together`
+                        ? m.knowledgePanelClaimDetail({
+                            predicate: link.predicate,
+                            standing: STANDING_WORDS[link.standing],
+                          })
+                        : m.knowledgePanelContextDetail({ reason: link.reason })
                     }
                     onOpen={() => onSelect({ kind: "connection", id: link.id })}
                   />
@@ -481,9 +522,9 @@ export function Inspector({
               })
             )}
           </Block>
-          <Block title="Supporting findings">
+          <Block title={m.knowledgePanelSupportingFindings()}>
             {entry.findings.length === 0 ? (
-              <p className="fm-kb-quiet">No finding is about it yet.</p>
+              <p className="fm-kb-quiet">{m.knowledgePanelNoFindings()}</p>
             ) : (
               <>
                 {entry.findings.map((finding) => (
@@ -497,7 +538,9 @@ export function Inspector({
                 ))}
                 {entry.findingsTotal > entry.findings.length ? (
                   <p className="fm-kb-note">
-                    And {entry.findingsTotal - entry.findings.length} more in Findings.
+                    {m.knowledgePanelMoreFindings({
+                      count: entry.findingsTotal - entry.findings.length,
+                    })}
                   </p>
                 ) : null}
               </>
@@ -505,37 +548,43 @@ export function Inspector({
           </Block>
           <div className="fm-kb-actions">
             <Button variant="secondary" size="sm" onClick={() => onShowOnGraph(entry.id)}>
-              Show on graph
+              {m.knowledgePanelShowOnGraph()}
             </Button>
           </div>
         </>
       );
     }
+    const basisAround = aroundSlot(
+      entry.basis === "inference"
+        ? m.knowledgePanelReasonedBy({ author: SLOT })
+        : m.knowledgePanelObservedBy({ author: SLOT }),
+    );
     return (
       <>
         {earlier ? compare() : null}
         <p className="fm-kb-note">
-          {entry.basis === "inference" ? "Reasoned to" : "Observed"} · by{" "}
+          {basisAround[0]}
           <Words text={entry.author} look="quiet" />
+          {basisAround[1]}
         </p>
         {entry.conditions && !earlier ? (
-          <Block title="Where it holds">
+          <Block title={m.knowledgePanelWhereItHolds()}>
             <p data-knowledge-conditions="">
               <Words text={entry.conditions} />
             </p>
           </Block>
         ) : null}
         {entry.relationship ? (
-          <Block title="The relationship it claims">
+          <Block title={m.knowledgePanelRelationshipClaimed()}>
             <p>
               {entry.relationship.from.title} <strong>{entry.relationship.predicate}</strong>{" "}
               {entry.relationship.to.title}
             </p>
           </Block>
         ) : null}
-        <Block title="About">
+        <Block title={m.knowledgePanelAbout()}>
           {entry.about.length === 0 ? (
-            <p className="fm-kb-quiet">It names no concept.</p>
+            <p className="fm-kb-quiet">{m.knowledgePanelNoConcept()}</p>
           ) : (
             entry.about.map(concept)
           )}
@@ -547,7 +596,7 @@ export function Inspector({
               size="sm"
               onClick={() => onShowOnGraph((entry.about[0] as PanelKnowledgeNamed).id)}
             >
-              Show on graph
+              {m.knowledgePanelShowOnGraph()}
             </Button>
           </div>
         ) : null}
@@ -557,48 +606,64 @@ export function Inspector({
 
   const evidence = (): ReactNode => {
     if (connection?.kind === "context") {
-      return (
-        <p className="fm-kb-quiet">
-          A read-together link carries its reason, not evidence. Its concepts keep their own.
-        </p>
-      );
+      return <p className="fm-kb-quiet">{m.knowledgePanelContextNoEvidence()}</p>;
     }
     return (
       <>
-        <Block title={entry.kind === "concept" ? "Its sources" : "Kept sources"}>
+        <Block
+          title={
+            entry.kind === "concept" ? m.knowledgePanelItsSources() : m.knowledgePanelKeptSources()
+          }
+        >
           {entry.sources.length === 0 ? (
-            <p className="fm-kb-quiet">No source was kept with it.</p>
+            <p className="fm-kb-quiet">{m.knowledgePanelNoSources()}</p>
           ) : (
             entry.sources.map(sourceBlock)
           )}
         </Block>
         {entry.kind === "finding" ? (
-          <Block title="Checks">
+          <Block title={m.knowledgePanelChecks()}>
             {entry.checks.length === 0 ? (
-              <p className="fm-kb-quiet">Nobody has checked it yet.</p>
+              <p className="fm-kb-quiet">{m.knowledgePanelNoChecks()}</p>
             ) : (
-              entry.checks.map((check) => (
-                <div key={check.id} className="fm-kb-check" data-knowledge-verdict={check.verdict}>
-                  <div className="fm-kb-check-head">
-                    {VERDICT_WORDS[check.verdict]} · revision {check.revision} ·{" "}
-                    <Words text={check.by} look="quiet" /> · {whenOf(check.at)}
-                  </div>
-                  <p>
-                    <span className="fm-kb-label">Method</span> <Words text={check.method} />
-                  </p>
-                  {check.conditions ? (
+              entry.checks.map((check) => {
+                const head = aroundSlot(
+                  m.knowledgePanelCheckHead({
+                    verdict: VERDICT_WORDS[check.verdict],
+                    revision: String(check.revision),
+                    by: SLOT,
+                    when: whenOf(check.at),
+                  }),
+                );
+                return (
+                  <div
+                    key={check.id}
+                    className="fm-kb-check"
+                    data-knowledge-verdict={check.verdict}
+                  >
+                    <div className="fm-kb-check-head">
+                      {head[0]}
+                      <Words text={check.by} look="quiet" />
+                      {head[1]}
+                    </div>
                     <p>
-                      <span className="fm-kb-label">Conditions</span>{" "}
-                      <Words text={check.conditions} />
+                      <span className="fm-kb-label">{m.knowledgePanelMethod()}</span>{" "}
+                      <Words text={check.method} />
                     </p>
-                  ) : null}
-                  {check.sources.length === 0 ? (
-                    <p className="fm-kb-note">It cites no evidence, so it checks nothing.</p>
-                  ) : (
-                    check.sources.map(sourceBlock)
-                  )}
-                </div>
-              ))
+                    {check.conditions ? (
+                      <p>
+                        <span className="fm-kb-label">{m.knowledgePanelConditions()}</span>{" "}
+                        <Words text={check.conditions} />
+                      </p>
+                    ) : null}
+                    {check.sources.length === 0 ? (
+                      <p className="fm-kb-note">{m.knowledgePanelCheckNoEvidence()}</p>
+                    ) : (
+                      check.sources.map(sourceBlock)
+                    )}
+                  </div>
+                );
+              })
             )}
           </Block>
         ) : null}
@@ -608,68 +673,82 @@ export function Inspector({
 
   const history = (): ReactNode => (
     <>
-      <Block title="Revisions">
-        {entry.revisions.map((revision) => (
-          <div
-            key={revision.revision}
-            className="fm-kb-revision"
-            data-knowledge-revision={revision.revision}
-          >
-            <div className="fm-kb-check-head">
-              Revision {revision.revision} · {OP_WORDS[revision.op]} by{" "}
-              <Words text={revision.by} look="quiet" /> · {whenOf(revision.at)}
-            </div>
-            <p>
-              <Words text={revision.title} />
-            </p>
-            {revision.reason ? (
-              <p className="fm-kb-note">
-                <Words text={revision.reason} />
-              </p>
-            ) : null}
-            {selection.kind === "connection" ? null : revision.revision === entry.revision ? (
-              <p className="fm-kb-note" data-knowledge-revision-shown="">
-                {earlier ? "Shown here" : "The current revision, shown here"}
-              </p>
-            ) : (
-              <div className="fm-kb-actions">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  data-knowledge-read-revision={revision.revision}
-                  onClick={() =>
-                    onSelect({
-                      kind: entry.kind,
-                      id: entry.id,
-                      ...(revision.revision === entry.current
-                        ? {}
-                        : { revision: revision.revision }),
-                    })
-                  }
-                >
-                  {revision.revision === entry.current
-                    ? "Read the current revision"
-                    : `Read revision ${revision.revision}`}
-                </Button>
+      <Block title={m.knowledgePanelRevisions()}>
+        {entry.revisions.map((revision) => {
+          const head = aroundSlot(
+            m.knowledgePanelRevisionHead({
+              revision: String(revision.revision),
+              op: OP_WORDS[revision.op],
+              by: SLOT,
+              when: whenOf(revision.at),
+            }),
+          );
+          return (
+            <div
+              key={revision.revision}
+              className="fm-kb-revision"
+              data-knowledge-revision={revision.revision}
+            >
+              <div className="fm-kb-check-head">
+                {head[0]}
+                <Words text={revision.by} look="quiet" />
+                {head[1]}
               </div>
-            )}
-          </div>
-        ))}
+              <p>
+                <Words text={revision.title} />
+              </p>
+              {revision.reason ? (
+                <p className="fm-kb-note">
+                  <Words text={revision.reason} />
+                </p>
+              ) : null}
+              {selection.kind === "connection" ? null : revision.revision === entry.revision ? (
+                <p className="fm-kb-note" data-knowledge-revision-shown="">
+                  {earlier ? m.knowledgePanelShownHere() : m.knowledgePanelCurrentShownHere()}
+                </p>
+              ) : (
+                <div className="fm-kb-actions">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    data-knowledge-read-revision={revision.revision}
+                    onClick={() =>
+                      onSelect({
+                        kind: entry.kind,
+                        id: entry.id,
+                        ...(revision.revision === entry.current
+                          ? {}
+                          : { revision: revision.revision }),
+                      })
+                    }
+                  >
+                    {revision.revision === entry.current
+                      ? m.knowledgePanelReadCurrent()
+                      : m.knowledgePanelReadRevision({ revision: String(revision.revision) })}
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
         {entry.olderRevisions > 0 ? (
-          <p className="fm-kb-note">And {entry.olderRevisions} earlier revisions.</p>
+          <p className="fm-kb-note">
+            {m.knowledgePanelEarlierRevisions({ count: entry.olderRevisions })}
+          </p>
         ) : null}
       </Block>
-      <Block title="Disagreements">
+      <Block title={m.knowledgePanelDisagreements()}>
         {entry.relations.length === 0 ? (
-          <p className="fm-kb-quiet">
-            No other finding disagrees with it, replaces it or repeats it.
-          </p>
+          <p className="fm-kb-quiet">{m.knowledgePanelNoDisagreements()}</p>
         ) : (
           entry.relations.map((relation) => (
             <LinkRow
               key={`${relation.type}:${relation.other.id}:${relation.at}`}
               testId={relation.other.id}
-              title={`${relationLine(relation)}: ${relation.other.title}`}
+              title={m.knowledgePanelRelationTitle({
+                relation: relationLine(relation),
+                title: relation.other.title,
+              })}
               detail={relation.reason}
               onOpen={() => onSelect({ kind: relation.other.kind, id: relation.other.id })}
             />
@@ -681,26 +760,36 @@ export function Inspector({
 
   const used = (): ReactNode =>
     connection?.kind === "context" ? (
-      <p className="fm-kb-quiet">Work declares the concepts and findings it used, not a link.</p>
+      <p className="fm-kb-quiet">{m.knowledgePanelContextNoUse()}</p>
     ) : entry.uses.count === 0 ? (
-      <p className="fm-kb-quiet">No work has declared it used this yet.</p>
+      <p className="fm-kb-quiet">{m.knowledgePanelNoUses()}</p>
     ) : (
       <>
-        <p className="fm-kb-note">Declared use, not proof the reasoning was right.</p>
-        {entry.uses.recent.map((use) => (
-          <div key={`${use.at}:${use.by}`} className="fm-kb-revision" data-knowledge-use="">
-            <div className="fm-kb-check-head">
-              <Words text={use.task ?? use.by} look="quiet" /> · revision {use.revision} ·{" "}
-              {whenOf(use.at)}
+        <p className="fm-kb-note">{m.knowledgePanelDeclaredUseNote()}</p>
+        {entry.uses.recent.map((use) => {
+          const head = aroundSlot(
+            m.knowledgePanelUseHead({
+              by: SLOT,
+              revision: String(use.revision),
+              when: whenOf(use.at),
+            }),
+          );
+          return (
+            <div key={`${use.at}:${use.by}`} className="fm-kb-revision" data-knowledge-use="">
+              <div className="fm-kb-check-head">
+                {head[0]}
+                <Words text={use.task ?? use.by} look="quiet" />
+                {head[1]}
+              </div>
+              <p>
+                <Words text={use.purpose} />
+              </p>
             </div>
-            <p>
-              <Words text={use.purpose} />
-            </p>
-          </div>
-        ))}
+          );
+        })}
         {entry.uses.count > entry.uses.recent.length ? (
           <p className="fm-kb-note">
-            And {entry.uses.count - entry.uses.recent.length} earlier uses.
+            {m.knowledgePanelEarlierUses({ count: entry.uses.count - entry.uses.recent.length })}
           </p>
         ) : null}
       </>
@@ -728,17 +817,21 @@ export function Inspector({
       </h3>
       {earlier ? (
         <span className="fm-kb-chip" data-knowledge-earlier="">
-          Earlier revision
+          {m.knowledgePanelEarlierRevision()}
         </span>
       ) : standing ? (
         <Chip standing={standing} />
       ) : null}
       {selection.kind === "finding" && entry.attention?.recheck && entry.standing !== "recheck" ? (
         <p className="fm-kb-note" data-warn="">
-          A source it cites changed since it was kept.
+          {m.knowledgePanelSourceChangedNote()}
         </p>
       ) : null}
-      <div className="fm-kb-sections" role="tablist" aria-label="Inspector sections">
+      <div
+        className="fm-kb-sections"
+        role="tablist"
+        aria-label={m.knowledgePanelInspectorSections()}
+      >
         {SECTIONS.map((name) => (
           <button
             key={name}

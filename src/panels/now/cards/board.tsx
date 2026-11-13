@@ -10,6 +10,7 @@ import type {
 } from "@infinitary/contracts";
 import {
   Button,
+  DROP_TASK_LABEL,
   focusWithRing,
   KeyCap,
   nowGroupOf,
@@ -37,6 +38,7 @@ import {
 import styles from "../board.css";
 import { type TileDrag, useTileDrag } from "../boardDrag";
 import {
+  BOARD_SAID,
   type BoardAsk,
   type BoardMenuEntry,
   type BoardMove,
@@ -46,9 +48,7 @@ import {
   boardMovable,
   boardMoveOf,
   boardPinText,
-  DRAG_STARTED,
   dropAskOf,
-  MOVE_CANCELLED,
   moveContextOf,
 } from "../boardMoves";
 import {
@@ -73,6 +73,7 @@ import {
   newInBacklog,
   type TilePoint,
 } from "../boardTiles";
+import * as m from "../messages.generated";
 
 /**
  * The task board (docs/task-board.md; the design skill's
@@ -198,6 +199,18 @@ const ASK_VIEWS: Partial<Record<FocusAsk, BoardView>> = {
 function focusAskOf(data: StoreValue): FocusAsk | null {
   const focus = (data as { focus?: unknown } | null)?.focus;
   return ASKS.includes(focus as FocusAsk) ? (focus as FocusAsk) : null;
+}
+
+/** What a message is handed in place of the `index`th part the board draws itself, such as a key cap. */
+function fill(index: number): string {
+  return `\uE000${index}\uE001`;
+}
+
+/** A worded sentence with each `fill` replaced by the part it stands for. */
+function filled(worded: string, parts: readonly ReactNode[]): ReactNode[] {
+  return worded
+    .split(/\uE000(\d+)\uE001/)
+    .map((piece, i) => (i % 2 === 0 ? piece : parts[Number(piece)]));
 }
 
 /** A lane's name in a sentence: "Done · 7d", "Waiting on you". */
@@ -689,7 +702,9 @@ export default function TaskBoardCard({
     const where = laneHolding(was.taskId);
     if (where !== was.lane) {
       say(
-        where ? `${was.key} moved to ${laneName(where)}.` : `${was.key} is no longer on the board.`,
+        where
+          ? m.nowPanelBoardMovedTo({ key: was.key, lane: laneName(where) })
+          : m.nowPanelBoardOffBoard({ key: was.key }),
       );
     }
   }, [tiles, board]);
@@ -704,7 +719,7 @@ export default function TaskBoardCard({
     const task = board.tasks.find((row) => row.id === pending.taskId);
     if (task && signatureOf(task) === pending.signature) return;
     setPending(null);
-    say(`${pending.key} changed, so the move was cancelled. Nothing was written.`, "refused");
+    say(m.nowPanelBoardMoveChanged({ key: pending.key }), "refused");
     const next = nearestTo({ taskId: pending.taskId, lane: pending.from, index: pending.index });
     if (next) turnTo(next);
   }, [board, pending]);
@@ -719,7 +734,7 @@ export default function TaskBoardCard({
     move: PanelTaskMove,
     review?: PanelDropReview,
   ): Promise<string | null> => {
-    if (!tasks) return "This board cannot move tasks here.";
+    if (!tasks) return m.nowPanelBoardCannotMove();
     try {
       const result = await tasks.run(task.id, move, review);
       return result.ok ? null : result.text;
@@ -752,9 +767,9 @@ export default function TaskBoardCard({
       case "card":
         // A pointing gesture: the card's own button merges, never the drop.
         if (await point.showCard(move.cardId).catch(() => false)) {
-          say("Brought its merge card forward. Only the card's own button merges.");
+          say(m.nowPanelBoardBroughtCard());
         } else {
-          refused(task.id, "Its merge card is no longer up.");
+          refused(task.id, m.nowPanelBoardCardGone());
         }
         return;
       case "now": {
@@ -791,8 +806,8 @@ export default function TaskBoardCard({
         setPending(asking);
         say(
           move.op === "drop-task" || move.op === "stop-task"
-            ? "Drop task asks once. Cancel writes nothing."
-            : "The tile landed and asks once. Cancel returns it.",
+            ? m.nowPanelBoardDropAsks()
+            : m.nowPanelBoardLandedAsks(),
         );
         return;
       }
@@ -813,7 +828,7 @@ export default function TaskBoardCard({
   const cancelPending = () => {
     if (!pending) return;
     setPending(null);
-    say(MOVE_CANCELLED);
+    say(BOARD_SAID.moveCancelled);
     backTo(pending.taskId);
   };
   const confirmPending = async () => {
@@ -865,7 +880,7 @@ export default function TaskBoardCard({
       const task = byId(taskId);
       if (!task) return;
       if (!over) {
-        say(DRAG_STARTED);
+        say(BOARD_SAID.dragStarted);
         return;
       }
       const move = boardMoveOf(task, from, over, moveContextOf(task));
@@ -878,14 +893,14 @@ export default function TaskBoardCard({
       const task = byId(taskId);
       if (!task) return;
       if (!target) {
-        say(MOVE_CANCELLED);
+        say(BOARD_SAID.moveCancelled);
         backTo(taskId);
         return;
       }
       void perform(task, from, target);
     },
     onCancel: ({ taskId }) => {
-      say(MOVE_CANCELLED);
+      say(BOARD_SAID.moveCancelled);
       backTo(taskId);
     },
   });
@@ -962,6 +977,7 @@ export default function TaskBoardCard({
       return;
     }
     const next = boardNavMove(layout, from, event.key, pointAt);
+    // i18n-exempt: not shown (the arrow keys' names)
     if (event.key.startsWith("Arrow") || event.key === "Home" || event.key === "End") {
       event.preventDefault();
     }
@@ -989,7 +1005,7 @@ export default function TaskBoardCard({
                   (result) => (result.ok ? null : result.text),
                   (caught: unknown) => (caught instanceof Error ? caught.message : String(caught)),
                 )
-              : Promise.resolve("This board cannot pin tasks here.")
+              : Promise.resolve(m.nowPanelBoardCannotPin())
           ).then((why) => (why ? refused(task.id, why) : say(boardPinText(task.key, pinned))));
         } else if (entry.id === "continue") {
           void run(task, "continue-task").then((why) =>
@@ -1049,7 +1065,7 @@ export default function TaskBoardCard({
             <>
               <span className="fm-board-tile-word-status">{reading.word}</span>
               {task.program &&
-                ` · ${task.children.closed} of ${task.children.total} parts finished`}
+                ` · ${m.nowPanelBoardPartsFinished({ closed: String(task.children.closed), count: task.children.total })}`}
               {reading.reason && ` · ${reading.reason}`}
             </>
           )}
@@ -1065,7 +1081,7 @@ export default function TaskBoardCard({
         {!wait && reading.since !== undefined && (
           // When the one wait was recorded, never when work stopped (INF-38).
           <span className="fm-board-tile-since" data-board-wait-since="">
-            {`Wait recorded ${waitRecordedTime(reading.since, Date.now())}`}
+            {m.nowPanelBoardWaitRecorded({ when: waitRecordedTime(reading.since, Date.now()) })}
           </span>
         )}
       </>
@@ -1160,7 +1176,7 @@ export default function TaskBoardCard({
         {items.length > 0 && (
           <span className="fm-board-more" data-board-more={task.id}>
             <RowMenu
-              label={`${task.key} actions`}
+              label={m.nowPanelBoardTileActions({ key: task.key })}
               {...keys["board-move"]}
               items={items}
               size={24}
@@ -1182,7 +1198,7 @@ export default function TaskBoardCard({
                   onClick={cancelPending}
                   style={{ flex: 1 }}
                 >
-                  Cancel
+                  {m.nowPanelBoardCancel()}
                 </Button>
               </span>
               <span data-board-confirm-act="go">
@@ -1217,13 +1233,13 @@ export default function TaskBoardCard({
             (tile.task as PanelTaskRow & { startNotice?: { reason: string } }).startNotice != null,
         ).length > 0 && (
           <span className="fm-board-n" data-board-failed={name}>
-            {`${
-              lane(name).filter(
+            {m.nowPanelSummaryFailed({
+              count: lane(name).filter(
                 (tile) =>
                   (tile.task as PanelTaskRow & { startNotice?: { reason: string } }).startNotice !=
                   null,
-              ).length
-            } could not start`}
+              ).length,
+            })}
           </span>
         )}
       {extra}
@@ -1235,7 +1251,12 @@ export default function TaskBoardCard({
     </div>
   );
   /** "21–40 of 300": where a page sits in its lane. */
-  const range = (at: BoardPage) => `${at.first}–${at.last} of ${at.total}`;
+  const range = (at: BoardPage) =>
+    m.nowPanelBoardRange({
+      first: String(at.first),
+      last: String(at.last),
+      total: String(at.total),
+    });
   /** Previous and Next for a lane's pages: dim, never gone, at either end, so focus stays on them. */
   const pager = (name: BoardLane, at: BoardPage) => {
     if (at.pages <= 1) return null;
@@ -1250,20 +1271,20 @@ export default function TaskBoardCard({
           className="fm-board-page"
           data-board-page-prev={name}
           aria-disabled={at.page === 0 ? "true" : undefined}
-          aria-label={`Previous page of ${laneName(name)}`}
+          aria-label={m.nowPanelBoardPreviousPage({ lane: laneName(name) })}
           onClick={() => turn(at.page - 1)}
         >
-          Previous
+          {m.nowPanelBoardPrevious()}
         </button>
         <button
           type="button"
           className="fm-board-page"
           data-board-page-next={name}
           aria-disabled={at.page === at.pages - 1 ? "true" : undefined}
-          aria-label={`Next page of ${laneName(name)}`}
+          aria-label={m.nowPanelBoardNextPage({ lane: laneName(name) })}
           onClick={() => turn(at.page + 1)}
         >
-          Next
+          {m.nowPanelBoardNext()}
         </button>
       </span>
     );
@@ -1299,15 +1320,15 @@ export default function TaskBoardCard({
     const note =
       name !== "earlier" ? null : found?.failed && !found.tasks ? (
         <p className="fm-board-list-note" data-board-earlier-note="unavailable">
-          Earlier results are unavailable right now. Done · 7d still lists this week’s.
+          {m.nowPanelBoardEarlierUnavailable()}
         </p>
       ) : !earlier ? (
         <p className="fm-board-list-note" data-board-earlier-note="reading">
-          Looking for earlier tasks…
+          {m.nowPanelBoardEarlierReading()}
         </p>
       ) : earlier.capped ? (
         <p className="fm-board-list-note" data-board-earlier-note="capped">
-          The search stops at its newest matches. Type more of a key or title to narrow them.
+          {m.nowPanelBoardEarlierCapped()}
         </p>
       ) : null;
     return (
@@ -1315,16 +1336,21 @@ export default function TaskBoardCard({
         key={name}
         className="fm-board-list"
         data-board-list={name}
-        aria-label={`${laneName(name)}, ${at.total} ${at.total === 1 ? "task" : "tasks"}`}
+        aria-label={m.nowPanelBoardListLabel({ lane: laneName(name), count: at.total })}
       >
         <div className="fm-board-list-head">
           {laneHead(
             name,
             <>
               {name === "backlog" && fresh > 0 && (
-                <span className="fm-board-n" data-board-new="">{`· ${fresh} new`}</span>
+                <span
+                  className="fm-board-n"
+                  data-board-new=""
+                >{`· ${m.nowPanelBoardNewCount({ count: fresh })}`}</span>
               )}
-              {name === "dropped" && <span className="fm-board-lane-note">Read-only</span>}
+              {name === "dropped" && (
+                <span className="fm-board-lane-note">{m.nowPanelBoardReadOnly()}</span>
+              )}
               {pager(name, at)}
             </>,
           )}
@@ -1389,7 +1415,7 @@ export default function TaskBoardCard({
       data-task-board=""
       data-board-view={view}
       data-board-dragging={dragging ? "" : undefined}
-      aria-label="Task board"
+      aria-label={m.nowPanelBoardLabel()}
     >
       <style>{styles}</style>
       <div className="fm-board-chrome" data-board-chrome="">
@@ -1419,8 +1445,8 @@ export default function TaskBoardCard({
             type="search"
             className="fm-board-find"
             data-board-find=""
-            placeholder="Find a task"
-            aria-label="Find on task board"
+            placeholder={m.nowPanelBoardFindPlaceholder()}
+            aria-label={m.nowPanelBoardFindLabel()}
             aria-keyshortcuts={findKey?.["aria-keyshortcuts"]}
             autoComplete="off"
             value={place.query}
@@ -1437,15 +1463,15 @@ export default function TaskBoardCard({
           {findKey && <CommandKey target="find" drawn={findKey.keys} />}
         </span>
       </div>
-      <nav className="fm-board-views" data-board-views="" aria-label="Task board views">
-        {viewTab("board", "Board")}
+      <nav className="fm-board-views" data-board-views="" aria-label={m.nowPanelBoardViews()}>
+        {viewTab("board", m.nowPanelBoardViewBoard())}
         {viewTab(
           "backlog",
-          "Backlog",
-          `${lane("backlog").length}${fresh > 0 ? ` · ${fresh} new` : ""}`,
+          m.nowPanelBoardViewBacklog(),
+          `${lane("backlog").length}${fresh > 0 ? ` · ${m.nowPanelBoardNewCount({ count: fresh })}` : ""}`,
         )}
-        {viewTab("landed", "Done · 7d", String(lane("landed").length))}
-        {typed && viewTab("earlier", "Earlier matches", earlierCount)}
+        {viewTab("landed", m.nowPanelBoardViewLanded(), String(lane("landed").length))}
+        {typed && viewTab("earlier", m.nowPanelBoardViewEarlier(), earlierCount)}
       </nav>
       {/* biome-ignore lint/a11y/noStaticElementInteractions: the arrows move between the tiles inside */}
       <div
@@ -1473,7 +1499,7 @@ export default function TaskBoardCard({
               {laneHead(
                 "waiting",
                 <>
-                  <span className="fm-board-lane-note">Cards waiting for you</span>
+                  <span className="fm-board-lane-note">{m.nowPanelBoardWaitingNote()}</span>
                   {waitingAll.length > band.length && (
                     <button
                       type="button"
@@ -1481,7 +1507,7 @@ export default function TaskBoardCard({
                       data-board-browse="waiting"
                       onClick={() => showView("waiting")}
                     >
-                      {`Show all ${waitingAll.length}`}
+                      {m.nowPanelBoardShowAll({ count: waitingAll.length })}
                     </button>
                   )}
                 </>,
@@ -1510,17 +1536,20 @@ export default function TaskBoardCard({
           aria-keyshortcuts={droppedKey?.["aria-keyshortcuts"]}
           onClick={() => showView(view === "dropped" ? "board" : "dropped")}
         >
-          {`Dropped · ${dropped.length}`}
+          {m.nowPanelBoardDroppedToggle({ count: dropped.length })}
           {droppedKey && <CommandKey target="dropped" drawn={droppedKey.keys} />}
         </button>
         {/* The Drop task tray: there only while a tile is in the air. */}
         {dragging && (
           <div className="fm-board-tray" data-board-drop-tray="" {...dropProps("drop")}>
-            Drop task
+            {DROP_TASK_LABEL}
           </div>
         )}
         <span className="fm-board-hint" data-board-hint="">
-          Arrows move · <KeyCap>Enter</KeyCap> opens · <KeyCap>Space</KeyCap> menu
+          {filled(m.nowPanelBoardHint({ enter: fill(0), space: fill(1) }), [
+            <KeyCap key="enter">{"Enter"}</KeyCap>,
+            <KeyCap key="space">{"Space"}</KeyCap>,
+          ])}
         </span>
       </div>
       <p
@@ -1587,7 +1616,8 @@ function KanbanWait({ task, word }: { task: PanelTaskRow; word: string }) {
       <span className="fm-board-wait-head">
         <span className="fm-board-tile-word-status">
           {word}
-          {task.program && ` · ${task.children.closed} of ${task.children.total} parts finished`}
+          {task.program &&
+            ` · ${m.nowPanelBoardPartsFinished({ closed: String(task.children.closed), count: task.children.total })}`}
         </span>
         <span className="fm-board-wait-names">{` · ${wait.names}`}</span>
       </span>

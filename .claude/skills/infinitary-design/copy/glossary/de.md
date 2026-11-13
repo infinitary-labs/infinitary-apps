@@ -98,3 +98,14 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | preset (keyboard) | Vorlage | |
 | version (replaces SHA, hash) | Version | |
 | Infinitary | Infinitary | Never translated. |
+| Knowledge (panel) | Wissen | "Wissen öffnen" |
+| concept / finding | Begriff / Erkenntnis | As the card references already say |
+| direction (a standing knowledge entry) | Vorgabe | Kept apart from its kinds: instruction "Anweisung", advice "Rat" |
+| claim (recorded claim) | Aussage | "Festgehaltene Aussage" |
+| evidence | Belege | "Widersprüchliche Belege" |
+| revision (of a knowledge entry) | Revision | "Revision 3"; kept apart from "Version" |
+| collection | Sammlung | |
+| pin / unpin (a task) | anheften / nicht mehr angeheftet | |
+| hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
+| Waiting on you (board lane) | Wartet auf dich | |
+| Queued (board lane) | Eingereiht | |

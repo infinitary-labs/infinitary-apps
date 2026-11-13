@@ -88,6 +88,19 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | preset (keyboard) | الإعداد المسبق | |
 | demo / its recording | عرض توضيحي / التسجيل | Never "فيديو". |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
+| Knowledge (panel) | المعرفة | "فتح المعرفة" for Open Knowledge. |
+| concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |
+| direction (a standing knowledge entry) | توجيه | Plural "توجيهات"; its kinds are "تعليمة" (instruction) and "نصيحة" (advice). |
+| claim (recorded claim) | ادعاء | "ادعاء مسجّل". |
+| evidence | الأدلة | "أدلة متعارضة" for differing evidence. |
+| revision (of a knowledge entry) | التعديل | "التعديل 3"; kept apart from "نسخة" and from "المراجعة" (review). |
+| collection | مجموعة | |
+| inspector | التفاصيل | The side pane that shows one entry. |
+| graph | المخطط | |
+| pin / unpin (a task) | تثبيت / إلغاء التثبيت | |
+| hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
+| Waiting on you (board lane) | بانتظارك | |
+| board (task board) | لوح المهام | "لوح" kept apart from "لوحة" (panel). |
 | repo (never said) | مشروع | "مستودع" only where a sentence points at GitHub. |
 | worktree (never said) | نسخة العمل | |
 | land, ship (never said) | دمج | |

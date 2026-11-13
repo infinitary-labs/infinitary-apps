@@ -9,6 +9,7 @@ import {
 } from "@infinitary/ui";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { feedKeysOf, focusedKeyOf, leadingDrop, linesInFocus, semanticKind } from "./feedRows";
+import * as m from "./messages.generated";
 import styles from "./panel.css";
 
 /**
@@ -370,12 +371,13 @@ export default function ActivityPanel({ reads, asks, rail, point, view }: PanelP
   // What was there when the page first read the feed is not news, held back by focus or not.
   if (allLines !== null && snapshotKeys.current === null)
     snapshotKeys.current = new Set(feedKeysOf(allLines));
+  const linesLabel = m.activityPanelLinesLabel();
   return (
     <>
       <style>{styles}</style>
       <div data-feed="" ref={feedRef}>
         {/* biome-ignore lint/a11y/noNoninteractiveTabindex: a scroller with no controls of its own is one stop for the keyboard, which scrolls it */}
-        <section data-feed-scroller="" ref={scrollerRef} tabIndex={0} aria-label="Activity lines">
+        <section data-feed-scroller="" ref={scrollerRef} tabIndex={0} aria-label={linesLabel}>
           <div data-feed-rows="" ref={rowsRef}>
             {lines?.map((line, i) => (
               <Row

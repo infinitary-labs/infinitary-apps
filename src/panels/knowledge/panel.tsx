@@ -6,8 +6,9 @@ import type {
 } from "@infinitary/contracts";
 import { Empty, focusWithRing, useOverflowTitle, useRestLabel } from "@infinitary/ui";
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
+import * as m from "./messages.generated";
 import styles from "./panel.css";
-import { counted, UNREADABLE_SUMMARY } from "./words";
+import { UNREADABLE_SUMMARY } from "./words";
 
 /** Accepted direction-first rail; the host supplies its one Knowledge heading. */
 export default function KnowledgePanel({ reads, cards, rail, asks }: PanelProps) {
@@ -41,7 +42,7 @@ export default function KnowledgePanel({ reads, cards, rail, asks }: PanelProps)
   const hasSomething = total > 0 || hasGraph;
   useEffect(() => {
     if (!rail || !collections || !directions) return;
-    rail.show(Boolean(unavailable) || hasSomething, "Nothing is recorded yet");
+    rail.show(Boolean(unavailable) || hasSomething, m.knowledgePanelNothingRecorded());
     // A short part beside the title, never a line in its place. A rail
     // wide holds the title and one count: directions lead, concepts stand
     // in while there are none.
@@ -49,9 +50,9 @@ export default function KnowledgePanel({ reads, cards, rail, asks }: PanelProps)
       unavailable
         ? [{ text: UNREADABLE_SUMMARY }]
         : total
-          ? [{ text: counted(total, "direction", "directions") }]
+          ? [{ text: m.knowledgePanelDirectionCount({ count: total }) }]
           : hasGraph
-            ? [{ text: counted(concepts, "concept", "concepts") }]
+            ? [{ text: m.knowledgePanelConceptCount({ count: concepts }) }]
             : null,
     );
   }, [rail, collections, directions, unavailable, hasSomething, total, concepts, hasGraph]);
@@ -67,7 +68,7 @@ export default function KnowledgePanel({ reads, cards, rail, asks }: PanelProps)
       .emit({
         id: "browser",
         view: "browser",
-        title: "Knowledge",
+        title: m.knowledgePanelBrowserTitle(),
         width: "wide",
         height: "fill",
         data: {
@@ -118,7 +119,7 @@ export default function KnowledgePanel({ reads, cards, rail, asks }: PanelProps)
           {unavailable.reason}
         </p>
       ) : !hasSomething ? (
-        <Empty>Tell your first mate about yourself or share an article you want to keep.</Empty>
+        <Empty>{m.knowledgePanelEmpty()}</Empty>
       ) : (
         <div ref={listRef} className="fm-knowledge-panel-list">
           {held.map((row) => (
@@ -142,7 +143,7 @@ export default function KnowledgePanel({ reads, cards, rail, asks }: PanelProps)
                 onKeyDown={onKey}
                 onClick={() => open("directions")}
               >
-                All {counted(total, "direction", "directions")}
+                {m.knowledgePanelAllDirections({ count: total })}
               </button>
             ) : null}
             {hasGraph ? (
@@ -155,7 +156,7 @@ export default function KnowledgePanel({ reads, cards, rail, asks }: PanelProps)
                 onKeyDown={onKey}
                 onClick={() => open("graph")}
               >
-                Graph · {counted(concepts, "concept", "concepts")}
+                {m.knowledgePanelGraphLink({ count: concepts })}
               </button>
             ) : null}
           </div>
@@ -188,7 +189,11 @@ function DirectionLine({
       data-knowledge-stop={`direction:${row.id}`}
       data-knowledge-direction={row.id}
       tabIndex={tabIndex}
-      aria-label={`${row.text}${row.scope !== "captain" ? ` · ${row.scopeName}` : ""} · Open Knowledge`}
+      aria-label={
+        row.scope !== "captain"
+          ? m.knowledgePanelDirectionScopedLabel({ text: row.text, scope: row.scopeName })
+          : m.knowledgePanelDirectionLabel({ text: row.text })
+      }
       onFocus={(event) => {
         rest.onFocus(event);
         onFocus();

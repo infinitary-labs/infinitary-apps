@@ -2,6 +2,7 @@ import type { PanelKnowledgeDirectionRead } from "@infinitary/contracts";
 import { Button, focusWithRing } from "@infinitary/ui";
 import { AskButton, Block, Words } from "./inspector";
 import { Pager } from "./lists";
+import * as m from "./messages.generated";
 import type { Section } from "./place";
 import { directionOrigin, OP_WORDS, whenOf } from "./words";
 
@@ -25,7 +26,7 @@ export function DirectionInspector({
   const back = onBack ? (
     <div className="fm-kb-back">
       <Button variant="secondary" size="sm" data-knowledge-back="" onClick={onBack}>
-        Back
+        {m.knowledgePanelBack()}
       </Button>
     </div>
   ) : null;
@@ -35,10 +36,10 @@ export function DirectionInspector({
         {back}
         <p className="fm-kb-quiet">
           {!read
-            ? "Reading…"
+            ? m.knowledgePanelReading()
             : read.state === "unavailable"
               ? read.reason
-              : "This record is not available here."}
+              : m.knowledgePanelRecordUnavailable()}
         </p>
       </div>
     );
@@ -50,14 +51,24 @@ export function DirectionInspector({
       data-knowledge-direction=""
     >
       {back}
-      <div className="fm-kb-eyebrow">Direction · revision {note.revision}</div>
+      <div className="fm-kb-eyebrow">
+        {m.knowledgePanelDirectionEyebrow({ revision: String(note.revision) })}
+      </div>
       <h3 className="fm-kb-heading" data-knowledge-heading="">
         <Words text={note.text} />
       </h3>
       <span className="fm-kb-chip">
-        {note.retired ? "Retired" : note.authority === "instruction" ? "Instruction" : "Advice"}
+        {note.retired
+          ? m.knowledgePanelRetired()
+          : note.authority === "instruction"
+            ? m.knowledgePanelInstruction()
+            : m.knowledgePanelAdvice()}
       </span>
-      <div className="fm-kb-sections" role="tablist" aria-label="Inspector sections">
+      <div
+        className="fm-kb-sections"
+        role="tablist"
+        aria-label={m.knowledgePanelInspectorSections()}
+      >
         {(["overview", "history"] as const).map((name) => (
           <button
             type="button"
@@ -78,35 +89,35 @@ export function DirectionInspector({
               if (button) focusWithRing(button);
             }}
           >
-            {name === "overview" ? "Overview" : "History"}
+            {name === "overview"
+              ? m.knowledgePanelSectionOverview()
+              : m.knowledgePanelSectionHistory()}
           </button>
         ))}
       </div>
       <div className="fm-kb-section" role="tabpanel" data-knowledge-section-body={tab}>
         {tab === "overview" ? (
           <>
-            <Block title="Applies to">
+            <Block title={m.knowledgePanelAppliesTo()}>
               <p>{note.scopeName}</p>
               <p className="fm-kb-count">{note.scope}</p>
             </Block>
-            <Block title="Recorded origin">
+            <Block title={m.knowledgePanelRecordedOrigin()}>
               <p>{directionOrigin(note.origin)}</p>
               <p className="fm-kb-count">{note.origin}</p>
             </Block>
-            <p className="fm-kb-note">
-              Knowledge supplies this direction. Only your words are instructions; no record grants
-              permission.
-            </p>
+            <p className="fm-kb-note">{m.knowledgePanelDirectionNote()}</p>
             <p className="fm-kb-count">
-              {whenOf(note.createdAt)} · updated {whenOf(note.updatedAt)}
+              {m.knowledgePanelDirectionDates({
+                created: whenOf(note.createdAt),
+                updated: whenOf(note.updatedAt),
+              })}
             </p>
-            <p className="fm-kb-count">d:{note.id}</p>
+            <p className="fm-kb-count">{`d:${note.id}`}</p>
           </>
         ) : (
           <>
-            <p className="fm-kb-note">
-              Edits made in Knowledge keep the wording, origin and project for each revision.
-            </p>
+            <p className="fm-kb-note">{m.knowledgePanelDirectionHistoryNote()}</p>
             <Pager
               page={note.page}
               shown={note.history.length}
@@ -121,15 +132,15 @@ export function DirectionInspector({
                 data-knowledge-direction-revision={revision.revision}
               >
                 <div className="fm-kb-check-head">
-                  Revision {revision.revision} ·{" "}
-                  {revision.op === "publish" ? "Recorded" : OP_WORDS[revision.op]} ·{" "}
-                  {whenOf(revision.at)}
+                  {m.knowledgePanelDirectionRevisionHead({
+                    revision: String(revision.revision),
+                    op: OP_WORDS[revision.op],
+                    when: whenOf(revision.at),
+                  })}
                 </div>
                 <p>{directionOrigin(revision.origin)}</p>
                 <p>
-                  <Words
-                    text={revision.text ?? "This revision retired the record without new words."}
-                  />
+                  <Words text={revision.text ?? m.knowledgePanelDirectionRetiredRevision()} />
                 </p>
                 <p className="fm-kb-note">
                   <Words text={revision.evidence} />

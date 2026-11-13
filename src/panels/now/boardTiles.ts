@@ -6,6 +6,7 @@ import {
   nowGroupOf,
   pinnedPastWeek,
 } from "@infinitary/ui";
+import * as m from "./messages.generated";
 
 /**
  * What the task board lists and where (docs/task-board.md; the design
@@ -37,10 +38,14 @@ export type BoardColumn = (typeof BOARD_COLUMNS)[number];
 export type BoardLane = "waiting" | BoardColumn | "dropped" | "earlier";
 
 /** Each lane's micro label: the panel's group names, the dropped list's and the earlier matches'. */
-export const BOARD_LANE_LABELS: Record<BoardLane, string> = {
+export const BOARD_LANE_LABELS: Readonly<Record<BoardLane, string>> = {
   ...(NOW_GROUP_LABELS as Record<NowGroup, string>),
-  dropped: "dropped · 7d",
-  earlier: "earlier matches",
+  get dropped() {
+    return m.nowPanelBoardLaneDropped();
+  },
+  get earlier() {
+    return m.nowPanelBoardLaneEarlier();
+  },
 };
 
 /** The Board view's columns, left to right: the work not yet done. Done · 7d is a list. */
@@ -66,14 +71,28 @@ export const BOARD_WAITING_SHOWN = 3;
 export const EARLIER_SEARCH_LIMIT = 50;
 
 /** What an empty lane says, in place of its tiles. */
-export const BOARD_EMPTY_WORDS: Record<BoardLane, string> = {
-  waiting: "Nothing waits on you",
-  backlog: "Nothing in the backlog",
-  queued: "Nothing queued",
-  working: "Nothing working",
-  landed: "Nothing done this week",
-  dropped: "Nothing dropped this week",
-  earlier: "No earlier tasks match",
+export const BOARD_EMPTY_WORDS: Readonly<Record<BoardLane, string>> = {
+  get waiting() {
+    return m.nowPanelBoardEmptyWaiting();
+  },
+  get backlog() {
+    return m.nowPanelBoardEmptyBacklog();
+  },
+  get queued() {
+    return m.nowPanelBoardEmptyQueued();
+  },
+  get working() {
+    return m.nowPanelBoardEmptyWorking();
+  },
+  get landed() {
+    return m.nowPanelBoardEmptyLanded();
+  },
+  get dropped() {
+    return m.nowPanelBoardEmptyDropped();
+  },
+  get earlier() {
+    return m.nowPanelBoardEmptyEarlier();
+  },
 };
 
 /** How deep a child tile indents at most, as a Tasks row does. */
@@ -109,8 +128,9 @@ export function tileWordOf(task: PanelTaskRow, partOf: string | null): string {
   if (task.status === "open" && task.flags.blocked) return "blocked";
   if (task.status === "open" && task.flags.held) return "held";
   if (task.priority === 0 && (task.status === "open" || task.status === "active")) return "urgent";
-  if (task.status === "open" && task.foundOn) return `found on ${task.foundOn}`;
-  return partOf ? `part of ${partOf}` : "";
+  if (task.status === "open" && task.foundOn)
+    return m.nowPanelBoardTileFoundOn({ key: task.foundOn });
+  return partOf ? m.nowPanelBoardTilePartOf({ key: partOf }) : "";
 }
 
 function matches(task: PanelTaskRow, filter: BoardFilter): boolean {
@@ -297,7 +317,7 @@ export function boardChipsOf(board: PanelTaskBoard): BoardChip[] {
   const projects = board.projects.filter((project) => withTiles.has(project.id));
   if (projects.length < 2) return [];
   return [
-    { id: null, label: "All projects" },
+    { id: null, label: m.nowPanelBoardAllProjects() },
     ...projects.map((project) => ({ id: project.id, label: project.key })),
   ];
 }

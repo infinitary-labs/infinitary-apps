@@ -24,6 +24,7 @@ import type { Camera } from "../graph";
 import { GraphView } from "../graphView";
 import { Inspector, InspectorTaskKeysContext } from "../inspector";
 import { ConceptList, DirectionList, FindingList } from "../lists";
+import * as m from "../messages.generated";
 import {
   askOf,
   entryIdOf,
@@ -35,7 +36,7 @@ import {
   TABS,
   type Tab,
 } from "../place";
-import { askWords, DIRECTIONS_EVERYWHERE } from "../words";
+import { askWords, directionsEverywhere } from "../words";
 
 /**
  * The knowledge browser (docs/knowledge.md, "The browser"; the design
@@ -65,11 +66,19 @@ const NARROW_PX = 720;
 /** How long typing in Find waits before it reads. */
 const FIND_WAIT_MS = 200;
 
-const TAB_WORDS: Record<Tab, string> = {
-  graph: "Graph",
-  concepts: "Concepts",
-  findings: "Findings",
-  directions: "Directions",
+const TAB_WORDS: Readonly<Record<Tab, string>> = {
+  get graph() {
+    return m.knowledgePanelTabGraph();
+  },
+  get concepts() {
+    return m.knowledgePanelTabConcepts();
+  },
+  get findings() {
+    return m.knowledgePanelTabFindings();
+  },
+  get directions() {
+    return m.knowledgePanelTabDirections();
+  },
 };
 
 /** A read held while its arguments stay the same: a new key lets the last value go. */
@@ -280,9 +289,11 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
     if (selection.kind !== "connection") return title(selection.id) ?? null;
     const line = graphRead?.connections.find((connection) => connection.id === selection.id);
     if (!line) return null;
-    const from = title(line.from) ?? "a concept";
-    const to = title(line.to) ?? "a concept";
-    return line.kind === "claim" ? `${from} ${line.predicate} ${to}` : `${from} read with ${to}`;
+    const from = title(line.from) ?? m.knowledgePanelSomeConcept();
+    const to = title(line.to) ?? m.knowledgePanelSomeConcept();
+    return line.kind === "claim"
+      ? `${from} ${line.predicate} ${to}`
+      : m.knowledgePanelReadWith({ from, to });
   };
   nameOfRef.current = nameOf;
   const pick = useCallback(
@@ -300,7 +311,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
             : "overview",
       }));
       const name = nameOfRef.current(selection)?.replace(/[.\s]+$/, "");
-      say(`${name ? `${name} selected` : "Selected"}. Browsing changes no record.`);
+      say(name ? m.knowledgePanelSaidNameSelected({ name }) : m.knowledgePanelSaidSelected());
       if (open) openInspector(byKey);
     },
     [openInspector, say],
@@ -375,8 +386,11 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
         section: "overview",
         detail: narrow,
       }));
-      const said = opened.revision ? `Revision ${opened.revision} opened` : "Opened";
-      say(`${said} in the inspector. Browsing changes no record.`);
+      say(
+        opened.revision
+          ? m.knowledgePanelSaidRevisionOpened({ revision: String(opened.revision) })
+          : m.knowledgePanelSaidOpened(),
+      );
     }
     keepPlace.current();
     setAsked(ask.focus);
@@ -455,7 +469,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
     void point
       .draft(words)
       .then((started) => {
-        if (started) say("A question about this is ready in the message field. Nothing was sent.");
+        if (started) say(m.knowledgePanelSaidAskReady());
       })
       .catch(() => {});
   };
@@ -510,7 +524,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
   const showPane = !narrow || !place.detail;
 
   const pane = () => {
-    if (!collections) return <p className="fm-kb-quiet">Reading…</p>;
+    if (!collections) return <p className="fm-kb-quiet">{m.knowledgePanelReading()}</p>;
     if (collections.state === "unavailable") {
       return (
         <p className="fm-kb-quiet" data-knowledge-unavailable="">
@@ -519,7 +533,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
       );
     }
     if (place.tab === "directions") {
-      if (!directions) return <p className="fm-kb-quiet">Reading…</p>;
+      if (!directions) return <p className="fm-kb-quiet">{m.knowledgePanelReading()}</p>;
       if (directions.state === "unavailable")
         return <p className="fm-kb-quiet">{directions.reason}</p>;
       return (
@@ -534,15 +548,12 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
     if (empty && !query) {
       return (
         <div className="fm-kb-empty" data-knowledge-empty="">
-          <p>
-            Nothing is recorded yet. Tell your first mate about yourself or share an article you
-            want to keep.
-          </p>
+          <p>{m.knowledgePanelBrowserEmpty()}</p>
         </div>
       );
     }
     if (place.tab === "graph") {
-      if (!graph) return <p className="fm-kb-quiet">Reading…</p>;
+      if (!graph) return <p className="fm-kb-quiet">{m.knowledgePanelReading()}</p>;
       if (graph.state === "unavailable") return <p className="fm-kb-quiet">{graph.reason}</p>;
       const nodeConnections =
         nodeRead?.state === "ready" && nodeRead.entry.kind === "concept"
@@ -561,11 +572,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
           hops={place.hops}
           onNearby={(nearby) => {
             patch({ nearby });
-            say(
-              nearby
-                ? "Showing the selected concept and its neighborhood."
-                : "Showing the collection.",
-            );
+            say(nearby ? m.knowledgePanelSaidNearby() : m.knowledgePanelSaidCollection());
           }}
           onHops={(hops) => patch({ hops })}
           narrowed={query.length > 0}
@@ -575,7 +582,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
       );
     }
     if (place.tab === "concepts") {
-      if (!concepts) return <p className="fm-kb-quiet">Reading…</p>;
+      if (!concepts) return <p className="fm-kb-quiet">{m.knowledgePanelReading()}</p>;
       if (concepts.state === "unavailable") return <p className="fm-kb-quiet">{concepts.reason}</p>;
       return (
         <ConceptList
@@ -587,7 +594,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
         />
       );
     }
-    if (!findings) return <p className="fm-kb-quiet">Reading…</p>;
+    if (!findings) return <p className="fm-kb-quiet">{m.knowledgePanelReading()}</p>;
     if (findings.state === "unavailable") return <p className="fm-kb-quiet">{findings.reason}</p>;
     return (
       <FindingList
@@ -615,12 +622,16 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
       <style>{styles}</style>
       <div className="fm-kb-chrome">
         <label className="fm-kb-field fm-kb-find">
-          <span>Find</span>
+          <span>{m.knowledgePanelFind()}</span>
           <input
             ref={findRef}
             type="search"
             className="fm-kb-input"
-            placeholder={place.tab === "directions" ? "Direction" : "Concept, alias or finding"}
+            placeholder={
+              place.tab === "directions"
+                ? m.knowledgePanelFindDirection()
+                : m.knowledgePanelFindEntry()
+            }
             data-knowledge-find=""
             value={place.query}
             onChange={(event) =>
@@ -632,7 +643,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
           />
         </label>
       </div>
-      <div className="fm-kb-tabs" role="tablist" aria-label="Knowledge views">
+      <div className="fm-kb-tabs" role="tablist" aria-label={m.knowledgePanelViews()}>
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -650,7 +661,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
         <span className="fm-kb-spacer" />
         {place.tab === "directions" ? (
           <label className="fm-kb-field">
-            <span>Project</span>
+            <span>{m.knowledgePanelProject()}</span>
             <select
               className="fm-kb-select"
               data-knowledge-scope-select=""
@@ -663,13 +674,13 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
                   detail: false,
                   pages: { ...place.pages, directions: 0 },
                 });
-                say("Showing directions for this project.");
+                say(m.knowledgePanelSaidProject());
               }}
             >
-              <option value="all">All projects</option>
+              <option value="all">{m.knowledgePanelAllProjects()}</option>
               {listed.map((option) => (
                 <option key={option.scope} value={option.scope}>
-                  {option.private ? DIRECTIONS_EVERYWHERE : option.name}
+                  {option.private ? directionsEverywhere() : option.name}
                 </option>
               ))}
             </select>
@@ -688,7 +699,11 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
           </section>
         ) : null}
         {showInspector ? (
-          <aside className="fm-kb-inspector" aria-label="Inspector" data-knowledge-aside="">
+          <aside
+            className="fm-kb-inspector"
+            aria-label={m.knowledgePanelInspector()}
+            data-knowledge-aside=""
+          >
             <InspectorTaskKeysContext.Provider value={taskKeys}>
               {place.selection?.kind === "direction" ? (
                 <DirectionInspector
@@ -717,7 +732,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
                       query: "",
                     });
                     setSearched("");
-                    say("Shown on the graph with its neighborhood.");
+                    say(m.knowledgePanelSaidShownOnGraph());
                     requestAnimationFrame(() => {
                       const land = (frames: number) => {
                         const drawing = drawingRef.current;

@@ -44,6 +44,9 @@ export function fixedLocaleProblems(files: Record<string, string>): string[] {
   for (const [path, text] of Object.entries(files)) {
     if (!/^src\/.*\.(ts|tsx|js|mjs)$/.test(path) || /\.(test|spec)\.[jt]sx?$/.test(path)) continue;
     if (path.startsWith("src/shared/i18n/")) continue;
+    // An app panel's compiled messages: the format module's own rules, copied
+    // into a module the panel can reach (scripts/generate-messages.ts).
+    if (/^src\/panels\/[^/]+\/messages\.generated\.ts$/.test(path)) continue;
     const kind = path.endsWith("x") ? ts.ScriptKind.TSX : path.endsWith("ts") ? ts.ScriptKind.TS : ts.ScriptKind.JS;
     const tree = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind);
     const found: string[] = [];

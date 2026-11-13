@@ -94,3 +94,15 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | press (a button) / press (a key) | 点击 / 按 | |
 | Not now | 暂不 | |
 | Done / Got it | 完成 / 知道了 | |
+| Knowledge (the panel) | 知识 | The panel's name. |
+| concept | 概念 | A Knowledge entry, as on cards. |
+| finding | 发现 | Measure word 条, as on cards. |
+| direction (a standing direction) | 指引 | Kept apart from 指示, which is the Instruction kind. |
+| check (of a finding) | 核实 | Kept apart from 检查, which is a pull request's checks. |
+| evidence / source | 证据 / 来源 | A finding's support and what it cites. |
+| revision (of a record) | 修订 | 修订 {revision}. |
+| connection (between concepts) | 关联 | A graph link. |
+| inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |
+| pin (a task) | 固定 | As for a pinned model. |
+| hold (on a task) | 暂缓 | 暂缓结束 for a hold ending. |
+| task board | 任务看板 | 看板 alone for the Board view. |

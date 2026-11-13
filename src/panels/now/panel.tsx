@@ -26,6 +26,7 @@ import {
   useRef,
   useState,
 } from "react";
+import * as m from "./messages.generated";
 import { groupNavKey, nowNavItems, nowNavMove, rovingKey, rowNavKey } from "./nav";
 import styles from "./panel.css";
 import { reconcileBoard, reconcileRows } from "./reconcile";
@@ -329,7 +330,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   useEffect(() => {
     if (!board || !rail) return;
     if (onRail(board)) rail.show(true);
-    else rail.show(false, "There are no tasks yet");
+    else rail.show(false, m.nowPanelNoTasks());
     rail.summarize(summaryOf(board, view.focusedProjectId));
   }, [board, rail, view.focusedProjectId]);
 
@@ -709,8 +710,8 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
               ref={queryRef}
               type="search"
               data-now-query=""
-              placeholder="key or title"
-              aria-label="Filter tasks"
+              placeholder={m.nowPanelFilterPlaceholder()}
+              aria-label={m.nowPanelFilterLabel()}
               autoComplete="off"
               value={query}
               onChange={(event) => setQuery(event.currentTarget.value)}
@@ -724,7 +725,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
               }}
             />
             <IconButton
-              label="Close search"
+              label={m.nowPanelCloseSearch()}
               keys="Esc"
               aria-keyshortcuts="Escape"
               size={24}
@@ -1128,7 +1129,10 @@ const Row = memo(function Row({
   const word = wordOf(task);
   const trailing = rowTrailing(task, singleProject ? "" : projectName);
   const place = task.place ? ` · ${task.place.where}` : "";
-  const waiting = task.blockedBy.length > 0 ? ` · Blocked by ${task.blockedBy.join(", ")}` : "";
+  const waiting =
+    task.blockedBy.length > 0
+      ? ` · ${m.nowPanelRowBlockedBy({ keys: task.blockedBy.join(", ") })}`
+      : "";
   const [closedParts = "", allParts = ""] = parts?.split("/") ?? [];
   const partsWords = parts ? ` · ${partsCountWords(Number(closedParts), Number(allParts))}` : "";
   const shutWords = shut ? ` · ${ROW_COLLAPSED_WORDS}` : "";

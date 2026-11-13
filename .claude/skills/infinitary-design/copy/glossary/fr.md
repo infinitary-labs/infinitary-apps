@@ -101,3 +101,11 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | session, transcript (never said) | conversation | |
 | error (never said) | what happened | "Fusion impossible", "n’a pas pu", never "erreur". |
 | plugin, extension (never said) | panneau | |
+| Knowledge (the panel) | Connaissances | The panel's name: "Ouvrir Connaissances". |
+| concept / finding | concept / constat | "constat" keeps the card's "Constat {id}". |
+| direction (a standing instruction in Knowledge) | consigne | Feminine; a standing instruction, never "direction". |
+| claim (a recorded relationship) | affirmation | "Affirmation enregistrée". |
+| revision (of a knowledge record) | révision | Kept apart from "revue", which is review. |
+| evidence | éléments | "Éléments divergents", "Ouvrez ses éléments"; plain and countable. |
+| hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
+| task board / its lanes | tableau des tâches / En attente de vous, Réserve, En attente, En cours, Terminées · 7 j | |

@@ -106,3 +106,15 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | session, transcript (never said) | 對話 | Never 工作階段 or 逐字稿. |
 | SHA, hash (never said) | 版本 | Never 雜湊. |
 | escalation (never said) | 更強的模型 | Never 升級處理. |
+| Knowledge (the panel) | 知識 | The panel's name. |
+| concept | 概念 | A Knowledge entry, as on cards. |
+| finding | 發現 | Counter 項, as on cards. |
+| direction (a standing direction) | 指引 | Kept apart from 指示, which is the Instruction kind. |
+| check (of a finding) | 查證 | Kept apart from 檢查, which is a pull request's checks. |
+| evidence / source | 證據 / 來源 | A finding's support and what it cites. |
+| revision (of a record) | 修訂 | 修訂 {revision}. |
+| connection (between concepts) | 關聯 | A graph link, counter 條. |
+| inspector | 檢閱器 | The Knowledge pane that reads one entry, as Apple's Taiwan apps say. |
+| pin (a task) | 釘選 | Taiwan's word, as for a pinned model. |
+| hold (on a task) | 暫緩 | 暫緩結束 for a hold ending. |
+| task board | 任務看板 | 看板 alone for the Board view. |

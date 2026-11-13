@@ -6,6 +6,7 @@ import type {
   PanelKnowledgeSource,
   PanelKnowledgeStanding,
 } from "@infinitary/contracts";
+import * as m from "./messages.generated";
 
 /**
  * What the Knowledge panel and its browser say (the design skill's
@@ -15,9 +16,21 @@ import type {
  * terminal; numbers stay numbers.
  */
 
+/**
+ * What a message is handed in place of a part the panel draws itself, such
+ * as a task key it links: `aroundSlot` splits the worded sentence there.
+ */
+export const SLOT = "\u0000";
+
+/** A worded sentence's words before and after its one `SLOT`. */
+export function aroundSlot(worded: string): [string, string] {
+  const at = worded.indexOf(SLOT);
+  return at < 0 ? [worded, ""] : [worded.slice(0, at), worded.slice(at + SLOT.length)];
+}
+
 /** A collection's name: the project's, or Private for the captain's own. */
 export function collectionName(collection: Pick<PanelKnowledgeCollection, "name" | "private">) {
-  return collection.private ? "Private" : collection.name;
+  return collection.private ? m.knowledgePanelPrivateCollection() : collection.name;
 }
 
 /**
@@ -25,12 +38,19 @@ export function collectionName(collection: Pick<PanelKnowledgeCollection, "name"
  * every project, and only the first mate reads it, never a crewmate. The
  * first mate's own list names it the same (`CAPTAIN_SCOPE_NAME`).
  */
-export const DIRECTIONS_EVERYWHERE = "Everywhere, first mate only";
+export function directionsEverywhere(): string {
+  return m.knowledgePanelDirectionsEverywhere();
+}
 
-/** What the collapsed panel says while the collection cannot be read. */
-export const UNREADABLE_SUMMARY = "cannot be read";
+/**
+ * What the collapsed panel says while the collection cannot be read. Worded
+ * once, when the module loads: the panel's frame is born in the app's
+ * language and a language change mounts it anew, and a journey reads it in
+ * Node, in English, as a plain value.
+ */
+export const UNREADABLE_SUMMARY = m.knowledgePanelUnreadableSummary();
 
-/** "1 concept", "4 findings". */
+/** "1 concept", "4 findings": a journey's own count, in English. The panel words its counts with their own messages. */
 export function counted(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
@@ -41,11 +61,16 @@ export function countsOf(counts: {
   findings: number;
   directions?: number;
 }): string {
-  return [
-    counted(counts.concepts, "concept", "concepts"),
-    counted(counts.findings, "finding", "findings"),
-    ...(counts.directions ? [counted(counts.directions, "direction", "directions")] : []),
-  ].join(" · ");
+  return counts.directions
+    ? m.knowledgePanelCountsWithDirections({
+        concepts: m.knowledgePanelConceptCount({ count: counts.concepts }),
+        findings: m.knowledgePanelFindingCount({ count: counts.findings }),
+        directions: m.knowledgePanelDirectionCount({ count: counts.directions }),
+      })
+    : m.knowledgePanelCounts({
+        concepts: m.knowledgePanelConceptCount({ count: counts.concepts }),
+        findings: m.knowledgePanelFindingCount({ count: counts.findings }),
+      });
 }
 
 export function collectionSize(counts: {
@@ -57,20 +82,32 @@ export function collectionSize(counts: {
 }
 
 export function directionOrigin(origin: string): string {
-  if (origin === "captain-turn") return "Your words";
+  if (origin === "captain-turn") return m.knowledgePanelOriginYourWords();
   if (origin.startsWith("crewmate-report:"))
-    return `Crewmate report · ${origin.slice("crewmate-report:".length)}`;
-  return "Agent";
+    return m.knowledgePanelOriginCrewmateReport({ key: origin.slice("crewmate-report:".length) });
+  return m.knowledgePanelOriginAgent();
 }
 
 /** A finding's standing as its chip says it. */
-export const STANDING_WORDS: Record<PanelKnowledgeStanding, string> = {
-  checked: "Checked",
-  unchecked: "Not yet checked",
-  recheck: "Needs rechecking",
-  differing: "Differing evidence",
-  superseded: "Superseded",
-  retired: "Retired",
+export const STANDING_WORDS: Readonly<Record<PanelKnowledgeStanding, string>> = {
+  get checked() {
+    return m.knowledgePanelStandingChecked();
+  },
+  get unchecked() {
+    return m.knowledgePanelStandingUnchecked();
+  },
+  get recheck() {
+    return m.knowledgePanelStandingRecheck();
+  },
+  get differing() {
+    return m.knowledgePanelStandingDiffering();
+  },
+  get superseded() {
+    return m.knowledgePanelStandingSuperseded();
+  },
+  get retired() {
+    return m.knowledgePanelStandingRetired();
+  },
 };
 
 /** A standing that asks the captain to look again: drawn in the warn color. */
@@ -83,8 +120,10 @@ export function connectionKindLine(
   connection: Pick<PanelKnowledgeConnection, "kind"> & { standing?: PanelKnowledgeStanding },
 ): string {
   return connection.kind === "claim"
-    ? `Recorded claim · ${STANDING_WORDS[connection.standing ?? "unchecked"]}`
-    : "Read together · not a claim";
+    ? m.knowledgePanelClaimKindLine({
+        standing: STANDING_WORDS[connection.standing ?? "unchecked"],
+      })
+    : m.knowledgePanelContextKindLine();
 }
 
 /**
@@ -100,7 +139,7 @@ export function connectionSentence(
   if (connection.kind === "claim") {
     return `${connection.from.title} ${connection.predicate} ${connection.to.title}`;
   }
-  return `${connection.from.title} read with ${connection.to.title}`;
+  return m.knowledgePanelReadWith({ from: connection.from.title, to: connection.to.title });
 }
 
 /** Where a kept source came from, in words. */
@@ -108,45 +147,79 @@ export function originLine(origin: PanelKnowledgeOrigin): string {
   if (origin.kind === "file") {
     const lines =
       origin.startLine === origin.endLine
-        ? `line ${origin.startLine}`
-        : `lines ${origin.startLine}–${origin.endLine}`;
-    const commit = origin.commit
-      ? ` · kept at commit ${origin.commit.slice(0, 10)}${origin.dirty ? " with uncommitted changes" : ""}`
-      : "";
-    return `${origin.path}, ${lines}${commit}`;
+        ? m.knowledgePanelOriginLine({ line: String(origin.startLine) })
+        : m.knowledgePanelOriginLines({
+            first: String(origin.startLine),
+            last: String(origin.endLine),
+          });
+    const path = origin.path;
+    if (!origin.commit) return m.knowledgePanelOriginFile({ path, lines });
+    const commit = origin.commit.slice(0, 10);
+    return origin.dirty
+      ? m.knowledgePanelOriginFileKeptDirty({ path, lines, commit })
+      : m.knowledgePanelOriginFileKept({ path, lines, commit });
   }
-  if (origin.kind === "report") return `${origin.key}'s report`;
+  if (origin.kind === "report") return m.knowledgePanelOriginReport({ key: origin.key });
   if (origin.kind === "article") {
-    const who = origin.author ? `, ${origin.author}` : "";
-    const when = origin.published ? `, published ${origin.published}` : "";
-    return `Saved article: ${origin.title} (${origin.url})${who}${when}`;
+    const { title, url, author, published } = origin;
+    if (author && published)
+      return m.knowledgePanelOriginArticleByOn({ title, url, author, published });
+    if (author) return m.knowledgePanelOriginArticleBy({ title, url, author });
+    if (published) return m.knowledgePanelOriginArticleOn({ title, url, published });
+    return m.knowledgePanelOriginArticle({ title, url });
   }
-  return `Quoted from ${origin.citation}`;
+  return m.knowledgePanelOriginQuote({ citation: origin.citation });
 }
 
 /** What a kept source reads like now, in words. */
-export const CHECK_WORDS: Record<PanelKnowledgeSource["check"]["state"], string> = {
-  unchanged: "Unchanged since it was kept",
-  changed: "Changed since it was kept",
-  missing: "Gone since it was kept",
-  unknown: "Could not be compared",
-  kept: "Kept as quoted; the app does not check it",
+export const CHECK_WORDS: Readonly<Record<PanelKnowledgeSource["check"]["state"], string>> = {
+  get unchanged() {
+    return m.knowledgePanelSourceUnchanged();
+  },
+  get changed() {
+    return m.knowledgePanelSourceChanged();
+  },
+  get missing() {
+    return m.knowledgePanelSourceMissing();
+  },
+  get unknown() {
+    return m.knowledgePanelSourceUnknown();
+  },
+  get kept() {
+    return m.knowledgePanelSourceKept();
+  },
 };
 
 /** A verdict as a check says it. */
 export const VERDICT_WORDS = {
-  supports: "Supports it",
-  contradicts: "Contradicts it",
-  inconclusive: "Inconclusive",
+  get supports() {
+    return m.knowledgePanelVerdictSupports();
+  },
+  get contradicts() {
+    return m.knowledgePanelVerdictContradicts();
+  },
+  get inconclusive() {
+    return m.knowledgePanelVerdictInconclusive();
+  },
 } as const;
 
 /** What a revision did. */
 export const OP_WORDS = {
-  publish: "Recorded",
-  revise: "Revised",
-  link: "Linked",
-  retire: "Retired",
-  restore: "Restored",
+  get publish() {
+    return m.knowledgePanelOpPublish();
+  },
+  get revise() {
+    return m.knowledgePanelOpRevise();
+  },
+  get link() {
+    return m.knowledgePanelOpLink();
+  },
+  get retire() {
+    return m.knowledgePanelOpRetire();
+  },
+  get restore() {
+    return m.knowledgePanelOpRestore();
+  },
 } as const;
 
 /** A disagreement or replacement, read from this entry's side. */
@@ -154,9 +227,14 @@ export function relationLine(relation: {
   type: "contradicts" | "supersedes" | "duplicates";
   outgoing: boolean;
 }): string {
-  if (relation.type === "contradicts") return "Contradicts";
-  if (relation.type === "supersedes") return relation.outgoing ? "Replaces" : "Replaced by";
-  return relation.outgoing ? "Duplicates" : "Duplicated by";
+  if (relation.type === "contradicts") return m.knowledgePanelRelationContradicts();
+  if (relation.type === "supersedes")
+    return relation.outgoing
+      ? m.knowledgePanelRelationReplaces()
+      : m.knowledgePanelRelationReplacedBy();
+  return relation.outgoing
+    ? m.knowledgePanelRelationDuplicates()
+    : m.knowledgePanelRelationDuplicatedBy();
 }
 
 /** A date and time in the captain's own words and time zone, in the locale the frame's document names. */
@@ -173,7 +251,11 @@ export function whenOf(at: number): string {
 export function rangeOf(page: number, size: number, shown: number, total: number): string {
   if (total === 0) return "0";
   const first = page * size + 1;
-  return `${first}–${first + shown - 1} of ${total}`;
+  return m.knowledgePanelRange({
+    first: String(first),
+    last: String(first + shown - 1),
+    total: String(total),
+  });
 }
 
 /** The most of an entry's own words an Ask about this question quotes. */
@@ -202,14 +284,32 @@ export function askWords(
 ): string {
   switch (about.kind) {
     case "concept":
+      return m.knowledgePanelAskConcept({
+        title: quoted(about.title),
+        id: about.id,
+        revision: String(about.revision),
+      });
     case "finding":
-      return `What should I know about the ${about.kind} “${quoted(about.title)}” (${about.id}, revision ${about.revision})? `;
+      return m.knowledgePanelAskFinding({
+        title: quoted(about.title),
+        id: about.id,
+        revision: String(about.revision),
+      });
     case "claim":
-      return `What should I know about the claim “${quoted(about.sentence)}” (${about.finding}, revision ${about.revision})? `;
+      return m.knowledgePanelAskClaim({
+        sentence: quoted(about.sentence),
+        finding: about.finding,
+        revision: String(about.revision),
+      });
     case "context":
-      return `What should I know about reading “${quoted(about.from.title)}” with “${quoted(about.to.title)}” (${about.from.id}, ${about.to.id})? `;
+      return m.knowledgePanelAskContext({
+        from: quoted(about.from.title),
+        to: quoted(about.to.title),
+        fromId: about.from.id,
+        toId: about.to.id,
+      });
     case "direction":
-      return `What should I know about the direction “${quoted(about.text)}” (d:${about.id})? `;
+      return m.knowledgePanelAskDirection({ text: quoted(about.text), id: about.id });
   }
 }
 

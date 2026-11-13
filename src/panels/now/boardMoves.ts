@@ -16,6 +16,7 @@ import {
   UNPIN_LABEL,
 } from "@infinitary/ui";
 import type { BoardColumn, BoardLane } from "./boardTiles";
+import * as m from "./messages.generated";
 import { isCardOnly } from "./rows";
 
 /** What Drop task would affect, as `tasks.detail` lists it. */
@@ -99,23 +100,36 @@ export type BoardMove =
   /** Brings the task's completion card forward; it writes nothing. */
   | { kind: "card"; cardId: string; text: string };
 
-export const QUEUE_LABEL = "Queue it";
-export const UNQUEUE_LABEL = "Back to backlog";
-export const START_LABEL = "Start";
-export const START_NOW_LABEL = "Start now";
+/*
+ * The menu's labels and sub-lines below are worded once, when the module
+ * loads: the panel's frame is born in the app's language and a language
+ * change mounts it anew, and the phone's contract generator reads them in
+ * Node, in English, as plain values (scripts/generate-phone-contract.ts).
+ */
+export const QUEUE_LABEL = m.nowPanelBoardQueueLabel();
+export const UNQUEUE_LABEL = m.nowPanelBoardUnqueueLabel();
+export const START_LABEL = m.nowPanelBoardStartLabel();
+export const START_NOW_LABEL = m.nowPanelBoardStartNowLabel();
 /** The board menu's Pin and Unpin sub-lines (INF-3127), which the phone's long press says too. */
-export const PIN_DETAIL = "Keeps it at the top of Tasks · at once";
-export const UNPIN_DETAIL = "Lists it under its state in Tasks again · at once";
+export const PIN_DETAIL = m.nowPanelBoardPinDetail();
+export const UNPIN_DETAIL = m.nowPanelBoardUnpinDetail();
 
-/** The live line as a drag begins. */
-export const DRAG_STARTED = "Drag to a column. Each one says what the drop would do.";
-/** A move the captain cancelled, or a drag he let go of with Esc. */
-export const MOVE_CANCELLED = "Cancelled. Nothing was written.";
+/** What the board's live line says as a move goes. */
+export const BOARD_SAID = {
+  /** The live line as a drag begins. */
+  get dragStarted() {
+    return m.nowPanelBoardDragStarted();
+  },
+  /** A move the captain cancelled, or a drag he let go of with Esc. */
+  get moveCancelled() {
+    return m.nowPanelBoardMoveCancelled();
+  },
+} as const;
 
 /** "FM3K-3", "FM3K-3 and FM3K-4", "FM3K-3, FM3K-4 and FM3K-5". */
 function keyList(keys: readonly string[]): string {
-  if (keys.length <= 1) return keys[0] ?? "another task";
-  return `${keys.slice(0, -1).join(", ")} and ${keys.at(-1)}`;
+  if (keys.length <= 1) return keys[0] ?? m.nowPanelBoardAnotherTask();
+  return m.nowPanelBoardKeyList({ keys: keys.slice(0, -1).join(", "), last: keys.at(-1) ?? "" });
 }
 
 const blockedOf = (task: PanelTaskRow) => task.flags.blocked || task.blockedBy.length > 0;
@@ -135,18 +149,18 @@ export function boardMoveOf(
 ): BoardMove {
   const key = task.key;
   if (!boardMovable(from)) {
-    return { kind: "refused", text: "Closed work stays where it is. Open its record instead." };
+    return { kind: "refused", text: m.nowPanelBoardMoveClosed() };
   }
   if (target === from) {
     return {
       kind: "none",
-      text: "Already here. The order follows priority and age, so this drop changes nothing.",
+      text: m.nowPanelBoardMoveAlreadyHere(),
     };
   }
   if (target === "waiting") {
     return {
       kind: "refused",
-      text: "Only a ready decision puts a task in Waiting on you.",
+      text: m.nowPanelBoardMoveNotWaiting(),
     };
   }
   if (target === "drop") return dropMoveOf(task);
@@ -155,64 +169,64 @@ export function boardMoveOf(
       ? {
           kind: "card",
           cardId: context.completionCardId,
-          text: "Brings its merge card forward. The card merges; the drop never does.",
+          text: m.nowPanelBoardMoveShowsMergeCard(),
         }
       : {
           kind: "refused",
-          text: "No merge card is up for it, so nothing can finish it from here.",
+          text: m.nowPanelBoardMoveNoMergeCard(),
         };
   }
   if (from === "waiting") {
     return {
       kind: "refused",
       text: task.waitingCardId
-        ? "Answer its card first. Moving it cannot dismiss that decision."
-        : "It waits for you. Open its record; moving it cannot answer that wait.",
+        ? m.nowPanelBoardMoveAnswerCardFirst()
+        : m.nowPanelBoardMoveWaitsForYou(),
     };
   }
   if (from === "queued" && taskStatusOf(task).mark === "starting") {
-    return { kind: "refused", text: "It is starting." };
+    return { kind: "refused", text: m.nowPanelBoardMoveStarting() };
   }
   if (task.status === "active") return startedMoveOf(task, from, target);
   if (from === "working" || !isUnstartedWork(task)) {
-    return { kind: "refused", text: "It has already started." };
+    return { kind: "refused", text: m.nowPanelBoardMoveAlreadyStarted() };
   }
   const blocked = blockedOf(task);
   const waitsOn = keyList(task.blockedBy);
   if (target === "backlog") {
     return hasParts(task)
-      ? { kind: "refused", text: "Its parts are the work. Move a part, not the container." }
+      ? { kind: "refused", text: m.nowPanelBoardMoveParentToBacklog() }
       : {
           kind: "now",
           op: "unqueue-task",
-          text: "It now waits for your word. Its blockers and holds stay.",
-          done: `${key} moved to Backlog. It waits for your word; its blockers and holds stay.`,
+          text: m.nowPanelBoardMoveToBacklog(),
+          done: m.nowPanelBoardMovedToBacklog({ key }),
         };
   }
   if (target === "queued") {
     if (hasParts(task)) {
-      return { kind: "refused", text: "Its parts are the work. Queue a part, not the container." };
+      return { kind: "refused", text: m.nowPanelBoardMoveParentToQueue() };
     }
     if (blocked) {
       return {
         kind: "now",
         op: "queue-task",
-        text: `Queued at once. It starts on its own once ${waitsOn} is done.`,
-        done: `${key} moved to Queued. It starts on its own once ${waitsOn} is done.`,
+        text: m.nowPanelBoardMoveQueuedBlocked({ waitsOn }),
+        done: m.nowPanelBoardMovedQueuedBlocked({ key, waitsOn }),
       };
     }
     if (task.flags.held) {
       return {
         kind: "now",
         op: "queue-task",
-        text: "Queued at once. It starts on its own once its hold ends.",
-        done: `${key} moved to Queued. It starts on its own once its hold ends.`,
+        text: m.nowPanelBoardMoveQueuedHeld(),
+        done: m.nowPanelBoardMovedQueuedHeld({ key }),
       };
     }
     return {
       kind: "ask",
       op: "queue-task",
-      sentence: `Start automatically? ${key} can begin at once and spends your plan's allowance.`,
+      sentence: m.nowPanelBoardAskQueue({ key }),
       confirm: QUEUE_LABEL,
     };
   }
@@ -220,31 +234,34 @@ export function boardMoveOf(
   if (blocked) {
     return {
       kind: "refused",
-      text: `${waitsOn} must finish first. ${task.blockedBy.length > 1 ? "The dependencies stay." : "The dependency stays."}`,
+      text:
+        task.blockedBy.length > 1
+          ? m.nowPanelBoardMoveBlockedMany({ waitsOn })
+          : m.nowPanelBoardMoveBlockedOne({ waitsOn }),
     };
   }
   if (task.flags.held) {
     return {
       kind: "refused",
-      text: "It is held, so a drag cannot start it. Its record's Start can.",
+      text: m.nowPanelBoardMoveHeld(),
     };
   }
   if (hasParts(task)) {
     return {
       kind: "refused",
-      text: "Its parts are already planned. Start a part, not the container.",
+      text: m.nowPanelBoardMoveParentStart(),
     };
   }
   if (task.startPolicy === "when-ready") {
     return {
       kind: "refused",
-      text: "It is already queued to start by itself. A drag cannot force a start.",
+      text: m.nowPanelBoardMoveAlreadyQueued(),
     };
   }
   return {
     kind: "ask",
     op: "start-task",
-    sentence: `Start ${key} now? It spends your plan's allowance; what it waits on is checked again first.`,
+    sentence: m.nowPanelBoardAskStart({ key }),
     confirm: START_LABEL,
   };
 }
@@ -263,14 +280,14 @@ function startedMoveOf(task: PanelTaskRow, from: BoardLane, target: BoardColumn)
           kind: "now",
           op: "unqueue-task",
           text: STARTED_BACKLOG_TEXT,
-          done: `${key} moved to Backlog. Its work is kept; Start picks it up.`,
+          done: m.nowPanelBoardMovedStartedToBacklog({ key }),
         };
   }
   if (target === "working" && from === "backlog") {
     return {
       kind: "ask",
       op: "start-task",
-      sentence: `Start ${key} again? Its crewmate carries on in the same conversation and spends your plan's allowance.`,
+      sentence: m.nowPanelBoardAskStartAgain({ key }),
       confirm: START_LABEL,
     };
   }
@@ -278,13 +295,13 @@ function startedMoveOf(task: PanelTaskRow, from: BoardLane, target: BoardColumn)
     kind: "refused",
     text:
       from === "backlog"
-        ? "It has already started. Start picks it up from the backlog."
-        : "It has already started.",
+        ? m.nowPanelBoardMoveStartedInBacklog()
+        : m.nowPanelBoardMoveAlreadyStarted(),
   };
 }
 
 /** What Back to backlog does to started work, before and as it moves. */
-export const STARTED_BACKLOG_TEXT = "Its turn stops and its work stays. It waits for your Start.";
+export const STARTED_BACKLOG_TEXT = m.nowPanelBoardStartedBacklogText();
 
 /** The Drop task tray: the record's own Drop task, which asks once. */
 function dropMoveOf(task: PanelTaskRow): BoardMove {
@@ -306,7 +323,7 @@ function dropMoveOf(task: PanelTaskRow): BoardMove {
       confirm: DROP_TASK_LABEL,
     };
   }
-  return { kind: "refused", text: "This task cannot be dropped here. Open its record instead." };
+  return { kind: "refused", text: m.nowPanelBoardMoveCannotDrop() };
 }
 
 /**
@@ -319,8 +336,7 @@ export function dropAskOf(
   key: string,
   effects: DropEffects | null | undefined,
 ): { kind: "ask"; sentence: string; review: PanelDropReview } | { kind: "refused"; text: string } {
-  if (!effects)
-    return { kind: "refused", text: `${key} changed. Look at it again before dropping it.` };
+  if (!effects) return { kind: "refused", text: m.nowPanelBoardDropChanged({ key }) };
   return {
     kind: "ask",
     sentence: [
@@ -337,28 +353,28 @@ export function dropAskOf(
 
 /** What Pin or Unpin did, for the live line. */
 export function boardPinText(key: string, pinned: boolean): string {
-  return pinned ? `${key} is pinned to the top of Tasks.` : `${key} is unpinned.`;
+  return pinned ? m.nowPanelBoardDonePinned({ key }) : m.nowPanelBoardDoneUnpinned({ key });
 }
 
 /** What a confirmed move or a menu entry the host accepted did, for the live line. */
 export function boardDoneText(key: string, op: PanelTaskMove): string {
   switch (op) {
     case "show-card":
-      return `${key}'s card is shown.`;
+      return m.nowPanelBoardDoneCardShown({ key });
     case "queue-task":
-      return `${key} is queued. It may start at once.`;
+      return m.nowPanelBoardDoneQueued({ key });
     case "unqueue-task":
-      return `${key} moved to Backlog. It waits for your word; its work, blockers and holds stay.`;
+      return m.nowPanelBoardDoneUnqueued({ key });
     case "start-again":
-      return `${key} started again as a new task.`;
+      return m.nowPanelBoardDoneStartedAgain({ key });
     case "start-task":
-      return `${key} is starting.`;
+      return m.nowPanelBoardDoneStarting({ key });
     case "continue-task":
-      return `${key}'s crewmate was told to carry on.`;
+      return m.nowPanelBoardDoneContinued({ key });
     case "drop-task":
-      return `${key} dropped. Its record stays.`;
+      return m.nowPanelBoardDoneDropped({ key });
     case "stop-task":
-      return `${key} dropped. A copy of its unfinished work is kept.`;
+      return m.nowPanelBoardDoneStopped({ key });
   }
 }
 
@@ -390,16 +406,16 @@ export function boardMenuOf(
   lane: BoardLane,
   context: BoardMoveContext,
 ): BoardMenuEntry[] {
-  if (isCardOnly(task)) return [{ id: "card", label: "Show the card" }];
+  if (isCardOnly(task)) return [{ id: "card", label: m.nowPanelBoardMenuShowCard() }];
   if (!boardMovable(lane)) return [];
-  const entries: BoardMenuEntry[] = [{ id: "open", label: "Open record" }];
+  const entries: BoardMenuEntry[] = [{ id: "open", label: m.nowPanelBoardMenuOpenRecord() }];
   if (lane === "waiting" && (task.waitingCardId || task.minimizedCardId))
-    entries.push({ id: "card", label: "Show the card" });
+    entries.push({ id: "card", label: m.nowPanelBoardMenuShowCard() });
   if (lane === "working" && taskStatusOf(task).mark === "interrupted") {
     entries.push({
       id: "continue",
-      label: "Continue",
-      detail: "Picks the work up where it stopped",
+      label: m.nowPanelBoardMenuContinue(),
+      detail: m.nowPanelBoardMenuContinueDetail(),
     });
   }
   if (lane === "working" && task.status === "active") {
@@ -407,7 +423,7 @@ export function boardMenuOf(
     entries.push({
       id: "unqueue",
       label: UNQUEUE_LABEL,
-      detail: move.kind === "refused" ? move.text : "Stops its turn, keeps its work · at once",
+      detail: move.kind === "refused" ? move.text : m.nowPanelBoardMenuStopDetail(),
       disabled: move.kind === "refused",
       target: "backlog",
     });
@@ -422,12 +438,12 @@ export function boardMenuOf(
         move.kind === "refused"
           ? move.text
           : lane === "queued"
-            ? "Waits for your word again · at once"
+            ? m.nowPanelBoardMenuUnqueueDetail()
             : move.kind === "ask"
-              ? "May start at once · asks once"
+              ? m.nowPanelBoardMenuQueueAskDetail()
               : blockedOf(task)
-                ? `Starts by itself once ${keyList(task.blockedBy)} is done · at once`
-                : "Starts by itself once its hold ends · at once",
+                ? m.nowPanelBoardMenuQueueBlockedDetail({ waitsOn: keyList(task.blockedBy) })
+                : m.nowPanelBoardMenuQueueHeldDetail(),
       disabled: move.kind === "refused",
       target,
     });
@@ -435,7 +451,7 @@ export function boardMenuOf(
     entries.push({
       id: "start",
       label: START_NOW_LABEL,
-      detail: start.kind === "refused" ? start.text : "Asks once · the record's Start",
+      detail: start.kind === "refused" ? start.text : m.nowPanelBoardMenuStartDetail(),
       disabled: start.kind === "refused",
       target: "working",
     });
@@ -452,7 +468,7 @@ export function boardMenuOf(
     {
       id: "drop",
       label: DROP_TASK_LABEL,
-      detail: drop.kind === "refused" ? drop.text : "Asks once",
+      detail: drop.kind === "refused" ? drop.text : m.nowPanelBoardMenuDropDetail(),
       disabled: drop.kind === "refused",
       danger: true,
       target: "drop",

@@ -9,10 +9,8 @@ import {
   Row,
 } from "@infinitary/ui";
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
+import * as m from "./messages.generated";
 import styles from "./panel.css";
-
-/** What the collapsed panel adds while the rules cannot be read. */
-const UNREADABLE_SUMMARY = "cannot be read";
 
 /**
  * The Automation panel (docs/automation.md, "The Automation panel"): an
@@ -51,7 +49,7 @@ export default function AutomationPanel({ reads, rail, asks, point }: PanelProps
   useEffect(() => {
     if (!rail || rules === null) return;
     if (rules.length === 0) {
-      rail.show(false, "No automations yet");
+      rail.show(false, m.automationPanelEmpty());
       rail.summarize(null);
       return;
     }
@@ -59,9 +57,9 @@ export default function AutomationPanel({ reads, rail, asks, point }: PanelProps
     const active = rules.filter((rule) => rule.state === "enabled").length;
     const paused = rules.filter((rule) => rule.state === "paused").length;
     rail.summarize([
-      { text: `${active} active` },
-      ...(paused > 0 ? [{ text: `${paused} paused` }] : []),
-      ...(unreadable ? [{ text: UNREADABLE_SUMMARY }] : []),
+      { text: m.automationPanelActiveCount({ count: active }) },
+      ...(paused > 0 ? [{ text: m.automationPanelPausedCount({ count: paused }) }] : []),
+      ...(unreadable ? [{ text: m.automationPanelUnreadableSummary() }] : []),
     ]);
   }, [rail, rules, unreadable]);
 
@@ -118,7 +116,11 @@ export default function AutomationPanel({ reads, rail, asks, point }: PanelProps
           {unreadable}
         </p>
       )}
-      <ul ref={listRef} className="fm-automation-panel-list" aria-label="Automations">
+      <ul
+        ref={listRef}
+        className="fm-automation-panel-list"
+        aria-label={m.automationPanelListLabel()}
+      >
         {shown.map((rule) => (
           <li key={rule.id} data-automation-rule={rule.id}>
             <Row

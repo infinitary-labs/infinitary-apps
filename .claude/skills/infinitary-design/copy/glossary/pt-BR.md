@@ -98,3 +98,10 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | remote, origin (avoided) | onde o projeto fica | |
 | machine (avoided) | computador | Also in the voice consent line, where the English says "this machine". |
 | session (avoided in sentences) | conversa | "sessão" survives only as the crewmate's log name and a search word. |
+| Knowledge (the panel) | Conhecimento | The panel's name: "Abrir Conhecimento", "o Conhecimento". |
+| concept / finding | conceito / constatação | "constatação" keeps the card's "Constatação {id}". |
+| direction (a standing instruction in Knowledge) | diretriz | Feminine; "diretrizes" in the plural. |
+| claim (a recorded relationship) | afirmação | "Afirmação registrada". |
+| revision (of a knowledge record) | versão | Kept apart from "revisão", which is review. |
+| hold (on a task) | retenção | "está retida", "quando a retenção acabar"; as in "a retém" for a merge. |
+| task board / its lanes | quadro de tarefas / Aguardando você, Backlog, Na fila, Trabalhando, Concluídas · 7 d | |

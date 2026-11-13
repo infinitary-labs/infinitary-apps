@@ -5,8 +5,9 @@ import type {
 } from "@infinitary/contracts";
 import { Button, focusWithRing } from "@infinitary/ui";
 import { type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useRef } from "react";
+import * as m from "./messages.generated";
 import type { Filter, Selection } from "./place";
-import { counted, directionOrigin, rangeOf, STANDING_WORDS, standingWarns, whenOf } from "./words";
+import { directionOrigin, rangeOf, STANDING_WORDS, standingWarns, whenOf } from "./words";
 
 /**
  * The knowledge browser's two lists (the design skill's
@@ -81,7 +82,7 @@ export function Pager({
     <div className="fm-kb-pager" data-knowledge-pager={where}>
       <span className="fm-kb-count">{rangeOf(page, PAGE, shown, total)}</span>
       <Button variant="secondary" size="sm" disabled={page <= 0} onClick={() => onPage(page - 1)}>
-        Previous
+        {m.knowledgePanelPrevious()}
       </Button>
       <Button
         variant="secondary"
@@ -89,7 +90,7 @@ export function Pager({
         disabled={page >= last}
         onClick={() => onPage(page + 1)}
       >
-        Next
+        {m.knowledgePanelNext()}
       </Button>
     </div>
   );
@@ -110,8 +111,8 @@ export function ConceptList({ read, query, selection, onPick, onPage }: ConceptL
     onPick({ kind: "concept", id }, id, open, byKey),
   );
   const head = query.trim()
-    ? `${counted(read.total, "concept matches", "concepts match")}`
-    : counted(read.total, "concept", "concepts");
+    ? m.knowledgePanelConceptMatches({ count: read.total })
+    : m.knowledgePanelConceptCount({ count: read.total });
   return (
     <div className="fm-kb-list" data-knowledge-list="concepts">
       <div className="fm-kb-pane-head">
@@ -130,14 +131,19 @@ export function ConceptList({ read, query, selection, onPick, onPage }: ConceptL
       {read.rows.length === 0 ? (
         <p className="fm-kb-quiet">
           {query.trim()
-            ? `Nothing here matches "${query.trim()}".`
-            : "No concept is recorded here yet."}
+            ? m.knowledgePanelNoMatch({ query: query.trim() })
+            : m.knowledgePanelNoConcepts()}
         </p>
       ) : (
-        <div ref={listRef} className="fm-kb-rows" role="listbox" aria-label="Concepts">
+        <div
+          ref={listRef}
+          className="fm-kb-rows"
+          role="listbox"
+          aria-label={m.knowledgePanelConceptsLabel()}
+        >
           <div className="fm-kb-columns" aria-hidden="true">
-            <span>Concept</span>
-            <span>Findings</span>
+            <span>{m.knowledgePanelConceptColumn()}</span>
+            <span>{m.knowledgePanelFindingsColumn()}</span>
           </div>
           {read.rows.map((row, index) => (
             <div
@@ -154,7 +160,9 @@ export function ConceptList({ read, query, selection, onPick, onPage }: ConceptL
                 <span className="fm-kb-row-name">{row.title}</span>
                 <span className="fm-kb-row-detail">{row.explanation}</span>
               </span>
-              <span className="fm-kb-count">{counted(row.findings, "finding", "findings")}</span>
+              <span className="fm-kb-count">
+                {m.knowledgePanelFindingCount({ count: row.findings })}
+              </span>
             </div>
           ))}
         </div>
@@ -170,10 +178,16 @@ export function ConceptList({ read, query, selection, onPick, onPage }: ConceptL
   );
 }
 
-const FILTER_WORDS: Record<Filter, string> = {
-  all: "All findings",
-  recheck: "Needs rechecking",
-  differing: "Differing evidence",
+const FILTER_WORDS: Readonly<Record<Filter, string>> = {
+  get all() {
+    return m.knowledgePanelFilterAll();
+  },
+  get recheck() {
+    return m.knowledgePanelStandingRecheck();
+  },
+  get differing() {
+    return m.knowledgePanelStandingDiffering();
+  },
 };
 
 export type FindingListProps = {
@@ -202,21 +216,21 @@ export function FindingList({
     onPick({ kind: "finding", id }, nodeOf(id), open, byKey),
   );
   const empty: ReactNode = query.trim()
-    ? `Nothing here matches "${query.trim()}".`
+    ? m.knowledgePanelNoMatch({ query: query.trim() })
     : filter === "recheck"
-      ? "No finding here cites a source that changed since it was kept."
+      ? m.knowledgePanelNoRecheckFindings()
       : filter === "differing"
-        ? "No finding here has differing evidence."
-        : "No finding is recorded here yet.";
+        ? m.knowledgePanelNoDifferingFindings()
+        : m.knowledgePanelNoFindingsRecorded();
   return (
     <div className="fm-kb-list" data-knowledge-list="findings">
       <div className="fm-kb-pane-head">
         <span className="fm-kb-count" data-knowledge-count="">
-          {counted(read.total, "finding", "findings")}
+          {m.knowledgePanelFindingCount({ count: read.total })}
         </span>
         <span className="fm-kb-spacer" />
         <label className="fm-kb-field">
-          <span>Show</span>
+          <span>{m.knowledgePanelFilterShow()}</span>
           <select
             className="fm-kb-select"
             value={filter}
@@ -241,10 +255,15 @@ export function FindingList({
       {read.rows.length === 0 ? (
         <p className="fm-kb-quiet">{empty}</p>
       ) : (
-        <div ref={listRef} className="fm-kb-rows" role="listbox" aria-label="Findings">
+        <div
+          ref={listRef}
+          className="fm-kb-rows"
+          role="listbox"
+          aria-label={m.knowledgePanelFindingsLabel()}
+        >
           <div className="fm-kb-columns" aria-hidden="true">
-            <span>Finding and context</span>
-            <span>Evidence and attention</span>
+            <span>{m.knowledgePanelFindingColumn()}</span>
+            <span>{m.knowledgePanelEvidenceColumn()}</span>
           </div>
           {read.rows.map((row, index) => (
             <div
@@ -273,8 +292,8 @@ export function FindingList({
                   {STANDING_WORDS[row.standing]}
                 </span>
                 <span className="fm-kb-row-detail">
-                  {counted(row.sources, "source", "sources")}
-                  {row.checks > 0 ? ` · ${counted(row.checks, "check", "checks")}` : ""}
+                  {m.knowledgePanelSourceCount({ count: row.sources })}
+                  {row.checks > 0 ? ` · ${m.knowledgePanelCheckCount({ count: row.checks })}` : ""}
                 </span>
               </span>
             </div>
@@ -312,12 +331,9 @@ export function DirectionList({
   return (
     <div className="fm-kb-list" data-knowledge-list="directions">
       <div className="fm-kb-pane-head">
-        <span className="fm-kb-count">{counted(read.total, "direction", "directions")}</span>
+        <span className="fm-kb-count">{m.knowledgePanelDirectionCount({ count: read.total })}</span>
       </div>
-      <p className="fm-kb-quiet">
-        Knowledge supplies these directions on every turn. Reading them changes nothing and grants
-        no permission.
-      </p>
+      <p className="fm-kb-quiet">{m.knowledgePanelDirectionsNote()}</p>
       <Pager
         page={read.page}
         shown={read.rows.length}
@@ -326,9 +342,14 @@ export function DirectionList({
         where="head"
       />
       {read.rows.length === 0 ? (
-        <p className="fm-kb-quiet">No direction matches this view.</p>
+        <p className="fm-kb-quiet">{m.knowledgePanelNoDirections()}</p>
       ) : (
-        <div ref={listRef} className="fm-kb-rows" role="listbox" aria-label="Directions">
+        <div
+          ref={listRef}
+          className="fm-kb-rows"
+          role="listbox"
+          aria-label={m.knowledgePanelDirectionsLabel()}
+        >
           {read.rows.map((row, index) => (
             <div
               key={row.id}
@@ -344,7 +365,9 @@ export function DirectionList({
                 <span className="fm-kb-row-name">{row.text}</span>
                 <span className="fm-kb-row-detail">
                   {row.scopeName} · {directionOrigin(row.origin)} ·{" "}
-                  {row.authority === "instruction" ? "Instruction" : "Advice"}
+                  {row.authority === "instruction"
+                    ? m.knowledgePanelInstruction()
+                    : m.knowledgePanelAdvice()}
                 </span>
               </span>
             </div>

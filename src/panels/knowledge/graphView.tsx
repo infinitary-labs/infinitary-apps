@@ -33,8 +33,9 @@ import {
   tiltStep,
   zoomStep,
 } from "./graph";
+import * as m from "./messages.generated";
 import type { Selection } from "./place";
-import { connectionKindLine, counted } from "./words";
+import { connectionKindLine } from "./words";
 
 /**
  * The knowledge browser's Graph tab (the design skill's
@@ -88,12 +89,18 @@ function walkOrder(graph: ReadyGraph): string[] {
 function countLine(graph: ReadyGraph): string {
   const concepts =
     graph.total.concepts > graph.shown.concepts
-      ? `${graph.shown.concepts} of ${graph.total.concepts} concepts`
-      : counted(graph.shown.concepts, "concept", "concepts");
+      ? m.knowledgePanelGraphConceptsOf({
+          shown: String(graph.shown.concepts),
+          count: graph.total.concepts,
+        })
+      : m.knowledgePanelConceptCount({ count: graph.shown.concepts });
   const connections =
     graph.total.connections > graph.shown.connections
-      ? `${graph.shown.connections} of ${graph.total.connections} connections`
-      : counted(graph.shown.connections, "connection", "connections");
+      ? m.knowledgePanelGraphConnectionsOf({
+          shown: String(graph.shown.connections),
+          count: graph.total.connections,
+        })
+      : m.knowledgePanelConnectionCount({ count: graph.shown.connections });
   return `${concepts} · ${connections} · 3D`;
 }
 
@@ -210,7 +217,7 @@ export function GraphView({
     drag.current = null;
     if (held.moved) {
       onCamera(orbitByDrag(held.from, event.clientX - held.x, event.clientY - held.y), true);
-      say("Camera orbited. The selection is unchanged.");
+      say(m.knowledgePanelCameraOrbited());
       return;
     }
     // A press that never moved is a click: the left button selects what it was on.
@@ -245,7 +252,7 @@ export function GraphView({
       const next = zoomStep(cameraRef.current, event.deltaY < 0 ? "in" : "out");
       cameraRef.current = next;
       onCamera(next, true);
-      say(`Zoom ${Math.round(next.zoom * 100)}%.`);
+      say(m.knowledgePanelZoomSaid({ percent: String(Math.round(next.zoom * 100)) }));
     };
     drawing.addEventListener("wheel", onWheel, { passive: false });
     return () => drawing.removeEventListener("wheel", onWheel);
@@ -261,36 +268,39 @@ export function GraphView({
     onCamera(next, true);
     say(words(next));
   };
-  const zoomWords = (next: Camera) => `Zoom ${Math.round(next.zoom * 100)}%.`;
+  const zoomWords = (next: Camera) =>
+    m.knowledgePanelZoomSaid({ percent: String(Math.round(next.zoom * 100)) });
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     const key = event.key;
+    // i18n-exempt: not shown (the arrow keys' names)
     if (event.shiftKey && key.startsWith("Arrow")) {
       event.preventDefault();
       if (key === "ArrowLeft") {
         step(
           (from) => orbitStep(from, "left", ORBIT_KEY_STEP),
-          () => "Camera orbited left.",
+          () => m.knowledgePanelCameraOrbitedLeft(),
         );
       }
       if (key === "ArrowRight") {
         step(
           (from) => orbitStep(from, "right", ORBIT_KEY_STEP),
-          () => "Camera orbited right.",
+          () => m.knowledgePanelCameraOrbitedRight(),
         );
       }
       if (key === "ArrowUp")
         step(
           (from) => tiltStep(from, "up"),
-          () => "Camera tilted up.",
+          () => m.knowledgePanelCameraTiltedUp(),
         );
       if (key === "ArrowDown")
         step(
           (from) => tiltStep(from, "down"),
-          () => "Camera tilted down.",
+          () => m.knowledgePanelCameraTiltedDown(),
         );
       return;
     }
+    // i18n-exempt: not shown (the arrow keys' names)
     if (key.startsWith("Arrow")) {
       event.preventDefault();
       if (walk.length === 0) return;
@@ -316,7 +326,7 @@ export function GraphView({
       event.preventDefault();
       step(
         () => HOME_CAMERA,
-        () => "Camera reset.",
+        () => m.knowledgePanelCameraReset(),
       );
       return;
     }
@@ -392,7 +402,8 @@ export function GraphView({
     const a = projected.get(connection.from);
     const b = projected.get(connection.to);
     if (!a || !b) return [];
-    const text = connection.kind === "claim" ? connection.predicate : "read with";
+    const text =
+      connection.kind === "claim" ? connection.predicate : m.knowledgePanelReadWithLabel();
     const box = placeEdgeLabel(a, b, text, taken, width, GRAPH_HEIGHT);
     if (!box) return [];
     taken.push(box);
@@ -410,7 +421,7 @@ export function GraphView({
     line,
   }));
   const endName = (end: string | { title: string }) =>
-    typeof end === "string" ? (titles.get(end) ?? "a concept not drawn") : end.title;
+    typeof end === "string" ? (titles.get(end) ?? m.knowledgePanelConceptNotDrawn()) : end.title;
 
   // The connections list is one stop: ↑ ↓ move along it, Enter opens.
   const listRef = useRef<HTMLDivElement>(null);
@@ -461,28 +472,27 @@ export function GraphView({
           disabled={!node && !nearby}
           onClick={() => onNearby(!nearby)}
         >
-          Focus nearby
+          {m.knowledgePanelFocusNearby()}
         </Button>
         <select
           className="fm-kb-select"
-          aria-label="How far nearby reaches"
+          aria-label={m.knowledgePanelNearbyReach()}
           value={hops}
           onChange={(event) => onHops(event.target.value === "2" ? 2 : 1)}
         >
-          <option value="1">1 hop</option>
-          <option value="2">2 hops</option>
+          <option value="1">{m.knowledgePanelHops({ count: 1 })}</option>
+          <option value="2">{m.knowledgePanelHops({ count: 2 })}</option>
         </select>
       </div>
       {graph.total.concepts > graph.shown.concepts ? (
         <p className="fm-kb-note" data-knowledge-omitted="">
-          {graph.total.concepts - graph.shown.concepts} more concepts are not drawn. Focus nearby or
-          Find narrows the graph to what you need.
+          {m.knowledgePanelConceptsNotDrawn({ count: graph.total.concepts - graph.shown.concepts })}
         </p>
       ) : null}
       <div ref={holderRef} className="fm-kg-holder">
         {graph.concepts.length === 0 ? (
           <p className="fm-kb-quiet fm-kg-empty">
-            {narrowed ? "No concept here matches." : "This collection has no concept yet."}
+            {narrowed ? m.knowledgePanelNoConceptMatches() : m.knowledgePanelNoConceptYet()}
           </p>
         ) : null}
         <div
@@ -491,7 +501,7 @@ export function GraphView({
           data-knowledge-drawing=""
           role="listbox"
           tabIndex={0}
-          aria-label="Concepts in three dimensions"
+          aria-label={m.knowledgePanelGraphLabel()}
           aria-describedby="fm-kg-keys"
           aria-activedescendant={node && projected.has(node) ? `fm-kg-node-${node}` : undefined}
           data-knowledge-camera={`${camera.yaw.toFixed(4)},${camera.pitch.toFixed(4)},${camera.zoom.toFixed(2)}`}
@@ -631,9 +641,7 @@ export function GraphView({
           </svg>
         </div>
       </div>
-      <p className="fm-kb-legend">
-        Solid arrow: recorded claim · Dashed line: read together · Depth is layout only
-      </p>
+      <p className="fm-kb-legend">{m.knowledgePanelGraphLegend()}</p>
       <div className="fm-kb-controls">
         <Button
           variant="secondary"
@@ -641,11 +649,11 @@ export function GraphView({
           onClick={() =>
             step(
               (from) => orbitStep(from, "left"),
-              () => "Camera orbited left.",
+              () => m.knowledgePanelCameraOrbitedLeft(),
             )
           }
         >
-          Orbit left
+          {m.knowledgePanelOrbitLeft()}
         </Button>
         <Button
           variant="secondary"
@@ -653,25 +661,25 @@ export function GraphView({
           onClick={() =>
             step(
               (from) => orbitStep(from, "right"),
-              () => "Camera orbited right.",
+              () => m.knowledgePanelCameraOrbitedRight(),
             )
           }
         >
-          Orbit right
+          {m.knowledgePanelOrbitRight()}
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => step((from) => zoomStep(from, "in"), zoomWords)}
         >
-          Zoom in
+          {m.knowledgePanelZoomIn()}
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => step((from) => zoomStep(from, "out"), zoomWords)}
         >
-          Zoom out
+          {m.knowledgePanelZoomOut()}
         </Button>
         <span className="fm-kb-count" data-knowledge-zoom="">
           {Math.round(camera.zoom * 100)}%
@@ -683,26 +691,35 @@ export function GraphView({
           onClick={() =>
             step(
               () => HOME_CAMERA,
-              () => "Camera reset.",
+              () => m.knowledgePanelCameraReset(),
             )
           }
         >
-          Reset view
+          {m.knowledgePanelResetView()}
         </Button>
       </div>
       <p id="fm-kg-keys" className="fm-kb-hint">
-        Left or right drag: orbit · Scroll while focused: zoom
+        {m.knowledgePanelPointerHint()}
         <br />
-        Arrows: select · Shift + arrows: orbit · Enter: inspect · Home: reset
+        {m.knowledgePanelKeyHint()}
       </p>
       <section className="fm-kb-connections" data-knowledge-connections={node ?? ""}>
-        <h4>{nodeTitle ? `Connections for ${nodeTitle}` : "Connections"}</h4>
+        <h4>
+          {nodeTitle
+            ? m.knowledgePanelConnectionsFor({ title: nodeTitle })
+            : m.knowledgePanelConnections()}
+        </h4>
         {!nodeTitle ? (
-          <p className="fm-kb-quiet">Select a concept to list its connections.</p>
+          <p className="fm-kb-quiet">{m.knowledgePanelSelectConceptPrompt()}</p>
         ) : listed.length === 0 ? (
-          <p className="fm-kb-quiet">No connection is recorded for it yet.</p>
+          <p className="fm-kb-quiet">{m.knowledgePanelNoConnection()}</p>
         ) : (
-          <div ref={listRef} className="fm-kb-rows" role="listbox" aria-label="Connections">
+          <div
+            ref={listRef}
+            className="fm-kb-rows"
+            role="listbox"
+            aria-label={m.knowledgePanelConnections()}
+          >
             {listed.map((row, index) => {
               const line = row.line;
               const from = endName(line.from);
@@ -726,7 +743,7 @@ export function GraphView({
                       </>
                     ) : (
                       <>
-                        {from} <strong>read with</strong> {to}
+                        {from} <strong>{m.knowledgePanelReadWithLabel()}</strong> {to}
                       </>
                     )}
                   </span>

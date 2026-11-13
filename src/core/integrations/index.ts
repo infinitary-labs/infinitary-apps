@@ -13,7 +13,6 @@ export type {
   IntegrationEventItem,
   IntegrationEventSpec,
   IntegrationLook,
-  IntegrationSecretSlot,
   PanelCaller,
 } from "./binding";
 export { IntegrationOutcomeUnknown } from "./binding";
@@ -70,13 +69,7 @@ export {
   SavedOutsideData,
   type SavedOutsideDataOptions,
 } from "./savedOutsideData";
-export {
-  FileIntegrationSecrets,
-  type IntegrationSecrets,
-  MissingSecret,
-  REDACTED,
-  type SecretRequestInit,
-} from "./secrets";
+export { type IntegrationKeys, REDACTED } from "./secrets";
 export {
   type IntegrationAskSent,
   type IntegrationAskStore,

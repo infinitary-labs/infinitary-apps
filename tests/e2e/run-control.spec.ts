@@ -39,6 +39,7 @@ import { writeMockClaudeClient } from "./mockClaudeClient";
 import { mockModelsJson } from "./mockModels";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { readSavedData } from "./savedData";
+import { launchSecrets, secretsEntry } from "./secretsHarness";
 import { settingRow, settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";
 import { pressKey, runFromSearch } from "./windowKeys";
@@ -107,17 +108,22 @@ test.afterEach(async () => {
   google = undefined;
 });
 
-function command(env: Record<string, string>, args: string[]) {
-  const child = spawn(electronPath as unknown as string, [builtAppDir(), ...args], {
+/** The app's own command, or `entry` in place of the built app (`secretsEntry`). */
+function command(env: Record<string, string>, args: string[], entry = builtAppDir()) {
+  const child = spawn(electronPath as unknown as string, [entry, ...args], {
     env,
     cwd: scratchDir("run-control-cwd-"),
   });
   let out = "";
   let error = "";
   let ready: () => void = () => {};
-  const started = new Promise<void>((resolve) => {
+  let ended: (reason: Error) => void = () => {};
+  // Settled by the start line, or by the command ending before it, with what it said.
+  const started = new Promise<void>((resolve, reject) => {
     ready = resolve;
+    ended = reject;
   });
+  started.catch(() => {});
   child.stdout.on("data", (chunk) => {
     out += String(chunk);
     if (out.split("\n").includes(RUN_WORDS.started)) ready();
@@ -126,6 +132,9 @@ function command(env: Record<string, string>, args: string[]) {
     error += String(chunk);
   });
   const exited = new Promise<number | null>((resolve) => child.once("close", resolve));
+  void exited.then((code) =>
+    ended(new Error(`The command ended (${code}) before it started:\n${out}\n${error}`)),
+  );
   children.push({ child, exited });
   return { child, exited, started, out: () => out, error: () => error };
 }
@@ -290,7 +299,9 @@ test("another computer controls a first mate started by a command: its Settings,
     INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
     INFINITARY_GOOGLE_URL: google.base,
   };
-  const run = command(env, ["run"]);
+  // The Google sign-in keeps its key in Secrets (docs/integrations.md, "Keys"):
+  // the run carries disposable Secrets, as `launchSecrets` gives a window.
+  const run = command(env, ["run"], await secretsEntry({ run: true }));
   await run.started;
   const asked = command(env, ["link", "--json"]);
   expect(await asked.exited, asked.error()).toBe(0);
@@ -376,8 +387,10 @@ test("another computer controls a first mate with its window: a card's Settings 
   await seedKnowledge(data);
   google = await startGoogleStandIn();
   const runs: HelperRun[] = [];
-  const home = await launchApp({
+  // Its Google sign-in keeps its key in Secrets, here on disposable custody.
+  const home = await launchSecrets({
     userDataDir: data,
+    withMockProvider: false,
     env: {
       INFINITARY_DEVICE_NAME: RUN_NAME,
       INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,

@@ -58,7 +58,25 @@ export async function launchSecrets({
 }: Omit<LaunchOptions, "entry" | "packaged"> & {
   leftCustody?: ReadonlyMap<CustodySlot, Buffer>;
 } = {}) {
-  const left = [...(leftCustody ?? [])].map(([slot, bytes]) => [slot, bytes.toString("base64")]);
+  const entry = await secretsEntry({ leftCustody });
+  return launchApp({ ...options, entry, withMockProvider: options.withMockProvider ?? true });
+}
+
+/**
+ * The main entry `launchSecrets` starts, built once per call. With `run`, it
+ * starts the app the way `<app> run` does, with no window (docs/run.md), so a
+ * spec that spawns a run as a command gives it the same disposable Secrets.
+ * The start is awaited at the top level, as `src/main/index.ts` awaits it:
+ * Electron is ready once the entry module finishes, and a Linux run starts
+ * its own display before that.
+ */
+export async function secretsEntry(
+  options: { run?: boolean; leftCustody?: ReadonlyMap<CustodySlot, Buffer> } = {},
+): Promise<string> {
+  const left = [...(options.leftCustody ?? [])].map(([slot, bytes]) => [
+    slot,
+    bytes.toString("base64"),
+  ]);
   const dir = scratchDir("infinitary-secrets-entry-");
   const root = process.cwd();
   const require = createRequire(import.meta.url);
@@ -83,7 +101,7 @@ export async function launchSecrets({
         };
         for (const [slot, bytes] of ${JSON.stringify(left)}) fixture.custody.slots.set(slot, Buffer.from(bytes, 'base64'));
         globalThis.secretsJourney = fixture;
-        startApp(${JSON.stringify(resolve(root, "out/main"))}, null, {
+        await startApp(${JSON.stringify(resolve(root, "out/main"))}, ${options.run ? "{ args: [] }" : "null"}, {
           secrets: {
             custody: fixture.custody,
             recovery: {
@@ -112,5 +130,5 @@ export async function launchSecrets({
     // modules and assets come unchanged from electron.vite.config.ts's build.
     external: [appEntry],
   });
-  return launchApp({ ...options, entry, withMockProvider: options.withMockProvider ?? true });
+  return entry;
 }

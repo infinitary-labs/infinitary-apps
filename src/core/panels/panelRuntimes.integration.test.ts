@@ -4,12 +4,7 @@ import { fileURLToPath } from "node:url";
 import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import {
-  FileIntegrationSecrets,
-  githubIntegration,
-  IntegrationSettingsStore,
-  IntegrationsService,
-} from "../integrations";
+import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from "../integrations";
 import { PersonalStore } from "../personal/personalStore";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { openInMemoryDatabase } from "../storage/db";
@@ -282,7 +277,6 @@ describe("a panel's background work reaches its integrations", () => {
         }),
       ],
       store: new IntegrationSettingsStore(join(scratchDir("panel-integrations-"), "integrations")),
-      secrets: new FileIntegrationSecrets(join(scratchDir("panel-integration-keys-"), "secrets")),
     });
     // The captain's rule in Settings: GitHub's read is always allowed.
     integrations.setRule("github", "read", true);

@@ -3,12 +3,7 @@ import { join } from "node:path";
 import type { FmEvent } from "@shared/events";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import {
-  FileIntegrationSecrets,
-  IntegrationSettingsStore,
-  IntegrationsService,
-  standInIntegration,
-} from "../integrations";
+import { IntegrationSettingsStore, IntegrationsService, standInIntegration } from "../integrations";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { ScheduleStore } from "../storage/scheduleStore";
@@ -30,7 +25,6 @@ function setup() {
   const integrations = new IntegrationsService({
     bindings: [standInIntegration({ dir: root })],
     store: new IntegrationSettingsStore(join(root, "integrations")),
-    secrets: new FileIntegrationSecrets(join(root, "secrets")),
   });
   const db = openInMemoryDatabase();
   const store = new ScheduleStore(db);

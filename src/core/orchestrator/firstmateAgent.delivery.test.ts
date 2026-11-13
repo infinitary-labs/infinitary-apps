@@ -18,11 +18,7 @@ import { jpegImage, pngImage } from "../../../tests/helpers/images";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { pageTaskField, readPagedTaskQuery } from "../../../tests/helpers/taskQueryText";
 import { attachmentPath } from "../attachments";
-import {
-  FileIntegrationSecrets,
-  IntegrationSettingsStore,
-  IntegrationsService,
-} from "../integrations";
+import { IntegrationSettingsStore, IntegrationsService } from "../integrations";
 import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
 import { parseTasksQueryText } from "../pi/taskTools";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
@@ -83,7 +79,6 @@ describe("FirstmateAgent answer delivery", () => {
         new IntegrationsService({
           bindings: [notesBinding()],
           store: new IntegrationSettingsStore(scratchDir("infinitary-agent-integrations-")),
-          secrets: new FileIntegrationSecrets(scratchDir("infinitary-agent-integration-keys-")),
           asks: {
             keep: (taskId, ask) => f.tasks.delivery.keepWriteAsk(taskId, ask),
             keepForFirstmate: (ask) => supervisor.integrationAsks.askIntegrationForFirstmate(ask),

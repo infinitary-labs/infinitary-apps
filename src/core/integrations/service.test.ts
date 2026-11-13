@@ -7,13 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { integrationNameSchema } from "../../shared/integrations";
-import {
-  FileIntegrationSecrets,
-  githubIntegration,
-  IntegrationSettingsStore,
-  IntegrationsService,
-  PanelAsks,
-} from ".";
+import { githubIntegration, IntegrationSettingsStore, IntegrationsService, PanelAsks } from ".";
 import { APP_EVENTS, TASK_CLOSED_EVENT, TASK_EVENTS_ID } from "./appEvents";
 import type { IntegrationActionSpec, IntegrationBinding } from "./binding";
 import { IntegrationOutcomeUnknown } from "./binding";
@@ -73,7 +67,6 @@ describe("GitHub names stay with the GitHub connection (INF-882)", () => {
       new IntegrationsService({
         bindings: [github(signIns), mcp],
         store,
-        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       });
     return { signIns, store, mcp, open };
   }
@@ -220,7 +213,6 @@ describe("IntegrationsService", () => {
       new IntegrationsService({
         bindings: [github(signIns)],
         store: new IntegrationSettingsStore(dir),
-        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       });
 
     const first = open();
@@ -292,7 +284,6 @@ describe("IntegrationsService", () => {
     const service = new IntegrationsService({
       bindings: [mcpNames([{ id: "mcp-notes", name: "Notes" }])],
       store: new IntegrationSettingsStore(dir),
-      secrets: new FileIntegrationSecrets(join(dir, "secrets")),
     });
     expect(service.view().appEvents).toEqual([
       {
@@ -400,7 +391,6 @@ describe("One owner for integration names (INF-946)", () => {
       new IntegrationsService({
         bindings,
         store,
-        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       });
     return { store, service };
   }
@@ -482,7 +472,6 @@ describe("One owner for integration names (INF-946)", () => {
       new IntegrationsService({
         bindings,
         store: new IntegrationSettingsStore(join(scratchDir("fm-integration-order-"), "i")),
-        secrets: new FileIntegrationSecrets(join(scratchDir("fm-integration-order-"), "s")),
       })
         .view()
         .integrations.map((row) => [row.id, row.name])
@@ -569,7 +558,6 @@ describe("per-action approval (INF-950)", () => {
       new IntegrationsService({
         bindings: [binding],
         store,
-        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
         asks: {
           keep: (_taskId, ask) => {
             kept.set(ask.id, ask);
@@ -593,7 +581,6 @@ describe("per-action approval (INF-950)", () => {
       options: {
         bindings: [binding],
         store,
-        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       },
       asks: {
         keep: (_taskId: string, ask: IntegrationAsk) => {
@@ -834,7 +821,6 @@ describe("Allow for the rest of this task (INF-2993)", () => {
     const service = new IntegrationsService({
       bindings: [binding],
       store,
-      secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       asks: {
         keep: (_taskId, ask) => {
           kept.set(ask.id, ask);
@@ -1083,7 +1069,6 @@ describe("off actions past an older build's count (INF-1407)", () => {
       new IntegrationsService({
         bindings: [binding],
         store,
-        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       });
     const offIn = (service: IntegrationsService) => {
       const row = service.roster().find((entry) => entry.id === "mcp-github");
@@ -1208,7 +1193,6 @@ describe("a panel is one more caller (INF-2334 piece 1)", () => {
     const service = new IntegrationsService({
       bindings: [binding],
       store,
-      secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       asks: {
         keep: () => {
           throw new Error("a panel's ask is never a task's");

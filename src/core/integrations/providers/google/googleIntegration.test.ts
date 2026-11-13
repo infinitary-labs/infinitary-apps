@@ -8,6 +8,7 @@ import {
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
 import { fencedListReminder, fencedSpans, fenceReminder } from "@shared/outsideData";
+import { SECRET_APPROVAL_CARD_WORDS, SECRETS_WORDS, secretsNamed } from "@shared/secrets";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
 import {
@@ -18,6 +19,7 @@ import {
   startGoogleStandIn,
 } from "../../../../../tests/helpers/googleStandIn";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
+import { integrationKeys } from "../../../../../tests/helpers/integrationKeys";
 import { serveNotesHttp } from "../../../../../tests/helpers/mcpStandIn";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { hostEnv } from "../../../hostEnv";
@@ -32,7 +34,6 @@ import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
 import {
-  FileIntegrationSecrets,
   GOOGLE_DATA_FENCE,
   GOOGLE_OAUTH_CLIENT,
   GOOGLE_SCOPES,
@@ -91,12 +92,13 @@ async function fixture(
   withMcp = false,
   /** What an older version saved in the integrations folder before this one opens it. */
   older?: (dir: string, google: GoogleStandIn) => Promise<void>,
+  keyOptions?: Parameters<typeof integrationKeys>[0],
 ) {
   const google: GoogleStandIn = await startGoogleStandIn();
   cleanup.push(() => google.close());
   const dir = join(scratchDir("fm-google-"), "integrations");
   await older?.(dir, google);
-  const secrets = new FileIntegrationSecrets(join(dir, "secrets"));
+  const keys = integrationKeys(keyOptions);
   const db = openInMemoryDatabase();
   cleanup.push(() => {
     db.close();
@@ -125,7 +127,7 @@ async function fixture(
     bindings: [
       googleIntegration({
         root: dir,
-        secrets,
+        keys: keys.keys,
         ...setup,
         // The person's browser: it opens the page and follows Google back to the app.
         open:
@@ -151,7 +153,6 @@ async function fixture(
         : []),
     ],
     store: new IntegrationSettingsStore(dir),
-    secrets,
     asks: {
       keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
       take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
@@ -173,10 +174,34 @@ async function fixture(
     push: (view) => pushed.push(JSON.stringify(view)),
   });
   cleanup.push(() => integrations?.dispose());
-  return { google, dir, tasks, clock, opened, pages, pushed, integrations, db, reads, refusals };
+  return {
+    google,
+    dir,
+    tasks,
+    clock,
+    opened,
+    pages,
+    pushed,
+    integrations,
+    db,
+    reads,
+    refusals,
+    keys,
+  };
 }
 
 type Fixture = Awaited<ReturnType<typeof fixture>>;
+
+/** The file an earlier version kept a sign-in's keys in: 0600 in a 0700 folder. */
+function earlierKeys(dir: string, keys: { access: string; refresh: string }) {
+  const folder = join(dir, "secrets", "google");
+  mkdirSync(folder, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(folder, "secrets.json"),
+    JSON.stringify({ access_token: keys.access, refresh_token: keys.refresh }),
+    { mode: 0o600 },
+  );
+}
 
 async function signedIn(): Promise<Fixture> {
   const world = await fixture();
@@ -199,7 +224,7 @@ function parsed(text: string) {
 
 describe("Google as an integration", () => {
   it("signs in once on a loopback address with PKCE, asking every Gmail and Calendar permission, and shows one row", async () => {
-    const { google, dir, opened, pages, pushed, integrations } = await fixture();
+    const { google, dir, opened, pages, pushed, integrations, keys } = await fixture();
     expect(integrations.view()).toMatchObject({
       integrations: [],
       addable: [{ kind: "google", name: "Google" }],
@@ -263,10 +288,12 @@ describe("Google as an integration", () => {
     // Nothing is pasted, so the row has no key fields.
     expect(view.integrations[0]?.secrets).toBeUndefined();
 
-    // Its keys are kept 0600 in a 0700 folder, and nothing a person or an agent reads holds them.
-    const folder = join(dir, "secrets", "google");
-    expect(statSync(folder).mode & 0o777).toBe(0o700);
-    expect(statSync(join(folder, "secrets.json")).mode & 0o777).toBe(0o600);
+    // Its lasting key is one hidden entry in Secrets, the access key stays in memory,
+    // and nothing a person or an agent reads holds either (INF-785).
+    expect(await keys.entries()).toEqual([
+      expect.objectContaining({ label: "Google sign-in", discoverable: false }),
+    ]);
+    expect(existsSync(join(dir, "secrets"))).toBe(false);
     expect(statSync(join(dir, "google.json")).mode & 0o777).toBe(0o600);
     const reads = [
       JSON.stringify(view),
@@ -897,7 +924,7 @@ describe("Google as an integration", () => {
   });
 
   it("renews the access before it runs out and after Google refuses it, and asks for a new sign-in only when Google refuses the lasting key", async () => {
-    const { google, clock, integrations } = await signedIn();
+    const { google, clock, integrations, keys } = await signedIn();
     const renewals = () => google.tokens.filter((form) => form.grant_type === "refresh_token");
 
     // An hour on, the access is about to run out: it renews before the request.
@@ -1003,7 +1030,7 @@ describe("Google as an integration", () => {
   });
 
   it("tells Google to forget the sign-in when the row is removed, and forgets it here", async () => {
-    const { google, dir, integrations } = await signedIn();
+    const { google, dir, integrations, keys: secrets } = await signedIn();
     const keys = google.issued();
     expect(keys.length).toBeGreaterThan(0);
 
@@ -1014,8 +1041,8 @@ describe("Google as an integration", () => {
     expect(google.issued()).toEqual([]);
     expect(view.integrations).toEqual([]);
     expect(view.addable).toEqual([{ kind: "google", name: "Google" }]);
-    expect(() => statSync(join(dir, "secrets", "google"))).toThrow();
     expect(() => statSync(join(dir, "google.json"))).toThrow();
+    expect(await secrets.entries()).toEqual([]);
   });
 
   it("keeps released Google on Infinitary's client and endpoints despite development overrides", () => {
@@ -1051,6 +1078,171 @@ describe("Google as an integration", () => {
   );
 });
 
+/**
+ * INF-785, the captain's words: "secrets used to access the external data
+ * should be handled by the planned secret management capability", and their
+ * choice on its plan: "One approval covers the Google sign-in".
+ */
+describe("Google's sign-in kept in Secrets", () => {
+  const search = (integrations: IntegrationsService) =>
+    integrations
+      .forTask("task-1")
+      .call(
+        "Google",
+        "search_mail",
+        { max: 1 },
+        undefined,
+        "To perform the task’s requested action.",
+      );
+  const renewals = (google: GoogleStandIn) =>
+    google.tokens.filter((form) => form.grant_type === "refresh_token");
+  const earlierRecord = (dir: string, key?: string) =>
+    new GoogleSignInStore(dir).write({
+      account: STAND_IN_ACCOUNT,
+      scopes: [...GOOGLE_SCOPES],
+      // Its access ran out, so the first call renews it.
+      expiresAt: Date.UTC(2026, 9, 22, 15),
+      health: "ok",
+      signedInAt: Date.UTC(2026, 9, 1),
+      ...(key ? { key } : {}),
+    });
+
+  it("asks the captain once, and every later renewal runs on that one saved decision", async () => {
+    const { google, clock, integrations, keys } = await signedIn();
+    for (let hour = 1; hour <= 3; hour++) {
+      clock.now += 3_600_000;
+      expect((await search(integrations)).refused).toBeUndefined();
+    }
+    expect(renewals(google)).toHaveLength(3);
+    expect(keys.cards).toHaveLength(1);
+    expect(keys.cards[0]?.title).toContain("Google sign-in");
+    expect((await keys.keys.view()).rules).toEqual([
+      expect.objectContaining({ effect: "allow", secret: "google-sign-in" }),
+    ]);
+  });
+
+  it("moves a sign-in an earlier version kept in its own file into Secrets, then removes the file", async () => {
+    const { google, dir, integrations, keys } = await fixture(
+      undefined,
+      false,
+      async (dir, google) => {
+        earlierKeys(dir, google.grantEarlier([...GOOGLE_SCOPES]));
+        earlierRecord(dir);
+      },
+    );
+    allowIntegrationReads(integrations);
+
+    expect((await search(integrations)).refused).toBeUndefined();
+
+    const key = new GoogleSignInStore(dir).read()?.key;
+    expect(key).toBeDefined();
+    expect(await keys.entries()).toEqual([
+      expect.objectContaining({ ref: key, label: "Google sign-in", discoverable: false }),
+    ]);
+    expect(existsSync(join(dir, "secrets"))).toBe(false);
+    expect(renewals(google)).toHaveLength(1);
+  });
+
+  it("finishes a move interrupted after its reference was written, onto that same entry", async () => {
+    const { dir, integrations, keys } = await fixture(undefined, false, async (dir, google) => {
+      earlierKeys(dir, google.grantEarlier([...GOOGLE_SCOPES]));
+      earlierRecord(dir, "google-sign-in-2");
+    });
+    allowIntegrationReads(integrations);
+
+    expect((await search(integrations)).refused).toBeUndefined();
+
+    expect(new GoogleSignInStore(dir).read()?.key).toBe("google-sign-in-2");
+    expect((await keys.entries()).map((entry) => entry.ref)).toEqual(["google-sign-in-2"]);
+    expect(existsSync(join(dir, "secrets"))).toBe(false);
+  });
+
+  it("leaves an earlier version's file in place while Secrets is locked, and moves it once unlocked", async () => {
+    const { dir, integrations, keys } = await fixture(undefined, false, async (dir, google) => {
+      earlierKeys(dir, google.grantEarlier([...GOOGLE_SCOPES]));
+      earlierRecord(dir);
+    });
+    allowIntegrationReads(integrations);
+    keys.custody.state = "locked";
+
+    const locked = await search(integrations);
+    expect(locked.refused).toBe("refused");
+    expect(locked.text).toContain("Unlock it in Settings -> Secrets");
+    expect(existsSync(join(dir, "secrets", "google", "secrets.json"))).toBe(true);
+
+    // The captain unlocks it in Settings -> Secrets.
+    keys.custody.state = "open";
+    await keys.keys.action({ kind: "unlock" });
+    expect((await search(integrations)).refused).toBeUndefined();
+    expect(existsSync(join(dir, "secrets"))).toBe(false);
+  });
+
+  it("holds Google after the captain does not allow a renewal, and asks again only on Check", async () => {
+    const { google, clock, integrations, keys } = await signedIn();
+    keys.answer(SECRETS_WORDS.deny);
+    clock.now += 3_600_000;
+
+    const refused = await search(integrations);
+    expect(refused.refused).toBe("refused");
+    expect(refused.text).toContain("was not allowed to use the Google sign-in");
+    expect(integrations.view().integrations[0]?.health).toBe("unavailable");
+    // A poll a minute later asks nothing.
+    clock.now += 60_000;
+    expect((await search(integrations)).refused).toBe("refused");
+    // One question, then the offer to stop asking that follows every Don't allow.
+    const named = secretsNamed(["Google sign-in"]);
+    expect(keys.cards.map((card) => card.title)).toEqual([
+      SECRET_APPROVAL_CARD_WORDS.title(named, null),
+      SECRET_APPROVAL_CARD_WORDS.stopTitle(named),
+    ]);
+    expect(renewals(google)).toEqual([]);
+
+    keys.answer(SECRETS_WORDS.once);
+    await integrations.check("google");
+    expect(keys.cards).toHaveLength(3);
+    expect(renewals(google)).toHaveLength(1);
+    expect(integrations.view().integrations[0]?.health).toBe("ok");
+  });
+
+  it("keeps no sign-in on a computer without Secrets, and tells Google to forget what it granted", async () => {
+    const google = await startGoogleStandIn();
+    cleanup.push(() => google.close());
+    const setup = googleSetup({
+      packaged: false,
+      env: {
+        INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+        INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+        INFINITARY_GOOGLE_URL: google.base,
+      },
+    });
+    if (!setup) throw new Error("a run that names a client has a Google setup");
+    const dir = join(scratchDir("fm-google-"), "integrations");
+    const binding = googleIntegration({
+      root: dir,
+      keys: {
+        shown: () => false,
+        reference: async () => undefined,
+        keepHidden: async () => undefined,
+        forgetHidden: async () => false,
+        registerBroker: () => {},
+        use: async () => ({ state: "unavailable" }),
+      },
+      ...setup,
+      open: async (url) => {
+        await fetch(url);
+      },
+      now: () => Date.UTC(2026, 9, 22, 16),
+      changed: () => {},
+    });
+    await expect(binding.signIn?.(new AbortController().signal)).rejects.toThrow(
+      "Google keeps its sign-in in Secrets, which this computer does not offer.",
+    );
+    expect(google.revoked).toHaveLength(1);
+    expect(google.issued()).toEqual([]);
+    expect(binding.connections()).toEqual([]);
+  });
+});
+
 /** INF-786, accepted INF-775 piece 6 and captain's isolated-only go-ahead. */
 describe("Calendar on the shared Google row", () => {
   it("keeps a sign-in that granted calendar.readonly listing calendars and availability after the narrower permissions", async () => {
@@ -1065,9 +1257,7 @@ describe("Calendar on the shared Google row", () => {
     ];
     const { google, integrations, clock } = await fixture(undefined, false, async (dir, google) => {
       const keys = google.grantEarlier(earlier);
-      const secrets = new FileIntegrationSecrets(join(dir, "secrets"));
-      secrets.put("google", "access_token", keys.access);
-      secrets.put("google", "refresh_token", keys.refresh);
+      earlierKeys(dir, keys);
       new GoogleSignInStore(dir).write({
         account: STAND_IN_ACCOUNT,
         scopes: earlier,

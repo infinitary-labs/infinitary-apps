@@ -43,6 +43,7 @@ import {
 } from "../../tests/helpers/bootedCore";
 import { claimedPort } from "../../tests/helpers/claimedPort";
 import { connectClient, type ReceivedPush } from "../../tests/helpers/connectionClient";
+import { disposableCustody } from "../../tests/helpers/disposableCustody";
 import { projectFontBytes } from "../../tests/helpers/fontFixture";
 import {
   type GoogleStandIn,
@@ -922,7 +923,14 @@ describe("a Google sign-in asked from another computer", () => {
     google = await startGoogleStandIn();
     Object.assign(process.env, env, { INFINITARY_GOOGLE_URL: google.base });
     shell = fakeHost(userDataDir);
-    core = await startCore(shell.host);
+    // The sign-in keeps its key in Secrets (docs/integrations.md, "Keys"), here on disposable custody.
+    core = await startCore({
+      ...shell.host,
+      secrets: {
+        custody: disposableCustody(),
+        authentication: { available: async () => true, confirm: async () => true },
+      },
+    });
     ({ connection, at } = await serveConnection(core));
   }, 60_000);
 

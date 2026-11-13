@@ -59,7 +59,13 @@ import { startHomeProjects } from "./homeProjects";
 import { startHomeQueue } from "./homeQueue";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath, hostEnv } from "./hostEnv";
-import { FIRSTMATE_READER, INBOX_EVENT, INBOX_ID, SavedOutsideData } from "./integrations";
+import {
+  FIRSTMATE_READER,
+  INBOX_EVENT,
+  INBOX_ID,
+  type IntegrationKeys,
+  SavedOutsideData,
+} from "./integrations";
 import { startHomeIntegrations } from "./integrations/homeIntegrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { KnowledgeService } from "./knowledge/knowledgeService";
@@ -119,6 +125,7 @@ import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
 import { servedSlots } from "./routing/router";
 import { Runbooks } from "./runbooks/runbooks";
+import type { SecretBroker } from "./secrets/brokers";
 import { ProtectedSecrets } from "./secrets/protected";
 import { SecretsSettings } from "./secrets/settings";
 import {
@@ -844,18 +851,36 @@ export async function createServices(
   const axiBinDir = host.app.packaged
     ? join(host.app.resourcesDir, "axi-bin")
     : join(host.app.appDir, "resources", "axi-bin");
+  // Secrets is built after the crew it raises cards through; a sign-in's
+  // key reaches it through this, only once a binding uses one.
+  let integrationSecrets: SecretsSettings | undefined;
+  const integrationBrokers: SecretBroker[] = [];
+  const integrationKeys: IntegrationKeys = {
+    shown: () => host.secrets !== undefined,
+    reference: async (label) => integrationSecrets?.reference(label),
+    keepHidden: async (input) => integrationSecrets?.keepHidden(input),
+    forgetHidden: async (ref) => (await integrationSecrets?.forgetHidden(ref)) ?? false,
+    registerBroker: (broker) => {
+      if (integrationSecrets) integrationSecrets.registerBroker(broker);
+      else integrationBrokers.push(broker);
+    },
+    use: async (input) =>
+      (await integrationSecrets?.use(input)) ?? { state: "unavailable" as const },
+  };
   // Integrations (docs/integrations.md): every binding, the inbox and the asks.
   const {
     integrations,
     inbox: integrationInbox,
     panelAsks,
     outsideReads,
+    moveKeys: moveIntegrationKeys,
   } = startHomeIntegrations({
     host,
     paths,
     standIns,
     axiBinDir,
     forgeSignIns,
+    keys: integrationKeys,
     gateway: githubGateway,
     tasks,
     panelOutside,
@@ -1188,6 +1213,10 @@ export async function createServices(
     changed: () => emit("inf:secrets:changed", {}),
   });
   supervisor.hostOps.setSecretsDecision((offer) => secrets.decide(offer));
+  integrationSecrets = secrets;
+  for (const broker of integrationBrokers.splice(0)) secrets.registerBroker(broker);
+  // A Google sign-in an earlier version kept in its own file moves into Secrets now.
+  void moveIntegrationKeys();
   readWorkPosture = (record) => supervisor.postures.workPosture(record);
   readWorkWaitFacts = (record) => supervisor.postures.workWaitFacts(record);
   const workPresentation = new WorkPresentation({

@@ -11,7 +11,6 @@ import { allowIntegrationReads } from "../../../../../tests/helpers/integrationA
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
 import {
-  FileIntegrationSecrets,
   forgeHostIntegration,
   IntegrationSettingsStore,
   IntegrationsService,
@@ -415,7 +414,6 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
           record: (taskId, askId, outcome) =>
             tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
         },
-        secrets: new FileIntegrationSecrets(join(scratchDir("fm-host-secrets-"), "secrets")),
       });
       const id = integrations.view().integrations[0]!.id;
       expect(integrations.view().integrations[0]).toMatchObject({

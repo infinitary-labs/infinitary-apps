@@ -22,7 +22,7 @@ import { googleIntegration } from "./providers/google/googleIntegration";
 import { INBOX_ID, Inbox, launcherDataDir } from "./providers/inbox";
 import { mcpIntegration } from "./providers/mcp/mcpIntegration";
 import { standInIntegration } from "./providers/standIn";
-import { FileIntegrationSecrets } from "./secrets";
+import type { IntegrationKeys } from "./secrets";
 import { IntegrationsService } from "./service";
 import { IntegrationSettingsStore } from "./store";
 
@@ -41,6 +41,8 @@ export type HomeIntegrations = {
   inbox: Inbox;
   /** One ask per panel and action at a time (docs/integrations.md, "Panels"). */
   panelAsks: PanelAsks;
+  /** Move a sign-in an earlier version kept in its own file into Secrets, once Secrets exists. */
+  moveKeys: () => Promise<void>;
   /** Which conversations received fenced words, and when, so they go when due. */
   outsideReads: OutsideReads;
 };
@@ -55,6 +57,8 @@ export function startHomeIntegrations(options: {
   /** The folder of the app's own task commands, the inbox's among them. */
   axiBinDir: string;
   forgeSignIns: ForgeSignIns;
+  /** Secrets, where a sign-in keeps its key (docs/integrations.md, "Keys"). */
+  keys: IntegrationKeys;
   gateway: GithubGatewayService;
   tasks: Pick<TaskService, "delivery">;
   /** A panel holds words from outside no longer than their kind does. */
@@ -71,7 +75,6 @@ export function startHomeIntegrations(options: {
   const google = googleSetup({ packaged: host.app.packaged });
   // A binding's own change reaches the service once it exists.
   let integrationsChanged: () => void = () => {};
-  const integrationSecrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
   // Which conversations received fenced words, and when, so they go when due.
   const outsideReads = new OutsideReads(paths.integrationsDir);
   // The inbox (docs/integrations.md, "The inbox"): infinitary-axi's switch
@@ -92,6 +95,20 @@ export function startHomeIntegrations(options: {
     changed: () => integrationsChanged(),
     now,
   });
+  const googleBinding = google
+    ? googleIntegration({
+        root: paths.integrationsDir,
+        keys: options.keys,
+        ...google,
+        open: async (url, to) => {
+          if (!isAllowedOpenExternalUrl(url))
+            throw new Error("The Google sign-in page's address was refused.");
+          await (host.openSignInPage ? host.openSignInPage(url, to) : host.openExternal(url));
+        },
+        now,
+        changed: () => integrationsChanged(),
+      })
+    : undefined;
   const integrationSettings = new IntegrationSettingsStore(paths.integrationsDir);
   // The inbox's switch is its connection's pause (INF-1567): off, its door refuses.
   integrationInbox.pausedThrough(() => integrationSettings.read()[INBOX_ID]?.paused === true);
@@ -125,22 +142,7 @@ export function startHomeIntegrations(options: {
           }),
         }),
       ),
-      ...(google
-        ? [
-            googleIntegration({
-              root: paths.integrationsDir,
-              secrets: integrationSecrets,
-              ...google,
-              open: async (url, to) => {
-                if (!isAllowedOpenExternalUrl(url))
-                  throw new Error("The Google sign-in page's address was refused.");
-                await (host.openSignInPage ? host.openSignInPage(url, to) : host.openExternal(url));
-              },
-              now,
-              changed: () => integrationsChanged(),
-            }),
-          ]
-        : []),
+      ...(googleBinding ? [googleBinding] : []),
       mcpIntegration({
         root: paths.integrationsDir,
         env: () => hostEnv(),
@@ -153,8 +155,6 @@ export function startHomeIntegrations(options: {
       ...(standIns.integrationDir ? [standInIntegration({ dir: standIns.integrationDir })] : []),
     ],
     store: integrationSettings,
-    // The bridge until the secret manager takes the keys over (INF-775, q3).
-    secrets: integrationSecrets,
     asks: {
       keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
       present: (taskId, ask, dropped) =>
@@ -189,5 +189,11 @@ export function startHomeIntegrations(options: {
     push: (view) => options.emit("inf:integrations", view),
   });
   integrationsChanged = () => integrations.changed();
-  return { integrations, inbox: integrationInbox, panelAsks, outsideReads };
+  return {
+    integrations,
+    inbox: integrationInbox,
+    panelAsks,
+    outsideReads,
+    moveKeys: () => googleBinding?.moveKeys() ?? Promise.resolve(),
+  };
 }

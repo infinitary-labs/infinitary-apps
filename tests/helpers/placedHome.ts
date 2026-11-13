@@ -18,7 +18,6 @@ import type {
 import { GitHubForge } from "../../src/core/forge/providers/github/githubForge";
 import {
   FIRSTMATE_READER,
-  FileIntegrationSecrets,
   githubIntegration,
   googleIntegration,
   googleSetup,
@@ -75,6 +74,7 @@ import {
 } from "../../src/shared/ipc";
 import { type CatalogModelView, servedProviderOf } from "../../src/shared/quota";
 import { STAND_IN_CLIENT_ID, STAND_IN_CLIENT_SECRET } from "./googleStandIn";
+import { integrationKeys } from "./integrationKeys";
 
 /**
  * A home whose crew runs on a computer that runs work (docs/helper.md,
@@ -397,7 +397,7 @@ export function startPlacedHome(options: {
         },
       })
     : undefined;
-  const secrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
+  const integrationSecrets = integrationKeys();
   const outsideReads = new OutsideReads(paths.integrationsDir);
   let integrations: IntegrationsService | undefined;
   integrations =
@@ -428,7 +428,7 @@ export function startPlacedHome(options: {
               ? [
                   googleIntegration({
                     root: paths.integrationsDir,
-                    secrets,
+                    keys: integrationSecrets.keys,
                     ...google,
                     // The stand-in's sign-in page answers at once: nothing reaches a browser.
                     open: async (url) => {
@@ -441,7 +441,6 @@ export function startPlacedHome(options: {
               : []),
           ],
           store: new IntegrationSettingsStore(paths.integrationsDir),
-          secrets,
           asks: {
             keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
             present: (taskId, ask, dropped): boolean =>

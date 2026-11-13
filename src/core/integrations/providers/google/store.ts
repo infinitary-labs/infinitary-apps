@@ -7,9 +7,10 @@ import { z } from "zod";
  * The Google sign-in's facts (docs/integrations.md, "Google"): one file,
  * `userData/integrations/google.json` (0600 in the integrations' 0700
  * folder) - who it is signed in as, what Google granted, when the access
- * runs out and its health. Its two keys are not here: the binding keeps
- * them in the integration's key store (`IntegrationSecrets`) and uses them
- * only through it. The Google binding is its one writer.
+ * runs out and its health, and which Secrets entry keeps its lasting key.
+ * No key is here: the lasting key lives in Secrets (`IntegrationKeys`), and
+ * the access key it renews lives only in the app's memory. The Google
+ * binding is its one writer.
  */
 
 const GOOGLE_FILE = "google.json";
@@ -23,6 +24,12 @@ const recordSchema = z
     expiresAt: z.number(),
     health: forgeSignInStateSchema,
     signedInAt: z.number(),
+    /**
+     * The Secrets reference of the lasting key. A sign-in an earlier version
+     * kept in its own file has none until the one move writes it, first,
+     * before the key goes in (`movedKeys.ts`).
+     */
+    key: z.string().min(1).max(64).optional(),
   })
   .strict();
 export type GoogleSignInRecord = z.infer<typeof recordSchema>;

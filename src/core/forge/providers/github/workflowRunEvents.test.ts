@@ -5,7 +5,6 @@ import type { FmEvent } from "@shared/events";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import {
-  FileIntegrationSecrets,
   githubIntegration,
   IntegrationSettingsStore,
   IntegrationsService,
@@ -214,7 +213,6 @@ async function setup() {
       }),
     ],
     store: new IntegrationSettingsStore(join(root, "integrations")),
-    secrets: new FileIntegrationSecrets(join(root, "secrets")),
   });
   const store = new ScheduleStore(db);
   const inbox = new InboxStore(db);

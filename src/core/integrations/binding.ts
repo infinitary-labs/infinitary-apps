@@ -69,19 +69,6 @@ export type IntegrationActionSpec = {
 };
 
 /**
- * A key a kind signs in with (docs/integrations.md, "Keys"): a name and
- * words, never a value. The captain enters the value in Settings ->
- * Integrations; the binding uses it only through `IntegrationSecrets`.
- */
-export type IntegrationSecretSlot = {
-  name: string;
-  /** A few plain words for the Settings row ("Linear key"). */
-  label: string;
-  /** Its actions run without it. */
-  optional?: true;
-};
-
-/**
  * Something a connection can tell (docs/integrations.md, "What an integration can tell"): a rule
  * listening to it looks every `every` minutes through the binding's `look`.
  */
@@ -180,8 +167,12 @@ export type IntegrationBinding = {
    * is absent. A kind the person adds again and again declares none.
    */
   identity?: { id: string; name: string };
-  /** The keys its connections sign in with; none for a kind whose sign-in has its own owner. */
-  secrets?: readonly IntegrationSecretSlot[];
+  /**
+   * Text with any key the kind holds in memory replaced (`REDACTED`), for
+   * every answer and refusal that leaves the service; a key kept in Secrets
+   * never reaches the kind's code at all.
+   */
+  redact?: (text: string) => string;
   /**
    * Its answers and event summaries carry words anyone can write, such as
    * a message or an invitation: the label they reach every agent under,

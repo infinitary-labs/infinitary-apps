@@ -92,7 +92,7 @@ No automatic scan or import of unrelated user files is permitted.
 ## Uses
 
 The complete maintained consumer register and migration obligations are in [`../docs/secrets.md`](../docs/secrets.md).
-Every listed consumer remains unmigrated; adding this primitive does not complete the integration bridge or Google readiness.
+The Google integration's sign-in is migrated, as a hidden entry an app service keeps and uses through its own broker ([`../docs/secrets.md`](../docs/secrets.md), "App services"); every other listed consumer remains unmigrated.
 Possible: approved brokered requests, exact-run shell injection, reviewed reusable scripts, narrow signing and origin-scoped browser session loading through their existing owners.
 
 ## Checks

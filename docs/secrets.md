@@ -6,8 +6,7 @@ It also provides native custody and fresh system authentication for macOS and Li
 The app supplies that custody and confirmation as its Secrets host capability on the person's own data folder on macOS and Linux ("In the app"), so the core builds the protected owner, Settings → Secrets and the task command.
 A run on an isolated or chosen data folder, and every other platform, gets no capability and offers no Secrets.
 The explicit host seam lets disposable checks exercise the real controller, trusted cards, secure entry and sealed files without opening a native credential store.
-No existing consumer is migrated or protected by this screen.
-The existing integration bridge remains in use and is not described as protected by this foundation.
+The Google integration's sign-in is the one consumer migrated so far ("App services"); every other consumer in the register keeps its own store.
 
 ## Threat model and the accepted boundary
 
@@ -223,6 +222,16 @@ After awaited custody and entry checks, the owner rechecks material and authorit
 It never covers a program launch, renewal or write, and disappears on restart, secret replacement, a protected rule change or End access.
 End access stops unused authority, not an already-sent request or a copy a recipient kept.
 
+## App services
+
+An app service that signs in somewhere keeps its own key here as a hidden entry, through `SecretsSettings` (`keepHidden`, `forgetHidden`, `reference` and `use`, the `IntegrationKeys` interface in `src/core/integrations/secrets.ts`).
+A hidden entry is written with `discoverable: false`: Settings → Secrets lists it by its label, while the crew's catalog, a task's request and a program launch never reach it.
+`keepHidden` writes under a reference the service names, or a fresh one no entry, rule or history names; it never replaces an entry the captain added, and it zero-fills the value it was handed.
+`forgetHidden` forgets only a hidden entry.
+`use` asks through the service's own registered broker and waits for the use to end - approved, refused or expired - with the broker's private result; it also waits for the captain's Always allow this to save its rule, so the service's next use reads it.
+The approval card, the saved decisions and the journal are the same as for any brokered use: a broker whose every bit but the key is fixed, such as Google's renewal, is covered by one saved Allow.
+The Google integration is the one such service today ([Integrations](integrations.md#keys)).
+
 ## The recipient
 
 [`../src/core/secrets/recipient.ts`](../src/core/secrets/recipient.ts) binds the program, its interpreter and every argument naming a regular file by digest.
@@ -360,15 +369,15 @@ No reveal, partial-value display, clipboard export or agent-authored secret-entr
 
 ## Consumer register
 
-Every row remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
+Every row but Google's sign-in remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
 A migration includes writers, every reader, replacement/renewal, interruption, rollback and old-app compatibility, without permanent dual writes or plaintext backups.
 The current owner retains protocol and lifecycle decisions; Secrets supplies custody, scoped use and atomic versioned replacement.
 Public certificates, host pins, fingerprints, token counts and non-secret metadata do not become vault values.
 
 | Area | Current entry points | Adapter and required preservation |
 | --- | --- | --- |
-| Integration slots and Google | `src/core/integrations/secrets.ts`; `providers/google/{googleIntegration,signIn,client}.ts` | Replace the temporary backend through INF-785; retain brokered requests, explicit grants and one Google renewer with atomic replacement. |
-| Connected programs | `src/core/integrations/providers/mcp/{runs,store,mcpIntegration}.ts` | Include inline credential assignments as well as named slots; exact recipient delivery, not inherited session credentials. |
+| Google sign-in (migrated) | `src/core/integrations/secrets.ts`; `providers/google/{googleIntegration,movedKeys,store}.ts` | A hidden entry used through the `google-sign-in` broker ("App services"); the access key stays in memory, one renewer at a time replaces the entry in place, and an earlier version's key file moves once and is removed. |
+| Connected programs | `src/core/integrations/providers/mcp/{runs,store,mcpIntegration}.ts` | Include inline credential assignments; exact recipient delivery, not inherited session credentials, to a program that keeps running, which a protected launch does not yet serve. |
 | Pi accounts | `src/core/pi/{accountVault,piAccountBackend,piAuth,modelRuntime}.ts` | Inject a Secrets-backed CredentialStore for account and base auth stores; retain serialized refresh and account lifecycle. |
 | Usage, Copilot and models | `src/core/quota/{auth,fetchQuota,http}.ts`; `src/core/pi/copilotMeter.ts`; model/account readers | Use the same account adapter; remove direct-file routes without confusing unavailable with signed out or adding renewal. |
 | Custom APIs | `src/core/pi/{customApiAccounts,customApiTransport,customApiPi}.ts` | Keys and secret headers in custody; credential-free Pi configuration and existing destination policy; Settings-approved Custom connection shell token commands retain their renewal and output isolation, outside the protected-recipient boundary. |

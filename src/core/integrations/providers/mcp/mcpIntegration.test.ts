@@ -23,12 +23,7 @@ import { ScheduleStore } from "../../../storage/scheduleStore";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
-import {
-  FileIntegrationSecrets,
-  githubIntegration,
-  IntegrationSettingsStore,
-  IntegrationsService,
-} from "../../index";
+import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from "../../index";
 import { mcpIntegration } from "./mcpIntegration";
 
 /**
@@ -81,7 +76,6 @@ function serviceIn(root: string): {
       }),
     ],
     store: new IntegrationSettingsStore(root),
-    secrets: new FileIntegrationSecrets(join(root, "secrets")),
     asks: {
       keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
       take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
@@ -302,7 +296,6 @@ it("keeps an old MCP ask and its event on the server after the GitHub name repai
         }),
       ],
       store: new IntegrationSettingsStore(root),
-      secrets: new FileIntegrationSecrets(join(root, "secrets")),
       asks: {
         keep: (taskId, kept) => legacy.tasks.delivery.keepWriteAsk(taskId, kept),
         take: (taskId, askId) => legacy.tasks.delivery.takeWriteAsk(taskId, askId),
@@ -419,7 +412,6 @@ describe("a server removed and replaced under the same name (INF-947)", () => {
         }),
       ],
       store: new IntegrationSettingsStore(root),
-      secrets: new FileIntegrationSecrets(join(root, "secrets")),
       asks: {
         keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
         take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),

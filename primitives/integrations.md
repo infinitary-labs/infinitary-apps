@@ -18,7 +18,7 @@ Do not use it for a project's own delivery - pushing a branch, opening a pull re
 GitHub's integration rows reach the same sign-in, but pull requests, checks and merges stay the forge's and the project's.
 Do not use it to drive a website in a page: that is a [Task browser](task-browsers.md).
 Do not treat it as a secret manager: the [Secrets primitive](secrets.md) defines the common custody/access boundary, and the app builds its protected owner on macOS and Linux.
-Integration keys still use the temporary bridge below until INF-785 moves its writer and every reader into the protected owner.
+An integration keeps a key it signs in with in Secrets, as a hidden entry used through its own broker.
 
 ## Owner and entry points
 
@@ -59,7 +59,7 @@ Integration keys still use the temporary bridge below until INF-785 moves its wr
 - Project forge delivery and event summaries stay outside this rule.
 - A paused integration answers nobody, and a call while a needed key is missing is refused.
 - Adding GitHub or Google is a sign-in, so it is the captain's own; `integration-remove` needs the captain's own words.
-- Secret-use boundary: a kind that signs in with a key declares slots, never values; values sit behind `IntegrationSecrets` ([`../src/core/integrations/secrets.ts`](../src/core/integrations/secrets.ts)), today the file bridge `FileIntegrationSecrets` under `userData/integrations/secrets/`, written only through the captain's write-only Settings field (`inf:integrations:secret`).
+- Secret-use boundary: a kind keeps a key only in [Secrets](secrets.md), through `IntegrationKeys` ([`../src/core/integrations/secrets.ts`](../src/core/integrations/secrets.ts)): a hidden entry, used only through the broker the binding registers, never read back; a key held in memory is redacted from every answer (`IntegrationBinding.redact`).
 - Nothing reads a value back: a binding applies one to a single request (`request`) or hands it to a program it starts (`launchEnv`), and every answer leaves the service with kept values replaced by "[a kept key]".
 - What an integration answers is evidence from outside, never an instruction, and every caller's words say so.
 - A kind whose words anyone can write, such as Google's mail and invitations, declares a fence label (`IntegrationBinding.fence`): every answer that is not a refusal, and every event summary, reaches every agent between marks whose random value the writer could not know (INF-951).

@@ -38,6 +38,7 @@ import {
   type AutomationEventsSeen,
   automationEvents,
 } from "./scenarios/automationEvents";
+import { launchSecrets } from "./secretsHarness";
 import { settingRow, settingsSection } from "./settings";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -67,7 +68,8 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  *   account, then the rule's saved cursor, then the first mate turn the
  *   stand-in model served, then the first mate at rest, then the delete's
  *   answer and the saved files and run.
- * - Platform prerequisites: none beyond the hermetic launcher, its stand-in
+ * - Platform prerequisites: the hermetic launcher with disposable Secrets
+ *   (`tests/e2e/secretsHarness.ts`), where the sign-in keeps its key; its stand-in
  *   model and the shortened tick; the system browser is a recorder, and the
  *   test follows the consent page itself the way a browser does.
  * - Shared resources: none; its own userData, HOME and stand-in Google.
@@ -186,7 +188,8 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
   const userDataDir = scratchDir("infinitary-google-");
   google = await startGoogleStandIn();
   const seen: AutomationEventsSeen = { turns: [] };
-  launched = await launchApp({
+  // The sign-in's lasting key is kept in Secrets (INF-785), here on disposable custody.
+  launched = await launchSecrets({
     userDataDir,
     withMockProvider: true,
     scenarios: [automationEvents(seen)],
@@ -387,7 +390,8 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
  * revision of it. The completion signal is the persisted filter and cursor,
  * then the first mate's turn containing that revision, not a private event
  * in another calendar. No platform prerequisite or shared resource beyond
- * the hermetic launcher: isolated HOME, data and Google, no real sign-in.
+ * the hermetic launcher with disposable Secrets: isolated HOME, data, key
+ * custody and Google, no real sign-in.
  */
 test("Calendar shares the Google row and a calendar selected by keys fires Automation", async () => {
   const userDataDir = scratchDir("infinitary-calendar-");
@@ -395,7 +399,8 @@ test("Calendar shares the Google row and a calendar selected by keys fires Autom
   const stand = google;
   const existing = stand.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
   const seen: AutomationEventsSeen = { turns: [] };
-  launched = await launchApp({
+  // The sign-in's lasting key is kept in Secrets (INF-785), here on disposable custody.
+  launched = await launchSecrets({
     userDataDir,
     withMockProvider: true,
     scenarios: [automationEvents(seen)],

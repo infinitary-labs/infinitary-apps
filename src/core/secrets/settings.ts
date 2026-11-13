@@ -46,6 +46,7 @@ import {
   type SecretsCommand,
   type UseCheckInput,
   type UseReceipt,
+  type UseState,
   validInjection,
 } from "./requests";
 
@@ -79,6 +80,10 @@ export class SecretsSettings {
   private readonly taskOf = new Map<string, Set<string>>();
   private readonly awaiting = new Map<string, Set<string>>();
   private readonly brokers = new Map<string, SecretBroker>();
+  /** Host consumers awaiting a use's end (`use`), by request. */
+  private readonly ending = new Map<string, (receipt: UseReceipt) => void>();
+  /** Each card choice still running, by its card's group. */
+  private readonly deciding = new Map<string, Promise<void>>();
   private readonly now: () => number;
   private message: string | null = null;
   private offeredCard: string | null = null;
@@ -138,6 +143,7 @@ export class SecretsSettings {
       this.options.withdraw(card, "This Secrets request is no longer waiting.");
       if (this.offeredCard === card) this.offeredCard = null;
       this.useCards.delete(receipt.request);
+      this.ending.get(receipt.request)?.(receipt);
       const tasks = this.awaiting.get(receipt.request);
       this.awaiting.delete(receipt.request);
       for (const task of tasks ?? []) {
@@ -1060,10 +1066,14 @@ export class SecretsSettings {
       if (sibling.group === offer.group) this.offers.delete(key);
     this.message = null;
     this.offeredCard = null;
-    try {
-      await offer.run();
-    } catch {
+    const running = offer.run().catch(() => {
       this.message = SECRETS_WORDS.unavailable;
+    });
+    this.deciding.set(offer.group, running);
+    try {
+      await running;
+    } finally {
+      if (this.deciding.get(offer.group) === running) this.deciding.delete(offer.group);
     }
     this.options.changed();
   }
@@ -1128,6 +1138,111 @@ export class SecretsSettings {
   }
   async takeBrokerResult(request: string): Promise<unknown> {
     return (await this.ready())?.protected.takeBrokerResult(request);
+  }
+
+  /**
+   * A host-registered consumer's use, awaited to its end (docs/secrets.md,
+   * "App services"): the receipt once it is no longer waiting or running,
+   * and the broker's private result when it completed. A use with no saved
+   * decision raises the ordinary exact-use card and waits on it.
+   */
+  async use(input: BrokeredUse): Promise<{ state: UseState; result?: unknown }> {
+    let resolve: (receipt: UseReceipt) => void = () => {};
+    const ended = new Promise<UseReceipt>((done) => {
+      resolve = done;
+    });
+    const owner = await this.ready();
+    if (!owner) return { state: "unavailable" };
+    const receipt = await this.broker(input);
+    let final: UseReceipt = receipt;
+    if (receipt.state === "waiting" || receipt.state === "executing") {
+      this.ending.set(receipt.request, resolve);
+      const settled = owner.requests.settled(receipt.request);
+      if (settled) resolve(settled);
+      // Expiry is read lazily: reading the receipt once its time is up ends it.
+      const expires = owner.requests.pending(receipt.request)?.expires;
+      const timer =
+        expires === undefined
+          ? undefined
+          : setTimeout(
+              () => owner.requests.status(receipt.request),
+              Math.max(0, expires - this.now()) + 1,
+            );
+      timer?.unref?.();
+      try {
+        final = await ended;
+      } finally {
+        if (timer) clearTimeout(timer);
+        this.ending.delete(receipt.request);
+      }
+    }
+    // Always allow this saves its rule once the use has begun: the consumer's next use waits for it.
+    await this.deciding.get(`use-${final.request}`);
+    if (final.state !== "completed") return { state: final.state };
+    return { state: "completed", result: owner.protected.takeBrokerResult(final.request) };
+  }
+
+  /**
+   * A host consumer's own credential (docs/secrets.md, "App services"),
+   * kept hidden from the crew's catalog and shown in Settings by its label.
+   * Without a reference, the controller makes a fresh one no entry, rule or
+   * history names. Answers the reference, or undefined when protection
+   * cannot keep it now.
+   */
+  async keepHidden(input: {
+    ref?: string;
+    label: string;
+    value: Buffer;
+  }): Promise<string | undefined> {
+    try {
+      const owner = await this.ready(true);
+      if (!owner) return undefined;
+      const current = input.ref
+        ? (await owner.protected.metadata()).find((entry) => entry.ref === input.ref)
+        : undefined;
+      // A consumer replaces only its own hidden entry, never one the captain added.
+      if (current?.discoverable) return undefined;
+      const ref = input.ref ?? (await this.freshReference(owner, input.label));
+      const written = await owner.protected.putSecret(ref, input.label, input.value, {
+        discoverable: false,
+      });
+      return written?.ref;
+    } catch {
+      return undefined;
+    } finally {
+      input.value.fill(0);
+      this.options.changed();
+    }
+  }
+
+  /** A reference for a hidden entry before it is written, so a move can record it first. */
+  async reference(label: string): Promise<string | undefined> {
+    const owner = await this.ready(true);
+    return owner ? this.freshReference(owner, label) : undefined;
+  }
+
+  /** Forget a host consumer's hidden entry; the captain's own entries are never touched. */
+  async forgetHidden(ref: string): Promise<boolean> {
+    try {
+      const owner = await this.ready();
+      if (!owner) return false;
+      const current = (await owner.protected.metadata()).find((entry) => entry.ref === ref);
+      if (!current) return true;
+      if (current.discoverable) return false;
+      return await owner.protected.forgetSecret(ref, current.version, current.revision);
+    } catch {
+      return false;
+    } finally {
+      this.options.changed();
+    }
+  }
+
+  private async freshReference(owner: Owner, label: string): Promise<string> {
+    return newReference(label, [
+      ...(await owner.protected.metadata()).map((entry) => entry.ref),
+      ...(owner.protected.authority()?.rules.map((rule) => rule.secret) ?? []),
+      ...owner.protected.history().flatMap((item) => item.secrets),
+    ]);
   }
 }
 

@@ -43,7 +43,6 @@ import {
 } from "./binding";
 import { FIRSTMATE_READER } from "./outsideReads";
 import { WHOLE_ACTION } from "./scopes";
-import type { IntegrationSecrets } from "./secrets";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
 
 /**
@@ -59,8 +58,6 @@ import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
 export type IntegrationsServiceOptions = {
   bindings: readonly IntegrationBinding[];
   store: IntegrationSettingsStore;
-  /** The keys the kinds sign in with: the bridge now, the secret manager later. */
-  secrets: IntegrationSecrets;
   /**
    * An unapproved action is kept with its reason and exact input - on the
    * caller's task, or for the first mate on the row the host files - the
@@ -292,7 +289,6 @@ export class IntegrationsService {
           view.paused ? "paused" : undefined,
           view.renamed ? integrationRenameWords(view.renamed) : undefined,
           view.health === "needs_reauth" ? "needs a sign-in again" : undefined,
-          this.missingKeys(row).length > 0 ? "needs a key entered in Settings" : undefined,
         ].filter(Boolean);
         return facts.length > 0 ? `${view.name} (${facts.join(", ")})` : view.name;
       })
@@ -363,10 +359,6 @@ export class IntegrationsService {
           input: spec.schema ?? spec.input.toJSONSchema(),
         };
       }),
-      // Which keys are kept, never a value: one entered in Settings is used, never shown.
-      ...(view.secrets
-        ? { keys: view.secrets.map((slot) => ({ name: slot.label, kept: slot.kept })) }
-        : {}),
       ...(row.connection.events?.length
         ? {
             events: row.connection.events.map((spec) => eventShown(view.id, spec)),
@@ -418,7 +410,7 @@ export class IntegrationsService {
     try {
       await row.binding.prepare?.(row.connection.id);
     } catch (error) {
-      return { text: this.options.secrets.redact(String(error)), refused: "refused" };
+      return { text: this.redact(String(error)), refused: "refused" };
     }
     row = this.find(name);
     if (!("connection" in row)) return row;
@@ -446,12 +438,6 @@ export class IntegrationsService {
           .map((issue) => `${issue.path.join(".") || "input"}: ${issue.message}`)
           .join("; ")}.`,
         refused: "invalid",
-      };
-    const missing = this.missingKeys(row);
-    if (missing.length > 0)
-      return {
-        text: `${view.name} needs ${missing.join(" and ")} before it can do anything. The captain enters it in Settings → Integrations; never ask for it in a message, a card or a task.`,
-        refused: "refused",
       };
     const noFile = this.fileRefusal(caller, view.name, spec);
     if (noFile) return { text: noFile, refused: "refused" };
@@ -525,7 +511,7 @@ export class IntegrationsService {
     try {
       await row.binding.prepare?.(row.connection.id);
     } catch (error) {
-      return done({ kind: "refused", why: this.options.secrets.redact(String(error)) });
+      return done({ kind: "refused", why: this.redact(String(error)) });
     }
     row = this.rows().find((entry) => entry.connection.id === ask.integration);
     if (!row) return done({ kind: "refused", why: `${ask.place} is no longer connected` });
@@ -550,9 +536,6 @@ export class IntegrationsService {
         kind: "refused",
         why: "The action changed since it was asked; call again with a reason.",
       });
-    const missing = this.missingKeys(row);
-    if (missing.length > 0)
-      return done({ kind: "refused", why: `${view.name} needs ${missing.join(" and ")}` });
     const parsed = spec.input.safeParse(JSON.parse(ask.input));
     if (!parsed.success)
       return done({ kind: "refused", why: `its input no longer fits ${view.name}'s ${spec.name}` });
@@ -637,17 +620,19 @@ export class IntegrationsService {
     return this.options.store.ruleMarks()[row.ref]?.[spec.name] ?? "";
   }
 
-  /** Keep a value the captain entered for a slot, or forget it with null. */
-  setSecret(id: string, slot: string, value: string | null): IntegrationsView {
+  /**
+   * A key typed into an integration's row. No kind keeps one any more: a
+   * sign-in keeps its key in Secrets (docs/integrations.md, "Keys"), so
+   * every slot is refused and nothing is written.
+   */
+  setSecret(id: string, slot: string, _value: string | null): IntegrationsView {
     const row = this.byId(id);
-    const name = this.viewOf(row).name;
-    if (!(row.binding.secrets ?? []).some((entry) => entry.name === slot))
-      throw new IntegrationRefusal(
-        `${name} has no key named ${slot}.${row.binding.secrets?.length ? ` Its keys: ${row.binding.secrets.map((entry) => entry.name).join(", ")}.` : ""}`,
-      );
-    if (value === null) this.options.secrets.forget(row.connection.id, slot);
-    else this.options.secrets.put(row.connection.id, slot, value);
-    return this.changed();
+    throw new IntegrationRefusal(`${this.viewOf(row).name} has no key named ${slot}.`);
+  }
+
+  /** Text with every key a kind holds in memory replaced, for whatever leaves the service. */
+  private redact(text: string): string {
+    return this.options.bindings.reduce((out, binding) => binding.redact?.(out) ?? out, text);
   }
 
   /**
@@ -662,7 +647,7 @@ export class IntegrationsService {
     input: unknown,
     caller: IntegrationCaller,
   ): Promise<{ answer: IntegrationAnswer; unknown?: true }> {
-    const redact = (text: string) => this.options.secrets.redact(text);
+    const redact = (text: string) => this.redact(text);
     try {
       const called = await row.binding.call(row.connection.id, action, input, caller);
       const { file: delivered, ...answer } = called;
@@ -925,9 +910,7 @@ Do not repeat this call; read ${name} to check what happened first.`
           return await this.look(row.connection.id, event, cursor, undefined, row.ref, caller);
         } catch (error) {
           return {
-            text: this.options.secrets.redact(
-              error instanceof Error ? error.message : String(error),
-            ),
+            text: this.redact(error instanceof Error ? error.message : String(error)),
             refused: "refused",
           };
         }
@@ -971,14 +954,6 @@ Do not repeat this call; read ${name} to check what happened first.`
     if (!spec) throw new IntegrationRefusal(`${this.viewOf(row).name} has no action ${action}.`);
     this.grant(row, spec, allowed);
     return this.view();
-  }
-
-  /** The required slots of a row that hold no value, by their words. */
-  private missingKeys(row: Row): string[] {
-    const kept = new Set(this.options.secrets.kept(row.connection.id));
-    return (row.binding.secrets ?? [])
-      .filter((slot) => !slot.optional && !kept.has(slot.name))
-      .map((slot) => slot.label);
   }
 
   /** What one task's crewmate reaches: every integration, under that task's rules. */
@@ -1232,7 +1207,6 @@ Do not repeat this call; read ${name} to check what happened first.`
         `[integrations] ${id} could not be signed out where it lives; forgetting it here: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-    this.options.secrets.forget(row.connection.id);
     const all = this.options.store.read();
     if (all[id]) {
       delete all[id];
@@ -1415,7 +1389,6 @@ Do not repeat this call; read ${name} to check what happened first.`
         };
       }),
       ...(row.connection.events?.length ? { events: row.connection.events.map(eventView) } : {}),
-      ...this.secretsOf(row),
     };
   }
 
@@ -1492,21 +1465,6 @@ Do not repeat this call; read ${name} to check what happened first.`
 
   private release(by: symbol): void {
     for (const [key, claim] of this.claims) if (claim.by === by) this.claims.delete(key);
-  }
-
-  /** A row's keys, kept or not; nothing when its kind declares none. */
-  private secretsOf(row: Row): Pick<IntegrationView, "secrets"> {
-    const slots = row.binding.secrets ?? [];
-    if (slots.length === 0) return {};
-    const kept = new Set(this.options.secrets.kept(row.connection.id));
-    return {
-      secrets: slots.map((slot) => ({
-        name: slot.name,
-        label: slot.label,
-        kept: kept.has(slot.name),
-        ...(slot.optional ? { optional: true } : {}),
-      })),
-    };
   }
 
   /**

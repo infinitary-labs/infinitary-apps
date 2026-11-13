@@ -9,7 +9,7 @@ import { openInMemoryDatabase } from "../../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../../storage/inboxStore";
 import { ScheduleStore } from "../../storage/scheduleStore";
 import { INFINITARY_COMMAND } from "../commandWords";
-import { FileIntegrationSecrets, IntegrationSettingsStore, IntegrationsService } from "../index";
+import { IntegrationSettingsStore, IntegrationsService } from "../index";
 import { INBOX_ID, Inbox } from "./inbox";
 
 /**
@@ -42,7 +42,6 @@ async function setup() {
   const integrations = new IntegrationsService({
     bindings: [inbox.binding()],
     store: settings,
-    secrets: new FileIntegrationSecrets(join(root, "secrets")),
   });
   const db = openInMemoryDatabase();
   const store = new ScheduleStore(db);

@@ -11,7 +11,6 @@ import { allowIntegrationReads } from "../../../../../tests/helpers/integrationA
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
 import {
-  FileIntegrationSecrets,
   forgeHostIntegration,
   githubIntegration,
   IntegrationSettingsStore,
@@ -871,7 +870,6 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
         record: (taskId, askId, outcome) =>
           tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
       },
-      secrets: new FileIntegrationSecrets(join(scratchDir("fm-enterprise-secrets-"), "secrets")),
     });
     const row = integrations.view().integrations[0];
     if (!row) throw new Error("Enterprise row missing");
@@ -997,7 +995,6 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
         record: (taskId, askId, outcome) =>
           tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
       },
-      secrets: new FileIntegrationSecrets(join(scratchDir("fm-integration-keys-"), "secrets")),
     });
     allowIntegrationReads(integrations);
     const crewmate = integrations.forTask("task-1");
@@ -1615,7 +1612,6 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
         }),
       ],
       store: new IntegrationSettingsStore(join(scratchDir("fm-panel-reads-"), "integrations")),
-      secrets: new FileIntegrationSecrets(join(scratchDir("fm-panel-read-keys-"), "secrets")),
     });
     allowIntegrationReads(integrations);
     const panel = integrations.forPanel({

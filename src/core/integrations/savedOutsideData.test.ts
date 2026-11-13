@@ -12,6 +12,7 @@ import {
   startGoogleStandIn,
 } from "../../../tests/helpers/googleStandIn";
 import { allowIntegrationReads } from "../../../tests/helpers/integrationApprovals";
+import { integrationKeys } from "../../../tests/helpers/integrationKeys";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
 import { Scheduler } from "../orchestrator/scheduler";
@@ -27,7 +28,6 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import {
   FIRSTMATE_READER,
-  FileIntegrationSecrets,
   googleIntegration,
   googleSetup,
   IntegrationSettingsStore,
@@ -97,13 +97,13 @@ async function world() {
     },
   });
   if (!setup) throw new Error("a run that names a client has a Google setup");
-  const secrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
+  const integrationSecrets = integrationKeys();
   let integrations: IntegrationsService | undefined;
   integrations = new IntegrationsService({
     bindings: [
       googleIntegration({
         root: paths.integrationsDir,
-        secrets,
+        keys: integrationSecrets.keys,
         ...setup,
         open: async (url) => {
           await (await fetch(url)).text();
@@ -113,7 +113,6 @@ async function world() {
       }),
     ],
     store: new IntegrationSettingsStore(paths.integrationsDir),
-    secrets,
     reads,
     // A saved attachment lands in the task's hand-over folder, where the crew delivers it on this Mac.
     files: {

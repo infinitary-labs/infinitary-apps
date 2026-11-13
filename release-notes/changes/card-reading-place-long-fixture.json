@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-reading-place-long-fixture",
+      "reason": "Test-only: the reading-place journey's sample card body is long enough to overflow by a wheel turn however much room a short window gives the card; no app behavior changes."
+    }
+  ]
+}

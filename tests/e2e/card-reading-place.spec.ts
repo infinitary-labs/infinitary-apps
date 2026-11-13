@@ -22,8 +22,20 @@ const checks = [
   "Make sure unfinished work is named before offering the merge.",
   "Check the download on a second computer before finishing.",
 ];
+/** How far one wheel turn asks a card's body to scroll. */
+const WHEEL_TURN = 400;
+
+/**
+ * A body of four sections, about 1,500px tall: more than the 800px default
+ * window and a wheel turn together, so the turn stops mid-body however much
+ * of that window the stage gives the card. Two sections were about 770px,
+ * which stopped overflowing by a turn once a short window gave the card the
+ * stage's empty space (docs/renderer.md, "Short windows").
+ */
 const long = (heading: string) =>
-  `<h2>${heading}</h2>${checks.map((c) => `<p>${c}</p>`).join("")}<h2>After</h2>${checks.map((c) => `<p>${c}</p>`).join("")}`;
+  [heading, "During", "After", "Later"]
+    .map((h) => `<h2>${h}</h2>${checks.map((c) => `<p>${c}</p>`).join("")}`)
+    .join("");
 
 /**
  * Scrolls like a person, a wheel turn over the body rather than a scrollTop
@@ -42,7 +54,7 @@ async function wheelToRest(page: Page, scroller: Locator): Promise<number> {
     ),
   }));
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.wheel(0, 400);
+  await page.mouse.wheel(0, WHEEL_TURN);
   const top = await page.evaluate((scrolled) => scrolled.top, ended);
   expect(top).toBeGreaterThan(0);
   return top;
@@ -152,7 +164,9 @@ test("paging away from a task record and back keeps its reading place", async ()
       .evaluate((el) => (el as HTMLElement).click());
     const scroller = () => recordCard(page).locator("[data-card-body]");
     await expect
-      .poll(() => scroller().evaluate((el) => el.scrollHeight - el.clientHeight > 400))
+      .poll(() =>
+        scroller().evaluate((el, turn) => el.scrollHeight - el.clientHeight > turn, WHEEL_TURN),
+      )
       .toBe(true);
     // The open words grow the card: the captain scrolls it once it has come
     // to rest (docs/e2e-contracts.md).
@@ -216,7 +230,9 @@ test("paging away from a past card and back keeps its reading place", async () =
     await stageAtRest(page);
     const scroller = () => cardScroller(page);
     await expect
-      .poll(() => scroller().evaluate((el) => el.scrollHeight - el.clientHeight > 400))
+      .poll(() =>
+        scroller().evaluate((el, turn) => el.scrollHeight - el.clientHeight > turn, WHEEL_TURN),
+      )
       .toBe(true);
     const top = await wheelToRest(page, scroller());
     const away = (await page.getByRole("button", { name: "Next card" }).isEnabled())

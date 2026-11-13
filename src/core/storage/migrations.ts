@@ -1375,6 +1375,11 @@ export const MIGRATIONS: readonly Migration[] = [
   // turn that handled it (docs/automation.md, "History and retention").
   // Null is a run handled before runs kept them, or one not handled.
   (db) => addColumn(db, "schedule_runs", "found", "TEXT"),
+  // What an event rule waits for, in words (docs/automation.md, "The event
+  // screen"). Null keeps every existing rule unscreened; `ScheduleStore` is
+  // the only writer and no published view reads it. Dropping the column
+  // reverses it.
+  (db) => addColumn(db, "schedules", "event_waits_for", "TEXT"),
 ];
 
 /**

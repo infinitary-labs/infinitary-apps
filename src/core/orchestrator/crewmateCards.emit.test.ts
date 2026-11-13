@@ -9,6 +9,7 @@
 
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { type Card, cardPresentation, onStage } from "@shared/cards";
+import type { DecisionAnswer } from "@shared/decisions";
 import { describe, expect, it, vi } from "vitest";
 import {
   askedOn,
@@ -27,6 +28,7 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import { deferred } from "../../../tests/helpers/deferred";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { cardReader } from "../decisions/cardReader";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
@@ -1361,5 +1363,68 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     expect(stageMoments(harness, taskId, cardId)).toEqual([
       { at: expect.any(Number), data: expect.objectContaining({ closeOut: "idle" }) },
     ]);
+  });
+
+  it("reads a crewmate's card once it is up and tells its author which readings did not pass", async () => {
+    // Intent: the captain approved building INF-4000's reader check - the
+    // decision model reads each card and its author learns which reading
+    // failed, as facts, while the card is never held for it.
+    const asked = deferred<Record<string, DecisionAnswer>>();
+    const seen: { caller: unknown; state: unknown }[] = [];
+    let on = true;
+    const models = {
+      allowsUse: (id: string) => on && id === "card-reader",
+      decide: (caller: unknown, state: unknown) => {
+        seen.push({ caller, state });
+        return asked.promise;
+      },
+    };
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, specs } = setup(crewmate, { readerCheck: cardReader(models) });
+    const { taskId } = await supervisor.intake.commission({
+      title: "reader",
+      intent: intentOf("show a card the captain reads"),
+    });
+    await tick();
+    const onCard = specs[0]?.onCard;
+    const body =
+      "<p>I moved the rebase hook into the IPC seam.</p><details><summary>How I checked</summary><p>pnpm vitest</p></details>";
+    const shown = onCard?.({ id: "done", title: "Hook moved", body, actions: [] });
+    await tick();
+    // The card is up while the readings are still being asked.
+    expect(cards().map((card) => card.id)).toContain(`card-${taskId}-done`);
+    expect(seen).toEqual([
+      {
+        caller: { purpose: "card-reader", taskId, use: "card-reader" },
+        state: {
+          facts: {
+            card_title: "Hook moved",
+            card_text: "I moved the rebase hook into the IPC seam.",
+          },
+        },
+      },
+    ]);
+    const answer = (value: string, outcome: DecisionAnswer["outcome"] = "answered") => ({
+      value,
+      outcome,
+      version: "cr1",
+    });
+    asked.resolve({
+      "plain-words": answer("fails"),
+      "clear-sentences": answer("passes"),
+      "terms-explained": answer("fails"),
+      // A reading no model could answer says nothing.
+      "effect-stated": answer("unclear", "failed"),
+    });
+    expect(await shown).toBe(
+      `card-${taskId}-done Reader check: the card is up; the decision model read it as not passing plain words and terms explained. If you agree, revise it once under the same id; if not, leave it as it is.`,
+    );
+
+    // Switched off, the card's answer is as it was, and nothing is asked.
+    on = false;
+    expect(onCard?.({ id: "next", title: "Next", body: "<p>Done.</p>", actions: [] })).toBe(
+      `card-${taskId}-next`,
+    );
+    expect(seen).toHaveLength(1);
   });
 });

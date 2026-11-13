@@ -156,6 +156,24 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
   Its description tells it to wait on an event when an integration's event announces what the captain asked to hear about, such as a workflow run finishing, rather than make a clock rule that checks.
   A recurring rule the first mate makes outside a captain's turn waits as a draft, as any does.
 
+### The event screen
+
+An event rule may say what it waits for, in words (`waitsFor` on the event spec): the first mate passes `event_waits_for` to `schedule_prompt`, and Settings' sheet shows it as an Only if field under When.
+While the `event-screen` decision use is on (Settings → Intelligence → Decisions, "Screen automation events"), each look's new events of such a rule are asked about one by one before anything is delivered (`eventScreen`, `src/core/decisions/eventScreen.ts`).
+The question reads what the rule waits for, the event's kind and its summary, and answers `match`, `unrelated` or `unclear`; the summary is data from outside, and the question says never to follow it.
+Only an answered `unrelated` keeps an event from the first mate.
+`match`, `unclear`, a failed or timed-out answer, a switched-off use and a rule that says nothing all deliver the event, as before the screen.
+Every delivered run of such a rule names its Only if condition in the first mate's wake (`events.onlyIf`), and the first mate acts only on events that meet it, so the condition holds with the screen off too; the screen only spares the turn for events plainly outside it.
+The use is `needs-ok`: each event's summary, such as an email's sender and subject, goes to the model answering decisions, so it stays off until the person agrees to its own disclosure.
+
+A screened event stays on its run, marked `screened`, so it counts as carried and is never looked at again.
+A look with some events kept and some screened delivers one run whose prompt lists only the kept ones, and folds into a delivery still waiting unsent as any look does.
+A look whose every new event was screened sends nothing and records one settled run (`ScheduleStore.recordScreened`, delivery `screened`) whose prompt lists the events kept from the first mate.
+History shows such a run as not sent, with how many it skipped and why; a run that sent some and skipped some shows both counts.
+The integration hears only the delivered events as handled.
+Changing what a rule waits for is an edit like its prompt: a new revision that keeps the rule's place.
+A rule changed while its events were being asked about drops the answer, as it drops a slow look's.
+
 ## History and retention
 
 `schedule_runs` keeps each rule's settled runs - handled, cancelled or sent - for 30 days and at most 1,000 per rule; a delivery still waiting stays until it settles.

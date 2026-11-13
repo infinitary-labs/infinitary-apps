@@ -3401,5 +3401,18 @@
   "settingsWebsiteSignInsHeading": "Inicios de sesión en sitios web",
   "settingsWebsiteSignInsRemove": "Quitar",
   "settingsWebsiteSignInsRemoveFailed": "{place} no pudo quitar ese inicio de sesión en este momento. Inténtalo de nuevo.",
-  "settingsWebsiteSignInsAutomaticFailed": "{place} no pudo cambiar ese permiso en este momento."
+  "settingsWebsiteSignInsAutomaticFailed": "{place} no pudo cambiar ese permiso en este momento.",
+  "automationWaitsFor": "Solo si",
+  "automationWaitsForPlaceholder": "Cada evento",
+  "automationEventsSkipped": "Eventos omitidos",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} evento, {date}",
+    "many": "{count} de eventos, {date}",
+    "other": "{count} eventos, {date}"
+  },
+  "automationRunSkippedState": "Omitido",
+  "automationRunAlsoSkipped": "{count} omitidos",
+  "automationScreenedNote": "No se envió a tu primer oficial: el modelo de decisión leyó estos eventos como claramente fuera de la condición Solo si de esta automatización.",
+  "automationWaitsForNote": "Tu primer oficial solo actúa ante los eventos que cumplen esto. Mientras el filtro de eventos esté activado en Ajustes, un evento que claramente no cumple esto no llega a tu primer oficial y sigue en el historial de esta automatización."
 }

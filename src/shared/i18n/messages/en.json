@@ -3318,5 +3318,17 @@
   "settingsWebsiteSignInsHeading": "Website sign-ins",
   "settingsWebsiteSignInsRemove": "Remove",
   "settingsWebsiteSignInsRemoveFailed": "{place} could not remove that sign-in right now. Try again.",
-  "settingsWebsiteSignInsAutomaticFailed": "{place} could not change that permission right now."
+  "settingsWebsiteSignInsAutomaticFailed": "{place} could not change that permission right now.",
+  "automationWaitsFor": "Only if",
+  "automationWaitsForPlaceholder": "Every event",
+  "automationEventsSkipped": "Events skipped",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} event, {date}",
+    "other": "{count} events, {date}"
+  },
+  "automationRunSkippedState": "Skipped",
+  "automationRunAlsoSkipped": "{count} skipped",
+  "automationScreenedNote": "Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.",
+  "automationWaitsForNote": "Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history."
 }

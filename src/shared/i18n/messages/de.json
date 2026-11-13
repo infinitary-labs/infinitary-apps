@@ -3318,5 +3318,17 @@
   "settingsWebsiteSignInsHeading": "Website-Anmeldungen",
   "settingsWebsiteSignInsRemove": "Entfernen",
   "settingsWebsiteSignInsRemoveFailed": "{place} konnte diese Anmeldung gerade nicht entfernen. Versuch es noch einmal.",
-  "settingsWebsiteSignInsAutomaticFailed": "{place} konnte diese Berechtigung gerade nicht ändern."
+  "settingsWebsiteSignInsAutomaticFailed": "{place} konnte diese Berechtigung gerade nicht ändern.",
+  "automationWaitsFor": "Nur wenn",
+  "automationWaitsForPlaceholder": "Jedes Ereignis",
+  "automationEventsSkipped": "Übersprungene Ereignisse",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} Ereignis, {date}",
+    "other": "{count} Ereignisse, {date}"
+  },
+  "automationRunSkippedState": "Übersprungen",
+  "automationRunAlsoSkipped": "{count} übersprungen",
+  "automationScreenedNote": "Nicht an deinen ersten Offizier gesendet: Das Entscheidungsmodell hat diese Ereignisse als eindeutig nicht passend zur Nur-wenn-Bedingung dieser Automatisierung gelesen.",
+  "automationWaitsForNote": "Dein erster Offizier handelt nur bei Ereignissen, die dies erfüllen. Solange die Ereignisprüfung in den Einstellungen an ist, überspringt ein Ereignis, das dies eindeutig nicht erfüllt, deinen ersten Offizier und steht weiter im Verlauf dieser Automatisierung."
 }

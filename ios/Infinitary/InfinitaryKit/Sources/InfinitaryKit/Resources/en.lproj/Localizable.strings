@@ -2028,6 +2028,13 @@
 "settingsWebsiteSignInsRemove" = "Remove";
 "settingsWebsiteSignInsRemoveFailed" = "%1$@ could not remove that sign-in right now. Try again.";
 "settingsWebsiteSignInsAutomaticFailed" = "%1$@ could not change that permission right now.";
+"automationWaitsFor" = "Only if";
+"automationWaitsForPlaceholder" = "Every event";
+"automationEventsSkipped" = "Events skipped";
+"automationRunSkippedState" = "Skipped";
+"automationRunAlsoSkipped" = "%1$@ skipped";
+"automationScreenedNote" = "Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.";
+"automationWaitsForNote" = "Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history.";
 "phonePromptCamera" = "Infinitary scans the code you open in Devices on your computer so this phone can join it, and takes the photos you add to a reply.";
 "phonePromptFaceId" = "Infinitary asks for Face ID before each use of your secrets you allow from this device.";
 "phonePromptLocalNetwork" = "Infinitary finds your computer and reads its cards and Activity on your network, and lists the computers here with Remote Login on when you join by an address.";

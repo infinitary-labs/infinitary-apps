@@ -3401,5 +3401,18 @@
   "settingsWebsiteSignInsHeading": "Logins em sites",
   "settingsWebsiteSignInsRemove": "Remover",
   "settingsWebsiteSignInsRemoveFailed": "{place} não conseguiu remover esse login agora. Tente de novo.",
-  "settingsWebsiteSignInsAutomaticFailed": "{place} não conseguiu alterar essa permissão agora."
+  "settingsWebsiteSignInsAutomaticFailed": "{place} não conseguiu alterar essa permissão agora.",
+  "automationWaitsFor": "Somente se",
+  "automationWaitsForPlaceholder": "Todo evento",
+  "automationEventsSkipped": "Eventos ignorados",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} evento, {date}",
+    "many": "{count} de eventos, {date}",
+    "other": "{count} eventos, {date}"
+  },
+  "automationRunSkippedState": "Ignorado",
+  "automationRunAlsoSkipped": "{count} ignorados",
+  "automationScreenedNote": "Não enviado ao seu imediato: o modelo de decisão leu estes eventos como claramente fora da condição Somente se desta automação.",
+  "automationWaitsForNote": "Seu imediato só age nos eventos que atendem a isto. Enquanto o filtro de eventos estiver ativado nas Configurações, um evento que claramente não atende a isto não chega ao seu imediato e continua no histórico desta automação."
 }

@@ -3235,5 +3235,16 @@
   "settingsWebsiteSignInsHeading": "网站登录",
   "settingsWebsiteSignInsRemove": "移除",
   "settingsWebsiteSignInsRemoveFailed": "{place} 暂时无法移除这个登录。请重试。",
-  "settingsWebsiteSignInsAutomaticFailed": "{place} 暂时无法更改这项权限。"
+  "settingsWebsiteSignInsAutomaticFailed": "{place} 暂时无法更改这项权限。",
+  "automationWaitsFor": "仅当",
+  "automationWaitsForPlaceholder": "每个事件",
+  "automationEventsSkipped": "已跳过的事件",
+  "automationRunSkipped": {
+    "plural": "count",
+    "other": "{count} 个事件，{date}"
+  },
+  "automationRunSkippedState": "已跳过",
+  "automationRunAlsoSkipped": "已跳过 {count} 个",
+  "automationScreenedNote": "未发送给你的大副：判断模型认为这些事件明显不符合此自动化的“仅当”条件。",
+  "automationWaitsForNote": "你的大副只会处理符合此条件的事件。在设置中开启事件筛选时，明显不符合此条件的事件不会交给你的大副，但仍列在此自动化的记录中。"
 }

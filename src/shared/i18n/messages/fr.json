@@ -3401,5 +3401,18 @@
   "settingsWebsiteSignInsHeading": "Connexions aux sites web",
   "settingsWebsiteSignInsRemove": "Retirer",
   "settingsWebsiteSignInsRemoveFailed": "{place} n’a pas pu retirer cette connexion pour l’instant. Réessayez.",
-  "settingsWebsiteSignInsAutomaticFailed": "{place} n’a pas pu modifier cette autorisation pour l’instant."
+  "settingsWebsiteSignInsAutomaticFailed": "{place} n’a pas pu modifier cette autorisation pour l’instant.",
+  "automationWaitsFor": "Seulement si",
+  "automationWaitsForPlaceholder": "Chaque événement",
+  "automationEventsSkipped": "Événements ignorés",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} événement, {date}",
+    "many": "{count} d’événements, {date}",
+    "other": "{count} événements, {date}"
+  },
+  "automationRunSkippedState": "Ignoré",
+  "automationRunAlsoSkipped": "{count} ignoré(s)",
+  "automationScreenedNote": "Non envoyé à votre second : le modèle de décision a lu ces événements comme ne remplissant clairement pas la condition Seulement si de cette automatisation.",
+  "automationWaitsForNote": "Votre second n’agit que sur les événements qui remplissent cette condition. Tant que le tri des événements est activé dans les Réglages, un événement qui ne remplit clairement pas cette condition ne passe pas par votre second et reste listé dans l’historique de cette automatisation."
 }

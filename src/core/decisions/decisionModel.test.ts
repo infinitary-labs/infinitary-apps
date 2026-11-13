@@ -9,8 +9,10 @@ import {
   type DecisionUseSwitches,
 } from "@shared/decisionUses";
 import { describe, expect, it, vi } from "vitest";
+import { CARD_READINGS } from "./cardReader";
 import {
   AdaptedDecisionModel,
+  adapterOptions,
   type DecisionModel,
   DecisionModels,
   type DecisionRun,
@@ -20,6 +22,7 @@ import {
   renderAdapterInstruction,
   renderAdapterState,
 } from "./decisionModel";
+import { EVENT_SCREEN_QUESTION } from "./eventScreen";
 
 /**
  * The class itself, away from any consumer (S7a): what a question renders
@@ -57,6 +60,16 @@ describe("parseOption", () => {
     expect(parseOption("either left or right", ["left", "right"])).toBeUndefined();
     expect(parseOption("I am not able to answer that", ["left", "right"])).toBeUndefined();
     expect(parseOption("", ["left", "right"])).toBeUndefined();
+  });
+
+  // A hermetic run of the event screen found a hyphenated option read back as
+  // its last word, so "no-match" came back as "match": every option of the
+  // event screen and the reader check must read back as itself.
+  it("reads back every option of the event screen and the reader check as itself", () => {
+    for (const question of [EVENT_SCREEN_QUESTION, ...Object.values(CARD_READINGS)]) {
+      const options = adapterOptions(question);
+      for (const option of options) expect(parseOption(option, options)).toBe(option);
+    }
   });
 });
 

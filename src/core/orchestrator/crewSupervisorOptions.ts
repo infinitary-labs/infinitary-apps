@@ -159,6 +159,16 @@ export type CrewSupervisorOptions = {
    * emit_card's answer. Absent, nothing names it.
    */
   captainPlaces?: import("../devices/captainPlaces").CaptainPlaceReads;
+  /**
+   * The reader check (docs/card-authoring.md, "The reader check"): asked
+   * about a crewmate's own card once it is up, its answer added to the
+   * emit_card answer as facts. `on` is read before anything waits, so a
+   * check that is off leaves the card's answer as it was.
+   */
+  readerCheck?: {
+    on(): boolean;
+    read(taskId: string, card: { title: string; body: string }): Promise<string>;
+  };
   taskSelection?: (
     input: import("../storage/taskSelection").TaskSelectionInput,
   ) => Promise<import("../storage/taskSelection").TaskSelection>;

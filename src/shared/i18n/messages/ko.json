@@ -3235,5 +3235,16 @@
   "settingsWebsiteSignInsHeading": "웹사이트 로그인",
   "settingsWebsiteSignInsRemove": "제거",
   "settingsWebsiteSignInsRemoveFailed": "{place}에서 지금 그 로그인을 제거할 수 없었어요. 다시 시도하세요.",
-  "settingsWebsiteSignInsAutomaticFailed": "{place}에서 지금 그 권한을 바꿀 수 없었어요."
+  "settingsWebsiteSignInsAutomaticFailed": "{place}에서 지금 그 권한을 바꿀 수 없었어요.",
+  "automationWaitsFor": "조건",
+  "automationWaitsForPlaceholder": "모든 이벤트",
+  "automationEventsSkipped": "건너뛴 이벤트",
+  "automationRunSkipped": {
+    "plural": "count",
+    "other": "이벤트 {count}개, {date}"
+  },
+  "automationRunSkippedState": "건너뜀",
+  "automationRunAlsoSkipped": "{count}개 건너뜀",
+  "automationScreenedNote": "일등항해사에게 보내지 않았어요. 판단 모델이 이 이벤트들은 이 자동화의 조건에 분명히 맞지 않는다고 읽었어요.",
+  "automationWaitsForNote": "일등항해사는 이 조건에 맞는 이벤트에만 대응해요. 설정에서 이벤트 선별이 켜져 있는 동안, 이 조건에 분명히 맞지 않는 이벤트는 일등항해사에게 가지 않고 이 자동화의 기록에는 남아요."
 }

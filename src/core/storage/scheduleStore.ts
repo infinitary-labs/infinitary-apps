@@ -65,7 +65,7 @@ export type RuleState = "draft" | "enabled" | "paused" | "completed";
  * or it is recalled. Null on a run recorded before deliveries were
  * followed (migration 80).
  */
-export type RunDelivery = "waiting" | "handled" | "cancelled";
+export type RunDelivery = "waiting" | "handled" | "cancelled" | "screened";
 
 /** Why a waiting delivery was recalled. */
 export type RunCancelReason = "edited" | "paused" | "cleared";
@@ -131,6 +131,7 @@ type Row = {
   event_integration: string | null;
   event_name: string | null;
   event_filter: string | null;
+  event_waits_for: string | null;
   event_cursor: string | null;
   event_connection: string | null;
   card_id: string | null;
@@ -230,6 +231,7 @@ function specOf(row: Row): ScheduleSpec {
         ...(row.event_filter !== null
           ? { filter: automationEventFilterSchema.parse(JSON.parse(row.event_filter)) }
           : {}),
+        ...(row.event_waits_for ? { waitsFor: row.event_waits_for } : {}),
       };
   }
 }
@@ -247,6 +249,7 @@ function specColumns(spec: ScheduleSpec) {
     spec.kind === "event" ? spec.integration : null,
     spec.kind === "event" ? spec.event : null,
     spec.kind === "event" && spec.filter ? JSON.stringify(spec.filter) : null,
+    spec.kind === "event" && spec.waitsFor ? spec.waitsFor : null,
   ] as const;
 }
 
@@ -274,8 +277,8 @@ export class ScheduleStore {
   insert(record: ScheduleRecord): void {
     this.db
       .prepare(
-        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, event_integration, event_name, event_filter, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id, event_cursor, event_connection, card_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, event_integration, event_name, event_filter, event_waits_for, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id, event_cursor, event_connection, card_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         record.id,
@@ -299,7 +302,7 @@ export class ScheduleStore {
     this.db
       .prepare(
         `UPDATE schedules SET spec_kind = ?, interval_minutes = ?, hour = ?, minute = ?, at = ?, days = ?, time_zone = ?,
-           event_integration = ?, event_name = ?, event_filter = ?, prompt = ?, next_fire = ?, captain_requested = ?, name = ?, state = ?,
+           event_integration = ?, event_name = ?, event_filter = ?, event_waits_for = ?, prompt = ?, next_fire = ?, captain_requested = ?, name = ?, state = ?,
            revision = ?, project_id = ?, event_cursor = ?, event_connection = ?, card_id = ? WHERE id = ?`,
       )
       .run(
@@ -356,6 +359,34 @@ export class ScheduleStore {
       const inboxId = deliver(runId);
       this.db.prepare("UPDATE schedule_runs SET inbox_id = ? WHERE id = ?").run(inboxId, runId);
       return true;
+    })();
+  }
+
+  /**
+   * A look whose every new event the event screen kept from the first mate
+   * (docs/automation.md, "The event screen"): one settled run listing them,
+   * with no delivery, and the rule's new cursor, in one transaction. Its
+   * events count as carried, so none is looked at again.
+   */
+  recordScreened(run: ScheduleRun, next: Advance, now: number): boolean {
+    return this.db.transaction(() => {
+      const inserted = this.db
+        .prepare(
+          `INSERT OR IGNORE INTO schedule_runs (schedule_id, revision, planned_at, fired_at, catch_up, missed, prompt, events, delivery, settled_at)
+           VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'screened', ?)`,
+        )
+        .run(
+          run.scheduleId,
+          run.revision,
+          run.plannedAt,
+          run.firedAt,
+          run.prompt,
+          run.events ? JSON.stringify(run.events) : null,
+          now,
+        );
+      this.advance(run.scheduleId, next);
+      this.trim(run.scheduleId, now);
+      return inserted.changes > 0;
     })();
   }
 
@@ -565,4 +596,11 @@ export class ScheduleStore {
     this.db.prepare("DELETE FROM schedules").run();
     this.db.prepare("DELETE FROM schedule_runs").run();
   }
+}
+
+/** A run's delivered events, and how many the event screen skipped when it skipped any. */
+export function eventCounts(events: readonly { screened?: true }[] | undefined) {
+  if (!events) return {};
+  const screened = events.filter((event) => event.screened).length;
+  return { events: events.length - screened, ...(screened ? { screened } : {}) };
 }

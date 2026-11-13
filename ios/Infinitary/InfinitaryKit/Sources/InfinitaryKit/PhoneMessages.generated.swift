@@ -2069,6 +2069,14 @@ public enum PhoneMessages {
     public static func `settingsWebsiteSignInsRemove`() -> String { PhoneWords.format("settingsWebsiteSignInsRemove", []) }
     public static func `settingsWebsiteSignInsRemoveFailed`(`place`: String) -> String { PhoneWords.format("settingsWebsiteSignInsRemoveFailed", [`place`]) }
     public static func `settingsWebsiteSignInsAutomaticFailed`(`place`: String) -> String { PhoneWords.format("settingsWebsiteSignInsAutomaticFailed", [`place`]) }
+    public static func `automationWaitsFor`() -> String { PhoneWords.format("automationWaitsFor", []) }
+    public static func `automationWaitsForPlaceholder`() -> String { PhoneWords.format("automationWaitsForPlaceholder", []) }
+    public static func `automationEventsSkipped`() -> String { PhoneWords.format("automationEventsSkipped", []) }
+    public static func `automationRunSkipped`(`count`: Int, `date`: String) -> String { PhoneWords.format("automationRunSkipped", [`count`, `date`]) }
+    public static func `automationRunSkippedState`() -> String { PhoneWords.format("automationRunSkippedState", []) }
+    public static func `automationRunAlsoSkipped`(`count`: String) -> String { PhoneWords.format("automationRunAlsoSkipped", [`count`]) }
+    public static func `automationScreenedNote`() -> String { PhoneWords.format("automationScreenedNote", []) }
+    public static func `automationWaitsForNote`() -> String { PhoneWords.format("automationWaitsForNote", []) }
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
@@ -4713,6 +4721,14 @@ extension PhoneWords {
         "settingsWebsiteSignInsRemove": [],
         "settingsWebsiteSignInsRemoveFailed": ["place"],
         "settingsWebsiteSignInsAutomaticFailed": ["place"],
+        "automationWaitsFor": [],
+        "automationWaitsForPlaceholder": [],
+        "automationEventsSkipped": [],
+        "automationRunSkipped": ["count", "date"],
+        "automationRunSkippedState": [],
+        "automationRunAlsoSkipped": ["count"],
+        "automationScreenedNote": [],
+        "automationWaitsForNote": [],
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],
@@ -5327,6 +5343,7 @@ extension PhoneWords {
         "settingsAutomationRunCatchingUpMissed": "count",
         "settingsAutomationEventPreview": "count",
         "settingsAutomationRunsEachTimeLooks": "count",
+        "automationRunSkipped": "count",
         "phoneMediaPicturePosition": "count",
         "phoneAddressSweeping": "count",
         "phoneSceneProgramParts": "count",

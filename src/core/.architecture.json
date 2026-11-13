@@ -450,6 +450,11 @@
       "why": "raises correction cards on the host's clock"
     },
     {
+      "from": "orchestrator",
+      "to": "decisions",
+      "why": "screens automation events and reads crewmates' cards"
+    },
+    {
       "from": "decisions",
       "to": "pi",
       "why": "asks decision models and checks card ids"

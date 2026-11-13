@@ -302,6 +302,15 @@ A card past the limit is refused to its author with its size, the limit and its 
 A saved story's merge card is measured when the story is prepared and again when the card is built, since a story's card carries parts the host adds: the live validation table and the map part ("Saved change stories", `docs/forge.md`).
 A card that still reaches the window over the limit, such as one whose strips the host adds after the check carry it past, opens with its words only (`cardBodyVehicle`, below).
 
+## The reader check
+
+While the `card-reader` decision use is on (Settings → Intelligence → Decisions, "Reader check on cards"; `docs/decision-models.md`, "The uses"), a crewmate's own card is read once it is up (`cardReader`, `src/core/decisions/cardReader.ts`; `CrewmateCards.readerChecked`).
+The decision model reads the card's title and open text - scripts, styles and everything under `<details>` left out - and answers four closed readings: plain words, clear sentences, terms explained and effect stated, each `passes`, `fails` or `unclear`.
+Each reading that answered `fails` is named after the card's id in the emit_card answer, as facts: the author decides whether to revise the card once under the same id or leave it.
+The card is never held and never refused for it: it goes up first, and a reading that is unclear, failed or timed out says nothing.
+A refused card is never read, and a contribution to someone else's card or a merge card built from a saved story is not read.
+It does not replace the replay gate, which stays the measure of card words (`docs/replay-harness.md`); it gives the author a reading in the same turn.
+
 ## The shape lint
 
 Both boundaries - the crewmate's `emit_card` (Pi or Claude) and the first mate's - run the shape rules in `src/core/pi/cardLint.ts`, reading the body with htmlparser2.

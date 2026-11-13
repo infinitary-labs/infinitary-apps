@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "automation-event-screen",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Automations can skip events they do not wait for",
+      "body": "An automation that listens for new mail or other events can now set an Only if condition. With Screen automation events turned on under Settings, Intelligence, Decisions, an event that plainly does not meet it skips your first mate and is listed in the automation's history instead. It stays off until you agree to what it sends.",
+      "picture": {
+        "dark": "automation-event-screen-dark.webp",
+        "light": "automation-event-screen-light.webp",
+        "alt": "An automation's history lists runs whose events were skipped beside the run its first mate handled"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "card-reader-check",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Crewmates can learn when a card does not read plainly",
+      "body": "With Reader check on cards turned on under Settings, Intelligence, Decisions, a crewmate learns which plain-language readings its card did not pass, so it can rewrite the card before you have to ask. The card reaches you either way. It stays off until you agree to what it sends.",
+      "noPicture": "A crewmate sees the reading in its own work; the switch shares the Decisions list pictured with the automation entry.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

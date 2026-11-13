@@ -60978,6 +60978,299 @@ export function settingsWebsiteSignInsAutomaticFailed(input: { place: string }):
   return `${place} could not change that permission right now.`;
 }
 
+export function automationWaitsFor(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فقط إذا`;
+    case "de":
+      return `Nur wenn`;
+    case "es":
+      return `Solo si`;
+    case "fr":
+      return `Seulement si`;
+    case "ja":
+      return `条件`;
+    case "ko":
+      return `조건`;
+    case "pt-BR":
+      return `Somente se`;
+    case "zh-Hans":
+      return `仅当`;
+    case "zh-Hant":
+      return `僅當`;
+    case "en-XA":
+      return `[Öñļý îƒ ~~~]`;
+    case "ar-XB":
+      return `\u202eOnly if\u202c`;
+  }
+  return `Only if`;
+}
+
+export function automationWaitsForPlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `كل حدث`;
+    case "de":
+      return `Jedes Ereignis`;
+    case "es":
+      return `Cada evento`;
+    case "fr":
+      return `Chaque événement`;
+    case "ja":
+      return `すべてのイベント`;
+    case "ko":
+      return `모든 이벤트`;
+    case "pt-BR":
+      return `Todo evento`;
+    case "zh-Hans":
+      return `每个事件`;
+    case "zh-Hant":
+      return `每個事件`;
+    case "en-XA":
+      return `[Éṽéŕý éṽéñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eEvery event\u202c`;
+  }
+  return `Every event`;
+}
+
+export function automationEventsSkipped(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أحداث متخطاة`;
+    case "de":
+      return `Übersprungene Ereignisse`;
+    case "es":
+      return `Eventos omitidos`;
+    case "fr":
+      return `Événements ignorés`;
+    case "ja":
+      return `スキップしたイベント`;
+    case "ko":
+      return `건너뛴 이벤트`;
+    case "pt-BR":
+      return `Eventos ignorados`;
+    case "zh-Hans":
+      return `已跳过的事件`;
+    case "zh-Hant":
+      return `已略過的事件`;
+    case "en-XA":
+      return `[Éṽéñţš šķîþþéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eEvents skipped\u202c`;
+  }
+  return `Events skipped`;
+}
+
+export function automationRunSkipped(input: { count: number; date: string }): string {
+  const count = formatNumber(input.count);
+  const date = input.date;
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `لا أحداث، ${date}`;
+        case "one":
+          return `حدث واحد، ${date}`;
+        case "two":
+          return `حدثان، ${date}`;
+        case "few":
+          return `${count} أحداث، ${date}`;
+        case "many":
+          return `${count} حدثًا، ${date}`;
+        default:
+          return `${count} حدث، ${date}`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} Ereignis, ${date}`;
+        default:
+          return `${count} Ereignisse, ${date}`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} evento, ${date}`;
+        case "many":
+          return `${count} de eventos, ${date}`;
+        default:
+          return `${count} eventos, ${date}`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} événement, ${date}`;
+        case "many":
+          return `${count} d’événements, ${date}`;
+        default:
+          return `${count} événements, ${date}`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count}件のイベント、${date}`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `이벤트 ${count}개, ${date}`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `${count} evento, ${date}`;
+        case "many":
+          return `${count} de eventos, ${date}`;
+        default:
+          return `${count} eventos, ${date}`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 个事件，${date}`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `${count} 個事件，${date}`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[${count} éṽéñţ, ${date} ~~~]`;
+        default:
+          return `[${count} éṽéñţš, ${date} ~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `${count}\u202e event, \u202c${date}`;
+        default:
+          return `${count}\u202e events, \u202c${date}`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `${count} event, ${date}`;
+    default:
+      return `${count} events, ${date}`;
+  }
+}
+
+export function automationRunSkippedState(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متخطّى`;
+    case "de":
+      return `Übersprungen`;
+    case "es":
+      return `Omitido`;
+    case "fr":
+      return `Ignoré`;
+    case "ja":
+      return `スキップ`;
+    case "ko":
+      return `건너뜀`;
+    case "pt-BR":
+      return `Ignorado`;
+    case "zh-Hans":
+      return `已跳过`;
+    case "zh-Hant":
+      return `已略過`;
+    case "en-XA":
+      return `[Šķîþþéð ~~~]`;
+    case "ar-XB":
+      return `\u202eSkipped\u202c`;
+  }
+  return `Skipped`;
+}
+
+export function automationRunAlsoSkipped(input: { count: string }): string {
+  const count = input.count;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تُخطّي ${count}`;
+    case "de":
+      return `${count} übersprungen`;
+    case "es":
+      return `${count} omitidos`;
+    case "fr":
+      return `${count} ignoré(s)`;
+    case "ja":
+      return `${count}件スキップ`;
+    case "ko":
+      return `${count}개 건너뜀`;
+    case "pt-BR":
+      return `${count} ignorados`;
+    case "zh-Hans":
+      return `已跳过 ${count} 个`;
+    case "zh-Hant":
+      return `已略過 ${count} 個`;
+    case "en-XA":
+      return `[${count} šķîþþéð ~~~]`;
+    case "ar-XB":
+      return `${count}\u202e skipped\u202c`;
+  }
+  return `${count} skipped`;
+}
+
+export function automationScreenedNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُرسل إلى نائب القبطان: قرأ نموذج القرار هذه الأحداث على أنها بوضوح لا تحقق شرط «فقط إذا» في هذه الأتمتة.`;
+    case "de":
+      return `Nicht an deinen ersten Offizier gesendet: Das Entscheidungsmodell hat diese Ereignisse als eindeutig nicht passend zur Nur-wenn-Bedingung dieser Automatisierung gelesen.`;
+    case "es":
+      return `No se envió a tu primer oficial: el modelo de decisión leyó estos eventos como claramente fuera de la condición Solo si de esta automatización.`;
+    case "fr":
+      return `Non envoyé à votre second : le modèle de décision a lu ces événements comme ne remplissant clairement pas la condition Seulement si de cette automatisation.`;
+    case "ja":
+      return `一等航海士には送っていません。判断モデルが、これらのイベントはこの自動化の条件に明らかに当てはまらないと判断しました。`;
+    case "ko":
+      return `일등항해사에게 보내지 않았어요. 판단 모델이 이 이벤트들은 이 자동화의 조건에 분명히 맞지 않는다고 읽었어요.`;
+    case "pt-BR":
+      return `Não enviado ao seu imediato: o modelo de decisão leu estes eventos como claramente fora da condição Somente se desta automação.`;
+    case "zh-Hans":
+      return `未发送给你的大副：判断模型认为这些事件明显不符合此自动化的“仅当”条件。`;
+    case "zh-Hant":
+      return `未傳送給你的大副：判斷模型認為這些事件明顯不符合此自動化的「僅當」條件。`;
+    case "en-XA":
+      return `[Ñöţ šéñţ ţö ýöûŕ ƒîŕšţ ɱáţé: ţĥé ðéçîšîöñ ɱöðéļ ŕéáð ţĥéšé éṽéñţš áš þļáîñļý ñöţ ɱééţîñĝ ţĥîš áûţöɱáţîöñ'š Öñļý îƒ çöñðîţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.\u202c`;
+  }
+  return `Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.`;
+}
+
+export function automationWaitsForNote(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يتصرف نائب القبطان إلا في الأحداث التي تحقق هذا الشرط. ما دام فرز الأحداث مفعّلًا في الإعدادات، فإن الحدث الذي لا يحقق هذا الشرط بوضوح لا يصل إلى نائب القبطان ويبقى مدرجًا في سجل هذه الأتمتة.`;
+    case "de":
+      return `Dein erster Offizier handelt nur bei Ereignissen, die dies erfüllen. Solange die Ereignisprüfung in den Einstellungen an ist, überspringt ein Ereignis, das dies eindeutig nicht erfüllt, deinen ersten Offizier und steht weiter im Verlauf dieser Automatisierung.`;
+    case "es":
+      return `Tu primer oficial solo actúa ante los eventos que cumplen esto. Mientras el filtro de eventos esté activado en Ajustes, un evento que claramente no cumple esto no llega a tu primer oficial y sigue en el historial de esta automatización.`;
+    case "fr":
+      return `Votre second n’agit que sur les événements qui remplissent cette condition. Tant que le tri des événements est activé dans les Réglages, un événement qui ne remplit clairement pas cette condition ne passe pas par votre second et reste listé dans l’historique de cette automatisation.`;
+    case "ja":
+      return `一等航海士はこの条件に当てはまるイベントにだけ対応します。設定でイベントの選別がオンのあいだ、この条件に明らかに当てはまらないイベントは一等航海士に届かず、この自動化の履歴には残ります。`;
+    case "ko":
+      return `일등항해사는 이 조건에 맞는 이벤트에만 대응해요. 설정에서 이벤트 선별이 켜져 있는 동안, 이 조건에 분명히 맞지 않는 이벤트는 일등항해사에게 가지 않고 이 자동화의 기록에는 남아요.`;
+    case "pt-BR":
+      return `Seu imediato só age nos eventos que atendem a isto. Enquanto o filtro de eventos estiver ativado nas Configurações, um evento que claramente não atende a isto não chega ao seu imediato e continua no histórico desta automação.`;
+    case "zh-Hans":
+      return `你的大副只会处理符合此条件的事件。在设置中开启事件筛选时，明显不符合此条件的事件不会交给你的大副，但仍列在此自动化的记录中。`;
+    case "zh-Hant":
+      return `你的大副只會處理符合此條件的事件。在設定中開啟事件篩選時，明顯不符合此條件的事件不會交給你的大副，但仍列在此自動化的記錄中。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé áçţš öñļý öñ éṽéñţš ţĥáţ ɱééţ ţĥîš. Ŵĥîļé ţĥé éṽéñţ šçŕééñ îš öñ îñ Šéţţîñĝš, áñ éṽéñţ ţĥáţ þļáîñļý ðöéš ñöţ ɱééţ ţĥîš šķîþš ýöûŕ ƒîŕšţ ɱáţé áñð îš šţîļļ ļîšţéð îñ ţĥîš áûţöɱáţîöñ'š ĥîšţöŕý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history.\u202c`;
+  }
+  return `Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -63045,6 +63338,14 @@ export const MESSAGES = {
   settingsWebsiteSignInsRemove,
   settingsWebsiteSignInsRemoveFailed,
   settingsWebsiteSignInsAutomaticFailed,
+  automationWaitsFor,
+  automationWaitsForPlaceholder,
+  automationEventsSkipped,
+  automationRunSkipped,
+  automationRunSkippedState,
+  automationRunAlsoSkipped,
+  automationScreenedNote,
+  automationWaitsForNote,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -65117,4 +65418,12 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsWebsiteSignInsRemove: [],
   settingsWebsiteSignInsRemoveFailed: ["place"],
   settingsWebsiteSignInsAutomaticFailed: ["place"],
+  automationWaitsFor: [],
+  automationWaitsForPlaceholder: [],
+  automationEventsSkipped: [],
+  automationRunSkipped: ["count", "date"],
+  automationRunSkippedState: [],
+  automationRunAlsoSkipped: ["count"],
+  automationScreenedNote: [],
+  automationWaitsForNote: [],
 };

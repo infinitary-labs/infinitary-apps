@@ -41,7 +41,7 @@ import { defaultClaudeConfigDir } from "./claude/claudeQuota";
 import { createClaudeSessionFactory } from "./claude/session";
 import type { CoreServices } from "./coreServices";
 import { CORRECTION_CASES, CORRECTION_QUESTIONS } from "./decisions/correctionConsumer";
-import { startHomeDecisions } from "./decisions/homeDecisions";
+import { cardReader, eventScreen, startHomeDecisions } from "./decisions/homeDecisions";
 import { startCorrections } from "./decisions/startCorrections";
 import { CaptainPlaces } from "./devices/captainPlaces";
 import { ownComputerName } from "./devices/computerName";
@@ -919,8 +919,7 @@ export async function createServices(
       renew: (accountId, reason) => vault.renew(accountId, reason),
     },
   });
-  // The decision-model class (S7, decisions/homeDecisions.ts): one
-  // core-wide service any module may ask a typed, bounded question of.
+  // The decision models (decisions/homeDecisions.ts): typed, bounded questions for any module.
   const questionModels = {
     availableModels: () => decisionServedModels(),
     capabilityFor,
@@ -953,8 +952,7 @@ export async function createServices(
     selectAccount: selectQuestionAccount,
     recordUsage,
   });
-  // The class's first consumer (S7a): what a spawn IS, so the captain's
-  // table can route it. The seam and the call site are unchanged.
+  // The class's first consumer (S7a): what a spawn IS, so the captain's table can route it.
   const classifier = new DecisionKindClassifier(decisions);
   // Each task's own browser and its task channel (browser/homeTaskBrowsers.ts).
   const browsers = startTaskBrowsers({
@@ -1024,6 +1022,7 @@ export async function createServices(
   });
   const supervisor: CrewSupervisor = new CrewSupervisor({
     captainPlaces,
+    readerCheck: cardReader(decisions),
     prepareContribution: (taskId) => projectContributions.prepareTask(taskId, tasks, false),
     automaticPlacement,
     // A program's script runs in a process of its own; its ask() is one typed read.
@@ -1449,6 +1448,7 @@ export async function createServices(
         integrations.look(integration, event, cursor, filter, connection),
     }),
     raise: (cardId) => void supervisor.cards.putOffs.raiseCard(cardId),
+    screen: eventScreen(decisions),
     // The inbox's receipts say an event was handled once its delivery was.
     handled: (integration, events, at) => {
       if (integration === INBOX_ID) integrationInbox.handled(events, at);

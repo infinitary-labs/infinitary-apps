@@ -3650,5 +3650,21 @@
   "settingsWebsiteSignInsHeading": "تسجيلات الدخول إلى المواقع",
   "settingsWebsiteSignInsRemove": "إزالة",
   "settingsWebsiteSignInsRemoveFailed": "تعذّر على {place} إزالة تسجيل الدخول هذا الآن. أعِد المحاولة.",
-  "settingsWebsiteSignInsAutomaticFailed": "تعذّر على {place} تغيير هذا الإذن الآن."
+  "settingsWebsiteSignInsAutomaticFailed": "تعذّر على {place} تغيير هذا الإذن الآن.",
+  "automationWaitsFor": "فقط إذا",
+  "automationWaitsForPlaceholder": "كل حدث",
+  "automationEventsSkipped": "أحداث متخطاة",
+  "automationRunSkipped": {
+    "plural": "count",
+    "zero": "لا أحداث، {date}",
+    "one": "حدث واحد، {date}",
+    "two": "حدثان، {date}",
+    "few": "{count} أحداث، {date}",
+    "many": "{count} حدثًا، {date}",
+    "other": "{count} حدث، {date}"
+  },
+  "automationRunSkippedState": "متخطّى",
+  "automationRunAlsoSkipped": "تُخطّي {count}",
+  "automationScreenedNote": "لم يُرسل إلى نائب القبطان: قرأ نموذج القرار هذه الأحداث على أنها بوضوح لا تحقق شرط «فقط إذا» في هذه الأتمتة.",
+  "automationWaitsForNote": "لا يتصرف نائب القبطان إلا في الأحداث التي تحقق هذا الشرط. ما دام فرز الأحداث مفعّلًا في الإعدادات، فإن الحدث الذي لا يحقق هذا الشرط بوضوح لا يصل إلى نائب القبطان ويبقى مدرجًا في سجل هذه الأتمتة."
 }

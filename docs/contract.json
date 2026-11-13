@@ -49422,6 +49422,10 @@
                               "additionalProperties": {
                                 "type": "string"
                               }
+                            },
+                            "waitsFor": {
+                              "type": "string",
+                              "minLength": 1
                             }
                           },
                           "required": [
@@ -49654,6 +49658,10 @@
                               "additionalProperties": {
                                 "type": "string"
                               }
+                            },
+                            "waitsFor": {
+                              "type": "string",
+                              "minLength": 1
                             }
                           },
                           "required": [
@@ -49771,6 +49779,11 @@
               "maximum": 9007199254740991
             },
             "events": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "screened": {
               "type": "integer",
               "minimum": -9007199254740991,
               "maximum": 9007199254740991
@@ -50013,6 +50026,10 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "waitsFor": {
+                    "type": "string",
+                    "minLength": 1
                   }
                 },
                 "required": [
@@ -50197,6 +50214,10 @@
                         "additionalProperties": {
                           "type": "string"
                         }
+                      },
+                      "waitsFor": {
+                        "type": "string",
+                        "minLength": 1
                       }
                     },
                     "required": [
@@ -50385,6 +50406,10 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "waitsFor": {
+                    "type": "string",
+                    "minLength": 1
                   }
                 },
                 "required": [
@@ -50620,6 +50645,10 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "waitsFor": {
+                    "type": "string",
+                    "minLength": 1
                   }
                 },
                 "required": [

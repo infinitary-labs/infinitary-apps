@@ -620,6 +620,19 @@ function Sheet({
           <Weekdays days={form.days} onChange={(days) => set("days", days)} />
         )}
       </div>
+      {form.kind === "event" && (
+        <div style={FIELD_STYLE}>
+          <label htmlFor="automation-waits-for" style={LABEL_STYLE}>
+            {m.automationWaitsFor()}
+          </label>
+          <Input
+            id="automation-waits-for"
+            placeholder={m.automationWaitsForPlaceholder()}
+            value={form.waitsFor}
+            onChange={(event) => set("waitsFor", event.target.value)}
+          />
+        </div>
+      )}
       {calendar && (
         <div style={FIELD_STYLE}>
           <label htmlFor="automation-zone" style={LABEL_STYLE}>
@@ -867,6 +880,12 @@ function ReviewPanel({
             ] as [string, React.ReactNode],
         )
       : []),
+    ...(review.spec.kind === "event" && review.spec.waitsFor
+      ? ([[m.automationWaitsFor(), `${review.spec.waitsFor}. ${m.automationWaitsForNote()}`]] as [
+          string,
+          React.ReactNode,
+        ][])
+      : []),
     [m.settingsAutomationProject(), project],
     event
       ? [m.settingsAutomationRuns(), eventRunsWords(review.listened?.every)]
@@ -1063,14 +1082,22 @@ function HistoryRow({ run }: { run: AutomationRun }) {
       <span style={{ display: "flex", alignItems: "center", height: "1lh" }}>
         <StatusDot
           tone={DELIVERY_TONES[run.delivery]}
-          label={DELIVERY_WORDS[run.delivery]}
+          label={
+            run.events === 0 && run.screened
+              ? m.automationRunSkippedState()
+              : DELIVERY_WORDS[run.delivery]
+          }
           nativeTitle={false}
         />
       </span>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         <div>
-          <span style={{ color: "var(--fg-1)" }}>{DELIVERY_WORDS[run.delivery]}</span> ·{" "}
-          {runWords(run)} · {m.settingsAutomationVersion({ version: String(run.revision) })}
+          <span style={{ color: "var(--fg-1)" }}>
+            {run.events === 0 && run.screened
+              ? m.automationRunSkippedState()
+              : DELIVERY_WORDS[run.delivery]}
+          </span>{" "}
+          · {runWords(run)} · {m.settingsAutomationVersion({ version: String(run.revision) })}
         </div>
         {note && <div>{note}</div>}
         {run.found && (
@@ -1112,7 +1139,9 @@ function HistoryRow({ run }: { run: AutomationRun }) {
         )}
         <details data-automation-run-prompt>
           <summary style={{ cursor: "pointer", width: "fit-content" }}>
-            {m.settingsAutomationPromptAsSent()}
+            {run.events === 0 && run.screened
+              ? m.automationEventsSkipped()
+              : m.settingsAutomationPromptAsSent()}
           </summary>
           <div style={{ marginTop: "var(--space-1)" }}>
             <PromptBox prompt={run.prompt} />

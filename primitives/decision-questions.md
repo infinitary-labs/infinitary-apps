@@ -67,7 +67,9 @@ A typed cut-off the adapter's session sees is recorded on the account (`noteCutO
 
 ## Uses
 
-- Task kind classification at dispatch (`DecisionKindClassifier`, [`../src/core/routing/decisionKindClassifier.ts`](../src/core/routing/decisionKindClassifier.ts)), the one closed-answer consumer.
+- Task kind classification at dispatch (`DecisionKindClassifier`, [`../src/core/routing/decisionKindClassifier.ts`](../src/core/routing/decisionKindClassifier.ts)).
+- Reply checks on the captain's new input ([`../src/core/decisions/correctionQuestion.ts`](../src/core/decisions/correctionQuestion.ts)).
+- The automation event screen ([`../src/core/decisions/eventScreen.ts`](../src/core/decisions/eventScreen.ts)) and the reader check on a crewmate's card ([`../src/core/decisions/cardReader.ts`](../src/core/decisions/cardReader.ts)); the listed uses and their switches are in [decision models](../docs/decision-models.md), "The uses".
 - A program's `ask(prompt, schema)` (`askJson`), the one JSON-answer consumer.
 - Possible: a further closed judgment the host needs as a typed value, added as a new question with its own `version`, not a new model or setting.
 

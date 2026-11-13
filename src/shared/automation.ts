@@ -46,6 +46,12 @@ export const automationSpecSchema = z.discriminatedUnion("kind", [
     event: z.string().min(1).max(48),
     /** Only fields the integration event declares; omitted means its defaults. */
     filter: automationEventFilterSchema.optional(),
+    /**
+     * What the rule waits for, in words (docs/automation.md, "The event
+     * screen"): with the event screen on, an event the decision model reads
+     * as plainly not this skips the first mate. Absent, nothing is screened.
+     */
+    waitsFor: z.string().min(1).optional(),
   }),
 ]);
 export type AutomationSpec = z.infer<typeof automationSpecSchema>;
@@ -140,6 +146,12 @@ export const automationRunSchema = z.strictObject({
   missed: z.number().int(),
   /** How many events an event rule's run carries; absent on a scheduled run. */
   events: z.number().int().optional(),
+  /**
+   * How many of those events the event screen kept from the first mate, as
+   * plainly not what the rule waits for; the run is then `cancelled` with
+   * no reason (docs/automation.md, "The event screen").
+   */
+  screened: z.number().int().optional(),
   prompt: z.string(),
   delivery: automationDeliverySchema,
   /** When it was handled or cancelled; null while it waits, or for a run recorded before. */
@@ -205,7 +217,16 @@ export function scheduleDetailsFor(
 }
 
 /** One event an integration told, as a run carries it: its id there and its typed summary. */
-export type AutomationEventItem = { id: string; summary: string };
+export type AutomationEventItem = {
+  id: string;
+  summary: string;
+  /**
+   * The event screen kept it from the first mate, as plainly not what the
+   * rule waits for (docs/automation.md, "The event screen"). It stays on the
+   * run so it is never looked at again, and the history can show it.
+   */
+  screened?: true;
+};
 
 /**
  * The events as `{{events}}` fills them: one line each, its summary and its

@@ -111,3 +111,8 @@ export function startHomeDecisions(options: {
     onNote: options.onNote,
   });
 }
+
+// The decision models' readers the composition root wires (docs/automation.md, "The event
+// screen"; docs/card-authoring.md, "The reader check"), each asking only while its use is on.
+export { cardReader } from "./cardReader";
+export { eventScreen } from "./eventScreen";

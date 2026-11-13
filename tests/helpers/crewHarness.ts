@@ -301,6 +301,8 @@ export type SetupExtras = {
   /** A panel's held call was answered: the panel hears the choice (`HomeIntegrations`). */
   panelAskAnswered?: CrewSupervisorOptions["panelAskAnswered"];
   checkCi?: CrewSupervisorOptions["checkCi"];
+  /** The reader check on a crewmate's own card (docs/card-authoring.md, "The reader check"). */
+  readerCheck?: CrewSupervisorOptions["readerCheck"];
   /** The bundled runbooks, when a test reads the guidance the task's facts select. */
   runbooks?: CrewSupervisorOptions["runbooks"];
   readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
@@ -560,6 +562,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.recallUpdateCard ? { recallUpdateCard: extras.recallUpdateCard } : {}),
     ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
     ...(extras.answerJson ? { answerJson: extras.answerJson } : {}),
+    ...(extras.readerCheck ? { readerCheck: extras.readerCheck } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
     ...(extras.costLimits ? { costLimits: extras.costLimits(db) } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),

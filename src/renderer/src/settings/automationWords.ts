@@ -31,6 +31,8 @@ export type RuleForm = {
   /** An event rule's event, as `integration/event`; empty for none picked. */
   event: string;
   filter: Record<string, string>;
+  /** What an event rule waits for, in words; empty for every event (docs/automation.md, "The event screen"). */
+  waitsFor: string;
   prompt: string;
   /** Empty for none. */
   projectId: string;
@@ -62,6 +64,7 @@ export function blankForm(): RuleForm {
     at: "",
     event: "",
     filter: {},
+    waitsFor: "",
     prompt: "",
     projectId: "",
     reconnect: false,
@@ -92,6 +95,7 @@ export function formOf(rule: AutomationRule): RuleForm {
     at: spec.kind === "once" ? localInput(spec.at) : "",
     event: spec.kind === "event" ? `${spec.integration}/${spec.event}` : "",
     filter: spec.kind === "event" ? (spec.filter ?? {}) : {},
+    waitsFor: spec.kind === "event" ? (spec.waitsFor ?? "") : "",
     prompt: rule.prompt,
     projectId: rule.projectId ?? "",
     reconnect: rule.stopped !== undefined,
@@ -108,6 +112,7 @@ export function specOf(form: RuleForm): AutomationSpec | string {
       integration: form.event.slice(0, at),
       event: form.event.slice(at + 1),
       ...(Object.keys(form.filter).length ? { filter: form.filter } : {}),
+      ...(form.waitsFor.trim() ? { waitsFor: form.waitsFor.trim() } : {}),
     };
   }
   if (form.kind === "every") {
@@ -151,7 +156,15 @@ export function saveOf(form: RuleForm, enable = false): AutomationSave | string 
 
 export function runWords(run: AutomationRun): string {
   const sent = automationDateWords(run.firedAt);
-  if (run.events !== undefined) return m.settingsAutomationRunEvents({ count: run.events, sent });
+  const skipped = run.screened ?? 0;
+  if (run.events !== undefined && run.events === 0 && skipped > 0)
+    return m.automationRunSkipped({ count: skipped, date: sent });
+  if (run.events !== undefined) {
+    const events = m.settingsAutomationRunEvents({ count: run.events, sent });
+    return skipped > 0
+      ? `${events}, ${m.automationRunAlsoSkipped({ count: String(skipped) })}`
+      : events;
+  }
   const planned = automationDateWords(run.plannedAt);
   if (run.missed > 0)
     return m.settingsAutomationRunCatchingUpMissed({ count: run.missed, planned, sent });
@@ -197,9 +210,8 @@ export function deliveryNote(run: AutomationRun): string | null {
     case "handled":
       return run.settledAt === null ? null : handledNote(run);
     case "cancelled":
-      return run.cancelReason
-        ? CANCEL_WORDS[run.cancelReason]
-        : m.settingsAutomationNoteCancelled();
+      if (run.cancelReason) return CANCEL_WORDS[run.cancelReason];
+      return run.screened ? m.automationScreenedNote() : m.settingsAutomationNoteCancelled();
     case "sent":
       return null;
   }

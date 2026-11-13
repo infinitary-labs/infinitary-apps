@@ -224,7 +224,7 @@ export class CrewmateCards {
             `Nothing changed on card "${own.title}" (${own.id}): you read revision ${input.expectedRevision}, and it is at ${own.revision ?? "none"} now. Read it again before revising it.`,
           );
       }
-      return this.addCrewmateCard(task, input);
+      return this.readerChecked(task, input, this.addCrewmateCard(task, input));
     }
     const unlabeled = input.actions.find((action) => !action.label?.trim());
     if (unlabeled)
@@ -247,6 +247,27 @@ export class CrewmateCards {
         ...(input.answersMessage !== undefined ? { answersMessage: input.answersMessage } : {}),
       },
     );
+  }
+
+  /**
+   * The reader check on a crewmate's own card (docs/card-authoring.md, "The
+   * reader check"): once the card is up, its four readings are asked and
+   * any that did not pass are added to the answer as facts. A refused card
+   * is never read, and a check that is off, fails or finds nothing adds
+   * nothing; the card is never held for it.
+   */
+  private readerChecked(
+    task: TaskRuntime,
+    input: DeclaredCardInput,
+    shown: string | Promise<string>,
+  ): string | Promise<string> {
+    const check = this.options.readerCheck;
+    if (!check?.on()) return shown;
+    const card = { title: input.title, body: input.body ?? "" };
+    return Promise.resolve(shown).then(async (answer) => {
+      const facts = await check.read(task.id, card).catch(() => "");
+      return `${answer}${facts}`;
+    });
   }
 
   /**

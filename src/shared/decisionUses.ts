@@ -36,7 +36,7 @@ export const DECISION_APPROVAL_VERSION = 2;
 export const decisionUseKindSchema = z.enum(["always-on", "default-on", "needs-ok"]);
 export type DecisionUseKind = z.infer<typeof decisionUseKindSchema>;
 
-export const DECISION_USE_IDS = ["kind", "reply-checks"] as const;
+export const DECISION_USE_IDS = ["kind", "reply-checks", "event-screen", "card-reader"] as const;
 export type DecisionUseId = (typeof DECISION_USE_IDS)[number];
 
 export type DecisionUse = {
@@ -70,6 +70,43 @@ export const DECISION_USES: readonly DecisionUse[] = [
       "When you tell your first mate how you like things done, it offers to keep that as a standing direction for the project, so you don't have to say it again. It reads your new replies, the conversation around them and the card you answered.",
     kind: "default-on",
     approval: DECISION_APPROVAL_VERSION,
+  },
+  {
+    id: "event-screen",
+    name: "Screen automation events",
+    reads:
+      "When an automation sets an Only if condition, events that plainly do not meet it skip your first mate and are listed in the automation's history. It reads each new event's summary, such as an email's sender and subject, and the automation's condition.",
+    // Each event's summary is words from outside, written by anyone who can
+    // email or invite the person: the first use that waits for their OK.
+    kind: "needs-ok",
+    approval: DECISION_APPROVAL_VERSION,
+    disclosure: {
+      version: 1,
+      text: [
+        "Each new event's summary, such as an email's sender and subject, and the automation's Only if condition go to the model answering decisions.",
+        "Only an automation with an Only if condition is screened. Turn this off at any time and every event reaches your first mate again.",
+        "One short question per event. When the answer is unclear, or no answer comes, the event reaches your first mate as before.",
+      ],
+    },
+  },
+  {
+    id: "card-reader",
+    name: "Reader check on cards",
+    reads:
+      "When a crewmate shows you a card, it learns whether the card reads plainly, so it can rewrite one before you have to ask. It reads the card's title and open text.",
+    // Four questions on every card a crewmate sends: on the person's own
+    // models that is a few seconds and a little allowance a card, so it
+    // waits for their OK (INF-4000).
+    kind: "needs-ok",
+    approval: DECISION_APPROVAL_VERSION,
+    disclosure: {
+      version: 1,
+      text: [
+        "The title and open text of each card a crewmate shows you go to the model answering decisions.",
+        "The crewmate sees which readings did not pass and decides whether to rewrite the card; a card is never held back. Turn this off at any time.",
+        "Four short questions per card. With your own models answering, that takes a few seconds and a little of your plan's allowance each time.",
+      ],
+    },
   },
 ];
 

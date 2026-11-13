@@ -48,6 +48,12 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
       // Like result_schema: a bare object is supported by both tool runtimes;
       // the binding declares its fields on discovery, not in standing context.
       event_filter: Type.Optional(Type.Unsafe<Record<string, string>>({ type: "object" })),
+      event_waits_for: Type.Optional(
+        Type.String({
+          description:
+            "With on_event: the rule's Only if condition, what the captain wants it to catch, in plain words, such as invoices from suppliers. Each turn on its events names it, and you act only on events that meet it. With the event screen on, an event plainly not that skips your turn and is listed in the rule's history. Omit to act on every event.",
+        }),
+      ),
       name: Type.Optional(Type.String()),
       project: Type.Optional(Type.String({ description: "Project key" })),
       draft: Type.Optional(Type.Boolean()),
@@ -96,6 +102,7 @@ function specFrom(params: {
   at_time?: string;
   on_event?: string;
   event_filter?: Record<string, string>;
+  event_waits_for?: string;
 }): ScheduleSpec {
   const set = [params.every_minutes, params.daily_at, params.at_time, params.on_event].filter(
     (value) => value !== undefined,
@@ -107,6 +114,8 @@ function specFrom(params: {
     throw new Error("days and time_zone go with daily_at.");
   }
   if (params.event_filter && !params.on_event) throw new Error("event_filter goes with on_event.");
+  if (params.event_waits_for !== undefined && !params.on_event)
+    throw new Error("event_waits_for goes with on_event.");
   if (params.on_event !== undefined) {
     const at = params.on_event.lastIndexOf("/");
     const integration = params.on_event.slice(0, at).trim();
@@ -123,6 +132,7 @@ function specFrom(params: {
       ...(params.event_filter
         ? { filter: automationEventFilterSchema.parse(params.event_filter) }
         : {}),
+      ...(params.event_waits_for?.trim() ? { waitsFor: params.event_waits_for.trim() } : {}),
     };
   }
   if (params.every_minutes !== undefined) {

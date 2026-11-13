@@ -85,7 +85,7 @@ export type SchedulerEvents = {
 
 /** A run as the history shows it: where its delivery stands now. */
 export type RunView = RecordedRun & {
-  state: "waiting" | "retrying" | "handled" | "cancelled" | "sent";
+  state: "waiting" | "retrying" | "handled" | "cancelled" | "screened" | "sent";
 };
 
 export type SchedulerOptions = {
@@ -109,6 +109,16 @@ export type SchedulerOptions = {
   projectOf?: (id: string) => { key: string; name: string } | undefined;
   /** Absent, no event rule can be made, and none looks. */
   events?: SchedulerEvents;
+  /**
+   * The event screen (docs/automation.md, "The event screen"): a rule that
+   * says what it waits for has each look's new events asked about, and
+   * answers them with those plainly not it marked `screened`. Absent, or
+   * for a rule that says nothing, every event reaches the first mate.
+   */
+  screen?: (
+    rule: { waitsFor: string; event: string },
+    items: readonly AutomationEventItem[],
+  ) => Promise<AutomationEventItem[]>;
   /**
    * Told the events of an event rule's delivery once a first mate turn
    * handled it, by the integration the rule listens to (the inbox's
@@ -291,7 +301,7 @@ export function scheduleText(spec: ScheduleSpec): string {
     case "once":
       return `once at ${formatDateTime(spec.at)}`;
     case "event":
-      return `on each ${spec.event} from ${spec.integration}`;
+      return `on each ${spec.event} from ${spec.integration}${spec.waitsFor ? `, only if "${spec.waitsFor}"` : ""}`;
   }
 }
 
@@ -507,14 +517,17 @@ export class Scheduler {
     } catch {
       return;
     }
-    const current = this.options.store.get(record.id);
-    if (
-      !current ||
-      current.state !== "enabled" ||
-      current.revision !== record.revision ||
-      current.cursor !== record.cursor
-    )
-      return;
+    const unchanged = () => {
+      const current = this.options.store.get(record.id);
+      return current &&
+        current.state === "enabled" &&
+        current.revision === record.revision &&
+        current.cursor === record.cursor
+        ? current
+        : undefined;
+    };
+    let current = unchanged();
+    if (!current) return;
     if (answer.resynced) {
       this.options.store.setCursor(record.id, answer.cursor);
       this.announce(automationWords.resynced(record, found.name), {});
@@ -526,20 +539,53 @@ export class Scheduler {
       if (answer.cursor !== record.cursor) this.options.store.setCursor(record.id, answer.cursor);
       return;
     }
+    // The event screen asks about each new event while the rule waits; a
+    // rule changed meanwhile drops the answer, as a slow look's is.
+    const waitsFor = record.spec.waitsFor?.trim();
+    const items =
+      waitsFor && this.options.screen
+        ? await this.options
+            .screen({ waitsFor, event: `${found.label} in ${found.name}` }, fresh)
+            .catch(() => fresh)
+        : fresh;
+    if (items !== fresh) {
+      current = unchanged();
+      if (!current) return;
+    }
+    const kept = items.filter((item) => !item.screened);
     const now = this.now();
     const next = {
       nextFire: now,
       state: record.card ? ("completed" as const) : ("enabled" as const),
       cursor: answer.cursor,
     };
+    if (kept.length === 0) {
+      // Nothing for the first mate: one settled run lists what was kept from it.
+      this.options.store.recordScreened(
+        {
+          scheduleId: record.id,
+          revision: record.revision,
+          plannedAt: now,
+          firedAt: now,
+          catchUp: false,
+          missed: 0,
+          prompt: eventsWords(items),
+          events: items,
+        },
+        // A rule that shows a card waits on: nothing was delivered.
+        { ...next, state: "enabled" as const },
+        now,
+      );
+      return;
+    }
     const project = record.projectId ? this.options.projectOf?.(record.projectId) : undefined;
     const unsent = this.unsent(current);
-    if (unsent?.events && this.foldEvents(current, unsent, fresh, next, project, found)) return;
+    if (unsent?.events && this.foldEvents(current, unsent, items, next, project, found)) return;
     const prompt = fillScheduleDetails(record.prompt, {
       plannedAt: now,
       timeZone: localTimeZone(),
       missed: 0,
-      events: eventsWords(fresh),
+      events: eventsWords(kept),
     });
     this.options.store.recordFire(
       {
@@ -550,7 +596,7 @@ export class Scheduler {
         catchUp: false,
         missed: 0,
         prompt,
-        events: fresh,
+        events: items,
       },
       next,
       now,
@@ -558,7 +604,13 @@ export class Scheduler {
         this.deliver(record, run, now, () =>
           wakeOf(
             record,
-            { prompt, catchUp: false, missed: 0, run, events: eventsFact(found, fresh.length) },
+            {
+              prompt,
+              catchUp: false,
+              missed: 0,
+              run,
+              events: eventsFact(found, kept.length, record.spec),
+            },
             project,
           ),
         ),
@@ -578,11 +630,12 @@ export class Scheduler {
     if (!inbox || run.inboxId === null) return false;
     const inboxId = run.inboxId;
     const events = [...(run.events ?? []), ...fresh];
+    const delivered = events.filter((item) => !item.screened);
     const prompt = fillScheduleDetails(record.prompt, {
       plannedAt: run.plannedAt,
       timeZone: localTimeZone(),
       missed: 0,
-      events: eventsWords(events),
+      events: eventsWords(delivered),
     });
     const wake = wakeOf(
       record,
@@ -592,7 +645,7 @@ export class Scheduler {
         missed: 0,
         run: run.id,
         waited: true,
-        events: eventsFact(found, events.length),
+        events: eventsFact(found, delivered.length, record.spec),
       },
       project,
     );
@@ -631,10 +684,11 @@ export class Scheduler {
         ...(found ? { found } : {}),
       });
       const spec = this.options.store.get(run.scheduleId)?.spec;
-      if (spec?.kind === "event" && run.events?.length)
+      const carried = (run.events ?? []).filter((event) => !event.screened);
+      if (spec?.kind === "event" && carried.length)
         this.options.handled?.(
           spec.integration,
-          run.events.map((event) => event.id),
+          carried.map((event) => event.id),
           record.endedAt,
         );
     }
@@ -815,9 +869,16 @@ export class Scheduler {
     const projectId =
       changes.projectId === undefined ? record.projectId : changes.projectId || undefined;
     if (projectId !== record.projectId) this.checkProject(projectId);
+    // What the rule waits for is read like its prompt: a new revision that
+    // keeps the rule's place, never a new schedule.
     const rescheduled =
-      JSON.stringify(spec) !== JSON.stringify(record.spec) || connection !== record.connection;
-    const edited = rescheduled || prompt !== record.prompt || projectId !== record.projectId;
+      JSON.stringify(unscreened(spec)) !== JSON.stringify(unscreened(record.spec)) ||
+      connection !== record.connection;
+    const edited =
+      rescheduled ||
+      JSON.stringify(spec) !== JSON.stringify(record.spec) ||
+      prompt !== record.prompt ||
+      projectId !== record.projectId;
     const state: RuleState =
       options.enable === true ||
       (record.state === "completed" && spec.kind === "once" && spec.at > now)
@@ -1005,6 +1066,7 @@ export class Scheduler {
         integration: found.integration,
         event: found.event,
         ...(spec.filter ? { filter: spec.filter } : {}),
+        ...(spec.waitsFor?.trim() ? { waitsFor: spec.waitsFor.trim() } : {}),
       },
       connection: found.connection,
     };
@@ -1070,7 +1132,7 @@ function wakeOf(
     missed: number;
     run: number;
     waited?: true;
-    events?: { integration: string; label: string; count: number };
+    events?: { integration: string; label: string; count: number; onlyIf?: string };
   },
   project: { key: string; name: string } | undefined,
 ): TypedWake {
@@ -1089,9 +1151,17 @@ function wakeOf(
   return { facts };
 }
 
-/** The events a run carries, as its wake names them. */
-function eventsFact(found: ListenedEvent, count: number) {
-  return { integration: found.name, label: found.label, count };
+/** A spec without what an event rule waits for: the schedule alone. */
+function unscreened(spec: ScheduleSpec): ScheduleSpec {
+  if (spec.kind !== "event") return spec;
+  const { waitsFor: _waitsFor, ...rest } = spec;
+  return rest;
+}
+
+/** The events a run carries, as its wake names them, with the rule's Only if condition. */
+function eventsFact(found: ListenedEvent, count: number, spec: ScheduleSpec) {
+  const onlyIf = spec.kind === "event" ? spec.waitsFor?.trim() : undefined;
+  return { integration: found.name, label: found.label, count, ...(onlyIf ? { onlyIf } : {}) };
 }
 
 /** The items not yet carried by a run of this rule, each once. */

@@ -24,12 +24,15 @@ function byId(view: ReturnType<typeof decisionUsesView>) {
 }
 
 describe("decision model uses", () => {
-  it("keeps task classification on and locked, and starts every other listed use on", () => {
+  it("keeps task classification on and locked, and starts every default-on use on", () => {
     // Intent: the captain asked that mandated uses such as task
     // classification show their switch locked, and that most uses default on.
     const fresh = byId(decisionUsesView(DEFAULT_DECISIONS, {}));
     expect(fresh.kind).toMatchObject({ name: "Task classification", kind: "always-on", on: true });
     expect(fresh["reply-checks"]).toMatchObject({ kind: "default-on", on: true });
+    // The uses INF-4000 added wait for the person's own OK (below).
+    expect(fresh["event-screen"]).toMatchObject({ kind: "needs-ok", on: false });
+    expect(fresh["card-reader"]).toMatchObject({ kind: "needs-ok", on: false });
     expect(Object.keys(fresh)).toEqual(DECISION_USES.map((use) => use.id));
 
     const switchedOff = byId(
@@ -76,18 +79,24 @@ describe("decision model uses", () => {
 
   it("keeps a use that needs its own OK off until that disclosure is agreed", () => {
     // Intent: the captain asked that a use needing the person's agreement
-    // start off and turn on only after its disclosure is shown. No listed use
-    // is of that kind yet, so this one is the reply-check entry as such a use.
-    const replyChecks = decisionUse("reply-checks");
-    if (!replyChecks) throw new Error("reply checks are listed");
-    const use: DecisionUse = {
-      ...replyChecks,
-      kind: "needs-ok",
-      disclosure: { version: 1, text: ["Shared.", "Your choice.", "Cost."] },
-    };
+    // start off and turn on only after its disclosure is shown; INF-4000's
+    // event screen is the first listed use of that kind.
+    const use = decisionUse("event-screen");
+    if (!use?.disclosure) throw new Error("the event screen is listed with its disclosure");
+    const version = use.disclosure.version;
     expect(decisionUseSwitchedOn(use, {})).toBe(false);
     expect(decisionUseSwitchedOn(use, { [use.id]: { on: true } })).toBe(false);
-    expect(decisionUseSwitchedOn(use, { [use.id]: { on: true, agreed: 1 } })).toBe(true);
-    expect(decisionUseSwitchedOn(use, { [use.id]: { on: false, agreed: 1 } })).toBe(false);
+    expect(decisionUseSwitchedOn(use, { [use.id]: { on: true, agreed: version } })).toBe(true);
+    expect(decisionUseSwitchedOn(use, { [use.id]: { on: false, agreed: version } })).toBe(false);
+    // Until agreed, Settings is handed the disclosure for the consent dialog.
+    expect(byId(decisionUsesView(DEFAULT_DECISIONS, {}))["event-screen"]?.disclosure).toEqual({
+      version,
+      text: [...use.disclosure.text],
+    });
+    expect(
+      byId(decisionUsesView(DEFAULT_DECISIONS, { [use.id]: { on: true, agreed: version } }))[
+        "event-screen"
+      ],
+    ).toMatchObject({ on: true });
   });
 });

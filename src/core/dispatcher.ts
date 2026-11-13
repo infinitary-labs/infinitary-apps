@@ -79,7 +79,7 @@ import { secretsHandlers } from "./secrets/handlers";
 import { plainSettingsChannels } from "./settingsChannels";
 import type { PhoneDiagnosticEvent } from "./sharing/sharingService";
 import { SIGN_IN_RETURN_WORDS, type SignInReturns } from "./signInReturns";
-import type { ScheduleRecord } from "./storage/scheduleStore";
+import { eventCounts, type ScheduleRecord } from "./storage/scheduleStore";
 import { readStartAtLogin, recordStartAtLogin } from "./storage/startAtLoginRecord";
 import { ProjectKeyRefusal } from "./tasks/projectKey";
 import { recentFeed } from "./tasks/taskFeed";
@@ -1343,9 +1343,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         firedAt: run.firedAt,
         catchUp: run.catchUp,
         missed: run.missed,
-        ...(run.events ? { events: run.events.length } : {}),
+        ...eventCounts(run.events),
         prompt: run.prompt,
-        delivery: run.state,
+        // A screened run reads as never sent, with no reason; `screened` says why.
+        delivery: run.state === "screened" ? "cancelled" : run.state,
         settledAt: run.settledAt,
         ...(run.cancelReason ? { cancelReason: run.cancelReason } : {}),
         tasks: run.tasks.flatMap((taskId) => {

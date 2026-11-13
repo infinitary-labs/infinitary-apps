@@ -1,13 +1,15 @@
 import { appendFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { DecisionAnswer, DecisionState } from "@shared/decisions";
 import type { FmEvent } from "@shared/events";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { EVENT_SCREEN_QUESTION, eventScreen } from "../decisions/eventScreen";
 import { IntegrationSettingsStore, IntegrationsService, standInIntegration } from "../integrations";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { ScheduleStore } from "../storage/scheduleStore";
-import { Scheduler } from "./scheduler";
+import { Scheduler, type SchedulerOptions } from "./scheduler";
 import { renderWake } from "./wakes";
 
 /**
@@ -18,7 +20,7 @@ import { renderWake } from "./wakes";
  * to its items file, into the real durable inbox.
  */
 
-function setup() {
+function setup(screen?: SchedulerOptions["screen"]) {
   const root = scratchDir("fm-automation-events-");
   const items = join(root, "items.jsonl");
   writeFileSync(items, "");
@@ -43,6 +45,7 @@ function setup() {
       find: (integration, event) => integrations.listenable(integration, event),
       look: (integration, event, cursor) => integrations.look(integration, event, cursor),
     },
+    ...(screen ? { screen } : {}),
   });
   /** Items arriving at the stand-in, as its file gains lines. */
   const arrive = (...summaries: [string, string][]) =>
@@ -132,6 +135,7 @@ describe("Automation on an integration's event", () => {
     await tick();
     expect(served()).toHaveLength(1);
     expect(served()[0]).toContain("on 1 new event - ");
+    expect(served()[0]).not.toContain("Only if");
     expect(scheduler.history(record.id)).toHaveLength(1);
   });
 
@@ -180,5 +184,99 @@ describe("Automation on an integration's event", () => {
       }),
     ).toThrow('Nothing connected tells "nothing_here"');
     expect(scheduler.preview(record.spec)).toEqual([]);
+  });
+
+  it("keeps events plainly not what a rule waits for from the first mate, and lists them in its history", async () => {
+    // Intent: the captain approved building INF-4000's event screen - a rule
+    // that says what it waits for skips the first mate's turn only on an
+    // answered unrelated, lists the skipped events on the rule, and delivers
+    // on match, unclear or a failed check.
+    const asked: DecisionState[] = [];
+    let on = true;
+    const answers: Record<string, Pick<DecisionAnswer, "value" | "outcome">> = {
+      "From Acme Supplies: Invoice 1042 due December 1": { value: "match", outcome: "answered" },
+      "From Bo: Lunch on Friday?": { value: "unrelated", outcome: "answered" },
+      "From Cy: Re: the quote you asked for": { value: "unclear", outcome: "abstained" },
+      "From Di: Newsletter - November deals": { value: "unclear", outcome: "failed" },
+      "From Ed: Team photo": { value: "unrelated", outcome: "answered" },
+    };
+    const screen = eventScreen({
+      allowsUse: (id) => on && id === "event-screen",
+      decide: async (caller, state, questions) => {
+        expect(caller).toEqual({ purpose: "event-screen", use: "event-screen" });
+        expect(questions).toEqual({ screen: EVENT_SCREEN_QUESTION });
+        asked.push(state);
+        const said = answers[String(state.facts.event_summary)];
+        if (!said) throw new Error("unexpected event");
+        return { screen: { ...said, version: "es1" } };
+      },
+    });
+    const { scheduler, arrive, tick, served } = setup(screen);
+    const record = scheduler.create(
+      {
+        kind: "event",
+        integration: "Stand-in",
+        event: "item_arrived",
+        waitsFor: "  invoices and quotes from suppliers ",
+      },
+      "File what needs paying: {{events}}",
+      true,
+      "Supplier invoices",
+    );
+    expect(record.spec).toMatchObject({ waitsFor: "invoices and quotes from suppliers" });
+    await tick();
+
+    arrive(
+      ["m1", "From Acme Supplies: Invoice 1042 due December 1"],
+      ["m2", "From Bo: Lunch on Friday?"],
+      ["m3", "From Cy: Re: the quote you asked for"],
+      ["m4", "From Di: Newsletter - November deals"],
+    );
+    await tick();
+    expect(asked[0]?.facts).toEqual({
+      automation_waits_for: "invoices and quotes from suppliers",
+      event_kind: "An item arrives in Stand-in",
+      event_summary: "From Acme Supplies: Invoice 1042 due December 1",
+    });
+    expect(served()).toHaveLength(1);
+    expect(served()[0]).toContain("on 3 new events");
+    const onlyIf =
+      'act on an event only when it meets the automation\'s Only if condition, "invoices and quotes from suppliers", and pass over the rest: ';
+    expect(served()[0]).toContain(onlyIf);
+    expect(served()[0]).toContain(
+      "- From Acme Supplies: Invoice 1042 due December 1 (id m1)\n- From Cy: Re: the quote you asked for (id m3)\n- From Di: Newsletter - November deals (id m4)",
+    );
+    expect(served()[0]).not.toContain("Lunch");
+    expect(scheduler.history(record.id)[0]?.events).toEqual([
+      { id: "m1", summary: "From Acme Supplies: Invoice 1042 due December 1" },
+      { id: "m2", summary: "From Bo: Lunch on Friday?", screened: true },
+      { id: "m3", summary: "From Cy: Re: the quote you asked for" },
+      { id: "m4", summary: "From Di: Newsletter - November deals" },
+    ]);
+
+    // A look with nothing for the first mate sends nothing, and its run
+    // lists the skipped event in the rule's history.
+    arrive(["m5", "From Ed: Team photo"]);
+    await tick();
+    expect(served()).toHaveLength(1);
+    const skipped = scheduler.history(record.id)[0];
+    expect(skipped).toMatchObject({
+      state: "screened",
+      inboxId: null,
+      prompt: "- From Ed: Team photo (id m5)",
+      events: [{ id: "m5", summary: "From Ed: Team photo", screened: true }],
+    });
+    // It is never looked at again.
+    await tick();
+    expect(asked).toHaveLength(5);
+
+    // Switched off, every event reaches the first mate and nothing is asked;
+    // the first mate still holds it to the rule's Only if condition.
+    on = false;
+    arrive(["m6", "From Bo: Lunch on Friday?"]);
+    await tick();
+    expect(asked).toHaveLength(5);
+    expect(served()[0]).toContain("From Bo: Lunch on Friday? (id m6)");
+    expect(served()[0]).toContain(onlyIf);
   });
 });

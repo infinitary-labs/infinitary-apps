@@ -3235,5 +3235,16 @@
   "settingsWebsiteSignInsHeading": "Web サイトのサインイン",
   "settingsWebsiteSignInsRemove": "削除",
   "settingsWebsiteSignInsRemoveFailed": "{place} は現在そのサインインを削除できませんでした。もう一度お試しください。",
-  "settingsWebsiteSignInsAutomaticFailed": "{place} は現在その権限を変更できませんでした。"
+  "settingsWebsiteSignInsAutomaticFailed": "{place} は現在その権限を変更できませんでした。",
+  "automationWaitsFor": "条件",
+  "automationWaitsForPlaceholder": "すべてのイベント",
+  "automationEventsSkipped": "スキップしたイベント",
+  "automationRunSkipped": {
+    "plural": "count",
+    "other": "{count}件のイベント、{date}"
+  },
+  "automationRunSkippedState": "スキップ",
+  "automationRunAlsoSkipped": "{count}件スキップ",
+  "automationScreenedNote": "一等航海士には送っていません。判断モデルが、これらのイベントはこの自動化の条件に明らかに当てはまらないと判断しました。",
+  "automationWaitsForNote": "一等航海士はこの条件に当てはまるイベントにだけ対応します。設定でイベントの選別がオンのあいだ、この条件に明らかに当てはまらないイベントは一等航海士に届かず、この自動化の履歴には残ります。"
 }

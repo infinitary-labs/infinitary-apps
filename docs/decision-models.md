@@ -171,10 +171,19 @@ Each entry has a kind:
 
 - `always-on`: Infinitary needs it to work; its switch shows on and locked (task classification).
 - `default-on`: on until the person turns it off (reply checks, which Settings names Propose standing direction).
-- `needs-ok`: off until the person agrees to its own disclosure in the consent dialog, once; no listed use is of this kind yet.
+- `needs-ok`: off until the person agrees to its own disclosure in the consent dialog, once (the event screen and the reader check, below).
 
 The person's switches are their own settings row, `decision-uses`, holding only the uses they switched.
 `DecisionModels.decide` refuses a use that is off, or that the answering Jev or OpenRouter approval predates, with the question's abstention and the reason `use-off`; the person's own models never answer in that model's place.
+Four uses are listed:
+
+- `kind`, task classification ("The first consumer").
+- `reply-checks`, "Optional reply checks" below.
+- `event-screen`, Screen automation events: a new event of an automation that says what it waits for is asked `match`, `unrelated` or `unclear`, and only `unrelated` keeps it from the first mate (`docs/automation.md`, "The event screen").
+  Its disclosure names what leaves: each event's summary, such as an email's sender and subject, which anyone who can email the person writes.
+- `card-reader`, Reader check on cards: four readings of a crewmate's card once it is up, told to its author as facts (`docs/card-authoring.md`, "The reader check").
+  It needs the person's OK because it asks four questions on every crewmate card, which on the person's own models costs a few seconds and some allowance each time.
+
 A program's `ask()` is not a use: it asks for JSON in a shape it chooses, which a decision model cannot be relied on to give, so `ProgramQuestions` asks the person's own models apart from this list (`docs/programs.md`).
 
 ## The first consumer
@@ -337,7 +346,7 @@ It never reads the request or its credential and sends nothing more: no second t
 A reply that names no model is recorded under the pick (`requested`), and one that states no cost at Pi's catalog estimate (`listed-prices`).
 The answer's source on the task names the served model as well (`classifier:openrouter/typesafe/jev-1.13-20260917`), while the row's last answer stays with the pick.
 Certainty remains free prose, not a new field on `DecisionAnswer`.
-The kind-of-work question remains the only consumer.
+The kind-of-work question is not the only consumer: every listed use reaches OpenRouter the same way ("The uses").
 
 `INFINITARY_OPENROUTER_DECISIONS_BASE_URL` redirects only this classifier's request address inside Pi's request callback in unpackaged dev/e2e runs; packaged builds ignore it.
 Hermetic tests use a stand-in System One server and fake account credentials, never a real OpenRouter login.

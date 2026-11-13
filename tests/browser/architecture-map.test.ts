@@ -4,7 +4,7 @@ import { buildFrameDocument, type FrameTheme } from "@shared/plugins/frameDocume
 import { expect, test } from "vitest";
 import { commands, page } from "vitest/browser";
 import part from "../../resources/runbooks/architecture/skills/advanced-architecture/parts/map.html?raw";
-import { cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
+import { cardBodyMarkup, cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
 import { fillMapPart, MAP_DATA, mapPartNaming } from "../helpers/architectureMap";
 
 /**
@@ -15,7 +15,9 @@ import { fillMapPart, MAP_DATA, mapPartNaming } from "../helpers/architectureMap
  * counts). The part is the very file the runbook ships, filled as its skill
  * says with map files of this project and comparisons read from its
  * history, and drawn in a card's sandboxed frame with the card's stylesheet,
- * policy and bridge, as the window draws a card body that carries a script.
+ * policy and bridge, as the window draws a card body that carries a script:
+ * the part names the map's code by reference, and the window's markup puts
+ * the app's own copy in its place.
  */
 
 const FRAME = "architecture-map";
@@ -226,9 +228,12 @@ async function mounted(
 ): Promise<Heard[]> {
   const data = options.data ?? MAP_DATA;
   const block = JSON.stringify(options.open ? { ...data, open: options.open } : data);
-  const html = options.file
+  // The body as the crewmate writes it, then as the window serves it: the
+  // map's code put in place of the part's reference, before its scripts are pinned.
+  const body = options.file
     ? mapPartNaming(part, DATA_SRC)
     : fillMapPart(part, options.pack ? await packed(block) : block, options.pack ?? false);
+  const html = cardBodyMarkup(body).html;
   const scripts = [...new DOMParser().parseFromString(html, "text/html").querySelectorAll("script")]
     .filter((script) => !script.src && script.textContent)
     .map((script) => script.textContent ?? "");

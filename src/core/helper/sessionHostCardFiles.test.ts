@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { withAppParts } from "@shared/appParts";
 import { CARD_MEDIA_PIECE_BYTES } from "@shared/cardPictures";
 import type { CardPicture } from "@shared/cards";
 import { placedTaskFolders } from "@shared/work";
 import { describe, expect, it } from "vitest";
-import { MAP_DATA } from "../../../tests/helpers/architectureMap";
+import { fillMapPart, MAP_DATA } from "../../../tests/helpers/architectureMap";
 import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { gif } from "../../../tests/helpers/gifFixture";
@@ -26,6 +27,14 @@ import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
  */
 
 sessionHostHooks();
+
+const MAP_PART = readFileSync(
+  join(
+    __dirname,
+    "../../../resources/runbooks/architecture/skills/advanced-architecture/parts/map.html",
+  ),
+  "utf8",
+);
 
 describe("a conversation held on a computer that runs work", () => {
   it("sends a card's picture before the card, from the folder the crewmate wrote it in", async () => {
@@ -312,6 +321,54 @@ describe("a conversation held on a computer that runs work", () => {
       expect(String((card?.request.card as { body?: string } | undefined)?.body)).toContain(
         `src="app-frame://data/${data?.request.id}.json"`,
       );
+    },
+  );
+
+  // The captain, on map cards carrying the map's code: "does our cards not
+  // support importing repetitive boilerplates, avoiding counting them in the
+  // card size?" A card names the map part by reference; a home whose window
+  // cannot fill a reference gets the part's code in the body instead, and a
+  // body that would then be over the card size limit is refused unsent.
+  it.each([
+    { case: "lists the change", homeChanges: ["card-app-parts"], pad: 0, arrives: "as written" },
+    { case: "is older", homeChanges: [], pad: 0, arrives: "with the code" },
+    {
+      case: "is older, and the code would not fit",
+      homeChanges: [],
+      pad: 50_000,
+      arrives: "refused",
+    },
+  ])(
+    "sends a card naming the map part to a home that $case: $arrives",
+    async ({ homeChanges, pad, arrives }) => {
+      const at = await placed({ homeChanges });
+      await at.open();
+      // The part as the runbook ships it, with an empty map and, to go over, a long note.
+      const body = fillMapPart(MAP_PART, JSON.stringify({ maps: {}, note: "x".repeat(pad) }));
+      model([
+        {
+          tools: [{ name: "emit_card", args: { title: "The core's map from another Mac", body } }],
+        },
+        { text: "Done." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:part", task: TASK, text: "Show it." },
+      ]);
+      await at.ended(1);
+
+      const sent = at.home.effects.find((effect) => effect.channel === "inf:work:card");
+      const sentBody = String((sent?.request.card as { body?: string } | undefined)?.body);
+      if (arrives === "refused") {
+        expect(sent).toBeUndefined();
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+          "cannot load the app's own parts by reference",
+        );
+      } else if (arrives === "as written") {
+        expect(sentBody).toBe(body);
+      } else {
+        expect(sentBody).toBe(withAppParts(body));
+        expect(sentBody).not.toContain("data-inf-part");
+      }
     },
   );
 

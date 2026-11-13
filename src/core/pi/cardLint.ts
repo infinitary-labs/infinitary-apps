@@ -1,3 +1,4 @@
+import { appPartProblem } from "@shared/appParts";
 import {
   bodyHeadings,
   COMPLETION_CARD_HEADINGS,
@@ -540,6 +541,11 @@ export function lintCardShape(card: ShapedCard): string | undefined {
     const taken = anythingElseRefusal(card.body);
     if (taken) return taken;
   }
+
+  // A product fact: a body names only a part the app ships, in the one form
+  // every reader fills (docs/card-authoring.md, "Parts by reference").
+  const partRefusal = appPartProblem(card.body);
+  if (partRefusal) return partRefusal;
 
   // A product fact: no figure text under 11 px, in a preview too.
   const figureRefusal = figureTypeRefusal(card.body);

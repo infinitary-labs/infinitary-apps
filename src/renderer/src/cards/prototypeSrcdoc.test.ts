@@ -67,6 +67,25 @@ describe("cardBodyMarkup", () => {
     expect(cardBodyMarkup("one\n\ntwo", [0]).marked).toBe(false);
   });
 
+  // A body naming the app's map part (docs/card-authoring.md, "Parts by
+  // reference"): the part's code goes in after the change bars are placed by
+  // the body's own offsets, so a bar after the part still marks its part.
+  it("puts the app's part in place of its reference after marking the body's own parts", () => {
+    const body =
+      '<p>Old.</p><div id="map"></div><script data-inf-part="map"></script><p>New after the map.</p>';
+    const { html, marked } = cardBodyMarkup(body, [body.lastIndexOf("<p>")]);
+    expect(marked).toBe(true);
+    const all = elements(html);
+    expect(all.find((node) => node.attribs?.["data-inf-changed"] !== undefined)).toMatchObject({
+      name: "p",
+      children: [{ data: "New after the map." }],
+    });
+    expect(html).not.toContain("data-inf-part");
+    const scripts = all.filter((node) => node.name === "script");
+    expect(scripts).toHaveLength(1);
+    expect(scripts[0]?.children?.length).toBe(1);
+  });
+
   it("builds a page born held, so its animations wait until the card is shown (FI3-871)", () => {
     expect(buildPrototypeSrcdoc("<p>Plain.</p>", "light")).toContain(
       '<html lang="en" dir="ltr" data-theme="light" data-inf-held>',

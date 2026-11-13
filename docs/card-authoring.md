@@ -474,6 +474,13 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   The first mate has no working copy, so a path in one of its cards is refused.
   A crewmate on a computer that runs work has each file checked there and sent home before the card as a card's media (`inf:work:media`), only to a home that lists the `card-data` change; to an older home it refuses the card itself, in words saying to put the data in the body until it is updated.
   A paired view and the phone read the home's copy by name (`inf:cards:data`, `docs/view.md`, `docs/ios.md`); a view or phone too old to know the verb draws the card with its script unable to read the file.
+- **Parts by reference.**
+  Code that many cards repeat, such as the architecture map part's, is the app's own: a body names it with an empty `<script data-inf-part="map"></script>`, written exactly so, instead of carrying the code.
+  Every reader - the window, a view of another computer and the phone - puts its own build's style and script for that part in its place when it builds the body's markup (`withAppParts`, `src/shared/appParts.ts`), before the body's scripts are hashed, so the part runs as if the body carried it and its code never counts toward the body's size.
+  The parts are generated from their readable sources in `src/core/runbooks/parts/` by `node scripts/generate-runbook-parts.ts`, which also writes the part a runbook's skill has a crewmate copy, its last line the reference.
+  At the `emit_card` boundary the card checks refuse a reference written in another form or naming a part the app does not ship (`appPartProblem`).
+  A computer that runs work sends a card naming a part to a home that does not list the `card-app-parts` change with the part's code put into the body, and refuses it, with nothing sent, when the body would then be over the size limit.
+  A view or phone too old to know parts draws the part's markup with none of its code.
 - **The host's own actions stay the host's.**
   A `data-inf-action` button or an `inf.action(id)` call raises one of the card's declared actions - EXCEPT any action carrying an effect (`settle`, `open`, or the app's own `host` op).
   Those are run by the host from the footer button the captain clicks, are never declared to the frame, and are checked again against the current card when dispatched; a body that raises one is refused.
@@ -501,6 +508,7 @@ The vocabulary beyond plain text:
 - Fonts: a preview's `@font-face` naming a WOFF2, WOFF, TTF or OTF file in the working copy or the evidence folder, which the host checks, loads and serves (Fonts by reference, above).
   Nothing else loads.
 - Data: a `<script type="application/json" src>` naming a JSON file in the working copy or the evidence folder, which the host checks and keeps and the body's script reads through the bridge (Data by reference, above).
+- Parts: an empty `<script data-inf-part="map"></script>` naming one of the app's own parts, whose code every reader puts in its place (Parts by reference, above).
 - Sizing: whatever units the body needs; relative ones follow the card.
 
 Links open through the app's safe external opener: https anywhere, plus http to loopback (`localhost`, `127.0.0.1`, `[::1]`) and to genuine `.localhost` subdomains, single-level or nested (`http://app.localhost:1355`, `http://task-1.soapbox.localhost:1355`).
@@ -532,7 +540,7 @@ A script is for behavior - drawing a `<canvas>`, toggling a view, wiring a contr
   It moves on the captain's press or drag, one pass, never on arrival and never in a loop, and reads `--dur-med` or `--dur-slow`, which the frame zeroes under reduced motion, so every move is then a cut; a duration written into the script is not zeroed (Figures, below).
 - A script that never yields (a tight loop, an animation that blocks) is stopped after a few seconds: the body shows "This card stopped responding." with a Retry, and the rest of the app is unaffected.
 - When too many cards with scripts are already open, the body says so and offers a Retry, which works once one of them closes.
-- Body size, script included, is capped at 64KB.
+- Body size, script included, is capped at 64KB; an app part the body names by reference does not count (Parts by reference, above).
   A body the app builds from a saved story can still be larger than the window's mount takes (`FRAME_TEMPLATE_MAX_BYTES`): it then opens with its words, tables, pictures and still drawings, its scripts off, under one line saying its drawings are off, with no Retry (`cardBodyVehicle`).
 - A card title longer than a mount takes (`FRAME_TITLE_MAX`) is shortened with an ellipsis for the served page; the card's own heading keeps the whole title.
 

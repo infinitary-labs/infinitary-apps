@@ -95,14 +95,16 @@ A change that moves nothing on the map, such as a docs edit, gets no change view
 
 ## Drawing it on a card
 
-Copy `parts/map.html` into a card body whole and fill in only its JSON block:
+Copy `parts/map.html` into a card body whole and fill in only its JSON block.
+Its last line, `<script data-inf-part="map"></script>`, names the map's code, which the app puts in its place wherever the card is drawn, so keep it exactly as it is.
+The block holds:
 
 - `maps`: every map file to draw, keyed by its folder (`""` for the top).
 - `counts`: for each part's folder, `{ "files": n, "lines": n }` from `git ls-files` and a line count of those files; boxes are sized from them.
 - `compare`: the comparisons, one button each.
 - `open`: where the card opens, a part's folder or a machine's name, including one that comparison removed, and which comparison is on.
 
-A card body holds at most 65,536 characters, and the part takes about 47,000 of them, so write the data as a JSON file and name it in the block, which stays empty: `<script type="application/json" data-map src="map-data.json"></script>`.
+A card body holds at most 65,536 characters, and the part takes about 2,000 of them; when the data does not fit in the rest, write it as a JSON file and name it in the block, which stays empty: `<script type="application/json" data-map src="map-data.json"></script>`.
 Name the file as you name a picture, by its path in your working copy or in your evidence folder; the app keeps a copy of it, at most 8MB, and the map reads it through the card.
 If the map part lists problems under the drawing, fix the map files and draw it again before the card goes up.
 The reader clicks a box for its links or a pill for its state machine, goes in with a double-click or Enter, goes back with Esc, chooses with the arrows, drags the map, and zooms with the − and + buttons, the +, − and 0 keys, a pinch or ⌘-scroll; a plain scroll scrolls the card past the map.

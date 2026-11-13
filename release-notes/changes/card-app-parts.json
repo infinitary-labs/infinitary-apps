@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-app-parts",
+      "reason": "Internal: a card can name one of the app's own parts, such as the architecture map, instead of carrying its code, and the map's skill now writes it that way; a map card looks and works the same, with more room left for its data, so nothing a person sees changes."
+    }
+  ]
+}

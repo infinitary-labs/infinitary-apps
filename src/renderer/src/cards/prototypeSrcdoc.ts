@@ -1,3 +1,4 @@
+import { withAppParts } from "@shared/appParts";
 import { cardNavigationParts } from "@shared/cardParts";
 import { cardTypefaceNames } from "@shared/cardPictures";
 import { REVISION_TARGETS_MAX } from "@shared/cards";
@@ -107,8 +108,12 @@ export const CHANGE_GUTTER_PX = 8;
  * one bar per part, anchored to it, follows the body - so a paragraph, a
  * list item, a table row, a figure and a question are marked alike and
  * nothing inside a part changes. `marked` is false when no offset named a
- * tag, and the markup is then the body's own.
+ * tag, and the markup is then the body's own but for its parts (below).
  * The internal marker is separate from the author's `data-inf-new` picture tag.
+ * Last, each app part the body names takes this build's own code in its place
+ * (`withAppParts`; docs/card-authoring.md, "Parts by reference"), after every
+ * offset above was read against the body as written, so every reader that
+ * draws or hashes the body's scripts draws the part's.
  */
 export function cardBodyMarkup(
   body: string,
@@ -130,7 +135,7 @@ export function cardBodyMarkup(
     marked = `${marked.slice(0, at)}${targets.includes(start) ? ` data-inf-target="${start}"` : ""}${changed ? ` data-inf-changed="${n}"` : ""}${marked.slice(at)}`;
     if (changed) bars.push(n);
   }
-  if (bars.length === 0) return { html: marked, marked: false };
+  if (bars.length === 0) return { html: withAppParts(marked), marked: false };
   // Each bar needs its own anchor name; the names ride a style block, never
   // the part's own style attribute, which the author may have written.
   const anchors = bars.map((n) => `[data-inf-changed="${n}"]{anchor-name:--fm-new-${n}}`).join("");
@@ -139,7 +144,7 @@ export function cardBodyMarkup(
     .join("");
   // i18n-exempt: not shown (markup)
   return {
-    html: `${marked}<style>${anchors}</style><div data-inf-bars="" aria-hidden="true">${drawn}</div>`,
+    html: `${withAppParts(marked)}<style>${anchors}</style><div data-inf-bars="" aria-hidden="true">${drawn}</div>`,
     marked: true,
   };
 }

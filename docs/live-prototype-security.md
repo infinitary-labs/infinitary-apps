@@ -144,6 +144,19 @@ The frame's policy is unchanged: `connect-src` stays at none, no host of the fra
 - A computer that runs work checks the file there and sends it home before the card as a card's media, only to a home that lists the `card-data` change; the phone asks its Mac for the text the same way, from its trusted parent page alone (`ios/Infinitary/CardRuntime/cardHost.ts`).
 - The bridge gained one request verb, `data`, and one refusal code, `data_failed`; `FRAME_BRIDGE_SHA256` moved with it.
 
+## The app's own parts in card bodies
+
+The captain asked whether a card could import code it repeats, so it would not count toward the card's size ("does our cards not support importing repetitive boilerplates, avoiding counting them in the card size?").
+A body names one of the app's own parts with an empty `<script data-inf-part="map"></script>`, and each reader puts its own build's style and script for that part in its place (`docs/card-authoring.md`, "Parts by reference").
+The frame's policy is unchanged: the part's script is an inline script of the served markup, pinned by its hash like any other, and nothing is fetched.
+
+**Layers.**
+
+- The code comes only from the reading app's own bundle (`src/shared/appParts.generated.json`, generated from `src/core/runbooks/parts/`): a body can name a part, never supply or change one.
+- Only the one exact form is filled, and only for a name the build ships; any other reference stays an empty script that runs nothing, and the card checks refuse it at `emit_card` (`appPartProblem`).
+- The part goes in when the markup is built (`cardBodyMarkup`), before the window's mount or the phone's parent page hashes the body's scripts, so the policy pins exactly the code the build shipped.
+- The part's code is the same code a body could already carry inline, so a body gains no reach it did not have; the generator refuses a part whose code would close its own element or open a comment.
+
 ## Phone cards
 
 Both native WebKit views set `allowsLinkPreview = false`, so system long-press previews cannot load a link outside the card’s script policy.

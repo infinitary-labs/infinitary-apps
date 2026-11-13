@@ -285,6 +285,7 @@ Each inline body script runs by its hash under `default-src 'none'`, with only l
 Native WebKit messages are admitted from the trusted main frame alone, never from the body’s child frame.
 The parent checks source identity, document identity, shared message schemas and declared action ids; native code checks effect-free action ids again and stamps every such request as `frame`, never `chrome`.
 A body's `inf.data(src)` reaches native code only for a data file the body names; native code checks the minted name again and reads the Mac's copy as text (`inf:cards:data`, `docs/card-authoring.md`, "Data by reference").
+An app part the body names by reference takes the phone's own copy of the part's code when the parent page builds the body's markup, before it asks native code for the scripts' hashes (`docs/card-authoring.md`, "Parts by reference").
 The native footer is the only path to an effect-bearing action.
 A native watchdog removes a body that stops answering without removing its native controls, and offers Retry.
 The watchdog counts only while the body is on screen, loaded and in front, since WebKit pauses a card behind another tab or in the background, and any answer since its last look counts, however slow.

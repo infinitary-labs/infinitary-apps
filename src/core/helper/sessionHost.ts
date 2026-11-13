@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { closeSync, openSync, readFileSync, readSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
+import { namesAppPart, withAppParts } from "@shared/appParts";
 import type { CutOff } from "@shared/authFailure";
 import {
   CARD_MEDIA_PIECE_BYTES,
@@ -56,6 +57,7 @@ import {
   crewmateResume,
   crewmateResumeToken,
 } from "../orchestrator/crewSession";
+import { MAX_CARD_BODY_LENGTH } from "../pi/cardBodyFile";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
@@ -259,6 +261,8 @@ const RETRIES = 2;
 const MERGE_CARD_SINCE_SEEN = contractChange("merge-card-since-seen");
 /** A put-off choice the home keeps and raises again (`card-put-off.md`). */
 const CARD_PUT_OFF = contractChange("card-put-off");
+/** A card naming the app's own parts by reference (`card-app-parts.md`). */
+const CARD_APP_PARTS = contractChange("card-app-parts");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -1388,6 +1392,17 @@ export class SessionHost {
               throw new Error(
                 `until refused: ${HOME.the} runs an older Infinitary that cannot keep a put-off choice; nothing was sent. Offer the choice without until, and set your own reminder until ${HOME.the} is updated.`,
               );
+            // A home without app parts would draw a part's markup without its
+            // code, so the part goes into the body, as cards carried it before;
+            // one that no longer fits is refused before anything is sent.
+            const sent =
+              namesAppPart(card.body) && !listsChange(this.options.homeChanges?.(), CARD_APP_PARTS)
+                ? { ...card, body: withAppParts(card.body) }
+                : card;
+            if (sent.body.length > MAX_CARD_BODY_LENGTH)
+              throw new Error(
+                `Card refused: ${HOME.the} runs an older Infinitary that cannot load the app's own parts by reference, and with the part's code in it the body is over ${MAX_CARD_BODY_LENGTH} characters; nothing was sent. Put the part's data in a data file, or wait until ${HOME.the} is updated.`,
+              );
             // Each data file its script reads, refused here before anything is
             // sent when the home cannot hand one over.
             await sendCardData(media, card.body, signal);
@@ -1410,7 +1425,7 @@ export class SessionHost {
               );
             }
             const answer = placedCardAnswerSchema.parse(
-              await this.call(held, "inf:work:card", { callId: randomUUID(), card }, signal),
+              await this.call(held, "inf:work:card", { callId: randomUUID(), card: sent }, signal),
             );
             if ("refused" in answer)
               throw new CardRefusedError(

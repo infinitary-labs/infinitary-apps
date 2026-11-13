@@ -1098,6 +1098,7 @@ It streams `main.stdout.log`, `main.stderr.log` and `provider.requests.jsonl` wh
 The provider record keeps decoded request bodies with sequence numbers and timestamps, including tool-result follow-ups, never authentication headers; a reused provider replays its history to the new launch's record.
 `launch.json` identifies the disposable userData and worker; no account store or whole HOME is copied.
 The existing failure uploads in `journeys.yml`, `source-journeys.yml`, `verify.yml` and the batch checks' confirm job already keep this run directory under `test-results/`.
+A passing Linux journey upload also keeps pictures saved under a test's `evidence/` output directory, alongside its results and demos.
 Main-process streams attach as soon as Playwright returns the launched process; a failure inside `electron.launch` itself has only Playwright's launch error, not these streams.
 On Linux, just before each close, the launcher also adds to `threads.txt` every process of the app and of the virtual screen, with each thread's name, its state and the kernel function it sleeps in (`appThreads` in `tests/e2e/launchDiagnostics.ts`).
 A window whose drawing process stops raises no error, and Playwright's failure picture then waits five seconds for a frame and gives up, so this record is what names the process and thread that held the window.

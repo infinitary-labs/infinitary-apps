@@ -499,6 +499,22 @@
       <string>Paused since %4$@: batch run %3$@ failed its checks, so %2$ld approved changes wait for a fix: %1$@.</string>
     </dict>
   </dict>
+  <key>accountsCustomApiListed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>This server lists %1$ld model. Pick the ones you would like to use:</string>
+      <key>other</key>
+      <string>This server lists %1$ld models. Pick the ones you would like to use:</string>
+    </dict>
+  </dict>
   <key>phoneMediaPicturePosition</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

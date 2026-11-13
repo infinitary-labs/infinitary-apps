@@ -126,3 +126,9 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | address (of a computer) | 地址 | The address used with SSH; also a browser page's address. |
 | private network | 私有网络 | A network that joins computers wherever they are. |
 | task key | 任务编号前缀 | The letters tasks are numbered with, such as {key}-1; 键 alone would read as a keyboard key. |
+| custom API (a connection the person adds) | 自定义 API | The Accounts form and its chip; a saved one is a 连接 (connection), and Disconnect is 断开连接. |
+| server (a custom API's) | 服务器 | Only for the custom API's server, never for a computer of the person's. |
+| address (a server's) | 地址 | |
+| header (an extra request header) | 请求头 | Short form of 请求标头, as Chinese developer docs say it. |
+| certificate | 证书 | Only where the person chooses an organization's CA certificate. |
+| token (a custom API's token command) | 令牌 | Only on that form, where the person chose a command that prints one; model sizes stay "token" as on the usage line. |

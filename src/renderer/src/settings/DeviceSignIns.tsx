@@ -16,7 +16,7 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import {
   AuthMethodChoice,
-  CUSTOM_API_UPDATE_THERE_NOTE,
+  CONNECT_CHIP_NOTES,
   connectMethods,
   ProviderChips,
 } from "../accounts/ConnectChips";
@@ -287,7 +287,7 @@ export function DeviceSignInGroups({
                       device.reach === "in-reach"
                         ? device.customApi
                           ? { onOpen: () => setCustomFor(device.deviceId) }
-                          : { note: CUSTOM_API_UPDATE_THERE_NOTE }
+                          : { note: CONNECT_CHIP_NOTES.updateThere }
                         : undefined
                     }
                   />

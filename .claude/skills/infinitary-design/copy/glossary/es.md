@@ -125,3 +125,8 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
 | issue (where the project lives) | incidencia | The queue's pause issue: "Abrir la incidencia". |
 | cost limit | límite de costo | A project's estimated-dollar cap; kept apart from the plan's allowance, which never says "límite". |
+| custom API | API personalizada | Feminine: "una API personalizada"; a connection the person adds to a server of their own. |
+| connection (to a server) | conexión | Feminine, so its status agrees: "Lista", "Comprobada", "En pausa". |
+| server, address (a custom API's) | servidor, dirección | Said only where English names the person's own server and its address. |
+| header (a request's) | encabezado | |
+| fetch (a server's list of models) | obtener | "Obtener del servidor", "Obteniendo…". |

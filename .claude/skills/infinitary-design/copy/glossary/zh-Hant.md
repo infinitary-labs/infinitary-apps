@@ -138,3 +138,9 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | address (of a computer) | 位址 | A computer's SSH address; a browser page's address is 網址. |
 | private network | 私人網路 | A network that joins computers wherever they are. |
 | task key | 任務編號前綴 | The letters tasks are numbered with, such as {key}-1; 鍵 alone would read as a keyboard key. |
+| custom API (a connection the person adds) | 自訂 API | Taiwan writes 自訂, not 自定義; a saved one is a 連線, and Disconnect is 中斷連線. |
+| server (a custom API's) | 伺服器 | Taiwan's word; 服務器 is mainland. |
+| address (a server's) | 位址 | Taiwan's word for a network address, as in 伺服器位址. |
+| header (an extra request header) | 標頭 | Microsoft Taiwan's word. |
+| certificate | 憑證 | Taiwan's word; 證書 reads as mainland in this sense. |
+| token (a custom API's token command) | 權杖 | Microsoft Taiwan's word, only on that form; model sizes stay "token" as on the usage line. |

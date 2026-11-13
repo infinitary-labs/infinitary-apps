@@ -40,6 +40,8 @@ import {
 } from "./customApiFailures";
 import "./customApi.css";
 import { HERE } from "@shared/deviceNames";
+import { formatList } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 
 type RowState = "run" | "ok" | "bad";
 const emptyModel = (): FormModel => ({ id: "", context: 0, output: 0, uiId: crypto.randomUUID() });
@@ -68,12 +70,32 @@ type RowError = { text: string; at: "id" | "sizes" | "model" };
 /** An approval holds for the address it was given for, and returns with that address. */
 type Approvals = { http?: string; storage?: string; certificates?: string; exception?: string };
 
-const SIZES_UNKNOWN = placeCustomApiFailure("limits", { address: "", stage: "check" }).text;
-const ROW_DOT: Record<RowState | "none", { tone: StatusDotTone; label: string }> = {
-  none: { tone: "ring", label: "Not checked yet" },
-  run: { tone: "busy", label: "Checking" },
-  ok: { tone: "ok", label: "Checked" },
-  bad: { tone: "danger", label: "Failed its check" },
+const sizesUnknown = () => placeCustomApiFailure("limits", { address: "", stage: "check" }).text;
+const ROW_DOT: Record<RowState | "none", { tone: StatusDotTone; readonly label: string }> = {
+  none: {
+    tone: "ring",
+    get label() {
+      return m.accountsCustomApiRowNotChecked();
+    },
+  },
+  run: {
+    tone: "busy",
+    get label() {
+      return m.accountsCustomApiRowChecking();
+    },
+  },
+  ok: {
+    tone: "ok",
+    get label() {
+      return m.accountsCustomApiRowChecked();
+    },
+  },
+  bad: {
+    tone: "danger",
+    get label() {
+      return m.accountsCustomApiRowFailed();
+    },
+  },
 };
 /** The standard design input, marked at fault in danger. */
 function FormInput({ invalid = false, ...rest }: InputProps & { invalid?: boolean }) {
@@ -98,6 +120,13 @@ const hostOf = (value: string) => {
   }
 };
 const digits = (value: string) => Number(value.replace(/[^0-9]/g, "")) || 0;
+/** Marks where a part drawn in its own type sits in a sentence, so the sentence stays one message. */
+const PART_MARK = "\u0000";
+/** A sentence's words either side of its marked part. */
+const aroundPart = (text: string): [string, string] => {
+  const [before = "", after = ""] = text.split(PART_MARK);
+  return [before, after];
+};
 
 /**
  * Add and Edit, in one dialog at every entry point. Save checks everything:
@@ -351,6 +380,7 @@ export function CustomApiForm({
   const connectInput = (rows: FormModel[], destination: string): CustomApiConnectInput => {
     const certificatesKept = keepCertificates && sameAddress;
     return {
+      // i18n-exempt: the saved connection's name when none was typed, a stored value
       label: label.trim() || "Custom API",
       baseUrl: baseUrl.trim(),
       protocol,
@@ -450,7 +480,7 @@ export function CustomApiForm({
       (command.trim() && Number.isSafeInteger(refreshSeconds) && refreshSeconds > 0)
     )
       return true;
-    setErrors({ key: "Enter a token command and a positive whole number of seconds." });
+    setErrors({ key: m.accountsCustomApiCommandNeeded() });
     return false;
   };
 
@@ -461,7 +491,7 @@ export function CustomApiForm({
       setNoList(false);
       const found: Errors = {};
       if (!baseUrl.trim()) {
-        setErrors({ address: "Enter the server's address." });
+        setErrors({ address: m.accountsCustomApiAddressNeeded() });
         return;
       }
       setBusy("fetch");
@@ -472,7 +502,7 @@ export function CustomApiForm({
           return;
         }
         if (http && !approved("http") && !httpRemembered) {
-          found.http = "Approve unencrypted HTTP first: fetching sends your key to this address.";
+          found.http = m.accountsCustomApiHttpFirst();
           return;
         }
         const result = await api.connect(connectInput(models, read.destination));
@@ -498,7 +528,7 @@ export function CustomApiForm({
           setModels((current) => filled(current, view));
         }
       } catch (caught) {
-        found.save = caught instanceof Error ? caught.message : "Could not reach this server.";
+        found.save = caught instanceof Error ? caught.message : m.accountsCustomApiFetchFailed();
       } finally {
         setErrors(found);
         setBusy("");
@@ -527,32 +557,31 @@ export function CustomApiForm({
         setRowErrors(rows);
         setSummary(
           Object.keys(rows).length && !Object.keys(found).length
-            ? "Not saved. Fix the marked row and press Save again."
-            : "Not saved. Fix the marked field and press Save again.",
+            ? m.accountsCustomApiNotSavedRow()
+            : m.accountsCustomApiNotSavedField(),
         );
         setPausedDraft(failedDraft);
       };
       // 1 · The form itself; nothing is sent.
-      if (!label.trim()) found.name = "Name this connection.";
-      if (!baseUrl.trim()) found.address = "Enter the server's address.";
-      if (!models.length) found.models = "Add at least one model, or fetch the server's list.";
+      if (!label.trim()) found.name = m.accountsCustomApiNameNeeded();
+      if (!baseUrl.trim()) found.address = m.accountsCustomApiAddressNeeded();
+      if (!models.length) found.models = m.accountsCustomApiModelsNeeded();
       const seen = new Set<string>();
       for (const model of models) {
         const modelId = model.id.trim();
-        if (!modelId)
-          rows[model.uiId] = { text: "Enter the model's ID, or remove this row.", at: "id" };
+        if (!modelId) rows[model.uiId] = { text: m.accountsCustomApiModelIdNeeded(), at: "id" };
         else if (seen.has(modelId))
-          rows[model.uiId] = { text: "This model is already in the list.", at: "id" };
+          rows[model.uiId] = { text: m.accountsCustomApiModelTwice(), at: "id" };
         else if (model.context && model.output && model.output >= model.context)
           rows[model.uiId] = {
-            text: "Enter an output size smaller than the context size.",
+            text: m.accountsCustomApiOutputTooLarge(),
             at: "sizes",
           };
         seen.add(modelId);
       }
       if (Object.keys(found).length || Object.keys(rows).length) return stop();
       setBusy("save");
-      setProgress("Reaching the server…");
+      setProgress(m.accountsCustomApiReaching());
       try {
         const read = await readLine();
         if (!read.destination) {
@@ -560,7 +589,7 @@ export function CustomApiForm({
           return stop();
         }
         if (http && !approved("http") && !httpRemembered) {
-          found.http = "Approve unencrypted HTTP to save this address.";
+          found.http = m.accountsCustomApiHttpToSave();
           return stop();
         }
         // 2 · Reach the server: its network, a draft, and its model list.
@@ -588,13 +617,13 @@ export function CustomApiForm({
           else {
             show(placed, found);
             if (!Object.keys(found).length)
-              found.save = placed.text || "This server could not be reached.";
+              found.save = placed.text || m.accountsCustomApiNotReached();
             return stop();
           }
         }
         const view = result.view;
         if (!view?.draftId) {
-          found.save = "Your first mate could not prepare this connection. Try again.";
+          found.save = m.accountsCustomApiPrepareFailed();
           return stop();
         }
         let current = filled(models, view);
@@ -608,14 +637,20 @@ export function CustomApiForm({
         let tested = false;
         for (const [index, row] of testable.entries()) {
           if (!row.context || !row.output) {
-            rows[row.uiId] = { text: SIZES_UNKNOWN, at: "sizes" };
+            rows[row.uiId] = { text: sizesUnknown(), at: "sizes" };
             mark(row.uiId, "bad");
             continue;
           }
           tested = true;
           const modelId = row.id.trim();
           mark(row.uiId, "run");
-          setProgress(`Checking ${modelId} (${index + 1} of ${testable.length})…`);
+          setProgress(
+            m.accountsCustomApiCheckingModel({
+              model: modelId,
+              index: String(index + 1),
+              total: String(testable.length),
+            }),
+          );
           const checked = await api.check(view.draftId, modelId);
           const after = checked.models.find((model) => model.id === modelId);
           if (after?.checked) {
@@ -642,11 +677,10 @@ export function CustomApiForm({
         if (Object.keys(found).length || Object.keys(rows).length) return stop();
         // 4 · Saved and ready, unless the form was cancelled meanwhile.
         if (closed.current) return;
-        setProgress("Saving…");
+        setProgress(m.accountsCustomApiSaving());
         finish(await api.save(view.draftId, false));
       } catch (caught) {
-        found.save =
-          caught instanceof Error ? caught.message : "This connection could not be saved.";
+        found.save = caught instanceof Error ? caught.message : m.accountsCustomApiSaveFailed();
         stop();
       } finally {
         setBusy("");
@@ -662,7 +696,7 @@ export function CustomApiForm({
         finish(await api.save(pausedDraft, true));
       } catch (caught) {
         setErrors({
-          save: caught instanceof Error ? caught.message : "This connection could not be saved.",
+          save: caught instanceof Error ? caught.message : m.accountsCustomApiSaveFailed(),
         });
       } finally {
         setBusy("");
@@ -679,34 +713,37 @@ export function CustomApiForm({
       </p>
     ) : null;
   const sent = [
-    ...(keyed ? [auth === "command" ? "the token" : "your key"] : []),
-    ...(namedHeaders.length
-      ? [`your headers (${namedHeaders.map((header) => header.name.trim()).join(", ")})`]
+    ...(keyed
+      ? [auth === "command" ? m.accountsCustomApiSentToken() : m.accountsCustomApiSentKey()]
       : []),
-    "a short test",
+    ...(namedHeaders.length
+      ? [
+          m.accountsCustomApiSentHeaders({
+            names: namedHeaders.map((header) => header.name.trim()).join(", "),
+          }),
+        ]
+      : []),
+    m.accountsCustomApiSentTest(),
   ];
-  const footHint =
-    progress ||
-    `Save sends ${sent.length > 1 ? `${sent.slice(0, -1).join(", ")} and ${sent.at(-1)}` : sent[0]} to this address, then checks each model. It may use a few tokens.`;
+  const footHint = progress || m.accountsCustomApiFootHint({ sent: formatList(sent) });
+  const [sendsBefore, sendsAfter] = aroundPart(
+    m.accountsCustomApiSendsTo({ destination: PART_MARK }),
+  );
 
   return (
     <section className="fm-custom-api fm-custom-form" data-custom-api-form>
       <h3>
         {original
-          ? `Edit ${original.label}`
+          ? m.accountsCustomApiEditTitle({ name: original.label })
           : place
-            ? `Add a custom API ${place.on}`
-            : "Add a custom API"}
+            ? m.accountsCustomApiAddTitleOn({ on: place.on })
+            : m.accountsCustomApiAddTitle()}
       </h3>
-      <p className="fm-custom-hint">
-        Connect only a server you trust. It receives your key and what Infinitary sends, may charge
-        for requests, and its model can direct work on {who}. Keys are kept in private files on{" "}
-        {who}, not encrypted storage.
-      </p>
+      <p className="fm-custom-hint">{m.accountsCustomApiTrustHint({ who })}</p>
       {/* Held still while Save runs, so what is checked is what is saved. */}
       <fieldset className="fm-custom-body" disabled={busy === "save"}>
         <div className="fm-custom-field">
-          <label htmlFor={`${id}-label`}>Name</label>
+          <label htmlFor={`${id}-label`}>{m.accountsCustomApiNameLabel()}</label>
           <FormInput
             id={`${id}-label`}
             value={label}
@@ -719,7 +756,7 @@ export function CustomApiForm({
           {fieldError("name")}
         </div>
         <div className="fm-custom-field">
-          <label htmlFor={`${id}-address`}>Address</label>
+          <label htmlFor={`${id}-address`}>{m.accountsCustomApiAddressLabel()}</label>
           <FormInput
             id={`${id}-address`}
             mono
@@ -727,6 +764,7 @@ export function CustomApiForm({
             autoComplete="off"
             value={baseUrl}
             invalid={Boolean(errors.address)}
+            // i18n-exempt: a sample address
             placeholder="https://api.example.com/v1"
             onChange={(event) => {
               edited("address", "http");
@@ -758,13 +796,16 @@ export function CustomApiForm({
                       setFix(undefined);
                     }}
                   >
-                    Use {fix}
+                    {m.accountsCustomApiUseFix({ address: fix })}
                   </Button>
                 ) : null,
               )
             : line.destination && (
                 <p className="fm-custom-hint" data-custom-sends-to>
-                  Sends to <b className="fm-custom-mono">{line.destination}</b>
+                  {sendsBefore}
+                  <b className="fm-custom-mono">{line.destination}</b>
+                  {sendsAfter}
+
                   {approved("exception")
                     ? ` · ${CUSTOM_EXCEPTION_WORDS.line}`
                     : network
@@ -790,16 +831,17 @@ export function CustomApiForm({
                 onChange={(event) => approve("exception", event.target.checked)}
               />
               <span>
-                Make an exception for {hostOf(line.destination ?? typedKey)}: send to it whatever
-                DNS answers, apart from {who} itself, link-local and cloud metadata addresses. Do
-                this only if you know why DNS answers this way, such as a proxy app.
+                {m.accountsCustomApiException({
+                  host: hostOf(line.destination ?? typedKey),
+                  who,
+                })}
               </span>
             </label>
           </div>
         )}
         {http &&
           (httpRemembered ? (
-            <p className="fm-custom-hint">Unencrypted HTTP is approved for this address.</p>
+            <p className="fm-custom-hint">{m.accountsCustomApiHttpApproved()}</p>
           ) : (
             <div className="fm-custom-http" data-invalid={Boolean(errors.http) || undefined}>
               <label className="fm-custom-choice">
@@ -809,12 +851,11 @@ export function CustomApiForm({
                   onChange={(event) => approve("http", event.target.checked)}
                 />
                 <span>
-                  Send over unencrypted HTTP. Anyone on the network path can read the key, prompts,
-                  project code and replies, or change replies that direct work on {who}.
-                  {network === "public" &&
-                    " This includes the public internet; use only a server and network path you trust."}
-                  {network === "private" &&
-                    " On shared Wi-Fi, another private server may answer for your organization's name."}
+                  {network === "public"
+                    ? m.accountsCustomApiHttpPublic({ who })
+                    : network === "private"
+                      ? m.accountsCustomApiHttpPrivate({ who })
+                      : m.accountsCustomApiHttp({ who })}
                 </span>
               </label>
               {fieldError("http")}
@@ -822,7 +863,7 @@ export function CustomApiForm({
           ))}
         <div className="fm-custom-two">
           <div className="fm-custom-field">
-            <label htmlFor={`${id}-auth`}>Connect with</label>
+            <label htmlFor={`${id}-auth`}>{m.accountsCustomApiConnectWith()}</label>
             <select
               id={`${id}-auth`}
               value={auth}
@@ -831,12 +872,12 @@ export function CustomApiForm({
                 setAuth(event.target.value);
               }}
             >
-              <option value="key">API key (or no key)</option>
-              <option value="command">Token command</option>
+              <option value="key">{m.accountsCustomApiAuthKey()}</option>
+              <option value="command">{m.accountsCustomApiTokenCommand()}</option>
             </select>
             {auth === "command" ? (
               <>
-                <label htmlFor={`${id}-command`}>Token command</label>
+                <label htmlFor={`${id}-command`}>{m.accountsCustomApiTokenCommand()}</label>
                 <FormInput
                   id={`${id}-command`}
                   mono
@@ -848,7 +889,7 @@ export function CustomApiForm({
                     setCommand(event.target.value);
                   }}
                 />
-                <label htmlFor={`${id}-refresh`}>Refresh after (seconds)</label>
+                <label htmlFor={`${id}-refresh`}>{m.accountsCustomApiRefreshAfter()}</label>
                 <FormInput
                   id={`${id}-refresh`}
                   type="number"
@@ -859,16 +900,14 @@ export function CustomApiForm({
                     setRefreshSeconds(Number(event.target.value));
                   }}
                 />
-                <span className="fm-custom-hint">
-                  Runs on {who} with your access. Prints only the token. Renew your organization’s
-                  sign-in outside Infinitary when needed.
-                </span>
+                <span className="fm-custom-hint">{m.accountsCustomApiCommandHint({ who })}</span>
               </>
             ) : (
               <>
                 <div className="fm-custom-keyrow">
                   <label htmlFor={`${id}-key`}>
-                    API key <span className="fm-custom-hint">· optional</span>
+                    {m.accountsCustomApiKeyLabel()}{" "}
+                    <span className="fm-custom-hint">{m.accountsCustomApiKeyOptional()}</span>
                   </label>
                   {keySaved && (
                     <button
@@ -879,7 +918,7 @@ export function CustomApiForm({
                         setKeyRemoved(true);
                       }}
                     >
-                      Remove saved key
+                      {m.accountsCustomApiRemoveSavedKey()}
                     </button>
                   )}
                 </div>
@@ -890,9 +929,7 @@ export function CustomApiForm({
                   value={key}
                   invalid={Boolean(errors.key)}
                   placeholder={
-                    keySaved
-                      ? "Saved key kept · type to replace"
-                      : "Leave empty if the server needs none"
+                    keySaved ? m.accountsCustomApiSavedKeyKept() : m.accountsCustomApiKeyEmpty()
                   }
                   onChange={(event) => {
                     edited("key");
@@ -901,7 +938,7 @@ export function CustomApiForm({
                 />
                 {place && (
                   <span className="fm-custom-hint">
-                    It goes to {who} once. {HERE.This} keeps no copy.
+                    {m.accountsCustomApiKeyGoesTo({ who, here: HERE.This })}
                   </span>
                 )}
               </>
@@ -909,7 +946,7 @@ export function CustomApiForm({
             {fieldError("key")}
           </div>
           <div className="fm-custom-field">
-            <label htmlFor={`${id}-protocol`}>API protocol</label>
+            <label htmlFor={`${id}-protocol`}>{m.accountsCustomApiProtocol()}</label>
             <select
               id={`${id}-protocol`}
               value={protocol}
@@ -927,8 +964,11 @@ export function CustomApiForm({
                 );
               }}
             >
+              {/* i18n-exempt: the API protocols' own names */}
               <option value="openai-completions">Chat Completions</option>
+              {/* i18n-exempt: the API protocols' own names */}
               <option value="openai-responses">Responses</option>
+              {/* i18n-exempt: the API protocols' own names */}
               <option value="anthropic-messages">Anthropic Messages</option>
             </select>
           </div>
@@ -938,21 +978,21 @@ export function CustomApiForm({
           open={headersOpen}
           onToggle={(event) => setHeadersOpen(event.currentTarget.open)}
         >
-          <summary ref={headersSummary}>Extra request headers</summary>
-          <p className="fm-custom-hint">
-            Headers your organization’s server needs on every request. A secret value is masked,
-            never shown again, and refused if a reply repeats it.
-          </p>
+          <summary ref={headersSummary}>{m.accountsCustomApiHeadersTitle()}</summary>
+          <p className="fm-custom-hint">{m.accountsCustomApiHeadersHint()}</p>
           {headers.map((header, index) => (
             <div className="fm-custom-header" key={header.uiId} data-custom-header={index}>
               <div className="fm-custom-field">
-                <label htmlFor={`${id}-header-name-${index}`}>Header name</label>
+                <label htmlFor={`${id}-header-name-${index}`}>
+                  {m.accountsCustomApiHeaderName()}
+                </label>
                 <FormInput
                   id={`${id}-header-name-${index}`}
                   mono
                   autoComplete="off"
                   spellCheck={false}
                   value={header.name}
+                  // i18n-exempt: a sample header name
                   placeholder="X-Example-Header"
                   onChange={(event) =>
                     changeHeader(header.uiId, { name: event.target.value, saved: false })
@@ -960,7 +1000,9 @@ export function CustomApiForm({
                 />
               </div>
               <div className="fm-custom-field">
-                <label htmlFor={`${id}-header-value-${index}`}>Header value</label>
+                <label htmlFor={`${id}-header-value-${index}`}>
+                  {m.accountsCustomApiHeaderValue()}
+                </label>
                 <FormInput
                   id={`${id}-header-value-${index}`}
                   mono
@@ -970,8 +1012,8 @@ export function CustomApiForm({
                   value={header.value}
                   placeholder={
                     header.saved && sameAddress
-                      ? "Saved value kept; type to replace it"
-                      : "Enter the value"
+                      ? m.accountsCustomApiSavedValueKept()
+                      : m.accountsCustomApiEnterValue()
                   }
                   onChange={(event) =>
                     changeHeader(header.uiId, { value: event.target.value, saved: false })
@@ -991,7 +1033,7 @@ export function CustomApiForm({
                       })
                     }
                   />
-                  Secret
+                  {m.accountsCustomApiSecret()}
                 </label>
                 <Button
                   variant="ghost"
@@ -1002,7 +1044,7 @@ export function CustomApiForm({
                     setHeaders(headers.filter((entry) => entry.uiId !== header.uiId));
                   }}
                 >
-                  Remove header
+                  {m.accountsCustomApiRemoveHeader()}
                 </Button>
               </div>
             </div>
@@ -1017,20 +1059,16 @@ export function CustomApiForm({
                 setHeaders([...headers, emptyHeader()]);
               }}
             >
-              Add header
+              {m.accountsCustomApiAddHeader()}
             </Button>
           )}
           {fieldError("headers")}
         </details>
         {showCertificates && (
           <fieldset className="fm-custom-box" data-custom-certificates>
-            <legend>Organization certificates</legend>
-            <p className="fm-custom-hint">
-              A public CA certificate from your organization, trusted only for this connection.
-              Private keys and client certificates are not supported. Server name, chain and expiry
-              checks stay on.
-            </p>
-            <label htmlFor={`${id}-ca`}>Choose a local PEM CA file</label>
+            <legend>{m.accountsCustomApiCertificatesTitle()}</legend>
+            <p className="fm-custom-hint">{m.accountsCustomApiCertificatesHint()}</p>
+            <label htmlFor={`${id}-ca`}>{m.accountsCustomApiChooseCertificate()}</label>
             <input
               id={`${id}-ca`}
               type="file"
@@ -1042,7 +1080,7 @@ export function CustomApiForm({
                   setPem("");
                   setErrors((current) => ({
                     ...current,
-                    certificates: "Choose a public CA file no larger than 64 KiB.",
+                    certificates: m.accountsCustomApiCertificateTooLarge(),
                   }));
                   return;
                 }
@@ -1064,7 +1102,7 @@ export function CustomApiForm({
                       certificates:
                         caught instanceof Error
                           ? caught.message
-                          : "This certificate file could not be read.",
+                          : m.accountsCustomApiCertificateUnreadable(),
                     }));
                   }
                 });
@@ -1077,8 +1115,11 @@ export function CustomApiForm({
                     <li key={certificate.fingerprint}>
                       <p>{certificate.subject}</p>
                       <p className="fm-custom-hint">
-                        Issuer: {certificate.issuer} · {certificate.validFrom} –{" "}
-                        {certificate.validTo}
+                        {m.accountsCustomApiIssuer({
+                          issuer: certificate.issuer,
+                          from: certificate.validFrom,
+                          to: certificate.validTo,
+                        })}
                       </p>
                       <p className="fm-custom-mono">{certificate.fingerprint}</p>
                     </li>
@@ -1090,7 +1131,7 @@ export function CustomApiForm({
                     checked={approved("certificates")}
                     onChange={(event) => approve("certificates", event.target.checked)}
                   />
-                  I approve these certificates only for this private connection
+                  {m.accountsCustomApiApproveCertificates()}
                 </label>
               </>
             )}
@@ -1106,7 +1147,7 @@ export function CustomApiForm({
                   setApprovals((current) => ({ ...current, certificates: undefined }));
                 }}
               >
-                Remove certificate
+                {m.accountsCustomApiRemoveCertificate()}
               </Button>
             )}
             {fieldError("certificates")}
@@ -1119,37 +1160,34 @@ export function CustomApiForm({
               checked={approved("storage")}
               onChange={(event) => approve("storage", event.target.checked)}
             />
-            <span>
-              Allow this server’s storage defaults. Requests otherwise ask the server not to save
-              responses; with this, it may keep them. No server-saved conversation is used.
-            </span>
+            <span>{m.accountsCustomApiStorage()}</span>
           </label>
         )}
         <div className="fm-custom-models">
           <div className="fm-custom-models-head">
-            <span className="fm-custom-models-title">Models</span>
+            <span className="fm-custom-models-title">{m.accountsCustomApiModelsTitle()}</span>
             <Button
               variant="secondary"
               size="sm"
               pending={busy === "fetch"}
-              pendingLabel="Fetching…"
+              pendingLabel={m.accountsCustomApiFetching()}
               disabled={busy !== ""}
               onClick={fetchModels}
             >
-              {listed ? "Fetch again" : "Fetch from server"}
+              {listed ? m.accountsCustomApiFetchAgain() : m.accountsCustomApiFetch()}
             </Button>
           </div>
           {noList && (
             <p className="fm-custom-hint" data-custom-no-list>
-              This server doesn’t list its models. Add them by hand.
+              {m.accountsCustomApiNoList()}
             </p>
           )}
           {listed && (
             <div className="fm-custom-avail" data-custom-listed-models>
               <p className="fm-custom-hint">
                 {listed.length
-                  ? `This server lists ${listed.length} ${listed.length === 1 ? "model" : "models"}. Pick the ones you would like to use:`
-                  : "This server lists no models. Add them by hand."}
+                  ? m.accountsCustomApiListed({ count: listed.length })
+                  : m.accountsCustomApiListedNone()}
               </p>
               {listed.map((entry) => {
                 const added = models.some((model) => model.id.trim() === entry.id);
@@ -1185,14 +1223,14 @@ export function CustomApiForm({
             <div className="fm-custom-rows">
               <div className="fm-custom-cols" aria-hidden="true">
                 <span />
-                <span>Model ID</span>
-                <span>Context</span>
-                <span>Output</span>
+                <span>{m.accountsCustomApiModelId()}</span>
+                <span>{m.accountsCustomApiContext()}</span>
+                <span>{m.accountsCustomApiOutput()}</span>
                 <span />
               </div>
               {models.map((model, index) => {
                 const dot = ROW_DOT[model.state ?? "none"];
-                const name = model.id.trim() || "this model";
+                const name = model.id.trim() || m.accountsCustomApiThisModelLower();
                 return (
                   <div
                     className="fm-custom-row"
@@ -1201,14 +1239,18 @@ export function CustomApiForm({
                     data-state={model.state}
                   >
                     <span className="fm-custom-row-dot">
-                      <StatusDot tone={dot.tone} label={`${name}: ${dot.label}`} focusable />
+                      <StatusDot
+                        tone={dot.tone}
+                        label={m.accountsCustomApiRowState({ name, state: dot.label })}
+                        focusable
+                      />
                     </span>
                     <FormInput
                       id={`${id}-model-${index}`}
                       mono
                       spellCheck={false}
                       autoComplete="off"
-                      aria-label="Model ID"
+                      aria-label={m.accountsCustomApiModelId()}
                       invalid={rowErrors[model.uiId]?.at === "id"}
                       value={model.id}
                       onChange={(event) => changeModel(model.uiId, { id: event.target.value })}
@@ -1216,9 +1258,9 @@ export function CustomApiForm({
                     <FormInput
                       mono
                       inputMode="numeric"
-                      aria-label={`Context tokens for ${name}`}
+                      aria-label={m.accountsCustomApiContextFor({ name })}
                       invalid={rowErrors[model.uiId]?.at === "sizes" && !model.context}
-                      placeholder="Context"
+                      placeholder={m.accountsCustomApiContext()}
                       value={model.context ? String(model.context) : ""}
                       onChange={(event) =>
                         changeModel(model.uiId, { context: digits(event.target.value) })
@@ -1227,19 +1269,19 @@ export function CustomApiForm({
                     <FormInput
                       mono
                       inputMode="numeric"
-                      aria-label={`Output tokens for ${name}`}
+                      aria-label={m.accountsCustomApiOutputFor({ name })}
                       invalid={
                         rowErrors[model.uiId]?.at === "sizes" &&
                         (!model.output || model.output >= model.context)
                       }
-                      placeholder="Output"
+                      placeholder={m.accountsCustomApiOutput()}
                       value={model.output ? String(model.output) : ""}
                       onChange={(event) =>
                         changeModel(model.uiId, { output: digits(event.target.value) })
                       }
                     />
                     <IconButton
-                      label={`Remove ${name}`}
+                      label={m.accountsCustomApiRemoveModel({ name })}
                       size={28}
                       onClick={() => {
                         edited("models");
@@ -1265,9 +1307,9 @@ export function CustomApiForm({
                     </IconButton>
                     <div className="fm-custom-capabilities">
                       <label className="fm-custom-field">
-                        <span>Reasoning profile</span>
+                        <span>{m.accountsCustomApiReasoning()}</span>
                         <select
-                          aria-label={`Reasoning profile for ${name}`}
+                          aria-label={m.accountsCustomApiReasoningFor({ name })}
                           value={model.reasoningProfile ?? ""}
                           onChange={(event) =>
                             changeModel(model.uiId, {
@@ -1276,7 +1318,7 @@ export function CustomApiForm({
                             })
                           }
                         >
-                          <option value="">Off</option>
+                          <option value="">{m.accountsCustomApiReasoningOff()}</option>
                           {profiles
                             .filter((profile) => profile.protocol === protocol)
                             .map((profile) => (
@@ -1293,9 +1335,9 @@ export function CustomApiForm({
                         </select>
                       </label>
                       <label className="fm-custom-field">
-                        <span>Cache retention</span>
+                        <span>{m.accountsCustomApiCache()}</span>
                         <select
-                          aria-label={`Cache retention for ${name}`}
+                          aria-label={m.accountsCustomApiCacheFor({ name })}
                           value={model.cacheRetention ?? customDefaultCacheRetention(protocol)}
                           onChange={(event) =>
                             changeModel(model.uiId, {
@@ -1315,23 +1357,18 @@ export function CustomApiForm({
                               }
                             >
                               {retention === "none"
-                                ? "None"
+                                ? m.accountsCustomApiCacheNone()
                                 : retention === "short"
-                                  ? "Short"
-                                  : "Long"}
+                                  ? m.accountsCustomApiCacheShort()
+                                  : m.accountsCustomApiCacheLong()}
                             </option>
                           ))}
                         </select>
                       </label>
-                      <p className="fm-custom-hint">
-                        Save checks the chosen profile and cache setting. Checks may incur charges;
-                        they do not prove reasoning or a cache hit. Your server may cache
-                        automatically, even with None.
-                      </p>
+                      <p className="fm-custom-hint">{m.accountsCustomApiCapabilityHint()}</p>
                       {profileFailure && (
                         <p role="alert" className="fm-custom-hint">
-                          Capability profiles could not be read. Close and reopen this form to try
-                          again.
+                          {m.accountsCustomApiProfilesFailed()}
                         </p>
                       )}
                     </div>
@@ -1345,9 +1382,7 @@ export function CustomApiForm({
               })}
             </div>
           ) : (
-            <p className="fm-custom-hint">
-              No models yet. Fetch them from the server, or add one by hand.
-            </p>
+            <p className="fm-custom-hint">{m.accountsCustomApiNoModels()}</p>
           )}
           {fieldError("models")}
           <div>
@@ -1361,16 +1396,13 @@ export function CustomApiForm({
                 setModels([...models, emptyModel()]);
               }}
             >
-              + Add by hand
+              {m.accountsCustomApiAddByHand()}
             </button>
           </div>
         </div>
       </fieldset>
       {original && !sameAddress && (
-        <p className="fm-custom-hint">
-          A different address saves a separate connection. The original stays until you disconnect
-          it.
-        </p>
+        <p className="fm-custom-hint">{m.accountsCustomApiSeparate()}</p>
       )}
       {(summary || errors.save) && (
         <div className="fm-custom-summary" role="status" data-custom-summary>
@@ -1387,17 +1419,14 @@ export function CustomApiForm({
               disabled={busy !== ""}
               onClick={savePaused}
             >
-              Save paused without checking
+              {m.accountsCustomApiSavePaused()}
             </button>
           )}
         </div>
       )}
       {auth === "command" && (
         <div className="fm-custom-command-approval" data-custom-command-approval>
-          <p className="fm-custom-hint">
-            Save or Fetch from server runs this command to get a token. Infinitary runs it again
-            after the refresh interval or one refusal.
-          </p>
+          <p className="fm-custom-hint">{m.accountsCustomApiCommandApproval()}</p>
           <pre>{command}</pre>
         </div>
       )}
@@ -1406,17 +1435,17 @@ export function CustomApiForm({
           {footHint}
         </span>
         <Button variant="ghost" size="sm" onClick={cancel}>
-          Cancel
+          {m.accountsCustomApiCancel()}
         </Button>
         <Button
           variant="primary"
           size="sm"
           pending={busy === "save"}
-          pendingLabel="Checking…"
+          pendingLabel={m.accountsCustomApiCheckingPending()}
           disabled={busy !== ""}
           onClick={save}
         >
-          Save
+          {m.accountsCustomApiSave()}
         </Button>
       </div>
     </section>
@@ -1434,12 +1463,12 @@ function FirstmateChoice({ view, onDone }: { view: CustomApiView; onDone: () => 
       .then((accounts) =>
         setProvider(accounts.find((account) => account.id === view.accountId)?.providerId ?? ""),
       )
-      .catch(() => setError("Could not read this connection."));
+      .catch(() => setError(m.accountsCustomApiReadFailed()));
   }, [view.accountId]);
   return (
     <section className="fm-custom-api fm-custom-form" data-custom-api-form data-custom-choose>
-      <h3>{view.label} is ready</h3>
-      <p>Which model should your first mate answer with?</p>
+      <h3>{m.accountsCustomApiReady({ name: view.label })}</h3>
+      <p>{m.accountsCustomApiChooseQuestion()}</p>
       <div className="fm-custom-choices">
         {view.models
           .filter((model) => model.checked)
@@ -1460,18 +1489,16 @@ function FirstmateChoice({ view, onDone }: { view: CustomApiView; onDone: () => 
                   .catch((caught: unknown) => {
                     setChoosing(false);
                     setError(
-                      caught instanceof Error ? caught.message : "Could not choose this model.",
+                      caught instanceof Error ? caught.message : m.accountsCustomApiChooseFailed(),
                     );
                   });
               }}
             >
-              Use {model.id}
+              {m.accountsCustomApiUseModel({ model: model.id })}
             </Button>
           ))}
       </div>
-      <p className="fm-custom-hint">
-        Crew use for these models is set on the Models board in Settings, under Intelligence.
-      </p>
+      <p className="fm-custom-hint">{m.accountsCustomApiCrewUseSettings()}</p>
       {error && (
         <p role="alert" className="fm-custom-field-error">
           {error}
@@ -1480,7 +1507,7 @@ function FirstmateChoice({ view, onDone }: { view: CustomApiView; onDone: () => 
       <div className="fm-custom-foot">
         <span />
         <Button variant="ghost" size="sm" onClick={onDone}>
-          Choose later
+          {m.accountsCustomApiChooseLater()}
         </Button>
       </div>
     </section>
@@ -1516,21 +1543,25 @@ export function RemoteCustomConnection({
         <span className="fm-custom-mono fm-custom-address">{view.baseUrl}</span>
         {view.baseUrl.startsWith("http:") && (
           <span className="fm-custom-tag" data-tone="warn">
-            Unencrypted
+            {m.accountsCustomApiUnencrypted()}
           </span>
         )}
         <span
           className="fm-custom-tag"
           data-tone={view.tokenCommandFailed ? "danger" : ready ? "ok" : "idle"}
         >
-          {view.tokenCommandFailed ? CUSTOM_TOKEN_FAILURE.status : ready ? "Ready" : "Not checked"}
+          {view.tokenCommandFailed
+            ? CUSTOM_TOKEN_FAILURE.status
+            : ready
+              ? m.accountsCustomApiStatusReady()
+              : m.accountsCustomApiStatusNotChecked()}
         </span>
         <span className="fm-custom-acts">
           <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-            Edit
+            {m.accountsCustomApiEdit()}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setArmed(true)}>
-            Disconnect
+            {m.accountsCustomApiDisconnect()}
           </Button>
         </span>
       </div>
@@ -1540,8 +1571,8 @@ export function RemoteCustomConnection({
         </p>
       )}
       <div className="fm-custom-lrow fm-custom-lcols" aria-hidden="true">
-        <span>MODEL</span>
-        <span>STATUS</span>
+        <span>{m.accountsCustomApiColumnModel()}</span>
+        <span>{m.accountsCustomApiColumnStatus()}</span>
       </div>
       {view.models.map((model) => (
         <div className="fm-custom-lrow" key={model.id} data-custom-model={model.id}>
@@ -1549,35 +1580,39 @@ export function RemoteCustomConnection({
           <span className="fm-custom-status">
             <StatusDot
               tone={model.checked && view.enabled ? "ok" : "ring"}
-              label={model.checked && view.enabled ? "Ready" : "Not checked"}
+              label={
+                model.checked && view.enabled
+                  ? m.accountsCustomApiStatusReady()
+                  : m.accountsCustomApiStatusNotChecked()
+              }
               nativeTitle={false}
             />
-            {model.checked && view.enabled ? "Ready" : "Not checked"}
+            {model.checked && view.enabled
+              ? m.accountsCustomApiStatusReady()
+              : m.accountsCustomApiStatusNotChecked()}
             {model.readsPictures && <Badge tone="accent">{CUSTOM_READS_PICTURES}</Badge>}
           </span>
         </div>
       ))}
-      <p className="fm-custom-lock">
-        Crew use for these models is set on the Models board, further down Intelligence. A model
-        here runs only on {place.who}.
-      </p>
+      <p className="fm-custom-lock">{m.accountsCustomApiCrewUseRemote({ who: place.who })}</p>
       {armed && (
         <div className="fm-custom-disconnect">
-          <p>
-            Disconnect removes this connection on {place.who}. {HERE.This} keeps no copy of its key.
-          </p>
+          <p>{m.accountsCustomApiDisconnectRemote({ who: place.who, here: HERE.This })}</p>
           <div className="fm-custom-acts">
             <Button variant="secondary" size="sm" onClick={() => onDisconnect(accountId)}>
-              Disconnect
+              {m.accountsCustomApiDisconnect()}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setArmed(false)}>
-              Keep connection
+              {m.accountsCustomApiKeepConnection()}
             </Button>
           </div>
         </div>
       )}
       {editing && (
-        <CustomApiDialog label={`Edit ${view.label}`} onClose={() => setEditing(false)}>
+        <CustomApiDialog
+          label={m.accountsCustomApiEditTitle({ name: view.label })}
+          onClose={() => setEditing(false)}
+        >
           <CustomApiForm
             original={view}
             client={client}
@@ -1615,7 +1650,7 @@ function FirstmateRadio({
       <input
         type="radio"
         name="custom-api-firstmate"
-        aria-label={`Use ${model} for your first mate`}
+        aria-label={m.accountsCustomApiUseForFirstMate({ model })}
         aria-description={off}
         aria-disabled={off === undefined ? undefined : "true"}
         checked={chosen}
@@ -1627,7 +1662,7 @@ function FirstmateRadio({
           if (off === undefined) onChoose();
         }}
       />
-      First mate
+      {m.accountsCustomApiFirstMate()}
     </label>
   );
 }
@@ -1656,7 +1691,7 @@ export function CustomApiAccountsSection() {
         );
         if (!choosing.current) setChosen(selected);
       })
-      .catch(() => setError("Could not read your custom connections."));
+      .catch(() => setError(m.accountsCustomApiListFailed()));
   }, []);
   useEffect(() => {
     refresh();
@@ -1689,10 +1724,12 @@ export function CustomApiAccountsSection() {
               <span className="fm-custom-mono fm-custom-address">{view.baseUrl}</span>
               {view.baseUrl.startsWith("http:") && (
                 <span className="fm-custom-tag" data-tone="warn">
-                  Unencrypted
+                  {m.accountsCustomApiUnencrypted()}
                 </span>
               )}
-              {view.tokenCommand && <span className="fm-custom-tag">Token command</span>}
+              {view.tokenCommand && (
+                <span className="fm-custom-tag">{m.accountsCustomApiTokenCommand()}</span>
+              )}
               {view.addressException && (
                 <span className="fm-custom-tag" data-tone="warn">
                   {CUSTOM_EXCEPTION_WORDS.tag}
@@ -1705,42 +1742,40 @@ export function CustomApiAccountsSection() {
                 {view.tokenCommandFailed
                   ? CUSTOM_TOKEN_FAILURE.status
                   : ready
-                    ? "Ready"
+                    ? m.accountsCustomApiStatusReady()
                     : checked
-                      ? "Paused"
-                      : "Paused · not checked"}
+                      ? m.accountsCustomApiStatusPaused()
+                      : m.accountsCustomApiStatusPausedNotChecked()}
               </span>
               <span className="fm-custom-acts">
                 <Button variant="ghost" size="sm" onClick={() => setEditing(view)}>
-                  Edit
+                  {m.accountsCustomApiEdit()}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   off={!view.enabled && !checked}
                   note={
-                    !view.enabled && !checked
-                      ? "Edit and Save to check these models before resuming."
-                      : undefined
+                    !view.enabled && !checked ? m.accountsCustomApiResumeNeedsCheck() : undefined
                   }
                   onClick={() =>
                     void window.infinitary.accounts
                       .setEnabled(accountId, !view.enabled)
                       .then(refresh)
-                      .catch(failed("Could not change this connection."))
+                      .catch(failed(m.accountsCustomApiChangeFailed()))
                   }
                 >
-                  {view.enabled ? "Pause" : "Resume"}
+                  {view.enabled ? m.accountsCustomApiPause() : m.accountsCustomApiResume()}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setArmed(accountId)}>
-                  Disconnect
+                  {m.accountsCustomApiDisconnect()}
                 </Button>
               </span>
             </div>
             <div className="fm-custom-lrow fm-custom-lcols" aria-hidden="true">
-              <span>MODEL</span>
-              <span>STATUS</span>
-              <span>FIRSTMATE</span>
+              <span>{m.accountsCustomApiColumnModel()}</span>
+              <span>{m.accountsCustomApiColumnStatus()}</span>
+              <span>{m.accountsCustomApiColumnFirstmate()}</span>
             </div>
             {view.models.map((model) => {
               const usable = Boolean(provider) && view.enabled && model.checked;
@@ -1751,10 +1786,20 @@ export function CustomApiAccountsSection() {
                   <span className="fm-custom-status">
                     <StatusDot
                       tone={model.checked ? (view.enabled ? "ok" : "idle") : "ring"}
-                      label={model.checked ? (view.enabled ? "Ready" : "Checked") : "Not checked"}
+                      label={
+                        model.checked
+                          ? view.enabled
+                            ? m.accountsCustomApiStatusReady()
+                            : m.accountsCustomApiStatusChecked()
+                          : m.accountsCustomApiStatusNotChecked()
+                      }
                       nativeTitle={false}
                     />
-                    {model.checked ? (view.enabled ? "Ready" : "Checked") : "Not checked"}
+                    {model.checked
+                      ? view.enabled
+                        ? m.accountsCustomApiStatusReady()
+                        : m.accountsCustomApiStatusChecked()
+                      : m.accountsCustomApiStatusNotChecked()}
                     {model.readsPictures && <Badge tone="accent">{CUSTOM_READS_PICTURES}</Badge>}
                   </span>
                   <FirstmateRadio
@@ -1764,8 +1809,8 @@ export function CustomApiAccountsSection() {
                       usable
                         ? undefined
                         : model.checked
-                          ? "Resume this connection to use it."
-                          : "Edit and Save to check this model first."
+                          ? m.accountsCustomApiResumeToUse()
+                          : m.accountsCustomApiCheckModelFirst()
                     }
                     onChoose={() => {
                       const before = chosen;
@@ -1775,7 +1820,7 @@ export function CustomApiAccountsSection() {
                         .setFirstmateModel({ provider, id: model.id })
                         .then(setChosen, (caught: unknown) => {
                           setChosen(before);
-                          failed("Could not choose this model.")(caught);
+                          failed(m.accountsCustomApiChooseFailed())(caught);
                         })
                         .finally(() => {
                           choosing.current = false;
@@ -1787,21 +1832,14 @@ export function CustomApiAccountsSection() {
               );
             })}
             {!checked ? (
-              <p className="fm-custom-lock">Edit and Save to check these models before use.</p>
+              <p className="fm-custom-lock">{m.accountsCustomApiCheckBeforeUse()}</p>
             ) : !view.enabled ? (
-              <p className="fm-custom-lock">Paused. Resume to use these models.</p>
+              <p className="fm-custom-lock">{m.accountsCustomApiPausedHint()}</p>
             ) : null}
-            <p className="fm-custom-lock">
-              Crew use for these models is set on the Models board, further down Intelligence.
-            </p>
+            <p className="fm-custom-lock">{m.accountsCustomApiCrewUse()}</p>
             {armed === accountId && (
               <div className="fm-custom-disconnect">
-                <p>
-                  Disconnect immediately stops matching work and your first mate if it uses this
-                  connection. It removes only this connection locally, keeps your task history, and
-                  does not move stopped work to another server. It cannot revoke the server’s key or
-                  erase content already sent.
-                </p>
+                <p>{m.accountsCustomApiDisconnectWarning()}</p>
                 <div className="fm-custom-acts">
                   <Button
                     variant="secondary"
@@ -1813,13 +1851,13 @@ export function CustomApiAccountsSection() {
                           setArmed(undefined);
                           refresh();
                         })
-                        .catch(failed("Could not disconnect this connection."))
+                        .catch(failed(m.accountsCustomApiDisconnectFailed()))
                     }
                   >
-                    Stop work and disconnect
+                    {m.accountsCustomApiStopAndDisconnect()}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setArmed(undefined)}>
-                    Keep connection
+                    {m.accountsCustomApiKeepConnection()}
                   </Button>
                 </div>
               </div>
@@ -1829,7 +1867,7 @@ export function CustomApiAccountsSection() {
       })}
       {editing && (
         <CustomApiDialog
-          label={`Edit ${editing.label}`}
+          label={m.accountsCustomApiEditTitle({ name: editing.label })}
           onClose={() => {
             setEditing(undefined);
             refresh();
@@ -1857,7 +1895,7 @@ export function CustomApiAccountsSection() {
 /** The same bounded, focus-contained aside at every entry point: first setup, Add and Edit. */
 export function CustomApiDialog({
   children,
-  label = "Custom API connection",
+  label = m.accountsCustomApiDialogLabel(),
   onClose,
 }: {
   children: ReactNode;

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
 import { StatusDot } from "../design";
@@ -28,7 +29,11 @@ export function RemoteControlLineView({ mac }: { mac: ViewMac }) {
     <div className="fm-remote-line" data-remote-control={mac.contact} ref={stateFit.ref}>
       <StatusDot
         tone={line.tone}
-        label={away ? `${mac.name} is out of reach` : `Controlling ${mac.name}`}
+        label={
+          away
+            ? m.devicesRemoteOutOfReach({ name: mac.name })
+            : m.devicesRemoteControlling({ name: mac.name })
+        }
         nativeTitle={nameFit.hidden || stateFit.hidden}
       />
       {line.lead && <span className="fm-remote-lead">{line.lead}</span>}
@@ -77,13 +82,18 @@ export function ViewPill() {
   const repeats =
     notice !== null &&
     mac !== null &&
-    (notice.includes("Changes are off") || notice.includes(`${mac.name} is back`));
+    (notice.includes(m.devicesRemoteChangesOff()) ||
+      notice.includes(m.devicesRemoteBack({ name: mac.name })));
   const noticeFit = useOverflowTitle(repeats ? notice : undefined);
   if (!mac) return null;
   if (words)
     return (
       <div className="fm-remote-pill" role="status" data-view-pill={mac.readOnly ?? mac.contact}>
-        <StatusDot tone="warn" label="Changes are off" nativeTitle={!repeats || noticeFit.hidden} />
+        <StatusDot
+          tone="warn"
+          label={m.devicesRemoteChangesOff()}
+          nativeTitle={!repeats || noticeFit.hidden}
+        />
         <span data-view-pill-words="" ref={repeats ? noticeFit.ref : undefined}>
           {words}
         </span>
@@ -99,7 +109,7 @@ export function ViewPill() {
     >
       <StatusDot
         tone="ok"
-        label={`${mac.name} is back`}
+        label={m.devicesRemoteBack({ name: mac.name })}
         nativeTitle={!repeats || noticeFit.hidden || back === "fading"}
       />
       <span data-view-pill-words="" ref={noticeFit.ref}>

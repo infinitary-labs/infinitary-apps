@@ -6,6 +6,8 @@ import {
   customNetworkLabel,
 } from "@shared/customApi";
 import { HERE } from "@shared/deviceNames";
+import { formatList } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 
 /** Where a failure is told: beside the field at fault, on a model's row, or above Save. */
 export type CustomApiFailurePlace =
@@ -55,21 +57,23 @@ export type FailureContext = {
 
 /** The words that show a person's exception for an address, on its line and its connection. */
 export const CUSTOM_EXCEPTION_WORDS = {
-  line: "Exception made for this address",
-  tag: "Address exception",
+  get line() {
+    return m.accountsCustomApiExceptionLine();
+  },
+  get tag() {
+    return m.accountsCustomApiExceptionTag();
+  },
 } as const;
 
 /** One DNS answer and the kind of network it points to, in the form's words. */
 function answerWords(answer: CustomApiAnswer, who?: string): string {
-  if (answer.kind === "reserved") return `${answer.address} (reserved)`;
+  if (answer.kind === "reserved")
+    return m.accountsCustomApiAnswerReserved({ address: answer.address });
   const label = customNetworkLabel(answer.kind, who);
-  return `${answer.address} (${label.charAt(0).toLowerCase()}${label.slice(1)})`;
-}
-
-/** A list in words: one, "a and b", or "a, b and c". */
-function listWords(items: readonly string[]): string {
-  if (items.length < 2) return items.join("");
-  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+  return m.accountsCustomApiAnswerKind({
+    address: answer.address,
+    kind: `${label.charAt(0).toLowerCase()}${label.slice(1)}`,
+  });
 }
 
 /**
@@ -80,15 +84,17 @@ export function destinationWords(
   context: Pick<FailureContext, "answers" | "exceptionOffered" | "who">,
 ): string {
   const answers = context.answers ?? [];
-  if (!answers.length)
-    return "Infinitary can't send to this address: it points to a reserved address, or to more than one kind of network.";
-  const why = answers.some((answer) => answer.kind === "reserved")
-    ? "A reserved answer often comes from a proxy app or a DNS filter that answers for every name."
-    : "They point to more than one kind of network.";
-  const never = context.exceptionOffered
-    ? ""
-    : ` Infinitary makes no exception for an answer that points to ${context.who ?? HERE.this}, a link-local or a cloud metadata address.`;
-  return `Infinitary can't send to this address. DNS answered ${listWords(answers.map((answer) => answerWords(answer, context.who)))}. ${why}${never}`;
+  if (!answers.length) return m.accountsCustomApiDestinationRefused();
+  const reserved = answers.some((answer) => answer.kind === "reserved");
+  const answered = formatList(answers.map((answer) => answerWords(answer, context.who)));
+  if (context.exceptionOffered)
+    return reserved
+      ? m.accountsCustomApiDestinationReserved({ answered })
+      : m.accountsCustomApiDestinationMixed({ answered });
+  const here = context.who ?? HERE.this;
+  return reserved
+    ? m.accountsCustomApiDestinationReservedNever({ answered, here })
+    : m.accountsCustomApiDestinationMixedNever({ answered, here });
 }
 
 function hostAndPath(address: string): { host: string; where: string; base: string } {
@@ -116,7 +122,7 @@ export function placeCustomApiFailure(
   context: FailureContext,
 ): PlacedFailure {
   const { host, where, base } = hostAndPath(context.address);
-  const model = context.model ?? "This model";
+  const model = context.model ?? m.accountsCustomApiThisModel();
   const check = context.stage === "check";
   const operation = context.stage === "list" ? "models" : "chat/completions";
   switch (category) {
@@ -124,12 +130,12 @@ export function placeCustomApiFailure(
       return context.suggestion
         ? {
             at: "address",
-            text: "This is the address of one operation. Use the server's base address.",
+            text: m.accountsCustomApiOperationAddress(),
             fix: context.suggestion,
           }
         : {
             at: "address",
-            text: "Enter the full address, starting with https:// or http://, with no query or sign-in in it.",
+            text: m.accountsCustomApiFullAddress(),
           };
     case "destination":
       return {
@@ -139,29 +145,29 @@ export function placeCustomApiFailure(
     case "network":
       return {
         at: "address",
-        text: `Could not reach ${host}. Check that it is running and that you are on its network.`,
+        text: m.accountsCustomApiUnreachable({ host }),
       };
     case "timeout":
     case "stalled":
       return check
-        ? { at: "row", text: `${model} took too long to answer the test.` }
-        : { at: "address", text: `${host} took too long to answer.` };
+        ? { at: "row", text: m.accountsCustomApiTestSlow({ model }) }
+        : { at: "address", text: m.accountsCustomApiHostSlow({ host }) };
     case "certificate":
       return context.network === "private"
         ? {
             at: "address",
-            text: `${host}'s certificate could not be verified. Add your organization's certificate below.`,
+            text: m.accountsCustomApiCertificateAdd({ host }),
             askCertificate: true,
           }
-        : { at: "address", text: `${host}'s certificate could not be verified.` };
+        : { at: "address", text: m.accountsCustomApiCertificate({ host }) };
     case "redirect":
       return {
         at: "address",
-        text: "The server sent the request somewhere else. Enter the address it redirects to.",
+        text: m.accountsCustomApiRedirect(),
       };
     case "not-found": {
       if (check && context.listed)
-        return { at: "row", text: `This server doesn't offer ${model}.` };
+        return { at: "row", text: m.accountsCustomApiNotOffered({ model }) };
       const fix = withV1(base);
       // A missing list is no failure on its own: some servers have none. When
       // the address lacks a version, it is offered the one many servers use.
@@ -169,8 +175,8 @@ export function placeCustomApiFailure(
       return {
         at: "address",
         text: fix
-          ? `Nothing answered at ${where}/${operation}. Many servers end in /v1.`
-          : `Nothing answered at ${where}/${operation}.`,
+          ? m.accountsCustomApiNothingAnsweredV1({ where, operation })
+          : m.accountsCustomApiNothingAnswered({ where, operation }),
         ...(fix ? { fix } : {}),
         ...(context.stage === "list" ? { noList: true } : {}),
       };
@@ -178,12 +184,12 @@ export function placeCustomApiFailure(
     case "key-rejected":
       return {
         at: "key",
-        text: context.keyed ? "The server refused this key." : "This server needs a key.",
+        text: context.keyed ? m.accountsCustomApiKeyRefused() : m.accountsCustomApiKeyNeeded(),
       };
     case "access-refused":
       return {
         at: "key",
-        text: "The server refused access. Check what this key is allowed to use.",
+        text: m.accountsCustomApiAccessRefused(),
       };
     case "credential":
       if (context.tokenCommand)
@@ -193,27 +199,27 @@ export function placeCustomApiFailure(
         };
       return {
         at: "key",
-        text: "Enter the key as one line of plain text, with no spaces at either end.",
+        text: m.accountsCustomApiKeyFormat(),
       };
     case "header":
       return {
         at: "headers",
-        text: "Check the extra headers: each name once with a one-line value, and no name Infinitary sets itself. A secret value is entered again for a new address.",
+        text: m.accountsCustomApiHeaders(),
       };
     case "certificate-policy":
       return {
         at: "certificates",
-        text: "Choose a valid public CA certificate and approve it for this connection.",
+        text: m.accountsCustomApiCertificatePolicy(),
       };
     case "rate-limit":
       return {
         at: "save",
-        text: "The server is limiting requests right now. Wait a moment, then press Save again.",
+        text: m.accountsCustomApiRateLimit(),
       };
     case "server":
       return {
         at: "save",
-        text: "The server could not complete the request. Try again in a moment.",
+        text: m.accountsCustomApiServer(),
       };
     case "malformed":
     case "oversized":
@@ -222,27 +228,27 @@ export function placeCustomApiFailure(
           at: "row",
           text:
             category === "malformed"
-              ? `${model} sent a reply Infinitary could not read.`
-              : `${model}'s reply was larger than the test allows.`,
+              ? m.accountsCustomApiMalformed({ model })
+              : m.accountsCustomApiOversized({ model }),
         };
       return context.stage === "list"
         ? { at: "models", text: "", noList: true }
-        : { at: "save", text: "Your first mate could not prepare this connection. Try again." };
+        : { at: "save", text: m.accountsCustomApiPrepareFailed() };
     case "incompatible":
       return check
         ? {
             at: "row",
-            text: `${model} didn't finish the test's tool call. Infinitary needs tool calls for work; try another model or the other API protocol.`,
+            text: m.accountsCustomApiIncompatible({ model }),
           }
-        : { at: "models", text: "Each model can be added once." };
+        : { at: "models", text: m.accountsCustomApiModelOnce() };
     case "limits":
     case "context-limit":
       return {
         at: "row",
-        text: "This server doesn't list this model's sizes. Enter its context and output tokens.",
+        text: m.accountsCustomApiLimits(),
       };
     case "cancelled":
     case "closed":
-      return { at: "save", text: "The check stopped before it finished. Press Save to try again." };
+      return { at: "save", text: m.accountsCustomApiCancelled() };
   }
 }

@@ -373,9 +373,9 @@ describe("the private alpha (roadmap 1.2)", () => {
 
 describe("the Linux packages", () => {
   // INF-2163's retention change, which the captain started: a passing
-  // journey run keeps only its result file and demos, and a failed phone
+  // journey run keeps its result file, demos and requested picture evidence, and a failed phone
   // check keeps its result bundles 1 day, a recording run 3.
-  it("keeps a passing journey run's result and demos, and a failed phone check's bundles 1 day", () => {
+  it("keeps a passing journey run's results and evidence, and a failed phone check's bundles 1 day", () => {
     type Step = { if?: string; uses?: string; with?: Record<string, unknown> };
     const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
       jobs: { "source-desktop": { steps: Step[] } };
@@ -391,6 +391,7 @@ describe("the Linux packages", () => {
       [
         "Application Support/firstmate/playwright-report/source-results.json",
         "Application Support/firstmate/test-results/runs/*/*/demo/",
+        "Application Support/firstmate/test-results/runs/*/*/evidence/",
       ],
     ]);
     for (const outcome of ["failure", "cancelled", "skipped"]) {

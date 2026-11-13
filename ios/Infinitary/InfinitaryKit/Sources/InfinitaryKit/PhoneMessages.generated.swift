@@ -1395,6 +1395,229 @@ public enum PhoneMessages {
     public static func `settingsDevicesSignInsPasteBackCode`() -> String { PhoneWords.format("settingsDevicesSignInsPasteBackCode", []) }
     public static func `settingsDevicesSignInsPasteBackHere`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsPasteBackHere", [`who`]) }
     public static func `settingsDevicesSignInsPasteBackAddress`() -> String { PhoneWords.format("settingsDevicesSignInsPasteBackAddress", []) }
+    public static func `accountsCustomApiExceptionLine`() -> String { PhoneWords.format("accountsCustomApiExceptionLine", []) }
+    public static func `accountsCustomApiExceptionTag`() -> String { PhoneWords.format("accountsCustomApiExceptionTag", []) }
+    public static func `accountsCustomApiAnswerReserved`(`address`: String) -> String { PhoneWords.format("accountsCustomApiAnswerReserved", [`address`]) }
+    public static func `accountsCustomApiAnswerKind`(`address`: String, `kind`: String) -> String { PhoneWords.format("accountsCustomApiAnswerKind", [`address`, `kind`]) }
+    public static func `accountsCustomApiDestinationRefused`() -> String { PhoneWords.format("accountsCustomApiDestinationRefused", []) }
+    public static func `accountsCustomApiDestinationReserved`(`answered`: String) -> String { PhoneWords.format("accountsCustomApiDestinationReserved", [`answered`]) }
+    public static func `accountsCustomApiDestinationMixed`(`answered`: String) -> String { PhoneWords.format("accountsCustomApiDestinationMixed", [`answered`]) }
+    public static func `accountsCustomApiDestinationReservedNever`(`answered`: String, `here`: String) -> String { PhoneWords.format("accountsCustomApiDestinationReservedNever", [`answered`, `here`]) }
+    public static func `accountsCustomApiDestinationMixedNever`(`answered`: String, `here`: String) -> String { PhoneWords.format("accountsCustomApiDestinationMixedNever", [`answered`, `here`]) }
+    public static func `accountsCustomApiThisModel`() -> String { PhoneWords.format("accountsCustomApiThisModel", []) }
+    public static func `accountsCustomApiOperationAddress`() -> String { PhoneWords.format("accountsCustomApiOperationAddress", []) }
+    public static func `accountsCustomApiFullAddress`() -> String { PhoneWords.format("accountsCustomApiFullAddress", []) }
+    public static func `accountsCustomApiUnreachable`(`host`: String) -> String { PhoneWords.format("accountsCustomApiUnreachable", [`host`]) }
+    public static func `accountsCustomApiTestSlow`(`model`: String) -> String { PhoneWords.format("accountsCustomApiTestSlow", [`model`]) }
+    public static func `accountsCustomApiHostSlow`(`host`: String) -> String { PhoneWords.format("accountsCustomApiHostSlow", [`host`]) }
+    public static func `accountsCustomApiCertificateAdd`(`host`: String) -> String { PhoneWords.format("accountsCustomApiCertificateAdd", [`host`]) }
+    public static func `accountsCustomApiCertificate`(`host`: String) -> String { PhoneWords.format("accountsCustomApiCertificate", [`host`]) }
+    public static func `accountsCustomApiRedirect`() -> String { PhoneWords.format("accountsCustomApiRedirect", []) }
+    public static func `accountsCustomApiNotOffered`(`model`: String) -> String { PhoneWords.format("accountsCustomApiNotOffered", [`model`]) }
+    public static func `accountsCustomApiNothingAnsweredV1`(`operation`: String, `where`: String) -> String { PhoneWords.format("accountsCustomApiNothingAnsweredV1", [`operation`, `where`]) }
+    public static func `accountsCustomApiNothingAnswered`(`operation`: String, `where`: String) -> String { PhoneWords.format("accountsCustomApiNothingAnswered", [`operation`, `where`]) }
+    public static func `accountsCustomApiKeyRefused`() -> String { PhoneWords.format("accountsCustomApiKeyRefused", []) }
+    public static func `accountsCustomApiKeyNeeded`() -> String { PhoneWords.format("accountsCustomApiKeyNeeded", []) }
+    public static func `accountsCustomApiAccessRefused`() -> String { PhoneWords.format("accountsCustomApiAccessRefused", []) }
+    public static func `accountsCustomApiKeyFormat`() -> String { PhoneWords.format("accountsCustomApiKeyFormat", []) }
+    public static func `accountsCustomApiHeaders`() -> String { PhoneWords.format("accountsCustomApiHeaders", []) }
+    public static func `accountsCustomApiCertificatePolicy`() -> String { PhoneWords.format("accountsCustomApiCertificatePolicy", []) }
+    public static func `accountsCustomApiRateLimit`() -> String { PhoneWords.format("accountsCustomApiRateLimit", []) }
+    public static func `accountsCustomApiServer`() -> String { PhoneWords.format("accountsCustomApiServer", []) }
+    public static func `accountsCustomApiMalformed`(`model`: String) -> String { PhoneWords.format("accountsCustomApiMalformed", [`model`]) }
+    public static func `accountsCustomApiOversized`(`model`: String) -> String { PhoneWords.format("accountsCustomApiOversized", [`model`]) }
+    public static func `accountsCustomApiPrepareFailed`() -> String { PhoneWords.format("accountsCustomApiPrepareFailed", []) }
+    public static func `accountsCustomApiIncompatible`(`model`: String) -> String { PhoneWords.format("accountsCustomApiIncompatible", [`model`]) }
+    public static func `accountsCustomApiModelOnce`() -> String { PhoneWords.format("accountsCustomApiModelOnce", []) }
+    public static func `accountsCustomApiLimits`() -> String { PhoneWords.format("accountsCustomApiLimits", []) }
+    public static func `accountsCustomApiCancelled`() -> String { PhoneWords.format("accountsCustomApiCancelled", []) }
+    public static func `accountsCustomApiRowNotChecked`() -> String { PhoneWords.format("accountsCustomApiRowNotChecked", []) }
+    public static func `accountsCustomApiRowChecking`() -> String { PhoneWords.format("accountsCustomApiRowChecking", []) }
+    public static func `accountsCustomApiRowChecked`() -> String { PhoneWords.format("accountsCustomApiRowChecked", []) }
+    public static func `accountsCustomApiRowFailed`() -> String { PhoneWords.format("accountsCustomApiRowFailed", []) }
+    public static func `accountsCustomApiCommandNeeded`() -> String { PhoneWords.format("accountsCustomApiCommandNeeded", []) }
+    public static func `accountsCustomApiAddressNeeded`() -> String { PhoneWords.format("accountsCustomApiAddressNeeded", []) }
+    public static func `accountsCustomApiHttpFirst`() -> String { PhoneWords.format("accountsCustomApiHttpFirst", []) }
+    public static func `accountsCustomApiFetchFailed`() -> String { PhoneWords.format("accountsCustomApiFetchFailed", []) }
+    public static func `accountsCustomApiNotSavedRow`() -> String { PhoneWords.format("accountsCustomApiNotSavedRow", []) }
+    public static func `accountsCustomApiNotSavedField`() -> String { PhoneWords.format("accountsCustomApiNotSavedField", []) }
+    public static func `accountsCustomApiNameNeeded`() -> String { PhoneWords.format("accountsCustomApiNameNeeded", []) }
+    public static func `accountsCustomApiModelsNeeded`() -> String { PhoneWords.format("accountsCustomApiModelsNeeded", []) }
+    public static func `accountsCustomApiModelIdNeeded`() -> String { PhoneWords.format("accountsCustomApiModelIdNeeded", []) }
+    public static func `accountsCustomApiModelTwice`() -> String { PhoneWords.format("accountsCustomApiModelTwice", []) }
+    public static func `accountsCustomApiOutputTooLarge`() -> String { PhoneWords.format("accountsCustomApiOutputTooLarge", []) }
+    public static func `accountsCustomApiReaching`() -> String { PhoneWords.format("accountsCustomApiReaching", []) }
+    public static func `accountsCustomApiHttpToSave`() -> String { PhoneWords.format("accountsCustomApiHttpToSave", []) }
+    public static func `accountsCustomApiNotReached`() -> String { PhoneWords.format("accountsCustomApiNotReached", []) }
+    public static func `accountsCustomApiCheckingModel`(`index`: String, `model`: String, `total`: String) -> String { PhoneWords.format("accountsCustomApiCheckingModel", [`index`, `model`, `total`]) }
+    public static func `accountsCustomApiSaving`() -> String { PhoneWords.format("accountsCustomApiSaving", []) }
+    public static func `accountsCustomApiSaveFailed`() -> String { PhoneWords.format("accountsCustomApiSaveFailed", []) }
+    public static func `accountsCustomApiSentToken`() -> String { PhoneWords.format("accountsCustomApiSentToken", []) }
+    public static func `accountsCustomApiSentKey`() -> String { PhoneWords.format("accountsCustomApiSentKey", []) }
+    public static func `accountsCustomApiSentHeaders`(`names`: String) -> String { PhoneWords.format("accountsCustomApiSentHeaders", [`names`]) }
+    public static func `accountsCustomApiSentTest`() -> String { PhoneWords.format("accountsCustomApiSentTest", []) }
+    public static func `accountsCustomApiFootHint`(`sent`: String) -> String { PhoneWords.format("accountsCustomApiFootHint", [`sent`]) }
+    public static func `accountsCustomApiEditTitle`(`name`: String) -> String { PhoneWords.format("accountsCustomApiEditTitle", [`name`]) }
+    public static func `accountsCustomApiAddTitleOn`(`on`: String) -> String { PhoneWords.format("accountsCustomApiAddTitleOn", [`on`]) }
+    public static func `accountsCustomApiAddTitle`() -> String { PhoneWords.format("accountsCustomApiAddTitle", []) }
+    public static func `accountsCustomApiTrustHint`(`who`: String) -> String { PhoneWords.format("accountsCustomApiTrustHint", [`who`]) }
+    public static func `accountsCustomApiNameLabel`() -> String { PhoneWords.format("accountsCustomApiNameLabel", []) }
+    public static func `accountsCustomApiAddressLabel`() -> String { PhoneWords.format("accountsCustomApiAddressLabel", []) }
+    public static func `accountsCustomApiUseFix`(`address`: String) -> String { PhoneWords.format("accountsCustomApiUseFix", [`address`]) }
+    public static func `accountsCustomApiSendsTo`(`destination`: String) -> String { PhoneWords.format("accountsCustomApiSendsTo", [`destination`]) }
+    public static func `accountsCustomApiException`(`host`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiException", [`host`, `who`]) }
+    public static func `accountsCustomApiHttpApproved`() -> String { PhoneWords.format("accountsCustomApiHttpApproved", []) }
+    public static func `accountsCustomApiHttp`(`who`: String) -> String { PhoneWords.format("accountsCustomApiHttp", [`who`]) }
+    public static func `accountsCustomApiHttpPublic`(`who`: String) -> String { PhoneWords.format("accountsCustomApiHttpPublic", [`who`]) }
+    public static func `accountsCustomApiHttpPrivate`(`who`: String) -> String { PhoneWords.format("accountsCustomApiHttpPrivate", [`who`]) }
+    public static func `accountsCustomApiConnectWith`() -> String { PhoneWords.format("accountsCustomApiConnectWith", []) }
+    public static func `accountsCustomApiAuthKey`() -> String { PhoneWords.format("accountsCustomApiAuthKey", []) }
+    public static func `accountsCustomApiTokenCommand`() -> String { PhoneWords.format("accountsCustomApiTokenCommand", []) }
+    public static func `accountsCustomApiRefreshAfter`() -> String { PhoneWords.format("accountsCustomApiRefreshAfter", []) }
+    public static func `accountsCustomApiCommandHint`(`who`: String) -> String { PhoneWords.format("accountsCustomApiCommandHint", [`who`]) }
+    public static func `accountsCustomApiKeyLabel`() -> String { PhoneWords.format("accountsCustomApiKeyLabel", []) }
+    public static func `accountsCustomApiKeyOptional`() -> String { PhoneWords.format("accountsCustomApiKeyOptional", []) }
+    public static func `accountsCustomApiRemoveSavedKey`() -> String { PhoneWords.format("accountsCustomApiRemoveSavedKey", []) }
+    public static func `accountsCustomApiSavedKeyKept`() -> String { PhoneWords.format("accountsCustomApiSavedKeyKept", []) }
+    public static func `accountsCustomApiKeyEmpty`() -> String { PhoneWords.format("accountsCustomApiKeyEmpty", []) }
+    public static func `accountsCustomApiKeyGoesTo`(`here`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiKeyGoesTo", [`here`, `who`]) }
+    public static func `accountsCustomApiProtocol`() -> String { PhoneWords.format("accountsCustomApiProtocol", []) }
+    public static func `accountsCustomApiHeadersTitle`() -> String { PhoneWords.format("accountsCustomApiHeadersTitle", []) }
+    public static func `accountsCustomApiHeadersHint`() -> String { PhoneWords.format("accountsCustomApiHeadersHint", []) }
+    public static func `accountsCustomApiHeaderName`() -> String { PhoneWords.format("accountsCustomApiHeaderName", []) }
+    public static func `accountsCustomApiHeaderValue`() -> String { PhoneWords.format("accountsCustomApiHeaderValue", []) }
+    public static func `accountsCustomApiSavedValueKept`() -> String { PhoneWords.format("accountsCustomApiSavedValueKept", []) }
+    public static func `accountsCustomApiEnterValue`() -> String { PhoneWords.format("accountsCustomApiEnterValue", []) }
+    public static func `accountsCustomApiSecret`() -> String { PhoneWords.format("accountsCustomApiSecret", []) }
+    public static func `accountsCustomApiRemoveHeader`() -> String { PhoneWords.format("accountsCustomApiRemoveHeader", []) }
+    public static func `accountsCustomApiAddHeader`() -> String { PhoneWords.format("accountsCustomApiAddHeader", []) }
+    public static func `accountsCustomApiCertificatesTitle`() -> String { PhoneWords.format("accountsCustomApiCertificatesTitle", []) }
+    public static func `accountsCustomApiCertificatesHint`() -> String { PhoneWords.format("accountsCustomApiCertificatesHint", []) }
+    public static func `accountsCustomApiChooseCertificate`() -> String { PhoneWords.format("accountsCustomApiChooseCertificate", []) }
+    public static func `accountsCustomApiCertificateTooLarge`() -> String { PhoneWords.format("accountsCustomApiCertificateTooLarge", []) }
+    public static func `accountsCustomApiCertificateUnreadable`() -> String { PhoneWords.format("accountsCustomApiCertificateUnreadable", []) }
+    public static func `accountsCustomApiIssuer`(`from`: String, `issuer`: String, `to`: String) -> String { PhoneWords.format("accountsCustomApiIssuer", [`from`, `issuer`, `to`]) }
+    public static func `accountsCustomApiApproveCertificates`() -> String { PhoneWords.format("accountsCustomApiApproveCertificates", []) }
+    public static func `accountsCustomApiRemoveCertificate`() -> String { PhoneWords.format("accountsCustomApiRemoveCertificate", []) }
+    public static func `accountsCustomApiStorage`() -> String { PhoneWords.format("accountsCustomApiStorage", []) }
+    public static func `accountsCustomApiModelsTitle`() -> String { PhoneWords.format("accountsCustomApiModelsTitle", []) }
+    public static func `accountsCustomApiFetching`() -> String { PhoneWords.format("accountsCustomApiFetching", []) }
+    public static func `accountsCustomApiFetchAgain`() -> String { PhoneWords.format("accountsCustomApiFetchAgain", []) }
+    public static func `accountsCustomApiFetch`() -> String { PhoneWords.format("accountsCustomApiFetch", []) }
+    public static func `accountsCustomApiNoList`() -> String { PhoneWords.format("accountsCustomApiNoList", []) }
+    public static func `accountsCustomApiListed`(`count`: Int) -> String { PhoneWords.format("accountsCustomApiListed", [`count`]) }
+    public static func `accountsCustomApiListedNone`() -> String { PhoneWords.format("accountsCustomApiListedNone", []) }
+    public static func `accountsCustomApiModelId`() -> String { PhoneWords.format("accountsCustomApiModelId", []) }
+    public static func `accountsCustomApiContext`() -> String { PhoneWords.format("accountsCustomApiContext", []) }
+    public static func `accountsCustomApiOutput`() -> String { PhoneWords.format("accountsCustomApiOutput", []) }
+    public static func `accountsCustomApiThisModelLower`() -> String { PhoneWords.format("accountsCustomApiThisModelLower", []) }
+    public static func `accountsCustomApiRowState`(`name`: String, `state`: String) -> String { PhoneWords.format("accountsCustomApiRowState", [`name`, `state`]) }
+    public static func `accountsCustomApiContextFor`(`name`: String) -> String { PhoneWords.format("accountsCustomApiContextFor", [`name`]) }
+    public static func `accountsCustomApiOutputFor`(`name`: String) -> String { PhoneWords.format("accountsCustomApiOutputFor", [`name`]) }
+    public static func `accountsCustomApiRemoveModel`(`name`: String) -> String { PhoneWords.format("accountsCustomApiRemoveModel", [`name`]) }
+    public static func `accountsCustomApiReasoning`() -> String { PhoneWords.format("accountsCustomApiReasoning", []) }
+    public static func `accountsCustomApiReasoningFor`(`name`: String) -> String { PhoneWords.format("accountsCustomApiReasoningFor", [`name`]) }
+    public static func `accountsCustomApiReasoningOff`() -> String { PhoneWords.format("accountsCustomApiReasoningOff", []) }
+    public static func `accountsCustomApiCache`() -> String { PhoneWords.format("accountsCustomApiCache", []) }
+    public static func `accountsCustomApiCacheFor`(`name`: String) -> String { PhoneWords.format("accountsCustomApiCacheFor", [`name`]) }
+    public static func `accountsCustomApiCacheNone`() -> String { PhoneWords.format("accountsCustomApiCacheNone", []) }
+    public static func `accountsCustomApiCacheShort`() -> String { PhoneWords.format("accountsCustomApiCacheShort", []) }
+    public static func `accountsCustomApiCacheLong`() -> String { PhoneWords.format("accountsCustomApiCacheLong", []) }
+    public static func `accountsCustomApiCapabilityHint`() -> String { PhoneWords.format("accountsCustomApiCapabilityHint", []) }
+    public static func `accountsCustomApiProfilesFailed`() -> String { PhoneWords.format("accountsCustomApiProfilesFailed", []) }
+    public static func `accountsCustomApiNoModels`() -> String { PhoneWords.format("accountsCustomApiNoModels", []) }
+    public static func `accountsCustomApiAddByHand`() -> String { PhoneWords.format("accountsCustomApiAddByHand", []) }
+    public static func `accountsCustomApiSeparate`() -> String { PhoneWords.format("accountsCustomApiSeparate", []) }
+    public static func `accountsCustomApiSavePaused`() -> String { PhoneWords.format("accountsCustomApiSavePaused", []) }
+    public static func `accountsCustomApiCommandApproval`() -> String { PhoneWords.format("accountsCustomApiCommandApproval", []) }
+    public static func `accountsCustomApiCancel`() -> String { PhoneWords.format("accountsCustomApiCancel", []) }
+    public static func `accountsCustomApiCheckingPending`() -> String { PhoneWords.format("accountsCustomApiCheckingPending", []) }
+    public static func `accountsCustomApiSave`() -> String { PhoneWords.format("accountsCustomApiSave", []) }
+    public static func `accountsCustomApiReadFailed`() -> String { PhoneWords.format("accountsCustomApiReadFailed", []) }
+    public static func `accountsCustomApiReady`(`name`: String) -> String { PhoneWords.format("accountsCustomApiReady", [`name`]) }
+    public static func `accountsCustomApiChooseQuestion`() -> String { PhoneWords.format("accountsCustomApiChooseQuestion", []) }
+    public static func `accountsCustomApiChooseFailed`() -> String { PhoneWords.format("accountsCustomApiChooseFailed", []) }
+    public static func `accountsCustomApiUseModel`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseModel", [`model`]) }
+    public static func `accountsCustomApiCrewUseSettings`() -> String { PhoneWords.format("accountsCustomApiCrewUseSettings", []) }
+    public static func `accountsCustomApiChooseLater`() -> String { PhoneWords.format("accountsCustomApiChooseLater", []) }
+    public static func `accountsCustomApiUnencrypted`() -> String { PhoneWords.format("accountsCustomApiUnencrypted", []) }
+    public static func `accountsCustomApiStatusReady`() -> String { PhoneWords.format("accountsCustomApiStatusReady", []) }
+    public static func `accountsCustomApiStatusNotChecked`() -> String { PhoneWords.format("accountsCustomApiStatusNotChecked", []) }
+    public static func `accountsCustomApiStatusChecked`() -> String { PhoneWords.format("accountsCustomApiStatusChecked", []) }
+    public static func `accountsCustomApiStatusPaused`() -> String { PhoneWords.format("accountsCustomApiStatusPaused", []) }
+    public static func `accountsCustomApiStatusPausedNotChecked`() -> String { PhoneWords.format("accountsCustomApiStatusPausedNotChecked", []) }
+    public static func `accountsCustomApiEdit`() -> String { PhoneWords.format("accountsCustomApiEdit", []) }
+    public static func `accountsCustomApiDisconnect`() -> String { PhoneWords.format("accountsCustomApiDisconnect", []) }
+    public static func `accountsCustomApiColumnModel`() -> String { PhoneWords.format("accountsCustomApiColumnModel", []) }
+    public static func `accountsCustomApiColumnStatus`() -> String { PhoneWords.format("accountsCustomApiColumnStatus", []) }
+    public static func `accountsCustomApiColumnFirstmate`() -> String { PhoneWords.format("accountsCustomApiColumnFirstmate", []) }
+    public static func `accountsCustomApiCrewUseRemote`(`who`: String) -> String { PhoneWords.format("accountsCustomApiCrewUseRemote", [`who`]) }
+    public static func `accountsCustomApiDisconnectRemote`(`here`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiDisconnectRemote", [`here`, `who`]) }
+    public static func `accountsCustomApiKeepConnection`() -> String { PhoneWords.format("accountsCustomApiKeepConnection", []) }
+    public static func `accountsCustomApiUseForFirstMate`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseForFirstMate", [`model`]) }
+    public static func `accountsCustomApiFirstMate`() -> String { PhoneWords.format("accountsCustomApiFirstMate", []) }
+    public static func `accountsCustomApiListFailed`() -> String { PhoneWords.format("accountsCustomApiListFailed", []) }
+    public static func `accountsCustomApiResumeNeedsCheck`() -> String { PhoneWords.format("accountsCustomApiResumeNeedsCheck", []) }
+    public static func `accountsCustomApiChangeFailed`() -> String { PhoneWords.format("accountsCustomApiChangeFailed", []) }
+    public static func `accountsCustomApiPause`() -> String { PhoneWords.format("accountsCustomApiPause", []) }
+    public static func `accountsCustomApiResume`() -> String { PhoneWords.format("accountsCustomApiResume", []) }
+    public static func `accountsCustomApiResumeToUse`() -> String { PhoneWords.format("accountsCustomApiResumeToUse", []) }
+    public static func `accountsCustomApiCheckModelFirst`() -> String { PhoneWords.format("accountsCustomApiCheckModelFirst", []) }
+    public static func `accountsCustomApiCheckBeforeUse`() -> String { PhoneWords.format("accountsCustomApiCheckBeforeUse", []) }
+    public static func `accountsCustomApiPausedHint`() -> String { PhoneWords.format("accountsCustomApiPausedHint", []) }
+    public static func `accountsCustomApiCrewUse`() -> String { PhoneWords.format("accountsCustomApiCrewUse", []) }
+    public static func `accountsCustomApiDisconnectWarning`() -> String { PhoneWords.format("accountsCustomApiDisconnectWarning", []) }
+    public static func `accountsCustomApiDisconnectFailed`() -> String { PhoneWords.format("accountsCustomApiDisconnectFailed", []) }
+    public static func `accountsCustomApiStopAndDisconnect`() -> String { PhoneWords.format("accountsCustomApiStopAndDisconnect", []) }
+    public static func `accountsCustomApiDialogLabel`() -> String { PhoneWords.format("accountsCustomApiDialogLabel", []) }
+    public static func `accountsCopyCodeCopying`() -> String { PhoneWords.format("accountsCopyCodeCopying", []) }
+    public static func `accountsCopyCodeButton`() -> String { PhoneWords.format("accountsCopyCodeButton", []) }
+    public static func `accountsConnectNotSignedIn`() -> String { PhoneWords.format("accountsConnectNotSignedIn", []) }
+    public static func `accountsConnectNotSignedInYet`(`here`: String, `provider`: String) -> String { PhoneWords.format("accountsConnectNotSignedInYet", [`here`, `provider`]) }
+    public static func `accountsConnectConnected`(`provider`: String) -> String { PhoneWords.format("accountsConnectConnected", [`provider`]) }
+    public static func `accountsConnectClaudeLoginThere`() -> String { PhoneWords.format("accountsConnectClaudeLoginThere", []) }
+    public static func `accountsConnectClaudeLoginOn`(`here`: String) -> String { PhoneWords.format("accountsConnectClaudeLoginOn", [`here`]) }
+    public static func `accountsConnectAddAnother`(`provider`: String) -> String { PhoneWords.format("accountsConnectAddAnother", [`provider`]) }
+    public static func `accountsConnectProvider`(`provider`: String) -> String { PhoneWords.format("accountsConnectProvider", [`provider`]) }
+    public static func `accountsConnectConnecting`() -> String { PhoneWords.format("accountsConnectConnecting", []) }
+    public static func `accountsConnectCustomApi`() -> String { PhoneWords.format("accountsConnectCustomApi", []) }
+    public static func `accountsConnectCrewOnly`() -> String { PhoneWords.format("accountsConnectCrewOnly", []) }
+    public static func `accountsConnectInstallClaudeThere`() -> String { PhoneWords.format("accountsConnectInstallClaudeThere", []) }
+    public static func `accountsConnectUpdateThere`() -> String { PhoneWords.format("accountsConnectUpdateThere", []) }
+    public static func `accountsConnectHow`(`provider`: String) -> String { PhoneWords.format("accountsConnectHow", [`provider`]) }
+    public static func `accountsConnectBrowser`() -> String { PhoneWords.format("accountsConnectBrowser", []) }
+    public static func `accountsConnectCancel`() -> String { PhoneWords.format("accountsConnectCancel", []) }
+    public static func `accountsConnectSubmit`() -> String { PhoneWords.format("accountsConnectSubmit", []) }
+    public static func `accountsConnectOpenSignIn`() -> String { PhoneWords.format("accountsConnectOpenSignIn", []) }
+    public static func `devicesRemoteOutOfReach`(`name`: String) -> String { PhoneWords.format("devicesRemoteOutOfReach", [`name`]) }
+    public static func `devicesRemoteControlling`(`name`: String) -> String { PhoneWords.format("devicesRemoteControlling", [`name`]) }
+    public static func `devicesRemoteChangesOff`() -> String { PhoneWords.format("devicesRemoteChangesOff", []) }
+    public static func `devicesRemoteBack`(`name`: String) -> String { PhoneWords.format("devicesRemoteBack", [`name`]) }
+    public static func `devicesNearbyPort`() -> String { PhoneWords.format("devicesNearbyPort", []) }
+    public static func `devicesNearbyPortPlaceholder`() -> String { PhoneWords.format("devicesNearbyPortPlaceholder", []) }
+    public static func `devicesNearbyRemoteLoginOn`() -> String { PhoneWords.format("devicesNearbyRemoteLoginOn", []) }
+    public static func `devicesNearbySshOn`() -> String { PhoneWords.format("devicesNearbySshOn", []) }
+    public static func `devicesJoinElsewhere`(`computer`: String) -> String { PhoneWords.format("devicesJoinElsewhere", [`computer`]) }
+    public static func `devicesJoinPasteChip`() -> String { PhoneWords.format("devicesJoinPasteChip", []) }
+    public static func `devicesJoinAddressChip`() -> String { PhoneWords.format("devicesJoinAddressChip", []) }
+    public static func `devicesJoinPasteHead`(`computer`: String) -> String { PhoneWords.format("devicesJoinPasteHead", [`computer`]) }
+    public static func `devicesJoinPasteSub`() -> String { PhoneWords.format("devicesJoinPasteSub", []) }
+    public static func `devicesJoinLinkLabel`(`computer`: String) -> String { PhoneWords.format("devicesJoinLinkLabel", [`computer`]) }
+    public static func `devicesJoinContinue`() -> String { PhoneWords.format("devicesJoinContinue", []) }
+    public static func `devicesJoinCancel`() -> String { PhoneWords.format("devicesJoinCancel", []) }
+    public static func `devicesJoinNotJoined`() -> String { PhoneWords.format("devicesJoinNotJoined", []) }
+    public static func `devicesJoinKeyYes`(`computer`: String) -> String { PhoneWords.format("devicesJoinKeyYes", [`computer`]) }
+    public static func `devicesJoinMoment`() -> String { PhoneWords.format("devicesJoinMoment", []) }
+    public static func `devicesJoinShows`(`computer`: String, `here`: String) -> String { PhoneWords.format("devicesJoinShows", [`computer`, `here`]) }
+    public static func `devicesJoinKeepHere`(`here`: String) -> String { PhoneWords.format("devicesJoinKeepHere", [`here`]) }
+    public static func `devicesJoinControl`() -> String { PhoneWords.format("devicesJoinControl", []) }
+    public static func `devicesJoinReaching`(`address`: String, `computer`: String) -> String { PhoneWords.format("devicesJoinReaching", [`address`, `computer`]) }
+    public static func `devicesJoinDidNotJoin`(`here`: String) -> String { PhoneWords.format("devicesJoinDidNotJoin", [`here`]) }
+    public static func `devicesJoinTryAgain`() -> String { PhoneWords.format("devicesJoinTryAgain", []) }
+    public static func `devicesJoinPasteAnother`() -> String { PhoneWords.format("devicesJoinPasteAnother", []) }
+    public static func `devicesJoinAddressSub`(`computer`: String, `mustBeOn`: String) -> String { PhoneWords.format("devicesJoinAddressSub", [`computer`, `mustBeOn`]) }
+    public static func `devicesJoinYourAccount`() -> String { PhoneWords.format("devicesJoinYourAccount", []) }
+    public static func `devicesJoinPickHint`(`computer`: String) -> String { PhoneWords.format("devicesJoinPickHint", [`computer`]) }
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
@@ -3365,6 +3588,229 @@ extension PhoneWords {
         "settingsDevicesSignInsPasteBackCode": [],
         "settingsDevicesSignInsPasteBackHere": ["who"],
         "settingsDevicesSignInsPasteBackAddress": [],
+        "accountsCustomApiExceptionLine": [],
+        "accountsCustomApiExceptionTag": [],
+        "accountsCustomApiAnswerReserved": ["address"],
+        "accountsCustomApiAnswerKind": ["address", "kind"],
+        "accountsCustomApiDestinationRefused": [],
+        "accountsCustomApiDestinationReserved": ["answered"],
+        "accountsCustomApiDestinationMixed": ["answered"],
+        "accountsCustomApiDestinationReservedNever": ["answered", "here"],
+        "accountsCustomApiDestinationMixedNever": ["answered", "here"],
+        "accountsCustomApiThisModel": [],
+        "accountsCustomApiOperationAddress": [],
+        "accountsCustomApiFullAddress": [],
+        "accountsCustomApiUnreachable": ["host"],
+        "accountsCustomApiTestSlow": ["model"],
+        "accountsCustomApiHostSlow": ["host"],
+        "accountsCustomApiCertificateAdd": ["host"],
+        "accountsCustomApiCertificate": ["host"],
+        "accountsCustomApiRedirect": [],
+        "accountsCustomApiNotOffered": ["model"],
+        "accountsCustomApiNothingAnsweredV1": ["operation", "where"],
+        "accountsCustomApiNothingAnswered": ["operation", "where"],
+        "accountsCustomApiKeyRefused": [],
+        "accountsCustomApiKeyNeeded": [],
+        "accountsCustomApiAccessRefused": [],
+        "accountsCustomApiKeyFormat": [],
+        "accountsCustomApiHeaders": [],
+        "accountsCustomApiCertificatePolicy": [],
+        "accountsCustomApiRateLimit": [],
+        "accountsCustomApiServer": [],
+        "accountsCustomApiMalformed": ["model"],
+        "accountsCustomApiOversized": ["model"],
+        "accountsCustomApiPrepareFailed": [],
+        "accountsCustomApiIncompatible": ["model"],
+        "accountsCustomApiModelOnce": [],
+        "accountsCustomApiLimits": [],
+        "accountsCustomApiCancelled": [],
+        "accountsCustomApiRowNotChecked": [],
+        "accountsCustomApiRowChecking": [],
+        "accountsCustomApiRowChecked": [],
+        "accountsCustomApiRowFailed": [],
+        "accountsCustomApiCommandNeeded": [],
+        "accountsCustomApiAddressNeeded": [],
+        "accountsCustomApiHttpFirst": [],
+        "accountsCustomApiFetchFailed": [],
+        "accountsCustomApiNotSavedRow": [],
+        "accountsCustomApiNotSavedField": [],
+        "accountsCustomApiNameNeeded": [],
+        "accountsCustomApiModelsNeeded": [],
+        "accountsCustomApiModelIdNeeded": [],
+        "accountsCustomApiModelTwice": [],
+        "accountsCustomApiOutputTooLarge": [],
+        "accountsCustomApiReaching": [],
+        "accountsCustomApiHttpToSave": [],
+        "accountsCustomApiNotReached": [],
+        "accountsCustomApiCheckingModel": ["index", "model", "total"],
+        "accountsCustomApiSaving": [],
+        "accountsCustomApiSaveFailed": [],
+        "accountsCustomApiSentToken": [],
+        "accountsCustomApiSentKey": [],
+        "accountsCustomApiSentHeaders": ["names"],
+        "accountsCustomApiSentTest": [],
+        "accountsCustomApiFootHint": ["sent"],
+        "accountsCustomApiEditTitle": ["name"],
+        "accountsCustomApiAddTitleOn": ["on"],
+        "accountsCustomApiAddTitle": [],
+        "accountsCustomApiTrustHint": ["who"],
+        "accountsCustomApiNameLabel": [],
+        "accountsCustomApiAddressLabel": [],
+        "accountsCustomApiUseFix": ["address"],
+        "accountsCustomApiSendsTo": ["destination"],
+        "accountsCustomApiException": ["host", "who"],
+        "accountsCustomApiHttpApproved": [],
+        "accountsCustomApiHttp": ["who"],
+        "accountsCustomApiHttpPublic": ["who"],
+        "accountsCustomApiHttpPrivate": ["who"],
+        "accountsCustomApiConnectWith": [],
+        "accountsCustomApiAuthKey": [],
+        "accountsCustomApiTokenCommand": [],
+        "accountsCustomApiRefreshAfter": [],
+        "accountsCustomApiCommandHint": ["who"],
+        "accountsCustomApiKeyLabel": [],
+        "accountsCustomApiKeyOptional": [],
+        "accountsCustomApiRemoveSavedKey": [],
+        "accountsCustomApiSavedKeyKept": [],
+        "accountsCustomApiKeyEmpty": [],
+        "accountsCustomApiKeyGoesTo": ["here", "who"],
+        "accountsCustomApiProtocol": [],
+        "accountsCustomApiHeadersTitle": [],
+        "accountsCustomApiHeadersHint": [],
+        "accountsCustomApiHeaderName": [],
+        "accountsCustomApiHeaderValue": [],
+        "accountsCustomApiSavedValueKept": [],
+        "accountsCustomApiEnterValue": [],
+        "accountsCustomApiSecret": [],
+        "accountsCustomApiRemoveHeader": [],
+        "accountsCustomApiAddHeader": [],
+        "accountsCustomApiCertificatesTitle": [],
+        "accountsCustomApiCertificatesHint": [],
+        "accountsCustomApiChooseCertificate": [],
+        "accountsCustomApiCertificateTooLarge": [],
+        "accountsCustomApiCertificateUnreadable": [],
+        "accountsCustomApiIssuer": ["from", "issuer", "to"],
+        "accountsCustomApiApproveCertificates": [],
+        "accountsCustomApiRemoveCertificate": [],
+        "accountsCustomApiStorage": [],
+        "accountsCustomApiModelsTitle": [],
+        "accountsCustomApiFetching": [],
+        "accountsCustomApiFetchAgain": [],
+        "accountsCustomApiFetch": [],
+        "accountsCustomApiNoList": [],
+        "accountsCustomApiListed": ["count"],
+        "accountsCustomApiListedNone": [],
+        "accountsCustomApiModelId": [],
+        "accountsCustomApiContext": [],
+        "accountsCustomApiOutput": [],
+        "accountsCustomApiThisModelLower": [],
+        "accountsCustomApiRowState": ["name", "state"],
+        "accountsCustomApiContextFor": ["name"],
+        "accountsCustomApiOutputFor": ["name"],
+        "accountsCustomApiRemoveModel": ["name"],
+        "accountsCustomApiReasoning": [],
+        "accountsCustomApiReasoningFor": ["name"],
+        "accountsCustomApiReasoningOff": [],
+        "accountsCustomApiCache": [],
+        "accountsCustomApiCacheFor": ["name"],
+        "accountsCustomApiCacheNone": [],
+        "accountsCustomApiCacheShort": [],
+        "accountsCustomApiCacheLong": [],
+        "accountsCustomApiCapabilityHint": [],
+        "accountsCustomApiProfilesFailed": [],
+        "accountsCustomApiNoModels": [],
+        "accountsCustomApiAddByHand": [],
+        "accountsCustomApiSeparate": [],
+        "accountsCustomApiSavePaused": [],
+        "accountsCustomApiCommandApproval": [],
+        "accountsCustomApiCancel": [],
+        "accountsCustomApiCheckingPending": [],
+        "accountsCustomApiSave": [],
+        "accountsCustomApiReadFailed": [],
+        "accountsCustomApiReady": ["name"],
+        "accountsCustomApiChooseQuestion": [],
+        "accountsCustomApiChooseFailed": [],
+        "accountsCustomApiUseModel": ["model"],
+        "accountsCustomApiCrewUseSettings": [],
+        "accountsCustomApiChooseLater": [],
+        "accountsCustomApiUnencrypted": [],
+        "accountsCustomApiStatusReady": [],
+        "accountsCustomApiStatusNotChecked": [],
+        "accountsCustomApiStatusChecked": [],
+        "accountsCustomApiStatusPaused": [],
+        "accountsCustomApiStatusPausedNotChecked": [],
+        "accountsCustomApiEdit": [],
+        "accountsCustomApiDisconnect": [],
+        "accountsCustomApiColumnModel": [],
+        "accountsCustomApiColumnStatus": [],
+        "accountsCustomApiColumnFirstmate": [],
+        "accountsCustomApiCrewUseRemote": ["who"],
+        "accountsCustomApiDisconnectRemote": ["here", "who"],
+        "accountsCustomApiKeepConnection": [],
+        "accountsCustomApiUseForFirstMate": ["model"],
+        "accountsCustomApiFirstMate": [],
+        "accountsCustomApiListFailed": [],
+        "accountsCustomApiResumeNeedsCheck": [],
+        "accountsCustomApiChangeFailed": [],
+        "accountsCustomApiPause": [],
+        "accountsCustomApiResume": [],
+        "accountsCustomApiResumeToUse": [],
+        "accountsCustomApiCheckModelFirst": [],
+        "accountsCustomApiCheckBeforeUse": [],
+        "accountsCustomApiPausedHint": [],
+        "accountsCustomApiCrewUse": [],
+        "accountsCustomApiDisconnectWarning": [],
+        "accountsCustomApiDisconnectFailed": [],
+        "accountsCustomApiStopAndDisconnect": [],
+        "accountsCustomApiDialogLabel": [],
+        "accountsCopyCodeCopying": [],
+        "accountsCopyCodeButton": [],
+        "accountsConnectNotSignedIn": [],
+        "accountsConnectNotSignedInYet": ["here", "provider"],
+        "accountsConnectConnected": ["provider"],
+        "accountsConnectClaudeLoginThere": [],
+        "accountsConnectClaudeLoginOn": ["here"],
+        "accountsConnectAddAnother": ["provider"],
+        "accountsConnectProvider": ["provider"],
+        "accountsConnectConnecting": [],
+        "accountsConnectCustomApi": [],
+        "accountsConnectCrewOnly": [],
+        "accountsConnectInstallClaudeThere": [],
+        "accountsConnectUpdateThere": [],
+        "accountsConnectHow": ["provider"],
+        "accountsConnectBrowser": [],
+        "accountsConnectCancel": [],
+        "accountsConnectSubmit": [],
+        "accountsConnectOpenSignIn": [],
+        "devicesRemoteOutOfReach": ["name"],
+        "devicesRemoteControlling": ["name"],
+        "devicesRemoteChangesOff": [],
+        "devicesRemoteBack": ["name"],
+        "devicesNearbyPort": [],
+        "devicesNearbyPortPlaceholder": [],
+        "devicesNearbyRemoteLoginOn": [],
+        "devicesNearbySshOn": [],
+        "devicesJoinElsewhere": ["computer"],
+        "devicesJoinPasteChip": [],
+        "devicesJoinAddressChip": [],
+        "devicesJoinPasteHead": ["computer"],
+        "devicesJoinPasteSub": [],
+        "devicesJoinLinkLabel": ["computer"],
+        "devicesJoinContinue": [],
+        "devicesJoinCancel": [],
+        "devicesJoinNotJoined": [],
+        "devicesJoinKeyYes": ["computer"],
+        "devicesJoinMoment": [],
+        "devicesJoinShows": ["computer", "here"],
+        "devicesJoinKeepHere": ["here"],
+        "devicesJoinControl": [],
+        "devicesJoinReaching": ["address", "computer"],
+        "devicesJoinDidNotJoin": ["here"],
+        "devicesJoinTryAgain": [],
+        "devicesJoinPasteAnother": [],
+        "devicesJoinAddressSub": ["computer", "mustBeOn"],
+        "devicesJoinYourAccount": [],
+        "devicesJoinPickHint": ["computer"],
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],
@@ -3974,6 +4420,7 @@ extension PhoneWords {
         "settingsDevicesRemoveRunsAfter": "count",
         "settingsDevicesTasks": "count",
         "settingsProjectsPauseSummary": "count",
+        "accountsCustomApiListed": "count",
         "phoneMediaPicturePosition": "count",
         "phoneAddressSweeping": "count",
         "phoneSceneProgramParts": "count",

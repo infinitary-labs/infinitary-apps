@@ -41509,6 +41509,6416 @@ export function settingsDevicesSignInsPasteBackAddress(): string {
   return `Open the link in your browser here and sign in. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.`;
 }
 
+export function accountsCustomApiExceptionLine(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مُنح هذا العنوان استثناءً`;
+    case "de":
+      return `Ausnahme für diese Adresse erteilt`;
+    case "es":
+      return `Excepción hecha para esta dirección`;
+    case "fr":
+      return `Exception accordée pour cette adresse`;
+    case "ja":
+      return `このアドレスに例外を設定済み`;
+    case "ko":
+      return `이 주소에 예외 적용됨`;
+    case "pt-BR":
+      return `Exceção feita para este endereço`;
+    case "zh-Hans":
+      return `已为此地址设置例外`;
+    case "zh-Hant":
+      return `已為這個位址設定例外`;
+    case "en-XA":
+      return `[Éẋçéþţîöñ ɱáðé ƒöŕ ţĥîš áððŕéšš ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eException made for this address\u202c`;
+  }
+  return `Exception made for this address`;
+}
+
+export function accountsCustomApiExceptionTag(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استثناء العنوان`;
+    case "de":
+      return `Adressausnahme`;
+    case "es":
+      return `Excepción de dirección`;
+    case "fr":
+      return `Exception d’adresse`;
+    case "ja":
+      return `アドレスの例外`;
+    case "ko":
+      return `주소 예외`;
+    case "pt-BR":
+      return `Exceção de endereço`;
+    case "zh-Hans":
+      return `地址例外`;
+    case "zh-Hant":
+      return `位址例外`;
+    case "en-XA":
+      return `[Åððŕéšš éẋçéþţîöñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAddress exception\u202c`;
+  }
+  return `Address exception`;
+}
+
+export function accountsCustomApiAnswerReserved(input: { address: string }): string {
+  const address = input.address;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${address} (محجوز)`;
+    case "de":
+      return `${address} (reserviert)`;
+    case "es":
+      return `${address} (reservada)`;
+    case "fr":
+      return `${address} (réservée)`;
+    case "ja":
+      return `${address}（予約済み）`;
+    case "ko":
+      return `${address} (예약됨)`;
+    case "pt-BR":
+      return `${address} (reservado)`;
+    case "zh-Hans":
+      return `${address}（保留地址）`;
+    case "zh-Hant":
+      return `${address}（保留位址）`;
+    case "en-XA":
+      return `[${address} (ŕéšéŕṽéð) ~~~~]`;
+    case "ar-XB":
+      return `${address}\u202e (reserved)\u202c`;
+  }
+  return `${address} (reserved)`;
+}
+
+export function accountsCustomApiAnswerKind(input: { address: string; kind: string }): string {
+  const address = input.address;
+  const kind = input.kind;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${address} (${kind})`;
+    case "de":
+      return `${address} (${kind})`;
+    case "es":
+      return `${address} (${kind})`;
+    case "fr":
+      return `${address} (${kind})`;
+    case "ja":
+      return `${address}（${kind}）`;
+    case "ko":
+      return `${address} (${kind})`;
+    case "pt-BR":
+      return `${address} (${kind})`;
+    case "zh-Hans":
+      return `${address}（${kind}）`;
+    case "zh-Hant":
+      return `${address}（${kind}）`;
+    case "en-XA":
+      return `[${address} (${kind}) ~]`;
+    case "ar-XB":
+      return `${address}\u202e (\u202c${kind}\u202e)\u202c`;
+  }
+  return `${address} (${kind})`;
+}
+
+export function accountsCustomApiDestinationRefused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يستطيع Infinitary الإرسال إلى هذا العنوان: فهو يشير إلى عنوان محجوز، أو إلى أكثر من نوع واحد من الشبكات.`;
+    case "de":
+      return `Infinitary kann nicht an diese Adresse senden: Sie verweist auf eine reservierte Adresse oder auf mehr als eine Art von Netzwerk.`;
+    case "es":
+      return `Infinitary no puede enviar a esta dirección: apunta a una dirección reservada o a más de un tipo de red.`;
+    case "fr":
+      return `Infinitary ne peut pas envoyer à cette adresse : elle pointe vers une adresse réservée, ou vers plusieurs types de réseau.`;
+    case "ja":
+      return `Infinitary はこのアドレスに送信できません。予約済みアドレス、または複数の種類のネットワークを指しています。`;
+    case "ko":
+      return `Infinitary는 이 주소로 보낼 수 없어요. 예약된 주소를 가리키거나, 두 종류 이상의 네트워크를 가리켜요.`;
+    case "pt-BR":
+      return `O Infinitary não pode enviar para este endereço: ele aponta para um endereço reservado ou para mais de um tipo de rede.`;
+    case "zh-Hans":
+      return `Infinitary 无法发送到此地址：它指向一个保留地址，或指向不止一种网络。`;
+    case "zh-Hant":
+      return `Infinitary 無法傳送到這個位址：它指向保留位址，或指向不只一種網路。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš: îţ þöîñţš ţö á ŕéšéŕṽéð áððŕéšš, öŕ ţö ɱöŕé ţĥáñ öñé ķîñð öƒ ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary can't send to this address: it points to a reserved address, or to more than one kind of network.\u202c`;
+  }
+  return `Infinitary can't send to this address: it points to a reserved address, or to more than one kind of network.`;
+}
+
+export function accountsCustomApiDestinationReserved(input: { answered: string }): string {
+  const answered = input.answered;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. غالبًا ما تأتي الإجابة المحجوزة من تطبيق وكيل أو مرشّح DNS يجيب عن كل اسم.`;
+    case "de":
+      return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Eine reservierte Antwort kommt oft von einer Proxy-App oder einem DNS-Filter, der für jeden Namen antwortet.`;
+    case "es":
+      return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Una respuesta reservada suele venir de una app de proxy o de un filtro DNS que responde por cualquier nombre.`;
+    case "fr":
+      return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Une réponse réservée vient souvent d’une app proxy ou d’un filtre DNS qui répond pour tous les noms.`;
+    case "ja":
+      return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。予約済みの応答は、すべての名前に応答するプロキシアプリや DNS フィルターから返されることがよくあります。`;
+    case "ko":
+      return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 예약된 답은 모든 이름에 답하는 프록시 앱이나 DNS 필터에서 오는 경우가 많아요.`;
+    case "pt-BR":
+      return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Uma resposta reservada costuma vir de um app de proxy ou de um filtro de DNS que responde por qualquer nome.`;
+    case "zh-Hans":
+      return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。保留地址的返回结果通常来自代理应用，或会替所有名称作答的 DNS 过滤器。`;
+    case "zh-Hant":
+      return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。保留位址的回應通常來自代理程式，或會替所有名稱回應的 DNS 過濾器。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Å ŕéšéŕṽéð áñšŵéŕ öƒţéñ çöɱéš ƒŕöɱ á þŕöẋý áþþ öŕ á ÐÑŠ ƒîļţéŕ ţĥáţ áñšŵéŕš ƒöŕ éṽéŕý ñáɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary can't send to this address. DNS answered \u202c${answered}\u202e. A reserved answer often comes from a proxy app or a DNS filter that answers for every name.\u202c`;
+  }
+  return `Infinitary can't send to this address. DNS answered ${answered}. A reserved answer often comes from a proxy app or a DNS filter that answers for every name.`;
+}
+
+export function accountsCustomApiDestinationMixed(input: { answered: string }): string {
+  const answered = input.answered;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. وهذه الإجابات تشير إلى أكثر من نوع واحد من الشبكات.`;
+    case "de":
+      return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Sie verweisen auf mehr als eine Art von Netzwerk.`;
+    case "es":
+      return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Apuntan a más de un tipo de red.`;
+    case "fr":
+      return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Ces réponses pointent vers plusieurs types de réseau.`;
+    case "ja":
+      return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。これらは複数の種類のネットワークを指しています。`;
+    case "ko":
+      return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 이 답들은 두 종류 이상의 네트워크를 가리켜요.`;
+    case "pt-BR":
+      return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Essas respostas apontam para mais de um tipo de rede.`;
+    case "zh-Hans":
+      return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。这些结果指向不止一种网络。`;
+    case "zh-Hant":
+      return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。這些回應指向不只一種網路。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Ţĥéý þöîñţ ţö ɱöŕé ţĥáñ öñé ķîñð öƒ ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary can't send to this address. DNS answered \u202c${answered}\u202e. They point to more than one kind of network.\u202c`;
+  }
+  return `Infinitary can't send to this address. DNS answered ${answered}. They point to more than one kind of network.`;
+}
+
+export function accountsCustomApiDestinationReservedNever(input: {
+  answered: string;
+  here: string;
+}): string {
+  const answered = input.answered;
+  const here = input.here;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. غالبًا ما تأتي الإجابة المحجوزة من تطبيق وكيل أو مرشّح DNS يجيب عن كل اسم. لا يستثني Infinitary أي إجابة تشير إلى ${here} أو إلى عنوان ربط محلي أو عنوان بيانات وصفية سحابية.`;
+    case "de":
+      return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Eine reservierte Antwort kommt oft von einer Proxy-App oder einem DNS-Filter, der für jeden Namen antwortet. Infinitary macht keine Ausnahme für eine Antwort, die auf ${here}, eine Link-Local-Adresse oder eine Cloud-Metadatenadresse verweist.`;
+    case "es":
+      return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Una respuesta reservada suele venir de una app de proxy o de un filtro DNS que responde por cualquier nombre. Infinitary no hace excepciones con una respuesta que apunte a ${here}, a una dirección de enlace local o a una dirección de metadatos de la nube.`;
+    case "fr":
+      return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Une réponse réservée vient souvent d’une app proxy ou d’un filtre DNS qui répond pour tous les noms. Infinitary ne fait aucune exception pour une réponse qui pointe vers ${here}, une adresse lien-local ou une adresse de métadonnées cloud.`;
+    case "ja":
+      return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。予約済みの応答は、すべての名前に応答するプロキシアプリや DNS フィルターから返されることがよくあります。${here}、リンクローカルアドレス、クラウドのメタデータアドレスを指す応答に、Infinitary は例外を設けません。`;
+    case "ko":
+      return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 예약된 답은 모든 이름에 답하는 프록시 앱이나 DNS 필터에서 오는 경우가 많아요. Infinitary는 ${here}, 링크 로컬 주소, 클라우드 메타데이터 주소를 가리키는 답에는 예외를 두지 않아요.`;
+    case "pt-BR":
+      return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Uma resposta reservada costuma vir de um app de proxy ou de um filtro de DNS que responde por qualquer nome. O Infinitary não abre exceção para uma resposta que aponte para ${here}, para um endereço link-local ou para um endereço de metadados de nuvem.`;
+    case "zh-Hans":
+      return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。保留地址的返回结果通常来自代理应用，或会替所有名称作答的 DNS 过滤器。对于指向 ${here}、链路本地地址或云元数据地址的结果，Infinitary 不设例外。`;
+    case "zh-Hant":
+      return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。保留位址的回應通常來自代理程式，或會替所有名稱回應的 DNS 過濾器。對於指向 ${here}、鏈路本機位址或雲端中繼資料位址的回應，Infinitary 不設例外。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Å ŕéšéŕṽéð áñšŵéŕ öƒţéñ çöɱéš ƒŕöɱ á þŕöẋý áþþ öŕ á ÐÑŠ ƒîļţéŕ ţĥáţ áñšŵéŕš ƒöŕ éṽéŕý ñáɱé. Îñƒîñîţáŕý ɱáķéš ñö éẋçéþţîöñ ƒöŕ áñ áñšŵéŕ ţĥáţ þöîñţš ţö ${here}, á ļîñķ-ļöçáļ öŕ á çļöûð ɱéţáðáţá áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary can't send to this address. DNS answered \u202c${answered}\u202e. A reserved answer often comes from a proxy app or a DNS filter that answers for every name. Infinitary makes no exception for an answer that points to \u202c${here}\u202e, a link-local or a cloud metadata address.\u202c`;
+  }
+  return `Infinitary can't send to this address. DNS answered ${answered}. A reserved answer often comes from a proxy app or a DNS filter that answers for every name. Infinitary makes no exception for an answer that points to ${here}, a link-local or a cloud metadata address.`;
+}
+
+export function accountsCustomApiDestinationMixedNever(input: {
+  answered: string;
+  here: string;
+}): string {
+  const answered = input.answered;
+  const here = input.here;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. وهذه الإجابات تشير إلى أكثر من نوع واحد من الشبكات. لا يستثني Infinitary أي إجابة تشير إلى ${here} أو إلى عنوان ربط محلي أو عنوان بيانات وصفية سحابية.`;
+    case "de":
+      return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Sie verweisen auf mehr als eine Art von Netzwerk. Infinitary macht keine Ausnahme für eine Antwort, die auf ${here}, eine Link-Local-Adresse oder eine Cloud-Metadatenadresse verweist.`;
+    case "es":
+      return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Apuntan a más de un tipo de red. Infinitary no hace excepciones con una respuesta que apunte a ${here}, a una dirección de enlace local o a una dirección de metadatos de la nube.`;
+    case "fr":
+      return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Ces réponses pointent vers plusieurs types de réseau. Infinitary ne fait aucune exception pour une réponse qui pointe vers ${here}, une adresse lien-local ou une adresse de métadonnées cloud.`;
+    case "ja":
+      return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。これらは複数の種類のネットワークを指しています。${here}、リンクローカルアドレス、クラウドのメタデータアドレスを指す応答に、Infinitary は例外を設けません。`;
+    case "ko":
+      return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 이 답들은 두 종류 이상의 네트워크를 가리켜요. Infinitary는 ${here}, 링크 로컬 주소, 클라우드 메타데이터 주소를 가리키는 답에는 예외를 두지 않아요.`;
+    case "pt-BR":
+      return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Essas respostas apontam para mais de um tipo de rede. O Infinitary não abre exceção para uma resposta que aponte para ${here}, para um endereço link-local ou para um endereço de metadados de nuvem.`;
+    case "zh-Hans":
+      return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。这些结果指向不止一种网络。对于指向 ${here}、链路本地地址或云元数据地址的结果，Infinitary 不设例外。`;
+    case "zh-Hant":
+      return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。這些回應指向不只一種網路。對於指向 ${here}、鏈路本機位址或雲端中繼資料位址的回應，Infinitary 不設例外。`;
+    case "en-XA":
+      return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Ţĥéý þöîñţ ţö ɱöŕé ţĥáñ öñé ķîñð öƒ ñéţŵöŕķ. Îñƒîñîţáŕý ɱáķéš ñö éẋçéþţîöñ ƒöŕ áñ áñšŵéŕ ţĥáţ þöîñţš ţö ${here}, á ļîñķ-ļöçáļ öŕ á çļöûð ɱéţáðáţá áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eInfinitary can't send to this address. DNS answered \u202c${answered}\u202e. They point to more than one kind of network. Infinitary makes no exception for an answer that points to \u202c${here}\u202e, a link-local or a cloud metadata address.\u202c`;
+  }
+  return `Infinitary can't send to this address. DNS answered ${answered}. They point to more than one kind of network. Infinitary makes no exception for an answer that points to ${here}, a link-local or a cloud metadata address.`;
+}
+
+export function accountsCustomApiThisModel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا النموذج`;
+    case "de":
+      return `Dieses Modell`;
+    case "es":
+      return `Este modelo`;
+    case "fr":
+      return `Ce modèle`;
+    case "ja":
+      return `このモデル`;
+    case "ko":
+      return `이 모델`;
+    case "pt-BR":
+      return `Este modelo`;
+    case "zh-Hans":
+      return `此模型`;
+    case "zh-Hant":
+      return `這個模型`;
+    case "en-XA":
+      return `[Ţĥîš ɱöðéļ ~~~~]`;
+    case "ar-XB":
+      return `\u202eThis model\u202c`;
+  }
+  return `This model`;
+}
+
+export function accountsCustomApiOperationAddress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا عنوان وظيفة واحدة. استخدم العنوان الأساسي للخادم.`;
+    case "de":
+      return `Das ist die Adresse einer einzelnen Funktion. Verwende die Basisadresse des Servers.`;
+    case "es":
+      return `Esta es la dirección de una sola operación. Usa la dirección base del servidor.`;
+    case "fr":
+      return `Ceci est l’adresse d’une seule opération. Utilisez l’adresse de base du serveur.`;
+    case "ja":
+      return `これは個別の操作のアドレスです。サーバーのベースアドレスを使ってください。`;
+    case "ko":
+      return `기능 하나의 주소예요. 서버의 기본 주소를 쓰세요.`;
+    case "pt-BR":
+      return `Este é o endereço de uma única operação. Use o endereço base do servidor.`;
+    case "zh-Hans":
+      return `这是某个具体操作的地址。请使用服务器的基础地址。`;
+    case "zh-Hant":
+      return `這是單一操作的位址。請使用伺服器的基本位址。`;
+    case "en-XA":
+      return `[Ţĥîš îš ţĥé áððŕéšš öƒ öñé öþéŕáţîöñ. Ûšé ţĥé šéŕṽéŕ'š ƀášé áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis is the address of one operation. Use the server's base address.\u202c`;
+  }
+  return `This is the address of one operation. Use the server's base address.`;
+}
+
+export function accountsCustomApiFullAddress(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل العنوان كاملًا، بدءًا بـ https:// أو http://، دون استعلام أو بيانات تسجيل دخول فيه.`;
+    case "de":
+      return `Gib die vollständige Adresse ein, beginnend mit https:// oder http://, ohne Abfrage oder Anmeldedaten darin.`;
+    case "es":
+      return `Escribe la dirección completa, empezando por https:// o http://, sin consulta ni datos de inicio de sesión.`;
+    case "fr":
+      return `Saisissez l’adresse complète, commençant par https:// ou http://, sans requête ni identifiants.`;
+    case "ja":
+      return `https:// または http:// で始まる完全なアドレスを、クエリやサインイン情報を含めずに入力してください。`;
+    case "ko":
+      return `https:// 또는 http://로 시작하는 전체 주소를 입력하세요. 쿼리나 로그인 정보는 넣지 마세요.`;
+    case "pt-BR":
+      return `Digite o endereço completo, começando com https:// ou http://, sem consulta nem dados de login.`;
+    case "zh-Hans":
+      return `请输入完整地址，以 https:// 或 http:// 开头，不含查询参数或登录信息。`;
+    case "zh-Hant":
+      return `請輸入完整位址，以 https:// 或 http:// 開頭，不含查詢參數或登入資訊。`;
+    case "en-XA":
+      return `[Éñţéŕ ţĥé ƒûļļ áððŕéšš, šţáŕţîñĝ ŵîţĥ ĥţţþš:// öŕ ĥţţþ://, ŵîţĥ ñö ǫûéŕý öŕ šîĝñ-îñ îñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter the full address, starting with https:// or http://, with no query or sign-in in it.\u202c`;
+  }
+  return `Enter the full address, starting with https:// or http://, with no query or sign-in in it.`;
+}
+
+export function accountsCustomApiUnreachable(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر الوصول إلى ${host}. تحقّق من أنه يعمل وأنك على شبكته.`;
+    case "de":
+      return `${host} war nicht erreichbar. Prüfe, ob der Server läuft und ob du in seinem Netzwerk bist.`;
+    case "es":
+      return `No se pudo conectar con ${host}. Comprueba que esté en marcha y que estés en su red.`;
+    case "fr":
+      return `Impossible de joindre ${host}. Vérifiez qu’il fonctionne et que vous êtes sur son réseau.`;
+    case "ja":
+      return `${host} に接続できませんでした。起動しているか、同じネットワークにいるかを確認してください。`;
+    case "ko":
+      return `${host}에 연결할 수 없었어요. 서버가 실행 중인지, 그 네트워크에 연결되어 있는지 확인하세요.`;
+    case "pt-BR":
+      return `Não foi possível acessar ${host}. Verifique se ele está em execução e se você está na rede dele.`;
+    case "zh-Hans":
+      return `无法连接到 ${host}。请确认它正在运行，并且你在它所在的网络中。`;
+    case "zh-Hant":
+      return `連不上 ${host}。請確認它正在執行，而且你在它所在的網路上。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ŕéáçĥ ${host}. Çĥéçķ ţĥáţ îţ îš ŕûññîñĝ áñð ţĥáţ ýöû áŕé öñ îţš ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not reach \u202c${host}\u202e. Check that it is running and that you are on its network.\u202c`;
+  }
+  return `Could not reach ${host}. Check that it is running and that you are on its network.`;
+}
+
+export function accountsCustomApiTestSlow(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استغرق ${model} وقتًا طويلًا للإجابة عن الاختبار.`;
+    case "de":
+      return `${model} hat zu lange gebraucht, um auf den Test zu antworten.`;
+    case "es":
+      return `${model} tardó demasiado en responder a la prueba.`;
+    case "fr":
+      return `${model} a mis trop de temps à répondre au test.`;
+    case "ja":
+      return `${model} のテストへの応答に時間がかかりすぎました。`;
+    case "ko":
+      return `${model}이(가) 테스트에 답하는 데 너무 오래 걸렸어요.`;
+    case "pt-BR":
+      return `${model} demorou demais para responder ao teste.`;
+    case "zh-Hans":
+      return `${model} 回答测试的时间过长。`;
+    case "zh-Hant":
+      return `${model} 回應測試的時間太久。`;
+    case "en-XA":
+      return `[${model} ţööķ ţöö ļöñĝ ţö áñšŵéŕ ţĥé ţéšţ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${model}\u202e took too long to answer the test.\u202c`;
+  }
+  return `${model} took too long to answer the test.`;
+}
+
+export function accountsCustomApiHostSlow(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استغرق ${host} وقتًا طويلًا للإجابة.`;
+    case "de":
+      return `${host} hat zu lange gebraucht, um zu antworten.`;
+    case "es":
+      return `${host} tardó demasiado en responder.`;
+    case "fr":
+      return `${host} a mis trop de temps à répondre.`;
+    case "ja":
+      return `${host} の応答に時間がかかりすぎました。`;
+    case "ko":
+      return `${host}이(가) 답하는 데 너무 오래 걸렸어요.`;
+    case "pt-BR":
+      return `${host} demorou demais para responder.`;
+    case "zh-Hans":
+      return `${host} 响应时间过长。`;
+    case "zh-Hant":
+      return `${host} 回應時間太久。`;
+    case "en-XA":
+      return `[${host} ţööķ ţöö ļöñĝ ţö áñšŵéŕ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `${host}\u202e took too long to answer.\u202c`;
+  }
+  return `${host} took too long to answer.`;
+}
+
+export function accountsCustomApiCertificateAdd(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر التحقق من شهادة ${host}. أضف شهادة مؤسستك أدناه.`;
+    case "de":
+      return `Das Zertifikat von ${host} konnte nicht überprüft werden. Füge unten das Zertifikat deiner Organisation hinzu.`;
+    case "es":
+      return `No se pudo verificar el certificado de ${host}. Agrega abajo el certificado de tu organización.`;
+    case "fr":
+      return `Le certificat de ${host} n’a pas pu être vérifié. Ajoutez ci-dessous le certificat de votre organisation.`;
+    case "ja":
+      return `${host} の証明書を検証できませんでした。下で組織の証明書を追加してください。`;
+    case "ko":
+      return `${host}의 인증서를 확인할 수 없었어요. 아래에 조직의 인증서를 추가하세요.`;
+    case "pt-BR":
+      return `Não foi possível verificar o certificado de ${host}. Adicione abaixo o certificado da sua organização.`;
+    case "zh-Hans":
+      return `无法验证 ${host} 的证书。请在下方添加你所在组织的证书。`;
+    case "zh-Hant":
+      return `無法驗證 ${host} 的憑證。請在下方加入你組織的憑證。`;
+    case "en-XA":
+      return `[${host}'š çéŕţîƒîçáţé çöûļð ñöţ ƀé ṽéŕîƒîéð. Åðð ýöûŕ öŕĝáñîžáţîöñ'š çéŕţîƒîçáţé ƀéļöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${host}\u202e's certificate could not be verified. Add your organization's certificate below.\u202c`;
+  }
+  return `${host}'s certificate could not be verified. Add your organization's certificate below.`;
+}
+
+export function accountsCustomApiCertificate(input: { host: string }): string {
+  const host = input.host;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر التحقق من شهادة ${host}.`;
+    case "de":
+      return `Das Zertifikat von ${host} konnte nicht überprüft werden.`;
+    case "es":
+      return `No se pudo verificar el certificado de ${host}.`;
+    case "fr":
+      return `Le certificat de ${host} n’a pas pu être vérifié.`;
+    case "ja":
+      return `${host} の証明書を検証できませんでした。`;
+    case "ko":
+      return `${host}의 인증서를 확인할 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível verificar o certificado de ${host}.`;
+    case "zh-Hans":
+      return `无法验证 ${host} 的证书。`;
+    case "zh-Hant":
+      return `無法驗證 ${host} 的憑證。`;
+    case "en-XA":
+      return `[${host}'š çéŕţîƒîçáţé çöûļð ñöţ ƀé ṽéŕîƒîéð. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${host}\u202e's certificate could not be verified.\u202c`;
+  }
+  return `${host}'s certificate could not be verified.`;
+}
+
+export function accountsCustomApiRedirect(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أرسل الخادم الطلب إلى مكان آخر. أدخل العنوان الذي يعيد التوجيه إليه.`;
+    case "de":
+      return `Der Server hat die Anfrage woandershin geschickt. Gib die Adresse ein, auf die er weiterleitet.`;
+    case "es":
+      return `El servidor envió la solicitud a otro lugar. Escribe la dirección a la que redirige.`;
+    case "fr":
+      return `Le serveur a envoyé la requête ailleurs. Saisissez l’adresse vers laquelle il redirige.`;
+    case "ja":
+      return `サーバーがリクエストを別の場所に転送しました。転送先のアドレスを入力してください。`;
+    case "ko":
+      return `서버가 요청을 다른 곳으로 보냈어요. 리디렉션되는 주소를 입력하세요.`;
+    case "pt-BR":
+      return `O servidor enviou a solicitação para outro lugar. Digite o endereço para o qual ele redireciona.`;
+    case "zh-Hans":
+      return `服务器把请求转到了别处。请输入它重定向到的地址。`;
+    case "zh-Hant":
+      return `伺服器把要求轉到別的地方。請輸入它重新導向的位址。`;
+    case "en-XA":
+      return `[Ţĥé šéŕṽéŕ šéñţ ţĥé ŕéǫûéšţ šöɱéŵĥéŕé éļšé. Éñţéŕ ţĥé áððŕéšš îţ ŕéðîŕéçţš ţö. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe server sent the request somewhere else. Enter the address it redirects to.\u202c`;
+  }
+  return `The server sent the request somewhere else. Enter the address it redirects to.`;
+}
+
+export function accountsCustomApiNotOffered(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يوفّر هذا الخادم ${model}.`;
+    case "de":
+      return `Dieser Server bietet ${model} nicht an.`;
+    case "es":
+      return `Este servidor no ofrece ${model}.`;
+    case "fr":
+      return `Ce serveur ne propose pas ${model}.`;
+    case "ja":
+      return `このサーバーは ${model} を提供していません。`;
+    case "ko":
+      return `이 서버는 ${model}을(를) 제공하지 않아요.`;
+    case "pt-BR":
+      return `Este servidor não oferece ${model}.`;
+    case "zh-Hans":
+      return `此服务器不提供 ${model}。`;
+    case "zh-Hant":
+      return `這台伺服器沒有提供 ${model}。`;
+    case "en-XA":
+      return `[Ţĥîš šéŕṽéŕ ðöéšñ'ţ öƒƒéŕ ${model}. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis server doesn't offer \u202c${model}\u202e.\u202c`;
+  }
+  return `This server doesn't offer ${model}.`;
+}
+
+export function accountsCustomApiNothingAnsweredV1(input: {
+  operation: string;
+  where: string;
+}): string {
+  const operation = input.operation;
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُجب شيء عند ${where}/${operation}. تنتهي عناوين كثير من الخوادم بـ /v1.`;
+    case "de":
+      return `Unter ${where}/${operation} hat nichts geantwortet. Viele Server enden auf /v1.`;
+    case "es":
+      return `Nada respondió en ${where}/${operation}. Muchos servidores terminan en /v1.`;
+    case "fr":
+      return `Rien n’a répondu à ${where}/${operation}. Beaucoup de serveurs se terminent par /v1.`;
+    case "ja":
+      return `${where}/${operation} から応答がありませんでした。多くのサーバーのアドレスは /v1 で終わります。`;
+    case "ko":
+      return `${where}/${operation}에서 아무것도 답하지 않았어요. 많은 서버 주소가 /v1로 끝나요.`;
+    case "pt-BR":
+      return `Nada respondeu em ${where}/${operation}. Muitos servidores terminam em /v1.`;
+    case "zh-Hans":
+      return `${where}/${operation} 没有任何响应。许多服务器的地址以 /v1 结尾。`;
+    case "zh-Hant":
+      return `${where}/${operation} 沒有任何回應。許多伺服器的位址以 /v1 結尾。`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ áñšŵéŕéð áţ ${where}/${operation}. Ṁáñý šéŕṽéŕš éñð îñ /ṽ1. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing answered at \u202c${where}\u202e/\u202c${operation}\u202e. Many servers end in /v1.\u202c`;
+  }
+  return `Nothing answered at ${where}/${operation}. Many servers end in /v1.`;
+}
+
+export function accountsCustomApiNothingAnswered(input: {
+  operation: string;
+  where: string;
+}): string {
+  const operation = input.operation;
+  const where = input.where;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُجب شيء عند ${where}/${operation}.`;
+    case "de":
+      return `Unter ${where}/${operation} hat nichts geantwortet.`;
+    case "es":
+      return `Nada respondió en ${where}/${operation}.`;
+    case "fr":
+      return `Rien n’a répondu à ${where}/${operation}.`;
+    case "ja":
+      return `${where}/${operation} から応答がありませんでした。`;
+    case "ko":
+      return `${where}/${operation}에서 아무것도 답하지 않았어요.`;
+    case "pt-BR":
+      return `Nada respondeu em ${where}/${operation}.`;
+    case "zh-Hans":
+      return `${where}/${operation} 没有任何响应。`;
+    case "zh-Hant":
+      return `${where}/${operation} 沒有任何回應。`;
+    case "en-XA":
+      return `[Ñöţĥîñĝ áñšŵéŕéð áţ ${where}/${operation}. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNothing answered at \u202c${where}\u202e/\u202c${operation}\u202e.\u202c`;
+  }
+  return `Nothing answered at ${where}/${operation}.`;
+}
+
+export function accountsCustomApiKeyRefused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رفض الخادم هذا المفتاح.`;
+    case "de":
+      return `Der Server hat diesen Schlüssel abgelehnt.`;
+    case "es":
+      return `El servidor rechazó esta clave.`;
+    case "fr":
+      return `Le serveur a refusé cette clé.`;
+    case "ja":
+      return `サーバーがこのキーを拒否しました。`;
+    case "ko":
+      return `서버가 이 키를 거부했어요.`;
+    case "pt-BR":
+      return `O servidor recusou esta chave.`;
+    case "zh-Hans":
+      return `服务器拒绝了此密钥。`;
+    case "zh-Hant":
+      return `伺服器拒絕了這把金鑰。`;
+    case "en-XA":
+      return `[Ţĥé šéŕṽéŕ ŕéƒûšéð ţĥîš ķéý. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe server refused this key.\u202c`;
+  }
+  return `The server refused this key.`;
+}
+
+export function accountsCustomApiKeyNeeded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحتاج هذا الخادم إلى مفتاح.`;
+    case "de":
+      return `Dieser Server braucht einen Schlüssel.`;
+    case "es":
+      return `Este servidor necesita una clave.`;
+    case "fr":
+      return `Ce serveur a besoin d’une clé.`;
+    case "ja":
+      return `このサーバーにはキーが必要です。`;
+    case "ko":
+      return `이 서버에는 키가 필요해요.`;
+    case "pt-BR":
+      return `Este servidor precisa de uma chave.`;
+    case "zh-Hans":
+      return `此服务器需要密钥。`;
+    case "zh-Hant":
+      return `這台伺服器需要金鑰。`;
+    case "en-XA":
+      return `[Ţĥîš šéŕṽéŕ ñééðš á ķéý. ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis server needs a key.\u202c`;
+  }
+  return `This server needs a key.`;
+}
+
+export function accountsCustomApiAccessRefused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رفض الخادم الوصول. تحقّق مما يُسمح لهذا المفتاح باستخدامه.`;
+    case "de":
+      return `Der Server hat den Zugriff verweigert. Prüfe, wofür dieser Schlüssel freigegeben ist.`;
+    case "es":
+      return `El servidor rechazó el acceso. Comprueba qué puede usar esta clave.`;
+    case "fr":
+      return `Le serveur a refusé l’accès. Vérifiez ce que cette clé a le droit d’utiliser.`;
+    case "ja":
+      return `サーバーがアクセスを拒否しました。このキーで使える範囲を確認してください。`;
+    case "ko":
+      return `서버가 접근을 거부했어요. 이 키로 무엇을 쓸 수 있는지 확인하세요.`;
+    case "pt-BR":
+      return `O servidor recusou o acesso. Verifique o que esta chave tem permissão para usar.`;
+    case "zh-Hans":
+      return `服务器拒绝了访问。请检查此密钥有权使用哪些内容。`;
+    case "zh-Hant":
+      return `伺服器拒絕存取。請確認這把金鑰可以使用哪些內容。`;
+    case "en-XA":
+      return `[Ţĥé šéŕṽéŕ ŕéƒûšéð áççéšš. Çĥéçķ ŵĥáţ ţĥîš ķéý îš áļļöŵéð ţö ûšé. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe server refused access. Check what this key is allowed to use.\u202c`;
+  }
+  return `The server refused access. Check what this key is allowed to use.`;
+}
+
+export function accountsCustomApiKeyFormat(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل المفتاح سطرًا واحدًا من النص العادي، دون مسافات في أي من طرفيه.`;
+    case "de":
+      return `Gib den Schlüssel als eine Zeile reinen Text ein, ohne Leerzeichen am Anfang oder Ende.`;
+    case "es":
+      return `Escribe la clave como una sola línea de texto sin formato, sin espacios al principio ni al final.`;
+    case "fr":
+      return `Saisissez la clé sur une seule ligne de texte brut, sans espace au début ni à la fin.`;
+    case "ja":
+      return `キーは前後に空白を入れず、1行のプレーンテキストで入力してください。`;
+    case "ko":
+      return `키는 양 끝에 공백 없이 한 줄의 일반 텍스트로 입력하세요.`;
+    case "pt-BR":
+      return `Digite a chave como uma única linha de texto simples, sem espaços no início nem no fim.`;
+    case "zh-Hans":
+      return `请以一行纯文本输入密钥，首尾不留空格。`;
+    case "zh-Hant":
+      return `請以一行純文字輸入金鑰，前後不要有空格。`;
+    case "en-XA":
+      return `[Éñţéŕ ţĥé ķéý áš öñé ļîñé öƒ þļáîñ ţéẋţ, ŵîţĥ ñö šþáçéš áţ éîţĥéŕ éñð. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter the key as one line of plain text, with no spaces at either end.\u202c`;
+  }
+  return `Enter the key as one line of plain text, with no spaces at either end.`;
+}
+
+export function accountsCustomApiHeaders(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تحقّق من الترويسات الإضافية: كل اسم مرة واحدة بقيمة من سطر واحد، ولا اسم يضبطه Infinitary بنفسه. تُدخَل القيمة السرية من جديد عند استخدام عنوان جديد.`;
+    case "de":
+      return `Prüfe die zusätzlichen Header: jeder Name nur einmal mit einem einzeiligen Wert und kein Name, den Infinitary selbst setzt. Ein geheimer Wert muss für eine neue Adresse erneut eingegeben werden.`;
+    case "es":
+      return `Revisa los encabezados adicionales: cada nombre una sola vez con un valor de una línea, y ningún nombre que Infinitary ya ponga por su cuenta. Un valor secreto se vuelve a escribir para una dirección nueva.`;
+    case "fr":
+      return `Vérifiez les en-têtes supplémentaires : chaque nom une seule fois avec une valeur sur une ligne, et aucun nom qu’Infinitary définit lui-même. Une valeur secrète doit être saisie à nouveau pour une nouvelle adresse.`;
+    case "ja":
+      return `追加のヘッダーを確認してください。各名前は1回だけで値は1行、Infinitary が自分で設定する名前は使えません。新しいアドレスでは、シークレットの値をもう一度入力します。`;
+    case "ko":
+      return `추가 헤더를 확인하세요. 각 이름은 한 번만 쓰고 값은 한 줄로 쓰며, Infinitary가 직접 설정하는 이름은 쓸 수 없어요. 새 주소에서는 비밀 값을 다시 입력해야 해요.`;
+    case "pt-BR":
+      return `Confira os cabeçalhos extras: cada nome uma só vez, com um valor de uma linha, e nenhum nome que o próprio Infinitary define. Um valor secreto precisa ser digitado de novo para um novo endereço.`;
+    case "zh-Hans":
+      return `请检查额外的请求头：每个名称只出现一次且值为单行，也不能使用 Infinitary 自己设置的名称。换用新地址时需要重新输入机密值。`;
+    case "zh-Hant":
+      return `請檢查額外標頭：每個名稱只出現一次、值只有一行，而且不能用 Infinitary 自己設定的名稱。換成新位址時，需要重新輸入機密值。`;
+    case "en-XA":
+      return `[Çĥéçķ ţĥé éẋţŕá ĥéáðéŕš: éáçĥ ñáɱé öñçé ŵîţĥ á öñé-ļîñé ṽáļûé, áñð ñö ñáɱé Îñƒîñîţáŕý šéţš îţšéļƒ. Å šéçŕéţ ṽáļûé îš éñţéŕéð áĝáîñ ƒöŕ á ñéŵ áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCheck the extra headers: each name once with a one-line value, and no name Infinitary sets itself. A secret value is entered again for a new address.\u202c`;
+  }
+  return `Check the extra headers: each name once with a one-line value, and no name Infinitary sets itself. A secret value is entered again for a new address.`;
+}
+
+export function accountsCustomApiCertificatePolicy(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر شهادة CA عامة صالحة ووافق عليها لهذا الاتصال.`;
+    case "de":
+      return `Wähl ein gültiges öffentliches CA-Zertifikat und gib es für diese Verbindung frei.`;
+    case "es":
+      return `Elige un certificado de CA pública válido y apruébalo para esta conexión.`;
+    case "fr":
+      return `Choisissez un certificat d’autorité publique valide et approuvez-le pour cette connexion.`;
+    case "ja":
+      return `有効な公開 CA 証明書を選び、この接続での使用を承認してください。`;
+    case "ko":
+      return `유효한 공개 CA 인증서를 고르고 이 연결에 쓰도록 승인하세요.`;
+    case "pt-BR":
+      return `Escolha um certificado de CA pública válido e aprove-o para esta conexão.`;
+    case "zh-Hans":
+      return `请选择一个有效的公共 CA 证书，并批准它用于此连接。`;
+    case "zh-Hant":
+      return `請選擇有效的公開 CA 憑證，並核准它用於這個連線。`;
+    case "en-XA":
+      return `[Çĥööšé á ṽáļîð þûƀļîç ÇÅ çéŕţîƒîçáţé áñð áþþŕöṽé îţ ƒöŕ ţĥîš çöññéçţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose a valid public CA certificate and approve it for this connection.\u202c`;
+  }
+  return `Choose a valid public CA certificate and approve it for this connection.`;
+}
+
+export function accountsCustomApiRateLimit(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يحدّ الخادم من الطلبات الآن. انتظر لحظة، ثم اضغط «حفظ» مرة أخرى.`;
+    case "de":
+      return `Der Server begrenzt gerade die Anfragen. Warte einen Moment und drück dann noch einmal auf Speichern.`;
+    case "es":
+      return `El servidor está limitando las solicitudes en este momento. Espera un momento y vuelve a presionar Guardar.`;
+    case "fr":
+      return `Le serveur limite les requêtes en ce moment. Patientez un instant, puis appuyez de nouveau sur Enregistrer.`;
+    case "ja":
+      return `サーバーが現在リクエストを制限しています。少し待ってから、もう一度「保存」を押してください。`;
+    case "ko":
+      return `서버가 지금 요청을 제한하고 있어요. 잠시 기다린 뒤 저장을 다시 누르세요.`;
+    case "pt-BR":
+      return `O servidor está limitando as solicitações agora. Aguarde um momento e clique em Salvar de novo.`;
+    case "zh-Hans":
+      return `服务器目前正在限制请求。请稍等片刻，然后再次点击“保存”。`;
+    case "zh-Hant":
+      return `伺服器目前正在限制要求。請稍候片刻，再按一次「儲存」。`;
+    case "en-XA":
+      return `[Ţĥé šéŕṽéŕ îš ļîɱîţîñĝ ŕéǫûéšţš ŕîĝĥţ ñöŵ. Ŵáîţ á ɱöɱéñţ, ţĥéñ þŕéšš Šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe server is limiting requests right now. Wait a moment, then press Save again.\u202c`;
+  }
+  return `The server is limiting requests right now. Wait a moment, then press Save again.`;
+}
+
+export function accountsCustomApiServer(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر على الخادم إكمال الطلب. حاول مرة أخرى بعد لحظة.`;
+    case "de":
+      return `Der Server konnte die Anfrage nicht abschließen. Versuch es gleich noch einmal.`;
+    case "es":
+      return `El servidor no pudo completar la solicitud. Vuelve a intentarlo en un momento.`;
+    case "fr":
+      return `Le serveur n’a pas pu traiter la requête. Réessayez dans un instant.`;
+    case "ja":
+      return `サーバーがリクエストを完了できませんでした。少し待ってからもう一度お試しください。`;
+    case "ko":
+      return `서버가 요청을 끝내지 못했어요. 잠시 후 다시 시도하세요.`;
+    case "pt-BR":
+      return `O servidor não conseguiu concluir a solicitação. Tente de novo daqui a pouco.`;
+    case "zh-Hans":
+      return `服务器无法完成请求。请稍后重试。`;
+    case "zh-Hant":
+      return `伺服器無法完成要求。請稍後再試。`;
+    case "en-XA":
+      return `[Ţĥé šéŕṽéŕ çöûļð ñöţ çöɱþļéţé ţĥé ŕéǫûéšţ. Ţŕý áĝáîñ îñ á ɱöɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe server could not complete the request. Try again in a moment.\u202c`;
+  }
+  return `The server could not complete the request. Try again in a moment.`;
+}
+
+export function accountsCustomApiMalformed(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `أرسل ${model} ردًا تعذّر على Infinitary قراءته.`;
+    case "de":
+      return `${model} hat eine Antwort gesendet, die Infinitary nicht lesen konnte.`;
+    case "es":
+      return `${model} envió una respuesta que Infinitary no pudo leer.`;
+    case "fr":
+      return `${model} a envoyé une réponse qu’Infinitary n’a pas pu lire.`;
+    case "ja":
+      return `${model} から Infinitary が読み取れない返信が届きました。`;
+    case "ko":
+      return `${model}이(가) Infinitary가 읽을 수 없는 답을 보냈어요.`;
+    case "pt-BR":
+      return `${model} enviou uma resposta que o Infinitary não conseguiu ler.`;
+    case "zh-Hans":
+      return `${model} 发来的回复 Infinitary 无法读取。`;
+    case "zh-Hant":
+      return `${model} 傳來的回覆 Infinitary 無法讀取。`;
+    case "en-XA":
+      return `[${model} šéñţ á ŕéþļý Îñƒîñîţáŕý çöûļð ñöţ ŕéáð. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${model}\u202e sent a reply Infinitary could not read.\u202c`;
+  }
+  return `${model} sent a reply Infinitary could not read.`;
+}
+
+export function accountsCustomApiOversized(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `كان رد ${model} أكبر مما يسمح به الاختبار.`;
+    case "de":
+      return `Die Antwort von ${model} war größer, als der Test erlaubt.`;
+    case "es":
+      return `La respuesta de ${model} superó el tamaño que permite la prueba.`;
+    case "fr":
+      return `La réponse de ${model} dépassait la taille autorisée par le test.`;
+    case "ja":
+      return `${model} の返信が、テストで許容されるサイズを超えました。`;
+    case "ko":
+      return `${model}의 답이 테스트에서 허용하는 크기보다 컸어요.`;
+    case "pt-BR":
+      return `A resposta de ${model} foi maior do que o teste permite.`;
+    case "zh-Hans":
+      return `${model} 的回复超出了测试允许的大小。`;
+    case "zh-Hant":
+      return `${model} 的回覆超過測試允許的大小。`;
+    case "en-XA":
+      return `[${model}'š ŕéþļý ŵáš ļáŕĝéŕ ţĥáñ ţĥé ţéšţ áļļöŵš. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${model}\u202e's reply was larger than the test allows.\u202c`;
+  }
+  return `${model}'s reply was larger than the test allows.`;
+}
+
+export function accountsCustomApiPrepareFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر على نائب القبطان تجهيز هذا الاتصال. حاول مرة أخرى.`;
+    case "de":
+      return `Dein erster Offizier konnte diese Verbindung nicht vorbereiten. Versuch es noch einmal.`;
+    case "es":
+      return `Tu primer oficial no pudo preparar esta conexión. Vuelve a intentarlo.`;
+    case "fr":
+      return `Votre second n’a pas pu préparer cette connexion. Réessayez.`;
+    case "ja":
+      return `一等航海士がこの接続を準備できませんでした。もう一度お試しください。`;
+    case "ko":
+      return `일등항해사가 이 연결을 준비하지 못했어요. 다시 시도하세요.`;
+    case "pt-BR":
+      return `Seu imediato não conseguiu preparar esta conexão. Tente de novo.`;
+    case "zh-Hans":
+      return `你的大副无法准备此连接。请重试。`;
+    case "zh-Hant":
+      return `你的大副無法準備這個連線。請再試一次。`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé çöûļð ñöţ þŕéþáŕé ţĥîš çöññéçţîöñ. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate could not prepare this connection. Try again.\u202c`;
+  }
+  return `Your first mate could not prepare this connection. Try again.`;
+}
+
+export function accountsCustomApiIncompatible(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُكمل ${model} استدعاء الأداة في الاختبار. يحتاج Infinitary إلى استدعاءات الأدوات للعمل؛ جرّب نموذجًا آخر أو بروتوكول API الآخر.`;
+    case "de":
+      return `${model} hat den Werkzeugaufruf des Tests nicht abgeschlossen. Infinitary braucht Werkzeugaufrufe für die Arbeit; probier ein anderes Modell oder das andere API-Protokoll.`;
+    case "es":
+      return `${model} no terminó la llamada a herramienta de la prueba. Infinitary necesita llamadas a herramientas para trabajar; prueba otro modelo o el otro protocolo de API.`;
+    case "fr":
+      return `${model} n’a pas terminé l’appel d’outil du test. Infinitary a besoin des appels d’outils pour travailler ; essayez un autre modèle ou l’autre protocole d’API.`;
+    case "ja":
+      return `${model} はテストのツール呼び出しを完了しませんでした。Infinitary の作業にはツール呼び出しが必要です。別のモデルか、もう一方の API プロトコルを試してください。`;
+    case "ko":
+      return `${model}이(가) 테스트의 도구 호출을 끝내지 못했어요. Infinitary가 작업하려면 도구 호출이 필요해요. 다른 모델이나 다른 API 프로토콜을 써 보세요.`;
+    case "pt-BR":
+      return `${model} não concluiu a chamada de ferramenta do teste. O Infinitary precisa de chamadas de ferramenta para trabalhar; tente outro modelo ou o outro protocolo de API.`;
+    case "zh-Hans":
+      return `${model} 没有完成测试中的工具调用。Infinitary 需要工具调用才能工作；请换一个模型，或改用另一种 API 协议。`;
+    case "zh-Hant":
+      return `${model} 沒有完成測試中的工具呼叫。Infinitary 需要工具呼叫才能工作；請改用其他模型，或另一種 API 通訊協定。`;
+    case "en-XA":
+      return `[${model} ðîðñ'ţ ƒîñîšĥ ţĥé ţéšţ'š ţööļ çáļļ. Îñƒîñîţáŕý ñééðš ţööļ çáļļš ƒöŕ ŵöŕķ; ţŕý áñöţĥéŕ ɱöðéļ öŕ ţĥé öţĥéŕ ÅÞÎ þŕöţöçöļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${model}\u202e didn't finish the test's tool call. Infinitary needs tool calls for work; try another model or the other API protocol.\u202c`;
+  }
+  return `${model} didn't finish the test's tool call. Infinitary needs tool calls for work; try another model or the other API protocol.`;
+}
+
+export function accountsCustomApiModelOnce(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يمكن إضافة كل نموذج مرة واحدة فقط.`;
+    case "de":
+      return `Jedes Modell kann nur einmal hinzugefügt werden.`;
+    case "es":
+      return `Cada modelo se puede agregar una sola vez.`;
+    case "fr":
+      return `Chaque modèle ne peut être ajouté qu’une fois.`;
+    case "ja":
+      return `各モデルは1回だけ追加できます。`;
+    case "ko":
+      return `각 모델은 한 번만 추가할 수 있어요.`;
+    case "pt-BR":
+      return `Cada modelo só pode ser adicionado uma vez.`;
+    case "zh-Hans":
+      return `每个模型只能添加一次。`;
+    case "zh-Hant":
+      return `每個模型只能加入一次。`;
+    case "en-XA":
+      return `[Éáçĥ ɱöðéļ çáñ ƀé áððéð öñçé. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEach model can be added once.\u202c`;
+  }
+  return `Each model can be added once.`;
+}
+
+export function accountsCustomApiLimits(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يذكر هذا الخادم أحجام هذا النموذج. أدخل عدد رموز السياق والمخرجات.`;
+    case "de":
+      return `Dieser Server nennt die Größen dieses Modells nicht. Gib seine Kontext- und Ausgabe-Tokens ein.`;
+    case "es":
+      return `Este servidor no indica los tamaños de este modelo. Escribe sus tokens de contexto y de salida.`;
+    case "fr":
+      return `Ce serveur n’indique pas les tailles de ce modèle. Saisissez ses jetons de contexte et de sortie.`;
+    case "ja":
+      return `このサーバーはこのモデルのサイズを公開していません。コンテキストと出力のトークン数を入力してください。`;
+    case "ko":
+      return `이 서버는 이 모델의 크기를 알려 주지 않아요. 컨텍스트 토큰과 출력 토큰 수를 입력하세요.`;
+    case "pt-BR":
+      return `Este servidor não informa os tamanhos deste modelo. Digite os tokens de contexto e de saída dele.`;
+    case "zh-Hans":
+      return `此服务器没有列出这个模型的大小。请输入它的上下文和输出 token 数。`;
+    case "zh-Hant":
+      return `這台伺服器沒有列出這個模型的大小。請輸入它的上下文與輸出 token 數。`;
+    case "en-XA":
+      return `[Ţĥîš šéŕṽéŕ ðöéšñ'ţ ļîšţ ţĥîš ɱöðéļ'š šîžéš. Éñţéŕ îţš çöñţéẋţ áñð öûţþûţ ţöķéñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis server doesn't list this model's sizes. Enter its context and output tokens.\u202c`;
+  }
+  return `This server doesn't list this model's sizes. Enter its context and output tokens.`;
+}
+
+export function accountsCustomApiCancelled(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `توقف الفحص قبل أن يكتمل. اضغط «حفظ» لتحاول مرة أخرى.`;
+    case "de":
+      return `Die Prüfung wurde vor dem Ende abgebrochen. Drück auf Speichern, um es noch einmal zu versuchen.`;
+    case "es":
+      return `La comprobación se detuvo antes de terminar. Presiona Guardar para volver a intentarlo.`;
+    case "fr":
+      return `La vérification s’est arrêtée avant la fin. Appuyez sur Enregistrer pour réessayer.`;
+    case "ja":
+      return `チェックが完了前に停止しました。「保存」を押してもう一度お試しください。`;
+    case "ko":
+      return `확인이 끝나기 전에 멈췄어요. 다시 시도하려면 저장을 누르세요.`;
+    case "pt-BR":
+      return `A verificação parou antes de terminar. Clique em Salvar para tentar de novo.`;
+    case "zh-Hans":
+      return `检查在完成前停止了。点击“保存”重试。`;
+    case "zh-Hant":
+      return `檢查在完成前就停止了。按「儲存」再試一次。`;
+    case "en-XA":
+      return `[Ţĥé çĥéçķ šţöþþéð ƀéƒöŕé îţ ƒîñîšĥéð. Þŕéšš Šáṽé ţö ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe check stopped before it finished. Press Save to try again.\u202c`;
+  }
+  return `The check stopped before it finished. Press Save to try again.`;
+}
+
+export function accountsCustomApiRowNotChecked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُفحص بعد`;
+    case "de":
+      return `Noch nicht geprüft`;
+    case "es":
+      return `Sin comprobar todavía`;
+    case "fr":
+      return `Pas encore vérifié`;
+    case "ja":
+      return `未チェック`;
+    case "ko":
+      return `아직 확인 안 됨`;
+    case "pt-BR":
+      return `Ainda não verificado`;
+    case "zh-Hans":
+      return `尚未检查`;
+    case "zh-Hant":
+      return `尚未檢查`;
+    case "en-XA":
+      return `[Ñöţ çĥéçķéð ýéţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot checked yet\u202c`;
+  }
+  return `Not checked yet`;
+}
+
+export function accountsCustomApiRowChecking(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الفحص`;
+    case "de":
+      return `Wird geprüft`;
+    case "es":
+      return `Comprobando`;
+    case "fr":
+      return `Vérification`;
+    case "ja":
+      return `チェック中`;
+    case "ko":
+      return `확인 중`;
+    case "pt-BR":
+      return `Verificando`;
+    case "zh-Hans":
+      return `正在检查`;
+    case "zh-Hant":
+      return `檢查中`;
+    case "en-XA":
+      return `[Çĥéçķîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eChecking\u202c`;
+  }
+  return `Checking`;
+}
+
+export function accountsCustomApiRowChecked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فُحص`;
+    case "de":
+      return `Geprüft`;
+    case "es":
+      return `Comprobado`;
+    case "fr":
+      return `Vérifié`;
+    case "ja":
+      return `チェック済み`;
+    case "ko":
+      return `확인됨`;
+    case "pt-BR":
+      return `Verificado`;
+    case "zh-Hans":
+      return `已检查`;
+    case "zh-Hant":
+      return `已檢查`;
+    case "en-XA":
+      return `[Çĥéçķéð ~~~]`;
+    case "ar-XB":
+      return `\u202eChecked\u202c`;
+  }
+  return `Checked`;
+}
+
+export function accountsCustomApiRowFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فشل فحصه`;
+    case "de":
+      return `Prüfung fehlgeschlagen`;
+    case "es":
+      return `No superó su comprobación`;
+    case "fr":
+      return `Vérification échouée`;
+    case "ja":
+      return `チェックに失敗`;
+    case "ko":
+      return `확인 실패`;
+    case "pt-BR":
+      return `Falhou na verificação`;
+    case "zh-Hans":
+      return `检查未通过`;
+    case "zh-Hant":
+      return `檢查未通過`;
+    case "en-XA":
+      return `[Ƒáîļéð îţš çĥéçķ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFailed its check\u202c`;
+  }
+  return `Failed its check`;
+}
+
+export function accountsCustomApiCommandNeeded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل أمر رمز الوصول وعددًا صحيحًا موجبًا من الثواني.`;
+    case "de":
+      return `Gib einen Token-Befehl und eine positive ganze Zahl von Sekunden ein.`;
+    case "es":
+      return `Escribe un comando de token y un número entero positivo de segundos.`;
+    case "fr":
+      return `Saisissez une commande de jeton et un nombre entier positif de secondes.`;
+    case "ja":
+      return `トークンコマンドと、正の整数の秒数を入力してください。`;
+    case "ko":
+      return `토큰 명령과, 초 단위로 1 이상의 정수를 입력하세요.`;
+    case "pt-BR":
+      return `Digite um comando de token e um número inteiro positivo de segundos.`;
+    case "zh-Hans":
+      return `请输入一条令牌命令，以及一个正整数秒数。`;
+    case "zh-Hant":
+      return `請輸入權杖指令，以及正整數的秒數。`;
+    case "en-XA":
+      return `[Éñţéŕ á ţöķéñ çöɱɱáñð áñð á þöšîţîṽé ŵĥöļé ñûɱƀéŕ öƒ šéçöñðš. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter a token command and a positive whole number of seconds.\u202c`;
+  }
+  return `Enter a token command and a positive whole number of seconds.`;
+}
+
+export function accountsCustomApiAddressNeeded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل عنوان الخادم.`;
+    case "de":
+      return `Gib die Adresse des Servers ein.`;
+    case "es":
+      return `Escribe la dirección del servidor.`;
+    case "fr":
+      return `Saisissez l’adresse du serveur.`;
+    case "ja":
+      return `サーバーのアドレスを入力してください。`;
+    case "ko":
+      return `서버 주소를 입력하세요.`;
+    case "pt-BR":
+      return `Digite o endereço do servidor.`;
+    case "zh-Hans":
+      return `请输入服务器的地址。`;
+    case "zh-Hant":
+      return `請輸入伺服器的位址。`;
+    case "en-XA":
+      return `[Éñţéŕ ţĥé šéŕṽéŕ'š áððŕéšš. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter the server's address.\u202c`;
+  }
+  return `Enter the server's address.`;
+}
+
+export function accountsCustomApiHttpFirst(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `وافق على HTTP غير المشفّر أولًا: الجلب يرسل مفتاحك إلى هذا العنوان.`;
+    case "de":
+      return `Gib zuerst unverschlüsseltes HTTP frei: Beim Abrufen wird dein Schlüssel an diese Adresse gesendet.`;
+    case "es":
+      return `Primero aprueba HTTP sin cifrar: al obtener la lista se envía tu clave a esta dirección.`;
+    case "fr":
+      return `Approuvez d’abord le HTTP non chiffré : la récupération envoie votre clé à cette adresse.`;
+    case "ja":
+      return `先に暗号化されていない HTTP を承認してください。取得するとキーがこのアドレスに送信されます。`;
+    case "ko":
+      return `먼저 암호화되지 않은 HTTP를 승인하세요. 가져오기를 하면 키가 이 주소로 전송돼요.`;
+    case "pt-BR":
+      return `Aprove o HTTP sem criptografia primeiro: buscar envia sua chave para este endereço.`;
+    case "zh-Hans":
+      return `请先批准未加密的 HTTP：获取列表会把你的密钥发送到此地址。`;
+    case "zh-Hant":
+      return `請先核准未加密的 HTTP：取得清單會把你的金鑰傳送到這個位址。`;
+    case "en-XA":
+      return `[Åþþŕöṽé ûñéñçŕýþţéð ĤŢŢÞ ƒîŕšţ: ƒéţçĥîñĝ šéñðš ýöûŕ ķéý ţö ţĥîš áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eApprove unencrypted HTTP first: fetching sends your key to this address.\u202c`;
+  }
+  return `Approve unencrypted HTTP first: fetching sends your key to this address.`;
+}
+
+export function accountsCustomApiFetchFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر الوصول إلى هذا الخادم.`;
+    case "de":
+      return `Dieser Server war nicht erreichbar.`;
+    case "es":
+      return `No se pudo conectar con este servidor.`;
+    case "fr":
+      return `Impossible de joindre ce serveur.`;
+    case "ja":
+      return `このサーバーに接続できませんでした。`;
+    case "ko":
+      return `이 서버에 연결할 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível acessar este servidor.`;
+    case "zh-Hans":
+      return `无法连接到此服务器。`;
+    case "zh-Hant":
+      return `連不上這台伺服器。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ŕéáçĥ ţĥîš šéŕṽéŕ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not reach this server.\u202c`;
+  }
+  return `Could not reach this server.`;
+}
+
+export function accountsCustomApiNotSavedRow(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُحفظ. أصلح الصف المعلَّم واضغط «حفظ» مرة أخرى.`;
+    case "de":
+      return `Nicht gespeichert. Korrigiere die markierte Zeile und drück noch einmal auf Speichern.`;
+    case "es":
+      return `No se guardó. Corrige la fila marcada y vuelve a presionar Guardar.`;
+    case "fr":
+      return `Non enregistré. Corrigez la ligne signalée et appuyez de nouveau sur Enregistrer.`;
+    case "ja":
+      return `保存されていません。印の付いた行を直して、もう一度「保存」を押してください。`;
+    case "ko":
+      return `저장되지 않았어요. 표시된 행을 고친 뒤 저장을 다시 누르세요.`;
+    case "pt-BR":
+      return `Não salvo. Corrija a linha marcada e clique em Salvar de novo.`;
+    case "zh-Hans":
+      return `未保存。请修正标出的那一行，然后再次点击“保存”。`;
+    case "zh-Hant":
+      return `未儲存。請修正標示的那一列，再按一次「儲存」。`;
+    case "en-XA":
+      return `[Ñöţ šáṽéð. Ƒîẋ ţĥé ɱáŕķéð ŕöŵ áñð þŕéšš Šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot saved. Fix the marked row and press Save again.\u202c`;
+  }
+  return `Not saved. Fix the marked row and press Save again.`;
+}
+
+export function accountsCustomApiNotSavedField(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُحفظ. أصلح الحقل المعلَّم واضغط «حفظ» مرة أخرى.`;
+    case "de":
+      return `Nicht gespeichert. Korrigiere das markierte Feld und drück noch einmal auf Speichern.`;
+    case "es":
+      return `No se guardó. Corrige el campo marcado y vuelve a presionar Guardar.`;
+    case "fr":
+      return `Non enregistré. Corrigez le champ signalé et appuyez de nouveau sur Enregistrer.`;
+    case "ja":
+      return `保存されていません。印の付いた項目を直して、もう一度「保存」を押してください。`;
+    case "ko":
+      return `저장되지 않았어요. 표시된 칸을 고친 뒤 저장을 다시 누르세요.`;
+    case "pt-BR":
+      return `Não salvo. Corrija o campo marcado e clique em Salvar de novo.`;
+    case "zh-Hans":
+      return `未保存。请修正标出的字段，然后再次点击“保存”。`;
+    case "zh-Hant":
+      return `未儲存。請修正標示的欄位，再按一次「儲存」。`;
+    case "en-XA":
+      return `[Ñöţ šáṽéð. Ƒîẋ ţĥé ɱáŕķéð ƒîéļð áñð þŕéšš Šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNot saved. Fix the marked field and press Save again.\u202c`;
+  }
+  return `Not saved. Fix the marked field and press Save again.`;
+}
+
+export function accountsCustomApiNameNeeded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سمِّ هذا الاتصال.`;
+    case "de":
+      return `Gib dieser Verbindung einen Namen.`;
+    case "es":
+      return `Ponle un nombre a esta conexión.`;
+    case "fr":
+      return `Donnez un nom à cette connexion.`;
+    case "ja":
+      return `この接続に名前を付けてください。`;
+    case "ko":
+      return `이 연결의 이름을 정하세요.`;
+    case "pt-BR":
+      return `Dê um nome a esta conexão.`;
+    case "zh-Hans":
+      return `请为此连接命名。`;
+    case "zh-Hant":
+      return `請為這個連線命名。`;
+    case "en-XA":
+      return `[Ñáɱé ţĥîš çöññéçţîöñ. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eName this connection.\u202c`;
+  }
+  return `Name this connection.`;
+}
+
+export function accountsCustomApiModelsNeeded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أضف نموذجًا واحدًا على الأقل، أو اجلب قائمة الخادم.`;
+    case "de":
+      return `Füge mindestens ein Modell hinzu oder ruf die Liste des Servers ab.`;
+    case "es":
+      return `Agrega al menos un modelo u obtén la lista del servidor.`;
+    case "fr":
+      return `Ajoutez au moins un modèle, ou récupérez la liste du serveur.`;
+    case "ja":
+      return `モデルを1つ以上追加するか、サーバーの一覧を取得してください。`;
+    case "ko":
+      return `모델을 하나 이상 추가하거나 서버의 목록을 가져오세요.`;
+    case "pt-BR":
+      return `Adicione pelo menos um modelo ou busque a lista do servidor.`;
+    case "zh-Hans":
+      return `请至少添加一个模型，或获取服务器的模型列表。`;
+    case "zh-Hant":
+      return `請至少加入一個模型，或取得伺服器的清單。`;
+    case "en-XA":
+      return `[Åðð áţ ļéášţ öñé ɱöðéļ, öŕ ƒéţçĥ ţĥé šéŕṽéŕ'š ļîšţ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd at least one model, or fetch the server's list.\u202c`;
+  }
+  return `Add at least one model, or fetch the server's list.`;
+}
+
+export function accountsCustomApiModelIdNeeded(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل معرّف النموذج، أو أزل هذا الصف.`;
+    case "de":
+      return `Gib die ID des Modells ein oder entferne diese Zeile.`;
+    case "es":
+      return `Escribe el ID del modelo o quita esta fila.`;
+    case "fr":
+      return `Saisissez l’identifiant du modèle, ou retirez cette ligne.`;
+    case "ja":
+      return `モデル ID を入力するか、この行を削除してください。`;
+    case "ko":
+      return `모델 ID를 입력하거나 이 행을 제거하세요.`;
+    case "pt-BR":
+      return `Digite o ID do modelo ou remova esta linha.`;
+    case "zh-Hans":
+      return `请输入模型 ID，或移除这一行。`;
+    case "zh-Hant":
+      return `請輸入模型 ID，或移除這一列。`;
+    case "en-XA":
+      return `[Éñţéŕ ţĥé ɱöðéļ'š ÎÐ, öŕ ŕéɱöṽé ţĥîš ŕöŵ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter the model's ID, or remove this row.\u202c`;
+  }
+  return `Enter the model's ID, or remove this row.`;
+}
+
+export function accountsCustomApiModelTwice(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا النموذج موجود في القائمة بالفعل.`;
+    case "de":
+      return `Dieses Modell ist schon in der Liste.`;
+    case "es":
+      return `Este modelo ya está en la lista.`;
+    case "fr":
+      return `Ce modèle est déjà dans la liste.`;
+    case "ja":
+      return `このモデルはすでに一覧にあります。`;
+    case "ko":
+      return `이 모델은 이미 목록에 있어요.`;
+    case "pt-BR":
+      return `Este modelo já está na lista.`;
+    case "zh-Hans":
+      return `此模型已在列表中。`;
+    case "zh-Hant":
+      return `這個模型已經在清單中。`;
+    case "en-XA":
+      return `[Ţĥîš ɱöðéļ îš áļŕéáðý îñ ţĥé ļîšţ. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis model is already in the list.\u202c`;
+  }
+  return `This model is already in the list.`;
+}
+
+export function accountsCustomApiOutputTooLarge(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل حجم مخرجات أصغر من حجم السياق.`;
+    case "de":
+      return `Gib eine Ausgabegröße ein, die kleiner als die Kontextgröße ist.`;
+    case "es":
+      return `Escribe un tamaño de salida menor que el tamaño de contexto.`;
+    case "fr":
+      return `Saisissez une taille de sortie inférieure à la taille du contexte.`;
+    case "ja":
+      return `出力サイズはコンテキストサイズより小さくしてください。`;
+    case "ko":
+      return `컨텍스트 크기보다 작은 출력 크기를 입력하세요.`;
+    case "pt-BR":
+      return `Digite um tamanho de saída menor que o tamanho do contexto.`;
+    case "zh-Hans":
+      return `请输入小于上下文大小的输出大小。`;
+    case "zh-Hant":
+      return `請輸入比上下文大小更小的輸出大小。`;
+    case "en-XA":
+      return `[Éñţéŕ áñ öûţþûţ šîžé šɱáļļéŕ ţĥáñ ţĥé çöñţéẋţ šîžé. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter an output size smaller than the context size.\u202c`;
+  }
+  return `Enter an output size smaller than the context size.`;
+}
+
+export function accountsCustomApiReaching(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الوصول إلى الخادم…`;
+    case "de":
+      return `Server wird erreicht …`;
+    case "es":
+      return `Conectando con el servidor…`;
+    case "fr":
+      return `Connexion au serveur…`;
+    case "ja":
+      return `サーバーに接続中…`;
+    case "ko":
+      return `서버에 연결하는 중…`;
+    case "pt-BR":
+      return `Acessando o servidor…`;
+    case "zh-Hans":
+      return `正在连接服务器…`;
+    case "zh-Hant":
+      return `正在連線到伺服器…`;
+    case "en-XA":
+      return `[Ŕéáçĥîñĝ ţĥé šéŕṽéŕ… ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReaching the server…\u202c`;
+  }
+  return `Reaching the server…`;
+}
+
+export function accountsCustomApiHttpToSave(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `وافق على HTTP غير المشفّر لحفظ هذا العنوان.`;
+    case "de":
+      return `Gib unverschlüsseltes HTTP frei, um diese Adresse zu speichern.`;
+    case "es":
+      return `Aprueba HTTP sin cifrar para guardar esta dirección.`;
+    case "fr":
+      return `Approuvez le HTTP non chiffré pour enregistrer cette adresse.`;
+    case "ja":
+      return `このアドレスを保存するには、暗号化されていない HTTP を承認してください。`;
+    case "ko":
+      return `이 주소를 저장하려면 암호화되지 않은 HTTP를 승인하세요.`;
+    case "pt-BR":
+      return `Aprove o HTTP sem criptografia para salvar este endereço.`;
+    case "zh-Hans":
+      return `批准未加密的 HTTP 才能保存此地址。`;
+    case "zh-Hant":
+      return `核准未加密的 HTTP 才能儲存這個位址。`;
+    case "en-XA":
+      return `[Åþþŕöṽé ûñéñçŕýþţéð ĤŢŢÞ ţö šáṽé ţĥîš áððŕéšš. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eApprove unencrypted HTTP to save this address.\u202c`;
+  }
+  return `Approve unencrypted HTTP to save this address.`;
+}
+
+export function accountsCustomApiNotReached(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر الوصول إلى هذا الخادم.`;
+    case "de":
+      return `Dieser Server war nicht erreichbar.`;
+    case "es":
+      return `No se pudo conectar con este servidor.`;
+    case "fr":
+      return `Ce serveur n’a pas pu être joint.`;
+    case "ja":
+      return `このサーバーに接続できませんでした。`;
+    case "ko":
+      return `이 서버에 연결할 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível acessar este servidor.`;
+    case "zh-Hans":
+      return `无法连接到此服务器。`;
+    case "zh-Hant":
+      return `連不上這台伺服器。`;
+    case "en-XA":
+      return `[Ţĥîš šéŕṽéŕ çöûļð ñöţ ƀé ŕéáçĥéð. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis server could not be reached.\u202c`;
+  }
+  return `This server could not be reached.`;
+}
+
+export function accountsCustomApiCheckingModel(input: {
+  index: string;
+  model: string;
+  total: string;
+}): string {
+  const index = input.index;
+  const model = input.model;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ فحص ${model} (${index} من ${total})…`;
+    case "de":
+      return `${model} wird geprüft (${index} von ${total}) …`;
+    case "es":
+      return `Comprobando ${model} (${index} de ${total})…`;
+    case "fr":
+      return `Vérification de ${model} (${index} sur ${total})…`;
+    case "ja":
+      return `${model} をチェック中（${index}/${total}）…`;
+    case "ko":
+      return `${model} 확인 중(${total}개 중 ${index}번째)…`;
+    case "pt-BR":
+      return `Verificando ${model} (${index} de ${total})…`;
+    case "zh-Hans":
+      return `正在检查 ${model}（第 ${index} 个，共 ${total} 个）…`;
+    case "zh-Hant":
+      return `正在檢查 ${model}（第 ${index} 個，共 ${total} 個）…`;
+    case "en-XA":
+      return `[Çĥéçķîñĝ ${model} (${index} öƒ ${total})… ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChecking \u202c${model}\u202e (\u202c${index}\u202e of \u202c${total}\u202e)…\u202c`;
+  }
+  return `Checking ${model} (${index} of ${total})…`;
+}
+
+export function accountsCustomApiSaving(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الحفظ…`;
+    case "de":
+      return `Wird gespeichert …`;
+    case "es":
+      return `Guardando…`;
+    case "fr":
+      return `Enregistrement…`;
+    case "ja":
+      return `保存中…`;
+    case "ko":
+      return `저장 중…`;
+    case "pt-BR":
+      return `Salvando…`;
+    case "zh-Hans":
+      return `正在保存…`;
+    case "zh-Hant":
+      return `儲存中…`;
+    case "en-XA":
+      return `[Šáṽîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202eSaving…\u202c`;
+  }
+  return `Saving…`;
+}
+
+export function accountsCustomApiSaveFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر حفظ هذا الاتصال.`;
+    case "de":
+      return `Diese Verbindung konnte nicht gespeichert werden.`;
+    case "es":
+      return `No se pudo guardar esta conexión.`;
+    case "fr":
+      return `Cette connexion n’a pas pu être enregistrée.`;
+    case "ja":
+      return `この接続を保存できませんでした。`;
+    case "ko":
+      return `이 연결을 저장할 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível salvar esta conexão.`;
+    case "zh-Hans":
+      return `无法保存此连接。`;
+    case "zh-Hant":
+      return `無法儲存這個連線。`;
+    case "en-XA":
+      return `[Ţĥîš çöññéçţîöñ çöûļð ñöţ ƀé šáṽéð. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis connection could not be saved.\u202c`;
+  }
+  return `This connection could not be saved.`;
+}
+
+export function accountsCustomApiSentToken(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `رمز الوصول`;
+    case "de":
+      return `das Token`;
+    case "es":
+      return `el token`;
+    case "fr":
+      return `le jeton`;
+    case "ja":
+      return `トークン`;
+    case "ko":
+      return `토큰`;
+    case "pt-BR":
+      return `o token`;
+    case "zh-Hans":
+      return `令牌`;
+    case "zh-Hant":
+      return `權杖`;
+    case "en-XA":
+      return `[ţĥé ţöķéñ ~~~]`;
+    case "ar-XB":
+      return `\u202ethe token\u202c`;
+  }
+  return `the token`;
+}
+
+export function accountsCustomApiSentKey(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاحك`;
+    case "de":
+      return `deinen Schlüssel`;
+    case "es":
+      return `tu clave`;
+    case "fr":
+      return `votre clé`;
+    case "ja":
+      return `キー`;
+    case "ko":
+      return `키`;
+    case "pt-BR":
+      return `sua chave`;
+    case "zh-Hans":
+      return `你的密钥`;
+    case "zh-Hant":
+      return `你的金鑰`;
+    case "en-XA":
+      return `[ýöûŕ ķéý ~~~]`;
+    case "ar-XB":
+      return `\u202eyour key\u202c`;
+  }
+  return `your key`;
+}
+
+export function accountsCustomApiSentHeaders(input: { names: string }): string {
+  const names = input.names;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ترويساتك (${names})`;
+    case "de":
+      return `deine Header (${names})`;
+    case "es":
+      return `tus encabezados (${names})`;
+    case "fr":
+      return `vos en-têtes (${names})`;
+    case "ja":
+      return `ヘッダー（${names}）`;
+    case "ko":
+      return `헤더(${names})`;
+    case "pt-BR":
+      return `seus cabeçalhos (${names})`;
+    case "zh-Hans":
+      return `你的请求头（${names}）`;
+    case "zh-Hant":
+      return `你的標頭（${names}）`;
+    case "en-XA":
+      return `[ýöûŕ ĥéáðéŕš (${names}) ~~~~~]`;
+    case "ar-XB":
+      return `\u202eyour headers (\u202c${names}\u202e)\u202c`;
+  }
+  return `your headers (${names})`;
+}
+
+export function accountsCustomApiSentTest(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختبارًا قصيرًا`;
+    case "de":
+      return `einen kurzen Test`;
+    case "es":
+      return `una prueba breve`;
+    case "fr":
+      return `un court test`;
+    case "ja":
+      return `短いテスト`;
+    case "ko":
+      return `짧은 테스트`;
+    case "pt-BR":
+      return `um teste curto`;
+    case "zh-Hans":
+      return `一次简短测试`;
+    case "zh-Hant":
+      return `一次簡短測試`;
+    case "en-XA":
+      return `[á šĥöŕţ ţéšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202ea short test\u202c`;
+  }
+  return `a short test`;
+}
+
+export function accountsCustomApiFootHint(input: { sent: string }): string {
+  const sent = input.sent;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يرسل الحفظ ${sent} إلى هذا العنوان، ثم يفحص كل نموذج. قد يستهلك بضعة رموز.`;
+    case "de":
+      return `Speichern sendet ${sent} an diese Adresse und prüft dann jedes Modell. Das kann ein paar Tokens verbrauchen.`;
+    case "es":
+      return `Guardar envía ${sent} a esta dirección y luego comprueba cada modelo. Puede usar algunos tokens.`;
+    case "fr":
+      return `Enregistrer envoie ${sent} à cette adresse, puis vérifie chaque modèle. Quelques jetons peuvent être consommés.`;
+    case "ja":
+      return `「保存」を押すと${sent}をこのアドレスに送信し、各モデルをチェックします。少量のトークンを使うことがあります。`;
+    case "ko":
+      return `저장하면 이 주소로 ${sent}을(를) 보낸 다음 각 모델을 확인해요. 토큰이 조금 쓰일 수 있어요.`;
+    case "pt-BR":
+      return `Salvar envia ${sent} para este endereço e depois verifica cada modelo. Pode usar alguns tokens.`;
+    case "zh-Hans":
+      return `“保存”会把${sent}发送到此地址，然后逐个检查模型。这可能会用掉少量 token。`;
+    case "zh-Hant":
+      return `「儲存」會把${sent}傳送到這個位址，然後逐一檢查每個模型。可能會用掉少量 token。`;
+    case "en-XA":
+      return `[Šáṽé šéñðš ${sent} ţö ţĥîš áððŕéšš, ţĥéñ çĥéçķš éáçĥ ɱöðéļ. Îţ ɱáý ûšé á ƒéŵ ţöķéñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave sends \u202c${sent}\u202e to this address, then checks each model. It may use a few tokens.\u202c`;
+  }
+  return `Save sends ${sent} to this address, then checks each model. It may use a few tokens.`;
+}
+
+export function accountsCustomApiEditTitle(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعديل ${name}`;
+    case "de":
+      return `${name} bearbeiten`;
+    case "es":
+      return `Editar ${name}`;
+    case "fr":
+      return `Modifier ${name}`;
+    case "ja":
+      return `${name} を編集`;
+    case "ko":
+      return `${name} 편집`;
+    case "pt-BR":
+      return `Editar ${name}`;
+    case "zh-Hans":
+      return `编辑 ${name}`;
+    case "zh-Hant":
+      return `編輯 ${name}`;
+    case "en-XA":
+      return `[Éðîţ ${name} ~~]`;
+    case "ar-XB":
+      return `\u202eEdit \u202c${name}`;
+  }
+  return `Edit ${name}`;
+}
+
+export function accountsCustomApiAddTitleOn(input: { on: string }): string {
+  const on = input.on;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة API مخصصة ${on}`;
+    case "de":
+      return `Eigene API hinzufügen ${on}`;
+    case "es":
+      return `Agregar una API personalizada ${on}`;
+    case "fr":
+      return `Ajouter une API personnalisée ${on}`;
+    case "ja":
+      return `カスタム API を追加（${on}）`;
+    case "ko":
+      return `사용자 지정 API 추가 ${on}`;
+    case "pt-BR":
+      return `Adicionar uma API personalizada ${on}`;
+    case "zh-Hans":
+      return `添加自定义 API（${on}）`;
+    case "zh-Hant":
+      return `加入自訂 API（${on}）`;
+    case "en-XA":
+      return `[Åðð á çûšţöɱ ÅÞÎ ${on} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd a custom API \u202c${on}`;
+  }
+  return `Add a custom API ${on}`;
+}
+
+export function accountsCustomApiAddTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة API مخصصة`;
+    case "de":
+      return `Eigene API hinzufügen`;
+    case "es":
+      return `Agregar una API personalizada`;
+    case "fr":
+      return `Ajouter une API personnalisée`;
+    case "ja":
+      return `カスタム API を追加`;
+    case "ko":
+      return `사용자 지정 API 추가`;
+    case "pt-BR":
+      return `Adicionar uma API personalizada`;
+    case "zh-Hans":
+      return `添加自定义 API`;
+    case "zh-Hant":
+      return `加入自訂 API`;
+    case "en-XA":
+      return `[Åðð á çûšţöɱ ÅÞÎ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd a custom API\u202c`;
+  }
+  return `Add a custom API`;
+}
+
+export function accountsCustomApiTrustHint(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا تربط إلا خادمًا تثق به. فهو يتلقى مفتاحك وما يرسله Infinitary، وقد يفرض رسومًا على الطلبات، ويمكن لنموذجه أن يوجّه العمل على ${who}. تُحفظ المفاتيح في ملفات خاصة على ${who}، لا في تخزين مشفّر.`;
+    case "de":
+      return `Verbinde nur einen Server, dem du vertraust. Er erhält deinen Schlüssel und alles, was Infinitary sendet, kann Anfragen in Rechnung stellen, und sein Modell kann die Arbeit auf ${who} steuern. Schlüssel liegen in privaten Dateien auf ${who}, nicht in verschlüsseltem Speicher.`;
+    case "es":
+      return `Conecta solo un servidor en el que confíes. Recibe tu clave y lo que envía Infinitary, puede cobrar por las solicitudes y su modelo puede dirigir trabajo en ${who}. Las claves se guardan en archivos privados en ${who}, no en un almacenamiento cifrado.`;
+    case "fr":
+      return `Ne connectez qu’un serveur de confiance. Il reçoit votre clé et ce qu’Infinitary envoie, peut facturer les requêtes, et son modèle peut diriger le travail sur ${who}. Les clés sont gardées dans des fichiers privés sur ${who}, pas dans un stockage chiffré.`;
+    case "ja":
+      return `信頼できるサーバーだけに接続してください。サーバーはキーと Infinitary が送る内容を受け取り、リクエストに料金がかかることがあり、そのモデルは ${who} での作業を指示できます。キーは暗号化された保管場所ではなく、${who} の非公開ファイルに保存されます。`;
+    case "ko":
+      return `신뢰하는 서버만 연결하세요. 서버는 키와 Infinitary가 보내는 내용을 받고, 요청에 요금을 청구할 수 있으며, 서버의 모델이 ${who}에서 하는 작업을 지시할 수 있어요. 키는 암호화된 저장소가 아니라 ${who}의 비공개 파일에 보관돼요.`;
+    case "pt-BR":
+      return `Conecte só um servidor em que você confia. Ele recebe sua chave e o que o Infinitary envia, pode cobrar pelas solicitações, e o modelo dele pode dirigir o trabalho em ${who}. As chaves ficam em arquivos privados em ${who}, não em um armazenamento criptografado.`;
+    case "zh-Hans":
+      return `只连接你信任的服务器。它会收到你的密钥和 Infinitary 发送的内容，可能会对请求收费，它的模型还能指挥 ${who} 上的工作。密钥保存在 ${who} 上的私有文件中，而不是加密存储里。`;
+    case "zh-Hant":
+      return `只連線到你信任的伺服器。它會收到你的金鑰和 Infinitary 傳送的內容，可能會對要求收費，它的模型也能指揮 ${who} 上的工作。金鑰存放在 ${who} 上的私人檔案中，而不是加密儲存空間。`;
+    case "en-XA":
+      return `[Çöññéçţ öñļý á šéŕṽéŕ ýöû ţŕûšţ. Îţ ŕéçéîṽéš ýöûŕ ķéý áñð ŵĥáţ Îñƒîñîţáŕý šéñðš, ɱáý çĥáŕĝé ƒöŕ ŕéǫûéšţš, áñð îţš ɱöðéļ çáñ ðîŕéçţ ŵöŕķ öñ ${who}. Ķéýš áŕé ķéþţ îñ þŕîṽáţé ƒîļéš öñ ${who}, ñöţ éñçŕýþţéð šţöŕáĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eConnect only a server you trust. It receives your key and what Infinitary sends, may charge for requests, and its model can direct work on \u202c${who}\u202e. Keys are kept in private files on \u202c${who}\u202e, not encrypted storage.\u202c`;
+  }
+  return `Connect only a server you trust. It receives your key and what Infinitary sends, may charge for requests, and its model can direct work on ${who}. Keys are kept in private files on ${who}, not encrypted storage.`;
+}
+
+export function accountsCustomApiNameLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاسم`;
+    case "de":
+      return `Name`;
+    case "es":
+      return `Nombre`;
+    case "fr":
+      return `Nom`;
+    case "ja":
+      return `名前`;
+    case "ko":
+      return `이름`;
+    case "pt-BR":
+      return `Nome`;
+    case "zh-Hans":
+      return `名称`;
+    case "zh-Hant":
+      return `名稱`;
+    case "en-XA":
+      return `[Ñáɱé ~~]`;
+    case "ar-XB":
+      return `\u202eName\u202c`;
+  }
+  return `Name`;
+}
+
+export function accountsCustomApiAddressLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `العنوان`;
+    case "de":
+      return `Adresse`;
+    case "es":
+      return `Dirección`;
+    case "fr":
+      return `Adresse`;
+    case "ja":
+      return `アドレス`;
+    case "ko":
+      return `주소`;
+    case "pt-BR":
+      return `Endereço`;
+    case "zh-Hans":
+      return `地址`;
+    case "zh-Hant":
+      return `位址`;
+    case "en-XA":
+      return `[Åððŕéšš ~~~]`;
+    case "ar-XB":
+      return `\u202eAddress\u202c`;
+  }
+  return `Address`;
+}
+
+export function accountsCustomApiUseFix(input: { address: string }): string {
+  const address = input.address;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام ${address}`;
+    case "de":
+      return `${address} verwenden`;
+    case "es":
+      return `Usar ${address}`;
+    case "fr":
+      return `Utiliser ${address}`;
+    case "ja":
+      return `${address} を使う`;
+    case "ko":
+      return `${address} 사용`;
+    case "pt-BR":
+      return `Usar ${address}`;
+    case "zh-Hans":
+      return `使用 ${address}`;
+    case "zh-Hant":
+      return `使用 ${address}`;
+    case "en-XA":
+      return `[Ûšé ${address} ~~]`;
+    case "ar-XB":
+      return `\u202eUse \u202c${address}`;
+  }
+  return `Use ${address}`;
+}
+
+export function accountsCustomApiSendsTo(input: { destination: string }): string {
+  const destination = input.destination;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُرسل إلى ${destination}`;
+    case "de":
+      return `Sendet an ${destination}`;
+    case "es":
+      return `Envía a ${destination}`;
+    case "fr":
+      return `Envoie à ${destination}`;
+    case "ja":
+      return `送信先：${destination}`;
+    case "ko":
+      return `보낼 곳: ${destination}`;
+    case "pt-BR":
+      return `Envia para ${destination}`;
+    case "zh-Hans":
+      return `发送到 ${destination}`;
+    case "zh-Hant":
+      return `傳送到 ${destination}`;
+    case "en-XA":
+      return `[Šéñðš ţö ${destination} ~~~]`;
+    case "ar-XB":
+      return `\u202eSends to \u202c${destination}`;
+  }
+  return `Sends to ${destination}`;
+}
+
+export function accountsCustomApiException(input: { host: string; who: string }): string {
+  const host = input.host;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استثناء ${host}: الإرسال إليه أيًّا كان ما يجيب به DNS، عدا ${who} نفسه وعناوين الربط المحلي والبيانات الوصفية السحابية. لا تفعل ذلك إلا إذا كنت تعرف سبب إجابة DNS بهذه الطريقة، مثل وجود تطبيق وكيل.`;
+    case "de":
+      return `Ausnahme für ${host} machen: an alles senden, was DNS antwortet, außer an ${who} selbst, Link-Local- und Cloud-Metadatenadressen. Tu das nur, wenn du weißt, warum DNS so antwortet, etwa wegen einer Proxy-App.`;
+    case "es":
+      return `Hacer una excepción para ${host}: enviarle lo que responda el DNS, salvo ${who}, las direcciones de enlace local y las de metadatos de la nube. Hazlo solo si sabes por qué el DNS responde así, por ejemplo por una app de proxy.`;
+    case "fr":
+      return `Faire une exception pour ${host} : lui envoyer ce que le DNS répond, sauf ${who} lui-même, les adresses lien-local et les adresses de métadonnées cloud. Ne le faites que si vous savez pourquoi le DNS répond ainsi, par exemple à cause d’une app proxy.`;
+    case "ja":
+      return `${host} を例外にする：${who} 自体、リンクローカル、クラウドのメタデータアドレスを除き、DNS の応答先がどこでも送信します。プロキシアプリなど、DNS がこう応答する理由がわかっている場合にだけ使ってください。`;
+    case "ko":
+      return `${host}에 예외 적용: ${who} 자신, 링크 로컬 주소, 클라우드 메타데이터 주소를 빼고 DNS가 답하는 곳이면 어디든 보내요. 프록시 앱처럼 DNS가 왜 이렇게 답하는지 알 때만 이렇게 하세요.`;
+    case "pt-BR":
+      return `Abrir uma exceção para ${host}: enviar para ele o que o DNS responder, exceto ${who}, endereços link-local e endereços de metadados de nuvem. Faça isso só se souber por que o DNS responde assim, como no caso de um app de proxy.`;
+    case "zh-Hans":
+      return `为 ${host} 设置例外：无论 DNS 返回什么都发送过去，但 ${who} 本身、链路本地地址和云元数据地址除外。只有在你清楚 DNS 为何这样返回时（例如使用了代理应用）才这样做。`;
+    case "zh-Hant":
+      return `為 ${host} 設定例外：不論 DNS 回應什麼都傳送過去，但 ${who} 本身、鏈路本機位址和雲端中繼資料位址除外。只有在你知道 DNS 為何這樣回應時（例如使用代理程式）才這麼做。`;
+    case "en-XA":
+      return `[Ṁáķé áñ éẋçéþţîöñ ƒöŕ ${host}: šéñð ţö îţ ŵĥáţéṽéŕ ÐÑŠ áñšŵéŕš, áþáŕţ ƒŕöɱ ${who} îţšéļƒ, ļîñķ-ļöçáļ áñð çļöûð ɱéţáðáţá áððŕéššéš. Ðö ţĥîš öñļý îƒ ýöû ķñöŵ ŵĥý ÐÑŠ áñšŵéŕš ţĥîš ŵáý, šûçĥ áš á þŕöẋý áþþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMake an exception for \u202c${host}\u202e: send to it whatever DNS answers, apart from \u202c${who}\u202e itself, link-local and cloud metadata addresses. Do this only if you know why DNS answers this way, such as a proxy app.\u202c`;
+  }
+  return `Make an exception for ${host}: send to it whatever DNS answers, apart from ${who} itself, link-local and cloud metadata addresses. Do this only if you know why DNS answers this way, such as a proxy app.`;
+}
+
+export function accountsCustomApiHttpApproved(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تمت الموافقة على HTTP غير المشفّر لهذا العنوان.`;
+    case "de":
+      return `Unverschlüsseltes HTTP ist für diese Adresse freigegeben.`;
+    case "es":
+      return `HTTP sin cifrar está aprobado para esta dirección.`;
+    case "fr":
+      return `Le HTTP non chiffré est approuvé pour cette adresse.`;
+    case "ja":
+      return `このアドレスでは暗号化されていない HTTP が承認されています。`;
+    case "ko":
+      return `이 주소에 암호화되지 않은 HTTP가 승인됐어요.`;
+    case "pt-BR":
+      return `O HTTP sem criptografia está aprovado para este endereço.`;
+    case "zh-Hans":
+      return `已批准此地址使用未加密的 HTTP。`;
+    case "zh-Hant":
+      return `已核准這個位址使用未加密的 HTTP。`;
+    case "en-XA":
+      return `[Ûñéñçŕýþţéð ĤŢŢÞ îš áþþŕöṽéð ƒöŕ ţĥîš áððŕéšš. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUnencrypted HTTP is approved for this address.\u202c`;
+  }
+  return `Unencrypted HTTP is approved for this address.`;
+}
+
+export function accountsCustomApiHttp(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإرسال عبر HTTP غير المشفّر. يستطيع أي أحد على مسار الشبكة قراءة المفتاح والتعليمات وشيفرة المشروع والردود، أو تغيير الردود التي توجّه العمل على ${who}.`;
+    case "de":
+      return `Über unverschlüsseltes HTTP senden. Jeder auf dem Netzwerkweg kann den Schlüssel, Prompts, Projektcode und Antworten lesen oder Antworten ändern, die die Arbeit auf ${who} steuern.`;
+    case "es":
+      return `Enviar por HTTP sin cifrar. Cualquiera en el camino de red puede leer la clave, las instrucciones, el código del proyecto y las respuestas, o cambiar respuestas que dirigen trabajo en ${who}.`;
+    case "fr":
+      return `Envoyer en HTTP non chiffré. N’importe qui sur le trajet réseau peut lire la clé, les instructions, le code du projet et les réponses, ou modifier des réponses qui dirigent le travail sur ${who}.`;
+    case "ja":
+      return `暗号化されていない HTTP で送信します。ネットワーク経路上の誰でも、キー、プロンプト、プロジェクトのコード、返信を読んだり、${who} での作業を指示する返信を書き換えたりできます。`;
+    case "ko":
+      return `암호화되지 않은 HTTP로 보내기. 네트워크 경로에 있는 누구나 키, 프롬프트, 프로젝트 코드, 답을 읽거나 ${who}의 작업을 지시하는 답을 바꿀 수 있어요.`;
+    case "pt-BR":
+      return `Enviar por HTTP sem criptografia. Qualquer pessoa no caminho da rede pode ler a chave, os prompts, o código do projeto e as respostas, ou alterar respostas que dirigem o trabalho em ${who}.`;
+    case "zh-Hans":
+      return `通过未加密的 HTTP 发送。网络路径上的任何人都能读取密钥、提示词、项目代码和回复，或篡改那些会指挥 ${who} 上工作的回复。`;
+    case "zh-Hant":
+      return `透過未加密的 HTTP 傳送。網路路徑上的任何人都能讀取金鑰、提示、專案程式碼和回覆，或竄改會指揮 ${who} 上工作的回覆。`;
+    case "en-XA":
+      return `[Šéñð öṽéŕ ûñéñçŕýþţéð ĤŢŢÞ. Åñýöñé öñ ţĥé ñéţŵöŕķ þáţĥ çáñ ŕéáð ţĥé ķéý, þŕöɱþţš, þŕöĵéçţ çöðé áñð ŕéþļîéš, öŕ çĥáñĝé ŕéþļîéš ţĥáţ ðîŕéçţ ŵöŕķ öñ ${who}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSend over unencrypted HTTP. Anyone on the network path can read the key, prompts, project code and replies, or change replies that direct work on \u202c${who}\u202e.\u202c`;
+  }
+  return `Send over unencrypted HTTP. Anyone on the network path can read the key, prompts, project code and replies, or change replies that direct work on ${who}.`;
+}
+
+export function accountsCustomApiHttpPublic(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإرسال عبر HTTP غير المشفّر. يستطيع أي أحد على مسار الشبكة قراءة المفتاح والتعليمات وشيفرة المشروع والردود، أو تغيير الردود التي توجّه العمل على ${who}. ويشمل ذلك الإنترنت العام؛ لا تستخدم إلا خادمًا ومسار شبكة تثق بهما.`;
+    case "de":
+      return `Über unverschlüsseltes HTTP senden. Jeder auf dem Netzwerkweg kann den Schlüssel, Prompts, Projektcode und Antworten lesen oder Antworten ändern, die die Arbeit auf ${who} steuern. Das schließt das öffentliche Internet ein; verwende nur einen Server und einen Netzwerkweg, denen du vertraust.`;
+    case "es":
+      return `Enviar por HTTP sin cifrar. Cualquiera en el camino de red puede leer la clave, las instrucciones, el código del proyecto y las respuestas, o cambiar respuestas que dirigen trabajo en ${who}. Esto incluye internet público; usa solo un servidor y un camino de red en los que confíes.`;
+    case "fr":
+      return `Envoyer en HTTP non chiffré. N’importe qui sur le trajet réseau peut lire la clé, les instructions, le code du projet et les réponses, ou modifier des réponses qui dirigent le travail sur ${who}. Cela inclut l’internet public ; n’utilisez qu’un serveur et un trajet réseau de confiance.`;
+    case "ja":
+      return `暗号化されていない HTTP で送信します。ネットワーク経路上の誰でも、キー、プロンプト、プロジェクトのコード、返信を読んだり、${who} での作業を指示する返信を書き換えたりできます。これには公衆インターネットも含まれます。信頼できるサーバーとネットワーク経路でだけ使ってください。`;
+    case "ko":
+      return `암호화되지 않은 HTTP로 보내기. 네트워크 경로에 있는 누구나 키, 프롬프트, 프로젝트 코드, 답을 읽거나 ${who}의 작업을 지시하는 답을 바꿀 수 있어요. 여기에는 공용 인터넷도 포함돼요. 신뢰하는 서버와 네트워크 경로만 쓰세요.`;
+    case "pt-BR":
+      return `Enviar por HTTP sem criptografia. Qualquer pessoa no caminho da rede pode ler a chave, os prompts, o código do projeto e as respostas, ou alterar respostas que dirigem o trabalho em ${who}. Isso inclui a internet pública; use só um servidor e um caminho de rede em que você confia.`;
+    case "zh-Hans":
+      return `通过未加密的 HTTP 发送。网络路径上的任何人都能读取密钥、提示词、项目代码和回复，或篡改那些会指挥 ${who} 上工作的回复。这包括公共互联网；只应使用你信任的服务器和网络路径。`;
+    case "zh-Hant":
+      return `透過未加密的 HTTP 傳送。網路路徑上的任何人都能讀取金鑰、提示、專案程式碼和回覆，或竄改會指揮 ${who} 上工作的回覆。這包括公用網際網路；請只使用你信任的伺服器和網路路徑。`;
+    case "en-XA":
+      return `[Šéñð öṽéŕ ûñéñçŕýþţéð ĤŢŢÞ. Åñýöñé öñ ţĥé ñéţŵöŕķ þáţĥ çáñ ŕéáð ţĥé ķéý, þŕöɱþţš, þŕöĵéçţ çöðé áñð ŕéþļîéš, öŕ çĥáñĝé ŕéþļîéš ţĥáţ ðîŕéçţ ŵöŕķ öñ ${who}. Ţĥîš îñçļûðéš ţĥé þûƀļîç îñţéŕñéţ; ûšé öñļý á šéŕṽéŕ áñð ñéţŵöŕķ þáţĥ ýöû ţŕûšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSend over unencrypted HTTP. Anyone on the network path can read the key, prompts, project code and replies, or change replies that direct work on \u202c${who}\u202e. This includes the public internet; use only a server and network path you trust.\u202c`;
+  }
+  return `Send over unencrypted HTTP. Anyone on the network path can read the key, prompts, project code and replies, or change replies that direct work on ${who}. This includes the public internet; use only a server and network path you trust.`;
+}
+
+export function accountsCustomApiHttpPrivate(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الإرسال عبر HTTP غير المشفّر. يستطيع أي أحد على مسار الشبكة قراءة المفتاح والتعليمات وشيفرة المشروع والردود، أو تغيير الردود التي توجّه العمل على ${who}. على شبكة Wi-Fi مشتركة، قد يجيب خادم خاص آخر باسم مؤسستك.`;
+    case "de":
+      return `Über unverschlüsseltes HTTP senden. Jeder auf dem Netzwerkweg kann den Schlüssel, Prompts, Projektcode und Antworten lesen oder Antworten ändern, die die Arbeit auf ${who} steuern. In einem geteilten WLAN kann ein anderer privater Server für den Namen deiner Organisation antworten.`;
+    case "es":
+      return `Enviar por HTTP sin cifrar. Cualquiera en el camino de red puede leer la clave, las instrucciones, el código del proyecto y las respuestas, o cambiar respuestas que dirigen trabajo en ${who}. En una red Wi-Fi compartida, otro servidor privado puede responder por el nombre de tu organización.`;
+    case "fr":
+      return `Envoyer en HTTP non chiffré. N’importe qui sur le trajet réseau peut lire la clé, les instructions, le code du projet et les réponses, ou modifier des réponses qui dirigent le travail sur ${who}. Sur un Wi-Fi partagé, un autre serveur privé peut répondre à la place du nom de votre organisation.`;
+    case "ja":
+      return `暗号化されていない HTTP で送信します。ネットワーク経路上の誰でも、キー、プロンプト、プロジェクトのコード、返信を読んだり、${who} での作業を指示する返信を書き換えたりできます。共有の Wi-Fi では、別の非公開サーバーが組織の名前に代わって応答することがあります。`;
+    case "ko":
+      return `암호화되지 않은 HTTP로 보내기. 네트워크 경로에 있는 누구나 키, 프롬프트, 프로젝트 코드, 답을 읽거나 ${who}의 작업을 지시하는 답을 바꿀 수 있어요. 공유 Wi-Fi에서는 다른 사설 서버가 조직의 이름으로 대신 답할 수 있어요.`;
+    case "pt-BR":
+      return `Enviar por HTTP sem criptografia. Qualquer pessoa no caminho da rede pode ler a chave, os prompts, o código do projeto e as respostas, ou alterar respostas que dirigem o trabalho em ${who}. Em um Wi-Fi compartilhado, outro servidor privado pode responder pelo nome da sua organização.`;
+    case "zh-Hans":
+      return `通过未加密的 HTTP 发送。网络路径上的任何人都能读取密钥、提示词、项目代码和回复，或篡改那些会指挥 ${who} 上工作的回复。在共享 Wi-Fi 上，可能会有另一台私有服务器冒用你所在组织的名称作答。`;
+    case "zh-Hant":
+      return `透過未加密的 HTTP 傳送。網路路徑上的任何人都能讀取金鑰、提示、專案程式碼和回覆，或竄改會指揮 ${who} 上工作的回覆。在共用 Wi-Fi 上，可能有另一台私人伺服器冒用你組織的名稱回應。`;
+    case "en-XA":
+      return `[Šéñð öṽéŕ ûñéñçŕýþţéð ĤŢŢÞ. Åñýöñé öñ ţĥé ñéţŵöŕķ þáţĥ çáñ ŕéáð ţĥé ķéý, þŕöɱþţš, þŕöĵéçţ çöðé áñð ŕéþļîéš, öŕ çĥáñĝé ŕéþļîéš ţĥáţ ðîŕéçţ ŵöŕķ öñ ${who}. Öñ šĥáŕéð Ŵî-Ƒî, áñöţĥéŕ þŕîṽáţé šéŕṽéŕ ɱáý áñšŵéŕ ƒöŕ ýöûŕ öŕĝáñîžáţîöñ'š ñáɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSend over unencrypted HTTP. Anyone on the network path can read the key, prompts, project code and replies, or change replies that direct work on \u202c${who}\u202e. On shared Wi-Fi, another private server may answer for your organization's name.\u202c`;
+  }
+  return `Send over unencrypted HTTP. Anyone on the network path can read the key, prompts, project code and replies, or change replies that direct work on ${who}. On shared Wi-Fi, another private server may answer for your organization's name.`;
+}
+
+export function accountsCustomApiConnectWith(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاتصال باستخدام`;
+    case "de":
+      return `Verbinden mit`;
+    case "es":
+      return `Conectar con`;
+    case "fr":
+      return `Se connecter avec`;
+    case "ja":
+      return `接続方法`;
+    case "ko":
+      return `연결 방식`;
+    case "pt-BR":
+      return `Conectar com`;
+    case "zh-Hans":
+      return `连接方式`;
+    case "zh-Hant":
+      return `連線方式`;
+    case "en-XA":
+      return `[Çöññéçţ ŵîţĥ ~~~~]`;
+    case "ar-XB":
+      return `\u202eConnect with\u202c`;
+  }
+  return `Connect with`;
+}
+
+export function accountsCustomApiAuthKey(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاح API (أو دون مفتاح)`;
+    case "de":
+      return `API-Schlüssel (oder kein Schlüssel)`;
+    case "es":
+      return `Clave de API (o sin clave)`;
+    case "fr":
+      return `Clé API (ou aucune clé)`;
+    case "ja":
+      return `API キー（またはキーなし）`;
+    case "ko":
+      return `API 키(또는 키 없음)`;
+    case "pt-BR":
+      return `Chave de API (ou sem chave)`;
+    case "zh-Hans":
+      return `API 密钥（或不用密钥）`;
+    case "zh-Hant":
+      return `API 金鑰（或不用金鑰）`;
+    case "en-XA":
+      return `[ÅÞÎ ķéý (öŕ ñö ķéý) ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAPI key (or no key)\u202c`;
+  }
+  return `API key (or no key)`;
+}
+
+export function accountsCustomApiTokenCommand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أمر رمز الوصول`;
+    case "de":
+      return `Token-Befehl`;
+    case "es":
+      return `Comando de token`;
+    case "fr":
+      return `Commande de jeton`;
+    case "ja":
+      return `トークンコマンド`;
+    case "ko":
+      return `토큰 명령`;
+    case "pt-BR":
+      return `Comando de token`;
+    case "zh-Hans":
+      return `令牌命令`;
+    case "zh-Hant":
+      return `權杖指令`;
+    case "en-XA":
+      return `[Ţöķéñ çöɱɱáñð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eToken command\u202c`;
+  }
+  return `Token command`;
+}
+
+export function accountsCustomApiRefreshAfter(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التجديد بعد (ثوانٍ)`;
+    case "de":
+      return `Erneuern nach (Sekunden)`;
+    case "es":
+      return `Renovar después de (segundos)`;
+    case "fr":
+      return `Renouveler après (secondes)`;
+    case "ja":
+      return `更新間隔（秒）`;
+    case "ko":
+      return `새로 고침 간격(초)`;
+    case "pt-BR":
+      return `Renovar depois de (segundos)`;
+    case "zh-Hans":
+      return `刷新间隔（秒）`;
+    case "zh-Hant":
+      return `多久後更新（秒）`;
+    case "en-XA":
+      return `[Ŕéƒŕéšĥ áƒţéŕ (šéçöñðš) ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRefresh after (seconds)\u202c`;
+  }
+  return `Refresh after (seconds)`;
+}
+
+export function accountsCustomApiCommandHint(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعمل على ${who} بصلاحياتك. يطبع رمز الوصول فقط. جدّد تسجيل دخول مؤسستك خارج Infinitary عند الحاجة.`;
+    case "de":
+      return `Läuft auf ${who} mit deinen Zugriffsrechten. Gibt nur das Token aus. Erneuere die Anmeldung deiner Organisation bei Bedarf außerhalb von Infinitary.`;
+    case "es":
+      return `Se ejecuta en ${who} con tu acceso. Solo imprime el token. Renueva el inicio de sesión de tu organización fuera de Infinitary cuando haga falta.`;
+    case "fr":
+      return `S’exécute sur ${who} avec vos accès. N’affiche que le jeton. Renouvelez la connexion de votre organisation en dehors d’Infinitary si besoin.`;
+    case "ja":
+      return `${who} であなたの権限で実行されます。トークンだけを出力します。必要に応じて、組織のサインインは Infinitary の外で更新してください。`;
+    case "ko":
+      return `${who}에서 내 권한으로 실행돼요. 토큰만 출력해야 해요. 필요하면 조직의 로그인은 Infinitary 밖에서 갱신하세요.`;
+    case "pt-BR":
+      return `Roda em ${who} com o seu acesso. Mostra só o token. Renove o login da sua organização fora do Infinitary quando for preciso.`;
+    case "zh-Hans":
+      return `以你的权限在 ${who} 上运行。只输出令牌。需要时，请在 Infinitary 之外续期你所在组织的登录。`;
+    case "zh-Hant":
+      return `以你的權限在 ${who} 上執行。只輸出權杖。需要時，請在 Infinitary 之外更新你組織的登入。`;
+    case "en-XA":
+      return `[Ŕûñš öñ ${who} ŵîţĥ ýöûŕ áççéšš. Þŕîñţš öñļý ţĥé ţöķéñ. Ŕéñéŵ ýöûŕ öŕĝáñîžáţîöñ’š šîĝñ-îñ öûţšîðé Îñƒîñîţáŕý ŵĥéñ ñééðéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRuns on \u202c${who}\u202e with your access. Prints only the token. Renew your organization’s sign-in outside Infinitary when needed.\u202c`;
+  }
+  return `Runs on ${who} with your access. Prints only the token. Renew your organization’s sign-in outside Infinitary when needed.`;
+}
+
+export function accountsCustomApiKeyLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `مفتاح API`;
+    case "de":
+      return `API-Schlüssel`;
+    case "es":
+      return `Clave de API`;
+    case "fr":
+      return `Clé API`;
+    case "ja":
+      return `API キー`;
+    case "ko":
+      return `API 키`;
+    case "pt-BR":
+      return `Chave de API`;
+    case "zh-Hans":
+      return `API 密钥`;
+    case "zh-Hant":
+      return `API 金鑰`;
+    case "en-XA":
+      return `[ÅÞÎ ķéý ~~~]`;
+    case "ar-XB":
+      return `\u202eAPI key\u202c`;
+  }
+  return `API key`;
+}
+
+export function accountsCustomApiKeyOptional(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `· اختياري`;
+    case "de":
+      return `· optional`;
+    case "es":
+      return `· opcional`;
+    case "fr":
+      return `· facultatif`;
+    case "ja":
+      return `· 任意`;
+    case "ko":
+      return `· 선택 사항`;
+    case "pt-BR":
+      return `· opcional`;
+    case "zh-Hans":
+      return `· 可选`;
+    case "zh-Hant":
+      return `· 選填`;
+    case "en-XA":
+      return `[· öþţîöñáļ ~~~~]`;
+    case "ar-XB":
+      return `\u202e· optional\u202c`;
+  }
+  return `· optional`;
+}
+
+export function accountsCustomApiRemoveSavedKey(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة المفتاح المحفوظ`;
+    case "de":
+      return `Gespeicherten Schlüssel entfernen`;
+    case "es":
+      return `Quitar la clave guardada`;
+    case "fr":
+      return `Retirer la clé enregistrée`;
+    case "ja":
+      return `保存したキーを削除`;
+    case "ko":
+      return `저장된 키 제거`;
+    case "pt-BR":
+      return `Remover chave salva`;
+    case "zh-Hans":
+      return `移除已保存的密钥`;
+    case "zh-Hant":
+      return `移除已儲存的金鑰`;
+    case "en-XA":
+      return `[Ŕéɱöṽé šáṽéð ķéý ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove saved key\u202c`;
+  }
+  return `Remove saved key`;
+}
+
+export function accountsCustomApiSavedKeyKept(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المفتاح المحفوظ باقٍ · اكتب لاستبداله`;
+    case "de":
+      return `Gespeicherter Schlüssel bleibt · zum Ersetzen tippen`;
+    case "es":
+      return `Clave guardada conservada · escribe para reemplazarla`;
+    case "fr":
+      return `Clé enregistrée conservée · saisissez pour la remplacer`;
+    case "ja":
+      return `保存したキーを保持 · 入力すると置き換え`;
+    case "ko":
+      return `저장된 키 유지됨 · 바꾸려면 입력`;
+    case "pt-BR":
+      return `Chave salva mantida · digite para substituir`;
+    case "zh-Hans":
+      return `已保留保存的密钥 · 输入即可替换`;
+    case "zh-Hant":
+      return `已保留儲存的金鑰 · 輸入即可取代`;
+    case "en-XA":
+      return `[Šáṽéð ķéý ķéþţ · ţýþé ţö ŕéþļáçé ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSaved key kept · type to replace\u202c`;
+  }
+  return `Saved key kept · type to replace`;
+}
+
+export function accountsCustomApiKeyEmpty(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اتركه فارغًا إن لم يكن الخادم يحتاج إلى مفتاح`;
+    case "de":
+      return `Leer lassen, wenn der Server keinen braucht`;
+    case "es":
+      return `Déjalo vacío si el servidor no necesita ninguna`;
+    case "fr":
+      return `Laissez vide si le serveur n’en demande pas`;
+    case "ja":
+      return `サーバーで不要なら空欄のまま`;
+    case "ko":
+      return `서버에 키가 필요 없으면 비워 두세요`;
+    case "pt-BR":
+      return `Deixe vazio se o servidor não precisar de chave`;
+    case "zh-Hans":
+      return `如果服务器不需要，可留空`;
+    case "zh-Hant":
+      return `如果伺服器不需要，請留空`;
+    case "en-XA":
+      return `[Ļéáṽé éɱþţý îƒ ţĥé šéŕṽéŕ ñééðš ñöñé ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eLeave empty if the server needs none\u202c`;
+  }
+  return `Leave empty if the server needs none`;
+}
+
+export function accountsCustomApiKeyGoesTo(input: { here: string; who: string }): string {
+  const here = input.here;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يذهب إلى ${who} مرة واحدة. لا يحتفظ ${here} بأي نسخة منه.`;
+    case "de":
+      return `Er geht einmal an ${who}. ${here} behält keine Kopie.`;
+    case "es":
+      return `Se envía a ${who} una vez. ${here} no guarda ninguna copia.`;
+    case "fr":
+      return `Elle est envoyée une fois à ${who}. ${here} n’en garde aucune copie.`;
+    case "ja":
+      return `${who} に1回だけ送られます。${here} にはコピーが残りません。`;
+    case "ko":
+      return `키는 ${who}에 한 번 전달돼요. ${here}에는 사본이 남지 않아요.`;
+    case "pt-BR":
+      return `Ela vai para ${who} uma vez. ${here} não guarda nenhuma cópia.`;
+    case "zh-Hans":
+      return `它只会发送到 ${who} 一次。${here} 不保留副本。`;
+    case "zh-Hant":
+      return `它只會傳送到 ${who} 一次。${here} 不會保留副本。`;
+    case "en-XA":
+      return `[Îţ ĝöéš ţö ${who} öñçé. ${here} ķééþš ñö çöþý. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIt goes to \u202c${who}\u202e once. \u202c${here}\u202e keeps no copy.\u202c`;
+  }
+  return `It goes to ${who} once. ${here} keeps no copy.`;
+}
+
+export function accountsCustomApiProtocol(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بروتوكول API`;
+    case "de":
+      return `API-Protokoll`;
+    case "es":
+      return `Protocolo de API`;
+    case "fr":
+      return `Protocole d’API`;
+    case "ja":
+      return `API プロトコル`;
+    case "ko":
+      return `API 프로토콜`;
+    case "pt-BR":
+      return `Protocolo de API`;
+    case "zh-Hans":
+      return `API 协议`;
+    case "zh-Hant":
+      return `API 通訊協定`;
+    case "en-XA":
+      return `[ÅÞÎ þŕöţöçöļ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAPI protocol\u202c`;
+  }
+  return `API protocol`;
+}
+
+export function accountsCustomApiHeadersTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ترويسات طلب إضافية`;
+    case "de":
+      return `Zusätzliche Anfrage-Header`;
+    case "es":
+      return `Encabezados de solicitud adicionales`;
+    case "fr":
+      return `En-têtes de requête supplémentaires`;
+    case "ja":
+      return `追加のリクエストヘッダー`;
+    case "ko":
+      return `추가 요청 헤더`;
+    case "pt-BR":
+      return `Cabeçalhos de solicitação extras`;
+    case "zh-Hans":
+      return `额外的请求头`;
+    case "zh-Hant":
+      return `額外的要求標頭`;
+    case "en-XA":
+      return `[Éẋţŕá ŕéǫûéšţ ĥéáðéŕš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eExtra request headers\u202c`;
+  }
+  return `Extra request headers`;
+}
+
+export function accountsCustomApiHeadersHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ترويسات يحتاجها خادم مؤسستك في كل طلب. تُخفى القيمة السرية ولا تُعرض مرة أخرى أبدًا، وتُرفض إن كرّرها أي رد.`;
+    case "de":
+      return `Header, die der Server deiner Organisation bei jeder Anfrage braucht. Ein geheimer Wert wird verdeckt, nie wieder angezeigt und abgelehnt, wenn eine Antwort ihn wiederholt.`;
+    case "es":
+      return `Encabezados que el servidor de tu organización necesita en cada solicitud. Un valor secreto se oculta, no se vuelve a mostrar y se rechaza si una respuesta lo repite.`;
+    case "fr":
+      return `Les en-têtes que le serveur de votre organisation demande à chaque requête. Une valeur secrète est masquée, n’est plus jamais affichée, et est refusée si une réponse la répète.`;
+    case "ja":
+      return `組織のサーバーがすべてのリクエストで必要とするヘッダーです。シークレットの値は伏せられて二度と表示されず、返信にその値が含まれていると拒否されます。`;
+    case "ko":
+      return `조직의 서버가 모든 요청에 요구하는 헤더예요. 비밀 값은 가려진 채 다시 표시되지 않으며, 답에 그 값이 그대로 나오면 거부돼요.`;
+    case "pt-BR":
+      return `Cabeçalhos que o servidor da sua organização exige em toda solicitação. Um valor secreto fica mascarado, nunca é mostrado de novo e é recusado se uma resposta o repetir.`;
+    case "zh-Hans":
+      return `你所在组织的服务器在每个请求中都需要的请求头。机密值会被遮盖，不再显示；如果某个回复重复了它，该回复会被拒绝。`;
+    case "zh-Hant":
+      return `你組織的伺服器在每個要求中都需要的標頭。機密值會被遮蔽、不再顯示；若有回覆重複出現它，就會被拒絕。`;
+    case "en-XA":
+      return `[Ĥéáðéŕš ýöûŕ öŕĝáñîžáţîöñ’š šéŕṽéŕ ñééðš öñ éṽéŕý ŕéǫûéšţ. Å šéçŕéţ ṽáļûé îš ɱášķéð, ñéṽéŕ šĥöŵñ áĝáîñ, áñð ŕéƒûšéð îƒ á ŕéþļý ŕéþéáţš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHeaders your organization’s server needs on every request. A secret value is masked, never shown again, and refused if a reply repeats it.\u202c`;
+  }
+  return `Headers your organization’s server needs on every request. A secret value is masked, never shown again, and refused if a reply repeats it.`;
+}
+
+export function accountsCustomApiHeaderName(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اسم الترويسة`;
+    case "de":
+      return `Header-Name`;
+    case "es":
+      return `Nombre del encabezado`;
+    case "fr":
+      return `Nom de l’en-tête`;
+    case "ja":
+      return `ヘッダー名`;
+    case "ko":
+      return `헤더 이름`;
+    case "pt-BR":
+      return `Nome do cabeçalho`;
+    case "zh-Hans":
+      return `请求头名称`;
+    case "zh-Hant":
+      return `標頭名稱`;
+    case "en-XA":
+      return `[Ĥéáðéŕ ñáɱé ~~~~]`;
+    case "ar-XB":
+      return `\u202eHeader name\u202c`;
+  }
+  return `Header name`;
+}
+
+export function accountsCustomApiHeaderValue(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قيمة الترويسة`;
+    case "de":
+      return `Header-Wert`;
+    case "es":
+      return `Valor del encabezado`;
+    case "fr":
+      return `Valeur de l’en-tête`;
+    case "ja":
+      return `ヘッダーの値`;
+    case "ko":
+      return `헤더 값`;
+    case "pt-BR":
+      return `Valor do cabeçalho`;
+    case "zh-Hans":
+      return `请求头值`;
+    case "zh-Hant":
+      return `標頭值`;
+    case "en-XA":
+      return `[Ĥéáðéŕ ṽáļûé ~~~~]`;
+    case "ar-XB":
+      return `\u202eHeader value\u202c`;
+  }
+  return `Header value`;
+}
+
+export function accountsCustomApiSavedValueKept(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `القيمة المحفوظة باقية؛ اكتب لاستبدالها`;
+    case "de":
+      return `Gespeicherter Wert bleibt; zum Ersetzen tippen`;
+    case "es":
+      return `Valor guardado conservado; escribe para reemplazarlo`;
+    case "fr":
+      return `Valeur enregistrée conservée ; saisissez pour la remplacer`;
+    case "ja":
+      return `保存した値を保持。入力すると置き換えます`;
+    case "ko":
+      return `저장된 값 유지됨, 바꾸려면 입력`;
+    case "pt-BR":
+      return `Valor salvo mantido; digite para substituí-lo`;
+    case "zh-Hans":
+      return `已保留保存的值；输入即可替换`;
+    case "zh-Hant":
+      return `已保留儲存的值；輸入即可取代`;
+    case "en-XA":
+      return `[Šáṽéð ṽáļûé ķéþţ; ţýþé ţö ŕéþļáçé îţ ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSaved value kept; type to replace it\u202c`;
+  }
+  return `Saved value kept; type to replace it`;
+}
+
+export function accountsCustomApiEnterValue(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أدخل القيمة`;
+    case "de":
+      return `Wert eingeben`;
+    case "es":
+      return `Escribe el valor`;
+    case "fr":
+      return `Saisissez la valeur`;
+    case "ja":
+      return `値を入力`;
+    case "ko":
+      return `값 입력`;
+    case "pt-BR":
+      return `Digite o valor`;
+    case "zh-Hans":
+      return `输入值`;
+    case "zh-Hant":
+      return `輸入值`;
+    case "en-XA":
+      return `[Éñţéŕ ţĥé ṽáļûé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eEnter the value\u202c`;
+  }
+  return `Enter the value`;
+}
+
+export function accountsCustomApiSecret(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `سرّية`;
+    case "de":
+      return `Geheim`;
+    case "es":
+      return `Secreto`;
+    case "fr":
+      return `Secret`;
+    case "ja":
+      return `シークレット`;
+    case "ko":
+      return `비밀`;
+    case "pt-BR":
+      return `Secreto`;
+    case "zh-Hans":
+      return `机密`;
+    case "zh-Hant":
+      return `機密`;
+    case "en-XA":
+      return `[Šéçŕéţ ~~]`;
+    case "ar-XB":
+      return `\u202eSecret\u202c`;
+  }
+  return `Secret`;
+}
+
+export function accountsCustomApiRemoveHeader(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة الترويسة`;
+    case "de":
+      return `Header entfernen`;
+    case "es":
+      return `Quitar encabezado`;
+    case "fr":
+      return `Retirer l’en-tête`;
+    case "ja":
+      return `ヘッダーを削除`;
+    case "ko":
+      return `헤더 제거`;
+    case "pt-BR":
+      return `Remover cabeçalho`;
+    case "zh-Hans":
+      return `移除请求头`;
+    case "zh-Hant":
+      return `移除標頭`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ĥéáðéŕ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove header\u202c`;
+  }
+  return `Remove header`;
+}
+
+export function accountsCustomApiAddHeader(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة ترويسة`;
+    case "de":
+      return `Header hinzufügen`;
+    case "es":
+      return `Agregar encabezado`;
+    case "fr":
+      return `Ajouter un en-tête`;
+    case "ja":
+      return `ヘッダーを追加`;
+    case "ko":
+      return `헤더 추가`;
+    case "pt-BR":
+      return `Adicionar cabeçalho`;
+    case "zh-Hans":
+      return `添加请求头`;
+    case "zh-Hant":
+      return `加入標頭`;
+    case "en-XA":
+      return `[Åðð ĥéáðéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd header\u202c`;
+  }
+  return `Add header`;
+}
+
+export function accountsCustomApiCertificatesTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `شهادات المؤسسة`;
+    case "de":
+      return `Zertifikate der Organisation`;
+    case "es":
+      return `Certificados de la organización`;
+    case "fr":
+      return `Certificats de l’organisation`;
+    case "ja":
+      return `組織の証明書`;
+    case "ko":
+      return `조직 인증서`;
+    case "pt-BR":
+      return `Certificados da organização`;
+    case "zh-Hans":
+      return `组织证书`;
+    case "zh-Hant":
+      return `組織憑證`;
+    case "en-XA":
+      return `[Öŕĝáñîžáţîöñ çéŕţîƒîçáţéš ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOrganization certificates\u202c`;
+  }
+  return `Organization certificates`;
+}
+
+export function accountsCustomApiCertificatesHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `شهادة CA عامة من مؤسستك، موثوق بها لهذا الاتصال فقط. المفاتيح الخاصة وشهادات العميل غير مدعومة. تبقى فحوصات اسم الخادم وسلسلة الشهادات وتاريخ الانتهاء مفعّلة.`;
+    case "de":
+      return `Ein öffentliches CA-Zertifikat deiner Organisation, dem nur für diese Verbindung vertraut wird. Private Schlüssel und Client-Zertifikate werden nicht unterstützt. Die Prüfung von Servername, Zertifikatskette und Ablaufdatum bleibt aktiv.`;
+    case "es":
+      return `Un certificado de CA pública de tu organización, de confianza solo para esta conexión. No se admiten claves privadas ni certificados de cliente. Las comprobaciones de nombre del servidor, cadena y vencimiento siguen activas.`;
+    case "fr":
+      return `Un certificat d’autorité publique de votre organisation, approuvé uniquement pour cette connexion. Les clés privées et les certificats client ne sont pas pris en charge. Les vérifications du nom du serveur, de la chaîne et de l’expiration restent actives.`;
+    case "ja":
+      return `組織の公開 CA 証明書で、この接続でのみ信頼されます。秘密鍵とクライアント証明書には対応していません。サーバー名、証明書チェーン、有効期限のチェックはオンのままです。`;
+    case "ko":
+      return `조직의 공개 CA 인증서로, 이 연결에서만 신뢰해요. 개인 키와 클라이언트 인증서는 지원하지 않아요. 서버 이름, 인증서 체인, 만료 확인은 계속 켜져 있어요.`;
+    case "pt-BR":
+      return `Um certificado de CA pública da sua organização, confiável só para esta conexão. Chaves privadas e certificados de cliente não são aceitos. As verificações de nome do servidor, cadeia e validade continuam ativas.`;
+    case "zh-Hans":
+      return `来自你所在组织的公共 CA 证书，只对此连接受信任。不支持私钥和客户端证书。服务器名称、证书链和有效期检查保持开启。`;
+    case "zh-Hant":
+      return `來自你組織的公開 CA 憑證，只在這個連線中受信任。不支援私密金鑰和用戶端憑證。伺服器名稱、憑證鏈和到期日檢查會保持開啟。`;
+    case "en-XA":
+      return `[Å þûƀļîç ÇÅ çéŕţîƒîçáţé ƒŕöɱ ýöûŕ öŕĝáñîžáţîöñ, ţŕûšţéð öñļý ƒöŕ ţĥîš çöññéçţîöñ. Þŕîṽáţé ķéýš áñð çļîéñţ çéŕţîƒîçáţéš áŕé ñöţ šûþþöŕţéð. Šéŕṽéŕ ñáɱé, çĥáîñ áñð éẋþîŕý çĥéçķš šţáý öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA public CA certificate from your organization, trusted only for this connection. Private keys and client certificates are not supported. Server name, chain and expiry checks stay on.\u202c`;
+  }
+  return `A public CA certificate from your organization, trusted only for this connection. Private keys and client certificates are not supported. Server name, chain and expiry checks stay on.`;
+}
+
+export function accountsCustomApiChooseCertificate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختيار ملف PEM CA محلي`;
+    case "de":
+      return `Lokale PEM-CA-Datei wählen`;
+    case "es":
+      return `Elegir un archivo de CA PEM local`;
+    case "fr":
+      return `Choisir un fichier CA PEM local`;
+    case "ja":
+      return `ローカルの PEM CA ファイルを選択`;
+    case "ko":
+      return `로컬 PEM CA 파일 선택`;
+    case "pt-BR":
+      return `Escolher um arquivo de CA PEM local`;
+    case "zh-Hans":
+      return `选择一个本地 PEM CA 文件`;
+    case "zh-Hant":
+      return `選擇本機的 PEM CA 檔案`;
+    case "en-XA":
+      return `[Çĥööšé á ļöçáļ ÞÉṀ ÇÅ ƒîļé ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose a local PEM CA file\u202c`;
+  }
+  return `Choose a local PEM CA file`;
+}
+
+export function accountsCustomApiCertificateTooLarge(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اختر ملف CA عامًا لا يزيد حجمه على 64 KiB.`;
+    case "de":
+      return `Wähl eine öffentliche CA-Datei mit höchstens 64 KiB.`;
+    case "es":
+      return `Elige un archivo de CA pública de 64 KiB como máximo.`;
+    case "fr":
+      return `Choisissez un fichier CA public de 64 Kio au maximum.`;
+    case "ja":
+      return `64 KiB 以下の公開 CA ファイルを選んでください。`;
+    case "ko":
+      return `64 KiB 이하의 공개 CA 파일을 선택하세요.`;
+    case "pt-BR":
+      return `Escolha um arquivo de CA pública de até 64 KiB.`;
+    case "zh-Hans":
+      return `请选择不超过 64 KiB 的公共 CA 文件。`;
+    case "zh-Hant":
+      return `請選擇不超過 64 KiB 的公開 CA 檔案。`;
+    case "en-XA":
+      return `[Çĥööšé á þûƀļîç ÇÅ ƒîļé ñö ļáŕĝéŕ ţĥáñ 64 ĶîƁ. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose a public CA file no larger than 64 KiB.\u202c`;
+  }
+  return `Choose a public CA file no larger than 64 KiB.`;
+}
+
+export function accountsCustomApiCertificateUnreadable(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة ملف الشهادة هذا.`;
+    case "de":
+      return `Diese Zertifikatsdatei konnte nicht gelesen werden.`;
+    case "es":
+      return `No se pudo leer este archivo de certificado.`;
+    case "fr":
+      return `Ce fichier de certificat n’a pas pu être lu.`;
+    case "ja":
+      return `この証明書ファイルを読み取れませんでした。`;
+    case "ko":
+      return `이 인증서 파일을 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler este arquivo de certificado.`;
+    case "zh-Hans":
+      return `无法读取此证书文件。`;
+    case "zh-Hant":
+      return `無法讀取這個憑證檔案。`;
+    case "en-XA":
+      return `[Ţĥîš çéŕţîƒîçáţé ƒîļé çöûļð ñöţ ƀé ŕéáð. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis certificate file could not be read.\u202c`;
+  }
+  return `This certificate file could not be read.`;
+}
+
+export function accountsCustomApiIssuer(input: {
+  from: string;
+  issuer: string;
+  to: string;
+}): string {
+  const from = input.from;
+  const issuer = input.issuer;
+  const to = input.to;
+  switch (currentLanguage()) {
+    case "ar":
+      return `المُصدِر: ${issuer} · ${from} – ${to}`;
+    case "de":
+      return `Aussteller: ${issuer} · ${from} – ${to}`;
+    case "es":
+      return `Emisor: ${issuer} · ${from} – ${to}`;
+    case "fr":
+      return `Émetteur : ${issuer} · ${from} – ${to}`;
+    case "ja":
+      return `発行者：${issuer} · ${from} – ${to}`;
+    case "ko":
+      return `발급자: ${issuer} · ${from} – ${to}`;
+    case "pt-BR":
+      return `Emissor: ${issuer} · ${from} – ${to}`;
+    case "zh-Hans":
+      return `颁发者：${issuer} · ${from} – ${to}`;
+    case "zh-Hant":
+      return `簽發者：${issuer} · ${from} – ${to}`;
+    case "en-XA":
+      return `[Îššûéŕ: ${issuer} · ${from} – ${to} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eIssuer: \u202c${issuer}\u202e · \u202c${from}\u202e – \u202c${to}`;
+  }
+  return `Issuer: ${issuer} · ${from} – ${to}`;
+}
+
+export function accountsCustomApiApproveCertificates(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أوافق على هذه الشهادات لهذا الاتصال الخاص فقط`;
+    case "de":
+      return `Ich gebe diese Zertifikate nur für diese private Verbindung frei`;
+    case "es":
+      return `Apruebo estos certificados solo para esta conexión privada`;
+    case "fr":
+      return `J’approuve ces certificats uniquement pour cette connexion privée`;
+    case "ja":
+      return `これらの証明書をこの非公開の接続でのみ使うことを承認します`;
+    case "ko":
+      return `이 인증서를 이 비공개 연결에서만 쓰도록 승인해요`;
+    case "pt-BR":
+      return `Aprovo estes certificados só para esta conexão privada`;
+    case "zh-Hans":
+      return `我批准这些证书只用于此私有连接`;
+    case "zh-Hant":
+      return `我核准這些憑證只用於這個私人連線`;
+    case "en-XA":
+      return `[Î áþþŕöṽé ţĥéšé çéŕţîƒîçáţéš öñļý ƒöŕ ţĥîš þŕîṽáţé çöññéçţîöñ ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eI approve these certificates only for this private connection\u202c`;
+  }
+  return `I approve these certificates only for this private connection`;
+}
+
+export function accountsCustomApiRemoveCertificate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة الشهادة`;
+    case "de":
+      return `Zertifikat entfernen`;
+    case "es":
+      return `Quitar certificado`;
+    case "fr":
+      return `Retirer le certificat`;
+    case "ja":
+      return `証明書を削除`;
+    case "ko":
+      return `인증서 제거`;
+    case "pt-BR":
+      return `Remover certificado`;
+    case "zh-Hans":
+      return `移除证书`;
+    case "zh-Hant":
+      return `移除憑證`;
+    case "en-XA":
+      return `[Ŕéɱöṽé çéŕţîƒîçáţé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemove certificate\u202c`;
+  }
+  return `Remove certificate`;
+}
+
+export function accountsCustomApiStorage(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السماح بإعدادات التخزين الافتراضية لهذا الخادم. وإلا فإن الطلبات تطلب من الخادم ألا يحفظ الردود؛ ومع هذا الخيار قد يحتفظ بها. لا تُستخدم أي محادثة محفوظة على الخادم.`;
+    case "de":
+      return `Die Speicher-Standards dieses Servers zulassen. Sonst bitten Anfragen den Server, Antworten nicht zu speichern; damit darf er sie behalten. Auf dem Server gespeicherte Unterhaltungen werden nicht verwendet.`;
+    case "es":
+      return `Permitir el almacenamiento predeterminado de este servidor. Si no, las solicitudes le piden al servidor que no guarde las respuestas; con esto, puede conservarlas. No se usa ninguna conversación guardada en el servidor.`;
+    case "fr":
+      return `Autoriser le stockage par défaut de ce serveur. Sinon, les requêtes demandent au serveur de ne pas enregistrer les réponses ; avec cette option, il peut les conserver. Aucune conversation enregistrée sur le serveur n’est utilisée.`;
+    case "ja":
+      return `このサーバーの保存に関する既定の動作を許可します。許可しない場合、リクエストは応答を保存しないようサーバーに求めます。許可すると、サーバーが応答を保持することがあります。サーバーに保存された会話は使いません。`;
+    case "ko":
+      return `이 서버의 저장 기본값 허용. 이 옵션이 꺼져 있으면 요청할 때 서버에 응답을 저장하지 말라고 해요. 켜면 서버가 응답을 보관할 수 있어요. 서버에 저장된 대화는 쓰지 않아요.`;
+    case "pt-BR":
+      return `Permitir o armazenamento padrão deste servidor. Caso contrário, as solicitações pedem ao servidor que não salve as respostas; com isso, ele pode guardá-las. Nenhuma conversa salva no servidor é usada.`;
+    case "zh-Hans":
+      return `允许此服务器的默认存储设置。否则请求会要求服务器不保存回复；开启后，服务器可能会保留它们。不会使用服务器保存的对话。`;
+    case "zh-Hant":
+      return `允許這台伺服器的預設儲存方式。否則要求會請伺服器不要儲存回覆；開啟後，伺服器可能會保留它們。不會使用伺服器儲存的對話。`;
+    case "en-XA":
+      return `[Åļļöŵ ţĥîš šéŕṽéŕ’š šţöŕáĝé ðéƒáûļţš. Ŕéǫûéšţš öţĥéŕŵîšé ášķ ţĥé šéŕṽéŕ ñöţ ţö šáṽé ŕéšþöñšéš; ŵîţĥ ţĥîš, îţ ɱáý ķééþ ţĥéɱ. Ñö šéŕṽéŕ-šáṽéð çöñṽéŕšáţîöñ îš ûšéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAllow this server’s storage defaults. Requests otherwise ask the server not to save responses; with this, it may keep them. No server-saved conversation is used.\u202c`;
+  }
+  return `Allow this server’s storage defaults. Requests otherwise ask the server not to save responses; with this, it may keep them. No server-saved conversation is used.`;
+}
+
+export function accountsCustomApiModelsTitle(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النماذج`;
+    case "de":
+      return `Modelle`;
+    case "es":
+      return `Modelos`;
+    case "fr":
+      return `Modèles`;
+    case "ja":
+      return `モデル`;
+    case "ko":
+      return `모델`;
+    case "pt-BR":
+      return `Modelos`;
+    case "zh-Hans":
+      return `模型`;
+    case "zh-Hant":
+      return `模型`;
+    case "en-XA":
+      return `[Ṁöðéļš ~~]`;
+    case "ar-XB":
+      return `\u202eModels\u202c`;
+  }
+  return `Models`;
+}
+
+export function accountsCustomApiFetching(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الجلب…`;
+    case "de":
+      return `Wird abgerufen …`;
+    case "es":
+      return `Obteniendo…`;
+    case "fr":
+      return `Récupération…`;
+    case "ja":
+      return `取得中…`;
+    case "ko":
+      return `가져오는 중…`;
+    case "pt-BR":
+      return `Buscando…`;
+    case "zh-Hans":
+      return `正在获取…`;
+    case "zh-Hant":
+      return `取得中…`;
+    case "en-XA":
+      return `[Ƒéţçĥîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202eFetching…\u202c`;
+  }
+  return `Fetching…`;
+}
+
+export function accountsCustomApiFetchAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الجلب مرة أخرى`;
+    case "de":
+      return `Erneut abrufen`;
+    case "es":
+      return `Volver a obtener`;
+    case "fr":
+      return `Récupérer à nouveau`;
+    case "ja":
+      return `再取得`;
+    case "ko":
+      return `다시 가져오기`;
+    case "pt-BR":
+      return `Buscar de novo`;
+    case "zh-Hans":
+      return `重新获取`;
+    case "zh-Hant":
+      return `重新取得`;
+    case "en-XA":
+      return `[Ƒéţçĥ áĝáîñ ~~~~]`;
+    case "ar-XB":
+      return `\u202eFetch again\u202c`;
+  }
+  return `Fetch again`;
+}
+
+export function accountsCustomApiFetch(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الجلب من الخادم`;
+    case "de":
+      return `Vom Server abrufen`;
+    case "es":
+      return `Obtener del servidor`;
+    case "fr":
+      return `Récupérer depuis le serveur`;
+    case "ja":
+      return `サーバーから取得`;
+    case "ko":
+      return `서버에서 가져오기`;
+    case "pt-BR":
+      return `Buscar no servidor`;
+    case "zh-Hans":
+      return `从服务器获取`;
+    case "zh-Hant":
+      return `從伺服器取得`;
+    case "en-XA":
+      return `[Ƒéţçĥ ƒŕöɱ šéŕṽéŕ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFetch from server\u202c`;
+  }
+  return `Fetch from server`;
+}
+
+export function accountsCustomApiNoList(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يعرض هذا الخادم قائمة بنماذجه. أضفها يدويًا.`;
+    case "de":
+      return `Dieser Server listet seine Modelle nicht auf. Füge sie von Hand hinzu.`;
+    case "es":
+      return `Este servidor no muestra sus modelos. Agrégalos a mano.`;
+    case "fr":
+      return `Ce serveur ne liste pas ses modèles. Ajoutez-les à la main.`;
+    case "ja":
+      return `このサーバーはモデルの一覧を公開していません。手動で追加してください。`;
+    case "ko":
+      return `이 서버는 모델 목록을 제공하지 않아요. 직접 추가하세요.`;
+    case "pt-BR":
+      return `Este servidor não lista os modelos dele. Adicione-os manualmente.`;
+    case "zh-Hans":
+      return `此服务器不提供模型列表。请手动添加。`;
+    case "zh-Hant":
+      return `這台伺服器不提供模型清單。請手動加入。`;
+    case "en-XA":
+      return `[Ţĥîš šéŕṽéŕ ðöéšñ’ţ ļîšţ îţš ɱöðéļš. Åðð ţĥéɱ ƀý ĥáñð. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis server doesn’t list its models. Add them by hand.\u202c`;
+  }
+  return `This server doesn’t list its models. Add them by hand.`;
+}
+
+export function accountsCustomApiListed(input: { count: number }): string {
+  const count = formatNumber(input.count);
+  switch (currentLanguage()) {
+    case "ar":
+      switch (pluralCategory(input.count)) {
+        case "zero":
+          return `يعرض هذا الخادم ${count} نموذج. اختر ما تريد استخدامه:`;
+        case "one":
+          return `يعرض هذا الخادم ${count} نموذج. اختر ما تريد استخدامه:`;
+        case "two":
+          return `يعرض هذا الخادم ${count} نموذجين. اختر ما تريد استخدامه:`;
+        case "few":
+          return `يعرض هذا الخادم ${count} نماذج. اختر ما تريد استخدامه:`;
+        case "many":
+          return `يعرض هذا الخادم ${count} نموذجًا. اختر ما تريد استخدامه:`;
+        default:
+          return `يعرض هذا الخادم ${count} نموذج. اختر ما تريد استخدامه:`;
+      }
+    case "de":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Dieser Server listet ${count} Modell auf. Wähl die aus, die du verwenden möchtest:`;
+        default:
+          return `Dieser Server listet ${count} Modelle auf. Wähl die aus, die du verwenden möchtest:`;
+      }
+    case "es":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Este servidor muestra ${count} modelo. Elige los que quieras usar:`;
+        case "many":
+          return `Este servidor muestra ${count} de modelos. Elige los que quieras usar:`;
+        default:
+          return `Este servidor muestra ${count} modelos. Elige los que quieras usar:`;
+      }
+    case "fr":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Ce serveur liste ${count} modèle. Choisissez ceux que vous souhaitez utiliser :`;
+        case "many":
+          return `Ce serveur liste ${count} modèles. Choisissez ceux que vous souhaitez utiliser :`;
+        default:
+          return `Ce serveur liste ${count} modèles. Choisissez ceux que vous souhaitez utiliser :`;
+      }
+    case "ja":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `このサーバーには${count}個のモデルがあります。使いたいモデルを選んでください：`;
+      }
+    case "ko":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `이 서버에 모델이 ${count}개 있어요. 사용할 모델을 고르세요:`;
+      }
+    case "pt-BR":
+      switch (pluralCategory(input.count)) {
+        case "one":
+          return `Este servidor lista ${count} modelo. Escolha os que você quer usar:`;
+        case "many":
+          return `Este servidor lista ${count} modelos. Escolha os que você quer usar:`;
+        default:
+          return `Este servidor lista ${count} modelos. Escolha os que você quer usar:`;
+      }
+    case "zh-Hans":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `此服务器列出了 ${count} 个模型。选择你想使用的模型：`;
+      }
+    case "zh-Hant":
+      switch (pluralCategory(input.count)) {
+        default:
+          return `這台伺服器列出 ${count} 個模型。選擇你想使用的模型：`;
+      }
+    case "en-XA":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `[Ţĥîš šéŕṽéŕ ļîšţš ${count} ɱöðéļ. Þîçķ ţĥé öñéš ýöû ŵöûļð ļîķé ţö ûšé: ~~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[Ţĥîš šéŕṽéŕ ļîšţš ${count} ɱöðéļš. Þîçķ ţĥé öñéš ýöû ŵöûļð ļîķé ţö ûšé: ~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.count, "en")) {
+        case "one":
+          return `\u202eThis server lists \u202c${count}\u202e model. Pick the ones you would like to use:\u202c`;
+        default:
+          return `\u202eThis server lists \u202c${count}\u202e models. Pick the ones you would like to use:\u202c`;
+      }
+  }
+  switch (pluralCategory(input.count)) {
+    case "one":
+      return `This server lists ${count} model. Pick the ones you would like to use:`;
+    default:
+      return `This server lists ${count} models. Pick the ones you would like to use:`;
+  }
+}
+
+export function accountsCustomApiListedNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا يعرض هذا الخادم أي نماذج. أضفها يدويًا.`;
+    case "de":
+      return `Dieser Server listet keine Modelle auf. Füge sie von Hand hinzu.`;
+    case "es":
+      return `Este servidor no muestra ningún modelo. Agrégalos a mano.`;
+    case "fr":
+      return `Ce serveur ne liste aucun modèle. Ajoutez-les à la main.`;
+    case "ja":
+      return `このサーバーにはモデルがありません。手動で追加してください。`;
+    case "ko":
+      return `이 서버가 알려 준 모델이 없어요. 직접 추가하세요.`;
+    case "pt-BR":
+      return `Este servidor não lista nenhum modelo. Adicione-os manualmente.`;
+    case "zh-Hans":
+      return `此服务器没有列出任何模型。请手动添加。`;
+    case "zh-Hant":
+      return `這台伺服器沒有列出任何模型。請手動加入。`;
+    case "en-XA":
+      return `[Ţĥîš šéŕṽéŕ ļîšţš ñö ɱöðéļš. Åðð ţĥéɱ ƀý ĥáñð. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis server lists no models. Add them by hand.\u202c`;
+  }
+  return `This server lists no models. Add them by hand.`;
+}
+
+export function accountsCustomApiModelId(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `معرّف النموذج`;
+    case "de":
+      return `Modell-ID`;
+    case "es":
+      return `ID del modelo`;
+    case "fr":
+      return `Identifiant du modèle`;
+    case "ja":
+      return `モデル ID`;
+    case "ko":
+      return `모델 ID`;
+    case "pt-BR":
+      return `ID do modelo`;
+    case "zh-Hans":
+      return `模型 ID`;
+    case "zh-Hant":
+      return `模型 ID`;
+    case "en-XA":
+      return `[Ṁöðéļ ÎÐ ~~~]`;
+    case "ar-XB":
+      return `\u202eModel ID\u202c`;
+  }
+  return `Model ID`;
+}
+
+export function accountsCustomApiContext(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `السياق`;
+    case "de":
+      return `Kontext`;
+    case "es":
+      return `Contexto`;
+    case "fr":
+      return `Contexte`;
+    case "ja":
+      return `コンテキスト`;
+    case "ko":
+      return `컨텍스트`;
+    case "pt-BR":
+      return `Contexto`;
+    case "zh-Hans":
+      return `上下文`;
+    case "zh-Hant":
+      return `上下文`;
+    case "en-XA":
+      return `[Çöñţéẋţ ~~~]`;
+    case "ar-XB":
+      return `\u202eContext\u202c`;
+  }
+  return `Context`;
+}
+
+export function accountsCustomApiOutput(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المخرجات`;
+    case "de":
+      return `Ausgabe`;
+    case "es":
+      return `Salida`;
+    case "fr":
+      return `Sortie`;
+    case "ja":
+      return `出力`;
+    case "ko":
+      return `출력`;
+    case "pt-BR":
+      return `Saída`;
+    case "zh-Hans":
+      return `输出`;
+    case "zh-Hant":
+      return `輸出`;
+    case "en-XA":
+      return `[Öûţþûţ ~~]`;
+    case "ar-XB":
+      return `\u202eOutput\u202c`;
+  }
+  return `Output`;
+}
+
+export function accountsCustomApiThisModelLower(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا النموذج`;
+    case "de":
+      return `dieses Modell`;
+    case "es":
+      return `este modelo`;
+    case "fr":
+      return `ce modèle`;
+    case "ja":
+      return `このモデル`;
+    case "ko":
+      return `이 모델`;
+    case "pt-BR":
+      return `este modelo`;
+    case "zh-Hans":
+      return `此模型`;
+    case "zh-Hant":
+      return `這個模型`;
+    case "en-XA":
+      return `[ţĥîš ɱöðéļ ~~~~]`;
+    case "ar-XB":
+      return `\u202ethis model\u202c`;
+  }
+  return `this model`;
+}
+
+export function accountsCustomApiRowState(input: { name: string; state: string }): string {
+  const name = input.name;
+  const state = input.state;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name}: ${state}`;
+    case "de":
+      return `${name}: ${state}`;
+    case "es":
+      return `${name}: ${state}`;
+    case "fr":
+      return `${name} : ${state}`;
+    case "ja":
+      return `${name}：${state}`;
+    case "ko":
+      return `${name}: ${state}`;
+    case "pt-BR":
+      return `${name}: ${state}`;
+    case "zh-Hans":
+      return `${name}：${state}`;
+    case "zh-Hant":
+      return `${name}：${state}`;
+    case "en-XA":
+      return `[${name}: ${state} ~]`;
+    case "ar-XB":
+      return `${name}\u202e: \u202c${state}`;
+  }
+  return `${name}: ${state}`;
+}
+
+export function accountsCustomApiContextFor(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `رموز السياق لـ ${name}`;
+    case "de":
+      return `Kontext-Tokens für ${name}`;
+    case "es":
+      return `Tokens de contexto de ${name}`;
+    case "fr":
+      return `Jetons de contexte pour ${name}`;
+    case "ja":
+      return `${name} のコンテキストトークン数`;
+    case "ko":
+      return `${name}의 컨텍스트 토큰`;
+    case "pt-BR":
+      return `Tokens de contexto de ${name}`;
+    case "zh-Hans":
+      return `${name} 的上下文 token 数`;
+    case "zh-Hant":
+      return `${name} 的上下文 token 數`;
+    case "en-XA":
+      return `[Çöñţéẋţ ţöķéñš ƒöŕ ${name} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eContext tokens for \u202c${name}`;
+  }
+  return `Context tokens for ${name}`;
+}
+
+export function accountsCustomApiOutputFor(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `رموز المخرجات لـ ${name}`;
+    case "de":
+      return `Ausgabe-Tokens für ${name}`;
+    case "es":
+      return `Tokens de salida de ${name}`;
+    case "fr":
+      return `Jetons de sortie pour ${name}`;
+    case "ja":
+      return `${name} の出力トークン数`;
+    case "ko":
+      return `${name}의 출력 토큰`;
+    case "pt-BR":
+      return `Tokens de saída de ${name}`;
+    case "zh-Hans":
+      return `${name} 的输出 token 数`;
+    case "zh-Hant":
+      return `${name} 的輸出 token 數`;
+    case "en-XA":
+      return `[Öûţþûţ ţöķéñš ƒöŕ ${name} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOutput tokens for \u202c${name}`;
+  }
+  return `Output tokens for ${name}`;
+}
+
+export function accountsCustomApiRemoveModel(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إزالة ${name}`;
+    case "de":
+      return `${name} entfernen`;
+    case "es":
+      return `Quitar ${name}`;
+    case "fr":
+      return `Retirer ${name}`;
+    case "ja":
+      return `${name} を削除`;
+    case "ko":
+      return `${name} 제거`;
+    case "pt-BR":
+      return `Remover ${name}`;
+    case "zh-Hans":
+      return `移除 ${name}`;
+    case "zh-Hant":
+      return `移除 ${name}`;
+    case "en-XA":
+      return `[Ŕéɱöṽé ${name} ~~~]`;
+    case "ar-XB":
+      return `\u202eRemove \u202c${name}`;
+  }
+  return `Remove ${name}`;
+}
+
+export function accountsCustomApiReasoning(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ملف الاستدلال`;
+    case "de":
+      return `Denkaufwand-Profil`;
+    case "es":
+      return `Perfil de razonamiento`;
+    case "fr":
+      return `Profil de raisonnement`;
+    case "ja":
+      return `推論プロファイル`;
+    case "ko":
+      return `추론 프로필`;
+    case "pt-BR":
+      return `Perfil de raciocínio`;
+    case "zh-Hans":
+      return `推理配置`;
+    case "zh-Hant":
+      return `推理設定檔`;
+    case "en-XA":
+      return `[Ŕéášöñîñĝ þŕöƒîļé ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReasoning profile\u202c`;
+  }
+  return `Reasoning profile`;
+}
+
+export function accountsCustomApiReasoningFor(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ملف الاستدلال لـ ${name}`;
+    case "de":
+      return `Denkaufwand-Profil für ${name}`;
+    case "es":
+      return `Perfil de razonamiento de ${name}`;
+    case "fr":
+      return `Profil de raisonnement pour ${name}`;
+    case "ja":
+      return `${name} の推論プロファイル`;
+    case "ko":
+      return `${name}의 추론 프로필`;
+    case "pt-BR":
+      return `Perfil de raciocínio de ${name}`;
+    case "zh-Hans":
+      return `${name} 的推理配置`;
+    case "zh-Hant":
+      return `${name} 的推理設定檔`;
+    case "en-XA":
+      return `[Ŕéášöñîñĝ þŕöƒîļé ƒöŕ ${name} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReasoning profile for \u202c${name}`;
+  }
+  return `Reasoning profile for ${name}`;
+}
+
+export function accountsCustomApiReasoningOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف`;
+    case "de":
+      return `Aus`;
+    case "es":
+      return `Desactivado`;
+    case "fr":
+      return `Désactivé`;
+    case "ja":
+      return `オフ`;
+    case "ko":
+      return `끔`;
+    case "pt-BR":
+      return `Desativado`;
+    case "zh-Hans":
+      return `关闭`;
+    case "zh-Hant":
+      return `關閉`;
+    case "en-XA":
+      return `[Öƒƒ ~]`;
+    case "ar-XB":
+      return `\u202eOff\u202c`;
+  }
+  return `Off`;
+}
+
+export function accountsCustomApiCache(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاحتفاظ بالذاكرة المؤقتة`;
+    case "de":
+      return `Cache-Aufbewahrung`;
+    case "es":
+      return `Retención de caché`;
+    case "fr":
+      return `Conservation du cache`;
+    case "ja":
+      return `キャッシュの保持`;
+    case "ko":
+      return `캐시 보존`;
+    case "pt-BR":
+      return `Retenção de cache`;
+    case "zh-Hans":
+      return `缓存保留`;
+    case "zh-Hant":
+      return `快取保留`;
+    case "en-XA":
+      return `[Çáçĥé ŕéţéñţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eCache retention\u202c`;
+  }
+  return `Cache retention`;
+}
+
+export function accountsCustomApiCacheFor(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاحتفاظ بالذاكرة المؤقتة لـ ${name}`;
+    case "de":
+      return `Cache-Aufbewahrung für ${name}`;
+    case "es":
+      return `Retención de caché de ${name}`;
+    case "fr":
+      return `Conservation du cache pour ${name}`;
+    case "ja":
+      return `${name} のキャッシュの保持`;
+    case "ko":
+      return `${name}의 캐시 보존`;
+    case "pt-BR":
+      return `Retenção de cache de ${name}`;
+    case "zh-Hans":
+      return `${name} 的缓存保留`;
+    case "zh-Hant":
+      return `${name} 的快取保留`;
+    case "en-XA":
+      return `[Çáçĥé ŕéţéñţîöñ ƒöŕ ${name} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCache retention for \u202c${name}`;
+  }
+  return `Cache retention for ${name}`;
+}
+
+export function accountsCustomApiCacheNone(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا شيء`;
+    case "de":
+      return `Keine`;
+    case "es":
+      return `Ninguna`;
+    case "fr":
+      return `Aucune`;
+    case "ja":
+      return `なし`;
+    case "ko":
+      return `없음`;
+    case "pt-BR":
+      return `Nenhuma`;
+    case "zh-Hans":
+      return `无`;
+    case "zh-Hant":
+      return `無`;
+    case "en-XA":
+      return `[Ñöñé ~~]`;
+    case "ar-XB":
+      return `\u202eNone\u202c`;
+  }
+  return `None`;
+}
+
+export function accountsCustomApiCacheShort(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قصير`;
+    case "de":
+      return `Kurz`;
+    case "es":
+      return `Corta`;
+    case "fr":
+      return `Courte`;
+    case "ja":
+      return `短`;
+    case "ko":
+      return `짧게`;
+    case "pt-BR":
+      return `Curta`;
+    case "zh-Hans":
+      return `短`;
+    case "zh-Hant":
+      return `短`;
+    case "en-XA":
+      return `[Šĥöŕţ ~~]`;
+    case "ar-XB":
+      return `\u202eShort\u202c`;
+  }
+  return `Short`;
+}
+
+export function accountsCustomApiCacheLong(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `طويل`;
+    case "de":
+      return `Lang`;
+    case "es":
+      return `Larga`;
+    case "fr":
+      return `Longue`;
+    case "ja":
+      return `長`;
+    case "ko":
+      return `길게`;
+    case "pt-BR":
+      return `Longa`;
+    case "zh-Hans":
+      return `长`;
+    case "zh-Hant":
+      return `長`;
+    case "en-XA":
+      return `[Ļöñĝ ~~]`;
+    case "ar-XB":
+      return `\u202eLong\u202c`;
+  }
+  return `Long`;
+}
+
+export function accountsCustomApiCapabilityHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يفحص الحفظ الملف المختار وإعداد الذاكرة المؤقتة. قد تترتب على الفحوصات رسوم، ولا تُثبت الاستدلال ولا الاستفادة من الذاكرة المؤقتة. قد يستخدم خادمك الذاكرة المؤقتة تلقائيًا، حتى مع «لا شيء».`;
+    case "de":
+      return `Speichern prüft das gewählte Profil und die Cache-Einstellung. Prüfungen können Kosten verursachen; sie beweisen weder Denkaufwand noch einen Cache-Treffer. Dein Server kann auch bei „Keine“ automatisch zwischenspeichern.`;
+    case "es":
+      return `Guardar comprueba el perfil y la caché elegidos. Las comprobaciones pueden tener costo; no demuestran el razonamiento ni un acierto de caché. Tu servidor puede usar caché por su cuenta, incluso con «Ninguna».`;
+    case "fr":
+      return `Enregistrer vérifie le profil et le réglage de cache choisis. Les vérifications peuvent être facturées ; elles ne prouvent ni le raisonnement ni l’utilisation du cache. Votre serveur peut mettre en cache de lui-même, même avec « Aucune ».`;
+    case "ja":
+      return `「保存」で、選んだプロファイルとキャッシュ設定をチェックします。チェックには料金がかかることがあり、推論やキャッシュヒットを証明するものではありません。「なし」でも、サーバーが自動でキャッシュすることがあります。`;
+    case "ko":
+      return `저장하면 선택한 프로필과 캐시 설정을 확인해요. 확인에 요금이 청구될 수 있으며, 확인했다고 추론이나 캐시 적중이 보장되지는 않아요. ‘없음’으로 두어도 서버가 자동으로 캐시할 수 있어요.`;
+    case "pt-BR":
+      return `Salvar verifica o perfil e a configuração de cache escolhidos. As verificações podem gerar cobranças; elas não provam o raciocínio nem um acerto de cache. Seu servidor pode usar cache por conta própria, mesmo com “Nenhuma”.`;
+    case "zh-Hans":
+      return `“保存”会检查所选的推理配置和缓存设置。检查可能产生费用；它们并不能证明推理或缓存命中。即使选择“无”，你的服务器也可能自动缓存。`;
+    case "zh-Hant":
+      return `「儲存」會檢查所選的設定檔和快取設定。檢查可能產生費用；檢查結果不代表確實有推理或命中快取。即使選「無」，你的伺服器也可能自動快取。`;
+    case "en-XA":
+      return `[Šáṽé çĥéçķš ţĥé çĥöšéñ þŕöƒîļé áñð çáçĥé šéţţîñĝ. Çĥéçķš ɱáý îñçûŕ çĥáŕĝéš; ţĥéý ðö ñöţ þŕöṽé ŕéášöñîñĝ öŕ á çáçĥé ĥîţ. Ýöûŕ šéŕṽéŕ ɱáý çáçĥé áûţöɱáţîçáļļý, éṽéñ ŵîţĥ Ñöñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave checks the chosen profile and cache setting. Checks may incur charges; they do not prove reasoning or a cache hit. Your server may cache automatically, even with None.\u202c`;
+  }
+  return `Save checks the chosen profile and cache setting. Checks may incur charges; they do not prove reasoning or a cache hit. Your server may cache automatically, even with None.`;
+}
+
+export function accountsCustomApiProfilesFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة ملفات القدرات. أغلق هذه الاستمارة وأعد فتحها لتحاول مرة أخرى.`;
+    case "de":
+      return `Die Fähigkeitsprofile konnten nicht gelesen werden. Schließ dieses Formular und öffne es erneut, um es noch einmal zu versuchen.`;
+    case "es":
+      return `No se pudieron leer los perfiles de capacidades. Cierra y vuelve a abrir este formulario para intentarlo de nuevo.`;
+    case "fr":
+      return `Les profils de capacités n’ont pas pu être lus. Fermez et rouvrez ce formulaire pour réessayer.`;
+    case "ja":
+      return `機能プロファイルを読み取れませんでした。このフォームを閉じて開き直し、もう一度お試しください。`;
+    case "ko":
+      return `기능 프로필을 읽을 수 없었어요. 이 양식을 닫았다가 다시 열어 보세요.`;
+    case "pt-BR":
+      return `Não foi possível ler os perfis de recursos. Feche e abra este formulário de novo para tentar outra vez.`;
+    case "zh-Hans":
+      return `无法读取能力配置。请关闭并重新打开此表单再试。`;
+    case "zh-Hant":
+      return `無法讀取功能設定檔。請關閉後重新開啟這個表單再試一次。`;
+    case "en-XA":
+      return `[Çáþáƀîļîţý þŕöƒîļéš çöûļð ñöţ ƀé ŕéáð. Çļöšé áñð ŕéöþéñ ţĥîš ƒöŕɱ ţö ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCapability profiles could not be read. Close and reopen this form to try again.\u202c`;
+  }
+  return `Capability profiles could not be read. Close and reopen this form to try again.`;
+}
+
+export function accountsCustomApiNoModels(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا نماذج بعد. اجلبها من الخادم، أو أضف واحدًا يدويًا.`;
+    case "de":
+      return `Noch keine Modelle. Ruf sie vom Server ab oder füge eins von Hand hinzu.`;
+    case "es":
+      return `Todavía no hay modelos. Obtenlos del servidor o agrega uno a mano.`;
+    case "fr":
+      return `Aucun modèle pour l’instant. Récupérez-les depuis le serveur, ou ajoutez-en un à la main.`;
+    case "ja":
+      return `モデルはまだありません。サーバーから取得するか、手動で追加してください。`;
+    case "ko":
+      return `아직 모델이 없어요. 서버에서 가져오거나 직접 하나 추가하세요.`;
+    case "pt-BR":
+      return `Ainda não há modelos. Busque-os no servidor ou adicione um manualmente.`;
+    case "zh-Hans":
+      return `还没有模型。从服务器获取，或手动添加一个。`;
+    case "zh-Hant":
+      return `還沒有模型。從伺服器取得，或手動加入一個。`;
+    case "en-XA":
+      return `[Ñö ɱöðéļš ýéţ. Ƒéţçĥ ţĥéɱ ƒŕöɱ ţĥé šéŕṽéŕ, öŕ áðð öñé ƀý ĥáñð. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo models yet. Fetch them from the server, or add one by hand.\u202c`;
+  }
+  return `No models yet. Fetch them from the server, or add one by hand.`;
+}
+
+export function accountsCustomApiAddByHand(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `+ إضافة يدوية`;
+    case "de":
+      return `+ Von Hand hinzufügen`;
+    case "es":
+      return `+ Agregar a mano`;
+    case "fr":
+      return `+ Ajouter à la main`;
+    case "ja":
+      return `+ 手動で追加`;
+    case "ko":
+      return `+ 직접 추가`;
+    case "pt-BR":
+      return `+ Adicionar manualmente`;
+    case "zh-Hans":
+      return `+ 手动添加`;
+    case "zh-Hant":
+      return `+ 手動加入`;
+    case "en-XA":
+      return `[+ Åðð ƀý ĥáñð ~~~~~]`;
+    case "ar-XB":
+      return `\u202e+ Add by hand\u202c`;
+  }
+  return `+ Add by hand`;
+}
+
+export function accountsCustomApiSeparate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُحفظ العنوان المختلف اتصالًا منفصلًا. ويبقى الاتصال الأصلي حتى تقطعه.`;
+    case "de":
+      return `Eine andere Adresse speichert eine eigene Verbindung. Die ursprüngliche bleibt, bis du sie trennst.`;
+    case "es":
+      return `Una dirección distinta guarda una conexión aparte. La original se mantiene hasta que la desconectes.`;
+    case "fr":
+      return `Une adresse différente enregistre une connexion distincte. L’originale reste jusqu’à ce que vous la déconnectiez.`;
+    case "ja":
+      return `アドレスが異なる場合は、別の接続として保存されます。元の接続は、接続を解除するまで残ります。`;
+    case "ko":
+      return `다른 주소로 저장하면 별도의 연결이 만들어져요. 원래 연결은 연결을 해제할 때까지 그대로 있어요.`;
+    case "pt-BR":
+      return `Um endereço diferente salva uma conexão separada. A original continua até você desconectá-la.`;
+    case "zh-Hans":
+      return `使用不同的地址会另存为一个独立的连接。原连接会一直保留，直到你断开它。`;
+    case "zh-Hant":
+      return `使用不同的位址會另存成獨立的連線。原本的連線會保留，直到你中斷它。`;
+    case "en-XA":
+      return `[Å ðîƒƒéŕéñţ áððŕéšš šáṽéš á šéþáŕáţé çöññéçţîöñ. Ţĥé öŕîĝîñáļ šţáýš ûñţîļ ýöû ðîšçöññéçţ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA different address saves a separate connection. The original stays until you disconnect it.\u202c`;
+  }
+  return `A different address saves a separate connection. The original stays until you disconnect it.`;
+}
+
+export function accountsCustomApiSavePaused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحفظ متوقفًا مؤقتًا دون فحص`;
+    case "de":
+      return `Pausiert speichern, ohne zu prüfen`;
+    case "es":
+      return `Guardar en pausa sin comprobar`;
+    case "fr":
+      return `Enregistrer en pause sans vérifier`;
+    case "ja":
+      return `チェックせずに一時停止で保存`;
+    case "ko":
+      return `확인 없이 일시 정지 상태로 저장`;
+    case "pt-BR":
+      return `Salvar pausada sem verificar`;
+    case "zh-Hans":
+      return `保存为暂停，不检查`;
+    case "zh-Hant":
+      return `儲存為暫停，不檢查`;
+    case "en-XA":
+      return `[Šáṽé þáûšéð ŵîţĥöûţ çĥéçķîñĝ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave paused without checking\u202c`;
+  }
+  return `Save paused without checking`;
+}
+
+export function accountsCustomApiCommandApproval(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يشغّل «حفظ» أو «الجلب من الخادم» هذا الأمر للحصول على رمز وصول. ويشغّله Infinitary من جديد بعد فترة التجديد أو بعد رفض واحد.`;
+    case "de":
+      return `Speichern oder „Vom Server abrufen“ führt diesen Befehl aus, um ein Token zu holen. Infinitary führt ihn nach dem Erneuerungsintervall oder nach einer Ablehnung erneut aus.`;
+    case "es":
+      return `Guardar u Obtener del servidor ejecuta este comando para conseguir un token. Infinitary lo vuelve a ejecutar tras el intervalo de renovación o tras un rechazo.`;
+    case "fr":
+      return `Enregistrer ou Récupérer depuis le serveur exécute cette commande pour obtenir un jeton. Infinitary l’exécute de nouveau après l’intervalle de renouvellement ou après un refus.`;
+    case "ja":
+      return `「保存」または「サーバーから取得」で、このコマンドを実行してトークンを取得します。更新間隔が過ぎたとき、または1回拒否されたときに、Infinitary が再実行します。`;
+    case "ko":
+      return `저장이나 서버에서 가져오기를 누르면 이 명령을 실행해 토큰을 받아요. Infinitary는 새로 고침 간격이 지나거나 한 번 거부되면 명령을 다시 실행해요.`;
+    case "pt-BR":
+      return `Salvar ou Buscar no servidor executa este comando para obter um token. O Infinitary o executa de novo depois do intervalo de renovação ou de uma recusa.`;
+    case "zh-Hans":
+      return `“保存”或“从服务器获取”会运行此命令来获取令牌。到了刷新间隔或遇到一次拒绝后，Infinitary 会再次运行它。`;
+    case "zh-Hant":
+      return `「儲存」或「從伺服器取得」會執行這個指令來取得權杖。到了更新間隔，或遭拒一次後，Infinitary 會再執行一次。`;
+    case "en-XA":
+      return `[Šáṽé öŕ Ƒéţçĥ ƒŕöɱ šéŕṽéŕ ŕûñš ţĥîš çöɱɱáñð ţö ĝéţ á ţöķéñ. Îñƒîñîţáŕý ŕûñš îţ áĝáîñ áƒţéŕ ţĥé ŕéƒŕéšĥ îñţéŕṽáļ öŕ öñé ŕéƒûšáļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave or Fetch from server runs this command to get a token. Infinitary runs it again after the refresh interval or one refusal.\u202c`;
+  }
+  return `Save or Fetch from server runs this command to get a token. Infinitary runs it again after the refresh interval or one refusal.`;
+}
+
+export function accountsCustomApiCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function accountsCustomApiCheckingPending(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الفحص…`;
+    case "de":
+      return `Wird geprüft …`;
+    case "es":
+      return `Comprobando…`;
+    case "fr":
+      return `Vérification…`;
+    case "ja":
+      return `チェック中…`;
+    case "ko":
+      return `확인 중…`;
+    case "pt-BR":
+      return `Verificando…`;
+    case "zh-Hans":
+      return `正在检查…`;
+    case "zh-Hant":
+      return `檢查中…`;
+    case "en-XA":
+      return `[Çĥéçķîñĝ… ~~~]`;
+    case "ar-XB":
+      return `\u202eChecking…\u202c`;
+  }
+  return `Checking…`;
+}
+
+export function accountsCustomApiSave(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حفظ`;
+    case "de":
+      return `Speichern`;
+    case "es":
+      return `Guardar`;
+    case "fr":
+      return `Enregistrer`;
+    case "ja":
+      return `保存`;
+    case "ko":
+      return `저장`;
+    case "pt-BR":
+      return `Salvar`;
+    case "zh-Hans":
+      return `保存`;
+    case "zh-Hant":
+      return `儲存`;
+    case "en-XA":
+      return `[Šáṽé ~~]`;
+    case "ar-XB":
+      return `\u202eSave\u202c`;
+  }
+  return `Save`;
+}
+
+export function accountsCustomApiReadFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة هذا الاتصال.`;
+    case "de":
+      return `Diese Verbindung konnte nicht gelesen werden.`;
+    case "es":
+      return `No se pudo leer esta conexión.`;
+    case "fr":
+      return `Impossible de lire cette connexion.`;
+    case "ja":
+      return `この接続を読み取れませんでした。`;
+    case "ko":
+      return `이 연결을 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler esta conexão.`;
+    case "zh-Hans":
+      return `无法读取此连接。`;
+    case "zh-Hant":
+      return `無法讀取這個連線。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ŕéáð ţĥîš çöññéçţîöñ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not read this connection.\u202c`;
+  }
+  return `Could not read this connection.`;
+}
+
+export function accountsCustomApiReady(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name} جاهز`;
+    case "de":
+      return `${name} ist bereit`;
+    case "es":
+      return `${name} está lista`;
+    case "fr":
+      return `${name} est prête`;
+    case "ja":
+      return `${name} の準備ができました`;
+    case "ko":
+      return `${name} 준비 완료`;
+    case "pt-BR":
+      return `${name} está pronta`;
+    case "zh-Hans":
+      return `${name} 已就绪`;
+    case "zh-Hant":
+      return `${name} 已就緒`;
+    case "en-XA":
+      return `[${name} îš ŕéáðý ~~~]`;
+    case "ar-XB":
+      return `${name}\u202e is ready\u202c`;
+  }
+  return `${name} is ready`;
+}
+
+export function accountsCustomApiChooseQuestion(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `بأي نموذج يجيب نائب القبطان؟`;
+    case "de":
+      return `Mit welchem Modell soll dein erster Offizier antworten?`;
+    case "es":
+      return `¿Con qué modelo debe responder tu primer oficial?`;
+    case "fr":
+      return `Avec quel modèle votre second doit-il répondre ?`;
+    case "ja":
+      return `一等航海士にはどのモデルで応答させますか？`;
+    case "ko":
+      return `일등항해사가 어떤 모델로 답할까요?`;
+    case "pt-BR":
+      return `Com qual modelo seu imediato deve responder?`;
+    case "zh-Hans":
+      return `你的大副应该用哪个模型来回答？`;
+    case "zh-Hant":
+      return `你的大副要用哪個模型來回應？`;
+    case "en-XA":
+      return `[Ŵĥîçĥ ɱöðéļ šĥöûļð ýöûŕ ƒîŕšţ ɱáţé áñšŵéŕ ŵîţĥ? ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhich model should your first mate answer with?\u202c`;
+  }
+  return `Which model should your first mate answer with?`;
+}
+
+export function accountsCustomApiChooseFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر اختيار هذا النموذج.`;
+    case "de":
+      return `Dieses Modell konnte nicht gewählt werden.`;
+    case "es":
+      return `No se pudo elegir este modelo.`;
+    case "fr":
+      return `Impossible de choisir ce modèle.`;
+    case "ja":
+      return `このモデルを選べませんでした。`;
+    case "ko":
+      return `이 모델을 선택할 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível escolher este modelo.`;
+    case "zh-Hans":
+      return `无法选择此模型。`;
+    case "zh-Hant":
+      return `無法選擇這個模型。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ çĥööšé ţĥîš ɱöðéļ. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not choose this model.\u202c`;
+  }
+  return `Could not choose this model.`;
+}
+
+export function accountsCustomApiUseModel(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام ${model}`;
+    case "de":
+      return `${model} verwenden`;
+    case "es":
+      return `Usar ${model}`;
+    case "fr":
+      return `Utiliser ${model}`;
+    case "ja":
+      return `${model} を使う`;
+    case "ko":
+      return `${model} 사용`;
+    case "pt-BR":
+      return `Usar ${model}`;
+    case "zh-Hans":
+      return `使用 ${model}`;
+    case "zh-Hant":
+      return `使用 ${model}`;
+    case "en-XA":
+      return `[Ûšé ${model} ~~]`;
+    case "ar-XB":
+      return `\u202eUse \u202c${model}`;
+  }
+  return `Use ${model}`;
+}
+
+export function accountsCustomApiCrewUseSettings(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُضبط استخدام الطاقم لهذه النماذج في جدول النماذج في الإعدادات، ضمن «الذكاء».`;
+    case "de":
+      return `Wie die Crew diese Modelle nutzt, legst du in den Einstellungen unter Intelligenz auf der Modelltafel fest.`;
+    case "es":
+      return `El uso de estos modelos por la tripulación se configura en el tablero Modelos de Configuración, en Inteligencia.`;
+    case "fr":
+      return `L’usage de ces modèles par l’équipage se règle dans le tableau Modèles des Réglages, sous Intelligence.`;
+    case "ja":
+      return `これらのモデルを乗組員がどう使うかは、設定の「インテリジェンス」にあるモデルボードで設定します。`;
+    case "ko":
+      return `선원들이 이 모델을 쓰는 방식은 설정의 지능 아래 모델 보드에서 정해요.`;
+    case "pt-BR":
+      return `O uso destes modelos pela tripulação é definido no quadro Modelos, em Ajustes, na seção Inteligência.`;
+    case "zh-Hans":
+      return `船员们如何使用这些模型，在“设置”的“智能”下的模型面板中设置。`;
+    case "zh-Hant":
+      return `船員如何使用這些模型，在「設定」的「智慧等級」中的模型面板設定。`;
+    case "en-XA":
+      return `[Çŕéŵ ûšé ƒöŕ ţĥéšé ɱöðéļš îš šéţ öñ ţĥé Ṁöðéļš ƀöáŕð îñ Šéţţîñĝš, ûñðéŕ Îñţéļļîĝéñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew use for these models is set on the Models board in Settings, under Intelligence.\u202c`;
+  }
+  return `Crew use for these models is set on the Models board in Settings, under Intelligence.`;
+}
+
+export function accountsCustomApiChooseLater(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الاختيار لاحقًا`;
+    case "de":
+      return `Später wählen`;
+    case "es":
+      return `Elegir más tarde`;
+    case "fr":
+      return `Choisir plus tard`;
+    case "ja":
+      return `あとで選ぶ`;
+    case "ko":
+      return `나중에 선택`;
+    case "pt-BR":
+      return `Escolher depois`;
+    case "zh-Hans":
+      return `稍后选择`;
+    case "zh-Hant":
+      return `稍後再選`;
+    case "en-XA":
+      return `[Çĥööšé ļáţéŕ ~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose later\u202c`;
+  }
+  return `Choose later`;
+}
+
+export function accountsCustomApiUnencrypted(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `غير مشفّر`;
+    case "de":
+      return `Unverschlüsselt`;
+    case "es":
+      return `Sin cifrar`;
+    case "fr":
+      return `Non chiffré`;
+    case "ja":
+      return `暗号化なし`;
+    case "ko":
+      return `암호화 안 됨`;
+    case "pt-BR":
+      return `Sem criptografia`;
+    case "zh-Hans":
+      return `未加密`;
+    case "zh-Hant":
+      return `未加密`;
+    case "en-XA":
+      return `[Ûñéñçŕýþţéð ~~~~]`;
+    case "ar-XB":
+      return `\u202eUnencrypted\u202c`;
+  }
+  return `Unencrypted`;
+}
+
+export function accountsCustomApiStatusReady(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جاهز`;
+    case "de":
+      return `Bereit`;
+    case "es":
+      return `Lista`;
+    case "fr":
+      return `Prête`;
+    case "ja":
+      return `準備完了`;
+    case "ko":
+      return `준비됨`;
+    case "pt-BR":
+      return `Pronta`;
+    case "zh-Hans":
+      return `就绪`;
+    case "zh-Hant":
+      return `就緒`;
+    case "en-XA":
+      return `[Ŕéáðý ~~]`;
+    case "ar-XB":
+      return `\u202eReady\u202c`;
+  }
+  return `Ready`;
+}
+
+export function accountsCustomApiStatusNotChecked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُفحص`;
+    case "de":
+      return `Nicht geprüft`;
+    case "es":
+      return `Sin comprobar`;
+    case "fr":
+      return `Non vérifiée`;
+    case "ja":
+      return `未チェック`;
+    case "ko":
+      return `확인 안 됨`;
+    case "pt-BR":
+      return `Não verificada`;
+    case "zh-Hans":
+      return `未检查`;
+    case "zh-Hant":
+      return `未檢查`;
+    case "en-XA":
+      return `[Ñöţ çĥéçķéð ~~~~]`;
+    case "ar-XB":
+      return `\u202eNot checked\u202c`;
+  }
+  return `Not checked`;
+}
+
+export function accountsCustomApiStatusChecked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فُحص`;
+    case "de":
+      return `Geprüft`;
+    case "es":
+      return `Comprobada`;
+    case "fr":
+      return `Vérifiée`;
+    case "ja":
+      return `チェック済み`;
+    case "ko":
+      return `확인됨`;
+    case "pt-BR":
+      return `Verificada`;
+    case "zh-Hans":
+      return `已检查`;
+    case "zh-Hant":
+      return `已檢查`;
+    case "en-XA":
+      return `[Çĥéçķéð ~~~]`;
+    case "ar-XB":
+      return `\u202eChecked\u202c`;
+  }
+  return `Checked`;
+}
+
+export function accountsCustomApiStatusPaused(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف مؤقتًا`;
+    case "de":
+      return `Pausiert`;
+    case "es":
+      return `En pausa`;
+    case "fr":
+      return `En pause`;
+    case "ja":
+      return `一時停止中`;
+    case "ko":
+      return `일시 정지됨`;
+    case "pt-BR":
+      return `Pausada`;
+    case "zh-Hans":
+      return `已暂停`;
+    case "zh-Hant":
+      return `已暫停`;
+    case "en-XA":
+      return `[Þáûšéð ~~]`;
+    case "ar-XB":
+      return `\u202ePaused\u202c`;
+  }
+  return `Paused`;
+}
+
+export function accountsCustomApiStatusPausedNotChecked(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف مؤقتًا · لم يُفحص`;
+    case "de":
+      return `Pausiert · nicht geprüft`;
+    case "es":
+      return `En pausa · sin comprobar`;
+    case "fr":
+      return `En pause · non vérifiée`;
+    case "ja":
+      return `一時停止中 · 未チェック`;
+    case "ko":
+      return `일시 정지됨 · 확인 안 됨`;
+    case "pt-BR":
+      return `Pausada · não verificada`;
+    case "zh-Hans":
+      return `已暂停 · 未检查`;
+    case "zh-Hant":
+      return `已暫停 · 未檢查`;
+    case "en-XA":
+      return `[Þáûšéð · ñöţ çĥéçķéð ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaused · not checked\u202c`;
+  }
+  return `Paused · not checked`;
+}
+
+export function accountsCustomApiEdit(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعديل`;
+    case "de":
+      return `Bearbeiten`;
+    case "es":
+      return `Editar`;
+    case "fr":
+      return `Modifier`;
+    case "ja":
+      return `編集`;
+    case "ko":
+      return `편집`;
+    case "pt-BR":
+      return `Editar`;
+    case "zh-Hans":
+      return `编辑`;
+    case "zh-Hant":
+      return `編輯`;
+    case "en-XA":
+      return `[Éðîţ ~~]`;
+    case "ar-XB":
+      return `\u202eEdit\u202c`;
+  }
+  return `Edit`;
+}
+
+export function accountsCustomApiDisconnect(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `قطع الاتصال`;
+    case "de":
+      return `Trennen`;
+    case "es":
+      return `Desconectar`;
+    case "fr":
+      return `Déconnecter`;
+    case "ja":
+      return `接続を解除`;
+    case "ko":
+      return `연결 해제`;
+    case "pt-BR":
+      return `Desconectar`;
+    case "zh-Hans":
+      return `断开连接`;
+    case "zh-Hant":
+      return `中斷連線`;
+    case "en-XA":
+      return `[Ðîšçöññéçţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eDisconnect\u202c`;
+  }
+  return `Disconnect`;
+}
+
+export function accountsCustomApiColumnModel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `النموذج`;
+    case "de":
+      return `MODELL`;
+    case "es":
+      return `MODELO`;
+    case "fr":
+      return `MODÈLE`;
+    case "ja":
+      return `モデル`;
+    case "ko":
+      return `모델`;
+    case "pt-BR":
+      return `MODELO`;
+    case "zh-Hans":
+      return `模型`;
+    case "zh-Hant":
+      return `模型`;
+    case "en-XA":
+      return `[ṀÖÐÉĻ ~~]`;
+    case "ar-XB":
+      return `\u202eMODEL\u202c`;
+  }
+  return `MODEL`;
+}
+
+export function accountsCustomApiColumnStatus(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحالة`;
+    case "de":
+      return `ZUSTAND`;
+    case "es":
+      return `ESTADO`;
+    case "fr":
+      return `ÉTAT`;
+    case "ja":
+      return `状態`;
+    case "ko":
+      return `상태`;
+    case "pt-BR":
+      return `STATUS`;
+    case "zh-Hans":
+      return `状态`;
+    case "zh-Hant":
+      return `狀態`;
+    case "en-XA":
+      return `[ŠŢÅŢÛŠ ~~]`;
+    case "ar-XB":
+      return `\u202eSTATUS\u202c`;
+  }
+  return `STATUS`;
+}
+
+export function accountsCustomApiColumnFirstmate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نائب القبطان`;
+    case "de":
+      return `ERSTER OFFIZIER`;
+    case "es":
+      return `PRIMER OFICIAL`;
+    case "fr":
+      return `SECOND`;
+    case "ja":
+      return `一等航海士`;
+    case "ko":
+      return `일등항해사`;
+    case "pt-BR":
+      return `IMEDIATO`;
+    case "zh-Hans":
+      return `大副`;
+    case "zh-Hant":
+      return `大副`;
+    case "en-XA":
+      return `[ƑÎŔŠŢṀÅŢÉ ~~~]`;
+    case "ar-XB":
+      return `\u202eFIRSTMATE\u202c`;
+  }
+  return `FIRSTMATE`;
+}
+
+export function accountsCustomApiCrewUseRemote(input: { who: string }): string {
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُضبط استخدام الطاقم لهذه النماذج في جدول النماذج، في الأسفل ضمن «الذكاء». لا يعمل أي نموذج هنا إلا على ${who}.`;
+    case "de":
+      return `Wie die Crew diese Modelle nutzt, legst du weiter unten unter Intelligenz auf der Modelltafel fest. Ein Modell hier läuft nur auf ${who}.`;
+    case "es":
+      return `El uso de estos modelos por la tripulación se configura en el tablero Modelos, más abajo en Inteligencia. Un modelo de aquí solo se ejecuta en ${who}.`;
+    case "fr":
+      return `L’usage de ces modèles par l’équipage se règle dans le tableau Modèles, plus bas dans Intelligence. Un modèle d’ici ne fonctionne que sur ${who}.`;
+    case "ja":
+      return `これらのモデルを乗組員がどう使うかは、「インテリジェンス」の下にあるモデルボードで設定します。ここのモデルは ${who} でのみ実行されます。`;
+    case "ko":
+      return `선원들이 이 모델을 쓰는 방식은 지능 아래쪽의 모델 보드에서 정해요. 여기 있는 모델은 ${who}에서만 실행돼요.`;
+    case "pt-BR":
+      return `O uso destes modelos pela tripulação é definido no quadro Modelos, mais abaixo em Inteligência. Um modelo daqui só roda em ${who}.`;
+    case "zh-Hans":
+      return `船员们如何使用这些模型，在“智能”下方的模型面板中设置。这里的模型只在 ${who} 上运行。`;
+    case "zh-Hant":
+      return `船員如何使用這些模型，在「智慧等級」下方的模型面板設定。這裡的模型只在 ${who} 上執行。`;
+    case "en-XA":
+      return `[Çŕéŵ ûšé ƒöŕ ţĥéšé ɱöðéļš îš šéţ öñ ţĥé Ṁöðéļš ƀöáŕð, ƒûŕţĥéŕ ðöŵñ Îñţéļļîĝéñçé. Å ɱöðéļ ĥéŕé ŕûñš öñļý öñ ${who}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew use for these models is set on the Models board, further down Intelligence. A model here runs only on \u202c${who}\u202e.\u202c`;
+  }
+  return `Crew use for these models is set on the Models board, further down Intelligence. A model here runs only on ${who}.`;
+}
+
+export function accountsCustomApiDisconnectRemote(input: { here: string; who: string }): string {
+  const here = input.here;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يزيل قطع الاتصال هذا الاتصال على ${who}. لا يحتفظ ${here} بأي نسخة من مفتاحه.`;
+    case "de":
+      return `Trennen entfernt diese Verbindung auf ${who}. ${here} behält keine Kopie ihres Schlüssels.`;
+    case "es":
+      return `Desconectar quita esta conexión en ${who}. ${here} no guarda ninguna copia de su clave.`;
+    case "fr":
+      return `Déconnecter retire cette connexion sur ${who}. ${here} ne garde aucune copie de sa clé.`;
+    case "ja":
+      return `接続を解除すると、${who} からこの接続が削除されます。${here} にはこのキーのコピーは残りません。`;
+    case "ko":
+      return `연결을 해제하면 ${who}에서 이 연결이 제거돼요. ${here}에는 이 연결의 키 사본이 남아 있지 않아요.`;
+    case "pt-BR":
+      return `Desconectar remove esta conexão em ${who}. ${here} não guarda nenhuma cópia da chave dela.`;
+    case "zh-Hans":
+      return `断开连接会在 ${who} 上移除此连接。${here} 不保留它的密钥副本。`;
+    case "zh-Hant":
+      return `中斷連線會在 ${who} 上移除這個連線。${here} 不會保留它的金鑰副本。`;
+    case "en-XA":
+      return `[Ðîšçöññéçţ ŕéɱöṽéš ţĥîš çöññéçţîöñ öñ ${who}. ${here} ķééþš ñö çöþý öƒ îţš ķéý. ~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDisconnect removes this connection on \u202c${who}\u202e. \u202c${here}\u202e keeps no copy of its key.\u202c`;
+  }
+  return `Disconnect removes this connection on ${who}. ${here} keeps no copy of its key.`;
+}
+
+export function accountsCustomApiKeepConnection(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إبقاء الاتصال`;
+    case "de":
+      return `Verbindung behalten`;
+    case "es":
+      return `Mantener la conexión`;
+    case "fr":
+      return `Garder la connexion`;
+    case "ja":
+      return `接続を残す`;
+    case "ko":
+      return `연결 유지`;
+    case "pt-BR":
+      return `Manter conexão`;
+    case "zh-Hans":
+      return `保留连接`;
+    case "zh-Hant":
+      return `保留連線`;
+    case "en-XA":
+      return `[Ķééþ çöññéçţîöñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eKeep connection\u202c`;
+  }
+  return `Keep connection`;
+}
+
+export function accountsCustomApiUseForFirstMate(input: { model: string }): string {
+  const model = input.model;
+  switch (currentLanguage()) {
+    case "ar":
+      return `استخدام ${model} لنائب القبطان`;
+    case "de":
+      return `${model} für deinen ersten Offizier verwenden`;
+    case "es":
+      return `Usar ${model} para tu primer oficial`;
+    case "fr":
+      return `Utiliser ${model} pour votre second`;
+    case "ja":
+      return `一等航海士に ${model} を使う`;
+    case "ko":
+      return `일등항해사에 ${model} 사용`;
+    case "pt-BR":
+      return `Usar ${model} para o seu imediato`;
+    case "zh-Hans":
+      return `让大副使用 ${model}`;
+    case "zh-Hant":
+      return `讓你的大副使用 ${model}`;
+    case "en-XA":
+      return `[Ûšé ${model} ƒöŕ ýöûŕ ƒîŕšţ ɱáţé ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eUse \u202c${model}\u202e for your first mate\u202c`;
+  }
+  return `Use ${model} for your first mate`;
+}
+
+export function accountsCustomApiFirstMate(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نائب القبطان`;
+    case "de":
+      return `Erster Offizier`;
+    case "es":
+      return `Primer oficial`;
+    case "fr":
+      return `Second`;
+    case "ja":
+      return `一等航海士`;
+    case "ko":
+      return `일등항해사`;
+    case "pt-BR":
+      return `Imediato`;
+    case "zh-Hans":
+      return `大副`;
+    case "zh-Hant":
+      return `大副`;
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate\u202c`;
+  }
+  return `First mate`;
+}
+
+export function accountsCustomApiListFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّرت قراءة اتصالاتك المخصصة.`;
+    case "de":
+      return `Deine eigenen Verbindungen konnten nicht gelesen werden.`;
+    case "es":
+      return `No se pudieron leer tus conexiones personalizadas.`;
+    case "fr":
+      return `Impossible de lire vos connexions personnalisées.`;
+    case "ja":
+      return `カスタム接続を読み取れませんでした。`;
+    case "ko":
+      return `사용자 지정 연결을 읽을 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível ler suas conexões personalizadas.`;
+    case "zh-Hans":
+      return `无法读取你的自定义连接。`;
+    case "zh-Hant":
+      return `無法讀取你的自訂連線。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ŕéáð ýöûŕ çûšţöɱ çöññéçţîöñš. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not read your custom connections.\u202c`;
+  }
+  return `Could not read your custom connections.`;
+}
+
+export function accountsCustomApiResumeNeedsCheck(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عدّل واحفظ لفحص هذه النماذج قبل الاستئناف.`;
+    case "de":
+      return `Bearbeite und speichere, um diese Modelle vor dem Fortsetzen zu prüfen.`;
+    case "es":
+      return `Edita y guarda para comprobar estos modelos antes de reanudar.`;
+    case "fr":
+      return `Modifiez et enregistrez pour vérifier ces modèles avant de reprendre.`;
+    case "ja":
+      return `再開する前に、編集して保存し、これらのモデルをチェックしてください。`;
+    case "ko":
+      return `다시 시작하기 전에 편집 후 저장해서 이 모델들을 확인하세요.`;
+    case "pt-BR":
+      return `Edite e salve para verificar estes modelos antes de retomar.`;
+    case "zh-Hans":
+      return `请编辑并保存以检查这些模型，然后再恢复。`;
+    case "zh-Hant":
+      return `請先編輯並儲存，檢查這些模型後再繼續。`;
+    case "en-XA":
+      return `[Éðîţ áñð Šáṽé ţö çĥéçķ ţĥéšé ɱöðéļš ƀéƒöŕé ŕéšûɱîñĝ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEdit and Save to check these models before resuming.\u202c`;
+  }
+  return `Edit and Save to check these models before resuming.`;
+}
+
+export function accountsCustomApiChangeFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر تغيير هذا الاتصال.`;
+    case "de":
+      return `Diese Verbindung konnte nicht geändert werden.`;
+    case "es":
+      return `No se pudo cambiar esta conexión.`;
+    case "fr":
+      return `Impossible de modifier cette connexion.`;
+    case "ja":
+      return `この接続を変更できませんでした。`;
+    case "ko":
+      return `이 연결을 바꿀 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível alterar esta conexão.`;
+    case "zh-Hans":
+      return `无法更改此连接。`;
+    case "zh-Hant":
+      return `無法變更這個連線。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ çĥáñĝé ţĥîš çöññéçţîöñ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not change this connection.\u202c`;
+  }
+  return `Could not change this connection.`;
+}
+
+export function accountsCustomApiPause(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف مؤقت`;
+    case "de":
+      return `Pausieren`;
+    case "es":
+      return `Pausar`;
+    case "fr":
+      return `Mettre en pause`;
+    case "ja":
+      return `一時停止`;
+    case "ko":
+      return `일시 정지`;
+    case "pt-BR":
+      return `Pausar`;
+    case "zh-Hans":
+      return `暂停`;
+    case "zh-Hant":
+      return `暫停`;
+    case "en-XA":
+      return `[Þáûšé ~~]`;
+    case "ar-XB":
+      return `\u202ePause\u202c`;
+  }
+  return `Pause`;
+}
+
+export function accountsCustomApiResume(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استئناف`;
+    case "de":
+      return `Fortsetzen`;
+    case "es":
+      return `Reanudar`;
+    case "fr":
+      return `Reprendre`;
+    case "ja":
+      return `再開`;
+    case "ko":
+      return `다시 시작`;
+    case "pt-BR":
+      return `Retomar`;
+    case "zh-Hans":
+      return `恢复`;
+    case "zh-Hant":
+      return `繼續`;
+    case "en-XA":
+      return `[Ŕéšûɱé ~~]`;
+    case "ar-XB":
+      return `\u202eResume\u202c`;
+  }
+  return `Resume`;
+}
+
+export function accountsCustomApiResumeToUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `استأنف هذا الاتصال لاستخدامه.`;
+    case "de":
+      return `Setz diese Verbindung fort, um sie zu verwenden.`;
+    case "es":
+      return `Reanuda esta conexión para usarla.`;
+    case "fr":
+      return `Reprenez cette connexion pour l’utiliser.`;
+    case "ja":
+      return `使うにはこの接続を再開してください。`;
+    case "ko":
+      return `이 연결을 쓰려면 다시 시작하세요.`;
+    case "pt-BR":
+      return `Retome esta conexão para usá-la.`;
+    case "zh-Hans":
+      return `恢复此连接后即可使用。`;
+    case "zh-Hant":
+      return `繼續這個連線後即可使用。`;
+    case "en-XA":
+      return `[Ŕéšûɱé ţĥîš çöññéçţîöñ ţö ûšé îţ. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eResume this connection to use it.\u202c`;
+  }
+  return `Resume this connection to use it.`;
+}
+
+export function accountsCustomApiCheckModelFirst(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عدّل واحفظ لفحص هذا النموذج أولًا.`;
+    case "de":
+      return `Bearbeite und speichere, um dieses Modell zuerst zu prüfen.`;
+    case "es":
+      return `Edita y guarda para comprobar primero este modelo.`;
+    case "fr":
+      return `Modifiez et enregistrez pour vérifier d’abord ce modèle.`;
+    case "ja":
+      return `先に編集して保存し、このモデルをチェックしてください。`;
+    case "ko":
+      return `먼저 편집 후 저장해서 이 모델을 확인하세요.`;
+    case "pt-BR":
+      return `Edite e salve para verificar este modelo primeiro.`;
+    case "zh-Hans":
+      return `请先编辑并保存以检查此模型。`;
+    case "zh-Hant":
+      return `請先編輯並儲存，檢查這個模型。`;
+    case "en-XA":
+      return `[Éðîţ áñð Šáṽé ţö çĥéçķ ţĥîš ɱöðéļ ƒîŕšţ. ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEdit and Save to check this model first.\u202c`;
+  }
+  return `Edit and Save to check this model first.`;
+}
+
+export function accountsCustomApiCheckBeforeUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `عدّل واحفظ لفحص هذه النماذج قبل الاستخدام.`;
+    case "de":
+      return `Bearbeite und speichere, um diese Modelle vor der Verwendung zu prüfen.`;
+    case "es":
+      return `Edita y guarda para comprobar estos modelos antes de usarlos.`;
+    case "fr":
+      return `Modifiez et enregistrez pour vérifier ces modèles avant de les utiliser.`;
+    case "ja":
+      return `使う前に、編集して保存し、これらのモデルをチェックしてください。`;
+    case "ko":
+      return `쓰기 전에 편집 후 저장해서 이 모델들을 확인하세요.`;
+    case "pt-BR":
+      return `Edite e salve para verificar estes modelos antes de usá-los.`;
+    case "zh-Hans":
+      return `使用前请编辑并保存以检查这些模型。`;
+    case "zh-Hant":
+      return `使用前請先編輯並儲存，檢查這些模型。`;
+    case "en-XA":
+      return `[Éðîţ áñð Šáṽé ţö çĥéçķ ţĥéšé ɱöðéļš ƀéƒöŕé ûšé. ~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEdit and Save to check these models before use.\u202c`;
+  }
+  return `Edit and Save to check these models before use.`;
+}
+
+export function accountsCustomApiPausedHint(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متوقف مؤقتًا. استأنف لاستخدام هذه النماذج.`;
+    case "de":
+      return `Pausiert. Setz fort, um diese Modelle zu verwenden.`;
+    case "es":
+      return `En pausa. Reanuda para usar estos modelos.`;
+    case "fr":
+      return `En pause. Reprenez pour utiliser ces modèles.`;
+    case "ja":
+      return `一時停止中です。これらのモデルを使うには再開してください。`;
+    case "ko":
+      return `일시 정지됨. 이 모델들을 쓰려면 다시 시작하세요.`;
+    case "pt-BR":
+      return `Pausada. Retome para usar estes modelos.`;
+    case "zh-Hans":
+      return `已暂停。恢复后即可使用这些模型。`;
+    case "zh-Hant":
+      return `已暫停。繼續後即可使用這些模型。`;
+    case "en-XA":
+      return `[Þáûšéð. Ŕéšûɱé ţö ûšé ţĥéšé ɱöðéļš. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaused. Resume to use these models.\u202c`;
+  }
+  return `Paused. Resume to use these models.`;
+}
+
+export function accountsCustomApiCrewUse(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يُضبط استخدام الطاقم لهذه النماذج في جدول النماذج، في الأسفل ضمن «الذكاء».`;
+    case "de":
+      return `Wie die Crew diese Modelle nutzt, legst du weiter unten unter Intelligenz auf der Modelltafel fest.`;
+    case "es":
+      return `El uso de estos modelos por la tripulación se configura en el tablero Modelos, más abajo en Inteligencia.`;
+    case "fr":
+      return `L’usage de ces modèles par l’équipage se règle dans le tableau Modèles, plus bas dans Intelligence.`;
+    case "ja":
+      return `これらのモデルを乗組員がどう使うかは、「インテリジェンス」の下にあるモデルボードで設定します。`;
+    case "ko":
+      return `선원들이 이 모델을 쓰는 방식은 지능 아래쪽의 모델 보드에서 정해요.`;
+    case "pt-BR":
+      return `O uso destes modelos pela tripulação é definido no quadro Modelos, mais abaixo em Inteligência.`;
+    case "zh-Hans":
+      return `船员们如何使用这些模型，在“智能”下方的模型面板中设置。`;
+    case "zh-Hant":
+      return `船員如何使用這些模型，在「智慧等級」下方的模型面板設定。`;
+    case "en-XA":
+      return `[Çŕéŵ ûšé ƒöŕ ţĥéšé ɱöðéļš îš šéţ öñ ţĥé Ṁöðéļš ƀöáŕð, ƒûŕţĥéŕ ðöŵñ Îñţéļļîĝéñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrew use for these models is set on the Models board, further down Intelligence.\u202c`;
+  }
+  return `Crew use for these models is set on the Models board, further down Intelligence.`;
+}
+
+export function accountsCustomApiDisconnectWarning(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يوقف قطع الاتصال فورًا العمل المرتبط به، ونائب القبطان إن كان يستخدم هذا الاتصال. ولا يزيل إلا هذا الاتصال محليًا، ويُبقي سجل مهامك، ولا ينقل العمل المتوقف إلى خادم آخر. ولا يمكنه إلغاء مفتاح الخادم أو محو محتوى أُرسل بالفعل.`;
+    case "de":
+      return `Trennen stoppt sofort die zugehörige Arbeit und deinen ersten Offizier, falls er diese Verbindung nutzt. Es entfernt nur diese Verbindung lokal, behält deine Aufgabenprotokolle und verschiebt gestoppte Arbeit nicht auf einen anderen Server. Es kann den Schlüssel beim Server nicht widerrufen und bereits gesendete Inhalte nicht löschen.`;
+    case "es":
+      return `Desconectar detiene de inmediato el trabajo que usa esta conexión y a tu primer oficial si la usa. Solo quita la conexión de forma local, conserva el historial de tus tareas y no pasa el trabajo detenido a otro servidor. No puede revocar la clave en el servidor ni borrar el contenido ya enviado.`;
+    case "fr":
+      return `Déconnecter arrête immédiatement le travail qui utilise cette connexion, ainsi que votre second s’il l’utilise. Seule cette connexion est retirée, localement ; l’historique de vos tâches est conservé et le travail arrêté ne passe pas sur un autre serveur. La clé ne peut pas être révoquée sur le serveur, ni le contenu déjà envoyé effacé.`;
+    case "ja":
+      return `接続を解除すると、この接続を使う作業と、この接続を使っている場合は一等航海士がすぐに停止します。削除されるのはこのコンピューター上のこの接続だけで、タスクの履歴は残り、停止した作業が別のサーバーに移ることはありません。サーバー側のキーを無効にしたり、すでに送信した内容を消したりすることはできません。`;
+    case "ko":
+      return `연결을 해제하면 이 연결을 쓰는 작업이 바로 중지되고, 일등항해사가 이 연결을 쓰고 있다면 일등항해사도 중지돼요. 이 연결만 로컬에서 제거하고 작업 기록은 남기며, 중지된 작업을 다른 서버로 옮기지 않아요. 서버의 키를 폐기하거나 이미 보낸 내용을 지울 수는 없어요.`;
+    case "pt-BR":
+      return `Desconectar para na hora o trabalho que usa esta conexão e o seu imediato, se ele a usar. Remove só esta conexão, localmente, mantém o histórico das suas tarefas e não move o trabalho parado para outro servidor. Não consegue revogar a chave no servidor nem apagar o conteúdo já enviado.`;
+    case "zh-Hans":
+      return `断开连接会立即停止使用此连接的相关工作；如果你的大副在用它，也会停止大副。它只在本地移除此连接，保留你的任务记录，也不会把已停止的工作转到其他服务器。它无法吊销服务器上的密钥，也无法删除已经发送的内容。`;
+    case "zh-Hant":
+      return `中斷連線會立即停止相關的工作；如果你的大副正在使用這個連線，也會一併停止。它只會在本機移除這個連線，保留你的任務紀錄，也不會把停止的工作移到其他伺服器。它無法撤銷伺服器上的金鑰，也無法清除已經傳送的內容。`;
+    case "en-XA":
+      return `[Ðîšçöññéçţ îɱɱéðîáţéļý šţöþš ɱáţçĥîñĝ ŵöŕķ áñð ýöûŕ ƒîŕšţ ɱáţé îƒ îţ ûšéš ţĥîš çöññéçţîöñ. Îţ ŕéɱöṽéš öñļý ţĥîš çöññéçţîöñ ļöçáļļý, ķééþš ýöûŕ ţášķ ĥîšţöŕý, áñð ðöéš ñöţ ɱöṽé šţöþþéð ŵöŕķ ţö áñöţĥéŕ šéŕṽéŕ. Îţ çáññöţ ŕéṽöķé ţĥé šéŕṽéŕ’š ķéý öŕ éŕášé çöñţéñţ áļŕéáðý šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDisconnect immediately stops matching work and your first mate if it uses this connection. It removes only this connection locally, keeps your task history, and does not move stopped work to another server. It cannot revoke the server’s key or erase content already sent.\u202c`;
+  }
+  return `Disconnect immediately stops matching work and your first mate if it uses this connection. It removes only this connection locally, keeps your task history, and does not move stopped work to another server. It cannot revoke the server’s key or erase content already sent.`;
+}
+
+export function accountsCustomApiDisconnectFailed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تعذّر قطع هذا الاتصال.`;
+    case "de":
+      return `Diese Verbindung konnte nicht getrennt werden.`;
+    case "es":
+      return `No se pudo desconectar esta conexión.`;
+    case "fr":
+      return `Impossible de déconnecter cette connexion.`;
+    case "ja":
+      return `この接続を解除できませんでした。`;
+    case "ko":
+      return `이 연결을 해제할 수 없었어요.`;
+    case "pt-BR":
+      return `Não foi possível desconectar esta conexão.`;
+    case "zh-Hans":
+      return `无法断开此连接。`;
+    case "zh-Hant":
+      return `無法中斷這個連線。`;
+    case "en-XA":
+      return `[Çöûļð ñöţ ðîšçöññéçţ ţĥîš çöññéçţîöñ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not disconnect this connection.\u202c`;
+  }
+  return `Could not disconnect this connection.`;
+}
+
+export function accountsCustomApiStopAndDisconnect(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إيقاف العمل وقطع الاتصال`;
+    case "de":
+      return `Arbeit stoppen und trennen`;
+    case "es":
+      return `Detener el trabajo y desconectar`;
+    case "fr":
+      return `Arrêter le travail et déconnecter`;
+    case "ja":
+      return `作業を停止して接続を解除`;
+    case "ko":
+      return `작업 중지 후 연결 해제`;
+    case "pt-BR":
+      return `Parar o trabalho e desconectar`;
+    case "zh-Hans":
+      return `停止工作并断开连接`;
+    case "zh-Hant":
+      return `停止工作並中斷連線`;
+    case "en-XA":
+      return `[Šţöþ ŵöŕķ áñð ðîšçöññéçţ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStop work and disconnect\u202c`;
+  }
+  return `Stop work and disconnect`;
+}
+
+export function accountsCustomApiDialogLabel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `اتصال API مخصص`;
+    case "de":
+      return `Verbindung zu eigener API`;
+    case "es":
+      return `Conexión de API personalizada`;
+    case "fr":
+      return `Connexion d’API personnalisée`;
+    case "ja":
+      return `カスタム API 接続`;
+    case "ko":
+      return `사용자 지정 API 연결`;
+    case "pt-BR":
+      return `Conexão de API personalizada`;
+    case "zh-Hans":
+      return `自定义 API 连接`;
+    case "zh-Hant":
+      return `自訂 API 連線`;
+    case "en-XA":
+      return `[Çûšţöɱ ÅÞÎ çöññéçţîöñ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCustom API connection\u202c`;
+  }
+  return `Custom API connection`;
+}
+
+export function accountsCopyCodeCopying(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ النسخ...`;
+    case "de":
+      return `Wird kopiert ...`;
+    case "es":
+      return `Copiando...`;
+    case "fr":
+      return `Copie...`;
+    case "ja":
+      return `コピー中...`;
+    case "ko":
+      return `복사 중...`;
+    case "pt-BR":
+      return `Copiando...`;
+    case "zh-Hans":
+      return `正在复制...`;
+    case "zh-Hant":
+      return `複製中…`;
+    case "en-XA":
+      return `[Çöþýîñĝ... ~~~~]`;
+    case "ar-XB":
+      return `\u202eCopying...\u202c`;
+  }
+  return `Copying...`;
+}
+
+export function accountsCopyCodeButton(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `نسخ الرمز`;
+    case "de":
+      return `Code kopieren`;
+    case "es":
+      return `Copiar código`;
+    case "fr":
+      return `Copier le code`;
+    case "ja":
+      return `コードをコピー`;
+    case "ko":
+      return `코드 복사`;
+    case "pt-BR":
+      return `Copiar código`;
+    case "zh-Hans":
+      return `复制代码`;
+    case "zh-Hant":
+      return `複製代碼`;
+    case "en-XA":
+      return `[Çöþý çöðé ~~~]`;
+    case "ar-XB":
+      return `\u202eCopy code\u202c`;
+  }
+  return `Copy code`;
+}
+
+export function accountsConnectNotSignedIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُسجَّل الدخول`;
+    case "de":
+      return `nicht angemeldet`;
+    case "es":
+      return `sin iniciar sesión`;
+    case "fr":
+      return `non connecté`;
+    case "ja":
+      return `未サインイン`;
+    case "ko":
+      return `로그인 안 됨`;
+    case "pt-BR":
+      return `sem login`;
+    case "zh-Hans":
+      return `未登录`;
+    case "zh-Hant":
+      return `未登入`;
+    case "en-XA":
+      return `[ñöţ šîĝñéð îñ ~~~~~]`;
+    case "ar-XB":
+      return `\u202enot signed in\u202c`;
+  }
+  return `not signed in`;
+}
+
+export function accountsConnectNotSignedInYet(input: { here: string; provider: string }): string {
+  const here = input.here;
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم يُسجَّل الدخول إلى ${provider} على ${here} بعد.`;
+    case "de":
+      return `${provider} ist auf ${here} noch nicht angemeldet.`;
+    case "es":
+      return `${provider} todavía no tiene la sesión iniciada en ${here}.`;
+    case "fr":
+      return `${provider} n’est pas encore connecté sur ${here}.`;
+    case "ja":
+      return `${here} ではまだ ${provider} にサインインしていません。`;
+    case "ko":
+      return `${here}에서 아직 ${provider}에 로그인하지 않았어요.`;
+    case "pt-BR":
+      return `${provider} ainda não tem login feito em ${here}.`;
+    case "zh-Hans":
+      return `${provider} 尚未在 ${here} 上登录。`;
+    case "zh-Hant":
+      return `${provider} 還沒在 ${here} 上登入。`;
+    case "en-XA":
+      return `[${provider} îš ñöţ šîĝñéð îñ öñ ${here} ýéţ. ~~~~~~~~~]`;
+    case "ar-XB":
+      return `${provider}\u202e is not signed in on \u202c${here}\u202e yet.\u202c`;
+  }
+  return `${provider} is not signed in on ${here} yet.`;
+}
+
+export function accountsConnectConnected(input: { provider: string }): string {
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${provider} متصل`;
+    case "de":
+      return `${provider} ist verbunden`;
+    case "es":
+      return `${provider} está conectado`;
+    case "fr":
+      return `${provider} est connecté`;
+    case "ja":
+      return `${provider} に接続済み`;
+    case "ko":
+      return `${provider} 연결됨`;
+    case "pt-BR":
+      return `${provider} está conectado`;
+    case "zh-Hans":
+      return `${provider} 已连接`;
+    case "zh-Hant":
+      return `${provider} 已連結`;
+    case "en-XA":
+      return `[${provider} îš çöññéçţéð ~~~~~]`;
+    case "ar-XB":
+      return `${provider}\u202e is connected\u202c`;
+  }
+  return `${provider} is connected`;
+}
+
+export function accountsConnectClaudeLoginThere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستخدم Claude تسجيل الدخول هناك`;
+    case "de":
+      return `Claude nutzt die Anmeldung dort`;
+    case "es":
+      return `Claude usa el inicio de sesión de allí`;
+    case "fr":
+      return `Claude utilise la connexion de là-bas`;
+    case "ja":
+      return `Claude はそちらのログインを使います`;
+    case "ko":
+      return `Claude는 그곳의 로그인을 사용해요`;
+    case "pt-BR":
+      return `O Claude usa o login de lá`;
+    case "zh-Hans":
+      return `Claude 使用那里的登录`;
+    case "zh-Hant":
+      return `Claude 使用那裡的登入`;
+    case "en-XA":
+      return `[Çļáûðé ûšéš ţĥé ļöĝîñ ţĥéŕé ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClaude uses the login there\u202c`;
+  }
+  return `Claude uses the login there`;
+}
+
+export function accountsConnectClaudeLoginOn(input: { here: string }): string {
+  const here = input.here;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستخدم Claude تسجيل الدخول على ${here}`;
+    case "de":
+      return `Claude nutzt die Anmeldung auf ${here}`;
+    case "es":
+      return `Claude usa el inicio de sesión de ${here}`;
+    case "fr":
+      return `Claude utilise la connexion de ${here}`;
+    case "ja":
+      return `Claude は ${here} のログインを使います`;
+    case "ko":
+      return `Claude는 ${here}의 로그인을 사용해요`;
+    case "pt-BR":
+      return `O Claude usa o login de ${here}`;
+    case "zh-Hans":
+      return `Claude 使用 ${here} 上的登录`;
+    case "zh-Hant":
+      return `Claude 使用 ${here} 上的登入`;
+    case "en-XA":
+      return `[Çļáûðé ûšéš ţĥé ļöĝîñ öñ ${here} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClaude uses the login on \u202c${here}`;
+  }
+  return `Claude uses the login on ${here}`;
+}
+
+export function accountsConnectAddAnother(input: { provider: string }): string {
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `إضافة حساب ${provider} آخر`;
+    case "de":
+      return `Weiteres ${provider}-Konto hinzufügen`;
+    case "es":
+      return `Agregar otra cuenta de ${provider}`;
+    case "fr":
+      return `Ajouter un autre compte ${provider}`;
+    case "ja":
+      return `${provider} アカウントをもう1つ追加`;
+    case "ko":
+      return `다른 ${provider} 계정 추가`;
+    case "pt-BR":
+      return `Adicionar outra conta do ${provider}`;
+    case "zh-Hans":
+      return `再添加一个 ${provider} 账户`;
+    case "zh-Hant":
+      return `再加入一個 ${provider} 帳號`;
+    case "en-XA":
+      return `[Åðð áñöţĥéŕ ${provider} áççöûñţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAdd another \u202c${provider}\u202e account\u202c`;
+  }
+  return `Add another ${provider} account`;
+}
+
+export function accountsConnectProvider(input: { provider: string }): string {
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `ربط ${provider}`;
+    case "de":
+      return `${provider} verbinden`;
+    case "es":
+      return `Conectar ${provider}`;
+    case "fr":
+      return `Connecter ${provider}`;
+    case "ja":
+      return `${provider} に接続`;
+    case "ko":
+      return `${provider} 연결`;
+    case "pt-BR":
+      return `Conectar ${provider}`;
+    case "zh-Hans":
+      return `连接 ${provider}`;
+    case "zh-Hant":
+      return `連結 ${provider}`;
+    case "en-XA":
+      return `[Çöññéçţ ${provider} ~~~]`;
+    case "ar-XB":
+      return `\u202eConnect \u202c${provider}`;
+  }
+  return `Connect ${provider}`;
+}
+
+export function accountsConnectConnecting(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الربط...`;
+    case "de":
+      return `Wird verbunden ...`;
+    case "es":
+      return `Conectando...`;
+    case "fr":
+      return `Connexion...`;
+    case "ja":
+      return `接続中...`;
+    case "ko":
+      return `연결 중...`;
+    case "pt-BR":
+      return `Conectando...`;
+    case "zh-Hans":
+      return `正在连接...`;
+    case "zh-Hant":
+      return `連結中…`;
+    case "en-XA":
+      return `[Çöññéçţîñĝ... ~~~~~]`;
+    case "ar-XB":
+      return `\u202eConnecting...\u202c`;
+  }
+  return `Connecting...`;
+}
+
+export function accountsConnectCustomApi(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `API مخصصة`;
+    case "de":
+      return `Eigene API`;
+    case "es":
+      return `API personalizada`;
+    case "fr":
+      return `API personnalisée`;
+    case "ja":
+      return `カスタム API`;
+    case "ko":
+      return `사용자 지정 API`;
+    case "pt-BR":
+      return `API personalizada`;
+    case "zh-Hans":
+      return `自定义 API`;
+    case "zh-Hant":
+      return `自訂 API`;
+    case "en-XA":
+      return `[Çûšţöɱ ÅÞÎ ~~~~]`;
+    case "ar-XB":
+      return `\u202eCustom API\u202c`;
+  }
+  return `Custom API`;
+}
+
+export function accountsConnectCrewOnly(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `للطاقم فقط`;
+    case "de":
+      return `nur für die Crew`;
+    case "es":
+      return `solo tripulación`;
+    case "fr":
+      return `équipage seulement`;
+    case "ja":
+      return `乗組員のみ`;
+    case "ko":
+      return `선원 전용`;
+    case "pt-BR":
+      return `só tripulação`;
+    case "zh-Hans":
+      return `仅限船员`;
+    case "zh-Hant":
+      return `僅限船員`;
+    case "en-XA":
+      return `[çŕéŵ öñļý ~~~]`;
+    case "ar-XB":
+      return `\u202ecrew only\u202c`;
+  }
+  return `crew only`;
+}
+
+export function accountsConnectInstallClaudeThere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `ثبّت Claude Code هناك أولًا`;
+    case "de":
+      return `dort zuerst Claude Code installieren`;
+    case "es":
+      return `primero instala Claude Code allí`;
+    case "fr":
+      return `installez d’abord Claude Code là-bas`;
+    case "ja":
+      return `先にそちらに Claude Code をインストールしてください`;
+    case "ko":
+      return `먼저 그곳에 Claude Code 설치 필요`;
+    case "pt-BR":
+      return `instale o Claude Code lá primeiro`;
+    case "zh-Hans":
+      return `请先在那里安装 Claude Code`;
+    case "zh-Hant":
+      return `請先在那裡安裝 Claude Code`;
+    case "en-XA":
+      return `[îñšţáļļ Çļáûðé Çöðé ţĥéŕé ƒîŕšţ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202einstall Claude Code there first\u202c`;
+  }
+  return `install Claude Code there first`;
+}
+
+export function accountsConnectUpdateThere(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حدّث Infinitary هناك أولًا`;
+    case "de":
+      return `dort zuerst Infinitary aktualisieren`;
+    case "es":
+      return `primero actualiza Infinitary allí`;
+    case "fr":
+      return `mettez d’abord Infinitary à jour là-bas`;
+    case "ja":
+      return `先にそちらの Infinitary をアップデートしてください`;
+    case "ko":
+      return `먼저 그곳의 Infinitary 업데이트 필요`;
+    case "pt-BR":
+      return `atualize o Infinitary lá primeiro`;
+    case "zh-Hans":
+      return `请先在那里更新 Infinitary`;
+    case "zh-Hant":
+      return `請先在那裡更新 Infinitary`;
+    case "en-XA":
+      return `[ûþðáţé Îñƒîñîţáŕý ţĥéŕé ƒîŕšţ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eupdate Infinitary there first\u202c`;
+  }
+  return `update Infinitary there first`;
+}
+
+export function accountsConnectHow(input: { provider: string }): string {
+  const provider = input.provider;
+  switch (currentLanguage()) {
+    case "ar":
+      return `كيف تريد ربط ${provider}؟`;
+    case "de":
+      return `Wie möchtest du ${provider} verbinden?`;
+    case "es":
+      return `¿Cómo quieres conectar ${provider}?`;
+    case "fr":
+      return `Comment voulez-vous connecter ${provider} ?`;
+    case "ja":
+      return `${provider} にどの方法で接続しますか？`;
+    case "ko":
+      return `${provider}을(를) 어떻게 연결할까요?`;
+    case "pt-BR":
+      return `Como você quer conectar ${provider}?`;
+    case "zh-Hans":
+      return `你想如何连接 ${provider}？`;
+    case "zh-Hant":
+      return `你想用什麼方式連結 ${provider}？`;
+    case "en-XA":
+      return `[Ĥöŵ ðö ýöû ŵáñţ ţö çöññéçţ ${provider}? ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eHow do you want to connect \u202c${provider}\u202e?\u202c`;
+  }
+  return `How do you want to connect ${provider}?`;
+}
+
+export function accountsConnectBrowser(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تسجيل الدخول عبر متصفحك`;
+    case "de":
+      return `Mit deinem Browser anmelden`;
+    case "es":
+      return `Iniciar sesión con tu navegador`;
+    case "fr":
+      return `Se connecter avec votre navigateur`;
+    case "ja":
+      return `ブラウザでサインイン`;
+    case "ko":
+      return `브라우저로 로그인`;
+    case "pt-BR":
+      return `Fazer login pelo navegador`;
+    case "zh-Hans":
+      return `用浏览器登录`;
+    case "zh-Hant":
+      return `用瀏覽器登入`;
+    case "en-XA":
+      return `[Šîĝñ îñ ŵîţĥ ýöûŕ ƀŕöŵšéŕ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSign in with your browser\u202c`;
+  }
+  return `Sign in with your browser`;
+}
+
+export function accountsConnectCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function accountsConnectSubmit(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إرسال`;
+    case "de":
+      return `Senden`;
+    case "es":
+      return `Enviar`;
+    case "fr":
+      return `Envoyer`;
+    case "ja":
+      return `送信`;
+    case "ko":
+      return `제출`;
+    case "pt-BR":
+      return `Enviar`;
+    case "zh-Hans":
+      return `提交`;
+    case "zh-Hant":
+      return `送出`;
+    case "en-XA":
+      return `[Šûƀɱîţ ~~]`;
+    case "ar-XB":
+      return `\u202eSubmit\u202c`;
+  }
+  return `Submit`;
+}
+
+export function accountsConnectOpenSignIn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `فتح صفحة تسجيل الدخول`;
+    case "de":
+      return `Anmeldeseite öffnen`;
+    case "es":
+      return `Abrir la página de inicio de sesión`;
+    case "fr":
+      return `Ouvrir la page de connexion`;
+    case "ja":
+      return `サインインページを開く`;
+    case "ko":
+      return `로그인 페이지 열기`;
+    case "pt-BR":
+      return `Abrir a página de login`;
+    case "zh-Hans":
+      return `打开登录页面`;
+    case "zh-Hant":
+      return `開啟登入頁面`;
+    case "en-XA":
+      return `[Öþéñ ţĥé šîĝñ-îñ þáĝé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen the sign-in page\u202c`;
+  }
+  return `Open the sign-in page`;
+}
+
+export function devicesRemoteOutOfReach(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `${name} خارج المتناول`;
+    case "de":
+      return `${name} ist außer Reichweite`;
+    case "es":
+      return `${name} está fuera de alcance`;
+    case "fr":
+      return `${name} est hors de portée`;
+    case "ja":
+      return `${name} と連絡がつきません`;
+    case "ko":
+      return `${name} 연락 닿지 않음`;
+    case "pt-BR":
+      return `${name} está fora de alcance`;
+    case "zh-Hans":
+      return `${name} 无法联系`;
+    case "zh-Hant":
+      return `${name} 連絡不上`;
+    case "en-XA":
+      return `[${name} îš öûţ öƒ ŕéáçĥ ~~~~~~]`;
+    case "ar-XB":
+      return `${name}\u202e is out of reach\u202c`;
+  }
+  return `${name} is out of reach`;
+}
+
+export function devicesRemoteControlling(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `التحكم في ${name}`;
+    case "de":
+      return `${name} wird gesteuert`;
+    case "es":
+      return `Controlando ${name}`;
+    case "fr":
+      return `Contrôle de ${name}`;
+    case "ja":
+      return `${name} を操作中`;
+    case "ko":
+      return `${name} 제어 중`;
+    case "pt-BR":
+      return `Controlando ${name}`;
+    case "zh-Hans":
+      return `正在控制 ${name}`;
+    case "zh-Hant":
+      return `正在控制 ${name}`;
+    case "en-XA":
+      return `[Çöñţŕöļļîñĝ ${name} ~~~~]`;
+    case "ar-XB":
+      return `\u202eControlling \u202c${name}`;
+  }
+  return `Controlling ${name}`;
+}
+
+export function devicesRemoteChangesOff(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التغييرات متوقفة`;
+    case "de":
+      return `Änderungen sind aus`;
+    case "es":
+      return `Los cambios están desactivados`;
+    case "fr":
+      return `Les modifications sont désactivées`;
+    case "ja":
+      return `変更できません`;
+    case "ko":
+      return `변경 꺼짐`;
+    case "pt-BR":
+      return `As alterações estão desativadas`;
+    case "zh-Hans":
+      return `暂不能更改`;
+    case "zh-Hant":
+      return `暫時無法變更`;
+    case "en-XA":
+      return `[Çĥáñĝéš áŕé öƒƒ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eChanges are off\u202c`;
+  }
+  return `Changes are off`;
+}
+
+export function devicesRemoteBack(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "ar":
+      return `عاد ${name}`;
+    case "de":
+      return `${name} ist wieder da`;
+    case "es":
+      return `${name} volvió`;
+    case "fr":
+      return `${name} est de retour`;
+    case "ja":
+      return `${name} と連絡がつきました`;
+    case "ko":
+      return `${name} 다시 연결됨`;
+    case "pt-BR":
+      return `${name} voltou`;
+    case "zh-Hans":
+      return `${name} 已恢复联系`;
+    case "zh-Hant":
+      return `${name} 已恢復連絡`;
+    case "en-XA":
+      return `[${name} îš ƀáçķ ~~~]`;
+    case "ar-XB":
+      return `${name}\u202e is back\u202c`;
+  }
+  return `${name} is back`;
+}
+
+export function devicesNearbyPort(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المنفذ`;
+    case "de":
+      return `Port`;
+    case "es":
+      return `Puerto`;
+    case "fr":
+      return `Port`;
+    case "ja":
+      return `ポート`;
+    case "ko":
+      return `포트`;
+    case "pt-BR":
+      return `Porta`;
+    case "zh-Hans":
+      return `端口`;
+    case "zh-Hant":
+      return `連接埠`;
+    case "en-XA":
+      return `[Þöŕţ ~~]`;
+    case "ar-XB":
+      return `\u202ePort\u202c`;
+  }
+  return `Port`;
+}
+
+export function devicesNearbyPortPlaceholder(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المنفذ 22`;
+    case "de":
+      return `Port 22`;
+    case "es":
+      return `Puerto 22`;
+    case "fr":
+      return `Port 22`;
+    case "ja":
+      return `ポート 22`;
+    case "ko":
+      return `포트 22`;
+    case "pt-BR":
+      return `Porta 22`;
+    case "zh-Hans":
+      return `端口 22`;
+    case "zh-Hant":
+      return `連接埠 22`;
+    case "en-XA":
+      return `[Þöŕţ 22 ~~~]`;
+    case "ar-XB":
+      return `\u202ePort 22\u202c`;
+  }
+  return `Port 22`;
+}
+
+export function devicesNearbyRemoteLoginOn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يجب أن يكون «تسجيل الدخول عن بُعد» مفعّلًا هناك.`;
+    case "de":
+      return `Dort muss „Entfernte Anmeldung“ aktiviert sein.`;
+    case "es":
+      return `Allí debe estar activada la Sesión remota.`;
+    case "fr":
+      return `La Session à distance doit y être activée.`;
+    case "ja":
+      return `そのコンピューターで「リモートログイン」をオンにする必要があります。`;
+    case "ko":
+      return `그 컴퓨터에서 원격 로그인이 켜져 있어야 해요.`;
+    case "pt-BR":
+      return `O Login Remoto precisa estar ativado lá.`;
+    case "zh-Hans":
+      return `那台电脑必须打开“远程登录”。`;
+    case "zh-Hant":
+      return `那台電腦必須開啟「遠端登入」。`;
+    case "en-XA":
+      return `[Ŕéɱöţé Ļöĝîñ ɱûšţ ƀé öñ ţĥéŕé. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eRemote Login must be on there.\u202c`;
+  }
+  return `Remote Login must be on there.`;
+}
+
+export function devicesNearbySshOn(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يجب أن يكون خادم SSH فيه مفعّلًا، أو «تسجيل الدخول عن بُعد» على Mac.`;
+    case "de":
+      return `Sein SSH-Server muss aktiviert sein, auf einem Mac die „Entfernte Anmeldung“.`;
+    case "es":
+      return `Debe estar activado su servidor SSH, o la Sesión remota en una Mac.`;
+    case "fr":
+      return `Son serveur SSH, ou la Session à distance sur un Mac, doit être activé.`;
+    case "ja":
+      return `SSH サーバー（Mac では「リモートログイン」）がオンになっている必要があります。`;
+    case "ko":
+      return `그 컴퓨터의 SSH 서버가 켜져 있어야 해요. Mac에서는 원격 로그인을 켜면 돼요.`;
+    case "pt-BR":
+      return `O servidor SSH dele, ou o Login Remoto em um Mac, precisa estar ativado.`;
+    case "zh-Hans":
+      return `它的 SSH 服务器（在 Mac 上为“远程登录”）必须打开。`;
+    case "zh-Hant":
+      return `它的 SSH 伺服器（在 Mac 上是「遠端登入」）必須開啟。`;
+    case "en-XA":
+      return `[Îţš ŠŠĤ šéŕṽéŕ, öŕ Ŕéɱöţé Ļöĝîñ öñ á Ṁáç, ɱûšţ ƀé öñ. ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eIts SSH server, or Remote Login on a Mac, must be on.\u202c`;
+  }
+  return `Its SSH server, or Remote Login on a Mac, must be on.`;
+}
+
+export function devicesJoinElsewhere(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `نائب القبطان على ${computer} آخر`;
+    case "de":
+      return `Dein erster Offizier ist auf einem anderen ${computer}`;
+    case "es":
+      return `Tu primer oficial está en otra ${computer}`;
+    case "fr":
+      return `Votre second est sur un autre ${computer}`;
+    case "ja":
+      return `一等航海士は別の ${computer} にいます`;
+    case "ko":
+      return `일등항해사가 다른 ${computer}에 있어요`;
+    case "pt-BR":
+      return `Seu imediato está em outro ${computer}`;
+    case "zh-Hans":
+      return `你的大副在另一台 ${computer} 上`;
+    case "zh-Hant":
+      return `你的大副在另一台 ${computer} 上`;
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé îš öñ áñöţĥéŕ ${computer} ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate is on another \u202c${computer}`;
+  }
+  return `Your first mate is on another ${computer}`;
+}
+
+export function devicesJoinPasteChip(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لصق رابطه`;
+    case "de":
+      return `Link einfügen`;
+    case "es":
+      return `Pegar su enlace`;
+    case "fr":
+      return `Coller son lien`;
+    case "ja":
+      return `リンクを貼り付ける`;
+    case "ko":
+      return `링크 붙여넣기`;
+    case "pt-BR":
+      return `Colar o link dele`;
+    case "zh-Hans":
+      return `粘贴它的链接`;
+    case "zh-Hant":
+      return `貼上它的連結`;
+    case "en-XA":
+      return `[Þášţé îţš ļîñķ ~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste its link\u202c`;
+  }
+  return `Paste its link`;
+}
+
+export function devicesJoinAddressChip(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `الانضمام بعنوانه`;
+    case "de":
+      return `Über die Adresse beitreten`;
+    case "es":
+      return `Unirse por su dirección`;
+    case "fr":
+      return `Rejoindre par son adresse`;
+    case "ja":
+      return `アドレスで参加`;
+    case "ko":
+      return `주소로 참여`;
+    case "pt-BR":
+      return `Entrar pelo endereço`;
+    case "zh-Hans":
+      return `通过地址加入`;
+    case "zh-Hant":
+      return `用位址加入`;
+    case "en-XA":
+      return `[Ĵöîñ ƀý îţš áððŕéšš ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eJoin by its address\u202c`;
+  }
+  return `Join by its address`;
+}
+
+export function devicesJoinPasteHead(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الصق الرابط من Infinitary على ${computer} الآخر لديك`;
+    case "de":
+      return `Füge den Link aus Infinitary auf deinem anderen ${computer} ein`;
+    case "es":
+      return `Pega el enlace de Infinitary de tu otra ${computer}`;
+    case "fr":
+      return `Collez le lien d’Infinitary de votre autre ${computer}`;
+    case "ja":
+      return `もう1台の ${computer} の Infinitary で作ったリンクを貼り付けてください`;
+    case "ko":
+      return `다른 ${computer}의 Infinitary에서 받은 링크를 붙여넣으세요`;
+    case "pt-BR":
+      return `Cole o link do Infinitary do seu outro ${computer}`;
+    case "zh-Hans":
+      return `粘贴你另一台 ${computer} 上 Infinitary 给出的链接`;
+    case "zh-Hant":
+      return `貼上你另一台 ${computer} 上 Infinitary 給的連結`;
+    case "en-XA":
+      return `[Þášţé ţĥé ļîñķ ƒŕöɱ Îñƒîñîţáŕý öñ ýöûŕ öţĥéŕ ${computer} ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste the link from Infinitary on your other \u202c${computer}`;
+  }
+  return `Paste the link from Infinitary on your other ${computer}`;
+}
+
+export function devicesJoinPasteSub(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تُنشئه هناك من الإعدادات ← الأجهزة، أو تطلبه من نائب القبطان.`;
+    case "de":
+      return `Du erstellst ihn dort unter Einstellungen → Geräte oder fragst deinen ersten Offizier danach.`;
+    case "es":
+      return `Se crea allí, en Configuración → Dispositivos, o pidiéndoselo a tu primer oficial.`;
+    case "fr":
+      return `Vous le créez là-bas, dans Réglages → Appareils, ou en le demandant à votre second.`;
+    case "ja":
+      return `そちらの「設定 → デバイス」で作るか、一等航海士に頼んで作れます。`;
+    case "ko":
+      return `링크는 그곳의 설정 → 기기에서 만들거나, 일등항해사에게 요청해서 받을 수 있어요.`;
+    case "pt-BR":
+      return `Você o cria lá, em Ajustes → Dispositivos, ou pedindo ao seu imediato.`;
+    case "zh-Hans":
+      return `在那台电脑上的“设置 → 设备”中生成，或让你的大副生成。`;
+    case "zh-Hant":
+      return `在那台電腦的「設定 → 裝置」中產生，或請你的大副產生。`;
+    case "en-XA":
+      return `[Ýöû ɱáķé îţ ţĥéŕé, îñ Šéţţîñĝš → Ðéṽîçéš, öŕ ƀý ášķîñĝ ýöûŕ ƒîŕšţ ɱáţé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYou make it there, in Settings → Devices, or by asking your first mate.\u202c`;
+  }
+  return `You make it there, in Settings → Devices, or by asking your first mate.`;
+}
+
+export function devicesJoinLinkLabel(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الرابط من ${computer} الآخر لديك`;
+    case "de":
+      return `Der Link von deinem anderen ${computer}`;
+    case "es":
+      return `El enlace de tu otra ${computer}`;
+    case "fr":
+      return `Le lien de votre autre ${computer}`;
+    case "ja":
+      return `もう1台の ${computer} からのリンク`;
+    case "ko":
+      return `다른 ${computer}에서 받은 링크`;
+    case "pt-BR":
+      return `O link do seu outro ${computer}`;
+    case "zh-Hans":
+      return `来自你另一台 ${computer} 的链接`;
+    case "zh-Hant":
+      return `來自你另一台 ${computer} 的連結`;
+    case "en-XA":
+      return `[Ţĥé ļîñķ ƒŕöɱ ýöûŕ öţĥéŕ ${computer} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe link from your other \u202c${computer}`;
+  }
+  return `The link from your other ${computer}`;
+}
+
+export function devicesJoinContinue(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `متابعة`;
+    case "de":
+      return `Weiter`;
+    case "es":
+      return `Continuar`;
+    case "fr":
+      return `Continuer`;
+    case "ja":
+      return `続ける`;
+    case "ko":
+      return `계속`;
+    case "pt-BR":
+      return `Continuar`;
+    case "zh-Hans":
+      return `继续`;
+    case "zh-Hant":
+      return `繼續`;
+    case "en-XA":
+      return `[Çöñţîñûé ~~~]`;
+    case "ar-XB":
+      return `\u202eContinue\u202c`;
+  }
+  return `Continue`;
+}
+
+export function devicesJoinCancel(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `إلغاء`;
+    case "de":
+      return `Abbrechen`;
+    case "es":
+      return `Cancelar`;
+    case "fr":
+      return `Annuler`;
+    case "ja":
+      return `キャンセル`;
+    case "ko":
+      return `취소`;
+    case "pt-BR":
+      return `Cancelar`;
+    case "zh-Hans":
+      return `取消`;
+    case "zh-Hant":
+      return `取消`;
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function devicesJoinNotJoined(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم ينضم`;
+    case "de":
+      return `Nicht beigetreten`;
+    case "es":
+      return `No se unió`;
+    case "fr":
+      return `Non rejoint`;
+    case "ja":
+      return `参加していません`;
+    case "ko":
+      return `참여하지 않음`;
+    case "pt-BR":
+      return `Não entrou`;
+    case "zh-Hans":
+      return `未加入`;
+    case "zh-Hant":
+      return `未加入`;
+    case "en-XA":
+      return `[Ñöţ ĵöîñéð ~~~~]`;
+    case "ar-XB":
+      return `\u202eNot joined\u202c`;
+  }
+  return `Not joined`;
+}
+
+export function devicesJoinKeyYes(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `هذا هو ${computer}`;
+    case "de":
+      return `Das ist der ${computer}`;
+    case "es":
+      return `Es esta ${computer}`;
+    case "fr":
+      return `C’est bien cet ${computer}`;
+    case "ja":
+      return `この ${computer} で間違いありません`;
+    case "ko":
+      return `이 ${computer}이(가) 맞아요`;
+    case "pt-BR":
+      return `É este ${computer}`;
+    case "zh-Hans":
+      return `就是这台 ${computer}`;
+    case "zh-Hant":
+      return `就是這台 ${computer}`;
+    case "en-XA":
+      return `[Ţĥîš îš ţĥé ${computer} ~~~~]`;
+    case "ar-XB":
+      return `\u202eThis is the \u202c${computer}`;
+  }
+  return `This is the ${computer}`;
+}
+
+export function devicesJoinMoment(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `يستغرق هذا لحظة.`;
+    case "de":
+      return `Das dauert einen Moment.`;
+    case "es":
+      return `Esto tarda un momento.`;
+    case "fr":
+      return `Cela prend un instant.`;
+    case "ja":
+      return `少し時間がかかります。`;
+    case "ko":
+      return `잠시 걸려요.`;
+    case "pt-BR":
+      return `Isso leva um momento.`;
+    case "zh-Hans":
+      return `这需要一点时间。`;
+    case "zh-Hant":
+      return `這需要一點時間。`;
+    case "en-XA":
+      return `[Ţĥîš ţáķéš á ɱöɱéñţ. ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThis takes a moment.\u202c`;
+  }
+  return `This takes a moment.`;
+}
+
+export function devicesJoinShows(input: { computer: string; here: string }): string {
+  const computer = input.computer;
+  const here = input.here;
+  switch (currentLanguage()) {
+    case "ar":
+      return `يعرض ${here} نائب القبطان. وتبقى بطاقاته ومهامه ومحادثته على ذلك ${computer}.`;
+    case "de":
+      return `${here} zeigt deinen ersten Offizier. Seine Karten, Aufgaben und Unterhaltung bleiben auf diesem ${computer}.`;
+    case "es":
+      return `${here} muestra a tu primer oficial. Sus tarjetas, tareas y conversación se quedan en esa ${computer}.`;
+    case "fr":
+      return `${here} affiche votre second. Ses cartes, ses tâches et sa conversation restent sur cet ${computer}.`;
+    case "ja":
+      return `${here} に一等航海士が表示されます。カード、タスク、会話はその ${computer} に残ります。`;
+    case "ko":
+      return `${here}에 일등항해사가 표시돼요. 일등항해사의 카드, 작업, 대화는 그 ${computer}에 그대로 있어요.`;
+    case "pt-BR":
+      return `${here} mostra o seu imediato. Os cartões, as tarefas e a conversa dele ficam naquele ${computer}.`;
+    case "zh-Hans":
+      return `${here} 会显示你的大副。它的卡片、任务和对话都留在那台 ${computer} 上。`;
+    case "zh-Hant":
+      return `${here} 會顯示你的大副。它的卡片、任務和對話都留在那台 ${computer} 上。`;
+    case "en-XA":
+      return `[${here} šĥöŵš ýöûŕ ƒîŕšţ ɱáţé. Îţš çáŕðš, ţášķš áñð çöñṽéŕšáţîöñ šţáý öñ ţĥáţ ${computer}. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${here}\u202e shows your first mate. Its cards, tasks and conversation stay on that \u202c${computer}\u202e.\u202c`;
+  }
+  return `${here} shows your first mate. Its cards, tasks and conversation stay on that ${computer}.`;
+}
+
+export function devicesJoinKeepHere(input: { here: string }): string {
+  const here = input.here;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لإبقاء نائب القبطان على ${here} بدلًا من ذلك، ألغِ وأعدّه هنا.`;
+    case "de":
+      return `Wenn dein erster Offizier stattdessen auf ${here} bleiben soll, brich ab und richte ihn hier ein.`;
+    case "es":
+      return `Para mantener a tu primer oficial en ${here}, cancela y configúralo aquí.`;
+    case "fr":
+      return `Pour garder plutôt votre second sur ${here}, annulez et configurez-le ici.`;
+    case "ja":
+      return `一等航海士を ${here} に置きたい場合は、キャンセルしてここで設定してください。`;
+    case "ko":
+      return `일등항해사를 ${here}에 두려면 취소하고 여기서 설정하세요.`;
+    case "pt-BR":
+      return `Para manter seu imediato em ${here}, cancele e configure-o aqui.`;
+    case "zh-Hans":
+      return `如果想让大副留在 ${here} 上，请取消并在这里设置。`;
+    case "zh-Hant":
+      return `如果想讓大副留在 ${here} 上，請取消並在這裡設定。`;
+    case "en-XA":
+      return `[Ţö ķééþ ýöûŕ ƒîŕšţ ɱáţé öñ ${here} îñšţéáð, çáñçéļ áñð šéţ îţ ûþ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo keep your first mate on \u202c${here}\u202e instead, cancel and set it up here.\u202c`;
+  }
+  return `To keep your first mate on ${here} instead, cancel and set it up here.`;
+}
+
+export function devicesJoinControl(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `التحكم فيه من هنا`;
+    case "de":
+      return `Von hier aus steuern`;
+    case "es":
+      return `Controlarlo desde aquí`;
+    case "fr":
+      return `Le contrôler d’ici`;
+    case "ja":
+      return `ここから操作する`;
+    case "ko":
+      return `여기서 제어하기`;
+    case "pt-BR":
+      return `Controlar daqui`;
+    case "zh-Hans":
+      return `从这里控制它`;
+    case "zh-Hant":
+      return `從這裡控制它`;
+    case "en-XA":
+      return `[Çöñţŕöļ îţ ƒŕöɱ ĥéŕé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eControl it from here\u202c`;
+  }
+  return `Control it from here`;
+}
+
+export function devicesJoinReaching(input: { address: string; computer: string }): string {
+  const address = input.address;
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `جارٍ الوصول إلى ${computer} على ${address}…`;
+    case "de":
+      return `${computer} unter ${address} wird erreicht …`;
+    case "es":
+      return `Conectando con la ${computer} en ${address}…`;
+    case "fr":
+      return `Connexion à l’${computer} à l’adresse ${address}…`;
+    case "ja":
+      return `${address} の ${computer} に接続中…`;
+    case "ko":
+      return `${address}의 ${computer}에 연결하는 중…`;
+    case "pt-BR":
+      return `Acessando o ${computer} em ${address}…`;
+    case "zh-Hans":
+      return `正在连接位于 ${address} 的 ${computer}…`;
+    case "zh-Hant":
+      return `正在連絡位於 ${address} 的 ${computer}…`;
+    case "en-XA":
+      return `[Ŕéáçĥîñĝ ţĥé ${computer} áţ ${address}… ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReaching the \u202c${computer}\u202e at \u202c${address}\u202e…\u202c`;
+  }
+  return `Reaching the ${computer} at ${address}…`;
+}
+
+export function devicesJoinDidNotJoin(input: { here: string }): string {
+  const here = input.here;
+  switch (currentLanguage()) {
+    case "ar":
+      return `لم ينضم ${here}`;
+    case "de":
+      return `${here} ist nicht beigetreten`;
+    case "es":
+      return `${here} no se unió`;
+    case "fr":
+      return `${here} n’a pas rejoint`;
+    case "ja":
+      return `${here} は参加できませんでした`;
+    case "ko":
+      return `${here}이(가) 참여하지 못했어요`;
+    case "pt-BR":
+      return `${here} não entrou`;
+    case "zh-Hans":
+      return `${here} 未能加入`;
+    case "zh-Hant":
+      return `${here} 沒有加入`;
+    case "en-XA":
+      return `[${here} ðîð ñöţ ĵöîñ ~~~~~]`;
+    case "ar-XB":
+      return `${here}\u202e did not join\u202c`;
+  }
+  return `${here} did not join`;
+}
+
+export function devicesJoinTryAgain(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `المحاولة مرة أخرى`;
+    case "de":
+      return `Erneut versuchen`;
+    case "es":
+      return `Volver a intentarlo`;
+    case "fr":
+      return `Réessayer`;
+    case "ja":
+      return `もう一度試す`;
+    case "ko":
+      return `다시 시도`;
+    case "pt-BR":
+      return `Tentar de novo`;
+    case "zh-Hans":
+      return `重试`;
+    case "zh-Hant":
+      return `再試一次`;
+    case "en-XA":
+      return `[Ţŕý áĝáîñ ~~~]`;
+    case "ar-XB":
+      return `\u202eTry again\u202c`;
+  }
+  return `Try again`;
+}
+
+export function devicesJoinPasteAnother(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لصق رابط آخر`;
+    case "de":
+      return `Anderen Link einfügen`;
+    case "es":
+      return `Pegar otro enlace`;
+    case "fr":
+      return `Coller un autre lien`;
+    case "ja":
+      return `別のリンクを貼り付ける`;
+    case "ko":
+      return `다른 링크 붙여넣기`;
+    case "pt-BR":
+      return `Colar outro link`;
+    case "zh-Hans":
+      return `粘贴另一个链接`;
+    case "zh-Hant":
+      return `貼上其他連結`;
+    case "en-XA":
+      return `[Þášţé áñöţĥéŕ ļîñķ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePaste another link\u202c`;
+  }
+  return `Paste another link`;
+}
+
+export function devicesJoinAddressSub(input: { computer: string; mustBeOn: string }): string {
+  const computer = input.computer;
+  const mustBeOn = input.mustBeOn;
+  switch (currentLanguage()) {
+    case "ar":
+      return `الحساب و${computer}، كما تسجّل الدخول إليه عبر SSH. ${mustBeOn}`;
+    case "de":
+      return `Das Konto und der ${computer}, so wie du dich per SSH dort anmeldest. ${mustBeOn}`;
+    case "es":
+      return `La cuenta y la ${computer}, tal como inicias sesión en ella con SSH. ${mustBeOn}`;
+    case "fr":
+      return `Le compte et l’${computer}, tels que vous vous y connectez en SSH. ${mustBeOn}`;
+    case "ja":
+      return `SSH でサインインするときと同じ形式のアカウントと ${computer}。${mustBeOn}`;
+    case "ko":
+      return `SSH로 로그인할 때 쓰는 계정과 ${computer}예요. ${mustBeOn}`;
+    case "pt-BR":
+      return `A conta e o ${computer}, do jeito que você faz login nele com SSH. ${mustBeOn}`;
+    case "zh-Hans":
+      return `账户和 ${computer}，按你用 SSH 登录它时的写法填写。${mustBeOn}`;
+    case "zh-Hant":
+      return `帳號和 ${computer}，照你用 SSH 登入它時的寫法輸入。${mustBeOn}`;
+    case "en-XA":
+      return `[Ţĥé áççöûñţ áñð ${computer}, áš ýöû šîĝñ îñ ţö îţ ŵîţĥ ŠŠĤ. ${mustBeOn} ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe account and \u202c${computer}\u202e, as you sign in to it with SSH. \u202c${mustBeOn}`;
+  }
+  return `The account and ${computer}, as you sign in to it with SSH. ${mustBeOn}`;
+}
+
+export function devicesJoinYourAccount(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `حسابك`;
+    case "de":
+      return `Dein Konto`;
+    case "es":
+      return `Tu cuenta`;
+    case "fr":
+      return `Votre compte`;
+    case "ja":
+      return `アカウント`;
+    case "ko":
+      return `내 계정`;
+    case "pt-BR":
+      return `Sua conta`;
+    case "zh-Hans":
+      return `你的账户`;
+    case "zh-Hant":
+      return `你的帳號`;
+    case "en-XA":
+      return `[Ýöûŕ áççöûñţ ~~~~]`;
+    case "ar-XB":
+      return `\u202eYour account\u202c`;
+  }
+  return `Your account`;
+}
+
+export function devicesJoinPickHint(input: { computer: string }): string {
+  const computer = input.computer;
+  switch (currentLanguage()) {
+    case "ar":
+      return `اكتب حسابك، ثم اختر ${computer} لملء عنوانه.`;
+    case "de":
+      return `Gib dein Konto ein und wähl dann deinen ${computer}, um seine Adresse einzutragen.`;
+    case "es":
+      return `Escribe tu cuenta y luego elige tu ${computer} para completar su dirección.`;
+    case "fr":
+      return `Saisissez votre compte, puis choisissez votre ${computer} pour remplir son adresse.`;
+    case "ja":
+      return `アカウントを入力してから ${computer} を選ぶと、アドレスが入力されます。`;
+    case "ko":
+      return `계정을 입력한 다음 ${computer}을(를) 골라 주소를 채우세요.`;
+    case "pt-BR":
+      return `Digite sua conta e depois escolha seu ${computer} para preencher o endereço dele.`;
+    case "zh-Hans":
+      return `输入你的账户，然后选择你的 ${computer} 来填入它的地址。`;
+    case "zh-Hant":
+      return `輸入你的帳號，再選擇你的 ${computer} 來填入它的位址。`;
+    case "en-XA":
+      return `[Ţýþé ýöûŕ áççöûñţ, ţĥéñ þîçķ ýöûŕ ${computer} ţö ƒîļļ îţš áððŕéšš. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eType your account, then pick your \u202c${computer}\u202e to fill its address.\u202c`;
+  }
+  return `Type your account, then pick your ${computer} to fill its address.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -42902,6 +49312,229 @@ export const MESSAGES = {
   settingsDevicesSignInsPasteBackCode,
   settingsDevicesSignInsPasteBackHere,
   settingsDevicesSignInsPasteBackAddress,
+  accountsCustomApiExceptionLine,
+  accountsCustomApiExceptionTag,
+  accountsCustomApiAnswerReserved,
+  accountsCustomApiAnswerKind,
+  accountsCustomApiDestinationRefused,
+  accountsCustomApiDestinationReserved,
+  accountsCustomApiDestinationMixed,
+  accountsCustomApiDestinationReservedNever,
+  accountsCustomApiDestinationMixedNever,
+  accountsCustomApiThisModel,
+  accountsCustomApiOperationAddress,
+  accountsCustomApiFullAddress,
+  accountsCustomApiUnreachable,
+  accountsCustomApiTestSlow,
+  accountsCustomApiHostSlow,
+  accountsCustomApiCertificateAdd,
+  accountsCustomApiCertificate,
+  accountsCustomApiRedirect,
+  accountsCustomApiNotOffered,
+  accountsCustomApiNothingAnsweredV1,
+  accountsCustomApiNothingAnswered,
+  accountsCustomApiKeyRefused,
+  accountsCustomApiKeyNeeded,
+  accountsCustomApiAccessRefused,
+  accountsCustomApiKeyFormat,
+  accountsCustomApiHeaders,
+  accountsCustomApiCertificatePolicy,
+  accountsCustomApiRateLimit,
+  accountsCustomApiServer,
+  accountsCustomApiMalformed,
+  accountsCustomApiOversized,
+  accountsCustomApiPrepareFailed,
+  accountsCustomApiIncompatible,
+  accountsCustomApiModelOnce,
+  accountsCustomApiLimits,
+  accountsCustomApiCancelled,
+  accountsCustomApiRowNotChecked,
+  accountsCustomApiRowChecking,
+  accountsCustomApiRowChecked,
+  accountsCustomApiRowFailed,
+  accountsCustomApiCommandNeeded,
+  accountsCustomApiAddressNeeded,
+  accountsCustomApiHttpFirst,
+  accountsCustomApiFetchFailed,
+  accountsCustomApiNotSavedRow,
+  accountsCustomApiNotSavedField,
+  accountsCustomApiNameNeeded,
+  accountsCustomApiModelsNeeded,
+  accountsCustomApiModelIdNeeded,
+  accountsCustomApiModelTwice,
+  accountsCustomApiOutputTooLarge,
+  accountsCustomApiReaching,
+  accountsCustomApiHttpToSave,
+  accountsCustomApiNotReached,
+  accountsCustomApiCheckingModel,
+  accountsCustomApiSaving,
+  accountsCustomApiSaveFailed,
+  accountsCustomApiSentToken,
+  accountsCustomApiSentKey,
+  accountsCustomApiSentHeaders,
+  accountsCustomApiSentTest,
+  accountsCustomApiFootHint,
+  accountsCustomApiEditTitle,
+  accountsCustomApiAddTitleOn,
+  accountsCustomApiAddTitle,
+  accountsCustomApiTrustHint,
+  accountsCustomApiNameLabel,
+  accountsCustomApiAddressLabel,
+  accountsCustomApiUseFix,
+  accountsCustomApiSendsTo,
+  accountsCustomApiException,
+  accountsCustomApiHttpApproved,
+  accountsCustomApiHttp,
+  accountsCustomApiHttpPublic,
+  accountsCustomApiHttpPrivate,
+  accountsCustomApiConnectWith,
+  accountsCustomApiAuthKey,
+  accountsCustomApiTokenCommand,
+  accountsCustomApiRefreshAfter,
+  accountsCustomApiCommandHint,
+  accountsCustomApiKeyLabel,
+  accountsCustomApiKeyOptional,
+  accountsCustomApiRemoveSavedKey,
+  accountsCustomApiSavedKeyKept,
+  accountsCustomApiKeyEmpty,
+  accountsCustomApiKeyGoesTo,
+  accountsCustomApiProtocol,
+  accountsCustomApiHeadersTitle,
+  accountsCustomApiHeadersHint,
+  accountsCustomApiHeaderName,
+  accountsCustomApiHeaderValue,
+  accountsCustomApiSavedValueKept,
+  accountsCustomApiEnterValue,
+  accountsCustomApiSecret,
+  accountsCustomApiRemoveHeader,
+  accountsCustomApiAddHeader,
+  accountsCustomApiCertificatesTitle,
+  accountsCustomApiCertificatesHint,
+  accountsCustomApiChooseCertificate,
+  accountsCustomApiCertificateTooLarge,
+  accountsCustomApiCertificateUnreadable,
+  accountsCustomApiIssuer,
+  accountsCustomApiApproveCertificates,
+  accountsCustomApiRemoveCertificate,
+  accountsCustomApiStorage,
+  accountsCustomApiModelsTitle,
+  accountsCustomApiFetching,
+  accountsCustomApiFetchAgain,
+  accountsCustomApiFetch,
+  accountsCustomApiNoList,
+  accountsCustomApiListed,
+  accountsCustomApiListedNone,
+  accountsCustomApiModelId,
+  accountsCustomApiContext,
+  accountsCustomApiOutput,
+  accountsCustomApiThisModelLower,
+  accountsCustomApiRowState,
+  accountsCustomApiContextFor,
+  accountsCustomApiOutputFor,
+  accountsCustomApiRemoveModel,
+  accountsCustomApiReasoning,
+  accountsCustomApiReasoningFor,
+  accountsCustomApiReasoningOff,
+  accountsCustomApiCache,
+  accountsCustomApiCacheFor,
+  accountsCustomApiCacheNone,
+  accountsCustomApiCacheShort,
+  accountsCustomApiCacheLong,
+  accountsCustomApiCapabilityHint,
+  accountsCustomApiProfilesFailed,
+  accountsCustomApiNoModels,
+  accountsCustomApiAddByHand,
+  accountsCustomApiSeparate,
+  accountsCustomApiSavePaused,
+  accountsCustomApiCommandApproval,
+  accountsCustomApiCancel,
+  accountsCustomApiCheckingPending,
+  accountsCustomApiSave,
+  accountsCustomApiReadFailed,
+  accountsCustomApiReady,
+  accountsCustomApiChooseQuestion,
+  accountsCustomApiChooseFailed,
+  accountsCustomApiUseModel,
+  accountsCustomApiCrewUseSettings,
+  accountsCustomApiChooseLater,
+  accountsCustomApiUnencrypted,
+  accountsCustomApiStatusReady,
+  accountsCustomApiStatusNotChecked,
+  accountsCustomApiStatusChecked,
+  accountsCustomApiStatusPaused,
+  accountsCustomApiStatusPausedNotChecked,
+  accountsCustomApiEdit,
+  accountsCustomApiDisconnect,
+  accountsCustomApiColumnModel,
+  accountsCustomApiColumnStatus,
+  accountsCustomApiColumnFirstmate,
+  accountsCustomApiCrewUseRemote,
+  accountsCustomApiDisconnectRemote,
+  accountsCustomApiKeepConnection,
+  accountsCustomApiUseForFirstMate,
+  accountsCustomApiFirstMate,
+  accountsCustomApiListFailed,
+  accountsCustomApiResumeNeedsCheck,
+  accountsCustomApiChangeFailed,
+  accountsCustomApiPause,
+  accountsCustomApiResume,
+  accountsCustomApiResumeToUse,
+  accountsCustomApiCheckModelFirst,
+  accountsCustomApiCheckBeforeUse,
+  accountsCustomApiPausedHint,
+  accountsCustomApiCrewUse,
+  accountsCustomApiDisconnectWarning,
+  accountsCustomApiDisconnectFailed,
+  accountsCustomApiStopAndDisconnect,
+  accountsCustomApiDialogLabel,
+  accountsCopyCodeCopying,
+  accountsCopyCodeButton,
+  accountsConnectNotSignedIn,
+  accountsConnectNotSignedInYet,
+  accountsConnectConnected,
+  accountsConnectClaudeLoginThere,
+  accountsConnectClaudeLoginOn,
+  accountsConnectAddAnother,
+  accountsConnectProvider,
+  accountsConnectConnecting,
+  accountsConnectCustomApi,
+  accountsConnectCrewOnly,
+  accountsConnectInstallClaudeThere,
+  accountsConnectUpdateThere,
+  accountsConnectHow,
+  accountsConnectBrowser,
+  accountsConnectCancel,
+  accountsConnectSubmit,
+  accountsConnectOpenSignIn,
+  devicesRemoteOutOfReach,
+  devicesRemoteControlling,
+  devicesRemoteChangesOff,
+  devicesRemoteBack,
+  devicesNearbyPort,
+  devicesNearbyPortPlaceholder,
+  devicesNearbyRemoteLoginOn,
+  devicesNearbySshOn,
+  devicesJoinElsewhere,
+  devicesJoinPasteChip,
+  devicesJoinAddressChip,
+  devicesJoinPasteHead,
+  devicesJoinPasteSub,
+  devicesJoinLinkLabel,
+  devicesJoinContinue,
+  devicesJoinCancel,
+  devicesJoinNotJoined,
+  devicesJoinKeyYes,
+  devicesJoinMoment,
+  devicesJoinShows,
+  devicesJoinKeepHere,
+  devicesJoinControl,
+  devicesJoinReaching,
+  devicesJoinDidNotJoin,
+  devicesJoinTryAgain,
+  devicesJoinPasteAnother,
+  devicesJoinAddressSub,
+  devicesJoinYourAccount,
+  devicesJoinPickHint,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -44300,4 +50933,227 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsDevicesSignInsPasteBackCode: [],
   settingsDevicesSignInsPasteBackHere: ["who"],
   settingsDevicesSignInsPasteBackAddress: [],
+  accountsCustomApiExceptionLine: [],
+  accountsCustomApiExceptionTag: [],
+  accountsCustomApiAnswerReserved: ["address"],
+  accountsCustomApiAnswerKind: ["address", "kind"],
+  accountsCustomApiDestinationRefused: [],
+  accountsCustomApiDestinationReserved: ["answered"],
+  accountsCustomApiDestinationMixed: ["answered"],
+  accountsCustomApiDestinationReservedNever: ["answered", "here"],
+  accountsCustomApiDestinationMixedNever: ["answered", "here"],
+  accountsCustomApiThisModel: [],
+  accountsCustomApiOperationAddress: [],
+  accountsCustomApiFullAddress: [],
+  accountsCustomApiUnreachable: ["host"],
+  accountsCustomApiTestSlow: ["model"],
+  accountsCustomApiHostSlow: ["host"],
+  accountsCustomApiCertificateAdd: ["host"],
+  accountsCustomApiCertificate: ["host"],
+  accountsCustomApiRedirect: [],
+  accountsCustomApiNotOffered: ["model"],
+  accountsCustomApiNothingAnsweredV1: ["operation", "where"],
+  accountsCustomApiNothingAnswered: ["operation", "where"],
+  accountsCustomApiKeyRefused: [],
+  accountsCustomApiKeyNeeded: [],
+  accountsCustomApiAccessRefused: [],
+  accountsCustomApiKeyFormat: [],
+  accountsCustomApiHeaders: [],
+  accountsCustomApiCertificatePolicy: [],
+  accountsCustomApiRateLimit: [],
+  accountsCustomApiServer: [],
+  accountsCustomApiMalformed: ["model"],
+  accountsCustomApiOversized: ["model"],
+  accountsCustomApiPrepareFailed: [],
+  accountsCustomApiIncompatible: ["model"],
+  accountsCustomApiModelOnce: [],
+  accountsCustomApiLimits: [],
+  accountsCustomApiCancelled: [],
+  accountsCustomApiRowNotChecked: [],
+  accountsCustomApiRowChecking: [],
+  accountsCustomApiRowChecked: [],
+  accountsCustomApiRowFailed: [],
+  accountsCustomApiCommandNeeded: [],
+  accountsCustomApiAddressNeeded: [],
+  accountsCustomApiHttpFirst: [],
+  accountsCustomApiFetchFailed: [],
+  accountsCustomApiNotSavedRow: [],
+  accountsCustomApiNotSavedField: [],
+  accountsCustomApiNameNeeded: [],
+  accountsCustomApiModelsNeeded: [],
+  accountsCustomApiModelIdNeeded: [],
+  accountsCustomApiModelTwice: [],
+  accountsCustomApiOutputTooLarge: [],
+  accountsCustomApiReaching: [],
+  accountsCustomApiHttpToSave: [],
+  accountsCustomApiNotReached: [],
+  accountsCustomApiCheckingModel: ["index", "model", "total"],
+  accountsCustomApiSaving: [],
+  accountsCustomApiSaveFailed: [],
+  accountsCustomApiSentToken: [],
+  accountsCustomApiSentKey: [],
+  accountsCustomApiSentHeaders: ["names"],
+  accountsCustomApiSentTest: [],
+  accountsCustomApiFootHint: ["sent"],
+  accountsCustomApiEditTitle: ["name"],
+  accountsCustomApiAddTitleOn: ["on"],
+  accountsCustomApiAddTitle: [],
+  accountsCustomApiTrustHint: ["who"],
+  accountsCustomApiNameLabel: [],
+  accountsCustomApiAddressLabel: [],
+  accountsCustomApiUseFix: ["address"],
+  accountsCustomApiSendsTo: ["destination"],
+  accountsCustomApiException: ["host", "who"],
+  accountsCustomApiHttpApproved: [],
+  accountsCustomApiHttp: ["who"],
+  accountsCustomApiHttpPublic: ["who"],
+  accountsCustomApiHttpPrivate: ["who"],
+  accountsCustomApiConnectWith: [],
+  accountsCustomApiAuthKey: [],
+  accountsCustomApiTokenCommand: [],
+  accountsCustomApiRefreshAfter: [],
+  accountsCustomApiCommandHint: ["who"],
+  accountsCustomApiKeyLabel: [],
+  accountsCustomApiKeyOptional: [],
+  accountsCustomApiRemoveSavedKey: [],
+  accountsCustomApiSavedKeyKept: [],
+  accountsCustomApiKeyEmpty: [],
+  accountsCustomApiKeyGoesTo: ["here", "who"],
+  accountsCustomApiProtocol: [],
+  accountsCustomApiHeadersTitle: [],
+  accountsCustomApiHeadersHint: [],
+  accountsCustomApiHeaderName: [],
+  accountsCustomApiHeaderValue: [],
+  accountsCustomApiSavedValueKept: [],
+  accountsCustomApiEnterValue: [],
+  accountsCustomApiSecret: [],
+  accountsCustomApiRemoveHeader: [],
+  accountsCustomApiAddHeader: [],
+  accountsCustomApiCertificatesTitle: [],
+  accountsCustomApiCertificatesHint: [],
+  accountsCustomApiChooseCertificate: [],
+  accountsCustomApiCertificateTooLarge: [],
+  accountsCustomApiCertificateUnreadable: [],
+  accountsCustomApiIssuer: ["from", "issuer", "to"],
+  accountsCustomApiApproveCertificates: [],
+  accountsCustomApiRemoveCertificate: [],
+  accountsCustomApiStorage: [],
+  accountsCustomApiModelsTitle: [],
+  accountsCustomApiFetching: [],
+  accountsCustomApiFetchAgain: [],
+  accountsCustomApiFetch: [],
+  accountsCustomApiNoList: [],
+  accountsCustomApiListed: ["count"],
+  accountsCustomApiListedNone: [],
+  accountsCustomApiModelId: [],
+  accountsCustomApiContext: [],
+  accountsCustomApiOutput: [],
+  accountsCustomApiThisModelLower: [],
+  accountsCustomApiRowState: ["name", "state"],
+  accountsCustomApiContextFor: ["name"],
+  accountsCustomApiOutputFor: ["name"],
+  accountsCustomApiRemoveModel: ["name"],
+  accountsCustomApiReasoning: [],
+  accountsCustomApiReasoningFor: ["name"],
+  accountsCustomApiReasoningOff: [],
+  accountsCustomApiCache: [],
+  accountsCustomApiCacheFor: ["name"],
+  accountsCustomApiCacheNone: [],
+  accountsCustomApiCacheShort: [],
+  accountsCustomApiCacheLong: [],
+  accountsCustomApiCapabilityHint: [],
+  accountsCustomApiProfilesFailed: [],
+  accountsCustomApiNoModels: [],
+  accountsCustomApiAddByHand: [],
+  accountsCustomApiSeparate: [],
+  accountsCustomApiSavePaused: [],
+  accountsCustomApiCommandApproval: [],
+  accountsCustomApiCancel: [],
+  accountsCustomApiCheckingPending: [],
+  accountsCustomApiSave: [],
+  accountsCustomApiReadFailed: [],
+  accountsCustomApiReady: ["name"],
+  accountsCustomApiChooseQuestion: [],
+  accountsCustomApiChooseFailed: [],
+  accountsCustomApiUseModel: ["model"],
+  accountsCustomApiCrewUseSettings: [],
+  accountsCustomApiChooseLater: [],
+  accountsCustomApiUnencrypted: [],
+  accountsCustomApiStatusReady: [],
+  accountsCustomApiStatusNotChecked: [],
+  accountsCustomApiStatusChecked: [],
+  accountsCustomApiStatusPaused: [],
+  accountsCustomApiStatusPausedNotChecked: [],
+  accountsCustomApiEdit: [],
+  accountsCustomApiDisconnect: [],
+  accountsCustomApiColumnModel: [],
+  accountsCustomApiColumnStatus: [],
+  accountsCustomApiColumnFirstmate: [],
+  accountsCustomApiCrewUseRemote: ["who"],
+  accountsCustomApiDisconnectRemote: ["here", "who"],
+  accountsCustomApiKeepConnection: [],
+  accountsCustomApiUseForFirstMate: ["model"],
+  accountsCustomApiFirstMate: [],
+  accountsCustomApiListFailed: [],
+  accountsCustomApiResumeNeedsCheck: [],
+  accountsCustomApiChangeFailed: [],
+  accountsCustomApiPause: [],
+  accountsCustomApiResume: [],
+  accountsCustomApiResumeToUse: [],
+  accountsCustomApiCheckModelFirst: [],
+  accountsCustomApiCheckBeforeUse: [],
+  accountsCustomApiPausedHint: [],
+  accountsCustomApiCrewUse: [],
+  accountsCustomApiDisconnectWarning: [],
+  accountsCustomApiDisconnectFailed: [],
+  accountsCustomApiStopAndDisconnect: [],
+  accountsCustomApiDialogLabel: [],
+  accountsCopyCodeCopying: [],
+  accountsCopyCodeButton: [],
+  accountsConnectNotSignedIn: [],
+  accountsConnectNotSignedInYet: ["here", "provider"],
+  accountsConnectConnected: ["provider"],
+  accountsConnectClaudeLoginThere: [],
+  accountsConnectClaudeLoginOn: ["here"],
+  accountsConnectAddAnother: ["provider"],
+  accountsConnectProvider: ["provider"],
+  accountsConnectConnecting: [],
+  accountsConnectCustomApi: [],
+  accountsConnectCrewOnly: [],
+  accountsConnectInstallClaudeThere: [],
+  accountsConnectUpdateThere: [],
+  accountsConnectHow: ["provider"],
+  accountsConnectBrowser: [],
+  accountsConnectCancel: [],
+  accountsConnectSubmit: [],
+  accountsConnectOpenSignIn: [],
+  devicesRemoteOutOfReach: ["name"],
+  devicesRemoteControlling: ["name"],
+  devicesRemoteChangesOff: [],
+  devicesRemoteBack: ["name"],
+  devicesNearbyPort: [],
+  devicesNearbyPortPlaceholder: [],
+  devicesNearbyRemoteLoginOn: [],
+  devicesNearbySshOn: [],
+  devicesJoinElsewhere: ["computer"],
+  devicesJoinPasteChip: [],
+  devicesJoinAddressChip: [],
+  devicesJoinPasteHead: ["computer"],
+  devicesJoinPasteSub: [],
+  devicesJoinLinkLabel: ["computer"],
+  devicesJoinContinue: [],
+  devicesJoinCancel: [],
+  devicesJoinNotJoined: [],
+  devicesJoinKeyYes: ["computer"],
+  devicesJoinMoment: [],
+  devicesJoinShows: ["computer", "here"],
+  devicesJoinKeepHere: ["here"],
+  devicesJoinControl: [],
+  devicesJoinReaching: ["address", "computer"],
+  devicesJoinDidNotJoin: ["here"],
+  devicesJoinTryAgain: [],
+  devicesJoinPasteAnother: [],
+  devicesJoinAddressSub: ["computer", "mustBeOn"],
+  devicesJoinYourAccount: [],
+  devicesJoinPickHint: ["computer"],
 };

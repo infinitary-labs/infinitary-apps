@@ -128,3 +128,9 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | reach (another computer) | joindre | "Impossible de joindre {host}", "joint sur ce réseau"; never "atteindre". |
 | issue (where the project lives) | ticket | The queue's pause issue: "Ouvrir le ticket". |
 | cost limit | plafond de coût | A project's estimated-dollar cap; "plafond" keeps it apart from the plan's allowance. |
+| custom API | API personnalisée | Feminine: "une API personnalisée". |
+| connection (to a server) | connexion | The same word as sign-in; the sentence tells them apart. Feminine, so its status agrees: "Prête", "Vérifiée"; "En pause" for paused. |
+| server, address (a custom API's) | serveur, adresse | Said only where English names the person's own server and its address. |
+| header (a request's) | en-tête | Masculine: "un en-tête". |
+| fetch (a server's list of models) | récupérer | "Récupérer depuis le serveur", "Récupération…". |
+| token (a custom API's sign-in token) | jeton | "Commande de jeton"; the same word as billable model tokens. |

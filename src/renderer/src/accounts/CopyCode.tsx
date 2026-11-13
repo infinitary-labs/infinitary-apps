@@ -1,4 +1,5 @@
 import { FORGE_SECTION_WORDS } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import { useState } from "react";
 import { Button } from "../design";
 
@@ -67,11 +68,11 @@ export function CopyCodeButton({ state, onCopy }: { state: CopyState; onCopy: ()
       variant="secondary"
       size="sm"
       pending={state === "copying"}
-      pendingLabel="Copying..."
+      pendingLabel={m.accountsCopyCodeCopying()}
       style={{ marginInlineStart: "var(--space-2)" }}
       onClick={onCopy}
     >
-      Copy code
+      {m.accountsCopyCodeButton()}
     </Button>
   );
 }

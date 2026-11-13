@@ -1,4 +1,5 @@
 import type { AccountView } from "@shared/accounts";
+import * as m from "@shared/i18n/messages.generated";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import {
   API_KEY_LABEL,
@@ -194,16 +195,19 @@ export function ProviderChips({
       // An account on the stage while the gate is up says why it cannot
       // answer yet, when it knows: nothing to run it on this Mac, or a
       // login not signed in.
-      const note = unavailable?.note ?? (account.connected ? undefined : "not signed in");
+      const note =
+        unavailable?.note ?? (account.connected ? undefined : m.accountsConnectNotSignedIn());
       const why =
         account.detail ??
         unavailable?.detail ??
-        (account.connected ? undefined : `${provider.name} is not signed in on ${home.this} yet.`);
+        (account.connected
+          ? undefined
+          : m.accountsConnectNotSignedInYet({ provider: provider.name, here: home.this }));
       return (
         <ConnectedAccount
           key={provider.id}
           providerId={provider.id}
-          why={why ?? `${provider.name} is connected`}
+          why={why ?? m.accountsConnectConnected({ provider: provider.name })}
           unavailable={Boolean(note)}
         >
           <span className="fm-connect-account-dot" aria-hidden="true" />
@@ -216,15 +220,15 @@ export function ProviderChips({
     const claudeTaken = provider.id === CLAUDE_PROVIDER_ID && account !== undefined;
     const note =
       unavailable && provider.id === CLAUDE_PROVIDER_ID && place === "there"
-        ? CLAUDE_CHIP_INSTALL_THERE_NOTE
+        ? CONNECT_CHIP_NOTES.installClaudeThere
         : unavailable?.note;
     const name = claudeTaken
       ? place === "there"
-        ? "Claude uses the login there"
-        : `Claude uses the login on ${home.this}`
+        ? m.accountsConnectClaudeLoginThere()
+        : m.accountsConnectClaudeLoginOn({ here: home.this })
       : account
-        ? `Add another ${provider.name} account`
-        : `Connect ${provider.name}`;
+        ? m.accountsConnectAddAnother({ provider: provider.name })
+        : m.accountsConnectProvider({ provider: provider.name });
     // Why the chip cannot be pressed: what the backend said (F14), or the
     // login Claude already uses; a provider with no way in and no word why
     // says that it cannot be added.
@@ -244,7 +248,7 @@ export function ProviderChips({
         onConnect={() => onConnect(provider)}
       >
         {plusIcon}
-        <span>{busy ? "Connecting..." : provider.name}</span>
+        <span>{busy ? m.accountsConnectConnecting() : provider.name}</span>
         {note && <span className="fm-connect-chip-note">{note}</span>}
         {providerSignInNote(provider) && (
           <span className="fm-connect-chip-note">{providerSignInNote(provider)}</span>
@@ -263,7 +267,7 @@ export function ProviderChips({
           onClick={() => setCustomOpen(true)}
         >
           {plusIcon}
-          <span>Custom API</span>
+          <span>{m.accountsConnectCustomApi()}</span>
         </button>
       )}
       {place === "there" && custom && (
@@ -276,12 +280,12 @@ export function ProviderChips({
           onClick={() => custom.onOpen?.()}
         >
           {plusIcon}
-          <span>Custom API</span>
+          <span>{m.accountsConnectCustomApi()}</span>
           {custom.note && <span className="fm-connect-chip-note">{custom.note}</span>}
         </button>
       )}
       {customOpen && (
-        <CustomApiDialog label="Add a custom API" onClose={() => setCustomOpen(false)}>
+        <CustomApiDialog label={m.accountsCustomApiAddTitle()} onClose={() => setCustomOpen(false)}>
           <CustomApiForm firstSetup={variant === "stage"} onClose={() => setCustomOpen(false)} />
         </CustomApiDialog>
       )}
@@ -290,7 +294,7 @@ export function ProviderChips({
         // ends a line with its group on the next.
         <span className="fm-connect-group" data-connect-group="crew">
           {groups.firstmate.length > 0 && <span className="fm-connect-sep" aria-hidden="true" />}
-          <span className="fm-connect-label">crew only</span>
+          <span className="fm-connect-label">{m.accountsConnectCrewOnly()}</span>
           {groups.crew.map(chip)}
         </span>
       )}
@@ -298,11 +302,17 @@ export function ProviderChips({
   );
 }
 
-/** A Claude chip on a computer that runs work, where Claude Code is not installed. */
-export const CLAUDE_CHIP_INSTALL_THERE_NOTE = "install Claude Code there first";
-
-/** A Custom API chip on a computer that runs an older Firstmate. */
-export const CUSTOM_API_UPDATE_THERE_NOTE = "update Infinitary there first";
+/** The notes a chip on a computer that runs work carries. */
+export const CONNECT_CHIP_NOTES = {
+  /** A Claude chip on a computer that runs work, where Claude Code is not installed. */
+  get installClaudeThere() {
+    return m.accountsConnectInstallClaudeThere();
+  },
+  /** A Custom API chip on a computer that runs an older Firstmate. */
+  get updateThere() {
+    return m.accountsConnectUpdateThere();
+  },
+} as const;
 
 /**
  * The sign-in a provider offers; two means the person picks first. A
@@ -355,17 +365,17 @@ export function AuthMethodChoice({
       style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4 }}
     >
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-1)" }}>
-        How do you want to connect {provider.name}?
+        {m.accountsConnectHow({ provider: provider.name })}
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button variant="secondary" size="sm" onClick={() => onPick("oauth")}>
-          Sign in with your browser
+          {m.accountsConnectBrowser()}
         </Button>
         <Button variant="secondary" size="sm" onClick={() => onPick("api_key")}>
           {API_KEY_LABEL}
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {m.accountsConnectCancel()}
         </Button>
       </div>
     </div>
@@ -409,7 +419,7 @@ export function AuthPromptPanel({
             </Button>
           ))}
           <Button variant="ghost" size="sm" onClick={() => onAnswer(null)}>
-            Cancel
+            {m.accountsConnectCancel()}
           </Button>
         </div>
       ) : (
@@ -431,10 +441,10 @@ export function AuthPromptPanel({
             />
           </div>
           <Button variant="primary" size="sm" type="submit">
-            Submit
+            {m.accountsConnectSubmit()}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onAnswer(null)}>
-            Cancel
+            {m.accountsConnectCancel()}
           </Button>
         </form>
       )}
@@ -501,7 +511,7 @@ export function AuthAside({
                   void window.infinitary.app.openExternal(url).catch(() => {});
                 }}
               >
-                Open the sign-in page
+                {m.accountsConnectOpenSignIn()}
               </Button>
             </div>
           )}
@@ -657,7 +667,7 @@ function CodeStep({
           </Button>
         )}
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {m.accountsConnectCancel()}
         </Button>
         {enterprise && (
           <Button
@@ -699,7 +709,7 @@ export function CodeExpired({
           {CODE_STEP_WORDS.newCode}
         </Button>
         <Button variant="ghost" size="sm" onClick={onClose}>
-          Cancel
+          {m.accountsConnectCancel()}
         </Button>
       </div>
     </div>

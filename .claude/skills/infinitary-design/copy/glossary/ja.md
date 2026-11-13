@@ -140,3 +140,8 @@ A number placeholder sits directly against its counter with no space (「{count}
 | private network | プライベートネットワーク | A network that joins computers wherever they are. |
 | task key | タスクキー | The letters tasks are numbered with, such as {key}-1, as Japanese project tools say. |
 | log in (to a computer's user account) | ログイン | Kept apart from サインイン, which is for services. |
+| custom API (a connection the person adds) | カスタム API | A saved one is a 接続, and Disconnect is 接続を解除. |
+| server (a custom API's) | サーバー | Long-vowel mark, as for コンピューター. |
+| header (an extra request header) | ヘッダー | Long-vowel mark. |
+| certificate | 証明書 | Only where the person chooses an organization's CA certificate. |
+| token (a custom API's token command and model sizes) | トークン | Only where the person chose a command that prints one, and for context and output sizes. |

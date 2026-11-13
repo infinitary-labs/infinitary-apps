@@ -60,6 +60,13 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Remove (a device) | إزالة | |
 | Leave (a device) | مغادرة | "غادر {name}." in the feed. |
 | key (an integration's key) | مفتاح | Also a keyboard key; the sentence makes it clear. |
+| custom API | API مخصصة | A connection to a model server the person adds; "اتصال API مخصص" for the connection itself. |
+| server (a model API server) | الخادم | Only for the custom API form, where the person types a server address; a computer is still never "خادم". |
+| header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
+| certificate | شهادة | "شهادة CA" for an organization certificate. |
+| token (a sign-in token a command prints) | رمز الوصول | Only in the custom API form ("أمر رمز الوصول"), kept apart from "رموز" for counted model tokens. |
+| Models board | جدول النماذج | Not "لوحة", which names a panel. |
+| form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
 | a panel by <name> | لوحة من صنع <name> | |
 | conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |
 | report | تقرير | |

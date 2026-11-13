@@ -71,6 +71,11 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Leave (a device) | Verlassen | "{name} hat deine Geräte verlassen." |
 | Devices | Geräte | |
 | key (an integration's key) | Schlüssel | "Linear-Schlüssel", "API-Schlüssel". |
+| custom API | eigene API | A connection to a model server the person adds; "Eigene API hinzufügen". |
+| header (a request header) | Header | Masculine, plural "Header"; only in the custom API form. |
+| certificate | Zertifikat | "CA-Zertifikat" for an organization certificate. |
+| token (a sign-in token a command prints) | Token | Neuter ("das Token"); only in the custom API form, plural "Tokens" for counted model tokens. |
+| Models board | Modelltafel | The board of models under Intelligenz in the settings. |
 | Secrets | Geheimnisse | As GitHub's German docs name secrets. |
 | Runbooks | Leitfäden | Plain word for a settings section a non-developer reads. |
 | Usage | Nutzung | |

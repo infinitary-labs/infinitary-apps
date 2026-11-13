@@ -271,8 +271,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
       # A run whose journeys did not pass keeps the window and everything the
-      # journeys left; a passing run keeps only its result file and any
-      # recorded demo, under the same name.
+      # journeys left; a passing run keeps its result file, recorded demos
+      # and explicitly captured picture evidence, under the same name.
       - name: Keep the Linux window and the journeys' results
         if: always() && steps.journeys.outcome != 'success'
         uses: actions/upload-artifact@v4
@@ -284,7 +284,7 @@ jobs:
             Application Support/firstmate/test-results/
           if-no-files-found: ignore
           retention-days: 3
-      - name: Keep a passing run's result and demos
+      - name: Keep a passing run's result and evidence
         if: always() && steps.journeys.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
@@ -292,6 +292,7 @@ jobs:
           path: |
             Application Support/firstmate/playwright-report/source-results.json
             Application Support/firstmate/test-results/runs/*/*/demo/
+            Application Support/firstmate/test-results/runs/*/*/evidence/
           if-no-files-found: ignore
           retention-days: 3
       - name: Keep the run-alone result

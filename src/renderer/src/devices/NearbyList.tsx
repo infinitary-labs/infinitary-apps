@@ -1,4 +1,5 @@
 import type { DeviceView } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import {
   type NearbyMac,
   type NearbyMacsView,
@@ -30,11 +31,11 @@ export function PortField({
     <Input
       id={id}
       mono
-      aria-label="Port"
+      aria-label={m.devicesNearbyPort()}
       inputMode="numeric"
       autoComplete="off"
       spellCheck={false}
-      placeholder="Port 22"
+      placeholder={m.devicesNearbyPortPlaceholder()}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       style={{ width: 96, flex: "none" }}
@@ -69,9 +70,7 @@ export function nearbyStep(key: string, at: number, count: number): number | nul
  * computer is as likely Linux, names both.
  */
 export function sshMustBeOn(): string {
-  return thisDesktop().mac
-    ? "Remote Login must be on there."
-    : "Its SSH server, or Remote Login on a Mac, must be on.";
+  return thisDesktop().mac ? m.devicesNearbyRemoteLoginOn() : m.devicesNearbySshOn();
 }
 
 /**

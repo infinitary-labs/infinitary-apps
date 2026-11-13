@@ -309,13 +309,6 @@ export function isCheckedFile(path: string): boolean {
  */
 export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/panels/now/words.ts": 13,
-  "src/renderer/src/accounts/ConnectChips.tsx": 22,
-  "src/renderer/src/accounts/CopyCode.tsx": 1,
-  "src/renderer/src/accounts/CustomApiForm.tsx": 172,
-  "src/renderer/src/accounts/customApiFailures.ts": 35,
-  "src/renderer/src/devices/JoinAnotherMac.tsx": 40,
-  "src/renderer/src/devices/NearbyList.tsx": 4,
-  "src/renderer/src/devices/RemoteControl.tsx": 6,
   "src/renderer/src/devices/viewWords.ts": 38,
   "src/renderer/src/settings/AutomationTab.tsx": 71,
   "src/renderer/src/settings/DecisionsGroup.tsx": 24,

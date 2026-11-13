@@ -28,6 +28,7 @@ import "./joinAnotherMac.css";
 import "../accounts/connectChips.css";
 import "../settings/devices.css";
 import { COMPUTER, HERE } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 
 /**
  * Joining Firstmate on another Mac from this app's first launch (design
@@ -303,7 +304,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
     return (
       <div className="fm-join-group" data-join-another-mac="closed">
         <div className="fm-join-row">
-          <MicroLabel>Your first mate is on another {COMPUTER.one}</MicroLabel>
+          <MicroLabel>{m.devicesJoinElsewhere({ computer: COMPUTER.one })}</MicroLabel>
           <div className="fm-connect-chips" data-connect-chips="stage">
             <button
               type="button"
@@ -312,7 +313,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               onClick={props.onOpen}
             >
               {plusIcon}
-              <span>Paste its link</span>
+              <span>{m.devicesJoinPasteChip()}</span>
             </button>
             <button
               type="button"
@@ -321,7 +322,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               onClick={props.onOpenAddress}
             >
               {plusIcon}
-              <span>Join by its address</span>
+              <span>{m.devicesJoinAddressChip()}</span>
             </button>
           </div>
         </div>
@@ -337,17 +338,14 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
             if (value.trim()) props.onContinue();
           }}
         >
-          <p className="fm-join-head">
-            Paste the link from Infinitary on your other {COMPUTER.one}
-          </p>
-          <p className="fm-join-sub">
-            You make it there, in Settings → Devices, or by asking your first mate.
-          </p>
+          <p className="fm-join-head">{m.devicesJoinPasteHead({ computer: COMPUTER.one })}</p>
+          <p className="fm-join-sub">{m.devicesJoinPasteSub()}</p>
           <div className="fm-join-field">
             <div>
               <Input
                 mono
-                aria-label={`The link from your other ${COMPUTER.one}`}
+                aria-label={m.devicesJoinLinkLabel({ computer: COMPUTER.one })}
+                // i18n-exempt: a sample link
                 placeholder="infinitary://join?…"
                 value={value}
                 onChange={(event) => props.onValue(event.target.value)}
@@ -357,15 +355,15 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               />
             </div>
             <Button variant="primary" size="sm" type="submit" disabled={!value.trim()}>
-              Continue
+              {m.devicesJoinContinue()}
             </Button>
             <Button variant="ghost" size="sm" onClick={props.onCancel}>
-              Cancel
+              {m.devicesJoinCancel()}
             </Button>
           </div>
           {step.notALink && (
             <p className="fm-join-warn" role="alert" data-join-warn="">
-              <StatusDot tone="warn" label="Not joined" />
+              <StatusDot tone="warn" label={m.devicesJoinNotJoined()} />
               {joinRefusalWords("not-a-link", null)}
             </p>
           )}
@@ -381,10 +379,10 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
           </div>
           <div className="fm-join-buttons">
             <Button variant="primary" size="sm" onClick={() => props.onKeyYes(step.line)}>
-              This is the {COMPUTER.one}
+              {m.devicesJoinKeyYes({ computer: COMPUTER.one })}
             </Button>
             <Button variant="ghost" size="sm" autoFocus onClick={props.onKeyCancel}>
-              Cancel
+              {m.devicesJoinCancel()}
             </Button>
           </div>
         </div>
@@ -397,7 +395,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               ? remoteLoginWords.lettingInRow(step.address)
               : remoteLoginWords.reachingRow(step.address)}
           </p>
-          <p className="fm-join-sub">This takes a moment.</p>
+          <p className="fm-join-sub">{m.devicesJoinMoment()}</p>
         </div>
       )}
       {step.step === "confirm" && (
@@ -408,13 +406,10 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
             {JOIN_CONFIRM_WORDS.after}
           </p>
           <p className="fm-join-sub">
-            {HERE.This} shows your first mate. Its cards, tasks and conversation stay on that{" "}
-            {COMPUTER.one}.
+            {m.devicesJoinShows({ here: HERE.This, computer: COMPUTER.one })}
           </p>
           {step.runsWork && <p className="fm-join-sub">{JOIN_RUNS_WORK}</p>}
-          <p className="fm-join-sub">
-            To keep your first mate on {HERE.this} instead, cancel and set it up here.
-          </p>
+          <p className="fm-join-sub">{m.devicesJoinKeepHere({ here: HERE.this })}</p>
           <div className="fm-join-buttons">
             <Button
               variant="primary"
@@ -422,10 +417,10 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               autoFocus
               onClick={() => props.onConfirm(step.address)}
             >
-              Control it from here
+              {m.devicesJoinControl()}
             </Button>
             <Button variant="ghost" size="sm" onClick={props.onCancel}>
-              Cancel
+              {m.devicesJoinCancel()}
             </Button>
           </div>
         </div>
@@ -433,16 +428,19 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
       {step.step === "reaching" && (
         <div role="status">
           <p className="fm-join-head">
-            Reaching the {COMPUTER.one} at <code>{step.address}</code>…
+            {withAddress(
+              m.devicesJoinReaching({ computer: COMPUTER.one, address: step.address }),
+              step.address,
+            )}
           </p>
-          <p className="fm-join-sub">This takes a moment.</p>
+          <p className="fm-join-sub">{m.devicesJoinMoment()}</p>
         </div>
       )}
       {step.step === "refused" && (
         <div data-join-refused={step.refused}>
-          <p className="fm-join-head">{HERE.This} did not join</p>
+          <p className="fm-join-head">{m.devicesJoinDidNotJoin({ here: HERE.This })}</p>
           <p className="fm-join-warn" role="alert" data-join-warn="">
-            <StatusDot tone="warn" label="Not joined" nativeTitle={false} />
+            <StatusDot tone="warn" label={m.devicesJoinNotJoined()} nativeTitle={false} />
             <span>{withAddress(joinRefusalWords(step.refused, step.address), step.address)}</span>
           </p>
           <div className="fm-join-buttons">
@@ -452,10 +450,10 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               autoFocus
               onClick={step.byAddress ? props.onOpenAddress : props.onOpen}
             >
-              {step.byAddress ? "Try again" : "Paste another link"}
+              {step.byAddress ? m.devicesJoinTryAgain() : m.devicesJoinPasteAnother()}
             </Button>
             <Button variant="ghost" size="sm" onClick={props.onCancel}>
-              Cancel
+              {m.devicesJoinCancel()}
             </Button>
           </div>
         </div>
@@ -494,16 +492,17 @@ function AddressStep(
       }}
     >
       <label className="fm-join-head" htmlFor="join-address">
-        Join by its address
+        {m.devicesJoinAddressChip()}
       </label>
       <p className="fm-join-sub">
-        The account and {COMPUTER.one}, as you sign in to it with SSH. {sshMustBeOn()}
+        {m.devicesJoinAddressSub({ computer: COMPUTER.one, mustBeOn: sshMustBeOn() })}
       </p>
       <div className="fm-join-field">
         <div>
           <Input
             id="join-address"
             mono
+            // i18n-exempt: a sample account and computer address
             placeholder="kun@studio"
             value={address}
             onChange={(event) => props.onAddress(event.target.value)}
@@ -523,26 +522,27 @@ function AddressStep(
         </div>
         <PortField id="join-port" value={port} onChange={props.onPort} />
         <Button variant="primary" size="sm" type="submit" disabled={!address.trim()}>
-          Continue
+          {m.devicesJoinContinue()}
         </Button>
         <Button variant="ghost" size="sm" onClick={props.onCancel}>
-          Cancel
+          {m.devicesJoinCancel()}
         </Button>
       </div>
       {step.refused && (
         <p className="fm-join-warn" role="alert" data-join-warn="" data-join-refused={step.refused}>
-          <StatusDot tone="warn" label="Not joined" nativeTitle={false} />
+          <StatusDot tone="warn" label={m.devicesJoinNotJoined()} nativeTitle={false} />
           <span>{joinAtRefusalWords(step.refused, step.at ?? address.trim())}</span>
         </p>
       )}
       {nearby.macs.length > 0 && (
         <div className="fm-join-account">
           <label className="fm-devices-nearby-label" htmlFor="join-account">
-            Your account
+            {m.devicesJoinYourAccount()}
           </label>
           <Input
             id="join-account"
             mono
+            // i18n-exempt: a sample account name
             placeholder="kun"
             value={account}
             onChange={(event) => props.onAccount(event.target.value)}
@@ -558,9 +558,7 @@ function AddressStep(
             spellCheck={false}
             autoComplete="off"
           />
-          <p className="fm-join-sub">
-            Type your account, then pick your {COMPUTER.one} to fill its address.
-          </p>
+          <p className="fm-join-sub">{m.devicesJoinPickHint({ computer: COMPUTER.one })}</p>
         </div>
       )}
       <NearbyList
@@ -618,15 +616,15 @@ function PasswordStep(props: JoinAnotherMacViewProps & { question: RemoteLoginPa
           />
         </div>
         <Button variant="primary" size="sm" type="submit" disabled={!typed}>
-          Continue
+          {m.devicesJoinContinue()}
         </Button>
         <Button variant="ghost" size="sm" onClick={props.onKeyCancel}>
-          Cancel
+          {m.devicesJoinCancel()}
         </Button>
       </div>
       {question.wrong && (
         <p className="fm-join-warn" role="alert" data-join-warn="">
-          <StatusDot tone="warn" label="Not joined" nativeTitle={false} />
+          <StatusDot tone="warn" label={m.devicesJoinNotJoined()} nativeTitle={false} />
           <span>{joinAtRefusalWords("password-wrong", question.address)}</span>
         </p>
       )}

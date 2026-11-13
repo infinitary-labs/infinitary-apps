@@ -124,3 +124,8 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | reach (another computer) | alcançar | "Não foi possível alcançar o {host}", matching "fora de alcance". |
 | issue (where the project lives) | issue | As GitHub's Portuguese docs keep it; feminine: "Abrir a issue". |
 | cost limit | limite de custo | A project's estimated-dollar cap, never the plan's allowance ("franquia"). |
+| custom API | API personalizada | Feminine: "uma API personalizada". |
+| connection (to a server) | conexão | Feminine, so its status agrees: "Pronta", "Verificada", "Pausada". |
+| server, address (a custom API's) | servidor, endereço | Said only where English names the person's own server and its address. |
+| header (a request's) | cabeçalho | |
+| fetch (a server's list of models) | buscar | "Buscar no servidor", "Buscando…". |

@@ -56,6 +56,11 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Leave (a device) | 나가기 | "{name} left." is {name} 컴퓨터가 나갔어요. |
 | devices | 기기 | |
 | key (an integration's key) | 키 | Named by its place, e.g. "Linear 키" |
+| custom API | 사용자 지정 API | A connection to a model server the person adds themselves; macOS Korean says 사용자 지정 |
+| header (a request header) | 헤더 | Only in the custom API form, where the person types header names |
+| certificate | 인증서 | An organization CA certificate in the custom API form |
+| token (a sign-in token a command prints) | 토큰 | Only in the custom API form, where the person enters a "token command"; elsewhere 로그인 or 키 |
+| Models board | 모델 보드 | The board of models under Intelligence in Settings |
 | a panel by <name> | <name>의 패널 | |
 | conversation | 대화 | Replaces session and transcript; "The crewmate's session" is 선원의 대화 |
 | report | 보고, 보고하다 | |

@@ -174,9 +174,18 @@ private struct PassiveCardMedia: UIViewRepresentable {
         return """
         <!doctype html><html><head><meta name="viewport" content="\(viewport)">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: app-frame://images app-frame://media; media-src 'none'; style-src 'unsafe-inline'; base-uri 'none'">
-        <style>html,body{margin:0;height:100%;background:transparent}html{touch-action:manipulation}body{display:flex;align-items:center;justify-content:center}img,video{max-width:100%;max-height:100%;object-fit:contain}img.drawing{width:100%;height:100%}</style>
+        <style>html,body{margin:0;height:100%;background:\(css(.light))}@media(prefers-color-scheme:dark){html,body{background:\(css(.dark))}}html{touch-action:manipulation}body{display:flex;align-items:center;justify-content:center}img,video{max-width:100%;max-height:100%;object-fit:contain}img.drawing{width:100%;height:100%}</style>
         </head><body>\(element)</body></html>
         """
+    }
+    /// The viewer's own background, drawn by the page itself: while zoomed, WebKit keeps a copy of the whole page drawn
+    /// at the fitted size under the zoomed tiles, and a page with no background lets that stretched copy show through as
+    /// a blurred second edge on every line and word.
+    private static func css(_ style: UIUserInterfaceStyle) -> String {
+        let color = UIColor(PhoneTheme.background).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return "rgb(\(Int((r * 255).rounded())),\(Int((g * 255).rounded())),\(Int((b * 255).rounded())))"
     }
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         coordinator.loading?.cancel(); view.stopLoading(); coordinator.assets.cancel()

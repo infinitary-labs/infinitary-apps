@@ -11,6 +11,7 @@ import {
 } from "../../../../tests/helpers/releaseWorkflows";
 import { scratchDir } from "../../../../tests/helpers/scratchDirs";
 import { GITHUB_QUEUE_PART, shippedFiles } from "../shipped";
+import { staleWorkflows } from "./github.mjs";
 import { QUEUE, queueKind, readComposition, WAITING } from "./rules.mjs";
 
 // INF-2952 piece 1, the captain's approved merge-route answer: "the queue
@@ -61,6 +62,217 @@ function project() {
     return clone;
   };
   return { origin, changes, job };
+}
+
+/** Commit files onto `branch`, made from `from` when it does not exist yet; answers its version. */
+function commitOn(origin: string, branch: string, from: string, files: Record<string, string>) {
+  const exists = spawnSync("git", ["rev-parse", "--verify", "-q", branch], {
+    cwd: origin,
+    env: git,
+  });
+  run(origin, "checkout", "-q", ...(exists.status === 0 ? [branch] : ["-b", branch, from]));
+  for (const [file, contents] of Object.entries(files)) {
+    mkdirSync(dirname(join(origin, file)), { recursive: true });
+    writeFileSync(join(origin, file), contents);
+  }
+  run(origin, "add", ".");
+  run(origin, "commit", "-q", "-m", branch);
+  run(origin, "checkout", "-q", "main");
+  return run(origin, "rev-parse", branch);
+}
+
+/** A workflow file's lines, the way a project's batch checks and release files read. */
+const workflow = (name: string, steps: string[], tail: string[] = []) =>
+  [
+    `name: ${name}`,
+    "on:",
+    "  workflow_call:",
+    "jobs:",
+    "  checks:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      - uses: actions/checkout@v4",
+    "      - run: corepack enable",
+    "      - run: pnpm install --frozen-lockfile",
+    ...steps.map((step) => `      - run: ${step}`),
+    ...tail,
+    "",
+  ].join("\n");
+const BATCH_CHECKS = ".github/workflows/batch-checks.yml";
+const CI = ".github/workflows/ci.yml";
+const RELEASE = ".github/workflows/release.yml";
+
+/**
+ * INF-4019's history, as approved changes to workflow files: PR 1637 added
+ * a job to batch-checks.yml; PR 1625 then changed another part of that
+ * file on the default branch, and the squash GitHub's queue key made of
+ * PR 1637 would have written the file as neither had it. PR 1613 changed
+ * ci.yml while the default branch had changed release.yml since it
+ * branched, and the same key merged it. Two later changes edit release.yml
+ * in two places, in one batch.
+ */
+function workflowProject() {
+  const { origin, job } = project();
+  const startsAt = commitOn(origin, "main", "main", {
+    [BATCH_CHECKS]: workflow("Batch checks", ["pnpm check", "pnpm test:unit"]),
+    [CI]: workflow("Pull request check", ["pnpm typecheck", "pnpm check"]),
+    [RELEASE]: workflow("Release", ["pnpm build", "pnpm package"]),
+  });
+  const behind = commitOn(origin, "behind", startsAt, {
+    [BATCH_CHECKS]: workflow(
+      "Batch checks",
+      ["pnpm check", "pnpm test:unit"],
+      [
+        "  watch:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - run: node scripts/batch-stop.mjs",
+      ],
+    ),
+  });
+  const otherFile = commitOn(origin, "other-file", startsAt, {
+    [CI]: workflow("Pull request check", ["pnpm typecheck", "pnpm check", "pnpm test:browser"]),
+  });
+  commitOn(origin, "main", "main", {
+    [BATCH_CHECKS]: workflow("Batch checks (keeps a failed confirm's evidence)", [
+      "pnpm check",
+      "pnpm test:unit",
+    ]),
+    [RELEASE]: workflow("Release", ["pnpm build", "pnpm package", "pnpm notarize"]),
+  });
+  const firstEdit = commitOn(origin, "first-edit", "main", {
+    [RELEASE]: workflow("Release (alpha and stable)", [
+      "pnpm build",
+      "pnpm package",
+      "pnpm notarize",
+    ]),
+  });
+  const secondEdit = commitOn(origin, "second-edit", "main", {
+    [RELEASE]: workflow("Release", ["pnpm build", "pnpm package", "pnpm notarize", "pnpm publish"]),
+  });
+  const members = [
+    { number: 1637, head: behind },
+    { number: 1613, head: otherFile },
+    { number: 1701, head: firstEdit },
+    { number: 1702, head: secondEdit },
+  ];
+  return { origin, job, members };
+}
+
+/**
+ * The shipped workflow's GitHub form job, step by step: its checkout, the
+ * form step reading the queue through a stand-in of GitHub's API, the
+ * compose step's shell and the mark step, with the project's stamped files
+ * in the checkout. Each pull request waits in the queue, approved in the
+ * order given. Answers the job's outputs and every status on each version,
+ * newest first.
+ */
+async function runFormJob(workspace: string, pulls: { number: number; head: string }[]) {
+  for (const file of shippedFiles(shipped, GITHUB_QUEUE_PART)) {
+    mkdirSync(dirname(join(workspace, file.path)), { recursive: true });
+    writeFileSync(join(workspace, file.path), file.text);
+  }
+  const statuses = new Map<string, Record<string, string>[]>(
+    pulls.map((pull, index) => [
+      pull.head,
+      [
+        {
+          context: QUEUE,
+          state: "pending",
+          description: WAITING,
+          target_url: "",
+          created_at: `2026-11-08T07:${String(30 + index).padStart(2, "0")}:00Z`,
+        },
+      ],
+    ]),
+  );
+  const github = {
+    paginate: async (
+      method: (params: Record<string, unknown>) => Promise<{ data: unknown[] }>,
+      params: Record<string, unknown>,
+    ) => (await method(params)).data,
+    rest: {
+      pulls: {
+        list: async () => ({
+          data: pulls.map((pull) => ({
+            number: pull.number,
+            head: { sha: pull.head },
+            base: { ref: "main" },
+            labels: [],
+          })),
+        }),
+      },
+      repos: {
+        listCommitStatusesForRef: async ({ ref }: { ref: string }) => ({
+          data: statuses.get(ref) ?? [],
+        }),
+        createCommitStatus: async (write: Record<string, string>) => {
+          const status = {
+            ...write,
+            target_url: write.target_url ?? "",
+            created_at: "2026-11-08T07:44:30Z",
+          };
+          statuses.set(write.sha as string, [status, ...(statuses.get(write.sha as string) ?? [])]);
+        },
+      },
+    },
+  };
+  const formJob = (
+    loadYamlFile("src/core/queue/shipped/workflow.yml") as { jobs: Record<string, Job> }
+  ).jobs.form as Job;
+  const runner = scratchDir("infinitary-queue-runner-");
+  const outputs: Record<string, { outputs: Record<string, string> }> = {};
+  const contexts = () => ({
+    github: { event: { repository: { default_branch: "main" } } },
+    steps: outputs,
+  });
+  const stepEnv = (id: string) => {
+    const step = formJob.steps.find((candidate) => candidate.id === id);
+    expect(step, id).toBeDefined();
+    const env = Object.entries(step?.env ?? {}).map(([key, value]) => [
+      key,
+      workflowString(value, contexts()),
+    ]);
+    return { step, env: Object.fromEntries(env) as Record<string, string> };
+  };
+  const githubStep = async (id: string) => {
+    const { step, env } = stepEnv(id);
+    const set: Record<string, string> = {};
+    outputs[id] = { outputs: set };
+    await githubScript(step?.with?.script ?? "", [
+      "github",
+      "context",
+      "core",
+      "require",
+      "process",
+    ])(
+      github,
+      {
+        repo: { owner: "acme", repo: "shop" },
+        runId: 43,
+        serverUrl: "https://github.com",
+        payload: { repository: { default_branch: "main" } },
+      },
+      { notice: () => {}, setOutput: (key: string, value: string) => (set[key] = value) },
+      createRequire(import.meta.url),
+      { env: { GITHUB_WORKSPACE: workspace, RUNNER_TEMP: runner, ...env } },
+    );
+  };
+
+  await githubStep("form");
+  const { step: compose, env } = stepEnv("compose");
+  outputs.compose = { outputs: {} };
+  const composed = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", compose?.run ?? ""], {
+    cwd: workspace,
+    env: { ...git, RUNNER_TEMP: runner, ...env },
+    encoding: "utf8",
+  });
+  expect(composed.status, composed.stderr).toBe(0);
+  await githubStep("mark");
+  const formed = Object.fromEntries(
+    Object.entries(formJob.outputs).map(([key, value]) => [key, workflowString(value, contexts())]),
+  );
+  return { formed, statuses };
 }
 
 /** How many distinct objects a clone holds, never downloading one. */
@@ -285,116 +497,12 @@ describe("composing a batch of the shipped queue", () => {
   it("runs the GitHub form job onto the default branch as it stands after its form step reads the queue", async () => {
     const { origin, changes, job } = project();
     const workspace = job();
-    for (const file of shippedFiles(shipped, GITHUB_QUEUE_PART)) {
-      mkdirSync(dirname(join(workspace, file.path)), { recursive: true });
-      writeFileSync(join(workspace, file.path), file.text);
-    }
     const checkedOut = run(workspace, "rev-parse", "HEAD");
     // #902, green in the previous batch, merges: GitHub lists it open no more.
     run(origin, "merge", "-q", "--no-ff", "-m", "#902", "second");
-    const statuses = new Map<string, Record<string, string>[]>([
-      [
-        changes.first,
-        [
-          {
-            context: QUEUE,
-            state: "pending",
-            description: WAITING,
-            target_url: "",
-            created_at: "2026-11-08T07:30:00Z",
-          },
-        ],
-      ],
+    const { formed, statuses } = await runFormJob(workspace, [
+      { number: 901, head: changes.first },
     ]);
-    const github = {
-      paginate: async (
-        method: (params: Record<string, unknown>) => Promise<{ data: unknown[] }>,
-        params: Record<string, unknown>,
-      ) => (await method(params)).data,
-      rest: {
-        pulls: {
-          list: async () => ({
-            data: [
-              { number: 901, head: { sha: changes.first }, base: { ref: "main" }, labels: [] },
-            ],
-          }),
-        },
-        repos: {
-          listCommitStatusesForRef: async ({ ref }: { ref: string }) => ({
-            data: statuses.get(ref) ?? [],
-          }),
-          createCommitStatus: async (write: Record<string, string>) => {
-            const status = {
-              ...write,
-              target_url: write.target_url ?? "",
-              created_at: "2026-11-08T07:34:30Z",
-            };
-            statuses.set(write.sha as string, [
-              status,
-              ...(statuses.get(write.sha as string) ?? []),
-            ]);
-          },
-        },
-      },
-    };
-    const formJob = (
-      loadYamlFile("src/core/queue/shipped/workflow.yml") as { jobs: Record<string, Job> }
-    ).jobs.form as Job;
-    const runner = scratchDir("infinitary-queue-runner-");
-    const outputs: Record<string, { outputs: Record<string, string> }> = {};
-    const contexts = () => ({
-      github: { event: { repository: { default_branch: "main" } } },
-      steps: outputs,
-    });
-    const stepEnv = (id: string) => {
-      const step = formJob.steps.find((candidate) => candidate.id === id);
-      expect(step, id).toBeDefined();
-      const env = Object.entries(step?.env ?? {}).map(([key, value]) => [
-        key,
-        workflowString(value, contexts()),
-      ]);
-      return { step, env: Object.fromEntries(env) as Record<string, string> };
-    };
-    const githubStep = async (id: string) => {
-      const { step, env } = stepEnv(id);
-      const set: Record<string, string> = {};
-      outputs[id] = { outputs: set };
-      await githubScript(step?.with?.script ?? "", [
-        "github",
-        "context",
-        "core",
-        "require",
-        "process",
-      ])(
-        github,
-        {
-          repo: { owner: "acme", repo: "shop" },
-          runId: 43,
-          serverUrl: "https://github.com",
-          payload: { repository: { default_branch: "main" } },
-        },
-        { notice: () => {}, setOutput: (key: string, value: string) => (set[key] = value) },
-        createRequire(import.meta.url),
-        { env: { GITHUB_WORKSPACE: workspace, RUNNER_TEMP: runner, ...env } },
-      );
-    };
-
-    await githubStep("form");
-    const { step: compose, env } = stepEnv("compose");
-    outputs.compose = { outputs: {} };
-    const composed = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", compose?.run ?? ""], {
-      cwd: workspace,
-      env: { ...git, RUNNER_TEMP: runner, ...env },
-      encoding: "utf8",
-    });
-    expect(composed.status, composed.stderr).toBe(0);
-    await githubStep("mark");
-    const formed = Object.fromEntries(
-      Object.entries(formJob.outputs).map(([key, value]) => [
-        key,
-        workflowString(value, contexts()),
-      ]),
-    );
 
     expect(formed.run).toBe("true");
     expect(formed.heads).toBe(`901:${changes.first}`);
@@ -418,6 +526,79 @@ describe("composing a batch of the shipped queue", () => {
     expect(run(check, "show", "HEAD:added.md")).toBe("new file");
     run(origin, "merge", "-q", "--no-ff", "-m", "#901", "first");
     expect(run(origin, "rev-parse", "main^{tree}")).toBe(formed.tree);
+  });
+
+  // INF-4019: PR 1637's batch passed, then GitHub refused the queue's merge:
+  // "refusing to allow a GitHub App to create or update workflow
+  // .github/workflows/batch-checks.yml without workflows permission". The
+  // workflow's key cannot be given that permission, so the form job keeps
+  // such a change out of the batch and sends it back to be brought up to
+  // date, where its batch would otherwise pass and then fail to merge.
+  it("sends a change back from a GitHub batch when its merge would write a workflow file in a form its own version lacks", async () => {
+    const { origin, job, members } = workflowProject();
+    const [behind, otherFile, firstEdit, secondEdit] = members as [
+      (typeof members)[number],
+      (typeof members)[number],
+      (typeof members)[number],
+      (typeof members)[number],
+    ];
+    const { formed, statuses } = await runFormJob(job(), members);
+    const newest = (head: string) => {
+      const [status] = statuses.get(head) ?? [];
+      return { ...queueKind(status?.state ?? "", status?.description ?? ""), status };
+    };
+
+    // The default branch changed batch-checks.yml since PR 1637 branched.
+    expect(newest(behind.head).status).toMatchObject({
+      state: "failure",
+      description: staleWorkflows(behind, "").description,
+    });
+    // Behind on release.yml, which it does not edit: its merge writes ci.yml as it has it.
+    expect(newest(otherFile.head)).toMatchObject({ kind: "in-batch", run: 43 });
+    expect(newest(firstEdit.head)).toMatchObject({ kind: "in-batch", run: 43 });
+    // Only the earlier change in this batch edits release.yml too: it waits for the next one.
+    expect(newest(secondEdit.head)).toMatchObject({ kind: "waiting" });
+    expect(formed.heads).toBe(
+      `${otherFile.number}:${otherFile.head} ${firstEdit.number}:${firstEdit.head}`,
+    );
+
+    // The checks build that batch, and once both merge the default branch has its tree.
+    // The batch checks' action passes the heads unquoted, one word each.
+    const applied = script(
+      job(),
+      "apply",
+      formed.base ?? "",
+      formed.tree ?? "",
+      ...(formed.heads ?? "").split(" "),
+    );
+    expect(applied.status, applied.stderr).toBe(0);
+    run(origin, "merge", "-q", "--no-ff", "-m", `#${otherFile.number}`, "other-file");
+    run(origin, "merge", "-q", "--no-ff", "-m", `#${firstEdit.number}`, "first-edit");
+    expect(run(origin, "rev-parse", "main^{tree}")).toBe(formed.tree);
+    // Each merged workflow file reads as its change carries it.
+    expect(run(origin, "rev-parse", `main:${CI}`)).toBe(
+      run(origin, "rev-parse", `other-file:${CI}`),
+    );
+    expect(run(origin, "rev-parse", `main:${RELEASE}`)).toBe(
+      run(origin, "rev-parse", `first-edit:${RELEASE}`),
+    );
+
+    // Brought up to date, PR 1637 carries the default branch's edit too and joins a batch.
+    run(origin, "checkout", "-q", "behind");
+    run(origin, "merge", "-q", "--no-edit", "main");
+    run(origin, "checkout", "-q", "main");
+    const updated = { number: behind.number, head: run(origin, "rev-parse", "behind") };
+    const again = await runFormJob(job(), [updated]);
+    expect(again.formed.heads).toBe(`${updated.number}:${updated.head}`);
+  });
+
+  it("composes changes to workflow files as before for a host whose queue key merges them in any form", () => {
+    const { job, members } = workflowProject();
+    const result = script(job(), "compose", "main", ...members.map((m) => `${m.number}:${m.head}`));
+    expect(result.status, result.stderr).toBe(0);
+    const composed = readComposition(result.stdout, members);
+    expect(composed.merged).toEqual(members);
+    expect([...composed.staleMain, ...composed.staleBatch]).toEqual([]);
   });
 
   it("composes nothing when it cannot read the default branch", () => {

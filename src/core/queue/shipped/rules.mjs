@@ -365,7 +365,12 @@ export const headList = (members) =>
  * The compose step's output: the default branch's version the batch
  * composes onto, read after the queue (`base`), the tree, and which changes
  * merged, which conflict with main alone, and which conflict only with an
- * earlier change of this batch (they wait for the next one).
+ * earlier change of this batch (they wait for the next one). On a host
+ * whose queue key may merge some files only as a change carries them, it
+ * also says which changes would merge such a file in another form: because
+ * the default branch changed it since they branched (`staleMain`, they go
+ * back to be brought up to date), or only because an earlier change of
+ * this batch did (`staleBatch`, they wait for the next one).
  */
 export function readComposition(output, members) {
   const lines = output.trim().split("\n");
@@ -383,6 +388,8 @@ export function readComposition(output, members) {
     merged: pick(said("merged")),
     conflictsMain: pick(said("conflict-main")),
     conflictsBatch: pick(said("conflict-batch")),
+    staleMain: pick(said("stale-main")),
+    staleBatch: pick(said("stale-batch")),
   };
 }
 

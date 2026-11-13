@@ -41,6 +41,26 @@ export const WORKFLOW = "infinitary-queue.yml";
 /** Who GitHub names as the writer of anything this workflow's own key writes. */
 const QUEUE_WRITER = "github-actions[bot]";
 
+/**
+ * The write for a change whose merge would write a workflow file in a form
+ * its own version does not have. GitHub lets this workflow's key merge a
+ * workflow file only as the change carries it, and that key cannot be
+ * given the workflows permission that would lift it, so such a change's
+ * batch would pass and its merge then be refused. The compose step finds
+ * it first (`compose.sh compose --carried .github/workflows`): it goes back
+ * to be brought up to date, after which its version carries the default
+ * branch's edits too.
+ */
+export function staleWorkflows(member, url) {
+  return {
+    ...member,
+    state: "failure",
+    description:
+      "Bring the branch up to date: the default branch changed workflow files it edits, and the queue can merge them only as the branch has them",
+    url,
+  };
+}
+
 const defaultBranch = (context) => context.payload.repository?.default_branch ?? "main";
 const runUrl = (context) =>
   `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
@@ -292,11 +312,13 @@ export async function form({ github, context, core }) {
 
 /**
  * After the compose step: a change that conflicts with the default branch
- * alone goes back to be brought up to date, one that conflicts only with
- * an earlier change here waits for the next batch, and the rest are in this
- * run. Its outputs name what the checks compose, the default branch's
- * version they compose onto (fetched after `form` read the queue, never
- * the job's own checkout) and the batch's tree.
+ * alone, or whose merge would write a workflow file in another form than
+ * its own (`staleWorkflows`), goes back to be brought up to date; one that
+ * conflicts only with an earlier change here, or whose workflow files only
+ * an earlier change here makes differ, waits for the next batch; and the
+ * rest are in this run. Its outputs name what the checks compose, the
+ * default branch's version they compose onto (fetched after `form` read
+ * the queue, never the job's own checkout) and the batch's tree.
  */
 export async function mark({ github, context, core, output, members }) {
   const repo = context.repo;
@@ -304,6 +326,8 @@ export async function mark({ github, context, core, output, members }) {
   core.notice(`The batch composes onto ${defaultBranch(context)} at ${composed.base}.`);
   for (const member of composed.conflictsMain)
     await writeStatus(github, repo, conflictsWithMain(member, runUrl(context)));
+  for (const member of composed.staleMain)
+    await writeStatus(github, repo, staleWorkflows(member, runUrl(context)));
   for (const member of composed.merged)
     await writeStatus(github, repo, {
       ...member,
@@ -314,6 +338,10 @@ export async function mark({ github, context, core, output, members }) {
   for (const member of composed.conflictsBatch)
     core.notice(
       `#${member.number} conflicts only with an earlier change here, so it waits for the next batch.`,
+    );
+  for (const member of composed.staleBatch)
+    core.notice(
+      `#${member.number} edits a workflow file an earlier change here edits too, and the queue can merge it only as its branch has it, so it waits for the next batch.`,
     );
   core.setOutput("run", composed.merged.length ? "true" : "false");
   core.setOutput("members", JSON.stringify(composed.merged));

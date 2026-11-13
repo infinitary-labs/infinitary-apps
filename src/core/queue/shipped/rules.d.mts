@@ -116,6 +116,8 @@ export function readComposition(
   merged: Member[];
   conflictsMain: Member[];
   conflictsBatch: Member[];
+  staleMain: Member[];
+  staleBatch: Member[];
 };
 export function conflictsWithMain(member: Member, url: string): StatusWrite;
 export function confirmPlan(

@@ -125,14 +125,17 @@ jobs:
             await queue.form({github, context, core});
       # Composes onto the default branch fetched again here, after the form
       # step read the queue: a change that merged since the checkout above
-      # is no longer open, so only this base carries it.
+      # is no longer open, so only this base carries it. GitHub lets the
+      # merge job's key merge a workflow file only as the change itself has
+      # it, so a change whose merge would write one in another form stays
+      # out of the batch and goes back to be brought up to date.
       - id: compose
         if: steps.form.outputs.heads != ''
         env:
           BRANCH: ${{ github.event.repository.default_branch }}
           HEADS: ${{ steps.form.outputs.heads }}
         run: |
-          bash .github/actions/infinitary-batch/compose.sh compose "$BRANCH" $HEADS | tee "$RUNNER_TEMP/composition"
+          bash .github/actions/infinitary-batch/compose.sh compose --carried .github/workflows "$BRANCH" $HEADS | tee "$RUNNER_TEMP/composition"
       - id: mark
         if: steps.form.outputs.heads != ''
         uses: actions/github-script@v7

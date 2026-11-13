@@ -1,4 +1,4 @@
-import type { Member, QueueEntry } from "./rules.mjs";
+import type { Member, QueueEntry, StatusWrite } from "./rules.mjs";
 
 /** The part of actions/github-script's arguments the queue uses; tests pass a stand-in of GitHub's client. */
 export type ScriptArgs = {
@@ -24,6 +24,7 @@ export type ScriptArgs = {
 };
 
 export const WORKFLOW: string;
+export function staleWorkflows(member: Member, url: string): StatusWrite;
 export function readOpenQueue(
   // biome-ignore lint/suspicious/noExplicitAny: github-script's Octokit client
   github: any,

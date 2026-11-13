@@ -788,6 +788,13 @@ A secret or a write a check needs is named in the queue's plan, and the team gra
 GitHub hands a called workflow only the secrets its caller passes, so each named secret is passed there by name and declared in the batch checks file; an environment's secret alone reaches no batch check, and the queue never passes `secrets: inherit`, which would hand down every secret.
 The queue's states are words on the `infinitary/queue` status: waiting, in batch run N, paused after batch run N, passed batch run N with the batch's tree, or failed with its reason (`queueKind`).
 A green batch passes every change still in it; from queue version 10, an isolated merge job squashes passed versions itself, rechecking their head, target branch and pass status immediately before each version-guarded merge.
+GitHub lets that job's key, the workflow's own, merge a file under `.github/workflows/` only as the change's own version has it, and that key cannot be given the workflows permission that would lift the limit (INF-4019).
+A change whose squash would write such a file in another form, because the default branch changed the same file since the change branched, would pass its batch and then have its merge refused.
+So GitHub's compose step names that folder (`compose.sh compose --carried`), and a change whose merge would write a file there in another form than its own stays out of the batch.
+It goes back to be brought up to date when the default branch made the difference (`staleWorkflows`), and waits for the next batch when only an earlier change of the same batch did.
+Brought up to date, its version carries the default branch's edits, so it joins a batch and the queue merges it once that batch passes.
+A change behind the default branch only in workflow files it does not edit composes as before, since its merge writes only its own workflow files, as it has them.
+GitLab's queue key merges any file, so its compose step names no folder.
 A passed status counts only when GitHub identifies its creator as `github-actions[bot]`, or GitLab identifies its author as the queue token's own user.
 The shared status reader enforces this for every read accepting a batch verdict; a rejected pass becomes a visible failure, including after a GitLab key replacement.
 A by-hand GitLab pause answer uses the person's sign-in, never accepts a pass as merge authority, and leaves passed changes to the queue's own jobs.

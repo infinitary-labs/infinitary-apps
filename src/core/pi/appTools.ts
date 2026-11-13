@@ -162,7 +162,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
     boundTool({
       name: "app_change",
       label: "Change app setting",
-      description: `Apply a catalog action (schema: app_state). evidence quotes the captain's ask, whatever began the turn: their message, their choice on any card or a schedule they set, never your own, except a judgment action's, which gives your reason; ${OWN_WORDS_ACTIONS.join(", ")} need their typed words. For project-settings and project-runs-on, on_words true declares the exact patch their words named; omit it to propose with its source as evidence. The app’s exact-change card alone applies once, on Apply change; no other card permits a patch. Success records one feed line. Hands offer a card (project-setup at any wake); yours explain.`,
+      description: `Apply a catalog action (schema: app_state). evidence quotes the captain's ask, whatever began the turn: their message, their choice on any card or a schedule they set, never your own, except a judgment action's, which gives your reason; ${OWN_WORDS_ACTIONS.join(", ")} need their typed words. For project-settings and project-runs-on, on_words true declares the exact patch their words named; omit it to propose with its source as evidence. The app’s exact-change card alone applies once, on Apply change; no other card permits a patch. Hands offer a card (project-setup at any wake); yours explain.`,
       parameters: Type.Object({
         action: stringEnum(ACTION_NAMES),
         value: Type.Object({}, { additionalProperties: true }),

@@ -532,7 +532,7 @@ export const SAVED_STORY_RULE = [
  */
 export const CARD_FILES_PARAM = [
   "Files for the captain to open, edit, attach or send: absolute or working-copy-relative paths, at most 1 GB each.",
-  "The app keeps copies where you run, with a Save row per file; the captain's click moves it to Downloads on that window's computer, never before.",
+  "The app keeps copies where you run, with a Save row per file the captain's click moves to Downloads.",
   "Never give a path instead, especially on another computer or in temporary or evidence folders. Revisions pass files again; the list replaces the card's.",
 ].join(" ");
 
@@ -608,7 +608,7 @@ const crewmateCardParams = Type.Object({
 const BROWSER_BUTTON_DESCRIPTION = [
   `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch.`,
   "It only opens the view: it never answers or closes the card, and it changes no merge.",
-  `It needs this task's browser, opened with ${browserCommand("open <url>")}; leave it open while the card is up, since a stopped browser opens stopped and a fresh one starts with nothing it had.`,
+  `It needs this task's browser, opened with ${browserCommand("open <url>")}; leave it open while the card is up.`,
 ].join(" ");
 
 /**
@@ -619,7 +619,7 @@ const BROWSER_BUTTON_DESCRIPTION = [
 const BROWSER_PAGE_DESCRIPTION = [
   "Optional, only beside browser_button: an HTML file from your task's project, such as index.html, that the button opens in this task's browser.",
   "Give its path relative to your working copy, the same in the project folder: an .html or .htm file, with no .. and no link on the way.",
-  "The app checks it when the card goes up and serves only files inside the project folder, so before your work merges the click opens the current file or says it is not there yet.",
+  "The app serves only files inside the project folder; before your work merges the click opens the current file or says it is not there yet.",
   "It needs no browser open now and works after your task closes; never beside browser_handoff.",
 ].join(" ");
 

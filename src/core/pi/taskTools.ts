@@ -279,7 +279,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now, and you hear once if news reaches it. Give a reason when the captain asks to pause it, or a stall wake shows it stopped on a blocker no steer will change; never steer it to stay idle. Add captain_stop true when the captain asked for the wait: nothing alarms until it starts.",
+            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now, and you hear once if news reaches it. Give a reason when the captain asks to pause it, or a stall wake shows it stopped on a blocker no steer will change. Add captain_stop true when the captain asked for the wait: nothing alarms until it starts.",
         }),
       ),
       // What it records is said on start_policy, so it is served bare.
@@ -360,7 +360,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       runs_on: Type.Optional(
         Type.String({
           description:
-            "Before start, for it and its parts: work computer name/id, this-mac, or automatic (model preference, then an answered basis’s current work computer if eligible, then room); project resets it. Automatic is a soft preference only for tasks already using it; name a computer on the captain’s words or a crewmate’s reported need.",
+            "Before start, for it and its parts: work computer name/id, this-mac, or automatic (model preference, then an answered basis’s current work computer if eligible, then room); project resets it. Name a computer on the captain’s words or a crewmate’s reported need.",
         }),
       ),
       direction: Type.Optional(

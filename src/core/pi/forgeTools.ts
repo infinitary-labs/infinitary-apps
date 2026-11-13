@@ -135,7 +135,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare one two-tier change story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Omit empty sections and boilerplate. Never write versions, hashes or revisions in text; use base, head and captureHead. Ordered views pair Before and After under one heading; recordings stack. Inspect publishable media and raster exports. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
+    "Prepare one two-tier change story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Never write versions, hashes or revisions in text; use base, head and captureHead. Ordered views pair Before and After under one heading; recordings stack. Inspect publishable media and raster exports. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
       description: PREPARE_CHANGE_STORY_DESCRIPTION,
@@ -194,7 +194,7 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
     recovery: Type.Optional(
       zodParameter<PresentationRecovery>(presentationRecoverySchema, {
         description:
-          "Deliberate recovery only, never an automatic retry: retryOpening after the earlier uncertain opening was read and no open PR exists; retryUploads names the exact uncertain digests after a card disclosed possible orphan uploads and the captain chose another attempt; replaceRegion is the exact edited region shown with the saved story on a card, after the captain chose to republish. A newer edit refuses that choice; show it again. Existing confirmed uploads are reused.",
+          "Deliberate recovery only, never an automatic retry: retryOpening after the earlier uncertain opening was read and no open PR exists; retryUploads names the exact uncertain digests after a card disclosed possible orphan uploads and the captain chose another attempt; replaceRegion is the exact edited region shown with the saved story on a card, after the captain chose to republish.",
       }),
     ),
     around: Type.Optional(
@@ -503,12 +503,12 @@ const GITLAB_READ_SCOPE =
   "GitLab API after /api/v4: /projects/{id}/..., with id the number or URL-encoded path (group%2Fname).";
 
 const GITHUB_WRITE_SCOPE =
-  "Your project: /repos/{owner}/{repo}/... on GitHub or /projects/<url-encoded group/name>/... on GitLab. A shipping task sends its writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. GitLab project deletion is refused. Other writes - another project, account, organization or task without a project API (using the github.com sign-in) - are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
+  "Your project: /repos/{owner}/{repo}/... on GitHub or /projects/<url-encoded group/name>/... on GitLab. A shipping task sends its writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes - another project, account, organization or task without a project API (using the github.com sign-in) - are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
 
 export const GITHUB_READ_TOOL = crewmateTool({
   name: "github_read",
   label: "Read where the project lives",
-  description: `Read data where your project lives with GET or HEAD - GitHub's API, or GitLab's on a GitLab project - for example to find a repository by name with /user/repos?sort=updated&per_page=100 or /search/repositories?q=... ${GITHUB_READ_SCOPE} ${GITLAB_READ_SCOPE} ${GITHUB_GATEWAY_RULES} A list over the cap comes back at the largest page that fits, each try a call; any other oversized answer is refused, never cut. A read changes nothing.`,
+  description: `Read data where your project lives with GET or HEAD - GitHub's API, or GitLab's on a GitLab project - e.g. /user/repos?sort=updated&per_page=100 or /search/repositories?q=... ${GITHUB_READ_SCOPE} ${GITLAB_READ_SCOPE} ${GITHUB_GATEWAY_RULES} A list over the cap comes back at the largest page that fits, each try a call; any other oversized answer is refused, never cut.`,
   parameters: Type.Object({
     path: Type.String({
       description:

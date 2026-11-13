@@ -60,6 +60,7 @@ import {
 } from "../../plugins/frames/frameController";
 import { giveFocusBack } from "../../plugins/frames/frameFocus";
 import { type CardStage, lendCardStage } from "../cardStage";
+import { dictationKeyTakenByPointer } from "../dictationKey";
 import { useCommandKeys } from "../keyHints";
 import { oncePressesHeard, pressesSoFar } from "../presses";
 import { firstTabbable, lastTabbable } from "../regions";
@@ -176,6 +177,8 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const nextKeys = useCommandKeys("cards.next");
   const maximizeKeys = useCommandKeys("cards.maximize");
   const minimizeKeys = useCommandKeys("cards.minimize");
+  const minimizeAllKeys = useCommandKeys("cards.minimize-all");
+  const putEveryCardAside = useShellStore((s) => s.putEveryCardAside);
   const cards = useShellStore((s) => s.cards);
   const replyNotes = useShellStore((s) => s.replyNotes);
   const entrancesReady = useShellStore((s) => s.cardsSnapshotLoaded);
@@ -813,6 +816,14 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
         toggle: toggleSize,
         ...maximizeKeys,
         minimize: { run: putAside, ...minimizeKeys },
+        minimizeAll: {
+          // A click with right ⌥ held is not dictation (INF-4002).
+          run: () => {
+            dictationKeyTakenByPointer();
+            putEveryCardAside();
+          },
+          ...minimizeAllKeys,
+        },
       }
     : null;
 

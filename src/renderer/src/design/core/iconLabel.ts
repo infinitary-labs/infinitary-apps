@@ -35,6 +35,9 @@ type LabelState = {
   keyTook: { event: Event; from: HTMLElement } | null;
 };
 
+/** Keys that only modify another, which leave the label where it is. */
+const LONE_MODIFIERS = new Set(["Alt", "AltGraph", "Control", "Meta", "Shift"]);
+
 const states = new WeakMap<Document, LabelState>();
 
 function stateOf(doc: Document): LabelState {
@@ -53,8 +56,11 @@ function stateOf(doc: Document): LabelState {
   };
   states.set(doc, state);
   const away = () => hideLabel(doc);
-  // A key takes the label away too, and remembers whose it was.
+  // A key takes the label away too, and remembers whose it was. A modifier
+  // held alone is not a key of its own: the label stays, and says the
+  // button's other words when a modifier changes them (⌥ on a card's minus).
   const key = (event: Event) => {
+    if (LONE_MODIFIERS.has((event as KeyboardEvent).key)) return;
     state.keyTook = state.on && state.el && !state.el.hidden ? { event, from: state.on } : null;
     hideLabel(doc);
   };

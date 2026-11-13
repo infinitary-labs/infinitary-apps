@@ -15,3 +15,6 @@ export const RESTORE_LABEL = m.uiCardRestore();
  */
 export const PUT_ASIDE_LABEL = CARD_LEAVE.decision.label;
 export const PUT_ASIDE_REST = CARD_LEAVE.decision.restWords;
+
+/** The same minus with ⌥ held: Put every card aside (INF-4002). */
+export const PUT_EVERY_CARD_ASIDE_LABEL = m.uiCardPutEveryCardAside();

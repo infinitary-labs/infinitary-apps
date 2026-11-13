@@ -83,6 +83,12 @@ Their reading place, picked answers and reply draft stay for this run.
 A revision or author answer returns one unread; a pointed-at card returns at the front, focused at the default size.
 Their put-away state is saved and shared by desktop and native views.
 
+One command puts every card on the stage aside or brings them back (`Put every card aside or bring them back`, default ⌥⇧⌘M in every preset, INF-4002).
+With a card shown, it puts every card in the stack aside in one move, the window's panels hide, and focus lands in the main message with its words kept.
+Cards held back by the project focus stay held back, not put aside.
+On an empty stage the same key brings back every card put aside to its place in the stack, with its picks and drafts; hidden panels stay hidden.
+A ⌥-click on any card's minus is the same put-aside move.
+
 ## Held back by the project focus
 
 While the window is focused on a project (`components/core/ProjectFocus`), cards about other projects' tasks are held back: they stay open but leave the stack, its pager count and new dot, with no marker of their own.

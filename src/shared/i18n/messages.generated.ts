@@ -6265,6 +6265,62 @@ export function commandCardsMinimize(): string {
   return `Put card aside`;
 }
 
+export function commandCardsMinimizeAll(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `وضع كل البطاقات جانبًا أو إعادتها`;
+    case "de":
+      return `Alle Karten beiseitelegen oder zurückholen`;
+    case "es":
+      return `Apartar todas las tarjetas o traerlas de vuelta`;
+    case "fr":
+      return `Mettre toutes les cartes de côté ou les ramener`;
+    case "ja":
+      return `すべてのカードを脇に置く、または戻す`;
+    case "ko":
+      return `모든 카드 치워 두기 또는 다시 꺼내기`;
+    case "pt-BR":
+      return `Deixar todos os cartões de lado ou trazê-los de volta`;
+    case "zh-Hans":
+      return `把所有卡片放到一边或拿回来`;
+    case "zh-Hant":
+      return `把所有卡片放到一旁或拿回來`;
+    case "en-XA":
+      return `[Þûţ éṽéŕý çáŕð ášîðé öŕ ƀŕîñĝ ţĥéɱ ƀáçķ ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePut every card aside or bring them back\u202c`;
+  }
+  return `Put every card aside or bring them back`;
+}
+
+export function commandCardsMinimizeAllWords(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تصغير, كل, جميع, إفراغ, ترتيب, إخفاء, استعادة, إعادة`;
+    case "de":
+      return `minimieren, alle, jede, leeren, aufräumen, ausblenden, wiederherstellen, zurück`;
+    case "es":
+      return `minimizar, todas, cada, vaciar, ordenar, ocultar, restaurar, volver`;
+    case "fr":
+      return `réduire, toutes, chaque, vider, ranger, masquer, restaurer, ramener`;
+    case "ja":
+      return `最小化, すべて, 全部, 片付け, 整理, 隠す, 戻す, 元に戻す`;
+    case "ko":
+      return `최소화, 모두, 전부, 비우기, 정리, 숨기기, 복원, 다시`;
+    case "pt-BR":
+      return `minimizar, todos, cada, limpar, arrumar, ocultar, restaurar, voltar`;
+    case "zh-Hans":
+      return `最小化, 全部, 所有, 清空, 整理, 隐藏, 恢复, 拿回`;
+    case "zh-Hant":
+      return `最小化, 全部, 所有, 清空, 整理, 隱藏, 還原, 拿回`;
+    case "en-XA":
+      return `[ɱîñîɱîžé, áļļ, éṽéŕý, çļéáŕ, ţîðý, ĥîðé, ŕéšţöŕé, ƀáçķ ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eminimize, all, every, clear, tidy, hide, restore, back\u202c`;
+  }
+  return `minimize, all, every, clear, tidy, hide, restore, back`;
+}
+
 export function commandCardsDone(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -8447,6 +8503,34 @@ export function uiCardRestore(): string {
       return `\u202eRestore card\u202c`;
   }
   return `Restore card`;
+}
+
+export function uiCardPutEveryCardAside(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `وضع كل البطاقات جانبًا`;
+    case "de":
+      return `Alle Karten beiseitelegen`;
+    case "es":
+      return `Apartar todas las tarjetas`;
+    case "fr":
+      return `Mettre toutes les cartes de côté`;
+    case "ja":
+      return `すべてのカードを脇に置く`;
+    case "ko":
+      return `모든 카드 치워 두기`;
+    case "pt-BR":
+      return `Deixar todos os cartões de lado`;
+    case "zh-Hans":
+      return `把所有卡片放到一边`;
+    case "zh-Hant":
+      return `把所有卡片放到一旁`;
+    case "en-XA":
+      return `[Þûţ éṽéŕý çáŕð ášîðé ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePut every card aside\u202c`;
+  }
+  return `Put every card aside`;
 }
 
 export function uiCardStackPrevious(): string {
@@ -11119,6 +11203,34 @@ export function refuseNoCardIsShown(): string {
       return `\u202eNo card is shown\u202c`;
   }
   return `No card is shown`;
+}
+
+export function refuseNoCardIsShownOrPutAside(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `لا توجد بطاقة معروضة أو موضوعة جانبًا`;
+    case "de":
+      return `Keine Karte wird angezeigt oder liegt beiseite`;
+    case "es":
+      return `No se muestra ni está apartada ninguna tarjeta`;
+    case "fr":
+      return `Aucune carte n’est affichée ni mise de côté`;
+    case "ja":
+      return `表示中のカードも脇に置いたカードもありません`;
+    case "ko":
+      return `표시된 카드도 치워 둔 카드도 없어요`;
+    case "pt-BR":
+      return `Nenhum cartão está sendo mostrado nem foi deixado de lado`;
+    case "zh-Hans":
+      return `没有显示或放到一边的卡片`;
+    case "zh-Hant":
+      return `目前沒有顯示或放到一旁的卡片`;
+    case "en-XA":
+      return `[Ñö çáŕð îš šĥöŵñ öŕ þûţ ášîðé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eNo card is shown or put aside\u202c`;
+  }
+  return `No card is shown or put aside`;
 }
 
 export function refuseNoCardThreadIsReadAboveIts(): string {
@@ -22354,6 +22466,8 @@ export const MESSAGES = {
   commandCardsPrevious,
   commandCardsNext,
   commandCardsMinimize,
+  commandCardsMinimizeAll,
+  commandCardsMinimizeAllWords,
   commandCardsDone,
   commandCardsDoneWords,
   commandCardsDecline,
@@ -22432,6 +22546,7 @@ export const MESSAGES = {
   commandDevicesTryAgain,
   uiCardMaximize,
   uiCardRestore,
+  uiCardPutEveryCardAside,
   uiCardStackPrevious,
   uiCardStackNext,
   uiCardStackNew,
@@ -22517,6 +22632,7 @@ export const MESSAGES = {
   refuseEveryProjectIsShown,
   refuseInfinitaryCouldNotConfirmHowThisCopy,
   refuseNoCardIsShown,
+  refuseNoCardIsShownOrPutAside,
   refuseNoCardThreadIsReadAboveIts,
   refuseNoReleaseNotesYet,
   refuseNoUpdateIsAvailable,
@@ -23104,6 +23220,8 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   commandCardsPrevious: [],
   commandCardsNext: [],
   commandCardsMinimize: [],
+  commandCardsMinimizeAll: [],
+  commandCardsMinimizeAllWords: [],
   commandCardsDone: [],
   commandCardsDoneWords: [],
   commandCardsDecline: [],
@@ -23182,6 +23300,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   commandDevicesTryAgain: [],
   uiCardMaximize: [],
   uiCardRestore: [],
+  uiCardPutEveryCardAside: [],
   uiCardStackPrevious: [],
   uiCardStackNext: [],
   uiCardStackNew: ["count"],
@@ -23267,6 +23386,7 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   refuseEveryProjectIsShown: [],
   refuseInfinitaryCouldNotConfirmHowThisCopy: [],
   refuseNoCardIsShown: [],
+  refuseNoCardIsShownOrPutAside: [],
   refuseNoCardThreadIsReadAboveIts: [],
   refuseNoReleaseNotesYet: [],
   refuseNoUpdateIsAvailable: [],

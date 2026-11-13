@@ -1,3 +1,4 @@
+import { cardCornerOf } from "@shared/cardLeave";
 import { CARD_REPLY_MAX_CHARS, type Card, TURN_IMAGES_MAX } from "@shared/cards";
 import { PANEL_OPEN_CARDS_MAX } from "@shared/plugins/panelCards";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -987,6 +988,80 @@ describe("the project focus holds other projects' cards back (docs/project-focus
     expect(stackIds()).toEqual(["web"]);
     focusOn("repo-inf");
     expect(stackIds()).toEqual(["inf"]);
+  });
+});
+
+describe("put every card aside or bring them back (INF-4002)", () => {
+  // The captain's ask, "a keybind to minimize all cards", and their answer
+  // to the plan's first question: one key both ways.
+  const ready = (id: string, overrides: Partial<Card> = {}) =>
+    card({
+      id,
+      status: "ready",
+      actions: DECIDE,
+      body: id,
+      corner: cardCornerOf("decision"),
+      ...overrides,
+    });
+  const state = () => useShellStore.getState();
+  const stackIds = () => stackOf(state()).map((entry) => entry.id);
+  const reset = () => {
+    focus.on = null;
+    focus.taskProjects = new Map([
+      ["inf-1", "repo-inf"],
+      ["web-1", "repo-web"],
+      ["web-2", "repo-web"],
+    ]);
+    vi.unstubAllGlobals();
+    resetShell();
+  };
+  beforeEach(reset);
+  afterEach(reset);
+
+  it("drops every entry in one move, leaves held-back cards alone, and brings back what the focus lets through", async () => {
+    const inf = ready("inf", { taskId: "inf-1" });
+    const mate = ready("mate");
+    const web = ready("web", { taskId: "web-1" });
+    const asideWeb = ready("aside-web", { taskId: "web-2", minimized: true });
+    let owned: Card[] = [inf, mate, web, asideWeb];
+    let answer: () => void = () => {};
+    const answered = new Promise<{ ok: true }>((resolve) => {
+      answer = () => resolve({ ok: true });
+    });
+    const close = vi.fn((_id: string, _submission?: unknown) => answered);
+    const minimize = vi.fn(async () => ({ ok: true as const }));
+    vi.stubGlobal("window", {
+      infinitary: { cards: { close, minimize, list: async () => owned } },
+    });
+    state().applyCards(owned);
+    focus.on = "repo-inf";
+    state().applyHold();
+    state().openRecord("t1");
+    expect(stackIds()).toEqual(["record:t1", "inf", "mate"]);
+
+    state().putEveryCardAside();
+    // The stage empties at once: the record hides, each card goes through its minus.
+    expect(stackIds()).toEqual([]);
+    expect(state().records).toEqual([]);
+    expect(close.mock.calls.map(([id]) => id)).toEqual(["inf", "mate"]);
+    // A push the owner sent before it heard the closes draws none of them again.
+    state().applyCards([inf, mate, web, asideWeb]);
+    expect(stackIds()).toEqual([]);
+    // Held back by the focus, so never on this window's stage, it is not touched.
+    expect(state().heldBackCardIds).toEqual(["web"]);
+
+    owned = [{ ...inf, minimized: true }, { ...mate, minimized: true }, web, asideWeb];
+    answer();
+    await vi.waitFor(() => expect(state().goingAsideCardIds).toEqual([]));
+    await vi.waitFor(() => expect(state().cards).toEqual(owned));
+    expect(stackIds()).toEqual([]);
+
+    // On the empty stage, the way back: the cards put aside the focus lets through.
+    state().bringBackEveryCard();
+    expect(minimize.mock.calls).toEqual([
+      ["inf", false],
+      ["mate", false],
+    ]);
   });
 });
 

@@ -1,7 +1,7 @@
 import { type CardCornerWords, cardCornerOf } from "@shared/cardLeave";
 import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 
@@ -16,6 +16,15 @@ export type CardSize = {
   maximized: boolean;
   corner?: CardCornerWords;
   minimize?: {
+    run: () => void;
+    keys?: string | undefined;
+    "aria-keyshortcuts"?: string | undefined;
+  };
+  /**
+   * Put every card aside (INF-4002): what a click on the minus does with ⌥
+   * (Alt) held, as ⌥ on a Mac window's own minimize does to every window.
+   */
+  minimizeAll?: {
     run: () => void;
     keys?: string | undefined;
     "aria-keyshortcuts"?: string | undefined;
@@ -89,7 +98,32 @@ export function CardSizeToggle() {
   );
 }
 
-/** The only card corner: maximize, then a minus that never ends work. */
+/**
+ * Whether ⌥ (Alt) is held now, read from the window's keys and from the
+ * pointer's own events, which carry it even while a card's frame has the
+ * keyboard; a window that loses focus lets it go.
+ */
+function useOptionHeld(): [boolean, (event: { altKey: boolean }) => void] {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    const read = (event: KeyboardEvent) => setHeld(event.altKey);
+    const letGo = () => setHeld(false);
+    window.addEventListener("keydown", read, true);
+    window.addEventListener("keyup", read, true);
+    window.addEventListener("blur", letGo);
+    return () => {
+      window.removeEventListener("keydown", read, true);
+      window.removeEventListener("keyup", read, true);
+      window.removeEventListener("blur", letGo);
+    };
+  }, []);
+  return [held, (event) => setHeld(event.altKey)];
+}
+
+/**
+ * The only card corner: maximize, then a minus that never ends work. With
+ * ⌥ held the minus puts every card aside, and its label says so (INF-4002).
+ */
 export function CardCorner({
   buttonRef,
   style,
@@ -99,9 +133,14 @@ export function CardCorner({
 }) {
   const size = useContext(CardSizeContext);
   const corner = size?.corner ?? cardCornerOf("window-panel");
+  const [optionHeld, readOption] = useOptionHeld();
+  const all = optionHeld ? size?.minimizeAll : undefined;
+  const leave = all ?? size?.minimize;
   return (
     <span
       data-card-corner=""
+      onPointerEnter={readOption}
+      onPointerMove={readOption}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -113,12 +152,17 @@ export function CardCorner({
       <CardSizeToggle />
       <IconButton
         ref={buttonRef}
-        data-card-leave=""
-        label={corner.label}
-        restWords={corner.restWords}
-        keys={size?.minimize?.keys}
-        aria-keyshortcuts={size?.minimize?.["aria-keyshortcuts"]}
-        onClick={size?.minimize?.run}
+        data-card-leave={all ? "all" : ""}
+        label={all ? m.uiCardPutEveryCardAside() : corner.label}
+        restWords={all ? undefined : corner.restWords}
+        tone={all ? "accent" : "neutral"}
+        keys={leave?.keys}
+        aria-keyshortcuts={leave?.["aria-keyshortcuts"]}
+        onClick={(event) => {
+          // The click's own ⌥ decides, whatever the label last read.
+          if (event.altKey && size?.minimizeAll) size.minimizeAll.run();
+          else size?.minimize?.run();
+        }}
       >
         <svg {...icon} aria-hidden="true">
           <path d="M5 12h14" />

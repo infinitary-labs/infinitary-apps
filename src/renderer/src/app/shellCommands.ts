@@ -268,6 +268,12 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "cards.previous": () => onShownCard((stage) => stage.page(-1)),
   "cards.next": () => onShownCard((stage) => stage.page(1)),
   "cards.minimize": () => onShownCard((stage) => stage.minimize?.()),
+  // INF-4002: every entry aside, or on an empty stage every card put aside back.
+  "cards.minimize-all": () => {
+    const shell = useShellStore.getState();
+    if (shownEntry(shell)) shell.putEveryCardAside();
+    else shell.bringBackEveryCard();
+  },
   "cards.done": () => toShownPart(answerDoneButton, (button) => button.click()),
   "cards.decline": () => toShownPart(declineButton, (button) => button.click()),
   "cards.maximize": () => onShownCard((stage) => stage.toggleSize()),

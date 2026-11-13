@@ -28,6 +28,7 @@ import {
 } from "../devices/viewWords";
 import { mainMessageRefusal } from "./composer";
 import { isHeldEntry, type StackEntry, shownEntry, stackOf } from "./stack";
+import { cardsPutAside } from "./stackActions";
 import type { ShellState } from "./store";
 
 /**
@@ -59,7 +60,9 @@ export type RefusalState = Pick<
   | "pendingCardActions"
   | "lastTurn"
 > &
-  Partial<Pick<ShellState, "replyNotes">>;
+  Partial<
+    Pick<ShellState, "replyNotes" | "letThroughCardIds" | "letThroughFocus" | "goingAsideCardIds">
+  >;
 
 /** What a refusal reads beyond the store: the window's own facts. */
 export type WindowFacts = {
@@ -246,6 +249,13 @@ const REFUSALS: Readonly<
   "cards.previous": (s) => pageRefusal(s, -1),
   "cards.next": (s) => pageRefusal(s, 1),
   "cards.minimize": cardRefusal,
+  // Every entry aside, or on an empty stage every card put aside back
+  // (INF-4002); each is a change on the first mate's computer.
+  "cards.minimize-all": (s) => {
+    if (s.view !== "home") return m.refuseSettingsIsOpen();
+    if (changesOff(s.thisMac) && isView(s.thisMac)) return changesOffWords(s.thisMac);
+    return shownEntry(s) || cardsPutAside(s).length > 0 ? null : m.refuseNoCardIsShownOrPutAside();
+  },
   "cards.done": (s, facts) =>
     cardRefusal(s) ?? (facts.answerDoneReady ? null : m.refuseThisCardHasNoDoneOrGot()),
   "cards.decline": (s, facts) =>

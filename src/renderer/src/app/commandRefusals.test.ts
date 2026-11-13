@@ -370,6 +370,40 @@ describe("why a window command cannot run now", () => {
     );
   });
 
+  // INF-4002: one key both ways - every card aside, or on an empty stage every card put aside back.
+  it("puts every card aside from a shown card, brings them back on an empty stage, and says when neither can be", () => {
+    expect(commandRefusal("cards.minimize-all", HOME, CLEAR)).toBeNull();
+    const emptied = { ...HOME, cards: [card("a", { minimized: true })] };
+    expect(commandRefusal("cards.minimize-all", emptied, CLEAR)).toBeNull();
+    expect(commandRefusal("cards.minimize-all", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown or put aside",
+    );
+    // A card this window is putting aside right now is not yet one to bring back.
+    expect(
+      commandRefusal("cards.minimize-all", { ...emptied, goingAsideCardIds: ["a"] }, CLEAR),
+    ).toBe("No card is shown or put aside");
+    expect(commandRefusal("cards.minimize-all", { ...HOME, view: "settings" }, CLEAR)).toBe(
+      "Settings is open",
+    );
+    expect(commandRefusal("cards.minimize-all", { ...HOME, recordingKeys: true }, CLEAR)).toBe(
+      "Settings is recording a key",
+    );
+    // Each card's put aside is a change on the first mate's computer.
+    const closed = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "closed",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    expect(commandRefusal("cards.minimize-all", { ...HOME, thisMac: closed }, CLEAR)).toBe(
+      "Changes are off until Mac mini is back",
+    );
+  });
+
   it("moves between the window's parts from home or Settings, but not during a recording", () => {
     for (const id of ["regions.next", "regions.previous"] as const) {
       expect(commandRefusal(id, { ...HOME, view: "settings" }, CLEAR)).toBeNull();

@@ -142,6 +142,22 @@ function submissionFor(mounted: CardMount | undefined): CardSubmission {
   };
 }
 
+/**
+ * The shell's one card-leave dispatcher (INF-1879): the corner's request
+ * for a card, or a put aside for a core predating the corner contract,
+ * which still has a destructive close. Put every card aside (INF-4002)
+ * sends each card through it too.
+ */
+export function leaveCard(
+  card: Card | undefined,
+  cardId: string,
+  mounted?: CardMount,
+): Promise<unknown> {
+  return card?.corner
+    ? window.infinitary.cards.close(cardId, submissionFor(mounted))
+    : window.infinitary.cards.minimize(cardId, true);
+}
+
 export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
   return {
     pendingCardActions: {},
@@ -307,11 +323,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         return;
       }
       const card = get().cards.find((entry) => entry.id === cardId);
-      // A core predating the corner contract still has a destructive close.
-      const request = card?.corner
-        ? window.infinitary.cards.close(cardId, submissionFor(mounted))
-        : window.infinitary.cards.minimize(cardId, true);
-      void request.catch(() => {});
+      void leaveCard(card, cardId, mounted).catch(() => {});
     },
     pressNote: async (cardId, mounted) => {
       const thisMac = get().thisMac;

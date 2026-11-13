@@ -9296,6 +9296,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Put card aside`;
   }
+  function commandCardsMinimizeAll() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وضع كل البطاقات جانبًا أو إعادتها`;
+      case "de":
+        return `Alle Karten beiseitelegen oder zurückholen`;
+      case "es":
+        return `Apartar todas las tarjetas o traerlas de vuelta`;
+      case "fr":
+        return `Mettre toutes les cartes de côté ou les ramener`;
+      case "ja":
+        return `すべてのカードを脇に置く、または戻す`;
+      case "ko":
+        return `모든 카드 치워 두기 또는 다시 꺼내기`;
+      case "pt-BR":
+        return `Deixar todos os cartões de lado ou trazê-los de volta`;
+      case "zh-Hans":
+        return `把所有卡片放到一边或拿回来`;
+      case "zh-Hant":
+        return `把所有卡片放到一旁或拿回來`;
+      case "en-XA":
+        return `[Þûţ éṽéŕý çáŕð ášîðé öŕ ƀŕîñĝ ţĥéɱ ƀáçķ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Put every card aside or bring them back‬`;
+    }
+    return `Put every card aside or bring them back`;
+  }
+  function commandCardsMinimizeAllWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تصغير, كل, جميع, إفراغ, ترتيب, إخفاء, استعادة, إعادة`;
+      case "de":
+        return `minimieren, alle, jede, leeren, aufräumen, ausblenden, wiederherstellen, zurück`;
+      case "es":
+        return `minimizar, todas, cada, vaciar, ordenar, ocultar, restaurar, volver`;
+      case "fr":
+        return `réduire, toutes, chaque, vider, ranger, masquer, restaurer, ramener`;
+      case "ja":
+        return `最小化, すべて, 全部, 片付け, 整理, 隠す, 戻す, 元に戻す`;
+      case "ko":
+        return `최소화, 모두, 전부, 비우기, 정리, 숨기기, 복원, 다시`;
+      case "pt-BR":
+        return `minimizar, todos, cada, limpar, arrumar, ocultar, restaurar, voltar`;
+      case "zh-Hans":
+        return `最小化, 全部, 所有, 清空, 整理, 隐藏, 恢复, 拿回`;
+      case "zh-Hant":
+        return `最小化, 全部, 所有, 清空, 整理, 隱藏, 還原, 拿回`;
+      case "en-XA":
+        return `[ɱîñîɱîžé, áļļ, éṽéŕý, çļéáŕ, ţîðý, ĥîðé, ŕéšţöŕé, ƀáçķ ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮minimize, all, every, clear, tidy, hide, restore, back‬`;
+    }
+    return `minimize, all, every, clear, tidy, hide, restore, back`;
+  }
   function commandCardsDone() {
     switch (currentLanguage()) {
       case "ar":
@@ -12457,6 +12511,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       repeat: false,
       risk: "view",
       keys: [{ key: "m", meta: true, shift: true }]
+    },
+    // INF-4002: every entry on the stage gets what its own minus does, in one
+    // move; on an empty stage the same key brings back every card put aside.
+    // ⌥ means every, as ⌥⌘M minimizes every window of a Mac app.
+    "cards.minimize-all": {
+      get label() {
+        return commandCardsMinimizeAll();
+      },
+      get searchWords() {
+        return searchWords(commandCardsMinimizeAllWords());
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "view",
+      keys: [{ key: "m", meta: true, alt: true, shift: true }]
     },
     "cards.done": {
       get label() {

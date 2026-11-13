@@ -544,6 +544,22 @@ export const KEYBOARD_COMMANDS = {
     risk: "view",
     keys: [{ key: "m", meta: true, shift: true }],
   },
+  // INF-4002: every entry on the stage gets what its own minus does, in one
+  // move; on an empty stage the same key brings back every card put aside.
+  // ⌥ means every, as ⌥⌘M minimizes every window of a Mac app.
+  "cards.minimize-all": {
+    get label() {
+      return m.commandCardsMinimizeAll();
+    },
+    get searchWords() {
+      return searchWords(m.commandCardsMinimizeAllWords());
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "view",
+    keys: [{ key: "m", meta: true, alt: true, shift: true }],
+  },
   "cards.done": {
     get label() {
       return m.commandCardsDone();

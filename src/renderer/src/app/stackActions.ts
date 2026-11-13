@@ -1,4 +1,4 @@
-import type { Card } from "@shared/cards";
+import { type Card, onStage } from "@shared/cards";
 import type { PanelCardEmit, StoreValue } from "@shared/personal/contracts";
 import {
   DEFAULT_PANEL_CARD_HEIGHT,
@@ -13,6 +13,7 @@ import {
 } from "../cards/cardReadingPlace";
 import { requestCharacterNotice } from "../character/emoteSignal";
 import { changesOff } from "../devices/viewWords";
+import { leaveCard } from "./cardActions";
 import { pressesSoFar } from "./presses";
 import { focusHoldsBack, heldProjectFocus } from "./projectFocus";
 import {
@@ -131,6 +132,20 @@ export type StackSlice = {
   dragCard: (cardId: string, width: number | null) => void;
   /** Holds back, or lets back, the cards the project focus names as it moves (docs/project-focus.md). */
   applyHold: () => void;
+  /**
+   * Cards this window just put aside all at once, drawn put aside until the
+   * owner's snapshot says so, so the stage drops once rather than card by
+   * card (INF-4002). Window memory only.
+   */
+  goingAsideCardIds: string[];
+  /**
+   * Put every card aside (INF-4002): every entry on the stack gets what its
+   * own minus does - a card is put aside or, ended, closed, and a held view
+   * hides - in one move. Cards the project focus holds back stay as they are.
+   */
+  putEveryCardAside: () => void;
+  /** Brings back every card put aside that the project focus lets through (INF-4002). */
+  bringBackEveryCard: () => void;
   prevCard: () => void;
   nextCard: () => void;
 };
@@ -216,6 +231,41 @@ export function readCardsAgain(get: ShellGet, settled?: () => void): Promise<voi
   });
 }
 
+/**
+ * The cards put aside that Put every card aside or bring them back would
+ * bring back (INF-4002): on the stage but for being put aside, let through
+ * by the project focus, and not being put aside by this window right now.
+ */
+export function cardsPutAside(
+  s: Pick<ShellState, "cards"> &
+    Partial<Pick<ShellState, "letThroughCardIds" | "letThroughFocus" | "goingAsideCardIds">>,
+): Card[] {
+  const holds = holdOf({
+    letThroughCardIds: s.letThroughCardIds ?? [],
+    letThroughFocus: s.letThroughFocus ?? null,
+  });
+  const going = s.goingAsideCardIds ?? [];
+  return s.cards.filter(
+    (card) => card.minimized && onStage(card) && !going.includes(card.id) && !holds(card),
+  );
+}
+
+/** `cards` with the ones this window is putting aside drawn put aside, and the ids still waiting. */
+function withGoingAside(
+  cards: Card[],
+  going: readonly string[],
+): { cards: Card[]; going: string[] } {
+  if (going.length === 0) return { cards, going: [] };
+  // A card the owner already shows put aside, or let go, needs no holding.
+  const still = going.filter((id) => cards.some((card) => card.id === id && !card.minimized));
+  return {
+    cards: cards.map((card) =>
+      still.includes(card.id) ? { ...card, minimized: true as const } : card,
+    ),
+    going: still,
+  };
+}
+
 export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
   return {
     cards: [],
@@ -230,6 +280,7 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
     letThroughFocus: null,
     cardsSeeded: false,
     cardDrags: {},
+    goingAsideCardIds: [],
     openRecord: (taskId, from, view) =>
       set((s) =>
         toFront(
@@ -404,16 +455,18 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
       }));
       return true;
     },
-    applyCards: (cards) => {
-      retainCardReadingPlaces(new Set(cards.map((card) => card.id)));
+    applyCards: (owned) => {
+      retainCardReadingPlaces(new Set(owned.map((card) => card.id)));
       let noticed = 0;
       set((s) => {
+        const { cards, going } = withGoingAside(owned, s.goingAsideCardIds);
         const reconciled = reconcileStack(s, cards, holdOf(s));
         noticed = reconciled.noticed;
         const present = new Set(cards.map((card) => card.id));
         return {
           cards,
           ...reconciled.state,
+          ...(going.length === s.goingAsideCardIds.length ? {} : { goingAsideCardIds: going }),
           pendingCardActions: Object.fromEntries(
             Object.entries(s.pendingCardActions).filter(([id]) => present.has(id)),
           ),
@@ -454,6 +507,48 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
         }
         return { ...state, ...held };
       });
+    },
+    putEveryCardAside: () => {
+      const s = get();
+      if (changesOff(s.thisMac)) return;
+      const cards = stackOf(s).filter((entry) => !isHeldEntry(entry));
+      const ids = cards.map((card) => card.id);
+      // Each held view hides as its own Hide does, its reading place let go.
+      const heldIds = new Set(s.records.map(heldEntryId));
+      for (const record of s.records) {
+        if ("taskId" in record) forgetReadingPlace(recordReadingPlaceId(record.taskId));
+        else if ("pastCardId" in record) forgetReadingPlace(pastReadingPlaceId(record.pastCardId));
+      }
+      let cardDrags = s.cardDrags;
+      for (const id of heldIds) cardDrags = withoutKey(cardDrags, id);
+      set({
+        records: [],
+        cardIndex: 0,
+        cardDrags,
+        unreadCardIds: s.unreadCardIds.filter((id) => !heldIds.has(id)),
+        goingAsideCardIds: [...new Set([...s.goingAsideCardIds, ...ids])],
+      });
+      // The stage drops once: every card leaves this window's stack now.
+      get().applyCards(get().cards);
+      if (ids.length === 0) return;
+      // Then each goes through its own minus's request, as one card's does.
+      const requests = cards.map((card) => leaveCard(card, card.id, card));
+      void Promise.allSettled(requests).then(() => {
+        set((now) => ({
+          goingAsideCardIds: now.goingAsideCardIds.filter((id) => !ids.includes(id)),
+        }));
+        // What the owner holds now, a refused request's card back included.
+        return readCardsAgain(get).catch(() => {});
+      });
+    },
+    bringBackEveryCard: () => {
+      const s = get();
+      if (changesOff(s.thisMac)) return;
+      const back = cardsPutAside(s);
+      if (back.length === 0) return;
+      void Promise.allSettled(
+        back.map((card) => window.infinitary.cards.minimize(card.id, false)),
+      ).then(() => readCardsAgain(get).catch(() => {}));
     },
     prevCard: () =>
       set((s) => {

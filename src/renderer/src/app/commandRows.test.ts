@@ -122,6 +122,13 @@ describe("command search's list", () => {
       },
       { id: "cards.next", label: "Show the next card", keys: "⇧⌘]", refusal: null },
       { id: "cards.minimize", label: "Put card aside", keys: "⇧⌘M", refusal: null },
+      // INF-4002: put every card aside, or bring them back, with ⌥ beside ⇧⌘M.
+      {
+        id: "cards.minimize-all",
+        label: "Put every card aside or bring them back",
+        keys: "⌥⇧⌘M",
+        refusal: null,
+      },
       {
         id: "cards.done",
         label: "Press the note's Done or Got it",
@@ -169,6 +176,7 @@ describe("command search's list", () => {
       ["cards.previous", "⇧⌘["],
       ["cards.next", "⌘J"],
       ["cards.minimize", "⇧⌘M"],
+      ["cards.minimize-all", "⌥⇧⌘M"],
       ["cards.done", undefined],
       ["cards.decline", undefined],
       ["cards.maximize", undefined],

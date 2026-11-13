@@ -162,6 +162,7 @@ describe("the command catalog", () => {
       "cards.previous",
       "cards.next",
       "cards.minimize",
+      "cards.minimize-all",
       "cards.done",
       "cards.decline",
       "cards.maximize",

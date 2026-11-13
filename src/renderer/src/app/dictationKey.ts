@@ -16,6 +16,18 @@ type Press = {
   untilHold: ReturnType<typeof setTimeout> | null;
 };
 
+/** The press the dictation key is in, dropped when a click takes the key (`dictationKeyTakenByPointer`). */
+let takenByPointer: (() => void) | null = null;
+
+/**
+ * A click made with the dictation key held, such as a ⌥-click on a card's
+ * minus with right ⌥ (INF-4002), was the key's other use: what its press
+ * recorded is dropped, and its release starts nothing.
+ */
+export function dictationKeyTakenByPointer(): void {
+  takenByPointer?.();
+}
+
 /**
  * The saved dictation key works as a tap toggle or a hold, only while the
  * window's page has focus (D-10; docs/composer.md, "Voice"). A release
@@ -95,6 +107,12 @@ export function followDictationKey(): () => void {
     } else if (performance.now() - ended.at >= HOLD_MS) store.acceptRecording(true);
   };
   const elsewhere = () => withAnotherKey(true);
+  takenByPointer = () => {
+    if (!press) return;
+    const { untilHold, stoppingToggle } = press;
+    forget();
+    if (!untilHold && !stoppingToggle) useShellStore.getState().abandonRecording();
+  };
   window.addEventListener("keydown", down);
   window.addEventListener("keydown", another, true);
   window.addEventListener("keyup", up);
@@ -102,6 +120,7 @@ export function followDictationKey(): () => void {
   const stopTaken = window.infinitary.keyboard.onTaken(elsewhere);
   return () => {
     forget();
+    takenByPointer = null;
     window.removeEventListener("keydown", down);
     window.removeEventListener("keydown", another, true);
     window.removeEventListener("keyup", up);

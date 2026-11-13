@@ -361,3 +361,6 @@ The minus never decides, reads a note, refuses consent or ends a task; ending is
 A note leaves through its own footer button, Done or Got it; the host never completes an answer by time.
 The separate Close command retires; unsent picks and words stay on a put-away decision without a warning question.
 The body primitive accepts an owner-supplied bodyRef for keeping an in-session reading place.
+
+With ⌥ held, the minus puts every card on the stage aside at once: its label reads `Put every card aside` with the installed key (default ⌥⇧⌘M), it turns accent, and a ⌥-click does it (INF-4002).
+The label changes where it stands when ⌥ goes down over the minus; a modifier held alone never takes a shown label away.

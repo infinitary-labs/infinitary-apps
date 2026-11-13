@@ -36,7 +36,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
     name: "schedule_prompt",
     label: "Schedule prompt",
     description:
-      "Schedule [fm-op]: one of every_minutes (min 15), daily_at (HH:MM; optional days, IANA time_zone; default local), at_time (ISO 8601), on_event (integration/event; event_filter from integrations). When an integration's event announces what the captain asked to hear about, such as a workflow run finishing, use on_event, not a clock that checks. Include all context in prompt. Runs while app does; missed runs fold into one. A run's history keeps your closing words as what it found. Use draft for open details.",
+      "Schedule [fm-op]: one of every_minutes (min 15), daily_at (HH:MM; optional days, IANA time_zone; default local), at_time (ISO 8601), on_event (integration/event; event_filter from integrations). Use on_event, not a clock, for announced results. Put all context in prompt. Runs while app does; missed runs fold. Closing words are its found line. Draft if details open.",
     parameters: Type.Object({
       prompt: Type.String(),
       every_minutes: Type.Optional(Type.Number()),
@@ -51,7 +51,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
       event_waits_for: Type.Optional(
         Type.String({
           description:
-            "With on_event: the rule's Only if condition, what the captain wants it to catch, in plain words, such as invoices from suppliers. Each turn on its events names it, and you act only on events that meet it. With the event screen on, an event plainly not that skips your turn and is listed in the rule's history. Omit to act on every event.",
+            "With on_event: the rule's Only if, in plain words; act only on events meeting it. Omit to act on all.",
         }),
       ),
       name: Type.Optional(Type.String()),
@@ -77,7 +77,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
   const cancel = boundTool({
     name: "cancel_schedule",
     label: "Cancel schedule",
-    description: "Cancel a schedule by its id (the context block lists them).",
+    description: "Cancel a schedule by id (listed in context).",
     parameters: Type.Object({
       schedule_id: Type.String(),
     }),

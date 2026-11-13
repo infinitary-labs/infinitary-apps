@@ -11,7 +11,7 @@ export function createCorrectionTool(handle: (request: CorrectionCaseRequest) =>
     name: "correction_case",
     label: "Handle a flagged correction",
     description:
-      "Handle only the source case a correction-review wake names. inspect reads its bounded source; offer proposes exact wording for a known project on an independent first-mate card; ignore finishes an unnecessary candidate, or, with reply telling the captain why, a chosen instruction that cannot be saved. After Keep, use app_change direction, with the offered id/text/scope and expectedRevision. recover reads storage before any retry; it confirms only a matching saved revision. guide declares only affected running task ids after verified saving; an empty list finishes without interrupting anyone. This tool never writes directions or authorizes work.",
+      "Handle only the case a correction-review wake names. inspect reads its source; offer proposes exact wording for a known project on an independent first-mate card; ignore finishes an unneeded candidate, or, with reply telling the captain why, a chosen instruction that cannot be saved. After Keep, use app_change direction with the offered id/text/scope and expectedRevision. recover reads storage before any retry; it confirms only a matching saved revision. guide declares only affected running task ids after verified saving; empty finishes without interrupting anyone. Never writes directions or authorizes work.",
     parameters: Type.Object({
       op: stringEnum(["inspect", "offer", "ignore", "recover", "guide"]),
       inputId: Type.Integer(),

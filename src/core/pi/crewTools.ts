@@ -681,8 +681,8 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Steer crewmate",
     description:
       "Send guidance, feedback, or a follow-up to a crewmate's running or idle task. " +
-      "The result says when a message was queued for the crewmate's next turn instead. " +
-      "Every message expects a correlated response by default; use response_mode guidance-only only when no answer is needed. Submitted responses wake you immediately, including while work continues. Dispatch briefs and host wakes are unchanged.",
+      "The result says when a message was queued for its next turn instead. " +
+      "Every message expects a correlated response by default; guidance-only response_mode needs none. Submitted responses wake you at once.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from the context block or spawn" }),
       message: Type.String({ description: "What the crewmate should know or do next" }),
@@ -801,12 +801,12 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Settle task",
     description:
       "merge-pr rechecks and merges the task's current pull request (fast-forwards on plain Git), or closes as merged " +
-      "one already merged once no question or other pull request on it is open. land merges locally, never for direct-PR. " +
+      "one already merged once no question or other pull request is open on it. land merges locally, never for direct-PR. " +
       "discard removes unwanted work unmerged; never discard results. done closes it as done and names why: answered " +
       "(an answer reported or handed on), finished (verified work with nothing to merge), released (you independently " +
       "verified its delivery through an external release; evidence names it), carried_on (carried_by) or merged (delivered_in: any pull request in its project, or a commit on main). " +
       "Every close stops its crewmate and keeps its work. done leaves the task's " +
-      "own pull request open and records it, but carried_on closes it. Closing on your own, done holds for open " +
+      "own pull request open and records it; carried_on closes it. Closing on your own, done holds for open " +
       "decisions, parts, waits and the delivery proof: a report, its own pull request closed or merged, and its work " +
       "merged or named elsewhere. captain_words passes them all. Use crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({

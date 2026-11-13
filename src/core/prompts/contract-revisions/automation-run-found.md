@@ -7,4 +7,4 @@ When an integration's event announces what the captain asked to hear about, such
 A run's history keeps its closing words as what the run found, so those words say what it found.
 
 Home: the `schedule_prompt` tool description, the one place the first mate reads how to make a rule.
-The two sentences add about 50 tokens to the fixed context.
+The two short sentences add about 20 tokens to the fixed context.

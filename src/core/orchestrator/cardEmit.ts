@@ -6,11 +6,13 @@ import {
   type CardWidth,
   cardAnswerLines,
   FIRSTMATE_CARD_META,
+  MERGE_HELD_MARK,
   mergeEffectOf,
   onStage,
   settleEffectOf,
 } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
+import { mergeActionsOf, withoutHeldMark } from "@shared/mergeHeld";
 import { revisedLineWords } from "@shared/threadLines";
 import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
@@ -100,7 +102,8 @@ export class CardEmits {
     if (!stableId) return undefined;
     const card = this.stack.cards.get(crewmateCardId(taskId, stableId));
     if (card?.taskId !== taskId || card.author !== "crewmate") return undefined;
-    return card.actions.some((action) => mergeEffectOf(action)) ? card : undefined;
+    // A card whose Merge the app holds is still the open merge card (INF-4031).
+    return mergeActionsOf(card).length > 0 ? card : undefined;
   }
 
   /**
@@ -246,7 +249,10 @@ export class CardEmits {
    * card is minted.
    */
   private upsertEmitted(raw: EmittedCardInput, context: EmitContext): string {
-    let input = raw;
+    // Only the host writes a merge card's held line (INF-4031); an authored body never carries one.
+    let input = raw.body.includes(MERGE_HELD_MARK)
+      ? { ...raw, body: withoutHeldMark(raw.body) }
+      : raw;
     // The two structural checks every emit boundary holds (P1): the host's
     // own effect is no agent's to declare, and a settle effect must know
     // its task or the button can settle nothing. Each lint already refuses

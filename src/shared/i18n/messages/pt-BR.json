@@ -141,6 +141,8 @@
   "mergeContinues": "A tarefa continua depois desta mesclagem.",
   "mergesOnItsOwn": "Mescla por conta própria",
   "mergesNext": "o app mescla assim que as verificações passarem.",
+  "mergeHeldPushed": "Uma versão mais recente recebeu push depois que este cartão apareceu. Mesclar volta quando o cartão mostrar a versão mais recente.",
+  "mergeHeldOther": "Outra solicitação de pull virou a mudança atual desta tarefa depois que este cartão apareceu. Mesclar volta quando o cartão mostrá-la.",
   "mergeSetByFirstMate": "Definido pelo seu imediato para esta tarefa.",
   "mergeSetInProject": "Definido nos ajustes deste projeto.",
   "projectsHost": "o host do projeto",

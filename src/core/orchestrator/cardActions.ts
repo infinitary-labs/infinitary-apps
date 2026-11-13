@@ -34,6 +34,7 @@ import {
   notAllowedAsks,
 } from "@shared/integrations";
 import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
+import { heldMerges } from "@shared/mergeHeld";
 import { opensPullRequest } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import {
@@ -72,22 +73,48 @@ import {
   writeSentLine,
 } from "./integrationAsks";
 import { approvableOffer, taskPull } from "./mergeAuthorization";
+import { holdsMerge, type MergeBehind } from "./settleCardFacts";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
 
 /** Typed refusal lets non-UI consumers retain the open card rather than accept it. */
 export class CardChoiceUnavailableError extends Error {
-  constructor(reason: "not-ready" | "task-closed" | "undeclared" | "action-changed" = "not-ready") {
+  constructor(
+    reason:
+      | "not-ready"
+      | "task-closed"
+      | "undeclared"
+      | "action-changed"
+      | "merge-behind"
+      | "merge-redrawn" = "not-ready",
+    behind?: MergeBehind,
+  ) {
     super(
-      reason === "action-changed"
-        ? "This action changed or still waits for other work. Read its current card before confirming."
-        : reason === "undeclared"
-          ? "This choice is not offered on this card. Choose one of its available options."
-          : reason === "task-closed"
-            ? "This choice is not available. Its task is no longer open."
-            : "This choice is not ready. Wait for the card to return.",
+      reason === "merge-behind"
+        ? mergeBehindRefusal(behind)
+        : reason === "merge-redrawn"
+          ? "This card changed while you were reading it, so I did not merge. Read it again before you choose."
+          : reason === "action-changed"
+            ? "This action changed or still waits for other work. Read its current card before confirming."
+            : reason === "undeclared"
+              ? "This choice is not offered on this card. Choose one of its available options."
+              : reason === "task-closed"
+                ? "This choice is not available. Its task is no longer open."
+                : "This choice is not ready. Wait for the card to return.",
     );
   }
+}
+
+/**
+ * The refused click on a merge card behind its change (INF-4031): what
+ * changed, and that the card now shows it, since the refusal holds or
+ * redraws the card at once.
+ */
+function mergeBehindRefusal(behind: MergeBehind | undefined): string {
+  if (behind?.why === "other")
+    return "Another pull request became this task's current change after this card went up, so I did not merge. The card now says so.";
+  const version = behind?.current ? `, ${behind.current.slice(0, 7)},` : "";
+  return `A newer version${version} was pushed after this card went up, so I did not merge. The card now shows it.`;
 }
 
 /**
@@ -288,7 +315,14 @@ export class CardActions {
     // Admit only an action declared by the shown offer, before any choice
     // bookkeeping. Resolution can close the card's answer task as well.
     const chosen = card.actions.find((action) => action.id === actionId);
-    if (!chosen) throw new CardChoiceUnavailableError("undeclared");
+    if (!chosen) {
+      // A Merge the app took off a card behind its change (INF-4031) says why.
+      const behind = heldMerges(card.body)?.some((held) => held.id === actionId)
+        ? this.mergeBehind(card, associated)
+        : undefined;
+      if (holdsMerge(behind)) throw new CardChoiceUnavailableError("merge-behind", behind);
+      throw new CardChoiceUnavailableError("undeclared");
+    }
     // A put-off (INF-3846 piece 3) is kept only on the captain's own click,
     // never a body's script; the frame is never offered it (`bridgeActionIds`).
     if (chosen.until && source !== "chrome") throw new CardChoiceUnavailableError("undeclared");
@@ -327,51 +361,18 @@ export class CardActions {
     // The one merge effect (INF-2744), whichever pull request it names.
     const merge = mergeEffectOf(chosen);
     // A merge click merges the change its card was shown for, at the version
-    // it showed: a card shown for another change is refused (INF-2490). A
-    // click whose approval is kept to the pull request its card showed
-    // merges that one even after another of the task's
-    // became current (INF-2746); a click that approves no head merges only
-    // the current change, so it is refused once another is current.
+    // it showed: a card behind its change is refused (`mergeBehind`), and
+    // the card is held or redrawn at once, so the next look shows why.
     if (merge && !merge.review && associated) {
-      const delivery = associated.delivery;
-      const offered = delivery?.completionOffers?.find(
-        (offer) => offer.cardId === card.id && offer.offerId === card.offerId,
-      );
-      const shownFor = offered?.shownFor ?? offered?.prNumber;
-      const current = currentChange(delivery, associated.branch);
-      const changes = this.core.options.tasks.changesFor(associated.id);
-      const elsewhere =
-        shownFor !== undefined &&
-        shownFor !== current.number &&
-        approvableOffer(
-          associated,
-          associated.repoId ? this.core.options.repos.get(associated.repoId) : undefined,
-          this.core.facts.taskDelivery(associated.id),
-          { cardId: card.id, offerId: card.offerId },
-          changes,
-        )
-          ? taskPull(associated, changes, shownFor)
-          : undefined;
-      const ledger = this.core.options.tasks.delivery.changePresentation(
-        associated.id,
-        elsewhere?.branch ?? current.branch,
-        shownFor ?? current.number,
-      );
-      // Approval follows the code, never the story's words (INF-3623): a
-      // story revised at the version the card showed keeps the click, and
-      // the merge carries the newest story. Only another commit refuses it -
-      // the newest story's version, or the pull request's own newer one.
-      const read = !elsewhere && current.number !== undefined ? delivery?.headSha : undefined;
-      const moved =
-        offered?.headSha !== ledger?.revisions.at(-1)?.head ||
-        (read !== undefined && read !== offered?.headSha);
-      const story = ledger !== undefined || offered?.presentationRevision !== undefined;
-      if (
-        (shownFor !== undefined && shownFor !== current.number && !elsewhere) ||
-        (story && (!offered?.presentationRevision || moved))
-      ) {
+      if (this.unboundStoryClick(card, associated)) {
         this.core.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");
+      }
+      const behind = this.mergeBehind(card, associated);
+      if (holdsMerge(behind)) {
+        this.core.cards.refreshSettleFacts([associated.id]);
+        this.core.cards.showOpenCard(card.id);
+        throw new CardChoiceUnavailableError("merge-behind", behind);
       }
     }
     // The captain's merge click mints his approval of the offer he was
@@ -413,7 +414,7 @@ export class CardActions {
         gesture.data.lifecycleId !== card.lifecycleId
       ) {
         this.core.cards.showOpenCard(card.id);
-        throw new CardChoiceUnavailableError("action-changed");
+        throw new CardChoiceUnavailableError(merge ? "merge-redrawn" : "action-changed");
       }
     }
     if (effect?.kind === "host" && effect.op === "confirm-required-action") {
@@ -1092,6 +1093,93 @@ export class CardActions {
    */
   mergeModeFor(taskId: string): "merge-pr" | "land" {
     return opensPullRequest(this.core.facts.taskDelivery(taskId)) ? "merge-pr" : "land";
+  }
+
+  /**
+   * Why an open merge card no longer shows its task's current change
+   * (INF-4031), the one fact its click and its drawing both read. A card
+   * shown for another change than the current one is behind it (INF-2490),
+   * unless its click is kept to the pull request it showed (INF-2746).
+   * Approval follows the code, never the story's words (INF-3623): a card
+   * with a story is behind after another commit - the newest story's
+   * version, or the pull request's own newer one; a newer story at the
+   * version it showed only asks for a redraw.
+   */
+  mergeBehind(
+    card: Card,
+    associated = card.taskId ? this.core.options.tasks.get(card.taskId) : undefined,
+  ): MergeBehind | null | undefined {
+    if (!associated || TaskService.isClosed(associated)) return undefined;
+    const delivery = associated.delivery;
+    const offered = delivery?.completionOffers?.find(
+      (offer) => offer.cardId === card.id && offer.offerId === card.offerId,
+    );
+    // A card with no offer of its own shows no version to fall behind.
+    if (!offered) return undefined;
+    const shownFor = offered.shownFor ?? offered.prNumber;
+    const current = currentChange(delivery, associated.branch);
+    const changes = this.core.options.tasks.changesFor(associated.id);
+    const elsewhere =
+      shownFor !== undefined &&
+      shownFor !== current.number &&
+      approvableOffer(
+        associated,
+        associated.repoId ? this.core.options.repos.get(associated.repoId) : undefined,
+        this.core.facts.taskDelivery(associated.id),
+        { cardId: card.id, offerId: card.offerId },
+        changes,
+      )
+        ? taskPull(associated, changes, shownFor)
+        : undefined;
+    const shown = offered?.headSha ? { shown: offered.headSha } : {};
+    if (shownFor !== undefined && shownFor !== current.number && !elsewhere)
+      return { why: "other", ...shown };
+    const ledger = this.core.options.tasks.delivery.changePresentation(
+      associated.id,
+      elsewhere?.branch ?? current.branch,
+      shownFor ?? current.number,
+    );
+    const newest = ledger?.revisions.at(-1);
+    const read = !elsewhere && current.number !== undefined ? delivery?.headSha : undefined;
+    const pushed = read !== undefined && read !== offered?.headSha;
+    const story = ledger !== undefined || offered?.presentationRevision !== undefined;
+    // Its publication is part of the reading, so a story confirmed published
+    // after it was saved is read again and redrawn (INF-4031).
+    const revision = newest
+      ? {
+          newest: newest.revision,
+          published: `${ledger?.published?.revision ?? "-"}:${ledger?.publication?.state ?? "-"}`,
+        }
+      : {};
+    if (story && (!offered?.presentationRevision || pushed || offered.headSha !== newest?.head)) {
+      const now = pushed ? read : newest?.head;
+      return { why: "pushed", ...shown, ...(now ? { current: now } : {}), ...revision };
+    }
+    if (newest && offered?.presentationRevision && newest.revision > offered.presentationRevision)
+      return { why: "story", ...shown, current: newest.head, ...revision };
+    return null;
+  }
+
+  /**
+   * A merge click on a card with no offer of its own while the task's change
+   * has a saved story (INF-3623): it shows no version the click could
+   * approve, so it is refused, as before INF-4031.
+   */
+  private unboundStoryClick(
+    card: Card,
+    associated: NonNullable<ReturnType<TaskService["get"]>>,
+  ): boolean {
+    const delivery = associated.delivery;
+    if (delivery?.completionOffers?.some((o) => o.cardId === card.id && o.offerId === card.offerId))
+      return false;
+    const current = currentChange(delivery, associated.branch);
+    return (
+      this.core.options.tasks.delivery.changePresentation(
+        associated.id,
+        current.branch,
+        current.number,
+      ) !== undefined
+    );
   }
 
   /**

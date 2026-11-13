@@ -854,6 +854,57 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "The project's queue holds !12 at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 out of its batches; its status reads \"Waiting for a Maintainer to approve this version\". Its code joins a batch only once a Maintainer of the project approves the merge request after its last push, since a later mark does not admit it, and then the captain's merge click starts the queue again, which nothing else does. Put up your merge card again saying a Maintainer must approve this version first; do not start the queue yourself.",
     },
   ],
+  // INF-4031: an open merge card fell behind its change, and no story at the
+  // current version could redraw it, so its author hears it once.
+  "merge-card-behind": [
+    {
+      name: "a crewmate's card after a push (INF-3930's versions)",
+      wake: {
+        facts: {
+          kind: "merge-card-behind",
+          lane: "crewmate",
+          card: "card-0a1b2c3d-merge-trim-first-mate-prompt-3",
+          task: { id: "0a1b2c3d", title: "Trim the first mate's text" },
+          why: "pushed",
+          shown: "87218b0c4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b",
+          current: "732a709d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b",
+        },
+      },
+      words:
+        "Your merge card card-0a1b2c3d-merge-trim-first-mate-prompt-3 shows 87218b0, and the pull request is at 732a709 now. The app took its Merge button off until the card shows the current version. Call show_merge_card when this version is ready: it revises this card, whatever id you give it.",
+    },
+    {
+      name: "a crewmate's card once another pull request became current",
+      wake: {
+        facts: {
+          kind: "merge-card-behind",
+          lane: "crewmate",
+          card: "card-0a1b2c3d-merge-trim-first-mate-prompt-3",
+          task: { id: "0a1b2c3d", title: "Trim the first mate's text" },
+          why: "other",
+          shown: "87218b0c4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b",
+        },
+      },
+      words:
+        "Your merge card card-0a1b2c3d-merge-trim-first-mate-prompt-3 shows 87218b0, and another pull request became the task's current change. The app took its Merge button off until the card shows the current version. Call show_merge_card when this version is ready: it revises this card, whatever id you give it.",
+    },
+    {
+      name: "the first mate's own card after a push",
+      wake: {
+        facts: {
+          kind: "merge-card-behind",
+          lane: "firstmate",
+          card: "card-fm-17",
+          task: { id: "0a1b2c3d", title: "Trim the first mate's text" },
+          why: "pushed",
+          shown: "87218b0c4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b",
+          current: "732a709d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b",
+        },
+      },
+      words:
+        '[fm-op] Your merge card card-fm-17 for task 0a1b2c3d "Trim the first mate\'s text" shows 87218b0, and the pull request is at 732a709 now. The app took its Merge button off, so the captain cannot click a merge it would refuse. When the current version is ready to merge, revise that card with emit_card under the same id.',
+    },
+  ],
   "queue-start-failed": [
     {
       name: "after two failed starts",

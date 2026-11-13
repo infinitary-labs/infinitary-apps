@@ -135,6 +135,8 @@
   {"said":{"m":"mergeContinues"},"words":"The task continues after this merge."},
   {"said":{"m":"mergesOnItsOwn"},"words":"Merges on its own"},
   {"said":{"m":"mergesNext"},"words":"the app merges it once its checks pass."},
+  {"said":{"m":"mergeHeldPushed"},"words":"A newer version was pushed after this card went up. Merge returns when this card shows the newer version."},
+  {"said":{"m":"mergeHeldOther"},"words":"Another pull request became this task's current change after this card went up. Merge returns when this card shows it."},
   {"said":{"m":"mergeSetByFirstMate"},"words":"Set by your first mate for this task."},
   {"said":{"m":"mergeSetInProject"},"words":"Set in this project's settings."},
   {"said":{"m":"projectsHost"},"words":"the project's host"},

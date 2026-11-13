@@ -1,6 +1,7 @@
 import {
   type Card,
   MERGE_ANYWAY_ACTION,
+  MERGE_HELD_MARK,
   mergeEffectOf,
   SETTLE_FACT_VALUE_CLASS,
   SETTLE_FACTS_OPEN,
@@ -27,6 +28,8 @@ import {
 } from "@shared/checksSpan";
 import { type FactDotState, factDotSvg } from "@shared/factDot";
 import { overrideCellWords, overrideWords, standingOverride } from "@shared/holds";
+import { said, saidMark } from "@shared/i18n/said";
+import { HELD_LINE, heldMerges } from "@shared/mergeHeld";
 import { opensPullRequest, QUEUE_STATUS, type RepoDelivery } from "@shared/repos";
 import {
   BATCH_CHECK_WORDS,
@@ -73,7 +76,50 @@ export type SettleFactsReading = {
   mergeLabel?: (card: Card) => string | undefined;
   /** Whether a settle card offers Merge anyway beside its merge now. */
   mergeAnyway?: (card: Card) => boolean;
+  /**
+   * Why a merge card no longer shows its task's current change
+   * (`MergeBehind`): null while it shows it, undefined when the card has
+   * no offer to compare.
+   */
+  behind?: (card: Card) => MergeBehind | null | undefined;
+  /** The rows of work the crew filed under the task's name now (`SettleFacts.followupNotice`). */
+  followups?: () => string | undefined;
 };
+
+/**
+ * Why an open merge card no longer shows its task's current change
+ * (INF-4031): the one fact its click and its drawing both read
+ * (`CardActions.mergeBehind`). A push since the card went up, or another of
+ * the task's pull requests current now, refuses its click, so the card holds
+ * its Merge until it is redrawn; a newer story at the same version keeps the
+ * click (INF-3623) and only asks for the redraw.
+ */
+export type MergeBehind = {
+  why: "pushed" | "other" | "story";
+  /** The version the card showed. */
+  shown?: string;
+  /** The change's version now, when the record names one. */
+  current?: string;
+  /** The newest story revision of the change, which a redraw would show. */
+  newest?: number;
+  /** Where that revision's publication stands, which a redraw on a hosted project waits for. */
+  published?: string;
+};
+
+/** Whether a reason refuses the card's click, and so holds its Merge. */
+export function holdsMerge(behind: MergeBehind | null | undefined): behind is MergeBehind {
+  return behind != null && behind.why !== "story";
+}
+
+/** The held line itself, keeping the merges it took off. */
+export function heldLine(why: "pushed" | "other", merges: Card["actions"]): string {
+  const kept = escapeCardText(JSON.stringify(merges));
+  const words = said(why === "pushed" ? "mergeHeldPushed" : "mergeHeldOther");
+  return `<p class="inf-panel" ${MERGE_HELD_MARK}="${kept}">${saidMark(words, "strong")}</p>`;
+}
+
+/** The work-filed rows a merge card carries (`SettleFacts.followupNotice`): each row closes on its last span. */
+const FOLLOWUPS = /<div class="inf-followups" data-followups>[\s\S]*?<\/span><\/div><\/div>/;
 
 /**
  * A card with the facts the record holds now: its strip replaced in place,
@@ -88,6 +134,37 @@ export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
     const merge = mergeEffectOf(action);
     return merge !== undefined && !merge.review && !action.passes;
   };
+  // The follow-up rows follow the record like the strip (INF-4031): a row
+  // whose task closed goes, and the rows go when none is open.
+  if (read.followups && FOLLOWUPS.test(card.body)) {
+    const rows = read.followups() ?? "";
+    const body = card.body.replace(FOLLOWUPS, () => rows);
+    if (body !== card.body) card = { ...card, body };
+  }
+  // A card behind its change holds its Merge (INF-4031): the click would
+  // only be refused, so no such button is left, and one line says why. A
+  // card current again gets back the merge the line kept; a line on a card
+  // with no offer to compare is dropped and brings nothing back.
+  const line = HELD_LINE.test(card.body);
+  const behind = line || card.actions.some(merges) ? read.behind?.(card) : undefined;
+  if (line && read.behind && !holdsMerge(behind)) {
+    const ids = new Set(card.actions.map((action) => action.id));
+    const back = behind === undefined ? [] : (heldMerges(card.body) ?? []);
+    card = {
+      ...card,
+      body: card.body.replace(HELD_LINE, ""),
+      actions: [...back.filter((action) => !ids.has(action.id)), ...card.actions],
+    };
+  } else if (holdsMerge(behind) && card.actions.some(merges)) {
+    const taken = card.actions.filter(merges);
+    card = {
+      ...card,
+      body: line
+        ? card.body
+        : `${heldLine(behind.why === "other" ? "other" : "pushed", taken)}${card.body}`,
+      actions: card.actions.filter((action) => !merges(action) && action.passes !== "checks"),
+    };
+  }
   const relabeled = (card: Card): Card => {
     const label = read.mergeLabel?.(card);
     if (!label || !card.actions.some((action) => merges(action) && action.label !== label))

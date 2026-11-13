@@ -24,6 +24,7 @@ import { forgePlace } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import type { ValidationPermission } from "@shared/liveValidation";
 import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
+import { mergeActionsOf } from "@shared/mergeHeld";
 import type { MergeReview } from "@shared/mergeReview";
 import { hostedPresentation } from "@shared/presentationDestination";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
@@ -76,6 +77,7 @@ import {
 } from "./mergeAuthorization";
 import { type MergeCardWalk, mergeCardAnswer } from "./mergeCardSteps";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
+import type { MergeBehind } from "./settleCardFacts";
 import type { SettleOwners } from "./settleOwners";
 import { contributionStatusLine, pendingMergeLine } from "./settleWords";
 import { seenBefore, sinceSeenNotice, sinceSeenSection } from "./sinceSeen";
@@ -154,6 +156,12 @@ export type CrewmateCardsHost = {
 export class CrewmateCards {
   /** A card's browser door: its browser button, its page and its hand-off. */
   private readonly browser: CardBrowserActions;
+  /** Each card and story the app redrew a card behind its change at (`redrawBehind`), once. */
+  private readonly redrawn = new Set<string>();
+  /** Tasks whose show_merge_card call is running (`whileShowing`). */
+  private readonly showing = new Map<string, number>();
+  /** Each task's app redraw still writing (`redrawBehind`), which its author's story calls wait for. */
+  private readonly redrawing = new Map<string, Promise<void>>();
 
   constructor(
     private readonly options: CrewSupervisorOptions,
@@ -281,6 +289,16 @@ export class CrewmateCards {
     } catch (caught) {
       return stop("card", caught instanceof Error ? caught.message : String(caught), "crewmate");
     }
+    // The task's open merge card is revised whatever id the call gives
+    // (INF-4031), so an older card never stands beside a newer one.
+    const open = this.openMergeCard(task.id);
+    const openId = open?.id.slice(crewmateCardId(task.id, "").length);
+    if (openId && openId !== stableId) {
+      did.push(
+        `Your open merge card is ${openId}, so this revises it instead of putting up ${stableId}.`,
+      );
+      stableId = openId;
+    }
     // The captain already chose on a card under this id, and the choice
     // reached the crewmate: the card goes up under a new id instead of being
     // refused for asking again. A choice still on its way keeps the refusal,
@@ -358,6 +376,119 @@ export class CrewmateCards {
       this.recordCardRefusal(task, { title: walk.ready.title, ...cardRefusalOf(caught) });
       return stop("card", caught instanceof Error ? caught.message : String(caught), "crewmate");
     }
+  }
+
+  /**
+   * A task's show_merge_card call from its story's preparation to its card
+   * write (INF-4031): the app redraws none of that task's cards meanwhile,
+   * so the two writes never race and the call's own revision, its reply and
+   * what changed since the captain looked are the ones that go up.
+   */
+  async whileShowing<T>(taskId: string, call: () => Promise<T>): Promise<T> {
+    this.showing.set(taskId, (this.showing.get(taskId) ?? 0) + 1);
+    try {
+      await this.redrawing.get(taskId);
+      return await call();
+    } finally {
+      const left = (this.showing.get(taskId) ?? 1) - 1;
+      if (left > 0) this.showing.set(taskId, left);
+      else this.showing.delete(taskId);
+    }
+  }
+
+  /**
+   * The task's open merge card of its own change, as its crewmate put it up:
+   * one with that merge, or one whose Merge the app holds (INF-4031).
+   */
+  openMergeCard(taskId: string): Card | undefined {
+    const own = crewmateCardId(taskId, "");
+    for (const card of this.host.cards.values()) {
+      if (card.taskId !== taskId || !card.id.startsWith(own)) continue;
+      if (mergesOwn(mergeActionsOf(card))) return card;
+    }
+    return undefined;
+  }
+
+  /**
+   * A story call of the task's author after the app's redraw of its merge
+   * card ends (INF-4031): the redraw holds the task's story operation, which
+   * refuses a second one, so the author's call waits for it instead.
+   */
+  afterRedraw<T>(taskId: string, call: () => T): T | Promise<Awaited<T>> {
+    const running = this.redrawing.get(taskId);
+    return running ? (running.then(call) as Promise<Awaited<T>>) : call();
+  }
+
+  /**
+   * A crewmate's merge card behind its change, redrawn by the app at the
+   * newest story once that story is ready at the current version (INF-4031):
+   * show_merge_card's own write, under the card's id, so the checks rule,
+   * an approval that covers the version, change marks and the strip apply as
+   * they do to the crewmate's call. The story's words are always the
+   * crewmate's: with no story at the current version, nothing is redrawn.
+   * Whether a redraw started or already ran for that story; `failed` hears a
+   * redraw the app refused.
+   */
+  redrawBehind(task: TaskRuntime, card: Card, behind: MergeBehind, failed: () => void): boolean {
+    // The task's own show_merge_card is writing this card: it brings it current.
+    if (this.showing.has(task.id)) return true;
+    const record = this.options.tasks.get(task.id);
+    const ledger = this.options.tasks.delivery.changePresentation(task.id);
+    const newest = ledger?.revisions.at(-1);
+    const current = behind.current ?? record?.delivery?.headSha;
+    if (!record || !ledger || !newest || !current || newest.head !== current) return false;
+    // On a hosted project the redraw waits for the story's publication to be
+    // confirmed: a revision at this version not yet published is redrawn
+    // once it is, with no wake meanwhile, since its author is publishing it;
+    // the confirmation is a new reading (`MergeBehind.published`). An
+    // uncertain write wakes the author.
+    if (
+      hostedPresentation(newest.destination) &&
+      (ledger.published?.revision !== newest.revision || ledger.publication?.state !== "confirmed")
+    )
+      return !(
+        ledger.publication?.revision === newest.revision && ledger.publication.state === "uncertain"
+      );
+    const once = `${card.id}:${newest.revision}:${newest.head}`;
+    if (this.redrawn.has(once)) return true;
+    this.redrawn.add(once);
+    const merge = mergeActionsOf(card)
+      .map((action) => mergeEffectOf(action))
+      .find((effect) => effect !== undefined && !effect.review);
+    const write = async () =>
+      this.crewmateCardWrite(task, {
+        title: newest.title,
+        body: "",
+        presentationRevision: newest.revision,
+        actions: [
+          emittedAction({
+            id: "merge",
+            default: true,
+            effect: {
+              kind: "merge",
+              after: merge?.after ?? "close",
+              ...(merge?.asksFirst ? { asks_first: merge.asksFirst } : {}),
+            },
+          }),
+        ],
+        id: card.id.slice(crewmateCardId(task.id, "").length),
+      });
+    const running: Promise<void> = write()
+      .then(() => {
+        // The redraw is the app's write, not a turn's: with its author idle,
+        // no close-out would bring it to the stage, so it goes there now.
+        if (this.options.tasks.get(task.id)?.activity !== "running")
+          this.host.cards.closeOut({ kind: "crewmate", taskId: task.id }, "idle");
+      })
+      .catch((caught: unknown) => {
+        console.warn(`Could not redraw merge card ${card.id}:`, caught);
+        failed();
+      })
+      .finally(() => {
+        if (this.redrawing.get(task.id) === running) this.redrawing.delete(task.id);
+      });
+    this.redrawing.set(task.id, running);
+    return true;
   }
 
   /** One card as it stands, for a writer about to revise or answer it. */

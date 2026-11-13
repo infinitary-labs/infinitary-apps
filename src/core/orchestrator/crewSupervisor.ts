@@ -60,6 +60,7 @@ import { CrewToolHooks } from "./crewToolHooks";
 import { CrewTurns, crewSignInCardId } from "./crewTurns";
 import { CrewUpdates } from "./crewUpdates";
 import { CrewWatch } from "./crewWatch";
+import { mergeCardBehindWake } from "./deliveryWakes";
 import { premiumRetryPossible } from "./holds";
 import { HostOps } from "./hostOps";
 import { IdleLadder } from "./idleLadder";
@@ -73,7 +74,7 @@ import { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
 import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
-import { SettleFacts } from "./settleCardFacts";
+import { type MergeBehind, SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { contributionStatusLine, hasMergeLine, receiptMergedLine } from "./settleWords";
 import { CrewStarts } from "./starts";
@@ -339,6 +340,8 @@ export class CrewSupervisor {
       settleFacts: (taskId) => this.settleFacts.strip(taskId),
       mergeLabel: (card) => this.cardActions.mergeLabel(card),
       mergeAnyway: (card) => this.cardActions.mergeAnyway(card),
+      mergeBehind: (card) => this.cardActions.mergeBehind(card),
+      mergeFellBehind: (cardId, behind) => this.mergeFellBehind(cardId, behind),
       holdsUntilMerge: (card) => this.holdsUntilMerge(card),
       mergedLine: (card) => this.mergedLineOf(card),
       otherChangeOpen: (taskId) => this.otherChangeOpen(taskId),
@@ -1019,6 +1022,31 @@ export class CrewSupervisor {
   /** Whether a task's events skip supervision: a review task itself. */
   private bypassesSupervision(taskId: string): boolean {
     return this.options.tasks.get(taskId)?.shape?.kind === "review";
+  }
+
+  /**
+   * A merge card behind its change (INF-4031): a crewmate's card is redrawn
+   * at its newest story once that story is ready at the current version;
+   * otherwise its author hears it once per card and version, and
+   * show_merge_card revises the card. A first mate card is never redrawn,
+   * since its words are its own. A newer story at the same version is only
+   * redrawn: the click it keeps needs no one woken.
+   */
+  private mergeFellBehind(cardId: string, behind: MergeBehind): void {
+    const card = this.cards.get(cardId);
+    const record = card?.taskId ? this.options.tasks.get(card.taskId) : undefined;
+    if (!card || !record || TaskService.isClosed(record)) return;
+    const crewmate = !card.id.startsWith(FIRSTMATE_CARD_PREFIX);
+    const tell = () => {
+      if (behind.why === "story") return;
+      const wake = mergeCardBehindWake(card, record, behind, crewmate ? "crewmate" : "firstmate");
+      // A task that merged or closed meanwhile takes no wake: its card goes with it.
+      if (crewmate)
+        void this.steer.steerInternal(record.id, wake, SUPERVISOR_STEER).catch(() => undefined);
+      else this.hooks.notifyOp(wake, "agent", record.id);
+    };
+    const runtime = crewmate ? this.tasks.get(record.id) : undefined;
+    if (!runtime || !this.crewmateCards.redrawBehind(runtime, card, behind, tell)) tell();
   }
 
   /**

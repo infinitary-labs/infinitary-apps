@@ -138,6 +138,8 @@
   "mergeContinues": "The task continues after this merge.",
   "mergesOnItsOwn": "Merges on its own",
   "mergesNext": "the app merges it once its checks pass.",
+  "mergeHeldPushed": "A newer version was pushed after this card went up. Merge returns when this card shows the newer version.",
+  "mergeHeldOther": "Another pull request became this task's current change after this card went up. Merge returns when this card shows it.",
   "mergeSetByFirstMate": "Set by your first mate for this task.",
   "mergeSetInProject": "Set in this project's settings.",
   "projectsHost": "the project's host",

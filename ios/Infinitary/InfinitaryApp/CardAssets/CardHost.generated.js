@@ -5284,8 +5284,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const riskAssessmentSchema = object({
     declared: riskDeclarationSchema
   });
+  const MERGE_HELD_MARK = "data-inf-merge-held";
   function takesTaskFacts(card) {
-    if (card.reviewTaskId) return true;
+    if (card.reviewTaskId || card.body?.includes(MERGE_HELD_MARK)) return true;
     if (card.actions.some((action) => settleEffectOf(action) || mergeEffectOf(action))) return true;
     return card.risk !== void 0 && card.actions.length === 0;
   }

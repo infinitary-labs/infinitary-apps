@@ -489,16 +489,20 @@ export const riskAssessmentSchema = z.object({
 });
 export type RiskAssessment = z.infer<typeof riskAssessmentSchema>;
 
+/** Marks the line on a merge card whose Merge the app holds behind a newer version (INF-4031). */
+export const MERGE_HELD_MARK = "data-inf-merge-held";
+
 /**
  * Whether the host writes its task's facts on a card's strip, which the
- * stage draws above the buttons: every merge card and a discard card, an
- * independent review's card, and the merge card of a task that merges on
- * its own (INF-1219), which carries the story's risk and no buttons - the
- * risk rides only a merge card, written by the host from the crewmate's
- * story.
+ * stage draws above the buttons: every merge card and one whose Merge it
+ * holds (`MERGE_HELD_MARK`), a discard card, an independent review's card,
+ * and the merge card of a task that merges on its own (INF-1219), which
+ * carries the story's risk and no buttons - the risk rides only a merge
+ * card, written by the host from the crewmate's story.
  */
-export function takesTaskFacts(card: Pick<Card, "actions" | "reviewTaskId" | "risk">): boolean {
-  if (card.reviewTaskId) return true;
+type FactsCard = Pick<Card, "actions" | "reviewTaskId" | "risk"> & { body?: string };
+export function takesTaskFacts(card: FactsCard): boolean {
+  if (card.reviewTaskId || card.body?.includes(MERGE_HELD_MARK)) return true;
   if (card.actions.some((action) => settleEffectOf(action) || mergeEffectOf(action))) return true;
   return card.risk !== undefined && card.actions.length === 0;
 }

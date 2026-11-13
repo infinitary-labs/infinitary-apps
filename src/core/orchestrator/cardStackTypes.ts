@@ -7,6 +7,7 @@ import type { AskEnding } from "./askEnding";
 import type { CardEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
 import type { CardStage } from "./cardStage";
+import type { MergeBehind } from "./settleCardFacts";
 
 export type CardActor = "captain" | "firstmate" | "crewmate";
 type CardResponse = Parameters<AskEnding["captainResponded"]>[1];
@@ -40,6 +41,14 @@ export type CardServiceHost = {
   mergeLabel?(card: Card): string | undefined;
   /** Whether a settle card offers Merge anyway beside its merge now (INF-1137 friction 6). */
   mergeAnyway?(card: Card): boolean;
+  /** Why a merge card no longer shows its task's current change (INF-4031, `CardActions.mergeBehind`). */
+  mergeBehind?(card: Card): MergeBehind | null | undefined;
+  /**
+   * A merge card the strip's pass read behind its change (INF-4031): the
+   * host redraws it at the current story or wakes its author. Called after
+   * the pass, never inside the task read it runs in.
+   */
+  mergeFellBehind?(cardId: string, behind: MergeBehind): void;
   /**
    * Whether a story note stays off the stack until its task's merge has a
    * result (INF-2533): the task merges on its own, is open, and its change

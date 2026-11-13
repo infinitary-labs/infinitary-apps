@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-follows-push",
+      "kind": "fix",
+      "title": "A merge card never offers an older version",
+      "body": "When a crewmate pushes a newer version after its merge card goes up, the card no longer keeps offering the older one. Its Merge button comes off at once, and a line at the top says a newer version was pushed. The same card then shows the newer version and Merge comes back, without a second card for the same change. If another pull request becomes the task's current change, the card says so in the same way.",
+      "area": "cards",
+      "picture": {
+        "dark": "merge-card-follows-push-dark.webp",
+        "light": "merge-card-follows-push-light.webp",
+        "alt": "A merge card whose Merge button is gone, with a line at the top saying a newer version was pushed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

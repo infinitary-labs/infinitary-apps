@@ -1,6 +1,7 @@
 import { type Card, mergeEffectOf } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
 import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
+import { mergeActionsOf } from "@shared/mergeHeld";
 import type { MergeReview } from "@shared/mergeReview";
 import type { RepoDelivery } from "@shared/repos";
 import type { Deliverable } from "@shared/routingPolicy";
@@ -86,6 +87,8 @@ export type OpenMergeAction = {
   /** The reviewed pull request it merges; absent means the task's current change. */
   review?: string;
   asksFirst?: string;
+  /** The app holds this Merge on a card behind its change (INF-4031): the card shows no such button. */
+  held?: true;
 };
 
 /**
@@ -101,7 +104,8 @@ export function openMergeActionIn(
 ): OpenMergeAction | undefined {
   for (const card of cards) {
     if (card.taskId !== taskId || card.author !== "crewmate") continue;
-    for (const action of card.actions) {
+    // A held Merge still names the open merge card (INF-4031, `mergeActionsOf`).
+    for (const action of mergeActionsOf(card)) {
       const effect = action.passes ? undefined : mergeEffectOf(action);
       if (!effect || (scope && effect.review !== scope.review)) continue;
       return {
@@ -112,6 +116,7 @@ export function openMergeActionIn(
         after: effect.after,
         ...(effect.review ? { review: effect.review } : {}),
         ...(effect.asksFirst ? { asksFirst: effect.asksFirst } : {}),
+        ...(card.actions.includes(action) ? {} : { held: true as const }),
       };
     }
   }

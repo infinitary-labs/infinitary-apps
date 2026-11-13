@@ -131,6 +131,8 @@ public enum PhoneMessages {
     public static func `mergeContinues`() -> String { PhoneWords.format("mergeContinues", []) }
     public static func `mergesOnItsOwn`() -> String { PhoneWords.format("mergesOnItsOwn", []) }
     public static func `mergesNext`() -> String { PhoneWords.format("mergesNext", []) }
+    public static func `mergeHeldPushed`() -> String { PhoneWords.format("mergeHeldPushed", []) }
+    public static func `mergeHeldOther`() -> String { PhoneWords.format("mergeHeldOther", []) }
     public static func `mergeSetByFirstMate`() -> String { PhoneWords.format("mergeSetByFirstMate", []) }
     public static func `mergeSetInProject`() -> String { PhoneWords.format("mergeSetInProject", []) }
     public static func `projectsHost`() -> String { PhoneWords.format("projectsHost", []) }
@@ -2099,6 +2101,8 @@ extension PhoneWords {
         "mergeContinues": [],
         "mergesOnItsOwn": [],
         "mergesNext": [],
+        "mergeHeldPushed": [],
+        "mergeHeldOther": [],
         "mergeSetByFirstMate": [],
         "mergeSetInProject": [],
         "projectsHost": [],

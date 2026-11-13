@@ -3907,6 +3907,62 @@ export function mergesNext(): string {
   return `the app merges it once its checks pass.`;
 }
 
+export function mergeHeldPushed(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `دُفعت نسخة أحدث بعد ظهور هذه البطاقة. يعود الدمج عندما تعرض البطاقة النسخة الأحدث.`;
+    case "de":
+      return `Nachdem diese Karte erschienen ist, wurde eine neuere Version gepusht. Zusammenführen ist wieder verfügbar, sobald die Karte die neuere Version zeigt.`;
+    case "es":
+      return `Se insertó una versión más reciente después de que apareciera esta tarjeta. Fusionar vuelve cuando la tarjeta muestre la versión más reciente.`;
+    case "fr":
+      return `Une version plus récente a été poussée après l’apparition de cette carte. Fusionner revient quand la carte affiche la version plus récente.`;
+    case "ja":
+      return `このカードの表示後に新しいバージョンがプッシュされました。カードが新しいバージョンを表示すると、マージが戻ります。`;
+    case "ko":
+      return `이 카드가 올라온 뒤 더 새로운 버전이 푸시됐어요. 카드가 새 버전을 보여 주면 병합이 다시 생겨요.`;
+    case "pt-BR":
+      return `Uma versão mais recente recebeu push depois que este cartão apareceu. Mesclar volta quando o cartão mostrar a versão mais recente.`;
+    case "zh-Hans":
+      return `这张卡片出现后，又推送了一个更新的版本。卡片显示新版本后，合并按钮会回来。`;
+    case "zh-Hant":
+      return `這張卡片出現後，又推送了一個較新的版本。卡片顯示新版本後，合併按鈕會回來。`;
+    case "en-XA":
+      return `[Å ñéŵéŕ ṽéŕšîöñ ŵáš þûšĥéð áƒţéŕ ţĥîš çáŕð ŵéñţ ûþ. Ṁéŕĝé ŕéţûŕñš ŵĥéñ ţĥîš çáŕð šĥöŵš ţĥé ñéŵéŕ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eA newer version was pushed after this card went up. Merge returns when this card shows the newer version.\u202c`;
+  }
+  return `A newer version was pushed after this card went up. Merge returns when this card shows the newer version.`;
+}
+
+export function mergeHeldOther(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `أصبح طلب سحب آخر هو التغيير الحالي لهذه المهمة بعد ظهور هذه البطاقة. يعود الدمج عندما تعرضه البطاقة.`;
+    case "de":
+      return `Nachdem diese Karte erschienen ist, wurde ein anderer Pull Request zur aktuellen Änderung dieser Aufgabe. Zusammenführen ist wieder verfügbar, sobald die Karte ihn zeigt.`;
+    case "es":
+      return `Otra solicitud de incorporación de cambios pasó a ser el cambio actual de esta tarea después de que apareciera esta tarjeta. Fusionar vuelve cuando la tarjeta la muestre.`;
+    case "fr":
+      return `Une autre demande de tirage est devenue le changement actuel de cette tâche après l’apparition de cette carte. Fusionner revient quand la carte l’affiche.`;
+    case "ja":
+      return `このカードの表示後に、別のプルリクエストがこのタスクの現在の変更になりました。カードがそれを表示すると、マージが戻ります。`;
+    case "ko":
+      return `이 카드가 올라온 뒤 다른 끌어오기 요청이 이 작업의 현재 변경이 됐어요. 카드가 그것을 보여 주면 병합이 다시 생겨요.`;
+    case "pt-BR":
+      return `Outra solicitação de pull virou a mudança atual desta tarefa depois que este cartão apareceu. Mesclar volta quando o cartão mostrá-la.`;
+    case "zh-Hans":
+      return `这张卡片出现后，另一个拉取请求成了这个任务的当前更改。卡片显示它之后，合并按钮会回来。`;
+    case "zh-Hant":
+      return `這張卡片出現後，另一個 pull request 成了這個任務目前的變更。卡片顯示它之後，合併按鈕會回來。`;
+    case "en-XA":
+      return `[Åñöţĥéŕ þûļļ ŕéǫûéšţ ƀéçáɱé ţĥîš ţášķ'š çûŕŕéñţ çĥáñĝé áƒţéŕ ţĥîš çáŕð ŵéñţ ûþ. Ṁéŕĝé ŕéţûŕñš ŵĥéñ ţĥîš çáŕð šĥöŵš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eAnother pull request became this task's current change after this card went up. Merge returns when this card shows it.\u202c`;
+  }
+  return `Another pull request became this task's current change after this card went up. Merge returns when this card shows it.`;
+}
+
 export function mergeSetByFirstMate(): string {
   switch (currentLanguage()) {
     case "ar":
@@ -41582,6 +41638,8 @@ export const MESSAGES = {
   mergeContinues,
   mergesOnItsOwn,
   mergesNext,
+  mergeHeldPushed,
+  mergeHeldOther,
   mergeSetByFirstMate,
   mergeSetInProject,
   projectsHost,
@@ -42978,6 +43036,8 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   mergeContinues: [],
   mergesOnItsOwn: [],
   mergesNext: [],
+  mergeHeldPushed: [],
+  mergeHeldOther: [],
   mergeSetByFirstMate: [],
   mergeSetInProject: [],
   projectsHost: [],

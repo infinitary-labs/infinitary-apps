@@ -184,12 +184,17 @@ export function mergeGate(
   const verb = mode === "merge-pr" ? "Merging the pull request for" : "Merging";
   const repo = record.repoId ? host.repos.get(record.repoId) : undefined;
   const standing = repo ? `${repo.name} asks before merging` : "this task has no repository";
-  const ways: SettleWay[] = open
-    ? [{ label: open.label, card: { id: open.cardId, action: open.actionId } }]
-    : [];
-  const pointer = open
-    ? `The merge card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
-    : "The captain merges it from the crewmate's merge card; steer the crewmate to emit one if it has not.";
+  // A held Merge is no button to point at (INF-4031): its card waits for
+  // its author to bring it to the current version.
+  const ways: SettleWay[] =
+    open && !open.held
+      ? [{ label: open.label, card: { id: open.cardId, action: open.actionId } }]
+      : [];
+  const pointer = open?.held
+    ? `The merge card "${open.cardTitle}" is on the stack without its "${open.label}" button, because its change moved on after it went up; it waits for its crewmate to bring it to the current change, and that click will be the captain's to make. Nothing further is needed from you.`
+    : open
+      ? `The merge card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
+      : "The captain merges it from the crewmate's merge card; steer the crewmate to emit one if it has not.";
   const why = hold
     ? `the captain's merge approval ended because ${hold}, so the merge is theirs again`
     : asks

@@ -167,6 +167,23 @@ export type DeliveryFacts =
       words: string;
     }
   | {
+      /**
+       * An open merge card fell behind its change (INF-4031): the app took
+       * its Merge off, and no story at the current version could redraw it.
+       * Once per card and version, to the card's author.
+       */
+      kind: "merge-card-behind";
+      lane: "crewmate" | "firstmate";
+      /** The card's id, and its task. */
+      card: string;
+      task: { id: string; title: string };
+      why: "pushed" | "other";
+      /** The version the card shows. */
+      shown?: string;
+      /** The change's version now. */
+      current?: string;
+    }
+  | {
       /** A task-scoped run's first failure or terminal reading, independent of PR green. */
       kind: "run-watch";
       outcome:
@@ -307,6 +324,42 @@ function renderDependencyClosed(facts: Extract<WakeFacts, { kind: "dependency-cl
   return facts.closed === "done"
     ? `${name}, which your task could not merge before, is done. Carry on from where you stopped.`
     : `${name}, which your task could not merge before, was dropped and no longer holds it. Carry on from where you stopped.`;
+}
+
+/** A merge card behind its change, in its author's words (INF-4031). */
+function renderMergeCardBehind(facts: Extract<WakeFacts, { kind: "merge-card-behind" }>): string {
+  const shows = facts.shown ? ` shows ${facts.shown.slice(0, 7)}, and` : "";
+  const moved =
+    facts.why === "other"
+      ? "another pull request became the task's current change"
+      : `the pull request is at ${facts.current ? facts.current.slice(0, 7) : "a newer version"} now`;
+  if (facts.lane === "firstmate")
+    return `[fm-op] Your merge card ${facts.card} for task ${facts.task.id} "${facts.task.title}"${shows} ${moved}. The app took its Merge button off, so the captain cannot click a merge it would refuse. When the current version is ready to merge, revise that card with emit_card under the same id.`;
+  return `Your merge card ${facts.card}${shows} ${moved}. The app took its Merge button off until the card shows the current version. Call show_merge_card when this version is ready: it revises this card, whatever id you give it.`;
+}
+
+/**
+ * The one wake to a merge card's author once the card fell behind its
+ * change (INF-4031), once per card and version.
+ */
+export function mergeCardBehindWake(
+  card: { id: string },
+  task: { id: string; title: string },
+  behind: { why: "pushed" | "other" | "story"; shown?: string; current?: string },
+  lane: "crewmate" | "firstmate",
+): TypedWake {
+  return {
+    facts: {
+      kind: "merge-card-behind",
+      lane,
+      card: card.id,
+      task: { id: task.id, title: task.title },
+      why: behind.why === "other" ? "other" : "pushed",
+      ...(behind.shown ? { shown: behind.shown } : {}),
+      ...(behind.current ? { current: behind.current } : {}),
+    },
+    once: `merge-card-behind:${card.id}:${behind.current ?? behind.why}`,
+  };
 }
 
 /** The name a closed dependency's steer goes out once for: the work that closed. */
@@ -508,6 +561,7 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
     `The project's queue holds ${facts.change} at ${facts.head} out of its batches; its status reads "${facts.words}". Its code joins a batch only once a Maintainer of the project approves the merge request after its last push, since a later mark does not admit it, and then the captain's merge click starts the queue again, which nothing else does. Put up your merge card again saying a Maintainer must approve this version first; do not start the queue yourself.`,
   "queue-start-failed": (facts) =>
     `The app tried twice to start your project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms until something starts it. Start it yourself through your project's API the way the queue-setup skill's queue starts it, or report what stops you.`,
+  "merge-card-behind": (facts) => renderMergeCardBehind(facts),
   "run-watch": (facts) => renderRunWatch(facts),
   "checks-settled": (facts) =>
     facts.approval ? `${renderChecksSettled(facts)} ${facts.approval}` : renderChecksSettled(facts),

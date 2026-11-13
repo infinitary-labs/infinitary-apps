@@ -103,7 +103,12 @@ export class CrewToolHooks {
         ? { probeTypeface: this.core.options.probeTypeface }
         : {}),
       contributionNotes: true,
-      onCard: (card) => this.core.crewmateCards.crewmateCardWrite(task, card),
+      onCard: (card) =>
+        card.presentationRevision === undefined
+          ? this.core.crewmateCards.crewmateCardWrite(task, card)
+          : this.core.crewmateCards.afterRedraw(task.id, () =>
+              this.core.crewmateCards.crewmateCardWrite(task, card),
+            ),
       onCardRefused: (refusal) => this.core.crewmateCards.recordCardRefusal(task, refusal),
       onCloseCard: (input) =>
         this.core.closeCard(input.cardId, { kind: "crewmate", taskId: task.id }, input.reason),
@@ -456,20 +461,25 @@ export class CrewToolHooks {
               ? {
                   onPrepareChange: (
                     input: import("@shared/changePresentation").StagedChangePresentation,
-                  ) => prepareChange(task.id, input),
+                  ) =>
+                    this.core.crewmateCards.afterRedraw(task.id, () =>
+                      prepareChange(task.id, input),
+                    ),
                 }
               : {}),
             onOpenChange: (input: import("@shared/changePresentation").OpenChangeInput) =>
-              openChange(task.id, input),
+              this.core.crewmateCards.afterRedraw(task.id, () => openChange(task.id, input)),
             ...(prepareChange && mergeCardSteps && canPrepare && canShowMergeCard
               ? {
                   onShowMergeCard: async (
                     input: import("@shared/changePresentation").ShowMergeCardInput,
                   ) =>
-                    this.core.crewmateCards.showMergeCard(
-                      task,
-                      await mergeCardSteps(task.id, input.story),
-                      input.card,
+                    this.core.crewmateCards.whileShowing(task.id, async () =>
+                      this.core.crewmateCards.showMergeCard(
+                        task,
+                        await mergeCardSteps(task.id, input.story),
+                        input.card,
+                      ),
                     ),
                 }
               : {}),

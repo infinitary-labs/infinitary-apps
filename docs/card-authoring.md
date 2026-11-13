@@ -326,6 +326,8 @@ The five headings are not asked of a merge card's open body.
 They remain required in the report, which `scoreRigor` reads through `reportEvidenceHeadings`, and in legacy PR bodies or those on hosts without saved stories.
 A saved-story completion names its published revision in `emit_card presentation`, supplies its title field, and omits body, body_file, risk and required_actions.
 After a push the card names the same revision, and the host republishes a pull request's published story at the pushed version; a new revision is prepared only when the story's words change, or after a later local-only or plain-branch commit (`docs/forge.md`, "Saved change stories").
+A task has one open merge card for its own change: `show_merge_card` revises that card whatever id it is given, and says so in its answer.
+Until the card shows the current version the app keeps its Merge off and says why on the card (`docs/delivery-rigor.md`, "A card behind its change").
 The saved story's title wins over the title field, and its risk and required actions supply the host's controls.
 A breaking marker in a title, such as the built-in naming runbook's `!:`, is metadata, not excited copy; the saved title keeps it.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").

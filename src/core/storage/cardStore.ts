@@ -31,6 +31,7 @@ import {
 } from "@shared/cards";
 import { cardWrittenText } from "@shared/cardWrittenText";
 import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
+import { heldMerges } from "@shared/mergeHeld";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { type KeptPutOff, keptPutOffSchema } from "@shared/putOff";
 import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
@@ -844,9 +845,9 @@ export class CardStore {
   hasCompletionCard(taskId: string): boolean {
     const rows = this.db
       .prepare(
-        "SELECT actions_json, risk_json FROM cards WHERE task_id = ? AND author = 'crewmate'",
+        "SELECT actions_json, risk_json, body FROM cards WHERE task_id = ? AND author = 'crewmate'",
       )
-      .all(taskId) as { actions_json: string; risk_json: string | null }[];
+      .all(taskId) as { actions_json: string; risk_json: string | null; body: string }[];
     return rows.some((row) => {
       let actions: unknown;
       try {
@@ -857,6 +858,8 @@ export class CardStore {
       // A merge card the app merges from keeps no buttons (INF-2744): its
       // risk with no actions still says the crewmate wrote it.
       if (row.risk_json && Array.isArray(actions) && actions.length === 0) return true;
+      // A merge card whose Merge the app holds is one too (INF-4031).
+      if (heldMerges(row.body)) return true;
       return (
         Array.isArray(actions) &&
         actions.some(

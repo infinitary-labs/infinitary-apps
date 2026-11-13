@@ -564,10 +564,17 @@ describe("CrewSupervisor", () => {
         at: Date.now(),
       };
       seedDelivery(h.tasks, h.taskId, { mergeReviews: [next], checkTarget: next });
-      expect(() => h.supervisor.cardActions.act(again.id, "merge")).toThrow(/This action changed/);
+      expect(() => h.supervisor.cardActions.act(again.id, "merge")).toThrow(
+        /Another pull request became this task's current change/,
+      );
       await tick();
       expect(h.forge.merges).toEqual([]);
       expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+      // The app took that card's Merge off and told its crewmate (INF-4031),
+      // whose turn ends before the kept approval's attempt.
+      expect(h.crewmate.promptCalls.join("\n")).toContain(`Your merge card ${again.id}`);
+      h.crewmate.finishPrompt();
+      await tick();
       // The first card's offer was kept: its click approves the version it showed of #7.
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()).toMatchObject({ target: { prNumber: 7 } }));

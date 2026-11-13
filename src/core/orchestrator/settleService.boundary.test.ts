@@ -16,6 +16,7 @@ import {
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
+import { heldLine } from "./settleCardFacts";
 
 type World = ReturnType<typeof settleWorld>;
 
@@ -339,6 +340,37 @@ describe("a settle's refusals before anything goes out", () => {
     );
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(world.tasks.timeline(TASK).at(-1)?.data).toMatchObject({ refused: "merge-pr" });
+  });
+
+  // INF-4042's review of INF-4031: a card whose Merge the app holds after a
+  // push shows no such button, so the refusal points at no click.
+  it("names a held merge card as waiting for its crewmate, offering no click on it", async () => {
+    const world = settleWorld();
+    const merge = {
+      id: "merge",
+      label: "Merge",
+      default: true,
+      effect: { kind: "merge" as const, after: "close" as const },
+    };
+    world.cards.put({
+      id: "card-done",
+      taskId: TASK,
+      author: "crewmate",
+      priority: 1,
+      title: "The meter reads on time",
+      meta: TASK,
+      body: `${heldLine("pushed", [merge])}<p>The meter reads on time.</p>`,
+      actions: [],
+      status: "ready",
+      createdAt: 1_000,
+    });
+    const answer = await world.settle.settleTaskDetailed(TASK, "merge-pr");
+    expect(answer.refusal).toMatchObject({ refused: "autonomy-off", ways: [] });
+    expect(answer.text).toContain(
+      'The merge card "The meter reads on time" is on the stack without its "Merge" button',
+    );
+    expect(answer.text).not.toContain("that click is the merge");
+    expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
   });
 
   it("refuses to discard a task whose crewmate is working unless the captain confirmed", async () => {

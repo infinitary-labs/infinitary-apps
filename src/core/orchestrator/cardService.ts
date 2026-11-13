@@ -54,7 +54,7 @@ import { HostCardStack } from "./hostCardStack";
 import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
-import { settleCardFacts } from "./settleCardFacts";
+import { type MergeBehind, settleCardFacts } from "./settleCardFacts";
 import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
 import { seenMergeOf } from "./sinceSeen";
@@ -121,6 +121,8 @@ export class CardService {
   readonly hostCards: HostCardStack;
   /** The put-off choices the host keeps and raises again (INF-3846 piece 3). */
   readonly putOffs: PutOffs;
+  /** The reading each merge card behind its change was last handed on at (`mergeFellBehind`). */
+  private readonly toldBehind = new Map<string, string>();
   private broadcastTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly unsubscribeTasks: () => void;
 
@@ -251,6 +253,7 @@ export class CardService {
     // the task projection invalidates both records and facts after a write.
     const factsOwner = Symbol("settle facts");
     let changed = false;
+    const fellBehind = new Map<string, MergeBehind>();
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
       const taskId = card.taskId;
@@ -268,6 +271,16 @@ export class CardService {
         othersOpen: () => this.othersOpen(taskId, card.id),
         mergeLabel: (shown) => this.host.mergeLabel?.(shown),
         mergeAnyway: (shown) => this.host.mergeAnyway?.(shown) === true,
+        ...(this.host.mergeBehind
+          ? {
+              behind: (shown: Card) => {
+                const behind = this.host.mergeBehind?.(shown);
+                if (behind) fellBehind.set(shown.id, behind);
+                return behind;
+              },
+            }
+          : {}),
+        followups: () => this.host.followupNotice(taskId),
       });
     };
     for (const [id, card] of this.cards) {
@@ -287,6 +300,18 @@ export class CardService {
       }
     }
     if (changed) this.scheduleBroadcast();
+    // The redraw or wake writes, so it runs once this read is over, and once
+    // per card and reading: what it writes runs this pass again.
+    const tell = this.host.mergeFellBehind;
+    for (const [id, behind] of fellBehind) {
+      const reading = `${behind.why}:${behind.shown}:${behind.current}:${behind.newest}:${behind.published}`;
+      if (this.toldBehind.get(id) === reading) fellBehind.delete(id);
+      else this.toldBehind.set(id, reading);
+    }
+    if (tell && fellBehind.size > 0)
+      queueMicrotask(() => {
+        for (const [id, behind] of fellBehind) if (this.cards.has(id)) tell(id, behind);
+      });
   }
 
   /** The open card under an id. */

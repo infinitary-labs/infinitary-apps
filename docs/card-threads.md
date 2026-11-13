@@ -148,6 +148,14 @@ No code, test or instruction keeps a list of phrases.
 The host refuses the mark with its reason and writes nothing on a card with a merge, a write or a browser hand-off for the captain, on one still `asking` or `continues`, on an interim line, and anywhere but the crewmate's own answering card of an active answer task.
 The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`, only to a home on the current work major.
 
+## A merge card behind its change
+
+The captain never reads an outdated merge card as if it were current (INF-4031).
+When a push or another pull request leaves an open merge card behind, the app revises that card in place: it takes Merge off and writes one line at the top saying a newer version is coming, with no author turn and no thread message.
+The card keeps its place, its thread and its other choices.
+When a published story at the new version exists, the app redraws the same card from it and Merge returns; otherwise the card's author is woken once and its next merge card revises the same card.
+The rules and the click are in `docs/delivery-rigor.md`, "A card behind its change".
+
 ## The waiting line
 
 FI3-592, grounded on FI3-643 (the captain folded a waiting line for every reason into FI3-592).

@@ -29,6 +29,15 @@ if (mode === "large") {
 } else if (mode === "fail") {
   process.stderr.write("Domain is tearing down\n");
   process.exitCode = 1;
+} else if (mode === "endless") {
+  // A log reader still streaming when the native gate is interrupted: it never
+  // finishes by itself, so only a signal ends it, however late the signal comes.
+  // It leaves on its own only once its parent is gone, so it cannot outlive a run.
+  process.stdout.write(`${launched}\n`);
+  const parent = process.ppid;
+  setInterval(() => {
+    if (process.ppid !== parent) process.exit(1);
+  }, 1000);
 } else {
   process.stdout.write(launched + "\n");
   process.stderr.write("Filtering the log data using the requested predicate\n");

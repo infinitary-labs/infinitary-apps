@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-log-interrupted-test-endless",
+      "reason": "Test-only repair: the phone log collector's interrupted-run test now uses a stand-in collector that runs until it is signalled, so a held-up test process can no longer miss the interrupt and see the collector finish by itself. No app behavior changes."
+    }
+  ]
+}

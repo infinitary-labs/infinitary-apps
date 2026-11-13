@@ -96,7 +96,9 @@ describe("failed phone parts keep logs without whole-output strings (INF-1885)",
 
   it("joins an interrupted collector and rejects instead of reporting a saved log", async () => {
     const { evidence, children, run } = fixture();
-    const collecting = run(join(evidence, "interrupted.log"));
+    // INF-4028: a collector that ends by itself could finish before a held-up test
+    // sends the signal, so this one runs until it is interrupted.
+    const collecting = run(join(evidence, "interrupted.log"), "endless");
     const rejected = expect(collecting).rejects.toThrow("failed (null)");
     const [child] = children;
     if (!child) throw new Error("The collector did not track its child");

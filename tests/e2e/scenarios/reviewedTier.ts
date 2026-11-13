@@ -23,6 +23,7 @@ import {
   onlyCheckNotices,
   providerMessages,
   sinceLastAsked,
+  sinceLastUser,
 } from "../providerRequest";
 
 /**
@@ -395,6 +396,12 @@ function crewmateMove({
       ],
     };
   }
+  // The check watch's notice alone names checks the builder already read and
+  // asks nothing new of it, so it says nothing. When the journey pushes a fix,
+  // the notice can be a turn of its own ahead of the captain's reading request,
+  // and a report then would send that version back to the reviewer, whose next
+  // handoff would reach the reading turn ahead of its proof.
+  if (onlyCheckNotices(sinceLastUser(body).user)) return { text: "" };
   return { text: MOCK_REVIEWED_BUILDER_REPORT };
 }
 

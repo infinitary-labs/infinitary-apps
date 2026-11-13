@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reviewed-builder-check-notice",
+      "reason": "The scripted reviewed builder in the end-to-end journeys now says nothing to a check notice on a turn of its own, so a journey's reading no longer loses its proof to a stray report; the app is unchanged."
+    }
+  ]
+}

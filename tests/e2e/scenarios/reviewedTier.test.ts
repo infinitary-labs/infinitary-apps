@@ -169,6 +169,33 @@ test("the reviewed builder takes its reading when the check watch's notice rides
   expect(builder.next()).toEqual({ text: "" });
 });
 
+/**
+ * `agents-reach.spec.ts` section 1, in a paused merge batch: the builder's
+ * second reading saved no proof at the version it read green. The journey
+ * pushes its fix as the builder ends its turn on the review's handoff, and
+ * the check watch's quiet refresh reads that new version on its next tick
+ * (docs/forge.md, "The check watch"), so its notice can be the builder's
+ * next turn, alone, before the captain's reading request arrives. A builder
+ * that answered it with its default report sent that version back to the
+ * reviewer, whose next handoff then reached the reading turn ahead of its
+ * proof. The notice names checks nothing asked the builder to act on, so it
+ * says nothing, and the reading that follows still saves its proof.
+ */
+test("the reviewed builder says nothing to the check watch's notice on its own turn", () => {
+  const builder = fixedBuilder();
+  builder.said(renderWake(NOTICE));
+  const quiet = builder.next();
+  expect(quiet).toEqual({ text: "" });
+  builder.answered(quiet);
+
+  builder.said(renderWake(READ_STEER));
+  expect(builder.next()).toEqual({ calls: [{ name: "check_change", args: {} }] });
+  builder.results(reading(FIXED_HEAD));
+  expect(builder.next()).toMatchObject({
+    calls: [{ name: "report", args: { validation: { kind: "run", head: FIXED_HEAD } } }],
+  });
+});
+
 const CHANGE = "pull request #55 https://github.com/o/meterlab/pull/55";
 const FIRST_HEAD = "50c9b6595e1e3d99e22ccd80ec7c96fd961f68b0";
 const FIXED_HEAD = "5881dadfacd5e3e80919b33440a3218598dc6865";
@@ -259,7 +286,7 @@ function fixedBuilder() {
   const fixed = next();
   expect(fixed).toEqual({ text: MOCK_REVIEWED_FIX_REPORT });
   answered(fixed);
-  return { next, results, said };
+  return { next, results, said, answered };
 }
 
 /** A green check_change reading at `head`, in the words and facts the tool answers with. */

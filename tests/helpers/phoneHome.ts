@@ -278,8 +278,15 @@ export async function startPhoneHome(
         taken: boolean;
         entered: ReturnType<typeof cardBarrier>;
         released: ReturnType<typeof cardBarrier>;
+        /** Lets the task board's held pushes go, when the hold keeps them too (`hold-board-read`). */
+        pushes?: () => void;
       }
     | undefined;
+  const releaseBoardHold = () => {
+    boardHold?.released.resolve();
+    boardHold?.pushes?.();
+    boardHold = undefined;
+  };
   let latePicture: { name: string; asked: ReturnType<typeof cardBarrier> } | undefined;
   // A real TCP endpoint that never answers TLS: no HTTP response can reset a refusal.
   const stalledSockets = new Set<Socket>();
@@ -1919,13 +1926,24 @@ export async function startPhoneHome(
             actions: [],
           });
           latePicture = { name, asked: cardBarrier() };
+          releaseBoardHold();
           boardHold = { taken: false, entered: cardBarrier(), released: cardBarrier() };
           result = { title, words: "The survey arrived while your phone was away." };
           break;
         }
         // INF-3750: the phone's next board read is held, so its In reach is read while the board's answer is out.
+        // The task board's pushes are held with it. This home's board is small, so each push goes whole and gives the
+        // phone a board before its read answers: a change made just before, such as `link`'s, pushes once its short
+        // timer ends, which can be after the phone's welcome. A large record's pushes go as differences, which a phone
+        // with no board cannot apply, so there only the read brings the board.
         case "POST hold-board-read":
-          boardHold = { taken: false, entered: cardBarrier(), released: cardBarrier() };
+          releaseBoardHold();
+          boardHold = {
+            taken: false,
+            entered: cardBarrier(),
+            released: cardBarrier(),
+            pushes: core.services.taskProtocol.holdPushes(),
+          };
           result = { ok: true };
           break;
         case "POST board-read-held": {
@@ -1936,8 +1954,7 @@ export async function startPhoneHome(
           break;
         }
         case "POST release-board-read":
-          boardHold?.released.resolve();
-          boardHold = undefined;
+          releaseBoardHold();
           result = { ok: true };
           break;
         case "POST late-picture-asked": {
@@ -2920,8 +2937,7 @@ export async function startPhoneHome(
     close: async () => {
       cardHold?.released.resolve();
       cardHold = undefined;
-      boardHold?.released.resolve();
-      boardHold = undefined;
+      releaseBoardHold();
       await new Promise<void>((resolve) => control.close(() => resolve()));
       await ssh?.stop();
       unreach();

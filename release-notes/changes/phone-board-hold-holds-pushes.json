@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-board-hold-holds-pushes",
+      "reason": "Test fixture repair: the phone test home holds the task board's pushes while it holds the phone's board read, so the In reach check no longer fails when a board push lands first. No app behavior change."
+    }
+  ]
+}

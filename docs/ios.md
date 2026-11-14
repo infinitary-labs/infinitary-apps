@@ -96,6 +96,7 @@ The app says **In reach** once its small first reads arrive: cards, Activity, th
 The task board is asked last and fills in Tasks and the crew scene when it arrives (INF-3750): the computer answers in the order asked, and on a large record the board outweighs every other first read together, so asking it first held In reach on a weak link for several times as long.
 Tasks says nothing in place of an empty list until the board is read.
 `PhoneCatchUpTests` holds the computer's answer to the board read (`hold-board-read`) and checks the phone is in reach with no board, then shows the board once the answer is sent.
+The test home holds the task board's pushes with the answer: its board is small, so each push goes whole and would bring the board first, where a large record's pushes go as differences that a phone with no board cannot apply.
 A card or task-board push supplies the new snapshot directly and supersedes any older initial read still in flight.
 A task-board delta folds onto the board the app holds, as the Mac’s `applyTaskBoardDelta` does (`PhoneBoard.applying`), because a full read of a large board on every task change stalled the crew scene on the main thread (INF-1854).
 A welcome that replays is caught up in one step (INF-2773, the captain's pick "keep what they showed, then change once when the catch-up is read"): while the phone reads the replayed pushes, they update its own copies of the cards, board and threads and its held busy state, presence and work count, and the screens keep what they showed.

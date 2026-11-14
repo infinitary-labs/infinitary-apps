@@ -404,6 +404,37 @@ export async function focusOn(
 }
 
 /**
+ * Gives the page `target` sits in the window's focus, as a shown, focused
+ * window gives every page, and returns once that page holds it
+ * (`document.hasFocus()`). A card's page reports no navigation, so
+ * `launchApp` gives it no focus of its own (`emulateFocusInFrames`), and
+ * Playwright's keyboard brings that focus with each key, apart from the key
+ * itself: on Linux the key can reach the page first. The frame's bridge
+ * offers the window a key only while its page holds focus
+ * (src/shared/plugins/frameScript.ts), so a key the frame is to offer goes
+ * in after this (docs/e2e-contracts.md). The window's own page, and a frame
+ * that shares its process, hold Playwright's focus already.
+ */
+export async function frameHoldsWindowFocus(target: Locator): Promise<void> {
+  const element = await target.elementHandle();
+  const frame = await element.ownerFrame();
+  await element.dispose();
+  if (!frame?.parentFrame()) return;
+  // The session stays open: closing it would take the emulated focus away again.
+  const session = await target
+    .page()
+    .context()
+    .newCDPSession(frame)
+    .catch(() => null);
+  await session?.send("Emulation.setFocusEmulationEnabled", { enabled: true });
+  await expect
+    .poll(() => frame.evaluate(() => document.hasFocus()), {
+      message: "the target's page holds the window's focus",
+    })
+    .toBe(true);
+}
+
+/**
  * `untilFocused` for a target that may sit in a frame next to the one the
  * window's focus rests on: the target's own document must focus it and no
  * element of the document around it may hold focus in its place, while a

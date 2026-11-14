@@ -34,6 +34,7 @@ import {
   chooseKeyPlace,
   endRecording,
   focusOn,
+  frameHoldsWindowFocus,
   keyboardSettings,
   pressKey,
   pressKeyTakingFrame,
@@ -77,6 +78,7 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
   // comes up only once its frame is gone (`pressKeyTakingFrame`).
   const frameKey = async (target: Locator, key: string, frame: "stays" | "goes") => {
     await focusOn(target);
+    await frameHoldsWindowFocus(target);
     await pressWindowKey(app, key);
     if (frame === "goes") await pressKeyTakingFrame(target, key);
     else await pressKey(target, key);
@@ -400,6 +402,7 @@ test("warned answer keys survive a restart, allow other saves and run their card
       exact: true,
     });
     await focusOn(note);
+    await frameHoldsWindowFocus(note);
     await pressWindowKey(restarted.app, "a");
     await pressKey(note, "a");
     await expect(shownCard(restarted.page, RISKY_KEYS_TITLES.question)).toHaveCount(0);

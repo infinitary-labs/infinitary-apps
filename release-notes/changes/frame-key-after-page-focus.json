@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "frame-key-after-page-focus",
+      "reason": "Test-only: the keyboard journey gives a card's page the window's focus before a key the card is to pass back to the window, so the key can no longer arrive before that focus; no app behavior changes."
+    }
+  ]
+}

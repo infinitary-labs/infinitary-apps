@@ -79,7 +79,7 @@ jobs:
           # paths and reader steps. A pushed branch has no merge commit, so it
           # fetches every commit to find the one it left main at.
           fetch-depth: ${{ github.event_name != 'push' && 2 || 0 }}
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -197,7 +197,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -226,7 +226,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -253,7 +253,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24

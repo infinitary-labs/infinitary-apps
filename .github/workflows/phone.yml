@@ -254,11 +254,10 @@ jobs:
         env:
           GATE: ${{ !inputs.affected || inputs.parts != '' || (matrix.device == 'ipad' && steps.request-select.outputs.ipad_parts != '') || (matrix.device != 'ipad' && steps.request-select.outputs.parts != '') }}
       # Install directly in the placed guest, never in a nested local clone.
-      - uses: pnpm/action-setup@v4
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
         if: ${{ steps.scope.outputs.gate == 'true' }}
         with:
-          dest: ${{ runner.temp }}/setup-pnpm
-          package_json_file: Application Support/firstmate/package.json
+          working-directory: Application Support/firstmate
       # A phone Mac starts fresh for each job, so the install below would fetch Electron and
       # the app's git from GitHub's release server every time; this restores them from the
       # Actions cache first (docs/testing.md, "Downloads from GitHub's release server").

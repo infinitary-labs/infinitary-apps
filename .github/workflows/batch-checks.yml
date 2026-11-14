@@ -235,10 +235,9 @@ jobs:
         with:
           ref: ${{ inputs.head }}
           path: Application Support/firstmate
-      - uses: pnpm/action-setup@v4
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
         with:
-          dest: ${{ runner.temp }}/setup-pnpm
-          package_json_file: Application Support/firstmate/package.json
+          working-directory: Application Support/firstmate
       - uses: actions/setup-node@v4
         with:
           node-version: 24

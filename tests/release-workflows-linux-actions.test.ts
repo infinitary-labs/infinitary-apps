@@ -41,10 +41,14 @@ const contexts = {
   github: { sha: OWN, ref: "refs/heads/main" },
 };
 
-/** The release's source: an Electron version to install, and none of the workflow's actions or scripts. */
+/** The release's source: the Electron and pnpm it pins, and none of the workflow's actions or scripts. */
 const SOURCE_ELECTRON = "1.2.3";
+const SOURCE_PNPM = "pnpm@4.5.6";
 const SOURCE_FILES = {
-  "package.json": JSON.stringify({ devDependencies: { electron: SOURCE_ELECTRON } }),
+  "package.json": JSON.stringify({
+    packageManager: SOURCE_PNPM,
+    devDependencies: { electron: SOURCE_ELECTRON },
+  }),
 };
 
 /** The repository's files a non-cone sparse checkout leaves: a folder by its trailing slash, else one file. */
@@ -138,20 +142,37 @@ describe("linux-packages.yml's local actions in a stable built from an older alp
     });
   }
 
+  /** The package.json a local action's shell step reads: the job's working-directory, or its default. */
+  function packageJsonRead(
+    workspace: string,
+    actions: Array<{ step: Step; folder: string }>,
+    name: string,
+  ): { packageManager?: string; devDependencies: { electron: string } } {
+    const used = actions.find(({ folder }) => folder.endsWith(`/${name}`));
+    expect(used, name).toBeDefined();
+    const action = loadYamlFile(`.github/actions/${name}/action.yml`) as Action;
+    // A composite action's shell step runs in the workspace, joined with its
+    // working-directory; the job passes none, so the input's default.
+    const given = used?.step.with?.["working-directory"];
+    const directory = String(given ?? action.inputs?.["working-directory"]?.default);
+    return JSON.parse(readFileSync(join(workspace, directory, "package.json"), "utf8"));
+  }
+
   it("restores the Electron download of the source it installs, not the workflow's", () => {
     for (const [name, job] of Object.entries(jobs)) {
       const { workspace, actions } = runJob(job);
-      const electron = actions.find(({ folder }) => folder.endsWith("/electron-download"));
-      expect(electron, name).toBeDefined();
-      const action = loadYamlFile(".github/actions/electron-download/action.yml") as Action;
-      // A composite action's shell step runs in the workspace, joined with its
-      // working-directory; the job passes none, so the input's default.
-      const given = electron?.step.with?.["working-directory"];
-      const directory = String(given ?? action.inputs?.["working-directory"]?.default);
-      const pkg = JSON.parse(readFileSync(join(workspace, directory, "package.json"), "utf8")) as {
-        devDependencies: { electron: string };
-      };
+      const pkg = packageJsonRead(workspace, actions, "electron-download");
       expect([name, pkg.devDependencies.electron]).toEqual([name, SOURCE_ELECTRON]);
+    }
+  });
+
+  // .github/actions/pnpm reads the version from the package.json in its
+  // working-directory (tests/pnpm-action.test.ts runs that step).
+  it("sets up the pnpm the source pins, not the workflow's", () => {
+    for (const [name, job] of Object.entries(jobs)) {
+      const { workspace, actions } = runJob(job);
+      const pkg = packageJsonRead(workspace, actions, "pnpm");
+      expect([name, pkg.packageManager]).toEqual([name, SOURCE_PNPM]);
     }
   });
 });

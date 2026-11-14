@@ -366,6 +366,19 @@ A retry would not do it: electron-builder already retries a server error three t
 - `tests/workflow-hygiene.test.ts` holds every install and every package step to these.
   `tests/ensure-electron-installed.test.ts` runs the download action's steps with Electron's own installer and the app's git script, and each zips reader step, against a stand-in server, and `tests/electron-builder-tools.test.ts` runs the tools action's steps with electron-builder's own downloader.
 
+## pnpm's own download
+
+Every job outside the release path takes pnpm itself from the Actions cache through `.github/actions/pnpm`, before setup-node and before its first pnpm command.
+`pnpm/action-setup` installed pnpm from npm's registry on every job, with three tries in about a minute, and twice in a day all three timed out on a fresh self-hosted Linux machine, so the pull request's check and a journeys job failed before any of the project's steps ran.
+The action reads the version from `packageManager` in the checkout's `package.json` and restores that version's npm package under a key naming the version and the system.
+On a miss it downloads the package from the registry through `scripts/fetch-without-credential.sh`, which tries a timeout, a lost connection or a server error again every 30 seconds for up to ten minutes, checks the package's version, and saves it at once, whatever the job does next.
+It puts `pnpm` and `pnpx` commands on the PATH that run the package's own entry on the job's Node, and points `PNPM_HOME` at a folder of its own outside the cached one, so a store pnpm keeps under its home is never saved with the package and stays the job's own, as before.
+A branch's jobs read the entry a run on `main` saved, so once `main` has run a version, no job reaches the registry for pnpm itself.
+`linux-packages.yml`'s jobs take the workflow's own copy of the action and of the fetch script, since a stable builds an older alpha's commit, and set up the pnpm that commit pins.
+The release path (`release.yml`, `ios-release.yml`, `mac-update.yml`, `republish-casks.yml`) and the Windows trial still run `pnpm/action-setup`.
+`pnpm install` still reaches the registry for a package the machine's store lacks.
+`tests/workflow-hygiene.test.ts` holds every other job to the action, and `tests/pnpm-action.test.ts` runs its steps against a stand-in registry that answers 504 first.
+
 ## Tests that need a Mac
 
 The captain's principle of 2026-10-28 (`docs/principles.md`): a test runs on the Mac only when it needs a Mac, and Linux runs every test it can.

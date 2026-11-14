@@ -1,0 +1,100 @@
+name: pnpm from the Actions cache
+description: Put the pnpm version package.json pins on the PATH from the Actions cache, so a job reaches npm's registry only for that version's first download, and waits out the registry's outages then.
+inputs:
+  working-directory:
+    description: Checkout whose package.json names the pnpm version in packageManager.
+    default: .
+  registry:
+    description: The npm registry a version's first download comes from.
+    default: https://registry.npmjs.org
+runs:
+  using: composite
+  steps:
+    # pnpm/action-setup installed pnpm from npm's registry on every job, with
+    # three tries in about a minute, and a fresh self-hosted Linux machine's
+    # tries all timed out twice in a day: the pull request's own check and a
+    # journeys job failed before any of the project's steps ran. Restored
+    # here, a job reaches the registry only on a version's first download,
+    # which waits out the registry rather than failing at its first timeout.
+    #
+    # Plain bash, as the setup ran before: this runs before setup-node, and a
+    # self-hosted machine's Node is in its tool cache, not yet on the PATH.
+    - id: pnpm
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # packageManager names the one pnpm the project runs, such as
+        # pnpm@11.1.2; a +sha512 suffix is a checksum, not the version.
+        manager="$(sed -nE 's/^[[:space:]]*"packageManager"[[:space:]]*:[[:space:]]*"([^"]*)".*$/\1/p' package.json | head -n 1)"
+        version="${manager#pnpm@}"
+        version="${version%%+*}"
+        if [[ "$manager" != pnpm@* || ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+          echo "::error title=No pnpm version::package.json's packageManager names no pnpm version: '$manager'" >&2
+          exit 1
+        fi
+        printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+        printf 'dir=%s\n' "$RUNNER_TEMP/pnpm/$version" >> "$GITHUB_OUTPUT"
+        # pnpm's home, as pnpm/action-setup set it: the commands' folder, on
+        # the PATH, which pnpm's store sits under unless the machine names
+        # its own store. Outside the cached folder, so the store is never saved with it.
+        printf 'home=%s\n' "$RUNNER_TEMP/pnpm/home" >> "$GITHUB_OUTPUT"
+    - id: restore
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.pnpm.outputs.dir }}
+        key: pnpm-${{ runner.os }}-${{ steps.pnpm.outputs.version }}
+    # A miss downloads the version's package from the registry, the same
+    # package pnpm/action-setup installed, through the project's patient
+    # fetch: a timeout, a lost connection or a server error is tried again 30
+    # seconds apart for up to ten minutes, and only then fails, naming the
+    # host. A version is downloaded once per cache it fills.
+    - id: fetch
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ steps.pnpm.outputs.version }}
+        DIR: ${{ steps.pnpm.outputs.dir }}
+        REGISTRY: ${{ inputs.registry }}
+        FETCH_PATIENCE_SECONDS: "600"
+      run: |
+        tarball="$RUNNER_TEMP/pnpm-$VERSION.tgz"
+        bash "$GITHUB_ACTION_PATH/../../../scripts/fetch-without-credential.sh" "${REGISTRY%/}/pnpm/-/pnpm-$VERSION.tgz" "$tarball"
+        rm -rf "$DIR"
+        mkdir -p "$DIR"
+        tar -xzf "$tarball" -C "$DIR"
+        rm -f "$tarball"
+        # The package is the version it was asked for.
+        grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"${VERSION//./\\.}\"" "$DIR/package/package.json"
+    # Saved at once, whatever the job does next: actions/cache saves only
+    # after every step passed, so a failing job would leave the key empty
+    # (the demo encoder's download says why).
+    - if: steps.fetch.outcome == 'success'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ steps.pnpm.outputs.dir }}
+        key: pnpm-${{ runner.os }}-${{ steps.pnpm.outputs.version }}
+    # The commands run the package's own entry on the Node the PATH has when
+    # they run, setup-node's once it has run, as pnpm/action-setup's did.
+    - shell: bash
+      env:
+        DIR: ${{ steps.pnpm.outputs.dir }}
+        PNPM_HOME: ${{ steps.pnpm.outputs.home }}
+      run: |
+        mkdir -p "$PNPM_HOME"
+        for name in pnpm pnpx; do
+          entry=""
+          for file in "$DIR/package/bin/$name.mjs" "$DIR/package/bin/$name.cjs"; do
+            if [[ -f "$file" ]]; then
+              entry="$file"
+              break
+            fi
+          done
+          if [[ -z "$entry" ]]; then
+            echo "::error title=No pnpm command::the pnpm package in $DIR has no bin/$name.mjs or bin/$name.cjs" >&2
+            exit 1
+          fi
+          printf '#!/bin/sh\nexec node "%s" "$@"\n' "$entry" > "$PNPM_HOME/$name"
+          chmod +x "$PNPM_HOME/$name"
+        done
+        printf '%s\n' "$PNPM_HOME" >> "$GITHUB_PATH"
+        printf 'PNPM_HOME=%s\n' "$PNPM_HOME" >> "$GITHUB_ENV"

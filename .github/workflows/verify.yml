@@ -278,12 +278,9 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
-      # Its own folder per job: both Mac runner slots run as one user, and
-      # setup wipes the default ~/setup-pnpm, pnpm's store included.
-      - uses: pnpm/action-setup@v4
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
         with:
-          dest: ${{ runner.temp }}/setup-pnpm
-          package_json_file: Application Support/firstmate/package.json
+          working-directory: Application Support/firstmate
       # No package cache on a Mac lane (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
@@ -710,10 +707,9 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
-      - uses: pnpm/action-setup@v4
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
         with:
-          dest: ${{ runner.temp }}/setup-pnpm
-          package_json_file: Application Support/firstmate/package.json
+          working-directory: Application Support/firstmate
       - uses: actions/setup-node@v4
         with:
           node-version: 24

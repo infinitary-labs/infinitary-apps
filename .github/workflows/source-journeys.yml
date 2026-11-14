@@ -120,9 +120,9 @@ jobs:
             }
           fi
           printf 'Linux request: suite=%s source=%s task=%s reason=%s\n' "$SUITE" "$(git rev-parse HEAD)" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
-      - uses: pnpm/action-setup@v4
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
         with:
-          package_json_file: Application Support/firstmate/package.json
+          working-directory: Application Support/firstmate
       - uses: actions/setup-node@v4
         with:
           node-version: 24

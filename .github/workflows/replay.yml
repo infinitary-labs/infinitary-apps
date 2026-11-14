@@ -29,9 +29,9 @@ jobs:
         with:
           path: Application Support/firstmate
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
         with:
-          package_json_file: Application Support/firstmate/package.json
+          working-directory: Application Support/firstmate
       - uses: actions/setup-node@v4
         with:
           node-version: 24

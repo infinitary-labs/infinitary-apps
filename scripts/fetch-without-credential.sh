@@ -3,6 +3,9 @@
 # the unauthenticated GET Homebrew, a person and the app's updater make, so the
 # release's fetch-back steps check the copy those people would get
 # (.github/workflows/release.yml, docs/alpha.md "The signed channel workflow").
+# .github/actions/pnpm fetches a pnpm version's first download from npm's
+# registry through it too, with a shorter patience (docs/testing.md, "pnpm's
+# own download").
 #
 # usage: fetch-without-credential.sh <url> <file>
 #

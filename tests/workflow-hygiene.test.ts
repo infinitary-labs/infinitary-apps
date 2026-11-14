@@ -200,6 +200,70 @@ describe("every workflow", () => {
     expect(covered).toEqual(expect.arrayContaining(["verify.yml:lane", "phone.yml:native-phone"]));
   });
 
+  // Journeys run 43298827793 and the pull request check in ci run 43360925106
+  // failed at pnpm/action-setup before any project step ran: it installed
+  // pnpm from npm's registry on every job, and all three of its tries timed
+  // out on a self-hosted Linux machine. So every job outside the release path
+  // takes pnpm from the Actions cache (.github/actions/pnpm), before its first
+  // pnpm command and before setup-node, whose pnpm cache asks pnpm for its
+  // store (docs/testing.md, "pnpm's own download").
+  it("takes pnpm from the Actions cache before any step runs it", () => {
+    // Jobs a change here is proven by only when a release runs them, and the
+    // Windows trial, whose shell commands the action does not write. The list
+    // only shrinks: each still sets up pnpm the old way.
+    const releasePath: Record<string, string> = {
+      "release.yml": "signs and publishes a release",
+      "ios-release.yml": "publishes the phone app",
+      "mac-update.yml": "the release's update check",
+      "republish-casks.yml": "rewrites the published casks",
+      "windows-feasibility.yml": "the Windows trial",
+    };
+    const covered: string[] = [];
+    for (const file of workflows) {
+      for (const [id, job] of Object.entries(load(file).jobs)) {
+        const steps = job.steps ?? [];
+        const where = `${file}:${id}`;
+        const first = (match: (step: Step) => boolean) => steps.findIndex(match);
+        const actionSetup = first((step) => !!step.uses?.startsWith("pnpm/action-setup"));
+        if (file in releasePath) continue;
+        expect(actionSetup, `${where} sets up pnpm from npm's registry`).toBe(-1);
+        const runs = first((step) => /(^|[\s;&|(])pnpm\s/.test(step.run ?? ""));
+        if (runs < 0) continue;
+        covered.push(where);
+        const cached = first((step) => !!step.uses?.endsWith("/.github/actions/pnpm"));
+        expect(cached, `${where} takes pnpm from the Actions cache first`).toBeGreaterThanOrEqual(
+          0,
+        );
+        expect(cached, `${where} takes pnpm from the Actions cache first`).toBeLessThan(runs);
+        const nodeCache = first(
+          (step) =>
+            !!step.uses?.startsWith("actions/setup-node") &&
+            String(step.with?.cache ?? "").includes("pnpm"),
+        );
+        if (nodeCache >= 0)
+          expect(cached, `${where} puts pnpm on the PATH before setup-node`).toBeLessThan(
+            nodeCache,
+          );
+      }
+    }
+    for (const [file, why] of Object.entries(releasePath))
+      expect(
+        Object.values(load(file).jobs).some((job) =>
+          (job.steps ?? []).some((step) => step.uses?.startsWith("pnpm/action-setup")),
+        ),
+        `${file} (${why}) still sets up pnpm the old way, or leaves the list`,
+      ).toBe(true);
+    // The two jobs that failed, and a virtual Mac's journeys.
+    expect(covered).toEqual(
+      expect.arrayContaining([
+        "ci.yml:typecheck-lint-build",
+        "journeys.yml:choose-journeys",
+        "source-journeys.yml:source-desktop",
+        "journeys.yml:affected-journeys",
+      ]),
+    );
+  });
+
   // Linux package run 42470282200 failed at its package step on a 504 from
   // GitHub's release server, where electron-builder downloads its packaging
   // tools: the AppImage tools, 7-Zip and fpm, and dmgbuild for a disk image.

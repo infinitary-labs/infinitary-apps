@@ -40,9 +40,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.temp }}/setup-pnpm
+      - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -116,9 +114,7 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.temp }}/setup-pnpm
+      - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24

@@ -81,7 +81,8 @@ jobs:
       # Every local action here comes from the workflow's own commit and runs
       # against the source above: a stable builds its alpha's commit, which
       # may predate an action this workflow uses (docs/linux-packages.md,
-      # "The checks"). It goes after the source, whose checkout would clear it.
+      # "The checks"), with the fetch script the pnpm download runs beside
+      # them. It goes after the source, whose checkout would clear it.
       - name: Check out the workflow's own actions
         uses: actions/checkout@v4
         with:
@@ -91,7 +92,8 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             .github/actions/
-      - uses: pnpm/action-setup@v4
+            scripts/fetch-without-credential.sh
+      - uses: ./.release-tooling/.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -218,8 +220,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
-      # The workflow's own actions, as in the build job, with the script the
-      # package check runs beside them.
+      # The workflow's own actions, as in the build job, with the scripts the
+      # pnpm download and the package check run beside them.
       - name: Check out the workflow's own actions
         uses: actions/checkout@v4
         with:
@@ -229,8 +231,9 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             .github/actions/
+            scripts/fetch-without-credential.sh
             scripts/linux-package-sums.ts
-      - uses: pnpm/action-setup@v4
+      - uses: ./.release-tooling/.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
           node-version: 24

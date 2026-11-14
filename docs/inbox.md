@@ -221,7 +221,7 @@ A first mate message sent through `steer_crewmate` expects a response by default
 Dispatch briefs, captain messages and host operational wakes retain their existing semantics.
 `InboxStore.requestResponse` commits the original message and its expectation together, before dispatch, retaining request identity, source message and session, target task and session, and original words.
 A delivery failure retains that same inbox row and request identity; it never claims the crewmate read the request.
-An optional `response_context` names an exact card lifecycle and captain message; the host validates that reference on request and answer.
+An optional `response_context` names a card and a captain message on it; the host records it in the card's current lifecycle, which the first mate is never shown, and validates that reference on request and answer.
 Pending expectations survive task closure, restart and compaction and remain readable in a by-key `tasks` read as `response_requests`.
 The next host-started turn serves each current request in its guidance once and carries other pending requests in a recovery-context snapshot, selected by inbox identity rather than words.
 The snapshot has an explicit end marker before any refreshed review assignment: earlier requests are context, not another current command, and the complete provider input remains intact.

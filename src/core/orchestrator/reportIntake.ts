@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { type CrewResponse, crewResponseSchema, type ResponsePolicy } from "@shared/crewResponses";
+import {
+  type AskedResponsePolicy,
+  type CrewResponse,
+  crewResponseSchema,
+  type ResponseCard,
+} from "@shared/crewResponses";
 import {
   keptValidationInputSchema,
   type ValidationForgeWrite,
@@ -500,13 +505,19 @@ export class ReportIntake {
 
   /**
    * A response's optional captain reference is factual routing, never edit
-   * authority. A refusal names the card's current lifecycle and captain
-   * messages (INF-3718), since nothing else shows the first mate a
-   * lifecycle; `field` names the optional parameter that carried it, which
-   * the caller may leave out.
+   * authority. A reference that leaves out the lifecycle takes the card's
+   * current one (INF-4165 finding 6), since the first mate is never shown
+   * a lifecycle; the message must still be the captain's in it. A refusal
+   * names the card's current captain messages (INF-3718); `field` names
+   * the optional parameter that carried it, which the caller may leave out.
+   * Answers the reference with its lifecycle.
    */
-  checkResponseCard(reference: NonNullable<ResponsePolicy["card"]>, field?: string): void {
+  checkResponseCard(
+    reference: NonNullable<AskedResponsePolicy["card"]>,
+    field?: string,
+  ): ResponseCard {
     const card = this.options.cardStore.get(reference.id);
+    const lifecycle = reference.lifecycle ?? card?.lifecycleId;
     const messages = card
       ? this.options.cardStore
           .observations(reference.id)
@@ -518,17 +529,18 @@ export class ReportIntake {
               : [],
           )
       : [];
-    if (card?.lifecycleId === reference.lifecycle && messages.includes(reference.messageId)) return;
+    if (lifecycle && card?.lifecycleId === lifecycle && messages.includes(reference.messageId))
+      return { id: reference.id, lifecycle, messageId: reference.messageId };
     const facts = !card
       ? `There is no card ${reference.id}.`
       : `Card ${reference.id}'s current lifecycle is ${card.lifecycleId}, ${messages.length ? `with captain messages ${messages.join(", ")}` : "with no captain message"}.`;
     const way = !field
       ? "Read the current card before resubmitting."
       : card && messages.length
-        ? `Name that lifecycle and one of those messages in ${field}, or leave ${field} out.`
+        ? `Name one of those messages in ${field}, or leave ${field} out.`
         : `Leave ${field} out.`;
     throw new Error(
-      `The response reference does not name that card's current lifecycle and captain message. Nothing changed. ${facts} ${way}`,
+      `The response reference does not name a captain message in that card's current lifecycle. Nothing changed. ${facts} ${way}`,
     );
   }
 

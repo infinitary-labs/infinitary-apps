@@ -404,11 +404,21 @@ describe("INF-2214 reliable requested answers", () => {
         response: { mode: "expected", card: { ...reference, lifecycle: "resolved" } },
       }),
     ).rejects.toThrow(
-      `Nothing changed. Card ${cardId}'s current lifecycle is ${reference.lifecycle}, with captain messages ${reference.messageId}. Name that lifecycle and one of those messages in response_context, or leave response_context out.`,
+      `Nothing changed. Card ${cardId}'s current lifecycle is ${reference.lifecycle}, with captain messages ${reference.messageId}. Name one of those messages in response_context, or leave response_context out.`,
     );
+    // INF-4165 finding 6: the first mate names only the card and the
+    // captain's message, never a lifecycle it is not shown. A message that
+    // is not the captain's on the card is still refused.
+    await expect(
+      h.supervisor.steer.steerCrewmate(taskId, "Answer the path question.", "firstmate", {
+        response: { mode: "expected", card: { id: cardId!, messageId: reference.messageId + 1 } },
+      }),
+    ).rejects.toThrow(`with captain messages ${reference.messageId}`);
     expect(h.inbox.pendingResponses(taskId)).toEqual([]);
+    // The first try with the card and message is taken, and the request
+    // records the card's current lifecycle the app filled in.
     await h.supervisor.steer.steerCrewmate(taskId, "Answer the path question.", "firstmate", {
-      response: { mode: "expected", card: reference },
+      response: { mode: "expected", card: { id: cardId!, messageId: reference.messageId } },
     });
     const first = h.inbox.pendingResponses(taskId)[0]!;
     expect(first.card).toEqual(reference);

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "response-context-lifecycle",
+      "reason": "Internal: when the first mate passes a card reply to a crewmate, it now names only the card and the message, and the app fills in the card's current state itself, so the first try is no longer refused; nothing a person sees changes."
+    }
+  ]
+}

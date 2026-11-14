@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
 import type { TurnImage } from "@shared/cards";
-import type { ResponsePolicy } from "@shared/crewResponses";
+import type { AskedResponsePolicy, ResponsePolicy } from "@shared/crewResponses";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
 import { capWithOverflow } from "../overflow";
@@ -32,6 +32,12 @@ import {
  * reach line a task's own computer coming back announces. Shares the
  * crew's state through `CrewCore`.
  */
+/** A steer's source once checked: its card reference names a lifecycle. */
+type CheckedSteerSource = Omit<
+  NonNullable<Parameters<CrewSteer["steerCrewmate"]>[3]>,
+  "response"
+> & { response?: ResponsePolicy | undefined };
+
 export class CrewSteer {
   /**
    * The lane rows that carry the captain's guidance (`isCaptainGuidance`):
@@ -107,7 +113,7 @@ export class CrewSteer {
       /** The message's own copies of `images`, kept when it was accepted. */
       attachments?: AttachmentRef[];
       /** First mate tool messages expect answers; host/captain steers do not. */
-      response?: ResponsePolicy;
+      response?: AskedResponsePolicy;
       /**
        * The first mate's tool answers once the message is recorded and
        * delivers it behind that answer (INF-3060): `recorded-sending`.
@@ -115,14 +121,14 @@ export class CrewSteer {
       behind?: boolean;
     } = {},
   ): Promise<SteerDelivery> {
-    this.checkSteer(taskId, actor, source);
+    const checked = this.checkSteer(taskId, actor, source);
     // A first mate message after one still waiting on its files is recorded
     // now and read after it, in the order the first mate sent them.
     if (actor === "firstmate" && this.handingOver(taskId)) {
-      await this.sendSteer(taskId, message, actor, source, true);
+      await this.sendSteer(taskId, message, actor, checked, true);
       return "after-files";
     }
-    return this.sendSteer(taskId, message, actor, source);
+    return this.sendSteer(taskId, message, actor, checked);
   }
 
   /** Whether a hand-over of files to the task is still crossing, which holds its lane. */
@@ -134,7 +140,7 @@ export class CrewSteer {
     taskId: string,
     message: WakeBody,
     actor: "firstmate" | "captain",
-    source: NonNullable<Parameters<CrewSteer["steerCrewmate"]>[3]>,
+    source: CheckedSteerSource,
     held = false,
   ): Promise<SteerDelivery> {
     // A steer answers a lane stuck at its provider: what it kept goes again
@@ -160,12 +166,15 @@ export class CrewSteer {
     );
   }
 
-  /** The refusals a steer answers before anything is recorded or copied. */
+  /**
+   * The refusals a steer answers before anything is recorded or copied;
+   * answers the source with its card reference in the card's lifecycle.
+   */
   private checkSteer(
     taskId: string,
     actor: "firstmate" | "captain",
     source: NonNullable<Parameters<CrewSteer["steerCrewmate"]>[3]>,
-  ): void {
+  ): CheckedSteerSource {
     const record = this.core.options.tasks.get(taskId);
     if (source.response && actor !== "firstmate")
       throw new Error("Only a first mate message creates or cancels its response expectations.");
@@ -184,8 +193,14 @@ export class CrewSteer {
       if (request?.targetTask !== taskId)
         throw new Error(`Response request ${id} does not belong to this task. Nothing was sent.`);
     }
-    if (source.response?.card)
-      this.core.reportIntake.checkResponseCard(source.response.card, "response_context");
+    if (!source.response) return { ...source, response: undefined };
+    const { card, ...response } = source.response;
+    return {
+      ...source,
+      response: card
+        ? { ...response, card: this.core.reportIntake.checkResponseCard(card, "response_context") }
+        : response,
+    };
   }
 
   /**
@@ -278,7 +293,7 @@ export class CrewSteer {
     message: string,
     source: Parameters<CrewSteer["steerCrewmate"]>[3] = {},
   ): Promise<void> {
-    this.checkSteer(taskId, "firstmate", source);
+    const checked = this.checkSteer(taskId, "firstmate", source);
     const refused = this.steerRefusal(taskId, "firstmate");
     if (refused) throw new Error(refused);
     // What only the source task decides answers now, even while the target
@@ -342,7 +357,7 @@ export class CrewSteer {
     // Until the files arrive, the line says what is true if they never do.
     const lineId = this.core.options.inbox.enqueue(taskId, handoverMissingLine(fromHandle));
     try {
-      await this.sendSteer(taskId, message, "firstmate", source, true);
+      await this.sendSteer(taskId, message, "firstmate", checked, true);
     } catch (caught) {
       this.core.options.inbox.withdraw([lineId]);
       resolveLine(-1);

@@ -120,7 +120,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     return result;
   };
   /** A first mate steer's source, read from this turn as it stands. */
-  const steerSource = (response?: import("@shared/crewResponses").ResponsePolicy) => ({
+  const steerSource = (response?: import("@shared/crewResponses").AskedResponsePolicy) => ({
     via: "tool" as const,
     decision: host.decisions.current() ?? null,
     response: {

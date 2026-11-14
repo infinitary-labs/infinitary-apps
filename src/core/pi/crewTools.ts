@@ -217,7 +217,7 @@ export type CrewDelegate = {
   steerCrewmate(
     taskId: string,
     message: string,
-    response?: import("@shared/crewResponses").ResponsePolicy,
+    response?: import("@shared/crewResponses").AskedResponsePolicy,
   ): Promise<SteerDelivery>;
   /**
    * Delivers the files `fromTask`'s reports handed on into `toTask`'s
@@ -233,7 +233,7 @@ export type CrewDelegate = {
     fromTask: string,
     taskId: string,
     message: string,
-    response?: import("@shared/crewResponses").ResponsePolicy,
+    response?: import("@shared/crewResponses").AskedResponsePolicy,
   ): Promise<void>;
   interruptCrewmate(
     taskId: string,
@@ -696,12 +696,11 @@ export function createCrewTools(delegate: CrewDelegate) {
         Type.Object(
           {
             card_id: Type.String(),
-            lifecycle: Type.String(),
             captain_message_id: Type.Integer(),
           },
           {
             description:
-              "Optional exact card, current lifecycle and captain message this request concerns, as a refusal names them; omit it otherwise. Routing context, never edit permission.",
+              "Optional card and captain message on it this request concerns; omit it otherwise. Routing context, never edit permission.",
           },
         ),
       ),
@@ -715,13 +714,12 @@ export function createCrewTools(delegate: CrewDelegate) {
       files_from: Type.Optional(Type.String()),
     }),
     run: async (params) => {
-      const response: import("@shared/crewResponses").ResponsePolicy = {
+      const response: import("@shared/crewResponses").AskedResponsePolicy = {
         mode: params.response_mode ?? "expected",
         ...(params.response_context
           ? {
               card: {
                 id: params.response_context.card_id,
-                lifecycle: params.response_context.lifecycle,
                 messageId: params.response_context.captain_message_id,
               },
             }

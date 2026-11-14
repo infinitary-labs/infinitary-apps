@@ -4,11 +4,13 @@ import { hereAs } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "@shared/providers";
-import type {
-  PiModelRefView,
-  QuotaProviderView,
-  QuotaSnapshotView,
-  RoutingSettings,
+import {
+  allowanceProviderOf,
+  CREDITS_SWITCH_PROVIDERS,
+  type PiModelRefView,
+  type QuotaProviderView,
+  type QuotaSnapshotView,
+  type RoutingSettings,
 } from "@shared/quota";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -42,6 +44,7 @@ import { FIRSTMATE_SELECT_STYLE, FirstmateModelRow, SettingRow } from "./General
 import { ModelsSection } from "./ModelsSection";
 import { ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
 import {
+  CREDITS_SITE,
   CREW_PREFERRED_MARK,
   PERSONAL_RESOURCES_WORDS,
   SUBSCRIPTIONS_WORDS,
@@ -230,6 +233,39 @@ function AccountMark({
   );
 }
 
+/**
+ * The row's Keep going on credits item (docs/quota.md "Keep going on
+ * credits"): offered for a provider that sells credits past its allowance,
+ * dim with the reason while the provider says they are off.
+ */
+export function keepGoingItem(
+  account: AccountView,
+  quotaRow: QuotaProviderView | undefined,
+  onSelect: () => void,
+): RowMenuItem {
+  const provider = allowanceProviderOf(account.providerId);
+  const off = !account.keepGoingOnCredits && quotaRow?.credits?.state === "off";
+  return {
+    id: "keep-going",
+    label: account.keepGoingOnCredits
+      ? m.settingsSubscriptionsMenuStopKeepingGoing()
+      : m.settingsSubscriptionsMenuKeepGoing(),
+    detail: off
+      ? provider === "codex"
+        ? m.settingsSubscriptionsMenuKeepGoingOffCodex({ site: CREDITS_SITE.codex ?? "" })
+        : m.settingsSubscriptionsMenuKeepGoingOffClaude({ site: CREDITS_SITE.claude ?? "" })
+      : m.settingsSubscriptionsMenuKeepGoingDetail(),
+    ...(off ? { disabled: true } : {}),
+    onSelect,
+  };
+}
+
+/** Whether this account's provider sells credits past its allowance. */
+export function offersKeepGoing(account: AccountView): boolean {
+  const provider = allowanceProviderOf(account.providerId);
+  return provider !== undefined && CREDITS_SWITCH_PROVIDERS.includes(provider);
+}
+
 export function AccountRow({
   account,
   providerName,
@@ -244,6 +280,7 @@ export function AccountRow({
   onRename,
   onCancelRename,
   onTogglePin,
+  onKeepGoing,
   onSetEnabled,
   onDisconnect,
   onSignIn,
@@ -266,6 +303,8 @@ export function AccountRow({
   onRename: (label: string) => void;
   onCancelRename: () => void;
   onTogglePin: () => void;
+  /** Turns its Keep going on credits switch (docs/quota.md); absent where the row offers none. */
+  onKeepGoing?: () => void;
   onSetEnabled: (enabled: boolean) => void;
   onDisconnect: () => void;
   onSignIn: () => void;
@@ -321,6 +360,7 @@ export function AccountRow({
       ),
       onSelect: onTogglePin,
     },
+    ...(onKeepGoing ? [keepGoingItem(account, quotaRow, onKeepGoing)] : []),
     ...(account.providerId === CLAUDE_PROVIDER_ID
       ? []
       : [{ id: "rename", label: m.settingsSubscriptionsMenuRename(), onSelect: onStartRename }]),
@@ -821,6 +861,12 @@ export function SubscriptionsTab() {
     );
   };
 
+  const keepGoing = (account: AccountView) => {
+    void editAccount(account.id, () =>
+      window.infinitary.accounts.keepGoing(account.id, !account.keepGoingOnCredits),
+    );
+  };
+
   const setEnabled = (account: AccountView, enabled: boolean) => {
     void editAccount(account.id, () => window.infinitary.accounts.setEnabled(account.id, enabled));
   };
@@ -1030,6 +1076,7 @@ export function SubscriptionsTab() {
                   onRename={(label) => rename(account.id, label)}
                   onCancelRename={() => setRenamingId(null)}
                   onTogglePin={() => togglePin(account)}
+                  {...(offersKeepGoing(account) ? { onKeepGoing: () => keepGoing(account) } : {})}
                   onSetEnabled={(enabled) => setEnabled(account, enabled)}
                   onDisconnect={() => disconnect(account)}
                   onSignIn={() => signIn(account)}

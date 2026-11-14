@@ -7,7 +7,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
-import type { CatalogModelView } from "../../src/shared/quota";
+import type { CatalogModelView, QuotaCreditsView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchSignedInClaude } from "./claudeAccount";
@@ -84,11 +84,18 @@ function seedAccounts(userDataDir: string): void {
   );
 }
 
+/** The crew's Claude session allowance as the fixture reads it, and its credits past it. */
+export type ClaudeAllowance = { percentRemaining: number; credits?: QuotaCreditsView };
+
 /**
  * Claude's allowance, from a fixture: the live sensor would read the
  * machine's own login to ask Anthropic, and this run must not.
  */
-function writeQuotaFixture(now: number, catalog?: CatalogModelView[]): string {
+function writeQuotaFixture(
+  now: number,
+  catalog?: CatalogModelView[],
+  allowance: ClaudeAllowance = { percentRemaining: 80 },
+): string {
   const dir = scratchDir("infinitary-quota-fixture-");
   if (catalog)
     writeFileSync(
@@ -113,13 +120,14 @@ function writeQuotaFixture(now: number, catalog?: CatalogModelView[]): string {
             {
               id: "five_hour",
               label: "session",
-              percentRemaining: 80,
+              percentRemaining: allowance.percentRemaining,
               pace: "behind",
               resetText: "resets 6pm",
               resetsAtMs: now + 2 * HOUR,
               windowSeconds: 18_000,
             },
           ],
+          ...(allowance.credits ? { credits: allowance.credits } : {}),
         },
       ],
     }),
@@ -169,6 +177,8 @@ export async function launchClaudeCrew(
      * there is none, and only a named model routes.
      */
     catalog?: CatalogModelView[];
+    /** The Claude account's session allowance and credits; absent, 80% left. */
+    allowance?: ClaudeAllowance;
   } = {},
 ): Promise<LaunchedApp> {
   const userDataDir = options.userDataDir ?? scratchDir("infinitary-e2e-");
@@ -189,7 +199,11 @@ export async function launchClaudeCrew(
     env: {
       USER: NO_CLAUDE_LOGIN_USER,
       ...options.env,
-      INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(Date.now(), options.catalog),
+      INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(
+        Date.now(),
+        options.catalog,
+        options.allowance,
+      ),
     },
   });
   if (relaunch) {

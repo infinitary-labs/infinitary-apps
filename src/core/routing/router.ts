@@ -84,6 +84,12 @@ export type RoutePreview = {
   candidates?: RoutingCandidateFact[];
   /** How the choice was made, saved with the decision (INF-1714). */
   selection?: SelectionFacts;
+  /**
+   * Providers whose spent allowance at the asked level made this work drop
+   * a level or wait (this Mac's own sign-ins only): their run-out card may
+   * offer Keep going on credits once the decision is committed.
+   */
+  spentAt?: string[];
 };
 
 export type RouteOptions = {
@@ -154,6 +160,12 @@ export class Router {
         model: string,
         placed: PlacedWorkData,
       ) => string | undefined;
+      /**
+       * A committed decision dropped a level or waits because these
+       * providers' allowance is spent at the asked level: the crew's
+       * run-out card (docs/quota.md "Keep going on credits").
+       */
+      onSpentAt?: (piProviders: string[]) => void;
     },
   ) {}
 
@@ -197,7 +209,8 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons, candidates, accountId, selection } = evaluation;
+    const { result, reasons, candidates, accountId, selection, spentAt } = evaluation;
+    if (spentAt && spentAt.length > 0) this.options.onSpentAt?.(spentAt);
     this.options.decisions.recordRouting({
       taskId,
       provider: result.choice?.provider ?? null,
@@ -385,6 +398,7 @@ export class Router {
       reasons: decision.reasons,
       preferenceRank,
       requiresReasoningWait: requiresReasoningWait(shape, result),
+      ...spentAtLevel(decision, options.pool),
       candidates: decision.candidates.map((candidate) => {
         const ranked = (catalog as RankedModel[]).find(
           (model) => servedModelKey(model) === `${candidate.provider}/${candidate.model}`,
@@ -492,6 +506,30 @@ export class Router {
     const slots = this.options.slots?.slotsOf(ref) ?? [];
     return SLOTS.find((slot) => slots.includes(slot));
   }
+}
+
+/**
+ * The providers whose spent allowance at the asked level made a decision on
+ * this Mac's own sign-ins drop a level or find nothing.
+ */
+function spentAtLevel(
+  decision: ReturnType<typeof route>,
+  pool: RoutingPool | undefined,
+): { spentAt?: string[] } {
+  if (pool) return {};
+  const dropped =
+    !decision.choice ||
+    (decision.servedBucket !== undefined && isDowngrade(decision.bucket, decision.servedBucket));
+  if (!dropped) return {};
+  const status = `skipped: exhausted at ${decision.bucket}`;
+  const providers = [
+    ...new Set(
+      decision.candidates
+        .filter((candidate) => candidate.status === status)
+        .map((candidate) => candidate.provider),
+    ),
+  ];
+  return providers.length > 0 ? { spentAt: providers } : {};
 }
 
 /** Premium asks and escalation keep the supervisor's existing never-downward gate. */

@@ -35,6 +35,11 @@ export const accountViewSchema = z.object({
   needsReauth: z.boolean().optional(),
   /** The provider-level account pin (the one that always wins selection). */
   pinned: z.boolean(),
+  /**
+   * Keep going on credits (docs/quota.md): once its allowance is spent, the
+   * account keeps serving on the credits set up with its provider. Absent is off.
+   */
+  keepGoingOnCredits: z.boolean().optional(),
   createdAt: z.number(),
   lastConnectedAt: z.number().optional(),
   /**

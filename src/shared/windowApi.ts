@@ -787,6 +787,8 @@ export type FirstmateApi = {
     rename: (accountId: string, label: string) => Promise<{ ok: true }>;
     setEnabled: (accountId: string, enabled: boolean) => Promise<{ ok: true }>;
     pin: (providerId: string, accountId: string | null) => Promise<{ ok: true }>;
+    /** Keep going on credits once the allowance is spent (docs/quota.md), on or off. */
+    keepGoing: (accountId: string, on: boolean) => Promise<{ ok: true }>;
   };
   /**
    * The app's own sign-ins where projects live (git integration PR 1.2):

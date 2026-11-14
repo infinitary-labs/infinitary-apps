@@ -9,7 +9,13 @@ import {
   servedModelKey,
   servedProviderOf,
 } from "@shared/quota";
-import { type BandRank, bandOf, compareBandRank, type SpendBand } from "@shared/quotaSignals";
+import {
+  allowanceSpent,
+  type BandRank,
+  bandOf,
+  compareBandRank,
+  type SpendBand,
+} from "@shared/quotaSignals";
 import type { RoutingCandidateFact } from "../storage/decisionStore";
 import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./capability";
 
@@ -174,6 +180,7 @@ const BAND_WORDS: Record<SpendBand, string> = {
   conserve: "is projected to run out before its reset",
   near_floor: "is at or below the near-floor",
   unknown: "has no usable reading",
+  credits: "spends credits past its allowance",
 };
 
 const BUCKET_RANK: Record<Slot, number> = {
@@ -368,10 +375,9 @@ export function route(input: RoutingInput): RoutingDecision {
         return [];
       }
       if (!memberSlots.includes(candidateSlot)) return [];
-      if (
-        typeof model.effectivePercentRemaining === "number" &&
-        model.effectivePercentRemaining <= 0
-      ) {
+      // A spent allowance stays out unless its account keeps going on
+      // credits: then it routes in the last band (INF-4104 piece 2).
+      if (allowanceSpent(model)) {
         mark(ref, `skipped: exhausted at ${candidateSlot}`);
         return [];
       }
@@ -527,6 +533,10 @@ export function route(input: RoutingInput): RoutingDecision {
       );
     }
     reasons.push(...turnLines);
+    // Every included allowance at this level is spent: say the pick spends credits.
+    if (bandOf(chosen.model) === "credits") {
+      reasons.push(`${chosen.model.provider}/${chosen.model.id} ${BAND_WORDS.credits}`);
+    }
     reasons.push(`picked ${chosen.model.provider}/${chosen.model.id} by ${pickedBy}`);
     return {
       bucket,

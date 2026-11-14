@@ -1,3 +1,4 @@
+import { modelChoiceLine, modelChoiceSchema } from "@shared/modelChoice";
 import type { CatalogModelView } from "@shared/quota";
 import { CREW_NEAR_FLOOR_PERCENT } from "@shared/quotaSignals";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -110,6 +111,39 @@ describe("modelChoiceOf (INF-1714)", () => {
     // A later reading and a reopened ledger leave the explanation as decided.
     w.setModels(RECORDED.map((model) => ({ ...model, effectivePercentRemaining: 90 })));
     expect(modelChoiceOf(w.record("audit-1"), new DecisionStore(w.db))).toEqual(choice);
+    w.db.close();
+  });
+
+  // INF-4104 piece 2, with the captain's ruling that older paired views keep
+  // reading the record: a model kept going on credits is published as the
+  // near_floor band with its onCredits mark, never a band an older view lacks.
+  it("publishes a model on credits as near_floor with its mark", () => {
+    const w = world();
+    w.setModels(
+      RECORDED.map((model) =>
+        model.provider === "claude"
+          ? { ...model, effectivePercentRemaining: 0, onCredits: true }
+          : { ...model, effectivePercentRemaining: 0 },
+      ),
+    );
+    seedTask(w.tasks, { id: "credits-1", title: "Audit the release notes", status: "queued" });
+    const routed = w.router.decide("credits-1", "Audit the release notes", BUILD, {
+      placed: { work: [], samples: [], charges: {} },
+    });
+    expect(routed?.choice).toEqual(CLAUDE);
+    w.tasks.starts.dispatch("credits-1", {
+      workspace: WORKSPACE,
+      accountId: null,
+      assignee: "crewmate",
+      model: routed?.choice,
+    });
+    const choice = modelChoiceOf(w.record("credits-1"), new DecisionStore(w.db));
+    const picked = choice?.candidates.find((candidate) => candidate.picked);
+    expect(picked).toMatchObject({ band: "near_floor", onCredits: true });
+    expect(modelChoiceSchema.parse(choice)).toEqual(choice);
+    expect(choice && modelChoiceLine(choice, () => "Claude Opus 5.5")).toBe(
+      "Every included allowance at this level was used up, so Claude Opus 5.5 keeps going on credits.",
+    );
     w.db.close();
   });
 

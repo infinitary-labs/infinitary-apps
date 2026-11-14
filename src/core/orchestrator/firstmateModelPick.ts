@@ -1,5 +1,6 @@
 import { isRetiredProvider, providerServesRole } from "@shared/providers";
 import { PREMIUM_SLOT, type Slot, servedModelKey, servedProviderOf } from "@shared/quota";
+import { allowanceSpent } from "@shared/quotaSignals";
 import type { FirstmateAgentOptions } from "./firstmateAgent";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
 
@@ -48,9 +49,7 @@ export function premiumCanServe(options: ModelPickOptions): boolean {
     const reading = catalog?.find((entry) => servedModelKey(entry) === servedModelKey(model));
     // No quota reading is unknown, never zero; a measured exhausted
     // premium offering is not a way this captain can take right now.
-    return (
-      reading?.effectivePercentRemaining === undefined || reading.effectivePercentRemaining > 0
-    );
+    return !(reading && allowanceSpent(reading));
   });
 }
 
@@ -127,13 +126,13 @@ function deriveFrom(
   const catalog = options.quotaModels()?.models ?? [];
   const pool = listed(options, available).filter((model) => {
     const reading = catalog.find((entry) => servedModelKey(entry) === servedModelKey(model));
-    return reading?.effectivePercentRemaining !== 0;
+    return !(reading && allowanceSpent(reading));
   });
   for (const bucket of ["high", "medium", "premium", "low"] as const) {
     for (const model of catalog) {
       const provider = servedProviderOf(model.provider);
       if (!availableKeys.has(servedModelKey(model))) continue;
-      if (model.effectivePercentRemaining === 0) continue;
+      if (allowanceSpent(model)) continue;
       if (slotsOf(options, { provider, id: model.id }).includes(bucket)) {
         return { provider, id: model.id };
       }

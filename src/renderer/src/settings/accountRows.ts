@@ -306,7 +306,9 @@ export function rowView(
   });
   const verdict = verdictFor(kind, row, now);
   if (verdict) view.verdict = verdict;
-  const credits = row ? creditsLine(row.provider, row.credits) : undefined;
+  const credits = row
+    ? creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true)
+    : undefined;
   if (credits) view.credits = credits;
   return withHold(view, account, now);
 }

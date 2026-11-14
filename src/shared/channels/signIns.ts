@@ -194,6 +194,14 @@ export const signInChannels = {
     request: z.tuple([z.string(), z.boolean()]),
     response: okSchema,
   },
+  // Keep going on credits (docs/quota.md): the account's switch, on or off.
+  "inf:accounts:keep-going": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string(), z.boolean()]),
+    response: okSchema,
+  },
   "inf:accounts:pin": {
     effect: "change",
     surface: "core",

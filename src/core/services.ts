@@ -79,6 +79,7 @@ import { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import { FirstmateAgent, type RunningComputerVersion } from "./orchestrator/firstmateAgent";
 import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
+import { creditsOfferCard, creditsOfferCardId } from "./orchestrator/hostCards";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
 import { createOwnBatches } from "./orchestrator/ownBatches";
 import { waitThroughAutomation } from "./orchestrator/putOffs";
@@ -114,6 +115,7 @@ import { PluginInstaller } from "./plugins/pluginInstaller";
 import { PluginRecords } from "./plugins/pluginRecords";
 import { ShellPreferencesService } from "./preferences/shellPreferences";
 import { startProgramQuestions } from "./program/programQuestions";
+import { creditsOffers, forgetAnsweredOffers } from "./quota/creditsSwitch";
 import { claudeStoreDirOf, startHomeQuota } from "./quota/homeQuota";
 import { RecordReader } from "./recordReads/recordReader";
 import { DecisionKindClassifier } from "./routing/decisionKindClassifier";
@@ -578,8 +580,13 @@ export async function createServices(
   const { recordClaudeRateLimit, noteCutOff } = homeQuota;
   const savedQuota = quota.latest();
   if (savedQuota) placedWork.observe("home", savedQuota);
+  // The crew's run-out card, once per spent allowance of an account (docs/quota.md
+  // "Keep going on credits"); wired once the card stack exists.
+  let onSpentAt: (piProviders: string[]) => void = () => {};
+  let setKeepGoingOnCredits: (accountId: string, on: boolean) => void = () => {};
   // The routing pool, the slot record and the router (routing/homeRouting.ts).
   const homeRouting = startHomeRouting({
+    onSpentAt: (piProviders) => onSpentAt(piProviders),
     standIns,
     settings,
     vault,
@@ -1538,6 +1545,7 @@ export async function createServices(
     modelRuntime: auth.modelRuntime,
     flagship,
     recheckAllowance: () => quota.refresh("demand"),
+    keepGoingOnCredits: (accountId) => setKeepGoingOnCredits(accountId, true),
     // Each backend's seat (W1): the seat preset, opened by the one factory
     // per backend.
     seats: sessionFactories,
@@ -1738,10 +1746,32 @@ export async function createServices(
       });
     }
   };
+  const creditsOffered = new Set<string>();
+  setKeepGoingOnCredits = (accountId, on) => {
+    homeQuota.setKeepGoingOnCredits(accountId, on);
+    if (on)
+      supervisor.cards.hostCards.withdrawHostCard(creditsOfferCardId(accountId), "kept going");
+  };
+  onSpentAt = (piProviders) => {
+    const switchOn = (accountId: string) => vault.keepsGoingOnCredits(accountId);
+    for (const offer of creditsOffers(
+      quota.latest(),
+      piProviders,
+      creditsOffered,
+      switchOn,
+      Date.now(),
+    ))
+      supervisor.cards.hostCards.raiseHostCard(creditsOfferCard(offer));
+  };
   onQuotaRefreshed = () => {
     const snapshot = quota.latest();
     // The terminal needs_reauth card, only from proof (homeQuota.ts).
     if (snapshot) homeQuota.syncNeedsReauthCards(snapshot, supervisor.cards);
+    // An offered account whose allowance answers again may be offered again.
+    forgetAnsweredOffers(snapshot, creditsOffered, Date.now());
+    // Keep going on credits: started spending, ran out, answers again.
+    for (const text of snapshot ? homeQuota.noteCredits(snapshot) : [])
+      broadcastEvent({ type: "firstmate_note", text });
     firstmate.onQuotaRefreshed();
     // A refresh may clear a quota-reset gate (R1).
     void supervisor.watch.sweepGates(ticker.now());
@@ -1845,6 +1875,7 @@ export async function createServices(
     timeline,
     auth,
     vault,
+    setKeepGoingOnCredits: (accountId, on) => setKeepGoingOnCredits(accountId, on),
     flagship,
     scheduler,
     ticker,

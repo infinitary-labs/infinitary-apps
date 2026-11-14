@@ -41,3 +41,49 @@ describe("a premium ask's wait", () => {
     expect(quotaGateCleared("bucket:premium", reads)).toBe(true);
   });
 });
+
+// INF-4104 piece 2: a wait for a spent allowance ends when its account keeps going on credits.
+describe("a wait for a spent allowance", () => {
+  const astra = { provider: "openai-codex", id: "gpt-6-astra" };
+  const reads = (onCredits: boolean) => ({
+    availableModels: () => [astra],
+    slotsOf: () => ["high" as const],
+    quota: {
+      latest: () => ({
+        generatedAt: "2026-11-13T21:00:00.000Z",
+        fetchedAt: 0,
+        providers: [
+          {
+            provider: "codex",
+            label: "Codex",
+            accountId: "acct-codex",
+            status: "ok" as const,
+            stale: false,
+            windows: [{ id: "weekly", label: "weekly", percentRemaining: 0 }],
+            credits: { state: "available" as const, balance: "120.5" },
+            ...(onCredits ? { keepGoingOnCredits: true } : {}),
+          },
+        ],
+      }),
+      latestModels: () => ({
+        generatedAt: "2026-11-13T21:00:00.000Z",
+        models: [
+          {
+            provider: "codex",
+            id: "gpt-6-astra",
+            label: "GPT-6 Astra",
+            effectivePercentRemaining: 0,
+            ...(onCredits ? { onCredits: true } : {}),
+          },
+        ],
+      }),
+    },
+  });
+
+  it("holds while the switch is off and clears once the account keeps going on credits", () => {
+    expect(quotaGateCleared("bucket:high", reads(false))).toBe(false);
+    expect(quotaGateCleared("codex", reads(false))).toBe(false);
+    expect(quotaGateCleared("bucket:high", reads(true))).toBe(true);
+    expect(quotaGateCleared("codex", reads(true))).toBe(true);
+  });
+});

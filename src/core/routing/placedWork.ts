@@ -1,6 +1,7 @@
 import type { CatalogModelView, QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
 import { allowanceProviderOf } from "@shared/quota";
 import {
+  allowanceSpent,
   classifyProviderWindows,
   compareBandRank,
   type SpendBand,
@@ -433,6 +434,9 @@ export class PlacedWorkScores {
         }))
         .filter((c) => c.raw.effectivePercentRemaining !== undefined);
       candidates.sort((a, b) => {
+        // A spent allowance comes after one that keeps going on credits.
+        const spent = Number(allowanceSpent(a.raw)) - Number(allowanceSpent(b.raw));
+        if (spent !== 0) return spent;
         const order = compareBandRank({ ...a.raw, ...a.score }, { ...b.raw, ...b.score });
         if (order !== 0) return order;
         return (b.raw.effectivePercentRemaining ?? -1) - (a.raw.effectivePercentRemaining ?? -1);
@@ -446,8 +450,10 @@ export class PlacedWorkScores {
       const resetsAtMs = limitingResetOf(best.row, now, model.id);
       // When the reading was taken: the observed reading's time, else the row's own.
       const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;
+      // Whether it keeps going on credits is the serving account's reading.
+      const { onCredits: _catalog, ...base } = model;
       return {
-        ...model,
+        ...base,
         ...best.raw,
         ...best.score,
         ...(best.raw.spendPriority !== undefined

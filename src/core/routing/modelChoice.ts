@@ -25,7 +25,9 @@ export function modelChoiceOf(
     .filter((fact) => fact.status.startsWith("picked") || fact.status.startsWith("eligible"))
     .sort(compareBandRank)
     .map((fact) => {
-      const band = crewBandSchema.safeParse(fact.band);
+      // Routing's credits band is published as near_floor with its mark (`onCredits`).
+      const onCredits = fact.band === "credits";
+      const band = crewBandSchema.safeParse(onCredits ? "near_floor" : fact.band);
       const points = fact.charge?.windows.reduce(
         (most, window) => Math.max(most, window.points),
         0,
@@ -35,6 +37,7 @@ export function modelChoiceOf(
         model: `${fact.provider}/${fact.model}`,
         picked: `${fact.provider}/${fact.model}` === served,
         ...(band.success ? { band: band.data } : {}),
+        ...(onCredits ? { onCredits: true as const } : {}),
         ...(fact.percentRemaining !== undefined ? { percentRemaining: fact.percentRemaining } : {}),
         ...(fact.spendPriority !== undefined ? { spendPriority: fact.spendPriority } : {}),
         ...(fact.rawSpendPriority !== undefined && fact.rawSpendPriority !== fact.spendPriority

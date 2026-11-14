@@ -403,15 +403,36 @@ export const CREW_NEAR_FLOOR_PERCENT = 10;
  * a known allowance at or below the floor; unknown - no usable reading.
  * A band is read from the unadjusted reading only: an estimate of placed
  * work orders candidates inside a band and never moves one between bands.
+ * A fifth band, credits, comes last (INF-4104 piece 2): a spent allowance
+ * whose account keeps going on credits, after every included allowance.
  */
-export type SpendBand = "room" | "conserve" | "near_floor" | "unknown";
+export type SpendBand = "room" | "conserve" | "near_floor" | "unknown" | "credits";
 
-export const SPEND_BANDS: readonly SpendBand[] = ["room", "conserve", "near_floor", "unknown"];
+export const SPEND_BANDS: readonly SpendBand[] = [
+  "room",
+  "conserve",
+  "near_floor",
+  "unknown",
+  "credits",
+];
 
 /** The raw facts a band is read from. */
-export type BandFacts = SpendRank & { effectivePercentRemaining?: number };
+export type BandFacts = SpendRank & { effectivePercentRemaining?: number; onCredits?: boolean };
+
+/**
+ * A known allowance that is spent and not carried on credits: nothing
+ * serves on it until its reset.
+ */
+export function allowanceSpent(raw: BandFacts): boolean {
+  return (
+    typeof raw.effectivePercentRemaining === "number" &&
+    raw.effectivePercentRemaining <= 0 &&
+    raw.onCredits !== true
+  );
+}
 
 export function spendBand(raw: BandFacts, floorPercent = CREW_NEAR_FLOOR_PERCENT): SpendBand {
+  if (raw.onCredits === true) return "credits";
   if (
     typeof raw.effectivePercentRemaining === "number" &&
     raw.effectivePercentRemaining <= floorPercent

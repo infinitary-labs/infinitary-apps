@@ -61,6 +61,11 @@ export type FirstmatePauseCard = {
   /** A spent allowance is being read again: no second recheck is offered. */
   checking?: boolean;
   /**
+   * The provider says the paused account has credits and its Keep going on
+   * credits switch is off (docs/quota.md): the card offers to turn it on.
+   */
+  credits?: { usedPercent?: number; balance?: string };
+  /**
    * Where the paused account's Claude access comes from when it is not a
    * subscription: a lost sign-in is then renewed where Claude Code's is.
    */
@@ -69,6 +74,29 @@ export type FirstmatePauseCard = {
 
 /** The spent-allowance card's way back: read the allowance again. */
 export const RECHECK_ALLOWANCE_LABEL = "Recheck allowance";
+
+/** A run-out card's offer to spend the account's credits (docs/quota.md). */
+export const KEEP_GOING_ON_CREDITS_LABEL = "Keep going on credits";
+
+/** What a run-out card says of the credits it offers, as one sentence. */
+export function creditsOfferSentence(credits: { usedPercent?: number; balance?: string }): string {
+  if (credits.usedPercent !== undefined)
+    return `Extra usage is on for this account; ${Math.round(credits.usedPercent)}% of your monthly limit is used.`;
+  if (credits.balance !== undefined)
+    return `This account has credits past its allowance: ${credits.balance} left.`;
+  return "This account has credits past its allowance.";
+}
+
+/** The run-out card's action that turns an account's Keep going on credits switch on. */
+export function keepGoingAction(accountId: string, primary: boolean): CardAction {
+  return {
+    id: "keep-going-on-credits",
+    label: KEEP_GOING_ON_CREDITS_LABEL,
+    variant: primary ? "primary" : "secondary",
+    ...(primary ? { default: true } : {}),
+    effect: { kind: "host", op: "keep-going-on-credits", arg: accountId },
+  };
+}
 
 /** A crewmate's sign-in card's title, and the Firstmate's own on a 401. */
 export const PROVIDER_SIGN_IN_TITLE = "A provider needs sign in";
@@ -157,12 +185,15 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
   // to another login elsewhere, say - and that is the card's default; a
   // move or Settings stays beside it.
   if (input.pause === "no_headroom" && input.accountId && !input.checking) {
+    // Credits the account already has come first: one click keeps it going.
+    const credits = input.credits !== undefined;
     return [
+      ...(credits ? [keepGoingAction(input.accountId, true)] : []),
       {
         id: "recheck-allowance",
         label: RECHECK_ALLOWANCE_LABEL,
-        variant: "primary",
-        default: true,
+        variant: credits ? "secondary" : "primary",
+        ...(credits ? {} : { default: true }),
         effect: { kind: "host", op: "try-again", arg: input.accountId },
       },
       input.move
@@ -229,6 +260,35 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
             ]
           : []),
       ];
+}
+
+/** The crew's run-out card for one account (docs/quota.md "Keep going on credits"). */
+export function creditsOfferCardId(accountId: string): string {
+  return `card-credits-offer-${accountId}`;
+}
+
+/**
+ * The crew's run-out card (INF-4104 piece 2): crew work would drop to a
+ * weaker model or wait because an account's allowance is spent, while its
+ * provider says the account has credits and its Keep going on credits
+ * switch is off. Its one choice turns the switch on; the app's Decline
+ * leaves it off. The host raises it once per account until its allowance answers again.
+ */
+export function creditsOfferCard(input: {
+  accountId: string;
+  /** The account, as its row names it: provider and label. */
+  name: string;
+  /** When its allowance resets, in clock time, when known. */
+  resetsAt?: string;
+  credits: { usedPercent?: number; balance?: string };
+}): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
+  return {
+    id: creditsOfferCardId(input.accountId),
+    title: `${input.name} has used up its allowance${input.resetsAt ? ` until ${input.resetsAt}` : ""}`,
+    meta: "Crew work",
+    body: `${creditsOfferSentence(input.credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.`,
+    actions: [keepGoingAction(input.accountId, true)],
+  };
 }
 
 /**

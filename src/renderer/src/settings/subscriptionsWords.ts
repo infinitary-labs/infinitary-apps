@@ -89,7 +89,7 @@ export const PERSONAL_RESOURCES_WORDS = {
  * Where each provider's credits are switched on, bought and limited: the
  * place the row points to, since Infinitary changes none of it.
  */
-const CREDITS_SITE: Record<string, string> = {
+export const CREDITS_SITE: Record<string, string> = {
   claude: "claude.ai",
   codex: "chatgpt.com",
   copilot: "github.com",
@@ -98,14 +98,23 @@ const CREDITS_SITE: Record<string, string> = {
 /**
  * The row's one line about paying past the allowance (docs/quota.md,
  * "Credits past the allowance"): what the provider says, then where to
- * change it. Unknown says nothing, and a provider this build reads no
- * credits for has no line.
+ * change it, or, while the account's Keep going on credits switch is on,
+ * that it keeps going on them. Unknown says nothing, and a provider this
+ * build reads no credits for has no line.
  */
-export function creditsLine(provider: string, credits: QuotaCreditsView | undefined) {
+export function creditsLine(
+  provider: string,
+  credits: QuotaCreditsView | undefined,
+  keepsGoing = false,
+) {
   const site = CREDITS_SITE[provider];
   if (!credits || !site || credits.state === "unknown") return undefined;
   const fact = creditsFact(provider, credits);
-  return fact ? `${fact} · ${m.settingsSubscriptionsCreditsWhere({ site })}` : undefined;
+  if (!fact) return undefined;
+  const after = keepsGoing
+    ? m.settingsSubscriptionsCreditsKeepsGoing()
+    : m.settingsSubscriptionsCreditsWhere({ site });
+  return `${fact} · ${after}`;
 }
 
 function creditsFact(provider: string, credits: QuotaCreditsView): string | undefined {

@@ -9669,6 +9669,33 @@ ${events}` : prompt;
     }
     return `Paid premium requests off`;
   }
+  function settingsSubscriptionsCreditsKeepsGoing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يواصل على الاعتمادات`;
+      case "de":
+        return `macht mit Guthaben weiter`;
+      case "es":
+        return `sigue con créditos`;
+      case "fr":
+        return `continue avec les crédits`;
+      case "ja":
+        return `クレジットで続行`;
+      case "ko":
+        return `크레딧으로 계속함`;
+      case "pt-BR":
+        return `continua com créditos`;
+      case "zh-Hans":
+        return `用点数继续`;
+      case "zh-Hant":
+        return `用點數繼續`;
+      case "en-XA":
+        return `[ķééþš ĝöîñĝ öñ çŕéðîţš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮keeps going on credits‬`;
+    }
+    return `keeps going on credits`;
+  }
   function settingsSubscriptionsCreditsWhere(input) {
     const site = input.site;
     switch (currentLanguage()) {
@@ -12977,6 +13004,11 @@ ${events}` : prompt;
     needsReauth: boolean().optional(),
     /** The provider-level account pin (the one that always wins selection). */
     pinned: boolean(),
+    /**
+     * Keep going on credits (docs/quota.md): once its allowance is spent, the
+     * account keeps serving on the credits set up with its provider. Absent is off.
+     */
+    keepGoingOnCredits: boolean().optional(),
     createdAt: number(),
     lastConnectedAt: number().optional(),
     /**
@@ -13344,6 +13376,11 @@ ${events}` : prompt;
     /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
     credits: quotaCreditsViewSchema.optional(),
     /**
+     * The account's Keep going on credits switch is on, as the vault holds it
+     * (`answersOnCredits`). Absent is off.
+     */
+    keepGoingOnCredits: boolean().optional(),
+    /**
      * Disclosed uncertainty, in the user's words, for a row with no window.
      * The surface renders it instead of a silent blank, and it is never a
      * substitute for a real window. It says what Infinitary did or did not do -
@@ -13389,7 +13426,13 @@ ${events}` : prompt;
      * burn, to last until its reset (INF-898): true lasts, false runs out
      * first (or is spent). Absent means the runway is unknown.
      */
-    lastsThroughReset: boolean().optional()
+    lastsThroughReset: boolean().optional(),
+    /**
+     * Every allowance serving this model is spent, and an account serving it
+     * answers on credits (`answersOnCredits`): the model still routes, in the
+     * last band, after every included allowance. Absent is not on credits.
+     */
+    onCredits: boolean().optional()
   });
   object({
     generatedAt: string(),
@@ -15161,11 +15204,13 @@ ${events}` : prompt;
     codex: "chatgpt.com",
     copilot: "github.com"
   };
-  function creditsLine(provider, credits) {
+  function creditsLine(provider, credits, keepsGoing = false) {
     const site = CREDITS_SITE[provider];
     if (!credits || !site || credits.state === "unknown") return void 0;
     const fact = creditsFact(provider, credits);
-    return fact ? `${fact} · ${settingsSubscriptionsCreditsWhere({ site })}` : void 0;
+    if (!fact) return void 0;
+    const after = keepsGoing ? settingsSubscriptionsCreditsKeepsGoing() : settingsSubscriptionsCreditsWhere({ site });
+    return `${fact} · ${after}`;
   }
   function creditsFact(provider, credits) {
     const { state } = credits;
@@ -15339,7 +15384,7 @@ ${events}` : prompt;
     });
     const verdict = verdictFor(kind, row, now);
     if (verdict) view.verdict = verdict;
-    const credits = row ? creditsLine(row.provider, row.credits) : void 0;
+    const credits = row ? creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true) : void 0;
     if (credits) view.credits = credits;
     return withHold(view, account, now);
   }

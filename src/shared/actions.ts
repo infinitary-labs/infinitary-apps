@@ -1404,6 +1404,23 @@ const actionLines = {
     }),
     done: (v) => `preferred account for ${v.provider}: ${v.accountId ?? "Auto"}`,
   },
+  "account-keep-going": {
+    area: "intelligence",
+    tier: "own-words",
+    change: "inf:accounts:keep-going",
+    current: "inf:accounts:list",
+    value: z.strictObject({ accountId: z.string().min(1), on: z.boolean() }),
+    line: "Turn an account's Keep going on credits on or off by id, only on typed captain words: once its allowance is spent it keeps serving on credits set up with its provider, after every included allowance. Claude and Codex only.",
+    toRequest: (v) => [v.accountId, v.on],
+    readValue: (c) => ({
+      accounts: (c as AccountView[]).map((a) => ({
+        id: a.id,
+        provider: a.providerId,
+        keepGoingOnCredits: a.keepGoingOnCredits === true,
+      })),
+    }),
+    done: (v) => `account ${v.accountId} ${v.on ? "keeps going" : "stops"} on credits`,
+  },
   "account-disconnect": {
     area: "intelligence",
     tier: "own-words",

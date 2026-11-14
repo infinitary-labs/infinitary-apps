@@ -7,7 +7,12 @@ import { z } from "zod";
  * Why this model; the crew summary does not.
  */
 
-/** The crew allowance bands, in rank order (`SpendBand`, src/shared/quotaSignals.ts). */
+/**
+ * The crew allowance bands, in rank order (`SpendBand`, src/shared/quotaSignals.ts).
+ * Routing's own `credits` band is published as `near_floor` with the
+ * candidate's `onCredits` mark, so a view that reads this list strictly still
+ * reads it (src/shared/contract-changes/keep-going-on-credits.md).
+ */
 export const crewBandSchema = z.enum(["room", "conserve", "near_floor", "unknown"]);
 export type CrewBand = z.infer<typeof crewBandSchema>;
 
@@ -29,6 +34,11 @@ export const modelChoiceCandidateSchema = z.object({
   model: z.string(),
   picked: z.boolean(),
   band: crewBandSchema.optional(),
+  /**
+   * Its allowance was used up and it keeps going on the account's credits
+   * (routing's `credits` band); its `band` then reads `near_floor`.
+   */
+  onCredits: z.literal(true).optional(),
   percentRemaining: z.number().optional(),
   /** The score it was ranked by, after placed work where placed work applied. */
   spendPriority: z.number().optional(),
@@ -56,7 +66,8 @@ export const modelChoiceSchema = z.object({
 export type ModelChoice = z.infer<typeof modelChoiceSchema>;
 
 /** Each allowance band, as the comparison names it. */
-export function bandWords(band: CrewBand, floorPercent: number): string {
+export function bandWords(band: CrewBand, floorPercent: number, onCredits?: boolean): string {
+  if (onCredits) return "Allowance used up, keeps going on credits";
   switch (band) {
     case "room":
       return "Lasts until its reset";
@@ -70,7 +81,8 @@ export function bandWords(band: CrewBand, floorPercent: number): string {
 }
 
 /** Why a model in a lower band lost, after "which". */
-function lowerBandClause(band: CrewBand, floorPercent: number): string {
+function lowerBandClause(band: CrewBand, floorPercent: number, onCredits?: boolean): string {
+  if (onCredits) return "had used up its allowance and would have spent credits";
   switch (band) {
     case "conserve":
       return "was projected to run out before its reset";
@@ -93,10 +105,13 @@ export function modelChoiceLine(
   const picked = choice.candidates.find((candidate) => candidate.picked);
   const runnerUp = choice.candidates.find((candidate) => !candidate.picked);
   const name = picked ? modelName(picked.model) : "It";
+  // Credits come only after every included allowance at this level.
+  if (picked?.onCredits && choice.decidedBy !== "named" && choice.decidedBy !== "pinned")
+    return `Every included allowance at this level was used up, so ${name} keeps going on credits.`;
   switch (choice.decidedBy) {
     case "band":
       return runnerUp?.band
-        ? `${name} had more allowance to spare than ${modelName(runnerUp.model)}, which ${lowerBandClause(runnerUp.band, choice.floorPercent)}.`
+        ? `${name} had more allowance to spare than ${modelName(runnerUp.model)}, which ${lowerBandClause(runnerUp.band, choice.floorPercent, runnerUp.onCredits)}.`
         : `${name} had more allowance to spare than the other models.`;
     case "spend-priority":
       return "Of the models with the same allowance outlook, its allowance was the most likely to go unused before its reset.";

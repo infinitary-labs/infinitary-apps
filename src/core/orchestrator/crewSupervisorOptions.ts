@@ -119,6 +119,8 @@ export type FirstmateHooks = {
   moveFlagship?: (providerId: string) => void;
   /** The refused card's "Try again": clear the account's refusal and drain once. */
   tryAgain?: (accountId: string) => void;
+  /** A run-out card's "Keep going on credits": the account's switch goes on. */
+  keepGoingOnCredits?: (accountId: string) => void;
   /** The notice's "Ask again": the captain's message sent once more as a new turn. */
   askAgain?: (askId: string) => void;
   /** Watchdog pass over the Firstmate's own turn, on the shared tick (P4). */

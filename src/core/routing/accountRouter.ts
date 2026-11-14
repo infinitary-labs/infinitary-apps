@@ -200,6 +200,7 @@ export class AccountSelector {
           ? { lastsThroughReset: effective.lastsThroughReset }
           : {}),
         ...score,
+        ...(effective.onCredits ? { onCredits: true, band: "credits" as const } : {}),
         ...(account.lastSelectedAt !== undefined ? { lastSelectedAt: account.lastSelectedAt } : {}),
       };
     });

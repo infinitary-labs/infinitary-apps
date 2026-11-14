@@ -170,6 +170,60 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     expect((t.sessions[1] as FakeSession).prompts[0]).toContain("second");
   });
 
+  // INF-4104 piece 2: credits come after every included allowance.
+  it("moves a seat on credits to a sibling that still has allowance, and comes back to credits when that runs out", async () => {
+    const t = setupWithFlagship({
+      accounts: [
+        {
+          id: "acct_a",
+          providerId: "openai-codex",
+          label: "Personal",
+          enabled: true,
+          keepGoingOnCredits: true,
+        },
+        { id: "acct_b", providerId: "openai-codex", label: "Work #2", enabled: true },
+      ],
+    });
+    t.setHeadroom("acct_a", 60);
+    t.setHeadroom("acct_b", 0);
+    await t.agent.converse("first");
+    expect(t.agent.boundAccount()).toBe("acct_a");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+
+    // Personal's allowance is spent with Work #2's spent too: it keeps going on credits.
+    t.setHeadroom("acct_a", 0);
+    await t.agent.converse("second");
+    await tick();
+    expect(t.specs).toHaveLength(1);
+    expect((t.sessions[0] as FakeSession).prompts.at(-1)).toContain("second");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+
+    // Work #2's allowance resets: the seat moves to it before spending more credits.
+    t.setHeadroom("acct_b", 40);
+    await t.agent.converse("third");
+    await tick();
+    expect(t.specs).toHaveLength(2);
+    expect(runtimeKind(t.specs[1])).toBe("runtime-acct_b");
+    expect(t.settings.getFirstmateAccount()).toBe("acct_b");
+    expect(notes(t.events).some((text) => text.includes("moved to Work #2"))).toBe(true);
+    expect((t.sessions[1] as FakeSession).prompts[0]).toContain("third");
+    (t.sessions[1] as FakeSession).resolveNextPrompt();
+    await tick();
+
+    // Work #2 runs out with no switch of its own: the seat goes back to
+    // Personal's credits rather than pausing, and stays there.
+    t.setHeadroom("acct_b", 0);
+    await t.agent.converse("fourth");
+    await tick();
+    expect(t.specs).toHaveLength(3);
+    expect(runtimeKind(t.specs[2])).toBe("runtime-acct_a");
+    expect(t.settings.getFirstmateAccount()).toBe("acct_a");
+    expect((t.sessions[2] as FakeSession).prompts[0]).toContain("fourth");
+    expect(t.cards().some((card) => card.id === "card-fm-no-headroom")).toBe(false);
+  });
+
   it("never rebinds mid-turn: a busy session steers instead", async () => {
     const t = setupWithFlagship({
       accounts: [

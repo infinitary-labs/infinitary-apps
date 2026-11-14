@@ -90,7 +90,13 @@ import { type OpenLocalDoor, openLocalDoor } from "./localDoor";
 const LOCAL_DOOR_NAME = "Infinitary local door";
 
 import { Outbox } from "./outbox";
-import { frameWithoutTaskAllow, readsTaskAllow, withoutTaskAllow } from "./taskAllow";
+import {
+  type ActionReads,
+  frameWithoutUnreadActions,
+  readsKeepGoing,
+  readsTaskAllow,
+  withoutUnreadActions,
+} from "./taskAllow";
 
 /**
  * A device the pairing seam vouches for (docs/devices.md): a `mac` both
@@ -466,8 +472,8 @@ type Client = {
   cardReads: CardReads;
   /** Whether it reads a thread line's contributor fields (`SHARED_CARDS_SINCE`). */
   sharedCards: boolean;
-  /** Whether it reads Allow for the rest of this task (`readsTaskAllow`). */
-  taskAllow: boolean;
+  /** Which card buttons it reads: Allow for the rest of this task, Keep going on credits. */
+  actionReads: ActionReads;
   /**
    * How it is sent streamed reply pieces and tool starts and ends
    * (`streamed-events-live.md`): as `live` frames, under the newest number
@@ -617,12 +623,13 @@ function cardPushFor(
   spelling: Spelling,
   reads: CardReads,
   sharedCards = true,
-  taskAllow = true,
+  actionReads: ActionReads = { taskAllow: true, keepGoing: true },
   unread: readonly string[] = [],
 ): string {
   const spelled = lookPushFor(entry, spelling, unread);
-  const text =
-    taskAllow || !entry.channel.startsWith("inf:cards") ? spelled : frameWithoutTaskAllow(spelled);
+  const text = entry.channel.startsWith("inf:cards")
+    ? frameWithoutUnreadActions(spelled, actionReads)
+    : spelled;
   if (
     (!sharedCards || !reads.annotations || !reads.through) &&
     THREAD_CHANNELS.has(entry.channel)
@@ -935,7 +942,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.spelling,
                 client.cardReads,
                 client.sharedCards,
-                client.taskAllow,
+                client.actionReads,
                 unreadLook(client.changes),
               ),
             );
@@ -1043,7 +1050,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
-      client.taskAllow = readsTaskAllow(hello.protocolVersion, hello.changes);
+      client.actionReads = {
+        taskAllow: readsTaskAllow(hello.protocolVersion, hello.changes),
+        keepGoing: readsKeepGoing(hello.changes, hello.system),
+      };
       client.streamed = unnumberedFor(hello, STREAMED_EVENTS_LIVE);
       client.readings = unnumberedFor(hello, COMPUTER_READINGS_LIVE);
       // From the welcome on, a long frame goes as parts to a device that reads them.
@@ -1108,7 +1118,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.spelling,
                 client.cardReads,
                 client.sharedCards,
-                client.taskAllow,
+                client.actionReads,
                 unreadLook(client.changes),
               ),
         );
@@ -1202,9 +1212,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         );
         const value = lookFor(
           channel,
-          client.taskAllow || !channel.startsWith("inf:cards")
-            ? answered
-            : withoutTaskAllow(answered),
+          channel.startsWith("inf:cards")
+            ? withoutUnreadActions(answered, client.actionReads)
+            : answered,
           unreadLook(client.changes),
         );
         reply({
@@ -1263,7 +1273,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           through: false,
         },
         sharedCards: false,
-        taskAllow: false,
+        actionReads: { taskAllow: false, keepGoing: false },
         streamed: "none",
         readings: "none",
         access: "read",

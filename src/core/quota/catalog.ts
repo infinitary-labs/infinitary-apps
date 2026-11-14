@@ -1,6 +1,11 @@
 import type { CatalogModelView, ModelsCatalogView, QuotaProviderView } from "@shared/quota";
-import { allowanceProviderOf } from "@shared/quota";
-import { compareSpendRank, providerScopes, type ScopeSignals } from "@shared/quotaSignals";
+import { allowanceProviderOf, answersOnCredits } from "@shared/quota";
+import {
+  allowanceSpent,
+  compareSpendRank,
+  providerScopes,
+  type ScopeSignals,
+} from "@shared/quotaSignals";
 import type { QuotaCatalogModel } from "./auth";
 
 type EffectiveView = {
@@ -8,6 +13,8 @@ type EffectiveView = {
   paceStatus?: CatalogModelView["paceStatus"];
   spendPriority?: number;
   lastsThroughReset?: boolean;
+  /** Spent, and the account answers on credits (`answersOnCredits`). */
+  onCredits?: true;
 };
 
 /**
@@ -103,7 +110,17 @@ export function effectiveFromProvider(
       : scope.runway.status === "unknown"
         ? {}
         : { lastsThroughReset: false }),
+    ...(scope.effectivePercentRemaining !== undefined &&
+    scope.effectivePercentRemaining <= 0 &&
+    answersOnCredits(provider)
+      ? { onCredits: true as const }
+      : {}),
   };
+}
+
+/** Included allowance first, then credits, then a spent allowance. */
+function creditsRank(effective: EffectiveView): number {
+  return allowanceSpent(effective) ? 2 : effective.onCredits ? 1 : 0;
 }
 
 /**
@@ -125,6 +142,14 @@ function effectiveAcrossAccounts(
   for (const row of rows) {
     const effective = effectiveFromProvider(row, nowMs, modelId);
     if (effective.effectivePercentRemaining === undefined) continue;
+    // Credits come after every included allowance, and before a spent one.
+    if (
+      best.effectivePercentRemaining !== undefined &&
+      creditsRank(effective) !== creditsRank(best)
+    ) {
+      if (creditsRank(effective) < creditsRank(best)) best = effective;
+      continue;
+    }
     const order = compareSpendRank(effective, best);
     const wins =
       best.effectivePercentRemaining === undefined ||
@@ -142,6 +167,30 @@ function effectiveAcrossAccounts(
 function runwayRank(model: CatalogModelView): number {
   if (typeof model.effectivePercentRemaining === "number") return model.effectivePercentRemaining;
   return -1;
+}
+
+/**
+ * Marks each model whose allowance is spent but an account of its provider
+ * answers on credits (`answersOnCredits`), and unmarks the rest: the catalog
+ * a fixture supplies and the one built from readings are marked alike, and
+ * a switch turned off unmarks at once.
+ */
+export function markCredits(
+  catalog: ModelsCatalogView,
+  providers: QuotaProviderView[],
+): ModelsCatalogView {
+  const credited = new Set(
+    providers.filter((row) => answersOnCredits(row)).map((row) => row.provider),
+  );
+  return {
+    ...catalog,
+    models: catalog.models.map((model) => {
+      const { onCredits: _was, ...rest } = model;
+      const spent =
+        typeof model.effectivePercentRemaining === "number" && model.effectivePercentRemaining <= 0;
+      return spent && credited.has(model.provider) ? { ...rest, onCredits: true } : rest;
+    }),
+  };
 }
 
 export function buildModelsCatalog(

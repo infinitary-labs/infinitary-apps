@@ -21,7 +21,11 @@ import type { FirstmatePaused } from "../storage/settingsStore";
 import type { FirstmateAgentOptions } from "./firstmateAgent";
 import { deriveModelForProvider, preflightModel, resolveModel } from "./firstmateModelPick";
 import type { buildFirstmateTools } from "./firstmateTools";
-import { FIRSTMATE_MOVE_BACK_CARD_ID, type FirstmatePauseCard } from "./hostCards";
+import {
+  creditsOfferSentence,
+  FIRSTMATE_MOVE_BACK_CARD_ID,
+  type FirstmatePauseCard,
+} from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
 import type { SeatMoveReason, WakeSeat } from "./noticeWakes";
 import {
@@ -587,6 +591,22 @@ export class FirstmateSeat {
     if (!accountId) return session;
     const pause = flagship.pause(accountId);
     if (!pause) {
+      // Credits come after every included allowance: a seat on credits
+      // moves first to a sibling of the same provider that still has some.
+      const sibling = flagship.onCredits(accountId)
+        ? flagship.sibling(accountId, "measured")
+        : undefined;
+      if (sibling) {
+        const label = flagship.labelOf(accountId) ?? accountId;
+        flagship.record("rebound", sibling.id, [
+          `${label}: on credits`,
+          `picked ${sibling.label}: an account of the same provider with included allowance`,
+        ]);
+        return this.rebind(
+          sibling.id,
+          `Your first mate moved to ${sibling.label} - ${label} has used up its allowance, and ${sibling.label} still has some.`,
+        );
+      }
       this.servesAgain();
       return session;
     }
@@ -689,6 +709,7 @@ export class FirstmateSeat {
       providerId && flagship ? flagship.providerNameOf(providerId) : "its provider";
     const other = providerId ? flagship?.otherProviderOption(providerId) : undefined;
     const access = flagship?.accessOf(accountId);
+    const credits = pause.class === "no_headroom" ? flagship?.creditsOffer(accountId) : undefined;
     return {
       pause: pause.class,
       ...(access ? { access } : {}),
@@ -697,6 +718,7 @@ export class FirstmateSeat {
       providerName,
       ...(other ? { move: other } : {}),
       ...(this.rechecking ? { checking: true } : {}),
+      ...(credits ? { credits } : {}),
     };
   }
 
@@ -718,6 +740,9 @@ export class FirstmateSeat {
           ? `Your first mate's ${providerName} accounts have used up their allowance (${summary}).`
           : flagship.pauseSentence(accountId, pause);
       const checked = this.allowanceCheckWords(accountId);
+      const offer = flagship.creditsOffer(accountId);
+      if (offer)
+        return `${spent} ${creditsOfferSentence(offer)} Your messages are kept, and your first mate and crew wait until then unless you keep going on credits.${checked}`;
       return moveTo
         ? `${spent} Your messages are kept.${checked} Move your first mate to ${moveTo} until then?`
         : `No connected account has allowance left for your first mate right now${
@@ -869,6 +894,20 @@ export class FirstmateSeat {
     if (this.paused?.accountId === accountId) this.paused = undefined;
     this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("trying again");
     this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
+    void this.host.drain();
+  }
+
+  /**
+   * A run-out card's "Keep going on credits" (docs/quota.md): the account's
+   * switch goes on, which reads the last snapshot again with it; a seat
+   * paused on that spent allowance then serves again and its card goes.
+   */
+  keepGoingOnCredits(accountId: string): void {
+    this.options.keepGoingOnCredits?.(accountId);
+    this.options.flagship?.record("keep-going-on-credits", accountId, [
+      "the captain chose to keep going on credits",
+    ]);
+    this.checkSeat();
     void this.host.drain();
   }
 

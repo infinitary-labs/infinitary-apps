@@ -1,0 +1,5 @@
+Adds the request `inf:accounts:keep-going`, which turns an account's Keep going on credits switch on or off.
+Adds an optional `keepGoingOnCredits` field to an account, to an allowance reading's row, and an optional `onCredits` field to an allowance catalog model and to a crewmate's model choice candidate.
+A model kept going on credits is published in a crewmate's model choice as the band `near_floor` with `onCredits: true`, so the closed band list gains no member.
+Adds the host operation `keep-going-on-credits` behind the run-out cards' Keep going on credits button; a home sends that button only to a view that lists this change, or to the phone, which reads the operation as text, and leaves it off for every other view, in card pushes and in the `inf:cards:list` and `inf:cards:show` answers, as it does for Allow for the rest of this task.
+A view without the change shows no switch and no button and reads a model on credits as near its floor; a home without the change refuses the request as unknown.

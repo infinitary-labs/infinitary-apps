@@ -1,10 +1,12 @@
 import { SLOTS, type Slot } from "@shared/modelSlots";
 import {
+  answersOnCredits,
   isAllowanceProvider,
   type ModelsCatalogView,
   type QuotaSnapshotView,
   servedModelKey,
 } from "@shared/quota";
+import { allowanceSpent } from "@shared/quotaSignals";
 import type { PiModelRef } from "./routingEngine";
 
 /** What a quota-reset gate reads, each only when its ref needs it. */
@@ -34,7 +36,8 @@ export function quotaGateRefValid(ref: string): boolean {
  * clears when any available model placed in that slot has headroom, or
  * unknown headroom - uncertainty stays eligible - so a slot no model sits
  * in clears only once one is placed there, never on a reset. A provider
- * ref clears when any of its windows has headroom.
+ * ref clears when any of its windows has headroom. Either clears, too, on
+ * an account that keeps going on credits (`answersOnCredits`).
  */
 export function quotaGateCleared(ref: string, reads: QuotaGateReads): boolean {
   if (ref.startsWith("bucket:")) {
@@ -43,9 +46,8 @@ export function quotaGateCleared(ref: string, reads: QuotaGateReads): boolean {
     return reads.availableModels().some((model) => {
       if (!reads.slotsOf(model).includes(bucket)) return false;
       const row = catalog.find((entry) => servedModelKey(entry) === servedModelKey(model));
-      return !(
-        typeof row?.effectivePercentRemaining === "number" && row.effectivePercentRemaining <= 0
-      );
+      // A spent allowance that keeps going on credits serves (INF-4104).
+      return !(row && allowanceSpent(row));
     });
   }
   return (
@@ -54,9 +56,11 @@ export function quotaGateCleared(ref: string, reads: QuotaGateReads): boolean {
       ?.providers.some(
         (provider) =>
           provider.provider === ref &&
-          provider.windows.some(
-            (window) => typeof window.percentRemaining !== "number" || window.percentRemaining > 0,
-          ),
+          (answersOnCredits(provider) ||
+            provider.windows.some(
+              (window) =>
+                typeof window.percentRemaining !== "number" || window.percentRemaining > 0,
+            )),
       ) ?? false
   );
 }

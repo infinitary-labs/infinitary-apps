@@ -642,6 +642,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:accounts:pin", () =>
           invoke("inf:accounts:pin", providerId, accountId),
         ),
+      keepGoing: (accountId, on) =>
+        readableRequest("inf:accounts:keep-going", () =>
+          invoke("inf:accounts:keep-going", accountId, on),
+        ),
     },
     forges: {
       projects: (host) =>

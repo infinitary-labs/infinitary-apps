@@ -6,6 +6,7 @@ import {
 } from "@shared/quota";
 import type { AppDatabase } from "../storage/db";
 import { QuotaSnapshotStore } from "../storage/quotaSnapshotStore";
+import { markCredits } from "./catalog";
 import type { QuotaFetchResult } from "./fetchQuota";
 import { CLAUDE_ACCESS_REASON } from "./outcome";
 
@@ -44,6 +45,12 @@ export type QuotaServiceOptions = {
    * refresh runs, without fetching anything.
    */
   catalogFor?: (snapshot: QuotaSnapshotView) => ModelsCatalogView;
+  /**
+   * Lays each account's Keep going on credits switch over its row
+   * (`QuotaProviderView.keepGoingOnCredits`), on every snapshot and again on
+   * `restamp`; the catalog is then marked from those rows (`markCredits`).
+   */
+  stamp?: (snapshot: QuotaSnapshotView) => QuotaSnapshotView;
   now?: () => number;
 };
 
@@ -64,7 +71,8 @@ export class QuotaService {
     const json = this.snapshots.latestJson();
     if (json !== undefined) {
       const parsed = quotaSnapshotViewSchema.safeParse(JSON.parse(json));
-      if (parsed.success) this.latestSnapshot = parsed.data;
+      // The switches as they stand now, not as they stood when it was saved.
+      if (parsed.success) this.latestSnapshot = options.stamp?.(parsed.data) ?? parsed.data;
     }
   }
 
@@ -87,7 +95,23 @@ export class QuotaService {
     if (!this.latestSnapshot || !this.options.catalogFor) return;
     const catalog = modelsCatalogViewSchema.safeParse(this.options.catalogFor(this.latestSnapshot));
     if (!catalog.success) return;
-    this.latestCatalog = catalog.data;
+    this.latestCatalog = markCredits(catalog.data, this.latestSnapshot.providers);
+    this.options.broadcast(this.latestSnapshot);
+  }
+
+  /**
+   * An account's Keep going on credits switch moved: the last snapshot and
+   * its catalog are read again with it, fetching nothing, and pushed again
+   * so routing, the first mate and every surface see it now.
+   */
+  restamp(): void {
+    if (!this.latestSnapshot) return;
+    this.latestSnapshot = this.options.stamp?.(this.latestSnapshot) ?? this.latestSnapshot;
+    const rebuilt = this.options.catalogFor
+      ? modelsCatalogViewSchema.safeParse(this.options.catalogFor(this.latestSnapshot))
+      : undefined;
+    const catalog = rebuilt?.success ? rebuilt.data : this.latestCatalog;
+    if (catalog) this.latestCatalog = markCredits(catalog, this.latestSnapshot.providers);
     this.options.broadcast(this.latestSnapshot);
   }
 
@@ -157,10 +181,11 @@ export class QuotaService {
     this.refreshing = (async () => {
       try {
         const result = await this.options.refresh(reason);
-        const snapshot = mergeStaleProviders(result.snapshot, this.latestSnapshot, this.now());
+        const merged = mergeStaleProviders(result.snapshot, this.latestSnapshot, this.now());
+        const snapshot = this.options.stamp?.(merged) ?? merged;
         this.latestSnapshot = snapshot;
         const catalog = modelsCatalogViewSchema.safeParse(result.catalog);
-        if (catalog.success) this.latestCatalog = catalog.data;
+        if (catalog.success) this.latestCatalog = markCredits(catalog.data, snapshot.providers);
         this.snapshots.record(snapshot);
         this.options.broadcast(snapshot);
         return this.latestSnapshot;

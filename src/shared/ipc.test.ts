@@ -335,6 +335,7 @@ describe("ipc contract", () => {
       "inf:accounts:custom:recheck",
       "inf:accounts:custom:review",
       "inf:accounts:custom:save",
+      "inf:accounts:keep-going",
       "inf:accounts:list",
       "inf:accounts:pin",
       "inf:accounts:remove",

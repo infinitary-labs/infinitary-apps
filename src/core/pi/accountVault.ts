@@ -28,6 +28,7 @@ import {
   isOfferedProvider,
   isRetiredProvider,
 } from "@shared/providers";
+import { allowanceProviderOf, CREDITS_SWITCH_PROVIDERS } from "@shared/quota";
 import { cutText } from "@shared/textCut";
 import {
   type AccountBackend,
@@ -108,6 +109,12 @@ export type AccountRecord = {
    * written before it existed, which is simply no cut-off.
    */
   cutOff?: AccountCutOff;
+  /**
+   * Keep going on credits (docs/quota.md): once the allowance is spent, the
+   * account keeps serving on its provider's credits. Absent is off, as on a
+   * row written before it existed.
+   */
+  keepGoingOnCredits?: boolean;
 };
 
 /**
@@ -294,6 +301,7 @@ export class AccountVault {
           enabled: account.enabled,
           connected: status.connected,
           pinned: this.registry.pins[account.providerId] === account.id,
+          ...(account.keepGoingOnCredits === true ? { keepGoingOnCredits: true } : {}),
           createdAt: account.createdAt,
           ...(account.lastConnectedAt ? { lastConnectedAt: account.lastConnectedAt } : {}),
           ...(status.identity?.label ? { identity: status.identity.label } : {}),
@@ -1155,6 +1163,48 @@ export class AccountVault {
     if (enabled && isCustomApiProvider(account.providerId))
       void this.runtimeFor(accountId).catch(() => undefined);
     this.saveRegistry();
+  }
+
+  /**
+   * Keep going on credits, on or off (docs/quota.md): only an account whose
+   * provider offers the switch (`CREDITS_SWITCH_PROVIDERS`) takes it.
+   */
+  setKeepGoingOnCredits(accountId: string, on: boolean): void {
+    const account = this.requireRegistryAccount(accountId);
+    const quotaId = allowanceProviderOf(account.providerId);
+    if (on && (!quotaId || !CREDITS_SWITCH_PROVIDERS.includes(quotaId))) {
+      throw new Error("This account cannot keep going on credits.");
+    }
+    if (on) account.keepGoingOnCredits = true;
+    else delete account.keepGoingOnCredits;
+    this.saveRegistry();
+  }
+
+  /** Whether the account's Keep going on credits switch is on. */
+  keepsGoingOnCredits(accountId: string): boolean {
+    return this.get(accountId)?.keepGoingOnCredits === true;
+  }
+
+  /**
+   * Whether the switch lets the account serve past its allowance now: it is
+   * on, and no refusal the provider gave is held as a spent allowance - a
+   * refusal with the switch on is credits not answering, until a top-up
+   * (`noteCreditsAvailable`) or the reset ends the hold.
+   */
+  servesOnCredits(accountId: string): boolean {
+    return this.keepsGoingOnCredits(accountId) && this.cutOff(accountId)?.class !== "no_headroom";
+  }
+
+  /**
+   * Credits answer again on an account that keeps going on them (a top-up,
+   * say): a spent allowance held after a real refusal ends now, before its
+   * reset. Answers whether a hold ended.
+   */
+  noteCreditsAvailable(accountId: string): boolean {
+    if (!this.keepsGoingOnCredits(accountId)) return false;
+    if (this.cutOff(accountId)?.class !== "no_headroom") return false;
+    this.clearCutOff(accountId);
+    return true;
   }
 
   /** Pin one account per provider (the selection override); null clears. */

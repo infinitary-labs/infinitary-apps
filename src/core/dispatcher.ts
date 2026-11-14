@@ -60,6 +60,7 @@ import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
 import { isCaptainInput } from "./devices/captainPlaces";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
+import { accountTrail } from "./dispatcher/accountTrail";
 import { createActionTrail } from "./dispatcher/actionTrail";
 import { cardMediaHandlers } from "./dispatcher/cardMedia";
 import type { CoreEventSink } from "./events";
@@ -1193,6 +1194,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { ok: true as const };
     },
 
+    "inf:accounts:keep-going": (accountId, on) => {
+      services.setKeepGoingOnCredits(accountId, on);
+      return { ok: true as const };
+    },
+
     "inf:accounts:pin": (providerId, accountId) => {
       services.vault.setPin(providerId, accountId);
       return { ok: true as const };
@@ -1790,33 +1796,13 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
             },
           );
       } else if (name.startsWith("account-") && ACTIONS[name].change) {
-        const accounts = before.get(name) as AccountView[];
-        const account = accounts.find((a) => a.id === args[0]);
-        const accountId = account?.label ?? args[0];
-        // Which account a provider prefers, by id: the state a run of prefers settles.
-        const preferred = (list: AccountView[]) =>
-          list.find((a) => a.providerId === args[0] && a.pinned)?.id ?? null;
-        trail(
+        const { value: said, step } = accountTrail(
           name,
-          name === "account-prefer"
-            ? {
-                provider: args[0],
-                accountId: (after as AccountView[]).find((a) => a.id === args[1])?.label ?? null,
-              }
-            : { accountId, label: args[1], paused: !args[1] },
-          actor,
-          // A rename and a disconnect are acts on an account; a pause and a
-          // preference are its settings.
-          name === "account-prefer"
-            ? {
-                target: String(args[0]),
-                from: preferred(accounts),
-                to: preferred(after as AccountView[]),
-              }
-            : name === "account-pause"
-              ? { target: String(args[0]), from: !account?.enabled, to: !args[1] }
-              : undefined,
+          args,
+          before.get(name) as AccountView[],
+          after as AccountView[],
         );
+        trail(name, said, actor, step);
       } else if (ACTIONS[name].alwaysTrail || name === "refresh-usage")
         trail(name, ACTIONS[name].alwaysTrail ? {} : value, actor);
       else

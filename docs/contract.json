@@ -7412,6 +7412,9 @@
                           "pinned": {
                             "type": "boolean"
                           },
+                          "keepGoingOnCredits": {
+                            "type": "boolean"
+                          },
                           "createdAt": {
                             "type": "number"
                           },
@@ -7605,6 +7608,9 @@
                                     "required": [
                                       "state"
                                     ]
+                                  },
+                                  "keepGoingOnCredits": {
+                                    "type": "boolean"
                                   },
                                   "detail": {
                                     "type": "string"
@@ -10590,6 +10596,7 @@
                               "move-flagship",
                               "retry-firstmate",
                               "try-again",
+                              "keep-going-on-credits",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -11984,6 +11991,7 @@
                                 "move-flagship",
                                 "retry-firstmate",
                                 "try-again",
+                                "keep-going-on-credits",
                                 "add-plugin",
                                 "decline-plugin",
                                 "apply-project-change",
@@ -19095,6 +19103,9 @@
             "pinned": {
               "type": "boolean"
             },
+            "keepGoingOnCredits": {
+              "type": "boolean"
+            },
             "createdAt": {
               "type": "number"
             },
@@ -19226,6 +19237,9 @@
           "pinned": {
             "type": "boolean"
           },
+          "keepGoingOnCredits": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "number"
           },
@@ -19333,6 +19347,9 @@
             "type": "boolean"
           },
           "pinned": {
+            "type": "boolean"
+          },
+          "keepGoingOnCredits": {
             "type": "boolean"
           },
           "createdAt": {
@@ -19458,6 +19475,35 @@
       }
     },
     "inf:accounts:set-enabled": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:accounts:keep-going": {
       "effect": "change",
       "reach": "views",
       "request": {
@@ -24949,6 +24995,9 @@
                         "state"
                       ]
                     },
+                    "keepGoingOnCredits": {
+                      "type": "boolean"
+                    },
                     "detail": {
                       "type": "string"
                     }
@@ -25110,6 +25159,9 @@
                       "required": [
                         "state"
                       ]
+                    },
+                    "keepGoingOnCredits": {
+                      "type": "boolean"
                     },
                     "detail": {
                       "type": "string"
@@ -25273,6 +25325,9 @@
                         "state"
                       ]
                     },
+                    "keepGoingOnCredits": {
+                      "type": "boolean"
+                    },
                     "detail": {
                       "type": "string"
                     }
@@ -25344,6 +25399,9 @@
                       "type": "number"
                     },
                     "lastsThroughReset": {
+                      "type": "boolean"
+                    },
+                    "onCredits": {
                       "type": "boolean"
                     }
                   },
@@ -37648,6 +37706,10 @@
                         "near_floor",
                         "unknown"
                       ]
+                    },
+                    "onCredits": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "percentRemaining": {
                       "type": "number"
@@ -58003,6 +58065,7 @@
                                     "move-flagship",
                                     "retry-firstmate",
                                     "try-again",
+                                    "keep-going-on-credits",
                                     "add-plugin",
                                     "decline-plugin",
                                     "apply-project-change",
@@ -67876,6 +67939,9 @@
                     "pinned": {
                       "type": "boolean"
                     },
+                    "keepGoingOnCredits": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "number"
                     },
@@ -68069,6 +68135,9 @@
                               "required": [
                                 "state"
                               ]
+                            },
+                            "keepGoingOnCredits": {
+                              "type": "boolean"
                             },
                             "detail": {
                               "type": "string"
@@ -70868,6 +70937,7 @@
                               "move-flagship",
                               "retry-firstmate",
                               "try-again",
+                              "keep-going-on-credits",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -72147,6 +72217,9 @@
                   "required": [
                     "state"
                   ]
+                },
+                "keepGoingOnCredits": {
+                  "type": "boolean"
                 },
                 "detail": {
                   "type": "string"
@@ -79015,6 +79088,9 @@
                           "pinned": {
                             "type": "boolean"
                           },
+                          "keepGoingOnCredits": {
+                            "type": "boolean"
+                          },
                           "createdAt": {
                             "type": "number"
                           },
@@ -79208,6 +79284,9 @@
                                     "required": [
                                       "state"
                                     ]
+                                  },
+                                  "keepGoingOnCredits": {
+                                    "type": "boolean"
                                   },
                                   "detail": {
                                     "type": "string"
@@ -80397,6 +80476,9 @@
                           "pinned": {
                             "type": "boolean"
                           },
+                          "keepGoingOnCredits": {
+                            "type": "boolean"
+                          },
                           "createdAt": {
                             "type": "number"
                           },
@@ -80590,6 +80672,9 @@
                                     "required": [
                                       "state"
                                     ]
+                                  },
+                                  "keepGoingOnCredits": {
+                                    "type": "boolean"
                                   },
                                   "detail": {
                                     "type": "string"
@@ -84005,6 +84090,9 @@
                   "pinned": {
                     "type": "boolean"
                   },
+                  "keepGoingOnCredits": {
+                    "type": "boolean"
+                  },
                   "createdAt": {
                     "type": "number"
                   },
@@ -84198,6 +84286,9 @@
                             "required": [
                               "state"
                             ]
+                          },
+                          "keepGoingOnCredits": {
+                            "type": "boolean"
                           },
                           "detail": {
                             "type": "string"

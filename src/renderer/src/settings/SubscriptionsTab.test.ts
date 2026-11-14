@@ -12,7 +12,12 @@ import * as m from "@shared/i18n/messages.generated";
 import type { QuotaProviderView } from "@shared/quota";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "@shared/quota";
 import { describe, expect, it } from "vitest";
-import { firstmateAccountChoices, rowView } from "./SubscriptionsTab";
+import {
+  firstmateAccountChoices,
+  keepGoingItem,
+  offersKeepGoing,
+  rowView,
+} from "./SubscriptionsTab";
 import { SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
 
 const account: AccountView = {
@@ -629,6 +634,41 @@ describe("Subscriptions rowView: credits past the allowance (INF-4104 piece 1)",
         balance: formatNumber(32684.7473575, { maximumFractionDigits: 2 }),
       })} · ${where("chatgpt.com")}`,
     );
+  });
+
+  // INF-4104 piece 2: the account's Keep going on credits switch.
+  it("says the account keeps going on credits while its switch is on, in place of where to change it", () => {
+    const keepsGoing = { ...account, keepGoingOnCredits: true };
+    expect(
+      rowView(keepsGoing, reading("claude", { state: "available", usedPercent: 12 }), now).credits,
+    ).toBe(
+      `${m.settingsSubscriptionsCreditsClaudeAvailableUsed({ percent: formatNumber(12) })} · ${m.settingsSubscriptionsCreditsKeepsGoing()}`,
+    );
+  });
+
+  it("offers Keep going on credits on Claude and Codex rows, dim with the reason while credits are off", () => {
+    const codex = { ...account, providerId: "openai-codex" };
+    expect(offersKeepGoing(account)).toBe(true);
+    expect(offersKeepGoing(codex)).toBe(true);
+    expect(offersKeepGoing({ ...account, providerId: "github-copilot" })).toBe(false);
+    expect(
+      keepGoingItem(account, reading("claude", { state: "available" }), () => {}),
+    ).toMatchObject({
+      label: m.settingsSubscriptionsMenuKeepGoing(),
+      detail: m.settingsSubscriptionsMenuKeepGoingDetail(),
+    });
+    const off = keepGoingItem(codex, reading("codex", { state: "off" }), () => {});
+    expect(off).toMatchObject({
+      disabled: true,
+      detail: m.settingsSubscriptionsMenuKeepGoingOffCodex({ site: "chatgpt.com" }),
+    });
+    expect(
+      keepGoingItem(
+        { ...account, keepGoingOnCredits: true },
+        reading("claude", { state: "off" }),
+        () => {},
+      ),
+    ).toMatchObject({ label: m.settingsSubscriptionsMenuStopKeepingGoing() });
   });
 
   it("says nothing when the fact is unknown or the row is not a reading", () => {

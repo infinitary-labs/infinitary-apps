@@ -7,7 +7,7 @@ import type { CoreServices } from "../coreServices";
 /** The captain's settled-run window (docs/orchestrator-contract.md). */
 export const SETTLE_MS = 10_000;
 
-type SettingStep = { target: string; from: unknown; to: unknown };
+export type SettingStep = { target: string; from: unknown; to: unknown };
 
 /** Records catalog changes and settles consecutive captain settings. */
 export function createActionTrail(

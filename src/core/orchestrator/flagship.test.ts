@@ -2,6 +2,11 @@ import type { QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it } from "vitest";
 import type { ModelRuntime } from "../pi/types";
 import { Flagship, type FlagshipVaultView } from "./flagship";
+import {
+  firstmatePauseCard,
+  KEEP_GOING_ON_CREDITS_LABEL,
+  RECHECK_ALLOWANCE_LABEL,
+} from "./hostCards";
 
 type FakeAccount = {
   id: string;
@@ -15,6 +20,8 @@ type FakeAccount = {
   cutOff?: { class: "signed_out" | "no_headroom" | "refused"; resetsAt?: number };
   /** Simulates a non-Pi store (the Claude backend, phase 7). */
   via?: string;
+  /** Its Keep going on credits switch. */
+  keepGoingOnCredits?: boolean;
 };
 
 const baseRuntime = { kind: "base" } as unknown as ModelRuntime;
@@ -33,6 +40,8 @@ function vaultOf(accounts: FakeAccount[]): FlagshipVaultView & { runtimes: strin
     },
     withheldReason: (accountId) => accounts.find((entry) => entry.id === accountId)?.withheld,
     withheldDetail: () => undefined,
+    keepsGoingOnCredits: (accountId) =>
+      accounts.find((entry) => entry.id === accountId)?.keepGoingOnCredits === true,
     cutOff: (accountId) => accounts.find((entry) => entry.id === accountId)?.cutOff,
     tryAgain: () => false,
     runtimeFor: async (accountId) => {
@@ -572,5 +581,75 @@ describe("a Claude account seats the Firstmate on the machine's login (W1 S12)",
     );
     expect(reason).toBe("Claude is not answering your first mate right now.");
     expect(reason).not.toMatch(/harness|agent-sdk|config-dir|backend/i);
+  });
+});
+
+// INF-4104 piece 2: Keep going on credits, as the first mate's seat reads it.
+describe("a seat whose allowance is spent but whose provider has credits", () => {
+  const credited = (keepGoingOnCredits: boolean, cutOff?: FakeAccount["cutOff"]) =>
+    new Flagship({
+      vault: vaultOf([
+        {
+          id: "acct",
+          providerId: "openai-codex",
+          label: "Personal",
+          enabled: true,
+          connected: true,
+          ...(cutOff ? { cutOff } : {}),
+          ...(keepGoingOnCredits ? { keepGoingOnCredits: true } : {}),
+        },
+      ]),
+      settings: settingsOf(),
+      quota: {
+        latest: () => {
+          const spent = snapshot([{ accountId: "acct", percent: 0 }]);
+          return {
+            ...spent,
+            providers: spent.providers.map((row) => ({
+              ...row,
+              credits: { state: "available" as const, balance: "120.5" },
+              // The home lays no switch on a row the provider refused.
+              ...(keepGoingOnCredits && cutOff?.class !== "no_headroom"
+                ? { keepGoingOnCredits: true }
+                : {}),
+            })),
+          };
+        },
+      },
+      baseRuntime,
+    });
+
+  it("keeps answering with the switch on, and pauses with an offer to turn it on while it is off", () => {
+    expect(credited(true).pause("acct")).toBeUndefined();
+    expect(credited(true).creditsOffer("acct")).toBeUndefined();
+    expect(credited(false).pause("acct")).toEqual({ class: "no_headroom" });
+    expect(credited(false).creditsOffer("acct")).toEqual({ balance: "120.5" });
+  });
+
+  it("still pauses on the provider's own refusal with the switch on, and offers no switch already on", () => {
+    const resetsAt = Date.now() + 60_000;
+    const refused = credited(true, { class: "no_headroom", resetsAt });
+    expect(refused.pause("acct")).toEqual({ class: "no_headroom", resetsAt });
+    expect(refused.creditsOffer("acct")).toBeUndefined();
+  });
+
+  it("puts Keep going on credits first on the run-out card, with Recheck beside it", () => {
+    const card = firstmatePauseCard("card-fm-no-headroom", {
+      pause: "no_headroom",
+      body: "",
+      accountId: "acct",
+      providerName: "Codex",
+      credits: { balance: "120.5" },
+    });
+    expect(card.actions.map((action) => [action.label, action.default === true])).toEqual([
+      [KEEP_GOING_ON_CREDITS_LABEL, true],
+      [RECHECK_ALLOWANCE_LABEL, false],
+      ["Open settings", false],
+    ]);
+    expect(card.actions[0]?.effect).toEqual({
+      kind: "host",
+      op: "keep-going-on-credits",
+      arg: "acct",
+    });
   });
 });

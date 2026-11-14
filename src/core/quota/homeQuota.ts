@@ -24,6 +24,7 @@ import type { AppDatabase } from "../storage/db";
 import { type QuotaCatalogModel, quotaEntryForPiProvider } from "./auth";
 import { buildModelsCatalog, effectiveFromProvider } from "./catalog";
 import { managedFromClaudeStore } from "./claudeAuthResolve";
+import { CreditsWatch, stampSnapshot, stampSwitch } from "./creditsSwitch";
 import { createQuotaFetcher } from "./fetchQuota";
 import { createFixtureRefresh } from "./fixture";
 import { createQuotaHttp } from "./http";
@@ -78,6 +79,14 @@ export type HomeQuota = {
     snapshot: QuotaSnapshotView,
     cards: Pick<CardService, "hostCards" | "snapshot">,
   ) => void;
+  /**
+   * Keep going on credits (docs/quota.md): what a new snapshot changed for
+   * an account that keeps going - its feed lines, said once - and a spent
+   * allowance held after a refusal ends once credits answer again.
+   */
+  noteCredits: (snapshot: QuotaSnapshotView) => string[];
+  /** An account's Keep going on credits switch, set and read at once by routing and the seat. */
+  setKeepGoingOnCredits: (accountId: string, on: boolean) => void;
 };
 
 /**
@@ -107,6 +116,10 @@ export function startHomeQuota(options: {
 }): HomeQuota {
   const { host, db, vault, served, auth } = options;
   const pushedQuota = new PushedQuotaStore(db);
+  // The row carries the switch only while the provider has not refused the
+  // account, so a refusal moves work to another account.
+  const keepsGoing = (accountId: string) => vault.servesOnCredits(accountId);
+  const creditsWatch = new CreditsWatch((accountId) => vault.keepsGoingOnCredits(accountId));
   const quotaUnresolved = new Map<string, ProviderOutcome>();
   /**
    * The quota catalog's rows for a client-served provider: the shipped list
@@ -241,7 +254,10 @@ export function startHomeQuota(options: {
         overlay: (view, now) => {
           if (!view.accountId) return view;
           const readings = pushedQuota.windowsFor(view.accountId);
-          return withPushedCredits(withRejectedReadings(view, readings, now), readings, now);
+          return stampSwitch(
+            withPushedCredits(withRejectedReadings(view, readings, now), readings, now),
+            keepsGoing,
+          );
         },
         // Session-pushed readings still merge for any provider the HTTP
         // sensor does not cover.
@@ -274,6 +290,7 @@ export function startHomeQuota(options: {
           catalogFor: (snapshot: QuotaSnapshotView) =>
             buildModelsCatalog(catalogModels(), snapshot.providers, snapshot.generatedAt),
         }),
+    stamp: (snapshot) => stampSnapshot(snapshot, keepsGoing),
     broadcast: options.broadcast,
   });
   return {
@@ -332,6 +349,21 @@ export function startHomeQuota(options: {
         cutOff,
         Date.now(),
       ),
+    noteCredits: (snapshot) => {
+      const change = creditsWatch.observe(snapshot, Date.now());
+      const ended = change.available.filter((accountId) => vault.noteCreditsAvailable(accountId));
+      // A hold that ended lets the switch serve again now.
+      if (ended.length > 0) quota.restamp();
+      return change.lines;
+    },
+    setKeepGoingOnCredits: (accountId, on) => {
+      vault.setKeepGoingOnCredits(accountId, on);
+      // A spent allowance held after a refusal ends when the provider says
+      // its credits answer: the switch is what was missing.
+      const row = quota.latest()?.providers.find((provider) => provider.accountId === accountId);
+      if (on && row?.credits?.state === "available") vault.noteCreditsAvailable(accountId);
+      quota.restamp();
+    },
     contextLine: () => quotaContextLine(quota.latest()),
     forgetLogin: (accountId) => {
       pushedQuota.forget(accountId);
@@ -384,7 +416,10 @@ export function quotaContextLine(snapshot: QuotaSnapshotView | undefined): strin
         typeof effective.spendPriority === "number"
           ? ` (spend priority ${effective.spendPriority.toFixed(2)})`
           : "";
-      return [`${subject} ${Math.round(effective.effectivePercentRemaining)}%${priority}`];
+      const credits = effective.onCredits ? " (keeps going on credits)" : "";
+      return [
+        `${subject} ${Math.round(effective.effectivePercentRemaining)}%${priority}${credits}`,
+      ];
     });
   return parts.length > 0 ? parts.join("; ") : "unknown";
 }

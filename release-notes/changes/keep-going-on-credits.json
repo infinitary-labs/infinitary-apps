@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "keep-going-on-credits",
+      "kind": "feature",
+      "title": "Keep going on credits once a plan's allowance runs out",
+      "body": "A Claude or Codex account can now keep working on the provider's extra usage credits after its plan allowance is used up. Turn on Keep going on credits from the account's menu in Settings, or from the card that appears when the allowance runs out. Credits are spent only after every other included allowance at the same level, and before work drops to a weaker model. The provider's own limit is the cap, and the feed says when an account starts spending credits and when they run out. The switch is off until you turn it on.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "keep-going-on-credits-dark.webp",
+        "light": "keep-going-on-credits-light.webp",
+        "alt": "A Claude account's menu offers Keep going on credits, only after every included allowance"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

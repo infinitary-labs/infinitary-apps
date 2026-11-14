@@ -193,5 +193,35 @@ Infinitary neither buys credits, switches them on nor sets their limit; the prov
 - Copilot, from `overage_permitted` on the premium-requests snapshot: `available` or `off`, shown only, and never `spent`, since GitHub does not yet say when a budget stops a request.
 
 The Subscriptions row says the fact in one line under its meters, then where to change it (`creditsLine` in `src/renderer/src/settings/subscriptionsWords.ts`, `docs/subscriptions-tab.md`).
-Nothing routes, picks an account or pauses the first mate on this fact.
+Alone the fact routes nothing, picks no account and pauses nothing; the account's Keep going on credits switch below is what lets an account serve on it.
 `src/core/quota/credits.test.ts` reads whole provider answers from `tests/fixtures/quota-credits/`: live Claude and Codex usage readings, the Codex one trimmed of its identity; the client's pushed readings there are written from its published types.
+
+## Keep going on credits
+
+INF-4104 piece 2.
+A Claude or Codex account carries a switch, off by default, that lets it keep serving on its provider's credits once its allowance is spent (`CREDITS_SWITCH_PROVIDERS` in `src/shared/quota.ts`; Copilot is left out, since GitHub does not say when a budget stops a request).
+The switch is saved on the account's registry row (`AccountRecord.keepGoingOnCredits`, additive: an older row has none, which is off) by `AccountVault.setKeepGoingOnCredits`, which refuses another provider's account.
+It is the `account-keep-going` catalog line (`inf:accounts:keep-going`), at the own-words tier: the first mate turns it on only on the captain's typed words, and the run-out card's button is the captain's own click.
+The row's menu offers it, and the provider's own limit is the only cap: Infinitary sets none.
+
+- **One predicate.**
+  `answersOnCredits` (`src/shared/quota.ts`) is true for a row whose switch is on, whose provider is one of the two, and whose credits are not `off` or `spent`; an unknown fact still answers, and the provider's refusal is what stops it.
+  The home lays the switch over every quota row (`stampSwitch` in `src/core/quota/creditsSwitch.ts`, through the fetcher's overlay and `QuotaService`'s `stamp`, the saved snapshot read at start included), so every reader sees it on the row it already reads.
+  It lays none on an account the provider refused ("A real refusal still holds" below), so the refusal moves work to another account rather than waiting on it.
+  `effectiveFromProvider` marks a spent scope of such a row `onCredits`, the catalog marks its spent models the same way (`markCredits`, for a fixture's catalog too), and `allowanceSpent` (`src/shared/quotaSignals.ts`) is the one exhaustion test: a spent allowance that is `onCredits` is not spent.
+  Routing's 0% exclusion, the account pick, the first mate's pause (`Flagship.pause`), the first mate's own model pick, the quota-reset gate and placed work read it, so never-downgrade keeps the level on credits because nothing excludes the model.
+- **Credits come last.**
+  A model on credits ranks in its own band, `credits`, after `unknown` (`spendBand`), so every included allowance at the level is spent first and a weaker level comes only after it (`docs/routing.md`).
+  The band stays inside routing: a crewmate's published model choice names it `near_floor` with the candidate's `onCredits` mark (`modelChoiceOf`), so a paired view that reads the band list strictly still reads the record.
+  The catalog's best account per model and the account pick take an account with allowance left before one on credits, and pick among accounts on credits the least recently used.
+  The first mate on credits moves first to a sibling of the same provider with measured included allowance (`FirstmateSeat.admitTurn`), and when that sibling runs out, the ladder's first rung takes it back to an account that serves on credits before it pauses (`Flagship.sibling`).
+- **The run-out cards.**
+  When the first mate's account runs out and its provider says credits are available while its switch is off, the spent-allowance card (`card-fm-no-headroom`) puts Keep going on credits first, with Recheck allowance beside it (`Flagship.creditsOffer`, the `keep-going-on-credits` host op).
+  When a crew decision would wait or drop a level because an account's allowance is spent, the router names those accounts (`RoutePreview.spentAt`), and the home raises one crew card per account until its allowance answers again (`creditsOffers`, `creditsOfferCard`, `forgetAnsweredOffers`), never keyed by a reset time, which moves with every Codex reading; the cards it offered are kept in memory, so a restart may offer one again.
+  Turning the switch on takes the account's card down.
+  A home sends the Keep going on credits button only to a view that lists the `keep-going-on-credits` contract change, or to the phone, and leaves it off every card it pushes or answers to an older desktop view, whose card reader is strict (`readsKeepGoing`, `withoutUnreadActions` in `src/core/connection/taskAllow.ts`, as for Allow for the rest of this task); that view still has Recheck allowance and Settings.
+- **A real refusal still holds.**
+  A spent allowance the provider refused stands until its reset, switch on or not (`no_headroom` on the account, "The cut-off on the account" above): the row carries no switch while it stands, and the switch serves again once the hold ends.
+  A later reading whose credits read `available` after `spent` or `off` ends that hold early (`AccountVault.noteCreditsAvailable`), and so does turning the switch on while the credits read `available`.
+- **Feed lines.**
+  `CreditsWatch` reads each snapshot against the one before it and says one line when an account that keeps going starts spending credits, and one when its credits run out; a restart says nothing again.

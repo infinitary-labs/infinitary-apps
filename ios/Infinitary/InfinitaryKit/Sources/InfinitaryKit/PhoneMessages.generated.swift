@@ -2805,6 +2805,7 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsCreditsCodexUnlimited`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCodexUnlimited", []) }
     public static func `settingsSubscriptionsCreditsCopilotAvailable`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCopilotAvailable", []) }
     public static func `settingsSubscriptionsCreditsCopilotOff`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCopilotOff", []) }
+    public static func `settingsSubscriptionsCreditsKeepsGoing`() -> String { PhoneWords.format("settingsSubscriptionsCreditsKeepsGoing", []) }
     public static func `settingsSubscriptionsCreditsWhere`(`site`: String) -> String { PhoneWords.format("settingsSubscriptionsCreditsWhere", [`site`]) }
     public static func `settingsSubscriptionsCrewPreferredMarkTitle`() -> String { PhoneWords.format("settingsSubscriptionsCrewPreferredMarkTitle", []) }
     public static func `settingsSubscriptionsDotNoReading`(`signedIn`: String) -> String { PhoneWords.format("settingsSubscriptionsDotNoReading", [`signedIn`]) }
@@ -2826,12 +2827,17 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsHeading`() -> String { PhoneWords.format("settingsSubscriptionsHeading", []) }
     public static func `settingsSubscriptionsKindSubscription`() -> String { PhoneWords.format("settingsSubscriptionsKindSubscription", []) }
     public static func `settingsSubscriptionsMenuDisconnect`() -> String { PhoneWords.format("settingsSubscriptionsMenuDisconnect", []) }
+    public static func `settingsSubscriptionsMenuKeepGoing`() -> String { PhoneWords.format("settingsSubscriptionsMenuKeepGoing", []) }
+    public static func `settingsSubscriptionsMenuKeepGoingDetail`() -> String { PhoneWords.format("settingsSubscriptionsMenuKeepGoingDetail", []) }
+    public static func `settingsSubscriptionsMenuKeepGoingOffClaude`(`site`: String) -> String { PhoneWords.format("settingsSubscriptionsMenuKeepGoingOffClaude", [`site`]) }
+    public static func `settingsSubscriptionsMenuKeepGoingOffCodex`(`site`: String) -> String { PhoneWords.format("settingsSubscriptionsMenuKeepGoingOffCodex", [`site`]) }
     public static func `settingsSubscriptionsMenuModelSlots`() -> String { PhoneWords.format("settingsSubscriptionsMenuModelSlots", []) }
     public static func `settingsSubscriptionsMenuPause`() -> String { PhoneWords.format("settingsSubscriptionsMenuPause", []) }
     public static func `settingsSubscriptionsMenuPrefer`() -> String { PhoneWords.format("settingsSubscriptionsMenuPrefer", []) }
     public static func `settingsSubscriptionsMenuRename`() -> String { PhoneWords.format("settingsSubscriptionsMenuRename", []) }
     public static func `settingsSubscriptionsMenuResetSlots`() -> String { PhoneWords.format("settingsSubscriptionsMenuResetSlots", []) }
     public static func `settingsSubscriptionsMenuResume`() -> String { PhoneWords.format("settingsSubscriptionsMenuResume", []) }
+    public static func `settingsSubscriptionsMenuStopKeepingGoing`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopKeepingGoing", []) }
     public static func `settingsSubscriptionsMenuStopPreferring`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopPreferring", []) }
     public static func `settingsSubscriptionsNoReader`() -> String { PhoneWords.format("settingsSubscriptionsNoReader", []) }
     public static func `settingsSubscriptionsNoReaderKey`(`apiKey`: String) -> String { PhoneWords.format("settingsSubscriptionsNoReaderKey", [`apiKey`]) }
@@ -6053,6 +6059,7 @@ extension PhoneWords {
         "settingsSubscriptionsCreditsCodexUnlimited": [],
         "settingsSubscriptionsCreditsCopilotAvailable": [],
         "settingsSubscriptionsCreditsCopilotOff": [],
+        "settingsSubscriptionsCreditsKeepsGoing": [],
         "settingsSubscriptionsCreditsWhere": ["site"],
         "settingsSubscriptionsCrewPreferredMarkTitle": [],
         "settingsSubscriptionsDotNoReading": ["signedIn"],
@@ -6074,12 +6081,17 @@ extension PhoneWords {
         "settingsSubscriptionsHeading": [],
         "settingsSubscriptionsKindSubscription": [],
         "settingsSubscriptionsMenuDisconnect": [],
+        "settingsSubscriptionsMenuKeepGoing": [],
+        "settingsSubscriptionsMenuKeepGoingDetail": [],
+        "settingsSubscriptionsMenuKeepGoingOffClaude": ["site"],
+        "settingsSubscriptionsMenuKeepGoingOffCodex": ["site"],
         "settingsSubscriptionsMenuModelSlots": [],
         "settingsSubscriptionsMenuPause": [],
         "settingsSubscriptionsMenuPrefer": [],
         "settingsSubscriptionsMenuRename": [],
         "settingsSubscriptionsMenuResetSlots": [],
         "settingsSubscriptionsMenuResume": [],
+        "settingsSubscriptionsMenuStopKeepingGoing": [],
         "settingsSubscriptionsMenuStopPreferring": [],
         "settingsSubscriptionsNoReader": [],
         "settingsSubscriptionsNoReaderKey": ["apiKey"],

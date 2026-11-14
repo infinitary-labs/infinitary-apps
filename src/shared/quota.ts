@@ -99,6 +99,42 @@ export const quotaCreditsViewSchema = z.object({
 });
 export type QuotaCreditsView = z.infer<typeof quotaCreditsViewSchema>;
 
+/**
+ * The quota providers whose accounts offer the Keep going on credits switch
+ * (INF-4104 piece 2, docs/quota.md "Keep going on credits"): Claude's extra
+ * usage and ChatGPT's Codex credits. Copilot waits until its refusal can be
+ * read.
+ */
+export const CREDITS_SWITCH_PROVIDERS: readonly string[] = ["claude", "codex"];
+
+/**
+ * What a run-out card offers of an account's credits: the provider is one
+ * with the switch and says its credits are available. Undefined offers none.
+ */
+export function creditsOfferOf(
+  row: Pick<QuotaProviderView, "provider" | "credits"> | undefined,
+): { usedPercent?: number; balance?: string } | undefined {
+  if (!row || !CREDITS_SWITCH_PROVIDERS.includes(row.provider)) return undefined;
+  if (row.credits?.state !== "available") return undefined;
+  return {
+    ...(row.credits.usedPercent !== undefined ? { usedPercent: row.credits.usedPercent } : {}),
+    ...(row.credits.balance !== undefined ? { balance: row.credits.balance } : {}),
+  };
+}
+
+/**
+ * Whether an account answers on credits once its allowance is spent: its
+ * Keep going on credits switch is on, and the provider has not said the
+ * credits are off or spent. Unknown is never off. The one predicate routing,
+ * the account pick, the first mate's pause and the quota gate read.
+ */
+export function answersOnCredits(
+  row: Pick<QuotaProviderView, "provider" | "keepGoingOnCredits" | "credits"> | undefined,
+): boolean {
+  if (!row?.keepGoingOnCredits || !CREDITS_SWITCH_PROVIDERS.includes(row.provider)) return false;
+  return row.credits?.state !== "off" && row.credits?.state !== "spent";
+}
+
 export const quotaProviderViewSchema = z.object({
   /** Quota provider id: codex, grok, claude, copilot. */
   provider: z.string(),
@@ -157,6 +193,11 @@ export const quotaProviderViewSchema = z.object({
   windows: z.array(quotaWindowViewSchema),
   /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
   credits: quotaCreditsViewSchema.optional(),
+  /**
+   * The account's Keep going on credits switch is on, as the vault holds it
+   * (`answersOnCredits`). Absent is off.
+   */
+  keepGoingOnCredits: z.boolean().optional(),
   /**
    * Disclosed uncertainty, in the user's words, for a row with no window.
    * The surface renders it instead of a silent blank, and it is never a
@@ -280,6 +321,12 @@ export const catalogModelViewSchema = z.object({
    * first (or is spent). Absent means the runway is unknown.
    */
   lastsThroughReset: z.boolean().optional(),
+  /**
+   * Every allowance serving this model is spent, and an account serving it
+   * answers on credits (`answersOnCredits`): the model still routes, in the
+   * last band, after every included allowance. Absent is not on credits.
+   */
+  onCredits: z.boolean().optional(),
 });
 export type CatalogModelView = z.infer<typeof catalogModelViewSchema>;
 

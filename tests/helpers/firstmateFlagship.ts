@@ -55,6 +55,8 @@ export type FlagshipAccount = {
   cutOff?: { class: "signed_out" | "no_headroom" | "refused"; resetsAt?: number };
   /** Claude access set up for Claude Code, as the vault reads it (`accessSync`). */
   access?: ClaudeAccessSource;
+  /** Its Keep going on credits switch, laid over its quota row as the home lays it. */
+  keepGoingOnCredits?: boolean;
 };
 
 /** Which runtime a Pi-bound spec was served on (the test runtimes carry a kind). */
@@ -136,6 +138,7 @@ export function setupWithFlagship(options: {
             accountId: account.id,
             status: "ok" as const,
             stale: false,
+            ...(account.keepGoingOnCredits ? { keepGoingOnCredits: true } : {}),
             windows:
               percent === undefined
                 ? []
@@ -175,6 +178,7 @@ export function setupWithFlagship(options: {
     },
     withheldReason: (accountId) => withheldOf(find(accountId)),
     withheldDetail: (accountId) => find(accountId)?.detail,
+    keepsGoingOnCredits: (accountId) => find(accountId)?.keepGoingOnCredits === true,
     cutOff: (accountId) => find(accountId)?.cutOff,
     accessSync: (accountId) => find(accountId)?.access,
     tryAgain: (accountId) => {

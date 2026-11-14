@@ -71,6 +71,28 @@ describe("QuotaService", () => {
     expect(restored.latest()?.generatedAt).toBe("2026-08-13T20:00:00Z");
   });
 
+  it("reads the saved snapshot at start with the switches as they stand now", async () => {
+    // docs/quota.md "Keep going on credits": a switch turned off before a
+    // restart spends no credits on the saved snapshot's old mark.
+    const db = openInMemoryDatabase();
+    const broadcast = vi.fn();
+    const on = (snapshot: QuotaSnapshotView): QuotaSnapshotView => ({
+      ...snapshot,
+      providers: snapshot.providers.map((row) => ({ ...row, keepGoingOnCredits: true })),
+    });
+    const off = (snapshot: QuotaSnapshotView): QuotaSnapshotView => ({
+      ...snapshot,
+      providers: snapshot.providers.map(({ keepGoingOnCredits: _was, ...row }) => row),
+    });
+    const refresh = vi.fn(async () => ({ snapshot: SNAPSHOT, catalog: CATALOG }));
+    const before = new QuotaService({ refresh, db, broadcast, stamp: on });
+    await before.refresh("demand");
+    expect(before.latest()?.providers[0]?.keepGoingOnCredits).toBe(true);
+
+    const restarted = new QuotaService({ refresh, db, broadcast, stamp: off });
+    expect(restarted.latest()?.providers[0]?.keepGoingOnCredits).toBeUndefined();
+  });
+
   it("rebuilds the model catalog over the last snapshot without fetching, and re-pushes it", async () => {
     // docs/model-lists.md: a runtime catalog read landed a model the catalog
     // had no row for, so routing could neither name nor pick it.

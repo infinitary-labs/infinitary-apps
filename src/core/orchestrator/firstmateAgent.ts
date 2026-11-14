@@ -148,6 +148,11 @@ export type FirstmateAgentOptions = {
    */
   recheckAllowance?: () => Promise<QuotaSnapshotView | undefined>;
   /**
+   * Turn an account's Keep going on credits switch on, on the captain's
+   * click on a run-out card (docs/quota.md "Keep going on credits").
+   */
+  keepGoingOnCredits?: (accountId: string) => void;
+  /**
    * The dev-only local seat (roadmap 1.7) as the boot found it: when set it
    * is the Firstmate's model and runtime outright - no pin, no account, no
    * ladder - and the persisted model pin is left exactly as it was. A later
@@ -656,6 +661,7 @@ export class FirstmateAgent {
         void this.seat.moveFlagship(providerId);
       },
       tryAgain: (accountId) => this.seat.tryAgain(accountId),
+      keepGoingOnCredits: (accountId) => this.seat.keepGoingOnCredits(accountId),
       checkQuiet: (now) => this.checkQuiet(now),
       pokeInbox: () => this.pokeInbox(),
     });

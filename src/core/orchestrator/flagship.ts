@@ -10,7 +10,8 @@ import {
   PROVIDER_CATALOG,
   providerServesRole,
 } from "@shared/providers";
-import type { QuotaSnapshotView } from "@shared/quota";
+import { creditsOfferOf, type QuotaSnapshotView } from "@shared/quota";
+import { allowanceSpent } from "@shared/quotaSignals";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import type { ModelRuntime } from "../pi/types";
 import { effectiveFromProvider } from "../quota/catalog";
@@ -63,6 +64,8 @@ export type FlagshipVaultView = {
   withheldReason(accountId: string): string | undefined;
   /** The one sentence a client issue carries, when that is what withholds it. */
   withheldDetail(accountId: string): string | undefined;
+  /** Whether the account's Keep going on credits switch is on (`AccountVault`). */
+  keepsGoingOnCredits?(accountId: string): boolean;
   /** The typed cut-off standing on the account (`AccountVault.noteCutOff`). */
   cutOff(accountId: string): { class: CutOffClass; resetsAt?: number } | undefined;
   /** The captain's "Try again" on a refusal; answers whether one stood. */
@@ -90,6 +93,7 @@ export type SeatDecision =
   | "move-back-offered"
   | "serves-again"
   | "try-again"
+  | "keep-going-on-credits"
   | "renewed";
 
 export type FlagshipOptions = {
@@ -314,8 +318,23 @@ export class Flagship {
         ...(cutOff.resetsAt !== undefined ? { resetsAt: cutOff.resetsAt } : {}),
       };
     }
-    const headroom = this.headroom(accountId);
-    return headroom !== undefined && headroom <= 0 ? { class: "no_headroom" } : undefined;
+    // An account that keeps going on credits answers past a spent
+    // allowance; only the provider's own refusal (the cut-off above) stops it.
+    const effective = effectiveFromProvider(this.snapshotRow(accountId), Date.now());
+    return allowanceSpent(effective) ? { class: "no_headroom" } : undefined;
+  }
+
+  /**
+   * The spent-allowance card's offer to keep going (INF-4104 piece 2): the
+   * account's provider says its credits are available and its switch is
+   * off. Undefined when there is nothing to offer.
+   */
+  creditsOffer(accountId: string): { usedPercent?: number; balance?: string } | undefined {
+    const row = this.snapshotRow(accountId);
+    // The switch itself, not the row's mark: a refusal held while it is on
+    // leaves the row unmarked, and the switch is not offered again.
+    if (!row || this.options.vault.keepsGoingOnCredits?.(accountId)) return undefined;
+    return creditsOfferOf(row);
   }
 
   /**
@@ -433,11 +452,21 @@ export class Flagship {
   }
 
   /**
+   * The account's allowance is spent and it answers on credits (its switch
+   * is on): it serves, but only after every sibling with included allowance.
+   */
+  onCredits(accountId: string): boolean {
+    return effectiveFromProvider(this.snapshotRow(accountId), Date.now()).onCredits === true;
+  }
+
+  /**
    * Ladder rung 1: a sibling account of the same provider worth rebinding
    * to - measured headroom first; an unknown-quota sibling is still better
-   * than benching the orchestrator.
+   * than benching the orchestrator; last, a sibling that serves on its
+   * credits. `measured` asks only for a sibling with measured headroom: the
+   * one a seat on credits moves to, since credits come last.
    */
-  sibling(accountId: string): { id: string; label: string } | undefined {
+  sibling(accountId: string, only?: "measured"): { id: string; label: string } | undefined {
     const account = this.options.vault.get(accountId);
     if (!account) return undefined;
     const siblings = this.options.vault
@@ -447,7 +476,12 @@ export class Flagship {
       const headroom = this.headroom(entry.id);
       return typeof headroom === "number" && headroom > 0;
     });
-    const chosen = measured ?? siblings.find((entry) => this.headroom(entry.id) === undefined);
+    const chosen =
+      only === "measured"
+        ? measured
+        : (measured ??
+          siblings.find((entry) => this.headroom(entry.id) === undefined) ??
+          siblings.find((entry) => this.onCredits(entry.id) && !this.pause(entry.id)));
     return chosen ? { id: chosen.id, label: chosen.label } : undefined;
   }
 

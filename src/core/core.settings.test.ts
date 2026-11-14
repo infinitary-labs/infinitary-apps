@@ -220,6 +220,7 @@ describe("the core, driven with no Electron in the process", () => {
       "integration-remove",
       "delete-outside",
       "forge-sign-out",
+      "account-keep-going",
       "account-disconnect",
       "projects-folder",
       "project-queue-answer",

@@ -94,6 +94,7 @@ const settingsCases = [
   ["inf:accounts:rename", "Could not rename this account"],
   ["inf:accounts:pin", "Could not change which account crew work prefers"],
   ["inf:accounts:set-enabled", "Could not pause or resume this account"],
+  ["inf:accounts:keep-going", "Could not change whether this account keeps going on credits"],
   ["inf:accounts:remove", "Could not disconnect this account"],
 ] as const;
 

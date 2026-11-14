@@ -4,7 +4,8 @@
  * account's sign-in (`arg` = account id), move the Firstmate flagship to
  * another provider (`arg` = provider id), retry the failed Firstmate turn,
  * try a refused account again (`arg` = account id; the only way a refusal
- * clears on the captain's word, W1 S9),
+ * clears on the captain's word, W1 S9), turn an account's Keep going on
+ * credits switch on from a run-out card (`arg` = account id; docs/quota.md),
  * add or turn down a plugin waiting on the captain's consent (`arg` =
  * plugin id; one plugin vehicle, Phase A, A2a), add or turn down a project
  * Firstmate proposed on the setup card (`arg` = the card's offer as JSON,
@@ -32,6 +33,7 @@ export const HOST_OPS = [
   "move-flagship",
   "retry-firstmate",
   "try-again",
+  "keep-going-on-credits",
   "add-plugin",
   "decline-plugin",
   "apply-project-change",

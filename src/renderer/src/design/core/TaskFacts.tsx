@@ -648,7 +648,9 @@ function ModelWhy({ why }: { why: TaskModelWhy }) {
         <ol className="why-list">
           {comparison.candidates.map((candidate) => {
             const facts = [
-              candidate.band ? bandWords(candidate.band, comparison.floorPercent) : undefined,
+              candidate.band
+                ? bandWords(candidate.band, comparison.floorPercent, candidate.onCredits)
+                : undefined,
               candidate.percentRemaining !== undefined
                 ? m.uiPercentLeft({ percent: formatNumber(Math.round(candidate.percentRemaining)) })
                 : undefined,

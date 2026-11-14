@@ -149,6 +149,9 @@ export class HostOps {
       case "try-again":
         if (effect.arg) this.core.hooks().tryAgain?.(effect.arg);
         return {};
+      case "keep-going-on-credits":
+        if (effect.arg) this.core.hooks().keepGoingOnCredits?.(effect.arg);
+        return {};
       case "restore-account":
         // The shell lands on Subscriptions with the account to re-sign.
         return {

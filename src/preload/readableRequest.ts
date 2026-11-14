@@ -182,6 +182,10 @@ export const REQUEST_COPY = {
     fallback: "Could not change which account crew work prefers. Please try again.",
     prefix: "Could not change which account crew work prefers: ",
   },
+  "inf:accounts:keep-going": {
+    fallback: "Could not change whether this account keeps going on credits. Please try again.",
+    prefix: "Could not change whether this account keeps going on credits: ",
+  },
   "inf:accounts:set-enabled": {
     fallback: "Could not pause or resume this account. Please try again.",
     prefix: "Could not pause or resume this account: ",

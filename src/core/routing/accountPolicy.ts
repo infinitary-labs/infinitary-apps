@@ -1,4 +1,10 @@
-import { bandOf, compareBandRank, compareSpendRank, type SpendBand } from "@shared/quotaSignals";
+import {
+  allowanceSpent,
+  bandOf,
+  compareBandRank,
+  compareSpendRank,
+  type SpendBand,
+} from "@shared/quotaSignals";
 import type { AccountCandidateFact } from "../storage/decisionStore";
 import type { ChargeFact } from "./placedWork";
 
@@ -59,6 +65,11 @@ export type AccountCandidate = {
   lastsThroughReset?: boolean;
   /** The band of the unadjusted reading, beside a placed-work-adjusted score. */
   band?: SpendBand;
+  /**
+   * Its allowance is spent and it keeps going on credits (INF-4104 piece
+   * 2): eligible, but only after every account with included allowance.
+   */
+  onCredits?: boolean;
   charge?: ChargeFact;
 };
 
@@ -153,25 +164,44 @@ function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "c
     return { reasons };
   }
 
-  // The pin always wins while healthy (present and not exhausted).
+  // The pin always wins while healthy (present and not exhausted). A pin
+  // on credits waits behind every account with included allowance.
   const pinned = eligible.find((candidate) => candidate.accountId === input.pinnedAccountId);
   if (pinned) {
-    if (!isExhausted(pinned)) {
+    if (!isExhausted(pinned) && !pinned.onCredits) {
       reasons.push(`picked ${pinned.label}: pinned`);
       return { accountId: pinned.accountId, reasons, pinned: true };
     }
-    reasons.push(`pin ${pinned.label} is exhausted; falling back to selection`);
+    reasons.push(
+      pinned.onCredits
+        ? `pin ${pinned.label} is on credits; falling back to selection`
+        : `pin ${pinned.label} is exhausted; falling back to selection`,
+    );
   }
 
-  const live = eligible.filter((candidate) => !isExhausted(candidate));
+  const usable = eligible.filter((candidate) => !isExhausted(candidate));
   for (const candidate of eligible) {
     if (isExhausted(candidate)) {
       reasons.push(`skipped ${candidate.label}: exhausted`);
     }
   }
-  if (live.length === 0) {
+  if (usable.length === 0) {
     reasons.push(`every ${input.providerId} account is exhausted`);
     return { reasons };
+  }
+  // Credits come after every included allowance, the first mate's included.
+  const live = usable.filter((candidate) => !candidate.onCredits);
+  if (live.length === 0) {
+    usable.sort((a, b) => (a.lastSelectedAt ?? 0) - (b.lastSelectedAt ?? 0));
+    const chosen = usable[0] as AccountCandidate;
+    reasons.push(
+      `picked ${chosen.label}: every included allowance is spent; keeps going on credits`,
+    );
+    return { accountId: chosen.accountId, reasons };
+  }
+  for (const candidate of usable) {
+    if (candidate.onCredits)
+      reasons.push(`${candidate.label}: on credits, kept for after every included allowance`);
   }
 
   // The flagship reservation: deprioritized to last resort.
@@ -228,10 +258,7 @@ function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "c
 }
 
 function isExhausted(candidate: AccountCandidate): boolean {
-  return (
-    typeof candidate.effectivePercentRemaining === "number" &&
-    candidate.effectivePercentRemaining <= 0
-  );
+  return allowanceSpent(candidate);
 }
 
 /**

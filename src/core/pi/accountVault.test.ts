@@ -915,6 +915,37 @@ describe("a typed cut-off on the account", () => {
     expect(heard).toEqual([id]);
   });
 
+  // INF-4104 piece 2: Keep going on credits, and a top-up ending the hold.
+  it("saves Keep going on credits on the account and ends a spent allowance's hold when credits answer again", async () => {
+    const world = claudeWorld();
+    const { vault, id } = await signedInClaude(world);
+    vault.noteCutOff(id, { class: "no_headroom", resetsAt: world.facts.now + 60_000 });
+    // Switch off: credits answering again changes nothing.
+    expect(vault.noteCreditsAvailable(id)).toBe(false);
+    expect(vault.cutOff(id)?.class).toBe("no_headroom");
+
+    vault.setKeepGoingOnCredits(id, true);
+    expect((await vault.views())[0]?.keepGoingOnCredits).toBe(true);
+    expect(world.open().keepsGoingOnCredits(id)).toBe(true);
+    // The provider's refusal still holds: the switch serves nothing yet.
+    expect(vault.servesOnCredits(id)).toBe(false);
+    expect(vault.noteCreditsAvailable(id)).toBe(true);
+    expect(vault.cutOff(id)).toBeUndefined();
+    expect(vault.servesOnCredits(id)).toBe(true);
+
+    vault.setKeepGoingOnCredits(id, false);
+    expect((await vault.views())[0]?.keepGoingOnCredits).toBeUndefined();
+  });
+
+  it("refuses Keep going on credits for a provider that sells no credits past its allowance", async () => {
+    const vault = AccountVault.create(freshPaths());
+    const account = await vault.add("xai", "oauth", bridge());
+    expect(() => vault.setKeepGoingOnCredits(account.id, true)).toThrow(
+      "This account cannot keep going on credits.",
+    );
+    expect(vault.keepsGoingOnCredits(account.id)).toBe(false);
+  });
+
   it("keeps a lower reading than the one it saw, and ends on a reading above that", async () => {
     const world = claudeWorld();
     const { vault, id } = await signedInClaude(world);

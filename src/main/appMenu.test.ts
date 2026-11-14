@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
+import { APP_IDENTITIES, OWN_IDENTITY } from "@shared/codeNames";
 import { DEFAULT_BINDINGS } from "@shared/keyboard";
 import { DEFAULT_SAVED_KEYMAP, resolveBindings } from "@shared/keymap";
 import type { Menu, MenuItemConstructorOptions } from "electron";
 import { describe, expect, it, vi } from "vitest";
-import { type AppMenuActions, appMenuTemplate } from "./appMenu";
+import { type AppMenuActions, appMenuTemplate, namedMenuTemplate } from "./appMenu";
 
 vi.mock("electron", () => ({ Menu: {}, dialog: {} }));
 
@@ -12,7 +14,7 @@ vi.mock("electron", () => ({ Menu: {}, dialog: {} }));
  * (docs/release-notes.md "Reading a note again").
  */
 
-type Item = { role?: string; label: string; submenu?: { items: Item[] } };
+type Item = { role?: string; type?: string; label: string; submenu?: { items: Item[] } };
 const item = (fields: Item) => ({
   type: "normal",
   accelerator: null,
@@ -175,4 +177,64 @@ it.each([false, true])("View menu release=%s removes only developer roles", (rel
   if (!reset?.click) throw new Error("Missing size reset handler");
   (reset.click as () => void)();
   expect(menuActions.size["size.reset"]).toHaveBeenCalledOnce();
+});
+
+// A Mac's app menu read "About infinitary", "Hide infinitary" and "Quit
+// infinitary" while the Dock and the menu bar said Infinitary: Electron words
+// those items with `app.name`, which is the package's name.
+describe("Electron's own menu, named as macOS names the app", () => {
+  const packageName: string = JSON.parse(
+    readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+  ).name;
+  const separator = () => item({ type: "separator", label: "" });
+  /** Electron 43's app menu and Edit menu for this package, as a Mac showed them. */
+  const electronMenu = {
+    items: [
+      item({
+        role: "appMenu",
+        label: packageName,
+        submenu: {
+          items: [
+            item({ role: "about", label: `About ${packageName}` }),
+            separator(),
+            item({ role: "services", label: "Services" }),
+            separator(),
+            item({ role: "hide", label: `Hide ${packageName}` }),
+            item({ role: "hideOthers", label: "Hide Others" }),
+            item({ role: "unhide", label: "Show All" }),
+            separator(),
+            item({ role: "quit", label: `Quit ${packageName}` }),
+          ],
+        },
+      }),
+      item({
+        role: "editMenu",
+        label: "Edit",
+        submenu: { items: [item({ role: "undo", label: "Undo" })] },
+      }),
+    ],
+  } as unknown as Menu;
+
+  it.each(Object.values(APP_IDENTITIES[OWN_IDENTITY].app))(
+    "reads %s in the app menu's title, About, Hide and Quit, and changes nothing else",
+    (name) => {
+      const menu = namedMenuTemplate(electronMenu, { electron: packageName, app: name });
+      expect(menu.map((entry) => [entry.role, entry.label])).toEqual([
+        ["appMenu", name],
+        ["editMenu", "Edit"],
+      ]);
+      expect(submenu(menu[0]).map((entry) => [entry.role, entry.type, entry.label])).toEqual([
+        ["about", "normal", `About ${name}`],
+        [undefined, "separator", ""],
+        ["services", "normal", "Services"],
+        [undefined, "separator", ""],
+        ["hide", "normal", `Hide ${name}`],
+        ["hideOthers", "normal", "Hide Others"],
+        ["unhide", "normal", "Show All"],
+        [undefined, "separator", ""],
+        ["quit", "normal", `Quit ${name}`],
+      ]);
+      expect(submenu(menu[1]).map((entry) => entry.label)).toEqual(["Undo"]);
+    },
+  );
 });

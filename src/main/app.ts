@@ -20,7 +20,7 @@ import {
 } from "@core/storage/savedDataCompatibility";
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { crewWorkHeldThere } from "@core/update/updateHold";
-import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
+import { APP_IDENTITIES, OWN_IDENTITY, readSpellings } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import { computerLanguagesArgument } from "@shared/fonts";
 import { setComputerLocale, setCurrentLanguage } from "@shared/i18n/current";
@@ -44,7 +44,7 @@ import { checksUpdates } from "@shared/update";
 import { spellingOfUserDataFolder } from "@shared/userDataFolders";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
 import { hostDesktop, hostPlatform } from "../core/platform";
-import { installAppMenu, resetAllKeysAfterAsking } from "./appMenu";
+import { installAppMenu, nameAppMenu, resetAllKeysAfterAsking } from "./appMenu";
 import {
   betweenStops,
   entryWaitMs,
@@ -599,6 +599,13 @@ export async function startApp(
       computerLocale = readableLocale(preferred[0]);
       computerLanguages = preferred;
       setComputerLocale(computerLocale);
+      // Electron's own menu names the app as macOS does in every start that
+      // may show it: the window, and a run macOS brings forward (./runReopen.ts).
+      if (hostPlatform() === "darwin")
+        nameAppMenu({
+          electron: app.name,
+          app: APP_IDENTITIES[OWN_IDENTITY].app[isRelease ? "release" : "dev"],
+        });
       // An installed Linux app with no git, or with its sandbox off (an
       // AppImage promises neither), asks before it opens (./linuxStartup.ts).
       // A run has nobody to ask: with no git it says so and exits, and with

@@ -12,13 +12,15 @@ import {
   type BrowserWindow,
   dialog,
   Menu,
+  type MenuItem,
   type MenuItemConstructorOptions,
   type MessageBoxOptions,
 } from "electron";
 import type { InstalledKeymap, SizeCommandHandlers } from "./keyboard";
 
 /**
- * The app menu (docs/keyboard.md, "The app menu"): Electron's own, without
+ * The app menu (docs/keyboard.md, "The app menu"): Electron's own, its
+ * About, Hide and Quit naming the app as macOS does (`nameAppMenu`), without
  * developer roles in the release, with the
  * View menu's zoom items running the size commands, after About the
  * Check for Updates… item (greyed out on a copy that cannot check), then
@@ -99,6 +101,58 @@ function whatsNewItem(bindings: Bindings, actions: AppMenuActions): MenuItemCons
   };
 }
 
+/**
+ * The items Electron words with `app.name`: the app menu's own title, About,
+ * Hide and Quit. That is the package's lowercase name, which stays as it is
+ * (docs/architecture.md, "Where state lives"), while macOS shows the bundle's
+ * name in the Dock and the menu bar.
+ */
+const NAMED_ROLES = new Set(["appmenu", "about", "hide", "quit"]);
+
+/** The name Electron's own items carry, and the one a person knows the app by. */
+export type AppMenuNames = {
+  /** `app.name`, which Electron's own items are worded with. */
+  electron: string;
+  /** The bundle's name (`APP_IDENTITIES`): Infinitary, or Infinitary Dev for a development build. */
+  app: string;
+};
+
+/** An item of Electron's menu as it stands, for a menu built again. */
+function sameItem(
+  item: MenuItem,
+  submenu: MenuItemConstructorOptions[] | undefined,
+): MenuItemConstructorOptions {
+  return {
+    role: item.role,
+    label: item.label,
+    type: item.type,
+    accelerator: item.accelerator ?? undefined,
+    submenu,
+    click: (menuItem, window, event) => item.click(menuItem, window, event),
+  };
+}
+
+/** Electron's own menu again, its items that carry the app's name with the bundle's name. */
+export function namedMenuTemplate(base: Menu, names: AppMenuNames): MenuItemConstructorOptions[] {
+  const copy = (source: Menu): MenuItemConstructorOptions[] =>
+    source.items.map((item) => {
+      const role = item.role?.toLowerCase();
+      const same = sameItem(item, item.submenu ? copy(item.submenu) : undefined);
+      if (role && NAMED_ROLES.has(role)) same.label = item.label.replace(names.electron, names.app);
+      return same;
+    });
+  return copy(base);
+}
+
+/**
+ * Names Electron's own menu as macOS names the app, once at the start of a
+ * Mac process that may show it, before `installAppMenu` copies it.
+ */
+export function nameAppMenu(names: AppMenuNames): void {
+  const base = Menu.getApplicationMenu();
+  if (base) Menu.setApplicationMenu(Menu.buildFromTemplate(namedMenuTemplate(base, names)));
+}
+
 /** Electron's menu again, with the app's own items and the keys `bindings` holds. */
 export function appMenuTemplate(
   base: Menu,
@@ -126,16 +180,7 @@ export function appMenuTemplate(
         const at = submenu.findIndex((entry) => entry.role?.toLowerCase() === "about") + 1;
         submenu.splice(at, 0, ...settingsItems(bindings, actions));
       }
-      return [
-        {
-          role: item.role,
-          label: item.label,
-          type: item.type,
-          accelerator: item.accelerator ?? undefined,
-          submenu,
-          click: (menuItem, window, event) => item.click(menuItem, window, event),
-        },
-      ];
+      return [sameItem(item, submenu)];
     });
   const menu = copy(base);
   // Electron's own menu has no Help menu; a later one that does keeps it.

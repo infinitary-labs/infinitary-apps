@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-tab-keeps-up",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "The Crewmate tab keeps up with a Claude crewmate",
+      "body": "A task card's Crewmate tab could stop showing what a crewmate on Claude wrote, leaving a line you typed marked queued and the crewmate's answer missing until it wrote again. The tab now shows every line the crewmate has written.",
+      "noPicture": "The tab looks as it always did; the fix only stops it from keeping an older transcript after the crewmate's session moved on.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

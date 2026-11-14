@@ -66,7 +66,9 @@ const FOLLOWED_MAX = 16;
  * session is followed as it grows through the one session reader
  * (`SessionFollower`), so a long session costs one parse; a transcript
  * whose sessions and record have not moved since the last read is the same
- * one.
+ * one. A session's generation is its follower's, which no other follower
+ * shares, so the Claude client's own file standing in for the app's copy of
+ * it, or the copy taking its place again, moves the transcript too.
  */
 export class CrewTranscripts {
   private readonly followed = new Map<string, SessionFollower>();

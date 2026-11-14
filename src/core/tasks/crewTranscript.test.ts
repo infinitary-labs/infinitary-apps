@@ -1,12 +1,15 @@
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { CrewLine } from "@shared/crewTranscript";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
+import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { renderWake, replyWordsSpan, type TypedWake } from "../orchestrator/wakes";
 import { EMIT_CARD_TOOL_NAME } from "../pi/cardTool";
 import { NOTE_PROGRESS_TOOL_NAME, REPORT_TOOL_NAME } from "../pi/crewmateTaskTools";
 import { OPEN_CHANGE_TOOL_NAME } from "../pi/forgeTools";
+import { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { CREW_BLOCK_TOOLS, CrewLiveText, CrewTranscripts, diffOf } from "./crewTranscript";
@@ -278,6 +281,107 @@ describe("the Crewmate tab's transcript", () => {
     expect(captain[0]).toMatchObject({ text: TYPED, queued: false });
     // Nothing moved: the same transcript, so a re-read is not delivered again.
     expect(transcripts.of(task(), [told, typed], false)).toBe(after);
+  });
+
+  it("shows what the session holds as the Claude client's own file and the app's copy of it stand in for each other", () => {
+    // Wired as the app wires it (services.ts): the resolver reads the
+    // client's own file while it holds more than the app's copy, else the
+    // copy, which the host's clock and each turn's end bring up to it.
+    const root = scratchDir("infinitary-crew-transcript-");
+    const recordDirOf = (taskId: string) => join(root, taskId, "sessions");
+    const configDir = join(root, "claude-store");
+    const client = join(
+      configDir,
+      "projects",
+      encodeClaudeProjectDir(WORKTREE),
+      `${SESSION}.jsonl`,
+    );
+    mkdirSync(dirname(client), { recursive: true });
+    const copy = new SessionRecordStore(recordDirOf("t1"));
+    const resolve = createCrewmateTranscriptResolver({
+      recordDirOf,
+      backendOf: () => "claude",
+      configDirOf: () => configDir,
+    });
+    const transcripts = new CrewTranscripts({
+      recordDirOf,
+      currentSession: (record) => resolve(record).path,
+    });
+    const record = {
+      id: "t1",
+      worktreeDir: WORKTREE,
+      accountId: "claude-account",
+      sessionFile: SESSION,
+      deviceId: null,
+    } as TaskRecord;
+    const typed = steer(1, 4, typedLine(TYPED), "crewmate-tab");
+    const queue = (seconds: number, operation: string, content?: string): Line => ({
+      type: "queue-operation",
+      operation,
+      timestamp: iso(seconds),
+      sessionId: SESSION,
+      ...(content ? { content } : {}),
+    });
+
+    // The turn so far, which the tab opens on while the copy holds none of it.
+    appendFileSync(
+      client,
+      jsonl([
+        claude.prompt(1, BRIEF),
+        claude.block(2, "m1", {
+          type: "tool_use",
+          id: "card1",
+          name: `mcp__infinitary__${EMIT_CARD_TOOL_NAME}`,
+          input: { id: "rivets", title: "Rivet count" },
+        }),
+        claude.result(3, "card1", "The card is up."),
+      ]),
+    );
+    expect(kinds(transcripts.of(record, [], false).lines)).toEqual(["brief", "card"]);
+    // The host's clock brings the copy up to the client's file.
+    copy.mirror(SESSION, client);
+    expect(kinds(transcripts.of(record, [], false).lines)).toEqual(["brief", "card"]);
+    // The captain types a line; the client queues it.
+    expect(transcripts.of(record, [typed], false).lines.at(-1)).toMatchObject({ queued: true });
+    appendFileSync(client, jsonl([queue(5, "enqueue", typed.text)]));
+    expect(transcripts.of(record, [typed], false).lines.at(-1)).toMatchObject({ queued: true });
+
+    // The held step answers, the line rides in, the crewmate reports and its
+    // turn ends, whose close brings the copy up - all before the next read.
+    appendFileSync(
+      client,
+      jsonl([
+        claude.block(6, "m2", {
+          type: "tool_use",
+          id: "plan1",
+          name: `mcp__infinitary__${NOTE_PROGRESS_TOOL_NAME}`,
+          input: { text: "Counted the port hatch." },
+        }),
+        queue(7, "remove", typed.text),
+        {
+          type: "attachment",
+          sessionId: SESSION,
+          uuid: "q1",
+          timestamp: iso(7),
+          attachment: { type: "queued_command", prompt: typed.text },
+        },
+        claude.result(7, "plan1", "Noted."),
+        claude.block(8, "m3", {
+          type: "tool_use",
+          id: "report1",
+          name: `mcp__infinitary__${REPORT_TOOL_NAME}`,
+          input: { text: "Counted the starboard hatch too." },
+        }),
+        claude.result(9, "report1", "Reported."),
+        claude.block(10, "m4", { type: "text", text: "done" }),
+      ]),
+    );
+    copy.mirror(SESSION, client);
+    const after = transcripts.of(record, [typed], false);
+    expect(kinds(after.lines)).toEqual(["brief", "card", "plan", "sent", "report", "said"]);
+    expect(ofKind(after.lines, "sent")).toEqual([
+      expect.objectContaining({ from: "captain", text: TYPED, queued: false }),
+    ]);
   });
 
   it("never reads a closed task's undelivered line as queued, and says where a turn was stopped", () => {

@@ -450,6 +450,15 @@ class ClaudeSessionMapper {
 }
 
 /**
+ * The newest generation any follower took. One count for every follower, so
+ * two followers never answer the same generation for different entries: the
+ * Claude client's own file and the app's copy of it share a name, and a
+ * reader that reads one in the other's place (the Crewmate tab) would
+ * otherwise take a moved session for the one it already holds.
+ */
+let lastGeneration = 0;
+
+/**
  * A session followed as it grows, whichever backend writes it: each `read`
  * parses only the whole lines appended since the last, and answers the
  * session's entries in the Pi dialect as `readSession` maps them (a Claude
@@ -467,7 +476,11 @@ export class SessionFollower {
   private ino = 0;
   private pi: JsonRecord[] = [];
   private claude: ClaudeSessionMapper | null = null;
-  /** Bumped whenever a read took in new lines, so a reader can tell a session moved. */
+  /**
+   * Taken anew whenever a read took in new lines, from the count every
+   * follower shares (`lastGeneration`), so a reader can tell a session moved
+   * even when it reads another file of the same name in its place.
+   */
   private generation = 0;
 
   readonly path: string;
@@ -478,7 +491,10 @@ export class SessionFollower {
     this.path = path;
   }
 
-  /** The session's entries so far, and a number that moves each time they change. */
+  /**
+   * The session's entries so far, and a number that moves each time they
+   * change, which no other follower's entries ever carry.
+   */
   read(): { entries: readonly JsonRecord[]; generation: number } {
     let size: number;
     let ino: number;
@@ -498,7 +514,7 @@ export class SessionFollower {
       const appended = wholeLinesBetween(this.path, this.offset, size);
       if (appended.bytes > 0) {
         this.offset += appended.bytes;
-        this.generation += 1;
+        this.generation = ++lastGeneration;
         for (const entry of parseLines(appended.text)) {
           if (this.claude) this.claude.push(entry);
           else this.pi.push(entry);
@@ -513,7 +529,7 @@ export class SessionFollower {
   }
 
   private reset(): void {
-    if (this.offset > 0) this.generation += 1;
+    if (this.offset > 0) this.generation = ++lastGeneration;
     this.dialect = null;
     this.offset = 0;
     this.pi = [];

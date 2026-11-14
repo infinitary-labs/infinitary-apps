@@ -82557,6 +82557,11 @@
                 "seed": {
                   "type": "string",
                   "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+                },
+                "branch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
                 }
               },
               "required": [
@@ -83555,6 +83560,11 @@
                     "size",
                     "sha256"
                   ]
+                },
+                "branch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
                 }
               },
               "required": [

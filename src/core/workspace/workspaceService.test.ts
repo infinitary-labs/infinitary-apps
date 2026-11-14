@@ -174,6 +174,36 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
     ]);
     expect(await workspace.listTaskBranches(join(paths.userData, "not-a-repo"))).toEqual([]);
   });
+
+  // INF-4195's plan: a task's branch takes the name its record holds, and
+  // cleanup still tells the app's branches apart from the person's own.
+  it("knows a task branch of any name by its mark, through a rename and until it is deleted", async () => {
+    const { paths, workspace } = await service();
+    const repo = paths.defaultWorkspaceDir;
+    const made = await workspace.createTaskWorktree(
+      "cccc3333",
+      undefined,
+      undefined,
+      undefined,
+      "inf/tidy-docs",
+    );
+    expect(made.branch).toBe("inf/tidy-docs");
+    expect(await git(made.cwd, ["symbolic-ref", "--short", "HEAD"])).toBe("inf/tidy-docs");
+    await git(repo, ["branch", "inf/someone-elses"]);
+    expect(await workspace.listTaskBranches(repo)).toEqual([
+      { branch: "inf/tidy-docs", taskId: "cccc3333" },
+    ]);
+    expect((await workspace.workspaceAt("cccc3333"))?.branch).toBe("inf/tidy-docs");
+
+    await git(made.cwd, ["branch", "-m", "inf/tidy-docs-renamed"]);
+    expect(await workspace.listTaskBranches(repo)).toEqual([
+      { branch: "inf/tidy-docs-renamed", taskId: "cccc3333" },
+    ]);
+
+    await workspace.removeTaskWorktree({ ...made, branch: "inf/tidy-docs-renamed" });
+    expect(await workspace.listTaskBranches(repo)).toEqual([]);
+    expect(await git(repo, ["config", "--get-regexp", "infinitarytask"]).catch(() => "")).toBe("");
+  });
 });
 
 describe("the copied repository fixture", () => {

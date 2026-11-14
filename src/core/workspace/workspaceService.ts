@@ -26,6 +26,7 @@ import {
   taskRemoteName,
 } from "./git";
 import { composedName, requireNamedRange } from "./naming";
+import { defaultTaskBranch, markTaskBranch, taskBranches, taskOfBranch } from "./taskBranches";
 import { WorktreePool, type WorktreePoolOptions } from "./worktreePool";
 
 const execFileAsync = promisify(execFile);
@@ -121,8 +122,7 @@ const FETCH_ATTEMPTS = 3;
 /** A cold online install of a large monorepo fits comfortably; a hang does not. */
 const INSTALL_TIMEOUT_MS = 10 * 60 * 1000;
 
-/** A branch the app named for a task: `fm/task-<id>`. */
-export const TASK_BRANCH_PREFIX = "fm/task-";
+export { TASK_BRANCH_PREFIX } from "./taskBranches";
 
 /**
  * Where a computer that runs work keeps the home's default workspace in its
@@ -296,25 +296,13 @@ export class WorkspaceService {
   }
 
   /**
-   * Every `fm/task-*` branch in a repo, with the task id it names. Read-only:
-   * boot reconciliation retires each leftover with `retireTaskBranch`.
+   * Every task branch in a repo, with the task it belongs to: each branch
+   * marked as a task's, and each `fm/task-<id>` (`taskBranches.ts`).
+   * Read-only: boot reconciliation retires each leftover with
+   * `retireTaskBranch`.
    */
   async listTaskBranches(repoDir: string): Promise<{ branch: string; taskId: string }[]> {
-    let out: string;
-    try {
-      out = await git(repoDir, [
-        "for-each-ref",
-        "--format=%(refname:short)",
-        `refs/heads/${TASK_BRANCH_PREFIX}*`,
-      ]);
-    } catch {
-      return [];
-    }
-    return out
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((branch) => branch.startsWith(TASK_BRANCH_PREFIX))
-      .map((branch) => ({ branch, taskId: branch.slice(TASK_BRANCH_PREFIX.length) }));
+    return taskBranches(repoDir);
   }
 
   /**
@@ -471,7 +459,8 @@ export class WorkspaceService {
   }
 
   /**
-   * Creates the task's worktree on branch fm/task-<id>, starting at the
+   * Creates the task's worktree on `branch` - the name its record holds,
+   * `fm/task-<id>` when none - marked as the task's, starting at the
    * dispatch base (`dispatchBase`). A warm tree from the pool is taken when
    * one is idle for the repository - moved to the task's path and switched
    * to the new branch, its dependency tree intact - and a new one is added
@@ -487,12 +476,13 @@ export class WorkspaceService {
     repoDir?: string,
     startAt?: DispatchBase | { headSha: string; previousHead?: string },
     remote?: { origin: string; pushOrigin?: string },
+    named?: string,
   ): Promise<TaskWorkspace> {
     const started = Date.now();
     const at = startAt && "headSha" in startAt ? startAt : undefined;
     const repo = repoDir ?? (await this.ensureDefaultRepo());
     const cwd = join(this.paths.worktreesDir, taskId);
-    const branch = `${TASK_BRANCH_PREFIX}${taskId}`;
+    const branch = named || defaultTaskBranch(taskId);
     await mkdir(this.paths.worktreesDir, { recursive: true });
     await git(repo, ["worktree", "prune"]);
     if (at && (await resolveCommit(repo, at.headSha)) !== at.headSha)
@@ -511,6 +501,7 @@ export class WorkspaceService {
         }
       }
       if (remote) await inheritWorktreeRemotes(repo, cwd, remote);
+      await markTaskBranch(repo, branch, taskId);
       return { taskId, cwd, branch, repoDir: repo };
     }
     if (existsSync(cwd)) {
@@ -550,6 +541,7 @@ export class WorkspaceService {
       }
       if (source === "new") await git(repo, ["worktree", "add", ...add]);
       if (remote) await inheritWorktreeRemotes(repo, cwd, remote);
+      await markTaskBranch(repo, branch, taskId);
       return {
         taskId,
         cwd,
@@ -1133,7 +1125,8 @@ export class WorkspaceService {
   /**
    * The workspace a tree under the worktrees area really is, read from git
    * itself - for a tree whose task record is gone. The branch is named
-   * only when it is the app's own `fm/task-<name>`, so retiring the tree
+   * only when it is the app's own branch for that task, marked as its or
+   * `fm/task-<name>` (`taskBranches.ts`), so retiring the tree
    * never deletes a branch the app did not make. Null when the directory
    * is not a checkout of its own.
    */
@@ -1146,7 +1139,7 @@ export class WorkspaceService {
       let branch = "";
       try {
         const head = await git(cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
-        if (head === `${TASK_BRANCH_PREFIX}${name}`) branch = head;
+        if ((await taskOfBranch(repoDir, head)) === name) branch = head;
       } catch {
         // Detached: no branch to retire with it.
       }

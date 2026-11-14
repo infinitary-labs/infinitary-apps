@@ -125,6 +125,56 @@ describe("the working copies a computer that runs work keeps", () => {
     expect(copies.list()).toEqual(["t-one", "t-two"]);
   });
 
+  // INF-4195's plan: the home sends the branch its record holds, and the
+  // computer makes, reads and moves the task's work on that name.
+  it("makes a task's working copy on the branch the home names, and moves its work on that name", async () => {
+    const { origin, main } = await project();
+    const { copies } = computer();
+    const made = await copies.prepare(
+      "t-named",
+      { origin },
+      undefined,
+      undefined,
+      "inf/meter-unit",
+    );
+    expect(made.branch).toBe("inf/meter-unit");
+    writeFileSync(join(made.dir, "meter.ts"), "export const unit = 'Wh';\n");
+    const head = await commitAll(made.dir, "fix: meter unit");
+    // A crewmate that left the branch still has it read as the task's.
+    await git(made.dir, ["checkout", "--quiet", "--detach", main]);
+    expect(await copies.revision("t-named")).toMatchObject({ headSha: head });
+
+    const moving = scratchDir("infinitary-copies-named-");
+    const packFile = join(moving, "move.pack");
+    await git(made.dir, ["checkout", "--quiet", "inf/meter-unit"]);
+    const { pack } = await packWork(made.dir, "inf/meter-unit", {}, packFile);
+    const bundleFile = join(moving, "move.bundle");
+    const bundled = await bundleRef(made.dir, "refs/heads/inf/meter-unit", [main], bundleFile);
+    if (!bundled.bundle) throw new Error("No bundle was made.");
+    const out = await copies.moveOut("t-named", {});
+    expect(out).toMatchObject({ head, branch: "inf/meter-unit" });
+
+    const other = computer();
+    await other.copies.prepare("t-seed", { origin });
+    const ready = await other.copies.moveIn(
+      {
+        orderId: "move-in:t-named:1",
+        task: "t-named",
+        project: { origin },
+        head,
+        branch: out.branch,
+        bundle: { name: "move.bundle", ...bundled.bundle },
+        pack: { name: "move.pack", ...pack },
+      },
+      { bundle: bundleFile, pack: packFile },
+      {},
+    );
+    expect(ready).toMatchObject({ outcome: "ready", branch: "inf/meter-unit" });
+    const movedDir = ready.outcome === "ready" ? ready.dir : "";
+    expect(await git(movedDir, ["symbolic-ref", "--short", "HEAD"])).toBe("inf/meter-unit");
+    expect(await git(movedDir, ["rev-parse", "HEAD"])).toBe(head);
+  });
+
   it("returns host-measured lines for the requested remote revision, not its newer branch (INF-1235)", async () => {
     // Captain chose “Fix remote-task line counts”: real git on the work computer owns the numbers.
     const { origin, main } = await project();

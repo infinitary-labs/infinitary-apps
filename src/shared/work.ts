@@ -1063,6 +1063,9 @@ export function requestRepeatsSafely(channel: string): boolean {
 }
 
 /** One order's task and id: every order that acts carries both. */
+/** A task's branch name, as git would take it; git itself refuses the rest when it makes the branch. */
+const taskBranchSchema = z.string().min(1).max(255);
+
 function ordered<T extends z.ZodRawShape>(shape: T) {
   return z.tuple([z.object({ orderId: workOrderIdSchema, task: placedTaskIdSchema, ...shape })]);
 }
@@ -1402,6 +1405,11 @@ export const workOrders = {
        * working copy starts from, sent first (`inf:working-copy:seed`).
        */
       seed: commitSchema.optional(),
+      /**
+       * The task's branch as the home names it (`task-branch-names.md`);
+       * `fm/task-<task>` without one. The answer's `branch` is the one made.
+       */
+      branch: taskBranchSchema.optional(),
     }),
     response: z.union([
       z.object({ refused: z.literal("preparation-unknown") }),
@@ -1666,6 +1674,8 @@ export const workOrders = {
       head: commitSchema,
       bundle: sourceFileSchema.optional(),
       pack: sourceFileSchema.optional(),
+      /** The task's branch as the home names it, as `inf:working-copy:prepare` takes it. */
+      branch: taskBranchSchema.optional(),
     }),
     response: z.discriminatedUnion("outcome", [
       z.object({ outcome: z.literal("need"), have: z.array(commitSchema).max(64) }),

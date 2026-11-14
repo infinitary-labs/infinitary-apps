@@ -773,6 +773,7 @@ export class SessionHost {
               prepare.project,
               prepare.seed,
               prepare.base,
+              prepare.branch,
             );
           } catch (caught) {
             // The host wants this computer's own sign-in: a typed answer, so

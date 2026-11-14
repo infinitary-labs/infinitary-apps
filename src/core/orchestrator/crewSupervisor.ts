@@ -989,6 +989,8 @@ export class CrewSupervisor {
           review.id,
           review.repoDir,
           base,
+          undefined,
+          review.branch || undefined,
         );
       }
       this.options.tasks.delivery.recordChangeEvidence(

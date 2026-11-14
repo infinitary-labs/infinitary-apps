@@ -26,6 +26,7 @@ import { writeArtifact } from "../workspace/artifacts";
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { forgeAuthRequired } from "../workspace/forgeAuth";
 import { git, inheritWorktreeRemotes } from "../workspace/git";
+import { branchOfTask, defaultTaskBranch } from "../workspace/taskBranches";
 import { type MovedFolders, packWork, readManifest, unpackWork } from "../workspace/workMove";
 import {
   type DependencyInstall,
@@ -35,7 +36,6 @@ import {
   OLDER_SEEDED_REF,
   SEEDED_REF,
   sourceRefPatterns,
-  TASK_BRANCH_PREFIX,
   type TaskWorkspace,
   WorkspaceService,
   type WorkspaceServiceOptions,
@@ -69,8 +69,9 @@ function checkPushOrigin(project: { origin: string; pushOrigin?: string } | unde
  *
  * A project is cloned here once, from where it lives, with this computer's
  * own git and sign-in: a bare clone in `repos/` that knows only `origin`'s
- * default branch. Each task then gets a working copy of its own on
- * `fm/task-<id>`, made exactly as the home makes one (`WorkspaceService`):
+ * default branch. Each task then gets a working copy of its own on the
+ * branch the home names, `fm/task-<id>` when it names none, made exactly as
+ * the home makes one (`WorkspaceService`):
  * from `origin`'s default branch, fetched first, or a warm working copy
  * from the pool; its dependencies installed the same way. The crewmate
  * pushes from it with this computer's own sign-in.
@@ -197,6 +198,7 @@ export class WorkingCopies {
     project: { origin: string; pushOrigin?: string } | undefined,
     seed?: string,
     base?: WorkingCopyBase,
+    branch?: string,
   ): Promise<PreparedCopy> {
     return this.serial(task, async () => {
       if (base?.task === task) throw new Error("A working copy must be separate from its source.");
@@ -216,6 +218,7 @@ export class WorkingCopies {
         repo?.dir,
         base ?? startAt,
         project?.pushOrigin ? project : undefined,
+        branch,
       );
       const host = project ? forgeOf(project.origin).host : null;
       return {
@@ -568,7 +571,7 @@ export class WorkingCopies {
     return this.serial(task, async () => {
       const workspace = await this.workspaceOf(task);
       if (!workspace) throw new Error("No working copy is here for this task.");
-      const branch = `${TASK_BRANCH_PREFIX}${task}`;
+      const branch = workspace.branch || (await branchOfTask(workspace.repoDir, task));
       const { manifest, pack } = await packWork(
         workspace.cwd,
         branch,
@@ -621,7 +624,7 @@ export class WorkingCopies {
           have: [...new Set(tips.split("\n").filter(Boolean))].slice(0, 64),
         };
       }
-      const branch = `${TASK_BRANCH_PREFIX}${checked(task)}`;
+      const branch = request.branch || defaultTaskBranch(checked(task));
       if (request.bundle && files.bundle && !(await commitOf(repoDir, head))) {
         const to = `refs/infinitary/sources/${checked(task)}-move`;
         await takeBundle(repoDir, files.bundle, request.bundle, `refs/heads/${branch}`, to, head);
@@ -642,7 +645,13 @@ export class WorkingCopies {
         if (remote) await inheritWorktreeRemotes(repoDir, dir, remote, branch);
       } else {
         dir = (
-          await this.workspace.createTaskWorktree(checked(task), repoDir, { headSha: head }, remote)
+          await this.workspace.createTaskWorktree(
+            checked(task),
+            repoDir,
+            { headSha: head },
+            remote,
+            branch,
+          )
         ).cwd;
       }
       await unpackWork(dir, pack, folders, request.pack);
@@ -729,7 +738,7 @@ export class WorkingCopies {
     // Every working copy here was made on its task's branch, which stays the
     // task's wherever its checkout points now, as a reviewer's checks out the
     // version it reads: its work is kept with the copy's, and it goes with it.
-    const branch = `${TASK_BRANCH_PREFIX}${task}`;
+    const branch = await branchOfTask(workspace.repoDir, task);
     if (!workspace.branch && (await commitOf(workspace.repoDir, `refs/heads/${branch}`)))
       return { ...workspace, branch };
     return workspace;

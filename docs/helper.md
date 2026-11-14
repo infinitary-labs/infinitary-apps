@@ -40,7 +40,7 @@ Until it is made, Infinitary's work is read where it is, in Firstmate 3000's fol
 | `running.lock` | The process that works from the folder now |
 | `tasks/<task>/` | One crewmate conversation the home opened here (below), written by `PlacedTasks` (`src/core/helper/placedTasks.ts`), the one writer of `tasks/` |
 | `repos/` | One bare clone per project the home gave it work in, from where the project lives (below, "Its working copies") |
-| `worktrees/<task>/` | One task's working copy, on its branch `fm/task-<task>` |
+| `worktrees/<task>/` | One task's working copy, on the branch the home names, `fm/task-<task>` when it names none |
 | `worktree-pool/`, `worktree-trash/` | Warm working copies between tasks, and retired ones being deleted, as the home keeps its own |
 | `default-workspace/` | This computer's own local workspace, for a task with no project |
 | `bundles/`, `artifacts/` | A task's branch or kept work waiting for the home to read it, and the pieces of an artifact the home is writing here |
@@ -690,7 +690,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   It is made under a temporary name and takes its own only once whole, so a failed clone leaves nothing behind.
   Its git answers GitHub with this computer's own sign-in in `forges/` when it has one (above, "Running"); a GitHub refusal reads as GitHub's sign-in being needed (`forgeAuthRequired`), and git never waits on a terminal.
 - **The working copy.**
-  `inf:working-copy:prepare` makes the task's working copy exactly as the home makes one (`WorkspaceService`): on `fm/task-<task>`, from `origin`'s default branch fetched first, or from a warm working copy in the pool.
+  `inf:working-copy:prepare` makes the task's working copy exactly as the home makes one (`WorkspaceService`): on the branch the request names (`branch`, the task record's), `fm/task-<task>` without one, marked as the task's, from `origin`'s default branch fetched first, or from a warm working copy in the pool.
   Asked again it answers the working copy that is there.
   A task with no project gets one of this computer's own default workspace, started at the commit of the home's that it was sent first (below, "Seeding").
   `inf:working-copy:install` installs its dependencies as the home installs a new one's.
@@ -713,7 +713,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   `inf:working-copy:status` answers, with what the working copy holds, the branch it has checked out and that commit (`checkedOut`).
 - **Keeping and deleting.**
   Once the task's conversation is closed for good, `inf:working-copy:keep` saves what the working copy holds that never merged - uncommitted edits, its checkout's commits and its branch's - as one commit on the task's kept ref, as the home saves its own.
-  The task's branch is `fm/task-<task>` wherever the checkout points, as a reviewer's checks out the version it reads.
+  The task's branch is the one marked as the task's, or `fm/task-<task>`, wherever the checkout points, as a reviewer's checks out the version it reads.
   A keep reads the working copy each time it is asked, never from `orders.jsonl`, and a kept commit that already holds all of it is the answer again; once nothing is unmerged, a commit an earlier keep saved here is the answer, so the home takes it first.
   `inf:working-copy:retire` deletes the working copy only when the commit it names is the one kept here and holds every commit of the checkout and the branch that never merged, or, with none, when nothing is unmerged; the copy goes to the pool or the trash, and its branch, kept ref and bundles go with it.
 - **An artifact.**
@@ -1033,7 +1033,7 @@ Nothing moves work on its own, to balance load or to fail over.
   No commit is made to carry them, a checkout off its branch or in a merge, rebase, cherry-pick, revert or bisect is refused, as is one with changes inside a submodule, which git's trees cannot check, or a submodule at a commit none of its remotes holds, or submodules git cannot list, and a link is kept as a link.
   A clean submodule is checked out again on the receiving side at the commit that left, or the unpack fails there.
   Unpacking writes nothing through a link already on the receiving side, the working copy and the task's folders themselves included, and reads and writes each file a piece at a time.
-  A computer that runs work packs on `inf:working-copy:move-out`, and its pack comes here through `inf:working-copy:read` with the ref `move`; a computer that takes the task gets the bundle and the pack as source files and makes its working copy on `inf:working-copy:move-in` (`PlacedCopies.moveOut`, `moveIn`).
+  A computer that runs work packs on `inf:working-copy:move-out`, and its pack comes here through `inf:working-copy:read` with the ref `move`; a computer that takes the task gets the bundle and the pack as source files and makes its working copy on `inf:working-copy:move-in`, on the branch the move named (`PlacedCopies.moveOut`, `moveIn`).
   The side that unpacks checks each part's digest and then the restored index and working tree against the trees the packing side read, so what arrives is what left.
   A pack that cannot be made changes nothing: the move waits again and says why.
 - **One commit.**

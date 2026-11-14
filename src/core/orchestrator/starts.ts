@@ -441,6 +441,7 @@ export class CrewStarts {
           repoDir,
           headSha ? { headSha } : branchFrom,
           preparedPublicationRemote(this.core.options.tasks.get(taskId)),
+          record?.branch || undefined,
         );
       }
       cwd ??= task.workspace?.cwd ?? "";

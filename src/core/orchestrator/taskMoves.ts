@@ -23,6 +23,7 @@ import { LOCAL_MACHINE_ID } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
 import { TaskService } from "../tasks/taskService";
+import { defaultTaskBranch } from "../workspace/taskBranches";
 import { type MovedFolders, packWork, unpackWork } from "../workspace/workMove";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import type { MoveAsk, MoveTarget, TaskRuntime } from "./crewRuntime";
@@ -801,6 +802,7 @@ export class TaskMoves {
             headSha: out.head,
           },
           preparedPublicationRemote(record),
+          out.branch,
         );
         await unpackWork(workspace.cwd, pack, this.localMoveFolders(taskId));
         cwd = workspace.cwd;
@@ -814,6 +816,7 @@ export class TaskMoves {
           pack,
         });
         cwd = copy.cwd;
+        branch = copy.branch || out.branch;
       }
       if (move.from !== RUNS_ON_THIS_MAC) machines?.forgetExecution?.(taskId);
       const who = move.by === "captain" ? "the captain" : "the first mate";
@@ -970,7 +973,7 @@ export class TaskMoves {
           await this.options.workspace.removeTaskWorktree({
             taskId,
             cwd,
-            branch: record.branch || `fm/task-${taskId}`,
+            branch: record.branch || defaultTaskBranch(taskId),
             repoDir: record.repoDir,
           });
       } else {
@@ -1011,7 +1014,7 @@ export class TaskMoves {
           await this.options.workspace.removeTaskWorktree({
             taskId,
             cwd: move.fromDir,
-            branch: `fm/task-${taskId}`,
+            branch: record.branch || defaultTaskBranch(taskId),
             repoDir: record.repoDir,
           });
       } else {

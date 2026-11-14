@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-branch-marks",
+      "reason": "A task's working copy now takes its branch name from the task's record and marks the branch as the task's, so cleanup and moves no longer depend on the fm/task-<id> name; every branch is still named fm/task-<id>, so nothing a person sees changes."
+    }
+  ]
+}

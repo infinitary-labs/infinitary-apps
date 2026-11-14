@@ -4,7 +4,8 @@ import type { CrewCore } from "./crewCore";
 
 /**
  * Leftover task branches (INF-3060 finding 6; docs/task-record.md, fleet
- * hygiene): an `fm/task-*` branch no live task explains. Boot once wrote
+ * hygiene): a task branch no live task explains - one marked as a task's,
+ * or named `fm/task-*` (`taskBranches.ts`). Boot once wrote
  * them as a feed line at every start, with nothing to click. Now boot
  * retires them the way a closed task's branch goes: whatever each holds
  * that never landed is saved on its task's hidden kept ref, then the branch

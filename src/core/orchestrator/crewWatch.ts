@@ -148,7 +148,7 @@ export class CrewWatch {
    * worktree retire it, and so does every directory under the worktrees
    * area that no record explains - the same rule as a close: the work is
    * saved on a hidden kept ref first, and only a failed save keeps a tree.
-   * Every `fm/task-*` branch that no live row explains - no record at all,
+   * Every task branch (marked as a task's, or `fm/task-*`) that no live row explains - no record at all,
    * or a row that is closed without a worktree, or open and not yet
    * started - is deleted too, its work saved on the kept ref first
    * (`leftoverBranches.ts`); only one that could not be deleted is named.

@@ -22,6 +22,7 @@ import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../works
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
+import { defaultTaskBranch } from "../workspace/taskBranches";
 import {
   checkedOutRefFor,
   type DependencyInstall,
@@ -142,6 +143,9 @@ export class PlacedCopies {
     // A projectless builder starts from the home's workspace. Its reviewer
     // already has the builder's repository there, so sends no seed.
     const seed = repoId || base ? undefined : await this.seed(deviceId, taskId);
+    // The name the task's record holds; a computer without the change makes
+    // `fm/task-<id>` and the answer's branch is saved (`task-branch-names.md`).
+    const branch = this.options.tasks.get(taskId)?.branch || undefined;
     let answer: WorkOrderResponse<"inf:working-copy:prepare">;
     try {
       answer = await this.ask(deviceId, "inf:working-copy:prepare", [
@@ -158,6 +162,7 @@ export class PlacedCopies {
             : {}),
           ...(base ? { base } : {}),
           ...(seed ? { seed } : {}),
+          ...(branch ? { branch } : {}),
         },
       ]);
     } catch (caught) {
@@ -589,6 +594,7 @@ export class PlacedCopies {
             : {}),
         ...(seed ? { seed } : {}),
         head: input.head,
+        branch: input.branch,
       };
       const asked = await this.ask(deviceId, "inf:working-copy:move-in", [
         { orderId: `move-in:${taskId}:${attempt}:ask`, ...base },
@@ -923,7 +929,7 @@ export class PlacedCopies {
     this.saidLeftover.add(key);
     this.options.broadcastEvent({
       type: "firstmate_note",
-      text: `${this.options.deviceName(deviceId)} keeps a leftover working copy, because its work could not be saved on ${HERE.this} first: fm/task-${taskId}.`,
+      text: `${this.options.deviceName(deviceId)} keeps a leftover working copy, because its work could not be saved on ${HERE.this} first: ${this.options.tasks.get(taskId)?.branch || defaultTaskBranch(taskId)}.`,
       taskId,
     });
   }

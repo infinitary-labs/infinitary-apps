@@ -160,15 +160,16 @@ describe("card action receipts", () => {
     }
   });
 
-  // INF-3116, answer A: the Allow card lands on Settings -> General, which adds its site.
-  it("routes a private site's Allow card into General with the site to add on arrival", async () => {
+  // INF-3116, answer A, moved by INF-4150's plan: the Allow card lands on
+  // Settings -> Integrations, whose Private sites box adds its site.
+  it("routes a private site's Allow card into Integrations with the site to add on arrival", async () => {
     const ipc = request();
     const sent = useShellStore.getState().actOnCard("choice", "open");
     ipc.resolve({ effect: { kind: "open", target: "settings", privateSite: "wiki.corp.example" } });
     await sent;
     expect(useShellStore.getState()).toMatchObject({
       view: "settings",
-      settingsSection: "general",
+      settingsSection: "integrations",
       pendingPrivateSite: "wiki.corp.example",
     });
     useShellStore.setState({ pendingPrivateSite: null, settingsSection: null, view: "home" });

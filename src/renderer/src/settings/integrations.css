@@ -240,3 +240,79 @@
 .fm-integrations-inbox .fm-integrations-door {
   padding: 0;
 }
+
+/* Private sites: one box holds the title, the list and the way to add (design skill IntegrationRow). */
+.fm-private-sites:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.fm-private-sites-head {
+  padding: 14px var(--space-4) 12px;
+}
+
+.fm-private-sites-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fm-private-sites-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 46px;
+  padding: 9px var(--space-4);
+  border-top: 1px solid var(--line-1);
+  min-width: 0;
+}
+
+.fm-private-sites-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+}
+
+.fm-private-sites-suffix {
+  font-family: var(--font-ui);
+  color: var(--fg-3);
+}
+
+.fm-private-sites-empty {
+  margin: 0;
+  padding: 12px var(--space-4);
+  border-top: 1px solid var(--line-1);
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.fm-private-sites-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 10px var(--space-4) 12px;
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-private-sites-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fm-private-sites-hint,
+.fm-private-sites-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.fm-private-sites-error {
+  color: var(--danger);
+}

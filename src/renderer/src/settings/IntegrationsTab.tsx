@@ -39,6 +39,7 @@ import "./integrations.css";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
 import { OutsideDataRow } from "./OutsideDataRow";
+import { PrivateSitesSection } from "./PrivateSitesSection";
 import {
   LABEL_GAP,
   ROW_GAP,
@@ -485,6 +486,8 @@ export function IntegrationsTab() {
         }}
         onLink={() => change(() => window.infinitary.integrations.linkInbox())}
       />
+      {/* What task browsers may reach beyond public websites (docs/task-browser.md). */}
+      <PrivateSitesSection />
       {(kept.length > 0 || inbox) && (
         // A section is 32 above, and the tab's column already spaces each child by 12.
         <div data-integrations-data="" style={{ marginTop: `calc(${SECTION_GAP} - ${ROW_GAP})` }}>

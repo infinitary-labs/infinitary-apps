@@ -507,13 +507,13 @@ const actionLines = {
   // "Private sites"): the first mate only offers the app's Allow card, and
   // only the captain's click on it, or their own entry in Settings, adds one.
   "private-site-allow": {
-    area: "general",
+    area: "integrations",
     tier: "hands",
     handover: "settings",
     change: "inf:browser:private-sites:add",
     current: "inf:browser:private-sites",
     value: z.strictObject({ site: z.string().min(1).max(2_048) }),
-    line: "Offer to let task browsers on every computer reach a private site - one on an office, home or VPN network - when a crewmate's report or the captain names one: app_change puts up the app's own card, and only the captain's Allow click adds it to Settings → General → Private sites. Pass site: the name the crewmate gave (wiki.corp.example), or a suffix of two or more parts (.corp.example.com) for every name under it, never an address. A listed site opens over https or http from any page; it never reaches loopback, link-local or cloud metadata addresses, so a program that listens only inside this computer stays out of reach.",
+    line: "Offer to let task browsers on every computer reach a private site - one on an office, home or VPN network - when a crewmate's report or the captain names one: app_change puts up the app's own card, and only the captain's Allow click adds it to Settings → Integrations → Private sites. Pass site: the name the crewmate gave (wiki.corp.example), or a suffix of two or more parts (.corp.example.com) for every name under it, never an address. A listed site opens over https or http from any page; it never reaches loopback, link-local or cloud metadata addresses, so a program that listens only inside this computer stays out of reach.",
     toRequest: (v) => [v.site],
     readValue: (c) => ({ privateSites: (c as PrivateSitesView).sites }),
     done: (v) => `allowed ${String(v.site)} for task browsers`,
@@ -533,7 +533,7 @@ const actionLines = {
           suffix
             ? `Task browsers on all your computers could then open every site whose name ends in ${site}, on an office, home or VPN network, over https or http.`
             : `Task browsers on all your computers could then open ${site} on an office, home or VPN network, over https or http.`,
-          "Any page a crewmate opens could reach it too, as in an ordinary browser. It never reaches a program that listens only inside this computer, or cloud metadata addresses. You can remove it in Settings → General → Private sites.",
+          "Any page a crewmate opens could reach it too, as in an ordinary browser. It never reaches a program that listens only inside this computer, or cloud metadata addresses. You can remove it in Settings → Integrations → Private sites.",
         ],
         label: "Allow",
         decline: "Not now",

@@ -80,14 +80,18 @@ export function listsPrivateSite(sites: readonly string[], hostname: string): bo
   return sites.some((site) => (site.startsWith(".") ? host.endsWith(site) : host === site));
 }
 
-/** Settings' words for the list (`PrivateSitesSection`). */
+/** Settings' words for the list (`PrivateSitesSection`, in Settings › Integrations). */
 export const PRIVATE_SITES_WORDS = {
   title: "Private sites",
-  lead: "Sites on an office, home or VPN network that task browsers may open, on every computer. Add a name, or a suffix such as .corp.example.com for every name under it.",
-  empty:
-    "None yet. Task browsers reach public websites and the pages your projects serve on the computer they run on.",
+  lead: "Sites on your office, home or VPN network that task browsers may open. The list applies on all your computers.",
+  empty: "None listed. When a crewmate needs one, your first mate asks you first.",
+  suffix: "and every name under it",
+  open: "Site",
+  openLabel: "Add a private site",
   field: "Private site",
   placeholder: "wiki.corp.example",
+  hint: "A name, or a suffix such as .corp.example.com for every name under it.",
   add: "Add",
+  cancel: "Cancel",
   remove: "Remove",
 } as const;

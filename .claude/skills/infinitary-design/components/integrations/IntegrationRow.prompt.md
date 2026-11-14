@@ -52,7 +52,19 @@ Last, one `--text-sm --fg-2` line, with no button beside it, says whether a rule
 It opens "Your first mate is told of a note at once." while a turned-on rule listens, "The rule Infinitary Inbox events is paused in Automation, so your first mate is not told of a note.
 Notes are still saved." while the rule is paused there, and "No rule listens to the notes, so your first mate is not told of one." once it is deleted, so the box never says the first mate is told when it is not (the captain's q4).
 The words are `INBOX_WORDS` in `src/shared/integrations.ts`.
-The tab closes with its Data section, under the inbox box: the Settings `SectionLabel` "Data", 32 above as any section, then one `SettingRow`, Delete Gmail and Calendar content, as General's Purge task data row is drawn, with its `--text-sm --fg-3` description and a small ghost "Delete" that turns into a danger "Confirm delete" on the first press, and whose answer takes the description's place.
+Private sites, the sites on an office, home or VPN network that task browsers may open (`docs/task-browser.md`, "Private sites"), is its own `fm-forges-box` after the Infinitary command box and before Data, and the box holds the whole list: nothing of it sits outside the box.
+Its head, padded 14 by `--space-4`, is the name "Private sites" in `--text-md` weight 500 over one `--text-sm --fg-2` lead, "Sites on your office, home or VPN network that task browsers may open.
+The list applies on all your computers."
+Below a `--line-1` hairline each site is one row, as a connection's row is spaced (9 by `--space-4`, at least 46 tall): the name in mono `--text-sm --fg-1`, ellipsized, and a small secondary "Remove", which acts at once with no confirmation; a suffix's row adds "and every name under it" in `--font-ui` `--fg-3` after the name.
+With none listed, one `--text-sm --fg-3` line takes the rows' place, "None listed.
+When a crewmate needs one, your first mate asks you first."
+The foot, below its own hairline, is one `ConnectChips` chip, "+ Site", and pressing it opens the add form in the chip's place and focuses the field: the `--text-xs --fg-2` label "Private site", a mono `Input` (placeholder "wiki.corp.example") at the fields' 420 measure, the `--text-sm --fg-3` hint "A name, or a suffix such as .corp.example.com for every name under it.", then a small primary "Add", disabled until the field holds words, beside a ghost "Cancel".
+Add or Enter adds the site, closes the form and puts the focus back on "+ Site"; Cancel or Escape closes it with nothing added and puts the focus back the same way.
+A refused name keeps the form open with its words, and its reason takes the hint's place as one `--danger` `--text-sm` line, until the words change.
+The app's Allow card lands here: Settings opens on Integrations, the box comes into view and takes the focus, and the site it names is listed.
+The box is absent where the build keeps no task browsers; it shows on the first mate's computer and on a computer that controls it.
+The words are `PRIVATE_SITES_WORDS` in `src/shared/privateSites.ts`.
+The tab closes with its Data section, under the Private sites box: the Settings `SectionLabel` "Data", 32 above as any section, then one `SettingRow`, Delete Gmail and Calendar content, as General's Purge task data row is drawn, with its `--text-sm --fg-3` description and a small ghost "Delete" that turns into a danger "Confirm delete" on the first press, and whose answer takes the description's place.
 While the inbox is kept, a second row of the same shape follows, "Delete Infinitary Inbox notes", described "Removes every note your scripts sent and the inbox's key, and turns the inbox off."
 It shows whether or not Google is connected, since removing Google deletes none of what the agents read, and is absent where the build keeps no such content; the words are `SAVED_OUTSIDE_DATA_WORDS` in `src/shared/savedOutsideData.ts`.
 Settings -> Projects' "Where your projects live" ends with one pointer line, "Your GitHub, GitLab and GitHub Enterprise sign-ins are in Integrations.", in `--text-sm --fg-3`, with a small secondary "Open Integrations".

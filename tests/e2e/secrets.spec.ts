@@ -21,6 +21,7 @@ import {
   SECRET_APPROVAL_CARD_WORDS,
   SECRET_CHECKED_WORDS,
   SECRET_DEVICE_WORDS,
+  SECRET_QUESTION_WORDS,
   SECRET_STATE_WORDS,
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
@@ -412,8 +413,9 @@ test("ending bounded access makes the next exact read ask again", async () => {
 // no card, while different arguments ask again; a failed confirmation on Always
 // allow runs and saves nothing; Don't allow raises no other card and saves
 // nothing, so the next run asks again; the window cannot add a decision; Keep it
-// leaves a decision and Remove makes the run ask again.
-// Every card is answered by keys. Native custody and confirmation stand in; no
+// leaves a decision and Remove makes the run ask again, both asked on the
+// decision's own row in Settings (INF-4090).
+// Every card and question is answered by keys. Native custody and confirmation stand in; no
 // account, native store or network.
 test("saved decisions are made on the approval card and removed from Settings", async () => {
   const cwd = realpathSync(scratchDir("secrets-decisions-recipient-"));
@@ -540,7 +542,7 @@ test("saved decisions are made on the approval card and removed from Settings", 
     expect(added.rules).toHaveLength(1);
     expect(await saved()).toBe(1);
 
-    // The page lists it as one sentence; Remove asks on a card, and the run asks again.
+    // The page lists it as one sentence; Remove asks on its row, and the run asks again.
     const sentence = decisionWords(
       {
         id: "shown",
@@ -561,26 +563,42 @@ test("saved decisions are made on the approval card and removed from Settings", 
       name: SECRETS_WORDS.remove,
       exact: true,
     });
-    // Keep it leaves the decision saved, and the same run still needs no card.
+    // Keep it, focused when the question opens, leaves the decision saved, and the same run
+    // still needs no card.
+    const keepIt = decisions().getByRole("button", {
+      name: SAVED_DECISION_WORDS.keep,
+      exact: true,
+    });
     await focusOn(remove);
     await pressKey(remove, "Enter");
-    await answer(SAVED_DECISION_WORDS.removeTitle, SAVED_DECISION_WORDS.keep);
+    await expect(decisions()).toContainText(SAVED_DECISION_WORDS.removeTitle);
+    await expect(keepIt).toBeFocused();
+    await pressKey(keepIt, "Enter");
+    await expect(remove).toBeFocused();
     await expect(shownCard(page, SAVED_DECISION_WORDS.removeTitle)).toHaveCount(0);
     expect(await saved()).toBe(1);
     const kept = await run("deploy-kept");
     await expect.poll(() => state(kept.request)).toEqual({ state: "completed", confirmations: 2 });
     expect(readFileSync(marker, "utf8")).toBe("ran\nran\nran\n");
-    await runFromSearch(app, page, "settings.secrets");
-    await secretsArea(page, "decisions");
     await focusOn(remove);
     await pressKey(remove, "Enter");
-    await expect(cardBody(page, SAVED_DECISION_WORDS.removeTitle).locator("body")).toContainText(
-      sentence,
-    );
-    await answer(SAVED_DECISION_WORDS.removeTitle, SAVED_DECISION_WORDS.removeConfirm);
+    await expect(decisions()).toContainText(SAVED_DECISION_WORDS.removeBody);
+    await expect(decisions()).toContainText(sentence);
+    const confirmRemove = decisions().getByRole("button", {
+      name: SAVED_DECISION_WORDS.removeConfirm,
+      exact: true,
+    });
+    await focusOn(confirmRemove);
+    await pressKey(confirmRemove, "Enter");
     await expect.poll(() => state(again.request)).toMatchObject({ confirmations: 3 });
     // The confirmation comes before the save, so wait for the decision itself to go.
     await expect.poll(saved).toBe(0);
+    await expect(section).toContainText(SAVED_DECISION_WORDS.saved);
+    // A request's card shows beside the first mate, not over Settings, so go back.
+    const leave = page.getByRole("button", { name: "Back", exact: true });
+    await focusOn(leave);
+    await pressKey(leave, "Enter");
+    await expect(section).toBeHidden();
     const asks = await run("deploy-3");
     expect(asks.state).toBe("waiting");
     await answer(title, SECRETS_WORDS.deny);
@@ -924,35 +942,36 @@ test("a paired phone's switch in Devices enrolls its key only through the code c
     await expect(devices.getByText(PHONE.label, { exact: true })).toBeVisible();
     await expect(devices.getByText(`Code ${approvalCode(key)}`, { exact: true })).toBeVisible();
 
-    // Turning the switch off asks on the Stop approvals card; Keep approvals leaves the phone approving.
+    // Turning the switch off asks under the switch (INF-4090), never on a card; Keep approvals
+    // leaves the phone approving and hands focus back to the switch.
     await toDevices();
     await focusOn(approves);
     await pressKey(approves, "Space");
-    const stopping = shownCard(page, SECRET_DEVICE_WORDS.stopTitle(PHONE.label));
-    await expect(stopping).toBeVisible();
-    await pressKey(
-      stopping.getByRole("button", { name: SECRET_DEVICE_WORDS.keep, exact: true }),
-      "Enter",
-    );
-    await expect(stopping).toHaveCount(0);
-    await toDevices();
+    const stopTitle = SECRET_DEVICE_WORDS.stopTitle(PHONE.label);
+    await expect(row).toContainText(stopTitle);
+    await expect(shownCard(page, stopTitle)).toHaveCount(0);
+    const keepApprovals = row.getByRole("button", { name: SECRET_DEVICE_WORDS.keep, exact: true });
+    await expect(keepApprovals).toBeFocused();
+    await pressKey(keepApprovals, "Enter");
+    await expect(row).not.toContainText(stopTitle);
+    await expect(approves).toBeFocused();
     await expect(approves).toHaveAttribute("aria-checked", "true");
     await expect(row).toContainText(SECRET_DEVICE_WORDS.on(approvalCode(key)));
 
-    // Settings -> Secrets' own Stop approvals raises the same card, and confirming it turns the switch off.
+    // Settings -> Secrets' own Stop approvals asks the same on its row, and confirming turns the switch off.
     await runFromSearch(app, page, "settings.secrets");
     await secretsArea(page, "phone");
     const stop = devices.getByRole("button", { name: SECRETS_WORDS.stopApprovals, exact: true });
     await focusOn(stop);
     await pressKey(stop, "Enter");
-    await expect(stopping).toBeVisible();
-    await pressKey(
-      stopping.getByRole("button", { name: SECRETS_WORDS.stopApprovals, exact: true }),
-      "Enter",
-    );
-    await expect(stopping).toHaveCount(0);
-    await runFromSearch(app, page, "settings.secrets");
-    await secretsArea(page, "phone");
+    await expect(devices).toContainText(stopTitle);
+    const confirmStop = devices.getByRole("button", {
+      name: SECRETS_WORDS.stopApprovals,
+      exact: true,
+    });
+    await focusOn(confirmStop);
+    await pressKey(confirmStop, "Enter");
+    await expect(shownCard(page, stopTitle)).toHaveCount(0);
     await expect(section.getByRole("region", { name: SECRETS_WORDS.devicesRegion })).toContainText(
       SECRETS_WORDS.noDevices,
     );
@@ -1042,6 +1061,100 @@ printf '%s' "$SERVICE_TOKEN"
     expect(
       await app.evaluate(() => (globalThis as SecretsJourneyGlobal).secretsJourney.confirmations),
     ).toBe(1);
+  } finally {
+    await launched.close();
+  }
+});
+
+// Intent: the captain's ask (INF-4090): "clicking "Forget" for a secret in the
+// settings page would take me back to the main screen and pop up a card just to
+// confirm the forget.. let's plan for the confirmation flow to happen in the
+// settings page right where the forget flow already is". Data: two disposable
+// secrets in launchSecrets' home. Completion: Forget turns the row's buttons into
+// the question with Keep secret focused, the window stays on Settings with no
+// card, Keep secret changes nothing and returns focus to Forget, and Forget
+// secret removes the secret, says so and focuses the next secret. Prerequisites:
+// Electron and the built renderer; custody stands in. No native store, account
+// or network.
+test("Forget asks on the secret's own row and the window stays on Settings", async () => {
+  const launched = await launchSecrets();
+  const { app, page } = launched;
+  const section = settingsSection(page, "secrets");
+  const kept = { ref: "calendar", label: "Planning calendar", environment: "" };
+  const forgotten = { ref: "website-staging", label: "Website deployment", environment: "Staging" };
+  const entries = () =>
+    app.evaluate(async () =>
+      (
+        await (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.view()
+      ).entries
+        .map((entry) => entry.ref)
+        .sort(),
+    );
+  const secretCards = () =>
+    app.evaluate(
+      async () =>
+        (
+          await (globalThis as SecretsJourneyGlobal).secretsJourney.core.dispatch(
+            "inf:cards:list",
+            [],
+          )
+        ).filter((card) => card.id.startsWith("card-secrets-")).length,
+    );
+  try {
+    await app.evaluate(
+      async (_electron, saved) => {
+        for (const entry of saved)
+          await (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.put({
+            ...entry,
+            value: `invented-${entry.ref}-proof-token`,
+            expectedVersion: 0,
+            expectedRevision: null,
+          });
+      },
+      [kept, forgotten],
+    );
+    await runFromSearch(app, page, "settings.secrets");
+    const row = section.getByRole("listitem").filter({ hasText: forgotten.label });
+    await pressKey(row.locator("summary"), "Enter");
+    const forget = row.getByRole("button", { name: SECRETS_WORDS.forget, exact: true });
+    const title = SECRET_QUESTION_WORDS.forgetTitle(secretName([kept, forgotten], forgotten.ref));
+    const keep = row.getByRole("button", { name: SECRET_QUESTION_WORDS.keepSecret, exact: true });
+    const confirm = row.getByRole("button", { name: SECRET_QUESTION_WORDS.forget, exact: true });
+
+    // Forget asks on the row: the question replaces Replace and Forget, Keep secret has focus.
+    await focusOn(forget);
+    await pressKey(forget, "Enter");
+    await expect(row).toContainText(title);
+    for (const line of SECRET_QUESTION_WORDS.forgetLines) await expect(row).toContainText(line);
+    await expect(keep).toBeFocused();
+    await expect(row.getByRole("button", { name: SECRETS_WORDS.replace, exact: true })).toHaveCount(
+      0,
+    );
+    await expect(section).toBeVisible();
+    await expect(shownCard(page, title)).toHaveCount(0);
+    expect(await secretCards()).toBe(0);
+    await regionShot(row, test.info().outputPath("forget-question.png"));
+
+    // Keep secret changes nothing and returns focus to Forget.
+    await pressKey(keep, "Enter");
+    await expect(forget).toBeFocused();
+    await expect(row).not.toContainText(title);
+    expect(await entries()).toEqual([kept.ref, forgotten.ref].sort());
+
+    // Tab reaches Forget secret from Keep secret; Enter forgets, and focus moves to the next secret.
+    await pressKey(forget, "Enter");
+    await expect(keep).toBeFocused();
+    await pressKey(keep, "Tab");
+    await expect(confirm).toBeFocused();
+    await pressKey(confirm, "Enter");
+    await expect(section.getByRole("status")).toHaveText(SECRET_QUESTION_WORDS.forgotten);
+    await expect(row).toHaveCount(0);
+    await expect(
+      section.getByRole("listitem").filter({ hasText: kept.label }).locator("summary"),
+    ).toBeFocused();
+    expect(await entries()).toEqual([kept.ref]);
+    await expect(section).toBeVisible();
+    expect(await secretCards()).toBe(0);
   } finally {
     await launched.close();
   }
@@ -1230,14 +1343,7 @@ for (const theme of ["dark", "light"] as const) {
       const rules = await savedRules();
       expect(rules.every((rule) => rule.effect === "allow")).toBe(true);
       // INF-1690 piece 1: saved decisions are plain sentences on the page, each
-      // naming exactly its secret, and Remove asks on the host's card.
-      const confirmRules = async (rulesTitle: string, confirm: string) => {
-        const rulesCard = shownCard(page, rulesTitle);
-        await expect(cardBody(page, rulesTitle).locator("body")).toBeVisible();
-        await runFromSearch(app, page, "focus.card-actions");
-        await pressKey(rulesCard.getByRole("button", { name: confirm, exact: true }), "Enter");
-        await expect(rulesCard).toHaveCount(0);
-      };
+      // naming exactly its secret, and Remove asks on the decision's own row (INF-4090).
       await runFromSearch(app, page, "settings.secrets");
       await secretsArea(page, "decisions");
       const decisions = section.getByRole("region", {
@@ -1261,8 +1367,15 @@ for (const theme of ["dark", "light"] as const) {
         mirror.getByRole("button", { name: SECRETS_WORDS.remove, exact: true }),
         "Enter",
       );
-      await confirmRules(SAVED_DECISION_WORDS.removeTitle, SAVED_DECISION_WORDS.removeConfirm);
-      // The card closes before the confirmed save is written, so read until it lands.
+      await expect(mirror).toContainText(SAVED_DECISION_WORDS.removeTitle);
+      await expect(shownCard(page, SAVED_DECISION_WORDS.removeTitle)).toHaveCount(0);
+      const confirmRemove = mirror.getByRole("button", {
+        name: SAVED_DECISION_WORDS.removeConfirm,
+        exact: true,
+      });
+      await focusOn(confirmRemove);
+      await pressKey(confirmRemove, "Enter");
+      // The confirmation comes before the save, so read until it lands.
       await expect
         .poll(() =>
           app.evaluate(async () =>

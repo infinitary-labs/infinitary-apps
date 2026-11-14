@@ -26,6 +26,10 @@ The task is named by its own title; a request no task made names only when.
 A request timestamp is never called proof that a value was used.
 A reference appears only when another secret has the same name and place; the row never shows a saved version or a raw timestamp.
 Opening a row offers Replace, Forget and that secret's saved decisions.
+Forget asks on the row, never on a card, and the window stays on Settings: Replace and Forget turn into the question, "Forget the Website deployment secret?", its two sentences ("Infinitary removes it from this computer, and no task can use it after this." and "This does not turn it off where it was made, and it cannot take back a copy a program already received.") in `--fg-2`, then a small secondary Keep secret, which has focus so Enter never forgets, and a small danger Forget secret.
+Keep secret changes nothing and returns focus to Forget; Forget secret removes that exact secret, the status line says "Secret forgotten locally." and focus moves to the next secret, or Add secret when none is left.
+Remove, Stop approvals and Delete history ask the same way on their own rows, with their own words; one question is open at a time, and closing its row or area, leaving Settings or starting another Secrets action drops it.
+Each answer is a one-time pass the app made for that question, so the page never forgets or removes by itself.
 A sign-in the app keeps for one of its own services, such as Google's, opens to one line saying Infinitary keeps it for a sign-in made in Integrations and uses it without asking, and one secondary button, Manage in Integrations, reached with Tab after the row; it has no Replace, Forget or decisions.
 A temporary read shows on the secret's own row as Reading until a time, beside End access; there is no separate temporary-access section.
 Discovery is global: crew can find the names without receiving the values or permission to use them.
@@ -41,10 +45,10 @@ Nothing shows an existing value, prefix or encoded substitute.
 
 Four rows under the list open in place, each a disclosure with its name on the left and a short muted summary on the right: Saved decisions (how many), Approve from your phone (the phone's name, or Not set up), What happened (how many uses and the newest) and Keep a copy.
 Saved decisions are the existing Never, Ask and Allow rules, each in one plain sentence that names its secret and the run it covers, such as Always give Website deployment (Staging) to /bin/sh deploy.sh --staging. or Never give Planning calendar to anyone., with Remove.
-Remove opens a host-authored card that quotes that sentence and needs fresh system confirmation; a click alone grants nothing.
+Remove asks on that decision's row, quoting that sentence, with Keep it and Remove decision, and Remove decision needs fresh system confirmation; a click alone grants nothing.
 The page has no rule editor, dropdowns or program rehearsal form: a decision is made only on a request's approval card, and the crew checks a run before asking.
 Approve from your phone lists each enrolled device with the code compared when it enrolled, beside Stop approvals; with none, it says to turn on Approves secret uses beside the phone in Settings → Devices, where approvals are set up (`components/devices/DevicesTab`, "Approving secret uses").
-What happened reports metadata, storage use and export, with explicit deletion on a host-authored confirmation card and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient.
+What happened reports metadata, storage use and export, with explicit deletion asked in place, Delete Secrets history? with Keep history and Delete history, and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient.
 History labels imported records as recovered history, with their source and recovery time under a disclosure, never as live approvals.
 Keep a copy uses native file choices; a separately held recovery key never enters a card, a conversation or an agent-readable reply.
 It says in short sentences that the copy and the key are kept apart, that there is no key reset, and that restoring replaces values, clears saved decisions, phone approvals and temporary access, and keeps history.

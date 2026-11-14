@@ -906,31 +906,27 @@ export async function startPhoneHome(
           result = { paired: phone.id };
           break;
         }
-        // The switch turned off for every approving device: each raises its Stop approvals card, and the captain's
-        // click on it stops that device's approvals after this computer's own confirmation.
+        // The switch turned off for every approving device: each asks Stop approvals under the switch in Settings,
+        // and the captain's answer there stops that device's approvals after this computer's own confirmation.
         case "POST secrets-stop": {
           const before = secretConfirms;
           for (const { device } of (await core.services.secrets.view()).devices) {
-            await core.dispatch("inf:secrets:action", [{ kind: "forget-device", device }]);
-            const card = (await core.dispatch("inf:cards:list", [])).find(
-              (one) => one.id === `card-secrets-forget-device-${device}`,
+            const { question } = await core.dispatch("inf:secrets:action", [
+              { kind: "forget-device", device },
+            ]);
+            if (
+              question?.about.kind !== "device" ||
+              question.about.device !== device ||
+              question.confirm.label !== SECRETS_WORDS.stopApprovals
+            )
+              throw new Error(`No Stop approvals question is waiting for ${device}`);
+            // The answer returns once its decision ends, as the Settings page awaits it.
+            await within(
+              core
+                .dispatch("inf:secrets:action", [{ kind: "answer", pass: question.confirm.pass }])
+                .then(() => undefined),
+              "The stop decision did not end on this computer",
             );
-            const stop = card?.actions.find(
-              (action) => action.label === SECRETS_WORDS.stopApprovals,
-            );
-            if (!card || !stop) throw new Error(`No Stop approvals card is waiting for ${device}`);
-            let unsubscribe = () => {};
-            const decided = new Promise<void>((resolve) => {
-              unsubscribe = core.events.subscribe((channel) => {
-                if (channel === "inf:secrets:changed") resolve();
-              });
-            });
-            try {
-              await core.dispatch("inf:cards:act", [card.id, stop.id, "chrome"]);
-              await within(decided, "The stop decision did not end on this computer");
-            } finally {
-              unsubscribe();
-            }
           }
           result = {
             devices: (await core.services.secrets.view()).devices,

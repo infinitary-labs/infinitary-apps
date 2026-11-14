@@ -8,9 +8,11 @@ import {
   SAVED_DECISION_WORDS,
   SECRET_APPROVAL_CARD_WORDS,
   SECRET_DEVICE_WORDS,
+  SECRET_QUESTION_WORDS,
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
   type SecretEntryInput,
+  type SecretsView,
   secretApprovalsSchema,
   secretsNamed,
   secretsViewSchema,
@@ -142,6 +144,25 @@ function fixture() {
       throw new Error("No trusted action with that label.");
     await controller.decide(effect.arg);
   };
+  /**
+   * The Settings page answering the question on its row: the pass the view
+   * carried, sent through the window's own action, as SecretsTab sends it.
+   */
+  const answer = async (
+    label: string,
+    question?: SecretsView["question"],
+    controller = settings,
+  ): Promise<SecretsView> => {
+    const asked = question === undefined ? (await controller.view()).question : question;
+    const pass =
+      asked?.confirm.label === label
+        ? asked.confirm.pass
+        : asked?.keep.label === label
+          ? asked.keep.pass
+          : undefined;
+    if (!pass) throw new Error("No question on a Settings row answers with that label.");
+    return controller.action({ kind: "answer", pass });
+  };
   return {
     settings,
     make,
@@ -150,6 +171,7 @@ function fixture() {
     withdrawn,
     ended,
     click,
+    answer,
     request,
     sent,
     custody,
@@ -200,7 +222,7 @@ describe("trusted Secrets settings", () => {
     const earlier = f.settings.view();
     await started;
     try {
-      await f.click("Delete history");
+      await f.answer(SECRET_QUESTION_WORDS.deleteHistory);
       const current = await f.settings.view();
       expect(current.history).toEqual([]);
       release();
@@ -280,8 +302,7 @@ describe("trusted Secrets settings", () => {
     expect((await settings.action({ kind: "backup-recovery" })).message).toBe(
       SECRETS_RECOVERY_WORDS.save.saved,
     );
-    await settings.action({ kind: "forget", ref: INPUT.ref });
-    const oldOffer = f.cards.at(-1);
+    const oldQuestion = (await settings.action({ kind: "forget", ref: INPUT.ref })).question;
     const restored = await settings.action({ kind: "restore-recovery" });
     expect(restored.message).toBe(SECRETS_RECOVERY_WORDS.restore.restored);
     expect(restored.home).not.toBe(original.home);
@@ -291,7 +312,8 @@ describe("trusted Secrets settings", () => {
     expect(JSON.stringify(restored)).not.toContain(TOKEN);
     expect(selected?.archive.every((byte) => byte === 0)).toBe(true);
     expect(selected?.key.every((byte) => byte === 0)).toBe(true);
-    await f.click("Forget secret", oldOffer, settings);
+    expect(restored.question).toBeNull();
+    await f.answer(SECRET_QUESTION_WORDS.forget, oldQuestion, settings);
     expect((await settings.view()).entries).toHaveLength(1);
   });
 
@@ -628,7 +650,7 @@ describe("trusted Secrets settings", () => {
       value: "stale replacement",
     };
     await f.settings.action({ kind: "forget", ref: INPUT.ref });
-    await f.click("Forget secret");
+    await f.answer(SECRET_QUESTION_WORDS.forget);
     const recreated = await f.settings.put({ ...INPUT, label: "New planning credential" });
     expect(recreated.entries[0]?.version).toBe(original.version);
     const refused = await f.settings.put(staleForm);
@@ -639,15 +661,84 @@ describe("trusted Secrets settings", () => {
     expect(f.sent).toEqual([`Bearer ${TOKEN}`]);
   });
 
+  // Intent: the captain's ask (INF-4090, direction A): "let's plan for the
+  // confirmation flow to happen in the settings page right where the forget
+  // flow already is". Forget asks on its row with no card, and only the
+  // one-time pass the host made for that question, spent once from the
+  // Settings page, forgets.
+  it("Forget asks on its Settings row, never a card, and only that question's pass forgets, once", async () => {
+    const f = fixture();
+    const saved = (await f.settings.put(INPUT)).entries[0];
+    if (!saved) throw new Error("No entry to forget.");
+    const asked = (await f.settings.action({ kind: "forget", ref: INPUT.ref })).question;
+    expect(f.cards).toEqual([]);
+    expect(asked).toMatchObject({
+      about: { kind: "forget", ref: INPUT.ref },
+      title: SECRET_QUESTION_WORDS.forgetTitle(INPUT.label),
+      lines: [...SECRET_QUESTION_WORDS.forgetLines],
+      confirm: { label: SECRET_QUESTION_WORDS.forget },
+      keep: { label: SECRET_QUESTION_WORDS.keepSecret },
+    });
+    if (!asked) throw new Error("Forget asked nothing.");
+    expect((await f.settings.view()).offeredCard).toBeNull();
+
+    // A made-up pass, and the question's own pass sent as card chrome, do nothing.
+    await f.settings.action({ kind: "answer", pass: "made-up" });
+    await f.settings.decide(asked.confirm.pass);
+    expect((await f.settings.view()).entries).toHaveLength(1);
+    expect((await f.settings.view()).question).toEqual(asked);
+
+    // Keep secret changes nothing and closes the question; its passes stop working.
+    const kept = await f.answer(SECRET_QUESTION_WORDS.keepSecret);
+    expect(kept.question).toBeNull();
+    expect(kept.entries).toEqual([saved]);
+    await f.settings.action({ kind: "answer", pass: asked.confirm.pass });
+    expect((await f.settings.view()).entries).toEqual([saved]);
+
+    // Another Secrets action drops an open question, and its pass with it.
+    const dropped = (await f.settings.action({ kind: "forget", ref: INPUT.ref })).question;
+    await f.settings.action({ kind: "delete-history" });
+    expect((await f.settings.view()).question?.about).toEqual({ kind: "history" });
+    await f.answer(SECRET_QUESTION_WORDS.forget, dropped);
+    expect((await f.settings.view()).entries).toEqual([saved]);
+
+    // Forget secret forgets it, says so, and a second answer does nothing more.
+    const again = (await f.settings.action({ kind: "forget", ref: INPUT.ref })).question;
+    const forgotten = await f.answer(SECRET_QUESTION_WORDS.forget, again);
+    expect(forgotten.entries).toEqual([]);
+    expect(forgotten.question).toBeNull();
+    expect(forgotten.message).toBe(SECRET_QUESTION_WORDS.forgotten);
+    const replaced = await f.settings.put(INPUT);
+    await f.answer(SECRET_QUESTION_WORDS.forget, again);
+    expect((await f.settings.view()).entries).toEqual(replaced.entries);
+    expect(f.cards).toEqual([]);
+    expect(f.confirms()).toBe(0);
+
+    // The window carries card offers too: an approval card's offer sent as a Settings answer
+    // spends nothing, asks nothing and leaves the card and its use waiting.
+    const receipt = await f.request("card-offer-as-answer");
+    const card = f.cards.at(-1);
+    const offer = card?.actions.find((action) => action.label === SECRETS_WORDS.once)?.effect;
+    if (offer?.kind !== "host" || !offer.arg) throw new Error("No approval card offer.");
+    f.confirmation(true);
+    await f.settings.action({ kind: "answer", pass: offer.arg });
+    expect(f.confirms()).toBe(0);
+    expect(f.sent).toEqual([]);
+    expect(f.cards).toEqual([card]);
+    expect(f.ended).toEqual([]);
+    expect(
+      (await f.settings.view()).uses.find((use) => use.request === receipt.request)?.state,
+    ).toBe("waiting");
+  });
+
   it("a Forget offer cannot delete a different entry that reused its displayed version", async () => {
     // INF-1109's trusted deletion must keep the exact entry the person reviewed.
     const f = fixture();
     await f.settings.put(INPUT);
-    await f.settings.action({ kind: "forget", ref: INPUT.ref });
-    const oldOffer = f.cards.at(-1);
+    const asked = (await f.settings.action({ kind: "forget", ref: INPUT.ref })).question;
     await (await f.owner()).forgetSecret(INPUT.ref);
     const recreated = await f.settings.put({ ...INPUT, label: "New planning credential" });
-    await f.click("Forget secret", oldOffer);
+    await f.answer(SECRET_QUESTION_WORDS.forget, asked);
     expect((await f.settings.view()).entries).toEqual(recreated.entries);
   });
 
@@ -692,10 +783,12 @@ describe("trusted Secrets settings", () => {
     const cards = f.cards.length;
     await f.settings.action({ kind: "forget", ref: kept });
     expect(f.cards).toHaveLength(cards);
-    expect((await f.settings.view()).entries.map((entry) => entry.ref)).toContain(kept);
+    const after = await f.settings.view();
+    expect(after.question).toBeNull();
+    expect(after.entries.map((entry) => entry.ref)).toContain(kept);
 
     await f.settings.action({ kind: "save-rules", rules: [] });
-    await f.click(SAVED_DECISION_WORDS.removeConfirm);
+    await f.answer(SAVED_DECISION_WORDS.removeConfirm);
     expect(owner.authority()?.rules).toEqual([]);
   });
 
@@ -966,17 +1059,19 @@ describe("trusted Secrets settings", () => {
     expect(f.confirms()).toBe(before + 1);
     expect((await run("deploy-3", ["--production"])).state).toBe("waiting");
 
-    // The page removes it with Remove; the card says what it removes, in the page's sentence,
+    // The page removes it with Remove; its question says what it removes, in the page's sentence,
     // naming the run the approval card showed.
     const shown = await f.settings.view();
     const saved = shown.rules[0];
     if (!saved) throw new Error("Always allow this saved no decision");
-    await f.settings.action({ kind: "save-rules", rules: [] });
-    const removing = f.cards.at(-1);
+    const removing = (await f.settings.action({ kind: "save-rules", rules: [] })).question;
+    expect(removing?.about).toEqual({ kind: "rule", rule: saved.id });
     expect(removing?.title).toBe(SAVED_DECISION_WORDS.removeTitle);
-    expect(removing?.body).toContain(decisionWords(saved, secretName(shown.entries, saved.secret)));
-    expect(removing?.body).toContain(`to ${run1}.`);
-    await f.click(SAVED_DECISION_WORDS.removeConfirm);
+    expect(removing?.lines).toContain(
+      decisionWords(saved, secretName(shown.entries, saved.secret)),
+    );
+    expect(removing?.lines[0]).toContain(`to ${run1}.`);
+    await f.answer(SAVED_DECISION_WORDS.removeConfirm);
     expect((await f.settings.view()).rules).toEqual([]);
     expect((await run("deploy-4", ["--staging"])).state).toBe("waiting");
   });
@@ -1083,11 +1178,13 @@ describe("trusted Secrets settings", () => {
 
     const saved = shown.rules[0];
     if (!saved) throw new Error("no saved decision");
-    await f.settings.action({ kind: "save-rules", rules: [] });
-    const removing = f.cards.at(-1);
+    const removing = (await f.settings.action({ kind: "save-rules", rules: [] })).question;
+    expect(f.cards).toHaveLength(cards);
     expect(removing?.title).toBe(SAVED_DECISION_WORDS.removeTitle);
-    expect(removing?.body).toContain(decisionWords(saved, secretName(shown.entries, saved.secret)));
-    await f.click(SAVED_DECISION_WORDS.removeConfirm);
+    expect(removing?.lines).toContain(
+      decisionWords(saved, secretName(shown.entries, saved.secret)),
+    );
+    await f.answer(SAVED_DECISION_WORDS.removeConfirm, removing);
     expect((await f.settings.view()).rules).toEqual([]);
     expect((await run("deploy-2", ["--production"])).state).toBe("waiting");
   });
@@ -1126,7 +1223,7 @@ describe("trusted Secrets settings", () => {
     expect(exported).toContain("waiting-at-quit");
     await reopened.action({ kind: "delete-history" });
     expect((await reopened.view()).history).toHaveLength(1);
-    await f.click("Delete history", f.cards.at(-1), reopened);
+    await f.answer(SECRET_QUESTION_WORDS.deleteHistory, undefined, reopened);
     view = await reopened.view();
     expect(view.history).toEqual([]);
   });
@@ -1236,10 +1333,10 @@ describe("a phone's Secrets approvals", () => {
     expect((await asAView(() => f.settings.approvals(PHONE), { view: PAIRED })).asked).toBe(false);
     expect(f.confirms()).toBe(1);
 
-    // Off asks once more, on the card that stops its approvals.
+    // Off asks once more, under the switch: the question that stops its approvals.
     await f.settings.action({ kind: "forget-device", device: PHONE });
     expect((await f.settings.view()).devices[0]?.stopping).toBe(true);
-    await f.click(SECRETS_WORDS.stopApprovals);
+    await f.answer(SECRETS_WORDS.stopApprovals);
     expect((await f.settings.view()).devices).toEqual([]);
     expect(f.confirms()).toBe(2);
   });
@@ -1441,12 +1538,15 @@ describe("a phone's Secrets approvals", () => {
     await f.settings.put(INPUT);
     const phone = phoneKey();
     await enrolled(f, phone.key);
-    await f.settings.action({ kind: "forget-device", device: PHONE });
-    expect(f.cards.at(-1)?.title).toBe(SECRET_DEVICE_WORDS.stopTitle("Kun’s iPhone"));
-    await f.click(SECRET_DEVICE_WORDS.keep);
+    const asked = (await f.settings.action({ kind: "forget-device", device: PHONE })).question;
+    expect(asked?.title).toBe(SECRET_DEVICE_WORDS.stopTitle("Kun’s iPhone"));
+    expect(asked?.about).toEqual({ kind: "device", device: PHONE });
+    await f.answer(SECRET_DEVICE_WORDS.keep);
     expect((await f.settings.view()).devices).toHaveLength(1);
+    expect(f.confirms()).toBe(1);
     await f.settings.action({ kind: "forget-device", device: PHONE });
-    await f.click(SECRETS_WORDS.stopApprovals);
+    await f.answer(SECRETS_WORDS.stopApprovals);
+    expect(f.confirms()).toBe(2);
     expect((await f.settings.view()).devices).toEqual([]);
     expect((await f.settings.approvals(PHONE)).device).toBeNull();
   });

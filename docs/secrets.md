@@ -169,7 +169,7 @@ Secure entry asks for a name, the masked value and an optional place, never a re
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
 Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
 The page ends with Website sign-ins in every storage state (`docs/task-browser.md`, "Saved sign-ins"): they keep their own storage, outside the protected owner, and the section says so (the consumer register's Remembered websites row).
-Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it on the host's Remove card; the page has no rule editor and no rehearsal form: the crew checks a run before asking.
+Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it and asks on that decision's row ("Asking in place"); the page has no rule editor and no rehearsal form: the crew checks a run before asking.
 A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow saves nothing.
 A Never or Ask an earlier version saved keeps applying and is listed with Remove, but nothing makes a new one.
 The exact-use card's title names the secrets and, in quotes, the task that asked; its body is labelled rows, one fact each, at one width of at most 44rem (`secretApprovalBody` in `approvalCard.ts`, words in `SECRET_APPROVAL_CARD_WORDS`).
@@ -188,10 +188,22 @@ A replacement names its reference; one without a reference is refused.
 The command-search entry focuses the Secrets heading in every availability state, and the forms and their actions use the ordinary keyboard controls.
 Enabled controls carry no disabled-reason label; unavailable actions keep their current explanation.
 Secure entry passes a value directly to the protected owner and returns metadata, never the value, its prefix or an encoded substitute.
-It raises app-authored cards for exact uses, removing a saved decision, forgetting and history deletion.
-Their private offers are spent once through host chrome; a saved card from a previous process is inert, and an agent-written card cannot mint one.
+It raises app-authored cards for exact uses, and asks in place for forgetting, removing a saved decision, stopping a device's approvals and history deletion ("Asking in place").
+A card's private offers are spent once through host chrome; a saved card from a previous process is inert, and an agent-written card cannot mint one.
 An Allow click still requires fresh system authentication; a failed or unavailable confirmation leaves the request waiting and reopens its card.
 Remove only proposes a change, and native confirmation covers the exact proposed revision.
+
+### Asking in place
+
+Forget on a secret's row, Remove on a saved decision, Stop approvals on an approving device and Delete history ask on the row they are about, never on a card, so the window stays on Settings.
+The row's buttons turn into the question: its title, its sentences, Keep (focused, so Enter never confirms) and the danger answer, as Remove project asks in Settings → Projects (`SecretQuestion.tsx`).
+The controller still makes a one-time pass for each answer, as it does for a card, and carries the open question on the view (`question`, `secretQuestionSchema`): what it is about, its words and both passes.
+The page answers with the `answer` action on the home-only `inf:secrets:action`, naming the pass; the controller spends it once and runs that answer, checking the secret's exact version and revision, or the authority revision, as the card did.
+A pass the controller did not make, one already spent, one from before a restore, Start over or restart, and a card's offer sent as an answer do nothing; a question's pass sent as card chrome does nothing either.
+One question is open at a time: starting another Secrets action drops it and its passes, and so does closing its row or area or leaving Settings, which answers Keep.
+Remove and Stop approvals still ask the system to confirm after the answer and save nothing when it is cancelled or fails; Forget and Delete history never asked it.
+Keep returns focus to the button that asked; after Forget, focus moves to the next secret, or Add secret when none is left.
+A paired phone never sees these questions: only this computer's window reads the Secrets view.
 
 ### Saved decisions
 
@@ -202,8 +214,8 @@ Because Never outranks Ask and Ask outranks Allow, every Ask rule on one of thos
 If the decisions changed in between, the run stands and the rule is not saved, and Settings says so.
 The rule's note holds the run in words (`runWords`), and the page and its cards say a decision in one sentence (`decisionWords`), such as "Always give Website deployment to /bin/sh deploy.sh --staging."
 Don't allow denies the use without a confirmation and raises no other card; it saves nothing, so the next run asks again.
-Removing a decision from Settings raises a card naming it in the same sentence and saves the remaining rules under fresh confirmation; a card shown against an older revision saves nothing.
-Settings can only remove: a `save-rules` request that adds or changes a rule, or removes more than one, raises no card and saves nothing.
+Removing a decision from Settings asks on its row, naming it in the same sentence, and saves the remaining rules under fresh confirmation; a question asked against an older revision saves nothing.
+Settings can only remove: a `save-rules` request that adds or changes a rule, or removes more than one, asks nothing and saves nothing.
 The command facade exposes the agent-visible entries' metadata, injection, status and cancellation, not this controller or a broker result reader.
 It namespaces command intent IDs by task to prevent accidental collisions; the namespace is not an authenticated identity or an access grant.
 A requester that received a waiting or executing receipt hears the terminal metadata through its task's existing durable inbox, once, after cleanup and journaling settle.
@@ -311,13 +323,13 @@ Enrollment is the captain's on this computer.
 It is set up where the phone is listed: Settings → Devices shows a switch, Approves secret uses, on each paired phone's row while Secrets are set up and open (`PhoneApprovals.tsx`).
 Turning it on (`ask-phone`) asks that phone, and only that one, to offer its key: its next `inf:secrets:approvals` answers `asked`, and the phone offers its key by itself.
 The row then says it waits for the phone, then that the phone offered its key, with Compare codes, which shows the card.
-Turning it off before the card is confirmed (`cancel-phone`) stops asking and takes the card down; turning it off once the phone approves raises the Stop approvals card.
+Turning it off before the card is confirmed (`cancel-phone`) stops asking and takes the card down; turning it off once the phone approves asks Stop approvals under the switch ("Asking in place").
 The asking is process-local, like the cards it leads to, and enrolls nothing by itself.
 The home records the paired device whose request offered the key (`paired` on the enrolled device, named by the connection through `askingView`), so the switch reads on for that phone's row; it is a name, never authority.
 The same key offered again from a paired phone the home has not linked it to, such as a key enrolled before the home recorded which phone it came from, raises the same card, and confirming it links the key at the next generation.
 The card shows eight digits from SHA-256 of the offered key (`approvalCode`), which the phone computes from its own key and shows in its Settings; the captain compares them, and only Confirm and allow on this computer, with this computer's fresh confirmation, saves the device into the authority file at its next generation.
 The phone's own copy of that card says to do it on the computer.
-Settings → Secrets → Approve from your phone also lists each enrolled device with its code and Stop approvals, which asks for the same confirmation.
+Settings → Secrets → Approve from your phone also lists each enrolled device with its code and Stop approvals, which asks the same question on its row and the same system confirmation.
 A change of devices moves the authority revision, so a use already waiting under the earlier authority is invalidated rather than run.
 A restore from a recovery backup keeps no enrolled device ("Recovery boundary"), so each phone sets up approvals again.
 

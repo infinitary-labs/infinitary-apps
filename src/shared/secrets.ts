@@ -124,7 +124,7 @@ export const secretApprovalDeviceSchema = z.strictObject({
   code: z.string(),
   /** The paired device that offered this key, whose row in Settings -> Devices carries its switch. */
   paired: z.string().optional(),
-  /** The card that stops its approvals is waiting for the captain. */
+  /** The question that stops its approvals is waiting for the captain. */
   stopping: z.boolean().optional(),
 });
 /**
@@ -139,6 +139,25 @@ export const secretPhoneSetupSchema = z.strictObject({
   /** The card with the code to compare, while it is up. */
   card: z.string().optional(),
 });
+/**
+ * The one question Settings asks on the row it is about (docs/secrets.md,
+ * "Asking in place"): Forget on a secret's row, Remove on a saved decision,
+ * Stop approvals on an approving device, and Delete history. Each answer is a
+ * one-time pass the host made for this question; only this computer's window
+ * reads the view and spends one through the `answer` action.
+ */
+export const secretQuestionSchema = z.strictObject({
+  about: z.discriminatedUnion("kind", [
+    z.strictObject({ kind: z.literal("forget"), ref: secretRefSchema }),
+    z.strictObject({ kind: z.literal("rule"), rule: z.string() }),
+    z.strictObject({ kind: z.literal("device"), device: z.string() }),
+    z.strictObject({ kind: z.literal("history") }),
+  ]),
+  title: z.string(),
+  lines: z.array(z.string()),
+  confirm: z.strictObject({ label: z.string(), pass: z.string() }),
+  keep: z.strictObject({ label: z.string(), pass: z.string() }),
+});
 export const secretsViewSchema = z.strictObject({
   availability: z.enum([
     "not-enabled",
@@ -151,6 +170,8 @@ export const secretsViewSchema = z.strictObject({
   ]),
   home: z.string().nullable(),
   offeredCard: z.string().nullable(),
+  /** The question waiting on its row in Settings; absent from an older home. */
+  question: secretQuestionSchema.nullable().optional(),
   entries: z.array(secretMetadataSchema),
   uses: z.array(secretUseSchema),
   rules: z.array(secretRuleSchema),
@@ -214,6 +235,8 @@ export const secretActionSchema = z.discriminatedUnion("kind", [
   // Settings -> Devices' switch on a paired phone: ask it to offer its key, or stop asking.
   z.strictObject({ kind: z.literal("ask-phone"), paired: z.string().min(1).max(64) }),
   z.strictObject({ kind: z.literal("cancel-phone"), paired: z.string().min(1).max(64) }),
+  // The answer to the question on a Settings row: the one-time pass the view carried.
+  z.strictObject({ kind: z.literal("answer"), pass: z.string().min(1).max(64) }),
 ]);
 
 /**
@@ -488,8 +511,10 @@ export const SECRET_DEVICE_WORDS = {
   comparing: (name: string) =>
     `${name} offered its key. Check that the card's code matches the one ${name} shows.`,
   compare: "Compare codes",
-  showCard: "Show the card",
-  stopping: "Confirm on the card to stop its approvals.",
+  stopLines: (label: string) => [
+    `${label} will no longer approve Secrets uses. Uses it could approve wait for you on this computer instead.`,
+    `${label} stays paired. The system will ask you to confirm.`,
+  ],
   cancelled: "The switch was turned off before this phone was confirmed.",
 } as const;
 
@@ -585,6 +610,28 @@ export const SECRET_CHECKED_WORDS = {
   readYes: "Yes, it changes nothing there",
   readNo: "No, it may change something there",
   request: "Exact request",
+} as const;
+
+/** The words of the questions Settings asks on a row (`secretQuestionSchema`), and what each answer reports. */
+export const SECRET_QUESTION_WORDS = {
+  forgetTitle: (name: string) => `Forget the ${name} secret?`,
+  forgetLines: [
+    "Infinitary removes it from this computer, and no task can use it after this.",
+    "This does not turn it off where it was made, and it cannot take back a copy a program already received.",
+  ],
+  forget: "Forget secret",
+  keepSecret: "Keep secret",
+  forgotten: "Secret forgotten locally.",
+  notForgotten: "This secret changed or storage is locked. Nothing was forgotten.",
+  historyTitle: "Delete Secrets history?",
+  historyLines: [
+    "Infinitary forgets which tasks asked for your secrets, and when. It never kept the secrets themselves there.",
+    "Uses still waiting or running keep their record until they end. Export the history first if you want a copy; backups and copies you exported stay as they are.",
+  ],
+  deleteHistory: "Delete history",
+  keepHistory: "Keep history",
+  historyDeleted: "Secrets history deleted.",
+  historyBusy: "Wait for pending or running uses to end before deleting history.",
 } as const;
 
 export const SAVED_DECISION_WORDS = {

@@ -26,6 +26,7 @@ import { openIntegrations } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input } from "../design";
 import { thisDesktop } from "../design/core/desktop";
+import { SecretQuestion } from "./SecretQuestion";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
 import { WebsiteSignInsSection } from "./WebsiteSignInsSection";
 import "./secrets.css";
@@ -34,6 +35,17 @@ type Entry = SecretsView["entries"][number];
 type Rule = SecretsView["rules"][number];
 type Area = (typeof SECRETS_AREAS)[number]["value"];
 type Act = (action: SecretAction) => Promise<void>;
+/** Where a question was asked from, so it opens beside the button clicked: a secret's row, or the area under the list. */
+type Asked = { at: string };
+/**
+ * Asks the host a question for this row: `asks` names the button that asked
+ * (its `data-secret-asks`), so Keep returns focus to it once it is drawn
+ * again, and `at` the place it sits.
+ */
+type Ask = (action: SecretAction, asks: string, at: string) => void;
+/** Sends one answer's pass; the page never decides by itself. */
+type Answer = (pass: string, confirmed: boolean) => void;
+type Asking = { view: SecretsView; asked: Asked | null; ask: Ask; answer: Answer; busy: boolean };
 /** A badge only when something is wrong; a working store says nothing about itself. */
 const PROBLEM: Partial<Record<SecretsView["availability"], string>> = {
   get locked() {
@@ -62,6 +74,32 @@ export function SecretsTab() {
   const entryTrigger = useRef<HTMLButtonElement | null>(null);
   const returnEntryFocus = useRef(false);
   const root = useRef<HTMLElement>(null);
+  const [asked, setAsked] = useState<Asked | null>(null);
+  const questionTrigger = useRef<string | null>(null);
+  const focusAfter = useRef<(() => HTMLElement | null | undefined) | null>(null);
+  const question = view?.question ?? null;
+  const openQuestion = useRef(question);
+  openQuestion.current = question;
+  // Leaving Settings drops an open question: its Keep pass changes nothing.
+  useEffect(
+    () => () => {
+      const open = openQuestion.current;
+      if (open)
+        void window.infinitary.secrets
+          .action({ kind: "answer", pass: open.keep.pass })
+          .catch(() => undefined);
+    },
+    [],
+  );
+  useLayoutEffect(() => {
+    const pick = focusAfter.current;
+    if (!pick || question) return;
+    focusAfter.current = null;
+    // Only focus the question took with it: a person who moved on keeps where they are.
+    const active = root.current?.ownerDocument.activeElement;
+    if (active && active !== active.ownerDocument.body && active.isConnected) return;
+    pick()?.focus();
+  }, [question]);
   useLayoutEffect(() => {
     if (editing !== null || !returnEntryFocus.current) return;
     returnEntryFocus.current = false;
@@ -107,6 +145,38 @@ export function SecretsTab() {
       setBusy(false);
     }
   };
+  const ask: Ask = (action, asks, at) => {
+    questionTrigger.current = asks;
+    setAsked({ at });
+    void act(action);
+  };
+  const answer: Answer = (pass, confirmed) => {
+    const asks = questionTrigger.current;
+    const forgetting = confirmed && question?.about.kind === "forget";
+    // After Forget the row is gone: focus the next secret, or Add secret when none is left.
+    const row = forgetting
+      ? root.current?.querySelector("[data-secret-question]")?.closest("li")
+      : null;
+    const next = row?.nextElementSibling ?? row?.previousElementSibling ?? null;
+    focusAfter.current = forgetting
+      ? () =>
+          (next?.isConnected ? next.querySelector<HTMLElement>("summary") : null) ??
+          root.current?.querySelector<HTMLElement>("[data-secret-add]")
+      : () =>
+          (asks
+            ? root.current?.querySelector<HTMLElement>(
+                `[data-secret-asks="${CSS.escape(asks)}"] button`,
+              )
+            : null) ?? root.current?.querySelector<HTMLElement>("[data-secrets-heading]");
+    void act({ kind: "answer", pass });
+  };
+  /** Closing the row or area a question sits in drops it, and changes nothing. */
+  const drop = (at: string) => {
+    if (question && asked?.at === at) {
+      focusAfter.current = null;
+      void act({ kind: "answer", pass: question.keep.pass });
+    }
+  };
   const beginEntry = (entry: Entry | "new", trigger: HTMLButtonElement) => {
     entryTrigger.current = trigger;
     setEditing(entry);
@@ -115,7 +185,8 @@ export function SecretsTab() {
     returnEntryFocus.current = true;
     setEditing(null);
   };
-  const toggleArea = (area: Area, open: boolean) =>
+  const toggleArea = (area: Area, open: boolean) => {
+    if (!open) drop(area);
     setOpened((current) => {
       if (current.has(area) === open) return current;
       const next = new Set(current);
@@ -123,6 +194,7 @@ export function SecretsTab() {
       else next.delete(area);
       return next;
     });
+  };
   const all = view?.entries ?? [];
   const query = search.toLocaleLowerCase();
   const entries = all
@@ -274,9 +346,9 @@ export function SecretsTab() {
                 <SecretRow
                   key={entry.ref}
                   entry={entry}
-                  view={view}
+                  asking={{ view, asked, ask, answer, busy }}
+                  onClose={() => drop(`row:${entry.ref}`)}
                   act={act}
-                  busy={busy}
                   canWrite={canWrite}
                   entryNote={entryNote}
                   onReplace={(trigger) => beginEntry(entry, trigger)}
@@ -292,7 +364,11 @@ export function SecretsTab() {
               onToggle={toggleArea}
             >
               <section className="fm-secrets-area" aria-label={SECRETS_WORDS.decisionsRegion}>
-                <Decisions view={view} rules={view.rules} act={act} busy={busy} />
+                <Decisions
+                  rules={view.rules}
+                  at="decisions"
+                  asking={{ view, asked, ask, answer, busy }}
+                />
               </section>
             </QuietRow>
             <QuietRow
@@ -305,7 +381,7 @@ export function SecretsTab() {
               open={opened.has("phone")}
               onToggle={toggleArea}
             >
-              <ApprovalDevices view={view} act={act} busy={busy} />
+              <ApprovalDevices asking={{ view, asked, ask, answer, busy }} />
             </QuietRow>
             <QuietRow
               area="history"
@@ -313,7 +389,7 @@ export function SecretsTab() {
               open={opened.has("history")}
               onToggle={toggleArea}
             >
-              <History view={view} act={act} busy={busy} refresh={refresh} />
+              <History asking={{ view, asked, ask, answer, busy }} refresh={refresh} />
             </QuietRow>
             <QuietRow area="copy" summary="" open={opened.has("copy")} onToggle={toggleArea}>
               <Recovery view={view} act={act} busy={busy || editing !== null} />
@@ -332,21 +408,22 @@ export function SecretsTab() {
 /** One secret: its name, its place, and what last happened with it; opening it offers its changes. */
 function SecretRow({
   entry,
-  view,
+  asking,
+  onClose,
   act,
-  busy,
   canWrite,
   entryNote,
   onReplace,
 }: {
   entry: Entry;
-  view: SecretsView;
+  asking: Asking;
+  onClose: () => void;
   act: Act;
-  busy: boolean;
   canWrite: boolean;
   entryNote: string | undefined;
   onReplace: (trigger: HTMLButtonElement) => void;
 }) {
+  const { view } = asking;
   const uses = view.uses.filter((use) => use.secrets.some((secret) => secret.ref === entry.ref));
   const reads = view.reads.filter((read) => read.secrets.includes(entry.ref));
   const rules = view.rules.filter((rule) => rule.secret === entry.ref);
@@ -359,7 +436,12 @@ function SecretRow({
         : SECRETS_WORDS.used(dayOf(entry.lastRequest), entry.lastTask);
   return (
     <li className="fm-secrets-key">
-      <details className="fm-secrets-entry">
+      <details
+        className="fm-secrets-entry"
+        onToggle={(event) => {
+          if (!event.currentTarget.open) onClose();
+        }}
+      >
         <summary>
           <span className="fm-secrets-key-name">
             <strong>{entry.label}</strong>
@@ -378,9 +460,7 @@ function SecretRow({
           ) : (
             <OwnSecret
               entry={entry}
-              view={view}
-              act={act}
-              busy={busy}
+              asking={asking}
               canWrite={canWrite}
               entryNote={entryNote}
               onReplace={onReplace}
@@ -401,53 +481,63 @@ function SecretRow({
   );
 }
 
-/** The captain's own secret: Replace, Forget and its saved decisions. */
+/** The captain's own secret: Replace, Forget and its saved decisions; Forget asks on this row. */
 function OwnSecret({
   entry,
-  view,
-  act,
-  busy,
+  asking,
   canWrite,
   entryNote,
   onReplace,
   rules,
 }: {
   entry: Entry;
-  view: SecretsView;
-  act: Act;
-  busy: boolean;
+  asking: Asking;
   canWrite: boolean;
   entryNote: string | undefined;
   onReplace: (trigger: HTMLButtonElement) => void;
   rules: SecretsView["rules"];
 }) {
+  const { view, busy } = asking;
+  const at = `row:${entry.ref}`;
+  const question =
+    view.question?.about.kind === "forget" && view.question.about.ref === entry.ref
+      ? view.question
+      : null;
   return (
     <>
-      <div className="fm-secrets-actions">
-        <Button
-          variant="secondary"
-          off={!canWrite || entryNote !== undefined}
-          note={entryNote}
-          onClick={(event) => onReplace(event.currentTarget)}
-        >
-          {SECRETS_WORDS.replace}
-        </Button>
-        <Button
-          variant="ghost"
-          off={busy || !canWrite}
-          note={
-            !canWrite
-              ? SECRETS_WORDS.unavailable
-              : busy
-                ? m.settingsSecretsWaitForChange()
-                : undefined
-          }
-          onClick={() => void act({ kind: "forget", ref: entry.ref })}
-        >
-          {SECRETS_WORDS.forget}
-        </Button>
-      </div>
-      {rules.length > 0 && <Decisions view={view} rules={rules} act={act} busy={busy} />}
+      {question ? (
+        <SecretQuestion question={question} answering={busy} onAnswer={asking.answer} />
+      ) : (
+        <div className="fm-secrets-actions">
+          <Button
+            variant="secondary"
+            off={!canWrite || entryNote !== undefined}
+            note={entryNote}
+            onClick={(event) => onReplace(event.currentTarget)}
+          >
+            {SECRETS_WORDS.replace}
+          </Button>
+          <span data-secret-asks={`forget:${entry.ref}`}>
+            <Button
+              variant="ghost"
+              off={busy || !canWrite}
+              note={
+                !canWrite
+                  ? SECRETS_WORDS.unavailable
+                  : busy
+                    ? m.settingsSecretsWaitForChange()
+                    : undefined
+              }
+              onClick={() =>
+                asking.ask({ kind: "forget", ref: entry.ref }, `forget:${entry.ref}`, at)
+              }
+            >
+              {SECRETS_WORDS.forget}
+            </Button>
+          </span>
+        </div>
+      )}
+      {rules.length > 0 && <Decisions rules={rules} at={at} asking={asking} />}
     </>
   );
 }
@@ -501,39 +591,50 @@ function QuietRow({
   );
 }
 
-/** Saved decisions in plain sentences. Removing one asks for confirmation on a card; nothing here edits a decision. */
-function Decisions({
-  view,
-  rules,
-  act,
-  busy,
-}: {
-  view: SecretsView;
-  rules: readonly Rule[];
-  act: Act;
-  busy: boolean;
-}) {
+/** Saved decisions in plain sentences. Removing one asks on its own row; nothing here edits a decision. */
+function Decisions({ rules, at, asking }: { rules: readonly Rule[]; at: string; asking: Asking }) {
+  const { view, busy } = asking;
   if (rules.length === 0) return <p className="fm-secrets-muted">{SECRETS_WORDS.noDecisions}</p>;
   const writable = view.availability === "available";
   return (
     <ul className="fm-secrets-decisions">
       {rules.map((rule) => (
         <li key={rule.id} className="fm-secrets-row">
-          <span>{decisionWords(rule, secretName(view.entries, rule.secret))}</span>
-          <Button
-            variant="ghost"
-            pending={busy}
-            off={!writable}
-            note={writable ? undefined : SECRETS_WORDS.unavailable}
-            onClick={() =>
-              void act({
-                kind: "save-rules",
-                rules: view.rules.filter((saved) => saved.id !== rule.id),
-              })
-            }
-          >
-            {SECRETS_WORDS.remove}
-          </Button>
+          {view.question?.about.kind === "rule" &&
+          view.question.about.rule === rule.id &&
+          asking.asked?.at === at ? (
+            // The question names the decision in its first line, so the row's sentence steps aside.
+            <SecretQuestion
+              question={view.question}
+              answering={busy}
+              onAnswer={asking.answer}
+              first
+            />
+          ) : (
+            <>
+              <span>{decisionWords(rule, secretName(view.entries, rule.secret))}</span>
+              <span data-secret-asks={`rule:${at}:${rule.id}`}>
+                <Button
+                  variant="ghost"
+                  pending={busy}
+                  off={!writable}
+                  note={writable ? undefined : SECRETS_WORDS.unavailable}
+                  onClick={() =>
+                    asking.ask(
+                      {
+                        kind: "save-rules",
+                        rules: view.rules.filter((saved) => saved.id !== rule.id),
+                      },
+                      `rule:${at}:${rule.id}`,
+                      at,
+                    )
+                  }
+                >
+                  {SECRETS_WORDS.remove}
+                </Button>
+              </span>
+            </>
+          )}
         </li>
       ))}
     </ul>
@@ -668,7 +769,8 @@ function SecureEntry({
 }
 
 /** INF-1109's phone approvals (docs/secrets.md, "Remote decisions"): each enrolled device, and the way to stop it. */
-function ApprovalDevices({ view, act, busy }: { view: SecretsView; act: Act; busy: boolean }) {
+function ApprovalDevices({ asking }: { asking: Asking }) {
+  const { view, busy } = asking;
   return (
     <section className="fm-secrets-area" aria-label={SECRETS_WORDS.devicesRegion}>
       {view.devices.length === 0 ? (
@@ -682,13 +784,26 @@ function ApprovalDevices({ view, act, busy }: { view: SecretsView; act: Act; bus
                 {m.settingsSecretsDeviceCode({ code: device.code })}
               </p>
             </div>
-            <Button
-              variant="ghost"
-              pending={busy}
-              onClick={() => void act({ kind: "forget-device", device: device.device })}
-            >
-              {SECRETS_WORDS.stopApprovals}
-            </Button>
+            {view.question?.about.kind === "device" &&
+            view.question.about.device === device.device ? (
+              <SecretQuestion question={view.question} answering={busy} onAnswer={asking.answer} />
+            ) : (
+              <span data-secret-asks={`device:${device.device}`}>
+                <Button
+                  variant="ghost"
+                  pending={busy}
+                  onClick={() =>
+                    asking.ask(
+                      { kind: "forget-device", device: device.device },
+                      `device:${device.device}`,
+                      "phone",
+                    )
+                  }
+                >
+                  {SECRETS_WORDS.stopApprovals}
+                </Button>
+              </span>
+            )}
           </div>
         ))
       )}
@@ -696,45 +811,46 @@ function ApprovalDevices({ view, act, busy }: { view: SecretsView; act: Act; bus
   );
 }
 
-function History({
-  view,
-  act,
-  busy,
-  refresh,
-}: {
-  view: SecretsView;
-  act: Act;
-  busy: boolean;
-  refresh: () => Promise<void>;
-}) {
+function History({ asking, refresh }: { asking: Asking; refresh: () => Promise<void> }) {
+  const { view, busy } = asking;
   const [message, setMessage] = useState<string | null>(null);
   return (
     <section className="fm-secrets-area" aria-label={SECRETS_WORDS.historyRegion}>
       <p>{SECRETS_WORDS.history}</p>
       <p className="fm-secrets-muted">{SECRETS_WORDS.storageUse(sizeOf(view.historyBytes))}</p>
-      <div className="fm-secrets-actions">
-        <Button
-          variant="secondary"
-          onClick={() => {
-            void window.infinitary.secrets
-              .exportHistory()
-              .then((result) =>
-                setMessage(
-                  result.saved ? m.settingsSecretsHistoryExported() : m.settingsSecretsNoExport(),
-                ),
-              )
-              .catch(() => setMessage(m.settingsSecretsExportFailed()));
-          }}
-        >
-          {m.settingsSecretsExportHistory()}
-        </Button>
-        <Button variant="ghost" pending={busy} onClick={() => void act({ kind: "delete-history" })}>
-          {m.settingsSecretsDeleteHistory()}
-        </Button>
-        <Button variant="ghost" onClick={() => void refresh()}>
-          {m.settingsSecretsRefresh()}
-        </Button>
-      </div>
+      {view.question?.about.kind === "history" ? (
+        <SecretQuestion question={view.question} answering={busy} onAnswer={asking.answer} />
+      ) : (
+        <div className="fm-secrets-actions">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void window.infinitary.secrets
+                .exportHistory()
+                .then((result) =>
+                  setMessage(
+                    result.saved ? m.settingsSecretsHistoryExported() : m.settingsSecretsNoExport(),
+                  ),
+                )
+                .catch(() => setMessage(m.settingsSecretsExportFailed()));
+            }}
+          >
+            {m.settingsSecretsExportHistory()}
+          </Button>
+          <span data-secret-asks="history">
+            <Button
+              variant="ghost"
+              pending={busy}
+              onClick={() => asking.ask({ kind: "delete-history" }, "history", "history")}
+            >
+              {m.settingsSecretsDeleteHistory()}
+            </Button>
+          </span>
+          <Button variant="ghost" onClick={() => void refresh()}>
+            {m.settingsSecretsRefresh()}
+          </Button>
+        </div>
+      )}
       {message && <p role="status">{message}</p>}
       {view.history.length === 0 ? (
         <p>{m.settingsSecretsNoHistory()}</p>

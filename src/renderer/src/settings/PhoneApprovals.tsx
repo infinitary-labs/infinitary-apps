@@ -1,14 +1,16 @@
 import { SECRET_DEVICE_WORDS, type SecretAction, type SecretsView } from "@shared/secrets";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Button, Switch } from "../design";
+import { SecretQuestion } from "./SecretQuestion";
 
 /**
  * Whether a paired phone approves secret uses (INF-1690 piece 4; docs/secrets.md,
  * "Remote decisions"): Settings -> Devices shows it as a switch on the phone's
  * own row. Turning it on asks the phone to offer its approval key, and the card
  * whose code the captain compares stays the one confirmation; turning it off
- * raises the card that stops its approvals. A build without protected storage,
+ * asks under the switch, the question that stops its approvals (docs/secrets.md,
+ * "Asking in place"). A build without protected storage,
  * or storage that is not open, shows no switch.
  */
 export type PhoneApproval =
@@ -43,7 +45,7 @@ function showCard(card: string): void {
 }
 
 /** The Secrets view while storage is open, read again whenever Secrets change; null otherwise. */
-function useOpenSecrets(): [SecretsView | null, (action: SecretAction) => void] {
+function useOpenSecrets(): [SecretsView | null, (action: SecretAction) => void, boolean] {
   const [view, setView] = useState<SecretsView | null>(null);
   const read = useCallback(async () => {
     const secrets = window.infinitary.secrets;
@@ -55,37 +57,65 @@ function useOpenSecrets(): [SecretsView | null, (action: SecretAction) => void] 
     void read();
     return window.infinitary.secrets.onChange(() => void read());
   }, [read]);
+  const [busy, setBusy] = useState(false);
   const act = useCallback((action: SecretAction) => {
-    void window.infinitary.secrets.action(action).then(
-      (next) => {
-        setView(next.availability === "available" ? next : null);
-        // Turning approvals off asks once more, on the card that stops them.
-        if (next.offeredCard) showCard(next.offeredCard);
-      },
-      () => undefined,
-    );
+    setBusy(true);
+    void window.infinitary.secrets
+      .action(action)
+      .then(
+        (next) => setView(next.availability === "available" ? next : null),
+        () => undefined,
+      )
+      .finally(() => setBusy(false));
   }, []);
-  return [view, act];
+  return [view, act, busy];
 }
 
 /** The line under a paired phone's summary and its switch, or nothing while Secrets are not open. */
 export function PhoneApprovals({ paired, name }: { paired: string; name: string }) {
-  const [view, act] = useOpenSecrets();
-  if (!view) return null;
-  const approval = phoneApprovalOf(view, paired);
+  const [view, act, busy] = useOpenSecrets();
+  const approval = view ? phoneApprovalOf(view, paired) : null;
+  const question =
+    approval?.state === "on" &&
+    view?.question?.about.kind === "device" &&
+    view.question.about.device === approval.device
+      ? view.question
+      : null;
+  // Leaving Settings drops this phone's open question: its Keep pass changes nothing.
+  const open = useRef(question);
+  const wrapper = useRef<HTMLSpanElement>(null);
+  // Once the question is answered, focus goes back to the switch that asked it.
+  const answered = useRef(false);
+  useLayoutEffect(() => {
+    if (question || !answered.current) return;
+    answered.current = false;
+    // Only focus the question took with it: a person who moved on keeps where they are.
+    const active = wrapper.current?.ownerDocument.activeElement;
+    if (active && active !== active.ownerDocument.body && active.isConnected) return;
+    wrapper.current?.querySelector<HTMLElement>('[role="switch"]')?.focus();
+  }, [question]);
+  open.current = question;
+  useEffect(
+    () => () => {
+      if (open.current)
+        void window.infinitary.secrets
+          .action({ kind: "answer", pass: open.current.keep.pass })
+          .catch(() => undefined);
+    },
+    [],
+  );
+  if (!view || !approval) return null;
   const checked = approval.state !== "off";
   const line =
     approval.state === "waiting"
       ? SECRET_DEVICE_WORDS.waiting(name)
       : approval.state === "comparing"
         ? SECRET_DEVICE_WORDS.comparing(name)
-        : approval.state === "on"
-          ? approval.stopping
-            ? SECRET_DEVICE_WORDS.stopping
-            : SECRET_DEVICE_WORDS.on(approval.code)
+        : approval.state === "on" && !question
+          ? SECRET_DEVICE_WORDS.on(approval.code)
           : null;
   return (
-    <span className="fm-devices-approvals" data-phone-approvals={approval.state}>
+    <span ref={wrapper} className="fm-devices-approvals" data-phone-approvals={approval.state}>
       <Switch
         checked={checked}
         label={SECRET_DEVICE_WORDS.approves}
@@ -114,14 +144,15 @@ export function PhoneApprovals({ paired, name }: { paired: string; name: string 
           {SECRET_DEVICE_WORDS.compare}
         </Button>
       )}
-      {approval.state === "on" && approval.stopping && (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => showCard(`card-secrets-forget-device-${approval.device}`)}
-        >
-          {SECRET_DEVICE_WORDS.showCard}
-        </Button>
+      {question && (
+        <SecretQuestion
+          question={question}
+          answering={busy}
+          onAnswer={(pass) => {
+            answered.current = true;
+            act({ kind: "answer", pass });
+          }}
+        />
       )}
     </span>
   );

@@ -6,6 +6,7 @@ import {
   SAVED_DECISION_WORDS,
   SECRET_APPROVAL_CARD_WORDS,
   SECRET_DEVICE_WORDS,
+  SECRET_QUESTION_WORDS,
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
   type SecretAction,
@@ -64,7 +65,9 @@ export type SecretsSettingsOptions = {
   now?: ProtectedSecretsOptions["now"];
 };
 type Owner = { protected: ProtectedSecrets; requests: SecretRequests };
-type Offer = { group: string; run: () => Promise<void> };
+/** Where an offer's answer comes from: a host card's chrome, or the question on its row in Settings. */
+type Offer = { group: string; run: () => Promise<void>; place: "card" | "settings" };
+type Question = NonNullable<SecretsView["question"]>;
 
 /**
  * Trusted Settings/controller facade. It shares the protected owner and coordinator with
@@ -86,6 +89,8 @@ export class SecretsSettings {
   private readonly now: () => number;
   private message: string | null = null;
   private offeredCard: string | null = null;
+  /** The one question waiting on its row in Settings, with the passes that answer it. */
+  private question: (Question & { group: string }) | null = null;
   private choosingRecovery = false;
   /** Uses whose approval card is up: a phone draws its own Allow and Deny on that card. */
   private readonly useCards = new Set<string>();
@@ -177,6 +182,7 @@ export class SecretsSettings {
       availability: this.options.open ? "unavailable" : "not-enabled",
       home: null,
       offeredCard: this.offeredCard,
+      question: this.questionView(),
       entries: [],
       uses: [],
       rules: [],
@@ -229,7 +235,13 @@ export class SecretsSettings {
     return this.owner === owner && this.viewEpoch === epoch ? snapshot : this.view();
   }
 
-  /** Whether a card of this group still waits for the captain's choice. */
+  private questionView(): SecretsView["question"] {
+    if (!this.question) return null;
+    const { group: _group, ...question } = this.question;
+    return structuredClone(question);
+  }
+
+  /** Whether a card or question of this group still waits for the captain's choice. */
   private offering(group: string): boolean {
     return [...this.offers.values()].some((offer) => offer.group === group);
   }
@@ -356,8 +368,14 @@ export class SecretsSettings {
   }
 
   async action(action: SecretAction): Promise<SecretsView> {
+    if (action.kind === "answer") {
+      await this.decide(action.pass, "settings");
+      return this.view();
+    }
     this.message = null;
     this.offeredCard = null;
+    // Starting another Secrets action drops a question still open, and changes nothing.
+    this.dropQuestion();
     const owner = await this.ready();
     if (!owner) return this.view();
     switch (action.kind) {
@@ -387,13 +405,14 @@ export class SecretsSettings {
         // An app sign-in is forgotten by signing out where it was made, never here.
         const entry = entries.find((one) => one.ref === action.ref && one.discoverable);
         if (entry)
-          this.offer(
+          this.askInPlace(
             `forget-${entry.ref}`,
-            `Forget the ${nameOf(identitiesOf(entries), entry.ref)} secret?`,
-            "<p>Infinitary removes it from this computer, and no task can use it after this.</p><p>This does not turn it off where it was made, and it cannot take back a copy a program already received.</p>",
-            [
-              {
-                label: "Forget secret",
+            { kind: "forget", ref: entry.ref },
+            SECRET_QUESTION_WORDS.forgetTitle(nameOf(identitiesOf(entries), entry.ref)),
+            SECRET_QUESTION_WORDS.forgetLines,
+            {
+              confirm: {
+                label: SECRET_QUESTION_WORDS.forget,
                 run: async () => {
                   const forgotten = await owner.protected.forgetSecret(
                     entry.ref,
@@ -401,12 +420,12 @@ export class SecretsSettings {
                     entry.revision,
                   );
                   this.message = forgotten
-                    ? "Secret forgotten locally."
-                    : "This secret changed or storage is locked. Nothing was forgotten.";
+                    ? SECRET_QUESTION_WORDS.forgotten
+                    : SECRET_QUESTION_WORDS.notForgotten;
                 },
               },
-              { label: "Keep secret", run: async () => {} },
-            ],
+              keep: SECRET_QUESTION_WORDS.keepSecret,
+            },
           );
         break;
       }
@@ -415,13 +434,13 @@ export class SecretsSettings {
           .authority()
           ?.devices.find((one) => one.device === action.device);
         if (!device) break;
-        const label = escapeCardText(device.label);
-        this.offer(
+        this.askInPlace(
           `forget-device-${device.device}`,
+          { kind: "device", device: device.device },
           SECRET_DEVICE_WORDS.stopTitle(device.label),
-          `<p>${label} will no longer approve Secrets uses. Uses it could approve wait for you on this computer instead.</p><p>${label} stays paired. The system will ask you to confirm.</p>`,
-          [
-            {
+          SECRET_DEVICE_WORDS.stopLines(device.label),
+          {
+            confirm: {
               label: SECRETS_WORDS.stopApprovals,
               run: async () => {
                 const saved = await this.saveDevices(
@@ -434,8 +453,8 @@ export class SecretsSettings {
                   : SECRET_DEVICE_WORDS.unchanged;
               },
             },
-            { label: SECRET_DEVICE_WORDS.keep, run: async () => {} },
-          ],
+            keep: SECRET_DEVICE_WORDS.keep,
+          },
         );
         break;
       }
@@ -446,25 +465,26 @@ export class SecretsSettings {
         this.cancelPhone(action.paired);
         break;
       case "delete-history":
-        this.offer(
+        this.askInPlace(
           "delete-history",
-          "Delete Secrets history?",
-          "<p>Infinitary forgets which tasks asked for your secrets, and when. It never kept the secrets themselves there.</p><p>Uses still waiting or running keep their record until they end. Export the history first if you want a copy; backups and copies you exported stay as they are.</p>",
-          [
-            {
-              label: "Delete history",
+          { kind: "history" },
+          SECRET_QUESTION_WORDS.historyTitle,
+          SECRET_QUESTION_WORDS.historyLines,
+          {
+            confirm: {
+              label: SECRET_QUESTION_WORDS.deleteHistory,
               run: async () => {
                 const result = await owner.protected.clearHistory();
                 this.message =
                   result === "cleared"
-                    ? "Secrets history deleted."
+                    ? SECRET_QUESTION_WORDS.historyDeleted
                     : result === "busy"
-                      ? "Wait for pending or running uses to end before deleting history."
+                      ? SECRET_QUESTION_WORDS.historyBusy
                       : SECRETS_WORDS.unavailable;
               },
             },
-            { label: "Keep history", run: async () => {} },
-          ],
+            keep: SECRET_QUESTION_WORDS.keepHistory,
+          },
         );
         break;
       case "save-rules": {
@@ -567,9 +587,12 @@ export class SecretsSettings {
 
   /** A restore or start-over replaced the home: earlier offers no longer apply, and the next read reopens. */
   private homeReplaced(): void {
-    const groups = new Set([...this.offers.values()].map((offer) => offer.group));
+    const groups = new Set(
+      [...this.offers.values()].filter((offer) => offer.place === "card").map((o) => o.group),
+    );
     this.offers.clear();
     this.offeredCard = null;
+    this.question = null;
     this.owner = undefined;
     for (const group of groups) {
       try {
@@ -967,12 +990,13 @@ export class SecretsSettings {
       this.message = words.onlyRemove;
       return;
     }
-    this.offer(
+    this.askInPlace(
       "rules",
+      { kind: "rule", rule: rule.id },
       words.removeTitle,
-      `<ul><li>${escapeCardText(decisionWords(rule, nameOf(named, rule.secret)))}</li></ul><p>${escapeCardText(words.removeBody)}</p><p>${escapeCardText(words.confirm)}</p>`,
-      [
-        {
+      [decisionWords(rule, nameOf(named, rule.secret)), words.removeBody, words.confirm],
+      {
+        confirm: {
           label: words.removeConfirm,
           run: async () => {
             const saved = await this.saveAuthority(
@@ -985,8 +1009,8 @@ export class SecretsSettings {
             this.message = saved ? words.saved : words.unchanged;
           },
         },
-        { label: words.keep, run: async () => {} },
-      ],
+        keep: words.keep,
+      },
     );
   }
 
@@ -999,7 +1023,8 @@ export class SecretsSettings {
   ): void {
     for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
     const offered = actions.map((action) => ({ ...action, id: randomUUID() }));
-    for (const action of offered) this.offers.set(action.id, { group, run: action.run });
+    for (const action of offered)
+      this.offers.set(action.id, { group, run: action.run, place: "card" });
     this.offeredCard = `card-secrets-${group}`;
     this.options.raise({
       id: this.offeredCard,
@@ -1018,12 +1043,55 @@ export class SecretsSettings {
     });
   }
 
-  /** Only host-authored card chrome calls this. A stale card after restart is inert. */
-  async decide(id: string): Promise<void> {
+  /**
+   * A question Settings asks on the row it is about (Forget, Remove, Stop
+   * approvals, Delete history), never on a card. The host still makes a
+   * one-time pass for each answer, and only this computer's own window, which
+   * reads the view, can spend one through the `answer` action. Keep has focus
+   * on the page, so Enter never confirms.
+   */
+  private askInPlace(
+    group: string,
+    about: Question["about"],
+    title: string,
+    lines: readonly string[],
+    answers: { confirm: { label: string; run: () => Promise<void> }; keep: string },
+  ): void {
+    this.dropQuestion();
+    for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
+    const confirm = randomUUID();
+    const keep = randomUUID();
+    this.offers.set(confirm, { group, run: answers.confirm.run, place: "settings" });
+    this.offers.set(keep, { group, run: async () => {}, place: "settings" });
+    this.question = {
+      group,
+      about,
+      title,
+      lines: [...lines],
+      confirm: { label: answers.confirm.label, pass: confirm },
+      keep: { label: answers.keep, pass: keep },
+    };
+  }
+
+  /** The open question no longer applies: its passes stop working, and nothing changes. */
+  private dropQuestion(): void {
+    if (!this.question) return;
+    const { group } = this.question;
+    for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
+    this.question = null;
+  }
+
+  /**
+   * Spends one pass, once: a host card's chrome answers a card, and the
+   * Settings page answers its own question (`place`). A stale pass after
+   * restart, one already spent, or one from the other place is inert.
+   */
+  async decide(id: string, place: Offer["place"] = "card"): Promise<void> {
     const offer = this.offers.get(id);
-    if (!offer) return;
+    if (!offer || offer.place !== place) return;
     for (const [key, sibling] of this.offers)
       if (sibling.group === offer.group) this.offers.delete(key);
+    if (this.question?.group === offer.group) this.question = null;
     this.message = null;
     this.offeredCard = null;
     const running = offer.run().catch(() => {

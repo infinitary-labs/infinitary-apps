@@ -46,7 +46,7 @@ Open Infinitary there to show its code."; once the phone offers its key it says 
 Check that the card's code matches the one Kun's iPhone shows.", with a small secondary Button "Compare codes" that shows the host's code card, which stays the one confirmation, asking for this computer's own Touch ID or password.
 Confirmed, the line reads "Each Allow there asks for its Face ID, Touch ID or passcode.
 Code 1234 5678."
-Turning it off before the card is confirmed takes the card down; turning it off once the phone approves shows the Stop approvals card, and until that is decided the switch stays on, the line reads "Confirm on the card to stop its approvals." and a small secondary "Show the card" shows it again.
+Turning it off before the card is confirmed takes the card down; turning it off once the phone approves asks under the switch, never on a card: "Stop approvals from Kun's iPhone?", its two sentences, a small secondary "Keep approvals", focused, and a small danger "Stop approvals", which asks this computer's own confirmation; until it is answered the switch stays on, and Keep approvals returns focus to the switch.
 The switch takes Tab and answers Space, like every switch.
 On the phone, its Settings shows the same switch under Secrets approvals; it only turns on there, and while on it says to turn it off in Settings → Devices on the computer.
 

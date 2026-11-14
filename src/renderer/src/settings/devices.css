@@ -26,6 +26,16 @@
   min-width: 0;
 }
 
+/* A Secrets question under a phone's switch makes the row tall; the dot and Remove stay beside the
+   phone's name instead of drifting down beside the question (docs/secrets.md, "Asking in place"). */
+.fm-devices-row:has([data-secret-question]) {
+  align-items: flex-start;
+}
+
+.fm-devices-row:has([data-secret-question]) .fm-devices-dot {
+  margin-top: 6px;
+}
+
 .fm-devices-box > .fm-devices-row:first-child {
   border-top: 0;
 }

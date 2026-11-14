@@ -59,7 +59,7 @@ import { currentChange } from "../storage/changeProjection";
 import { StaleValidationDecisionError } from "../tasks/liveValidation";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
-import type { WakeChoice } from "./captainWakes";
+import type { CardActionUndone, WakeChoice } from "./captainWakes";
 import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import type { CardInteractionEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
@@ -630,8 +630,13 @@ export class CardActions {
     // Review carefully (INF-562): the captain's care lands on the record
     // first, so its notice waits on the crewmate's lane ahead of the choice
     // that starts it below, the way any choice on its card does.
-    if (chosen.care && card.taskId && !closedAnswer && this.careFromCard(card.taskId, chosen.care))
-      void this.reviewFromCard(card.taskId);
+    if (
+      chosen.care &&
+      card.taskId &&
+      !closedAnswer &&
+      this.careFromCard(card, card.taskId, chosen.label, chosen.care)
+    )
+      void this.reviewFromCard(card, card.taskId, chosen.label);
     // Merge anyway (INF-1137 friction 6): his click passes the checks at
     // the card's version before the merge below runs, so it merges now.
     if (chosen.passes === "checks" && source === "chrome" && card.taskId && !closedAnswer)
@@ -771,9 +776,10 @@ export class CardActions {
   /**
    * The captain's care from a card's button (INF-562): the same writer and
    * notice as update_task, with the captain as its author and the merge
-   * card as where it came from. A refusal is a feed line, never a silent no-op.
+   * card as where it came from. A refusal is a feed line and the first
+   * mate's wake, never a silent no-op.
    */
-  private careFromCard(taskId: string, care: Rigor): boolean {
+  private careFromCard(card: Card, taskId: string, label: string, care: Rigor): boolean {
     const before = this.core.options.tasks.policiesOf(this.core.options.tasks.get(taskId));
     try {
       this.core.options.tasks.updateFields(
@@ -784,6 +790,7 @@ export class CardActions {
     } catch (caught) {
       if (!(caught instanceof TaskGraphRefusal)) throw caught;
       this.core.options.broadcastEvent({ type: "firstmate_note", text: caught.message, taskId });
+      this.cardActionUndone(card, taskId, label, "set-rigor", caught.message);
       return false;
     }
     this.core.policiesChanged(taskId, { rigor: care }, before);
@@ -795,18 +802,19 @@ export class CardActions {
    * starts it on the builder's committed version - the one its merge card
    * offered - as soon as the care is on the record. The click is a typed
    * fact starting an operation, never a judgment; the reviewer's brief
-   * carries the card the captain read. What the app cannot start it says in
-   * the feed, and the first mate starts the review as on any Careful task.
+   * carries the card the captain read. A task whose record holds no words
+   * of the captain's is reviewed against its goal (INF-4072 finding 1).
+   * What the app cannot start it says in the feed and wakes the first mate
+   * with at once, to start the review as on any Careful task.
    */
-  private async reviewFromCard(taskId: string): Promise<void> {
+  private async reviewFromCard(card: Card, taskId: string, label: string): Promise<void> {
     const builder = this.core.options.tasks.get(taskId);
     if (!builder || TaskService.isClosed(builder)) return;
     try {
-      if (!builder.intent) throw new Error("the task has no recorded words to review against.");
       const { taskId: reviewId, review: assigned } = await this.core.intake.commissionReview(
         {
           title: `Review: ${builder.title}`,
-          intent: builder.intent,
+          intent: builder.intent ?? { goal: builder.goal?.trim() || builder.title, userWords: "" },
           ...(builder.repoId ? { repoId: builder.repoId } : {}),
         },
         builder.id,
@@ -834,7 +842,36 @@ export class CardActions {
         text: `${REVIEW_CAREFULLY_WORDS}: the app could not start the review of ${builder.key || builder.id}: ${message}`,
         taskId,
       });
+      this.cardActionUndone(card, taskId, label, "start-review", message);
     }
+  }
+
+  /**
+   * A card button the app could not carry out (INF-4072 finding 1): the
+   * first mate hears it at once, with the reason, on the task's ref.
+   */
+  private cardActionUndone(
+    card: Card,
+    taskId: string,
+    label: string,
+    undone: CardActionUndone,
+    reason: string,
+  ): void {
+    const record = this.core.options.tasks.get(taskId);
+    this.core.hooks().notifyOp(
+      {
+        facts: {
+          kind: "card-action-undone",
+          card: { id: card.id, title: card.title },
+          task: { id: taskId, key: record?.key || taskId, title: record?.title ?? card.title },
+          label,
+          undone,
+          reason,
+        },
+      },
+      "agent",
+      taskId,
+    );
   }
 
   /**

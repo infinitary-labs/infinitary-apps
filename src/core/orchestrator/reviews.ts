@@ -142,6 +142,7 @@ export class Reviews {
     const validation = builder.delivery?.liveValidation;
     return {
       builderTitle: builder.title,
+      builderGoal: builder.goal?.trim() || builder.title,
       branch: builder.branch,
       headSha,
       ...(prUrl ? { prUrl } : {}),

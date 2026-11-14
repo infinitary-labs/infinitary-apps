@@ -185,6 +185,13 @@ export type FolderBriefFacts = { project: string; folder: string };
 const USER_WORDS_PRECEDENCE =
   "The user's words, verbatim - these outrank every elaboration below, including your own:";
 
+/**
+ * How a review brief opens when the builder's record holds no words of the
+ * user's (INF-4072 finding 1), followed by the builder's goal.
+ */
+export const NO_RECORDED_WORDS_LEAD =
+  "This task's record holds no words of the user's, so its goal stands in for them: wherever this brief says the user's words, read the change against this goal instead, and do not report the missing words as a finding. The goal: ";
+
 /** Amend only a host-rendered goal, never matching a goal line inside verbatim words.
  * Keep goal-first stored briefs and follow-up provenance from before INF-1369 readable.
  */
@@ -899,6 +906,12 @@ export type ReviewBriefFacts = {
   validation?: LiveValidation;
   proofFiles?: { id: string; file: string; poster?: string }[];
   builderTitle: string;
+  /**
+   * The builder's goal, standing in for the user's words when its record
+   * holds none (INF-4072 finding 1): an older or app-made task the captain
+   * still asked to review.
+   */
+  builderGoal?: string;
   /** The builder's branch; the review reads it before any PR exists. */
   branch: string;
   headSha: string;
@@ -1205,12 +1218,18 @@ export function renderReviewBrief(
   facts: ReviewBriefFacts,
   queueOwned: QueueOwned = false,
 ): string {
-  const userWords = intent.userWords.trim();
-  if (!userWords) {
+  const words = intent.userWords.trim();
+  const standIn = facts.builderGoal?.trim();
+  if (!words && !standIn) {
     throw new Error(
       "A review brief needs the user's words: the reviewer reads the change against them, so pass them as user_words.",
     );
   }
+  // A builder whose record holds no words of the user's is read against its
+  // goal, said as such, never passed off as their words (INF-4072 finding 1).
+  const userWords = words
+    ? [USER_WORDS_PRECEDENCE, words]
+    : [`${NO_RECORDED_WORDS_LEAD}${JSON.stringify(standIn)}`];
   const assigned = `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff of the assigned commit against the default branch yourself (git diff <default>...${facts.headSha})`;
   const target = facts.prUrl
     ? `${assigned}. A pull request is already open at ${facts.prUrl}; review the assigned commit, not that pull request's recorded head.`
@@ -1244,8 +1263,7 @@ export function renderReviewBrief(
       ? "Do a full pass over the difference before reporting"
       : "Do a full review pass before reporting";
   return [
-    USER_WORDS_PRECEDENCE,
-    userWords,
+    ...userWords,
     "",
     `Goal: review the change for "${facts.builderTitle}" and report findings.`,
     "The verdict report is the whole deliverable of this internal review; emit no outcome card.",

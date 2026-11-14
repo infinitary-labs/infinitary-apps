@@ -46,6 +46,8 @@ export type TaskSeed = {
   difficulty?: TaskRecord["difficulty"];
   shape?: WorkShape;
   intent?: SpawnIntent;
+  /** The one sentence of what done looks like, as a filed task records it with no intent. */
+  goal?: string;
   gate?: TaskGate | null;
   /** How an open row starts; the one writer's default (when-ready) when absent. */
   startPolicy?: TaskRecord["startPolicy"];
@@ -73,6 +75,7 @@ export function seedTask(tasks: TaskService, seed: TaskSeed): TaskRecord {
     difficulty: seed.difficulty ?? null,
     shape: seed.shape ?? null,
     intent: seed.intent ?? null,
+    ...(seed.goal ? { goal: seed.goal } : {}),
     gate: seed.gate ?? null,
     ...(seed.startPolicy ? { startPolicy: seed.startPolicy } : {}),
     status: mapped.status === "open" ? "open" : "active",

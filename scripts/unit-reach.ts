@@ -59,6 +59,7 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
     owns: (path) => /^src\/core\/orchestrator\/(wakes|[a-z]+Wakes)\.ts$/.test(path),
     readers: [
       "src/core/orchestrator/wakes.words.batches.test.ts",
+      "src/core/orchestrator/wakes.words.cards.test.ts",
       "src/core/orchestrator/wakes.words.corrections.test.ts",
       "src/core/orchestrator/wakes.words.crewmate.test.ts",
       "src/core/orchestrator/wakes.words.firstmate.test.ts",

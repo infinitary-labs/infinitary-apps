@@ -236,7 +236,9 @@ The captain's click closes the card and mints no merge approval.
 It sets care to Careful through `TaskService.updateFields` with the captain as the actor and "from the merge card" in Activity and the feed, then the choice reaches the crewmate like any choice on its card, which starts it with the care notice ahead of it.
 A body's script cannot press it.
 The pull request stays as it is: nothing is pushed, closed or marked as a draft, and its checks reading stays.
-The click also starts the review of the version the card offered (INF-1875): the app commissions it on the task's committed branch head as soon as the care is on the record, a child of the task like any review, and notes it on the task's timeline; a review it cannot start it names in the feed, and the first mate then starts one as on any Careful task.
+The click also starts the review of the version the card offered (INF-1875): the app commissions it on the task's committed branch head as soon as the care is on the record, a child of the task like any review, and notes it on the task's timeline.
+A task whose record holds no words of the captain's, such as a filed follow-up, is reviewed against its goal, and the brief says the goal stands in for those words (INF-4072).
+A part of the click the app cannot carry out - the care it sets, or the review it starts - it names in the feed and tells the first mate at once in a `card-action-undone` wake with the reason, and the first mate carries it out with its own tools or tells the captain what stops it.
 The care notice carries the Careful section, which has the crewmate commit, report without pushing and wait for that review.
 The reviewer's brief adds the merge card the captain read, saved whole beside the builder's source cards (quoted in the brief when the work runs on another computer), with its risk chart as lines.
 A pass on the version already pushed brings a new merge card once its checks read passed, with no push; after fixes the crewmate pushes once to the same pull request after the pass.

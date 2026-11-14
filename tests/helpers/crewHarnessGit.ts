@@ -22,6 +22,7 @@ import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "@core/forge/forge";
 import { type ChangeDelivery, createChangeDelivery } from "@core/orchestrator/changeDelivery";
 import { ChangePresentations } from "@core/orchestrator/changePresentations";
 import type { LineageFacts } from "@core/orchestrator/mergeAuthorization";
+import { seedTask } from "@core/tasks/seedTask";
 import type { Card } from "@shared/cards";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { expect, vi } from "vitest";
@@ -210,6 +211,24 @@ export class KeptForge implements Forge {
  * its completion card up through the real checks gate and went idle:
  * the real check service, the real click, a GitHub stand-in.
  */
+/** The goal a filed task records in place of the captain's words. */
+export const FILED_GOAL = "The meter reads the same value after a restart.";
+
+/** A follow-up filed with a goal and no intent, then started now. */
+async function startFiled(harness: ReturnType<typeof setup>, repoId: string): Promise<string> {
+  seedTask(harness.tasks, {
+    id: "filed-meter",
+    title: "Ship the meter",
+    prompt: `Goal: ${FILED_GOAL}`,
+    goal: FILED_GOAL,
+    repoId,
+    status: "queued",
+    startPolicy: "on-request",
+  });
+  await harness.supervisor.starts.startQueuedNow("filed-meter");
+  return "filed-meter";
+}
+
 export async function approved(
   where: {
     kind?: "github" | "gitlab";
@@ -221,6 +240,11 @@ export async function approved(
     checkWatch?: boolean;
     /** The project merges its pull requests through its queue. */
     queue?: boolean;
+    /**
+     * The task was filed, as a follow-up is, with a goal and no recorded
+     * words of the captain's, then started (INF-4072 finding 1).
+     */
+    filed?: boolean;
     realRouter?: import("./crewHarness").SetupExtras["realRouter"];
     /**
      * Save the task's change story before its card goes up, through the
@@ -296,12 +320,16 @@ export async function approved(
     delivery: where.queue ? "queue-pr" : "direct-pr",
     rigor: "quick",
   });
-  const { taskId } = await harness.supervisor.intake.commission({
-    title: "Ship the meter",
-    intent: intentOf("Ship the meter fix"),
-    repoId: repo.id,
-    ...(where.internalStep ? { shape: { internal_step: true } } : {}),
-  });
+  const taskId = where.filed
+    ? await startFiled(harness, repo.id)
+    : (
+        await harness.supervisor.intake.commission({
+          title: "Ship the meter",
+          intent: intentOf("Ship the meter fix"),
+          repoId: repo.id,
+          ...(where.internalStep ? { shape: { internal_step: true } } : {}),
+        })
+      ).taskId;
   await tick();
   if (where.referenced) await service().checkTool.checkForCrew(taskId, { pull: 7 });
   const review = harness.tasks.get(taskId)?.delivery?.mergeReviews?.[0];

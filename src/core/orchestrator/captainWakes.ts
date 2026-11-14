@@ -35,6 +35,20 @@ import type { KindWords, TypedWake, WakeFacts, WakeLane } from "./wakes";
 export type CaptainFacts =
   | { kind: "validation-question-stale"; card: string; reason: string }
   | {
+      /**
+       * The captain pressed a card button the app could not carry out
+       * (INF-4072 finding 1): the first mate hears it at once with the
+       * reason, rather than a feed line nobody acts on. `undone` names the
+       * part of the click the app could not do.
+       */
+      kind: "card-action-undone";
+      card: { id: string; title: string };
+      task: { id: string; key: string; title: string };
+      label: string;
+      undone: CardActionUndone;
+      reason: string;
+    }
+  | {
       /** The captain's choice closed an answer task; the payload is the wake. */
       kind: "answer-closed";
       handoff: AnswerTaskClosedPayload;
@@ -370,8 +384,23 @@ function answersText(choice: WakeChoice, source?: "chrome" | "frame"): string {
   return `\n${who} to the card's questions:\n${cardAnswerLines(choice.answers).join("\n")}`;
 }
 
+/**
+ * The part of a card button's click the app could not carry out: the rigor
+ * the button sets, or the review it starts once that rigor is recorded.
+ */
+export type CardActionUndone = "set-rigor" | "start-review";
+
+/** What the app could not do, as the first mate reads it. */
+const CARD_ACTION_UNDONE_WORDS: Record<CardActionUndone, string> = {
+  "set-rigor": "record the rigor the button sets, so the task's rigor and review are unchanged",
+  "start-review":
+    "start the review the button asks for; the task's new rigor is recorded, and no review of it is open",
+};
+
 /** The captain's own moves, worded. */
 export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
+  "card-action-undone": (facts) =>
+    `[fm-op] The captain pressed "${facts.label}" on card "${facts.card.title}" (${facts.card.id}) for task ${facts.task.key} "${facts.task.title}", and the app could not ${CARD_ACTION_UNDONE_WORDS[facts.undone]}. The reason: ${facts.reason.trim()} Carry out what the captain's click asked for with your own tools, or tell the captain on a card what stops it.`,
   "validation-question-stale": (facts) =>
     `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`,
   "answer-closed": (facts) =>

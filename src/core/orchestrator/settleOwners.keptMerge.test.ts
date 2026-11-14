@@ -42,6 +42,7 @@ import {
   APPROVED,
   approved,
   editPolicies,
+  FILED_GOAL,
   gitRepo,
   kept,
   REPAIRED,
@@ -66,6 +67,7 @@ import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
 import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewSupervisor } from "./crewSupervisor";
+import { NO_RECORDED_WORDS_LEAD } from "./intentBrief";
 import { keptFeedLine } from "./mergeAuthorization";
 import { POLICY_GUIDANCE_HEADING } from "./noticeWakes";
 import { closingNoteTitle } from "./settleWords";
@@ -884,11 +886,12 @@ describe("CrewSupervisor", () => {
       ).rejects.toThrow(/already has a review open/);
     });
 
-    it("says in the feed when the app cannot start the review from the merge card, and the care still rose", async () => {
+    it("says in the feed and wakes the first mate at once when the app cannot start the review from the merge card, and the care still rose", async () => {
       const h = await approved();
       const careful = h.card.actions.find((action) => action.care);
       // No commits to read on the branch: nothing to review yet.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(null);
+      const woken = h.ops.length;
       h.supervisor.cardActions.act(h.card.id, careful?.id ?? "");
       await tick();
       expect(h.tasks.get(h.taskId)?.shape?.policies?.rigor).toBe("reviewed");
@@ -906,6 +909,40 @@ describe("CrewSupervisor", () => {
       );
       expect(h.tasks.listLive().some((task) => task.shape?.kind === "review")).toBe(false);
       expect(h.reviewer.promptCalls).toHaveLength(0);
+      // INF-4072 finding 1: the first mate hears the click it must carry
+      // out now, with the reason, rather than only a feed line.
+      const key = h.tasks.get(h.taskId)?.key;
+      const wakes = h.ops
+        .slice(woken)
+        .filter((op) => op.includes(`The captain pressed "${REVIEW_CAREFULLY_WORDS}"`));
+      expect(wakes).toHaveLength(1);
+      expect(wakes[0]).toContain(`(${h.card.id}) for task ${key} "Ship the meter"`);
+      expect(wakes[0]).toContain("could not start the review the button asks for");
+      expect(wakes[0]).toContain("no commits on its branch to review yet");
+    });
+
+    it("reviews a task with no recorded words of the captain's against its goal from the merge card", async () => {
+      const h = await approved({ filed: true });
+      expect(h.tasks.get(h.taskId)?.intent).toBeNull();
+      // The branch has the committed version the card offered.
+      vi.mocked(h.workspace.branchHead).mockResolvedValue(APPROVED);
+      const careful = h.card.actions.find((action) => action.care);
+      const woken = h.ops.length;
+      h.supervisor.cardActions.act(h.card.id, careful?.id ?? "");
+      await vi.waitFor(() => expect(h.reviewer.promptCalls).toHaveLength(1));
+      const review = h.tasks
+        .listLive()
+        .find((task) => task.shape?.kind === "review" && task.parentId === h.taskId);
+      expect(review).toMatchObject({ title: "Review: Ship the meter", status: "active" });
+      const brief = h.reviewer.promptCalls[0] ?? "";
+      expect(brief).toContain(`${NO_RECORDED_WORDS_LEAD}${JSON.stringify(FILED_GOAL)}`);
+      expect(brief).toContain(`Review branch fm/task-${h.taskId} at head ${APPROVED}`);
+      // Started, so nothing is left for the first mate to carry out.
+      expect(
+        h.ops
+          .slice(woken)
+          .some((op) => op.includes(`The captain pressed "${REVIEW_CAREFULLY_WORDS}"`)),
+      ).toBe(false);
     });
 
     it("raising care in words takes the old merge card down, and lowering it does not", async () => {

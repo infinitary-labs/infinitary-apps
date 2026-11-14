@@ -92,10 +92,13 @@ export type CorrectionWakeKind =
 /** Batches of your own have their own byte-exact cases: the hold the first mate hears and a crewmate's send-back. */
 export type OwnBatchWakeKind = "batch-held" | "batch-sent-back";
 
+/** A card button the app could not carry out has its own byte-exact cases (INF-4072). */
+export type CardActionWakeKind = "card-action-undone";
+
 /** Every other kind: a crewmate's steers, and the wrappers and choices either lane hears. */
 export type CrewmateWakeKind = Exclude<
   WakeKind,
-  FirstmateWakeKind | SavedOnlyWakeKind | CorrectionWakeKind | OwnBatchWakeKind
+  FirstmateWakeKind | SavedOnlyWakeKind | CorrectionWakeKind | OwnBatchWakeKind | CardActionWakeKind
 >;
 
 /** One wake as a lane holds it, and the words it is served as. */

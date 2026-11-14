@@ -903,6 +903,45 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     );
   });
 
+  // INF-4165 finding 3: work the captain filed for later was flagged as
+  // standing still ten minutes on, because filing could not record the wait.
+  it("records the captain's wait at filing with create_task captain_stop", async () => {
+    const { agent, specs, tasks } = setup();
+    await agent.converse("file it as its own task for later");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    const filed = await text("create_task", {
+      title: "Color audit",
+      goal: "Audit",
+      user_words: "file it as its own task for later",
+      captain_stop: true,
+    });
+    expect(filed).toContain("Recorded that the captain asked SCR-1 to wait.");
+    const later = tasks.byKey("SCR-1");
+    if (!later) throw new Error("The task was not filed");
+    expect(later.startPolicy).toBe("on-request");
+    expect(tasks.starts.stoppedByCaptain(later)).toBe(true);
+
+    // Work queued to start does not wait for a start: it is filed, the stop refused in words.
+    const queued = await text("create_task", {
+      title: "Color names",
+      goal: "Names",
+      user_words: "names",
+      start_policy: "when-ready",
+      blocked_by: [],
+      captain_stop: true,
+    });
+    expect(queued).toContain("Planned SCR-2");
+    expect(queued).toContain("Cannot record a stop on SCR-2");
+    const named = tasks.byKey("SCR-2");
+    if (!named) throw new Error("The queued task was not filed");
+    expect(tasks.starts.stoppedByCaptain(named)).toBe(false);
+  });
+
   it("names the filed wait while an independent when-ready task starts immediately", async () => {
     const { agent, specs, tasks, supervisor } = setup();
     await agent.converse("fix the meter");

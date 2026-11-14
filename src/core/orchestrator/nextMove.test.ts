@@ -425,6 +425,78 @@ describe("the next-move check (INF-3846 piece 2)", () => {
     expect(h.told(part.id)).toEqual([]);
   });
 
+  // INF-4165 finding 3: the first mate asked about three held tasks on one
+  // card of its own, and the app still raised a standing-still card for each.
+  it("counts a first mate question that names the part in related as its question, and takes the app's card down", async () => {
+    const h = harness();
+    const { part } = workstream(h);
+    await h.at(STALL_WAKE_MS);
+    await h.at(STALL_WAKE_MS + minutes(1));
+    expect(h.card(part.id)).toBeDefined();
+    // The first mate's own decision, filed as emit_card files one without
+    // task_id, whose related names the part.
+    const asked = h.supervisor.cards.addFirstmateCard({
+      title: "Three steps wait on things only you can do",
+      body: "<p>Each waits on a step only you can take.</p>",
+      actions: [
+        { id: "wait", label: "Leave them waiting", default: true },
+        { id: "start", label: "Start them" },
+      ],
+    });
+    h.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+    const question = h.tasks.capture.fileDecision({
+      id: "fm-question",
+      title: "Three steps wait on things only you can do",
+      cardId: asked,
+    });
+    h.tasks.graph.link(question.id, part.id, "related", "firstmate");
+    await h.at(STALL_WAKE_MS + minutes(2));
+    expect(h.card(part.id)).toBeUndefined();
+    for (const later of [60, 600]) await h.at(minutes(later));
+    expect(h.card(part.id)).toBeUndefined();
+    expect(h.told(part.id)).toHaveLength(1);
+    // Once that question is answered, the part stands again and is told anew.
+    h.supervisor.cardActions.act(asked, "wait");
+    await settle();
+    await h.at(minutes(601) + STALL_WAKE_MS);
+    expect(h.told(part.id)).toHaveLength(2);
+  });
+
+  it("does not count a first mate question that names other work, or a note naming the part", async () => {
+    const h = harness();
+    const { main, part } = workstream(h);
+    const asked = h.supervisor.cards.addFirstmateCard({
+      title: "Go on with the secrets work?",
+      body: "<p>The owner is underway.</p>",
+      actions: [
+        { id: "go", label: "Go on", default: true },
+        { id: "wait", label: "Wait" },
+      ],
+    });
+    const told = h.supervisor.cards.addFirstmateCard({
+      title: "Where the secrets work stands",
+      body: "<p>Halfway.</p>",
+      actions: [],
+    });
+    h.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+    const question = h.tasks.capture.fileDecision({
+      id: "fm-other",
+      title: "Go on?",
+      cardId: asked,
+    });
+    h.tasks.graph.link(question.id, main.id, "related", "firstmate");
+    // A note the first mate answered with: its record is a question, closed at birth.
+    const note = h.tasks.capture.fileQuestion({
+      id: "fm-note",
+      title: "Where the secrets work stands",
+      outcome: "<p>Halfway.</p>",
+      cardId: told,
+    });
+    h.tasks.graph.link(note.id, part.id, "related", "firstmate");
+    await h.at(STALL_WAKE_MS);
+    expect(h.told(part.id)).toHaveLength(1);
+  });
+
   it("leaves ideas filed for later alone: on-request work under a task that delivers an answer, or on its own", async () => {
     const h = harness();
     const plan = seedTask(h.tasks, {

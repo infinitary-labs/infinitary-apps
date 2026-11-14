@@ -54,7 +54,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     }
   };
   return {
-    plan: (input) => {
+    plan: ({ captainStop, ...input }) => {
       let record: TaskRecord;
       try {
         record = supervisor.intake.plan(input);
@@ -65,6 +65,12 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         throw caught;
       }
       host.asks.attach(record.id, "create_task", true);
+      // The captain asked for it to wait, as when they chose to file it for
+      // later (INF-4165 finding 3): recorded at filing, so the next-move
+      // check never reads the wait as work standing still.
+      const stop = captainStop
+        ? tasks.starts.declareCaptainStop(record.id, "firstmate")
+        : undefined;
       // The reply says where the work landed (INF-2715): filed means the
       // backlog, and queued work says when it starts.
       host.turn.replyFacts.app =
@@ -85,7 +91,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       return {
         taskId: record.id,
         key: record.key,
-        text: `Planned ${record.key} "${record.title}" (task_id ${record.id})${waiting ? ` - ${waiting}` : ""}.`,
+        text: `Planned ${record.key} "${record.title}" (task_id ${record.id})${waiting ? ` - ${waiting}` : ""}.${stop ? ` ${stop.ok ? `Recorded that the captain asked ${record.key} to wait.` : stop.text}` : ""}`,
       };
     },
     update: async (input) => {

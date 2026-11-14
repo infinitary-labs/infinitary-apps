@@ -68,6 +68,8 @@ type Pass = {
   stopped: Map<string, boolean>;
   putOff: Map<string, boolean>;
   putOffs?: PutOffIndex;
+  /** The open cards' ids, read on first need. */
+  openCards?: Set<string>;
 };
 
 export class NextMove {
@@ -132,7 +134,8 @@ export class NextMove {
     // The stay begins at the newest typed fact that left it standing: its
     // filing, a line that stopped or started it, its move to the backlog,
     // the close of the last work it waited on, the start of the work that
-    // made it begun, or the end of another card about it.
+    // made it begun, or the end of another card about it, a first mate
+    // question that named it included.
     const since = Math.max(
       record.createdAt,
       tasks.starts.latestStopAt(record.id) ?? 0,
@@ -140,6 +143,7 @@ export class NextMove {
       found.at,
       tasks.graph.latestBlockerClose(record.id) ?? 0,
       tasks.capture.cardResolvedAt(record.id, nextMoveCardId(record.id)) ?? 0,
+      ...this.questionsNaming(record).map((asking) => asking.closedAt ?? 0),
     );
     return { record, stands: open ? "on-request" : "backlog", begun: found.begun, since };
   }
@@ -235,11 +239,13 @@ export class NextMove {
   }
 
   /**
-   * The captain holds it: a card of it asks them something, they put off a
-   * card of it or of a parent above it, or their hands hold its browser.
+   * The captain holds it: a card of it asks them something, a first mate's
+   * question names it, they put off a card of it or of a parent above it,
+   * or their hands hold its browser.
    */
   private captainHolds(record: TaskRecord, pass: Pass): boolean {
     if (this.putOff(record, pass)) return true;
+    if (this.namedByQuestion(record, pass)) return true;
     const own = nextMoveCardId(record.id);
     let anyCard = false;
     for (const card of this.host.openCards()) {
@@ -250,6 +256,41 @@ export class NextMove {
     if (this.host.answerNoteForTask?.(record.id) !== undefined) return true;
     if (record.delivery?.captainWait && anyCard) return true;
     return this.host.browserWithCaptain?.(record.id) === true;
+  }
+
+  /**
+   * A first mate's decision that belongs to no task names this work in
+   * `related` (INF-4165 finding 3): its record, open while its card is up,
+   * links to the work, and that card asks the captain the work's question
+   * for it, so the work is held as a card of its own would hold it.
+   */
+  private namedByQuestion(record: TaskRecord, pass: Pass): boolean {
+    return this.questionsNaming(record).some(
+      (asking) =>
+        asking.status === "open" &&
+        asking.gate?.kind === "captain" &&
+        asking.gate.ref !== undefined &&
+        this.openCardIds(pass).has(asking.gate.ref),
+    );
+  }
+
+  /**
+   * The first mate's own decisions whose `related` names this work, open or
+   * answered: each closes when its card leaves the stack.
+   */
+  private questionsNaming(record: TaskRecord): TaskRecord[] {
+    return this.host.tasks.graph.linksTo(record.id).flatMap((link) => {
+      if (link.type !== "related") return [];
+      const asking = this.host.tasks.get(link.fromId);
+      return asking?.kind === "decision" ? [asking] : [];
+    });
+  }
+
+  /** The open cards' ids, read once a pass on first need. */
+  private openCardIds(pass: Pass): Set<string> {
+    if (!pass.openCards)
+      pass.openCards = new Set([...this.host.openCards()].map((card) => card.id));
+    return pass.openCards;
   }
 
   /**

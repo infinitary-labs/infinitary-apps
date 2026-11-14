@@ -44,6 +44,8 @@ export type TaskToolsDelegate = {
     priority?: number;
     /** The basis the step names; the host verifies it when the step dispatches. */
     shape?: WorkShapeAsk;
+    /** The captain asked for it to wait, as when they chose to file it for later (INF-4165 finding 3). */
+    captainStop?: boolean;
   }): { taskId: string; key: string; text: string };
   update(input: {
     task: string;
@@ -143,7 +145,7 @@ const START_POLICY_VALUES = ["when-ready", "on-request"] as const;
 
 const START_POLICY = stringEnum(START_POLICY_VALUES, {
   description:
-    "when-ready auto-starts once unblocked/unheld. on-request (the default): no crewmate starts on it until update_task start_now. Leave a parent on request: its children do its work.",
+    "when-ready auto-starts once unblocked/unheld. on-request (the default): no crewmate starts on it until update_task start_now. Leave a parent on request: its children do its work. Add captain_stop true when the captain asked for the wait, as when they chose to file it for later: nothing alarms until it starts.",
 });
 
 function undeclaredPrerequisites(verb: "filed" | "changed") {
@@ -191,6 +193,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         }),
       ),
       start_policy: Type.Optional(START_POLICY),
+      // What it records is said on start_policy, so it is served bare.
+      captain_stop: Type.Optional(Type.Boolean()),
       priority: PRIORITY,
       ongoing: Type.Optional(Type.Boolean({ description: "As spawn_crewmate shape.ongoing." })),
       intelligence: Type.Optional(stringEnum(["low", "medium", "high", "premium"])),
@@ -244,6 +248,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.start_policy ? { startPolicy: params.start_policy } : {}),
         ...(params.priority !== undefined ? { priority: params.priority } : {}),
         ...(Object.keys(shape).length > 0 ? { shape } : {}),
+        ...(params.captain_stop ? { captainStop: true } : {}),
       });
       return { text: planned.text };
     },
@@ -279,7 +284,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now, and you hear once if news reaches it. Give a reason when the captain asks to pause it, or a stall wake shows it stopped on a blocker no steer will change. Add captain_stop true when the captain asked for the wait: nothing alarms until it starts.",
+            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now, and you hear once if news reaches it. Give a reason when the captain asks to pause it, or a stall wake shows it stopped on a blocker no steer will change.",
         }),
       ),
       // What it records is said on start_policy, so it is served bare.

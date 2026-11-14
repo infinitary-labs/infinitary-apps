@@ -1,9 +1,10 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PROBE_FILES } from "../scripts/affected-probes.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import {
+  REACH_RUN_FILES,
   REPEATS,
   reachArgs,
   repetitionArgs,
@@ -360,6 +361,73 @@ describe("the pull request's direct-reader round", () => {
       status ?? 1,
     );
     expect(report).not.toHaveBeenCalled();
+  });
+
+  // INF-4163: a branch whose selection reached 454 files ran two unit workers
+  // at 3.2 and 2.4 GB on the check's 7.9 GB runner, and a sibling branch's
+  // runner stopped answering in this step, since a worker keeps what every
+  // file it ran leaves behind until its run ends.
+  describe("a selection wider than one run", () => {
+    // The project's own test files, as a change that reaches nearly all of them selects them.
+    // Listed here rather than through the reach script's own lister: the reach test's real
+    // example of a reader that is not direct is this file, which reaches that script only through unit-repeats.
+    const files = readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" })
+      .filter((path) => path.endsWith(".test.ts"))
+      .map((path) => join("src", path))
+      .toSorted()
+      .slice(0, 2 * REACH_RUN_FILES + 1);
+
+    it("runs as the fewest runs of at most REACH_RUN_FILES files, each file in exactly one, one after another", () => {
+      const parts: string[][] = [];
+      const reports = new Set<string>();
+      const run = vi.fn((args: string[], file: string) => {
+        const part = args.slice(args.indexOf("browser") + 1);
+        expect(args).toEqual(reachArgs(part, file));
+        parts.push(part);
+        reports.add(file);
+        writeFileSync(file, JSON.stringify(ran(part)));
+        return 0;
+      });
+      const report = vi.fn();
+      expect(runLinuxReach(files, run, report, root)).toBe(0);
+      expect(parts).toHaveLength(3);
+      for (const part of parts) expect(part.length).toBeLessThanOrEqual(REACH_RUN_FILES);
+      expect(parts.flat()).toEqual(files);
+      expect(reports.size).toBe(3);
+      expect(report).toHaveBeenCalledExactlyOnceWith([
+        `The ${files.length} selected files run as 3 Vitest runs of at most ${REACH_RUN_FILES} files, one after another, each with fresh workers.`,
+      ]);
+    });
+
+    it("fails, naming a file no run's report shows", () => {
+      const [missed = ""] = files.slice(-1);
+      const run = (args: string[], file: string) => {
+        const part = args.slice(args.indexOf("browser") + 1).filter((path) => path !== missed);
+        writeFileSync(file, JSON.stringify(ran(part)));
+        return 0;
+      };
+      const report = vi.fn();
+      expect(runLinuxReach(files, run, report, root)).toBe(1);
+      expect(report).toHaveBeenLastCalledWith([
+        "These selected test files did not run in pure, unit, unit-isolated, integration, browser:",
+        `- \`${missed}\``,
+      ]);
+    });
+
+    it("runs every part after a failed one and returns the failed run's status", () => {
+      const run = vi.fn((args: string[], file: string) => {
+        writeFileSync(file, JSON.stringify(ran(args.slice(args.indexOf("browser") + 1))));
+        return run.mock.calls.length === 1 ? 1 : 0;
+      });
+      expect(runLinuxReach(files, run, () => {}, root)).toBe(1);
+      expect(run).toHaveBeenCalledTimes(3);
+    });
+
+    it("ends at an interrupted run", () => {
+      const run = vi.fn((_args: string[], _file: string) => null);
+      expect(runLinuxReach(files, run, () => {}, root)).toBe(1);
+      expect(run).toHaveBeenCalledOnce();
+    });
   });
 
   it("runs nothing for an empty selection", () => {

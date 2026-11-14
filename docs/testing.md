@@ -276,6 +276,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   It lists apart, with the run that owns each, an unedited Mac-listed reader (the crewmate's local round), a probe (main's full check, `docs/test-cohorts.md` "Probes") and, when the change touches the renderer or its browser tests, a browser test (the browser step, which then runs every browser file).
   It installs Chromium first, for the browser tests this step and the browser step run, and for an integration file that starts it, such as `tests/run-temp-root.test.ts`.
   It reads Vitest's JSON report afterwards and fails when a file it selected did not run, so a file none of those cohorts takes cannot pass unseen.
+  A selection of more than `REACH_RUN_FILES` (100) files runs as several Vitest runs of at most that many, one after another, each with fresh workers and its own report, and every run goes even after one fails (INF-4163).
+  An in-memory worker (`pure`, `unit`, `isolate: false`) keeps what each file it ran leaves behind until its run ends, so one run of a wide selection can use most of the memory of the check's runner, which has 7.9 GB and no swap.
   Required focused proof may run before or alongside the PR and must finish for its current version before merge.
   A selected local `renderer` or `application` spec needs `--no-deps`, since its teardown otherwise runs the whole `desktop` lane.
   Run the existing unit and integration tests a change can break by path, `pnpm test <path>...` (a bare file path finds its cohort, `docs/test-cohorts.md`), and the probes it reaches with `pnpm test:probes`.

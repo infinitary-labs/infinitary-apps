@@ -124,7 +124,32 @@ export function unreported(
   return files.filter((file) => !ran.has(file));
 }
 
-/** Run the selected files once; a failed round or a file that did not run fails it. */
+/**
+ * The most selected test files one Vitest run of the reader step takes (INF-4163).
+ * The pure and unit projects share one module cache per worker (isolate: false), so a worker keeps what each file
+ * leaves behind - its modules, state a test kept, native memory the heap does not count - until its run ends.
+ * A branch whose selection reached 454 files ran two such workers at 3.2 and 2.4 GB on the check's runner, which has
+ * 7.9 GB and no swap, and the same step on a sibling branch lost its runner.
+ * A wider selection runs as several runs one after another, each with fresh workers, so a worker's memory follows
+ * one run's files rather than the whole selection's.
+ * On that runner, every file this step can select (1,239) in runs of at most 100 took 26 minutes, its largest worker
+ * held 2.4 GB, and at least 2.1 GB stayed free except while tests/checks-mode.test.ts started the quick check's
+ * programs all at once; runs of at most 200 saved 89 seconds and let a worker reach 2.9 GB.
+ */
+export const REACH_RUN_FILES = 100;
+
+/** The selection cut in order into the fewest runs of at most `most` files, of nearly equal size. */
+export function reachRuns(files: readonly string[], most = REACH_RUN_FILES): string[][] {
+  const count = Math.ceil(files.length / most);
+  const size = Math.ceil(files.length / count);
+  return Array.from({ length: count }, (_, run) => files.slice(run * size, (run + 1) * size));
+}
+
+/**
+ * Run the selected files once, in runs of at most REACH_RUN_FILES one after another. Every run goes, so one push
+ * shows each failing reader; a failed run, an interrupted one, which ends the step there, or a file no run's report
+ * shows fails it.
+ */
 export function runLinuxReach(
   files: readonly string[],
   run: (args: string[], reportFile: string) => number | null,
@@ -132,13 +157,27 @@ export function runLinuxReach(
   root = ROOT,
 ): number {
   if (files.length === 0) return 0;
+  const runs = reachRuns(files);
+  if (runs.length > 1)
+    report([
+      `The ${files.length} selected files run as ${runs.length} Vitest runs of at most ${REACH_RUN_FILES} files, one after another, each with fresh workers.`,
+    ]);
   const dir = mkdtempSync(join(tmpdir(), "unit-reach-"));
   try {
-    const file = join(dir, "report.json");
-    const status = run(reachArgs(files, file), file);
-    if (status !== 0) return status ?? 1;
-    const parsed = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : undefined;
-    const missing = unreported(files, parsed, root);
+    const ran: { name: string }[] = [];
+    let failed = 0;
+    for (const [index, part] of runs.entries()) {
+      const file = join(dir, `report-${index + 1}.json`);
+      const status = run(reachArgs(part, file), file);
+      if (status === null) return failed || 1;
+      if (status !== 0) {
+        failed ||= status;
+        continue;
+      }
+      if (existsSync(file)) ran.push(...(JSON.parse(readFileSync(file, "utf8")).testResults ?? []));
+    }
+    if (failed !== 0) return failed;
+    const missing = unreported(files, { testResults: ran }, root);
     if (missing.length === 0) return 0;
     report([
       `These selected test files did not run in ${REACH_PROJECTS.join(", ")}:`,

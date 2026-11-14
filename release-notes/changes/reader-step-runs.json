@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reader-step-runs",
+      "reason": "CI only: the branch check runs a wide selection of tests in several runs so its Linux runner keeps enough memory; nothing a person using the app sees changes."
+    }
+  ]
+}

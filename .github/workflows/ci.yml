@@ -136,7 +136,9 @@ jobs:
       # files, whose three rounds stay local). A probe, an unedited
       # Mac-listed reader, or a browser file when the browser step runs every
       # one, is listed with the run that owns it, and a selected file that
-      # did not run fails it.
+      # did not run fails it. A selection wider than 100 files runs as
+      # several Vitest runs one after another, each with fresh workers, so an
+      # in-memory worker's memory stays inside this runner's (INF-4163).
       - name: Unit, integration and browser tests that read a changed file
         if: ${{ github.event_name != 'workflow_dispatch' }}
         run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --run

@@ -96,11 +96,6 @@ describe("classifyClaudeSignal", () => {
       { kind: "cut-off", cutOff: { class: "refused" } },
     ],
     [
-      "an API 403",
-      { ...failedResult, apiErrorStatus: 403 },
-      { kind: "cut-off", cutOff: { class: "refused" } },
-    ],
-    [
       "a spent allowance with its reset",
       {
         ...failedResult,
@@ -127,6 +122,37 @@ describe("classifyClaudeSignal", () => {
     ],
   ] as const)("reads %s as a cut-off", (_name, signal, outcome) => {
     expect(classifyClaudeSignal(signal)).toEqual(outcome);
+  });
+
+  it("reads a 403 as no proof of a lost sign-in or a refusal", () => {
+    // A firewall's block page answers 403, and the client labels it
+    // `authentication_failed`: no sign-in changes it, so it takes the retry.
+    expect(
+      classifyClaudeSignal({
+        ...failedResult,
+        assistantError: "authentication_failed",
+        apiErrorStatus: 403,
+      }),
+    ).toEqual({ kind: "turn-failed" });
+    expect(classifyClaudeSignal({ ...failedResult, apiErrorStatus: 403 })).toEqual({
+      kind: "turn-failed",
+    });
+    // The client's own refusal word still is a refusal, whatever the status.
+    expect(
+      classifyClaudeSignal({
+        ...failedResult,
+        assistantError: "oauth_org_not_allowed",
+        apiErrorStatus: 403,
+      }),
+    ).toEqual({ kind: "cut-off", cutOff: { class: "refused" } });
+    // A 401 beside the sign-in label is the proof.
+    expect(
+      classifyClaudeSignal({
+        ...failedResult,
+        assistantError: "authentication_failed",
+        apiErrorStatus: 401,
+      }),
+    ).toEqual({ kind: "cut-off", cutOff: { class: "signed_out" } });
   });
 
   it.each([

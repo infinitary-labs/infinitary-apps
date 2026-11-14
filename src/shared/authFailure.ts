@@ -173,6 +173,12 @@ const API_STOP_SUBTYPES: ReadonlySet<string> = new Set(["success", "error_during
  * ...): its requests were answered, so a reading it saw on the way is not
  * why it stopped, and an allowance held on it would hold a working login.
  *
+ * Only proof of a lost sign-in is `signed_out`: a 401, or the client's
+ * `authentication_failed` with no status beside it. The client types a 403
+ * that way too, and a 403 is also a firewall's block page, which no sign-in
+ * changes; so a 403 is never a cut-off on its own - neither a lost sign-in
+ * nor a refusal - and takes the honest retry.
+ *
  * A turn the client cut short (`terminal_reason` `aborted_*`) with no API
  * error behind it is the cut a steer or an interrupt makes, not a failure:
  * the client can close such a turn with an `error_*` result.
@@ -191,10 +197,17 @@ export function classifyClaudeSignal(signal: ClaudeSignal): ClaudeOutcome {
   if (!apiError && signal.terminalReason && ABORTED_REASONS.has(signal.terminalReason)) {
     return { kind: "ok" };
   }
-  if ((error && SIGNED_OUT_ERRORS.has(error)) || signal.apiErrorStatus === 401) {
+  // The client types every 401 and every 403 it gets as
+  // `authentication_failed`, and a 403 is also how a firewall in front of
+  // the API refuses (a block page). So the typed error is proof of a lost
+  // sign-in only where no status says otherwise: beside a 403 it is not.
+  const status = typeof signal.apiErrorStatus === "number" ? signal.apiErrorStatus : undefined;
+  const signInError = error !== undefined && SIGNED_OUT_ERRORS.has(error);
+  if (status === 401 || (signInError && status === undefined)) {
     return { kind: "cut-off", cutOff: { class: "signed_out" } };
   }
-  if ((error && REFUSED_ERRORS.has(error)) || signal.apiErrorStatus === 403) {
+  // A refusal needs the client's own word for one; a bare 403 is not it.
+  if (error && REFUSED_ERRORS.has(error)) {
     return { kind: "cut-off", cutOff: { class: "refused" } };
   }
   const rejected = signal.rateLimitStatus === "rejected";

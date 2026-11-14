@@ -407,7 +407,11 @@ export async function scriptedClaudeWorld(
     if (turn) turn.requests += 1;
     // The API's first word of a reply, which the client relays; a refused
     // request never starts one.
-    if (playing === "hang" || playing === "loop" || !("refuse" in playing)) {
+    if (
+      playing === "hang" ||
+      playing === "loop" ||
+      (playing !== "blockPage" && !("refuse" in playing))
+    ) {
       emit({
         type: "stream_event",
         parent_tool_use_id: null,
@@ -434,6 +438,21 @@ export async function scriptedClaudeWorld(
         return;
       }
       await request(client);
+      return;
+    }
+    if (playing === "blockPage") {
+      // The real client's own messages for a 403 HTML block page, as the
+      // boxed client reports it against the stub API's block page: the
+      // sign-in label with the page's title, and the 403 on the result.
+      const words = "Failed to authenticate. API Error: Attention Required! | Cloudflare";
+      emit({
+        type: "assistant",
+        parent_tool_use_id: null,
+        message: { content: [{ type: "text", text: words }] },
+        error: "authentication_failed",
+      });
+      emit(result(words, { is_error: true, api_error_status: 403 }));
+      endTurn(client);
       return;
     }
     if ("refuse" in playing) {

@@ -102,8 +102,9 @@ W1 S3, the Claude-seat plan's section 4.2.
 A cut-off - a provider that stops serving an account - is expected input, never an error path, and it is classified in ONE place from typed fields only: `classifyClaudeSignal` in `src/shared/authFailure.ts`, beside `isAuthFailureMessage`, which stays the classifier for Pi and for rows recorded as prose.
 Three product-neutral classes ride `turn_failed.cutOff` (`src/shared/events.ts`), so no provider's vocabulary crosses the event seam:
 
-- `signed_out`: the assistant's `authentication_failed`, or a result with `api_error_status: 401`.
-- `refused`: `oauth_org_not_allowed` or `billing_error`, or `api_error_status: 403`.
+- `signed_out`: a result with `api_error_status: 401`, or the assistant's `authentication_failed` with no status beside it.
+  The client labels every 401 and 403 `authentication_failed`, and a 403 is also a firewall's block page in front of the API, which no sign-in changes; so `authentication_failed` beside a 403 is an ordinary failed turn, never "sign in again".
+- `refused`: `oauth_org_not_allowed` or `billing_error`; a bare `api_error_status: 403` is not a refusal.
 - `no_headroom`: a pushed rate-limit `status: "rejected"` in the same failed turn, with `rate_limit` or no typed error at all; it carries that reading's `resetsAt` (epoch ms).
   `rate_limit` alone is not enough: the client also types a transient capacity 429 and a model it has switched off that way, so without the vendor's rejected reading it is an ordinary failed turn, and a typed error that is not a cut-off beats a reading.
   So does a loop that stopped on its own bound (`error_max_turns`, `error_max_budget_usd`, `error_max_structured_output_retries`): its requests were answered, so a reading it saw on the way is not why it stopped.

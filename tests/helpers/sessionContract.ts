@@ -75,6 +75,11 @@ export type ContractReply =
   | { cutShort: string }
   /** The API refuses the sign-in: 401 as signed out, 403 as an organisation refusal. */
   | { refuse: 401 | 403 }
+  /**
+   * A firewall in front of the API answers instead: a 403 HTML block page,
+   * the shape a network block returned to a crewmate's request (INF-4072).
+   */
+  | "blockPage"
   /** The API goes quiet mid-answer and never finishes. */
   | "hang"
   /** The model calls the named tool, with `args` or none, and answers once it has the tool's result. */
@@ -232,6 +237,14 @@ export function stubReply(reply: ContractReply): Reply {
         )?.name ?? CONTRACT_TOOL;
       writeAnthropicToolUse(res, 0, { id: `toolu_${request.n}`, name, args: {} });
       finishAnthropicStream(res, "tool_use", 7);
+      return;
+    }
+    if (reply === "blockPage") {
+      res.writeHead(403, { "content-type": "text/html; charset=UTF-8" });
+      res.end(
+        "<!DOCTYPE html><html><head><title>Attention Required! | Cloudflare</title></head>" +
+          "<body><h1>Sorry, you have been blocked</h1></body></html>",
+      );
       return;
     }
     if ("refuse" in reply) {
@@ -1157,6 +1170,30 @@ export function describeSessionContract(harness: SessionContractHarness): void {
             expect(session.isStreaming()).toBe(false);
           },
         );
+      },
+    );
+
+    // INF-4072: a network block page is not proof of a lost sign-in. The
+    // Claude client labels it as one, beside status 403; the typed backend
+    // reads it as an ordinary failed turn, which the honest retry takes.
+    (harness.backend === "claude" ? describeCrewmate : describe.skip)(
+      "the crewmate meeting a network block page",
+      () => {
+        it("reports a 403 block page as a failed turn with no cut-off", async () => {
+          world.answer("blockPage");
+          const session = await open(crewmateOn(world));
+          const events = recorder(session);
+          await settled(session.prompt(QUESTION));
+          const failed = failures(events);
+          expect(failed).toHaveLength(1);
+          expect(failed[0]?.taskId).toBe(CREWMATE_TASK);
+          // The client's own words for it, kept: the block page's title.
+          expect(failed[0]?.error).toBe(
+            "Failed to authenticate. API Error: Attention Required! | Cloudflare",
+          );
+          expect(failed[0]?.cutOff).toBeUndefined();
+          expect(session.isStreaming()).toBe(false);
+        });
       },
     );
 

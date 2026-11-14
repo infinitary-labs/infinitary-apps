@@ -135,6 +135,29 @@ describe("parseClaudeTranscript", () => {
     expect(parsed.authFailure).toBe(true);
   });
 
+  it("never badges a firewall's 403 block page as a sign-in problem", () => {
+    // The shape the client wrote when a network block page answered a
+    // crewmate's request: the sign-in label, but status 403.
+    const parsed = parseClaudeTranscript(
+      jsonl([
+        assistant(
+          "a1",
+          "msg_err",
+          [
+            {
+              type: "text",
+              text: "Failed to authenticate. API Error: 403 Attention Required! | Cloudflare",
+            },
+          ],
+          { isApiErrorMessage: true, error: "authentication_failed", apiErrorStatus: 403 },
+          { input_tokens: 0, output_tokens: 0 },
+        ),
+      ]),
+    );
+    expect(parsed.error).toMatch(/403/);
+    expect(parsed.authFailure).toBe(false);
+  });
+
   it("never reads a sign-in from an API error's words", () => {
     const apiError = (error?: string) =>
       parseClaudeTranscript(

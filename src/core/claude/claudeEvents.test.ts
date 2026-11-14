@@ -73,17 +73,29 @@ describe("fmEventsFromClaudeMessage, a turn's outcome", () => {
     });
   });
 
-  it("reads an organisation refusal as refused, and a 403 without a typed error too", () => {
+  it("reads an organisation refusal as refused, and a 403 without a typed error as no cut-off", () => {
     expect(
       turn(
         apiErrorMessage("oauth_org_not_allowed", "Your organization does not allow this."),
         successResult({ is_error: true, result: "Your organization does not allow this." }),
       ).failure?.cutOff,
     ).toEqual({ class: "refused" });
+    // A 403 is also how a firewall refuses: no refusal without the client's word for one.
     expect(
       turn(successResult({ is_error: true, result: "API Error: 403", api_error_status: 403 }))
-        .failure?.cutOff,
-    ).toEqual({ class: "refused" });
+        .failure,
+    ).toEqual({ error: "API Error: 403" });
+  });
+
+  it("reads a network block page the client labelled a sign-in failure as an ordinary failed turn", () => {
+    // The messages a crewmate's session got when a firewall's block page
+    // answered its request: the client's sign-in label, with status 403.
+    const words = "Failed to authenticate. API Error: 403 Attention Required! | Cloudflare";
+    const outcome = turn(
+      apiErrorMessage("authentication_failed", words),
+      successResult({ is_error: true, result: words, api_error_status: 403 }),
+    );
+    expect(outcome.failure).toEqual({ error: words });
   });
 
   it("reads a spent allowance with the reset the rejected reading named, in ms", () => {

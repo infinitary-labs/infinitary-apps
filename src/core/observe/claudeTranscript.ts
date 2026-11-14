@@ -124,7 +124,13 @@ export function* claudeTranscript(raw: string, summary = false): Generator<numbe
       // refused here (docs/quota.md "Typed cut-offs").
       const outcome =
         typeof entry.error === "string"
-          ? classifyClaudeSignal({ isError: true, assistantError: entry.error })
+          ? classifyClaudeSignal({
+              isError: true,
+              assistantError: entry.error,
+              ...(typeof entry.apiErrorStatus === "number"
+                ? { apiErrorStatus: entry.apiErrorStatus }
+                : {}),
+            })
           : undefined;
       meta.authFailure =
         outcome?.kind === "cut-off" &&

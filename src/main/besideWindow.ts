@@ -248,10 +248,15 @@ export class BesideWindow {
    * The copy is about to be replaced by this window's update: the first
    * mate ends with its crew's work saved, for whatever started it to start
    * the new copy. A first mate that kept no work saved changes nothing.
+   * The starter this window started it with then lets it go: its agent
+   * starts the run again after an update's exit, which would start the old
+   * copy before the installer replaced it, and macOS's installer refuses
+   * to replace a copy that runs. The new copy's window starts it again.
    */
   async replacing(): Promise<void> {
     if (!this.options.beside.installsUpdates || !this.window.inReach()) return;
     await this.window.dispatch("inf:update:hold", ["replaced"]);
+    await this.options.beside.starter?.stop({ forget: false });
   }
 
   /** One core channel the window asked: the first mate's, but for what only this program holds. */

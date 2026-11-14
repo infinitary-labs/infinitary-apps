@@ -142,6 +142,8 @@ The Mac updater asks once the download is done and before native installation; t
   The window asks `save` where a window with its own first mate asks the crew's work, `later` for Update later, `release` when nothing replaced the copy, and `replaced` once it did, which ends the first mate with its work still saved for the new copy to resume (`crewWorkHeldThere`).
   The hold belongs to the window's connection: a window that closes or drops mid-save lets the save go and the work carries on, so a closed window never leaves the crew waiting.
   A `replaced` with no work saved is refused, and nothing ends.
+  Once `replaced` answers, the window lets go of the agent it started the command with (`BesideWindow.replacing`, `src/main/besideWindow.ts`): that agent starts the command again after an update's exit, which would start the old copy before the installer replaced it, and macOS's installer refuses to replace a copy that runs (INF-4113 found it giving up with no window back).
+  The new copy's window, which the installer opens, starts the command again.
 - **What it does not wait for.**
   A background job is app-lifetime: the shutdown stops it and its row says the quit stopped it (`src/core/jobs/jobManager.ts`), which the crewmate hears after the restart.
   A turn on another computer goes on there; the connection and Remote Login updates of a computer that runs work still pause its turns the earlier way ("Updating" in `docs/devices.md`).

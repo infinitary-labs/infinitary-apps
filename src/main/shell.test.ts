@@ -1850,7 +1850,7 @@ describe("the window beside a command's first mate", () => {
   it("installs an update itself where only a window can, with the first mate ending first", async () => {
     const command = commandRun();
     await command.open().settled();
-    const at = besideShell(command.doorDir, { installsUpdates: true });
+    const at = besideShell(command.doorDir, { installsUpdates: true, starts: true });
     await at.shell.start();
     // This program's own notice, with the work the first mate still resumes.
     const status = await at.shell.dispatch("inf:update:status", []);
@@ -1860,8 +1860,16 @@ describe("the window beside a command's first mate", () => {
     });
     expect(command.asked("inf:update:status")).toEqual([]);
     // Before this window's update replaces the copy, the first mate ends with its work saved.
+    const heldAtStop: unknown[] = [];
+    at.starter.stop.mockImplementation(
+      async () => void heldAtStop.push(command.there.holds.at(-1)),
+    );
     await at.shell.updateReplacing();
     expect(command.there.holds.at(-1)).toBe("replaced");
+    // Then its starter lets it go, not forgotten: its agent would start the old copy again, and
+    // macOS's installer refuses to replace a copy that runs (INF-4113). The new window starts it.
+    expect(heldAtStop).toEqual(["replaced"]);
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: false }]]);
   });
 
   // INF-1352's plan, piece 7, starter=login-agent: an earlier command's stop is not this one's.

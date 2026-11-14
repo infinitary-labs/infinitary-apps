@@ -89,6 +89,7 @@ import {
   windowProfileDir,
 } from "./runCommand";
 import { type RunEnvironment, readKeychainLock, runEnvironment } from "./runEnvironment";
+import { openWindowOnReopen } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
@@ -295,7 +296,15 @@ export async function startApp(
   }
   // No Dock icon, no menu bar, never brought forward: macOS lists a run as
   // background-only, as it does the work mode.
-  if (windowless && hostPlatform() === "darwin") app.setActivationPolicy("prohibited");
+  // Clicking the app while only the run runs reaches the run: it opens the window beside itself.
+  if (windowless && hostPlatform() === "darwin") {
+    app.setActivationPolicy("prohibited");
+    openWindowOnReopen({
+      app,
+      execPath: process.execPath,
+      args: app.isPackaged ? [] : [app.getAppPath()],
+    });
+  }
   const rendererSource = defaultRendererSourceOptions(mainDir);
 
   // Privileged schemes must be registered before the app is ready, all in

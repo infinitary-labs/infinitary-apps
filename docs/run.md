@@ -22,7 +22,7 @@ The main entry (`src/main/index.ts`) reads the words before anything of the app 
 - **The same app.**
   It opens the same data folder the app with its window opens in that account, holds the same single-instance lock, and starts the same core, connection and scheduler, so a device paired with that account's Infinitary reaches it as it reaches the window.
 - **No window.**
-  It opens no window, menu or icon in the top bar, and on a Mac its activation policy is `prohibited`, so macOS lists it as background-only with no Dock icon.
+  It opens no window, menu or icon in the top bar, and on a Mac its activation policy is `prohibited`, so macOS lists it as background-only with no Dock icon. macOS still lists it under the app's own identity, so clicking Infinitary in the Dock, Spotlight or Finder, or `open -a`, reaches the command instead of starting the app: the command hears macOS's reopen (`activate`), puts itself back in the background, and opens the app beside itself as a new copy through macOS's `open -n`, which joins the command as any window does (`openWindowOnReopen`, `src/main/runReopen.ts`).
   The only windows it draws are hidden pages: a task's browser and the checks of a card's demo recording or a preview's font.
   The last of them closing is no reason to quit.
 - **A display of its own on Linux.**
@@ -151,6 +151,7 @@ A development run may stand in the program with `INFINITARY_RUN_PROGRAM` and how
 An update the command's own first mate installs ends the same way (INF-3660's plan, the captain's answer update=window-installs): its updater saves the crew's work, replaces the program, and where the app with its window would start itself again, the command says the same two lines and exits 75, for whatever started it to start the new version (`endUpdated`, `src/main/app.ts`).
 A command never starts itself again: it would come back as a window.
 On a Mac whose installed app updates itself, only a program in the person's own session can replace the copy, so the window opened beside the command installs it while the command holds the crew's saved work, and the command ends with 75 once the window says the copy is replaced (`docs/alpha.md`, "Saving work before an update").
+A window that started the command lets its agent go then, so the agent does not start the old copy again before the installer replaces it, and the new copy's window starts the command.
 
 ## The window starts it
 

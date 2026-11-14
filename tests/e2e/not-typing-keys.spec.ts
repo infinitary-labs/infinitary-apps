@@ -36,6 +36,7 @@ import {
   focusOn,
   keyboardSettings,
   pressKey,
+  pressKeyTakingFrame,
   pressWindowKey,
   runFromSearch,
   startRecording,
@@ -72,10 +73,13 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
   const settings = () => page.getByRole("tab", { name: "General", exact: true });
   // Electron injects a window key into the shell, not an out-of-process frame.
   // Witness it through the native owner, then deliver it to the focused frame through its key driver.
-  const frameKey = async (target: Locator, key: string) => {
+  // Settings takes the cards and the side panels away, so a key that opens it
+  // comes up only once its frame is gone (`pressKeyTakingFrame`).
+  const frameKey = async (target: Locator, key: string, frame: "stays" | "goes") => {
     await focusOn(target);
     await pressWindowKey(app, key);
-    await pressKey(target, key);
+    if (frame === "goes") await pressKeyTakingFrame(target, key);
+    else await pressKey(target, key);
   };
   const keepsLetter = async (field: Locator) => {
     await field.fill("");
@@ -178,13 +182,13 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
         await keepsLetter(cardReply(page).field);
         await pressWindowKey(app, "Escape");
         await expect(shownEntry(page)).toBeFocused();
-        await frameKey(body.getByRole("region", { name: "Note text" }), "s");
+        await frameKey(body.getByRole("region", { name: "Note text" }), "s", "goes");
         await expect(settings()).toBeVisible();
         await home();
         // Settings took the cards away, so going home makes every card's page again.
         await showCard(page, cardTitle);
         await focusFrameAfterStage(page, cardBodyElement(page, cardTitle));
-        await frameKey(body.getByRole("radio", { name: "Ready for review" }), "s");
+        await frameKey(body.getByRole("radio", { name: "Ready for review" }), "s", "goes");
         await expect(settings()).toBeVisible();
         await home();
       }
@@ -227,7 +231,7 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
       await stagePrepared(page);
       const body = cardBody(page, NOT_TYPING_TITLES.served);
       const local = body.getByRole("button", { name: "Keep reading", exact: true });
-      await frameKey(local, "s");
+      await frameKey(local, "s", "stays");
       await expect(local).toHaveAttribute("data-used", "true");
       await expect(settings()).toHaveCount(0);
       await page.evaluate(() => {
@@ -271,7 +275,7 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
       await forge();
       await frameGesturesDecided(page);
       await expect(settings()).toHaveCount(0);
-      await frameKey(reader, "s");
+      await frameKey(reader, "s", "goes");
       await expect(settings()).toBeVisible();
       await home();
     });
@@ -285,8 +289,12 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
       if (!task) throw new Error("The scenario's task is missing");
       await expandDock(page, "now");
       await pressRow(page, task.key);
+      // The row brings the task's card forward, which takes the focus once it
+      // appears; the keys below start after that, so it cannot move focus
+      // out of Tasks between them (docs/e2e-contracts.md, `pressRow`).
+      await expect(shownEntry(page)).toBeFocused();
       await focusFrameAfterStage(page, dockFrameElement(page, "now"));
-      await frameKey(nowRow(page, task.key), "s");
+      await frameKey(nowRow(page, task.key), "s", "goes");
       await expect(settings()).toBeVisible();
       await home();
       await showCard(page, NOT_TYPING_TITLES.served);

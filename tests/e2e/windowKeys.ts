@@ -426,6 +426,38 @@ export async function pressKey(target: Locator, key: string): Promise<void> {
 }
 
 /**
+ * `pressKey` for a key whose command takes away the frame `target` sits
+ * in, as Settings takes the cards and the side panels: the key goes down,
+ * and comes up once the frame is gone. Playwright's keyboard reaches a
+ * frame through Chromium's debugger, which answers a key only when the
+ * frame it went to has handled it, and a frame removed first never does:
+ * a release still on its way when the command removes the frame leaves
+ * the press waiting for ever. The command runs as the key goes down, as a
+ * person's key does, so the release then goes wherever focus went. The
+ * key comes up even when the frame stays, which fails the press loudly.
+ */
+export async function pressKeyTakingFrame(target: Locator, key: string): Promise<void> {
+  await takeTurn(target.page(), async () => {
+    await untilFocusable(target);
+    await target.focus();
+    await focusLanded(target);
+    const element = await target.elementHandle();
+    const frame = await element.ownerFrame();
+    await element.dispose();
+    if (!frame?.parentFrame()) throw new Error("the target sits in the window's own page");
+    const { keyboard } = target.page();
+    await keyboard.down(key);
+    try {
+      await expect
+        .poll(() => frame.isDetached(), { message: "the key's command takes its frame away" })
+        .toBe(true);
+    } finally {
+      await keyboard.up(key);
+    }
+  });
+}
+
+/**
  * Types `text` with Playwright's keyboard once `field` holds the window's
  * focus. The keyboard types wherever focus is, so a journey that types
  * where a step of its own put focus checks first that it landed there; one

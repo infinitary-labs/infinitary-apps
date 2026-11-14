@@ -185,6 +185,9 @@ A key goes wherever the window's focus is.
 `focus()` returns before focus has moved: into a frame of its own it lands a moment later, and a key pressed in between goes to whatever still held it.
 Two clicks, or a click and a key, that overlap on one page can swallow one while both report success, because Playwright keeps one hit-target check per page.
 So `focusOn(target)` and `pressKey(target, key)` (`tests/e2e/windowKeys.ts`) focus the target, wait until it holds the window's focus (`untilFocused`), and press; `typeInto` already did the same for words.
+Playwright's keyboard reaches a frame through Chromium's debugger, which answers a key only once the frame it went to has handled it, and a frame removed first never answers.
+A key whose command takes its own frame away, as Settings takes the cards and the side panels, therefore goes through `pressKeyTakingFrame(target, key)`: the key goes down, and comes up only once the frame is gone.
+A `pressKey` there releases the key at once, and a release still on its way when the frame goes leaves the press waiting until the test times out (`tests/e2e/not-typing-keys.spec.ts`).
 For a pointer activation dispatched inside a hidden frame, `focusOn(target, { focusVisible: false, preventScroll: true })` preserves pointer modality without revealing the target; the journey then dispatches its in-frame click.
 Hover alone does not change Chromium's focus-visible modality, so scripted default focus is not evidence of pointer focus.
 A `fill` moves focus the same way, so a window key a journey presses after filling a field inside a frame (`pressWindowKey`) waits on `focusOn(field)` first: a key that reaches the window before it hears focus moved finds the window's focus where it was before, and command search opened then gives focus back there (INF-1132).

@@ -14,10 +14,10 @@ import { GitHubCliLine } from "./GitHubCliLine";
 import { useDeviceSignIns } from "./useDeviceSignIns";
 
 /**
- * Settings -> Projects, "Where your projects live", for each computer that
- * runs work (design skill `components/devices/SignInOnAMac`, "GitHub on
- * another device"; docs/forge.md, "A computer's own sign-in"): under this
- * Mac's own row, a row per computer and host - "GitHub · octo" over "Mac mini
+ * Settings -> Integrations, for each computer that runs work (design skill
+ * `components/devices/SignInOnAMac`, "GitHub on another device";
+ * docs/forge.md, "A computer's own sign-in"): under this computer's own
+ * connections, a row per computer and host - "GitHub · octo" over "Mac mini
  * · clones and pushes its own work", or the computer's name over "not signed
  * in to GitHub" with a Sign in. The host's device flow runs on that
  * computer: its code to read is drawn in the aside under the row, and that
@@ -105,8 +105,8 @@ export function deviceForgeRowView(row: DeviceForgeRow): {
 }
 
 /**
- * The computers' rows, below this Mac's own. `onAny` says whether any draws,
- * so this Mac's row names its own part.
+ * The computers' rows, below this computer's own connections. `onAny` says
+ * whether any draws, so the box is not called empty.
  */
 export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = {}) {
   const devices = useDeviceSignIns();
@@ -123,9 +123,9 @@ export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = 
     [devices],
   );
 
-  // The host's card for a computer that needs its own sign-in lands here
-  // with that sign-in to start, so the code is on screen when the section
-  // opens (docs/forge.md, "A computer's own sign-in").
+  // The host's card for a computer that needs its own sign-in lands here,
+  // in Settings -> Integrations, with that sign-in to start, so the code is
+  // on screen when the tab opens (docs/forge.md, "A computer's own sign-in").
   const pending = useShellStore((s) => s.pendingDeviceForgeSignIn);
   useEffect(() => {
     if (!pending) return;

@@ -127,9 +127,10 @@ for (const host of ["gitlab.com", "gitlab.example.com"]) {
           await heroShot(launched.app, page, { region: section, name: "gitlab-sign-in" });
       }
       await pressKey(page.getByRole("tab", { name: "Projects", exact: true }), "Enter");
-      await expect(
-        page.locator("[data-forges] [data-forge-row], [data-forges] [data-forge-chip]"),
-      ).toHaveCount(0);
+      // Projects holds no sign-in row or chip: they are only in Integrations.
+      const projects = page.locator('[data-settings-section="projects"]');
+      await expect(projects).toBeVisible();
+      await expect(projects.locator("[data-forge-row], [data-forge-chip]")).toHaveCount(0);
       const add = page.locator("[data-add-project]");
       const name = host === "gitlab.com" ? "GitLab" : host;
       const choose = add.getByRole("button", { name: `${name} repo`, exact: true });

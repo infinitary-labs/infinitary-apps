@@ -1,8 +1,9 @@
-/* "Where your projects live" (design skill components/projects/ForgeRow):
-   the optional sign-in section at the top of Settings -> Projects. One list
-   box, a row per signed-in host on the Subscriptions rows' rhythm, one quiet
-   line when nothing is signed in, and the chip foot with its device-code
-   aside. The layout rules inline styles cannot express live here. */
+/* The host sign-in rows and forms (design skill components/projects/ForgeRow),
+   drawn in Settings -> Integrations' connections box. One list box, a row per
+   signed-in host and per other computer's own sign-in on the Subscriptions
+   rows' rhythm, one quiet line when nothing is connected, and the chip foot
+   with its device-code aside. The layout rules inline styles cannot express
+   live here. */
 
 .fm-forges-box {
   background: var(--bg-1);
@@ -189,20 +190,4 @@
 
 .fm-forges-browser-problem {
   color: var(--danger);
-}
-
-/* The pointer to Settings -> Integrations, where GitHub's own sign-in lives. */
-.fm-forges-pointer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: 10px var(--space-4);
-  border-top: 1px solid var(--line-1);
-  font-size: var(--text-sm);
-  color: var(--fg-3);
-}
-
-.fm-forges-box > .fm-forges-pointer:first-child {
-  border-top: 0;
 }

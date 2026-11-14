@@ -382,7 +382,8 @@ export function authDecisionCard(
 /**
  * The one host card for a sign-in where projects live that the host
  * refused (git integration PR 1.2): "Sign in to GitHub again", whose one
- * action lands on Settings -> Projects with the sign-in already started.
+ * action lands on Settings -> Integrations with the sign-in already started
+ * (its effect names `projects`, which `openedSection` routes there).
  * A body names what waits on it; it never suggests the host is required.
  */
 export function forgeSignInCard(
@@ -425,7 +426,8 @@ export function forgeSignInCard(
  * it holds no sign-in for (design skill `components/devices/SignInOnAMac`,
  * "GitHub on another device"; docs/forge.md, "A computer's own sign-in"):
  * "Sign in to GitHub on Mac mini", whose one action lands on Settings ->
- * Projects with that computer's sign-in started under its row.
+ * Integrations with that computer's sign-in started under its row (its
+ * effect names `projects`, which `openedSection` routes there).
  */
 export function deviceForgeSignInCard(
   id: string,

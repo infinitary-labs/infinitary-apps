@@ -67,10 +67,11 @@ The words are `PRIVATE_SITES_WORDS` in `src/shared/privateSites.ts`.
 The tab closes with its Data section, under the Private sites box: the Settings `SectionLabel` "Data", 32 above as any section, then one `SettingRow`, Delete Gmail and Calendar content, as General's Purge task data row is drawn, with its `--text-sm --fg-3` description and a small ghost "Delete" that turns into a danger "Confirm delete" on the first press, and whose answer takes the description's place.
 While the inbox is kept, a second row of the same shape follows, "Delete Infinitary Inbox notes", described "Removes every note your scripts sent and the inbox's key, and turns the inbox off."
 It shows whether or not Google is connected, since removing Google deletes none of what the agents read, and is absent where the build keeps no such content; the words are `SAVED_OUTSIDE_DATA_WORDS` in `src/shared/savedOutsideData.ts`.
-Settings -> Projects' "Where your projects live" ends with one pointer line, "Your GitHub, GitLab and GitHub Enterprise sign-ins are in Integrations.", in `--text-sm --fg-3`, with a small secondary "Open Integrations".
+Each other device that runs work has its own GitHub row under the connections and above the chips, in the same box (`components/devices/SignInOnAMac.prompt.md`, "GitHub on another device"); with such a row the box holds no quiet line.
+Settings -> Projects holds no sign-in and no pointer here: every sign-in where projects live is in this tab.
 
 GitLab and GitHub Enterprise each draw one row per signed-in host, named GitLab for gitlab.com and by address for a server.
 Their rows use the same health, action switches and menu as GitHub, with two actions, Read and Change.
 The GitLab and GitHub Enterprise chips remain available to add another server; GitLab's public chip and server chip never duplicate the same label.
 The browser/application guide and both key forms described in `components/projects/ForgeRow` render here, under the row signing in again or under the chips for a new host.
-Projects keeps only its pointer and other computers' own GitHub rows.
+Projects keeps none of them.

@@ -10,11 +10,11 @@ It runs work once it has:" ("Running as Builder is set up with git and Claude Co
 Then one row per need, each a bold need over its state:
 - "A subscription of its own" · "Sign in under Mac mini in Settings → Intelligence." open, or `signed in to Codex and Grok` done, as a `mark`;
 - "Its own GitHub sign-in, to clone and push" · "Needed for a project that lives on GitHub.
-  Sign in under Where your projects live in Settings → Projects." open, or `signed in as octo` done;
+  Sign in under Mac mini in Settings → Integrations." open, or `signed in as octo` done;
 - "A project that runs there", last and worded as optional: "Optional: Mac mini runs nothing until a project's Runs on names it, and that is fine." open, or `runs website and api` done.
 
 Under the rows the muted line "Nothing from this computer's sign-ins goes there."
-The card's footer holds one button per row still open, the first as the primary: "Add a subscription" opens Settings → Intelligence at the computer's group; "Sign in to GitHub on Mac mini" ("as Builder") opens Settings → Projects with that computer's GitHub sign-in started, its code to read under its row; "Choose a project" opens Settings → Projects, where Runs on is.
+The card's footer holds one button per row still open, the first as the primary: "Add a subscription" opens Settings → Intelligence at the computer's group; "Sign in to GitHub on Mac mini" ("as Builder") opens Settings → Integrations with that computer's GitHub sign-in started, its code to read under its row; "Choose a project" opens Settings → Projects, where Runs on is.
 A ghost "Not now" closes it.
 Every button closes the card, as every card's does; the app raises it again, under the same card, as a need is met.
 

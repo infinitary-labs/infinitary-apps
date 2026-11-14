@@ -37,6 +37,7 @@ import {
 } from "../devices/viewWords";
 import "./integrations.css";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
+import { DeviceForgeRows } from "./DeviceForgeRows";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
 import { OutsideDataRow } from "./OutsideDataRow";
 import { PrivateSitesSection } from "./PrivateSitesSection";
@@ -66,7 +67,10 @@ import "./forges.css";
  * GitHub is the first kind, and its sign-in is the forge's device flow
  * (`docs/forge.md`): this tab starts it, shows the code, and follows the
  * `inf:forges` push for how it ends, as Settings -> Projects did before the
- * sign-in moved here (INF-775, the captain's q2). Google signs in in the
+ * sign-in moved here (INF-775, the captain's q2). Under the connections, each
+ * other computer that runs work has its own GitHub row, for its own clones
+ * and pushes, with its Sign in, its code and its Sign out
+ * (`DeviceForgeRows.tsx`); Settings -> Projects holds no sign-in. Google signs in in the
  * person's browser (`integrations.signIn`), after its notice: what
  * Infinitary uses from Gmail and Calendar and where it goes, which the
  * person accepts before anything is asked of Google (INF-949). While the
@@ -113,6 +117,8 @@ export function IntegrationsTab() {
   const [kept, setKept] = useState<readonly KeptOutsideData[]>([]);
   // The rules on the inbox, so its box says whether one tells the first mate; null until read.
   const [inboxRules, setInboxRules] = useState<AutomationRule[] | null>(null);
+  // Whether another computer's own GitHub row draws in the box, so it is not called empty.
+  const [computerRows, setComputerRows] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -346,7 +352,7 @@ export function IntegrationsTab() {
       </div>
       <SettingError error={error} />
       <div className="fm-forges-box" data-integrations-list="">
-        {loaded && connected.length === 0 && (
+        {loaded && connected.length === 0 && !computerRows && (
           <div className="fm-forges-quiet" data-integrations-quiet="">
             {INTEGRATIONS_WORDS.quiet}
           </div>
@@ -408,6 +414,8 @@ export function IntegrationsTab() {
             {browser === integration.kind && browserAside}
           </div>
         ))}
+        {/* Each other computer's own GitHub sign-in, for its clones and pushes (docs/forge.md, "A computer's own sign-in"). */}
+        <DeviceForgeRows onAny={setComputerRows} />
         {view.addable.length > 0 && (
           <div className="fm-forges-add">
             <div className="fm-connect-chips" data-connect-chips="foot">

@@ -315,8 +315,8 @@ The Infinitary command's box, the inbox's, sits under the list and its chips, wi
 The Data section closes the tab, under the inbox: Delete Gmail and Calendar content, armed on the first press and run on the second, as Purge task data is ([Task retention](task-retention.md#words-from-outside)), and, while the inbox is kept, Delete Infinitary Inbox notes, armed and run the same way, which deletes its key and log.
 Delete Gmail and Calendar content shows whether or not Google is connected, since removing Google deletes none of what the agents read.
 The "MCP server" chip is always there: its form takes a name and what the server runs, and Connect opens the new row on the server's tools, or says in the form why it could not.
-GitHub, GitLab and GitHub Enterprise sign-ins live here; Projects keeps a pointer line and other computers' own GitHub sign-ins.
-A card's `open` effect that names `projects` with a forge host in `signIn` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives; one with `signIn: "google"` lands here and opens Google's notice, whose accept opens Google's page.
+GitHub, GitLab and GitHub Enterprise sign-ins live here, and so does each other computer's own GitHub sign-in, a row per computer under the connections in the same box, with its Sign in, its code and its Sign out (`docs/forge.md`, "A computer's own sign-in"); Settings -> Projects holds no sign-in.
+A card's `open` effect that names `projects` with a forge host in `signIn` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives, and so does one with `forgeSignInOn`, which starts that computer's own sign-in under its row; one with `signIn: "google"` lands here and opens Google's notice, whose accept opens Google's page.
 Like Projects, the tab shows on a paired view too, read and changed on the first mate's computer (`docs/view.md`, "Settings on a view").
 
 ## How the first mate reaches them

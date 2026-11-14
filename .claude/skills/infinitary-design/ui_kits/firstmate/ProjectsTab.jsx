@@ -1,22 +1,18 @@
-// Settings → Projects (components/projects/): where your projects live, then one list box: a row per
-// project that opens to its settings and says only how it differs from a new project, Add project, and
-// the projects folder on one line under it. All data is fake; nothing is cloned or created.
+// Settings → Projects (components/projects/): one list box: a row per project that opens to its
+// settings and says only how it differs from a new project, Add project, and the projects folder on one
+// line under it. Sign-ins are in Settings → Integrations, never here. All data is fake; nothing is
+// cloned or created.
 (()=>{
 const NS=window.InfinitaryDesignSystem_94f559;
-const {Button,Input,Switch,Badge}=NS;
+const {Button,Input,Switch}=NS;
 const {GroupedPills}=window.GroupedPills;
-const {StatusDot}=window.StatusDot;
-const {RowMenu}=window.RowMenu;
-const {ConnectChips}=window.ConnectChips;
 const label={fontSize:"var(--text-xs)",fontWeight:500,letterSpacing:"var(--tracking-label)",textTransform:"uppercase",color:"var(--fg-3)"};
 const intro={fontSize:"var(--text-sm)",color:"var(--fg-3)",margin:"6px 0 14px"};
 const box={background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"};
-const foot={display:"flex",alignItems:"center",flexWrap:"wrap",gap:10,padding:"12px 18px",borderTop:"1px solid var(--line-1)"};
 const mono={fontFamily:"var(--font-mono)",fontSize:"var(--text-xs)",color:"var(--fg-3)"};
 const quiet={fontSize:"var(--text-sm)",color:"var(--fg-3)"};
 const plus=<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>;
 const chevron=<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>;
-const GITHUB={id:"github.com",name:"GitHub",authTypes:["oauth"],tier:"subscription",servesFirstmate:true};
 const DEFAULT_FOLDER="~/Library/Application Support/infinitary/fleet";
 const DELIVERY=[{value:"local-only",label:"local merge"},{value:"direct-pr",label:"pull requests"}];
 const CARE=[{value:"quick",label:"Quick"},{value:"standard",label:"Default"},{value:"reviewed",label:"Careful"}];
@@ -31,38 +27,6 @@ const rowWords=(p,folder)=>p.personal?["builds in place"]:[
   p.rigor==="reviewed"&&"Careful care",
 ].filter(Boolean);
 const REPOS=[{name:"octo/website",added:true},{name:"octo/notes",private:true},{name:"octo/design-site"}];
-
-// Where your projects live (components/projects/ForgeRow): optional, and it reads as optional.
-function WhereProjectsLive({signedIn,onSignedIn}){
-  const [flow,setFlow]=React.useState(false);
-  return <div style={{marginBottom:28}}>
-    <div style={label}>Where your projects live</div>
-    <div style={intro}>Optional. Sign in once and your first mate can clone your projects and merge changes for you; projects kept on this computer need no sign-in.</div>
-    <div style={box}>
-      {signedIn?<div style={{display:"grid",gridTemplateColumns:"14px 120px 1fr auto",alignItems:"center",gap:12,padding:"12px 18px"}}>
-        <StatusDot tone="ok" label="signed in"/>
-        <span style={{fontSize:"var(--text-base)",fontWeight:500,color:"var(--fg-1)"}}>GitHub</span>
-        <span style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}><Badge tone="ok">signed in</Badge><span style={mono}>as octo · 3 projects here</span></span>
-        <RowMenu label="GitHub actions" items={[{id:"sign-out",label:"Sign out",tone:"danger",onSelect:()=>onSignedIn(false)}]}/>
-      </div>
-      :<div style={{...quiet,padding:"14px 18px"}}>Projects kept on this computer need no sign-in.</div>}
-      {!signedIn&&<div style={foot}>
-        <ConnectChips providers={[GITHUB]} variant="foot" busyProviderId={flow?GITHUB.id:null} onConnect={()=>setFlow(true)}/>
-      </div>}
-      {!signedIn&&flow&&<div style={{padding:"0 18px 14px",display:"flex",flexDirection:"column",gap:10}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,fontSize:"var(--text-sm)",color:"var(--fg-2)"}}>
-          Enter this code on GitHub:
-          <code style={{fontFamily:"var(--font-mono)",fontSize:"var(--text-sm)",letterSpacing:"0.12em",color:"var(--fg-1)",background:"var(--bg-3)",borderRadius:"var(--radius-s)",padding:"3px 8px"}}>WDJB-MJHT</code>
-          <Button variant="secondary" size="sm">Copy code</Button>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <Button size="sm" onClick={()=>{setFlow(false);onSignedIn(true);}}>Open GitHub</Button>
-          <Button variant="ghost" size="sm" onClick={()=>setFlow(false)}>Cancel</Button>
-        </div>
-      </div>}
-    </div>
-  </div>;
-}
 
 // Projects folder (components/projects/ProjectsFolder): one line under Add project.
 function ProjectsFolderLine({folder,setFolder}){
@@ -186,7 +150,8 @@ function AddProjectRow({folder,signedIn,onAdd}){
 }
 
 function ProjectsTab(){
-  const [signedIn,setSignedIn]=React.useState(true);
+  // GitHub is signed in, in Integrations, so Add project lists its repositories.
+  const signedIn=true;
   const [folder,setFolder]=React.useState(DEFAULT_FOLDER);
   const [projects,setProjects]=React.useState([
     {id:"website",name:"website",path:`${DEFAULT_FOLDER}/website`,setup:"cloned",lives:"on GitHub",delivery:"direct-pr",autonomy:false,rigor:"standard"},
@@ -202,7 +167,6 @@ function ProjectsTab(){
     setProjects(list=>[...list,{...project,id}]);setOpenId(id);
   };
   return <div>
-    <WhereProjectsLive signedIn={signedIn} onSignedIn={setSignedIn}/>
     <div style={label}>Projects</div>
     <div style={intro}>Add a project here or ask your first mate, and open one to change how it works. A row says only what is set differently from a new project, which is offered as pull requests where it lives, waits for your word before merging, takes Default care and runs on a computer chosen automatically.</div>
     <div style={{...box,overflow:"hidden"}}>

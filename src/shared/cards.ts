@@ -158,9 +158,10 @@ export const signInOnSchema = z.object({
 
 /**
  * A computer that runs work and a host where projects live whose sign-in
- * Settings -> Projects starts there on arrival (docs/forge.md, "A
- * computer's own sign-in"): the code to read opens under that computer's
- * row. Only the host's own cards carry it.
+ * Settings starts there on arrival (docs/forge.md, "A computer's own
+ * sign-in"): the effect names `projects`, which lands on Settings ->
+ * Integrations (`openedSection`), and the code to read opens under that
+ * computer's row. Only the host's own cards carry it.
  */
 export const forgeSignInOnSchema = z.object({
   deviceId: z.string().min(1).max(64),

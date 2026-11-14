@@ -48,9 +48,10 @@ import { expectNoCard, shownCard } from "./stack";
  * the allowance it reads shows in its row. What the captain types goes to
  * that computer once: nothing the home saves holds it.
  *
- * Settings -> Projects does the same for the computer's own GitHub sign-in,
- * which its clones and pushes use: GitHub's code to read is drawn here, and
- * the computer finishes the sign-in and its git answers GitHub with it.
+ * Settings -> Integrations does the same for the computer's own GitHub
+ * sign-in, which its clones and pushes use: GitHub's code to read is drawn
+ * here, and the computer finishes the sign-in and its git answers GitHub
+ * with it. Settings -> Projects holds no sign-in at all.
  *
  * The home is the built app. The computer is the helper as the work mode
  * composes it, in this test's own process, joined as another macOS user on
@@ -578,21 +579,29 @@ test("a computer already signed in to Claude uses that login, and asks for no co
   expect(saved.queries.filter((query) => query.interactive === true)).toEqual([]);
 });
 
-test("a computer signs in to GitHub for its own clones and pushes from Settings -> Projects here", async () => {
+test("a computer signs in to GitHub for its own clones and pushes from Settings -> Integrations here", async () => {
   github = await startGitHubStub();
   const { app, page, deviceId, dataDir } = await homeAndComputer({ github });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("tab", { name: "Projects", exact: true }).click();
 
-  // This Mac's own GitHub sign-in is in Integrations (INF-775, the captain's q2),
-  // so Projects points there; the computer's row is here, not signed in.
-  await expect(page.locator("[data-forges]").locator('[data-forge-row="github.com"]')).toHaveCount(
-    0,
+  // The captain: these sign-ins do not belong in Projects "any more. it should
+  // be only in integrations tab". Projects draws no sign-in, this Mac's or the
+  // computer's, and no pointer to them.
+  await page.getByRole("tab", { name: "Projects", exact: true }).click();
+  await expect(page.locator('[data-settings-section="projects"]')).toBeVisible();
+  await expect(
+    page.locator("[data-forges], [data-device-forge-row], [data-forge-row]"),
+  ).toHaveCount(0);
+
+  // Integrations holds this Mac's GitHub connection and, under it, the
+  // computer's own row, not signed in.
+  await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
+  const list = page.locator("[data-integrations-list]");
+  await expect(list.locator('[data-forge-row="github.com"]')).toHaveAttribute(
+    "data-forge-state",
+    "ok",
   );
-  await expect(page.locator("[data-integrations-pointer]")).toContainText(
-    INTEGRATIONS_WORDS.pointer,
-  );
-  const row = page.locator(`[data-device-forge-row="${deviceId}"]`);
+  const row = list.locator(`[data-device-forge-row="${deviceId}"]`);
   await expect(row).toHaveAttribute("data-forge-state", "none");
 
   // GitHub's code to read, here; the computer finishes the sign-in itself.
@@ -602,7 +611,7 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
   // The same row 6 guardrail for the other caller: a code stays available on return.
   await page.getByRole("tab", { name: "Appearance", exact: true }).click();
   await expect(aside).toHaveCount(0);
-  await page.getByRole("tab", { name: "Projects", exact: true }).click();
+  await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
   await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
   await expect(aside.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
   github.device.approve(COMPUTER_GITHUB);
@@ -627,9 +636,9 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
     savedText(join(dataDir, "forges")).some(({ text }) => text.includes(COMPUTER_GITHUB)),
   ).toBe(true);
 
-  // Signing it out from here deletes it there.
+  // Signing it out from its menu here deletes it there.
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("tab", { name: "Projects", exact: true }).click();
+  await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
   await row.getByRole("button", { name: "GitHub as Builder actions" }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(row).toHaveAttribute("data-forge-state", "none");
@@ -655,12 +664,12 @@ function standInGitHubCli(): { path: string; calls: () => string[] } {
 // INF-3145, the captain's user: registering a separate computer, its GitHub
 // sign-in "doesn't have the recent change where it allows to sign with GH via
 // already authenticated cli".
-test("a computer signs in to GitHub through its own GitHub CLI from Settings -> Projects here", async () => {
+test("a computer signs in to GitHub through its own GitHub CLI from Settings -> Integrations here", async () => {
   github = await startGitHubStub();
   const cli = standInGitHubCli();
   const { app, page, deviceId, dataDir } = await homeAndComputer({ github, githubCli: cli.path });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("tab", { name: "Projects", exact: true }).click();
+  await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
   const row = page.locator(`[data-device-forge-row="${deviceId}"]`);
   await expect(row).toHaveAttribute("data-forge-state", "none");
 

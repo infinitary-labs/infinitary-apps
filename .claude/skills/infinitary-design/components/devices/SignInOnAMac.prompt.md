@@ -67,13 +67,14 @@ A reply under a held task's card is kept, and its waiting line names where: "Sav
 Sign in from Settings, under Intelligence, and it goes to crewmate 3."
 
 **GitHub on another device.**
-Settings → Projects' `WHERE YOUR PROJECTS LIVE` lists a row per device that runs work under this computer's own: "GitHub · <account>" with the mono line "Mac mini · clones and pushes its own work".
+Settings → Integrations lists a row per device that runs work under this computer's own connections, in the same list box and on the same row grid (`components/integrations/IntegrationRow.prompt.md`): "GitHub · <account>" with the mono line "Mac mini · clones and pushes its own work", and a `RowMenu` whose one item is "Sign out" (danger), which signs that device out.
 A device not signed in reads its name over "not signed in to GitHub", with a secondary "Sign in" whose code to read opens in the aside under it.
+Settings → Projects holds no sign-in, this computer's or a device's (the captain: it "should be only in integrations tab").
 Where that device has GitHub CLI installed, the aside closes as GitHub's own does on this computer (`components/integrations/IntegrationRow.prompt.md`): below a `--line-1` hairline, one `--text-sm --fg-3` line, "If your organization blocks apps like Infinitary, use the GitHub sign-in that GitHub CLI already holds on Mac mini.", and a small "Use GitHub CLI" that asks that device's own GitHub CLI; its row then reads "Mac mini · through GitHub CLI · clones and pushes its own work".
-This computer's row reads "this computer · opens, checks and merges pull requests": pull requests are still opened, checked and merged from this computer, with its own sign-in.
+This computer's own GitHub connection above it is the one pull requests are still opened, checked and merged with.
 When a project is set to run on a device with no GitHub sign-in, the app raises its own card (chip "Attention"), "Sign in to GitHub on Mac mini": "website runs on Mac mini now.
 Mac mini needs its own GitHub sign-in to clone it and push." and "Its next task waits for it.
-This computer's GitHub sign-in is not sent there.", with one primary "Sign in to GitHub on Mac mini" that opens Projects with that sign-in started.
+This computer's GitHub sign-in is not sent there.", with one primary "Sign in to GitHub on Mac mini" that opens Integrations with that sign-in started.
 The feed says "website's next task waits for Mac mini's own GitHub sign-in."
 The same card is raised when a task is about to start there, and when that device's clone is refused for want of the sign-in; while the device's setup card is up (`FinishSetup.prompt.md`), its own GitHub row asks instead and no second card goes up.
 The card comes down, and the task starts, the moment the device reports its GitHub sign-in.

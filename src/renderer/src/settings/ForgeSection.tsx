@@ -15,24 +15,22 @@ import {
   GITLAB,
 } from "@shared/forges";
 import * as m from "@shared/i18n/messages.generated";
-import {
-  INTEGRATIONS_SIGN_IN_HOST,
-  INTEGRATIONS_WORDS,
-  integrationHostArrival,
-} from "@shared/integrations";
+import { INTEGRATIONS_SIGN_IN_HOST, integrationHostArrival } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { CopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Button, Input, type InputProps, type StatusDotTone } from "../design";
 import { useHereAs } from "../devices/useFirstMatePlace";
-import { DeviceForgeRows } from "./DeviceForgeRows";
 import { ForgeBrowserAside } from "./ForgeBrowserAside";
 import { GitHubCliLine } from "./GitHubCliLine";
 import "../accounts/connectChips.css";
 import "./forges.css";
 
-/** Projects keeps the pointer and other computers' own sign-ins (INF-1007 direction A).
- * This module also owns the shared host sign-in forms drawn by Integrations.
+/**
+ * The shared host sign-in forms Settings -> Integrations draws (INF-1007
+ * direction A): host chips, the key and browser asides, and the device-code
+ * aside. Settings -> Projects holds no sign-in; each other computer's own
+ * GitHub row is in Integrations too (`DeviceForgeRows.tsx`).
  */
 
 /** The add chip's plus, shared with Settings -> Integrations' MCP server chip. */
@@ -91,26 +89,6 @@ export function withoutIntegrationHost(view: ForgesView): ForgesView {
     flow: view.flow && other(view.flow.host) ? view.flow : null,
     ended: view.ended && other(view.ended.host) ? view.ended : null,
   };
-}
-
-export function ForgeSection() {
-  return (
-    <section data-forges="" style={{ marginBottom: "var(--space-6)" }}>
-      <div className="fm-forges-box" data-forges-list="">
-        <div className="fm-forges-pointer" data-integrations-pointer="">
-          <span>{INTEGRATIONS_WORDS.pointer}</span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => useShellStore.setState({ settingsSection: "integrations" })}
-          >
-            {INTEGRATIONS_WORDS.open}
-          </Button>
-        </div>
-        <DeviceForgeRows />
-      </div>
-    </section>
-  );
 }
 
 /** Host chips and their original sign-in forms, now owned by Integrations. */

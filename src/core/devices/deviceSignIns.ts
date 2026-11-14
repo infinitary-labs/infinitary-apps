@@ -36,7 +36,7 @@ import type { WorkDevices } from "../placed/workDevices";
  *
  * The same holds for the computer's own sign-in where projects live, which
  * its clones and pushes use (docs/forge.md, "A computer's own sign-in"):
- * Settings -> Projects starts the host's device flow there, the code to read
+ * Settings -> Integrations starts the host's device flow there, the code to read
  * comes back as a step, and that computer finishes the sign-in itself.
  */
 

@@ -16,6 +16,7 @@ import {
   deviceSetupDoneLine,
   deviceSetupTitle,
 } from "../../src/shared/deviceSetup";
+import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
 import { signInPlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -204,14 +205,14 @@ test("a computer that joins gets its setup card, whose buttons open each step, r
     await expect(page.getByRole("button", { name: label, exact: true })).toHaveCount(0);
   });
 
-  await test.step("Sign in to GitHub opens Projects with the computer's sign-in started; its code approved marks the row done", async () => {
+  await test.step("Sign in to GitHub opens Integrations with the computer's sign-in started; its code approved marks the row done", async () => {
     await page
       .getByRole("button", { name: `Sign in to GitHub ${PLACE.where}`, exact: true })
       .click();
-    await expect(page.getByRole("tab", { name: "Projects", exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    // The computer's own GitHub sign-in is only in Integrations (the captain's word).
+    await expect(
+      page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
     const forgeRow = page.locator(`[data-device-forge-row="${deviceId}"]`);
     const aside = page.locator('[data-device-sign-in-provider="github.com"]');
     await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
@@ -249,9 +250,12 @@ test("Not now takes the setup card down for good, and a GitHub project set to ru
   // The setup card stays down: Not now meant it.
   await expectNoCard(page, CARD);
 
-  // Its one button opens Projects with that sign-in started; the code
+  // Its one button opens Integrations with that sign-in started; the code
   // approved on GitHub's page takes the card down.
   await page.getByRole("button", { name: forgeCard, exact: true }).click();
+  await expect(
+    page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   const aside = page.locator('[data-device-sign-in-provider="github.com"]');
   await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
   github?.device.approve("gho_e2e_computer_1350");

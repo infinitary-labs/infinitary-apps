@@ -436,7 +436,8 @@ The task record's body is a page of its own, which the window's label cannot rea
 
 - Settings -> Intelligence, an account's row: its status dot (`StatusDot`'s `focusable`), the ✱ crew work prefers and the first mate tag, each named by its meaning, and each quota meter that has a reset time, named by its window, what is left and the reset (`quotaMeterName`).
 - Settings -> Intelligence and the first-launch gate: a provider chip that cannot be pressed stays a stop, marked `aria-disabled` rather than disabled, with its reason on rest and in its description; an account the gate shows in a chip's place says why it cannot answer yet the same way.
-- Settings -> Projects: the projects folder's path while it is cut, and a forge row's status dot; a custom API's model rows' dots in its form.
+- Settings -> Projects: the projects folder's path while it is cut; a custom API's model rows' dots in its form.
+- Settings -> Integrations: another computer's own GitHub row's status dot.
 - The task record: the ages of Now, Progress and each finished item, each named by the short age and the exact time, and the checks' words, named by their words, when they started and when they were last read; the crew summary, which takes neither pointer nor keyboard, names them for assistive technology alone.
 - The record's key and a past card's strip while they are cut, and a task browser's status line with the page's title and address.
 - The task record's body: every age, on an Activity or ask line, a closed task's line and a card's line, named by the short age and the exact time; an Activity line that opens is itself the stop, and its age's name reads in the line's.

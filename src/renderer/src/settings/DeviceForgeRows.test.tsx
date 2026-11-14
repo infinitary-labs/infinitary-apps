@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { deviceForgeRows, deviceForgeRowView } from "./DeviceForgeRows";
 
 /**
- * Settings -> Projects, "Where your projects live", for each computer that
+ * Settings -> Integrations, for each computer that
  * runs work (design skill components/devices/SignInOnAMac, "GitHub on
  * another device"): a row per computer and host, its words, and the code to
  * read in the aside under it.

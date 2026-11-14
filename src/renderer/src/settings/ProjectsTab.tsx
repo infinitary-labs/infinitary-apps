@@ -27,7 +27,6 @@ import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
 import { FOLDER_THERE_WORDS } from "./addProjectWords";
 import { BatchHoldPanel } from "./BatchHoldPanel";
-import { ForgeSection } from "./ForgeSection";
 import { ProjectCostLimit } from "./ProjectCostLimit";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
 import {
@@ -49,7 +48,9 @@ import { useSettingSave } from "./useSettingSave";
  * line under it, where new projects go (INF-1495, direction A). A closed row
  * says only how the project differs from a new one (`projectRowWords`);
  * delivery, autonomy, and standing rigor are accordion rows that write the
- * same policy `app_change project-settings` already writes.
+ * same policy `app_change project-settings` already writes. Every sign-in
+ * where projects live, this computer's and each other computer's own, is in
+ * Settings -> Integrations, so this tab holds none.
  */
 
 const RIGOR_OPTIONS = [
@@ -191,7 +192,6 @@ export function ProjectsTab() {
 
   return (
     <div>
-      <ForgeSection />
       <div
         style={{
           fontSize: "var(--text-xs)",

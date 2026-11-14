@@ -273,13 +273,12 @@ export const integrationMcpAddSchema = z
   .strict();
 export type IntegrationMcpAdd = z.infer<typeof integrationMcpAddSchema>;
 
-/** The words Settings -> Integrations and the Projects tab's pointer show. */
+/** The words Settings -> Integrations shows, and the host card's button that opens it. */
 export const INTEGRATIONS_WORDS = {
   title: "Integrations",
   intro:
     "What your first mate and your crew can reach outside your projects. Each row is one connection, signed in as you.",
   quiet: "Nothing connected yet.",
-  pointer: "Your GitHub, GitLab and GitHub Enterprise sign-ins are in Integrations.",
   open: "Open Integrations",
   /** The section at the tab's foot that deletes what the crew read (the captain: a "Data" section at the bottom). */
   data: "Data",
@@ -422,9 +421,16 @@ export function isIntegrationSignIn(signIn: string | null | undefined): boolean 
  * a sign-in Integrations owns opens Settings -> Integrations (INF-775, the
  * captain's q2), so a card naming `projects` with `signIn: "github.com"`
  * - written before the move, or by a host card - lands where it lives now.
+ * Another computer's own GitHub sign-in (`forgeSignInOn`) is drawn there
+ * too, so the card that asks for it opens Integrations with it started.
  */
-export function openedSection(effect: { target: string; signIn?: string | undefined }): string {
-  return effect.target === "projects" && isIntegrationSignIn(effect.signIn)
+export function openedSection(effect: {
+  target: string;
+  signIn?: string | undefined;
+  forgeSignInOn?: object | undefined;
+}): string {
+  return effect.target === "projects" &&
+    (isIntegrationSignIn(effect.signIn) || effect.forgeSignInOn !== undefined)
     ? "integrations"
     : effect.target;
 }

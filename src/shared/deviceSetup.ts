@@ -122,7 +122,7 @@ export function deviceSetupRows(facts: DeviceSetupFacts): DeviceSetupRow[] {
       state:
         github !== undefined
           ? `signed in${github.login ? ` as ${github.login}` : ""}`
-          : "Needed for a project that lives on GitHub. Sign in under Where your projects live in Settings → Projects.",
+          : `Needed for a project that lives on GitHub. Sign in under ${facts.place.label} in Settings → Integrations.`,
     },
     {
       id: "project",

@@ -252,7 +252,7 @@ Once the firewall lets devices in, or is turned off, the line goes the next time
 A Mac never shows it: macOS asks its person before a firewall keeps Infinitary out.
 
 **Asking the first mate.**
-Each card's button is the captain's own click on the card's chrome; it opens this tab and acts on arrival, the way a sign-in action opens Projects and starts that sign-in.
+Each card's button is the captain's own click on the card's chrome; it opens this tab and acts on arrival, the way a sign-in action opens Integrations and starts that sign-in.
 - "connect my MacBook Air so it can control you" yields one decision from the first mate, "Connect your MacBook Air": "Your first mate stays on this computer.
   Your MacBook Air will show it and can run work for it.", "Make a link here, then paste it into Infinitary on your MacBook Air." and "It works once, for ten minutes.
   Only your click can make it, so I never see it.", with "Make a link" and "Not now".

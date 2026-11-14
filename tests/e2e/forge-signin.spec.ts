@@ -320,14 +320,9 @@ const section = (page: Page) => page.locator("[data-integrations]");
 test("Settings -> Integrations offers the GitHub sign-in as optional, and each way a code can end", async () => {
   await arrange({ signedIn: false });
   const { page } = launched;
-  // Projects no longer offers GitHub itself: it points to Integrations.
-  await openProjects(page);
-  const pointer = page.locator("[data-integrations-pointer]");
-  await expect(pointer).toContainText(INTEGRATIONS_WORDS.pointer);
-  await expect(
-    page.locator("[data-forges]").getByRole("button", { name: "Sign in to GitHub", exact: true }),
-  ).toHaveCount(0);
-  await pointer.getByRole("button", { name: INTEGRATIONS_WORDS.open }).click();
+  // GitHub's sign-in is only in Integrations; that Projects holds none is
+  // device-sign-ins.spec.ts's, with a computer's own row there too.
+  await openIntegrations(page);
   const forges = section(page);
   expect(await signInStates(page)).toEqual([]);
   await expect(forges).toBeVisible();

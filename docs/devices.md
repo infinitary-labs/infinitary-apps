@@ -131,7 +131,7 @@ So the moment one joins, the host files one card, "Finish setting up Mac mini" o
   "A subscription of its own", done once the computer reports any account there, whatever its allowance read (the captain's pick: a Claude login whose allowance macOS there will not let Infinitary read still counts); "Its own GitHub sign-in, to clone and push", done once it reports a sign-in for GitHub, whatever its health; and last, "A project that runs there", worded as optional - a computer with no project runs nothing, and that is fine - done once a project's Runs on names it.
   Each row carries its id and whether it is done (`data-setup-row`, `data-done`), so a reader takes the fact, never the words.
 - **Its buttons.**
-  One per row still open, in the card's own footer, which only the captain's click runs: "Add a subscription" opens Settings -> Intelligence, "Sign in to GitHub on Mac mini" opens Settings -> Projects with that computer's GitHub sign-in started under its row (`forgeSignInOn` on the open effect, `src/shared/cards.ts`), and "Choose a project" opens Settings -> Projects; the first open row's button is the default.
+  One per row still open, in the card's own footer, which only the captain's click runs: "Add a subscription" opens Settings -> Intelligence, "Sign in to GitHub on Mac mini" opens Settings -> Integrations with that computer's GitHub sign-in started under its row (`forgeSignInOn` on the open effect, `src/shared/cards.ts`, which `openedSection` routes there), and "Choose a project" opens Settings -> Projects; the first open row's button is the default.
   "Not now" takes the card down for good: the card's own resolution remembers it (`CardStore.chosenAction`), across restarts, until the computer is removed and added again.
 - **How it moves.**
   Every button resolves the card, as every card's does.
@@ -944,7 +944,7 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 | `inf:devices:sign-in:answer` | views | none: what the captain typed goes to that computer once and is kept nowhere here |
 | `inf:devices:sign-in:cancel` | views | none |
 | `inf:devices:sign-out` | views | none |
-| `inf:devices:forge-sign-in` | views | none: the captain's click in Settings -> Projects starts that computer's own GitHub sign-in there (`docs/forge.md`, "A computer's own sign-in") |
+| `inf:devices:forge-sign-in` | views | none: the captain's click in Settings -> Integrations starts that computer's own GitHub sign-in there (`docs/forge.md`, "A computer's own sign-in") |
 | `inf:devices:forge-sign-out` | views | none |
 
 The list is also pushed whole, `inf:devices`, after any change to it, to what the home reads of a computer that runs work, or to whether a Mac that controls this first mate is connected.

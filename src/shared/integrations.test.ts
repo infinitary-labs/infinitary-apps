@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { DEVICE_SETUP_ACTIONS, deviceSetupActions } from "./deviceSetup";
 import { integrationHostArrival, openedSection } from "./integrations";
+import { signInPlace } from "./signIns";
 
 // INF-1007 direction A: host cards from before the move reach the new home,
 // and a new server handoff retains its explicitly selected kind and address.
@@ -29,5 +31,26 @@ describe("forge sign-in arrivals in Integrations", () => {
     );
     expect(integrationHostArrival("gitlab:../code.example.com")).toBeUndefined();
     expect(openedSection({ target: "projects" })).toBe("projects");
+  });
+  // The captain: another computer's own GitHub sign-in "should be only in
+  // integrations tab", so the card that asks for it lands there too; the
+  // host's "Sign in to GitHub on Mac mini" card names the same effect
+  // (cardService.hostCards.test.ts).
+  it("opens Integrations for another computer's own sign-in, as its setup card names it", () => {
+    const actions = deviceSetupActions({
+      deviceId: "dev-mini",
+      place: signInPlace({ name: "Mac mini", onThisMac: false }),
+      signIns: null,
+      runs: [],
+    });
+    const github = actions.find((action) => action.id === DEVICE_SETUP_ACTIONS.github)?.effect;
+    if (github?.kind !== "open") throw new Error("The setup card offers no GitHub sign-in");
+    expect(github.forgeSignInOn).toEqual({ deviceId: "dev-mini", host: "github.com" });
+    expect(openedSection(github)).toBe("integrations");
+    // The computer's own subscriptions stay in Intelligence, and a project in Projects.
+    const elsewhere = actions.flatMap(({ effect }) =>
+      effect?.kind === "open" && effect !== github ? [openedSection(effect)] : [],
+    );
+    expect(elsewhere).toEqual(["subscriptions", "projects"]);
   });
 });

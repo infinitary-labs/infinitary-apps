@@ -264,8 +264,9 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         // The shell applies the effect the core returns and reads no action
         // id (cards/tasks/agents P1): open Settings, on the named section,
         // with the account whose sign-in the Subscriptions tab re-runs, the
-        // host whose sign-in the Projects tab starts (git integration PR 1.2),
-        // or what the Devices tab does on arrival. A request card's open-browser
+        // host whose sign-in the Integrations tab starts (git integration PR
+        // 1.2), here or on another computer (`forgeSignInOn`), or what the
+        // Devices tab does on arrival. A request card's open-browser
         // action opens its task's browser view instead, with the captain in
         // control (docs/task-browser.md, "Asking for help").
         if (effect?.kind === "open" && effect.target === "browser") {

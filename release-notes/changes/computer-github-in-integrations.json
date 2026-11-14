@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "computer-github-in-integrations",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Every GitHub sign-in is in Integrations, none in Projects",
+      "body": "Settings → Projects no longer has a sign-ins section. The GitHub sign-in each of your other computers uses for its own clones and pushes is now a row in Settings → Integrations, under your own connections, with its Sign in, its code and Sign out in its menu. The card that asks a computer to sign in to GitHub opens Integrations with that sign-in started.",
+      "picture": {
+        "dark": "computer-github-in-integrations-dark.webp",
+        "light": "computer-github-in-integrations-light.webp",
+        "alt": "Settings, Integrations, the GitHub connection signed in as octo, and under it a second GitHub row signed in as octo for Running as Builder, which clones and pushes its own work"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

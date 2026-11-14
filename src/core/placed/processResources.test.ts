@@ -85,6 +85,51 @@ describe("accepted load plan: explicit task process shares", () => {
     expect(roots.readGroups().size).toBe(0);
   });
 
+  // INF-4072 finding 3: a running task's test programs, left behind when their shell
+  // ended, held 59 GB that the memory warning blamed on programs no task owns.
+  it("counts a program reparented out of every task tree against the task whose folder it works in", () => {
+    // A vitest left running after its shell exited, reparented to launchd, and its worker.
+    const rows =
+      processesFromPs(`${PS}  4211     1  4211   9:12.40 20480000 Thu Nov 12 16:21:07 2026
+  4215  4211  4211  31:02.11 18874368 Thu Nov 12 16:21:08 2026
+`) ?? [];
+    // The worker's folder is not the task's; its parent's is.
+    const folders = new Map([
+      [4211, "running-task"],
+      [119, "running-task"],
+    ]);
+    const owners = new ProcessAttribution().owners(
+      rows,
+      new Map([[118, "shell-task"]]),
+      new Map(),
+      folders,
+    );
+    expect(owners.get(4211)).toBe("running-task");
+    expect(owners.get(4215)).toBe("running-task");
+    // A registered root decides before any folder does.
+    const rooted = new ProcessAttribution().owners(
+      rows,
+      new Map([[119, "rooted"]]),
+      new Map(),
+      folders,
+    );
+    expect(rooted.get(119)).toBe("rooted");
+    const facts = processResources(rows, rows, owners, 250);
+    if (facts.status !== "sampled") throw new Error("Expected measured processes");
+    expect(facts.tasks.find((task) => task.taskId === "running-task")?.residentBytes).toBe(
+      (20480000 + 18874368 + 6320) * 1024,
+    );
+    // Without the folder fact the same programs fall to everything else.
+    const unread = processResources(
+      rows,
+      rows,
+      new ProcessAttribution().owners(rows, new Map()),
+      250,
+    );
+    if (unread.status !== "sampled") throw new Error("Expected measured processes");
+    expect(unread.tasks).toEqual([]);
+  });
+
   it("keeps known orphans but drops ownership on PID reuse and leaves new CPU counters unknown", () => {
     const rows = processesFromPs(PS)!;
     const attribution = new ProcessAttribution();

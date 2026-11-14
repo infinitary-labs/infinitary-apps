@@ -46,6 +46,7 @@ import {
 } from "../privacy/appDataWatch";
 import type { StandIns } from "../standIns";
 import type { TaskService } from "../tasks/taskService";
+import { TEMP_DIR_NAME } from "../tasks/taskTemp";
 import { linuxUpdateCommand, readLinuxInstallation } from "../update/linuxInstall";
 import { findOnPath } from "../userBin";
 import type { RepoRegistry } from "../workspace/repoRegistry";
@@ -139,7 +140,7 @@ export type DevicesCrew = {
 
 export async function startHomeDevices(options: {
   host: Pick<HostCapabilities, "app" | "resourceMemory">;
-  paths: Pick<AppPaths, "userData" | "devicesDir" | "phoneDoorDir">;
+  paths: Pick<AppPaths, "userData" | "devicesDir" | "phoneDoorDir" | "crewmatesDir">;
   standIns: StandIns;
   tasks: TaskService;
   emit: CoreEventSink;
@@ -166,6 +167,20 @@ export async function startHomeDevices(options: {
     local: new ResourceSampler({
       memory: host.resourceMemory,
       processes: readProcesses,
+      // A program a task's shell left behind still counts as that task's.
+      taskFolders: () =>
+        tasks
+          .listActive()
+          .filter((record) => !record.deviceId)
+          .map((record) => ({
+            taskId: record.id,
+            folders: [
+              ...(record.worktreeDir && record.workspaceState === "present"
+                ? [record.worktreeDir]
+                : []),
+              join(paths.crewmatesDir, record.id, TEMP_DIR_NAME),
+            ],
+          })),
       observed: (observation, processes, started, window, cpuWindow) =>
         loadLine.observe(observation, processes, started, window, cpuWindow),
     }),

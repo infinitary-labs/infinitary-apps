@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "memory-warning-names-left-behind-programs-task",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "The memory warning names the task whose leftover programs use the memory",
+      "body": "A program a task started in the background, such as a test run that kept going after its command ended, now counts against that task while it still works in the task's folders. The memory warning and the task's Use row name that task, so your first mate can point at the right one. Before, those programs counted as programs not linked to open tasks.",
+      "noPicture": "The warning and the Use row keep their look; only which task a left-behind program counts against changed.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

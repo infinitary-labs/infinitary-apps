@@ -187,4 +187,50 @@ describe("live task process observation", () => {
       await exited;
     }
   });
+
+  /**
+   * INF-4072 finding 3: a running task's test programs, left behind when their shell
+   * ended, held 59 GB the memory warning blamed on programs no task owns. Fixture: a
+   * real shell in a task's working copy starts a program in the background and exits,
+   * so the program is reparented out of every registered tree. Fails when that
+   * program's use stays in everything else.
+   */
+  it("counts a program its shell left behind against the task whose folder it works in", async () => {
+    const work = scratchDir("infinitary-orphan-work-");
+    const shell = spawn("/bin/sh", ["-c", "sleep 60 >/dev/null 2>&1 & echo $!"], {
+      cwd: work,
+      env: hostEnv(),
+      stdio: ["ignore", "pipe", "inherit"],
+    });
+    let printed = "";
+    shell.stdout.on("data", (data) => {
+      printed += data;
+    });
+    await once(shell, "exit");
+    const orphan = Number(printed.trim());
+    expect(Number.isSafeInteger(orphan) && orphan > 0).toBe(true);
+    try {
+      const sample = (taskFolders?: () => { taskId: string; folders: string[] }[]) =>
+        new ResourceSampler({
+          processes: readProcesses,
+          memory: () => ({ totalBytes: totalmem(), freeBytes: freemem() }),
+          ...(taskFolders ? { taskFolders } : {}),
+        }).read();
+      const shares = async (taskFolders?: () => { taskId: string; folders: string[] }[]) => {
+        const observation = await sample(taskFolders);
+        if (observation.status !== "sampled" || observation.processes?.status !== "sampled")
+          throw new Error("Process observation unavailable");
+        return observation.processes;
+      };
+      const unclaimed = await shares();
+      expect(unclaimed.tasks.find((task) => task.taskId === "running-task")).toBeUndefined();
+      const claimed = await shares(() => [{ taskId: "running-task", folders: [work] }]);
+      const task = claimed.tasks.find((share) => share.taskId === "running-task");
+      console.info("Left-behind program share", JSON.stringify(task));
+      expect(task?.processCount).toBe(1);
+      expect(task?.residentBytes).toBeGreaterThan(0);
+    } finally {
+      process.kill(orphan, "SIGKILL");
+    }
+  });
 });

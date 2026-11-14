@@ -14,6 +14,7 @@ import { isSignInOrderChannel } from "@shared/signIns";
 import {
   downloadOrders,
   isBrowserOrderChannel,
+  placedTaskFolders,
   type UpdateProgress,
   updateOrders,
   WORK_DOWNLOAD_ORDER,
@@ -21,6 +22,7 @@ import {
   WORK_UPDATE_ORDER,
   type WorkDownloadAnswer,
   type WorkUpdateAnswer,
+  worktreesDirOf,
 } from "@shared/work";
 import type { WebSocket } from "ws";
 import { dialHome } from "../devices/dial";
@@ -272,6 +274,15 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   const resources = new ResourceSampler({
     memory: options.resourceMemory,
     processes: readProcesses,
+    // A program a task's shell left behind still counts as that task's.
+    taskFolders: () =>
+      placedTasks
+        .list()
+        .filter((task) => !placedTasks.state(task).closed)
+        .map((task) => {
+          const folders = placedTaskFolders(placedTasks.tasksDir, task, worktreesDirOf(dataDir));
+          return { taskId: task, folders: [folders.work, folders.temp] };
+        }),
     observed: (observation, processes, started, window, cpuWindow) =>
       loadLine.observe(observation, processes, started, window, cpuWindow),
   });

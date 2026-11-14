@@ -20,6 +20,7 @@ import {
   type WorkingCopyBase,
   type WorkOrderRequest,
   type WorkOrderResponse,
+  worktreesDirOf,
 } from "@shared/work";
 import { writeArtifact } from "../workspace/artifacts";
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
@@ -119,7 +120,7 @@ export class WorkingCopies {
 
   constructor(dataDir: string, options: WorkingCopiesOptions = {}) {
     this.signedInTo = options.signedInTo ?? (() => false);
-    this.worktreesDir = join(dataDir, "worktrees");
+    this.worktreesDir = worktreesDirOf(dataDir);
     this.reposDir = join(dataDir, "repos");
     this.bundlesDir = join(dataDir, "bundles");
     this.artifactsDir = join(dataDir, "artifacts");

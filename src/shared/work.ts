@@ -102,6 +102,11 @@ const RECORDING_PIECE_MAX_CHARS = Math.ceil(CARD_MEDIA_PIECE_BYTES / 3) * 4;
 /** A demo recording's whole size: the card tool's 16 MiB cap. */
 const RECORDING_MAX_BYTES = 16 * 1024 * 1024;
 
+/** Where a computer that runs work keeps its tasks' working copies (`WorkingCopies`). */
+export function worktreesDirOf(dataDir: string): string {
+  return `${dataDir}/worktrees`;
+}
+
 /**
  * Where a computer keeps one task's conversation, under the folder its
  * roster names (`tasksDir`), and its working copy, under the folder the

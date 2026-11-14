@@ -209,7 +209,12 @@ export async function readProcesses(): Promise<ProcessReading[] | null> {
   }
 }
 
-/** Task attribution survives reparenting, but never a changed process birth stamp. */
+/**
+ * Task attribution survives reparenting, but never a changed process birth stamp.
+ * A registered root or group decides first; a program outside every such tree
+ * belongs to the task whose folder it, or the nearest program above it, works in
+ * (`folders`, process number to task, from `folderOwners`).
+ */
 export class ProcessAttribution {
   private previous = new Map<number, { started: string; owner: string }>();
 
@@ -217,6 +222,7 @@ export class ProcessAttribution {
     rows: ProcessReading[],
     roots: ReadonlyMap<number, string>,
     groups: ReadonlyMap<number, ProcessGroupOwner> = new Map(),
+    folders: ReadonlyMap<number, string> = new Map(),
   ): Map<number, string> {
     const byPid = new Map(rows.map((row) => [row.pid, row]));
     const owners = new Map<number, string>();
@@ -237,7 +243,21 @@ export class ProcessAttribution {
         return group.owner;
       // A shell may have exited before this read; its living group members
       // still name the explicit root's group. No unregistered group is guessed.
-      return roots.get(row.group);
+      const groupRoot = roots.get(row.group);
+      if (groupRoot) return groupRoot;
+      // A program its task's shell left behind is reparented out of the tree
+      // but still works in the task's folder.
+      seen.clear();
+      for (
+        let at: ProcessReading | undefined = row;
+        at && at.pid > 1 && !seen.has(at.pid);
+        at = byPid.get(at.parent)
+      ) {
+        seen.add(at.pid);
+        const owner = folders.get(at.pid);
+        if (owner) return owner;
+      }
+      return undefined;
     };
     for (const row of rows) {
       const owner = ownerOf(row);

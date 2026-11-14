@@ -1,6 +1,6 @@
 export type ProcessGroupOwner = { owner: string; started: string };
 
-/** Explicit ownership of processes and declared groups; no command-line or folder guessing. */
+/** Explicit ownership of processes and declared groups; no command-line guessing (folders: `workingFolders`). */
 export class ProcessRoots {
   private readonly roots = new Map<number, string>();
   private readonly groups = new Map<number, ProcessGroupOwner>();

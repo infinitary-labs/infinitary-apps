@@ -11,6 +11,7 @@ import {
 
 import { ProcessAttribution, type ProcessReading, processResources } from "./processResources";
 import { processRoots } from "./processRoots";
+import { folderOwners, readWorkingFolders, type TaskFolders } from "./workingFolders";
 
 export type CpuWindow = { epoch: string; start: number; end: number };
 
@@ -27,6 +28,8 @@ export type ResourceSamplerOptions = {
   /** Wall clock, read beside each process reading so births inside the window count. */
   wallNow?: () => number;
   wait?: (ms: number) => Promise<unknown>;
+  /** The open tasks here and their folders: a program working in one counts as that task's. */
+  taskFolders?: () => readonly TaskFolders[];
   /** Local owners reuse this completed window; process metadata never crosses the connection. */
   observed?: (
     observation: ResourceObservation,
@@ -78,6 +81,14 @@ export class ResourceSampler {
       });
     this.pending = pending;
     return pending;
+  }
+
+  /** No open task here, or an unreadable listing, attributes nothing by folder. */
+  private async folderOwners(rows: ProcessReading[]): Promise<Map<number, string>> {
+    const tasks = this.options.taskFolders?.() ?? [];
+    if (tasks.length === 0) return new Map();
+    const folders = await readWorkingFolders(rows.map((row) => row.pid)).catch(() => null);
+    return folders ? folderOwners(folders, tasks) : new Map();
   }
 
   private async sample(): Promise<ResourceObservation> {
@@ -137,6 +148,7 @@ export class ResourceSampler {
                 lastProcesses,
                 processRoots.read(),
                 processRoots.readGroups(),
+                await this.folderOwners(lastProcesses),
               ),
               processMs,
               firstAt,

@@ -462,7 +462,10 @@ Process identifiers, arguments, paths, usernames and environments never cross th
 `ProcessRoots` owns explicit process roots registered by every shell job, including a synchronous one, and every coding Claude client.
 `ProcessAttribution` walks parent links and registered groups, retaining observed ownership across reparenting only while the process birth stamp is unchanged.
 Each process contributes once; a nested explicit root owns its subtree.
-Processes outside those trees, including simulators started by launchd, remain in everything else; this observation does not infer ownership from a working folder.
+A process outside those trees belongs to the open task whose working copy or temporary folder it, or the nearest process above it, works in (`src/core/placed/workingFolders.ts`), so a test program a task's shell left behind, reparented out of its tree, still counts as that task's.
+A registered root or group decides before any folder does.
+The working folders come from `lsof -d cwd` on a Mac and `/proc/<pid>/cwd` on Linux, are read only when a task here is open, and never cross the connection; an unreadable listing attributes nothing by folder.
+Every other process, including simulators started by launchd, remains in everything else.
 Processor use comes from cumulative process-time deltas across the sample, not macOS’s lifetime-average percentage.
 A process missing from the first reading, or reborn under the same number, counts all its processor time when its birth stamp is not earlier than the first reading's wall-clock time, since all that work happened inside the window; the comparison allows the whole second a Mac's `lstart` stamp truncates.
 Wait loops start new processes in most two-second windows, so without this the whole task's figure went blank in most readings.

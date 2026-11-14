@@ -1,11 +1,11 @@
-import { readFile, readlink, realpath } from "node:fs/promises";
-import { sep } from "node:path";
+import { readFile, readlink } from "node:fs/promises";
 import type { ProgramOutcome } from "@shared/leftoverPrograms";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { cutText } from "@shared/textCut";
 import { hostPlatform } from "../platform";
 import { procOpenFiles, procPids, readLsof } from "./openFiles";
 import { descendsFrom, type ProcessReading, readProcesses } from "./processResources";
+import { prefixesOf, under } from "./workingFolders";
 
 /**
  * The programs still holding a closed task's folders, and their end
@@ -30,23 +30,6 @@ const KILL_WAIT_MS = 2000;
 const POLL_MS = 100;
 /** A Mac's birth stamp counts whole seconds. */
 const BIRTH_PRECISION_MS = 1000;
-
-/** The folders' own spellings and their real paths, each with a separator after it. */
-async function prefixesOf(folders: readonly string[]): Promise<string[]> {
-  const prefixes = new Set<string>();
-  for (const folder of folders) {
-    const trimmed = folder.replace(/[\\/]+$/, "");
-    if (!trimmed) continue;
-    prefixes.add(trimmed);
-    const real = await realpath(trimmed).catch(() => undefined);
-    if (real) prefixes.add(real.replace(/[\\/]+$/, ""));
-  }
-  return [...prefixes];
-}
-
-function under(path: string, prefixes: readonly string[]): boolean {
-  return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}${sep}`));
-}
 
 /**
  * The open files of this user's programs as lsof lists them on a Mac

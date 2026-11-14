@@ -299,6 +299,64 @@ describe("Careful's accepted live-validation contract", () => {
     expect(removed.permissions[0]?.state).toBe("expired");
   });
 
+  // INF-3664: on INF-3617 a reviewer re-read a run whose only gap the
+  // captain had accepted and recorded go; acceptance needs the run's and the
+  // review's verdicts to match, so the change stalled before its merge card.
+  it("INF-3664: a review records only a verdict its run can carry, so an accepted gap's proof read stays inconclusive", () => {
+    const permitted = approve(askGap(run(plan(), head, true)), "no-device");
+    expect(() => review(permitted, head, { verdict: "go" })).toThrow(
+      "Live validation refused: Go requires completed live proof for every required scenario. Run 1's own record rules out go, so a review of it cannot record it either; record the verdict that run can carry. The captain's accepted gap for keyboard-close leaves that proof missing, so the run and its review stay inconclusive; the host shows the gap as Proceeding without live proof.",
+    );
+    const read = review(permitted);
+    expect(read.reviews.at(-1)?.verdict).toBe("inconclusive");
+    expect(acceptedValidation(read, head)).toMatchObject({
+      ready: true,
+      label: "Proceeding without live proof",
+    });
+    // Before the captain answers, the refusal names no exception.
+    const asked = askGap(run(plan(), head, true));
+    expect(() => review(asked, head, { verdict: "go" })).toThrow(
+      /^(?!.*accepted gap).*rules out go/,
+    );
+    // A failure is no-go and nothing else, as on the run's own record.
+    const passed = run(plan());
+    const { revision: _r, at: _a, deviceId: _d, ...input } = passed.runs[0]!;
+    const failed = recordValidation(
+      plan(),
+      {
+        ...input,
+        verdict: "no-go",
+        observations: [{ ...input.observations[0]!, result: "fail" }],
+      },
+      ctx,
+    );
+    expect(() => review(failed, head, { verdict: "inconclusive" })).toThrow(
+      "An observed failure is no-go, never an exception or a pass. Run 1's own record rules out inconclusive",
+    );
+    expect(review(failed).reviews.at(-1)?.verdict).toBe("no-go");
+    expect(() => review(passed, head, { verdict: "no-surface" })).toThrow(
+      "No running surface contradicts an executed result.",
+    );
+    // A verdict the run could carry still records, so a reviewer who finds
+    // the proof short says so and the builder runs it again.
+    const short = review(passed, head, { verdict: "inconclusive" });
+    expect(acceptedValidation(short, head).missing).toBe(
+      "The review's verdict (inconclusive) differs from the run's (go); the reviewer re-reads the run and records the verdict it supports, or the crewmate runs the scenarios again.",
+    );
+    // The run is judged against the scenarios it ran, not a later plan's.
+    const replanned = recordValidation(
+      passed,
+      {
+        kind: "plan",
+        previousRevision: passed.scenarioRevision,
+        reason: "The captain also asks to check recovery.",
+        scenarios: [scenario, { ...scenario, id: "focus-recovery" }],
+      },
+      ctx,
+    );
+    expect(review(replanned, head, { verdict: "go" }).reviews.at(-1)?.verdict).toBe("go");
+  });
+
   it("refuses fabricated go, missing observations and contradictory no-surface results", () => {
     const state = run(plan());
     const { revision: _revision, at: _at, deviceId: _device, ...input } = state.runs[0]!;

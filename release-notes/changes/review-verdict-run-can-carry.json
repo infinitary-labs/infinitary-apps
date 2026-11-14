@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "review-verdict-run-can-carry",
+      "reason": "A Careful reviewer's live-proof verdict is now refused when the run it judges could not carry it, by the run's own rules, and the reviewer's brief says a gap the captain accepted keeps the verdict inconclusive; this keeps an accepted gap's proof read from stalling the crew before the merge card, with no screen or wording a person sees changed."
+    }
+  ]
+}

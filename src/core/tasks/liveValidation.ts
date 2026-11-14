@@ -4,16 +4,46 @@ import {
   checkValidationRun,
   emptyValidation,
   type KeptValidationInput,
+  LIVE_VALIDATION_WORDS,
   type LiveValidation,
   latestValidationRun,
   sameCheckReach,
   sameScenario,
+  scenariosOfRun,
+  unprovenRequired,
   type ValidationPermission,
   type ValidationReview,
+  type ValidationRun,
   validationRevision,
   validationStateRevision,
+  verdictContradiction,
 } from "@shared/liveValidation";
 import { findingsBlock } from "@shared/rigor";
+
+/**
+ * INF-3664: a review's verdict obeys the rules its run's own record obeys,
+ * so a proof read never records one the run could not carry. On INF-3617 a
+ * reviewer read a run whose one gap the captain had accepted and recorded
+ * go; acceptance, which needs the two verdicts to match, then sent the
+ * builder back to prove again. The refusal names the run and, for an
+ * accepted gap, the verdict it keeps.
+ */
+function reviewVerdictProblem(
+  state: LiveValidation,
+  run: ValidationRun,
+  verdict: ValidationRun["verdict"],
+): string | undefined {
+  const scenarios = scenariosOfRun(state, run);
+  const problem = verdictContradiction(verdict, run, scenarios);
+  if (!problem) return undefined;
+  const ruled = `${problem} Run ${run.revision}'s own record rules out ${verdict}, so a review of it cannot record it either; record the verdict that run can carry.`;
+  if (verdict !== "go" || run.observations.some((item) => item.result === "fail")) return ruled;
+  const accepted = unprovenRequired(run, scenarios)
+    .filter((scenario) => acceptedGap(state, scenario.id))
+    .map((scenario) => scenario.id);
+  if (!accepted.length) return ruled;
+  return `${ruled} The captain's accepted gap for ${accepted.join(", ")} leaves that proof missing, so the run and its review stay inconclusive; the host shows the gap as ${LIVE_VALIDATION_WORDS.exception}.`;
+}
 
 /** Pure transitions; TaskService is the only writer. No reported fact can mint consent. */
 export function recordValidation(
@@ -136,6 +166,11 @@ export function recordValidation(
         fail(
           "Code findings needs a finding that blocks (error, warning or ask-user); report code clear and keep the notes as findings.",
         );
+      const judged = state.runs.find((run) => run.revision === input.revision);
+      if (judged) {
+        const problem = reviewVerdictProblem(state, judged, input.verdict);
+        if (problem) fail(problem);
+      }
       state.reviews.push({
         ...input,
         reviewer: context.reviewer,

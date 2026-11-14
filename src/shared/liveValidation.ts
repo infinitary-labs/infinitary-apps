@@ -376,11 +376,36 @@ export function checkValidationRun(
     )
       return "An untested scenario needs attempted alternatives and a reason, never a live label.";
   }
-  const failed = run.observations.some((item) => item.result === "fail");
-  if (failed && run.verdict !== "no-go")
+  return verdictContradiction(run.verdict, run, state.scenarios);
+}
+/** The required scenarios a run holds no live proof of, an accepted gap's among them. */
+export function unprovenRequired(
+  run: Pick<ValidationRun, "observations">,
+  scenarios: readonly ValidationScenario[],
+): ValidationScenario[] {
+  return scenarios.filter((scenario) => {
+    if (scenario.importance !== "required") return false;
+    const observation = run.observations.find((item) => item.scenario === scenario.id);
+    return !observation || !demonstrated(observation);
+  });
+}
+/**
+ * The verdicts a run's own observations rule out: closed contradictions,
+ * not a judgment of whether the evidence proves the claim. The run and
+ * every review of it obey them alike (INF-3664), so a review never records
+ * a verdict its run could not carry, which acceptance would refuse as a
+ * mismatch: a gap the captain accepted is still missing proof, so its run
+ * and its review stay inconclusive.
+ */
+export function verdictContradiction(
+  verdict: ValidationRun["verdict"],
+  run: Pick<ValidationRun, "observations" | "completion">,
+  scenarios: readonly ValidationScenario[],
+): string | undefined {
+  if (verdict !== "no-go" && run.observations.some((item) => item.result === "fail"))
     return "An observed failure is no-go, never an exception or a pass.";
   if (
-    run.verdict === "no-surface" &&
+    verdict === "no-surface" &&
     run.observations.some(
       (item) =>
         item.result !== "untested" || item.live || item.missingCapability || item.unproven.length,
@@ -388,17 +413,22 @@ export function checkValidationRun(
   )
     return "No running surface contradicts an executed result.";
   if (
-    run.verdict === "go" &&
+    verdict === "go" &&
     (run.completion !== "complete" ||
-      state.scenarios.length === 0 ||
-      state.scenarios.some(
-        (scenario) =>
-          scenario.importance === "required" &&
-          !demonstrated(run.observations.find((item) => item.scenario === scenario.id)!),
-      ))
+      scenarios.length === 0 ||
+      unprovenRequired(run, scenarios).length > 0)
   )
     return "Go requires completed live proof for every required scenario.";
   return undefined;
+}
+/** The scenarios a run was recorded against: its own plan revision, which a later plan may have replaced. */
+export function scenariosOfRun(
+  state: LiveValidation,
+  run: Pick<ValidationRun, "scenarioRevision">,
+): ValidationScenario[] {
+  return (
+    state.plans.find((plan) => plan.revision === run.scenarioRevision)?.scenarios ?? state.scenarios
+  );
 }
 /**
  * Which part of a review holds acceptance, and who supplies it (INF-3717

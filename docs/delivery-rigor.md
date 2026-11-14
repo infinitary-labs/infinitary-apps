@@ -769,6 +769,8 @@ Go requires completed live proof of each required scenario; its observation has 
 A real required gap stays recorded; never clear it merely to obtain go.
 An observed failure is no-go even with other proof missing; missing proof or omitted coverage alone is inconclusive, and interrupted or unknown work cannot pass.
 This distinction applies to the reviewer's live-proof verdict too; code findings remain separate.
+The record refuses a review whose verdict the run it judges could not carry, by the same rules as that run's own record, judged against the scenarios the run ran (`verdictContradiction`, INF-3664): acceptance needs the two verdicts to match, so such a review could only stall the change.
+A gap the captain accepted is still missing proof, so its run and every review of it stay inconclusive, and acceptance shows the gap as Proceeding without live proof; the refusal of a go says so, and the reviewer's brief says it first.
 The reviewer records its assigned version and evidence revision, code clearance, coverage with omissions, any inspected effect identities, and its verdict and reason.
 Code clearance is separate from final proof acceptance.
 A missing required scenario goes back to the builder; supplementary gaps remain explained beside the claim.

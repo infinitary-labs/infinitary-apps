@@ -132,7 +132,7 @@ Turning it off leaves the names on the record and serves no procedure for them.
 Batched pull requests holds `batch-repair`, which repairs a held batch of the captain's own approved changes: it accounts for every failed test against every change in the batch, then sends back the changes at fault, fixes forward, or runs the failed checks again for a flake that still gets an owner (`docs/forge.md`, "Batches of your own").
 Its id is `batches`, and a person who turned it off under its earlier id, `queue`, keeps it off (`SettingsStore.getRunbookStates`).
 Computer cleanup supplies the first mate’s ask-first procedure and the `computer-cleanup` skill for a look on a computer short on memory or whose heavy-run line a finished task's run blocks, after the captain agrees to use their plan’s allowance.
-The skill owns measurement, the leftovers card and stopping only the captain’s picks; the runbook’s `guide.md` owns the first mate’s response to pressure and line-blocked notices, including when to offer again (`docs/heavy-runs.md`).
+The skill owns measurement, the leftovers card and stopping only the captain’s picks; the runbook’s `guide.md` owns the first mate’s response to pressure and line-blocked notices, including one offer per memory warning ID and when to offer again (`docs/heavy-runs.md`).
 Disabling it removes both guides through the existing instruction-refresh and new-session doors; pressure facts and the unconditional no-kill instruction remain, and already running conversations keep what they received.
 Advanced architecture is an experiment and starts off (`startsOff`).
 It maps a project as flat diagrams of its parts, the links between them and the state machines inside them, and shows what a change moves on that map.

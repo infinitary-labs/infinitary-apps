@@ -1,6 +1,7 @@
 import { feedLineFrom } from "@shared/feed";
 import type { ComputerResourcesView } from "@shared/resources";
 import { describe, expect, it } from "vitest";
+import day from "../../../tests/fixtures/memory-warnings/mac-mini-day.json";
 import { renderWake, type TypedWake } from "../orchestrator/wakes";
 import { type PressureLeftover, ResourcePressure } from "./resourcePressure";
 
@@ -176,9 +177,10 @@ describe("a memory warning in the feed", () => {
   });
 });
 
-// INF-3497 finding 5: one line per episode and wakes
-// only when a reading carries a new typed fact, not byte drift or level flips.
-describe("the accepted pressure episode fix", () => {
+// INF-4182's plan: a memory warning is one thing with an ID - the computer and
+// when it began - told once until the computer stays clear for 30 minutes.
+describe("a memory warning told once", () => {
+  const MINUTE = 60_000;
   const leftover: PressureLeftover = {
     id: "task-event:closed:1",
     taskId: "closed",
@@ -190,35 +192,92 @@ describe("the accepted pressure episode fix", () => {
     },
   };
 
-  it("names recorded leftovers without claiming their current use or waking on repeated facts", () => {
+  /** A stand-in inbox that queues each once-name a single time, as the durable one does. */
+  function inbox() {
+    const names: string[] = [];
+    return {
+      names,
+      heard: (prefix: string) => names.filter((name) => name.startsWith(prefix)),
+      queue: (wake: TypedWake) => {
+        if (wake.once !== undefined && names.includes(wake.once)) return null;
+        if (wake.once !== undefined) names.push(wake.once);
+        return names.length;
+      },
+    };
+  }
+
+  function watcher(
+    options: {
+      leftovers?: () => PressureLeftover[];
+      store?: ReturnType<typeof inbox>;
+      start?: number;
+    } = {},
+  ) {
+    const store = options.store ?? inbox();
+    const clock = { now: options.start ?? Date.parse("2026-11-13T13:00:00.000Z") };
     const wakes: TypedWake[] = [];
-    const activity: string[] = [];
+    const activity: { text: string; pressure: string }[] = [];
     const pressure = new ResourcePressure({
       taskKey: (id) => id,
-      leftovers: () => [leftover],
-      notify: (wake) => wakes.push(wake),
-      activity: (fact) => activity.push(fact.text),
+      leftovers: options.leftovers,
+      now: () => clock.now,
+      heard: store.heard,
+      notify: (wake) => {
+        const queued = store.queue(wake);
+        if (queued !== null) wakes.push(wake);
+        return queued;
+      },
+      activity: (fact) => activity.push({ text: fact.text, pressure: fact.pressure }),
     });
-    pressure.observe(view("warning", 1));
-    pressure.observe(view("critical", 2));
-    pressure.observe(view("warning", 3));
-    pressure.observe(
-      view(
-        "critical",
-        4,
-        TASK_SHARES.map((share) => ({ ...share, residentBytes: share.residentBytes + 1024 })),
-      ),
+    return { pressure, clock, wakes, activity, store };
+  }
+
+  // The Mac mini on Nov 13 (INF-4165's evidence, read by INF-4182): 53
+  // notices, 49 of them only for a newly seen task, while its level went
+  // back to normal at least 41 times. A warning that ends only after 30
+  // minutes clear is told 6 times that day; with the old rule it was 53.
+  it("tells the same warning once through a day of real readings", () => {
+    const { pressure, clock, wakes, activity } = watcher();
+    let sequence = 0;
+    for (const [at, level, taskIds] of day.readings as [
+      string,
+      "normal" | "warning" | "critical",
+      string[]?,
+    ][]) {
+      clock.now = Date.parse(at);
+      const tasks = (taskIds ?? ["task"]).map((taskId) => ({ ...TASK_SHARES[0]!, taskId }));
+      pressure.observe(view(level, ++sequence, tasks, "Mac mini"));
+    }
+    const begun = wakes.filter((wake) => wake.facts.kind === "resource-pressure");
+    const ended = wakes.filter((wake) => wake.facts.kind === "memory-warning-ended");
+    expect(begun).toHaveLength(6);
+    // Each of them ended before the day did.
+    expect(ended).toHaveLength(6);
+    expect(begun.map((wake) => wake.once)).toEqual(
+      begun.map((wake) => (wake.facts as { warning: { id: string } }).warning.id),
     );
-    expect(activity).toEqual([
+    expect(activity).toHaveLength(begun.length + ended.length);
+  });
+
+  it("names recorded leftovers in its one notice and stays quiet on new tasks, leftovers and flips", () => {
+    let leftovers: PressureLeftover[] = [leftover];
+    const { pressure, clock, wakes, activity } = watcher({ leftovers: () => leftovers });
+    pressure.observe(view("warning", 1));
+    expect(activity.map((line) => line.text)).toEqual([
       'This computer · Memory pressure warning · Leftovers recorded at close: INF-1629: stop "scratch machine" failed, sleep survived · Current use unknown',
     ]);
-    expect(wakes).toHaveLength(2);
-    expect(wakes[0]?.facts).toMatchObject({
-      recordedLeftovers: [leftover],
-      leftoverUse: "unknown",
+    expect(wakes[0]).toMatchObject({
+      facts: { recordedLeftovers: [leftover], leftoverUse: "unknown" },
+      once: `memory-warning:home:${clock.now}`,
     });
-    expect(wakes[1]?.facts).toMatchObject({ pressure: "critical" });
-    // Unknown and a missing computer are not evidence that the episode ended.
+    expect(renderWake(wakes[0]!)).toContain(
+      `This is memory warning memory-warning:home:${clock.now}`,
+    );
+    leftovers = [leftover, { ...leftover, id: "task-event:closed:2" }];
+    clock.now += 10 * MINUTE;
+    pressure.observe(view("warning", 2, [...TASK_SHARES, { ...TASK_SHARES[0]!, taskId: "new" }]));
+    pressure.observe(view("normal", 3));
+    pressure.observe(view("warning", 4));
     pressure.observe({
       computers: [
         {
@@ -228,79 +287,90 @@ describe("the accepted pressure episode fix", () => {
         },
       ],
     });
+    clock.now += 40 * MINUTE;
     pressure.observe({ computers: [] });
-    pressure.observe(view("warning", 5));
+    expect(wakes).toHaveLength(1);
     expect(activity).toHaveLength(1);
-    expect(wakes).toHaveLength(2);
-    pressure.observe(view("normal", 6));
-    pressure.observe(view("warning", 7));
-    expect(activity).toHaveLength(1);
-    expect(wakes).toHaveLength(2);
-    pressure.observe(
-      view(
-        "warning",
-        8,
-        TASK_SHARES.map((share) => ({ ...share, taskId: "new-work" })),
-      ),
-    );
-    expect(activity).toHaveLength(2);
-    expect(wakes).toHaveLength(3);
-    expect(new Set(wakes.map((wake) => wake.once)).size).toBe(wakes.length);
   });
 
-  it("wakes for newly recorded leftovers and newly observed tasks even at the same pressure", () => {
-    const wakes: TypedWake[] = [];
-    const activity: string[] = [];
-    let leftovers: PressureLeftover[] = [];
-    const pressure = new ResourcePressure({
-      taskKey: (id) => id,
-      leftovers: () => leftovers,
-      notify: (wake) => wakes.push(wake),
-      activity: (fact) => activity.push(fact.text),
-    });
+  it("tells a first turn to critical once more under the same ID", () => {
+    const { pressure, clock, wakes, activity } = watcher();
     pressure.observe(view("warning", 1));
-    leftovers = [leftover];
-    pressure.observe(view("warning", 1));
-    pressure.observe(view("warning", 2));
-    expect(wakes).toHaveLength(2);
-    expect(wakes[1]?.facts).toMatchObject({ recordedLeftovers: [leftover] });
-    pressure.observe(
-      view("warning", 3, [...TASK_SHARES, { ...TASK_SHARES[0]!, taskId: "another" }]),
-    );
-    expect(wakes).toHaveLength(3);
-    expect(activity).toHaveLength(1);
-    expect(new Set(wakes.map((wake) => wake.once)).size).toBe(wakes.length);
-  });
-
-  it("keeps computers separate and wakes once when process use becomes available", () => {
-    const wakes: TypedWake[] = [];
-    const activity: string[] = [];
-    const pressure = new ResourcePressure({
-      taskKey: (id) => id,
-      leftovers: (id) => (id === "work" ? [leftover] : []),
-      notify: (wake) => wakes.push(wake),
-      activity: (fact) => activity.push(fact.text),
-    });
-    const unknown = view("warning", 1);
-    const reading = unknown.computers[0]!.reading;
-    if (reading.status === "fresh") reading.observation.processes = { status: "unknown" };
-    pressure.observe(unknown);
-    pressure.observe(view("warning", 2));
+    const id = `memory-warning:home:${clock.now}`;
+    clock.now += MINUTE;
+    pressure.observe(view("critical", 2));
     pressure.observe(view("warning", 3));
-    const remote = view("critical", 1);
-    remote.computers[0]!.computerId = "work";
-    pressure.observe(remote);
+    pressure.observe(view("critical", 4));
+    expect(wakes.map((wake) => wake.once)).toEqual([id, `${id}:critical`]);
+    expect(wakes[1]?.facts).toMatchObject({ pressure: "critical", warning: { id } });
+    expect(activity.map((line) => line.pressure)).toEqual(["warning", "critical"]);
+  });
+
+  it("ends a warning once the computer reads normal after 30 minutes clear, then tells a new one", () => {
+    const { pressure, clock, wakes, activity } = watcher();
+    const began = clock.now;
+    pressure.observe(view("warning", 1));
+    clock.now += 29 * MINUTE;
+    pressure.observe(view("normal", 2));
+    expect(wakes).toHaveLength(1);
+    clock.now += MINUTE;
+    pressure.observe(view("normal", 3));
     pressure.observe(view("normal", 4));
+    expect(wakes).toHaveLength(2);
+    expect(wakes[1]).toMatchObject({
+      facts: {
+        kind: "memory-warning-ended",
+        warning: { id: `memory-warning:home:${began}` },
+        clearMinutes: 30,
+      },
+      once: `memory-clear:home:${began}`,
+    });
+    expect(renderWake(wakes[1]!)).toContain("Show no card for this.");
+    expect(activity[1]).toEqual({
+      text: "This computer · Memory warning ended · Normal for 30 minutes",
+      pressure: "normal",
+    });
+    clock.now += MINUTE;
+    pressure.observe(view("warning", 5));
+    expect(wakes[2]?.once).toBe(`memory-warning:home:${clock.now}`);
+  });
+
+  it("keeps computers apart", () => {
+    const { pressure, wakes } = watcher();
+    const remote = view("warning", 1);
+    remote.computers[0]!.computerId = "work";
+    pressure.observe(view("warning", 1));
     pressure.observe(remote);
-    const remoteReading = remote.computers[0]!.reading;
-    if (remoteReading.status === "fresh")
-      remoteReading.observation.memory.memoryPressure = "warning";
-    pressure.observe(remote);
-    expect(wakes).toHaveLength(3);
-    expect(activity).toHaveLength(2);
-    expect(activity[0]).toContain("Task use unavailable");
-    expect(activity[1]).toContain(leftover.key);
-    expect(wakes[0]?.facts).not.toHaveProperty("recordedLeftovers");
-    expect(wakes[2]?.facts).toMatchObject({ computerId: "work", recordedLeftovers: [leftover] });
+    expect(wakes.map((wake) => wake.facts)).toMatchObject([
+      { computerId: null },
+      { computerId: "work" },
+    ]);
+  });
+
+  it("tells nothing again after a restart, and counts the clear time from the restart", () => {
+    const store = inbox();
+    const first = watcher({ store });
+    first.pressure.observe(view("warning", 1));
+    first.clock.now += MINUTE;
+    first.pressure.observe(view("critical", 2));
+    // The restarted app reads its open warning back when it starts, an hour on.
+    const second = watcher({ store, start: first.clock.now + 60 * MINUTE });
+    second.pressure.observe(view("warning", 1));
+    second.pressure.observe(view("critical", 2));
+    second.clock.now += 20 * MINUTE;
+    second.pressure.observe(view("normal", 3));
+    expect(second.wakes).toHaveLength(0);
+    second.clock.now += 10 * MINUTE;
+    second.pressure.observe(view("normal", 4));
+    expect(second.wakes.map((wake) => wake.facts.kind)).toEqual(["memory-warning-ended"]);
+    expect(second.activity).toHaveLength(1);
+  });
+
+  it("writes no Activity line when its wake was already queued", () => {
+    const store = inbox();
+    const { pressure, clock, activity } = watcher({ store });
+    store.names.push(`memory-warning:home:${clock.now}`);
+    pressure.observe(view("warning", 1));
+    expect(activity).toHaveLength(0);
   });
 });

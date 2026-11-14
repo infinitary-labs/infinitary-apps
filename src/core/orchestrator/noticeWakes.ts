@@ -37,6 +37,12 @@ export type NoticeFacts =
       computerId: string | null;
       label: string;
       pressure: "warning" | "critical";
+      /**
+       * The memory warning this notice belongs to (INF-4182): told once when
+       * it begins, and again only on a first turn to critical. A wake saved
+       * before it has none.
+       */
+      warning?: { id: string; since: string };
       tasks: PressureTaskShare[];
       /** Close outcomes only: neither liveness nor current memory use was measured. */
       recordedLeftovers?: PressureLeftover[];
@@ -46,6 +52,18 @@ export type NoticeFacts =
       swapUsedBytes?: number;
       /** What finished tasks left on the computer now, as the app recorded it. */
       leftBehind?: LeftBehindFacts;
+    }
+  | {
+      /**
+       * A memory warning ended: the computer read normal after the clear
+       * time without warning or critical. Once per warning; it asks for no card.
+       */
+      kind: "memory-warning-ended";
+      computerId: string | null;
+      label: string;
+      warning: { id: string; since: string };
+      clearMinutes: number;
+      endedAt: string;
     }
   | {
       /**
@@ -484,7 +502,9 @@ export const NOTICE_WORDS: KindWords<NoticeFacts> = {
               "Explicit requests to keep a rule retain your existing authority and require no extra confirmation. Tell only running crewmates whose work the saved change affects; use correction_case guide with their ids after saving. Saving grants no other permission.",
             ].join("\n"),
   "resource-pressure": (facts) =>
-    `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.`,
+    `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.${facts.warning ? ` This is memory warning ${facts.warning.id}, begun ${facts.warning.since}, and it is told once: while it lasts, only a first turn to critical is told again, and its end is told when the computer reads normal after a quiet stretch. Offer the captain at most one card for this warning ID; after their answer, offer again only for a new warning ID.` : ""}`,
+  "memory-warning-ended": (facts) =>
+    `[fm-op] Memory warning ${facts.warning.id} on ${facts.label}, begun ${facts.warning.since}, ended at ${facts.endedAt}: the computer read normal after ${facts.clearMinutes} minutes without warning or critical. Show no card for this. Take down an offer about this warning that nobody answered. Facts: ${JSON.stringify(facts)}.`,
   "line-blocked": (facts) =>
     `[fm-op] On ${facts.label}, a run of finished task ${facts.run.key} still counts as running in the heavy-run line while ${facts.waiting} other ${facts.waiting === 1 ? "run waits" : "runs wait"} there. Nothing was stopped. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Facts: ${JSON.stringify(facts)}. What finished tasks left is the app's record, not a reading of memory use.`,
   "freeze-recorded": (facts) => renderFreezeRecorded(facts),

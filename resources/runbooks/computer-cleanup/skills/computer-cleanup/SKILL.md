@@ -10,7 +10,7 @@ Confirm that permission in the task’s brief or card choice; if missing, ask be
 Permission to look is not permission to stop anything.
 Use the computer named in the brief; a shell on another computer cannot inspect it, so report needs_firstmate to coordinate a crewmate there rather than guessing from local readings.
 Keep one look per computer, no project, and reuse its card and task while open.
-After an answer, another offer waits for fresh evidence that the computer recovered and is stuck again: renewed pressure after a normal reading, or a new line-blocked notice for a different run; missing readings prove neither.
+After an answer, another offer waits for a new memory warning ID, which the app gives only after the computer read normal for 30 minutes, or a new line-blocked notice for a different run; missing readings prove neither.
 No pressure notice authorizes killing, pausing, slowing or moving running work.
 
 ## Read without changing anything

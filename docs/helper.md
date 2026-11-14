@@ -451,7 +451,7 @@ The last screen demand expires after fifteen seconds; when no task is active eit
 A read already in flight stays bounded by its timeout.
 Closing the core stops the loop and invalidates the receiver.
 Ordinary samples write no database row, task event, activity line or panel-store value.
-A newly observed warning or critical memory-pressure fact writes one Activity notice and one durable first-mate wake ("Running tasks’ resource use").
+A memory warning on a computer writes one Activity notice and one durable first-mate wake when it begins, told once until it ends ("Running tasks’ resource use").
 These readings are observations only, never a scheduling commitment, a physical-sharing identity, or a stored placement snapshot.
 
 ### Running tasks’ resource use
@@ -478,10 +478,9 @@ The birth tick reaches the wall clock through `/proc/uptime`.
 The Mac adapter adds swap occupancy from `vm.swapusage`, independently of installed memory; Linux reads SwapTotal minus SwapFree from `/proc/meminfo`.
 None of these additions changes placement, its margins, sampling cadence or process priority.
 
-The home emits one Activity warning, one separate row per observed task share, and one durable first-mate wake for each newly observed warning or critical pressure level on a computer.
-Separate rows keep later tasks visible within Activity’s two-line display instead of putting every share in one truncated sentence.
-Repeated samples at that level do not repeat the notice; a missing reading does not establish recovery.
-A normal reading ends the episode, and a subsequent warning is a new fact.
+The home tells each memory warning on a computer once: one Activity line naming the computer and what holds the most memory, and one durable first-mate wake, when the warning begins.
+Later readings in the same warning tell nothing more, except a first turn to critical; a missing reading does not establish recovery.
+A warning ends only after the computer reads normal following 30 minutes without pressure, and only then can a new one begin ([heavy-runs.md](heavy-runs.md), "Capacity and pressure").
 The wake carries the observed task shares, unclaimed use, process count and swap occupancy when available.
 The first mate decides what to steer; this observation path never kills, pauses, slows or gates a run.
 The task record’s Use row reads these same live observations, with explicit unavailable words when they are missing or stale.

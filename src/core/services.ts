@@ -1588,6 +1588,7 @@ export async function createServices(
     here: leftBehind,
     work: workDevices,
     notify: (wake) => notifyFirstmate(wake, "scheduled"),
+    heard: (prefix) => inbox.wokenNames("", prefix),
     broadcast: broadcastEvent,
   });
   // The freeze recorder, in alpha builds only (docs/freeze-recorder.md).

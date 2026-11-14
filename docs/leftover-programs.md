@@ -50,8 +50,9 @@ Unlike the close, which ends programs it read moments ago, `end` signals nothing
 `drop <task> <stop id>` removes a kept stop without running it; a cleanup look uses it, without asking, for a stop whose target it found already gone.
 All three refuse a task that is not finished on that computer, or whose close is still cleaning up.
 
-Memory pressure names those recorded unresolved outcomes by task on their recorded computer, without claiming the programs are still running or assigning them measured memory (`docs/heavy-runs.md`, "Capacity and pressure").
+A memory warning's one notice names those recorded unresolved outcomes by task on their recorded computer, without claiming the programs are still running or assigning them measured memory (`docs/heavy-runs.md`, "Capacity and pressure").
 Older reports without computer provenance are not guessed onto a computer, and a successful stop or ended program is not named as a leftover.
+A report recorded while that warning is open is named in the next warning's notice, not in a notice of its own.
 The pressure notice offers no cleanup action.
 
 A close with no stops and no holders writes nothing.

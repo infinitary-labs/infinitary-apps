@@ -81,10 +81,15 @@ This is admission accounting, not a prediction or a promise of physical isolatio
 A normal request cannot pass an earlier waiting request, even if the later request is smaller.
 A macOS warning or critical pressure reading suspends new admissions; normal pressure and fresh capacity allow the same line to advance.
 The existing resource-pressure Activity and first-mate wake remain the only pressure notices.
-Activity shows at most one line while a computer remains under pressure; a fresh normal reading permits another line only when a later pressure reading carries new facts (`src/core/placed/resourcePressure.ts`).
-Normal/warning oscillations with the same facts stay quiet, and missing readings never establish recovery.
+Each memory warning is one thing with an ID: memory, the computer, and when the warning began on the home's clock (`memory-warning:<computer or home>:<began, ms>`).
+A warning begins at the first fresh warning or critical reading on a computer with no open warning; the home then writes one Activity line and queues one first-mate wake whose once-name is the ID (`src/core/placed/resourcePressure.ts`).
+While it is open, later readings tell nothing: not a newly seen task, not new process use, not a newly recorded close report, not byte counts, not a flip to normal and back, not a restart.
+The one exception is the first critical reading in it, which writes one more line and queues one more wake under the same ID (`<id>:critical`).
+A warning ends when the computer reads normal after 30 minutes without a warning or critical reading, the captain's number; the check runs on each reading, and missing or stale readings never count as normal.
+Its end queues one first-mate wake that asks for no card (`memory-warning-ended`, once-name `memory-clear:<computer or home>:<began, ms>`) and writes one Activity line without the warning tone.
+A line is written only when its wake was queued, so a restart cannot repeat one.
+Open warnings and their ends are read back from the inbox's once-names after a restart, and an open warning's quiet stretch starts again at the restart, since not knowing is not recovery.
 The line names unresolved leftovers recorded at finished tasks' closes on that computer, when present, with current use explicitly unknown; otherwise it names the largest measured open-task share or the programs not linked to open tasks.
-The first mate receives the first pressure fact, the first critical reading, newly observed task identities, newly available process use and newly recorded unresolved close reports, not changes in byte counts alone.
 The wake keeps every measured task share separate from the recorded close outcomes.
 It also carries what finished tasks left on that computer, when the list names anything (`docs/leftover-programs.md`, "What a close leaves").
 When a finished task's run still counts as running in a computer's line while another run waits there, the first mate hears it once for that run (`line-blocked`, `LineBlocked` in `src/core/placed/leftBehindNotices.ts`), with the same list; this reads the line facts the resource feed already carries and stops nothing.
@@ -92,7 +97,7 @@ It tells only once that computer's own list names the run, which it does only af
 No pressure change kills, pauses, slows or moves a running program.
 With Computer cleanup enabled, on either notice the first mate offers a read-only cleanup look on the reporting computer before spending the captain’s plan’s allowance, and starts it only on yes.
 The runbook owns that procedure, not the pressure wake: disabling it withdraws the offer guidance and the skill for new looks, without cancelling running conversations or suppressing the pressure facts.
-It reuses an open offer or look there; after an answer, a new offer needs fresh evidence of recovery and renewed pressure.
+It offers at most one card per warning ID and reuses an open offer or look there; after an answer, a new offer needs a new warning ID, and a warning's end takes down an offer nobody answered.
 The no-project look follows the bundled `computer-cleanup` skill: measured ownership, one card of finished-task leftovers and unowned programs with stopping costs, and only explicit picks stopped after identity checks.
 Open tasks and CI are named, never offered; unowned programs are never recommended.
 Recorded close outcomes are leads, never proof of current liveness, ownership or memory use.

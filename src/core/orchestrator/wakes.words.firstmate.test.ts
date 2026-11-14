@@ -121,6 +121,47 @@ const CASES: WordsCases<FirstmateWakeKind> = {
       words:
         '[fm-op] This Mac reports critical memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: {"kind":"resource-pressure","computerId":null,"label":"This Mac","pressure":"critical","tasks":[{"taskId":"479823ee","key":"INF-2696","processCount":41,"residentBytes":6442450944,"cpuCores":3.5}],"other":{"residentBytes":2147483648,"processCount":212},"processCount":253,"swapUsedBytes":1073741824}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.',
     },
+    {
+      name: "a memory warning's one notice",
+      wake: {
+        facts: {
+          kind: "resource-pressure",
+          computerId: "mac-mini",
+          label: "Mac mini",
+          pressure: "warning",
+          warning: {
+            id: "memory-warning:mac-mini:1794574800000",
+            since: "2026-11-13T13:00:00.000Z",
+          },
+          tasks: [],
+          other: { residentBytes: 20_548_157_440, processCount: 936 },
+          processCount: 936,
+          swapUsedBytes: 13_448_972_861,
+        },
+      },
+      words:
+        '[fm-op] Mac mini reports warning memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: {"kind":"resource-pressure","computerId":"mac-mini","label":"Mac mini","pressure":"warning","warning":{"id":"memory-warning:mac-mini:1794574800000","since":"2026-11-13T13:00:00.000Z"},"tasks":[],"other":{"residentBytes":20548157440,"processCount":936},"processCount":936,"swapUsedBytes":13448972861}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown. This is memory warning memory-warning:mac-mini:1794574800000, begun 2026-11-13T13:00:00.000Z, and it is told once: while it lasts, only a first turn to critical is told again, and its end is told when the computer reads normal after a quiet stretch. Offer the captain at most one card for this warning ID; after their answer, offer again only for a new warning ID.',
+    },
+  ],
+  "memory-warning-ended": [
+    {
+      name: "a warning that stayed clear",
+      wake: {
+        facts: {
+          kind: "memory-warning-ended",
+          computerId: "mac-mini",
+          label: "Mac mini",
+          warning: {
+            id: "memory-warning:mac-mini:1794574800000",
+            since: "2026-11-13T13:00:00.000Z",
+          },
+          clearMinutes: 30,
+          endedAt: "2026-11-13T14:10:00.000Z",
+        },
+      },
+      words:
+        '[fm-op] Memory warning memory-warning:mac-mini:1794574800000 on Mac mini, begun 2026-11-13T13:00:00.000Z, ended at 2026-11-13T14:10:00.000Z: the computer read normal after 30 minutes without warning or critical. Show no card for this. Take down an offer about this warning that nobody answered. Facts: {"kind":"memory-warning-ended","computerId":"mac-mini","label":"Mac mini","warning":{"id":"memory-warning:mac-mini:1794574800000","since":"2026-11-13T13:00:00.000Z"},"clearMinutes":30,"endedAt":"2026-11-13T14:10:00.000Z"}.',
+    },
   ],
   "line-blocked": [
     {

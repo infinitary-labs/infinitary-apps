@@ -23,6 +23,7 @@ export type FirstmateWakeKind =
   | "response-missing"
   | "possible-repetition"
   | "resource-pressure"
+  | "memory-warning-ended"
   | "line-blocked"
   | "freeze-recorded"
   | "panel-update-asked"

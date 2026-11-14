@@ -21,7 +21,10 @@ export function attachComputerNotices(
     tasks: Pick<TaskService, "get" | "resolve" | "leftoverNotes" | "resolveLeftoverNote">;
     here: Pick<LeftBehindHere, "list">;
     work: Pick<WorkDevices, "ask" | "inReach" | "takesCurrentWork">;
-    notify: (wake: TypedWake) => void;
+    /** Queues a first mate wake; answers null when nothing new was queued. */
+    notify: (wake: TypedWake) => unknown;
+    /** The once-names already queued that start with a prefix, read back after a restart. */
+    heard?: (prefix: string) => string[];
     broadcast: (event: FmEvent) => void;
   },
 ): void {
@@ -38,8 +41,13 @@ export function attachComputerNotices(
     leftovers: (computerId) => recordedPressureLeftovers(tasks, computerId),
     leftBehind,
     notify: options.notify,
+    heard: options.heard,
     activity: (fact) =>
-      options.broadcast({ type: "firstmate_note", text: fact.text, tone: "warn" }),
+      options.broadcast({
+        type: "firstmate_note",
+        text: fact.text,
+        ...(fact.pressure === "normal" ? {} : { tone: "warn" as const }),
+      }),
   });
   const lineBlocked = new LineBlocked({ finished, leftBehind, notify: options.notify });
   const observe = (view: ComputerResourcesView): void => {

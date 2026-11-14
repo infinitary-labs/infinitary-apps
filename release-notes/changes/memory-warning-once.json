@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "memory-warning-once",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "A computer short on memory is told once, not every few minutes",
+      "body": "When a computer runs short on memory, your first mate hears it once, with one line in Activity. It hears again only if things get critical, and once more when the computer has stayed back to normal for 30 minutes. A new card about it can come back only after that.",
+      "noPicture": "Nothing on screen looks different: the change is how often the same memory warning is told.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

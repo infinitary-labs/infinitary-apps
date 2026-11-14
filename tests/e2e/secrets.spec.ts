@@ -218,6 +218,29 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
       `SERVICE_TOKEN ${SECRET_CHECKED_WORDS.gets} ${LABEL}`,
     );
     await expect(body.locator("input, textarea, select")).toHaveCount(0);
+    // INF-4087's rows: one labelled row per fact in the open, the secret with the
+    // variable it goes in as, and the command as a shell reads it.
+    // e2e-typed-words: the open rows' region is named for the request the captain reads.
+    const open = (name: string) =>
+      body
+        .locator('dl[aria-label="The request"] > div')
+        .filter({ has: page.locator("dt").getByText(name, { exact: true }) })
+        .locator("dd");
+    await expect(open(SECRET_APPROVAL_CARD_WORDS.secret)).toHaveText(
+      `${LABEL} ${SECRET_APPROVAL_CARD_WORDS.goesIn} SERVICE_TOKEN`,
+    );
+    await expect(open(SECRET_APPROVAL_CARD_WORDS.runs)).toHaveText(`${shPath} check.sh`);
+    await expect(open(SECRET_APPROVAL_CARD_WORDS.in)).toHaveText(cwd);
+    // Answer 5: Don't allow stands apart, left of the two allows.
+    const left = async (name: string) =>
+      (await card.getByRole("button", { name, exact: true }).boundingBox())?.x ?? Number.NaN;
+    const [deny, always, once] = [
+      await left(SECRETS_WORDS.deny),
+      await left(SECRETS_WORDS.always),
+      await left(SECRETS_WORDS.once),
+    ];
+    expect(deny).toBeLessThan(always);
+    expect(always).toBeLessThan(once);
 
     await app.evaluate(() => {
       (globalThis as SecretsJourneyGlobal).secretsJourney.confirmation = false;
@@ -1171,7 +1194,7 @@ for (const theme of ["dark", "light"] as const) {
       for (const entry of entries) {
         const row = requested.locator(`[data-secret-ref=${JSON.stringify(entry.ref)}]`);
         // Named as Settings names it: place when a name repeats, reference only when both do.
-        await expect(row).toHaveText(secretName(entries, entry.ref));
+        await expect(row.locator("[data-secret-name]")).toHaveText(secretName(entries, entry.ref));
         await expect(row).toBeInViewport();
       }
       expect(await overflows(requested)).toBe(0);

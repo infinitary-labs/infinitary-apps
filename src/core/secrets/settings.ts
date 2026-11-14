@@ -803,6 +803,7 @@ export class SecretsSettings {
           program: script.facts.executable.path,
           argv: script.facts.argv,
           cwd: script.facts.cwd,
+          env: script.facts.env,
         },
       };
     const broker = owner.protected.describeBrokered(request);
@@ -924,12 +925,14 @@ export class SecretsSettings {
       `use-${request}`,
       words.title(named, ask.task),
       secretApprovalBody(use, ask, identities, notice),
+      // The footer draws the default last, so this reads Don't allow, the
+      // second allow, then Allow once: the refusal stands apart (INF-4087).
       [
         { label: SECRETS_WORDS.once, run: () => confirm(false) },
+        { label: SECRETS_WORDS.deny, run: deny },
         use.shortReadEligible
           ? { label: SECRETS_WORDS.short, run: () => confirm(true) }
           : { label: SECRETS_WORDS.always, run: always },
-        { label: SECRETS_WORDS.deny, run: deny },
       ],
       this.taskOf.get(request)?.values().next().value,
     );

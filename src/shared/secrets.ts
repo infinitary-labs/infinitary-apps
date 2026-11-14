@@ -512,19 +512,33 @@ export function secretsListed(names: readonly string[]): string {
  * answers include the two decisions a person can save.
  */
 export const SECRET_APPROVAL_CARD_WORDS = {
-  /** Who asks: the task's crewmate, or Infinitary itself when no task asked. */
-  title: (secrets: string, task: string | null) => `Give ${secrets} to ${task ?? "Infinitary"}?`,
+  /** Who asks: the task's crewmate, its title in quotes, or Infinitary itself when no task asked. */
+  title: (secrets: string, task: string | null) =>
+    `Give ${secrets} to ${task ? `“${task}”` : "Infinitary"}?`,
+  /** Under the reason: the title names the task, so this says only who wrote it. */
   asked: (task: string | null) =>
-    task ? `Asked by the crewmate on ${task}.` : "Asked by Infinitary itself, not by a task.",
-  runs: "It will run",
-  in: "in",
-  sends: "It will send one request to",
-  reason: "Its reason:",
-  scope:
-    "Only these secrets, only this run. What receives them can keep them. Allowing never approves a separate action, such as deploying or sending something.",
-  read: `On your computer, ${SECRETS_WORDS.short} repeats only this exact read, up to ${SHORT_READ_USES} times. You can stop it in Settings → Secrets.`,
+    task
+      ? "Asked by the crewmate on this task, in its own words."
+      : "Asked by Infinitary itself, not by a task.",
+  /** The open rows' labels, one fact each. */
+  secret: "Secret",
+  secrets: "Secrets",
+  goesIn: "goes in as",
+  runs: "Runs",
+  in: "In folder",
+  sends: "Sends to",
+  request: "Request",
+  reason: "Its reason",
+  /** One line per allow button, beside its label, saying what that button covers. */
+  once: (many: boolean) =>
+    many ? "Only these secrets, only this run." : "Only this secret, only this run.",
+  read: `On your computer, repeats only this exact read, up to ${SHORT_READ_USES} times. You can stop it in Settings → Secrets.`,
   always:
-    "On your computer, Always allow this saves this exact run: the same program, files, arguments and folder. Anything different asks again.",
+    "On your computer, saves this exact run: the same program, files, arguments and folder. Anything different asks again.",
+  /** The standing sentences after the button lines; `confirm` ends them. */
+  keep: (many: boolean) =>
+    many ? "What receives them can keep them." : "What receives it can keep it.",
+  never: "Allowing never approves a separate action, such as deploying or sending something.",
   checked: "Everything that was checked",
   confirm: "Each allow asks you to confirm first.",
   /** The system's own confirmation, which names what one Allow covers. */
@@ -544,6 +558,8 @@ export const SECRET_APPROVAL_CARD_WORDS = {
  * fingerprint's first characters where a file was bound by its content.
  */
 export const SECRET_CHECKED_WORDS = {
+  /** Each requested secret by name, reference and version. */
+  secret: "Secret",
   program: "Program",
   interpreter: "Interpreter",
   file: "File",

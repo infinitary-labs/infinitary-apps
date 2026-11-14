@@ -543,7 +543,8 @@ import XCTest
         // temporary access is only the computer's; no Allow here offers it.
         XCTAssertTrue(body("asks you to confirm first").exists, app.debugDescription)
         XCTAssertFalse(body("Your computer asks you to confirm").exists, app.debugDescription)
-        let temporary = body("On your computer, Allow for 10 minutes")
+        // INF-4087: the line beside the computer's Allow for 10 minutes says the read is only the computer's.
+        let temporary = body("On your computer, repeats only this exact read")
         XCTAssertTrue(temporary.exists, app.debugDescription)
         // INF-1109 and INF-1690: the card names the requested secret as the computer's Settings names it - this
         // lone saved secret by its name alone, with no place, reference or version - and the task that asked; the

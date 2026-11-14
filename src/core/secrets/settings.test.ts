@@ -928,11 +928,14 @@ describe("trusted Secrets settings", () => {
     expect(first.state).toBe("waiting");
     const card = f.cards.at(-1);
     expect(card?.title).toBe(SECRET_APPROVAL_CARD_WORDS.title(STAGING, "Deploy the site"));
+    // INF-4087's answer 5: refusal first. The default comes first here and the
+    // footer draws it last, so the card reads Don't allow, Always allow this, Allow once.
     expect(card?.actions.map((action) => action.label)).toEqual([
       SECRETS_WORDS.once,
-      SECRETS_WORDS.always,
       SECRETS_WORDS.deny,
+      SECRETS_WORDS.always,
     ]);
+    expect(card?.actions.map((action) => action.variant)).toEqual(["primary", "ghost", "ghost"]);
     expect(card?.body).toContain(SECRET_APPROVAL_CARD_WORDS.asked("Deploy the site"));
     // The checked program's own path (the captain's review answer), not the request's word.
     const run1 = `${await realpath("/bin/sh")} deploy.sh --staging`;

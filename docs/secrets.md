@@ -172,7 +172,12 @@ The page ends with Website sign-ins in every storage state (`docs/task-browser.m
 Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it on the host's Remove card; the page has no rule editor and no rehearsal form: the crew checks a run before asking.
 A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow saves nothing.
 A Never or Ask an earlier version saved keeps applying and is listed with Remove, but nothing makes a new one.
-The exact-use card's title names the secrets and the task that asked; its body says who asks, what runs and why, with every checked fact, reference and version under one disclosure.
+The exact-use card's title names the secrets and, in quotes, the task that asked; its body is labelled rows, one fact each, at one width of at most 44rem (`secretApprovalBody` in `approvalCard.ts`, words in `SECRET_APPROVAL_CARD_WORDS`).
+The rows are Secret (each secret's name and the variable it goes in as), Runs (the command as a shell reads it, in single quotes and never with backslashes) and In folder for a program, or Sends to and Request for a service, then Its reason in quotes with who wrote it.
+On a narrow card, 480 pixels and under, each label sits above its value.
+Every checked fact, reference and version folds under one disclosure, what is not checked among them.
+Last, one line beside each allow button's name says what that button covers, followed by the standing sentences: what receives a secret can keep it, allowing approves no separate action, and each allow asks for confirmation first.
+A failed or unavailable confirmation's status stays the body's first line.
 That disclosure, Everything that was checked, says each check in words, one line each (`checkedFacts` in `approvalCard.ts`, words in `SECRET_CHECKED_WORDS`): the program, its interpreter and each file argument by path, whether each runs from a private copy or where nothing the person runs can change it, and the first characters of its fingerprint; the arguments as a shell reads them; the working folder; which variable gets which secret; that output stays private; and what is not checked.
 A service's request lists where it goes, what it asks, its result, whether it only reads, and its fingerprint.
 The card names each secret among every saved one exactly as Settings does (`secretNames.secretName`): its place when another secret shares its name, and its reference only when name and place both repeat.
@@ -190,7 +195,7 @@ Remove only proposes a change, and native confirmation covers the exact proposed
 
 ### Saved decisions
 
-The approval card's answers are Allow once, Always allow this (Allow for 10 minutes for an eligible read instead) and Don't allow.
+The approval card's answers are Allow once, Always allow this (Allow for 10 minutes for an eligible read instead) and Don't allow, drawn as Don't allow, the second allow, then Allow once, so the refusal stands apart from the two allows.
 Always allow this asks the system once for two proofs (`LocalApprovals.confirmEach`): one for the shown use and one for the next authority revision with an Allow rule naming that use's operation key for each of its secrets.
 The use starts first, because any saved revision ends a use still waiting on the older one; the rule is saved as soon as the program has started (`approve` with `until: "launched"`), while the confirmation is fresh, so a run of any length keeps its decision.
 Because Never outranks Ask and Ask outranks Allow, every Ask rule on one of those secrets that covers the run is dropped: one naming the same operation, and one with no operation, which covered every run of that secret.

@@ -59,14 +59,18 @@ Its rows, Remove, permission and empty line are the same as anywhere else; a bui
 
 ## The exact-use card
 
-The title asks in one sentence: Give the Website deployment (Staging) secret to Deploy the site?, naming one or two secrets (or a count) and the task that asked, or Infinitary when no task asked.
+The title asks in one sentence: Give the Website deployment (Staging) secret to “Deploy the site”?, naming one or two secrets (or a count) and the task that asked in quotes, or Infinitary when no task asked.
 Every card names a secret as the page does: its place only when another saved secret shares its name, and its reference only when name and place both repeat.
-The body then says who asked, what will run in plain words (the checked program's own path, so a look-alike script shows where it is, then its arguments with the working folder; or the destination and operation), and the requester's reason in quotes, visually secondary to the checked facts.
-The recipient-trust caveat, separate external-action consent and lack of isolation for later-loaded files stay in the open.
-Every checked fact (each secret's environment, reference and saved version, then each check in words: the program, interpreter and files by path with how each is bound and a short fingerprint, the arguments, the folder, which variable gets which secret, that output stays private, and what is not checked) folds under one Everything that was checked disclosure, whose columns wrap with the available width.
+The body is labelled rows, one fact per row, label on the left in muted small type and value on the right, at one width of at most 44rem so it has one right edge.
+Secret names each secret and the variable it goes in as; Runs shows the command in a dark code well as a shell reads it (the checked program's own path, so a look-alike script shows where it is, then its arguments, in single quotes and never with backslashes); In folder gives the working folder; a service shows Sends to and Request instead.
+Its reason quotes the requester's reason in secondary color, with a muted line under it saying who wrote it, so it reads apart from the checked facts.
+Every checked fact (each secret's environment, reference and saved version, then each check in words: the program, interpreter and files by path with how each is bound and a short fingerprint, the arguments, the folder, which variable gets which secret, that output stays private, and what is not checked) folds under one quiet Everything that was checked disclosure, whose rows stack on a narrow card.
+Under a hairline, one row per allow button gives its name and what it covers: Allow once, only this secret and this run; Always allow this, the exact run it saves; or Allow for 10 minutes, the exact read it repeats on this computer.
+A muted line ends the body: what receives the secret can keep it, allowing approves no separate action, and each allow asks for confirmation first.
+On a card 480 pixels wide or less, each label sits above its value and nothing scrolls sideways.
 The person fills in nothing: the crew checked the run before asking.
 The shared approval body describes confirmation without naming a device, and clearly labels temporary access as computer-only; an enrolled phone keeps its own pinned identities and confirmation instructions.
-Its answers are Allow once, Always allow this (Allow for 10 minutes and twenty uses for an eligible read instead) and Don't allow; every allow needs fresh system confirmation.
+Its answers are Allow once, Always allow this (Allow for 10 minutes and twenty uses for an eligible read instead) and Don't allow, drawn left to right as Don't allow, the second allow, then Allow once as the default; every allow needs fresh system confirmation.
 Always allow this runs the shown use and saves that exact run as a decision under the same confirmation.
 Don't allow sends nothing and saves nothing, raises no other card, and the next run asks again.
 No card asks for a secret value.

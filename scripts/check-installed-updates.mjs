@@ -305,6 +305,10 @@ try {
   assert.equal(installedVersion(), versions.alphaBefore);
   record("Unwritable installation", "The updater refused replacement and kept the old app.");
 
+  // That refusal withdraws Update and restart for the rest of the run (docs/alpha.md,
+  // "Consent before replacement"), so the cancellation check needs a new run of the restored copy.
+  await stopApp();
+  page = await launch();
   feed({ mode: "pause" }); await choose(page, "alpha");
   rmSync(`${control}.download`, { force: true });
   const attempt = page.evaluate(() => window.infinitary.update.install());

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "installer-check-relaunch-after-unwritable",
+      "reason": "Internal: the signed installer check starts the app again after the unwritable-copy refusal, which withdraws Update and restart for the rest of that run, so its cancellation step can start a download; the app is unchanged."
+    }
+  ]
+}

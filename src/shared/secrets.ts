@@ -535,12 +535,6 @@ export const SECRET_APPROVAL_CARD_WORDS = {
   allowed: "Allowed. This exact run is now a saved decision.",
   notKept:
     "This run was allowed, but the saved decision was not kept because your decisions changed while it ran. Nothing else changed.",
-  stopTitle: (secrets: string) => `Stop asking for ${secrets}?`,
-  stopBody: (secrets: string, task: string | null) =>
-    `${task ?? "Infinitary"} did not get ${secrets}. Stop asking means ${task ? "no task gets" : "neither Infinitary nor any task gets"} ${secrets} again, for any run, until you remove that saved decision in Settings → Secrets.`,
-  stop: "Stop asking",
-  keepAsking: "Keep asking",
-  stopped: "Saved. Infinitary no longer asks for this secret.",
 } as const;
 
 /**

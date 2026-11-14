@@ -39,7 +39,7 @@ export const SECRETS_CHECK_WORDS = {
     allow:
       "This run passed every check, and a saved decision already allows it: inject runs it without a card.",
     never:
-      "This run passed every check, but the captain stopped asking for a secret it names: inject is refused. When the work needs it, say so in your report.",
+      "This run passed every check, but a saved decision never gives a secret it names: inject is refused. When the work needs it, say so in your report.",
   } satisfies Record<Exclude<UseCheck, { problem: UseCheckProblem }>["decision"], string>,
   /** Beside an inject that answered unavailable: no card was raised. */
   refused: `Nothing was asked: this request did not pass its checks. Run \`${SECRETS_COMMAND} check\` with the same --env and program to see which one, then inject again with a new --id.`,

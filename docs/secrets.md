@@ -53,7 +53,7 @@ Every request is checked before its card, and the crew can run the same checks i
 It answers the first failed check as a typed `problem` (`secret`, `folder`, `variable`, `program`, `interpreter` or `unavailable`, `UseCheckProblem` in `requests.ts`), or the checked run: the program and interpreter by real path, each file argument, the working folder, and the saved decision the exact run meets (`never`, `ask` or `allow`).
 An unknown and a hidden secret answer alike, and an answer names no value.
 It journals, approves, keeps and runs nothing, and removes the private copies it made while checking.
-The channel adds the host's words for the answer (`SECRETS_CHECK_WORDS`, `commandWords.ts`): what failed and what to change, or whether asking raises a card, runs at once under a saved decision, or is refused under Stop asking.
+The channel adds the host's words for the answer (`SECRETS_CHECK_WORDS`, `commandWords.ts`): what failed and what to change, or whether asking raises a card, runs at once under a saved decision, or is refused under a saved Never.
 An `inject` that failed its checks still raises no card and answers `unavailable`, now with words that say so and point to `check`; its intent stays spent, so the next request takes a new `--id`.
 The older `inf:secrets:rehearse` request evaluates the same way for Settings, which no longer calls it; it goes with the contract's next major.
 
@@ -170,7 +170,8 @@ The form locates the returned entry through the controller's `saved` receipt; re
 Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
 The page ends with Website sign-ins in every storage state (`docs/task-browser.md`, "Saved sign-ins"): they keep their own storage, outside the protected owner, and the section says so (the consumer register's Remembered websites row).
 Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it on the host's Remove card; the page has no rule editor and no rehearsal form: the crew checks a run before asking.
-A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow offers a second card that saves a Never for that secret.
+A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow saves nothing.
+A Never or Ask an earlier version saved keeps applying and is listed with Remove, but nothing makes a new one.
 The exact-use card's title names the secrets and the task that asked; its body says who asks, what runs and why, with every checked fact, reference and version under one disclosure.
 That disclosure, Everything that was checked, says each check in words, one line each (`checkedFacts` in `approvalCard.ts`, words in `SECRET_CHECKED_WORDS`): the program, its interpreter and each file argument by path, whether each runs from a private copy or where nothing the person runs can change it, and the first characters of its fingerprint; the arguments as a shell reads them; the working folder; which variable gets which secret; that output stays private; and what is not checked.
 A service's request lists where it goes, what it asks, its result, whether it only reads, and its fingerprint.
@@ -182,7 +183,7 @@ A replacement names its reference; one without a reference is refused.
 The command-search entry focuses the Secrets heading in every availability state, and the forms and their actions use the ordinary keyboard controls.
 Enabled controls carry no disabled-reason label; unavailable actions keep their current explanation.
 Secure entry passes a value directly to the protected owner and returns metadata, never the value, its prefix or an encoded substitute.
-It raises app-authored cards for exact uses, stopping asking, removing a saved decision, forgetting and history deletion.
+It raises app-authored cards for exact uses, removing a saved decision, forgetting and history deletion.
 Their private offers are spent once through host chrome; a saved card from a previous process is inert, and an agent-written card cannot mint one.
 An Allow click still requires fresh system authentication; a failed or unavailable confirmation leaves the request waiting and reopens its card.
 Remove only proposes a change, and native confirmation covers the exact proposed revision.
@@ -195,8 +196,7 @@ The use starts first, because any saved revision ends a use still waiting on the
 Because Never outranks Ask and Ask outranks Allow, every Ask rule on one of those secrets that covers the run is dropped: one naming the same operation, and one with no operation, which covered every run of that secret.
 If the decisions changed in between, the run stands and the rule is not saved, and Settings says so.
 The rule's note holds the run in words (`runWords`), and the page and its cards say a decision in one sentence (`decisionWords`), such as "Always give Website deployment to /bin/sh deploy.sh --staging."
-Don't allow denies the use without a confirmation, then raises a separate card offering Stop asking, which saves a Never rule with no operation for each secret, under fresh confirmation.
-That card lists every secret it covers by name (`secretsListed`), never a count, and when Infinitary itself asked it says neither Infinitary nor any task gets them again.
+Don't allow denies the use without a confirmation and raises no other card; it saves nothing, so the next run asks again.
 Removing a decision from Settings raises a card naming it in the same sentence and saves the remaining rules under fresh confirmation; a card shown against an older revision saves nothing.
 Settings can only remove: a `save-rules` request that adds or changes a rule, or removes more than one, raises no card and saves nothing.
 The command facade exposes the agent-visible entries' metadata, injection, status and cancellation, not this controller or a broker result reader.
@@ -330,7 +330,7 @@ The damaged record's device name cannot be read back, so the new key takes a new
 An enrollment the computer holds under the earlier name stays until the captain stops it in Settings → Devices or Settings → Secrets; nothing it allowed carries over.
 Each Allow evaluates a fresh `LAContext` with no reuse, naming exactly what it gives, before the key signs; a failed confirmation sends nothing.
 A use's approval card on the phone shows Allow once and Don't allow in place of the computer's own choices; a phone that is not enrolled shows only Don't allow and says where to set up.
-A saved decision is made only on the computer: the phone offers neither Always allow this nor Stop asking.
+A saved decision is made only on the computer: the phone does not offer Always allow this.
 Only an executing or completed Allow, or a denied Don't allow, marks the phone's choice accepted; waiting, refusal and uncertain outcomes retain their explanation instead.
 A later successful key read clears an earlier locked-store problem without replacing the key.
 The computer's card title names one or two secrets as "the X secret" or "the X and Y secrets" and the task that asked.

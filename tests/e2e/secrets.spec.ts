@@ -25,7 +25,6 @@ import {
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
   secretRefSchema,
-  secretsListed,
   secretsNamed,
 } from "../../src/shared/secrets";
 import { connectClient } from "../helpers/connectionClient";
@@ -382,14 +381,15 @@ test("ending bounded access makes the next exact read ask again", async () => {
 });
 
 // Intent: INF-1690's accepted plan, the captain's answer: saved decisions are
-// made "Only from the approval card: Always allow this run, or Don't allow and
-// stop asking for this key. The page lists saved decisions with Remove and has
-// no editor." Data: a disposable credential and a real shell recipient in a
-// scratch folder. Completion: Always allow this runs the shown use and the same
-// run then needs no card, while different arguments ask again; a failed
-// confirmation on Always allow runs and saves nothing; Keep asking saves nothing;
-// the window cannot add a decision; Keep it leaves a decision and Remove makes the
-// run ask again; Don't allow then Stop asking refuses the next run without a card.
+// made "Only from the approval card: Always allow this run [...]. The page lists
+// saved decisions with Remove and has no editor."; and INF-4088's, where the
+// captain found the Stop asking card after Don't allow "totally unnecessary".
+// Data: a disposable credential and a real shell recipient in a scratch folder.
+// Completion: Always allow this runs the shown use and the same run then needs
+// no card, while different arguments ask again; a failed confirmation on Always
+// allow runs and saves nothing; Don't allow raises no other card and saves
+// nothing, so the next run asks again; the window cannot add a decision; Keep it
+// leaves a decision and Remove makes the run ask again.
 // Every card is answered by keys. Native custody and confirmation stand in; no
 // account, native store or network.
 test("saved decisions are made on the approval card and removed from Settings", async () => {
@@ -484,20 +484,22 @@ test("saved decisions are made on the approval card and removed from Settings", 
     await expect(cardBody(page, title).getByRole("status")).toBeVisible();
     await confirming(true);
     expect(await saved()).toBe(1);
-    // Don't allow, then Keep asking: nothing is saved, so the next such run asks.
+    // Don't allow only refuses: no other card comes up, nothing is saved, and
+    // the next such run asks again.
     await answer(title, SECRETS_WORDS.deny);
-    const stopTitle = SECRET_APPROVAL_CARD_WORDS.stopTitle(
-      secretsListed([secretName([entry], entry.ref)]),
-    );
     await expect.poll(() => state(other.request)).toEqual({ state: "denied", confirmations: 2 });
-    await answer(stopTitle, SECRET_APPROVAL_CARD_WORDS.keepAsking);
-    await expect(shownCard(page, stopTitle)).toHaveCount(0);
+    await expect(shownCard(page, title)).toHaveCount(0);
     expect(await saved()).toBe(1);
     const otherAgain = await run("deploy-other-2", ["/bin/sh", script, "--production"]);
     expect(otherAgain.state).toBe("waiting");
     await answer(title, SECRETS_WORDS.deny);
-    await answer(stopTitle, SECRET_APPROVAL_CARD_WORDS.keepAsking);
-    await expect(shownCard(page, stopTitle)).toHaveCount(0);
+    await expect
+      .poll(() => state(otherAgain.request))
+      .toEqual({
+        state: "denied",
+        confirmations: 2,
+      });
+    expect(await saved()).toBe(1);
     expect(readFileSync(marker, "utf8")).toBe("ran\nran\n");
 
     // The window cannot add a decision: a save that adds one changes nothing.
@@ -526,6 +528,9 @@ test("saved decisions are made on the approval card and removed from Settings", 
     await secretsArea(page, "decisions");
     await expect(decisions()).toContainText(sentence);
     await regionShot(decisions(), test.info().outputPath("saved-decision-allow.png"));
+    // There is no editor: the only control a saved decision has is Remove.
+    await expect(decisions().getByRole("combobox")).toHaveCount(0);
+    await expect(decisions().getByRole("textbox")).toHaveCount(0);
     const remove = decisions().getByRole("button", {
       name: SECRETS_WORDS.remove,
       exact: true,
@@ -552,27 +557,12 @@ test("saved decisions are made on the approval card and removed from Settings", 
     await expect.poll(saved).toBe(0);
     const asks = await run("deploy-3");
     expect(asks.state).toBe("waiting");
-
-    // Don't allow sends nothing, then offers to stop asking; Stop asking saves Never.
     await answer(title, SECRETS_WORDS.deny);
-    await expect(shownCard(page, stopTitle)).toBeVisible();
     await expect.poll(() => state(asks.request)).toEqual({ state: "denied", confirmations: 3 });
-    await answer(stopTitle, SECRET_APPROVAL_CARD_WORDS.stop);
-    await expect.poll(() => state(asks.request)).toMatchObject({ confirmations: 4 });
-    await expect.poll(saved).toBe(1);
-    expect((await run("deploy-4")).state).toBe("denied");
+    expect(await saved()).toBe(0);
     expect(readFileSync(marker, "utf8")).toBe("ran\nran\nran\n");
     await runFromSearch(app, page, "settings.secrets");
     await secretsArea(page, "decisions");
-    await expect(decisions()).toContainText(
-      decisionWords(
-        { id: "shown", effect: "never", secret: entry.ref },
-        secretName([entry], entry.ref),
-      ),
-    );
-    // There is no editor: the only control a saved decision has is Remove.
-    await expect(decisions().getByRole("combobox")).toHaveCount(0);
-    await expect(decisions().getByRole("textbox")).toHaveCount(0);
 
     // A request's card shows beside the first mate, not over Settings, so go back.
     const back = page.getByRole("button", { name: "Back", exact: true });
@@ -616,11 +606,11 @@ test("saved decisions are made on the approval card and removed from Settings", 
     const long = await previewRun("preview-held", ["/bin/sh", held]);
     expect(long.state).toBe("waiting");
     await answer(previewTitle, SECRETS_WORDS.always);
-    await expect.poll(saved).toBe(2);
-    expect(await state(long.request)).toEqual({ state: "executing", confirmations: 5 });
+    await expect.poll(saved).toBe(1);
+    expect(await state(long.request)).toEqual({ state: "executing", confirmations: 4 });
     writeFileSync(release, "");
-    await expect.poll(() => state(long.request)).toEqual({ state: "completed", confirmations: 5 });
-    expect(await saved()).toBe(2);
+    await expect.poll(() => state(long.request)).toEqual({ state: "completed", confirmations: 4 });
+    expect(await saved()).toBe(1);
 
     // A replacement saved while a use waits does not rename it: the card offered
     // again from Settings still names the secret the use prepared.
@@ -651,11 +641,7 @@ test("saved decisions are made on the approval card and removed from Settings", 
       ),
     ).toHaveCount(0);
     await answer(previewTitle, SECRETS_WORDS.deny);
-    const previewStop = SECRET_APPROVAL_CARD_WORDS.stopTitle(
-      secretsListed([secretName([entry, preview], preview.ref)]),
-    );
-    await answer(previewStop, SECRET_APPROVAL_CARD_WORDS.keepAsking);
-    await expect.poll(() => state(renamed.request)).toEqual({ state: "denied", confirmations: 5 });
+    await expect.poll(() => state(renamed.request)).toEqual({ state: "denied", confirmations: 4 });
   } finally {
     // The held script loops until this file exists, so write it whatever happened.
     writeFileSync(release, "");
@@ -1122,7 +1108,7 @@ test("simple entry generates a stable reference and returns keyboard focus", asy
 // Captain's INF-1109 UX request: every actual requested identity is readable,
 // including duplicate and long names at the desktop's minimum width; INF-1690's
 // plan names each by name and place, and by reference only where two read alike.
-// The genuine sealed owner prepares a real executable; Don't allow sends no values.
+// The genuine sealed owner prepares a real executable; Always allow this runs it once.
 // Custody/confirmation stand in; there is no account, network or native store.
 for (const theme of ["dark", "light"] as const) {
   test(`named secret requests fit the narrow approval in ${theme}`, async () => {
@@ -1190,7 +1176,12 @@ for (const theme of ["dark", "light"] as const) {
       const card = shownCard(page, title);
       await regionShot(card, test.info().outputPath(`named-approval-${theme}.png`));
       await runFromSearch(app, page, "focus.card-actions");
-      await pressKey(card.getByRole("button", { name: SECRETS_WORDS.deny, exact: true }), "Enter");
+      // Always allow this runs the shown use and saves one decision for each
+      // secret, after the computer's confirmation. A decision is made only on a card.
+      await pressKey(
+        card.getByRole("button", { name: SECRETS_WORDS.always, exact: true }),
+        "Enter",
+      );
       await expect
         .poll(() =>
           app.evaluate(async (_electron, request) => {
@@ -1201,26 +1192,8 @@ for (const theme of ["dark", "light"] as const) {
             };
           }, receipt.request),
         )
-        .toMatchObject({ receipt: { state: "denied" }, confirmations: 0 });
-      // Don't allow offers to stop asking; Stop asking saves Never for each secret,
-      // after the computer's confirmation. A decision is made only on a card.
-      // The stop card lists every secret by name, in the order the use holds them.
-      const stopTitle = SECRET_APPROVAL_CARD_WORDS.stopTitle(
-        secretsListed(
-          entries
-            .map((entry) => entry.ref)
-            .sort()
-            .map((ref) => secretName(entries, ref)),
-        ),
-      );
-      const stop = shownCard(page, stopTitle);
-      await expect(stop).toBeVisible();
-      await runFromSearch(app, page, "focus.card-actions");
-      await pressKey(
-        stop.getByRole("button", { name: SECRET_APPROVAL_CARD_WORDS.stop, exact: true }),
-        "Enter",
-      );
-      await expect(stop).toHaveCount(0);
+        .toMatchObject({ receipt: { state: "completed" }, confirmations: 1 });
+      await expect(card).toHaveCount(0);
       const savedRules = () =>
         app.evaluate(async () =>
           (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets
@@ -1229,7 +1202,7 @@ for (const theme of ["dark", "light"] as const) {
         );
       await expect.poll(async () => (await savedRules()).length).toBe(entries.length);
       const rules = await savedRules();
-      expect(rules.every((rule) => rule.effect === "never")).toBe(true);
+      expect(rules.every((rule) => rule.effect === "allow")).toBe(true);
       // INF-1690 piece 1: saved decisions are plain sentences on the page, each
       // naming exactly its secret, and Remove asks on the host's card.
       const confirmRules = async (rulesTitle: string, confirm: string) => {

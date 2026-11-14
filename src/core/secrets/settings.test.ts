@@ -12,7 +12,6 @@ import {
   SECRETS_WORDS,
   type SecretEntryInput,
   secretApprovalsSchema,
-  secretsListed,
   secretsNamed,
   secretsViewSchema,
 } from "@shared/secrets";
@@ -21,7 +20,6 @@ import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { asAView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
-import { escapeCardText } from "../orchestrator/cardText";
 import { approvalCode, decisionMessage } from "./approvals";
 import { httpSecretBroker } from "./httpBroker";
 import { ProtectedSecrets } from "./protected";
@@ -897,9 +895,9 @@ describe("trusted Secrets settings", () => {
   });
 
   // Intent: INF-1690's accepted plan, the captain's answer on how a saved
-  // decision is made: "Only from the approval card: Always allow this run, or
-  // Don't allow and stop asking for this key. The page lists saved decisions
-  // with Remove and has no editor."
+  // decision is made: "Only from the approval card: Always allow this run [...].
+  // The page lists saved decisions with Remove and has no editor." INF-4088
+  // removed the other half, Don't allow and stop asking.
   async function deployRun(f: ReturnType<typeof fixture>) {
     await f.settings.put({
       ...INPUT,
@@ -1036,75 +1034,59 @@ describe("trusted Secrets settings", () => {
     );
   });
 
-  it("Don't allow ends the use and offers to stop asking, which saves Never for the secret", async () => {
+  // Intent: INF-4088's accepted plan, the captain: the "Stop asking" card after
+  // Don't allow "is totally unnecessary". Don't allow only refuses this use.
+  it("Don't allow ends the use, raises no other card and saves nothing, so the next run asks again", async () => {
     const f = fixture();
     const { run } = await deployRun(f);
     const first = await run("deploy-1", ["--staging"]);
     const before = f.confirms();
     await f.click(SECRETS_WORDS.deny);
     expect(f.confirms()).toBe(before);
-    expect((await f.settings.view()).uses.find((one) => one.request === first.request)?.state).toBe(
-      "denied",
-    );
-    const offer = f.cards.at(-1);
-    expect(offer?.title).toBe(SECRET_APPROVAL_CARD_WORDS.stopTitle(STAGING));
-    expect(offer?.taskId).toBe("deploy-task");
-    expect((await f.settings.view()).rules).toEqual([]);
-
-    await f.click(SECRET_APPROVAL_CARD_WORDS.stop);
-    expect(f.confirms()).toBe(before + 1);
     const view = await f.settings.view();
-    expect(view.rules).toMatchObject([{ effect: "never", secret: "website-staging" }]);
-    expect(view.rules[0]?.operation).toBeUndefined();
+    expect(view.uses.find((one) => one.request === first.request)?.state).toBe("denied");
+    expect(view.rules).toEqual([]);
     const cards = f.cards.length;
-    expect((await run("deploy-2", ["--production"])).state).toBe("denied");
-    expect(f.cards).toHaveLength(cards);
+    expect(f.cards.at(-1)?.title).toBe(
+      SECRET_APPROVAL_CARD_WORDS.title(STAGING, "Deploy the site"),
+    );
+    expect((await run("deploy-2", ["--staging"])).state).toBe("waiting");
+    expect(f.cards).toHaveLength(cards + 1);
+    expect(f.cards.at(-1)?.title).toBe(
+      SECRET_APPROVAL_CARD_WORDS.title(STAGING, "Deploy the site"),
+    );
   });
 
-  // The captain's review answer on the Stop asking card: "List every secret by
-  // name, and say Infinitary too when it was the one asking".
-  it("Stop asking names every secret it covers, and Infinitary when Infinitary asked", async () => {
-    const f = fixture();
-    const saved = [
-      { ref: "website-staging", label: "Website deployment", environment: "Staging" },
-      { ref: "website-production", label: "Website deployment", environment: "Production" },
-      { ref: "billing-read", label: "Customer billing", environment: "" },
-    ];
-    for (const one of saved) await f.settings.put({ ...INPUT, ...one });
-    const cwd = await realpath(f.dir);
-    await f.settings.commandFor({ task: "" }).inject({
-      id: "compare-1",
-      reason: "Compare the deployment credentials and billing access",
-      cwd,
-      argv: ["/usr/bin/true"],
-      env: {
-        STAGING: "website-staging",
-        PRODUCTION: "website-production",
-        BILLING: "billing-read",
-      },
-    });
-    const requested = (await f.settings.view()).uses[0]?.secrets ?? [];
-    await f.click(SECRETS_WORDS.deny);
-    const offer = f.cards.at(-1);
-    const names = secretsListed(requested.map((one) => secretName(saved, one.ref)));
-    for (const name of ["Website deployment (Production)", "Website deployment (Staging)"])
-      expect(names).toContain(name);
-    expect(names).toContain("Customer billing");
-    expect(offer?.title).toBe(SECRET_APPROVAL_CARD_WORDS.stopTitle(names));
-    expect(offer?.body).toContain(escapeCardText(SECRET_APPROVAL_CARD_WORDS.stopBody(names, null)));
-    expect(offer?.body).toContain("neither Infinitary nor any task gets");
-  });
-
-  it("Keep asking on the stop card saves nothing, and the next run asks again", async () => {
+  // Intent: INF-4088's accepted plan, the captain's answer on Never decisions a
+  // computer already saved: "Keep them. Each keeps refusing its secret, and
+  // Settings → Secrets lists it with Remove."
+  it("a Never decision saved earlier still refuses its secret, and Settings removes it with Remove", async () => {
     const f = fixture();
     const { run } = await deployRun(f);
-    await run("deploy-1", ["--staging"]);
-    await f.click(SECRETS_WORDS.deny);
-    const before = f.confirms();
-    await f.click(SECRET_APPROVAL_CARD_WORDS.keepAsking);
-    expect(f.confirms()).toBe(before);
+    const owner = await f.owner();
+    const proposal = owner.proposeAuthority({
+      rules: [{ id: "never-staging", effect: "never", secret: "website-staging" }],
+      devices: owner.authority()?.devices ?? [],
+    });
+    if (!proposal) throw new Error("no authority");
+    const proof = await owner.confirmAuthority(proposal.digest, 1000 + 300_000, "Save rule");
+    expect(await owner.saveAuthority(proposal.authority, proof)).toBe("stored");
+
+    const shown = await f.settings.view();
+    expect(shown.rules).toMatchObject([{ effect: "never", secret: "website-staging" }]);
+    const cards = f.cards.length;
+    expect((await run("deploy-1", ["--production"])).state).toBe("denied");
+    expect(f.cards).toHaveLength(cards);
+
+    const saved = shown.rules[0];
+    if (!saved) throw new Error("no saved decision");
+    await f.settings.action({ kind: "save-rules", rules: [] });
+    const removing = f.cards.at(-1);
+    expect(removing?.title).toBe(SAVED_DECISION_WORDS.removeTitle);
+    expect(removing?.body).toContain(decisionWords(saved, secretName(shown.entries, saved.secret)));
+    await f.click(SAVED_DECISION_WORDS.removeConfirm);
     expect((await f.settings.view()).rules).toEqual([]);
-    expect((await run("deploy-2", ["--staging"])).state).toBe("waiting");
+    expect((await run("deploy-2", ["--production"])).state).toBe("waiting");
   });
 
   it("keeps lock state honest and does not save a replacement into locked custody", async () => {

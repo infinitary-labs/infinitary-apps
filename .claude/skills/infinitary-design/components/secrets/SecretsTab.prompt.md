@@ -68,7 +68,7 @@ The person fills in nothing: the crew checked the run before asking.
 The shared approval body describes confirmation without naming a device, and clearly labels temporary access as computer-only; an enrolled phone keeps its own pinned identities and confirmation instructions.
 Its answers are Allow once, Always allow this (Allow for 10 minutes and twenty uses for an eligible read instead) and Don't allow; every allow needs fresh system confirmation.
 Always allow this runs the shown use and saves that exact run as a decision under the same confirmation.
-Don't allow sends nothing, then a second card asks Stop asking for the Website deployment (Staging) secret?, naming every secret it covers and never a count, and saying Infinitary when Infinitary asked, with Stop asking, which saves Never for that secret under fresh confirmation, and Keep asking, which saves nothing.
+Don't allow sends nothing and saves nothing, raises no other card, and the next run asks again.
 No card asks for a secret value.
 
 ## Availability and keyboard

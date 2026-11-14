@@ -17,7 +17,6 @@ import {
   type SecretRehearsal,
   type SecretRehearsalInput,
   type SecretsView,
-  secretsListed,
   secretsNamed,
 } from "@shared/secrets";
 import { askingView } from "../askedFromAView";
@@ -822,9 +821,9 @@ export class SecretsSettings {
   /**
    * The approval card (INF-1690's plan, piece 2). Its title names the secrets and
    * who asks; its answers are Allow once, Always allow this (Allow for 10
-   * minutes for an eligible read) and Don't allow, and the two decisions a
-   * person can save are born here: Always allow this saves today's exact-run
-   * Allow, and Don't allow offers to stop asking, today's Never.
+   * minutes for an eligible read) and Don't allow. The one decision a person can
+   * save is born here: Always allow this saves today's exact-run Allow. Don't
+   * allow only refuses this use and saves nothing, so the next run asks again.
    */
   private async offerUse(owner: Owner, request: string, notice?: string): Promise<void> {
     const saved = await savedIdentities(owner);
@@ -919,8 +918,6 @@ export class SecretsSettings {
     };
     const deny = async () => {
       await owner.requests.deny(request);
-      if (owner.requests.status(request)?.state !== "denied") return;
-      this.offerStopAsking(owner, use.secrets, names, ask.task, this.taskOf.get(request));
     };
     this.useCards.add(request);
     this.offer(
@@ -938,63 +935,6 @@ export class SecretsSettings {
     );
     // A phone reads which card is this use's once the card is up.
     this.options.changed();
-  }
-
-  /** After Don't allow: one offer to stop asking for these secrets, today's Never rule for each. */
-  private offerStopAsking(
-    owner: Owner,
-    secrets: SecretsView["uses"][number]["secrets"],
-    names: readonly string[],
-    task: string | null,
-    tasks: Set<string> | undefined,
-  ): void {
-    const words = SECRET_APPROVAL_CARD_WORDS;
-    const authority = owner.protected.authority();
-    const refs = secrets.map((secret) => secret.ref);
-    // Already never given: nothing to offer.
-    if (
-      !authority ||
-      refs.every((ref) =>
-        authority.rules.some(
-          (rule) => rule.secret === ref && rule.effect === "never" && !rule.operation,
-        ),
-      )
-    )
-      return;
-    // This card saves a lasting refusal, so it names every secret it covers.
-    const named = secretsListed(names);
-    this.offer(
-      `never-${refs.join("-")}`,
-      words.stopTitle(named),
-      `<p>${escapeCardText(words.stopBody(named, task))}</p><p>${escapeCardText(SAVED_DECISION_WORDS.confirm)}</p>`,
-      [
-        {
-          label: words.stop,
-          run: async () => {
-            const current = owner.protected.authority();
-            if (!current) return;
-            const never = refs.filter(
-              (ref) =>
-                !current.rules.some(
-                  (rule) => rule.secret === ref && rule.effect === "never" && !rule.operation,
-                ),
-            );
-            const saved = await this.saveAuthority(
-              owner,
-              [
-                ...current.rules,
-                ...never.map((secret) => ({ id: randomUUID(), effect: "never" as const, secret })),
-              ],
-              current.devices,
-              words.stopTitle(named),
-            );
-            this.message = saved ? words.stopped : SAVED_DECISION_WORDS.unchanged;
-          },
-        },
-        { label: words.keepAsking, run: async () => {} },
-      ],
-      tasks?.values().next().value,
-    );
   }
 
   /**

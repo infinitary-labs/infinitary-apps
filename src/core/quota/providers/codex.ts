@@ -1,4 +1,4 @@
-import type { QuotaWindowView } from "@shared/quota";
+import type { QuotaCreditsView, QuotaWindowView } from "@shared/quota";
 import type { ManagedAuth } from "../auth";
 import { type QuotaHttp, requestHeaders } from "../http";
 import { asNumber, asRecord, asString, remainingFromUsedPercent } from "../json";
@@ -35,6 +35,7 @@ export function parseCodexUsage(
   now: number,
 ): {
   windows: QuotaWindowView[];
+  credits?: QuotaCreditsView;
   plan?: string;
 } {
   const root = asRecord(body);
@@ -59,6 +60,7 @@ export function parseCodexUsage(
 
   for (const [key, node] of Object.entries(rate)) {
     if (key === "primary_window" || key === "primaryWindow") continue;
+    if (key === "credits" || key === "spend_control" || key === "spendControl") continue;
     if (key === "secondary_window" || key === "secondaryWindow") continue;
     const slot = asRecord(node);
     if (!slot) continue;
@@ -68,7 +70,39 @@ export function parseCodexUsage(
   }
 
   const plan = asString(root.plan_type) ?? asString(root.plan);
-  return { windows, ...(plan ? { plan } : {}) };
+  const credits = codexCredits(root, rate);
+  return { windows, ...(credits ? { credits } : {}), ...(plan ? { plan } : {}) };
+}
+
+/**
+ * ChatGPT's credits as a credits fact (docs/quota.md, "Credits past the
+ * allowance"), from the usage reading's `credits` (`has_credits`,
+ * `unlimited`, `balance`, `overage_limit_reached`) and
+ * `spend_control.reached`: a reached spend or overage limit is `spent`,
+ * credits the account has are `available`, and an account with none is
+ * `off`. A reading without `credits` stays unknown.
+ */
+function codexCredits(
+  root: Record<string, unknown>,
+  rate: Record<string, unknown>,
+): QuotaCreditsView | undefined {
+  const node = asRecord(root.credits) ?? asRecord(rate.credits);
+  const spend =
+    asRecord(root.spend_control) ??
+    asRecord(root.spendControl) ??
+    asRecord(rate.spend_control) ??
+    asRecord(rate.spendControl);
+  if (spend?.reached === true) return { state: "spent" };
+  if (!node) return undefined;
+  if (node.overage_limit_reached === true) return { state: "spent" };
+  const hasCredits = node.has_credits ?? node.hasCredits;
+  if (node.unlimited === true) return { state: "available", unlimited: true };
+  const balance =
+    asString(node.balance) ??
+    (asNumber(node.balance) !== undefined ? String(asNumber(node.balance)) : undefined);
+  if (hasCredits === true) return { state: "available", ...(balance ? { balance } : {}) };
+  if (hasCredits === false) return { state: "off" };
+  return undefined;
 }
 
 function windowSecondsOf(slot: Record<string, unknown>): number | undefined {

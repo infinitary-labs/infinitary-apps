@@ -1,5 +1,5 @@
 import { REFRESH_TOKEN_LAPSED } from "@shared/credentialHealth";
-import type { QuotaWindowView } from "@shared/quota";
+import type { QuotaCreditsView, QuotaWindowView } from "@shared/quota";
 import type { ManagedAuth } from "../auth";
 import { isAuthFailure, type QuotaHttp, requestHeaders } from "../http";
 import { asNumber, asRecord, clampPercent } from "../json";
@@ -46,7 +46,7 @@ export function copilotUsageUrl(apiBase: string | undefined): string {
 }
 
 export type CopilotUsageParse =
-  | { kind: "windows"; windows: QuotaWindowView[] }
+  | { kind: "windows"; windows: QuotaWindowView[]; credits?: QuotaCreditsView }
   /** A known answer with nothing metered in it. */
   | { kind: "empty" }
   /** Not the answer this reader knows. */
@@ -77,7 +77,22 @@ export function parseCopilotUsage(body: unknown, now: number): CopilotUsageParse
     if (percentRemaining === undefined) continue;
     windows.push(buildWindow({ id, label, percentRemaining, ...cycle, now }));
   }
-  return windows.length > 0 ? { kind: "windows", windows } : { kind: "empty" };
+  if (windows.length === 0) return { kind: "empty" };
+  const credits = copilotCredits(snapshots.premium_interactions);
+  return { kind: "windows", windows, ...(credits ? { credits } : {}) };
+}
+
+/**
+ * Paid premium requests past the allowance, as a credits fact shown only
+ * (docs/quota.md, "Credits past the allowance"): `overage_permitted` on the
+ * premium-requests snapshot. GitHub does not yet say when a budget stops a
+ * request, so nothing here is ever `spent`.
+ */
+function copilotCredits(value: unknown): QuotaCreditsView | undefined {
+  const permitted = asRecord(value)?.overage_permitted;
+  if (permitted === true) return { state: "available" };
+  if (permitted === false) return { state: "off" };
+  return undefined;
 }
 
 /** A snapshot's percent left, or undefined when it meters nothing. */
@@ -139,5 +154,10 @@ export async function fetchCopilotQuota(
       reason: "no_window_read",
     };
   }
-  return { status: "ok", windows: parsed.windows, plan: COPILOT_PLAN };
+  return {
+    status: "ok",
+    windows: parsed.windows,
+    ...(parsed.credits ? { credits: parsed.credits } : {}),
+    plan: COPILOT_PLAN,
+  };
 }

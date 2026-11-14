@@ -97,6 +97,17 @@
   overflow-wrap: anywhere;
 }
 
+/* Paying past the allowance: its own line under the meters. */
+.fm-subs-credits {
+  flex-basis: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .fm-subs-state[data-tone="danger"] {
   color: var(--danger);
 }

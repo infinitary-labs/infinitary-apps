@@ -9315,6 +9315,388 @@ ${events}` : prompt;
     }
     return `Sign in with Claude on ${here}.`;
   }
+  function settingsSubscriptionsCreditsClaudeAvailable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاستخدام الإضافي مفعّل`;
+      case "de":
+        return `Zusätzliche Nutzung an`;
+      case "es":
+        return `Uso adicional activado`;
+      case "fr":
+        return `Utilisation supplémentaire activée`;
+      case "ja":
+        return `追加使用量オン`;
+      case "ko":
+        return `추가 사용량 켜짐`;
+      case "pt-BR":
+        return `Uso extra ativado`;
+      case "zh-Hans":
+        return `额外用量已开启`;
+      case "zh-Hant":
+        return `額外用量已開啟`;
+      case "en-XA":
+        return `[Éẋţŕá ûšáĝé öñ ~~~~~]`;
+      case "ar-XB":
+        return `‮Extra usage on‬`;
+    }
+    return `Extra usage on`;
+  }
+  function settingsSubscriptionsCreditsClaudeAvailableUsed(input) {
+    const percent = input.percent;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاستخدام الإضافي مفعّل · استُخدم ${percent}% من حدّك الشهري`;
+      case "de":
+        return `Zusätzliche Nutzung an · ${percent} % deines Monatslimits verbraucht`;
+      case "es":
+        return `Uso adicional activado · ${percent} % de tu límite mensual usado`;
+      case "fr":
+        return `Utilisation supplémentaire activée · ${percent} % de votre limite mensuelle utilisés`;
+      case "ja":
+        return `追加使用量オン · 月間上限の${percent}%を使用`;
+      case "ko":
+        return `추가 사용량 켜짐 · 월 한도의 ${percent}% 사용`;
+      case "pt-BR":
+        return `Uso extra ativado · ${percent}% do seu limite mensal usado`;
+      case "zh-Hans":
+        return `额外用量已开启 · 已用每月上限的 ${percent}%`;
+      case "zh-Hant":
+        return `額外用量已開啟 · 已用每月上限的 ${percent}%`;
+      case "en-XA":
+        return `[Éẋţŕá ûšáĝé öñ · ${percent}% öƒ ýöûŕ ɱöñţĥļý ļîɱîţ ûšéð ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Extra usage on · ‬${percent}‮% of your monthly limit used‬`;
+    }
+    return `Extra usage on · ${percent}% of your monthly limit used`;
+  }
+  function settingsSubscriptionsCreditsClaudeInUse() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجيب الآن على الاستخدام الإضافي`;
+      case "de":
+        return `Antwortet gerade über zusätzliche Nutzung`;
+      case "es":
+        return `Respondiendo ahora con uso adicional`;
+      case "fr":
+        return `Répond en ce moment sur l’utilisation supplémentaire`;
+      case "ja":
+        return `現在、追加使用量で応答中`;
+      case "ko":
+        return `지금 추가 사용량으로 응답 중`;
+      case "pt-BR":
+        return `Respondendo agora com uso extra`;
+      case "zh-Hans":
+        return `正在使用额外用量回答`;
+      case "zh-Hant":
+        return `正在使用額外用量回答`;
+      case "en-XA":
+        return `[Åñšŵéŕîñĝ öñ éẋţŕá ûšáĝé ñöŵ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Answering on extra usage now‬`;
+    }
+    return `Answering on extra usage now`;
+  }
+  function settingsSubscriptionsCreditsClaudeInUseUsed(input) {
+    const percent = input.percent;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجيب الآن على الاستخدام الإضافي · استُخدم ${percent}% من حدّك الشهري`;
+      case "de":
+        return `Antwortet gerade über zusätzliche Nutzung · ${percent} % deines Monatslimits verbraucht`;
+      case "es":
+        return `Respondiendo ahora con uso adicional · ${percent} % de tu límite mensual usado`;
+      case "fr":
+        return `Répond en ce moment sur l’utilisation supplémentaire · ${percent} % de votre limite mensuelle utilisés`;
+      case "ja":
+        return `現在、追加使用量で応答中 · 月間上限の${percent}%を使用`;
+      case "ko":
+        return `지금 추가 사용량으로 응답 중 · 월 한도의 ${percent}% 사용`;
+      case "pt-BR":
+        return `Respondendo agora com uso extra · ${percent}% do seu limite mensal usado`;
+      case "zh-Hans":
+        return `正在使用额外用量回答 · 已用每月上限的 ${percent}%`;
+      case "zh-Hant":
+        return `正在使用額外用量回答 · 已用每月上限的 ${percent}%`;
+      case "en-XA":
+        return `[Åñšŵéŕîñĝ öñ éẋţŕá ûšáĝé ñöŵ · ${percent}% öƒ ýöûŕ ɱöñţĥļý ļîɱîţ ûšéð ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Answering on extra usage now · ‬${percent}‮% of your monthly limit used‬`;
+    }
+    return `Answering on extra usage now · ${percent}% of your monthly limit used`;
+  }
+  function settingsSubscriptionsCreditsClaudeOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاستخدام الإضافي متوقف`;
+      case "de":
+        return `Zusätzliche Nutzung aus`;
+      case "es":
+        return `Uso adicional desactivado`;
+      case "fr":
+        return `Utilisation supplémentaire désactivée`;
+      case "ja":
+        return `追加使用量オフ`;
+      case "ko":
+        return `추가 사용량 꺼짐`;
+      case "pt-BR":
+        return `Uso extra desativado`;
+      case "zh-Hans":
+        return `额外用量已关闭`;
+      case "zh-Hant":
+        return `額外用量已關閉`;
+      case "en-XA":
+        return `[Éẋţŕá ûšáĝé öƒƒ ~~~~~]`;
+      case "ar-XB":
+        return `‮Extra usage off‬`;
+    }
+    return `Extra usage off`;
+  }
+  function settingsSubscriptionsCreditsClaudeSpent() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نفد الاستخدام الإضافي`;
+      case "de":
+        return `Zusätzliche Nutzung aufgebraucht`;
+      case "es":
+        return `Uso adicional agotado`;
+      case "fr":
+        return `Utilisation supplémentaire épuisée`;
+      case "ja":
+        return `追加使用量を使い切りました`;
+      case "ko":
+        return `추가 사용량 소진`;
+      case "pt-BR":
+        return `Uso extra esgotado`;
+      case "zh-Hans":
+        return `额外用量已用完`;
+      case "zh-Hant":
+        return `額外用量已用完`;
+      case "en-XA":
+        return `[Éẋţŕá ûšáĝé ûšéð ûþ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Extra usage used up‬`;
+    }
+    return `Extra usage used up`;
+  }
+  function settingsSubscriptionsCreditsCodexAvailable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توجد اعتمادات`;
+      case "de":
+        return `Guthaben vorhanden`;
+      case "es":
+        return `Créditos disponibles`;
+      case "fr":
+        return `Crédits disponibles`;
+      case "ja":
+        return `クレジットあり`;
+      case "ko":
+        return `크레딧 있음`;
+      case "pt-BR":
+        return `Créditos disponíveis`;
+      case "zh-Hans":
+        return `有可用点数`;
+      case "zh-Hant":
+        return `有可用點數`;
+      case "en-XA":
+        return `[Çŕéðîţš áṽáîļáƀļé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Credits available‬`;
+    }
+    return `Credits available`;
+  }
+  function settingsSubscriptionsCreditsCodexBalance(input) {
+    const balance = input.balance;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاعتمادات: متبقٍّ ${balance}`;
+      case "de":
+        return `Guthaben: noch ${balance}`;
+      case "es":
+        return `Créditos: quedan ${balance}`;
+      case "fr":
+        return `Crédits : ${balance} restants`;
+      case "ja":
+        return `クレジット: 残り${balance}`;
+      case "ko":
+        return `크레딧: ${balance} 남음`;
+      case "pt-BR":
+        return `Créditos: restam ${balance}`;
+      case "zh-Hans":
+        return `点数：剩余 ${balance}`;
+      case "zh-Hant":
+        return `點數：剩餘 ${balance}`;
+      case "en-XA":
+        return `[Çŕéðîţš: ${balance} ļéƒţ ~~~~~]`;
+      case "ar-XB":
+        return `‮Credits: ‬${balance}‮ left‬`;
+    }
+    return `Credits: ${balance} left`;
+  }
+  function settingsSubscriptionsCreditsCodexOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا توجد اعتمادات`;
+      case "de":
+        return `Kein Guthaben`;
+      case "es":
+        return `Sin créditos`;
+      case "fr":
+        return `Aucun crédit`;
+      case "ja":
+        return `クレジットなし`;
+      case "ko":
+        return `크레딧 없음`;
+      case "pt-BR":
+        return `Sem créditos`;
+      case "zh-Hans":
+        return `没有点数`;
+      case "zh-Hant":
+        return `沒有點數`;
+      case "en-XA":
+        return `[Ñö çŕéðîţš ~~~~]`;
+      case "ar-XB":
+        return `‮No credits‬`;
+    }
+    return `No credits`;
+  }
+  function settingsSubscriptionsCreditsCodexSpent() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بلغت حدّ الإنفاق على الاعتمادات`;
+      case "de":
+        return `Ausgabelimit für Guthaben erreicht`;
+      case "es":
+        return `Límite de gasto de créditos alcanzado`;
+      case "fr":
+        return `Limite de dépense des crédits atteinte`;
+      case "ja":
+        return `クレジットの支出上限に達しました`;
+      case "ko":
+        return `크레딧 지출 한도 도달`;
+      case "pt-BR":
+        return `Limite de gasto de créditos atingido`;
+      case "zh-Hans":
+        return `已达到点数支出上限`;
+      case "zh-Hant":
+        return `已達到點數支出上限`;
+      case "en-XA":
+        return `[Çŕéðîţ šþéñðîñĝ ļîɱîţ ŕéáçĥéð ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Credit spending limit reached‬`;
+    }
+    return `Credit spending limit reached`;
+  }
+  function settingsSubscriptionsCreditsCodexUnlimited() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاعتمادات: بلا حد`;
+      case "de":
+        return `Guthaben: ohne Limit`;
+      case "es":
+        return `Créditos: sin límite`;
+      case "fr":
+        return `Crédits : sans limite`;
+      case "ja":
+        return `クレジット: 上限なし`;
+      case "ko":
+        return `크레딧: 한도 없음`;
+      case "pt-BR":
+        return `Créditos: sem limite`;
+      case "zh-Hans":
+        return `点数：无上限`;
+      case "zh-Hant":
+        return `點數：無上限`;
+      case "en-XA":
+        return `[Çŕéðîţš: ñö ļîɱîţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Credits: no limit‬`;
+    }
+    return `Credits: no limit`;
+  }
+  function settingsSubscriptionsCreditsCopilotAvailable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبات مميزة مدفوعة مفعّلة`;
+      case "de":
+        return `Bezahlte Premium-Anfragen an`;
+      case "es":
+        return `Solicitudes premium de pago activadas`;
+      case "fr":
+        return `Requêtes premium payantes activées`;
+      case "ja":
+        return `有料プレミアムリクエストオン`;
+      case "ko":
+        return `유료 프리미엄 요청 켜짐`;
+      case "pt-BR":
+        return `Solicitações premium pagas ativadas`;
+      case "zh-Hans":
+        return `付费高级请求已开启`;
+      case "zh-Hant":
+        return `付費進階請求已開啟`;
+      case "en-XA":
+        return `[Þáîð þŕéɱîûɱ ŕéǫûéšţš öñ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Paid premium requests on‬`;
+    }
+    return `Paid premium requests on`;
+  }
+  function settingsSubscriptionsCreditsCopilotOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبات مميزة مدفوعة متوقفة`;
+      case "de":
+        return `Bezahlte Premium-Anfragen aus`;
+      case "es":
+        return `Solicitudes premium de pago desactivadas`;
+      case "fr":
+        return `Requêtes premium payantes désactivées`;
+      case "ja":
+        return `有料プレミアムリクエストオフ`;
+      case "ko":
+        return `유료 프리미엄 요청 꺼짐`;
+      case "pt-BR":
+        return `Solicitações premium pagas desativadas`;
+      case "zh-Hans":
+        return `付费高级请求已关闭`;
+      case "zh-Hant":
+        return `付費進階請求已關閉`;
+      case "en-XA":
+        return `[Þáîð þŕéɱîûɱ ŕéǫûéšţš öƒƒ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Paid premium requests off‬`;
+    }
+    return `Paid premium requests off`;
+  }
+  function settingsSubscriptionsCreditsWhere(input) {
+    const site = input.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `غيّره على ${site}`;
+      case "de":
+        return `ändern auf ${site}`;
+      case "es":
+        return `cámbialo en ${site}`;
+      case "fr":
+        return `modifiable sur ${site}`;
+      case "ja":
+        return `${site} で変更`;
+      case "ko":
+        return `${site}에서 변경`;
+      case "pt-BR":
+        return `altere em ${site}`;
+      case "zh-Hans":
+        return `在 ${site} 更改`;
+      case "zh-Hant":
+        return `在 ${site} 變更`;
+      case "en-XA":
+        return `[çĥáñĝé îţ öñ ${site} ~~~~~]`;
+      case "ar-XB":
+        return `‮change it on ‬${site}`;
+    }
+    return `change it on ${site}`;
+  }
   function settingsSubscriptionsCrewPreferredMarkTitle() {
     switch (currentLanguage()) {
       case "ar":
@@ -12885,6 +13267,18 @@ ${events}` : prompt;
     startsAtMs: number().optional(),
     windowSeconds: number().optional()
   });
+  const QUOTA_CREDIT_STATES = ["available", "spent", "off", "unknown"];
+  const quotaCreditsViewSchema = object({
+    state: _enum(QUOTA_CREDIT_STATES),
+    /** The share of a monthly spend limit used, 0–100, where the provider gives one (Claude). */
+    usedPercent: number().optional(),
+    /** The balance left, in the provider's own words (ChatGPT's "15.00"). */
+    balance: string().optional(),
+    /** The provider says the credits have no limit. */
+    unlimited: boolean().optional(),
+    /** The provider says this account is answering on credits right now. */
+    inUse: boolean().optional()
+  });
   const quotaProviderViewSchema = object({
     /** Quota provider id: codex, grok, claude, copilot. */
     provider: string(),
@@ -12941,6 +13335,8 @@ ${events}` : prompt;
     /** RFC 9110 Retry-After, as the vendor sent it, when it sent one. */
     retryAfter: string().optional(),
     windows: array(quotaWindowViewSchema),
+    /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
+    credits: quotaCreditsViewSchema.optional(),
     /**
      * Disclosed uncertainty, in the user's words, for a row with no window.
      * The surface renders it instead of a silent blank, and it is never a
@@ -14754,6 +15150,44 @@ ${events}` : prompt;
     }
   };
   const CREW_PREFERRED_MARK = "✱";
+  const CREDITS_SITE = {
+    claude: "claude.ai",
+    codex: "chatgpt.com",
+    copilot: "github.com"
+  };
+  function creditsLine(provider, credits) {
+    const site = CREDITS_SITE[provider];
+    if (!credits || !site || credits.state === "unknown") return void 0;
+    const fact = creditsFact(provider, credits);
+    return fact ? `${fact} · ${settingsSubscriptionsCreditsWhere({ site })}` : void 0;
+  }
+  function creditsFact(provider, credits) {
+    const { state } = credits;
+    if (provider === "claude") {
+      if (state === "off") return settingsSubscriptionsCreditsClaudeOff();
+      if (state === "spent") return settingsSubscriptionsCreditsClaudeSpent();
+      const percent = credits.usedPercent !== void 0 ? formatNumber(Math.round(credits.usedPercent)) : void 0;
+      if (credits.inUse) {
+        return percent !== void 0 ? settingsSubscriptionsCreditsClaudeInUseUsed({ percent }) : settingsSubscriptionsCreditsClaudeInUse();
+      }
+      return percent !== void 0 ? settingsSubscriptionsCreditsClaudeAvailableUsed({ percent }) : settingsSubscriptionsCreditsClaudeAvailable();
+    }
+    if (provider === "codex") {
+      if (state === "off") return settingsSubscriptionsCreditsCodexOff();
+      if (state === "spent") return settingsSubscriptionsCreditsCodexSpent();
+      if (credits.unlimited) return settingsSubscriptionsCreditsCodexUnlimited();
+      return credits.balance !== void 0 ? settingsSubscriptionsCreditsCodexBalance({ balance: balanceText(credits.balance) }) : settingsSubscriptionsCreditsCodexAvailable();
+    }
+    if (provider === "copilot") {
+      if (state === "available") return settingsSubscriptionsCreditsCopilotAvailable();
+      if (state === "off") return settingsSubscriptionsCreditsCopilotOff();
+    }
+    return void 0;
+  }
+  function balanceText(balance) {
+    const value = Number(balance);
+    return balance.trim() !== "" && Number.isFinite(value) ? formatNumber(value, { maximumFractionDigits: 2 }) : balance;
+  }
   function kindCopy(kind) {
     return kind === "api_key" ? API_KEY_LABEL : settingsSubscriptionsKindSubscription();
   }
@@ -14899,6 +15333,8 @@ ${events}` : prompt;
     });
     const verdict = verdictFor(kind, row, now);
     if (verdict) view.verdict = verdict;
+    const credits = row ? creditsLine(row.provider, row.credits) : void 0;
+    if (credits) view.credits = credits;
     return withHold(view, account, now);
   }
   function withHold(view, account, now) {

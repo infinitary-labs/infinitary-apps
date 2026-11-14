@@ -29,7 +29,13 @@ import { createFixtureRefresh } from "./fixture";
 import { createQuotaHttp } from "./http";
 import { needsReauthTargets } from "./needsReauth";
 import { claudeAccessOutcome, type ProviderOutcome } from "./outcome";
-import { PushedQuotaStore, pushedProviderViews, withRejectedReadings } from "./pushedQuota";
+import {
+  PushedQuotaStore,
+  pushedCredits,
+  pushedProviderViews,
+  withPushedCredits,
+  withRejectedReadings,
+} from "./pushedQuota";
 import { type QuotaRefresh, QuotaService } from "./quotaService";
 import { lowestLeft, recordCutOff } from "./spentAllowance";
 
@@ -160,7 +166,10 @@ export function startHomeQuota(options: {
   const endRefusedReadings = (accountId: string) => {
     for (const window of pushedQuota.windowsFor(accountId)) {
       if (window.status === "rejected") {
-        pushedQuota.record(accountId, { ...window, status: "allowed", at: Date.now() });
+        // Ending the refusal is not a new word from the session: whether it
+        // was answering on extra usage is not carried to the new time.
+        const { usingOverage: _using, ...rest } = window;
+        pushedQuota.record(accountId, { ...rest, status: "allowed", at: Date.now() });
       }
     }
   };
@@ -229,10 +238,11 @@ export function startHomeQuota(options: {
           if (left !== undefined && vault.noteReading(accountId, left))
             endRefusedReadings(accountId);
         },
-        overlay: (view, now) =>
-          view.accountId
-            ? withRejectedReadings(view, pushedQuota.windowsFor(view.accountId), now)
-            : view,
+        overlay: (view, now) => {
+          if (!view.accountId) return view;
+          const readings = pushedQuota.windowsFor(view.accountId);
+          return withPushedCredits(withRejectedReadings(view, readings, now), readings, now);
+        },
         // Session-pushed readings still merge for any provider the HTTP
         // sensor does not cover.
         pushed: (now) =>
@@ -272,19 +282,34 @@ export function startHomeQuota(options: {
     catalogModels,
     recordClaudeRateLimit: (accountId, reading) => {
       if (!reading.windowId) return;
-      const refusedBefore = pushedQuota
-        .windowsFor(accountId)
-        .some((window) => window.windowId === reading.windowId && window.status === "rejected");
+      const now = Date.now();
+      const before = pushedQuota.windowsFor(accountId);
+      const refusedBefore = before.some(
+        (window) => window.windowId === reading.windowId && window.status === "rejected",
+      );
+      const creditsBefore = pushedCredits(before, now)?.credits;
       pushedQuota.record(accountId, {
         windowId: reading.windowId,
         status: reading.status,
         ...(reading.utilization !== undefined ? { utilization: reading.utilization } : {}),
         ...(reading.resetsAt !== undefined ? { resetsAt: reading.resetsAt } : {}),
-        at: Date.now(),
+        ...(reading.overageStatus !== undefined ? { overageStatus: reading.overageStatus } : {}),
+        ...(reading.overageDisabledReason !== undefined
+          ? { overageReason: reading.overageDisabledReason }
+          : {}),
+        ...(reading.usingOverage !== undefined ? { usingOverage: reading.usingOverage } : {}),
+        at: now,
       });
+      const creditsAfter = pushedCredits(pushedQuota.windowsFor(accountId), now)?.credits;
       // A window that just said no, or just stopped saying it, moves the
-      // account's headroom now rather than at the next sensor pass.
-      if ((reading.status === "rejected") !== refusedBefore) void quota.refresh("pushed");
+      // account's headroom now rather than at the next sensor pass; so does
+      // a change in what extra usage can do.
+      if (
+        (reading.status === "rejected") !== refusedBefore ||
+        creditsBefore?.state !== creditsAfter?.state ||
+        Boolean(creditsBefore?.inUse) !== Boolean(creditsAfter?.inUse)
+      )
+        void quota.refresh("pushed");
     },
     noteCutOff: (accountId, cutOff) =>
       recordCutOff(

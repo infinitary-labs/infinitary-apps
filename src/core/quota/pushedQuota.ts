@@ -1,4 +1,4 @@
-import type { QuotaProviderView } from "@shared/quota";
+import type { QuotaCreditsView, QuotaProviderView } from "@shared/quota";
 import type { AppDatabase } from "../storage/db";
 import { buildWindow } from "./pace";
 
@@ -28,6 +28,12 @@ export type PushedWindow = {
   /** Fraction of the window consumed, as the session reported it (0..1). */
   utilization?: number;
   resetsAt?: number;
+  /** What the same reading said about extra usage; absent when it said nothing. */
+  overageStatus?: PushedWindowStatus;
+  /** The client's code for why extra usage cannot answer (`out_of_credits`, ...). */
+  overageReason?: string;
+  /** The session was answering on extra usage when it pushed this reading. */
+  usingOverage?: boolean;
   at: number;
 };
 
@@ -71,9 +77,12 @@ export class PushedQuotaStore {
     this.readings.set(accountId, windows);
     this.db
       .prepare(
-        "INSERT INTO pushed_quota (account_id, window_id, status, utilization, resets_at, at) VALUES (?, ?, ?, ?, ?, ?)" +
+        "INSERT INTO pushed_quota (account_id, window_id, status, utilization, resets_at," +
+          " overage_status, overage_reason, using_overage, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)" +
           " ON CONFLICT(account_id, window_id) DO UPDATE SET status = excluded.status," +
-          " utilization = excluded.utilization, resets_at = excluded.resets_at, at = excluded.at",
+          " utilization = excluded.utilization, resets_at = excluded.resets_at," +
+          " overage_status = excluded.overage_status, overage_reason = excluded.overage_reason," +
+          " using_overage = excluded.using_overage, at = excluded.at",
       )
       .run(
         accountId,
@@ -81,6 +90,9 @@ export class PushedQuotaStore {
         window.status ?? null,
         window.utilization ?? null,
         window.resetsAt ?? null,
+        window.overageStatus ?? null,
+        window.overageReason ?? null,
+        window.usingOverage === undefined ? null : window.usingOverage ? 1 : 0,
         window.at,
       );
   }
@@ -96,23 +108,33 @@ export class PushedQuotaStore {
 
   private load(): void {
     const rows = this.db
-      .prepare("SELECT account_id, window_id, status, utilization, resets_at, at FROM pushed_quota")
+      .prepare(
+        "SELECT account_id, window_id, status, utilization, resets_at, overage_status," +
+          " overage_reason, using_overage, at FROM pushed_quota",
+      )
       .all() as {
       account_id: string;
       window_id: string;
       status: string | null;
       utilization: number | null;
       resets_at: number | null;
+      overage_status: string | null;
+      overage_reason: string | null;
+      using_overage: number | null;
       at: number;
     }[];
     for (const row of rows) {
       const windows = this.readings.get(row.account_id) ?? new Map<string, PushedWindow>();
       const status = pushedStatus(row.status);
+      const overageStatus = pushedStatus(row.overage_status);
       windows.set(row.window_id, {
         windowId: row.window_id,
         ...(status ? { status } : {}),
         ...(row.utilization !== null ? { utilization: row.utilization } : {}),
         ...(row.resets_at !== null ? { resetsAt: row.resets_at } : {}),
+        ...(overageStatus ? { overageStatus } : {}),
+        ...(row.overage_reason !== null ? { overageReason: row.overage_reason } : {}),
+        ...(row.using_overage !== null ? { usingOverage: row.using_overage === 1 } : {}),
         at: row.at,
       });
       this.readings.set(row.account_id, windows);
@@ -132,6 +154,7 @@ export function pushedProviderViews(
   return accounts.map((account) => {
     const readings = windowsFor(account.accountId);
     const stale = readings.some((reading) => now - reading.at > PUSHED_STALE_AFTER_MS);
+    const credits = pushedCredits(readings, now)?.credits;
     return {
       provider: account.quotaId,
       label: account.providerLabel,
@@ -154,8 +177,77 @@ export function pushedProviderViews(
           }),
         )
         .sort((a, b) => a.id.localeCompare(b.id)),
+      ...(credits ? { credits } : {}),
     };
   });
+}
+
+/**
+ * The client's codes for extra usage that cannot answer because nothing
+ * could be read, rather than because it is switched off: unknown, never off.
+ */
+const UNREAD_OVERAGE_REASONS: ReadonlySet<string> = new Set(["fetch_error", "unknown"]);
+
+/**
+ * Extra usage as the newest pushed reading that spoke of it says
+ * (docs/quota.md, "Credits past the allowance"): allowed is `available`,
+ * with `inUse` while that reading is current and the session said it was
+ * answering on it; refused for `out_of_credits` is `spent`; refused for a
+ * reason the client could not read is `unknown`; refused for any other
+ * reason is `off`. No reading that spoke of it says nothing.
+ */
+export function pushedCredits(
+  readings: PushedWindow[],
+  now: number,
+): { credits: QuotaCreditsView; at: number } | undefined {
+  let newest: PushedWindow | undefined;
+  for (const reading of readings) {
+    if (reading.overageStatus === undefined) continue;
+    if (!newest || reading.at > newest.at) newest = reading;
+  }
+  if (!newest?.overageStatus) return undefined;
+  const at = newest.at;
+  if (newest.overageStatus !== "rejected") {
+    const current = now - at <= PUSHED_STALE_AFTER_MS;
+    return {
+      credits: { state: "available", ...(current && newest.usingOverage ? { inUse: true } : {}) },
+      at,
+    };
+  }
+  const reason = newest.overageReason;
+  if (reason === "out_of_credits") return { credits: { state: "spent" }, at };
+  if (reason === undefined || UNREAD_OVERAGE_REASONS.has(reason)) {
+    return { credits: { state: "unknown" }, at };
+  }
+  return { credits: { state: "off" }, at };
+}
+
+/**
+ * A sensed row with its sessions' word on extra usage laid over it: the
+ * newer of the two readings decides the state, the sensor's share of the
+ * monthly limit stays beside an `available` state, and only a current
+ * pushed reading can say the account is answering on it now. A row that is
+ * not a reading is left as it stands.
+ */
+export function withPushedCredits(
+  view: QuotaProviderView,
+  readings: PushedWindow[],
+  now: number,
+): QuotaProviderView {
+  if (view.status !== "ok") return view;
+  const pushed = pushedCredits(readings, now);
+  if (!pushed) return view;
+  const sensed = view.credits;
+  const pushedIsNewer = !sensed || view.measuredAt === undefined || pushed.at >= view.measuredAt;
+  const state = pushedIsNewer ? pushed.credits.state : (sensed?.state ?? pushed.credits.state);
+  const credits: QuotaCreditsView = {
+    state,
+    ...(state === "available" && sensed?.usedPercent !== undefined
+      ? { usedPercent: sensed.usedPercent }
+      : {}),
+    ...(state === "available" && pushed.credits.inUse ? { inUse: true } : {}),
+  };
+  return { ...view, credits };
 }
 
 /**

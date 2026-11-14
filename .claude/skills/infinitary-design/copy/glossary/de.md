@@ -43,6 +43,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | computer | Computer | Every computer, never "Rechner" or "Mac" in a sentence. |
 | concept / finding | Begriff / Erkenntnis | As the card references already say |
 | conversation | Unterhaltung | Replaces session and transcript. |
+| credits (a provider's, paid past the allowance) | Guthaben | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | Crew | Common in German; "Besatzung" reads stiffer. |
 | crewmate | Crewmitglied | Neuter, so "sein Crewmitglied", "es". |
 | custom API | eigene API | A connection to a model server the person adds; "Eigene API hinzufügen". |
@@ -60,6 +61,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Dynamic routing | Dynamische Verteilung | |
 | estimated (Usage) | geschätzt | |
 | evidence | Belege | "Widersprüchliche Belege" |
+| extra usage (Claude's credits past the allowance) | zusätzliche Nutzung | |
 | feed / activity | Aktivität | |
 | file (to the backlog) | im Backlog ablegen | "Warum sie abgelegt wurde". |
 | fingerprint (a computer's key) | Fingerabdruck |  |

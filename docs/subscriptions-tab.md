@@ -51,6 +51,8 @@ The row's verdict reads only the shared `providerScopes` projection, never a sin
 An account-wide scope stays authoritative even when its headroom or runway is unknown; a readable window cannot bypass an unread bounding window.
 When only narrower scopes exist, the row uses the lowest-headroom scope, giving unknown headroom precedence, and never adds the all-models check mark.
 Each scope includes all its own bounds, excludes extra usage, and warns of projected exhaustion only before the limiting window's reset.
+A reading that says what the provider does past the allowance adds one line under the meters, such as "Extra usage on · 12% of your monthly limit used · change it on claude.ai" or "Credits: 15 left · change it on chatgpt.com" (`creditsLine`, `docs/quota.md` "Credits past the allowance").
+An unknown fact, a row that is not a reading and a provider Infinitary reads no credits for say nothing.
 An unknown runway has no verdict, while an already empty scope still reports empty now.
 `SubscriptionsTab.test.ts` owns verdict wording and boundaries; `tests/e2e/subscriptions-instruments.spec.ts` checks that the tab renders the scope projection from an isolated allowance snapshot.
 

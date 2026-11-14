@@ -208,6 +208,30 @@ describe("classifyClaudeSignal", () => {
     ).toEqual({ kind: "turn-failed" });
   });
 
+  it("reads a rejected plan window on an account extra usage still serves as an ordinary failed turn", () => {
+    // INF-4104: the plan window said no, but the same reading says extra
+    // usage answers past it, so the allowance is not what stopped the turn.
+    for (const overageStatus of ["allowed", "allowed_warning"]) {
+      expect(
+        classifyClaudeSignal({
+          ...failedResult,
+          assistantError: "rate_limit",
+          rateLimitStatus: "rejected",
+          resetsAt: 1_800_000_000_000,
+          overageStatus,
+        }),
+      ).toEqual({ kind: "turn-failed" });
+    }
+    // Extra usage that also said no leaves the plan window's refusal standing.
+    expect(
+      classifyClaudeSignal({
+        ...failedResult,
+        rateLimitStatus: "rejected",
+        resetsAt: 1_800_000_000_000,
+        overageStatus: "rejected",
+      }),
+    ).toEqual({ kind: "cut-off", cutOff: { class: "no_headroom", resetsAt: 1_800_000_000_000 } });
+  });
   it("reads a rate limit without the vendor's rejected reading as an ordinary failed turn", () => {
     // The client types a transient capacity 429 and a switched-off model
     // as `rate_limit` too: only a rejected reading says the allowance is spent.

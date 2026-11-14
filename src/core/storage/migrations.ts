@@ -1386,6 +1386,19 @@ export const MIGRATIONS: readonly Migration[] = [
   // `RepoRegistry.recordBatch` is the only writer, for `Batches`; no
   // published view reads it. Dropping the column reverses it.
   `ALTER TABLE repos ADD COLUMN batch_json TEXT;`,
+  // INF-4104 piece 1 (docs/quota.md, "Credits past the allowance"): what a
+  // pushed Claude reading said about extra usage beside its plan window -
+  // `overage_status` (`allowed`, `allowed_warning`, `rejected`), the
+  // client's `overage_reason` code when it cannot answer, and
+  // `using_overage` (1 or 0) when the session is answering on it. Null on
+  // every older reading, which said nothing about extra usage: unknown,
+  // never off. `PushedQuotaStore` is the only writer and no published view
+  // reads the table. Dropping the three columns reverses it.
+  (db) => {
+    addColumn(db, "pushed_quota", "overage_status", "TEXT");
+    addColumn(db, "pushed_quota", "overage_reason", "TEXT");
+    addColumn(db, "pushed_quota", "using_overage", "INTEGER");
+  },
 ];
 
 /**

@@ -39,6 +39,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | connection (to a server) | connexion | The same word as sign-in; the sentence tells them apart. Feminine, so its status agrees: "Prête", "Vérifiée"; "En pause" for paused. |
 | conversation | conversation | Never "session" or "transcription" for a crewmate's notes. |
 | cost limit | plafond de coût | A project's estimated-dollar cap; "plafond" keeps it apart from the plan's allowance. |
+| credits (a provider's, paid past the allowance) | crédits | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | équipage | |
 | crewmate | équipier | Masculine; shorter than "membre d’équipage" and natural for one member of a crew. |
 | custom API | API personnalisée | Feminine: "une API personnalisée". |
@@ -53,6 +54,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | drop (a task) | écarter | "Écartée", kept apart from "abandonner" so each English word keeps one French word. |
 | error (never said) | what happened | "Fusion impossible", "n’a pas pu", never "erreur". |
 | evidence | éléments | "Éléments divergents", "Ouvrez ses éléments"; plain and countable. |
+| extra usage (Claude's credits past the allowance) | utilisation supplémentaire | |
 | feed / activity | Activité | |
 | fetch (a server's list of models) | récupérer | "Récupérer depuis le serveur", "Récupération…". |
 | file (to the backlog) | classer | "Pourquoi elle a été classée"; only for the backlog. |

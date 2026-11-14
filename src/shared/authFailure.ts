@@ -134,6 +134,8 @@ export type ClaudeSignal = {
   rateLimitStatus?: string;
   /** That reading's reset, epoch ms; a `rejected` one is when the allowance returns. */
   resetsAt?: number;
+  /** That reading's `overageStatus`: whether extra usage answers past the plan window. */
+  overageStatus?: string;
 };
 
 export type ClaudeOutcome =
@@ -166,7 +168,10 @@ const API_STOP_SUBTYPES: ReadonlySet<string> = new Set(["success", "error_during
  * ordinary failed turn, which takes the honest retry.
  *
  * A spent allowance needs the vendor's own word: a `rejected` rate-limit
- * reading in the same turn. The client also types a transient capacity 429
+ * reading in the same turn, and no word in that reading that extra usage
+ * still answers (`overageStatus` `allowed` or `allowed_warning`): an
+ * account on extra usage keeps working past its plan window, so a turn
+ * that failed there failed for another reason. The client also types a transient capacity 429
  * and a model it has switched off as `rate_limit`, so that error alone is
  * an ordinary failure, and a typed error that is not a cut-off beats a
  * reading. So does a loop that stopped on its own bound (`error_max_turns`,
@@ -210,7 +215,9 @@ export function classifyClaudeSignal(signal: ClaudeSignal): ClaudeOutcome {
   if (error && REFUSED_ERRORS.has(error)) {
     return { kind: "cut-off", cutOff: { class: "refused" } };
   }
-  const rejected = signal.rateLimitStatus === "rejected";
+  const onExtraUsage =
+    signal.overageStatus === "allowed" || signal.overageStatus === "allowed_warning";
+  const rejected = signal.rateLimitStatus === "rejected" && !onExtraUsage;
   const apiStop = signal.resultSubtype === undefined || API_STOP_SUBTYPES.has(signal.resultSubtype);
   if (rejected && apiStop && (error === undefined || error === "rate_limit")) {
     return {

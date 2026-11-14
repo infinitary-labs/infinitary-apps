@@ -40,6 +40,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | concept | 概念 | A Knowledge entry, as on cards. |
 | connection (between concepts) | 关联 | A graph link. |
 | conversation | 对话 | Used instead of session or transcript. |
+| credits (a provider's, paid past the allowance) | 点数 | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 船员 / 船员们 | 船员们 where the sentence needs the group. |
 | crewmate | 船员 | One helper of the first mate. |
 | custom API (a connection the person adds) | 自定义 API | The Accounts form and its chip; a saved one is a 连接 (connection), and Disconnect is 断开连接. |
@@ -55,6 +56,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Dynamic routing | 动态分配 | Plain words for sending work to a level and then to the model with the most allowance left. |
 | estimate / estimated (cost) | 估算 | As in 估算美元. |
 | evidence / source | 证据 / 来源 | A finding's support and what it cites. |
+| extra usage (Claude's credits past the allowance) | 额外用量 | |
 | feed / activity | 动态 | |
 | file (to the backlog) | 放入待办 | Used only for the backlog, never for a task that starts now. |
 | finding | 发现 | Measure word 条, as on cards. |

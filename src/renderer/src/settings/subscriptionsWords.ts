@@ -1,7 +1,9 @@
+import { formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import type { AccountView } from "../../../shared/accounts";
 import { COMPUTER, HERE } from "../../../shared/deviceNames";
 import { API_KEY_LABEL } from "../../../shared/providers";
+import type { QuotaCreditsView } from "../../../shared/quota";
 
 /** Settings → Intelligence's account-row words (`SubscriptionsTab.tsx`). */
 export const SUBSCRIPTIONS_WORDS = {
@@ -82,3 +84,68 @@ export const PERSONAL_RESOURCES_WORDS = {
     });
   },
 } as const;
+
+/**
+ * Where each provider's credits are switched on, bought and limited: the
+ * place the row points to, since Infinitary changes none of it.
+ */
+const CREDITS_SITE: Record<string, string> = {
+  claude: "claude.ai",
+  codex: "chatgpt.com",
+  copilot: "github.com",
+};
+
+/**
+ * The row's one line about paying past the allowance (docs/quota.md,
+ * "Credits past the allowance"): what the provider says, then where to
+ * change it. Unknown says nothing, and a provider this build reads no
+ * credits for has no line.
+ */
+export function creditsLine(provider: string, credits: QuotaCreditsView | undefined) {
+  const site = CREDITS_SITE[provider];
+  if (!credits || !site || credits.state === "unknown") return undefined;
+  const fact = creditsFact(provider, credits);
+  return fact ? `${fact} · ${m.settingsSubscriptionsCreditsWhere({ site })}` : undefined;
+}
+
+function creditsFact(provider: string, credits: QuotaCreditsView): string | undefined {
+  const { state } = credits;
+  if (provider === "claude") {
+    if (state === "off") return m.settingsSubscriptionsCreditsClaudeOff();
+    if (state === "spent") return m.settingsSubscriptionsCreditsClaudeSpent();
+    const percent =
+      credits.usedPercent !== undefined ? formatNumber(Math.round(credits.usedPercent)) : undefined;
+    if (credits.inUse) {
+      return percent !== undefined
+        ? m.settingsSubscriptionsCreditsClaudeInUseUsed({ percent })
+        : m.settingsSubscriptionsCreditsClaudeInUse();
+    }
+    return percent !== undefined
+      ? m.settingsSubscriptionsCreditsClaudeAvailableUsed({ percent })
+      : m.settingsSubscriptionsCreditsClaudeAvailable();
+  }
+  if (provider === "codex") {
+    if (state === "off") return m.settingsSubscriptionsCreditsCodexOff();
+    if (state === "spent") return m.settingsSubscriptionsCreditsCodexSpent();
+    if (credits.unlimited) return m.settingsSubscriptionsCreditsCodexUnlimited();
+    return credits.balance !== undefined
+      ? m.settingsSubscriptionsCreditsCodexBalance({ balance: balanceText(credits.balance) })
+      : m.settingsSubscriptionsCreditsCodexAvailable();
+  }
+  if (provider === "copilot") {
+    if (state === "available") return m.settingsSubscriptionsCreditsCopilotAvailable();
+    if (state === "off") return m.settingsSubscriptionsCreditsCopilotOff();
+  }
+  return undefined;
+}
+
+/**
+ * A balance as the language writes numbers, to two places at most
+ * (ChatGPT sends "32684.7473575000"); words it is not a number stay as sent.
+ */
+function balanceText(balance: string): string {
+  const value = Number(balance);
+  return balance.trim() !== "" && Number.isFinite(value)
+    ? formatNumber(value, { maximumFractionDigits: 2 })
+    : balance;
+}

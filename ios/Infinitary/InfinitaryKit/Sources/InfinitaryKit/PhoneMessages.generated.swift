@@ -2789,6 +2789,20 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsAsOfTime`(`time`: String) -> String { PhoneWords.format("settingsSubscriptionsAsOfTime", [`time`]) }
     public static func `settingsSubscriptionsClaudeFirstRun`(`here`: String) -> String { PhoneWords.format("settingsSubscriptionsClaudeFirstRun", [`here`]) }
     public static func `settingsSubscriptionsConnecting`() -> String { PhoneWords.format("settingsSubscriptionsConnecting", []) }
+    public static func `settingsSubscriptionsCreditsClaudeAvailable`() -> String { PhoneWords.format("settingsSubscriptionsCreditsClaudeAvailable", []) }
+    public static func `settingsSubscriptionsCreditsClaudeAvailableUsed`(`percent`: String) -> String { PhoneWords.format("settingsSubscriptionsCreditsClaudeAvailableUsed", [`percent`]) }
+    public static func `settingsSubscriptionsCreditsClaudeInUse`() -> String { PhoneWords.format("settingsSubscriptionsCreditsClaudeInUse", []) }
+    public static func `settingsSubscriptionsCreditsClaudeInUseUsed`(`percent`: String) -> String { PhoneWords.format("settingsSubscriptionsCreditsClaudeInUseUsed", [`percent`]) }
+    public static func `settingsSubscriptionsCreditsClaudeOff`() -> String { PhoneWords.format("settingsSubscriptionsCreditsClaudeOff", []) }
+    public static func `settingsSubscriptionsCreditsClaudeSpent`() -> String { PhoneWords.format("settingsSubscriptionsCreditsClaudeSpent", []) }
+    public static func `settingsSubscriptionsCreditsCodexAvailable`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCodexAvailable", []) }
+    public static func `settingsSubscriptionsCreditsCodexBalance`(`balance`: String) -> String { PhoneWords.format("settingsSubscriptionsCreditsCodexBalance", [`balance`]) }
+    public static func `settingsSubscriptionsCreditsCodexOff`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCodexOff", []) }
+    public static func `settingsSubscriptionsCreditsCodexSpent`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCodexSpent", []) }
+    public static func `settingsSubscriptionsCreditsCodexUnlimited`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCodexUnlimited", []) }
+    public static func `settingsSubscriptionsCreditsCopilotAvailable`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCopilotAvailable", []) }
+    public static func `settingsSubscriptionsCreditsCopilotOff`() -> String { PhoneWords.format("settingsSubscriptionsCreditsCopilotOff", []) }
+    public static func `settingsSubscriptionsCreditsWhere`(`site`: String) -> String { PhoneWords.format("settingsSubscriptionsCreditsWhere", [`site`]) }
     public static func `settingsSubscriptionsCrewPreferredMarkTitle`() -> String { PhoneWords.format("settingsSubscriptionsCrewPreferredMarkTitle", []) }
     public static func `settingsSubscriptionsDotNoReading`(`signedIn`: String) -> String { PhoneWords.format("settingsSubscriptionsDotNoReading", [`signedIn`]) }
     public static func `settingsSubscriptionsDotNotSignedInYet`() -> String { PhoneWords.format("settingsSubscriptionsDotNotSignedInYet", []) }
@@ -6018,6 +6032,20 @@ extension PhoneWords {
         "settingsSubscriptionsAsOfTime": ["time"],
         "settingsSubscriptionsClaudeFirstRun": ["here"],
         "settingsSubscriptionsConnecting": [],
+        "settingsSubscriptionsCreditsClaudeAvailable": [],
+        "settingsSubscriptionsCreditsClaudeAvailableUsed": ["percent"],
+        "settingsSubscriptionsCreditsClaudeInUse": [],
+        "settingsSubscriptionsCreditsClaudeInUseUsed": ["percent"],
+        "settingsSubscriptionsCreditsClaudeOff": [],
+        "settingsSubscriptionsCreditsClaudeSpent": [],
+        "settingsSubscriptionsCreditsCodexAvailable": [],
+        "settingsSubscriptionsCreditsCodexBalance": ["balance"],
+        "settingsSubscriptionsCreditsCodexOff": [],
+        "settingsSubscriptionsCreditsCodexSpent": [],
+        "settingsSubscriptionsCreditsCodexUnlimited": [],
+        "settingsSubscriptionsCreditsCopilotAvailable": [],
+        "settingsSubscriptionsCreditsCopilotOff": [],
+        "settingsSubscriptionsCreditsWhere": ["site"],
         "settingsSubscriptionsCrewPreferredMarkTitle": [],
         "settingsSubscriptionsDotNoReading": ["signedIn"],
         "settingsSubscriptionsDotNotSignedInYet": [],

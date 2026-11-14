@@ -13,7 +13,12 @@ import { isKeychainValueFailure, isSensedProvider, type QuotaProviderView } from
 import { formatDurationShort, providerScopes, windowSignals } from "@shared/quotaSignals";
 import type { DeviceSignIns } from "@shared/signIns";
 import type { StatusDotTone } from "../design/core/StatusDot";
-import { EMPTY_QUOTA_TEXT, noReaderText, SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
+import {
+  creditsLine,
+  EMPTY_QUOTA_TEXT,
+  noReaderText,
+  SUBSCRIPTIONS_WORDS,
+} from "./subscriptionsWords";
 
 /**
  * What one account's row says in Settings → Intelligence
@@ -90,6 +95,8 @@ export type RowView = {
     clock?: number;
   }[];
   verdict?: Verdict;
+  /** Paying past the allowance, in one line, beside a reading's meters (`creditsLine`). */
+  credits?: string;
   /** The one-line state for a row with no meter to show. */
   stateText?: string;
   stateTone?: "danger";
@@ -299,6 +306,8 @@ export function rowView(
   });
   const verdict = verdictFor(kind, row, now);
   if (verdict) view.verdict = verdict;
+  const credits = row ? creditsLine(row.provider, row.credits) : undefined;
+  if (credits) view.credits = credits;
   return withHold(view, account, now);
 }
 

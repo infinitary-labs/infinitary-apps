@@ -106,6 +106,7 @@ Three product-neutral classes ride `turn_failed.cutOff` (`src/shared/events.ts`)
   The client labels every 401 and 403 `authentication_failed`, and a 403 is also a firewall's block page in front of the API, which no sign-in changes; so `authentication_failed` beside a 403 is an ordinary failed turn, never "sign in again".
 - `refused`: `oauth_org_not_allowed` or `billing_error`; a bare `api_error_status: 403` is not a refusal.
 - `no_headroom`: a pushed rate-limit `status: "rejected"` in the same failed turn, with `rate_limit` or no typed error at all; it carries that reading's `resetsAt` (epoch ms).
+  A reading whose `overageStatus` is `allowed` or `allowed_warning` is not one: extra usage still answers past the plan window there ("Credits past the allowance"), so a turn that failed on it is an ordinary failed turn.
   `rate_limit` alone is not enough: the client also types a transient capacity 429 and a model it has switched off that way, so without the vendor's rejected reading it is an ordinary failed turn, and a typed error that is not a cut-off beats a reading.
   So does a loop that stopped on its own bound (`error_max_turns`, `error_max_budget_usd`, `error_max_structured_output_retries`): its requests were answered, so a reading it saw on the way is not why it stopped.
   Only an API stop (`success` with `is_error`, or `error_during_execution`) can be read as a spent allowance; the real client against a stub API returning the vendor's `rejected` headers pushes the reading before it reports the error (`claudeFirstmateSession.integration.test.ts`).
@@ -173,3 +174,24 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
 - **A refusal never renews.**
   `AccountVault.renew` answers `withheld` without asking the backend while a refusal stands; the health tick already skips a degraded account, and the sensor's 401 path reads `withheld` as `renewal_withheld` (not knowing), never a sign-out.
   A lost sign-in may still renew: only a 401 renews, and that is the path to proof.
+
+## Credits past the allowance
+
+INF-4104 piece 1.
+A provider can keep answering after the plan allowance runs out, paid from credits the person set up with it: Claude's extra usage, ChatGPT's Codex credits and Copilot's paid premium requests.
+Each reading carries what the provider says about them as `credits` on the account's row (`quotaCreditsViewSchema` in `src/shared/quota.ts`): `available`, `spent`, `off` or `unknown`, with a share of a monthly limit used, a balance, `unlimited` or `inUse` where the provider gives them.
+No `credits` is unknown too, never `off`.
+It is a fact beside the windows: it never bounds or raises a plan window, so a spent window still reads 0% and every reader of the windows is unchanged.
+Infinitary neither buys credits, switches them on nor sets their limit; the provider's own site does.
+
+- Claude, from the usage reading's `extra_usage`: `is_enabled: false` is `off`; switched on, `spend_limit_reached` or `utilization` at 100 is `spent`, and below it `available` with that share (`claudeCreditsFromUsage`).
+- Claude, from the reading the client pushes mid-session (`readRateLimit` in `src/core/claude/claudeEvents.ts`): `overageStatus`, `overageDisabledReason` and `isUsingOverage` are saved beside the pushed window (`PushedQuotaStore`, three nullable columns).
+  The newest reading that names an `overageStatus` decides: allowed is `available`, refused for `out_of_credits` is `spent`, refused for `fetch_error`, `unknown` or no reason is `unknown`, and refused for any other reason is `off` (`pushedCredits`).
+  Only a reading younger than `PUSHED_STALE_AFTER_MS` may say `inUse`.
+- On a sensed Claude row the newer of the two readings decides the state, and the sensor's share stays beside an `available` state (`withPushedCredits`, laid over the row after `withRejectedReadings`).
+- ChatGPT, from the Codex usage reading's `credits` (`has_credits`, `unlimited`, `balance`, `overage_limit_reached`) and `spend_control.reached`: a reached spend or overage limit is `spent`, `unlimited` or `has_credits` is `available` with the balance as sent, and `has_credits: false` is `off`.
+- Copilot, from `overage_permitted` on the premium-requests snapshot: `available` or `off`, shown only, and never `spent`, since GitHub does not yet say when a budget stops a request.
+
+The Subscriptions row says the fact in one line under its meters, then where to change it (`creditsLine` in `src/renderer/src/settings/subscriptionsWords.ts`, `docs/subscriptions-tab.md`).
+Nothing routes, picks an account or pauses the first mate on this fact.
+`src/core/quota/credits.test.ts` reads whole provider answers from `tests/fixtures/quota-credits/`: live Claude and Codex usage readings, the Codex one trimmed of its identity; the client's pushed readings there are written from its published types.

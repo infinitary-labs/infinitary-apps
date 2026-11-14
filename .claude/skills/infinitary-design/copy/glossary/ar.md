@@ -41,6 +41,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | computer | حاسوب | Plural "حواسيب"; used for every computer, never "جهاز ماك" or "خادم". |
 | concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |
 | conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |
+| credits (a provider's, paid past the allowance) | الاعتمادات | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | الطاقم | |
 | crewmate | فرد الطاقم | Plural "أفراد الطاقم"; masculine default. |
 | custom API | API مخصصة | A connection to a model server the person adds; "اتصال API مخصص" for the connection itself. |
@@ -57,6 +58,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | error (never said) | تعذّر … | A line says what could not be done ("تعذّر فتح هذه اللوحة."). |
 | estimated (Usage) | تقديري | |
 | evidence | الأدلة | "أدلة متعارضة" for differing evidence. |
+| extra usage (Claude's credits past the allowance) | الاستخدام الإضافي | |
 | feed / activity | النشاط | |
 | file (to the backlog) | إدراج | Used only for the backlog, never for a task that starts now. |
 | fingerprint (a computer's key) | بصمة |  |

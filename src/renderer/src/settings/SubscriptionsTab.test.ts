@@ -7,6 +7,8 @@ import {
   CLAUDE_GATEWAY_LABEL,
 } from "@shared/claudeAccess";
 import { CLAUDE_CLIENT_MISSING_TEXT, claudeClientOutdatedText } from "@shared/claudeClient";
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { QuotaProviderView } from "@shared/quota";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "@shared/quota";
 import { describe, expect, it } from "vitest";
@@ -588,5 +590,55 @@ describe("Subscriptions rowView: Claude access set up for Claude Code", () => {
       Date.now(),
     );
     expect(view.sub).toBe(CLAUDE_ACCESS_LABEL["claude-settings"]);
+  });
+});
+
+describe("Subscriptions rowView: credits past the allowance (INF-4104 piece 1)", () => {
+  const now = 1_800_000_000_000;
+  const reading = (
+    provider: string,
+    credits: QuotaProviderView["credits"],
+    extra: Partial<QuotaProviderView> = {},
+  ): QuotaProviderView => ({
+    provider,
+    label: provider,
+    status: "ok",
+    stale: false,
+    windows: [{ id: "five_hour", label: "session", percentRemaining: 0 }],
+    ...(credits ? { credits } : {}),
+    ...extra,
+  });
+  const where = (site: string) => m.settingsSubscriptionsCreditsWhere({ site });
+
+  it("says what the provider says, then where to change it", () => {
+    expect(
+      rowView(account, reading("claude", { state: "available", usedPercent: 12, inUse: true }), now)
+        .credits,
+    ).toBe(
+      `${m.settingsSubscriptionsCreditsClaudeInUseUsed({ percent: formatNumber(12) })} · ${where("claude.ai")}`,
+    );
+    expect(rowView(account, reading("claude", { state: "off" }), now).credits).toBe(
+      `${m.settingsSubscriptionsCreditsClaudeOff()} · ${where("claude.ai")}`,
+    );
+    const codex = { ...account, providerId: "openai-codex" };
+    expect(
+      rowView(codex, reading("codex", { state: "available", balance: "32684.7473575000" }), now)
+        .credits,
+    ).toBe(
+      `${m.settingsSubscriptionsCreditsCodexBalance({
+        balance: formatNumber(32684.7473575, { maximumFractionDigits: 2 }),
+      })} · ${where("chatgpt.com")}`,
+    );
+  });
+
+  it("says nothing when the fact is unknown or the row is not a reading", () => {
+    expect(rowView(account, reading("claude", undefined), now).credits).toBeUndefined();
+    expect(rowView(account, reading("claude", { state: "unknown" }), now).credits).toBeUndefined();
+    const unread = reading(
+      "claude",
+      { state: "available" },
+      { status: "unavailable", windows: [], reason: "http_500" },
+    );
+    expect(rowView(account, unread, now).credits).toBeUndefined();
   });
 });

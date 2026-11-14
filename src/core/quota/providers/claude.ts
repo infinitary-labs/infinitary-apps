@@ -1,4 +1,4 @@
-import type { QuotaWindowView } from "@shared/quota";
+import type { QuotaCreditsView, QuotaWindowView } from "@shared/quota";
 import type { ManagedAuth } from "../auth";
 import { type QuotaHttp, requestHeaders } from "../http";
 import { asNumber, asRecord, asString, clampPercent } from "../json";
@@ -75,7 +75,10 @@ const TOP_LEVEL_WINDOW_IDS = [
  * code change. The fixed top-level fields are the fallback for a response
  * that has no `limits`.
  */
-export function parseClaudeUsage(body: unknown, now: number): { windows: QuotaWindowView[] } {
+export function parseClaudeUsage(
+  body: unknown,
+  now: number,
+): { windows: QuotaWindowView[]; credits?: QuotaCreditsView } {
   const root = asRecord(body);
   if (!root) return { windows: [] };
   const windows: QuotaWindowView[] = [];
@@ -100,7 +103,29 @@ export function parseClaudeUsage(body: unknown, now: number): { windows: QuotaWi
   if (extra && extra.is_enabled === true) push(windowFromSlot(extra, "extra_usage", now));
 
   windows.sort((a, b) => a.id.localeCompare(b.id));
-  return { windows };
+  const credits = claudeCreditsFromUsage(extra);
+  return { windows, ...(credits ? { credits } : {}) };
+}
+
+/**
+ * Extra usage as a credits fact (docs/quota.md, "Credits past the
+ * allowance"): switched off is `off`; switched on, its spend limit reached
+ * or its monthly limit used up is `spent`, and anything short of it is
+ * `available` with the share used. A response without the field says
+ * nothing, which stays unknown.
+ */
+export function claudeCreditsFromUsage(
+  extra: Record<string, unknown> | undefined,
+): QuotaCreditsView | undefined {
+  if (!extra) return undefined;
+  if (extra.is_enabled === false) return { state: "off" };
+  if (extra.is_enabled !== true) return undefined;
+  if (extra.spend_limit_reached === true) return { state: "spent", usedPercent: 100 };
+  const used = asNumber(extra.utilization);
+  if (used === undefined) return { state: "available" };
+  return used >= 100
+    ? { state: "spent", usedPercent: 100 }
+    : { state: "available", usedPercent: Math.max(0, used) };
 }
 
 /**

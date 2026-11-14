@@ -276,9 +276,64 @@ describe("migration 51 (a pushed reading's status, W1 S3)", () => {
       { windowId: "five_hour", status: "rejected", utilization: 1, resetsAt: 9_000, at: 3_000 },
     ]);
 
-    // Reversible: dropping the column restores the v50 shape with every row.
+    // Reversible: dropping the column, and the extra-usage columns a later
+    // migration adds, restores the v50 shape with every row.
     reopened.exec("ALTER TABLE pushed_quota DROP COLUMN status;");
+    for (const column of PUSHED_OVERAGE_COLUMNS)
+      reopened.exec(`ALTER TABLE pushed_quota DROP COLUMN ${column};`);
     expect(columnNames(reopened, "pushed_quota")).toEqual(columnsAt50);
+    expect(reopened.prepare("SELECT COUNT(*) AS n FROM pushed_quota").get()).toEqual({ n: 1 });
+    reopened.close();
+  });
+});
+
+const PUSHED_OVERAGE_COLUMNS = ["overage_status", "overage_reason", "using_overage"] as const;
+
+describe("migration 136 (a pushed reading's extra usage, INF-4104 piece 1)", () => {
+  it("adds the nullable columns, keeps every earlier reading silent on extra usage, records new ones, and reverses", () => {
+    const dir = tmpUserData();
+    const before = openDatabase(dir, 135);
+    const columnsBefore = columnNames(before, "pushed_quota");
+    before
+      .prepare(
+        "INSERT INTO pushed_quota (account_id, window_id, status, utilization, resets_at, at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run("acct_a", "five_hour", "allowed", 0.4, 2_000, 1_000);
+    before.close();
+
+    const upgraded = openDatabase(dir);
+    expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+    const store = new PushedQuotaStore(upgraded);
+    // An older reading said nothing about extra usage: no fields, so unknown, never off.
+    expect(store.windowsFor("acct_a")).toEqual([
+      { windowId: "five_hour", status: "allowed", utilization: 0.4, resetsAt: 2_000, at: 1_000 },
+    ]);
+    store.record("acct_a", {
+      windowId: "five_hour",
+      status: "rejected",
+      utilization: 1,
+      resetsAt: 9_000,
+      overageStatus: "allowed",
+      usingOverage: true,
+      at: 3_000,
+    });
+    upgraded.close();
+
+    const reopened = openDatabase(dir);
+    expect(new PushedQuotaStore(reopened).windowsFor("acct_a")).toEqual([
+      {
+        windowId: "five_hour",
+        status: "rejected",
+        utilization: 1,
+        resetsAt: 9_000,
+        overageStatus: "allowed",
+        usingOverage: true,
+        at: 3_000,
+      },
+    ]);
+    for (const column of PUSHED_OVERAGE_COLUMNS)
+      reopened.exec(`ALTER TABLE pushed_quota DROP COLUMN ${column};`);
+    expect(columnNames(reopened, "pushed_quota")).toEqual(columnsBefore);
     expect(reopened.prepare("SELECT COUNT(*) AS n FROM pushed_quota").get()).toEqual({ n: 1 });
     reopened.close();
   });

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   type ClaudeNormalizeResult,
@@ -255,6 +257,56 @@ describe("fmEventsFromClaudeMessage, a turn's outcome", () => {
         resetsAt: 1_800_000_000_000,
         windowId: "seven_day",
       },
+    });
+  });
+});
+
+describe("extra usage in the pushed reading", () => {
+  const fixture = (name: string) =>
+    JSON.parse(
+      readFileSync(join(__dirname, "../../../tests/fixtures/quota-credits", name), "utf8"),
+    ) as unknown;
+
+  it("hands the quota surface what the reading says about extra usage", () => {
+    const onExtra = fmEventsFromClaudeMessage(
+      fixture("claude-rate-limit-on-extra-usage.json"),
+      "task-1",
+      createNormalizerState(),
+    );
+    expect(onExtra.rateLimit).toMatchObject({
+      status: "rejected",
+      windowId: "five_hour",
+      overageStatus: "allowed",
+      usingOverage: true,
+    });
+    const spent = fmEventsFromClaudeMessage(
+      fixture("claude-rate-limit-out-of-credits.json"),
+      "task-1",
+      createNormalizerState(),
+    );
+    expect(spent.rateLimit).toMatchObject({
+      overageStatus: "rejected",
+      overageDisabledReason: "out_of_credits",
+      usingOverage: false,
+    });
+  });
+
+  it("keeps a turn that failed on extra usage from reading as a spent allowance", () => {
+    const failedAfter = (name: string) => {
+      const state = createNormalizerState();
+      fmEventsFromClaudeMessage(fixture(name), "task-1", state);
+      return fmEventsFromClaudeMessage(
+        successResult({ is_error: true, result: "API Error: 429" }),
+        "task-1",
+        state,
+      ).failure;
+    };
+    expect(failedAfter("claude-rate-limit-on-extra-usage.json")).toEqual({
+      error: "API Error: 429",
+    });
+    expect(failedAfter("claude-rate-limit-out-of-credits.json")?.cutOff).toEqual({
+      class: "no_headroom",
+      resetsAt: 1_763_074_800_000,
     });
   });
 });

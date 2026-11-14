@@ -41,6 +41,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | concept | 概念 | A Knowledge entry, as on cards. |
 | connection (between concepts) | 關聯 | A graph link, counter 條. |
 | conversation | 對話 | Also used for a crewmate's session; 工作階段 is avoided. |
+| credits (a provider's, paid past the allowance) | 點數 | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 船員 | Chinese needs no plural; the orbit label reads 船員 and counts take 位. |
 | crewmate | 船員 | Same word as crew; context and the 位 counter carry the singular. |
 | custom API (a connection the person adds) | 自訂 API | Taiwan writes 自訂, not 自定義; a saved one is a 連線, and Disconnect is 中斷連線. |
@@ -54,6 +55,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | escalation (never said) | 更強的模型 | Never 升級處理. |
 | estimate / estimated (cost) | 估計 | As in 估計美元. |
 | evidence / source | 證據 / 來源 | A finding's support and what it cites. |
+| extra usage (Claude's credits past the allowance) | 額外用量 | |
 | feed / activity | 動態 | The Activity label. |
 | file (to the backlog) | 排入 | Only for the backlog, as in 排入的原因. |
 | finding | 發現 | Counter 項, as on cards. |

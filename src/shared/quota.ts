@@ -71,6 +71,34 @@ export const quotaWindowViewSchema = z.object({
 });
 export type QuotaWindowView = z.infer<typeof quotaWindowViewSchema>;
 
+/**
+ * What the provider says about paying past the plan allowance (INF-4104
+ * piece 1, docs/quota.md "Credits past the allowance"): Claude's extra
+ * usage, ChatGPT's Codex credits, Copilot's paid premium requests. A fact
+ * beside the windows, never a window: it never bounds or raises a plan
+ * window, and Infinitary neither buys credits nor sets their limit.
+ * - `available` the provider will answer past the allowance on credits,
+ * - `spent` the credits ran out, or their spend limit was reached,
+ * - `off` the account has credits switched off or has none,
+ * - `unknown` the provider said something this build cannot place.
+ * No `credits` at all is also unknown, never `off`.
+ */
+export const QUOTA_CREDIT_STATES = ["available", "spent", "off", "unknown"] as const;
+export type QuotaCreditState = (typeof QUOTA_CREDIT_STATES)[number];
+
+export const quotaCreditsViewSchema = z.object({
+  state: z.enum(QUOTA_CREDIT_STATES),
+  /** The share of a monthly spend limit used, 0–100, where the provider gives one (Claude). */
+  usedPercent: z.number().optional(),
+  /** The balance left, in the provider's own words (ChatGPT's "15.00"). */
+  balance: z.string().optional(),
+  /** The provider says the credits have no limit. */
+  unlimited: z.boolean().optional(),
+  /** The provider says this account is answering on credits right now. */
+  inUse: z.boolean().optional(),
+});
+export type QuotaCreditsView = z.infer<typeof quotaCreditsViewSchema>;
+
 export const quotaProviderViewSchema = z.object({
   /** Quota provider id: codex, grok, claude, copilot. */
   provider: z.string(),
@@ -127,6 +155,8 @@ export const quotaProviderViewSchema = z.object({
   /** RFC 9110 Retry-After, as the vendor sent it, when it sent one. */
   retryAfter: z.string().optional(),
   windows: z.array(quotaWindowViewSchema),
+  /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
+  credits: quotaCreditsViewSchema.optional(),
   /**
    * Disclosed uncertainty, in the user's words, for a row with no window.
    * The surface renders it instead of a silent blank, and it is never a

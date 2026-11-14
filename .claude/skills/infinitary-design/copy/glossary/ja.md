@@ -42,6 +42,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | conflict (avoided) | 食い違い | Vocabulary rule: the word conflict is not restored. |
 | connection (between concepts) | つながり | Plain word for a graph link. |
 | conversation | 会話 | Replaces session and transcript. |
+| credits (a provider's, paid past the allowance) | クレジット | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 乗組員 | The native ship word reads warmer than クルー and works for one or many. |
 | crewmate | 乗組員 | Same word as crew; 担当の乗組員 when it means the crewmate assigned to a task. |
 | custom API (a connection the person adds) | カスタム API | A saved one is a 接続, and Disconnect is 接続を解除. |
@@ -61,6 +62,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Dynamic routing | 動的な振り分け | Plain words for sending work to a level and then to the model with the most allowance left; ルーティング would be jargon. |
 | estimate / estimated (cost) | 推定 | As in 推定値 and 推定（米ドル）; the command search keeps 見積もり as a search word. |
 | evidence / source | 根拠 / 出典 | A finding's support and what it cites. |
+| extra usage (Claude's credits past the allowance) | 追加使用量 | |
 | feed / activity | アクティビティ | The pane's name. |
 | file (to the backlog) | バックログに登録 | 登録 for filing; a task that starts now is 開始, never 登録. |
 | finding | 知見 | A recorded claim with evidence, as on cards. |

@@ -56,10 +56,11 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN plugins USING INDEX sqlite_autoindex_plugins_1"],
     reason: "one row per personal panel the captain installs",
   },
-  "SELECT account_id, window_id, status, utilization, resets_at, at FROM pushed_quota": {
-    walks: ["SCAN pushed_quota"],
-    reason: "one row per account and allowance window",
-  },
+  "SELECT account_id, window_id, status, utilization, resets_at, overage_status, overage_reason, using_overage, at FROM pushed_quota":
+    {
+      walks: ["SCAN pushed_quota"],
+      reason: "one row per account and allowance window",
+    },
   "SELECT id FROM captain_asks ORDER BY at DESC, rowid DESC LIMIT 1": {
     walks: ["SCAN captain_asks USING INDEX captain_asks_at"],
     reason: "reads the newest message through captain_asks_at and stops at its LIMIT",

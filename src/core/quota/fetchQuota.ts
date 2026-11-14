@@ -160,6 +160,7 @@ async function fetchOneAccount(
     status: outcome.status,
     windows: outcome.windows,
     ...(outcome.windows.length > 0 ? { measuredAt: now } : {}),
+    ...(outcome.credits ? { credits: outcome.credits } : {}),
     ...(outcome.plan ? { plan: outcome.plan } : {}),
     ...(outcome.account ? { account: outcome.account } : {}),
     ...(outcome.detail ? { detail: outcome.detail } : {}),

@@ -37,6 +37,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | connection (to a server) | conexão | Feminine, so its status agrees: "Pronta", "Verificada", "Pausada". |
 | conversation | conversa | Also used for a card's thread. |
 | cost limit | limite de custo | A project's estimated-dollar cap, never the plan's allowance ("franquia"). |
+| credits (a provider's, paid past the allowance) | créditos | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | tripulação | |
 | crewmate | tripulante | Masculine by default ("o tripulante"). |
 | custom API | API personalizada | Feminine: "uma API personalizada". |
@@ -48,6 +49,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | direction (a standing instruction in Knowledge) | diretriz | Feminine; "diretrizes" in the plural. |
 | discard | descartar | |
 | draft | rascunho | As in GitHub's Portuguese docs. |
+| extra usage (Claude's credits past the allowance) | uso extra | |
 | feed / activity | Atividade | |
 | fetch (a server's list of models) | buscar | "Buscar no servidor", "Buscando…". |
 | file (to the backlog) | registrar no backlog | "Por que foi registrada". |

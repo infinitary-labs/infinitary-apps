@@ -41,7 +41,10 @@ export type ClaudeNormalizerState = {
    * `error`, the latest pushed rate-limit reading - which that turn's result
    * is classified with, then cleared.
    */
-  turnSignal: Pick<ClaudeSignal, "assistantError" | "rateLimitStatus" | "resetsAt">;
+  turnSignal: Pick<
+    ClaudeSignal,
+    "assistantError" | "rateLimitStatus" | "resetsAt" | "overageStatus"
+  >;
 };
 
 export function createNormalizerState(): ClaudeNormalizerState {
@@ -54,6 +57,12 @@ export type ClaudeRateLimit = {
   /** Epoch ms (the session pushes epoch seconds; the normalizer converts). */
   resetsAt?: number;
   windowId?: string;
+  /** Whether extra usage would answer past the plan window, as the session said it. */
+  overageStatus?: "allowed" | "allowed_warning" | "rejected";
+  /** Why extra usage cannot answer (`out_of_credits`, `org_level_disabled`, ...), the client's own code. */
+  overageDisabledReason?: string;
+  /** The session says it is answering on extra usage right now. */
+  usingOverage?: boolean;
 };
 
 /**
@@ -188,6 +197,9 @@ export function fmEventsFromClaudeMessage(
       state.turnSignal.rateLimitStatus = rateLimit.status;
       if (rateLimit.resetsAt !== undefined) state.turnSignal.resetsAt = rateLimit.resetsAt;
       else delete state.turnSignal.resetsAt;
+      if (rateLimit.overageStatus !== undefined)
+        state.turnSignal.overageStatus = rateLimit.overageStatus;
+      else delete state.turnSignal.overageStatus;
       return { events: [], rateLimit };
     }
     case "result": {
@@ -417,11 +429,31 @@ function readRateLimit(info: unknown): ClaudeRateLimit | undefined {
   const resetsAtSeconds = num(info.resetsAt);
   const resetsAt = resetsAtSeconds !== undefined ? resetsAtSeconds * 1000 : undefined;
   const windowId = typeof info.rateLimitType === "string" ? info.rateLimitType : undefined;
+  const overage = info.overageStatus;
+  const overageStatus =
+    overage === "allowed" || overage === "allowed_warning" || overage === "rejected"
+      ? overage
+      : undefined;
+  const overageDisabledReason =
+    typeof info.overageDisabledReason === "string" && info.overageDisabledReason !== ""
+      ? info.overageDisabledReason
+      : undefined;
+  // `isUsingOverage` is the field the client documents; `overageInUse` is
+  // its other spelling of the same fact.
+  const using =
+    typeof info.isUsingOverage === "boolean"
+      ? info.isUsingOverage
+      : typeof info.overageInUse === "boolean"
+        ? info.overageInUse
+        : undefined;
   return {
     status,
     ...(utilization !== undefined ? { utilization } : {}),
     ...(resetsAt !== undefined ? { resetsAt } : {}),
     ...(windowId ? { windowId } : {}),
+    ...(overageStatus ? { overageStatus } : {}),
+    ...(overageDisabledReason ? { overageDisabledReason } : {}),
+    ...(using !== undefined ? { usingOverage: using } : {}),
   };
 }
 

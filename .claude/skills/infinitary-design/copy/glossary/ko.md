@@ -38,6 +38,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | computer | 컴퓨터 | For every computer, Mac, Linux or Windows |
 | concept / finding | 개념 / 발견 | As the card references already say |
 | conversation | 대화 | Replaces session and transcript; "The crewmate's session" is 선원의 대화 |
+| credits (a provider's, paid past the allowance) | 크레딧 | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 선원들 | The first mate's helpers as a group |
 | crewmate | 선원 | One helper; "Crewmate" as a tab label is 선원 |
 | custom API | 사용자 지정 API | A connection to a model server the person adds themselves; macOS Korean says 사용자 지정 |
@@ -55,6 +56,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | drop (a task) | 중단 | As the feed already says 중단됨 |
 | Dynamic routing | 동적 배분 | Sending work by level, then by allowance left |
 | evidence | 근거 | "Differing evidence" is 엇갈리는 근거 |
+| extra usage (Claude's credits past the allowance) | 추가 사용량 | |
 | feed / activity | 활동 | |
 | file (to the backlog) | 백로그에 등록 | "Why it was filed" is 등록한 이유 |
 | fingerprint (a computer's key) | 지문 |  |

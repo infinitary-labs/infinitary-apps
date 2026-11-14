@@ -125,6 +125,22 @@ describe("parseCopilotUsage", () => {
     expect(parsed.windows[0]?.resetText).toMatch(/^resets /);
   });
 
+  it("reads paid premium requests past the allowance as a credits fact, shown only", () => {
+    // INF-4104 piece 1: `overage_permitted` on the premium-requests snapshot.
+    expect(parseCopilotUsage(PAID_SEAT, NOW)).toMatchObject({ credits: { state: "off" } });
+    const permitted = {
+      ...PAID_SEAT,
+      quota_snapshots: {
+        ...PAID_SEAT.quota_snapshots,
+        premium_interactions: {
+          ...PAID_SEAT.quota_snapshots.premium_interactions,
+          overage_permitted: true,
+        },
+      },
+    };
+    expect(parseCopilotUsage(permitted, NOW)).toMatchObject({ credits: { state: "available" } });
+  });
+
   it("shows chat beside premium requests when the plan meters it", () => {
     const parsed = parseCopilotUsage(FREE_SEAT, NOW);
     expect(parsed.kind).toBe("windows");

@@ -1,0 +1,41 @@
+{
+  "plan_type": "pro",
+  "rate_limit": {
+    "allowed": true,
+    "limit_reached": false,
+    "primary_window": {
+      "used_percent": 84,
+      "limit_window_seconds": 604800,
+      "reset_after_seconds": 215009,
+      "reset_at": 1794821641
+    },
+    "secondary_window": null
+  },
+  "code_review_rate_limit": null,
+  "additional_rate_limits": null,
+  "model_usage": {
+    "gpt-6-astra": {
+      "available": true,
+      "available_at": null,
+      "credits_would_enable": false
+    }
+  },
+  "credits": {
+    "has_credits": true,
+    "unlimited": false,
+    "overage_limit_reached": false,
+    "balance": "32684.7473575000",
+    "approx_local_messages": [8171, 42490],
+    "approx_cloud_messages": [1307, 8171]
+  },
+  "spend_control": {
+    "reached": false,
+    "individual_limit": null
+  },
+  "rate_limit_reached_type": null,
+  "promo": null,
+  "rate_limit_reset_credits": {
+    "available_count": 1,
+    "applicable_available_count": 0
+  }
+}

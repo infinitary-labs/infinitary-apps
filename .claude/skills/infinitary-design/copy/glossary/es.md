@@ -36,6 +36,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | connection (to a server) | conexión | Feminine, so its status agrees: "Lista", "Comprobada", "En pausa". |
 | conversation | conversación | A crewmate's session is "las notas del tripulante". |
 | cost limit | límite de costo | A project's estimated-dollar cap; kept apart from the plan's allowance, which never says "límite". |
+| credits (a provider's, paid past the allowance) | créditos | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | tripulación | |
 | crewmate | tripulante | Masculine by default ("el tripulante", "los tripulantes"). |
 | custom API | API personalizada | Feminine: "una API personalizada"; a connection the person adds to a server of their own. |
@@ -50,6 +51,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | drop (a task) | abandonar | "Abandonada", kept apart from "descartar". |
 | Enable… / Turn on | Activar… / Activar | "Activar…" opens the review whose button is "Activar"; "Turn off" is "Desactivar". |
 | escalate (never said) | un modelo más potente | |
+| extra usage (Claude's credits past the allowance) | uso adicional | |
 | feed / activity | Actividad | |
 | fetch (a server's list of models) | obtener | "Obtener del servidor", "Obteniendo…". |
 | file (to the backlog) | anotar | "Por qué se anotó"; only for the backlog, never for work that starts now. |

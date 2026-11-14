@@ -5,7 +5,9 @@ import { effectiveFromProvider } from "./catalog";
 import {
   PUSHED_STALE_AFTER_MS,
   PushedQuotaStore,
+  pushedCredits,
   pushedProviderViews,
+  withPushedCredits,
   withRejectedReadings,
 } from "./pushedQuota";
 
@@ -201,5 +203,99 @@ describe("withRejectedReadings", () => {
     // A sign-out the sensor proved is not rewritten into a zero window.
     const proven: QuotaProviderView = { ...sensed, status: "auth_required", windows: [] };
     expect(withRejectedReadings(proven, [rejected], NOW)).toBe(proven);
+  });
+});
+
+describe("extra usage a session pushed (INF-4104 piece 1)", () => {
+  const onExtra = {
+    windowId: "five_hour",
+    status: "rejected" as const,
+    utilization: 1,
+    resetsAt: NOW + 3_600_000,
+    overageStatus: "allowed" as const,
+    usingOverage: true,
+    at: NOW,
+  };
+
+  it("keeps what the reading said about extra usage across a restart", () => {
+    const db = openInMemoryDatabase();
+    new PushedQuotaStore(db).record("acct_a", {
+      ...onExtra,
+      windowId: "seven_day",
+      overageStatus: "rejected",
+      overageReason: "out_of_credits",
+      usingOverage: false,
+    });
+    new PushedQuotaStore(db).record("acct_a", onExtra);
+    const windows = new PushedQuotaStore(db)
+      .windowsFor("acct_a")
+      .sort((a, b) => a.windowId.localeCompare(b.windowId));
+    expect(windows).toEqual([
+      onExtra,
+      {
+        ...onExtra,
+        windowId: "seven_day",
+        overageStatus: "rejected",
+        overageReason: "out_of_credits",
+        usingOverage: false,
+      },
+    ]);
+  });
+
+  it("reads the newest reading that spoke of extra usage", () => {
+    expect(pushedCredits([onExtra], NOW)?.credits).toEqual({ state: "available", inUse: true });
+    // Answering on it now is a claim only a current reading makes.
+    expect(pushedCredits([onExtra], NOW + PUSHED_STALE_AFTER_MS + 1)?.credits).toEqual({
+      state: "available",
+    });
+    const refused = (overageReason?: string) => ({
+      ...onExtra,
+      overageStatus: "rejected" as const,
+      ...(overageReason ? { overageReason } : {}),
+      at: NOW + 60,
+    });
+    expect(pushedCredits([onExtra, refused("out_of_credits")], NOW)?.credits).toEqual({
+      state: "spent",
+    });
+    expect(pushedCredits([onExtra, refused("org_level_disabled")], NOW)?.credits).toEqual({
+      state: "off",
+    });
+    // A reason the client could not read is unknown, never off.
+    expect(pushedCredits([refused("fetch_error")], NOW)?.credits).toEqual({ state: "unknown" });
+    expect(pushedCredits([refused()], NOW)?.credits).toEqual({ state: "unknown" });
+    // A reading that said nothing about extra usage says nothing.
+    expect(pushedCredits([{ windowId: "five_hour", status: "allowed", at: NOW }], NOW)).toBe(
+      undefined,
+    );
+  });
+
+  it("lets the newer of the sensor and the session decide, keeping the sensor's share", () => {
+    const sensed: QuotaProviderView = {
+      provider: "claude",
+      label: "Claude",
+      accountId: "acct_a",
+      status: "ok",
+      stale: false,
+      measuredAt: NOW - 60_000,
+      windows: [],
+      credits: { state: "available", usedPercent: 12 },
+    };
+    expect(withPushedCredits(sensed, [onExtra], NOW).credits).toEqual({
+      state: "available",
+      usedPercent: 12,
+      inUse: true,
+    });
+    const outOfCredits = {
+      ...onExtra,
+      overageStatus: "rejected" as const,
+      overageReason: "out_of_credits",
+    };
+    expect(withPushedCredits(sensed, [outOfCredits], NOW).credits).toEqual({ state: "spent" });
+    // A sensor reading taken after the session's word wins.
+    const newer = { ...sensed, measuredAt: NOW + 60_000, credits: { state: "off" as const } };
+    expect(withPushedCredits(newer, [onExtra], NOW).credits).toEqual({ state: "off" });
+    // A row that is not a reading is left as it stands.
+    const unread = { ...sensed, status: "unavailable" as const, credits: undefined };
+    expect(withPushedCredits(unread, [onExtra], NOW)).toBe(unread);
   });
 });

@@ -460,6 +460,11 @@ export function AccountRow({
               {view.verdict.text}
             </span>
           )}
+          {view.credits && (
+            <span className="fm-subs-credits" data-credits="">
+              {view.credits}
+            </span>
+          )}
           {view.stateText ? (
             <span
               className="fm-subs-state"

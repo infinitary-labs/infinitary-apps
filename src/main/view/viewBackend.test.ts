@@ -1,3 +1,4 @@
+import { CONTRACT_CHANGES } from "@core/connection/contractChanges";
 import type { HomeLinkOptions, HomeLinkState } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import type { UpdateChecker } from "@core/update/updateChecker";

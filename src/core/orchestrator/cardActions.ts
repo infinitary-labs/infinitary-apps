@@ -48,6 +48,7 @@ import {
   REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
 import { allowanceCovers, type IntegrationAllowance } from "@shared/writeAsk";
+import { z } from "zod";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
 import { keepImages } from "../attachments";
@@ -75,6 +76,14 @@ import { approvableOffer, taskPull } from "./mergeAuthorization";
 import { holdsMerge, type MergeBehind } from "./settleCardFacts";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
+
+/**
+ * A gesture as the consequential checks below read it: its offer, lifecycle
+ * and remount decide, and what pressed the button (`input`) is never part
+ * of that reading, so an input this home cannot read never refuses a press
+ * (docs/card-evidence.md, "What a click carries").
+ */
+const gestureSchema = cardSubmissionSchema.extend({ input: z.unknown().optional() });
 
 /** Typed refusal lets non-UI consumers retain the open card rather than accept it. */
 export class CardChoiceUnavailableError extends Error {
@@ -405,7 +414,7 @@ export class CardActions {
     const confirming = effect?.kind === "host" && effect.op === "confirm-required-action";
     const consequentialMerge = card.requiredActions !== undefined && merge !== undefined;
     if ((confirming || consequentialMerge) && submission !== undefined) {
-      const gesture = cardSubmissionSchema.safeParse(submission);
+      const gesture = gestureSchema.safeParse(submission);
       if (
         !gesture.success ||
         gesture.data.remounted ||
@@ -472,8 +481,7 @@ export class CardActions {
         this.core.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");
       }
-      const gesture =
-        submission === undefined ? undefined : cardSubmissionSchema.safeParse(submission);
+      const gesture = submission === undefined ? undefined : gestureSchema.safeParse(submission);
       if (
         source !== "chrome" ||
         (gesture &&
@@ -499,7 +507,7 @@ export class CardActions {
           )
         : undefined;
     if (allowanceOffer && submission !== undefined) {
-      const gesture = cardSubmissionSchema.safeParse(submission);
+      const gesture = gestureSchema.safeParse(submission);
       if (!gesture.success || gesture.data.remounted || gesture.data.offerId !== card.offerId) {
         this.core.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");
@@ -516,7 +524,7 @@ export class CardActions {
       effect.integration &&
       submission !== undefined
     ) {
-      const gesture = cardSubmissionSchema.safeParse(submission);
+      const gesture = gestureSchema.safeParse(submission);
       if (!gesture.success || gesture.data.remounted || gesture.data.offerId !== card.offerId) {
         this.core.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");

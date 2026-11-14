@@ -95,10 +95,16 @@ A revision on a shown crewmate card records the shown offer as still `available`
 
 The shell stamps each gesture (`src/renderer/src/app/cardActions.ts`): a random 32-hex interaction id, the lifecycle and offer ids of the card it mounted, and for a footer click with a form, whether the reading was `fresh`, a `fallback` to the last draft, or `none`, whether the card was remounted with another offer while it waited, and the question definitions.
 It rides `inf:cards:act`, `inf:cards:close` and `inf:cards:reply` as one optional trailing argument (protocol 1.37.0).
+A button's press also says what pressed it, as `input` (`src/renderer/src/app/pressInput.ts`, INF-4175): a pointer and which (`mouse`, `pen` or `touch`), the focused button's own `Enter` or `Space`, or a window command that presses it - by its key (`key`, with the `command` and the `keys` it had installed then, such as ⌘1) or chosen in command search (`command-search`, with the `command`).
+A footer choice and a note's own button send it on `inf:cards:act` and `inf:cards:note-done`; the action observation keeps it beside the press.
+The shell sends none when it cannot tell, such as a click a script made, so a missing input is unknown, never guessed; the core leaves out an input it cannot read and records the rest of the press.
+What pressed a button never changes what the press does.
+A view leaves `input` out for a home that does not list `card-press-input` (`src/main/view/cardPressInput.ts`), since an older home reads the submission strictly.
 
 The core normally reads that metadata leniently: a missing or malformed submission does not refuse a choice.
 For a durable required action's confirmation or a merge with declared requirements, submitted metadata must name the current offer and lifecycle and must not say it remounted (`docs/required-actions.md`).
 The host refuses stale or unreadable submitted metadata before it records completion or authorizes merging; a legacy caller that submits no metadata remains supported.
+Those checks read only the offer, lifecycle and remount: what pressed the button (`input`, above) is never part of them, so an input the host cannot read never refuses a press (`src/core/orchestrator/cardActions.ts`).
 Otherwise it only decides the recorded **display fidelity**:
 
 - `matched` - the shell showed the offer the core dispatched;

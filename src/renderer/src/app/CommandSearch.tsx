@@ -111,7 +111,7 @@ function SearchPanel({
     const row = rows[index];
     if (!row || row.refusal !== null) return;
     closeCommandSearch();
-    runWindowCommand(row.id);
+    runWindowCommand(row.id, "command-search");
   };
   const latest = useRef({ rows, at, choose });
   latest.current = { rows, at, choose };

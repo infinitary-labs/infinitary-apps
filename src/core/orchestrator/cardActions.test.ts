@@ -431,6 +431,36 @@ describe("a crewmate's integration approval card (INF-2993)", () => {
     expect(kept?.sentAt).toBeUndefined();
   });
 
+  // INF-4190: what pressed the button never changes what the press does, so
+  // an input this home cannot read - a key label past its bound, or a kind a
+  // later window adds - never refuses a consequential press on the current offer.
+  it("takes an approval pressed on the current offer whatever input it names, readable or not", async () => {
+    const send = sendTaken();
+    const { h, crewmate, taskId } = await started(send);
+    const ask = integrationAsk("pr-a", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 1);
+    h.tasks.delivery.keepWriteAsk(taskId, ask);
+    h.supervisor.integrationAsks.askIntegration(taskId, ask);
+    await endTurn(crewmate, taskId, "The proof pull request waits on the captain's click.");
+    const shown = h.supervisor.cards.get("integration-ask-pr-a");
+
+    expect(
+      h.supervisor.cardActions.act("integration-ask-pr-a", "once", "chrome", undefined, {
+        id: "gesture-0003",
+        lifecycleId: shown?.lifecycleId,
+        offerId: shown?.offerId,
+        // A Linux two-key binding's label, past the input's 32-character bound.
+        input: {
+          kind: "key",
+          command: "cards.choice-1",
+          keys: ["Ctrl+Alt+Shift+K Ctrl+Alt+Shift+S"],
+        },
+      }),
+    ).toEqual({});
+    await tick();
+    await tick();
+    expect(ran(send)).toEqual(["pr-a once"]);
+  });
+
   it("refuses a click on an offer the card showed before an ask joined, and shows the current list", async () => {
     const send = sendTaken();
     const { h, crewmate, taskId } = await started(send);

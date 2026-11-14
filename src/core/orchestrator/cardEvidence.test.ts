@@ -173,6 +173,44 @@ describe("CardService evidence", () => {
     expect(only(cardStore, legacy, "action")[0]?.payload.interactionSource).toBe("host");
   });
 
+  // INF-4175: a choice's record could not tell a click from a key, so how an
+  // unclicked Start was pressed stayed unknown. The press keeps what the
+  // shell said pressed it; an input it cannot read is left out, never a
+  // reason to doubt the rest of the press.
+  it("keeps what pressed the button with the choice, and leaves out an input it cannot read", () => {
+    const { tasks, cardStore, make } = setup();
+    seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
+    const cards = make();
+    const [keyed, unreadable, unsaid] = ["key", "odd", "none"].map((suffix) =>
+      cards.addFirstmateCard({ ...decision, id: `fm-input-${suffix}`, taskId: "t1" }),
+    ) as [string, string, string];
+    const press = (id: string, input?: unknown) => {
+      const shown = cards.shown(id) as Card;
+      cards.resolve(shown, "right", "right", undefined, "captain", {
+        source: "chrome",
+        submission: {
+          id: `gesture-${id}`,
+          offerId: shown.offerId,
+          lifecycleId: shown.lifecycleId,
+          ...(input !== undefined ? { input } : {}),
+        },
+      });
+    };
+    const commandKey = { kind: "key", command: "cards.choice-1", keys: ["⌘1"] } as const;
+    press(keyed, commandKey);
+    press(unreadable, { kind: "telepathy" });
+    press(unsaid);
+    const payload = (id: string) => only(cardStore, id, "action")[0]?.payload;
+    expect(payload(keyed)).toMatchObject({
+      display: { fidelity: "matched" },
+      interactionSource: "shell",
+      input: commandKey,
+    });
+    expect(payload(unreadable)?.display.fidelity).toBe("matched");
+    expect(payload(unreadable)).not.toHaveProperty("input");
+    expect(payload(unsaid)).not.toHaveProperty("input");
+  });
+
   it("uses the current answer hold across reopen and restart without erasing historical messages or choices", () => {
     const directory = scratchDir("infinitary-thread-witness-");
     let { db, tasks, cardStore, make } = setup(openDatabase(directory));

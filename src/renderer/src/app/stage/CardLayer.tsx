@@ -844,8 +844,17 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   lentStage.current = null;
   if (!layerCard || !layerView) return null;
 
-  const onCardAction: StackedCardProps["onAction"] = (actionId, source, value, collect, mounted) =>
-    cardId ? actOnCard(cardId, actionId, source, value, collect, mounted) : Promise.resolve();
+  const onCardAction: StackedCardProps["onAction"] = (
+    actionId,
+    source,
+    value,
+    collect,
+    mounted,
+    input,
+  ) =>
+    cardId
+      ? actOnCard(cardId, actionId, source, value, collect, mounted, input)
+      : Promise.resolve();
 
   // A held record or past card reads its title rather than carrying it on the stack entry.
   const shownTitle = (recordTitle?: string) =>

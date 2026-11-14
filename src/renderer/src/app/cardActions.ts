@@ -5,6 +5,7 @@ import type {
   CardActionSource,
   CardAnswer,
   CardMessage,
+  CardPressInput,
   CardSubmission,
 } from "@shared/cards";
 import {
@@ -95,13 +96,14 @@ export type CardSlice = {
     value?: unknown,
     collect?: (focusUnpicked?: boolean) => Promise<FrameAnswers | undefined>,
     mounted?: CardMount,
+    input?: CardPressInput,
   ) => Promise<void>;
   /** A card body's frame read its form again (the bridge's `answers`). */
   setCardAnswers: (cardId: string, answers: FrameAnswers) => void;
   /** The close control; `mounted` is the card it was clicked on. */
   closeCard: (cardId: string, mounted?: CardMount) => void;
-  /** A live note's own button, Done or Got it (INF-2794); `mounted` as on close. */
-  pressNote: (cardId: string, mounted?: CardMount) => Promise<void>;
+  /** A live note's own button, Done or Got it (INF-2794); `mounted` as on close, `input` what pressed it. */
+  pressNote: (cardId: string, mounted?: CardMount, input?: CardPressInput) => Promise<void>;
   /** Read one card's thread from the core; idempotent, and safe to call on every show. */
   loadThread: (cardId: string) => void;
   /** Adopt a pushed thread (`inf:cards:thread`). */
@@ -133,12 +135,16 @@ function gestureId(): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** What the shell says about a gesture beside it: its id and the card it had mounted. */
-function submissionFor(mounted: CardMount | undefined): CardSubmission {
+/**
+ * What the shell says about a gesture beside it: its id, the card it had
+ * mounted, and on a button's press what pressed it (./pressInput).
+ */
+function submissionFor(mounted: CardMount | undefined, input?: CardPressInput): CardSubmission {
   return {
     id: gestureId(),
     ...(mounted?.lifecycleId ? { lifecycleId: mounted.lifecycleId } : {}),
     ...(mounted?.offerId ? { offerId: mounted.offerId } : {}),
+    ...(input ? { input } : {}),
   };
 }
 
@@ -176,7 +182,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
     replyPastes: {},
     replyImages: {},
     closedThreadIds: [],
-    actOnCard: async (cardId, actionId, source = "chrome", value, collect, mounted) => {
+    actOnCard: async (cardId, actionId, source = "chrome", value, collect, mounted, input) => {
       const offered = get().cards.find((card) => card.id === cardId);
       if (get().pendingCardActions[cardId] || !offered) return;
       const thisMac = get().thisMac;
@@ -198,7 +204,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         return;
       }
       const request = { actionId };
-      const submission = submissionFor(mounted);
+      const submission = submissionFor(mounted, input);
       set((s) => ({
         pendingCardActions: { ...s.pendingCardActions, [cardId]: request },
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
@@ -326,7 +332,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
       const card = get().cards.find((entry) => entry.id === cardId);
       void leaveCard(card, cardId, mounted).catch(() => {});
     },
-    pressNote: async (cardId, mounted) => {
+    pressNote: async (cardId, mounted, input) => {
       const thisMac = get().thisMac;
       if (isView(thisMac) && changesOff(thisMac)) {
         set((s) => ({
@@ -340,7 +346,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
       }));
       try {
-        await window.infinitary.cards.noteDone(cardId, submissionFor(mounted));
+        await window.infinitary.cards.noteDone(cardId, submissionFor(mounted, input));
       } catch (caught) {
         const message = caught instanceof Error ? caught.message : String(caught);
         set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: message } }));

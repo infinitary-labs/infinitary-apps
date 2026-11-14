@@ -16,6 +16,7 @@ import {
   type CardObservationSource,
   type CardQuestion,
   type CardSubmission,
+  cardPressInputSchema,
   cardQuestionsBytes,
   cardQuestionsSchema,
   cardSubmissionSchema,
@@ -319,6 +320,7 @@ export class CardEvidence {
         ...(evidence?.context ? { context: evidence.context } : {}),
         ...(evidence?.contextGap ? { contextGap: evidence.contextGap } : {}),
         interactionSource: submission ? "shell" : "host",
+        ...(submission?.input ? { input: submission.input } : {}),
       },
     });
     return kept ? id : undefined;
@@ -538,14 +540,23 @@ type SubmissionReading = {
   questionsGap?: "no-fresh-reading" | "too-large" | "invalid";
 };
 
-const submissionEnvelopeSchema = cardSubmissionSchema.extend({ questions: z.unknown().optional() });
+const submissionEnvelopeSchema = cardSubmissionSchema.extend({
+  questions: z.unknown().optional(),
+  input: z.unknown().optional(),
+});
 
 function readSubmission(raw: unknown): SubmissionReading {
   if (raw === undefined) return { malformed: false };
   const envelope = submissionEnvelopeSchema.safeParse(raw);
   if (!envelope.success) return { malformed: true };
-  const { questions: rawQuestions, ...rest } = envelope.data;
-  const submission: CardSubmission = rest;
+  const { questions: rawQuestions, input: rawInput, ...rest } = envelope.data;
+  // What pressed the button is kept only as the shell said it; an input
+  // that cannot be read is left out, never a reason to doubt the rest.
+  const input = cardPressInputSchema.safeParse(rawInput);
+  const submission: CardSubmission = {
+    ...rest,
+    ...(rawInput !== undefined && input.success ? { input: input.data } : {}),
+  };
   if (rawQuestions === undefined) {
     return {
       submission,

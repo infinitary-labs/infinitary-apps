@@ -59,7 +59,7 @@ test("picture viewer and command search cover the annotation popover without cle
   expect.soft(coversPick(viewer.element())).toBe(true);
   await userEvent.keyboard("{Escape}");
   await expect.element(viewer).not.toBeInTheDocument();
-  expect(runWindowCommand("commands.search")).toBe(true);
+  expect(runWindowCommand("commands.search", "key")).toBe(true);
   const search = page.getByRole("dialog", { name: "Search commands" });
   await expect.element(search).toBeVisible();
   const backdrop = search.element().closest("[data-command-search-backdrop]");

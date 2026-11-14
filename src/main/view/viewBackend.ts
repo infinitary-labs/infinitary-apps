@@ -33,6 +33,7 @@ import {
 import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
+import { pressInputFor } from "./cardPressInput";
 import { namedCards, namedHere, namedHereError } from "./namedHere";
 import { ViewLook } from "./viewLook";
 import { ViewNotices } from "./viewNotices";
@@ -313,11 +314,8 @@ export class ViewBackend {
     // with the other Mac's own words naming it where they say this computer.
     const name = () => this.homeName();
     try {
-      return namedHere(
-        channel,
-        await this.link.invoke(channel, rawArgs),
-        name,
-      ) as InvokeResponse<C>;
+      const args = pressInputFor(channel, rawArgs, this.link.state().homeChanges);
+      return namedHere(channel, await this.link.invoke(channel, args), name) as InvokeResponse<C>;
     } catch (caught) {
       throw namedHereError(caught, name);
     }

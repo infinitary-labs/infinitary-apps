@@ -5,6 +5,7 @@ import {
   type Card,
   type CardAction,
   type CardActionSource,
+  type CardPressInput,
   type CardWidth,
   cardMetaWords,
   cardTakesReplies,
@@ -59,6 +60,7 @@ import type { CardKindContribution } from "../../plugins/contributions";
 import type { CardMount } from "../cardActions";
 import { mainMessageRefusal } from "../composer";
 import { useCommandKeys } from "../keyHints";
+import { pressInputOf } from "../pressInput";
 import { useShellStore } from "../store";
 import { factStripOf } from "./entryView";
 
@@ -120,6 +122,7 @@ export type StackedCardProps = {
     value?: unknown,
     collect?: CollectAnswers,
     mounted?: CardMount,
+    input?: CardPressInput,
   ) => Promise<void>;
   onPicture?: React.ComponentProps<typeof HtmlCardBody>["onPicture"];
   onDrawn?: () => void;
@@ -447,12 +450,14 @@ export function StackedCard({
                     aria-description={actionOff ?? undefined}
                     aria-disabled={unanswered && action.default ? true : undefined}
                     // The offer this footer belongs to rides the click, read now.
-                    onClick={() => {
+                    onClick={(event) => {
                       if (unanswered && action.default) {
                         void collect(true);
                         return;
                       }
-                      void onAction(action.id, "chrome", undefined, collect, card);
+                      // What pressed it rides the click, read now (./pressInput).
+                      const input = pressInputOf(event.nativeEvent, event.currentTarget);
+                      void onAction(action.id, "chrome", undefined, collect, card, input);
                     }}
                   >
                     {action.label}
@@ -476,7 +481,13 @@ export function StackedCard({
                   off={offWords !== null}
                   note={noticeCovers ? undefined : (offWords ?? noteDone.restWords)}
                   aria-description={offWords ?? undefined}
-                  onClick={() => void pressNote(card.id, card)}
+                  onClick={(event) =>
+                    void pressNote(
+                      card.id,
+                      card,
+                      pressInputOf(event.nativeEvent, event.currentTarget),
+                    )
+                  }
                 >
                   {noteDone.label}
                 </Button>

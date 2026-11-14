@@ -1006,6 +1006,23 @@ export type CardQuestionsGap = z.infer<typeof cardQuestionsGapSchema>;
  * footer's answers came from: the mounted frame's fresh reading, the shell's
  * last draft when the frame could not answer, or no form at all.
  */
+/**
+ * What pressed a card's button, as the window heard it (INF-4175): a pointer
+ * and which (`mouse`, `pen` or `touch`); the focused button's own key
+ * (`Enter` or `Space`); or a window command that presses it, by its key
+ * (`key` with the `command` and the `keys` it had installed then, such as
+ * ⌘1) or chosen in command search. The window sends none when it could not
+ * tell, so a missing input is unknown, never guessed.
+ */
+export const cardPressInputSchema = z.strictObject({
+  kind: z.enum(["pointer", "key", "command-search"]),
+  pointer: z.enum(["mouse", "pen", "touch"]).optional(),
+  key: z.enum(["Enter", "Space"]).optional(),
+  command: z.string().max(64).optional(),
+  keys: z.array(z.string().max(32)).max(8).optional(),
+});
+export type CardPressInput = z.infer<typeof cardPressInputSchema>;
+
 export const cardSubmissionSchema = z.strictObject({
   id: z.string().min(8).max(64),
   lifecycleId: z.string().max(64).optional(),
@@ -1015,6 +1032,8 @@ export const cardSubmissionSchema = z.strictObject({
   remounted: z.literal(true).optional(),
   questions: cardQuestionsSchema.optional(),
   questionsGap: cardQuestionsGapSchema.optional(),
+  /** What pressed the button, on an action or a note's own button (`card-press-input.md`). */
+  input: cardPressInputSchema.optional(),
 });
 export type CardSubmission = z.infer<typeof cardSubmissionSchema>;
 
@@ -1862,6 +1881,8 @@ export const cardActionPayloadSchema = z.strictObject({
   contextGap: z.enum(["no-task", "task-missing"]).optional(),
   /** Who minted the interaction id: the shell at the gesture, or the host for a click that sent none. */
   interactionSource: z.enum(["shell", "host"]),
+  /** What pressed the button, as the shell said; absent when it did not say or could not tell. */
+  input: cardPressInputSchema.optional(),
 });
 
 /**

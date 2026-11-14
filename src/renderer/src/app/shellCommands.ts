@@ -26,6 +26,7 @@ import { cardStage } from "./cardStage";
 import { commandRefusal, type WindowFacts } from "./commandRefusals";
 import { landLostFocus, typingWhereFocusRested } from "./focusLanding";
 import { available, modalOpen } from "./focusRecovery";
+import { type CommandVia, pressForCommand } from "./pressInput";
 import { projectFocus } from "./projectFocus";
 import { enterCard, moveToRegion, moveToRegionToward } from "./regions";
 import { isHeldEntry, shownEntry } from "./stack";
@@ -137,11 +138,15 @@ const cardButton = (cardId: string) =>
   shownPart(cardId, "[data-card-actions] button:enabled") ??
   answerDoneButton(cardId);
 
-/** Presses the shown card's nth choice (`choiceOrder`), the click the pointer would make. */
-function pressCardChoice(index: number): void {
+/**
+ * Presses the shown card's nth choice (`choiceOrder`), the click the pointer
+ * would make, saying that `command` pressed it and how it came (./pressInput).
+ */
+function pressCardChoice(index: number, command: ShellCommandId, via: CommandVia): void {
   const entryId = shownEntry(useShellStore.getState())?.id;
   if (!entryId) return;
-  shownPart(entryId, `[data-card-actions] [data-card-choice="${index}"]`)?.click();
+  const button = shownPart(entryId, `[data-card-actions] [data-card-choice="${index}"]`);
+  if (button) pressForCommand(button, command, via);
 }
 
 /**
@@ -239,7 +244,8 @@ export function closeCommandSearch(): void {
   else landLostFocus();
 }
 
-const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
+/** Each shell command, told how it came: a card's button it presses says so. */
+const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>> = {
   // Its own key closes it again.
   "commands.search": () => {
     if (useShellStore.getState().commandSearchOpen) closeCommandSearch();
@@ -252,10 +258,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   // Focus only: the button is pressed by its own key, through the click's checks.
   "focus.card-actions": () => toShownPart(cardButton, (button) => focusWithRing(button)),
   // The click itself: unanswered questions, pending and disabled stay the button's.
-  "cards.choice-1": () => pressCardChoice(0),
-  "cards.choice-2": () => pressCardChoice(1),
-  "cards.choice-3": () => pressCardChoice(2),
-  "cards.choice-4": () => pressCardChoice(3),
+  "cards.choice-1": (via) => pressCardChoice(0, "cards.choice-1", via),
+  "cards.choice-2": (via) => pressCardChoice(1, "cards.choice-2", via),
+  "cards.choice-3": (via) => pressCardChoice(2, "cards.choice-3", via),
+  "cards.choice-4": (via) => pressCardChoice(3, "cards.choice-4", via),
   "regions.next": () => moveToRegion(1),
   "regions.previous": () => moveToRegion(-1),
   "regions.left": () => moveToRegionToward("left"),
@@ -275,8 +281,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
     if (shownEntry(shell)) shell.putEveryCardAside();
     else shell.bringBackEveryCard();
   },
-  "cards.done": () => toShownPart(answerDoneButton, (button) => button.click()),
-  "cards.decline": () => toShownPart(declineButton, (button) => button.click()),
+  "cards.done": (via) =>
+    toShownPart(answerDoneButton, (button) => pressForCommand(button, "cards.done", via)),
+  "cards.decline": (via) =>
+    toShownPart(declineButton, (button) => pressForCommand(button, "cards.decline", via)),
   "cards.maximize": () => onShownCard((stage) => stage.toggleSize()),
   "cards.next-revision": () =>
     toShownPart(cardBody, (body) =>
@@ -518,10 +526,10 @@ export function focusPanelCard(entryId: string): void {
  * process's by asking it, a panel's through its panel. Returns whether it
  * ran. Command search closes itself before it runs what was chosen in it.
  */
-export function runWindowCommand(id: WindowCommandId | PanelCommandId): boolean {
+export function runWindowCommand(id: WindowCommandId | PanelCommandId, via: CommandVia): boolean {
   if (windowCommandRefusal(id) !== null) return false;
   if (isPanelCommandId(id)) runPanelCommand(pluginHost, id, focusPanelCard);
-  else if (isShellCommand(id)) SHELL_COMMANDS[id]();
+  else if (isShellCommand(id)) SHELL_COMMANDS[id](via);
   else void window.infinitary.keyboard.run(id).catch(() => {});
   return true;
 }
@@ -535,8 +543,11 @@ export function runWindowCommand(id: WindowCommandId | PanelCommandId): boolean 
  */
 export function followShellCommands(): () => void {
   let following = true;
+  // The main process names a command for its key, or for an app menu item;
+  // no menu item presses a card's button (src/main/appMenu.ts), so a card's
+  // press it names came from its key.
   const stopCommands = window.infinitary.keyboard.onCommand(({ command }) =>
-    runWindowCommand(command),
+    runWindowCommand(command, "key"),
   );
   // A movement command's key for a frame (docs/keyboard.md, "Moving by a key of your own").
   const stopMoves = window.infinitary.keyboard.onMove(({ key, frame }) => moveInFrame(key, frame));

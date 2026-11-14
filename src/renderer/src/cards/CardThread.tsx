@@ -33,6 +33,7 @@ import {
 } from "react";
 import { ComposerNoticeView } from "../app/ComposerNotice";
 import { useCommandKeys } from "../app/keyHints";
+import { pressInputOf } from "../app/pressInput";
 import { useShellStore } from "../app/store";
 import { replyDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
@@ -815,7 +816,9 @@ function EndedLine({ card }: { card: Pick<Card, "id" | "ended" | "lifecycleId" |
           variant="secondary"
           data-thread-ended-close=""
           disabled={pending}
-          onClick={() => void pressNote(card.id, card)}
+          onClick={(event) =>
+            void pressNote(card.id, card, pressInputOf(event.nativeEvent, event.currentTarget))
+          }
         >
           {ENDED_CLOSE_CARD_LABEL}
         </Button>

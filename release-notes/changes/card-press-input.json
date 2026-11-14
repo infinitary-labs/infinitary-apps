@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-press-input",
+      "reason": "Internal record only: each card press now keeps what pressed it (pointer, key or command search) in the card's saved evidence; nothing a person sees or does changes."
+    }
+  ]
+}

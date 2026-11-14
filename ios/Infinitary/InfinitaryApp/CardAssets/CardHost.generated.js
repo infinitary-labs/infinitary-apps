@@ -70523,6 +70523,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   });
   const cardQuestionsSchema = array(cardQuestionSchema).max(CARD_MAX_ANSWERS);
   const cardQuestionsGapSchema = _enum(["no-fresh-reading", "too-large", "invalid"]);
+  const cardPressInputSchema = strictObject({
+    kind: _enum(["pointer", "key", "command-search"]),
+    pointer: _enum(["mouse", "pen", "touch"]).optional(),
+    key: _enum(["Enter", "Space"]).optional(),
+    command: string().max(64).optional(),
+    keys: array(string().max(32)).max(8).optional()
+  });
   strictObject({
     id: string().min(8).max(64),
     lifecycleId: string().max(64).optional(),
@@ -70531,7 +70538,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The card showed another offer by the time the reading came back. */
     remounted: literal(true).optional(),
     questions: cardQuestionsSchema.optional(),
-    questionsGap: cardQuestionsGapSchema.optional()
+    questionsGap: cardQuestionsGapSchema.optional(),
+    /** What pressed the button, on an action or a note's own button (`card-press-input.md`). */
+    input: cardPressInputSchema.optional()
   });
   const CARD_ASKED_KINDS = ["asked", "said", "chose", "automation", "from"];
   const cardAskedSchema = strictObject({
@@ -70971,7 +70980,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     context: cardDecisionContextSchema.optional(),
     contextGap: _enum(["no-task", "task-missing"]).optional(),
     /** Who minted the interaction id: the shell at the gesture, or the host for a click that sent none. */
-    interactionSource: _enum(["shell", "host"])
+    interactionSource: _enum(["shell", "host"]),
+    /** What pressed the button, as the shell said; absent when it did not say or could not tell. */
+    input: cardPressInputSchema.optional()
   });
   strictObject({
     messageId: number().int(),

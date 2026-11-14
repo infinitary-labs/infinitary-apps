@@ -278,3 +278,77 @@ it("tells no waiting panels switch once the view is closed", async () => {
   await new Promise<void>((resolve) => setImmediate(resolve));
   expect(sent).toEqual([]);
 });
+
+// INF-4175: a choice's record names what pressed its button. An older home
+// reads the press's submission strictly and would take one naming its input
+// as unreadable, so a view leaves the input out there and sends it to a home
+// that lists the change.
+it("sends what pressed a card's button only to a home that reads it", async () => {
+  let changes: HomeLinkState["homeChanges"] = null;
+  const invoke = vi.fn(async () => ({}));
+  const view = new ViewBackend({
+    joined: new JoinedHome(scratchDir("view-press-input-")),
+    record: {
+      version: 1,
+      grant: {
+        at: "127.0.0.1:1",
+        homeKey: "unused",
+        deviceId: "view",
+        kind: "view",
+        key: "unused",
+        cert: "unused",
+      },
+      name: null,
+      joinedAt: 1,
+    },
+    broadcast: () => {},
+    notifications: { supported: () => false, focused: () => true, show: () => {} },
+    onThisMac: () => {},
+    onRemoved: () => {},
+    // No update action is used by a card's press.
+    updates: {} as UpdateChecker,
+    link: () => ({
+      start: () => {},
+      state: () => ({
+        contact: "in-reach",
+        access: "full",
+        homeVersion: null,
+        homeChanges: changes,
+        name: null,
+        takesWork: null,
+        onHomeMac: null,
+        heardAt: null,
+        removed: false,
+      }),
+      invoke: invoke as never,
+      leave: async () => true,
+      close: () => {},
+    }),
+  });
+  views.push(view);
+  const pressed = { id: "862e395c997ddf0c7f20cc8187ca2157", offerId: "offer-1" };
+  const input = { kind: "pointer", pointer: "mouse" } as const;
+  const act = (submission: object) => ["card-1", "start", "chrome", undefined, submission];
+  const noteDone = (submission: object) => ["card-1", submission];
+  for (const older of [
+    null,
+    CONTRACT_CHANGES.names.filter((name) => name !== "card-press-input"),
+  ]) {
+    changes = older;
+    invoke.mockClear();
+    await view.dispatch("inf:cards:act", act({ ...pressed, input }) as never);
+    await view.dispatch("inf:cards:note-done", noteDone({ ...pressed, input }) as never);
+    expect(invoke.mock.calls).toEqual([
+      ["inf:cards:act", act(pressed)],
+      ["inf:cards:note-done", noteDone(pressed)],
+    ]);
+  }
+  changes = [...CONTRACT_CHANGES.names];
+  invoke.mockClear();
+  await view.dispatch("inf:cards:act", act({ ...pressed, input }) as never);
+  await view.dispatch("inf:cards:note-done", noteDone({ ...pressed, input }) as never);
+  expect(invoke.mock.calls).toEqual([
+    ["inf:cards:act", act({ ...pressed, input })],
+    ["inf:cards:note-done", noteDone({ ...pressed, input })],
+  ]);
+});

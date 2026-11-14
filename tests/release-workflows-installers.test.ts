@@ -47,18 +47,13 @@ describe("the cask republication workflow", () => {
   ): Step[] | null => {
     const contexts = { github: { ref, repository }, inputs };
     if (workflowValue(job.if, contexts) !== true) return null;
-    const outcomes: Record<string, { outcome: string; outputs?: { run: string } }> = {};
+    const outcomes: Record<string, { outcome: string }> = {};
     const ran: Step[] = [];
     for (const candidate of job.steps) {
       const runs =
         candidate.if === undefined ||
         workflowValue(candidate.if, { ...contexts, steps: outcomes }) === true;
-      if (candidate.id)
-        outcomes[candidate.id] = {
-          outcome: runs ? "success" : "skipped",
-          // The path selector runs for these push/manual fixtures; irrelevant signals have their own behavioral test.
-          ...(candidate.id === "paths" && runs ? { outputs: { run: "true" } } : {}),
-        };
+      if (candidate.id) outcomes[candidate.id] = { outcome: runs ? "success" : "skipped" };
       if (runs) ran.push(candidate);
     }
     return ran;
@@ -87,8 +82,7 @@ describe("the cask republication workflow", () => {
       type: "boolean",
       default: false,
     });
-    // R2: source checkpoints need Actions read access; the workflow still grants no writes.
-    expect(workflow.permissions).toEqual({ contents: "read", actions: "read" });
+    expect(workflow.permissions).toEqual({ contents: "read" });
     expect(workflow.concurrency).toEqual({ group: "republish-casks", "cancel-in-progress": false });
   });
 

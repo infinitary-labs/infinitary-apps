@@ -721,6 +721,7 @@ The typed fact that chooses it is the workflow files that mention `infinitary/qu
 A project read with none gets batches of its own, and one that carries such a file keeps the team queue ("A project's queue" below) until the files are removed.
 A project whose files were never read is unknown, never guessed: the app reads them once before a change's merge decides (`ChangeContext.resolveOwnBatch`), and the change keeps the team queue's path while that read fails.
 It works wherever the forge seam has a host with pull requests and checks: GitHub, GitHub on a team's own server, gitlab.com and GitLab on a team's own server.
+This repository merges this way itself: what its batch runs, and how each pushed task branch is checked, is `docs/testing.md`'s ("The swept batch", "A pushed branch").
 
 A change is a pushed branch with its saved story and no pull request of its own.
 `open_change` confirms the story on the pushed branch and opens nothing (`BATCH_OPEN_WORDS`, `ChangePublication`).

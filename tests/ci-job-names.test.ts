@@ -2,11 +2,7 @@ import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { legacyJobName, splitLevel, TRIGGERS } from "../scripts/ci-job-names.mjs";
-import {
-  coveringBatch,
-  verifyBatchEvidence,
-  verifyMainEvidence,
-} from "../scripts/main-alpha-proof.mjs";
+import { coveringBatch, verifyMainEvidence } from "../scripts/main-alpha-proof.mjs";
 import { runJobNames, type Scenario } from "./helpers/ciJobNames";
 import { loadYamlFile, workflowString } from "./helpers/releaseWorkflows";
 
@@ -65,23 +61,6 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     scenario: {
       github: { event_name: "workflow_dispatch" },
       needs: { find: waitedForAlpha, sort: { outputs: { kind: "full" } } },
-    },
-  },
-  // The batch checks the shipped queue calls on a composed batch
-  // (infinitary-batch-checks.yml); the queue names its own jobs.
-  {
-    file: "infinitary-batch-checks.yml",
-    trigger: "Merge batch",
-    scenario: {
-      github: { event_name: "status", event: { context: "infinitary/queue", state: "pending" } },
-      inputs: { batch: `917:${"a".repeat(40)}`, base: "c".repeat(40), tree: "b".repeat(40) },
-      // A batch whose checks passed, so its last job runs (INF-3052).
-      needs: {
-        sweep: { result: "success" },
-        "critical-path": { result: "success" },
-        startup: { result: "success" },
-        confirm: { result: "skipped" },
-      },
     },
   },
   {
@@ -228,8 +207,8 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
-  // INF-3759's plan, piece 2: a pushed task branch runs its pull request's
-  // one job, named for the push.
+  // INF-3759's plan, pieces 2 and 3: a pushed task branch runs a pull
+  // request's one job, named for the push.
   { file: "ci.yml", trigger: "Branch push", scenario: { github: { event_name: "push" } } },
   // A batch pull request's run (batch-pull-request.yml), whose one job calls
   // batch-checks.yml on the pull request's version; its checks passed, so
@@ -262,12 +241,9 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
 ];
 
 describe("CI job names (INF-2410 scheme A, trigger first)", () => {
-  // The shipped queue (docs/forge.md, "The shipped queue") is generated for
-  // every project and names its own jobs, so this project's scheme starts at
-  // the batch checks it calls.
   const workflows = readdirSync(
     fileURLToPath(new URL("../.github/workflows/", import.meta.url)),
-  ).filter((file) => file.endsWith(".yml") && file !== "infinitary-queue.yml");
+  ).filter((file) => file.endsWith(".yml"));
   type Workflow = {
     on: Record<string, { inputs?: Record<string, { required?: boolean; default?: unknown }> }>;
     jobs: Record<
@@ -470,7 +446,9 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
     });
   });
 
-  it("names a covered push and the batch's sweep so the alpha follows them to the batch run", () => {
+  // The batch run's own job names, and the proof they give, are held in
+  // tests/batch-pull.test.ts.
+  it("names a covered push so the alpha follows it to the batch run", () => {
     const covered = runJobNames("main.yml", SCENARIOS[3]!.scenario).map((name) => ({
       name,
       run_id: 1,
@@ -480,53 +458,6 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       conclusion: "success",
     }));
     expect(coveringBatch(covered)).toBe(41700000001);
-    const tree = "b".repeat(40);
-    // The queue's own jobs, then this project's batch checks under its checks job.
-    const names = [
-      "Form the batch",
-      ...runJobNames("infinitary-batch-checks.yml", SCENARIOS[5]!.scenario).map(
-        (name) => `Batch checks / ${name}`,
-      ),
-      "Batch verdict",
-    ];
-    // INF-3052: the last job names the base too, which main's sort reads.
-    expect(names).toContain(
-      `Batch checks / Merge batch · Batch passed (tree ${tree}; base ${"c".repeat(40)})`,
-    );
-    const run = {
-      id: 2,
-      run_attempt: 1,
-      path: ".github/workflows/infinitary-queue.yml",
-      event: "status",
-      head_branch: "main",
-      head_sha: "c".repeat(40),
-      status: "completed",
-      conclusion: "success",
-      head_repository: { full_name: "infinitary-labs/infinitary" },
-      repository: { full_name: "infinitary-labs/infinitary" },
-      html_url: "https://github.com/infinitary-labs/infinitary/actions/runs/2",
-    };
-    const jobs = names.map((name) => ({
-      name,
-      run_id: 2,
-      run_attempt: 1,
-      head_sha: run.head_sha,
-      status: "completed",
-      conclusion: "success",
-    }));
-    expect(verifyBatchEvidence(run, jobs, "infinitary-labs/infinitary", tree)).toMatchObject({
-      runId: 2,
-      journeys: true,
-    });
-    // A batch of other files never proves this source.
-    expect(() =>
-      verifyBatchEvidence(run, jobs, "infinitary-labs/infinitary", "d".repeat(40)),
-    ).toThrow("other files");
-    // Nor does a batch whose checks did not all run.
-    const short = jobs.filter((job) => !job.name.endsWith("(Mac)"));
-    expect(() => verifyBatchEvidence(run, short, "infinitary-labs/infinitary", tree)).toThrow(
-      "every full-check owner",
-    );
   });
 
   it("reads a name from before the scheme as it was, and a partly renamed one as no known job", () => {

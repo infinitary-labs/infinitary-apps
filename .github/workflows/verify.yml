@@ -58,19 +58,6 @@ on:
         required: false
         type: boolean
         default: false
-      # Only the batch checks set these: the swept batch's changes, composed
-      # onto ref in every job (infinitary-batch-checks.yml; docs/testing.md,
-      # "The swept batch").
-      batch:
-        description: The swept batch's changes as number:version words, composed onto ref in every job
-        required: false
-        type: string
-        default: ""
-      batch_tree:
-        description: The tree the composed batch must have
-        required: false
-        type: string
-        default: ""
       profile:
         description: Which lanes run - stable or alpha (both run the full checks)
         required: false
@@ -217,8 +204,6 @@ jobs:
       ref: ${{ inputs.ref || github.ref }}
       hosted: ${{ inputs.hosted == true }}
       suite: full
-      batch: ${{ inputs.batch || '' }}
-      batch_tree: ${{ inputs.batch_tree || '' }}
   installer:
     needs: request
     name: ${{ format('{0} · Signed installer checks', inputs.trigger || 'Manual request') }}
@@ -293,18 +278,6 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
-      # A batch's changes, composed onto main by the shipped queue's own
-      # compose step (docs/forge.md, "The shipped queue"), the same way in
-      # every job. It runs in this job's checkout, which the composite
-      # action's own step, run from the workspace root, would miss.
-      - name: Compose the batch
-        if: inputs.batch != ''
-        env:
-          HEADS: ${{ inputs.batch }}
-          BASE: ${{ inputs.ref }}
-          TREE: ${{ inputs.batch_tree }}
-        # shellcheck disable=SC2086 # one word per change
-        run: bash .github/actions/infinitary-batch/compose.sh apply "$BASE" "$TREE" $HEADS
       # Its own folder per job: both Mac runner slots run as one user, and
       # setup wipes the default ~/setup-pnpm, pnpm's store included.
       - uses: pnpm/action-setup@v4
@@ -737,18 +710,6 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
-      # A batch's changes, composed onto main by the shipped queue's own
-      # compose step (docs/forge.md, "The shipped queue"), the same way in
-      # every job. It runs in this job's checkout, which the composite
-      # action's own step, run from the workspace root, would miss.
-      - name: Compose the batch
-        if: inputs.batch != ''
-        env:
-          HEADS: ${{ inputs.batch }}
-          BASE: ${{ inputs.ref }}
-          TREE: ${{ inputs.batch_tree }}
-        # shellcheck disable=SC2086 # one word per change
-        run: bash .github/actions/infinitary-batch/compose.sh apply "$BASE" "$TREE" $HEADS
       - uses: pnpm/action-setup@v4
         with:
           dest: ${{ runner.temp }}/setup-pnpm

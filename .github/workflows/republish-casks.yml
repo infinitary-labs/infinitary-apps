@@ -22,8 +22,6 @@ name: republish-casks
 # old-cask switch (docs/alpha.md "The old-cask switch").
 
 on:
-  repository_dispatch:
-    types: [infinitary-after-merge]
   push:
     branches: [main]
     # What the casks are written from; a run that finds them current writes
@@ -52,7 +50,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 # One republication at a time, never cancelled mid-push; each reads the tap
 # afresh, and the tap's push refuses a writer that read a stale tap.
@@ -65,7 +62,7 @@ env:
 
 jobs:
   republish:
-    name: ${{ inputs.dry_run && 'Manual request · Preview Homebrew entries; publish nothing' || format('{0} · Republish Homebrew entries', github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
+    name: ${{ inputs.dry_run && 'Manual request · Preview Homebrew entries; publish nothing' || format('{0} · Republish Homebrew entries', github.event_name == 'push' && 'Main push' || 'Manual request') }}
     # Only main's generator in Infinitary's own repository writes the tap;
     # any other ref or repository may only rehearse.
     if: ${{ (github.ref == 'refs/heads/main' && github.repository == 'infinitary-labs/infinitary') || inputs.dry_run == true }}
@@ -77,38 +74,25 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Select changed paths
-        id: paths
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {pathToFileURL} = require('node:url');
-            const {afterMergeShouldRun} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/after-merge-paths.mjs`).href);
-            core.setOutput('run', String(await afterMergeShouldRun(github, context, 'republish-casks')));
-
       # Its own folder per job: both Mac runner slots run as one user, and
       # setup wipes the default ~/setup-pnpm, pnpm's store included.
       - uses: pnpm/action-setup@v4
-        if: steps.paths.outputs.run == 'true'
         with:
           dest: ${{ runner.temp }}/setup-pnpm
 
       # No package cache on a Mac (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
-        if: steps.paths.outputs.run == 'true'
         with:
           node-version: 24
 
       - uses: ./.github/actions/electron-download
-        if: steps.paths.outputs.run == 'true'
 
       - name: Install dependencies
-        if: steps.paths.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Republish the casks
         id: tap
-        if: ${{ steps.paths.outputs.run == 'true' && (inputs.dry_run != true) }}
+        if: ${{ inputs.dry_run != true }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
@@ -119,14 +103,14 @@ jobs:
 
       - name: Rehearse the republished casks
         id: tap-rehearsal
-        if: ${{ steps.paths.outputs.run == 'true' && (inputs.dry_run == true) }}
+        if: ${{ inputs.dry_run == true }}
         run: |
           set -euo pipefail
           TAP_URL="https://github.com/$TAP_REPO.git" WORK="$RUNNER_TEMP/tap-republish" \
             OUT="$RUNNER_TEMP/tap-rehearsal" scripts/publish-tap.sh republish-rehearsal | tee "$RUNNER_TEMP/tap-result.txt"
 
       - name: Keep the rehearsed casks
-        if: ${{ steps.paths.outputs.run == 'true' && (always() && steps.tap-rehearsal.outcome == 'success') }}
+        if: ${{ always() && steps.tap-rehearsal.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: tap-republish-rehearsal
@@ -135,7 +119,7 @@ jobs:
           retention-days: 30
 
       - name: Summarize
-        if: ${{ steps.paths.outputs.run == 'true' && (always()) }}
+        if: always()
         continue-on-error: true
         env:
           DRY_RUN: ${{ inputs.dry_run == true }}

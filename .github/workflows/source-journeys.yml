@@ -47,16 +47,6 @@ on:
         required: false
         type: boolean
         default: false
-      # Only the batch checks set these, directly and through verify.yml
-      # (infinitary-batch-checks.yml; docs/testing.md, "The swept batch").
-      batch:
-        description: The swept batch's changes as number:version words, composed onto ref
-        type: string
-        default: ""
-      batch_tree:
-        description: The tree the composed batch must have
-        type: string
-        default: ""
       artifact-suffix:
         type: string
         default: source
@@ -116,18 +106,6 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
           fetch-depth: 0
-      # A batch's changes, composed onto main by the shipped queue's own
-      # compose step (docs/forge.md, "The shipped queue"), the same way in
-      # every job. It runs in this job's checkout, which the composite
-      # action's own step, run from the workspace root, would miss.
-      - name: Compose the batch
-        if: inputs.batch != ''
-        env:
-          HEADS: ${{ inputs.batch }}
-          BASE: ${{ inputs.ref }}
-          TREE: ${{ inputs.batch_tree }}
-        # shellcheck disable=SC2086 # one word per change
-        run: bash .github/actions/infinitary-batch/compose.sh apply "$BASE" "$TREE" $HEADS
       - name: Record the manual Linux request
         if: github.event_name == 'workflow_dispatch' && github.workflow == 'Source desktop journeys'
         env:

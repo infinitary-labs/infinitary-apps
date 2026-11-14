@@ -381,7 +381,7 @@ Where each journey runs:
 | A request for journeys (`journeys.yml`) | every named journey when `platforms=linux` or `both` | tagged tests when `platforms=mac` or `both`, or every test with `mac_all` |
 | A requested full check (`verify.yml`) | every journey | every tagged test, or every journey with `all_journeys` |
 | The run on `main` (`main.yml`) | none | every tagged test |
-| The swept batch (`infinitary-batch-checks.yml`), which an alpha from its merges reuses | every journey | every journey |
+| The swept batch (`batch-checks.yml`), which an alpha from its merges reuses | every journey | every journey |
 | An alpha that reuses main's checks (`release.yml`, `part: journeys`) | every journey | every journey |
 | A manual alpha without reusable proof (`verify.yml`) | every journey | every journey |
 
@@ -542,15 +542,11 @@ The first mate's and a crewmate's fixed prompts each have a budget derived from 
 
 Main's check is the desktop app's release check (INF-2498, the captain: "the main check should be clarified to be specifically about the desktop app's release").
 Its passing run is what the desktop app's alpha is cut from; the phone app releases through its own checks (`ios-release.yml`).
-Relevant pushes to `main`, and the queue's `infinitary-after-merge` signal, start `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check for files no merge batch built ("The swept batch").
+A push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check for files no merge batch built ("The swept batch").
+A batch merges with the person's own sign-in, so its merge is a push like any other and starts the run itself.
 Beside the full check it calls `linux-startup.yml`, the Linux automatic startup fixtures (INF-2441); a push the swept batch covered runs neither, since the batch ran both.
 A push whose every changed file is in the phone app or the docs starts no run (INF-2492, the captain's decision "Skip pushes that change only the phone app or the docs"): its `paths-ignore` lists `ios/`, `docs/` except the generated `docs/contract.json`, `primitives/` and `release-notes/changes/`, since a change file rides with every change.
 Phone check helpers in `scripts/` and `tests/helpers/` are not the phone app, so a push that touches them runs.
-`scripts/after-merge-paths.mjs` compares the event's default-branch version with the newest completed, non-cancelled run of the same workflow whose Select changed paths step succeeded, whatever started that run.
-A pending or cancelled run is not coverage, so a docs-only signal that replaces one still carries its unprocessed relevant changes.
-An absent or incomplete source-reading checkpoint runs conservatively instead of trusting only the latest batch's pre-merge source.
-An ignored-only signal cancels its sorting run before the full main check or an alpha starts; an incomplete path reading runs the check rather than guessing that nothing relevant changed.
-The same owner preserves `prompt-budget.yml` and `republish-casks.yml`'s existing push-path selections on that signal.
 The sentence-per-line check runs in `pnpm check` on every pull request.
 Other docs breaks that only a unit test reads, such as `tests/served-boundary.test.ts`, surface at the next push that runs, and a skipped push leaves main's green mark on the older version.
 The full check is `verify.yml`'s checks part (`part: checks`, `all_journeys: false`): the Linux checks, and the three Mac lanes with only the journeys tagged `MAC_ONLY_TAG` beside the unit, client, replay and package stages.
@@ -584,79 +580,73 @@ Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so t
 There one two-processor machine ran every vitest project past its step's 60-minute limit, so the Linux checks run on nine machines at once (INF-2646, the captain's approved split): `linux-checks` runs the typecheck, the lints and the build, and `linux-tests` runs the tests in eight groups, `pure`, `unit` and `unit-isolated` in three, `integration` in two, `probe` in two and `browser` in one, each group a set of vitest's own `--shard`.
 Each group keeps the 60-minute limit and reports whatever another did, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
 `tests/release-workflows-main-check.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
-Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a passed batch's skips the full check once the wait ends, a push before a batch's files that main has reached or can still reach cancels its own run, and only files no batch built get the full check (the captain's pick on INF-3052, "A: keep a fallback full check on main for versions no batch built").
+Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a passed batch's skips the full check once the wait ends, and only files no batch built get the full check (the captain's pick on INF-3052, "A: keep a fallback full check on main for versions no batch built").
 
 ## The swept batch
 
-This project merges through the queue Infinitary ships (`docs/forge.md`, "The shipped queue"), so a change merges only when it passed the alpha's whole check together with every change approved beside it, and the alpha needs no second run of it (INF-2430's plan, piece 3; INF-2952's plan, piece 3).
-Its queue is the generated one: `node scripts/generate-shipped-queue.ts` writes the stamped files from `src/core/queue/shipped/` into `.github/workflows/infinitary-queue.yml`, `.github/actions/infinitary-batch/` and `.github/infinitary/`, and `pnpm check` refuses a copy that differs.
-Its one grant, made by that script, gives the batch checks a read of the project's runs, which `verify.yml` asks for; they get no secret and no write.
-How the queue forms, composes, pauses, resumes and sends back a batch, and the words of its `infinitary/queue` status, are `docs/forge.md`'s.
+This project merges in batches of the person's own (`docs/forge.md`, "Batches of your own"), so a change merges only when it passed the alpha's whole check together with every change approved beside it, and the alpha needs no second run of it (INF-2430's plan, piece 3; INF-2952's plan, piece 3; INF-3759's plan, piece 3).
+It carries no file of a team queue, which is the fact the app reads to choose them.
+A change is a task's pushed branch with no pull request of its own, and each push of that branch runs the change's own check ("A pushed branch").
+The captain's merge click on its merge card puts the approved version in line.
+The app at the captain's home combines the line into one branch, `infinitary-batch/<id>`, one commit per change, and opens it as one pull request with the captain's sign-in ("A batch pull request").
+Once every check of that pull request passed, the app merges it with the same sign-in: by squash when it holds one change and by a rebase merge when it holds several, so `main` gains one commit per change.
+That merge is a push to `main` like any other, so it starts `main.yml`, and `prompt-budget.yml` and `republish-casks.yml` where their paths select it.
+The line and its batch are the home's own record, so a batch waits while the app there is closed.
+How the app forms, combines, holds and merges a batch is `docs/forge.md`'s.
 
-What this project adds is its batch checks, `.github/workflows/infinitary-batch-checks.yml`, which the queue calls on each composed batch.
+What this project adds is the batch's checks, `.github/workflows/batch-checks.yml`, which `batch-pull-request.yml` calls on the batch pull request's version.
 The sweep is `verify.yml` with every journey and without the phone check, the whole check an alpha reuses: an alpha from a merge it checked runs no lane itself (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 A sweep without every journey's complete set still lends its Linux checks and Mac lanes, and the alpha then runs every journey itself (INF-2480; `scripts/main-alpha-proof.mjs`).
 Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release_split` queue ("Each Mac job's kind and size").
-Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
-The `startup` job runs the Linux automatic startup fixtures, `linux-startup.yml`, on the same composed commit on GitHub's hosted Ubuntu, so they run before a merge (the captain's pick on INF-3052, "In the batch check, beside the critical-path journey").
-Every job composes the batch with the shipped compose script, `.github/actions/infinitary-batch/compose.sh apply`, in its own checkout, and fails if its tree differs from the one the queue composed.
-The last job, `Merge batch · Batch passed (tree T; base B)`, passes only once all three did and names the tree they built and the main version B the batch composed onto.
+Beside it, the `critical-path` job runs the critical path on the same version on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
+The `startup` job runs the Linux automatic startup fixtures, `linux-startup.yml`, on the same version on GitHub's hosted Ubuntu, so they run before a merge (the captain's pick on INF-3052, "In the batch check, beside the critical-path journey").
+The last job, `Merge batch · Batch passed (tree T; base B)`, passes once all three passed, or once the confirm passed, and names the tree T of the batch's version and the main version B its branch left `main` at.
 The batch stops at its first code-check failure (the captain's pick on INF-3925): its `watch` job reads the run until the sweep's `Code checks and build (Linux)` job ends, and when that job failed, its `stop` job enters the concurrency group of every other sweep job (`verify.yml`'s lanes and test groups and `source-journeys.yml`'s journey groups, each its own) with cancel-in-progress, which cancels each one, queued or running (`scripts/batch-stop.mjs`).
-Each stop job then fails, so the batch ends failed minutes in; its failed code checks name no test file, so nothing is confirmed, and the queue pauses.
-The stop cancels single jobs, never a whole called check, and its jobs fail rather than pass: GitHub ends a batch cancelled when a called check was cancelled, or when jobs were cancelled and none of its own jobs failed, and the queue reads cancelled as no verdict and runs the batch again.
+Each stop job then fails, so the batch ends failed minutes in; its failed code checks name no test file, so nothing is confirmed, and the batch holds.
+The stop cancels single jobs, never a whole called check, and its jobs fail rather than pass: GitHub ends a run cancelled when a called check was cancelled, or when jobs were cancelled and none of its own jobs failed, and a cancelled run is no verdict on the batch.
 The critical path and the startup fixtures end within a few minutes and run on, and the watch never fails a batch itself.
-When they fail, the queue's confirm calls the same file again with the failed jobs and files, and only its `confirm` job runs: each failed test file three rounds with no retries, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did, while the sweep, the critical path and the startup fixtures skip (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
+When a check fails, the `failures` job reads each failed job's log for the test files it names as failed (`scripts/batch-failures.mjs`), and the `confirm` job runs each of those files three rounds with no retries on the same version, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
+A failed job whose log names no test file failed for something no rerun of a test answers, so nothing runs again.
 When the confirm fails, it keeps everything under `test-results/` on the run as `confirm-failures-mac` or `confirm-failures-linux` for 7 days: each failed journey's error context, trace and screenshot, as `e2e-failures-<lane>` keeps the sweep's ("A red verify's evidence"), so a failure that shows only in the confirm can still be read.
-The last job then passes once the confirm did, and names the same tree and base.
-A green confirm passes the batch; its run's summary names what failed, and that flaky test still needs an owner who fixes its root cause.
-A red confirm fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the queue pauses its changes behind one issue, and the app starts the repair ("A paused batch's repair").
+A batch with a failed check holds, whatever its confirm said: the app merges only a pull request whose every check passed, and the failed job stays failed on it (`docs/forge.md`, "A held batch").
+The confirm is the repair's evidence ("A held batch's repair"): a green one says the failed files passed three rounds on the same version, and its run's summary names what failed, a flaky test that still needs an owner who fixes its root cause.
+A red confirm says the failure repeats, and it fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the changes approved meanwhile wait in line behind the held batch until its repair answers it.
 
-`main.yml`'s `sort` job reads the pushed commit's pull request with the queue's own rules (`scripts/batch.mjs`).
-When that change passed batch run N on exactly the pushed files, the push is covered: a job named `Main push · Covered by batch run N` replaces the full check and the startup fixtures.
-That holds for a batch that passed on its confirm too, since the batch's run and its confirm together passed every test (the captain's pick on INF-3052, "Nothing more: the batch's run and its recheck together passed every test").
-When main's newest files are already batch N's, or another change of batch N is still open and passed while every commit main has since the base its last job names is a change of batch N, the push is landing: main has reached or can still reach the batch's files, so the run cancels itself, cuts no alpha and leaves no failed run, and the push with the batch's files is covered.
-A batch run from before its last job named the base is landing on an open change of it alone.
-Anything else gets the full check: files no batch built, such as a merge outside the queue, a batch merged in an order that changed its files, or a batch composed onto an older main than the one its changes merged onto.
-The alpha's proof follows a covered run to its queue run and reads its batch checks, and the tree their last job names in the batch's run or its confirm; after a passed confirm it counts each failed job of the checks as passed, since the confirm ran its failed files again (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
+`main.yml`'s `sort` job reads a push that merged a batch pull request from that pull request's own run (`scripts/batch.mjs`, `scripts/batch-pull.mjs`).
+When a run N on the pull request's version named exactly the pushed files in its last job, and the batch changed no file under `.github/`, the push is covered: a job named `Main push · Covered by batch run N` replaces the full check and the startup fixtures.
+That holds for a batch merged after it passed on its confirm too, since the batch's run and its confirm together passed every test (the captain's pick on INF-3052, "Nothing more: the batch's run and its recheck together passed every test").
+A pull request's run reads its workflows and their actions from the pull request itself, so a batch that changes one chose its own check, and main runs its full check instead.
+A file list GitHub cut short counts as a changed check file.
+Anything else gets the full check: a commit that merged no batch pull request, such as a pull request merged through its own review or a commit pushed by hand, and a batch merged after `main` moved under it, since the pushed files are then not the ones the batch checked.
+The alpha's proof follows a covered run to the batch pull request's run: it requires a completed run of `batch-pull-request.yml`, started by a pull request from a batch branch of this repository, whose last job names the source's tree, and after a passed confirm it counts each failed job of the checks as passed, since the confirm ran its failed files again (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
+It still reads a run of the team queue this project merged through before, for an alpha whose source that queue merged.
 The fleet never cancels a running batch or a running main check unless the captain asks; a batch's own stop at failed code checks is the batch's, not the fleet's.
-`tests/batch.test.ts` holds the batch checks, their compose step and main's sort.
+`tests/batch.test.ts` holds the batch's checks and which pushes main's sort leaves to a batch; `tests/batch-pull.test.ts` holds how a batch pull request starts them, the confirm's plan, main's reading of the merged pull request and the alpha's proof.
 
-## A paused batch's repair
+## A held batch's repair
 
-A paused batch already failed its confirm, unless its issue says nothing ran again; it reaches the first mate as the app's `queue-paused` wake, and its repair follows the `queue-repair` skill (`docs/forge.md`, "One queue for every host"): it claims the pause's issue, reads the failed jobs' logs and the files the issue names, then fixes forward with a pull request labelled `infinitary-queue-fix`, sends one change back, or files a flake's owner and resumes.
-A send-back or a resume is the queue's own by-hand start, from Settings → Projects or `infinitary-queue.yml`'s Run workflow with `action`, `number` and `reason`.
-A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the composed commit.
-The composed commit is `main`'s version the batch run names with each change's version merged in order: `bash .github/actions/infinitary-batch/compose.sh apply <base> <tree> <number:version>...` rebuilds it on any clone.
+A batch whose check failed holds, and its repair follows the app's `batch-repair` skill (`docs/forge.md`, "A held batch"): a batch of one wakes its own crewmate, and a batch of several gets one repair task, which accounts for every failed test against every change and then sends changes back, fixes forward, or runs the failed checks again for a flake that still gets an owner.
+The batch's run holds what the repair reads: its failed jobs, the test files the `failures` job read from their logs, and whether the confirm passed or failed on them.
+A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the batch's version.
+The batch's version is its branch's, `infinitary-batch/<id>`, which any clone fetches: one commit per change on the `main` version its last job names.
 
 ## A batch pull request
 
-A batch can also be one pull request (INF-3759's plan, piece 2): a branch of this repository whose name starts with `infinitary-batch/` holds several approved changes, one commit each, and its pull request against `main` runs the swept batch on its own version.
-It runs beside the shipped queue, which composes its own batches and reads none of this.
+A batch is one pull request (INF-3759's plan, pieces 2 and 3): a branch of this repository whose name starts with `infinitary-batch/` holds the approved changes, one commit each, and its pull request against `main` runs the swept batch on its own version.
 `batch-pull-request.yml` starts on every pull request, since a pull request has no filter on the name of its branch, and its one job, `Merge batch · Batch checks`, runs only when the branch starts with `infinitary-batch/`, comes from this repository itself and targets `main`.
 A fork's branch of that name starts nothing, so code from a fork never reaches this project's own Mac; every other pull request shows the job skipped.
+`ci.yml`'s job skips itself on exactly those pull requests, since each change of the batch ran it on its own pushed branch, and the push of a batch's branch starts no run ("A pushed branch").
+So a batch's checks are `batch-pull-request.yml`'s run alone.
 A newer version of the pull request cancels the run of the older one.
 
-That job calls `batch-checks.yml` on the pull request's version, which runs what the shipped queue's batch runs with nothing composed, since the branch already holds its changes.
-Its `sweep`, `critical-path` and `startup` jobs make the same calls as `infinitary-batch-checks.yml` with that version as `ref` and no batch to compose.
-It stops at its first code-check failure the same way, with the same `watch` and `stop` jobs.
-When one of them fails, its `failures` job reads each failed job's log for the test files it names as failed, with the shipped queue's own reader (`scripts/batch-failures.mjs`), and its `confirm` job runs those files three rounds with no retries on the same version, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did (`scripts/batch-confirm.ts`).
-A failed confirm keeps the same evidence the queue's confirm keeps ("The swept batch").
-A failed job whose log names no test file failed for something no rerun of a test answers, so nothing runs again.
-The last job, `Merge batch · Batch passed (tree T; base B)`, passes once all three checks passed, or once the confirm passed, and names the tree T of the pull request's version and the main version B the branch left `main` at.
-A batch that passed on its confirm still shows its failed job on the pull request and its run ends failed, so its last job, not the run's result, says the batch passed.
-
-`main.yml`'s `sort` job reads a push that merged a batch pull request from that pull request's own run (`scripts/batch.mjs`, `scripts/batch-pull.mjs`).
-The push is covered when a run on the pull request's version named exactly the pushed files in its last job, and the batch changed no file under `.github/`.
-A pull request's run reads its workflows and their actions from the pull request itself, so a batch that changes one chose its own check, and main runs its full check instead.
-A file list GitHub cut short counts as a changed check file.
-Main also runs its full check when it moved under the batch, since the pushed files are then not the ones the batch checked.
-The alpha's proof follows a covered run to the batch pull request's run the same way it follows one to the queue's: it requires a completed run of `batch-pull-request.yml`, started by a pull request from a batch branch of this repository, whose last job names the source's tree, and after a passed confirm it counts each failed job of the checks as passed (`scripts/main-alpha-proof.mjs`).
-`tests/batch-pull.test.ts` holds the two workflow files, the confirm's plan, main's sort and the alpha's proof for a batch pull request.
+That job calls `batch-checks.yml` on the pull request's version, with nothing to combine, since the branch already holds its changes ("The swept batch").
+Main's sort and the alpha's proof read that run by its last job ("The swept batch").
+`tests/batch-pull.test.ts` holds the two workflow files and which pull requests and pushes start each check.
 
 ## CI job names
 
 Every job's name says what started its run and what it checks, in one scheme (INF-2410, the captain: "i want to distinguish what triggered the job and what they check"; scheme "A. Trigger first"): `Trigger · Purpose (platform or device; group or round)`, such as `Main push · App journeys (Linux; serial group 3/4)` or `Pull request · Code, build, affected tests and critical path (Linux)`.
-The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Branch push` (a pushed branch's own check, "A pushed branch"), `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the batch checks the shipped queue calls, and a batch pull request's; the queue's own jobs name no trigger), `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
+The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Branch push` (a pushed branch's own check, "A pushed branch"), `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (a batch pull request's checks), `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
 A called workflow takes its caller's trigger through its `trigger` input, so each level of GitHub's full name leads with it: `Main push · Desktop checks / Main push · Linux journeys / Main push · App journeys (Linux; serial group 3/4)`; a runner list that shows only the last level still says what started it.
 A workflow only a caller starts (`alpha-wait.yml`, `batch-checks.yml`, `linux-startup.yml`, `mac-installer.yml`, `mac-update.yml`) requires that input and keeps no fallback of its own, and a release says its trigger once, in its `resolve` job's `trigger` output, which every later job's name and every workflow it calls read (INF-2539).
 Workflow names and files, job ids, run titles, concurrency groups and artifact names keep their earlier names, so triggers, queues and the readers of `github.workflow` are unchanged.
@@ -678,8 +668,8 @@ The cost is GitHub's per-minute bill for those jobs.
 - `verify.yml`, whose `request` job, `linux-checks` lane, every Linux test group and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
 - `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`.
 
-`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `infinitary-batch-checks.yml` and `batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
-`infinitary-batch-checks.yml` passes `hosted: true` to its sweep and its critical path, its startup fixtures name hosted Ubuntu themselves, and its own job and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04`; the shipped queue's own jobs run where it names ("The swept batch").
+`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
+`batch-checks.yml` passes `hosted: true` to its sweep and its critical path, its startup fixtures name hosted Ubuntu themselves, and its own jobs but the Mac side of its confirm, and `main.yml`'s `sort` and `covered` jobs, name `ubuntu-24.04` ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
@@ -799,7 +789,7 @@ Status-only TestFlight requests start no phone or signing job.
 
 ## What a pull request runs
 
-A pull request version runs one check, `ci.yml`'s `typecheck-lint-build`, on the PC's PR line (INF-2915's plan, the captain's direction B with the light profile).
+A change's version runs one check, `ci.yml`'s `typecheck-lint-build`, on the PC's PR line (INF-2915's plan, the captain's direction B with the light profile): each push of a task's branch starts it, and so does a pull request ("A pushed branch").
 Its steps keep what caught problems on pull requests and leave the rest to the swept batch, which runs everything on each approved change before it reaches `main` ("The swept batch").
 Every version runs the release notes check, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes").
 Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit's base parent and decides two things.
@@ -815,7 +805,11 @@ The same job runs for a pushed branch as for its pull request, named `Branch pus
 A pull request's change starts at the base parent of its merge commit; a pushed branch has no merge commit, so its change starts at the commit the branch left `main` at.
 The job's `Find the change's base` step finds that commit, and the release notes check, the paths step, the reader of changed files and the critical path all measure the change from it, so commits `main` gained since are never read as the branch's own.
 A pushed branch fetches every commit to find it, where a pull request fetches two.
-No push starts `ci.yml` yet: its triggers are a pull request and a request by hand.
+Each push of a branch named `fm/task-*` starts `ci.yml`, so a task's change is checked with no pull request of its own, which is how a change reaches a batch (INF-3759's plan, piece 3; "The swept batch").
+A branch under another name is checked by its pull request, or by a request by hand.
+A task branch that still has a pull request runs the job for each, the push and the pull request.
+A push of `main` or of a batch's own branch, `infinitary-batch/<id>`, starts nothing here, and the job skips itself on a batch pull request, whose changes each ran it already ("A batch pull request").
+`tests/batch-pull.test.ts` holds which pushes and pull requests run it.
 
 ### The weekly audit of the pull request check
 
@@ -850,15 +844,15 @@ Those sections are the gate at launch, a key signed in through the gate's own ch
 A version that skips the build skips it too ("What a pull request runs").
 A pull request that edits the journey runs it three rounds and then alone, as any edited journey (`scripts/journey-runs.ts`); any other pull request runs it once.
 A failed run keeps the window and the journey's results as the `source-desktop-critical-path` artifact.
-The swept batch runs it again on the composed batch, in `infinitary-batch-checks.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
+The swept batch runs it again on the batch's version, in `batch-checks.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
 Every other journey runs on request ("Journeys on request") and in main's desktop release check, never on a pull request of its own accord.
 A step that breaks fails the pull request, and is repaired at its owner; weakening or deleting the journey is ask-first ("This project's rulings on tests").
 
 ## What a task branch requests
 
-A task branch's checks are its pull request's own, the critical path included, and only the requests below (INF-2576, the captain's choices "a, the critical path and the edited journeys only; reached ones wait for the swept batch" and "A, write the rules and add the phone workflow guard").
+A task branch's checks are the check each push of it runs ("A pushed branch"), the critical path included, and only the requests below (INF-2576, the captain's choices "a, the critical path and the edited journeys only; reached ones wait for the swept batch" and "A, write the rules and add the phone workflow guard").
 The swept batch runs every journey on Linux and the Mac, and the critical path, on each approved change before it reaches `main` ("The swept batch").
-So a journey the change only reaches is checked there, and a break found there sends the change back to its pull request.
+So a journey the change only reaches is checked there, and a break found there sends the change back to its task.
 
 | Check | A task branch requests it when | It requests |
 | --- | --- | --- |
@@ -870,7 +864,7 @@ So a journey the change only reaches is checked there, and a break found there s
 | The Linux package check | its change edits how the Linux packages are made (`docs/linux-packages.md`, "The checks", lists the files) | `linux-packages.yml`, which no pull request starts (INF-2834) |
 | Full verification | never, outside a named exception ("When to request full verification") | `verify.yml` with `full_system`, or `mac_only` for its Mac jobs alone, task and reason |
 
-Each request goes once per task, at the final version, after the pull request's own checks passed.
+Each request goes once per task, at the final version, after the branch's own check passed.
 A request made while the change is still being written is a diagnostic, never its proof.
 A phone request that failed is retried with only its failing part and device, and the whole affected selection runs once at the final version ("A retry after a failed phone request").
 Before a request, read the runs already on that version, running ones included, and reuse one that passed or is still running.
@@ -895,7 +889,7 @@ It never sends the whole affected selection again, and never the device that pas
 An affected request runs every part a shared app file reaches, often twenty or more on both devices, for about an hour on the iPhone; a one-part retry on one device takes minutes and holds one phone Mac, which the merge batch's Mac jobs share.
 Read the failed part's logs and repair it before the retry, as for any failed check; a retry that fails again names that same part and device again.
 A retry is a diagnostic, never the change's proof, and its named part gets no repeat rounds.
-Once the repair is final and the pull request's own checks pass, the whole affected selection runs once at that final version, as "What a task branch requests" says, with its repeat rounds for edited test code.
+Once the repair is final and the branch's own check passes, the whole affected selection runs once at that final version, as "What a task branch requests" says, with its repeat rounds for edited test code.
 A failure there is retried the same way, and the whole affected selection then runs once more at the version that holds the repair.
 
 ## Journeys on the pull request
@@ -1583,7 +1577,7 @@ An install inside a container needs none of this: the container's apt is its own
 ## The Linux source desktop
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
-`journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `infinitary-batch-checks.yml` for the critical path on the composed batch ("The swept batch"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
+`journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `batch-checks.yml` for the critical path on the batch's version ("The swept batch"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
 Linux runs the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys, the device journeys and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
 `verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, in every alpha or the swept batch it reuses and named full-run exceptions, in nine jobs, with no run-alone pass (INF-2340).
 Six take a group each of the parallel lanes (`styles`, `renderer` and `application`) and three a group each of the serial `desktop` lane, groups of about equal measured time ("Journey groups by measured time", below), each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its group, such as `Main push · App journeys (Linux; serial group 2/3)`, a serial group being a share of the desktop lane.

@@ -22,8 +22,7 @@ vi.setConfig({ testTimeout: 10_000 });
 
 /**
  * The inputs main.yml's last job dispatches release.yml with for main run
- * `run_number` (INF-3738: a completion trigger never fired for a main check
- * the queue's after-merge signal started with GitHub's own token).
+ * `run_number` (INF-3738: main's check starts its own alpha cut by dispatch).
  */
 const automaticAlpha = (run_number: number) => ({
   channel: "alpha",
@@ -619,7 +618,7 @@ describe("the next main check waits for the alpha cut", () => {
   it("holds every check of a main run behind the wait, and names a requested release plainly", () => {
     expect(main.jobs["alpha-wait"]?.uses).toBe("./.github/workflows/alpha-wait.yml");
     // The swept batch's sort (INF-2430's plan, piece 3) runs no check: it
-    // only decides whether the full check runs, and ends a landing run at once.
+    // only decides whether the full check runs.
     for (const [id, job] of Object.entries(main.jobs))
       if (!["alpha-wait", "sort"].includes(id))
         expect([job.needs].flat(), id).toContain("alpha-wait");
@@ -674,8 +673,6 @@ describe("the next main check waits for the alpha cut", () => {
     });
     expect(pauseStep?.name).toBe("Stop while the captain has paused the rolling pipeline");
     expect(decide("push", "true")).toEqual({ pause: true, find: false });
-    // Approved queue-owned merges enter the same rolling-main pause boundary.
-    expect(decide("repository_dispatch", "true")).toEqual({ pause: true, find: false });
     // Not paused, or a check started by hand: the wait runs as before.
     for (const [event_name, paused] of [
       ["push", ""],

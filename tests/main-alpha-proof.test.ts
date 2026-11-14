@@ -743,8 +743,8 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
   });
 
   // INF-2492: main runs no phone check, so only a passed main check starts a
-  // cut; one started by hand or ended by its sort starts none.
-  it("dispatches the alpha only from a passed pushed or after-merge main check", () => {
+  // cut; one started by hand starts none.
+  it("dispatches the alpha only from a passed main check a push started", () => {
     const main = loadYamlFile(".github/workflows/main.yml") as {
       jobs: Record<string, { if?: string; needs?: string[] }>;
     };
@@ -762,14 +762,14 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
         { github: { event_name }, needs: { sort: { outputs: { kind } } } },
         { success: !failed && !cancelled, failure: failed, always: true, cancelled },
       );
-    for (const event_name of ["push", "repository_dispatch"]) {
-      expect(decide(event_name, "full"), event_name).toBe(true);
-      expect(decide(event_name, "covered"), event_name).toBe(true);
-      expect(decide(event_name, "landing"), event_name).toBe(false);
-      expect(decide(event_name, "ignored"), event_name).toBe(false);
-      expect(decide(event_name, "full", true), event_name).toBe(false);
-      expect(decide(event_name, "full", false, true), event_name).toBe(false);
-    }
+    // The sort's two answers: main's own full check ran, or a batch's run
+    // covers the push (tests/batch.test.ts, "main.yml's sort").
+    expect(decide("push", "full")).toBe(true);
+    expect(decide("push", "covered")).toBe(true);
+    expect(decide("push", "full", true)).toBe(false);
+    expect(decide("push", "full", false, true)).toBe(false);
+    // A sort that failed named no kind, and its failure cuts nothing.
+    expect(decide("push", "", true)).toBe(false);
     expect(decide("workflow_dispatch", "full")).toBe(false);
   });
 

@@ -5,9 +5,10 @@ import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWo
 
 // The captain's pick on INF-3925: "Stop a batch at its first code-check
 // failure, in both today's batch checks and the per-person batch checks"
-// (docs/testing.md, "The swept batch"). The reading is the shipped queue's
-// batch run 839 as GitHub listed its jobs: its code checks failed at
-// 09:10:20, four minutes in, and the run went on until 09:49.
+// (docs/testing.md, "The swept batch"). The reading is a batch run of the
+// team queue this project ran then, run 839, as GitHub listed its jobs: its
+// code checks failed at 09:10:20, four minutes in, and the run went on until
+// 09:49.
 type RecordedJob = {
   name: string;
   created_at: string;
@@ -131,19 +132,9 @@ function groups(job: Job, inputs: Record<string, unknown>): string[] {
   );
 }
 
-// Both batch check files: the shipped queue's (in its own run and in its
-// confirm) and a batch pull request's.
-describe.each([
-  {
-    file: "infinitary-batch-checks.yml",
-    inputs: { failed_jobs: "" },
-    confirm: {
-      failed_jobs: "Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)",
-    },
-  },
-  { file: "batch-checks.yml", inputs: { trigger: "Merge batch" }, confirm: undefined },
-])("$file stops at a failed code check", ({ file, inputs, confirm }) => {
-  const jobs = jobsOf(file);
+describe("batch-checks.yml stops at a failed code check", () => {
+  const jobs = jobsOf("batch-checks.yml");
+  const inputs = { trigger: "Merge batch" };
 
   it("stops every job of the sweep but its code checks, each through that job's own concurrency group", () => {
     const sweep = jobs.sweep!;
@@ -173,7 +164,7 @@ describe.each([
       sweepGroups.filter((group) => group !== `${lead}verify-lane-linux-checks`).sort(),
     );
     // A stop never cancels a whole called check: GitHub then ends the batch
-    // cancelled, which the queue reads as no verdict.
+    // cancelled, which is no verdict on it.
     for (const id of ["sweep", "critical-path", "startup"])
       expect(jobs[id]!.concurrency, id).toBeUndefined();
   });
@@ -199,9 +190,5 @@ describe.each([
     expect(watcher["continue-on-error"]).toBe(true);
     expect(workflowString(watcher.name!, { inputs }).endsWith(WATCH)).toBe(true);
     expect(watcher.steps![0]!.with!["sparse-checkout"]).toBe("scripts/batch-stop.mjs");
-    if (confirm) {
-      expect(workflowValue(watcher.if!, { inputs: confirm })).toBe(false);
-      expect(workflowValue(watcher.if!, { inputs })).toBe(true);
-    }
   });
 });

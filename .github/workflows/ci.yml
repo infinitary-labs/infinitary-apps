@@ -1,10 +1,11 @@
 name: ci
 
-# Pull requests run one Linux job (INF-2915's plan, the captain's direction
-# B): the release notes, typecheck, the lint, the edited unit and integration
-# tests and the unit, integration and browser tests that read a changed file,
-# the build and the one critical-path journey (INF-2507), and every browser
-# test when a version touches the renderer or its browser tests.
+# A pushed task branch and a pull request run one Linux job (INF-2915's plan,
+# the captain's direction B): the release notes, typecheck, the lint, the
+# edited unit and integration tests and the unit, integration and browser
+# tests that read a changed file, the build and the one critical-path journey
+# (INF-2507), and every browser test when a version touches the renderer or
+# its browser tests.
 # A version whose every path is a test, docs, a release note or the phone app
 # skips the build and the critical path (scripts/pr-paths.ts). The swept
 # batch runs everything before a change reaches main (docs/testing.md, "What
@@ -12,9 +13,13 @@ name: ci
 # never in extra PR repeat jobs, and once more here beside the tests that read
 # a changed file. Full unit, integration and probe sweeps run here only on
 # request, never on PRs.
-# A pushed branch runs the same job as its pull request, measured from the
-# commit the branch left main at; no push starts this file yet (docs/testing.md,
-# "A pushed branch").
+# A change here is a pushed task branch with no pull request of its own
+# (docs/forge.md, "Batches of your own"), so each push of a branch named
+# fm/task-* starts this job, measured from the commit the branch left main at
+# (docs/testing.md, "A pushed branch"). A pull request runs the same job on
+# its merge commit: another person's, or a task's own from before it. A batch
+# pull request skips it, since batch-pull-request.yml runs the swept batch on
+# that version.
 # A push to main starts none of these jobs (INF-2340): main.yml's full check
 # runs the same commands in verify.yml's linux-checks lane and its Linux test
 # groups, every probe included.
@@ -38,6 +43,11 @@ on:
         required: false
         type: boolean
         default: false
+  # Each push of a task's branch; the app's own batch branches
+  # (infinitary-batch/*) and main start nothing here.
+  push:
+    branches:
+      - "fm/task-*"
   pull_request:
 
 permissions:
@@ -47,14 +57,19 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# The retained PR job runs on every pull request, including release notes.
-# Full sweeps are explicitly excluded from pull requests at the job boundary.
+# The retained job runs on every pushed task branch and pull request,
+# including release notes. Full sweeps run only on a request: a push and a
+# pull request name no sweep, so those jobs skip at the job boundary.
 # Each test step ends at 30 minutes (INF-1083, the captain's choice for unit
 # tests): a stuck test or wait ends sooner, by its own cap of at most 10
 # minutes (docs/test-cohorts.md, "Budgets"), and these steps take about two.
 jobs:
   # Each job's name leads with what started it (scripts/ci-job-names.mjs).
+  # A batch pull request skips it: the exact pull requests whose checks
+  # batch-pull-request.yml starts, a batch branch of this repository itself
+  # into the default branch, which the swept batch checks whole.
   typecheck-lint-build:
+    if: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'infinitary-batch/') && github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == github.event.repository.default_branch) }}
     name: ${{ github.event_name == 'pull_request' && 'Pull request · Code, build, affected tests and critical path (Linux)' || github.event_name == 'push' && 'Branch push · Code, build, affected tests and critical path (Linux)' || 'Manual request · Code and build (Linux)' }}
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
@@ -139,8 +154,9 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' || steps.paths.outputs.build == 'true' }}
       # The critical path (INF-2480's plan, captain: "path six-steps (launch,
       # sign in, project, first mate, crewmate card, merge)"; INF-2507): the
-      # one journey every pull request that builds the app runs, on the app
-      # just built from the pull request's merge commit, on the Linux desktop
+      # one journey every change that builds the app runs, on the app just
+      # built from the pushed branch's version or the pull request's merge
+      # commit, on the Linux desktop
       # (docs/testing.md, "The critical path"). A change that edits it runs
       # it three rounds and alone, as any edited journey.
       - uses: ./.github/actions/linux-desktop

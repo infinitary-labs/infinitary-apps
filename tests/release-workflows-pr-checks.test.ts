@@ -53,10 +53,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // The event must reach every job, not disappear behind a branch/path filter.
     expect(ci.on).toHaveProperty("pull_request", null);
     // INF-2340 (captain's route "drop-ci-main"): a push to main starts none of
-    // these jobs, since main.yml's full check runs the same commands. No push
-    // starts them yet: a task branch's push waits for the switch (INF-3759's
-    // plan, piece 3).
-    expect(Object.keys(ci.on).toSorted()).toEqual(["pull_request", "workflow_dispatch"]);
+    // these jobs, since main.yml's full check runs the same commands. The
+    // captain's pick on INF-3759, "the pushed branch": each push of a task's
+    // branch starts them (tests/batch-pull.test.ts holds which branches).
+    expect(Object.keys(ci.on).toSorted()).toEqual(["pull_request", "push", "workflow_dispatch"]);
     const github = new data.Dictionary(
       { key: "event_name", value: new data.StringData(eventName) },
       { key: "head_ref", value: new data.StringData(headRef) },

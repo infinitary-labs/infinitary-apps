@@ -75,10 +75,8 @@ name: release
 run-name: ${{ inputs.main_run != '' && format('Alpha from main run {0}', inputs.main_run_number) || 'release' }}
 
 # Every release starts by dispatch. A rolling alpha is dispatched by main.yml's
-# last job once main's check passed, with main_run and main_run_number set; a
-# completion trigger would never fire for a check the queue's after-merge
-# signal started, since GitHub starts no run for its own token's events except
-# a dispatch (docs/alpha.md, "Cutting an alpha").
+# last job once main's check passed, with main_run and main_run_number set
+# (docs/alpha.md, "Cutting an alpha").
 on:
   workflow_dispatch:
     inputs:
@@ -403,6 +401,7 @@ jobs:
                 ...context.repo, workflow_id: 'main.yml', head_sha: process.env.SOURCE_COMMIT,
                 branch: 'main', per_page: 100
               });
+              // A main run from before batches of the person's own was started by the team queue's dispatch.
               const main = candidates.find(candidate => ['push', 'repository_dispatch'].includes(candidate.event) && candidate.status === 'completed' && candidate.conclusion === 'success');
               if (!main) {
                 core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} reused main's checks, and main has no successful run of its exact source.`);

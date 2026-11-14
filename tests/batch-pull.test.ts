@@ -1,6 +1,7 @@
+import { posix } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readMainPush } from "../scripts/batch.mjs";
-import { confirmPlan, failures } from "../scripts/batch-failures.mjs";
+import { confirmPlan, failedTestFiles, failures } from "../scripts/batch-failures.mjs";
 import {
   BATCH_BRANCH,
   BATCH_PULL_CHECKS,
@@ -12,12 +13,13 @@ import { verifyBatchEvidence } from "../scripts/main-alpha-proof.mjs";
 import { runJobNames, type Scenario } from "./helpers/ciJobNames";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
-// INF-3759's approved plan, piece 2 (the captain: "Approve and build", "all
-// seven answers as proposed"): a pull request whose branch starts with
+// INF-3759's approved plan, pieces 2 and 3 (the captain: "Approve and build",
+// "all seven answers as proposed"): a pull request whose branch starts with
 // infinitary-batch/ and comes from this repository itself runs the swept
 // batch and ends in the job that names the tree, and main's sort and the
 // alpha's proof accept that run, reusing it only when the batch changed no
 // file its own check is made of (docs/testing.md, "A batch pull request").
+// What the batch's checks run is held in tests/batch.test.ts.
 // The readings are the rehearsal batch pull request's own: its number, its
 // branch, its version and tree, the main version it left main at and its run.
 const REPOSITORY = "infinitary-labs/infinitary";
@@ -49,7 +51,7 @@ type Job = {
 };
 const workflow = (file: string) =>
   loadYamlFile(`.github/workflows/${file}`) as {
-    on: Record<string, { inputs?: Record<string, unknown> } | null>;
+    on: Record<string, { inputs?: Record<string, unknown>; branches?: string[] } | null>;
     jobs: Record<string, Job>;
   };
 
@@ -79,8 +81,7 @@ const passedRun: Scenario = {
 };
 const FAILED_JOB =
   "Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)";
-// The file a batch run's sweep named as failed, as the shipped queue's own
-// test reads it (src/core/queue/shipped/github.test.ts).
+// The file a batch run's sweep named as failed, in its job's own log line.
 const FAILED_FILE = "src/core/freeze/freezeRecorder.integration.test.ts";
 const FAILED_LOG = `2026-11-07T19:12:44.0000000Z  FAIL  |integration| ${FAILED_FILE} > writes the record\n`;
 /** A batch whose sweep failed in one Linux job and whose confirm passed. */
@@ -144,6 +145,40 @@ describe("batch-pull-request.yml", () => {
     ).toEqual([]);
   });
 
+  // The captain's pick on INF-3759, "the pushed branch": a change's check is
+  // the run the push of its own branch started, so a batch pull request,
+  // whose changes each ran that check already, runs the batch's checks alone.
+  it("leaves the change's own check to each change's pushed branch", () => {
+    const ci = workflow("ci.yml");
+    const change = (github: Record<string, unknown>) =>
+      workflowValue(String(ci.jobs["typecheck-lint-build"]?.if), { github });
+    // Every pull request runs one of the two: the batch's checks or the
+    // change's check, a fork's batch-named branch the change's.
+    for (const pull of [
+      pullRequest(rehearsal.branch),
+      pullRequest(rehearsal.branch, "someone/infinitary"),
+      pullRequest("fm/task-573def9c"),
+      pullRequest("batch/infinitary-batch/x"),
+      pullRequest(rehearsal.branch, REPOSITORY, "release"),
+    ])
+      expect(
+        change(pull),
+        `${pull.head_ref} from ${pull.event.pull_request.head.repo.full_name}`,
+      ).toBe(!starts(pull));
+    expect(change(pullRequest(rehearsal.branch))).toBe(false);
+    // A task's branch starts the change's check at each push. The push of
+    // the batch's own branch starts nothing, so the batch's checks are the
+    // one run its pull request started.
+    const pushStarts = (branch: string) =>
+      ci.on.push!.branches!.some((pattern) => posix.matchesGlob(branch, pattern));
+    expect(pushStarts("fm/task-573def9c")).toBe(true);
+    expect(pushStarts(rehearsal.branch)).toBe(false);
+    expect(pushStarts("main")).toBe(false);
+    expect(
+      change({ event_name: "push", ref: "refs/heads/fm/task-573def9c", repository: REPOSITORY }),
+    ).toBe(true);
+  });
+
   it("checks the pull request's own version, which a later push replaces", () => {
     const checks = file.jobs.checks!;
     expect(checks.uses).toBe("./.github/workflows/batch-checks.yml");
@@ -161,46 +196,21 @@ describe("batch-pull-request.yml", () => {
 
 describe("batch-checks.yml", () => {
   const checks = workflow("batch-checks.yml");
-  const queue = workflow("infinitary-batch-checks.yml");
   const inputs = { trigger: "Merge batch", head: rehearsal.head };
 
-  it("runs what the shipped queue's batch runs, on the batch's own version with nothing composed", () => {
+  it("runs every check on the batch's own version", () => {
     for (const id of ["sweep", "critical-path", "startup"]) {
-      const own = checks.jobs[id]!;
-      const queued = queue.jobs[id]!;
-      expect(own.uses, id).toBe(queued.uses);
-      // The queue composes its changes onto main; a batch's branch already holds them.
-      const { ref, batch, batch_tree, ...rest } = queued.with!;
-      expect([ref, batch, batch_tree].every(Boolean), id).toBe(true);
-      const passed = Object.fromEntries(
-        Object.entries(own.with!).map(([key, value]) => [
-          key,
-          typeof value === "string" ? workflowString(value, { inputs, vars: {} }) : value,
-        ]),
-      );
-      const expected = Object.fromEntries(
-        Object.entries(rest).map(([key, value]) => [
-          key,
-          typeof value === "string" ? workflowString(value, { inputs, vars: {} }) : value,
-        ]),
-      );
-      expect(passed, id).toEqual({ ...expected, ref: rehearsal.head });
+      const call = checks.jobs[id]!.with!;
+      expect(workflowString(String(call.ref), { inputs }), id).toBe(rehearsal.head);
+      expect(workflowString(String(call.trigger), { inputs }), id).toBe("Merge batch");
     }
-    // The confirm runs the failed files on that version too, by the same script.
-    const steps = (job: Job) => job.steps ?? [];
-    const confirm = steps(checks.jobs.confirm!);
-    expect(confirm.some((step) => step.name === "Compose the batch")).toBe(false);
-    for (const step of confirm.filter((each) => each.uses === "actions/checkout@v4"))
+    // The confirm runs the failed files on that version too.
+    const checkouts = (checks.jobs.confirm!.steps ?? []).filter(
+      (step) => step.uses === "actions/checkout@v4",
+    );
+    expect(checkouts.length).toBeGreaterThan(0);
+    for (const step of checkouts)
       expect(workflowString(String(step.with?.ref), { inputs })).toBe(rehearsal.head);
-    const round = (job: Job) =>
-      steps(job).find((step) => step.name === "Run each failed test file three rounds");
-    expect(round(checks.jobs.confirm!)?.run).toBe(round(queue.jobs.confirm!)?.run);
-    // A failed round keeps its evidence the same way (tests/batch.test.ts).
-    const kept = (job: Job) =>
-      steps(job).find((step) => step.uses?.startsWith("actions/upload-artifact@"));
-    expect(kept(checks.jobs.confirm!)).toBeDefined();
-    expect(kept(checks.jobs.confirm!)).toEqual(kept(queue.jobs.confirm!));
-    expect(round(checks.jobs.confirm!)?.id).toBe(round(queue.jobs.confirm!)?.id);
   });
 
   it("confirms on the platform whose job failed", () => {
@@ -269,6 +279,42 @@ describe("a failed batch pull request's confirm plan", () => {
         },
       ]),
     ).toBe(null);
+  });
+
+  // Each log is a failed job's own closing lines: Vitest's FAIL line,
+  // Playwright's list under its "N failed" line, and the line Vitest prints
+  // for an unhandled error, which fails a run whose every test passed and
+  // prints no FAIL line, colors and all.
+  it("reads the failed test files from a job's log as each runner names them", () => {
+    expect(failedTestFiles(FAILED_LOG)).toEqual([FAILED_FILE]);
+    expect(
+      failedTestFiles(
+        "2026-11-07T19:20:01.0000000Z   1 failed\n2026-11-07T19:20:01.0000000Z     [application] › knowledge-references.spec.ts:41:3 › opens a saved reference\n",
+      ),
+    ).toEqual(["knowledge-references.spec.ts"]);
+    expect(
+      failedTestFiles(
+        [
+          "2026-11-08T08:05:33.8316852Z  \u001b[32m✓\u001b[39m \u001b[30m\u001b[45m integration \u001b[49m\u001b[39m tests/replay-gate-catches-lint.test.ts \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 5615\u001b[2mms\u001b[22m\u001b[39m",
+          "2026-11-08T08:05:48.8700969Z Vitest caught 1 unhandled error during the test run.",
+          '2026-11-08T08:05:48.8766094Z \u001b[31mThis error originated in "\u001b[1mtests/phone-scene-projection.test.ts\u001b[22m" test file. It doesn\'t mean the error was thrown inside the file itself, but while it was running.\u001b[39m',
+          "2026-11-08T08:05:48.9690171Z ##[error]Process completed with exit code 1.",
+        ].join("\n"),
+      ),
+    ).toEqual(["tests/phone-scene-projection.test.ts"]);
+    // The files go to the confirm as one list separated by spaces, so a path
+    // with a space is named nowhere rather than split, and an unhandled
+    // error Vitest ties to no test file names none.
+    expect(
+      failedTestFiles(
+        '2026-11-08T08:05:48.8766094Z This error originated in "tests/my file.test.ts" test file. It doesn\'t mean the error was thrown inside the file itself, but while it was running.\n',
+      ),
+    ).toEqual([]);
+    expect(
+      failedTestFiles(
+        "2026-11-08T08:05:48.8700969Z Vitest caught 1 unhandled error during the test run.\n2026-11-08T08:05:48.8764393Z Error: setup failed\n",
+      ),
+    ).toEqual([]);
   });
 
   it("reads the run's failed jobs and their logs, leaving the confirm's own jobs out", async () => {
@@ -372,7 +418,6 @@ describe("main's check sorting a push that merged a batch pull request", () => {
                   ]
                 : [],
           }),
-          listCommitStatusesForRef: "statuses",
         },
         pulls: {
           get: async ({ pull_number }: { pull_number: number }) => {
@@ -384,7 +429,6 @@ describe("main's check sorting a push that merged a batch pull request", () => {
         actions: { listWorkflowRuns: "runs", listJobsForWorkflowRun: "jobs" },
       },
       paginate: async (method: string, parameters: Record<string, unknown>) => {
-        if (method === "statuses") return [];
         if (method === "files") return files;
         if (method === "runs") {
           expect(parameters).toMatchObject({
@@ -404,9 +448,13 @@ describe("main's check sorting a push that merged a batch pull request", () => {
     expect(await readMainPush(github, repo, { ...push, tree: "d".repeat(40) })).toEqual({
       kind: "full",
     });
-    // A fork's branch of that name is no batch: it has no queue state and no run to reuse.
+    // A fork's branch of that name is no batch, so it has no run to reuse.
     from = "someone/infinitary";
     expect(await readMainPush(github, repo, push)).toEqual({ kind: "full" });
+    // A commit that merged no pull request is checked in full.
+    expect(await readMainPush(github, repo, { ...push, sha: rehearsal.base })).toEqual({
+      kind: "full",
+    });
   });
 });
 

@@ -7,16 +7,15 @@
  * typecheck, the lints, the size and generated-file checks and the build)
  * fail a few minutes in, while the journeys run on for half an hour. A
  * rerun of a test answers none of their failures, so a batch whose code
- * checks failed is going to pause whatever else passes.
+ * checks failed is going to stay failed whatever else passes.
  *
- * Both batch check files (infinitary-batch-checks.yml, batch-checks.yml)
- * run a watch job beside their checks: it reads this run's jobs until the
- * code checks end, and names their outcome. When they failed, a stop job per
- * check enters that check's concurrency group with cancel-in-progress,
- * which cancels the check and every job it called, and fails, so the batch
- * ends failed minutes after the code checks did. The batch's code holds
- * only a read of the project, and GitHub cancels a single job only through
- * its concurrency group, never through the run's API.
+ * batch-checks.yml runs a watch job beside its checks: it reads this run's
+ * jobs until the code checks end, and names their outcome. When they failed,
+ * a stop job per check enters that check's concurrency group with
+ * cancel-in-progress, which cancels the check and every job it called, and
+ * fails, so the batch ends failed minutes after the code checks did. The
+ * batch's code holds only a read of the project, and GitHub cancels a single
+ * job only through its concurrency group, never through the run's API.
  */
 
 /** How the code checks' job name ends, at every level of a batch run's names. */

@@ -2,10 +2,9 @@ name: batch
 
 # A batch pull request's check (docs/testing.md, "A batch pull request"): a
 # pull request from a branch of this repository whose name starts with
-# infinitary-batch/ carries several approved changes, one commit each, and
-# this file runs the swept batch on its version (batch-checks.yml). It runs
-# beside the shipped queue (infinitary-queue.yml), which composes its own
-# batches and is not read or changed here.
+# infinitary-batch/ carries the approved changes the app combined, one commit
+# each (docs/forge.md, "Batches of your own"), and this file runs the swept
+# batch on its version (batch-checks.yml).
 #
 # Only a branch of this repository itself starts the checks, never a fork's
 # branch of that name: the swept batch runs on this project's own Mac, which

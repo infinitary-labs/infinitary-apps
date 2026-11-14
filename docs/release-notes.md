@@ -52,7 +52,7 @@ Never hand-edit `CHANGELOG.md`; it stopped changing at stable 0.1.30.
 
 | Path | Holds |
 | --- | --- |
-| `changes/*.json` | One file per change, added by the change's own pull request. `{ "entries": [...], "exclusions": [...] }`. The commit that adds the file is the change it covers. |
+| `changes/*.json` | One file per change, added by the change itself. `{ "entries": [...], "exclusions": [...] }`. The commit that adds the file is the change it covers. |
 | `history/<version>.json` | The backfill of published history. Names the commits it covers in `covers`. |
 | `releases/<version>.json` | One immutable manifest per published release: exact `version`, `channel`, `sourceCommit`, `date`, `promotedFrom`, and `entryIds`, the cumulative membership. `highlights` is a promoted stable's picked highlights, lead first. `incomplete` marks a range that cannot be recovered. |
 | `archive.json` | The record of past releases ("A fresh history"): where the archived history lives, the newest `stable` and `alpha` it published, and each of its releases' manifest by the SHA-256 of its file. |
@@ -134,10 +134,10 @@ Every later job reads the one `notes` result, which holds only when both parts p
    Without `--picks` it lists the changes since the last stable to pick from, for the promotion's card.
 4. `verify-package` runs against the packaged app, before notarization: the catalog is this exact logical version and source commit, and each packaged picture is the file the catalog hashed.
 
-Every pull request's first check step runs `node scripts/release-notes.ts change --base HEAD^1` (`ci.yml`, plain Node with no install, under a second).
-It refuses a change whose commits add no file under `release-notes/changes/` declaring a note or an exclusion: a squash merge makes the change one commit, and the commit that adds the file is the one the alpha credits, so this is the alpha's coverage rule applied before merge.
+Every change's first check step runs `node scripts/release-notes.ts change` from the commit the change starts at (`ci.yml`, on each push of a task's branch and on a pull request; plain Node with no install, under a second).
+It refuses a change whose commits add no file under `release-notes/changes/` declaring a note or an exclusion: a change merges as one commit, squashed alone or as its own commit of a batch of several (`docs/testing.md`, "The swept batch"), and the commit that adds the file is the one the alpha credits, so this is the alpha's coverage rule applied before merge.
 Editing a note another change added does not count; the change still adds its own file.
-The same step runs the part of `validate` that needs no git history over the real ledger (`ledgerProblems`), so a note with no area, a new `maintenance` note, a visible change with neither picture nor reason, a picture over the caps, or a manifest that no longer matches the record of past releases also fails on its own pull request rather than at the next alpha.
+The same step runs the part of `validate` that needs no git history over the real ledger (`ledgerProblems`), so a note with no area, a new `maintenance` note, a visible change with neither picture nor reason, a picture over the caps, or a manifest that no longer matches the record of past releases also fails on its own change rather than at the next alpha.
 `tests/release-notes-ledger.test.ts` runs that part again with main's unit tests.
 
 A development or end-to-end build carries a placeholder (`generate --dev`) with an empty pictures folder that never passes `verify-package`; the app reads it as notes unavailable.

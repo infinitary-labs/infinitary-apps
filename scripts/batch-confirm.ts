@@ -7,16 +7,16 @@ import { REPEATS } from "./unit-repeats.ts";
 /**
  * The swept batch's confirm (docs/testing.md, "The swept batch"; the
  * captain's pick on INF-3012, "A only: the confirm step"): when a batch's
- * checks fail, the shipped queue calls infinitary-batch-checks.yml once more
- * on the same composed batch with the failed test files, and this runs only
- * those files, three rounds with no retries, stopping at the first failure.
+ * checks fail, batch-checks.yml's confirm job runs the failed test files on
+ * the same version, and this runs only those files, three rounds with no
+ * retries, stopping at the first failure.
  *
  *   node scripts/batch-confirm.ts --files "<file> <file>" [-- <journey args>]
  *
- * The queue reads the files from the failed jobs' logs: Vitest names a file
- * by its path from the project's root, Playwright by its path from the
- * journeys' folder. The journey arguments go to the parallel lanes only, as
- * verify.yml gives them half the job's cores.
+ * The files come from the failed jobs' logs (scripts/batch-failures.mjs):
+ * Vitest names a file by its path from the project's root, Playwright by its
+ * path from the journeys' folder. The journey arguments go to the parallel
+ * lanes only, as verify.yml gives them half the job's cores.
  */
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -33,7 +33,7 @@ export function confirmFiles(
       named.map((file) => {
         if (exists(file)) return file;
         if (exists(`${JOURNEYS}${file}`)) return `${JOURNEYS}${file}`;
-        throw new Error(`The failed test file ${file} is not in the composed batch.`);
+        throw new Error(`The failed test file ${file} is not in the batch's version.`);
       }),
     ),
   ];

@@ -387,21 +387,16 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "main.yml:covered",
     // Main's last job, which dispatches its alpha cut (INF-3738).
     "main.yml:alpha",
-    "infinitary-batch-checks.yml:passed",
-    // Its confirm reruns failed files on the machines the sweep took, which
-    // are hosted on Linux (INF-3012's direction A).
-    "infinitary-batch-checks.yml:confirm",
-    // A batch pull request's run of the same swept batch (INF-3759's plan,
-    // piece 2): its reading of the batch and of the failures, its confirm
-    // and its last job.
+    // A batch pull request's run of the swept batch (INF-3759's plan, piece
+    // 2): its reading of the batch and of the failures, its last job, and
+    // its confirm, which reruns failed files on the machines the sweep took,
+    // hosted on Linux (INF-3012's direction A).
     "batch-checks.yml:batch",
     "batch-checks.yml:failures",
     "batch-checks.yml:confirm",
     "batch-checks.yml:passed",
-    // Both batches' watch of their code checks and their stop after a failed
-    // one: a reading and an echo, each on a hosted machine.
-    "infinitary-batch-checks.yml:watch",
-    "infinitary-batch-checks.yml:stop",
+    // The batch's watch of its code checks and its stop after a failed one:
+    // a reading and an echo, each on a hosted machine.
     "batch-checks.yml:watch",
     "batch-checks.yml:stop",
   ];
@@ -428,11 +423,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
   const evaluate = (value: string, contexts: Record<string, unknown>) =>
     value.includes("${{") ? workflowValue(value, contexts) : value;
   const linux: string[] = [];
-  // The shipped queue (docs/forge.md, "The shipped queue") is generated from
-  // src/core/queue/shipped/ for every project and names its own runners;
-  // this project's batch checks, which it calls, run where this check says.
-  for (const file of readdirSync(join(root, ".github/workflows")).filter(
-    (name) => name.endsWith(".yml") && name !== "infinitary-queue.yml",
+  for (const file of readdirSync(join(root, ".github/workflows")).filter((name) =>
+    name.endsWith(".yml"),
   )) {
     const { jobs } = loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> };
     for (const [id, job] of Object.entries(jobs)) {
@@ -683,12 +675,10 @@ describe("a release's hosted machines", () => {
     }
     expect(passing.sort()).toEqual([
       // The swept batch's critical path (INF-2507) and its sweep, the alpha's
-      // full check (INF-2430's plan, piece 3), on the shipped queue's batch
-      // and on a batch pull request (INF-3759's plan, piece 2).
+      // full check (INF-2430's plan, piece 3), on a batch pull request
+      // (INF-3759's plan, piece 2).
       "batch-checks.yml:critical-path",
       "batch-checks.yml:sweep",
-      "infinitary-batch-checks.yml:critical-path",
-      "infinitary-batch-checks.yml:sweep",
       "main.yml:verify",
       "release.yml:linux",
       "release.yml:verify",

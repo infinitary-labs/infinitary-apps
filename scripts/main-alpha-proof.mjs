@@ -121,6 +121,9 @@ export function verifyMainEvidence(run, named, repository, source) {
   return { source, runId: run.id, attempt: run.run_attempt, url: run.html_url, journeys: everyLinuxJourney(jobs) };
 }
 
+// A main run from before this project merged in batches of the person's own
+// was started by the team queue's after-merge signal, a repository_dispatch;
+// such a run still proves its own source.
 function checkMainRun(run, jobs, repository, source) {
   if (run.path !== ".github/workflows/main.yml" || !["push", "repository_dispatch"].includes(run.event) ||
       run.head_branch !== "main" || run.head_repository?.full_name !== repository ||
@@ -134,33 +137,29 @@ function checkMainRun(run, jobs, repository, source) {
 
 // The swept batch (INF-2430 piece 3, docs/testing.md "The swept batch"): a
 // main push whose files are exactly a passed batch's skips main's full check,
-// and main.yml names the batch run in a job of its own. The batch run is the
-// shipped queue's (infinitary-queue.yml), whose batch checks job calls this
-// repository's infinitary-batch-checks.yml: its last job names the tree its
-// sweep and critical path built, and its sweep is verify.yml, read as
-// `verify` like main's own. A batch run from before the shipped queue
-// (batch.yml) named the tree in its verdict job and called verify.yml as
-// `sweep`.
+// and main.yml names the batch run in a job of its own. The batch run is a
+// batch pull request's (batch-pull-request.yml; docs/testing.md, "A batch
+// pull request"): its one job calls batch-checks.yml, whose sweep is
+// verify.yml, read as `verify` like main's own, and whose last job names the
+// tree. Main's sort names such a run only when the batch changed no file its
+// own check is made of (scripts/batch.mjs).
 //
 // A batch that passed on its confirm passes too (the captain's pick on
 // INF-3052, "Nothing more: the batch's run and its recheck together passed
-// every test"): the queue confirms only when every failed job of its checks
-// named the test files that failed, and the confirm ran each of them again,
-// three rounds, and passed. Its run ends failed, since its checks failed,
-// and the tree is named by the confirm's own last job.
+// every test"): the confirm runs only when every failed job of the checks
+// named the test files that failed, and it ran each of them again, three
+// rounds, in the same run. So a run that ended failed passes when its last
+// job named the tree and every confirm job passed.
 //
-// A batch pull request's run (batch-pull-request.yml; docs/testing.md, "A
-// batch pull request") is read the same way: its one job calls
-// batch-checks.yml, whose sweep is verify.yml and whose last job names the
-// tree. Its confirm runs in the same run, so a run that ended failed passes
-// when its last job named the tree and every confirm job passed. Main's sort
-// names such a run only when the batch changed no file its own check is made
-// of (scripts/batch.mjs).
+// Main runs from before this project merged in batches of the person's own
+// name older batch runs, which are still read: the team queue's
+// (infinitary-queue.yml), whose batch checks ran under its `Batch checks`
+// job and again under `Batch confirm`, the tree named by the last job of
+// either; and, before that queue, batch.yml, which named the tree in its
+// verdict job and called verify.yml as `sweep`.
 const COVERED = /^covered by batch (\d+)$/;
 const QUEUE_RUN = ".github/workflows/infinitary-queue.yml";
 const OLD_BATCH_RUN = ".github/workflows/batch.yml";
-// The shipped queue names its own jobs; this repository's batch checks run
-// under its `Batch checks` job, and run again under `Batch confirm`.
 const BATCH_CHECKS = "Batch checks / ";
 const BATCH_CONFIRM = "Batch confirm / ";
 

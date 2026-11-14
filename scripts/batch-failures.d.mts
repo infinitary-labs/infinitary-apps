@@ -1,5 +1,7 @@
 /** A failed job of a batch pull request's checks, with the test files its log named as failed. */
 export type FailedJob = { name: string; files: readonly string[] };
+/** The test files a failed job's log names as failed, in the order it names them. */
+export function failedTestFiles(log: string): string[];
 /** The confirm's plan: the failed jobs' names, one a line, and the failed files, separated by spaces; null when nothing runs again. */
 export function confirmPlan(failedJobs: readonly FailedJob[]): { jobs: string; files: string } | null;
 /** The run's failed jobs outside the confirm, each with the test files its log names. */

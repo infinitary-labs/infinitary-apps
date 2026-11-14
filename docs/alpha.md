@@ -227,7 +227,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included.
   An alpha that ran only the journeys part, with no Linux checks job, needs complete Linux shard sets and also validated exact-source main proof for the rest.
   An automatic alpha that ran no lane reused every one, so it is promoted only when the run it reused also holds complete Linux shard sets: its swept batch's, or a main run from before INF-2480, which carried every journey (`scripts/main-alpha-proof.mjs`).
-  Reuse reads GitHub's run and latest per-job executions, requires a trusted main push or queue after-merge signal and the full-check owners, the Linux checks and the three Mac jobs (or, in a run from before INF-2779, the one `mac` job), and refuses skipped required owners, partial, cancelled, failed or other-source results.
+  Reuse reads GitHub's run and latest per-job executions, requires a trusted main push, or the after-merge signal of the team queue this project merged through before, and the full-check owners, the Linux checks and the three Mac jobs (or, in a run from before INF-2779, the one `mac` job), and refuses skipped required owners, partial, cancelled, failed or other-source results.
   The Linux checks are the `linux-checks` lane and every Linux test group's complete set, or, in a run from before INF-2646 split them, the one `linux-checks` job that ran them all (`scripts/main-alpha-proof.mjs`).
   A manual alpha without reusable main proof, including a rehearsal, still runs full verification.
   A stable is refused without its alpha's proof, never verified again on its own.
@@ -365,18 +365,18 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 A rolling `main.yml` run that passed automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
 The alpha cuts only when no earlier alpha is still being cut, no stable is being promoted, and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
 Main's last job, once every check before it passed, dispatches `release.yml` with `channel` alpha, the checked source as `candidate`, and its own run as `main_run` and `main_run_number`.
-It starts the cut by dispatch because the queue's after-merge signal starts main's check with GitHub's own token, and GitHub starts no new run for that token's events except a dispatch, so a completion trigger on `release.yml` never fired for a merge the queue made (INF-3738).
-A check started by hand, and a run its sort ended, dispatches nothing.
+It starts the cut by dispatch, naming its own run, rather than by a completion trigger on `release.yml` (INF-3738).
+A check started by hand dispatches nothing.
 The dispatched release uses the checked source, not main's newer head, waits for that main run to end, since it starts during the run's last job, and runs only the journeys part of the full check, which main leaves to the release (INF-2480, the captain: "old set at the release check only, from the first piece on").
 A source the swept batch checked with every journey runs no part: the batch already ran them on its files (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 Main runs no phone check ("An alpha does not wait on the phone check", below).
 A failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
 
 1. **Validate the completed run.**
-   The resolver reads the completed successful trusted main run, started by a push or the queue's after-merge signal, and every latest per-job execution from GitHub.
+   The resolver reads the completed successful trusted main run, started by a push or, before this project merged in batches of the person's own, by its team queue's after-merge signal, and every latest per-job execution from GitHub.
    It requires the full-check owners, the Linux checks (the `linux-checks` lane and every Linux test group) and `mac`, at exactly the source being released.
    A covered main run, whose files a passed swept batch already checked, names that batch run instead; the resolver then reads the batch run's two owners and requires the tree its batch checks name to be the source's tree, and accepts a batch that passed on its confirm, whose failed jobs the confirm ran again (`docs/testing.md`, "The swept batch").
-   The batch run is the shipped queue's, or a batch pull request's own (`docs/testing.md`, "A batch pull request").
+   The batch run is a batch pull request's own (`docs/testing.md`, "A batch pull request"), or, for a source merged before then, a run of the team queue.
 2. **Keep the same source.**
    The notes check validates committed declarations without a separate notes-review commit.
    Existing immutable tags supply published manifests through the same ledger reader when they have not been committed afterward.
@@ -411,7 +411,6 @@ Tests, the phone, docs, `.github/`, `release-notes/` and every other script neve
 A skipped merge is not lost: the next alpha that cuts carries it, and that alpha's notes check covers its note or exclusion.
 A failed or cancelled alpha publishes no tag, so the next run still finds the change and cuts.
 Main's full check still runs on every merge that changes more than the phone app or the docs, and its green mark still moves.
-Queue-owned merges reach it through the shared after-merge signal; an ignored-only signal cancels its sorting run without a full check or an alpha.
 Skipped runs leave gaps in the alpha numbers, which already skip run numbers.
 Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
 

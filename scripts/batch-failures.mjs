@@ -3,14 +3,48 @@
  * confirm step").
  *
  * batch-checks.yml's failures job reads each failed job's log for the test
- * files it names as failed, with the shipped queue's own reader, and its
- * confirm job runs those files three rounds on the same version
- * (scripts/batch-confirm.ts). A failed job whose log names no test file
- * failed for something no rerun of a test answers, so nothing runs again and
- * the batch's check stays failed.
+ * files it names as failed, and its confirm job runs those files three
+ * rounds on the same version (scripts/batch-confirm.ts). A failed job whose
+ * log names no test file failed for something no rerun of a test answers, so
+ * nothing runs again and the batch's check stays failed.
  */
-import { failedTestFiles } from "../.github/infinitary/rules.mjs";
 import { BATCH_PULL_CHECKS, BATCH_PULL_CONFIRM } from "./batch-pull.mjs";
+
+// A test file's path as the runners print it, from the project's root. The
+// files go to the confirm as one list separated by spaces, so a path with
+// other characters is named nowhere rather than split.
+const TEST_FILE = /(?:^|\s)((?:[\w.@-]+\/)*[\w.@-]+\.(?:test|spec)\.[cm]?[jt]sx?)(?=[\s:[]|$)/;
+// Vitest's line naming the test file an unhandled error came from: such an
+// error fails the run even when every test passed, and prints no FAIL line.
+const UNHANDLED_IN = /^\s*This error originated in "((?:[\w.@-]+\/)*[\w.@-]+)" test file\./;
+// A job log's timestamp before each line, and a terminal's colors.
+const LOG_PREFIX = /^\d{4}-\d\d-\d\dT[\d:.]+Z /;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: a terminal's color codes start with ESC
+const COLORS = /\u001b\[[0-9;]*m/g;
+
+/**
+ * The test files a failed job's log names as failed, in the order it names
+ * them: Vitest's FAIL lines, the tests listed under Playwright's closing
+ * "N failed" line, and the test file Vitest says an unhandled error
+ * originated in.
+ */
+export function failedTestFiles(log) {
+  const files = [];
+  let inFailedList = false;
+  for (const raw of log.split("\n")) {
+    const line = raw.replace(LOG_PREFIX, "").replace(COLORS, "").trimEnd();
+    if (/^\s*\d+ failed$/.test(line)) {
+      inFailedList = true;
+      continue;
+    }
+    const listed = inFailedList && /^\s{4}\S/.test(line);
+    inFailedList = listed;
+    const file =
+      listed || /^\s*FAIL\s/.test(line) ? TEST_FILE.exec(line)?.[1] : UNHANDLED_IN.exec(line)?.[1];
+    if (file && !files.includes(file)) files.push(file);
+  }
+  return files;
+}
 
 const FAILED = ["failure", "timed_out", "cancelled"];
 

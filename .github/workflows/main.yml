@@ -37,8 +37,6 @@ name: main
 # a unit test reads surfaces at the next push that runs.
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [infinitary-after-merge]
   push:
     branches: [main]
     paths-ignore:
@@ -72,39 +70,33 @@ jobs:
       trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
   # Sorts the push first (docs/testing.md, "The swept batch"): files that are
   # exactly a passed batch's are already checked, so the full check is
-  # skipped, whether the batch passed in its own run or on its confirm; a
-  # push before a batch's files, which main has reached or can still reach,
-  # ends this run at once, cutting no alpha and leaving no failed run; only
-  # files no batch built get the full check (the captain's pick on INF-3052,
-  # "A: keep a fallback full check on main for versions no batch built").
-  # A batch pull request's files are a passed batch's when its own run passed
-  # on exactly them and the batch changed no file under .github/, which its
-  # run reads from the pull request itself (docs/testing.md, "A batch pull
-  # request").
+  # skipped, whether the batch passed outright or on its confirm; only files
+  # no batch built get the full check (the captain's pick on INF-3052, "A:
+  # keep a fallback full check on main for versions no batch built"). A batch
+  # is one pull request, merged in one push, so the push that merges it holds
+  # its files. They are a passed batch's when the pull request's own run
+  # passed on exactly them and the batch changed no file under .github/,
+  # which its run reads from the pull request itself.
   sort:
     name: ${{ format('{0} · Compare with checked batches', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      statuses: read
       pull-requests: read
-      actions: write
+      actions: read
     outputs:
       kind: ${{ steps.sort.outputs.kind }}
       batch: ${{ steps.sort.outputs.batch }}
     steps:
       - uses: actions/checkout@v4
         with:
-          # The sort, the shipped queue's rules it reads the batch's state
-          # with, and its reader of a batch pull request's own run.
+          # The sort and its reader of a batch pull request's own run.
           sparse-checkout: |
             scripts/batch.mjs
             scripts/batch-pull.mjs
-            scripts/after-merge-paths.mjs
-            .github/infinitary/rules.mjs
           sparse-checkout-cone-mode: false
       - id: sort
-        name: Select changed paths
+        name: Compare the push with its batch
         uses: actions/github-script@v7
         env:
           TREE: ${{ github.event.head_commit.tree_id }}
@@ -112,15 +104,8 @@ jobs:
           script: |
             const {pathToFileURL} = require('node:url');
             const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
-            const {afterMergeShouldRun} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/after-merge-paths.mjs`).href);
-            if (!await afterMergeShouldRun(github, context, 'main')) {
-              core.setOutput('kind', 'ignored');
-              core.notice('Only phone or documentation files changed; the full main check does not run.');
-              await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
-              return;
-            }
             let sorted = {kind: 'full'};
-            if (context.eventName === 'push' || context.eventName === 'repository_dispatch') {
+            if (context.eventName === 'push') {
               try {
                 const tree = process.env.TREE || (await github.rest.repos.getCommit({...context.repo, ref: context.sha})).data.commit.tree.sha;
                 sorted = await batch.readMainPush(github, context.repo, {sha: context.sha, tree});
@@ -130,10 +115,6 @@ jobs:
             }
             core.setOutput('kind', sorted.kind);
             core.setOutput('batch', String(sorted.run ?? ''));
-            if (sorted.kind === 'landing') {
-              core.notice(`Main reaches batch run ${sorted.run}'s files at a later push, whose check reads it.`);
-              await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
-            }
   # A push whose files are a passed batch's. The alpha's proof follows its
   # name to the batch run (scripts/main-alpha-proof.mjs).
   covered:
@@ -150,7 +131,7 @@ jobs:
   # release (INF-2480).
   verify:
     needs: [alpha-wait, sort]
-    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' && needs.sort.outputs.kind != 'ignored' }}
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' }}
     name: ${{ format('{0} · Desktop checks', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/verify.yml
     with:
@@ -163,11 +144,10 @@ jobs:
       # (docs/testing.md, "Main's desktop release check").
       hosted: true
   # The Linux automatic startup fixtures, beside the full check, on GitHub's
-  # hosted Ubuntu; a covered push's batch ran them (infinitary-batch-checks.yml,
-  # batch-checks.yml).
+  # hosted Ubuntu; a covered push's batch ran them (batch-checks.yml).
   startup:
     needs: [alpha-wait, sort]
-    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' && needs.sort.outputs.kind != 'ignored' }}
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' }}
     name: ${{ format('{0} · Linux startup', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/linux-startup.yml
     with:
@@ -175,12 +155,9 @@ jobs:
       ref: ${{ github.sha }}
   # The alpha cut from this run (docs/alpha.md, "Cutting an alpha"): once
   # every check above passed, the last job starts release.yml by dispatch,
-  # naming this run. GitHub starts no run for an event its own token caused,
-  # except a dispatch, and the queue's after-merge signal starts this run with
-  # that token, so a completion trigger on release.yml would never fire for a
-  # merge the queue made. The release names itself after this run, waits for
-  # it to end and reads its proof (scripts/main-alpha-proof.mjs). A check
-  # started by hand cuts no alpha, and neither does a run the sort ended.
+  # naming this run. The release names itself after this run, waits for it to
+  # end and reads its proof (scripts/main-alpha-proof.mjs). A check started
+  # by hand cuts no alpha.
   alpha:
     needs: [alpha-wait, sort, covered, verify, startup]
     if: ${{ !cancelled() && !failure() && github.event_name != 'workflow_dispatch' && (needs.sort.outputs.kind == 'full' || needs.sort.outputs.kind == 'covered') }}

@@ -69,7 +69,7 @@ describe("the signed channel workflow", () => {
   // swept batch's sweep is this full check, whose browser test group
   // installs the browser layer's Chromium and then runs every browser file.
   it("runs every browser file in the swept batch's check", () => {
-    const batch = loadYamlFile(".github/workflows/infinitary-batch-checks.yml") as Workflow;
+    const batch = loadYamlFile(".github/workflows/batch-checks.yml") as Workflow;
     const sweep = jobOf(batch, "sweep");
     expect(sweep.uses).toBe("./.github/workflows/verify.yml");
     const groups = verifyLinuxTests((sweep.with ?? {}) as Record<string, unknown>);

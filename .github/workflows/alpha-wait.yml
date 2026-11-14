@@ -80,6 +80,7 @@ jobs:
             const {data: mains} = await github.rest.actions.listWorkflowRuns({
               ...context.repo, workflow_id: 'main.yml', branch: 'main', status: 'completed', per_page: 100
             });
+            // A main run from before batches of the person's own was started by the team queue's dispatch.
             const previous = mains.workflow_runs
               .filter((run) => ['push', 'repository_dispatch'].includes(run.event) && run.run_number < me.run_number && run.conclusion === 'success')
               .sort((a, b) => b.run_number - a.run_number)[0];

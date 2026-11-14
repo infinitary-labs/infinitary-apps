@@ -109,8 +109,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     };
     expect(main.on).toEqual({
       workflow_dispatch: null,
-      // Approved queue-owned merges: their job token needs an explicit signal.
-      repository_dispatch: { types: ["infinitary-after-merge"] },
       push: { branches: ["main"], "paths-ignore": expect.any(Array) },
     });
     // One group for every run, so a newer push waits instead of starting beside it.

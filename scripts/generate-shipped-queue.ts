@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   GITHUB_QUEUE_PART,
@@ -14,28 +14,12 @@ import { historyBreak } from "./shipped-queue-history.ts";
 // The shipped queue's files as the queue-setup skill hands them to a
 // crewmate (docs/forge.md, "The shipped queue"): for each host part, each
 // stamped file as plain text in the part's own folder, since a runbook holds
-// no executable source, and files.md naming where each one goes. It also
-// writes this repository's own queue, GitHub's stamped files at their paths
-// with this repository's grants (docs/testing.md, "The swept batch").
-// `--check` refuses drift in either, and a source change that keeps a part's
-// old version.
+// no executable source, and files.md naming where each one goes. This
+// repository runs no copy of its own: its changes merge in batches of the
+// person's own (docs/forge.md, "Batches of your own"). `--check` refuses
+// drift, and a source change that keeps a part's old version.
 const source = fileURLToPath(new URL("../src/core/queue/shipped/", import.meta.url));
 const skill = fileURLToPath(new URL("../resources/runbooks/queue/skills/queue-setup/", import.meta.url));
-const repoRoot = fileURLToPath(new URL("../", import.meta.url));
-
-// This repository's grants, the one edit a project makes to a stamped file
-// (the queue file's `checks` and `confirm` jobs, the same in both): verify.yml, which the batch checks call,
-// asks for a read of the project's runs (its Mac installer lane reads its
-// caller's run), and a called workflow can ask for no more than its caller
-// grants. It names no secret and no write.
-const GRANTS_AT = "      contents: read\n      # The team's grants";
-const OWN_GRANTS = "      contents: read\n      actions: read\n      # The team's grants";
-const withOwnGrants = (path: string, text: string) => {
-  if (path !== GITHUB_QUEUE_PART.queueFile) return text;
-  if (text.split(GRANTS_AT).length !== 3)
-    throw new Error(`The shipped queue file no longer marks its two jobs' grants as "${GRANTS_AT}".`);
-  return text.replaceAll(GRANTS_AT, OWN_GRANTS);
-};
 
 /** Each part's version list, by the name it is declared under in `shipped.ts`. */
 const PARTS: { part: QueueHostPart; list: string; was?: string }[] = [
@@ -105,20 +89,7 @@ for (const { part, list, was } of PARTS) {
       "",
     ].join("\n"),
   );
-  // This repository runs GitHub's part itself.
-  const own =
-    part === GITHUB_QUEUE_PART
-      ? files.map((file) => ({ path: join(repoRoot, file.path), text: withOwnGrants(file.path, file.text) }))
-      : [];
-
   if (check) {
-    const read = (path: string) => {
-      try {
-        return readFileSync(path, "utf8");
-      } catch {
-        return undefined;
-      }
-    };
     const present = (() => {
       try {
         return readdirSync(out).sort();
@@ -128,16 +99,11 @@ for (const { part, list, was } of PARTS) {
     })();
     const drift =
       present.join("\n") !== [...wanted.keys()].sort().join("\n") ||
-      [...wanted].some(([name, text]) => readFileSync(join(out, name), "utf8") !== text) ||
-      own.some((file) => read(file.path) !== file.text);
+      [...wanted].some(([name, text]) => readFileSync(join(out, name), "utf8") !== text);
     if (drift) throw new Error("Run node scripts/generate-shipped-queue.ts to refresh the shipped queue's files.");
   } else {
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
     for (const [name, text] of wanted) writeFileSync(join(out, name), text);
-    for (const file of own) {
-      mkdirSync(dirname(file.path), { recursive: true });
-      writeFileSync(file.path, file.text);
-    }
   }
 }

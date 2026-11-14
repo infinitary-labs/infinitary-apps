@@ -168,10 +168,17 @@ export async function settled<T>(page: Page, read: () => Promise<T>): Promise<T>
  * scaled on screen though its layout never changed. Unlike `settled`, it
  * waits on the motion itself rather than on two reads agreeing. A motion
  * that never ends is not waited for.
+ *
+ * An opened details reveals its content with a transition on its
+ * `::details-content` (design/reveals.css) that slides every box inside it
+ * down into place, yet Chromium lists it among no document's or element's
+ * animations and announces it with no transition event. So for each open
+ * details whose content holds `target`, it also waits, a frame at a time,
+ * until that content shows as the reveal leaves it: opaque and untransformed.
  */
 export async function atRest(target: Locator): Promise<void> {
-  await target.evaluate((element) =>
-    Promise.all(
+  await target.evaluate(async (element) => {
+    await Promise.all(
       document
         .getAnimations()
         .filter((motion) => {
@@ -183,8 +190,21 @@ export async function atRest(target: Locator): Promise<void> {
           );
         })
         .map((motion) => motion.finished.catch(() => undefined)),
-    ),
-  );
+    );
+    const revealing = () => {
+      for (let box = element.parentElement; box; box = box.parentElement) {
+        // The summary is slotted outside the content, so the reveal never moves it.
+        if (!(box instanceof HTMLDetailsElement) || !box.open) continue;
+        if (box.querySelector(":scope > summary")?.contains(element)) continue;
+        const content = getComputedStyle(box, "::details-content");
+        const moved =
+          content.transform !== "none" && !new DOMMatrixReadOnly(content.transform).isIdentity;
+        if (content.opacity !== "1" || moved) return true;
+      }
+      return false;
+    };
+    while (revealing()) await new Promise((drawn) => requestAnimationFrame(drawn));
+  });
 }
 
 /** A window's content area in device-independent pixels, before page zoom. */

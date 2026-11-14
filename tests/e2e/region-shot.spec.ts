@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { UI_SIZES } from "../../src/shared/preferences";
+import { scratchDir } from "../helpers/scratchDirs";
 import { CORNERS, chooseSize, markCorners, readMarkers } from "./captureMarkers";
 import { launchApp } from "./launch";
-import { atRest, resizeWindow } from "./layout";
+import { atRest, resizeWindow, settled } from "./layout";
 import { regionShot } from "./pictures";
-import { usageTab } from "./usage";
-import { runFromSearch } from "./windowKeys";
+import { seedUsageLedger, usageTab } from "./usage";
+import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 test("a whole-region picture waits for reveal and keeps every capture edge", async () => {
   const launched = await launchApp({ withMockProvider: true });
@@ -70,6 +71,34 @@ test("a whole-region picture waits for reveal and keeps every capture edge", asy
       expect(count, `the whole picture keeps its ${edge} edge after reveal`).toBeGreaterThanOrEqual(
         25,
       );
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-4154: a picture of a section taken just after it opened was clipped by
+// 1.9px. The opened section's reveal slides its content down into place with a
+// transition Chromium lists among no animations, so the wait returned at once
+// and the region was scrolled into view on a box the reveal still moved.
+test("a region inside a section just opened waits for its reveal", async () => {
+  // The Daily values section shows once the ledger holds usage.
+  const userDataDir = scratchDir("infinitary-region-reveal-");
+  seedUsageLedger(userDataDir);
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1200, height: 1000 });
+    await runFromSearch(app, page, "settings.usage");
+    const daily = usageTab(page).section.locator("details[data-usage-daily-values]");
+    const summary = daily.locator(":scope > summary");
+    const region = daily.locator("thead");
+    await focusOn(summary);
+    await pressKey(summary, "Enter");
+    await atRest(region);
+    // Read at once: the box the wait let go of is the one the reveal leaves.
+    const released = await region.boundingBox();
+    expect(released).toEqual(await settled(page, () => region.boundingBox()));
+    await regionShot(region, test.info().outputPath("opened-section.png"));
   } finally {
     await launched.close();
   }

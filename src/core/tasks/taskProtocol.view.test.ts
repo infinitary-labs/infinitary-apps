@@ -744,4 +744,21 @@ describe("the task protocol (task-system P3)", () => {
     ]);
     expect(protocol.projects()).toEqual(board.projects);
   });
+
+  // INF-4147's plan, direction B: each finished segment of a collapsed
+  // task's parts bar opens its own part, so the task names its closed parts
+  // in the order they closed, oldest first, whatever order they were filed in.
+  it("names a task's closed parts in the order they closed, on the board and in its record", () => {
+    const { tasks, protocol, tick } = taskProtocolFixture();
+    tasks.create({ id: "plan", title: "Plan", prompt: "p", repoId: null });
+    for (const id of ["first", "second", "third", "open"])
+      tasks.create({ id, title: id, prompt: "p", repoId: null, parentId: "plan" });
+    tick(1_000);
+    tasks.close("third", { status: "done", reason: "settled", actor: "host" });
+    tick(1_000);
+    tasks.close("first", { status: "dropped", reason: "cancelled", actor: "captain" });
+    const children = { total: 4, closed: 2, closedIds: ["third", "first"] };
+    expect(protocol.board().tasks.find((task) => task.id === "plan")?.children).toEqual(children);
+    expect(protocol.detail("plan")?.children).toEqual(children);
+  });
 });

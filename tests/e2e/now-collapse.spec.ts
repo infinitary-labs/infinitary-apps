@@ -7,7 +7,7 @@ import { panelCommandId } from "../../src/shared/keyboard";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
-import { expandDock, nowFrame, openGroup } from "./rails";
+import { expandDock, nowFrame, openGroup, openRowSummary } from "./rails";
 import { focusedRegion, regionAfter, runFromSearch } from "./windowKeys";
 
 /**
@@ -18,13 +18,17 @@ import { focusedRegion, regionAfter, runFromSearch } from "./windowKeys";
  * as the app counts today."), the way the captain uses it: by keys - ←
  * from a part goes up to its task, ← there collapses it, → expands it - a
  * restart that finds it still collapsed, and Expand all parts and Collapse
- * all parts from command search.
+ * all parts from command search. Resting on a segment of the collapsed
+ * task's bar rests on the part it names (INF-4147's plan, direction B, the
+ * captain's "Every segment, finished ones too"): the finished part's
+ * summary, then an open part's, then the task's own back on its title.
  *
  * Data: a plan with three parts - one finished, two on request - so its
  * tree lists under Backlog and its row reads 1/3. Every task is queued on
  * request, since a seeded running task returns to the queue at launch.
  * Completion: the parts' rows leave and come back, the row's collapse
- * control says which, and its bar draws one segment per part.
+ * control says which, and its bar draws one segment per part; the summary
+ * names the task the pointer rests on.
  * Platforms: any; no Mac-only part. Shared resources: none beyond the app.
  */
 
@@ -125,6 +129,30 @@ test("a task with parts collapses and expands by keys and by command, and stays 
         await openGroup(page, "backlog");
       await expect(row("cl-plan")).toBeVisible();
       await collapsedNow();
+    });
+
+    await test.step("resting on a segment opens the summary of the part it names", async () => {
+      const segment = (index: number) => row("cl-plan").locator("[data-now-bar] i").nth(index);
+      const summary = openRowSummary(page);
+      // The finished part first, then the open ones as the board lists them.
+      // Each rest lands below the drawn segment, inside its taller target.
+      for (const [index, part] of [
+        [0, "cl-words"],
+        [1, "cl-ship"],
+        [2, "cl-phone"],
+      ] as const) {
+        const box = await segment(index).boundingBox();
+        if (!box) throw new Error(`segment ${index} is not drawn`);
+        // e2e-frame-actions: native -- This journey proves a real pointer on a bar segment rests on its part.
+        await segment(index).hover({ position: { x: box.width / 2, y: box.height - 2 } });
+        await expect(summary).toHaveAttribute("data-point-summary", part);
+        await expect(segment(index)).toHaveAttribute("data-now-part-rested", "");
+      }
+      // The rest of the row (its status mark here) brings back the task's own summary.
+      // e2e-frame-actions: native -- This journey proves the pointer moving off the bar rests on the task again.
+      await row("cl-plan").locator("[data-now-dot]").hover();
+      await expect(summary).toHaveAttribute("data-point-summary", "cl-plan");
+      await expect(row("cl-plan").locator("[data-now-part-rested]")).toHaveCount(0);
     });
 
     await test.step("Expand all parts and Collapse all parts from command search", async () => {

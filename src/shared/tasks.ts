@@ -385,7 +385,15 @@ export const taskViewSchema = z.object({
   blockedSince: z.record(z.string(), z.number()).optional(),
   /** Keys of the tasks waiting on this one. */
   blocks: z.array(z.string()),
-  children: z.object({ total: z.number(), closed: z.number() }),
+  /**
+   * Its parts: how many, how many closed, and the closed ones' ids in the
+   * order they closed, oldest first. `closedIds` is absent on an older home.
+   */
+  children: z.object({
+    total: z.number(),
+    closed: z.number(),
+    closedIds: z.array(z.string()).optional(),
+  }),
   assignee: z.string().nullable(),
   model: z.string().nullable(),
   /**

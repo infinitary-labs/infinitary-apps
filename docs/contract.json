@@ -33542,6 +33542,12 @@
                     },
                     "closed": {
                       "type": "number"
+                    },
+                    "closedIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [
@@ -35266,6 +35272,12 @@
               },
               "closed": {
                 "type": "number"
+              },
+              "closedIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "required": [
@@ -39998,6 +40010,12 @@
                 },
                 "closed": {
                   "type": "number"
+                },
+                "closedIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [
@@ -41672,6 +41690,12 @@
                 },
                 "closed": {
                   "type": "number"
+                },
+                "closedIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [
@@ -72759,6 +72783,12 @@
                     },
                     "closed": {
                       "type": "number"
+                    },
+                    "closedIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [
@@ -74483,6 +74513,12 @@
                     },
                     "closed": {
                       "type": "number"
+                    },
+                    "closedIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [

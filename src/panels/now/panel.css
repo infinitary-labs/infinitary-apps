@@ -357,33 +357,48 @@
 }
 /* A collapsed task's bar: one segment per part, in the row marks' colors -
    finished, working now, waiting on you, not finished - 3px under its title. */
+/* Each segment is its part's rest target (INF-4147): its own width and half
+   of each gap, from 2px above the drawn bar down to the row's bottom edge.
+   The bar's box reaches 5px into the row's padding and gives it back, so
+   the row keeps its height; the drawn segment is each target's ::before. */
 [data-now-bar] {
   grid-column: 2 / -1;
   grid-row: 3;
   display: flex;
-  gap: 2px;
-  height: 3px;
-  margin: 2px 0 1px;
+  height: 11px;
+  margin: 0 -1px -5px;
   overflow: hidden;
-}
-[data-now-bar][data-now-many] {
-  gap: 1px;
 }
 [data-now-bar] i {
   flex: 1 1 0;
   min-width: 0;
+  padding: 0 1px;
+}
+[data-now-bar][data-now-many] i {
+  padding: 0 0.5px;
+}
+[data-now-bar] i::before {
+  content: "";
+  display: block;
+  height: 3px;
+  margin-top: 2px;
   border-radius: var(--radius-xs);
 }
-[data-now-part="done"] {
+/* The rested segment grows to 5px in place, its bottom edge where it was. */
+[data-now-bar] i[data-now-part-rested]::before {
+  height: 5px;
+  margin-top: 0;
+}
+[data-now-part="done"]::before {
   background: var(--fg-3);
 }
-[data-now-part="working"] {
+[data-now-part="working"]::before {
   background: var(--warn);
 }
-[data-now-part="waiting"] {
+[data-now-part="waiting"]::before {
   background: var(--accent);
 }
-[data-now-part="rest"] {
+[data-now-part="rest"]::before {
   box-shadow: inset 0 0 0 1px var(--line-2);
 }
 :is([data-now-item]:hover, [data-now-item]:has(:focus-visible)) .key {

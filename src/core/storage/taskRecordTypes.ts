@@ -20,6 +20,12 @@ import type { IntegrationAllowance, WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 
 export type TaskStatus = "open" | "active" | "done" | "dropped";
+
+/**
+ * A parent's parts: how many, how many closed, and the closed ones' ids in
+ * the order they closed, oldest first, for the Tasks panel's parts bar.
+ */
+export type PartCounts = { total: number; closed: number; closedIds?: string[] };
 export type TaskActivity = "starting" | "running" | "idle" | "interrupted";
 export type TaskClosedReason =
   | "landed"

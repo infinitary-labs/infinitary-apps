@@ -81823,7 +81823,15 @@ ${FRAME_QUESTION_SCRIPT}
     blockedSince: record(string(), number()).optional(),
     /** Keys of the tasks waiting on this one. */
     blocks: array(string()),
-    children: object({ total: number(), closed: number() }),
+    /**
+     * Its parts: how many, how many closed, and the closed ones' ids in the
+     * order they closed, oldest first. `closedIds` is absent on an older home.
+     */
+    children: object({
+      total: number(),
+      closed: number(),
+      closedIds: array(string()).optional()
+    }),
     assignee: string().nullable(),
     model: string().nullable(),
     /**

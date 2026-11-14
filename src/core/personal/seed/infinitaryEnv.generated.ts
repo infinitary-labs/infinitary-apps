@@ -263,8 +263,11 @@ declare module "@infinitary/contracts" {
      * in Pinned whatever its state. Absent while it is not pinned, and on an older home.
      */
     pinnedAt?: number;
-    /** Its parts: how many, and how many are closed. */
-    children: { total: number; closed: number };
+    /**
+     * Its parts: how many, how many are closed, and the closed ones' ids in
+     * the order they closed, oldest first (absent on an older home).
+     */
+    children: { total: number; closed: number; closedIds?: string[] };
     /** Reachable shown ready decision, null on hidden/working/closed tasks. */
     waitingCardId: string | null;
     /** A saved marked answer waits for the captain’s Done, even after it is read. */

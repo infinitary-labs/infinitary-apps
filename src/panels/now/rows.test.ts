@@ -846,14 +846,39 @@ describe("a task with parts (INF-3823)", () => {
   });
 
   it("draws one bar segment per part: finished first, then each open part by its state, in order", () => {
-    expect(partsBarOf(tree, parent)).toEqual(["done", "done", "working", "waiting", "rest"]);
+    const states = (at: PanelTaskBoard, row: PanelTaskRow) =>
+      partsBarOf(at, row).map((segment) => segment.state);
+    expect(states(tree, parent)).toEqual(["done", "done", "working", "waiting", "rest"]);
     // A part the board does not list reads not finished, never a made-up state.
     const sparse = board({ tasks: [{ ...parent, children: { total: 4, closed: 1 } }] });
-    expect(partsBarOf(sparse, sparse.tasks[0] as PanelTaskRow)).toEqual([
+    expect(states(sparse, sparse.tasks[0] as PanelTaskRow)).toEqual([
       "done",
       "rest",
       "rest",
       "rest",
+    ]);
+  });
+
+  // INF-4147's plan, direction B (the captain's answer "Every segment,
+  // finished ones too"): a rest on a segment opens the part it names.
+  it("names each segment's part: finished ones in the order they closed, then the open ones", () => {
+    const named = { ...parent, children: { total: 5, closed: 2, closedIds: ["first", "second"] } };
+    const at = board({ tasks: [named, working, decision, queued, review, solo] });
+    expect(partsBarOf(at, named).map((segment) => segment.id)).toEqual([
+      "first",
+      "second",
+      "ship",
+      "ask",
+      "iphone",
+    ]);
+    // An older home sends no ids: its finished segments, and padding the
+    // board cannot match, name no part, so their rest keeps the parent's.
+    const sparse = board({ tasks: [{ ...parent, children: { total: 4, closed: 1 } }] });
+    expect(partsBarOf(sparse, sparse.tasks[0] as PanelTaskRow).map((s) => s.id)).toEqual([
+      null,
+      null,
+      null,
+      null,
     ]);
   });
 

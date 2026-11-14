@@ -76,6 +76,12 @@ The row's accessible label adds the count in words, `3 of 7 parts finished`, and
 Collapsing hides every row listed under the task in its group, at any depth, except a part that waits on you, which is never hidden: it keeps its row and its indentation under the collapsed task (in Pinned, where parts list under their parent whatever their state).
 A collapsed row adds a bar under its title, 3px tall, 2px below the title and 1px above the row's edge, from the title's left edge to the row's right: one segment per part, 2px apart (1px past 30 parts), each with a 2px radius - finished parts first in `--fg-3`, then each open part in its order, working now in `--warn`, waiting on you in `--accent`, and the rest as a `--line-2` outline.
 A part the board does not list reads finished when the count says so, otherwise not finished.
+Resting on a segment rests on the part it names (INF-4147, the captain's words: "when my mouse hover onto the segments in the progress bar, it should count as hovering over the task that segment represents"): after the row's usual beat that part's crew summary opens level with the row, and the part is lit everywhere a rest lights a task, its crewmate on the stage included.
+Every segment names its part, the finished ones in the order they closed, oldest first, and the open ones as the board lists them; a segment that names none (an older home that sends no finished parts, or a count the board cannot match) keeps the task's own summary.
+Each segment's rest target is its own width plus half of each gap, from 2px above the bar down to the row's bottom edge; moving to another segment moves the summary at once, and moving onto the rest of the row brings back the task's own.
+The rested segment grows from 3px to 5px tall, its bottom edge where it was, and nothing else moves.
+A click anywhere on the row, bar included, still opens the task's record; leaving the row, Esc or a press lets the summary go, as for any row.
+The keyboard keeps its way to a part: → opens the task's parts, and ↓ rests on each one.
 Nothing starts collapsed (the captain's answer "None.
 Everything starts expanded as today, and a task stays collapsed once you collapse it."); a collapsed task stays collapsed across restarts, kept in the panel's own store, until it is expanded or leaves the board.
 Typed words in the filter show every match, a part under a collapsed task included, and leave what is collapsed as it was.

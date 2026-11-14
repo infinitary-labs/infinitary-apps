@@ -221,6 +221,7 @@ describe("the task protocol (task-system P3)", () => {
     expect(long.board.tasks.find((task) => task.id === "old-parent")?.children).toEqual({
       total: 1,
       closed: 0,
+      closedIds: [],
     });
     expect(long.board.projects).toEqual(short.board.projects);
     expect(long.rows).toBe(short.rows);

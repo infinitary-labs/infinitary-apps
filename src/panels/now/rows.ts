@@ -510,22 +510,38 @@ function openPartsOf(board: PanelTaskBoard): ReadonlyMap<string, PanelTaskRow[]>
   return parts;
 }
 
+/** One segment of a collapsed parent's bar: its part's state, and the part it names. */
+export type PartSegment = {
+  state: PartState;
+  /** The part's task id; null where the row cannot name it, and its rest keeps the parent's. */
+  id: string | null;
+};
+
 /**
- * A collapsed parent's bar: one state per part, the finished ones first,
- * then each open part in its order - waiting on you, working now, or not
- * finished. The board lists every open task, so a part the board does not
- * hold is finished; a count the board cannot match reads not finished.
+ * A collapsed parent's bar: one segment per part, the finished ones first,
+ * in the order they closed, then each open part in its order - waiting on
+ * you, working now, or not finished. The board lists every open task, so a
+ * part the board does not hold is finished; a count the board cannot match
+ * reads not finished. Each segment names its part (INF-4147's plan,
+ * direction B), so a rest on it opens that part's summary: a finished part
+ * from the row's `closedIds`, an open one from the board; a segment with no
+ * name to give (an older home's finished parts, or padding) names none.
  */
-export function partsBarOf(board: PanelTaskBoard, task: PanelTaskRow): PartState[] {
+export function partsBarOf(board: PanelTaskBoard, task: PanelTaskRow): PartSegment[] {
   const count = partsCountOf(task);
   if (!count) return [];
-  const bar: PartState[] = Array.from({ length: count.closed }, () => "done" as const);
+  const closedIds = task.children.closedIds ?? [];
+  const bar: PartSegment[] = Array.from({ length: count.closed }, (_, index) => ({
+    state: "done" as const,
+    id: closedIds[index] ?? null,
+  }));
   for (const part of openPartsOf(board).get(task.id) ?? []) {
     if (bar.length >= count.total) break;
     const group = nowGroupOf(part);
-    bar.push(group === "waiting" ? "waiting" : group === "working" ? "working" : "rest");
+    const state = group === "waiting" ? "waiting" : group === "working" ? "working" : "rest";
+    bar.push({ state, id: part.id });
   }
-  while (bar.length < count.total) bar.push("rest");
+  while (bar.length < count.total) bar.push({ state: "rest", id: null });
   return bar;
 }
 

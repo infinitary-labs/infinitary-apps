@@ -50,6 +50,7 @@ import {
   PANEL_GROUP_LABELS,
   PANEL_GROUPS,
   type PanelGroup,
+  type PartSegment,
   type PartState,
   partsBarOf,
   partsCountOf,
@@ -184,8 +185,11 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     keyboard: boolean;
   } | null>(null);
   const peek = useCallback(
-    (row: HTMLElement | null, task?: PanelTaskRow, keyboard = false) => {
-      setRestedId(task?.id ?? null);
+    (row: HTMLElement | null, task?: PanelTaskRow, keyboard = false, partId?: string) => {
+      // A rest on a segment of a collapsed row's bar rests on the part it
+      // names (INF-4147): its summary opens level with the row, and the part
+      // is lit as any rest is.
+      setRestedId(partId ?? task?.id ?? null);
       if (!row || !task) {
         if (!peeked.current) return;
         peeked.current = null;
@@ -194,9 +198,13 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
       }
       const { top, right, bottom, left } = row.getBoundingClientRect();
       peeked.current = { row, task, box: boxKey(row), keyboard };
-      point.peekTask({ taskId: task.id, box: { top, right, bottom, left } });
+      point.peekTask({ taskId: partId ?? task.id, box: { top, right, bottom, left } });
     },
     [point],
+  );
+  const peekPart = useCallback(
+    (row: HTMLElement, task: PanelTaskRow, partId: string) => peek(row, task, false, partId),
+    [peek],
   );
   const leave = useCallback(
     (row: HTMLElement) => {
@@ -831,6 +839,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
                 onToggle={() => toggle(group)}
                 onOpen={openTask}
                 onPeek={peek}
+                onPeekPart={peekPart}
                 onLeave={leave}
                 onFocusRow={focusRow}
                 onBlurRow={blurRow}
@@ -850,6 +859,20 @@ const NONE: ReadonlySet<string> = new Set();
 
 /** Past this many parts a collapsed row's bar draws its segments with a hairline gap, so they fit. */
 const MANY_PARTS = 30;
+
+/** A collapsed row's bar as one string, so its memoized row paints again only when it changes. */
+function barWords(bar: readonly PartSegment[]): string {
+  return bar.map(({ state, id }) => `${state}:${id ?? ""}`).join(" ");
+}
+
+/** The segments `barWords` wrote. */
+function barSegments(words: string): PartSegment[] {
+  return words.split(" ").map((word) => {
+    const at = word.indexOf(":");
+    const id = word.slice(at + 1);
+    return { state: word.slice(0, at) as PartState, id: id || null };
+  });
+}
 
 /** The last press on a row's Start: the row as it stood, and the app's refusal once it answered. */
 type StartPress = { taskId: string; updatedAt: number; refusal: string | null };
@@ -878,6 +901,7 @@ export function Group({
   onToggle,
   onOpen,
   onPeek,
+  onPeekPart,
   onLeave,
   onFocusRow,
   onBlurRow,
@@ -911,6 +935,8 @@ export function Group({
   onOpen: (task: PanelTaskRow) => void;
   /** The row the pointer or the keyboard rests on, or null on a press. */
   onPeek?: (row: HTMLElement | null, task?: PanelTaskRow) => void;
+  /** The pointer rests on a segment of a collapsed row's bar that names this part. */
+  onPeekPart?: (row: HTMLElement, task: PanelTaskRow, partId: string) => void;
   /** The pointer or the keyboard left this row: what rests on it, and only that, goes. */
   onLeave?: (row: HTMLElement) => void;
   /** Focus reached a row: the keyboard rests on it. */
@@ -963,6 +989,7 @@ export function Group({
           onStop={onStop}
           onOpen={onOpen}
           onPeek={onPeek}
+          onPeekPart={onPeekPart}
           onLeave={onLeave}
           onFocusRow={onFocusRow}
           onBlurRow={onBlurRow}
@@ -975,7 +1002,7 @@ export function Group({
           parts={count ? `${count.closed}/${count.total}` : undefined}
           folds={folds}
           shut={shut}
-          bar={shut ? partsBarOf(board, task).join(" ") : undefined}
+          bar={shut ? barWords(partsBarOf(board, task)) : undefined}
           onFold={onFold}
         />
       );
@@ -996,6 +1023,7 @@ export function Group({
     onStop,
     onOpen,
     onPeek,
+    onPeekPart,
     onLeave,
     onFocusRow,
     onBlurRow,
@@ -1072,6 +1100,7 @@ const Row = memo(function Row({
   onStop,
   onOpen,
   onPeek,
+  onPeekPart,
   onLeave,
   onFocusRow,
   onBlurRow,
@@ -1102,6 +1131,7 @@ const Row = memo(function Row({
   onStop?: (key: string) => void;
   onOpen: (task: PanelTaskRow) => void;
   onPeek?: (row: HTMLElement | null, task?: PanelTaskRow) => void;
+  onPeekPart?: (row: HTMLElement, task: PanelTaskRow, partId: string) => void;
   onLeave?: (row: HTMLElement) => void;
   onFocusRow?: (row: HTMLElement, task: PanelTaskRow) => void;
   onBlurRow?: (row: HTMLElement) => void;
@@ -1121,11 +1151,19 @@ const Row = memo(function Row({
   folds?: boolean;
   /** It is collapsed. */
   shut?: boolean;
-  /** A collapsed row's bar: each part's state, parted by spaces. */
+  /** A collapsed row's bar: each part's state and id, `state:id`, parted by spaces (`barWords`). */
   bar?: string | undefined;
   onFold?: ((ids: readonly string[], on: boolean) => void) | undefined;
 }) {
   paintedRows += 1;
+  // The part the pointer rests on through the bar: undefined while the
+  // pointer is off the row, null on the rest of the row or a segment that
+  // names no part.
+  const hovered = useRef<string | null | undefined>(undefined);
+  const [restedPart, setRestedPart] = useState<number | null>(null);
+  // A press let the rest go: it stays gone until the pointer leaves the row, as before.
+  const pressed = useRef(false);
+  const segments = bar ? barSegments(bar) : [];
   const word = wordOf(task);
   const trailing = rowTrailing(task, singleProject ? "" : projectName);
   const place = task.place ? ` · ${task.place.where}` : "";
@@ -1156,9 +1194,31 @@ const Row = memo(function Row({
       style={{ "--depth": String(depth) } as CSSProperties}
       aria-label={label}
       onClick={() => onOpen(task)}
-      onPointerEnter={(event) => onPeek?.(event.currentTarget, task)}
-      onPointerLeave={(event) => onLeave?.(event.currentTarget)}
-      onPointerDown={() => onPeek?.(null)}
+      onPointerOver={(event) => {
+        // The rest follows the pointer between the row and its bar's
+        // segments: a segment that names a part rests on that part, the
+        // rest of the row, and a segment that names none, on the task.
+        if (pressed.current) return;
+        const at = (event.target as HTMLElement).closest<HTMLElement>("[data-now-part]");
+        const index = at ? Number(at.dataset.nowPartIndex) : null;
+        const partId = index === null ? null : (segments[index]?.id ?? null);
+        if (hovered.current === partId) return;
+        hovered.current = partId;
+        setRestedPart(partId === null ? null : index);
+        if (partId !== null) onPeekPart?.(event.currentTarget, task, partId);
+        else onPeek?.(event.currentTarget, task);
+      }}
+      onPointerLeave={(event) => {
+        hovered.current = undefined;
+        pressed.current = false;
+        setRestedPart(null);
+        onLeave?.(event.currentTarget);
+      }}
+      onPointerDown={() => {
+        pressed.current = true;
+        setRestedPart(null);
+        onPeek?.(null);
+      }}
       onFocus={(event: FocusEvent<HTMLButtonElement>) => {
         onStop?.(rowNavKey(task.id));
         onFocusRow?.(event.currentTarget, task);
@@ -1186,12 +1246,18 @@ const Row = memo(function Row({
         <span
           data-now-bar=""
           aria-hidden="true"
-          data-now-many={bar.split(" ").length > MANY_PARTS ? "" : undefined}
+          data-now-many={segments.length > MANY_PARTS ? "" : undefined}
         >
-          {bar.split(" ").map((state, index) => (
-            // The bar is the parts in order; a part has no identity of its own here.
-            // biome-ignore lint/suspicious/noArrayIndexKey: one segment per part, in order
-            <i key={index} data-now-part={state as PartState} />
+          {segments.map(({ state, id }, index) => (
+            <i
+              // The bar is the parts in order; a part it cannot name has no identity here.
+              // biome-ignore lint/suspicious/noArrayIndexKey: one segment per part, in order
+              key={index}
+              data-now-part={state}
+              data-now-part-index={index}
+              data-now-part-id={id ?? undefined}
+              data-now-part-rested={restedPart === index ? "" : undefined}
+            />
           ))}
         </span>
       )}

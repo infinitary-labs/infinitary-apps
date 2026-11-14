@@ -3,6 +3,7 @@ import type { CommittedPlacement } from "@shared/placement";
 import type { WorkShape } from "@shared/routingPolicy";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 import type {
+  PartCounts,
   PendingSettleIntent,
   TaskActivity,
   TaskClosedReason,
@@ -1236,18 +1237,31 @@ export class TaskStore {
     return [...found, ...this.read(rows)];
   }
 
-  /** How many children each of these parents has, and how many of them closed. */
-  childCounts(parentIds: readonly string[]): Map<string, { total: number; closed: number }> {
-    const counts = new Map<string, { total: number; closed: number }>();
+  /**
+   * How many children each of these parents has, how many of them closed,
+   * and the closed ones' ids in the order they closed, oldest first.
+   */
+  childCounts(parentIds: readonly string[]): Map<string, PartCounts> {
+    const counts = new Map<string, PartCounts>();
     if (parentIds.length === 0) return counts;
     const rows = prepared(
       this.db,
       `SELECT parent_id, COUNT(*) AS total,
-              SUM(status NOT IN ('open', 'active')) AS closed
+              SUM(status NOT IN ('open', 'active')) AS closed,
+              json_group_array(id ORDER BY closed_at, created_at, id)
+                FILTER (WHERE status NOT IN ('open', 'active')) AS closed_ids
        FROM tasks WHERE parent_id IN (SELECT value FROM json_each(?))
        GROUP BY parent_id`,
-    ).all(JSON.stringify(parentIds)) as { parent_id: string; total: number; closed: number }[];
-    for (const row of rows) counts.set(row.parent_id, { total: row.total, closed: row.closed });
+    ).all(JSON.stringify(parentIds)) as {
+      parent_id: string;
+      total: number;
+      closed: number;
+      closed_ids: string;
+    }[];
+    for (const row of rows) {
+      const closedIds = JSON.parse(row.closed_ids) as string[];
+      counts.set(row.parent_id, { total: row.total, closed: row.closed, closedIds });
+    }
     return counts;
   }
 

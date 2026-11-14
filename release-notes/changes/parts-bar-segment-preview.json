@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "parts-bar-segment-preview",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Rest on a collapsed task's progress bar to peek at each part",
+      "body": "In the Tasks panel, resting the pointer on one segment of a collapsed task's progress bar opens the summary of the part that segment stands for, finished parts included. Move along the bar to check each part in turn; the rest of the row still shows the task itself.",
+      "picture": {
+        "dark": "parts-bar-segment-preview-dark.webp",
+        "light": "parts-bar-segment-preview-light.webp",
+        "alt": "A collapsed task in the Tasks panel with one segment of its progress bar taller than the rest, and that part's summary open beside the panel"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

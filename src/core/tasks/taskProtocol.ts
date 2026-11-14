@@ -55,7 +55,7 @@ import { currentChange, taskPullRequestsOf } from "../storage/changeProjection";
 import type { ProjectRecord } from "../storage/projectStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
-import { oldestFirst, type TaskRecord } from "../storage/taskRecords";
+import { oldestFirst, type PartCounts, type TaskRecord } from "../storage/taskRecords";
 import type { ClosedTaskSearch, ClosedTaskSearchInput } from "../storage/taskSelection";
 import { deliveryViewOf } from "./deliveryView";
 import { standingDependencyWaits } from "./dependencyWaits";
@@ -1343,7 +1343,7 @@ export class TaskProtocol {
     all: readonly TaskRecord[],
     links: TaskLink[],
     replacedBy: Map<string, string>,
-    childCounts: Map<string, { total: number; closed: number }> | undefined,
+    childCounts: Map<string, PartCounts> | undefined,
     cards: readonly Card[],
   ): Graph {
     // The graph owns these current records, including the other tasks a posture reads.
@@ -1367,7 +1367,7 @@ export class TaskProtocol {
       push(blockersOf, link.toId, from);
       push(blockingOf, link.fromId, to);
     }
-    const children = childCounts ?? new Map<string, { total: number; closed: number }>();
+    const children = childCounts ?? new Map<string, PartCounts>();
     if (!childCounts) {
       for (const record of all) {
         if (!record.parentId) continue;
@@ -1723,7 +1723,7 @@ type BoardCache = {
   /** The edges touching a shown row, by `edgeKey`. */
   links: Map<string, TaskLink>;
   /** Each shown parent's child counts (`TaskService.childCounts`). */
-  childCounts: Map<string, { total: number; closed: number }>;
+  childCounts: Map<string, PartCounts>;
   /** What replaced each shown dropped or superseded row (`TaskService.graph.replacementsOf`). */
   replacedBy: Map<string, string>;
   /** The graph around the shown rows, as the last read built it. */
@@ -1776,7 +1776,7 @@ type Graph = {
   linksInto: Map<string, TaskLink[]>;
   blockersOf: Map<string, TaskRecord[]>;
   blockingOf: Map<string, TaskRecord[]>;
-  children: Map<string, { total: number; closed: number }>;
+  children: Map<string, PartCounts>;
   filedFrom: Map<string, TaskLink>;
   decisionCards: Map<string, Card>;
   openCardIds: Set<string>;

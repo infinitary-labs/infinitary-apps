@@ -41,6 +41,7 @@ import type {
   TaskEventActor,
 } from "../storage/taskEventStore";
 import type {
+  PartCounts,
   TaskActivity,
   TaskClosedReason,
   TaskDelivery,
@@ -703,7 +704,7 @@ export class TaskService {
   }
 
   /** How many children each of these parents has, and how many of them closed. */
-  childCounts(parentIds: readonly string[]): Map<string, { total: number; closed: number }> {
+  childCounts(parentIds: readonly string[]): Map<string, PartCounts> {
     return this.writer.store.childCounts(parentIds);
   }
 

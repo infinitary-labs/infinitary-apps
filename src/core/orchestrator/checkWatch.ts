@@ -98,6 +98,8 @@ export type WatchedReading =
       head: string;
       change: string;
       pending: WatchedCheck[];
+      /** A complete reading where no check ran: none reported, or every one skipped. */
+      noneStarted?: boolean;
       /** Red checks seen while others still run. Absent when none are red. */
       failing?: WatchedCheck[];
       /**
@@ -406,6 +408,7 @@ export class CheckWatcher {
               head: read.head,
               checks: read.pending,
               waitedMs: now - current.since,
+              ...(read.noneStarted ? { noneStarted: true } : {}),
               ...(read.batch ? { batch: read.batch } : {}),
             },
             read.observationId,

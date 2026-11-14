@@ -587,6 +587,7 @@ The restored cancellation filter keeps a replacement pending while its known lat
 The reading identifies incomplete lists rather than inventing a check for a physical read limit.
 An empty hosted reading, or one where every check skipped, stays pending and watched until checks run or the crew records positive, exact-version absence evidence through `absentChecks`, with `pull` or, for the task's own pull request, alone (INF-1955: `CheckChangeTool.declareOwnAbsence` matches it to the pull request the task's branch holds, by number, branch and version, and stores it on an owned merge review).
 A declaration the record cannot match - no open pull request yet, another version, a host that runs no checks - is refused in words, never dropped; the merge card's checks hold names the declaration when an empty or all-skipped reading holds the card.
+While such a reading is watched, `check_change` does not tell the crewmate to end its turn and wait: it names both ways out, waiting if checks are still to start, or else declaring `absentChecks` or reporting that there is no evidence to declare, and the first mate's reading carries the same fact (INF-4215).
 That evidence names an explicit no-CI policy from the trusted default branch and the applicable local gate; elapsed time, history and missing workflow files are not evidence of that policy.
 A host that runs no checks, such as a plain Git host, needs no invented hosted check.
 An absence declaration never removes registered checks from the reading or marks them passed.
@@ -926,7 +927,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   The first is `first-failure`, naming each red check, while others are still running.
   A read that first sees a failure and also sees the checks finished sends only the end wake.
   At a version the captain's standing approval covers, a finish with every check passed sends no wake and runs the approval instead, and any other wake carries the approval's line (INF-4018, `docs/delivery-rigor.md` "No second card for an approved version").
-  The end wake carries the finished check states without a passing verdict; `timed-out`, still running after `CHECK_WATCH_BOUND_MS` (two hours); `gone` (no open change for the branch); `unreadable` (a sign-in, permission or other refusal; a transient failure reads again inside the bound).
+  The end wake carries the finished check states without a passing verdict; `timed-out`, still running after `CHECK_WATCH_BOUND_MS` (two hours), or with no check started in that time (`noneStarted`), when it names the absence declaration instead; `gone` (no open change for the branch); `unreadable` (a sign-in, permission or other refusal; a transient failure reads again inside the bound).
   A spent hourly allowance is not a refusal: the watch keeps standing, wakes nobody, and reads again at the reset GitHub named (`ForgeAllowanceSpent.resetAt`, INF-2149); the quiet refresh and the merge read wait the same.
   Each wake is named by the watch and the event (`check-watch:<head>:<since>:failure` or `:end`), and the inbox records the name with the row it queues (`InboxStore.enqueueSteerOnce`), so a restart between the wake and the clear never sends it again.
   A wake recorded before the early wake existed, named `check-watch:<head>:<since>`, still counts as the end wake.

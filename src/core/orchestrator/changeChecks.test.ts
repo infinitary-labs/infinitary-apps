@@ -19,9 +19,11 @@ import {
   ForgeError,
   type ForgePull,
 } from "../forge";
+import { InboxStore } from "../storage/inboxStore";
 import { TaskStore } from "../storage/taskRecords";
 import { git } from "../workspace/git";
 import { CheckWatcher } from "./checkWatch";
+import { renderWake, type TypedWake } from "./wakes";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
 // priority, the slowest test (the no-CI project's merge) 0.59 s at its fastest
@@ -485,6 +487,53 @@ it("does not open a change again when an older task recorded its number before i
 // Crew judgment and settlement live in checkDeclarations.test.ts (accepted INF-1177).
 
 describe('the check watch\'s side of a reading (docs/forge.md, "The check watch")', () => {
+  // INF-4215, the captain's "how can we prevent this kind of wasteful wait":
+  // a GitHub pull request in a project with no workflows reads an empty list
+  // forever. The empty list stays pending (docs/forge.md), but no reading
+  // tells the crew to wait for a wake that only the two-hour bound sends, and
+  // that wake does not call checks running when none started.
+  it("names the way out of an empty, undeclared reading, and its two-hour wake says no check started", async () => {
+    let now = 1_000_000;
+    const forge = new FakeForge();
+    forge.states = [];
+    const { tasks, repos, service, db } = setup({ forge, now: () => now });
+    await insertDirectPrTask(tasks, repos);
+
+    const said = await service.checkTool.checkForCrew("ab12cd34");
+    expect(said).toContain("- no checks reported on the head SHA");
+    expect(said).toContain("check_change absentChecks");
+    expect(said).not.toContain("End your turn now and wait");
+    const told = (await service.checks.run("ab12cd34")).text;
+    expect(told).toContain("absentChecks");
+    expect(told).not.toContain("will wake the crewmate when the first check fails");
+    // Still pending and watched, in case checks are about to start.
+    expect(service.checks.reading("ab12cd34")?.overall).toBe("pending");
+    expect(tasks.get("ab12cd34")?.delivery?.ciWatch?.head).toBe("feedbeef");
+
+    const inbox = new InboxStore(db, { now: () => now });
+    const steers: TypedWake[] = [];
+    const watcher = new CheckWatcher({
+      tasks,
+      inbox,
+      runKept: () => {},
+      read: (taskId) => service.checks.readWatched(taskId),
+      steer: async (taskId, wake) => {
+        steers.push(wake);
+        if (wake.once) inbox.enqueueSteerOnce(taskId, { ...wake, once: wake.once });
+      },
+    });
+    const start = now;
+    for (let minute = 1; minute <= 130; minute++) {
+      now = start + minute * 60_000;
+      await watcher.poll(now);
+    }
+    expect(steers).toHaveLength(1);
+    const wake = renderWake(steers[0] as TypedWake);
+    expect(wake).toContain("No check started");
+    expect(wake).toContain("check_change absentChecks");
+    expect(wake).not.toContain("still running");
+  });
+
   it("arms on checks still running, keeps its start on the same head, and restarts on a new one", async () => {
     let now = 1_000_000;
     const forge = new FakeForge();

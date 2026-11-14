@@ -210,6 +210,7 @@ export class ChangeChecks {
           head: change.headSha,
           change: words,
           pending: named(checks.items.filter((check) => check.state === "pending")),
+          ...(noneStarted(checks) ? { noneStarted: true } : {}),
           ...(failing.length > 0 ? { failing } : {}),
           ...(batch ? { batch } : {}),
         };
@@ -496,6 +497,7 @@ export class ChangeChecks {
       const after = this.options.tasks.get(record.id)?.delivery;
       const watched = stillRunning && after?.ciWatch?.head === change.headSha;
       const earlyOwed = watched && after?.ciWatch?.failureSeen !== true;
+      const empty = watched && noneStarted(checks);
       const held = this.readiness.readinessProblem(taskId, change);
       return {
         text: [
@@ -536,7 +538,7 @@ export class ChangeChecks {
           ...(held ? [held] : []),
           ...(checks.items.length > 0 ? lines : ["- no checks reported on the head SHA"]),
 
-          ...watchWords(forge, audience, watched, earlyOwed),
+          ...(empty ? emptyWords(audience) : watchWords(forge, audience, watched, earlyOwed)),
         ].join("\n"),
         recorded: true,
         checked: { change, forge },
@@ -843,6 +845,31 @@ function changesCheckState(
     ("ciCapAt" in round && round.ciCapAt !== before.ciCapAt) ||
     ("ciRepair" in round && JSON.stringify(round.ciRepair) !== JSON.stringify(before.ciRepair))
   );
+}
+
+/**
+ * A complete reading where no check ran - none reported, or every one
+ * skipped. It stays pending until the crew declares absence (docs/forge.md),
+ * but nothing is running for a wake to report on.
+ */
+function noneStarted(checks: { items: { state: ForgeCheckState }[]; complete?: boolean }): boolean {
+  return checks.complete !== false && noCheckRan(checks.items);
+}
+
+/**
+ * What a watched reading with no check started says (INF-4215): checks may
+ * still be on their way, so the watch stands, but if this pull request runs
+ * none, only an absentChecks declaration or a report ends the wait.
+ */
+function emptyWords(audience: Audience): string[] {
+  if (audience === "crewmate") {
+    return [
+      "No check has started at this version, and nothing declares that it has none. If checks are still to start, end your turn: the app is watching and wakes you when they finish, or when its watch ends with none started. If this pull request runs no checks, declare that now with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks. If you have no such evidence, report that this pull request has no checks and nothing to declare instead of waiting; an empty reading alone stays pending.",
+    ];
+  }
+  return [
+    "No check has started at this version, and nothing declares that it has none. The host is watching in case checks start, and wakes the crewmate when they finish or when its watch ends with none started. If this pull request runs no checks, the crewmate ends the wait by declaring that with check_change absentChecks, or by reporting that it has no evidence to declare; an empty reading alone stays pending.",
+  ];
 }
 
 /** Some check is still queued or running: the only reading a watch waits on. */

@@ -150,6 +150,8 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await home.supervisor.steer.steerCrewmate("t-drop", "Make it blue too.")).toBe(
       "recorded-held",
     );
+    // INF-4165 finding 2: the hold is named as the computer, never as its account.
+    expect(home.supervisor.facts.laneHold("t-drop")).toEqual({ kind: "out-of-reach" });
     const before = kinds(home, "t-drop").length;
     home.supervisor.watch.checkQuietTasks(now() + 3 * 60 * 60 * 1000);
     expect(kinds(home, "t-drop").slice(before)).not.toContain("note");

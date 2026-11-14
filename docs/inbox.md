@@ -191,6 +191,10 @@ The cut-off contract on crew lanes (W1 S8; `docs/quota.md`, "Typed cut-offs"): a
 - **A computer out of reach holds its lanes the same way.**
   A task whose crewmate runs on a computer that runs work is held while that computer is out of reach or back and not yet caught up (`CrewFacts.outOfReach`, read inside the same `laneHeld`), on every path above; a steer to its running turn answers `recorded-held` too, and goes into that turn once it is back (`docs/helper.md`, "The home's side").
   The boot's `resetInFlight` leaves such a task's in-flight rows in flight, because its turn went on there; once that computer is back and caught up, a row no turn there took goes back on the lane.
+- **A kept steer names its hold.**
+  A lane is held for one of several reasons: a cut-off on its account, its computer out of reach, an update, a move to another computer, a hand-over of files still crossing, or a cost limit on it or a task above it (`docs/usage.md`, "The cost limit").
+  `CrewFacts.laneHold` names which one, and `laneHeld` is only whether it names any.
+  A first mate steer that answers `recorded-held` says that hold (`heldSteerText`), and for a cost limit the task it stands on and the card whose answer releases it, so a spending limit is never reported as an account that is not answering.
 - **A task on another computer is held by that computer's own account.**
   Its crewmate runs on that computer's own sign-in (`docs/helper.md`, "Its own sign-ins"), so no cut-off on this Mac's accounts holds it.
   A cut-off its turn meets there is recorded on that computer's own account, and that computer tells this Mac with its sign-ins, whose rows carry it (`AccountView.cutOff`).

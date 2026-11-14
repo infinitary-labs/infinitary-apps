@@ -99,8 +99,8 @@ test("a crewmate its organisation refuses waits without a turn, is told once, an
     await input.click();
     await input.fill(`${STEER_PROMPT_MARKER}${TITLE}: ${CLAUDE_REFUSAL_OVER_MARKER}`);
     await input.press("Enter");
-    // What `steer_crewmate` answers for guidance a held lane keeps.
-    const keptSteer = heldSteerText(await taskId(launched.page, TITLE));
+    // What `steer_crewmate` answers for guidance a lane held by its account keeps.
+    const keptSteer = heldSteerText(await taskId(launched.page, TITLE), { kind: "account" });
     await expect.poll(() => heard(keptSteer), { timeout: 30_000 }).toBe(true);
     await launched.close();
     launched = undefined;

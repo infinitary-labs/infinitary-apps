@@ -23,7 +23,9 @@ import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
 import { TaskService } from "../tasks/taskService";
 import { crewTally } from "../tasks/workPresentation";
 import { ciFactOf } from "./ciFact";
+import { costCardId } from "./costLimits";
 import type { CrewCore } from "./crewCore";
+import type { LaneHold } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { premiumRetryPossible } from "./holds";
 import type { AccountServeability } from "./idleLadder";
@@ -125,7 +127,27 @@ export class CrewFacts {
    * same way (`outOfReach`).
    */
   laneHeld(taskId: string): boolean {
+    return this.laneHold(taskId) !== undefined;
+  }
+
+  /**
+   * What holds the lane (`laneHeld`), or undefined when nothing does, so
+   * steer_crewmate answers a kept message with its real hold. A cost limit
+   * comes first: only the captain's answer on its card ends it.
+   */
+  laneHold(taskId: string): LaneHold | undefined {
     const record = this.core.options.tasks.get(taskId);
+    // The task, or a task above it, passed its cost limit: nothing starts
+    // until the captain answers its card (docs/usage.md, "The cost limit").
+    const cost = this.core.costLimits.heldBy(taskId);
+    if (cost)
+      return {
+        kind: "cost-limit",
+        holder: cost.taskId,
+        holderKey: this.core.options.tasks.get(cost.taskId)?.key || cost.taskId,
+        limitUsd: cost.limitUsd,
+        cardId: costCardId(cost.taskId),
+      };
     // A move to another computer starts no new turn until it has moved, its
     // new conversation opened there and its dependencies installed
     // (`restartFrom`, `preparing`, `reopenMovedTask`).
@@ -135,24 +157,27 @@ export class CrewFacts {
       move?.phase === "moving" ||
       move?.restartFrom !== undefined ||
       move?.preparing === true ||
-      this.core.moves.isCrossing(taskId) ||
-      // A hand-over of files still crossing: what is behind it waits for it (INF-3060).
-      this.core.steer.handingOver(taskId)
+      this.core.moves.isCrossing(taskId)
     )
-      return true;
+      return { kind: "move" };
+    // A hand-over of files still crossing: what is behind it waits for it (INF-3060).
+    if (this.core.steer.handingOver(taskId)) return { kind: "hand-over" };
     const accountId = this.core.tasks.get(taskId)?.accountId ?? record?.accountId;
-    return (
+    if (
       this.core.ladder.cutOffHolds({
         id: taskId,
         accountId: accountId ?? null,
         deviceId: record?.deviceId ?? null,
-      }) ||
-      this.outOfReach(taskId) ||
-      this.core.updates.heldForUpdate(taskId) ||
-      // The task, or a task above it, passed its cost limit: nothing starts
-      // until the captain answers its card (docs/usage.md, "The cost limit").
-      this.core.costLimits.heldBy(taskId) !== undefined
-    );
+      })
+    )
+      return { kind: "account" };
+    // This computer's update, or the update of the computer the task runs on.
+    if (this.core.updates.heldForUpdate(taskId)) return { kind: "update" };
+    if (this.outOfReach(taskId))
+      return this.core.updates.isUpdating(this.machineOf(taskId))
+        ? { kind: "update" }
+        : { kind: "out-of-reach" };
+    return undefined;
   }
 
   /**

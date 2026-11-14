@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "held-message-names-its-hold",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "A message waiting for a crewmate says why it waits",
+      "body": "When a crewmate cannot take a message yet, your first mate now tells you the real reason: a spending limit, its computer out of reach, an update, a move to another computer, or its account. For a spending limit it points you to the card whose answer lets the work go on, instead of saying the account is not answering.",
+      "noPicture": "This changes what the first mate is told and says in its answer, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

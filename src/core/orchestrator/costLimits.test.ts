@@ -16,6 +16,7 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import type { FakeSessionOptions } from "../../../tests/helpers/fakeSession";
+import { heldSteerText } from "../pi/crewTools";
 import { CostLimitStore } from "../storage/costLimitStore";
 import { UsageStore } from "../storage/usageStore";
 import { costCardId } from "./costLimits";
@@ -111,6 +112,31 @@ describe("CostLimits", () => {
     h.respond(1);
     await tick();
     expect(h.cards().filter((each) => each.id === costCardId(h.taskId))).toHaveLength(1);
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-4165 finding 2: four messages kept behind spending-limit cards were
+  // each reported as "account is not answering".
+  it("answers a message kept behind the limit with the limit and its card, not the account", async () => {
+    const h = await heldTask();
+    h.crewmate.stops[0]?.();
+    await tick();
+    expect(await h.supervisor.steer.steerCrewmate(h.taskId, "and the tests")).toBe("recorded-held");
+    const hold = h.supervisor.facts.laneHold(h.taskId);
+    expect(hold).toMatchObject({
+      kind: "cost-limit",
+      holder: h.taskId,
+      limitUsd: 50,
+      cardId: costCardId(h.taskId),
+    });
+    const answer = heldSteerText(h.taskId, hold);
+    expect(answer).toContain("passed its $50 cost limit");
+    expect(answer).toContain(costCardId(h.taskId));
+    expect(answer).not.toContain("account is not answering");
+    // The captain's answer on that card releases it.
+    h.supervisor.cardActions.act(costCardId(h.taskId), "allow-more");
+    await tick();
+    expect(h.supervisor.facts.laneHold(h.taskId)).toBeUndefined();
     await h.supervisor.disposeAll();
   });
 

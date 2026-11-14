@@ -1,3 +1,4 @@
+import { formatUsd } from "@shared/costLimit";
 import { DONE_WHYS, type DoneWhy } from "@shared/deliveryFacts";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
@@ -6,7 +7,7 @@ import type { Rigor } from "@shared/rigor";
 import { CLASSIFIABLE_KINDS, type WorkKind, type WorkShapeAsk } from "@shared/routingPolicy";
 import { Type } from "typebox";
 import type { CiReadingFact } from "../orchestrator/ciFact";
-import type { SteerDelivery } from "../orchestrator/crewRuntime";
+import type { LaneHold, SteerDelivery } from "../orchestrator/crewRuntime";
 import { crewHoldWays, type HoldRefusal, renderHold } from "../orchestrator/holds";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
 import { boundTool, stringEnum } from "../session/tools";
@@ -219,6 +220,8 @@ export type CrewDelegate = {
     message: string,
     response?: import("@shared/crewResponses").AskedResponsePolicy,
   ): Promise<SteerDelivery>;
+  /** What holds a task's lane now (`CrewFacts.laneHold`), for a kept message's answer. */
+  laneHold?(taskId: string): LaneHold | undefined;
   /**
    * Delivers the files `fromTask`'s reports handed on into `toTask`'s
    * hand-over folder (INF-992); answers the words its steer carries.
@@ -498,9 +501,35 @@ function missingHandFiles(): Promise<string> {
   return Promise.reject(new Error("Handing files between tasks is not available here."));
 }
 
-/** What steer_crewmate answers for guidance a held lane keeps until its account answers. */
-export function heldSteerText(taskId: string): string {
-  return `Task ${taskId}'s account is not answering right now, so your message is kept and goes out when it answers again; you will hear when it does. Do not resend.`;
+/**
+ * What steer_crewmate answers for guidance a held lane keeps: the hold that
+ * keeps it (`LaneHold`), and for a cost limit the card whose answer releases
+ * it, so the first mate never reports one hold as another.
+ */
+export function heldSteerText(taskId: string, hold?: LaneHold): string {
+  const kept = "so your message is kept and goes out on its own";
+  const tail = "Do not resend.";
+  switch (hold?.kind) {
+    case "cost-limit": {
+      const where =
+        hold.holder === taskId || hold.holderKey === taskId
+          ? `Task ${taskId} passed its ${formatUsd(hold.limitUsd)} cost limit`
+          : `Task ${taskId} is under ${hold.holderKey}, which passed its ${formatUsd(hold.limitUsd)} cost limit`;
+      return `${where}, ${kept} once the captain allows more spending on its cost limit card ${hold.cardId}. ${tail}`;
+    }
+    case "move":
+      return `Task ${taskId} is moving to another computer, ${kept} once it has moved and its conversation is open there. ${tail}`;
+    case "hand-over":
+      return `Task ${taskId} is still receiving files handed over to it, ${kept} right after them. ${tail}`;
+    case "account":
+      return `Task ${taskId}'s account is not answering right now, ${kept} when it answers again; you will hear when it does. ${tail}`;
+    case "update":
+      return `The computer task ${taskId} runs on is being updated, ${kept} once the update is over and it is back. ${tail}`;
+    case "out-of-reach":
+      return `The computer task ${taskId} runs on is out of reach or still catching up, ${kept} once it is back and caught up. ${tail}`;
+    default:
+      return `Task ${taskId} cannot take messages right now, ${kept} when it can. ${tail}`;
+  }
 }
 
 export function createCrewTools(delegate: CrewDelegate) {
@@ -751,7 +780,7 @@ export function createCrewTools(delegate: CrewDelegate) {
             : delivery === "recorded-retrying"
               ? `Task ${params.task_id} did not accept the message just now, but it is durably recorded: delivery is retried automatically, and you will hear an [fm-op] if it keeps failing. Do not resend.`
               : delivery === "recorded-held"
-                ? heldSteerText(params.task_id)
+                ? heldSteerText(params.task_id, delegate.laneHold?.(params.task_id))
                 : delivery === "recorded-queued"
                   ? `Task ${params.task_id} has not started yet; your message is recorded and its crewmate reads it right after its brief once it starts. Do not resend.`
                   : delivery === "recorded-sending"

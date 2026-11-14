@@ -185,6 +185,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       steered(taskId);
       return delivery;
     },
+    laneHold: (taskId) => supervisor.facts.laneHold(taskId),
     handFiles: (fromTask, toTask) => supervisor.sessions.handFiles(fromTask, toTask),
     // The hand-over's checks answer now; its copy and the steer after it go
     // on behind the answer, read from this turn as it stands (INF-3060).

@@ -380,6 +380,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(cards().filter((card) => card.id.startsWith("card-stall-"))).toEqual([]);
       // Guidance given while it waits is kept, and says so.
       expect(await supervisor.steer.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      // INF-4165 finding 2: what keeps it is named as the account, the one hold that is.
+      expect(supervisor.facts.laneHold(taskId)).toEqual({ kind: "account" });
       await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts);
 

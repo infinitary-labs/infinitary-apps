@@ -27,10 +27,11 @@ import type { WakeWithdrawn } from "./reportWakes";
  * right after its brief once it starts. `after-files`: the first mate's
  * message is recorded on the task's lane, which is held while its earlier
  * message with files is still being handed over, so the crewmate reads them
- * in the order they were sent. `recorded-held`: a
- * cut-off stands on the task's account, so the message is kept on its lane,
- * not attempted, and goes out when the account serves again - which the
- * Firstmate hears (docs/inbox.md, "A lane on a withheld account").
+ * in the order they were sent. `recorded-held`: the task's lane is held
+ * (`LaneHold`: a cut-off on its account, its computer out of reach, an
+ * update, a move, a hand-over or a cost limit), so the message is kept on
+ * its lane, not attempted, and goes out when the hold ends (docs/inbox.md,
+ * "A lane on a withheld account").
  * `recorded-sending` (INF-3060): the first mate's message is recorded and
  * its delivery - into the running turn, or by reopening the conversation -
  * goes on behind the tool's answer; the timeline records what became of it,
@@ -44,6 +45,21 @@ export type SteerDelivery =
   | "recorded-held"
   | "recorded-sending"
   | "after-files";
+
+/**
+ * What keeps a task's lane held (`CrewFacts.laneHold`), so a message kept
+ * there is answered with the hold that keeps it: the task's account under
+ * a cut-off, its computer out of reach, an update, a move to another
+ * computer or a hand-over of files still crossing, or a cost limit, named
+ * with the task it stands on and the card whose answer releases it.
+ */
+export type LaneHold =
+  | { kind: "cost-limit"; holder: string; holderKey: string; limitUsd: number; cardId: string }
+  | { kind: "move" }
+  | { kind: "hand-over" }
+  | { kind: "account" }
+  | { kind: "update" }
+  | { kind: "out-of-reach" };
 
 /** Who issued a steer, how it arrived, and the decision behind it (R2 capture). */
 export type SteerSource = {

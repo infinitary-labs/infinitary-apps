@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { LaneHold } from "../orchestrator/crewRuntime";
 import {
   type CrewDelegate,
   closingSentenceMissing,
@@ -495,6 +496,42 @@ describe("crew tools", () => {
     const after = await answer("after-files");
     expect(after).toContain("right after your earlier message with files");
     expect(after).toContain("Do not resend");
+  });
+
+  // INF-4165 finding 2: one sentence once answered five different holds.
+  it("steer answers a kept message with the hold that keeps it", async () => {
+    const answer = async (hold?: LaneHold) => {
+      const laneHold = vi.fn(() => hold);
+      const { byName } = toolset({
+        steerCrewmate: vi.fn(async () => "recorded-held" as const),
+        laneHold,
+      });
+      const result = await byName
+        .get("steer_crewmate")
+        ?.execute("t1", { task_id: "ab12", message: "change course" });
+      expect(laneHold).toHaveBeenCalledWith("ab12");
+      return JSON.stringify(result?.content ?? []);
+    };
+    const cost = await answer({
+      kind: "cost-limit",
+      holder: "p1",
+      holderKey: "INF-7",
+      limitUsd: 300,
+      cardId: "card-cost-p1",
+    });
+    expect(cost).toContain("under INF-7, which passed its $300 cost limit");
+    expect(cost).toContain("card-cost-p1");
+    expect(cost).not.toContain("account is not answering");
+    expect(await answer({ kind: "account" })).toContain("account is not answering");
+    expect(await answer({ kind: "out-of-reach" })).toContain("out of reach");
+    expect(await answer({ kind: "update" })).toContain("being updated");
+    expect(await answer({ kind: "move" })).toContain("moving to another computer");
+    expect(await answer({ kind: "hand-over" })).toContain("files handed over");
+    for (const hold of [undefined, { kind: "move" } as const]) {
+      const text = await answer(hold);
+      expect(text).not.toContain("account");
+      expect(text).toContain("Do not resend");
+    }
   });
 
   it("interrupt carries the lifecycle mode", async () => {

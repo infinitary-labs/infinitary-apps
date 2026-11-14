@@ -60,13 +60,35 @@ describe("the Claude read", () => {
       configDir: () => "/claude-home",
       clientVersion: async () => "2.1.293",
       read: async () => [
-        { value: "haiku", resolvedModel: "claude-haiku-4-5", displayName: "Haiku 4.5" },
+        { value: "claude-haiku-4-5", resolvedModel: "claude-haiku-4-5", displayName: "Haiku 4.5" },
       ],
     });
     expect(await reader(claude)).toEqual({
       status: "ok",
       models: [{ id: "claude-haiku-4-5", name: "Claude Haiku 4.5" }],
     });
+  });
+
+  it("does not take the client's built-in picker for the account's list", async () => {
+    // Claude Code 2.1.322 answered the app's startup read with its built-in
+    // picker before the account's own list had loaded: four aliases, its
+    // Fable alias still on 5.1. Served, it hid the Fable 5.2 starter from the
+    // catalog and the premium level for the rest of the day (INF-4110).
+    const reader = claudeListReader({
+      configDir: () => "/claude-home",
+      clientVersion: async () => "2.1.322",
+      read: async () => [
+        {
+          value: "default",
+          resolvedModel: "claude-opus-5-5",
+          displayName: "Default (recommended)",
+        },
+        { value: "fable", resolvedModel: "claude-fable-5-1", displayName: "Fable" },
+        { value: "sonnet", resolvedModel: "claude-sonnet-5-5", displayName: "Sonnet" },
+        { value: "haiku", resolvedModel: "claude-haiku-5-5", displayName: "Haiku" },
+      ],
+    });
+    expect(await reader(claude)).toMatchObject({ status: "failed", reason: "unrecognised" });
   });
 
   it("defers, never reads, while a crewmate session holds the store", async () => {

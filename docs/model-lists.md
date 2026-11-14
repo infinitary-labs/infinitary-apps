@@ -59,7 +59,7 @@ Changing the starting levels is a commit to that file in the tap; a development 
 
 | Provider | The runtime read | Shipped fallback |
 | --- | --- | --- |
-| Claude | the installed client's `supportedModels()` (`readClaudeModelCatalog`), checked for known-incomplete older metadata, a one-shot under `claudeStoreLease` that **defers** while a crewmate session holds the store | `CLAUDE_MODELS` |
+| Claude | the installed client's `supportedModels()` (`readClaudeModelCatalog`), checked for known-incomplete older metadata and an answer of aliases only, a one-shot under `claudeStoreLease` that **defers** while a crewmate session holds the store | `CLAUDE_MODELS` |
 | Codex, Grok | Pi's catalog (bundled plus the pi.dev overlay), filtered by the account's **own list**: `chatgpt.com/backend-api/codex/models?client_version=…` and `api.x.ai/v1/models`, read with the account's auth the way quota reads it, through the same bounded transport with a wider 8 MiB reply limit (a meter's is 64 KB; a list describing every model may run past that) | Pi's catalog, unfiltered |
 | Kimi Code | Pi's catalog (Kimi serves no list of its own) | - |
 | Copilot | Pi's catalog, which Pi itself narrows at sign-in to the models the account may use (it stores their ids with the sign-in) | - |
@@ -73,6 +73,10 @@ A pre-2.1.293 client can run the explicit Haiku 5.5 id while omitting it from a 
 `claudeCatalogIsOutdated` treats that specific omission as an unavailable read, so the existing fallback keeps the new default routable; it never inserts an account-specific row.
 Older by-name offerings wait for a current catalog, but their saved choices remain intact.
 A current client's omissions remain authoritative, and the global session version floor stays unchanged (`claude-model-probe.md`).
+Claude Code answers a session from a built-in picker of aliases when the account's own list is not ready, and those aliases can point at an older model than the account serves.
+`claudeCatalogIsBuiltInPicker` treats an answer of aliases only, with no row naming a model by its own id, as an unavailable read: the shipped catalog keeps serving until the next pass.
+It recognizes only that shape, so a built-in answer that also carries an explicit id is served.
+An alias row whose model the shipped list does not name is named by that model's version where the client's label leaves it out (`fable` on `claude-fable-5-1` reads "Claude Fable 5.1").
 
 The Pi account's own list is a **filter, never a source**: Pi cannot run an id it has no definition for.
 It sits behind a **safety rail** (captain's decision A, 2026-09-23; `railVerdict` in `src/core/models/piAccountLists.ts`).
@@ -102,7 +106,7 @@ The captain's two rules:
   - Pi's own pi.dev refresh moved off the start path in the same change.
     The runtime is created offline (bundled catalog plus the stored overlay), and the refresh runs in the background (`src/core/pi/modelRuntime.ts`).
 - **A failed read falls back to our catalog, silently.**
-  A timeout, a missing client, a sign-in problem, an unrecognised shape, known-incomplete Claude metadata and an empty answer are all failures.
+  A timeout, a missing client, a sign-in problem, an unrecognised shape, known-incomplete Claude metadata, an answer of aliases only and an empty answer are all failures.
   The account's last read is forgotten and the shipped catalog serves again.
   Each failure is logged once (`[models]` in the core log) until its reason changes, and retried on the next pass.
   A deferred read keeps what is in hand.

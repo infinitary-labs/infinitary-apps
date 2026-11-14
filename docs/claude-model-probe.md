@@ -70,6 +70,7 @@ It never reports a pass it did not earn:
 - **Known-incomplete older metadata**: a client older than 2.1.293 whose list omits Haiku 5.5 is skipped with a request to use a current client for catalog validation, never reported as a passing entitlement check.
   An empty answer still fails.
   A current client's omissions still fail the normal dead-default guard; the version exception cannot mask them.
+- **The client's built-in picker**: an answer of aliases only, the shape Claude Code gives when the account's own list is not ready, is skipped with a request to run the probe again, the way the app's own read treats it as unavailable (`docs/model-lists.md`).
 - **An unreadable catalog** - a client that answers nothing, or does not answer within 90s: the probe **fails**.
   An empty list must never read as "this subscription serves nothing".
 

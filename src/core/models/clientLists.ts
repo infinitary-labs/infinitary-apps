@@ -3,6 +3,7 @@ import { accessFlagSettings, readClaudeAccess } from "../claude/claudeAccess";
 import { claudeClientVersion, resolveClaudeExecutable } from "../claude/claudeCli";
 import {
   type ClaudeModelRow,
+  claudeCatalogIsBuiltInPicker,
   claudeCatalogIsOutdated,
   claudeServedModels,
   readClaudeModelCatalog,
@@ -66,6 +67,13 @@ export function claudeListReader(options: {
         status: "failed",
         reason: "unrecognised",
         detail: "client catalog predates Haiku 5.5",
+      };
+    }
+    if (claudeCatalogIsBuiltInPicker(outcome.rows)) {
+      return {
+        status: "failed",
+        reason: "unrecognised",
+        detail: "client answered with aliases only, the shape of its built-in picker",
       };
     }
     return { status: "ok", models: claudeServedModels(outcome.rows) };

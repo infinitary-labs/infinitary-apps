@@ -9,6 +9,7 @@ import {
   query as sdkQuery,
 } from "@anthropic-ai/claude-agent-sdk";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
+import { modelLine } from "@shared/modelListing";
 import { atUtilityQos } from "../utilityQos";
 import type { ClaudeAccessSettings } from "./claudeAccess";
 import { claudeEnvFor, compareVersions, resolveClaudeExecutable } from "./claudeCli";
@@ -121,9 +122,48 @@ export function claudeCatalogIsOutdated(
 }
 
 /**
+ * Whether the answer has the shape of the client's built-in picker: rows
+ * that are all aliases, none naming a model by its own id. Claude Code
+ * answers a session from that picker when the account's own list is not
+ * ready, and its aliases can point at an older model than the account
+ * serves. Such an answer is treated like an unavailable read. It catches
+ * only that shape: a built-in answer the client adds an explicit id to
+ * passes, and is named by version below. An empty answer is its own
+ * failure, not this one.
+ */
+export function claudeCatalogIsBuiltInPicker(rows: readonly ClaudeModelRow[]): boolean {
+  return rows.length > 0 && !rows.some(namesItsOwnId);
+}
+
+/** Whether a row's `value` is the model id itself, not an alias for it. */
+function namesItsOwnId(row: ClaudeModelRow): boolean {
+  const own = canonicalClaudeModelId({ value: row.value });
+  return own !== "" && own === canonicalClaudeModelId(row);
+}
+
+/**
+ * An alias row's label names the alias ("Fable"), not the model it points
+ * at today. Where it leaves out that model's version, the name comes from
+ * the id, so `fable` on claude-fable-5-1 reads "Claude Fable 5.1".
+ */
+function aliasName(id: string, label: string): string | undefined {
+  const { line, version } = modelLine(id);
+  const number = version.join(".");
+  if (!number || label.includes(number)) return undefined;
+  const family = (line.split("|")[0] ?? "")
+    .replace(/^claude-?/, "")
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word[0]?.toUpperCase() + word.slice(1))
+    .join(" ");
+  return family ? `Claude ${family} ${number}` : undefined;
+}
+
+/**
  * The catalog as Infinitary's runtime read keeps it (docs/model-lists.md): one
  * row per distinct model, named as CLAUDE_MODELS names it where it does,
- * else by the client's own label.
+ * else by the client's own label - an alias row's label with the model's
+ * version added where the label leaves it out.
  */
 export function claudeServedModels(
   rows: readonly ClaudeModelRow[],
@@ -136,6 +176,7 @@ export function claudeServedModels(
     const label = row.value.trim() === "default" ? undefined : row.displayName?.trim();
     const name =
       shipped.get(id) ??
+      (label && !namesItsOwnId(row) ? aliasName(id, label) : undefined) ??
       (label ? (/^claude\b/i.test(label) ? label : `Claude ${label}`) : undefined);
     if (!byId.has(id) || (name && byId.get(id) === id)) byId.set(id, name ?? id);
   }

@@ -5,6 +5,7 @@ import {
   type ClaudeModelRow,
   canonicalClaudeModelId,
   canonicalClaudeModelIds,
+  claudeCatalogIsBuiltInPicker,
   claudeCatalogIsOutdated,
   claudeServedModels,
   readClaudeModelCatalog,
@@ -176,6 +177,43 @@ describe("the Claude catalog check (docs/model-lists.md)", () => {
     // The "default" alias row never names a model.
     expect(served.some((model) => /default/i.test(model.name))).toBe(false);
     expect(served).toHaveLength(new Set(canonicalClaudeModelIds(RELISTED_ROWS)).size);
+  });
+});
+
+describe("naming an alias row's model", () => {
+  // Claude Code 2.1.322's built-in picker rows: its Fable alias still on 5.1,
+  // and the Sonnet 4.6 1M row it adds with an explicit id, which keeps the
+  // answer from reading as aliases only.
+  const BUILT_IN_WITH_ID: ClaudeModelRow[] = [
+    { value: "default", resolvedModel: "claude-opus-5-5", displayName: "Default (recommended)" },
+    { value: "fable", resolvedModel: "claude-fable-5-1", displayName: "Fable" },
+    { value: "sonnet", resolvedModel: "claude-sonnet-5-5", displayName: "Sonnet" },
+    {
+      value: "claude-sonnet-4-6[1m]",
+      resolvedModel: "claude-sonnet-4-6",
+      displayName: "Sonnet 4.6 (1M context)",
+    },
+    { value: "haiku", resolvedModel: "claude-haiku-5-5", displayName: "Haiku" },
+  ];
+
+  it("names the model an alias points at by its version, not the alias's bare label", () => {
+    expect(claudeCatalogIsBuiltInPicker(BUILT_IN_WITH_ID)).toBe(false);
+    expect(claudeServedModels(BUILT_IN_WITH_ID)).toContainEqual({
+      id: "claude-fable-5-1",
+      name: "Claude Fable 5.1",
+    });
+  });
+
+  it("keeps an alias label that already carries the version", () => {
+    expect(claudeServedModels(RELISTED_ROWS)).toContainEqual({
+      id: "claude-haiku-4-5",
+      name: "Claude Haiku 4.5",
+    });
+    expect(
+      claudeServedModels([
+        { value: "opus", resolvedModel: "claude-opus-4-8", displayName: "Opus 4.8" },
+      ]),
+    ).toEqual([{ id: "claude-opus-4-8", name: "Claude Opus 4.8" }]);
   });
 });
 

@@ -4,6 +4,7 @@ import { parseStatus } from "./claudeAuth";
 import { claudeClientVersion, resolveClaudeExecutable, runClaude } from "./claudeCli";
 import {
   canonicalClaudeModelIds,
+  claudeCatalogIsBuiltInPicker,
   claudeCatalogIsOutdated,
   readClaudeModelCatalog,
 } from "./claudeModelCatalog";
@@ -91,6 +92,14 @@ describeWithClaude("the routed Claude models (live catalog probe)", () => {
       ) {
         context.skip(
           "client catalog predates Haiku 5.5; use Claude Code 2.1.293 or later for catalog validation",
+        );
+        return;
+      }
+      if (claudeCatalogIsBuiltInPicker(rows)) {
+        // Aliases only, the shape of the client's built-in picker: it says
+        // nothing about what the account serves.
+        context.skip(
+          "client answered with aliases only (its built-in picker); run the probe again",
         );
         return;
       }

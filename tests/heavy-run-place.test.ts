@@ -56,6 +56,13 @@ const computerLine = computerLines();
 
 // INF-2165: exercise the actual config through Playwright discovery, without
 // launching apps. The fixture below separately witnesses the resolved demand.
+// The worker count is the config's own, so each listing loads the config alone:
+// `--no-deps` leaves out the lanes a spec's lane depends on, and a filter that
+// names no spec loads none. Listing one spec compiled every spec of those lanes
+// and all they import, about a thousand files through a cold transform cache,
+// work that grows with the suite and outgrew this file's budget on a loaded
+// Linux runner.
+const NO_SPEC = "no-spec-has-this-name";
 it.each([
   { label: "local default", ci: "", args: [], workers: 2 },
   { label: "local override", ci: "", args: ["--workers=4"], workers: 4 },
@@ -71,7 +78,9 @@ it.each([
     [
       "node_modules/@playwright/test/cli.js",
       "test",
-      "tests/e2e/cap-gate.spec.ts",
+      NO_SPEC,
+      "--no-deps",
+      "--pass-with-no-tests",
       "--list",
       "--reporter=json",
       ...args,

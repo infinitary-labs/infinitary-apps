@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "heavy-run-discovery-config-only",
+      "reason": "A test of the journey runner's worker count lists the end-to-end config alone instead of one spec and every spec its lanes depend on, so its work no longer grows with the suite past its time limit on a loaded Linux runner; nothing a person sees changes."
+    }
+  ]
+}

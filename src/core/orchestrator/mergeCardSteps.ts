@@ -179,12 +179,15 @@ export class MergeCardSteps {
     }
     const record = ledger();
     const newest = record?.revisions.at(-1);
-    if (!record || !newest)
+    if (!record || !newest) {
+      // INF-3995: the current change on another branch keeps the story.
+      const elsewhere = local ? undefined : this.publication.currentStoryWords(taskId, branch);
       return stop(
         "story",
-        `${branch ?? "This change"} has no prepared story. Pass story with its words.`,
+        `${branch ?? "This change"} has no prepared story. ${elsewhere ? `${elsewhere} To deliver ${branch} instead, pass story with its words.` : "Pass story with its words."}`,
         "crewmate",
       );
+    }
     // A published story follows a later push on its own (INF-2509); one
     // never published, or a local one, needs words at this version.
     const followsPush =

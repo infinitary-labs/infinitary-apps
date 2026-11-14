@@ -24,7 +24,7 @@ import {
   PresentationAroundError,
   presentationLines,
 } from "../forge";
-import { currentChange } from "../storage/changeProjection";
+import { currentChange, storyNeverSent } from "../storage/changeProjection";
 import type { TaskRecord } from "../storage/taskRecords";
 import { earlyPublication } from "../tasks/liveValidation";
 import { git, gitFailure } from "../workspace/git";
@@ -278,12 +278,13 @@ export class ChangePublication {
       (!fork && branch === located.record.branch && this.context.ownBatch(taskId)
         ? await this.context.pushedBranch(located.forge, branch)
         : null);
-    if (!change)
+    if (!change) {
+      if (fork) throw new Error("The story's pull request is not open.");
+      const elsewhere = this.currentStoryWords(taskId, checkedOut);
       throw new Error(
-        fork
-          ? "The story's pull request is not open."
-          : `The story's pull request is not open: no open pull request was found for ${branch}${checkedOut ? ", the branch the working copy has checked out" : ""}. Publish its story with open_change, which opens one.`,
+        `The story's pull request is not open: no open pull request was found for ${branch}${checkedOut ? ", the branch the working copy has checked out" : ""}. ${elsewhere ?? "Publish its story with open_change, which opens one."}`,
       );
+    }
     // INF-2509: a pull request that moved past its published story shows it
     // republished at the pushed version, with the same words.
     const shown = await this.options.presentations.atPushedVersion(
@@ -469,6 +470,27 @@ export class ChangePublication {
         )
           prerequisite = early.request.id;
       }
+      // INF-3995: a story prepared for the branch the working copy has
+      // checked out goes with an existing branch named at its very version.
+      let carried = "";
+      if (
+        input.branch?.trim() &&
+        input.presentation !== undefined &&
+        input.body === undefined &&
+        this.options.presentations &&
+        !(selected && isForkReview(selected))
+      ) {
+        const carry = await this.carryStory(
+          taskId,
+          branch,
+          input.presentation,
+          existing,
+          forge,
+          () => git(dir, ["rev-parse", read]),
+        );
+        if ("said" in carry) return carry.said;
+        carried = carry.words;
+      }
       const presentations = this.options.presentations;
       // The story of the change on this branch: each change keeps its own (INF-2490).
       const ledger = this.options.tasks.delivery.changePresentation(taskId, branch);
@@ -606,6 +628,7 @@ export class ChangePublication {
         const renamed =
           existing && changeTitle(forge.kind, change) !== changeTitle(forge.kind, existing);
         described = [
+          carried,
           input.around
             ? `Changed the words around the story: ${place} shows them, and the story is as published.`
             : "",
@@ -667,6 +690,84 @@ export class ChangePublication {
     } catch (caught) {
       return this.openFailure(record, forge, located.repo, caught);
     }
+  }
+
+  /**
+   * open_change naming an existing branch that keeps no story of its own
+   * (INF-3995): the story prepare_change saved for the branch the working
+   * copy has checked out - the current change's with none - goes with it
+   * when the crewmate names that story's newest revision, nothing of it was
+   * sent anywhere, and it was prepared at the very commit the named branch
+   * is at where the project lives. Otherwise the answer names the fact that
+   * does not hold. A pull request open before saved stories keeps its own
+   * delivery.
+   */
+  private async carryStory(
+    taskId: string,
+    branch: string,
+    revision: number,
+    existing: ForgeChange | null,
+    forge: Forge,
+    readHere: () => Promise<string>,
+  ): Promise<{ words: string } | { said: string }> {
+    const tasks = this.options.tasks;
+    const record = tasks.get(taskId);
+    if (!record || tasks.delivery.changePresentation(taskId, branch)) return { words: "" };
+    if (existing && hasChangeRequests(forge.kind)) return { words: "" };
+    const checkedOut = await this.presentationBranch(taskId).catch(() => undefined);
+    const from = checkedOut ?? currentChange(record.delivery, record.branch).branch;
+    if (from === branch) return { words: "" };
+    const where = `${from}, ${checkedOut ? "the branch the working copy has checked out" : "the task's current change"}`;
+    const ledger = tasks.delivery.changePresentation(taskId, from);
+    const story = ledger?.revisions.at(-1);
+    if (!ledger || !story)
+      return {
+        said: `${branch} has no prepared story, and neither has ${where}. ${checkOutWords(branch)} and prepare its story there with prepare_change.`,
+      };
+    if (story.revision !== revision)
+      return {
+        said: `Use the newest prepared story revision: the newest for ${where}, is revision ${story.revision}, not ${revision}.`,
+      };
+    if (!storyNeverSent(ledger))
+      return {
+        said: `${where}, keeps a story already sent where the project lives, so the story stays with that change. ${checkOutWords(branch)} and prepare its own story there with prepare_change.`,
+      };
+    // Where the project lives when its host can say, else as this Mac reads it.
+    const at =
+      existing?.headSha ??
+      (forge.branchHead ? await forge.branchHead(branch).catch(() => undefined) : undefined) ??
+      (await readHere().catch(() => undefined));
+    if (at !== story.head)
+      return {
+        said: `Story revision ${revision} was prepared for ${where}, at ${story.head}, and ${branch} is ${at ? `at ${at}` : "not pushed where the project lives"}. A story goes with a named branch only at the version it was prepared for: ${lowerFirst(checkOutWords(branch))} and prepare its story there with prepare_change.`,
+      };
+    tasks.delivery.carryChangePresentation(taskId, from, branch);
+    return {
+      words: `Story revision ${revision}, prepared for ${from} at this version, now belongs to ${branch}.${checkedOut ? ` Its merge card follows the branch the working copy has checked out: ${lowerFirst(checkOutWords(branch))} before showing it.` : ""}`,
+    };
+  }
+
+  /**
+   * The words that say how to show the current change's merge card while
+   * the working copy has another branch checked out (INF-3995): undefined
+   * unless the current change is another branch of this project that keeps
+   * a story.
+   */
+  currentStoryWords(taskId: string, checkedOut: string | undefined): string | undefined {
+    const target = this.options.tasks.get(taskId)?.delivery?.checkTarget;
+    if (
+      !checkedOut ||
+      !target ||
+      isForkReview(target) ||
+      target.repoId ||
+      target.branch === checkedOut
+    )
+      return undefined;
+    const story = this.options.tasks.delivery
+      .changePresentation(taskId, target.branch)
+      ?.revisions.at(-1);
+    if (!story) return undefined;
+    return `${target.branch}, the task's current change, keeps story revision ${story.revision}; its merge card follows the branch the working copy has checked out. ${checkOutWords(target.branch)}, then show its merge card.`;
   }
 
   /**
@@ -959,6 +1060,18 @@ export class ChangePublication {
     await this.options.bringBranchHome?.(record.id, true, branch);
     return checkedOutRefFor(record.id);
   }
+}
+
+/**
+ * How a crewmate checks out an existing branch to deliver it (INF-3995): by
+ * name, or at its commit where another working copy holds the name.
+ */
+function checkOutWords(branch: string): string {
+  return `Check out ${branch} (git switch ${branch}; where another working copy holds it, git switch --detach ${branch})`;
+}
+
+function lowerFirst(words: string): string {
+  return words.charAt(0).toLowerCase() + words.slice(1);
 }
 
 /** What open_change says of a body on a host whose pushed branch carries no description. */

@@ -106,6 +106,22 @@ export function storyLedgerOf(
 }
 
 /**
+ * A story ledger nothing of which has left this computer (INF-3995): no
+ * publication claimed, published, reconciled or confirmed on a pushed
+ * branch, and no attachment sent. Only such a story can move to another
+ * change's branch.
+ */
+export function storyNeverSent(ledger: ChangePresentationRecord): boolean {
+  return (
+    !ledger.publication &&
+    !ledger.published &&
+    !ledger.reconciled &&
+    !ledger.completion &&
+    ledger.receipts.every((receipt) => receipt.state === "prepared")
+  );
+}
+
+/**
  * The story ledgers placed for the current change: its own in
  * `presentation`, the one field older readers read, and every other
  * change's in `presentations`.

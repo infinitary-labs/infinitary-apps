@@ -23,6 +23,7 @@ import {
   type Forge,
   type ForgeApi,
   type ForgeChange,
+  ForgeError,
   type ForgePull,
   NO_MISTAKES_ATTESTATION_PREFIX,
   NO_MISTAKES_SIGNATURE,
@@ -51,22 +52,9 @@ vi.mock("../utilityQos", async (importOriginal) =>
 describe("shared story delivery boundaries", () => {
   const original = "5ca2d466ee21f9733827383f23df81f3874e0d10";
   const repaired = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-  async function saved(
-    kind: "github" | "gitlab" = "github",
-    checkedOut?: CheckedOut,
-    prepareContribution?: (taskId: string) => Promise<string | undefined>,
-  ) {
-    const bringBranchHome = vi.fn(async (): Promise<string> => {
-      throw new Error("Work computer is asleep");
-    });
-    const at = setup({
-      bringBranchHome,
-      ...(checkedOut ? { checkedOut } : {}),
-      ...(prepareContribution ? { prepareContribution } : {}),
-      ...(kind === "gitlab" ? { forge: new FakeForge({ kind, place: "GitLab" }) } : {}),
-    });
-    await insertDirectPrTask(at.tasks, at.repos, { deviceId: "sleeping-work-computer" });
-    const story: ChangePresentation = {
+  // The one story the tests below save, as a crewmate prepares it.
+  function storyFixture(): ChangePresentation {
+    return {
       version: 1,
       taskId: "ab12cd34",
       revision: 1,
@@ -98,6 +86,23 @@ describe("shared story delivery boundaries", () => {
       unfinished: [],
       projectText: "",
     };
+  }
+  async function saved(
+    kind: "github" | "gitlab" = "github",
+    checkedOut?: CheckedOut,
+    prepareContribution?: (taskId: string) => Promise<string | undefined>,
+  ) {
+    const bringBranchHome = vi.fn(async (): Promise<string> => {
+      throw new Error("Work computer is asleep");
+    });
+    const at = setup({
+      bringBranchHome,
+      ...(checkedOut ? { checkedOut } : {}),
+      ...(prepareContribution ? { prepareContribution } : {}),
+      ...(kind === "gitlab" ? { forge: new FakeForge({ kind, place: "GitLab" }) } : {}),
+    });
+    await insertDirectPrTask(at.tasks, at.repos, { deviceId: "sleeping-work-computer" });
+    const story = storyFixture();
     const region = presentationMarkdown(story, new Map(), "passed");
     const published = {
       revision: 1,
@@ -1256,6 +1261,195 @@ describe("shared story delivery boundaries", () => {
     await expect(at.service.publication.completionPresentation("ab12cd34", 1)).rejects.toThrow(
       `no open pull request was found for ${phone}, the branch the working copy has checked out`,
     );
+  });
+
+  // INF-3995, from INF-3994's takeover: the crewmate fast-forwarded its own
+  // branch to the existing pushed branch it was asked to open, prepared the
+  // story there, and named the existing branch to open_change.
+  describe("a takeover opening the existing branch it was named (INF-3995)", () => {
+    const own = "fm/task-ab12cd34";
+    const named = "fm/task-f0dac6a9-record";
+    const title = "feat(i18n): translate task record details";
+    async function takingOver() {
+      const checkout: { now: { branch: string | null; head: string } } = {
+        now: { branch: own, head: original },
+      };
+      const pushed: Record<string, string> = { [named]: original };
+      const bringBranchHome = vi.fn(async (): Promise<string> => "");
+      const at = setup({ bringBranchHome, checkedOut: async () => checkout.now });
+      await insertDirectPrTask(at.tasks, at.repos, { deviceId: "work-computer" });
+      const repoId = at.tasks.get("ab12cd34")?.repoId as string;
+      at.repos.configure(repoId, { origin: "https://github.com/x/y.git" });
+      const story = { ...storyFixture(), title };
+      at.readHead.mockResolvedValue(original);
+      at.forge.change = null;
+      Object.assign(at.forge, {
+        attachments: {
+          destination: async () => story.destination,
+          upload: async () => {
+            throw new Error("No upload expected");
+          },
+        },
+        branchHead: async (branch: string) => {
+          const head = pushed[branch];
+          if (!head) throw new ForgeError("not-found", `${branch} is not pushed.`);
+          return head;
+        },
+        changeFor: async (branch: string) => {
+          at.forge.calls.push(`changeFor ${branch}`);
+          const change = at.forge.change;
+          return change && change.branch === branch ? { ...change } : null;
+        },
+        openChange: async (input: { branch: string; title: string; body: string }) => {
+          at.forge.calls.push(`openChange ${input.branch} ${input.title}`);
+          at.forge.change = {
+            ...at.forge.opened,
+            number: 1653,
+            url: "https://github.com/x/y/pull/1653",
+            branch: input.branch,
+            title: input.title,
+            body: input.body,
+            headSha: pushed[input.branch] ?? "",
+          };
+          return at.forge.change;
+        },
+      });
+      return { at, story, checkout, pushed, bringBranchHome };
+    }
+
+    it("publishes the story prepared on its own branch when it opens the named branch at that version, then shows its merge card once that branch is checked out", async () => {
+      const { at, story, checkout, bringBranchHome } = await takingOver();
+      expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
+        "Prepared presentation 1 ",
+      );
+      // The story was prepared for the branch the working copy has checked out.
+      expect(at.tasks.delivery.changePresentation("ab12cd34", own)?.revisions).toHaveLength(1);
+      const opened = await at.service.publication.open("ab12cd34", {
+        title,
+        branch: named,
+        presentation: 1,
+      });
+      expect(opened).toContain(
+        `Opened pull request #1653 https://github.com/x/y/pull/1653 for ${named}.`,
+      );
+      expect(opened).toContain(
+        `Story revision 1, prepared for ${own} at this version, now belongs to ${named}.`,
+      );
+      expect(opened).toContain(
+        `Its merge card follows the branch the working copy has checked out: check out ${named}`,
+      );
+      // Opened once, from the named branch with the story; the own branch opened nothing.
+      expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([
+        `openChange ${named} ${title}`,
+      ]);
+      expect(at.forge.change?.body).toContain("<!-- infinitary-story:ab12cd34:start -->");
+      expect(at.forge.change?.body).toContain("Keep the approved explanation");
+      // The story now belongs to the named branch's change, which is current.
+      expect(at.tasks.delivery.changePresentation("ab12cd34", named)).toMatchObject({
+        branch: named,
+        revisions: [{ revision: 1, head: original }],
+        published: { revision: 1, number: 1653 },
+      });
+      expect(at.tasks.delivery.changePresentation("ab12cd34", own)).toBeUndefined();
+      expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({
+        branch: named,
+        number: 1653,
+      });
+
+      // While the own branch stays checked out, the card calls say how to show the named branch's.
+      const howTo = `${named}, the task's current change, keeps story revision 1; its merge card follows the branch the working copy has checked out. Check out ${named}`;
+      await expect(at.service.publication.completionPresentation("ab12cd34", 1)).rejects.toThrow(
+        howTo,
+      );
+      // The card call reads the own branch's commit from its copy brought home.
+      const { repo: home } = await at.repos.setup({ kind: "init", name: "takeover-home" });
+      const run = (...args: string[]) =>
+        execFileSync("git", ["-C", home.path, ...args])
+          .toString()
+          .trim();
+      run("config", "user.email", "test@example.com");
+      run("config", "user.name", "Test");
+      run("checkout", "-b", own);
+      writeFileSync(join(home.path, "tracked.txt"), "Recorded fixture\n");
+      run("add", "tracked.txt");
+      run("commit", "-m", "test: record a fixture");
+      bringBranchHome.mockResolvedValue(home.path);
+      const waiting = await at.service.mergeCard.walk("ab12cd34");
+      expect(waiting.stop).toMatchObject({ step: "story", by: "crewmate" });
+      expect(waiting.stop?.missing).toContain(`${own} has no prepared story. ${howTo}`);
+
+      // Detached at the named branch's commit (another working copy may hold
+      // the branch by name), the card calls follow the current change.
+      checkout.now = { branch: null, head: original };
+      expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
+        did: [],
+        ready: { revision: 1, title, head: original },
+      });
+      expect(await at.service.publication.completionPresentation("ab12cd34", 1)).toMatchObject({
+        revision: 1,
+        title,
+      });
+      // And checked out by name, as well.
+      checkout.now = { branch: named, head: original };
+      expect(await at.service.publication.completionPresentation("ab12cd34", 1)).toMatchObject({
+        revision: 1,
+      });
+      expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toHaveLength(1);
+    });
+
+    it("keeps the story where it was prepared when the named branch is at another version, naming both", async () => {
+      const { at, story, pushed } = await takingOver();
+      pushed[named] = repaired;
+      expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
+        "Prepared presentation 1 ",
+      );
+      const refused = await at.service.publication.open("ab12cd34", {
+        title,
+        branch: named,
+        presentation: 1,
+      });
+      expect(refused).toBe(
+        `Story revision 1 was prepared for ${own}, the branch the working copy has checked out, at ${original}, and ${named} is at ${repaired}. A story goes with a named branch only at the version it was prepared for: check out ${named} (git switch ${named}; where another working copy holds it, git switch --detach ${named}) and prepare its story there with prepare_change.`,
+      );
+      expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
+      expect(at.tasks.delivery.changePresentation("ab12cd34", own)?.revisions).toHaveLength(1);
+      expect(at.tasks.delivery.changePresentation("ab12cd34", named)).toBeUndefined();
+      expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
+    });
+
+    it("leaves a story already published for the checked-out branch with that branch's pull request", async () => {
+      const { at, story } = await takingOver();
+      expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
+        "Prepared presentation 1 ",
+      );
+      at.tasks.delivery.updateChangePresentation(
+        "ab12cd34",
+        (ledger) => ({
+          ...(ledger as NonNullable<typeof ledger>),
+          published: {
+            revision: 1,
+            head: original,
+            state: "confirmed",
+            region: "",
+            regionHash: "",
+            contentHash: "",
+            number: 23,
+          },
+        }),
+        own,
+      );
+      const refused = await at.service.publication.open("ab12cd34", {
+        title,
+        branch: named,
+        presentation: 1,
+      });
+      expect(refused).toContain(
+        `${own}, the branch the working copy has checked out, keeps a story already sent where the project lives, so the story stays with that change. Check out ${named} (git switch ${named}; where another working copy holds it, git switch --detach ${named}) and prepare its own story there with prepare_change.`,
+      );
+      expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
+      expect(at.tasks.delivery.changePresentation("ab12cd34", own)?.published?.number).toBe(23);
+      expect(at.tasks.delivery.changePresentation("ab12cd34", named)).toBeUndefined();
+    });
   });
 
   // INF-3717 piece 2, the captain's direction A: "One call that shows the

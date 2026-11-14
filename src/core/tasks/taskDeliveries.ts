@@ -41,6 +41,7 @@ import {
   placeStories,
   storyLedgerOf,
   storyLedgers,
+  storyNeverSent,
 } from "../storage/changeProjection";
 import {
   HISTORY_FIELDS,
@@ -406,6 +407,43 @@ export class TaskDeliveries {
             record.branch,
             currentChange(record.delivery, record.branch).branch,
             forkNumber,
+          ),
+        ),
+        updatedAt: this.writer.now(),
+      });
+    })();
+  }
+
+  /**
+   * Move the story of the change on `from`, never sent anywhere, to the
+   * existing branch `to` (INF-3995): open_change names that branch at the
+   * very version the story was prepared for while the working copy has
+   * another branch checked out. Refused when `to` keeps a story of its own
+   * or anything of the story left this computer.
+   */
+  carryChangePresentation(id: string, from: string, to: string): void {
+    this.writer.write(() => {
+      const record = this.writer.mustGet(id);
+      if (record.status === "done" || record.status === "dropped")
+        throw new Error("A closed task cannot publish another story.");
+      const source = storyLedgerOf(record.delivery, record.branch, from);
+      if (!source) throw new Error(`${from} has no prepared story.`);
+      if (storyLedgerOf(record.delivery, record.branch, to))
+        throw new Error(`${to} keeps a story of its own.`);
+      if (!storyNeverSent(source))
+        throw new Error(`The story of ${from} was sent where the project lives and stays with it.`);
+      const target = record.delivery?.checkTarget;
+      this.writer.patch(id, {
+        delivery: this.writer.mergeDelivery(
+          record,
+          placeStories(
+            [
+              ...storyLedgers(record.delivery).filter((ledger) => ledger !== source),
+              { ...source, branch: to },
+            ],
+            record.branch,
+            currentChange(record.delivery, record.branch).branch,
+            target && isForkReview(target) ? target.number : undefined,
           ),
         ),
         updatedAt: this.writer.now(),

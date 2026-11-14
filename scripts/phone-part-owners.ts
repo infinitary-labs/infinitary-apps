@@ -152,6 +152,22 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhonePanels.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanels.swift",
   ] },
+  // INF-3563: the Settings list reads its five computer rows in the join-read part too, so what answers them is
+  // both parts'; each page's own drawing is the settings part's.
+  { parts: [...family("settings"), "join-read"], files: [
+    "ios/Infinitary/InfinitaryApp/SettingsWords.generated.js",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSettings.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSettingsWords.swift",
+  ] },
+  { parts: family("settings"), files: [
+    "ios/Infinitary/InfinitaryApp/PhoneAutomationPage.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneIntelligencePage.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneProjectsPage.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneRunbooksPage.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneSettingsParts.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneUsagePage.swift",
+    "ios/Infinitary/SettingsRuntime/settingsWords.ts",
+  ] },
   { parts: family("pick"), files: [
     "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift",
   ] },
@@ -167,6 +183,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PinnedTransport.swift",
   ] },
   { parts: [...family("cards"), ...family("panels")], files: ["scripts/generate-phone-cards.ts"] },
+  { parts: family("settings"), files: ["scripts/generate-phone-settings.ts", "tests/helpers/phoneSettings.ts"] },
   // Every native gate runs the Swift package tests before its part. One smoke part owns their inputs.
   { parts: ["join-read"], files: ["ios/Infinitary/InfinitaryKit/Tests/"] },
 ];

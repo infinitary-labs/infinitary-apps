@@ -5,7 +5,6 @@ import {
   type AutomationRun,
   type AutomationSave,
   type AutomationSpec,
-  fillScheduleDetails,
   SCHEDULE_DETAILS,
   scheduleDetailsFor,
 } from "@shared/automation";
@@ -38,17 +37,19 @@ import {
   AUTOMATION_SHEET_WORDS,
   blankForm,
   DELIVERY_TONES,
-  DELIVERY_WORDS,
   deliveryNote,
   eventPreviewWords,
-  eventRunsWords,
   formOf,
   hereZone,
   knownZones,
   localClockWords,
   localTimeNote,
+  previewPrompt,
   type RuleForm,
-  reviewMissedWords,
+  reviewCanTurnOn,
+  reviewFacts,
+  runPromptTitle,
+  runStateWords,
   runWords,
   saveOf,
   specOf,
@@ -377,20 +378,10 @@ function Sheet({
   // The next dates and the prompt as it is sent the first time; sends nothing.
   const previewOf = async (spec: AutomationSpec): Promise<Preview> => {
     const { dates } = await window.infinitary.automation.preview(spec);
-    const timeZone = automationZoneOf(spec);
-    const first = spec.kind === "event" ? Date.now() : dates[0];
     return {
       dates,
-      timeZone,
-      prompt:
-        first === undefined
-          ? form.prompt.trim()
-          : fillScheduleDetails(form.prompt.trim(), {
-              plannedAt: first,
-              timeZone: timeZone ?? hereZone(),
-              missed: 0,
-              ...(spec.kind === "event" ? { events: AUTOMATION_SHEET_WORDS.eventsPreview } : {}),
-            }),
+      timeZone: automationZoneOf(spec),
+      prompt: previewPrompt(spec, form.prompt, dates, Date.now()),
     };
   };
 
@@ -850,58 +841,12 @@ function ReviewPanel({
   useEffect(() => {
     if (turnOnRef.current) focusWithRing(turnOnRef.current);
   }, []);
-  const zone = automationZoneOf(review.spec);
-  const calendar = review.spec.kind === "daily" || review.spec.kind === "weekly";
-  const project = review.save.projectId
-    ? (projects.find((one) => one.id === review.save.projectId)?.name ??
-      m.settingsAutomationRemovedProject())
-    : m.settingsAutomationNoProject();
-  const event = review.spec.kind === "event";
-  const facts: [string, React.ReactNode][] = [
-    [m.settingsAutomationWhen(), automationWhenWords(review.spec, review.listened?.when)],
-    ...(calendar
-      ? ([
-          [
-            m.settingsAutomationTimeZone(),
-            zone ? automationZoneWords(zone) : localClockWords(where),
-          ],
-        ] as [string, React.ReactNode][])
-      : []),
-    ...(review.spec.kind === "event"
-      ? (review.listened?.filters ?? []).map(
-          (field) =>
-            [
-              field.label,
-              review.spec.kind === "event"
-                ? review.spec.filter?.[field.name] ||
-                  field.defaultValue ||
-                  m.settingsAutomationNotSpecified()
-                : "",
-            ] as [string, React.ReactNode],
-        )
-      : []),
-    ...(review.spec.kind === "event" && review.spec.waitsFor
-      ? ([[m.automationWaitsFor(), `${review.spec.waitsFor}. ${m.automationWaitsForNote()}`]] as [
-          string,
-          React.ReactNode,
-        ][])
-      : []),
-    [m.settingsAutomationProject(), project],
-    event
-      ? [m.settingsAutomationRuns(), eventRunsWords(review.listened?.every)]
-      : [
-          review.spec.kind === "once" ? m.settingsAutomationRuns() : m.settingsAutomationNextRuns(),
-          review.dates.length === 0
-            ? m.settingsAutomationPassed()
-            : review.dates.map((at) => automationDateWords(at, review.timeZone)).join(" · "),
-        ],
-    [m.settingsAutomationFirstMateGets(), <PromptBox key="prompt" prompt={review.prompt} />],
-    [
-      m.settingsAutomationWhatItSends(),
-      event ? AUTOMATION_SHEET_WORDS.reviewSendsEvents : AUTOMATION_SHEET_WORDS.reviewSends,
+  const facts = reviewFacts({ ...review, projectId: review.save.projectId }, projects, where).map(
+    (fact): [string, React.ReactNode] => [
+      fact.term,
+      fact.prompt ? <PromptBox key="prompt" prompt={fact.value} /> : fact.value,
     ],
-    [m.settingsAutomationMissedTime(), reviewMissedWords(review.spec, where)],
-  ];
+  );
   return (
     <section
       aria-label={m.settingsAutomationTurnOnLabel()}
@@ -940,7 +885,7 @@ function ReviewPanel({
           ref={turnOnRef}
           type="button"
           variant="primary"
-          disabled={busy || (!event && review.dates.length === 0)}
+          disabled={busy || !reviewCanTurnOn(review.spec, review.dates)}
           onClick={onTurnOn}
           data-automation-turn-on
         >
@@ -1082,22 +1027,14 @@ function HistoryRow({ run }: { run: AutomationRun }) {
       <span style={{ display: "flex", alignItems: "center", height: "1lh" }}>
         <StatusDot
           tone={DELIVERY_TONES[run.delivery]}
-          label={
-            run.events === 0 && run.screened
-              ? m.automationRunSkippedState()
-              : DELIVERY_WORDS[run.delivery]
-          }
+          label={runStateWords(run)}
           nativeTitle={false}
         />
       </span>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         <div>
-          <span style={{ color: "var(--fg-1)" }}>
-            {run.events === 0 && run.screened
-              ? m.automationRunSkippedState()
-              : DELIVERY_WORDS[run.delivery]}
-          </span>{" "}
-          · {runWords(run)} · {m.settingsAutomationVersion({ version: String(run.revision) })}
+          <span style={{ color: "var(--fg-1)" }}>{runStateWords(run)}</span> · {runWords(run)} ·{" "}
+          {m.settingsAutomationVersion({ version: String(run.revision) })}
         </div>
         {note && <div>{note}</div>}
         {run.found && (
@@ -1139,9 +1076,7 @@ function HistoryRow({ run }: { run: AutomationRun }) {
         )}
         <details data-automation-run-prompt>
           <summary style={{ cursor: "pointer", width: "fit-content" }}>
-            {run.events === 0 && run.screened
-              ? m.automationEventsSkipped()
-              : m.settingsAutomationPromptAsSent()}
+            {runPromptTitle(run)}
           </summary>
           <div style={{ marginTop: "var(--space-1)" }}>
             <PromptBox prompt={run.prompt} />

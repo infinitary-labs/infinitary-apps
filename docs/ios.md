@@ -341,12 +341,17 @@ Home is one column: the stage, then the last turn and the message box under it, 
 No bar height is measured or guessed, and nothing recedes on scroll.
 No panel sits behind the message box: the last turn is its rounds of lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
 The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
-Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on General, Appearance, Integrations and Devices in the desktop's order.
+Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
+The names, the sheet's own Settings title and Back are the catalog's messages, never words typed into the sheet (`docs/i18n.md`, "On the phone").
+The phone's four own sections, Settings, Done and Back to Settings are the phone's own messages (`PhoneMessages.phoneSettings…`, `phoneCommonSettings`, `phoneCommonDone`); the five pages read from the computer take the computer's own tab names (`PhoneMessages.panelSettings…`).
+Back's spoken name on a page under a section is `phoneSettingsBackTo`, and from a page under a page it is the shared `shellTopBarBack`.
 Each row has its name, one current-state line and a chevron, with no icon, and opens its page inside the same sheet on iPhone and iPad alike.
 General holds Infinitary and its version, Appearance holds Theme, Integrations holds Google on the computer it controls (below), and Devices holds This phone (This iPad on a tablet), what it can do and the existing Approves secret uses switch while the computer offers it.
-Back returns to the list, Command-[ presses Back, Done closes from any page, and Command-Comma opens the list.
+Projects, Intelligence, Runbooks, Usage and Automation are the computer's own pages ("Settings pages in the computer's words", below).
+Back goes one page back, from a page under a section to that section and from a section to the list, Command-[ presses Back, Done closes from any page, and Command-Comma opens the list.
 The list starts focused on General; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
-Sections with nothing to show stay off the list, so Integrations shows once the computer answers its connections; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
+The row a key moves to scrolls into view where the list is longer than the sheet.
+Sections with nothing to show stay off the list, so Integrations shows once the computer answers its connections and the five computer pages show together once the computer has answered them; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
 Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
 It starts on Device, which follows iOS's own setting and its Automatic switching; Dark or Light sets the window's interface style, so every screen, sheet, the keyboard, the crew, card bodies and the picture viewer follow it at once.
 The choice is saved in the app's own defaults, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
@@ -354,7 +359,8 @@ It never reaches the computer, and the computer's Theme never reaches the phone;
 The launch screen, which iOS draws before the app runs, keeps the device's own appearance.
 While Appearance is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
-Both open at half height on the system's glass and can be pulled up, with the same headings and spacing; Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
+Both sit on the system's glass with the same headings and spacing: the computer's sheet opens at half height and can be pulled up, and Settings opens at full height, since its nine sections do not fit half a screen.
+Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
 While the computer's Secrets are set up and open, Settings → Devices also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
 The dismissal command does not belong to the keyboard’s transient accessory view.
@@ -614,6 +620,52 @@ When the phone cannot listen on that port, or the computer refused what it passe
 Sign out asks once, then removes the connection on the computer (`inf:integrations:remove`).
 The isolated phone check opens no browser: the simulator shares its computer's loopback address, where the sign-in itself listens, so its google part pastes the address the stand-in Google sends the browser to (`tests/helpers/phoneGoogle.ts`), and `PhoneSignInReturnTests` drives the real listener with a real request.
 
+## Settings pages in the computer's words
+
+Projects, Intelligence, Runbooks, Usage and Automation in the phone's Settings are the computer's own pages, read from the computer the phone controls and said in that computer's words (INF-3563).
+Each row's line is the page's state: how many projects, how many accounts and how many need a sign-in, how many runbooks are on and off, the period's tokens, and how many automations are active and paused.
+The phone asks what the computer's own Settings asks, over channels a paired view may ask (`PhoneRequest`'s Settings entries, `scripts/generate-phone-contract.ts`), and hands the answers as they came to one script, `SettingsWords.generated.js`.
+`node scripts/generate-phone-settings.ts` bundles that script from `src/renderer/src/settings/phonePages.ts`, whose pure functions build each page's rows from the computer's own row rules and word owners: `rowView`, `accountsSummary` and `awayNote` (`accountRows.ts`), `quotaMicroMeterLook`, and the automation, usage, project and runbook words.
+The app runs it in JavaScriptCore (`PhoneSettingsWords`) with no page, network or timer, and draws the rows it answers, so no allowance rule, verdict or sentence is written a second time in Swift; `src/shared/quotaSignals.ts` stays the one home of quota math.
+A sentence the computer's own Settings says too has one owner both read, and the pages' own sentences are catalog messages (`settingsPhone…` in `docs/i18n.md`'s catalog); the script never sets a language, so it speaks English, as the rest of the phone does.
+`pnpm check` refuses a script that is not current (`generate-phone-settings.ts --check`), so a change to a rule or a word on the computer reaches the phone in the same pull request.
+Where the computer's sentence says this computer, the phone's names the computer, as a computer that controls a first mate does (`docs/view.md`, "Settings on a view").
+`PhoneSettings` holds the pages: Settings reads all five as it opens, a page the computer refuses stays off the list, and out of reach each keeps its last reading.
+The open page reads again when the computer comes into reach and once the computer's words about accounts, allowance, projects or runbooks settle (`ReadOnlySession.settingsRevision`); Intelligence also reads every ten seconds and Automation every thirty.
+On a phone the computer lets only read, every page shows with its switches and buttons off.
+Signing in, and making, changing or deleting, stay on the computer, and each page's last line says where.
+
+Intelligence only shows.
+It lists every account in the computer's order, under the computer it is on where other computers run work, each with its status dot, provider, plan and identity, the marks for the crew's preferred account and the first mate's, every allowance window as the computer's micro meter (what is left, the reset clock's tick, when it resets) and the row's one verdict.
+A reading the computer could not refresh is drawn dim, and a computer out of reach keeps its last reading under its out-of-reach note.
+A row that waits for a sign-in says where to sign in, by the computer's name; the phone starts no sign-in and offers no pause, rename or remove.
+
+Automation lists each rule with its name and two lines: its schedule, then its next run in the rule's own time zone (`automationNextWords`) beside its term, or its state where it has none (Paused, Draft, Done).
+A row's one button is what the phone may do to it: Pause, Resume, or Enable… on a draft; Pause all asks once and names how many it pauses.
+Pause, Resume and Pause all are the computer's own actions (`inf:automation:state`, `inf:automation:pause-all`).
+A row opens the rule: its name, state, schedule, what an event rule waits for (Only if), project, its next run while it is on, the prompt as the first mate gets it, and its runs, each with what it led to and the prompt as sent.
+A look that sent nothing because every event was kept from the first mate reads Skipped and names the events it skipped in place of a prompt, by the rules the computer's history reads (`runStateWords`, `runPromptTitle`; `docs/automation.md`, "The event screen").
+A rule that runs once fills its prompt with that one time, whether it is still to come or has passed, so a finished rule shows no placeholder.
+Enable… opens the computer's review of the draft (`reviewFacts`): when it runs, what an event rule waits for, where, its next runs one a line, the prompt and what it sends.
+A page under a section leads with its own name (`PhonePageName`) and the top bar names only where Back goes, because the bar would cut a long name short.
+Turn on saves the draft through `inf:automation:save` with the save the review showed, and Back leaves it a draft.
+
+Usage only shows: the period's total in tokens or estimated dollars, the tasks finished and the milestone, a bar a day, each model's share and where it went, for all work.
+Its period and unit are its only controls and change nothing on the computer; recent tasks and each model's detail stay in the computer's Usage.
+
+Projects lists each project with how it differs from a new one, in the computer's row words, and opens it to its four standing choices: where changes go, whether merging asks first, its rigor and its cost limit.
+The personal workspace sits in a list of its own under the projects, since the Settings row's count leaves it out: the count reads as the first list's rows.
+Each saves through the computer's project settings (`inf:repos:configure`) as it is chosen and reads back what the computer kept; a choice the project's setup fixes shows as fixed, with the computer's reason.
+Choosing an amount of its own for the cost limit uncovers the amount at the page's foot, and the page brings it into view, since a sheet shorter than the page, as an iPad's is, would uncover it out of sight.
+An iPhone types the amount on the decimal pad and an iPad on its full keyboard's numbers, since an iPad shows a decimal pad as a popover beside the field and a tap outside a popover only closes it: the first tap on Save would save nothing.
+Adding or removing a project, its folder and where it runs stay on the computer.
+
+Runbooks lists the built-in runbooks and the person's own, each with the computer's switch (`inf:settings:runbooks:set`).
+Writing a runbook and opening its folder stay on the computer.
+
+Every row and control on these pages is a keyboard stop (`PhoneStopsPage`): the up and down arrows and Tab walk them and keep the one under the ring in view, Return or Space presses it, the left and right arrows step a choice, and Esc or Command-[ goes back one page.
+`tests/phone-settings-pages.test.ts` builds every page from a stand-in computer's answers, read as a paired phone reads them, with the committed script; `phonePages.test.ts` owns the grouping by computer; and the settings-pages part of the phone check drives the pages on a home that holds accounts, rules, usage, projects and runbooks (`tests/helpers/phoneSettings.ts`).
+
 ## Installing on a phone
 
 The captain installs Infinitary through TestFlight, not Xcode.
@@ -708,7 +760,7 @@ Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
 The gate refuses any other Xcode before it builds, and `scripts/phone-simulator.ts` refuses a Mac without that runtime, or one whose runtime does not support the device, naming the download that fixes it; it never takes a newer or older runtime in its place.
 Moving to a new pair is one pull request that edits the pin, after the virtual Mac image and every Mac that runs the check have the new pair.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
-The native journey is tests in `PhoneJourney`, one per part (`scripts/phone-test-plan.ts`): three join parts (`join-read`, `join-activity`, `join-away`), three talk parts (`talk-compose`, `talk-tasks`, `talk-drafts`), two relaunch parts (`relaunch-first`, `relaunch-second`), three cards parts (`cards-merge`, `cards-form`, `cards-media`), `address` (join by its address), `pick` (a card pager pick across a workspace redraw), `cards-revise` (a revision while the thread shows, then the thread's minus), `cards-notes` (notes on a card's parts and selected words, queued and sent as one reply, INF-3296), `cards-diagram` (a card's map opened live in its cover, and a finger on the map in the card scrolling the card, INF-3881), four keyboard parts (`keyboard-pinned`, `keyboard-scrolling`: the message box and a card's reply with the keyboard up, INF-2568; `keyboard-ways-out`: each way out of that keyboard, INF-3106; `body-field`: a text box inside a card's body with the keyboard up, INF-3427), `card-questions` (the answers line's stepper through a decision's questions, by tap and by key), `google` (Google's row in Settings, INF-3454), `panels` (the Panels tab from a fixture panel on the test home's real core, INF-3830), `weak-link` (the app-hosted `PhoneWeakLinkTests` class alone), and `rest`, which runs the character and past choices with the other app-hosted tests and any test no other part names.
+The native journey is tests in `PhoneJourney`, one per part (`scripts/phone-test-plan.ts`): three join parts (`join-read`, `join-activity`, `join-away`), three talk parts (`talk-compose`, `talk-tasks`, `talk-drafts`), two relaunch parts (`relaunch-first`, `relaunch-second`), three cards parts (`cards-merge`, `cards-form`, `cards-media`), `address` (join by its address), `pick` (a card pager pick across a workspace redraw), `cards-revise` (a revision while the thread shows, then the thread's minus), `cards-notes` (notes on a card's parts and selected words, queued and sent as one reply, INF-3296), `cards-diagram` (a card's map opened live in its cover, and a finger on the map in the card scrolling the card, INF-3881), four keyboard parts (`keyboard-pinned`, `keyboard-scrolling`: the message box and a card's reply with the keyboard up, INF-2568; `keyboard-ways-out`: each way out of that keyboard, INF-3106; `body-field`: a text box inside a card's body with the keyboard up, INF-3427), `card-questions` (the answers line's stepper through a decision's questions, by tap and by key), `google` (Google's row in Settings, INF-3454), `settings-pages` (Settings' Projects, Intelligence, Runbooks, Usage and Automation, INF-3563), `panels` (the Panels tab from a fixture panel on the test home's real core, INF-3830), `weak-link` (the app-hosted `PhoneWeakLinkTests` class alone), and `rest`, which runs the character and past choices with the other app-hosted tests and any test no other part names.
 The weak link checks wait out real slow links, outages and silences, about five minutes a device, so they take a part of their own rather than doubling the rest part, and a change to the other app-hosted tests does not repeat them (INF-2989).
 Each part's test, with the steps only it takes, is in a file of its own beside `InfinitaryUITests/PhoneJourney.swift`, named for the part (`PhoneJourney+JoinRead.swift` for `join-read`, `PhoneJourney+Rest.swift` for `rest`).
 `PhoneJourney.swift` keeps the class and the steps two or more parts share.

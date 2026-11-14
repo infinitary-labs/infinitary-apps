@@ -49,13 +49,55 @@ In reach the bar says nothing more.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
 The computer button opens a native sheet with the computer's name, its reach and its address.
-The Settings button, the Lucide gear, opens this phone's own sheet on a list of General, Appearance and Devices, in the desktop's order.
+The Settings button, the Lucide gear, opens a sheet at full height on a list of General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
 Each row has no icon: its section name, one current-state line and a trailing chevron, in the shared list shape.
 A row opens its page in the same sheet, on iPad as on iPhone, never a sidebar.
 General shows Infinitary and the version, Appearance shows Theme, and Devices shows This phone (This iPad on a tablet), its current capability and the existing Approves secret uses switch when the computer offers it.
 Sections with nothing to show stay off the list.
-Back returns to the list, with Command-[ from the keyboard, and Done closes from any page.
-The list starts focused on General, arrow keys move between its rows, and Return or Space opens one; native controls retain their keyboard focus treatment.
+Back returns one page, with Command-[ from the keyboard, and Done closes from any page.
+The list starts focused on General, arrow keys move between its rows and bring the one they reach into view, and Return or Space opens one; native controls retain their keyboard focus treatment.
+
+Projects, Intelligence, Runbooks, Usage and Automation are the computer's own pages on a phone, and every word, figure and tone on them is the computer's: the phone draws rows the computer's own rules built and writes no sentence of its own.
+A page is one column of the shared list shape under the sheet's title, at the sheet's margins: a quiet line that says what the page is where it needs one, groups under the uppercase micro section label, and a last quiet line that says where the rest is done, by the computer's name.
+A page under a section (a rule, a draft's review, a project) leads with its own name at the title size, wrapping in full, and the bar above it carries only Back and Done: between them a long name would be cut short.
+That last line is the page's only mention of what the phone leaves out; a control the phone does not offer is never drawn dimmed in its place.
+A row's state is the status dot before its name, in the computer's tone for it, never a colored row or a badge.
+A page asks at most one thing of a row: one button, one switch or one choice, at least 44 points tall, with the row's opening beside it where it has a page.
+The filled accent button is the one that moves something forward (Enable… on a draft, Turn on in its review, Resume on a rule's own page); Pause and Pause all are outlined.
+On a phone the computer lets only read, the same rows show with every switch and button off.
+A change shows what the computer kept when it answers; one the computer refused says why in the warning color under the control that asked, in the computer's words.
+A page out of reach keeps its last reading.
+From a keyboard a 1.5 point accent ring marks the row or control the keys are on, and shows only after a key is pressed: the up and down arrows and Tab walk every row and control in order and keep the ring in view, Return or Space presses it, the left and right arrows step a choice, and Esc goes back one page.
+
+Intelligence only shows.
+Its first line is the accounts' count and how many need a sign-in, with the reading's time opposite in mono.
+An account row leads with its dot and provider, then the marks for the crew's preferred account (the accent ✱) and the first mate's (a hairline capsule), with the row's one verdict opposite in mono in its tone.
+Under it sit the account's name, plan and identity in mono, then one line for each allowance window: its name at micro size, a 4 point capsule bar of what is left with the reset clock as a 1.5 point tick across it, the percent left in mono, and when it resets under the bar.
+The bar and the figure take the computer's micro meter tones, and a reading the computer could not refresh is drawn in the idle color.
+A row with no window says its one sentence instead, and a row that waits for a sign-in says where to sign in, in the primary color; the phone draws no Sign in button.
+Where other computers run work, each computer's accounts sit under its name, with its out-of-reach note opposite in the warning color.
+The two marks are explained once under the list, each beside its mark.
+
+Automation leads with what an automation is, then each rule as a row: its dot and name across the row's width with the chevron opposite, then two caption lines under the name, its schedule and its next run.
+The next run is the computer's own words for it, in the rule's time zone, beside its term in the muted color (Next run), and under the term when a date with its zone is too long for the line; a rule with none says its state there instead (Paused, Draft, Done).
+A rule's button sits beside those two lines at the row's trailing edge: Pause on an active rule, Resume on a paused one, Enable… filled on a draft, and none on a finished one.
+Pause all sits alone under the list and asks once in a confirmation that names how many it pauses.
+A rule's page leads with its name, then its dot and state, then its facts as term over value, with the prompt in its own surface box as the first mate gets it, the rule's one button, and its runs.
+A fact whose value is a list, such as a draft's next runs, is drawn one entry a line.
+A run is its dot and outcome, when it ran in mono, what it led to, and a folded "prompt as sent" that opens in a surface box.
+Enable… opens the computer's review: its question as the page's name with the rule's name under it in the secondary color, then the same facts with Back outlined beside Turn on filled; nothing turns on before that page.
+
+Usage only shows.
+Period and unit are two segmented controls over the reading's label in mono; they are the page's only controls and change nothing on the computer.
+The total stands alone at display size under its label, with the two counts under it as a pair of hairline panels of one height.
+Daily usage is one accent bar a day on a hairline floor, 72 points tall, against the period's largest day, today last at 45% because it is still filling, with the first and last dates under it at micro size.
+Each model is a row with its share as a line under its name and its figure opposite in mono, and where it went is a list with each project's tasks indented under it in the secondary color.
+
+Projects lists each project as its name over the quiet words that say how it differs from a new one, with a chevron.
+A project's page leads with its name and its folder in mono under it, then its four standing choices, each a headline over one caption sentence: where changes go as a list of rows with a radio mark, merging as a switch beside its current state, rigor and cost limit as segmented controls, and an amount as a field with its own Save because the number pad has no Return.
+A choice the project's setup fixes shows as its words in the muted color in place of the control, with the computer's reason.
+
+Runbooks lists the built-in runbooks and the person's own under their labels, each as its name over one caption line with Apple's switch tinted with the accent; a runbook the computer could not read says why in the warning color.
 Theme is Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
 Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I the computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.

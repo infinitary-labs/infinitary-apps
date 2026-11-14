@@ -236,6 +236,9 @@ describe("the native gate on an affected request", () => {
     "tests/e2e/crewScripts.ts",
     "tests/e2e/mockModels.ts",
     "tests/e2e/providerRequest.ts",
+    // INF-3563: the script the phone's Settings pages are built by, and the test home's accounts, rules and usage.
+    "scripts/generate-phone-settings.ts",
+    "tests/helpers/phoneSettings.ts",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });

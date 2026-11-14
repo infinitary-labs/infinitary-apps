@@ -30,7 +30,7 @@
     {
       "name": "settings",
       "path": "src/renderer/src/settings",
-      "about": "The settings screen and its tabs"
+      "about": "The settings screen and its tabs, and the pages the phone's Settings shows"
     },
     {
       "name": "voice",

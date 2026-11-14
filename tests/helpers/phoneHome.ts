@@ -60,6 +60,13 @@ import type {
 import { phonePanelControls } from "./phonePanels";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
+import {
+  PHONE_SETTINGS_SESSION_LATER,
+  phoneSettingsState,
+  readPhoneAllowanceAgain,
+  seedPhoneAutomations,
+  seedPhoneSettings,
+} from "./phoneSettings";
 import { seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { type SshServer, startSshServer } from "./sshServer";
@@ -109,6 +116,8 @@ export async function startPhoneHome(
     pickerPreview?(since: number): Promise<PhonePickerPreview>;
     biometry?(step: "enroll" | "face-in-view" | "face-away"): Promise<void>;
   },
+  // INF-3563: the Settings pages part's computer starts with accounts, projects, usage and automations to show.
+  options: { settings?: boolean } = {},
 ) {
   const port = await claimedPort();
   process.env.INFINITARY_CONNECTION_LOOPBACK_PORT = String(port);
@@ -122,6 +131,7 @@ export async function startPhoneHome(
   const models = JSON.parse(mockModelsJson(provider.port));
   models.providers[MOCK_PROVIDER_ID].api = "anthropic-messages";
   writeFileSync(paths.modelsPath, JSON.stringify(models));
+  if (options.settings) seedPhoneSettings(root, userData);
   let secretConfirms = 0;
   // The invented token the stand-in calendar receives; no request leaves this process.
   const SECRET_TOKEN = "ya29.invented-phone-calendar-token";
@@ -167,6 +177,7 @@ export async function startPhoneHome(
   });
   const scene = phoneSceneFixture(core, userData, () => connection.settled());
   const google = phoneGoogleControls(core);
+  const settingsRules = options.settings ? await seedPhoneAutomations(core) : {};
   const panels = phonePanelControls(core, frameLib);
   const readings = {
     cards: 0,
@@ -990,6 +1001,16 @@ export async function startPhoneHome(
           break;
         case "GET google-state":
           result = await google.state();
+          break;
+        // INF-3563: what the computer holds after the phone's Settings pages asked it to change something.
+        case "GET settings-state":
+          result = await phoneSettingsState(core, settingsRules);
+          break;
+        case "POST settings-allowance":
+          // Only a computer started on the stand-in readings reads them again.
+          if (!options.settings) throw new Error("This computer was started without Settings data");
+          await readPhoneAllowanceAgain(core, root);
+          result = { session: PHONE_SETTINGS_SESSION_LATER };
           break;
         // INF-3830 piece 2's phone part: the fixture panel on the computer, its data, its stop and its library.
         case "POST panel-seed":
@@ -2848,6 +2869,25 @@ export async function startPhoneHome(
         leaks,
       },
     ],
+    // INF-3563: reads as a paired phone does, over the published contract, then forgets that phone.
+    asPhone: async <Result>(
+      work: (ask: Awaited<ReturnType<typeof startScriptedClient>>["ask"]) => Promise<Result>,
+    ): Promise<Result> => {
+      const invitation = await core.dispatch("inf:devices:invite", [{ kind: "mac" }]);
+      await connection.settled();
+      const grant = await claimLink(invitation.link, {
+        kind: "mac",
+        system: "ios",
+        name: "Settings test phone",
+      });
+      const client = await startScriptedClient(grant);
+      try {
+        return await work(client.ask.bind(client));
+      } finally {
+        await client.close();
+        core.services.devices.remove(grant.deviceId);
+      }
+    },
     checkPublishedClient: async () => {
       const invitation = await core.dispatch("inf:devices:invite", [{ kind: "mac" }]);
       await connection.settled();
@@ -2898,6 +2938,7 @@ export async function startPhoneHome(
       await new Promise<void>((resolve) => relayServer.close(() => resolve()));
       stopConversationReading();
       google.close();
+      if (options.settings) delete process.env.INFINITARY_QUOTA_FIXTURE_DIR;
       await core.dispose();
       await provider.close();
       await googleStandIn.close();

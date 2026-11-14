@@ -1,4 +1,12 @@
 {
+  "settingsAccountsCount": {
+    "plural": "count",
+    "other": "계정 {count}개"
+  },
+  "settingsAccountsWaiting": {
+    "plural": "count",
+    "other": "{accounts} · {count}개 로그인 필요"
+  },
   "settingsAddProjectAdd": "추가",
   "settingsAddProjectAddFolder": "폴더 추가",
   "settingsAddProjectAdded": "{name}을(를) 추가했어요.",
@@ -685,6 +693,28 @@
   "settingsPanelsTop": "위",
   "settingsPanelsWaitsForKnowledge": "지식이 생기면 나타나요",
   "settingsPanelsWaitsForRule": "규칙을 저장하면 나타나요",
+  "settingsPhoneAccountsThere": "로그인은 {home}에 보관돼요. 계정 추가, 일시 정지, 제거는 그곳에서 하세요.",
+  "settingsPhoneAutomationLead": "일정에 따라 일등항해사가 받는 메시지예요.",
+  "settingsPhoneAutomationsThere": "자동화를 만들거나 바꾸거나 삭제하려면 {home}에서 설정 → 자동화를 여세요.",
+  "settingsPhoneByFirstMate": "일등항해사가 설정함",
+  "settingsPhoneLastRan": "마지막 실행",
+  "settingsPhoneNextRun": "다음 실행",
+  "settingsPhoneNoAccounts": "아직 계정이 없어요.",
+  "settingsPhoneNoAutomations": "아직 자동화가 없어요. {home}에서 만들거나, 일등항해사에게 무엇을 언제 실행할지 말해 주세요.",
+  "settingsPhoneNoProjects": "아직 프로젝트가 없어요. {home}의 설정 → 프로젝트에서 추가하세요.",
+  "settingsPhonePauseAllAsk": {
+    "plural": "count",
+    "other": "실행되는 자동화 {count}개를 일시 정지할까요?"
+  },
+  "settingsPhoneProjectsThere": "프로젝트를 추가하거나 제거하거나 폴더를 바꾸려면 {home}에서 설정 → 프로젝트를 여세요.",
+  "settingsPhoneQueueDecides": "변경이 어디로 갈지는 이 프로젝트의 대기열이 정해요.",
+  "settingsPhoneRunbooksLead": "일등항해사와 선원들이 따르는 안내예요. 하나를 끄면 그 안내 없이 일해요.",
+  "settingsPhoneSave": "저장",
+  "settingsPhoneSignIn": "{where} {action}.",
+  "settingsPhoneSignInAction": "로그인하세요",
+  "settingsPhoneStoppedThere": "{reason} {home}의 설정 → 자동화에서 연동을 다시 고르세요.",
+  "settingsPhoneTodayPartial": "오늘은 아직 진행 중",
+  "settingsPhoneUsageThere": "최근 작업과 모델별 세부 정보는 {home}의 설정 → 사용량에 있어요.",
   "settingsProjectsAutonomyOff": "끝난 작업은 선장님의 말을 기다려요.",
   "settingsProjectsAutonomyOn": "검사를 통과한 작업은 묻지 않고 병합될 수 있어요.",
   "settingsProjectsAutonomyPersonal": "그 자리에서 만들어요. 검사를 통과한 작업은 끝나는 즉시 기록돼요.",
@@ -723,6 +753,10 @@
   "settingsProjectsCostNone": "한도 없음",
   "settingsProjectsCostOwn": "직접 정한 금액",
   "settingsProjectsCostTitle": "비용 한도",
+  "settingsProjectsCount": {
+    "plural": "count",
+    "other": "프로젝트 {count}개"
+  },
   "settingsProjectsDelivery": "프로젝트가 있는 곳에 끌어오기 요청으로 올리거나, 승인된 다른 변경과 함께 하나의 일괄 끌어오기 요청으로 병합하거나, 끌어오기 요청 없이 로컬에서 병합해요.",
   "settingsProjectsDeliveryTitle": "변경이 가는 곳",
   "settingsProjectsEmpty": "아직 프로젝트가 없어요. 아래에서 추가하거나, 일등항해사에게 어떤 프로젝트를 맡을지 알려 주세요.",
@@ -743,6 +777,7 @@
   "settingsProjectsName": "이름",
   "settingsProjectsNameDescription": "프로젝트의 키와 기록은 그대로 유지돼요.",
   "settingsProjectsNameLabel": "프로젝트 이름",
+  "settingsProjectsNone": "아직 프로젝트 없음",
   "settingsProjectsOrigin": "있는 곳",
   "settingsProjectsOriginDescription": "폴더가 가리키는 주소를 입력하거나, {place}(으)로 두려면 비워 두세요.",
   "settingsProjectsOriginLabel": "프로젝트가 있는 곳",
@@ -1061,6 +1096,7 @@
   "settingsUsageShowAs": "사용량 표시 단위",
   "settingsUsageSplitFor": "가격 있는 기록 {priced}개 중 {split}개는 항목별로 나뉘어 있어요.",
   "settingsUsageSubtotal": "소계",
+  "settingsUsageSummary": "{tokens} 토큰 · {period}",
   "settingsUsageTaskColumn": "작업",
   "settingsUsageTaskCountAll": "작업 {count}개 모두 표시",
   "settingsUsageTaskCountOne": "작업 1개 표시",

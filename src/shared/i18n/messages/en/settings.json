@@ -1,4 +1,14 @@
 {
+  "settingsAccountsCount": {
+    "plural": "count",
+    "one": "{count} account",
+    "other": "{count} accounts"
+  },
+  "settingsAccountsWaiting": {
+    "plural": "count",
+    "one": "{accounts} · {count} needs a sign-in",
+    "other": "{accounts} · {count} need a sign-in"
+  },
   "settingsAddProjectAdd": "Add",
   "settingsAddProjectAddFolder": "Add folder",
   "settingsAddProjectAdded": "Added {name}.",
@@ -696,6 +706,29 @@
   "settingsPanelsTop": "Top",
   "settingsPanelsWaitsForKnowledge": "Shows once there is knowledge",
   "settingsPanelsWaitsForRule": "Shows when a rule is saved",
+  "settingsPhoneAccountsThere": "Sign-ins stay on {home}. Add, pause or remove an account there.",
+  "settingsPhoneAutomationLead": "Prompts your first mate gets on a schedule.",
+  "settingsPhoneAutomationsThere": "To make, change or delete an automation, open Settings → Automation on {home}.",
+  "settingsPhoneByFirstMate": "Set up by your first mate",
+  "settingsPhoneLastRan": "Last ran",
+  "settingsPhoneNextRun": "Next run",
+  "settingsPhoneNoAccounts": "No accounts yet.",
+  "settingsPhoneNoAutomations": "No automations yet. Make one on {home}, or tell your first mate what to run and when.",
+  "settingsPhoneNoProjects": "No projects yet. Add one in Settings → Projects on {home}.",
+  "settingsPhonePauseAllAsk": {
+    "plural": "count",
+    "one": "Pause the {count} automation that runs?",
+    "other": "Pause all {count} automations that run?"
+  },
+  "settingsPhoneProjectsThere": "To add or remove a project, or change its folder, open Settings → Projects on {home}.",
+  "settingsPhoneQueueDecides": "This project's queue decides where changes go.",
+  "settingsPhoneRunbooksLead": "Guidance your first mate and crew follow. Turn one off to work without it.",
+  "settingsPhoneSave": "Save",
+  "settingsPhoneSignIn": "{action} {where}.",
+  "settingsPhoneSignInAction": "Sign in",
+  "settingsPhoneStoppedThere": "{reason} Pick its integration again in Settings → Automation on {home}.",
+  "settingsPhoneTodayPartial": "Today is partial",
+  "settingsPhoneUsageThere": "Recent tasks and each model's detail are in Settings → Usage on {home}.",
   "settingsProjectsAutonomyOff": "Finished work waits for your word.",
   "settingsProjectsAutonomyOn": "Work that passes the checks may merge without asking you.",
   "settingsProjectsAutonomyPersonal": "Builds in place. Work that passes the checks is written as soon as it is done.",
@@ -737,6 +770,11 @@
   "settingsProjectsCostNone": "No limit",
   "settingsProjectsCostOwn": "Own amount",
   "settingsProjectsCostTitle": "Cost limit",
+  "settingsProjectsCount": {
+    "plural": "count",
+    "one": "{count} project",
+    "other": "{count} projects"
+  },
   "settingsProjectsDelivery": "Offered as a pull request where the project lives, merged together with your other approved changes as one batch pull request, or merged locally with no pull request.",
   "settingsProjectsDeliveryTitle": "Where changes go",
   "settingsProjectsEmpty": "No projects yet. Add one below, or tell your first mate which project to work on.",
@@ -757,6 +795,7 @@
   "settingsProjectsName": "Name",
   "settingsProjectsNameDescription": "Your project keeps its key and history.",
   "settingsProjectsNameLabel": "Project name",
+  "settingsProjectsNone": "No projects yet",
   "settingsProjectsOrigin": "Where it lives",
   "settingsProjectsOriginDescription": "Enter the address your folder points at, or leave it empty for {place}.",
   "settingsProjectsOriginLabel": "Where the project lives",
@@ -1076,6 +1115,7 @@
   "settingsUsageShowAs": "Show usage as",
   "settingsUsageSplitFor": "Split by category for {split} of {priced} priced records.",
   "settingsUsageSubtotal": "Subtotal",
+  "settingsUsageSummary": "{tokens} tokens · {period}",
   "settingsUsageTaskColumn": "Task",
   "settingsUsageTaskCountAll": "All {count} tasks shown",
   "settingsUsageTaskCountOne": "1 task shown",

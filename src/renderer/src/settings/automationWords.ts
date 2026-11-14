@@ -6,7 +6,14 @@ import type {
   AutomationSave,
   AutomationSpec,
 } from "@shared/automation";
-import { automationClockWords, automationDateWords } from "@shared/automationWords";
+import { fillScheduleDetails } from "@shared/automation";
+import {
+  automationClockWords,
+  automationDateWords,
+  automationWhenWords,
+  automationZoneOf,
+  automationZoneWords,
+} from "@shared/automationWords";
 import * as m from "@shared/i18n/messages.generated";
 
 /**
@@ -200,6 +207,21 @@ export const DELIVERY_TONES: Record<AutomationDelivery, "ok" | "busy" | "warn" |
     sent: "ring",
   };
 
+/** A look whose every new event was kept from the first mate, so nothing was sent (docs/automation.md, "The event screen"). */
+function sentNothing(run: AutomationRun): boolean {
+  return run.events === 0 && Boolean(run.screened);
+}
+
+/** A run's state in words: a look that sent nothing reads as skipped, never as its delivery. */
+export function runStateWords(run: AutomationRun): string {
+  return sentNothing(run) ? m.automationRunSkippedState() : DELIVERY_WORDS[run.delivery];
+}
+
+/** What a run's kept prompt is called: the events it skipped when it sent nothing. */
+export function runPromptTitle(run: AutomationRun): string {
+  return sentNothing(run) ? m.automationEventsSkipped() : m.settingsAutomationPromptAsSent();
+}
+
 /** What a delivery's state means, beside it. */
 export function deliveryNote(run: AutomationRun): string | null {
   switch (run.delivery) {
@@ -338,3 +360,116 @@ export const AUTOMATION_SHEET_WORDS = {
     return m.settingsAutomationDetailNote();
   },
 } as const;
+
+/** What an event rule listens for, as its integration declares it: its words, cadence and filters. */
+export type ListenedEvent = {
+  /** "When an item arrives in Stand-in". */
+  when: string;
+  /** How often, in minutes, the app looks for it. */
+  every: number;
+  filters?: { name: string; label: string; defaultValue?: string }[];
+};
+
+/**
+ * The prompt as it is sent the first time, for the preview and the review:
+ * its schedule details filled in for the first of `dates`, or for now on an
+ * event rule. With no date left it stays as written.
+ */
+export function previewPrompt(
+  spec: AutomationSpec,
+  prompt: string,
+  dates: readonly number[],
+  now: number,
+): string {
+  const first = spec.kind === "event" ? now : dates[0];
+  if (first === undefined) return prompt.trim();
+  return fillScheduleDetails(prompt.trim(), {
+    plannedAt: first,
+    timeZone: automationZoneOf(spec) ?? hereZone(),
+    missed: 0,
+    ...(spec.kind === "event" ? { events: AUTOMATION_SHEET_WORDS.eventsPreview } : {}),
+  });
+}
+
+/**
+ * One line of the review: its term, and its value in words; `prompt` marks
+ * the exact prompt, and `lines` holds a value that is a list, one entry
+ * each, for a reader that draws them one a line.
+ */
+export type ReviewFact = { term: string; value: string; lines?: string[]; prompt?: true };
+
+/** A rule's project in words: its name, or that it has none or lost it. */
+export function ruleProjectWords(
+  projectId: string | undefined,
+  projects: readonly { id: string; name: string }[],
+): string {
+  if (!projectId) return m.settingsAutomationNoProject();
+  return projects.find((one) => one.id === projectId)?.name ?? m.settingsAutomationRemovedProject();
+}
+
+/**
+ * Enable's review as its facts, in order (docs/automation.md, "Drafts"):
+ * the schedule, its zone, an event rule's filters, the project, the next
+ * dates, the exact prompt, what it sends and what happens to a missed time.
+ * `where` names the computer the first mate lives on when another one
+ * shows the review. The computer's review and the phone's page of a rule
+ * both draw these.
+ */
+export function reviewFacts(
+  review: {
+    spec: AutomationSpec;
+    dates: readonly number[];
+    prompt: string;
+    projectId?: string | undefined;
+    listened?: ListenedEvent | undefined;
+  },
+  projects: readonly { id: string; name: string }[],
+  where: string | null,
+): ReviewFact[] {
+  const { spec, listened } = review;
+  const zone = automationZoneOf(spec);
+  const next = review.dates.map((at) => automationDateWords(at, zone));
+  return [
+    { term: m.settingsAutomationWhen(), value: automationWhenWords(spec, listened?.when) },
+    ...(spec.kind === "daily" || spec.kind === "weekly"
+      ? [
+          {
+            term: m.settingsAutomationTimeZone(),
+            value: zone ? automationZoneWords(zone) : localClockWords(where),
+          },
+        ]
+      : []),
+    ...(spec.kind === "event"
+      ? (listened?.filters ?? []).map((field) => ({
+          term: field.label,
+          value:
+            spec.filter?.[field.name] || field.defaultValue || m.settingsAutomationNotSpecified(),
+        }))
+      : []),
+    ...(spec.kind === "event" && spec.waitsFor
+      ? [{ term: m.automationWaitsFor(), value: `${spec.waitsFor}. ${m.automationWaitsForNote()}` }]
+      : []),
+    { term: m.settingsAutomationProject(), value: ruleProjectWords(review.projectId, projects) },
+    spec.kind === "event"
+      ? { term: m.settingsAutomationRuns(), value: eventRunsWords(listened?.every) }
+      : {
+          term: spec.kind === "once" ? m.settingsAutomationRuns() : m.settingsAutomationNextRuns(),
+          value: next.length === 0 ? m.settingsAutomationPassed() : next.join(" · "),
+          ...(next.length > 1 ? { lines: next } : {}),
+        },
+    { term: m.settingsAutomationFirstMateGets(), value: review.prompt, prompt: true },
+    {
+      term: m.settingsAutomationWhatItSends(),
+      value:
+        spec.kind === "event"
+          ? AUTOMATION_SHEET_WORDS.reviewSendsEvents
+          : AUTOMATION_SHEET_WORDS.reviewSends,
+    },
+    { term: m.settingsAutomationMissedTime(), value: reviewMissedWords(spec, where) },
+  ];
+}
+
+/** Whether the review's Turn on can run the rule: an event rule always, a schedule with a time still to come. */
+export function reviewCanTurnOn(spec: AutomationSpec, dates: readonly number[]): boolean {
+  return spec.kind === "event" || dates.length > 0;
+}

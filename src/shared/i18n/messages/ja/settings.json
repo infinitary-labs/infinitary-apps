@@ -1,4 +1,12 @@
 {
+  "settingsAccountsCount": {
+    "plural": "count",
+    "other": "{count}件のアカウント"
+  },
+  "settingsAccountsWaiting": {
+    "plural": "count",
+    "other": "{accounts} · {count}件はサインインが必要"
+  },
   "settingsAddProjectAdd": "追加",
   "settingsAddProjectAddFolder": "フォルダを追加",
   "settingsAddProjectAdded": "{name} を追加しました。",
@@ -685,6 +693,28 @@
   "settingsPanelsTop": "上",
   "settingsPanelsWaitsForKnowledge": "ナレッジができると表示されます",
   "settingsPanelsWaitsForRule": "ルールが保存されると表示されます",
+  "settingsPhoneAccountsThere": "サインインは {home} に保管されます。アカウントの追加、一時停止、削除はそちらで行ってください。",
+  "settingsPhoneAutomationLead": "スケジュールに沿って一等航海士に届くプロンプトです。",
+  "settingsPhoneAutomationsThere": "自動化を作成、変更、削除するには、{home} で「設定 → 自動化」を開いてください。",
+  "settingsPhoneByFirstMate": "一等航海士が設定",
+  "settingsPhoneLastRan": "前回の実行",
+  "settingsPhoneNextRun": "次回の実行",
+  "settingsPhoneNoAccounts": "アカウントはまだありません。",
+  "settingsPhoneNoAutomations": "自動化はまだありません。{home} で作成するか、何をいつ実行するかを一等航海士に伝えてください。",
+  "settingsPhoneNoProjects": "プロジェクトはまだありません。{home} の「設定 → プロジェクト」で追加してください。",
+  "settingsPhonePauseAllAsk": {
+    "plural": "count",
+    "other": "稼働中の自動化（{count}件）をすべて一時停止しますか？"
+  },
+  "settingsPhoneProjectsThere": "プロジェクトの追加や削除、フォルダの変更をするには、{home} で「設定 → プロジェクト」を開いてください。",
+  "settingsPhoneQueueDecides": "変更の届け先は、このプロジェクトのキューが決めます。",
+  "settingsPhoneRunbooksLead": "一等航海士と乗組員が従う手引きです。オフにすると、その手引きなしで作業します。",
+  "settingsPhoneSave": "保存",
+  "settingsPhoneSignIn": "{action}は{where}行ってください。",
+  "settingsPhoneSignInAction": "サインイン",
+  "settingsPhoneStoppedThere": "{reason}連携は、{home} の「設定 → 自動化」で選び直してください。",
+  "settingsPhoneTodayPartial": "今日はまだ途中です",
+  "settingsPhoneUsageThere": "最近のタスクと各モデルの詳細は、{home} の「設定 → 使用量」にあります。",
   "settingsProjectsAutonomyOff": "完了した作業はあなたの承認を待ちます。",
   "settingsProjectsAutonomyOn": "チェックに合格した作業は、確認なしでマージされることがあります。",
   "settingsProjectsAutonomyPersonal": "その場で作成。チェックに合格した作業は、終わりしだい書き込まれます。",
@@ -723,6 +753,10 @@
   "settingsProjectsCostNone": "上限なし",
   "settingsProjectsCostOwn": "独自の金額",
   "settingsProjectsCostTitle": "コスト上限",
+  "settingsProjectsCount": {
+    "plural": "count",
+    "other": "{count}件のプロジェクト"
+  },
   "settingsProjectsDelivery": "プロジェクトの保管先でプルリクエストとして出すか、ほかの承認済みの変更とまとめて1つの一括プルリクエストとしてマージするか、プルリクエストなしでローカルマージします。",
   "settingsProjectsDeliveryTitle": "変更の届け方",
   "settingsProjectsEmpty": "プロジェクトはまだありません。下で追加するか、どのプロジェクトで作業するかを一等航海士に伝えてください。",
@@ -743,6 +777,7 @@
   "settingsProjectsName": "名前",
   "settingsProjectsNameDescription": "プロジェクトのタスクキーと履歴はそのまま残ります。",
   "settingsProjectsNameLabel": "プロジェクト名",
+  "settingsProjectsNone": "プロジェクトはまだありません",
   "settingsProjectsOrigin": "保管先",
   "settingsProjectsOriginDescription": "フォルダが指しているアドレスを入力するか、空のままにして {place} を使います。",
   "settingsProjectsOriginLabel": "プロジェクトの保管先",
@@ -1061,6 +1096,7 @@
   "settingsUsageShowAs": "使用量の表示単位",
   "settingsUsageSplitFor": "価格のある記録{priced}件のうち{split}件はカテゴリ別に分かれています。",
   "settingsUsageSubtotal": "小計",
+  "settingsUsageSummary": "{tokens} トークン · {period}",
   "settingsUsageTaskColumn": "タスク",
   "settingsUsageTaskCountAll": "全{count}件のタスクを表示",
   "settingsUsageTaskCountOne": "1件のタスクを表示",

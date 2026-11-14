@@ -1,6 +1,6 @@
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD } from "@shared/placement";
 import { type RepoView, runsHereOnly } from "@shared/repos";
-import { type DeviceSignIns, devicePlace, signInPlace } from "@shared/signIns";
+import { type DeviceSignIns, signInPlace } from "@shared/signIns";
 import { useEffect, useState } from "react";
 import "./devices.css";
 import { awayWord } from "@shared/devices";
@@ -51,15 +51,8 @@ function notNow(computer: DeviceSignIns): string {
   return "";
 }
 
-/** How the row and its badge place a project's computer: "on Mac mini", "as Builder". */
-export function runsOnWhere(repo: RepoView, computers: readonly DeviceSignIns[]): string | null {
-  if (!repo.runsOn) return null;
-  if (repo.runsOn === AUTOMATIC_COMPUTER) return m.settingsRunsOnAutomatically();
-  return devicePlace(
-    computers.map((computer) => ({ ...computer, id: computer.deviceId })),
-    repo.runsOn,
-  ).where;
-}
+/** The row's place words live with the row's other words, which the phone runs too. */
+export { runsOnWhere } from "./projectsWords";
 
 /** The control in the Runs on row: one select, or "This Mac" as text where only this Mac can run it. */
 export function RunsOnControl({

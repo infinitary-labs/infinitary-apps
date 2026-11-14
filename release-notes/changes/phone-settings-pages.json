@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-settings-pages",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Settings on iPhone and iPad opens your computer's Intelligence, Automation, Usage, Projects and Runbooks",
+      "body": "On iPhone and iPad, Settings now opens five pages from your computer. Intelligence lists each account with its allowance; signing in stays on your computer. Automation shows each automation's schedule and next run: pause or resume one, pause them all, or turn on a draft after reading what it will do. Usage shows tokens or estimated dollars by day, by model and by where the work went. Projects holds where changes go, asking before merging, rigor and the cost limit. Runbooks turns each runbook on or off. With a keyboard, the arrows and Tab move, Return chooses and Command-[ goes back.",
+      "picture": {
+        "dark": "phone-settings-pages-dark.webp",
+        "light": "phone-settings-pages-light.webp",
+        "alt": "Five rows of Settings on iPhone, each with a line under its name: Projects, 2 projects; Intelligence, 3 accounts, 1 needs a sign-in; Runbooks, 10 on, 1 off; Usage, 19.00M tokens, last 30 days; Automation, 1 active, 1 paused."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

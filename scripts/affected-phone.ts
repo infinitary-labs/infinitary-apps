@@ -29,6 +29,8 @@ const INPUTS = [
   "tests/e2e/mockProvider.ts", "tests/e2e/crewScripts.ts", "tests/e2e/mockModels.ts", "tests/e2e/providerRequest.ts",
   // INF-2928 piece 3: the test home's Backlog row for a long press and a swipe.
   "tests/helpers/phoneRowMoves.ts",
+  // INF-3563: the script the phone's Settings pages are built by, and the test home's accounts, rules and usage.
+  "scripts/generate-phone-settings.ts", "tests/helpers/phoneSettings.ts",
   // INF-3830 piece 2: the test home's fixture panel and the controls the Panels part asks of it.
   "tests/helpers/phonePanels.ts", "tests/fixtures/phone-panels/phone-tally/", "tests/fixtures/phone-panels/phone-shy/",
 ] as const;

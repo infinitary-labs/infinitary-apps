@@ -1599,6 +1599,7 @@ public enum PhoneMessages {
     public static func `phoneSettingsApprovalTurnOff`(`computer`: String) -> String { PhoneWords.format("phoneSettingsApprovalTurnOff", [`computer`]) }
     public static func `phoneSettingsApprovesSecretUses`() -> String { PhoneWords.format("phoneSettingsApprovesSecretUses", []) }
     public static func `phoneSettingsBack`() -> String { PhoneWords.format("phoneSettingsBack", []) }
+    public static func `phoneSettingsBackTo`(`place`: String) -> String { PhoneWords.format("phoneSettingsBackTo", [`place`]) }
     public static func `phoneSettingsCapabilityFull`() -> String { PhoneWords.format("phoneSettingsCapabilityFull", []) }
     public static func `phoneSettingsCapabilityRead`(`update`: String) -> String { PhoneWords.format("phoneSettingsCapabilityRead", [`update`]) }
     public static func `phoneSettingsConversationStays`() -> String { PhoneWords.format("phoneSettingsConversationStays", []) }
@@ -1907,6 +1908,8 @@ public enum PhoneMessages {
     public static func `secretsKeyOpenTitle`() -> String { PhoneWords.format("secretsKeyOpenTitle", []) }
     public static func `secretsKeySaveMessage`() -> String { PhoneWords.format("secretsKeySaveMessage", []) }
     public static func `secretsKeySaveTitle`() -> String { PhoneWords.format("secretsKeySaveTitle", []) }
+    public static func `settingsAccountsCount`(`count`: Int) -> String { PhoneWords.format("settingsAccountsCount", [`count`]) }
+    public static func `settingsAccountsWaiting`(`accounts`: String, `count`: Int) -> String { PhoneWords.format("settingsAccountsWaiting", [`accounts`, `count`]) }
     public static func `settingsAddProjectAdd`() -> String { PhoneWords.format("settingsAddProjectAdd", []) }
     public static func `settingsAddProjectAddFolder`() -> String { PhoneWords.format("settingsAddProjectAddFolder", []) }
     public static func `settingsAddProjectAdded`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAdded", [`name`]) }
@@ -2560,6 +2563,25 @@ public enum PhoneMessages {
     public static func `settingsPanelsTop`() -> String { PhoneWords.format("settingsPanelsTop", []) }
     public static func `settingsPanelsWaitsForKnowledge`() -> String { PhoneWords.format("settingsPanelsWaitsForKnowledge", []) }
     public static func `settingsPanelsWaitsForRule`() -> String { PhoneWords.format("settingsPanelsWaitsForRule", []) }
+    public static func `settingsPhoneAccountsThere`(`home`: String) -> String { PhoneWords.format("settingsPhoneAccountsThere", [`home`]) }
+    public static func `settingsPhoneAutomationLead`() -> String { PhoneWords.format("settingsPhoneAutomationLead", []) }
+    public static func `settingsPhoneAutomationsThere`(`home`: String) -> String { PhoneWords.format("settingsPhoneAutomationsThere", [`home`]) }
+    public static func `settingsPhoneByFirstMate`() -> String { PhoneWords.format("settingsPhoneByFirstMate", []) }
+    public static func `settingsPhoneLastRan`() -> String { PhoneWords.format("settingsPhoneLastRan", []) }
+    public static func `settingsPhoneNextRun`() -> String { PhoneWords.format("settingsPhoneNextRun", []) }
+    public static func `settingsPhoneNoAccounts`() -> String { PhoneWords.format("settingsPhoneNoAccounts", []) }
+    public static func `settingsPhoneNoAutomations`(`home`: String) -> String { PhoneWords.format("settingsPhoneNoAutomations", [`home`]) }
+    public static func `settingsPhoneNoProjects`(`home`: String) -> String { PhoneWords.format("settingsPhoneNoProjects", [`home`]) }
+    public static func `settingsPhonePauseAllAsk`(`count`: Int) -> String { PhoneWords.format("settingsPhonePauseAllAsk", [`count`]) }
+    public static func `settingsPhoneProjectsThere`(`home`: String) -> String { PhoneWords.format("settingsPhoneProjectsThere", [`home`]) }
+    public static func `settingsPhoneQueueDecides`() -> String { PhoneWords.format("settingsPhoneQueueDecides", []) }
+    public static func `settingsPhoneRunbooksLead`() -> String { PhoneWords.format("settingsPhoneRunbooksLead", []) }
+    public static func `settingsPhoneSave`() -> String { PhoneWords.format("settingsPhoneSave", []) }
+    public static func `settingsPhoneSignIn`(`action`: String, `where`: String) -> String { PhoneWords.format("settingsPhoneSignIn", [`action`, `where`]) }
+    public static func `settingsPhoneSignInAction`() -> String { PhoneWords.format("settingsPhoneSignInAction", []) }
+    public static func `settingsPhoneStoppedThere`(`home`: String, `reason`: String) -> String { PhoneWords.format("settingsPhoneStoppedThere", [`home`, `reason`]) }
+    public static func `settingsPhoneTodayPartial`() -> String { PhoneWords.format("settingsPhoneTodayPartial", []) }
+    public static func `settingsPhoneUsageThere`(`home`: String) -> String { PhoneWords.format("settingsPhoneUsageThere", [`home`]) }
     public static func `settingsProjectsAutonomyOff`() -> String { PhoneWords.format("settingsProjectsAutonomyOff", []) }
     public static func `settingsProjectsAutonomyOn`() -> String { PhoneWords.format("settingsProjectsAutonomyOn", []) }
     public static func `settingsProjectsAutonomyPersonal`() -> String { PhoneWords.format("settingsProjectsAutonomyPersonal", []) }
@@ -2589,6 +2611,7 @@ public enum PhoneMessages {
     public static func `settingsProjectsCostNone`() -> String { PhoneWords.format("settingsProjectsCostNone", []) }
     public static func `settingsProjectsCostOwn`() -> String { PhoneWords.format("settingsProjectsCostOwn", []) }
     public static func `settingsProjectsCostTitle`() -> String { PhoneWords.format("settingsProjectsCostTitle", []) }
+    public static func `settingsProjectsCount`(`count`: Int) -> String { PhoneWords.format("settingsProjectsCount", [`count`]) }
     public static func `settingsProjectsDelivery`() -> String { PhoneWords.format("settingsProjectsDelivery", []) }
     public static func `settingsProjectsDeliveryTitle`() -> String { PhoneWords.format("settingsProjectsDeliveryTitle", []) }
     public static func `settingsProjectsEmpty`() -> String { PhoneWords.format("settingsProjectsEmpty", []) }
@@ -2609,6 +2632,7 @@ public enum PhoneMessages {
     public static func `settingsProjectsName`() -> String { PhoneWords.format("settingsProjectsName", []) }
     public static func `settingsProjectsNameDescription`() -> String { PhoneWords.format("settingsProjectsNameDescription", []) }
     public static func `settingsProjectsNameLabel`() -> String { PhoneWords.format("settingsProjectsNameLabel", []) }
+    public static func `settingsProjectsNone`() -> String { PhoneWords.format("settingsProjectsNone", []) }
     public static func `settingsProjectsOrigin`() -> String { PhoneWords.format("settingsProjectsOrigin", []) }
     public static func `settingsProjectsOriginDescription`(`place`: String) -> String { PhoneWords.format("settingsProjectsOriginDescription", [`place`]) }
     public static func `settingsProjectsOriginLabel`() -> String { PhoneWords.format("settingsProjectsOriginLabel", []) }
@@ -2924,6 +2948,7 @@ public enum PhoneMessages {
     public static func `settingsUsageShowAs`() -> String { PhoneWords.format("settingsUsageShowAs", []) }
     public static func `settingsUsageSplitFor`(`priced`: String, `split`: String) -> String { PhoneWords.format("settingsUsageSplitFor", [`priced`, `split`]) }
     public static func `settingsUsageSubtotal`() -> String { PhoneWords.format("settingsUsageSubtotal", []) }
+    public static func `settingsUsageSummary`(`period`: String, `tokens`: String) -> String { PhoneWords.format("settingsUsageSummary", [`period`, `tokens`]) }
     public static func `settingsUsageTaskColumn`() -> String { PhoneWords.format("settingsUsageTaskColumn", []) }
     public static func `settingsUsageTaskCountAll`(`count`: String) -> String { PhoneWords.format("settingsUsageTaskCountAll", [`count`]) }
     public static func `settingsUsageTaskCountOne`() -> String { PhoneWords.format("settingsUsageTaskCountOne", []) }
@@ -4803,6 +4828,7 @@ extension PhoneWords {
         "phoneSettingsApprovalTurnOff": ["computer"],
         "phoneSettingsApprovesSecretUses": [],
         "phoneSettingsBack": [],
+        "phoneSettingsBackTo": ["place"],
         "phoneSettingsCapabilityFull": [],
         "phoneSettingsCapabilityRead": ["update"],
         "phoneSettingsConversationStays": [],
@@ -5111,6 +5137,8 @@ extension PhoneWords {
         "secretsKeyOpenTitle": [],
         "secretsKeySaveMessage": [],
         "secretsKeySaveTitle": [],
+        "settingsAccountsCount": ["count"],
+        "settingsAccountsWaiting": ["accounts", "count"],
         "settingsAddProjectAdd": [],
         "settingsAddProjectAddFolder": [],
         "settingsAddProjectAdded": ["name"],
@@ -5764,6 +5792,25 @@ extension PhoneWords {
         "settingsPanelsTop": [],
         "settingsPanelsWaitsForKnowledge": [],
         "settingsPanelsWaitsForRule": [],
+        "settingsPhoneAccountsThere": ["home"],
+        "settingsPhoneAutomationLead": [],
+        "settingsPhoneAutomationsThere": ["home"],
+        "settingsPhoneByFirstMate": [],
+        "settingsPhoneLastRan": [],
+        "settingsPhoneNextRun": [],
+        "settingsPhoneNoAccounts": [],
+        "settingsPhoneNoAutomations": ["home"],
+        "settingsPhoneNoProjects": ["home"],
+        "settingsPhonePauseAllAsk": ["count"],
+        "settingsPhoneProjectsThere": ["home"],
+        "settingsPhoneQueueDecides": [],
+        "settingsPhoneRunbooksLead": [],
+        "settingsPhoneSave": [],
+        "settingsPhoneSignIn": ["action", "where"],
+        "settingsPhoneSignInAction": [],
+        "settingsPhoneStoppedThere": ["home", "reason"],
+        "settingsPhoneTodayPartial": [],
+        "settingsPhoneUsageThere": ["home"],
         "settingsProjectsAutonomyOff": [],
         "settingsProjectsAutonomyOn": [],
         "settingsProjectsAutonomyPersonal": [],
@@ -5793,6 +5840,7 @@ extension PhoneWords {
         "settingsProjectsCostNone": [],
         "settingsProjectsCostOwn": [],
         "settingsProjectsCostTitle": [],
+        "settingsProjectsCount": ["count"],
         "settingsProjectsDelivery": [],
         "settingsProjectsDeliveryTitle": [],
         "settingsProjectsEmpty": [],
@@ -5813,6 +5861,7 @@ extension PhoneWords {
         "settingsProjectsName": [],
         "settingsProjectsNameDescription": [],
         "settingsProjectsNameLabel": [],
+        "settingsProjectsNone": [],
         "settingsProjectsOrigin": [],
         "settingsProjectsOriginDescription": ["place"],
         "settingsProjectsOriginLabel": [],
@@ -6128,6 +6177,7 @@ extension PhoneWords {
         "settingsUsageShowAs": [],
         "settingsUsageSplitFor": ["priced", "split"],
         "settingsUsageSubtotal": [],
+        "settingsUsageSummary": ["period", "tokens"],
         "settingsUsageTaskColumn": [],
         "settingsUsageTaskCountAll": ["count"],
         "settingsUsageTaskCountOne": [],
@@ -6485,6 +6535,8 @@ extension PhoneWords {
         "recordMoreKnowledge": "count",
         "recordShowEarlier": "count",
         "recordUsesMore": "count",
+        "settingsAccountsCount": "count",
+        "settingsAccountsWaiting": "count",
         "settingsAutomationEventPreview": "count",
         "settingsAutomationRunCatchingUpMissed": "count",
         "settingsAutomationRunEvents": "count",
@@ -6496,9 +6548,11 @@ extension PhoneWords {
         "settingsDevicesWayCount": "count",
         "settingsGeneralTasksPurged": "count",
         "settingsIntegrationsActionCount": "count",
+        "settingsPhonePauseAllAsk": "count",
         "settingsProjectsBatchHeldChecks": "count",
         "settingsProjectsBatchHeldChecksUnnamed": "count",
         "settingsProjectsBatchSentBack": "count",
+        "settingsProjectsCount": "count",
         "settingsProjectsPauseSummary": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",

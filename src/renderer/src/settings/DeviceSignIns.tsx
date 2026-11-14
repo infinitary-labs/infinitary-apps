@@ -1,7 +1,5 @@
 import type { AccountView } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
-import { awayWord } from "@shared/devices";
-import { formatTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import type { ProviderView } from "@shared/providers";
 import type { QuotaProviderView } from "@shared/quota";
@@ -31,6 +29,7 @@ import { useShellStore } from "../app/store";
 import type { RowMenuItem } from "../design";
 import { Button, Input } from "../design";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { awayNote, DEVICE_SIGN_INS_WORDS } from "./accountRows";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP } from "./settingRows";
 import { useDeviceSignIns } from "./useDeviceSignIns";
 
@@ -78,14 +77,14 @@ export type DeviceAccountRowProps = {
 
 /** Under a computer's label while it is not in reach: out of reach, or connecting while its connection is being made. */
 export function OutOfReachNote({ device }: { device: DeviceSignIns }) {
-  if (device.reach === "in-reach") return null;
+  const note = awayNote(device);
+  if (note === null) return null;
   return (
     <div
       style={{ ...MONO_NOTE_STYLE, marginBottom: "var(--space-2)" }}
       data-device-out-of-reach={device.reach === "connecting" ? "connecting" : ""}
     >
-      {awayWord(device.reach === "connecting")}
-      {device.asOf ? ` · ${m.settingsDevicesSignInsAsOf({ time: timeOf(device.asOf) })}` : ""}
+      {note}
     </div>
   );
 }
@@ -197,7 +196,7 @@ export function DeviceSignInGroups({
           >
             <div style={LABEL_STYLE}>{place.label}</div>
             <div style={{ ...LINE_STYLE, margin: `${LABEL_GAP} 0 ${ROW_GAP}` }}>
-              {m.settingsDevicesSignInsOwn({ where: place.where })}
+              {DEVICE_SIGN_INS_WORDS.own(place.where)}
             </div>
             <OutOfReachNote device={device} />
             <div
@@ -268,8 +267,8 @@ export function DeviceSignInGroups({
                   }}
                 >
                   {device.unanswered
-                    ? m.settingsDevicesSignInsUnanswered({ who: place.who, home: home.this })
-                    : m.settingsDevicesSignInsNone()}
+                    ? DEVICE_SIGN_INS_WORDS.unanswered(place.who, home.this)
+                    : DEVICE_SIGN_INS_WORDS.none}
                 </div>
               )}
               {device.signIns && (
@@ -535,8 +534,4 @@ function pasteBackLine(asked: "code" | "address", who: string, onThisMac: boolea
 /** Whether English writes "an" before the provider's name. */
 function anArticle(word: string): boolean {
   return /^[aeiou]/i.test(word);
-}
-
-function timeOf(ms: number): string {
-  return formatTime(ms, { hour: "2-digit", minute: "2-digit" });
 }

@@ -506,6 +506,7 @@
   "phoneSettingsApprovalTurnOff": "끄려면 {computer}에서 설정 → 기기를 여세요.",
   "phoneSettingsApprovesSecretUses": "비밀 정보 사용 승인",
   "phoneSettingsBack": "설정으로 돌아가기",
+  "phoneSettingsBackTo": "{place}(으)로 돌아가기",
   "phoneSettingsCapabilityFull": "컴퓨터에서 카드에 답하고, 메시지를 보내고, 작업을 제어해요.",
   "phoneSettingsCapabilityRead": "카드, 활동, 작업을 읽어요. {update}",
   "phoneSettingsConversationStays": "대화는 컴퓨터에 머물러요.",

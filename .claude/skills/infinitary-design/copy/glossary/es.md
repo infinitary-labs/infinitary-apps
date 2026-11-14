@@ -24,6 +24,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | batch (your approved changes, combined) | lote | As in "la comprobación del lote"; masculine. |
 | branch | rama | GitHub's Spanish docs say "rama"; "la rama principal". |
 | bring up to date | poner al día | "lo haya puesto al día"; used where English says rebase or resolve a conflict. |
+| built in place, builds in place | construido en el lugar, construye en el lugar | Delivery with no working copy and no pull request. |
 | captain | capitán | The usual word a crew uses for a ship's captain; masculine default form, see the register lines above; lowercase in the middle of a sentence, also as a form of address. |
 | card | tarjeta | Feminine: "Revisada", "Escrita". |
 | claim (a recorded relationship) | afirmación | "Afirmación registrada". |
@@ -47,6 +48,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Done / Got it | Hecho / Entendido | |
 | draft (a pull request) | borrador | As in GitHub's Spanish docs. |
 | drop (a task) | abandonar | "Abandonada", kept apart from "descartar". |
+| Enable… / Turn on | Activar… / Activar | "Activar…" opens the review whose button is "Activar"; "Turn off" is "Desactivar". |
 | escalate (never said) | un modelo más potente | |
 | feed / activity | Actividad | |
 | fetch (a server's list of models) | obtener | "Obtener del servidor", "Obteniendo…". |
@@ -54,10 +56,12 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | fingerprint (a computer's key) | huella digital |  |
 | first mate | primer oficial | The ship's officer who is second-in-command; a common noun, lowercase: "tu primer oficial", "Primer oficial" only as a short label; "oficial" alone in the thread's short author tag. |
 | font (Settings → Appearance) | fuente | |
+| gate | control | The checks work passes before it merges: "Aquí nada pasa por un control." |
 | header (a request's) | encabezado | |
 | held (a batch that stopped) | retenido | "Lote retenido", "Retenido desde las {since}"; the same verb as "lo retiene" on a merge a rule holds. |
 | hold (on a task) | retención | "está retenida", "cuando termine su retención"; as in "lo retiene" for a merge. |
 | Infinitary | Infinitary | Never translated. |
+| Integrations, an integration | Integraciones, una integración | A Settings tab and each connection in it. |
 | Intelligence | Inteligencia | |
 | iOS Settings (the phone's own app) | Ajustes | Apple's name; the app's own Settings stays "Configuración". |
 | issue (where the project lives) | incidencia | The queue's pause issue: "Abrir la incidencia". |
@@ -79,6 +83,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | model | modelo | |
 | Not now | Ahora no | |
 | offline, disconnected (never said) | fuera de alcance | |
+| on pace / empty (an allowance) | al ritmo / se agota, agotada | "se agota en 2h", "agotada"; never "vacía". |
 | out of reach | fuera de alcance | Never "desconectado" or "sin conexión". |
 | panel | panel | |
 | passcode (iOS) | código | As in Apple's "Face ID y código". |
@@ -98,6 +103,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | queued | en cola | |
 | quota, rate limit (never said) | asignación de tu plan | |
 | rail | barra | The column of panels at a window's side; "barras" in command search words. |
+| reading (of an allowance) | lectura | From "leer": "leyendo…", "sin lectura de la asignación". |
 | Reasoning | Razonamiento | |
 | rebase merges, merge commits (the host's settings) | fusiones con cambio de base (rebase), confirmaciones de fusión | Named only as the settings where the project lives, following GitHub's Spanish docs, with "rebase" beside it because that settings page is in English; the app's own action stays "poner al día". |
 | rebase, conflict (never said) | poner al día | One English line says "conflicts"; it reads "choca con trabajo más reciente". |
@@ -108,6 +114,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | review | revisión | "Superó su revisión". |
 | revision (of a knowledge record) | versión | Kept apart from "revisión", which is review. |
 | rigor levels: Quick, Default, Careful | Rápido, Predeterminado, Cuidadoso | Masculine, agreeing with "cuidado": "Cuidado: Rápido". |
+| run (an automation's) | ejecución, ejecutarse | "Próxima ejecución", "Se ejecuta"; the verb is "ejecutar" everywhere. |
 | Runbooks | Manuales | A Settings tab and the folder of guidance it opens. |
 | Secrets | Secretos | |
 | send back (a change out of a batch) | devolver | "Devolver con un motivo". |
@@ -134,6 +141,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | where the project lives | donde se aloja el proyecto | |
 | window wash | velo de la ventana | The theme color laid over the blurred background. |
 | working copy | copia de trabajo | |
+| workspace (the personal one) | espacio de trabajo | The project that builds in place. |
 | worktree (never said) | copia de trabajo | |
 | your plan's allowance | la asignación de tu plan | "Volver a consultar la asignación"; never "cuota" or "límite" in a sentence. |
 | your project | tu proyecto | |

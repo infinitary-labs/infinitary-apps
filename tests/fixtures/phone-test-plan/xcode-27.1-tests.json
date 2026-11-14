@@ -75,6 +75,7 @@
   "InfinitaryUITests/PhoneJourney/testRelaunchPairsFirstTen",
   "InfinitaryUITests/PhoneJourney/testRelaunchPairsSecondTen",
   "InfinitaryUITests/PhoneJourney/testRevisionKeepsTheThreadShowing",
+  "InfinitaryUITests/PhoneJourney/testSettingsPages",
   "InfinitaryUITests/PhoneJourney/testTasksAndSteer",
   "InfinitaryUITests/PhoneJourney/testThreadKeepsItsPlace",
   "InfinitaryUITests/PhoneTargetPixelsTests/testCaptureExtentMatchesTheRecordedNativeAllocator",

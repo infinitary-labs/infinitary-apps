@@ -3,29 +3,79 @@ import SwiftUI
 
 /// The accepted phone Settings plan: the desktop's section names and order, each opening in this same sheet.
 /// Leave and Forget stay with the computer in its sheet; Theme and approvals keep their existing owners.
+/// INF-3563: Projects, Intelligence, Runbooks, Usage and Automation are the computer's own pages in the computer's
+/// words (docs/ios.md, "Settings pages in the computer's words"); signing in stays on the computer.
 struct PhoneSettingsSheet: View {
     let session: ReadOnlySession
     @Environment(\.dismiss) private var dismiss
     @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
     @Environment(PhoneGoogle.self) private var google: PhoneGoogle?
+    @Environment(PhoneSettings.self) private var settings: PhoneSettings?
     @FocusState private var themeFocused: Bool
     @State private var section: Section?
+    /// The pages opened inside a section, outermost first: an automation, its review, a project.
+    @State private var path: [Detail] = []
     @State private var lastSection: Section = .general
     @State private var browsing = false
+    /// The page last read for, so a page reads at once as it opens and a burst of changes reads once.
+    @State private var followed: Place?
 
     private enum Section: String, CaseIterable {
-        // i18n-exempt: raw values name each section's accessibility identifier; `title` is shown
-        case general = "General", appearance = "Appearance", integrations = "Integrations", devices = "Devices"
-        var id: String { rawValue.lowercased() }
+        case general, appearance, projects, intelligence, runbooks, usage, automation, integrations, devices
+        var id: String { rawValue }
+
+        /// The section's name: the phone's own word for its four sections, and for each of the computer's pages the
+        /// computer's own name for that Settings tab.
         var title: String {
             switch self {
             case .general: PhoneMessages.phoneSettingsGeneral()
             case .appearance: PhoneMessages.phoneSettingsAppearance()
+            case .projects: PhoneMessages.panelSettingsProjects()
+            case .intelligence: PhoneMessages.panelSettingsIntelligence()
+            case .runbooks: PhoneMessages.panelSettingsRunbooks()
+            case .usage: PhoneMessages.panelSettingsUsage()
+            case .automation: PhoneMessages.panelSettingsAutomation()
             case .integrations: PhoneMessages.phoneSettingsIntegrations()
             case .devices: PhoneMessages.phoneSettingsDevices()
             }
         }
+
+        /// The computer's page behind the section, where it has one.
+        var live: PhoneSettings.Section? {
+            switch self {
+            case .projects: .projects
+            case .intelligence: .intelligence
+            case .runbooks: .runbooks
+            case .usage: .usage
+            case .automation: .automation
+            case .general, .appearance, .integrations, .devices: nil
+            }
+        }
+
+        /// How often the computer's own page reads again with nothing said: its accounts and its automations.
+        var readsEvery: Duration? {
+            switch self {
+            case .intelligence: .seconds(10)
+            case .automation: .seconds(30)
+            default: nil
+            }
+        }
+    }
+
+    private enum Detail: Hashable { case rule(String), review(String), project(String) }
+
+    private struct Place: Hashable {
+        let section: Section?
+        let detail: Detail?
+    }
+
+    /// What the open page reads again on: where it is, the computer coming into reach, and what the computer said changed.
+    private struct Watch: Hashable {
+        let place: Place
+        let contact: String
+        let settings: Int
+        let work: Int
     }
 
     private var device: String { UIDevice.current.userInterfaceIdiom == .pad ? PhoneMessages.phoneSettingsThisIpad() : PhoneMessages.phoneSettingsThisPhone() }
@@ -44,56 +94,193 @@ struct PhoneSettingsSheet: View {
 
     var body: some View {
         NavigationStack {
-            page(section?.title ?? PhoneMessages.phoneCommonSettings()) {
-                if let section {
-                    switch section {
-                    case .general:
-                        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                            Text("Infinitary").font(PhoneFont.headline)
-                            Text(PhoneMessages.phoneSettingsVersion(version: Self.version)).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
-                                .accessibilityIdentifier("app-version")
-                        }
-                    case .appearance:
-                        if let appearance { theme(appearance) }
-                    case .integrations:
-                        // INF-3454's phone part: Google's row, under Integrations as on the computer.
-                        if let google { PhoneGoogleSection(session: session, google: google) }
-                    case .devices:
-                        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                            Text(device).font(PhoneFont.headline)
-                            Text(capability).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                            Text(PhoneMessages.phoneSettingsConversationStays()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                            if let secrets, secrets.standing != .unavailable { approvals(secrets) }
-                        }
-                    }
-                } else {
-                    sections
-                }
-            }
             // One navigation content owner keeps exactly one Done on every page, with no inherited toolbar items.
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(PhoneMessages.phoneCommonDone()) { dismiss() }.accessibilityIdentifier("close-phone-settings")
-                }
-                if section != nil {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button { section = nil } label: {
-                            HStack(spacing: PhoneTheme.space2) {
-                                PhoneSymbol.chevron.image.rotationEffect(.degrees(180))
-                                Text(PhoneMessages.phoneCommonSettings())
+            ZStack { content }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .phoneTitle(title)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(PhoneMessages.phoneCommonDone()) { dismiss() }.accessibilityIdentifier("close-phone-settings")
+                    }
+                    if section != nil {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button { back() } label: {
+                                HStack(spacing: PhoneTheme.space2) {
+                                    PhoneSymbol.chevron.image.rotationEffect(.degrees(180))
+                                    Text(parent ?? PhoneMessages.shellTopBarBack())
+                                }
                             }
+                            .keyboardShortcut("[", modifiers: .command)
+                            .accessibilityLabel(backLabel)
+                            .accessibilityIdentifier("phone-settings-back")
                         }
-                        .keyboardShortcut("[", modifiers: .command)
-                        .accessibilityLabel(PhoneMessages.phoneSettingsBack())
-                        .accessibilityIdentifier("phone-settings-back")
                     }
                 }
-            }
         }
         // INF-3454: Integrations shows once the computer answered its connections; one that cannot hides it.
         .task(id: session.contact) { await google?.refresh() }
+        .task(id: watch) { await follow() }
+        // A page the computer stopped answering leaves the list, and the sheet with it.
+        .onChange(of: shown) { _, shown in
+            if let section, !shown.contains(section) { path = []; settings?.closeRule(); self.section = nil }
+        }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
-        .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
+        // Nine sections do not fit half a screen: Settings opens at full height, with no half stop on the way down.
+        .presentationDragIndicator(.visible).phoneSheetSurface()
+    }
+
+    @ViewBuilder private var content: some View {
+        if let section {
+            if section.live == nil {
+                page { own(section) }
+            } else if let settings {
+                live(section, settings)
+            }
+        } else {
+            // The list is longer than half a screen: the ring a key moves brings its row into view.
+            ScrollViewReader { proxy in
+                page { sections }
+                    .onChange(of: lastSection) { _, section in
+                        if browsing { withAnimation(.easeOut(duration: PhoneTheme.fadeSeconds)) { proxy.scrollTo(section) } }
+                    }
+            }
+        }
+    }
+
+    /// The sections this phone draws itself.
+    @ViewBuilder private func own(_ section: Section) -> some View {
+        switch section {
+        case .general:
+            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                Text("Infinitary").font(PhoneFont.headline)
+                Text(PhoneMessages.phoneSettingsVersion(version: Self.version)).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                    .accessibilityIdentifier("app-version")
+            }
+        case .appearance:
+            if let appearance { theme(appearance) }
+        case .integrations:
+            // INF-3454's phone part: Google's row, under Integrations as on the computer.
+            if let google { PhoneGoogleSection(session: session, google: google) }
+        case .devices:
+            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                Text(device).font(PhoneFont.headline)
+                Text(capability).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                Text(PhoneMessages.phoneSettingsConversationStays()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                if let secrets, secrets.standing != .unavailable { approvals(secrets) }
+            }
+        case .projects, .intelligence, .runbooks, .usage, .automation:
+            EmptyView()
+        }
+    }
+
+    /// The computer's own pages, each drawn from what its row rules answered.
+    @ViewBuilder private func live(_ section: Section, _ settings: PhoneSettings) -> some View {
+        switch section {
+        case .intelligence:
+            if let page = settings.intelligence { PhoneIntelligenceView(page: page, back: back) }
+        case .usage:
+            if let page = settings.usage { PhoneUsageView(page: page, settings: settings, back: back) }
+        case .runbooks:
+            if let page = settings.runbooks { PhoneRunbooksView(page: page, settings: settings, back: back) }
+        case .projects:
+            if case .project(let id) = detail, let project = settings.projects?.projects.first(where: { $0.id == id }) {
+                PhoneProjectView(project: project, settings: settings, back: back)
+            } else if let page = settings.projects {
+                PhoneProjectsView(page: page, open: { open(.project($0)) }, back: back)
+            }
+        case .automation:
+            if case .review = detail, let rule = settings.rule, let review = rule.review {
+                PhoneRuleReviewView(page: rule, review: review, settings: settings, back: back)
+            } else if case .rule = detail, let rule = settings.rule {
+                PhoneRuleView(page: rule, settings: settings, review: { open(.review(rule.id), over: true) }, back: back)
+            } else if let page = settings.automation {
+                PhoneAutomationView(page: page, settings: settings, open: { open(.rule($0)) }, review: { open(.review($0)) }, back: back)
+            }
+        case .general, .appearance, .integrations, .devices:
+            EmptyView()
+        }
+    }
+
+    /// The page under the top bar: the deepest opened one the computer's answers still hold, so a rule deleted or a
+    /// project removed on the computer falls back to its list.
+    private var detail: Detail? {
+        path.last { detail in
+            switch detail {
+            case .rule(let id): settings?.rule?.id == id
+            case .review(let id): settings?.rule?.id == id && settings?.rule?.review != nil
+            case .project(let id): settings?.projects?.projects.contains(where: { $0.id == id }) == true
+            }
+        }
+    }
+
+    /// The top bar names Settings or the section. A page under a section leads with its own name instead, where a
+    /// long one wraps; between Back and Done the bar would cut it short.
+    private var title: String {
+        guard let section else { return PhoneMessages.phoneCommonSettings() }
+        return detail == nil ? section.title : ""
+    }
+
+    /// Where Back goes, as the top bar names it: Settings or the section. From a page under a page it names
+    /// nothing, and the bar reads plain Back.
+    private var parent: String? {
+        guard let section else { return PhoneMessages.phoneCommonSettings() }
+        guard let detail, let index = path.lastIndex(of: detail) else {
+            return PhoneMessages.phoneCommonSettings()
+        }
+        return index == 0 ? section.title : nil
+    }
+
+    /// Back's spoken name: where it goes, or plain Back from a page under a page.
+    private var backLabel: String {
+        guard detail != nil else { return PhoneMessages.phoneSettingsBack() }
+        return parent.map { PhoneMessages.phoneSettingsBackTo(place: $0) } ?? PhoneMessages.shellTopBarBack()
+    }
+
+    /// One page back: out of the page under the top bar, or out of the section.
+    private func back() {
+        settings?.problem = nil
+        if let detail, let index = path.lastIndex(of: detail) {
+            path.removeSubrange(index...)
+        } else if !path.isEmpty {
+            path = []
+        } else {
+            section = nil
+        }
+        if !path.contains(where: { if case .project = $0 { false } else { true } }) { settings?.closeRule() }
+    }
+
+    private func open(_ detail: Detail, over: Bool = false) {
+        settings?.problem = nil
+        switch detail {
+        case .rule(let id), .review(let id): if !over { settings?.openRule(id) }
+        case .project: break
+        }
+        path = over ? path + [detail] : [detail]
+    }
+
+    private var watch: Watch {
+        Watch(place: Place(section: section, detail: path.last), contact: session.contact,
+              settings: session.settingsRevision, work: section == .usage ? session.workRevision : 0)
+    }
+
+    /// Reads what the page under the top bar shows: at once as it opens, once after a burst of changes settles, and
+    /// again as often as the computer's own page does. The list reads every page, for its one-line summaries.
+    private func follow() async {
+        guard let settings else { return }
+        let place = watch.place
+        if followed == place {
+            try? await Task.sleep(for: .milliseconds(400))
+            if Task.isCancelled { return }
+        }
+        followed = place
+        guard let section else { await settings.refresh(); return }
+        guard let live = section.live else { return }
+        await settings.refresh(live)
+        while let wait = section.readsEvery {
+            try? await Task.sleep(for: wait)
+            if Task.isCancelled { return }
+            await settings.refresh(live)
+        }
     }
 
     private var sections: some View {
@@ -109,7 +296,7 @@ struct PhoneSettingsSheet: View {
                             .strokeBorder(PhoneTheme.accent, lineWidth: 1.5)
                     }
                 }
-                .accessibilityIdentifier("phone-settings-\(section.id)")
+                .accessibilityIdentifier("phone-settings-\(section.id)").id(section)
             }
         }
         // The list reuses the scene's native keyboard owner, so a card behind the sheet never keeps its keys.
@@ -131,15 +318,32 @@ struct PhoneSettingsSheet: View {
             : PhoneMessages.phoneSettingsCapabilityFull()
     }
 
-    /// Sections with nothing to show stay off the list: Integrations waits for the computer's connections.
+    /// Sections with nothing to show stay off the list: Integrations waits for the computer's connections, and each
+    /// of the computer's own pages for the computer's answer. Those five arrive together, once each has been asked
+    /// for, so the list changes under a finger once and not five times.
     private var shown: [Section] {
-        Section.allCases.filter { $0 != .integrations || google?.read == true }
+        Section.allCases.filter { section in
+            switch section {
+            case .integrations: google?.read == true
+            case .projects: settings?.read == true && settings?.projects != nil
+            case .intelligence: settings?.read == true && settings?.intelligence != nil
+            case .runbooks: settings?.read == true && settings?.runbooks != nil
+            case .usage: settings?.read == true && settings?.usage != nil
+            case .automation: settings?.read == true && settings?.automation != nil
+            case .general, .appearance, .devices: true
+            }
+        }
     }
 
     private func summary(_ section: Section) -> String {
         switch section {
         case .general: PhoneMessages.phoneSettingsVersion(version: Self.version)
         case .appearance: PhoneMessages.phoneSettingsThemeSummary(theme: appearance?.look.words ?? PhoneLook.device.words)
+        case .projects: settings?.projects?.summary ?? ""
+        case .intelligence: settings?.intelligence?.summary ?? ""
+        case .runbooks: settings?.runbooks?.summary ?? ""
+        case .usage: settings?.usage?.summary ?? ""
+        case .automation: settings?.automation?.summary ?? ""
         case .integrations: PhoneMessages.phoneSettingsGoogleSummary(account: google?.row.map { $0.account ?? PhoneMessages.phoneSettingsGoogleSignedIn() } ?? PhoneMessages.phoneSettingsGoogleSignedOut())
         case .devices: device
         }
@@ -147,6 +351,8 @@ struct PhoneSettingsSheet: View {
 
     private func open(_ section: Section) {
         lastSection = section
+        path = []
+        settings?.problem = nil
         self.section = section
     }
 
@@ -156,12 +362,11 @@ struct PhoneSettingsSheet: View {
         if sections.indices.contains(index + offset) { lastSection = sections[index + offset] }
     }
 
-    private func page<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    private func page<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PhoneTheme.space5, content: content)
                 .padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .phoneTitle(title)
     }
 
     /// The captain's Approve and build: this device's own Theme, in Apple's segmented control like the computer's Dark

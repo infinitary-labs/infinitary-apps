@@ -601,6 +601,7 @@
   "phoneSettingsApprovalTurnOff": "لإيقافه، افتح الإعدادات ← الأجهزة على {computer}.",
   "phoneSettingsApprovesSecretUses": "يوافق على استخدام الأسرار",
   "phoneSettingsBack": "العودة إلى الإعدادات",
+  "phoneSettingsBackTo": "العودة إلى {place}",
   "phoneSettingsCapabilityFull": "يجيب عن البطاقات ويرسل الرسائل ويتحكم في المهام على حاسوبك.",
   "phoneSettingsCapabilityRead": "يقرأ البطاقات والنشاط والمهام. {update}",
   "phoneSettingsConversationStays": "تبقى المحادثة على حاسوبك.",

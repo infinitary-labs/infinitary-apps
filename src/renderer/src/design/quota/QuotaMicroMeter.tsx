@@ -3,6 +3,7 @@ import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { useRestLabel } from "../core/restLabel";
 import type { QuotaPace } from "./QuotaMeter";
+import { quotaMicroMeterLook } from "./quotaMeterLook";
 
 export type QuotaMicroMeterProps = {
   /** Window label, e.g. "session", "weekly (Opus)". Never truncated. */
@@ -44,13 +45,6 @@ export function quotaMeterName(label: string, percentRemaining?: number, resetTe
   return [left, resetText].filter(Boolean).join(" · ");
 }
 
-const paceColors: Record<QuotaPace, string> = {
-  ahead: "var(--warn)",
-  on_pace: "var(--accent)",
-  behind: "var(--ok)",
-  unknown: "var(--idle)",
-};
-
 export function QuotaMicroMeter({
   label,
   percentRemaining,
@@ -60,20 +54,12 @@ export function QuotaMicroMeter({
   stale = false,
   style,
 }: QuotaMicroMeterProps) {
-  const known = typeof percentRemaining === "number";
-  const low = known && percentRemaining <= 10;
-  const color = stale ? "var(--idle)" : low ? "var(--danger)" : paceColors[pace];
-  const clock =
-    typeof clockPercent === "number" ? Math.max(0, Math.min(100, clockPercent)) : undefined;
-  const percentColor =
-    stale || !known
-      ? "var(--fg-3)"
-      : percentRemaining < 20
-        ? "var(--danger)"
-        : percentRemaining < 50
-          ? "var(--warn)"
-          : "var(--fg-1)";
-  const fill = known ? Math.max(0, Math.min(100, percentRemaining)) : 0;
+  // The tone rules are apart from the drawing, so the phone colors a window the same way.
+  const look = quotaMicroMeterLook({ percentRemaining, pace, clockPercent, stale });
+  const color = `var(--${look.bar})`;
+  const clock = look.clock;
+  const percentColor = `var(--${look.figure})`;
+  const fill = look.fill;
   // The reset time is a fact the row has no room for: the meter is a Tab
   // stop of its own that shows it on rest, as the pointer's rest does
   // (docs/keyboard.md, "Facts shown on rest").
@@ -152,7 +138,7 @@ export function QuotaMicroMeter({
           whiteSpace: "nowrap",
         }}
       >
-        {known ? `${Math.round(percentRemaining)}%` : "–"}
+        {look.text}
       </span>
     </span>
   );

@@ -525,6 +525,7 @@
   "phoneSettingsApprovalTurnOff": "To turn it off, open Settings → Devices on {computer}.",
   "phoneSettingsApprovesSecretUses": "Approves secret uses",
   "phoneSettingsBack": "Back to Settings",
+  "phoneSettingsBackTo": "Back to {place}",
   "phoneSettingsCapabilityFull": "Answers cards, sends messages and controls tasks on your computer.",
   "phoneSettingsCapabilityRead": "Reads cards, Activity and tasks. {update}",
   "phoneSettingsConversationStays": "Conversation stays on your computer.",

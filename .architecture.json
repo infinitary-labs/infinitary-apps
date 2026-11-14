@@ -259,12 +259,12 @@
     {
       "from": "ios",
       "to": "shared",
-      "why": "builds cards with the desktop's card code"
+      "why": "builds cards and Settings pages with the desktop's shapes and words"
     },
     {
       "from": "ios",
       "to": "renderer",
-      "why": "draws card bodies the way the desktop does"
+      "why": "draws card bodies and builds Settings pages the way the desktop does"
     },
     {
       "from": "ios",

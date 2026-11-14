@@ -68,6 +68,9 @@ export const EMPTY_QUOTA_TEXT = {
   },
 } as const;
 
+/** The mark beside an account crew work prefers, on the computer's row and the phone's alike. */
+export const CREW_PREFERRED_MARK = "✱";
+
 export const PERSONAL_RESOURCES_WORDS = {
   get title() {
     return m.settingsSubscriptionsPersonalResourcesTitle();

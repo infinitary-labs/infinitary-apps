@@ -525,6 +525,7 @@
   "phoneSettingsApprovalTurnOff": "Zum Ausschalten öffne auf {computer} Einstellungen → Geräte.",
   "phoneSettingsApprovesSecretUses": "Gibt Geheimnisse frei",
   "phoneSettingsBack": "Zurück zu den Einstellungen",
+  "phoneSettingsBackTo": "Zurück zu {place}",
   "phoneSettingsCapabilityFull": "Beantwortet Karten, sendet Nachrichten und steuert Aufgaben auf deinem Computer.",
   "phoneSettingsCapabilityRead": "Liest Karten, Aktivität und Aufgaben. {update}",
   "phoneSettingsConversationStays": "Die Unterhaltung bleibt auf deinem Computer.",

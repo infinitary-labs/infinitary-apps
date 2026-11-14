@@ -93,6 +93,14 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var workRevision = 0
     /// Rises when the home's Secrets change or contact comes back, so this phone reads its approvals again.
     public private(set) var secretsRevision = 0
+    /// Bumps when the computer says something a Settings page shows changed: an allowance reading, a sign-in on a
+    /// computer that runs work, an automation or a project. The page that is open reads again.
+    public private(set) var settingsRevision = 0
+    /// The pushes and events the computer's own Settings pages read again on.
+    private static let settingsPushes: Set<String> = ["inf:quota", "inf:models:changed", "inf:devices:sign-ins"]
+    private static let settingsEvents: Set<String> = [
+        "firstmate_note", "personalized", "repo_setup", "repo_configured", "repo_runs_on", "repo_queue", "repo_unregistered",
+    ]
     public private(set) var access = "read"
     /// The contract the computer's welcome said it speaks, which names the side a reads-only phone updates.
     public private(set) var homeVersion: String?
@@ -1076,6 +1084,12 @@ public struct PhoneNotice: Equatable, Sendable {
                 onPanelPush(channel, value)
             }
             if frame["channel"] as? String == "inf:secrets:changed" { secretsRevision += 1 }
+            // A replay ends in reach, where the open page reads again anyway.
+            if !replayed, let channel = frame["channel"] as? String,
+               Self.settingsPushes.contains(channel)
+                || (channel == "inf:event" && Self.settingsEvents.contains((frame["payload"] as? [String: Any])?["type"] as? String ?? "")) {
+                settingsRevision += 1
+            }
             // A page opens only as it is asked; an ending still ends the wait after a reconnect.
             if frame["channel"] as? String == "inf:app:sign-in-page", !replayed, let page = PhoneSignInPage(frame["payload"]) {
                 onSignInPage?(page)

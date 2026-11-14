@@ -482,3 +482,16 @@ export function milestoneWords(finishedEver: number): { title: string; note: str
     note: m.settingsUsageMilestoneNote(),
   };
 }
+
+/**
+ * The period's usage in one line, as the phone's Settings row says it:
+ * "17.26M tokens · Last 30 days", or that nothing is recorded.
+ */
+export function usageSummaryLine(summary: UsageSummary): string {
+  if (summary.total.records === 0) return m.settingsUsageEmptyTitle();
+  const tokens = usageValue(summary.total, "tokens");
+  const period = PERIOD_WORDS[summary.query.period];
+  return tokens === null
+    ? period
+    : m.settingsUsageSummary({ tokens: compactTokens(tokens), period });
+}

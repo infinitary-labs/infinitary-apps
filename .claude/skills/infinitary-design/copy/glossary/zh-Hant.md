@@ -61,6 +61,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | first mate | 大副 | The ship's second-in-command in Chinese naval usage, written as a common noun, often 你的大副. |
 | font (Settings → Appearance) | 字體 | |
 | forget (a computer, on the phone) | 忘記 | As Apple's 忘記此網路; Leave stays 退出. |
+| gate (the checks work passes before it merges) | 把關 | As in 不經過把關; 閘門 and 關卡 are avoided. |
 | header (an extra request header) | 標頭 | Microsoft Taiwan's word. |
 | held (a batch that stopped) | 暫緩 | 暫停 stays for what a person pauses. |
 | hold (on a task) | 暫緩 | 暫緩結束 for a hold ending. |
@@ -103,6 +104,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | queued | 排入佇列 | Taiwan writes 佇列 for a queue; 队列 is mainland. |
 | quota, rate limit (never said) | 方案額度 | Never 配額. |
 | rail | 側欄 | Used in command search words. |
+| reading (of the allowance) | 讀數 / 讀取 | The noun is 讀數 and the verb 讀取, as in 尚未讀取. |
 | Reasoning | 推理 | The fact strip's label. |
 | rebase merges, merge commits (the host's settings) | rebase 合併、合併提交 | Named only as the settings where the project lives, where rebase stays in English; the app's own action stays 更新到最新. |
 | rebase, conflict (never said alone) | 更新到最新 | Never 重定基底 or 變基. |
@@ -118,6 +120,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | rigor levels (Quick, Default, Careful) | 快速、預設、謹慎 | The dimension itself is 謹慎度, as in 謹慎度：快速. |
 | Runbooks | 作業手冊 | Plain word for the guidance folder. |
 | save point (never said) | 提交 | Never 存檔點. |
+| schedule (an automation's) | 排程 | As in 依排程. |
 | Secrets | 機密 | The Settings tab; 密鑰 and 秘密 are avoided. |
 | send back (a change out of a batch) | 退回 | |
 | server (a custom API's) | 伺服器 | Taiwan's word; 服務器 is mainland. |
@@ -150,6 +153,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | usage record (on the Usage page) | 紀錄 | Counter 筆, as in 12 筆紀錄. |
 | where the project lives | 專案所在處 | Used for the host in general; a named host follows 在, as in 在 GitHub 合併. |
 | working copy | 工作副本 | Not 工作樹 (worktree). |
+| workspace (the personal workspace) | 工作區 | Taiwan's software word; 工作空間 is avoided. |
 | worktree (never said) | 工作副本 | Never 工作樹. |
 | your plan's allowance | 方案額度 | Avoids 配額 and 速率限制 (quota, rate limit). |
 | your project | 你的專案 / 你專案的 | Possessive kept wherever English has "your". |

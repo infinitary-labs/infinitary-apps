@@ -544,6 +544,7 @@
   "phoneSettingsApprovalTurnOff": "Pour la désactiver, ouvrez Réglages → Appareils sur {computer}.",
   "phoneSettingsApprovesSecretUses": "Approuve l’utilisation des secrets",
   "phoneSettingsBack": "Retour aux Réglages",
+  "phoneSettingsBackTo": "Retour à {place}",
   "phoneSettingsCapabilityFull": "Répond aux cartes, envoie des messages et pilote les tâches sur votre ordinateur.",
   "phoneSettingsCapabilityRead": "Lit les cartes, l’Activité et les tâches. {update}",
   "phoneSettingsConversationStays": "La conversation reste sur votre ordinateur.",

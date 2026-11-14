@@ -59,6 +59,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | fingerprint (a computer's key) | empreinte |  |
 | first mate | second | The French navy and merchant-marine term for a ship's second-in-command ("le second"); a common noun, "votre second", "Second" only as a short label or at a sentence start. |
 | font (Settings → Appearance) | police | |
+| gate (the checks work passes before it merges) | point de contrôle | "Ici, rien ne passe par un point de contrôle"; kept apart from "les vérifications". |
 | header (a request's) | en-tête | Masculine: "un en-tête". |
 | held (a batch that stopped) | retenu | "Lot retenu", "Retenu depuis {since}"; the same verb as "la retient" on a merge a rule holds. |
 | hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
@@ -100,6 +101,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | quota, rate limit (never said) | allocation de votre forfait | |
 | rail | colonne | Only in search words ("colonnes"); a plain word for the side column of panels. |
 | reach (another computer) | joindre | "Impossible de joindre {host}", "joint sur ce réseau"; never "atteindre". |
+| reading (of the allowance) | lecture | "la dernière lecture n’est plus à jour", "aucune lecture de l’allocation". |
 | Reasoning | Raisonnement | |
 | rebase merges, merge commits (the host's settings) | fusion par rebasage (rebase), commits de fusion | Named only as the settings where the project lives, with "rebase" beside it because that settings page is in English; the app's own action stays "mettre à jour". |
 | rebase, conflict (never said) | mettre à jour, ne s’accorde pas avec | "elle ne s’accorde pas avec un travail plus récent du projet". |
@@ -112,6 +114,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | review | revue | "Revue réussie". |
 | revision (of a knowledge record) | révision | Kept apart from "revue", which is review. |
 | rigor levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The rigor label reads "Soin : {care}". |
+| run (of an automation) | exécution | "Prochaine exécution", "Dernière exécution"; the verb is "s’exécuter". |
 | runbooks | procédures | The Settings section "Procédures". |
 | send back (a change out of a batch) | renvoyer | "Renvoyer avec un motif". |
 | server, address (a custom API's) | serveur, adresse | Said only where English names the person's own server and its address. |
@@ -140,6 +143,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | where the project lives | là où le projet est hébergé | |
 | window wash | voile de la fenêtre | The theme color laid over the blurred background. |
 | working copy | copie de travail | |
+| workspace (the personal one) | espace de travail | It "construit sur place", with no "copie de travail". |
 | worktree (never said) | copie de travail | |
 | your plan's allowance | l’allocation de votre forfait | "Revérifier l’allocation"; "quota" only as a search word. |
 | your project | votre projet | |

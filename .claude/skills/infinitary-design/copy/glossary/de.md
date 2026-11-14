@@ -18,10 +18,12 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | account | Konto | |
 | action (an integration action) | Aktion | |
 | Allow (secrets approval button) | „Erlauben“ |  |
+| allowance reading, as of | Stand | "Stand: vor 5 Min.", "letzter Stand veraltet"; the allowance itself is "gelesen" ("kein Kontingent gelesen"). |
 | Always use | Immer verwenden | Quoted „Immer verwenden“ mid-sentence. |
 | Appearance | Erscheinungsbild | As macOS German names it. |
 | Approves secret uses (switch) | Gibt Geheimnisse frei | The computer's Settings → Devices should show the same words. |
 | Asks first | Fragt vorher | |
+| Automation | Automatisierung | The Settings section; one of them is "eine Automatisierung", feminine. |
 | backlog | Backlog | |
 | batch (your approved changes, combined) | Bündel | Neuter, matching "gebündelter Pull Request"; "Stapel" reads like a pile of paper. |
 | batch / batch run (the queue's) | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
@@ -65,10 +67,12 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | first mate (thread author tag) | Offizier | The very short author label in a card's thread. |
 | font (Settings → Appearance) | Schrift | |
 | forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
+| gate (what work passes before it merges) | Kontrolle | Kept apart from "Überprüfungen" and "Review". |
 | header (a request header) | Header | Masculine, plural "Header"; only in the custom API form. |
 | held (a batch that stopped) | angehalten | "Bündel angehalten", "Seit {since} angehalten"; "pausiert" stays for what a person pauses. |
 | hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
 | Infinitary | Infinitary | Never translated. |
+| Integrations | Integrationen | The Settings section; one of them is "eine Integration". |
 | Intelligence | Intelligenz | |
 | join (the phone joins a computer) | sich mit … verbinden | "Mit {computer} verbinden?", "Erneut verbinden"; reads more naturally than "beitreten". |
 | key (an integration's key) | Schlüssel | "Linear-Schlüssel", "API-Schlüssel". |
@@ -85,6 +89,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | model | Modell | |
 | Models board | Modelltafel | The board of models under Intelligenz in the settings. |
 | Not now | Nicht jetzt | |
+| on pace / empty (allowance verdicts) | im Plan / leer | "leer in 2h", "jetzt leer". |
 | out of reach | außer Reichweite | Replaces offline and unreachable. |
 | panel | Panel | Neuter, plural "Panels"; common in German software. |
 | passcode (iOS) | Code | iOS German says "Face ID & Code". |
@@ -113,6 +118,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | review | Review | Neuter ("das Review"), so it does not collide with "Überprüfungen". |
 | revision (of a knowledge entry) | Revision | "Revision 3"; kept apart from "Version" |
 | rigor levels: Quick, Default, Careful | Schnell, Standard, Sorgfältig | "{care} rigor" is "Sorgfalt: {care}". |
+| run (of an automation) | Lauf, laufen | "Nächster Lauf", "Zuletzt gelaufen", "Läuft". |
 | Runbooks | Leitfäden | Plain word for a settings section a non-developer reads. |
 | Runs on | Läuft auf | |
 | Secrets | Geheimnisse | As GitHub's German docs name secrets. |
@@ -141,5 +147,6 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Waiting on you (board lane) | Wartet auf dich | |
 | where the project lives | wo das Projekt liegt | "dort, wo das Projekt liegt". |
 | working copy | Arbeitskopie | Replaces worktree. |
+| workspace (the personal one) | Arbeitsbereich | Kept apart from "Arbeitskopie". |
 | your plan's allowance | das Kontingent deines Tarifs | "Kontingent" replaces quota, rate limit and usage window. |
 | your project | dein Projekt | |

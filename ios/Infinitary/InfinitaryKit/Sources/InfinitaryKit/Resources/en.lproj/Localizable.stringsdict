@@ -1187,6 +1187,38 @@
       <string>And %1$ld more.</string>
     </dict>
   </dict>
+  <key>settingsAccountsCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld account</string>
+      <key>other</key>
+      <string>%1$ld accounts</string>
+    </dict>
+  </dict>
+  <key>settingsAccountsWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ · %2$ld needs a sign-in</string>
+      <key>other</key>
+      <string>%1$@ · %2$ld need a sign-in</string>
+    </dict>
+  </dict>
   <key>settingsAutomationEventPreview</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1363,6 +1395,22 @@
       <string>%1$ld actions</string>
     </dict>
   </dict>
+  <key>settingsPhonePauseAllAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Pause the %1$ld automation that runs?</string>
+      <key>other</key>
+      <string>Pause all %1$ld automations that run?</string>
+    </dict>
+  </dict>
   <key>settingsProjectsBatchHeldChecks</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1409,6 +1457,22 @@
       <string>Sent one change back. The rest of the batch is combined again.</string>
       <key>other</key>
       <string>Sent %1$ld changes back. The rest of the batch is combined again.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld project</string>
+      <key>other</key>
+      <string>%1$ld projects</string>
     </dict>
   </dict>
   <key>settingsProjectsPauseSummary</key>

@@ -506,6 +506,7 @@
   "phoneSettingsApprovalTurnOff": "要关闭它，请在 {computer} 上打开“设置”→“设备”。",
   "phoneSettingsApprovesSecretUses": "批准机密使用",
   "phoneSettingsBack": "返回设置",
+  "phoneSettingsBackTo": "返回 {place}",
   "phoneSettingsCapabilityFull": "在你的电脑上回答卡片、发送消息并控制任务。",
   "phoneSettingsCapabilityRead": "读取卡片、动态和任务。{update}",
   "phoneSettingsConversationStays": "对话保留在你的电脑上。",

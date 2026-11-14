@@ -55,6 +55,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | first mate | imediato | The Brazilian naval term for a ship's second-in-command; a common noun, lowercase: "seu imediato", "Imediato" only as a short label. |
 | font (Settings → Appearance) | fonte | |
 | forget (a computer, on the phone) | Esquecer | Pairs with "Sair" for Leave. |
+| gate | crivo | What work passes before it merges: "passar por um crivo"; never "verificações", which are the checks. |
 | Got it / Done | Entendi / Concluído | |
 | header (a request's) | cabeçalho | |
 | held (a batch that stopped) | retido | "Lote retido", "Retido desde as {since}"; the same verb as "a retém" on a merge a rule holds. |
@@ -94,6 +95,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | quota, rate limit, usage (avoided) | franquia | |
 | rail | barra lateral | The column of panels at a window's side. |
 | reach (another computer) | alcançar | "Não foi possível alcançar o {host}", matching "fora de alcance". |
+| reading (of the allowance) | leitura, ler | "a última leitura está desatualizada", "lendo…". |
 | Reasoning | Raciocínio | |
 | rebase merges, merge commits (the host's settings) | mesclagens com rebase, commits de mesclagem | Named only as the settings where the project lives, as GitHub's Portuguese docs say them; the app's own action stays "atualizar". |
 | released (a task's close) | publicada | Closed through an outside release process. |
@@ -105,6 +107,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | review | revisão | |
 | revision (of a knowledge record) | versão | Kept apart from "revisão", which is review. |
 | rigor levels | Rápido, Padrão, Cuidadoso | "{care} rigor" is "Cuidado {care}"; the feed says "cuidado: Rápido". |
+| run (an automation's) | execução, executar | "Próxima execução", "Última execução"; an automation that is on is "em execução". |
 | Runbooks | Manuais | |
 | Runs on | Roda em | |
 | Secrets | Segredos | The Settings section's name. |
@@ -127,11 +130,13 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | this computer | este computador | |
 | thread (a card's) | conversa | "conversa do cartão". |
 | token, credential (avoided) | login, chave | "tokens" stays only where it means billed model text. |
+| Turn on / Turn off | Ativar / Desativar | Also for "Enable…": "Ativar…". |
 | unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
 | Usage (Settings section) | Uso | The section's name only; never for the allowance. |
 | where the project lives | onde o projeto fica | "o host do projeto" where the English says the project's host. |
 | window wash | véu da janela | The theme color laid over the blurred background. |
 | working copy | cópia de trabalho | |
+| workspace (the personal one) | espaço de trabalho | Never "área de trabalho", which is the desktop. |
 | worktree (avoided) | cópia de trabalho | |
 | your plan's allowance | a franquia do seu plano | "franquia" is the everyday Brazilian word for what a plan allows; avoids "cota" and "limite de uso". |
 | your project | seu projeto | |

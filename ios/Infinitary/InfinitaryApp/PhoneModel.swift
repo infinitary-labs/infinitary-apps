@@ -30,6 +30,11 @@ struct AddressJoin: Equatable {
     var secrets: PhoneSecrets?
     /// INF-3454's phone part: Google's row in Settings → Integrations, for the computer this phone controls.
     var google: PhoneGoogle?
+    /// INF-3563: the computer's own Settings pages, for the computer this phone controls.
+    var settings: PhoneSettings?
+    /// The computer's row rules and words for those pages, built from its own code and carried in the app.
+    private static let settingsScript = Bundle.main.url(forResource: "SettingsWords.generated", withExtension: "js")
+        .flatMap { try? String(contentsOf: $0, encoding: .utf8) }
     var proposal: JoinLink?
     var problem: String?
     var busy = false
@@ -288,7 +293,7 @@ struct AddressJoin: Equatable {
     func forgetMac() {
         do {
             try forget()
-            connection?.stop(); connection = nil; secrets = nil; google = nil
+            connection?.stop(); connection = nil; secrets = nil; google = nil; settings = nil
             removed = false; proposal = nil; problem = nil
         } catch {
             problem = needsUnlock(error) ? PhoneMessages.phoneModelForgetUnlock()
@@ -354,6 +359,7 @@ struct AddressJoin: Equatable {
         connection = session
         secrets = PhoneSecrets(session: session, label: UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone")
         google = PhoneGoogle(session: session)
+        settings = PhoneSettings(session: session, script: Self.settingsScript)
         session.found(addresses: nearby.macs.map(\.address))
         if foreground { session.start() }
     }

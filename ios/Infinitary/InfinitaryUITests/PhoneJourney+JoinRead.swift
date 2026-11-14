@@ -70,9 +70,11 @@ extension PhoneJourney {
         XCTAssertTrue(general.waitForPresence(timeout: 10), app.debugDescription)
         // INF-3454: Integrations joins the list once the computer answers its connections, in the desktop's place.
         XCTAssertTrue(integrations.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertLessThan(general.frame.maxY, appearance.frame.minY)
-        XCTAssertLessThan(appearance.frame.maxY, integrations.frame.minY)
-        XCTAssertLessThan(integrations.frame.maxY, devicesSection.frame.minY)
+        // INF-3563: the five sections the computer answers join the list together, each in the desktop's place.
+        let computerSections = ["projects", "intelligence", "runbooks", "usage", "automation"].map { app.buttons["phone-settings-\($0)"] }
+        for row in computerSections { XCTAssertTrue(row.waitForPresence(timeout: 20), app.debugDescription) }
+        let list = [general, appearance] + computerSections + [integrations, devicesSection]
+        for (above, below) in zip(list, list.dropFirst()) { XCTAssertLessThan(above.frame.maxY, below.frame.minY, "\(above.identifier) sits above \(below.identifier)") }
         XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
         XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
         XCTAssertFalse(app.buttons["leave"].exists)
@@ -93,7 +95,8 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["Theme: Device"].exists, "The list reads the current saved choice")
         XCTAssertTrue(app.staticTexts["Google: Not signed in"].exists, "The list reads the computer's Google state")
         waitForSteadyTarget(integrations)
-        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        // Down passes the five sections the computer answers (the settings-pages part opens them) to Integrations.
+        for _ in 0...computerSections.count { app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: []) }
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(app.descendants(matching: .any)["google-section"].waitForPresence(timeout: 10), app.debugDescription)
         try await settingsBack()

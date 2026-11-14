@@ -158,3 +158,26 @@ export function automationNextShort(
 export function automationCount(count: number): string {
   return `${count} ${count === 1 ? "automation" : "automations"}`;
 }
+
+/** What the phone's Settings row adds while the rules cannot be read. */
+export const AUTOMATION_UNREADABLE_SUMMARY = "cannot be read";
+
+/**
+ * The rules in one line's parts, as the phone's Settings row says them: how
+ * many run ("2 active"), how many are paused when any is, and that they
+ * cannot be read while they cannot. The Automation panel's header says the
+ * same from its own messages (`automationPanel…`, docs/i18n.md, "The app's
+ * own panels"), since a panel reads no code outside its folder and the kit.
+ */
+export function automationSummary(
+  rules: readonly Pick<AutomationRule, "state">[],
+  unreadable = false,
+): string[] {
+  const active = rules.filter((rule) => rule.state === "enabled").length;
+  const paused = rules.filter((rule) => rule.state === "paused").length;
+  return [
+    `${active} active`,
+    ...(paused > 0 ? [`${paused} paused`] : []),
+    ...(unreadable ? [AUTOMATION_UNREADABLE_SUMMARY] : []),
+  ];
+}

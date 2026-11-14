@@ -61,6 +61,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | first mate | 일등항해사 | The ship's second-in-command, a common noun; the thread's short author tag is 항해사 |
 | font (Settings → Appearance) | 글꼴 | |
 | forget (a computer, on the phone) | 지우기 | As iOS forgets a network; kept apart from 제거 and 나가기. |
+| gate | 관문 | What work passes before it merges; kept apart from 검사 |
 | header (a request header) | 헤더 | Only in the custom API form, where the person types header names |
 | held (a batch that stopped) | 보류 | 보류됨, 보류 중; 일시 정지 stays for what a person pauses |
 | hold (on a task) | 보류 | "once its hold ends" is 보류가 풀리면 |
@@ -99,6 +100,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | 프리미엄 / 어려움 / 보통 / 간단, 난이도 | How hard the task is, never a reasoning word. |
 | preset | 프리셋 | |
 | project | 프로젝트 | |
+| prompt (a task's) | 요청 | "Task prompt" is 작업 요청 |
 | prompt (an automation's words) | 메시지 | What the first mate gets; "Prompt as sent" is 보낸 그대로의 메시지 |
 | provider | 제공자 | |
 | pull request | 끌어오기 요청 | GitHub's own Korean docs say 끌어오기 요청 |
@@ -149,6 +151,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | Waiting on you (board lane) | 선장님을 기다림 | |
 | where the project lives | 프로젝트가 있는 곳 | "the project's host" is 프로젝트 호스트 |
 | working copy | 작업 사본 | |
+| workspace (the personal workspace) | 작업 공간 | The personal workspace is 개인 작업 공간 |
 | worktree | (not used) | 작업 사본 instead |
 | your plan's allowance | 사용 한도 | "allowance left" is 남은 한도; never 할당량 |
 | your project | 프로젝트 | "Your" is dropped; "프로젝트의 대기열" for "your project's queue" |

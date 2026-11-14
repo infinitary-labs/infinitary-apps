@@ -1,4 +1,14 @@
 {
+  "settingsAccountsCount": {
+    "plural": "count",
+    "one": "{count} Konto",
+    "other": "{count} Konten"
+  },
+  "settingsAccountsWaiting": {
+    "plural": "count",
+    "one": "{accounts} · {count} braucht eine Anmeldung",
+    "other": "{accounts} · {count} brauchen eine Anmeldung"
+  },
   "settingsAddProjectAdd": "Hinzufügen",
   "settingsAddProjectAddFolder": "Ordner hinzufügen",
   "settingsAddProjectAdded": "{name} hinzugefügt.",
@@ -696,6 +706,29 @@
   "settingsPanelsTop": "Oben",
   "settingsPanelsWaitsForKnowledge": "Erscheint, sobald es Wissen gibt",
   "settingsPanelsWaitsForRule": "Erscheint, sobald eine Regel gespeichert ist",
+  "settingsPhoneAccountsThere": "Anmeldungen bleiben auf {home}. Dort kannst du ein Konto hinzufügen, pausieren oder entfernen.",
+  "settingsPhoneAutomationLead": "Nachrichten, die dein erster Offizier nach Zeitplan bekommt.",
+  "settingsPhoneAutomationsThere": "Um eine Automatisierung zu erstellen, zu ändern oder zu löschen, öffne Einstellungen → Automatisierung auf {home}.",
+  "settingsPhoneByFirstMate": "Von deinem ersten Offizier eingerichtet",
+  "settingsPhoneLastRan": "Zuletzt gelaufen",
+  "settingsPhoneNextRun": "Nächster Lauf",
+  "settingsPhoneNoAccounts": "Noch keine Konten.",
+  "settingsPhoneNoAutomations": "Noch keine Automatisierungen. Erstell eine auf {home} oder sag deinem ersten Offizier, was wann laufen soll.",
+  "settingsPhoneNoProjects": "Noch keine Projekte. Füg eins unter Einstellungen → Projekte auf {home} hinzu.",
+  "settingsPhonePauseAllAsk": {
+    "plural": "count",
+    "one": "Die {count} laufende Automatisierung pausieren?",
+    "other": "Alle {count} laufenden Automatisierungen pausieren?"
+  },
+  "settingsPhoneProjectsThere": "Um ein Projekt hinzuzufügen oder zu entfernen oder seinen Ordner zu ändern, öffne Einstellungen → Projekte auf {home}.",
+  "settingsPhoneQueueDecides": "Die Warteschlange dieses Projekts entscheidet, wohin Änderungen gehen.",
+  "settingsPhoneRunbooksLead": "Anleitungen, denen dein erster Offizier und deine Crew folgen. Schalte eine aus, um ohne sie zu arbeiten.",
+  "settingsPhoneSave": "Speichern",
+  "settingsPhoneSignIn": "{action} {where}.",
+  "settingsPhoneSignInAction": "Anmelden",
+  "settingsPhoneStoppedThere": "{reason} Wähl ihre Integration unter Einstellungen → Automatisierung auf {home} erneut aus.",
+  "settingsPhoneTodayPartial": "Heute ist unvollständig",
+  "settingsPhoneUsageThere": "Letzte Aufgaben und die Details zu jedem Modell stehen unter Einstellungen → Nutzung auf {home}.",
   "settingsProjectsAutonomyOff": "Fertige Arbeit wartet auf dein Wort.",
   "settingsProjectsAutonomyOn": "Arbeit, die die Überprüfungen besteht, darf ohne Rückfrage zusammengeführt werden.",
   "settingsProjectsAutonomyPersonal": "Baut direkt im Ordner. Arbeit, die die Überprüfungen besteht, wird geschrieben, sobald sie fertig ist.",
@@ -737,6 +770,11 @@
   "settingsProjectsCostNone": "Keine Grenze",
   "settingsProjectsCostOwn": "Eigener Betrag",
   "settingsProjectsCostTitle": "Kostengrenze",
+  "settingsProjectsCount": {
+    "plural": "count",
+    "one": "{count} Projekt",
+    "other": "{count} Projekte"
+  },
   "settingsProjectsDelivery": "Als Pull Request dort angeboten, wo das Projekt liegt, gemeinsam mit deinen anderen bestätigten Änderungen als ein gebündelter Pull Request zusammengeführt, oder lokal zusammengeführt ohne Pull Request.",
   "settingsProjectsDeliveryTitle": "Wohin Änderungen gehen",
   "settingsProjectsEmpty": "Noch keine Projekte. Füg unten eines hinzu oder sag deinem ersten Offizier, an welchem Projekt er arbeiten soll.",
@@ -757,6 +795,7 @@
   "settingsProjectsName": "Name",
   "settingsProjectsNameDescription": "Dein Projekt behält sein Kürzel und seinen Verlauf.",
   "settingsProjectsNameLabel": "Projektname",
+  "settingsProjectsNone": "Noch keine Projekte",
   "settingsProjectsOrigin": "Wo es liegt",
   "settingsProjectsOriginDescription": "Gib die Adresse ein, auf die dein Ordner verweist, oder lass das Feld leer für {place}.",
   "settingsProjectsOriginLabel": "Wo das Projekt liegt",
@@ -1076,6 +1115,7 @@
   "settingsUsageShowAs": "Nutzung anzeigen als",
   "settingsUsageSplitFor": "Nach Kategorie aufgeteilt für {split} von {priced} Einträgen mit Preis.",
   "settingsUsageSubtotal": "Zwischensumme",
+  "settingsUsageSummary": "{tokens} Tokens · {period}",
   "settingsUsageTaskColumn": "Aufgabe",
   "settingsUsageTaskCountAll": "Alle {count} Aufgaben angezeigt",
   "settingsUsageTaskCountOne": "1 Aufgabe angezeigt",

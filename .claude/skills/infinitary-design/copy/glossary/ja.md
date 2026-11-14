@@ -68,6 +68,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | first mate | 一等航海士 | The ship's officer term, a common noun; the thread's short author label is 航海士. |
 | font (Settings → Appearance) | フォント | |
 | forget (a computer, on the phone) | 登録を解除 | Kept apart from 削除 (Remove) and 離脱 (Leave). |
+| gate | 関門 | The checks work passes before it merges; ゲート would read as a physical gate. |
 | header (an extra request header) | ヘッダー | Long-vowel mark. |
 | held (a batch that stopped) | 保留中 | The same word as a merge a rule holds (保留しています); 一時停止 stays for what a person pauses. |
 | hold (on a task) | 保留 | 「保留が解ける」 for a hold ending. |
@@ -98,6 +99,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | out of reach | 連絡がつきません | Replaces offline; the short label is the same phrase. |
 | panel | パネル | Plain loanword. |
 | part (of a program) | パート | A program's sub-task. |
+| pause / paused | 一時停止 / 一時停止中 | Standard; 停止 stays for stop. |
 | phone | スマートフォン | 電話 would read as a call. |
 | pin (a task) | 固定 | 「タスクの先頭に固定」, as for a pinned model. |
 | plan | プラン | Standard billing word. |
@@ -113,6 +115,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | queued | 待機中 | The Queued lane; キュー is kept for the project's merge queue. |
 | Quick | クイック | Rigor level. |
 | rail | パネル列 | The column of panels; レール would be opaque. |
+| reading (of the allowance) | 読み取り | As in 「読み取り中…」 and 「利用枠の読み取りなし」. |
 | Reasoning | 推論 | The fact strip's label. |
 | rebase merges, merge commits (the host's settings) | リベースマージ、マージコミット | Named only as the settings where the project lives, as GitHub's Japanese docs say them; the app's own action stays 最新の状態に更新. |
 | recording (the file) | 録画 | A demo's recording; a voice recording in progress is 録音中. |
@@ -146,11 +149,15 @@ A number placeholder sits directly against its counter with no space (「{count}
 | the record (a task's record) | 記録 | 「タスクの記録」 for the pane's title. |
 | Theme: Device / Dark / Light | テーマ: デバイスに合わせる / ダーク / ライト |  |
 | this computer | このコンピューター | Never 本機 or ホスト. |
+| time zone | タイムゾーン | The common software word; Apple's 時間帯 also means a time of day and would blur beside a schedule. |
 | token (a custom API's token command and model sizes) | トークン | Only where the person chose a command that prints one, and for context and output sizes. |
+| token (what Usage counts) | トークン | The same unit as the model sizes in the custom API row above; a sign-in or a key is never a トークン. |
 | Usage | 使用量 | Settings section name. |
 | version (for a SHA) | バージョン | Never ハッシュ or SHA in a sentence. |
+| Where changes go | 変更の届け先 | Row title in Settings → Projects; pairs with 届け方 for Delivery. |
 | where the project lives | プロジェクトの保管先 | Plain phrase for the remote; never リモート or オリジン. |
 | window | ウインドウ | Apple's Japanese spelling. |
 | working copy | 作業コピー | The isolated copy the app makes. |
+| workspace (the personal workspace) | ワークスペース | Plain loanword, standard in Japanese software. |
 | your plan's allowance | プランの利用枠 | Replaces quota and rate limit; 「残り{percent}%」 for allowance left. |
 | your project | プロジェクト | The possessive is dropped as Japanese does; あなたのプロジェクト reads as translationese. |

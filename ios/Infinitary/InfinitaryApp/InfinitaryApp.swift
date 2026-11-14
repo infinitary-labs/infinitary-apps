@@ -117,7 +117,7 @@ struct PhoneView: View {
                 }
             }
             .sheet(isPresented: $settings) {
-                if let session = model.connection { PhoneSettingsSheet(session: session).environment(model.secrets).environment(model.google) }
+                if let session = model.connection { PhoneSettingsSheet(session: session).environment(model.secrets).environment(model.google).environment(model.settings) }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 keyboardVisible = true

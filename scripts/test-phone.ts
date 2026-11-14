@@ -489,7 +489,9 @@ const onePart = async () => {
   keyboard = await observePhoneKeyboard({ simulator: owned, env, evidence, children });
   const { startPhoneHome } = await runner.import<typeof import("../tests/helpers/phoneHome")>(join(REPO_ROOT, "tests/helpers/phoneHome.ts"));
   await demo.prepare();
-  fixture = await startPhoneHome(root, recording);
+  // INF-3563: only the part that reads the phone's Settings pages starts its computer with accounts, projects,
+  // recorded usage and automations; every other part's computer stays as it was.
+  fixture = await startPhoneHome(root, recording, { settings: values.part![0] === "settings-pages" });
   writeFileSync(join(evidence, "published-client.json"), JSON.stringify(await fixture.checkPublishedClient(), null, 2));
   const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${owned}`,
     "-resultBundlePath", join(evidence, "phone.xcresult")];

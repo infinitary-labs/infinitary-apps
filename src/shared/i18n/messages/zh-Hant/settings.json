@@ -1,4 +1,12 @@
 {
+  "settingsAccountsCount": {
+    "plural": "count",
+    "other": "{count} 個帳號"
+  },
+  "settingsAccountsWaiting": {
+    "plural": "count",
+    "other": "{accounts} · {count} 個需要登入"
+  },
   "settingsAddProjectAdd": "加入",
   "settingsAddProjectAddFolder": "加入資料夾",
   "settingsAddProjectAdded": "已加入 {name}。",
@@ -685,6 +693,28 @@
   "settingsPanelsTop": "上方",
   "settingsPanelsWaitsForKnowledge": "有知識後顯示",
   "settingsPanelsWaitsForRule": "儲存規則後顯示",
+  "settingsPhoneAccountsThere": "登入保存在 {home} 上。請在那裡加入、暫停或移除帳號。",
+  "settingsPhoneAutomationLead": "依排程傳給你的大副的提示。",
+  "settingsPhoneAutomationsThere": "若要建立、變更或刪除自動化，請在 {home} 上開啟「設定 → 自動化」。",
+  "settingsPhoneByFirstMate": "由你的大副設定",
+  "settingsPhoneLastRan": "上次執行",
+  "settingsPhoneNextRun": "下次執行",
+  "settingsPhoneNoAccounts": "還沒有帳號。",
+  "settingsPhoneNoAutomations": "還沒有自動化。請在 {home} 上建立一個，或告訴你的大副要執行什麼、何時執行。",
+  "settingsPhoneNoProjects": "還沒有專案。請在 {home} 上的「設定 → 專案」加入一個。",
+  "settingsPhonePauseAllAsk": {
+    "plural": "count",
+    "other": "要暫停這 {count} 項運作中的自動化嗎？"
+  },
+  "settingsPhoneProjectsThere": "若要加入或移除專案，或變更它的資料夾，請在 {home} 上開啟「設定 → 專案」。",
+  "settingsPhoneQueueDecides": "變更的去向由這個專案的佇列決定。",
+  "settingsPhoneRunbooksLead": "你的大副和船員遵循的指引。關閉其中一項，工作時就不會用到它。",
+  "settingsPhoneSave": "儲存",
+  "settingsPhoneSignIn": "{where} {action}。",
+  "settingsPhoneSignInAction": "登入",
+  "settingsPhoneStoppedThere": "{reason}請在 {home} 上的「設定 → 自動化」重新選擇它的整合。",
+  "settingsPhoneTodayPartial": "今天尚未結束",
+  "settingsPhoneUsageThere": "最近的任務和各模型的詳細資料在 {home} 上的「設定 → 用量」。",
   "settingsProjectsAutonomyOff": "完成的工作會等你同意。",
   "settingsProjectsAutonomyOn": "通過檢查的工作可以不問你就合併。",
   "settingsProjectsAutonomyPersonal": "就地建置。通過檢查的工作一完成就會寫入。",
@@ -723,6 +753,10 @@
   "settingsProjectsCostNone": "不設上限",
   "settingsProjectsCostOwn": "自訂金額",
   "settingsProjectsCostTitle": "費用上限",
+  "settingsProjectsCount": {
+    "plural": "count",
+    "other": "{count} 個專案"
+  },
   "settingsProjectsDelivery": "在專案所在處以 pull request 提出、與你其他已核准的變更一起合成一個批次 pull request 合併，或不經 pull request 本機合併。",
   "settingsProjectsDeliveryTitle": "變更去向",
   "settingsProjectsEmpty": "還沒有專案。在下方加入一個，或告訴你的大副要處理哪個專案。",
@@ -743,6 +777,7 @@
   "settingsProjectsName": "名稱",
   "settingsProjectsNameDescription": "你的專案會保留它的任務編號前綴和歷史。",
   "settingsProjectsNameLabel": "專案名稱",
+  "settingsProjectsNone": "還沒有專案",
   "settingsProjectsOrigin": "專案所在處",
   "settingsProjectsOriginDescription": "輸入你的資料夾指向的位址，或留白以使用 {place}。",
   "settingsProjectsOriginLabel": "專案所在處",
@@ -1061,6 +1096,7 @@
   "settingsUsageShowAs": "用量顯示為",
   "settingsUsageSplitFor": "{priced} 筆已計價紀錄中有 {split} 筆依類別拆分。",
   "settingsUsageSubtotal": "小計",
+  "settingsUsageSummary": "{tokens} token · {period}",
   "settingsUsageTaskColumn": "任務",
   "settingsUsageTaskCountAll": "顯示全部 {count} 項任務",
   "settingsUsageTaskCountOne": "顯示 1 項任務",

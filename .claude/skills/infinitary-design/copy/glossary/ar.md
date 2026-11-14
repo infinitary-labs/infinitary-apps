@@ -18,6 +18,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | action (an integration action) | إجراء | Plural "إجراءات". |
 | Allow (secrets approval button) | «سماح» |  |
 | Always use | الاستخدام دائمًا | Quoted «الاستخدام دائمًا» mid-sentence. |
+| an automation | أتمتة | One is "أتمتة" ("هذه الأتمتة"), several are "عمليات الأتمتة". |
 | Appearance | المظهر | |
 | Approves secret uses (switch) | «يوافق على استخدام الأسرار» | The computer's Settings → Devices should show the same words. |
 | Asks first | يسأل أولًا | |
@@ -62,6 +63,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | first mate | نائب القبطان | The ship's second-in-command, a common noun; used without "your" because the captain is the reader, and "النائب" only as the thread's one-word author tag. |
 | font (Settings → Appearance) | خط | |
 | form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
+| gate (the checks work passes before it merges) | بوابة | As in "بوابة الجودة", the usual Arabic for a quality gate. |
 | graph | المخطط | |
 | header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
 | held (a batch that stopped) | معلّقة | "إيقاف مؤقت" stays for what a person pauses. |
@@ -147,6 +149,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Waiting on you (board lane) | بانتظارك | |
 | where the project lives | حيث يُستضاف المشروع | "مستضيف المشروع" for "the project's host". |
 | working copy | نسخة العمل | |
+| workspace (the personal workspace) | مساحة العمل | The usual Arabic interface word; it builds in place ("بناء في المكان"). |
 | worktree (never said) | نسخة العمل | |
 | your plan's allowance | رصيد باقتك | "الرصيد" alone on short labels such as "إعادة التحقق من الرصيد". |
 | your project | مشروعك | |

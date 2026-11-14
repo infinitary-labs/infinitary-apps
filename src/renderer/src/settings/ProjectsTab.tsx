@@ -667,10 +667,8 @@ function ProjectRow({
             // The personal workspace is a workspace kind, not a posture, so
             // its first row is not a Delivery at all - naming it one is the
             // conflation this tab stopped making.
-            title={personal ? m.settingsProjectsWorkspace() : m.settingsProjectsDeliveryTitle()}
-            description={
-              personal ? m.settingsProjectsWorkspaceDescription() : PROJECT_POLICY_WORDS.delivery
-            }
+            title={PROJECT_POLICY_WORDS.deliveryTitle(personal)}
+            description={personal ? PROJECT_POLICY_WORDS.workspace : PROJECT_POLICY_WORDS.delivery}
             control={
               personal ? (
                 <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
@@ -748,13 +746,7 @@ function ProjectRow({
           )}
           <PolicyRow
             title={AUTONOMY_SWITCH_NAME}
-            description={
-              personal
-                ? m.settingsProjectsAutonomyPersonal()
-                : repo.autonomy
-                  ? m.settingsProjectsAutonomyOn()
-                  : m.settingsProjectsAutonomyOff()
-            }
+            description={PROJECT_POLICY_WORDS.asks(personal, repo.autonomy)}
             control={
               personal ? (
                 <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
@@ -772,14 +764,12 @@ function ProjectRow({
             }
           />
           <PolicyRow
-            title={m.settingsProjectsCare()}
-            description={
-              personal ? m.settingsProjectsCarePersonal() : m.settingsProjectsRigorDescription()
-            }
+            title={PROJECT_POLICY_WORDS.rigorTitle}
+            description={PROJECT_POLICY_WORDS.rigor(personal)}
             control={
               personal ? (
                 <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-                  {m.settingsProjectsCareNone()}
+                  {PROJECT_POLICY_WORDS.rigorNone}
                 </span>
               ) : (
                 <GroupedPills
@@ -822,7 +812,7 @@ function ProjectRow({
                 borderTop: "1px solid var(--line-1)",
               }}
             >
-              {m.settingsProjectsLocalCareful()}
+              {PROJECT_POLICY_WORDS.carefulLocal}
             </div>
           )}
           {!personal && <RemoveProject repo={repo} onRemoved={onRemoved} />}

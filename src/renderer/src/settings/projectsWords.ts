@@ -3,6 +3,7 @@ import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { QUEUE_STATUS, type RepoView } from "@shared/repos";
+import { type DeviceSignIns, devicePlace } from "@shared/signIns";
 import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
 
 /**
@@ -14,6 +15,33 @@ export const PROJECT_POLICY_WORDS = {
   /** What "Where changes go" says on every project but the personal workspace. */
   get delivery() {
     return m.settingsProjectsDelivery();
+  },
+  /** The first row's name: the personal workspace is a kind of workspace, not a way to deliver. */
+  deliveryTitle: (personal: boolean) =>
+    personal ? m.settingsProjectsWorkspace() : m.settingsProjectsDeliveryTitle(),
+  get workspace() {
+    return m.settingsProjectsWorkspaceDescription();
+  },
+  /** What the asks-first row says under its name. */
+  asks: (personal: boolean, autonomy: boolean) =>
+    personal
+      ? m.settingsProjectsAutonomyPersonal()
+      : autonomy
+        ? m.settingsProjectsAutonomyOn()
+        : m.settingsProjectsAutonomyOff(),
+  get rigorTitle() {
+    return m.settingsProjectsCare();
+  },
+  /** What the Rigor row says under its name. */
+  rigor: (personal: boolean) =>
+    personal ? m.settingsProjectsCarePersonal() : m.settingsProjectsRigorDescription(),
+  /** The personal workspace's rigor, in place of a choice. */
+  get rigorNone() {
+    return m.settingsProjectsCareNone();
+  },
+  /** Under the rows of a project that merges locally and asks for Careful. */
+  get carefulLocal() {
+    return m.settingsProjectsLocalCareful();
   },
 } as const;
 
@@ -279,4 +307,23 @@ export function projectRowWords(
   if (runsWhere && repo.runsOn && repo.runsOn !== AUTOMATIC_COMPUTER)
     words.push(PROJECT_ROW_WORDS.runs(runsWhere));
   return words;
+}
+
+/** The projects in one line, as the phone's Settings row counts them; the personal workspace is not one. */
+export function projectsSummary(repos: readonly Pick<RepoView, "kind">[]): string {
+  const count = repos.filter((repo) => repo.kind !== "personal").length;
+  return count === 0 ? m.settingsProjectsNone() : m.settingsProjectsCount({ count });
+}
+
+/** How the row and its badge place a project's computer: "on Mac mini", "as Builder". */
+export function runsOnWhere(
+  repo: Pick<RepoView, "runsOn">,
+  computers: readonly Pick<DeviceSignIns, "deviceId" | "name" | "user" | "onThisMac">[],
+): string | null {
+  if (!repo.runsOn) return null;
+  if (repo.runsOn === AUTOMATIC_COMPUTER) return m.settingsRunsOnAutomatically();
+  return devicePlace(
+    computers.map((computer) => ({ ...computer, id: computer.deviceId })),
+    repo.runsOn,
+  ).where;
 }

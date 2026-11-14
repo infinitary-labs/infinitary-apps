@@ -87,8 +87,27 @@ public enum PhoneRequest: String, Sendable {
     case signInReturn = "inf:integrations:sign-in-return"
     case signInCancel = "inf:integrations:sign-in-cancel"
     case integrationRemove = "inf:integrations:remove"
+    case accounts = "inf:accounts:list"
+    case quota = "inf:quota:snapshot"
+    case providers = "inf:auth:providers"
+    case devicesShown = "inf:devices:shown"
+    case deviceSignIns = "inf:devices:sign-ins"
+    case firstmateAccount = "inf:settings:firstmate-account:get"
+    case automations = "inf:automation:list"
+    case automationHistory = "inf:automation:history"
+    case automationPreview = "inf:automation:preview"
+    case automationProjects = "inf:projects:list"
+    case automationState = "inf:automation:state"
+    case automationPauseAll = "inf:automation:pause-all"
+    case automationSave = "inf:automation:save"
+    case usageSummary = "inf:usage:summary"
+    case projects = "inf:repos:list"
+    case projectsFolder = "inf:repos:folder"
+    case projectConfigure = "inf:repos:configure"
+    case runbooks = "inf:settings:runbooks:get"
+    case runbookSet = "inf:settings:runbooks:set"
     public var changes: Bool {
-        switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide, .signIn, .signInReturn, .signInCancel, .integrationRemove: true; default: false }
+        switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide, .signIn, .signInReturn, .signInCancel, .integrationRemove, .automationState, .automationPauseAll, .automationSave, .projectConfigure, .runbookSet: true; default: false }
     }
 }
 

@@ -25,6 +25,15 @@ const requests = {
   // INF-3454's phone part: Google's row in the phone's Settings (docs/ios.md, "Google in Settings").
   integrations: "inf:integrations:list", signIn: "inf:integrations:sign-in", signInReturn: "inf:integrations:sign-in-return",
   signInCancel: "inf:integrations:sign-in-cancel", integrationRemove: "inf:integrations:remove",
+  // INF-3563: the phone's Settings pages read what the computer's Settings reads and change it through the
+  // computer's own actions (docs/ios.md, "Settings pages in the computer's words").
+  accounts: "inf:accounts:list", quota: "inf:quota:snapshot", providers: "inf:auth:providers",
+  devicesShown: "inf:devices:shown", deviceSignIns: "inf:devices:sign-ins", firstmateAccount: "inf:settings:firstmate-account:get",
+  automations: "inf:automation:list", automationHistory: "inf:automation:history", automationPreview: "inf:automation:preview",
+  automationProjects: "inf:projects:list",
+  automationState: "inf:automation:state", automationPauseAll: "inf:automation:pause-all", automationSave: "inf:automation:save",
+  usageSummary: "inf:usage:summary", projects: "inf:repos:list", projectsFolder: "inf:repos:folder",
+  projectConfigure: "inf:repos:configure", runbooks: "inf:settings:runbooks:get", runbookSet: "inf:settings:runbooks:set",
 };
 for (const channel of Object.values(requests)) {
   if (contract.requests[channel]?.reach !== "views") throw new Error(`The phone cannot ask ${channel}`);

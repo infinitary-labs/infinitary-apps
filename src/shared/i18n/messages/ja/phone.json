@@ -506,6 +506,7 @@
   "phoneSettingsApprovalTurnOff": "オフにするには、{computer} で「設定」→「デバイス」を開いてください。",
   "phoneSettingsApprovesSecretUses": "シークレットの使用を承認",
   "phoneSettingsBack": "設定に戻る",
+  "phoneSettingsBackTo": "{place} に戻る",
   "phoneSettingsCapabilityFull": "コンピューター上のカードに答え、メッセージを送信し、タスクを操作します。",
   "phoneSettingsCapabilityRead": "カード、アクティビティ、タスクを読み込みます。{update}",
   "phoneSettingsConversationStays": "会話はコンピューターに残ります。",

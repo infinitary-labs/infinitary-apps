@@ -21,6 +21,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Always use | 始终使用 | The setting that sends all crew work to one model; quoted as “始终使用” in sentences. |
 | Appearance | 外观 | |
 | Approves secret uses (switch) | 批准机密使用 | The computer's Settings → Devices should show the same words. |
+| Automation / an automation | 自动化 | The Settings section and one scheduled prompt alike, counted with 项. |
 | backlog | 待办列表 | |
 | batch (your approved changes, combined) | 这批改动 | 批量 stays the adjective in 批量检查 and 批量拉取请求. |
 | batched pull request / your project's queue | 批量拉取请求 / 你项目的队列 | |
@@ -61,11 +62,13 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | first mate | 大副 | The ship's second-in-command, a common noun, never a name. |
 | font (Settings → Appearance) | 字体 | |
 | forget (a computer, on the phone) | 忘记 | Leave stays 离开. |
+| gate (the checks work passes before it merges) | 把关 | The same word as the Rigor setting: 不经过任何把关. |
 | header (an extra request header) | 请求头 | Short form of 请求标头, as Chinese developer docs say it. |
 | held (a batch that stopped) | 暂缓 | The same word as a merge a rule holds (暂缓了它); 暂停 stays for what a person pauses. |
 | hold (on a task) | 暂缓 | 暂缓结束 for a hold ending. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |
+| Integrations / integration | 集成 | |
 | Intelligence | 智能 | |
 | join (the phone joins a computer) | 连接 |  |
 | key (an integration's key) | 密钥 | Named by its place, such as Linear 密钥, instead of token or secret. |
@@ -97,6 +100,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | private network | 私有网络 | A network that joins computers wherever they are. |
 | program (a script filing parts) | 程序 | |
 | project | 项目 | Mainland term. |
+| prompt (the words the first mate gets) | 提示 | As in 任务提示. |
 | provider | 服务商 | |
 | pull request | 拉取请求 | GitHub's own Simplified Chinese docs say 拉取请求. |
 | purge (task data) | 清除 | Settings → General's button and its confirm; distinct from 移除 for a device. |
@@ -139,5 +143,6 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | version | 版本 | Used instead of SHA, hash or head. |
 | where the project lives | 项目托管处 | Used instead of remote, origin or upstream. |
 | working copy | 工作副本 | Used instead of worktree. |
+| workspace (the personal workspace) | 工作区 | |
 | your plan's allowance | 你的套餐额度 / 额度 | Used instead of quota, rate limit or usage window. |
 | your project | 你的项目 | |

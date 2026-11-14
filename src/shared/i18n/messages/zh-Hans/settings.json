@@ -1,4 +1,12 @@
 {
+  "settingsAccountsCount": {
+    "plural": "count",
+    "other": "{count} 个账户"
+  },
+  "settingsAccountsWaiting": {
+    "plural": "count",
+    "other": "{accounts} · {count} 个需要登录"
+  },
   "settingsAddProjectAdd": "添加",
   "settingsAddProjectAddFolder": "添加文件夹",
   "settingsAddProjectAdded": "已添加 {name}。",
@@ -685,6 +693,28 @@
   "settingsPanelsTop": "顶部",
   "settingsPanelsWaitsForKnowledge": "有知识后显示",
   "settingsPanelsWaitsForRule": "保存规则后显示",
+  "settingsPhoneAccountsThere": "登录保留在 {home} 上。请在那里添加、暂停或移除账户。",
+  "settingsPhoneAutomationLead": "按计划发给你的大副的提示。",
+  "settingsPhoneAutomationsThere": "要创建、更改或删除自动化，请在 {home} 上打开“设置” → “自动化”。",
+  "settingsPhoneByFirstMate": "由你的大副设置",
+  "settingsPhoneLastRan": "上次运行",
+  "settingsPhoneNextRun": "下次运行",
+  "settingsPhoneNoAccounts": "还没有账户。",
+  "settingsPhoneNoAutomations": "还没有自动化。在 {home} 上创建一个，或者告诉你的大副要运行什么、何时运行。",
+  "settingsPhoneNoProjects": "还没有项目。请在 {home} 上的“设置” → “项目”中添加一个。",
+  "settingsPhonePauseAllAsk": {
+    "plural": "count",
+    "other": "要暂停这 {count} 个会运行的自动化吗？"
+  },
+  "settingsPhoneProjectsThere": "要添加或移除项目，或更改它的文件夹，请在 {home} 上打开“设置” → “项目”。",
+  "settingsPhoneQueueDecides": "这个项目的队列决定改动的去向。",
+  "settingsPhoneRunbooksLead": "你的大副和船员们遵循的指南。关闭其中一份，工作时就不再使用它。",
+  "settingsPhoneSave": "保存",
+  "settingsPhoneSignIn": "{where} {action}。",
+  "settingsPhoneSignInAction": "登录",
+  "settingsPhoneStoppedThere": "{reason} 请在 {home} 上的“设置” → “自动化”中重新选择它的集成。",
+  "settingsPhoneTodayPartial": "今天尚未结束",
+  "settingsPhoneUsageThere": "最近的任务和各模型的明细在 {home} 上的“设置” → “用量”中。",
   "settingsProjectsAutonomyOff": "完成的工作会等你确认。",
   "settingsProjectsAutonomyOn": "通过检查的工作可以不经询问直接合并。",
   "settingsProjectsAutonomyPersonal": "就地构建。通过检查的工作一完成就会写入。",
@@ -723,6 +753,10 @@
   "settingsProjectsCostNone": "不设上限",
   "settingsProjectsCostOwn": "自定金额",
   "settingsProjectsCostTitle": "费用上限",
+  "settingsProjectsCount": {
+    "plural": "count",
+    "other": "{count} 个项目"
+  },
   "settingsProjectsDelivery": "在项目托管处以拉取请求提交、与你其他已批准的改动一起合成一个批量拉取请求合并，或不经拉取请求本地合并。",
   "settingsProjectsDeliveryTitle": "改动去向",
   "settingsProjectsEmpty": "还没有项目。在下方添加一个，或告诉你的大副要处理哪个项目。",
@@ -743,6 +777,7 @@
   "settingsProjectsName": "名称",
   "settingsProjectsNameDescription": "你的项目会保留它的任务编号前缀和历史。",
   "settingsProjectsNameLabel": "项目名称",
+  "settingsProjectsNone": "还没有项目",
   "settingsProjectsOrigin": "项目托管处",
   "settingsProjectsOriginDescription": "输入你的文件夹指向的地址，或留空以使用 {place}。",
   "settingsProjectsOriginLabel": "项目托管处",
@@ -1061,6 +1096,7 @@
   "settingsUsageShowAs": "用量显示为",
   "settingsUsageSplitFor": "{priced} 条已定价记录中有 {split} 条按类别拆分。",
   "settingsUsageSubtotal": "小计",
+  "settingsUsageSummary": "{tokens} token · {period}",
   "settingsUsageTaskColumn": "任务",
   "settingsUsageTaskCountAll": "显示全部 {count} 个任务",
   "settingsUsageTaskCountOne": "显示 1 个任务",

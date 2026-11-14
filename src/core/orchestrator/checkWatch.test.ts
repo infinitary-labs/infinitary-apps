@@ -415,33 +415,9 @@ describe("CheckWatcher at a version the captain's approval covers (INF-4018)", (
     expect(kept).toEqual([]);
   });
 
-  // The reviewer's finding on PR #1673 (INF-3208): a failed batch check
-  // wakes with the queue's route, which no checks override passes.
-  it("wakes on a failed batch check there with the queue's route, never Merge anyway", async () => {
-    const { tasks, answer, at, steers, kept } = setup();
-    approve(tasks);
-    answer({
-      kind: "finished",
-      head: HEAD,
-      change: "PR #7",
-      checks: [
-        { name: "typecheck-lint-build", state: "success" },
-        { name: "infinitary/queue", state: "failure" },
-      ],
-    });
-    await at(minutes(1));
-    expect(steers).toHaveLength(1);
-    const words = renderWake(steers[0]!);
-    expect(words).toContain("no checks override passes the queue");
-    expect(words).toContain("check_change's answered verdict");
-    expect(words).not.toContain("Merge anyway case");
-    expect(kept).toEqual([]);
-  });
-
-  // A batch of the person's own (docs/forge.md, "Batches of your own"): the
-  // app itself wrote that failed batch check, and an answer to a queue puts
-  // nothing back in its line, so the wake gives the repair's route alone.
-  it("wakes on a failed batch of the person's own there with the repair's route, never an answer to a queue", async () => {
+  // INF-3208 (docs/forge.md, "A held batch"): no checks override passes a
+  // batch, so a failed batch check wakes with the repair's route alone.
+  it("wakes on a failed batch there with the repair's route, never Merge anyway", async () => {
     const { tasks, answer, at, steers, kept } = setup();
     approve(tasks);
     const words = BATCH_STATUS_WORDS.failed(["typecheck-lint-build"]);
@@ -460,8 +436,7 @@ describe("CheckWatcher at a version the captain's approval covers (INF-4018)", (
     const approval = tasks.get("t1")?.delivery?.mergeAuthorization;
     if (!approval) throw new Error("No approval");
     const said = renderWake(steers[0]!);
-    expect(said).toContain(coveredNextStep(approval, "own-batch"));
-    expect(said).not.toContain("answered verdict");
+    expect(said).toContain(coveredNextStep(approval, "batch"));
     expect(said).not.toContain("Merge anyway case");
     expect(kept).toEqual([]);
   });

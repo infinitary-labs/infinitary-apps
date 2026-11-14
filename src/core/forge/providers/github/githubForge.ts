@@ -1,19 +1,10 @@
-import { BATCH_BRANCH_PREFIX, type MergeWay, type MergeWays } from "@shared/batches";
+import { BATCH_BRANCH_PREFIX, BATCH_CHECK, type MergeWay, type MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { cutText } from "@shared/textCut";
 import type { NamingRule } from "../../../../shared/runbooks";
-import { GITHUB_QUEUE_PART, readQueueStamp } from "../../../queue/shipped";
-import { MERGE_PERMISSIONS, WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
-import {
-  commitEnvelope,
-  NAMING_DECISION,
-  newestTrustedApproval,
-  revocationEnvelope,
-} from "../../../queue/shipped/message.mjs";
-import { PAUSE_LABEL, REMOVED, readPauseMarker } from "../../../queue/shipped/rules.mjs";
 import { requireNamed } from "../../../workspace/naming";
 import {
   type ApiProject,
@@ -39,10 +30,6 @@ import {
   type ForgeLocation,
   type ForgeProject,
   type ForgePull,
-  type ForgeQueueApproval,
-  type ForgeQueueMark,
-  type ForgeQueuePause,
-  type ForgeQueueStart,
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
@@ -52,9 +39,7 @@ import {
   isTransientForgeFailure,
   type MergeAnswer,
   ownChecksOf,
-  QUEUE_STATUS,
-  QUEUE_WAITING_WORDS,
-  type QueueWorkflow,
+  type TeamQueueLeftovers,
 } from "../../forge";
 import { waysUnderRules } from "../../mergeWays";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
@@ -209,12 +194,16 @@ type StatusJson = {
   created_at?: string;
   updated_at?: string;
 };
-type WorkflowJson = { path?: string; state?: string };
-type PauseIssueJson = {
-  body?: string | null;
-  html_url?: string;
-  assignee?: { login?: string } | null;
-  assignees?: { login?: string }[] | null;
+
+/**
+ * Where the team queue the app once shipped kept its files in a project on
+ * GitHub, by folder: the queue's workflow and the project's batch checks it
+ * ran, its action, and its scripts.
+ */
+const TEAM_QUEUE_FILES: Record<string, readonly string[]> = {
+  ".github/workflows": ["infinitary-queue.yml", "infinitary-batch-checks.yml"],
+  ".github/actions/infinitary-batch": ["action.yml", "compose.sh"],
+  ".github/infinitary": ["rules.mjs", "message.mjs", "github.mjs"],
 };
 
 /** The workflow run a check suite belongs to, as far as superseding needs it. */
@@ -579,7 +568,6 @@ export class GitHubForge implements Forge {
           name: status.context,
           state,
           ...checkTimes(status.created_at, state === "pending" ? null : status.updated_at),
-          ...(typeof status.id === "number" ? { statusId: status.id } : {}),
           ...(status.description ? { detail: status.description } : {}),
           ...(status.target_url ? { link: status.target_url } : {}),
         };
@@ -1075,199 +1063,6 @@ export class GitHubForge implements Forge {
     };
   }
 
-  /** GitHub's status event starts the shipped queue's workflow on each mark. */
-  readonly markStartsQueue = true;
-
-  async markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
-    this.requireMaintainer();
-    const checkApproval = () => {
-      const why = approval?.beforeDispatch?.();
-      if (why) throw new ForgeError("refused", why);
-    };
-    let approvalUrl: string | undefined;
-    if (approval) {
-      const pull = (await this.request("GET", `${this.repoPath()}/pulls/${approval.number}`)) as {
-        head?: { sha?: string };
-        body?: string | null;
-        title?: string;
-      };
-      if (pull.head?.sha !== sha || pull.title !== (approval.requestTitle ?? approval.title))
-        throw new ForgeError("refused", "The approved change moved before it could be queued.");
-      checkApproval();
-      const message = approval.message ?? pull.body ?? "";
-      const comment = (await this.request(
-        "POST",
-        `${this.repoPath()}/issues/${approval.number}/comments`,
-        {
-          body: `Approved for the batch queue at this version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(sha, message, approval.title, { naming: approval.naming ? NAMING_DECISION.checked : NAMING_DECISION.off, requestTitle: approval.requestTitle ?? approval.title })}`,
-        },
-      )) as { html_url?: string };
-      if (!comment.html_url)
-        throw new ForgeError("refused", "The approved merge words have no confirmed comment link.");
-      approvalUrl = comment.html_url;
-    }
-    checkApproval();
-    const answer = (await this.request(
-      "POST",
-      `${this.repoPath()}/statuses/${encodeURIComponent(sha)}`,
-      {
-        state: "pending",
-        context: QUEUE_STATUS,
-        description: QUEUE_WAITING_WORDS,
-        ...(approvalUrl ? { target_url: approvalUrl } : {}),
-      },
-    )) as { id?: unknown } | null;
-    return typeof answer?.id === "number" ? { id: answer.id } : {};
-  }
-
-  private async queuePermission(login: string): Promise<string> {
-    const role = (await this.request(
-      "GET",
-      `${this.repoPath()}/collaborators/${encodeURIComponent(login)}/permission`,
-    ).catch((error) => {
-      if (error instanceof ForgeError && error.failure === "not-found")
-        return { permission: "none" };
-      throw error;
-    })) as { permission: string };
-    return role.permission;
-  }
-
-  private async queueApproval(sha: string, number: number) {
-    const listed = await this.pages<{ id: number; body?: string; user?: { login?: string } }>(
-      `${this.repoPath()}/issues/${number}/comments`,
-      (page) => page as { id: number; body?: string; user?: { login?: string } }[],
-    );
-    if (!listed.complete)
-      throw new ForgeError("transient", "The merge approval history could not be read completely.");
-    const roles = new Map<string, string>();
-    return await newestTrustedApproval(listed.items, sha, async (comment) => {
-      const login = comment.user?.login;
-      if (!login) return false;
-      if (!roles.has(login)) roles.set(login, await this.queuePermission(login));
-      return MERGE_PERMISSIONS.includes(roles.get(login) ?? "");
-    });
-  }
-
-  async removeQueued(sha: string, number: number): Promise<void> {
-    this.requireMaintainer();
-    const record = await this.queueApproval(sha, number);
-    if (!record) return;
-    if (record.kind === "approval") {
-      const user = (await this.request("GET", "/user")) as { login?: string };
-      if (!user.login || !MERGE_PERMISSIONS.includes(await this.queuePermission(user.login)))
-        throw new ForgeError(
-          "permission",
-          "The current sign-in cannot withdraw this project's approved queue version.",
-        );
-      const posted = (await this.request("POST", `${this.repoPath()}/issues/${number}/comments`, {
-        body: `Merge approval withdrawn for this version.\n\n${revocationEnvelope(sha)}`,
-      })) as { id?: number };
-      if (
-        typeof posted?.id !== "number" ||
-        (await this.queueApproval(sha, number))?.kind !== "revocation"
-      )
-        throw new ForgeError(
-          "transient",
-          "The host did not confirm a trusted approval revocation.",
-        );
-    }
-    const statuses = (await this.request(
-      "GET",
-      `${this.repoPath()}/commits/${encodeURIComponent(sha)}/statuses?per_page=100`,
-    )) as { context?: string; description?: string }[];
-    const current = statuses.find((status) => status.context === QUEUE_STATUS);
-    if (!current || current.description === REMOVED) return;
-    await this.request("POST", `${this.repoPath()}/statuses/${encodeURIComponent(sha)}`, {
-      state: "error",
-      context: QUEUE_STATUS,
-      description: REMOVED,
-    });
-  }
-
-  /**
-   * The workflow files on the default branch whose text mentions the queue
-   * status: GitHub's list of the project's workflows, then each file read
-   * at the default branch. A listed file the default branch no longer has
-   * is left out; any other refusal is the read's failure.
-   */
-  async queueWorkflows(options: { all?: boolean } = {}): Promise<QueueWorkflow[]> {
-    const listed = await this.pages<WorkflowJson>(
-      `${this.repoPath()}/actions/workflows`,
-      (page) => (page as { workflows?: WorkflowJson[] }).workflows ?? [],
-    );
-    // The shipped queue's file first: its stamp is all a teammate's app
-    // needs, and a project running it needs no other file read.
-    const live = listed.items
-      .filter((workflow) => workflow.path && workflow.state !== "deleted")
-      .sort(
-        (a, b) =>
-          Number(b.path === GITHUB_QUEUE_PART.queueFile) -
-          Number(a.path === GITHUB_QUEUE_PART.queueFile),
-      );
-    const found: QueueWorkflow[] = [];
-    for (const workflow of live) {
-      const path = workflow.path as string;
-      if (path !== GITHUB_QUEUE_PART.queueFile && options.all === false) break;
-      let file: { content?: string; encoding?: string } | null;
-      try {
-        file = (await this.request(
-          "GET",
-          `${this.repoPath()}/contents/${path.split("/").map(encodeURIComponent).join("/")}`,
-        )) as { content?: string; encoding?: string } | null;
-      } catch (caught) {
-        if (caught instanceof ForgeError && caught.failure === "not-found") continue;
-        throw caught;
-      }
-      const text =
-        file?.encoding === "base64" && file.content
-          ? Buffer.from(file.content, "base64").toString("utf8")
-          : (file?.content ?? "");
-      if (!text.includes(QUEUE_STATUS)) continue;
-      const shipped = readQueueStamp(text);
-      found.push({
-        path,
-        active: workflow.state === "active",
-        ...(shipped !== undefined ? { shipped } : {}),
-      });
-      if (shipped !== undefined && workflow.state === "active") break;
-    }
-    return found;
-  }
-
-  /**
-   * The shipped queue's open pause issue, read by its label: the run and
-   * paused changes its marker names, and its assignee as who repairs it.
-   * The earliest assignment holds the claim, and a later claimant removes
-   * its own (the queue-repair skill), so the one assignee left is the claim.
-   * An issue with no readable marker is not the queue's.
-   */
-  async queuePause(): Promise<ForgeQueuePause | null> {
-    const issues = (await this.request(
-      "GET",
-      `${this.repoPath()}/issues?state=open&labels=${encodeURIComponent(PAUSE_LABEL)}&per_page=10`,
-    )) as PauseIssueJson[] | null;
-    for (const issue of issues ?? []) {
-      const marker = readPauseMarker(issue.body);
-      if (!marker || !issue.html_url) continue;
-      const claimedBy = issue.assignees?.[0]?.login ?? issue.assignee?.login;
-      return { ...marker, url: issue.html_url, ...(claimedBy ? { claimedBy } : {}) };
-    }
-    return null;
-  }
-
-  /** Start the shipped queue's workflow by hand on the default branch, with its inputs. */
-  async startQueue(start: ForgeQueueStart): Promise<void> {
-    this.requireMaintainer();
-    const inputs: Record<string, string> = { action: start.action };
-    if (start.action !== "form") inputs.reason = start.reason;
-    if (start.action === "send-back") inputs.number = String(start.number);
-    await this.request(
-      "POST",
-      `${this.repoPath()}/actions/workflows/${encodeURIComponent(QUEUE_WORKFLOW)}/dispatches`,
-      { ref: await this.defaultBranch(), inputs },
-    );
-  }
-
   async close(change: ForgeChange): Promise<void> {
     await this.request("PATCH", `${this.repoPath()}/pulls/${numbered(change)}`, {
       state: "closed",
@@ -1310,6 +1105,75 @@ export class GitHubForge implements Forge {
       },
       rules,
     );
+  }
+
+  async teamQueueLeftovers(): Promise<TeamQueueLeftovers> {
+    const branch = await this.defaultBranch();
+    const absent =
+      <T>(fallback: T) =>
+      (caught: unknown) => {
+        if (
+          caught instanceof ForgeError &&
+          (caught.failure === "not-found" || caught.failure === "permission")
+        )
+          return fallback;
+        throw caught;
+      };
+    const files: string[] = [];
+    for (const [folder, names] of Object.entries(TEAM_QUEUE_FILES)) {
+      const listed = (await this.request(
+        "GET",
+        `${this.repoPath()}/contents/${folder}?ref=${encodeURIComponent(branch)}`,
+      ).catch(absent(null))) as { name?: string; type?: string }[] | null;
+      if (!Array.isArray(listed)) continue;
+      for (const name of names)
+        if (listed.some((entry) => entry.type === "file" && entry.name === name))
+          files.push(`${folder}/${name}`);
+    }
+    if (files.length === 0) return { files };
+    const rule = await this.ruleRequiring(branch, BATCH_CHECK).catch(absent(undefined));
+    return { files, ...(rule ? { rule } : {}) };
+  }
+
+  /**
+   * The rule on `branch` that requires the status `context`, in GitHub's
+   * name for it: a rule set first, then the branch's own protection.
+   */
+  private async ruleRequiring(branch: string, context: string): Promise<string | undefined> {
+    const encoded = branch.split("/").map(encodeURIComponent).join("/");
+    const rules = (await this.request(
+      "GET",
+      `${this.repoPath()}/rules/branches/${encoded}?per_page=100`,
+    )) as
+      | {
+          type?: string;
+          ruleset_id?: number;
+          parameters?: { required_status_checks?: { context?: string }[] };
+        }[]
+      | null;
+    const held = (rules ?? []).find(
+      (rule) =>
+        rule.type === "required_status_checks" &&
+        (rule.parameters?.required_status_checks ?? []).some((check) => check.context === context),
+    );
+    if (held) {
+      const set =
+        typeof held.ruleset_id === "number"
+          ? ((await this.request("GET", `${this.repoPath()}/rulesets/${held.ruleset_id}`).catch(
+              () => null,
+            )) as { name?: string } | null)
+          : null;
+      return set?.name ? `rule set "${set.name}"` : "rule set on its default branch";
+    }
+    const protection = (await this.request(
+      "GET",
+      `${this.repoPath()}/branches/${encoded}/protection/required_status_checks`,
+    )) as { contexts?: string[]; checks?: { context?: string }[] } | null;
+    const required = [
+      ...(protection?.contexts ?? []),
+      ...(protection?.checks ?? []).map((check) => check.context),
+    ];
+    return required.includes(context) ? `branch protection rule for ${branch}` : undefined;
   }
 
   async deleteBranch(branch: string): Promise<void> {

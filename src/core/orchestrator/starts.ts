@@ -49,7 +49,6 @@ import {
 } from "./intentBrief";
 import { unnamedBackgroundWork } from "./jobWakes";
 import { namedModelOf, namedModelWords } from "./namedModel";
-import { queueWay } from "./projectQueue";
 import { computerLeftOutWake, systemWaitWake } from "./startWakes";
 import { placedCutOffStartRefusal } from "./taskPlacement";
 import { withAttachmentsKept } from "./wakes";
@@ -749,13 +748,12 @@ export class CrewStarts {
       shape.deliverable !== "change" || personal
         ? undefined
         : (this.core.facts.taskDelivery(record.id) ?? "local-only");
-    if (!record.intent) return withDeliveryLine(record.prompt, delivery, queueWay(repo));
+    if (!record.intent) return withDeliveryLine(record.prompt, delivery);
     return renderIntentBrief(
       record.intent,
       delivery,
       personal ? this.core.facts.personalFacts(shape.ongoing) : undefined,
       undefined,
-      queueWay(repo),
     );
   }
 

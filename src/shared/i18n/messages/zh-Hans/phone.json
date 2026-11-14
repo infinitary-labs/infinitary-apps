@@ -355,7 +355,7 @@
   "phoneRecordHoldsUp": "阻挡",
   "phoneRecordLandsMerged": "已合并",
   "phoneRecordLandsRigor": "把关：{care}",
-  "phoneRecordModeBatched": "以批量拉取请求的方式，由你项目的队列测试",
+  "phoneRecordModeBatched": "以批量拉取请求的方式，和你其他已批准的改动一起合并",
   "phoneRecordModeInPlace": "就地构建",
   "phoneRecordModeLocal": "本地合并，不创建拉取请求",
   "phoneRecordModePullRequest": "以拉取请求的方式",

@@ -364,33 +364,22 @@ describe("CrewSupervisor", () => {
     // The independent review of PR #1673 (INF-4018): the check watch sends
     // no wake once every check passed at the approved version, and that
     // wake's turn was what ran the kept merge, so the watch runs it: a click
-    // on running checks merges when they pass, or on a queue project marks
-    // the version waiting for the batch, with no turn of the crewmate's.
-    it.each([false, true])(
-      "runs the kept merge when the watch finds the checks passed at the approved version (queue: %s)",
-      async (queue) => {
-        const h = await approved({ checkWatch: true, queue });
-        h.forge.states = ["success", "pending"];
-        await h.declare({});
-        h.supervisor.cardActions.act(h.card.id, "merge");
-        await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
-        await vi.waitFor(() =>
-          expect(h.supervisor.settling.locks.holder(h.taskId)).toBeUndefined(),
-        );
-        const prompts = h.crewmate.promptCalls.length;
-        h.forge.states = ["success"];
-        await h.supervisor.watch.pollCheckWatches(Date.now() + 60_000);
-        if (queue) {
-          await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("queue"));
-          expect(h.forge.merges).toEqual([]);
-        } else {
-          await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
-        }
-        expect(h.crewmate.promptCalls.slice(prompts).join("\n")).not.toContain(
-          "offer its merge when ready",
-        );
-      },
-    );
+    // on running checks merges when they pass, with no turn of the crewmate's.
+    it("runs the kept merge when the watch finds the checks passed at the approved version", async () => {
+      const h = await approved({ checkWatch: true });
+      h.forge.states = ["success", "pending"];
+      await h.declare({});
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+      await vi.waitFor(() => expect(h.supervisor.settling.locks.holder(h.taskId)).toBeUndefined());
+      const prompts = h.crewmate.promptCalls.length;
+      h.forge.states = ["success"];
+      await h.supervisor.watch.pollCheckWatches(Date.now() + 60_000);
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      expect(h.crewmate.promptCalls.slice(prompts).join("\n")).not.toContain(
+        "offer its merge when ready",
+      );
+    });
 
     // The saved story of a kept merge's card (INF-3623, INF-3799): the app's
     // own story service holds it, published on #7 at the approved version.

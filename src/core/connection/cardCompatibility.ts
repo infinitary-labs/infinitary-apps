@@ -40,9 +40,10 @@ export function threadLinesFor(
 
 /**
  * A view reads the look strictly, so each choice added after it - the
- * language (`language-choice.md`) and the fonts (`font-choice.md`) - is left
- * out of the look it is pushed or answered when its hello does not list the
- * change; a view keeps its own look and never needs the home's.
+ * language (`language-choice`) and the fonts (`font-choice`) - is left out
+ * of the look it is pushed or answered when it is older than major 16 and
+ * its hello does not list that name; a view keeps its own look and never
+ * needs the home's.
  */
 export function lookFor(channel: string, value: unknown, unread: readonly string[]): unknown {
   if (unread.length === 0 || !value || typeof value !== "object") return value;

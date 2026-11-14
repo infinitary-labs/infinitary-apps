@@ -75,13 +75,13 @@ export const BATCH_DECLARATION_DESCRIPTION = [
 ].join(" ");
 
 /**
- * The declaration parameter's own words (INF-3190): the answer to the
- * project's queue a Claude crewmate must see is here.
+ * The declaration parameter's own words: the answer to the host's own merge
+ * queue a Claude crewmate must see is here.
  */
-export const QUEUE_ANSWER_DESCRIPTION = [
-  "verdict answered: the project's queue failed or sent back headSha, your pull request's current version, and you judged nothing is left to change there, such as a send-back that names an earlier version while this one holds the fix.",
-  "Name the queue status as check and say in evidence what the queue said and why it is answered.",
-  "Under the captain's kept merge approval the host marks that version waiting for the queue again once; put up no merge card.",
+export const REMOVAL_ANSWER_DESCRIPTION = [
+  "verdict answered: the host's own merge queue removed headSha, your pull request's current version, without merging it, and you judged nothing is left to change there, such as a removal for another pull request's failure.",
+  "Say in evidence what the queue said and why it is answered.",
+  "Under the captain's kept merge approval the host sends that version to the queue once more; put up no merge card.",
   "A version with something left to fix gets the fix, never an answer.",
 ].join(" ");
 
@@ -341,7 +341,7 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
           repairId: Type.Optional(Type.String()),
           outcome: Type.Optional(stringEnum(["passed", "failed", "superseded", "void"])),
         },
-        { description: QUEUE_ANSWER_DESCRIPTION },
+        { description: REMOVAL_ANSWER_DESCRIPTION },
       ),
     ),
     diagnosis: Type.Optional(

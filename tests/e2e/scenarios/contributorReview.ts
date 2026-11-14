@@ -29,7 +29,7 @@ export const contributorReview: Scenario =
             args: {
               id: "contributor-review",
               title: CONTRIBUTOR_REVIEW_TITLE,
-              body: "<p>I read the contributor's change and its checks at this version.</p><p>Your merge click queues only this reviewed version.</p>",
+              body: "<p>I read the contributor's change and its checks at this version.</p><p>Your merge click merges only this reviewed version.</p>",
               actions: [
                 {
                   id: "merge",
@@ -37,8 +37,7 @@ export const contributorReview: Scenario =
                     kind: "merge",
                     review,
                     after: "continue",
-                    asks_first:
-                      "The captain decides whether reviewed contributor code enters the queue.",
+                    asks_first: "The captain decides whether reviewed contributor code merges.",
                   },
                 },
               ],

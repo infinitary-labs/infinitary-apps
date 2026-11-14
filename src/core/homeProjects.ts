@@ -1,6 +1,7 @@
 import type { FmEvent } from "@shared/events";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
+import { TeamQueueLeft } from "./orchestrator/teamQueueLeft";
 import type { TaskService } from "./tasks/taskService";
 import { ProjectChanges } from "./workspace/projectChanges";
 import { ProjectContributions } from "./workspace/projectContributions";
@@ -20,7 +21,8 @@ export function startHomeProjects({
   repos: RepoRegistry;
   tasks: TaskService;
   devices: ConstructorParameters<typeof ProjectSetups>[0]["devices"];
-  forgeFor: ConstructorParameters<typeof ProjectContributions>[0]["forgeFor"];
+  forgeFor: ConstructorParameters<typeof ProjectContributions>[0]["forgeFor"] &
+    ConstructorParameters<typeof TeamQueueLeft>[0]["forgeFor"];
   supervisor: Pick<CrewSupervisor, "cards" | "hostOps">;
   broadcastEvent: (event: FmEvent) => void;
   notify: (notice: Parameters<FirstmateAgent["notifyOp"]>[0]) => void;
@@ -68,5 +70,21 @@ export function startHomeProjects({
     raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
     tell: (facts) => notify({ facts }),
   });
-  return { projectContributions, projectSetups, projectChanges };
+  // A project that still carries the team queue's files is looked at once,
+  // at start or after a merge in it, and offered their removal (docs/forge.md,
+  // "A project that still carries the team queue's files").
+  const teamQueueLeft = new TeamQueueLeft({
+    repos,
+    forgeFor,
+    tell: (facts) => notify({ facts }),
+    withdrawCard: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
+  });
+  tasks.onChange((change) => {
+    for (const event of change.events) {
+      if (event.kind !== "merged" && event.kind !== "landed") continue;
+      const repoId = tasks.get(event.taskId)?.repoId;
+      if (repoId) void teamQueueLeft.look(repoId);
+    }
+  });
+  return { projectContributions, projectSetups, projectChanges, teamQueueLeft };
 }

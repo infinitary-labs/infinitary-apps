@@ -42,7 +42,7 @@ const FAILED = [{ name: "unit-tests", status: "completed", conclusion: "failure"
  * reason, by keys.
  *
  * Real git supplies five crewmates' commits and the app's own combine and
- * push; a disposable GitHub serves a project with no file of a team queue,
+ * push; a disposable GitHub serves a project on batched pull requests,
  * each pushed branch's passing check, the batch pull requests the app
  * opens and their checks, and records each merge, moving the project's
  * default branch as GitHub does. The crewmates' moves are scripted
@@ -53,7 +53,7 @@ const FAILED = [{ name: "unit-tests", status: "completed", conclusion: "failure"
  * Requires desktop Electron and local git; no real sign-in or shared pull
  * request.
  */
-test("approved changes of a project with no team queue merge in batches of the captain's own, and a failed batch holds until Settings sends one change back by keys", async () => {
+test("approved changes of a batched project merge in batches of the captain's own, and a failed batch holds until Settings sends one change back by keys", async () => {
   test.setTimeout(5 * 60_000);
   const userDataDir = scratchDir("infinitary-own-batches-");
   const { repoDir } = seedRepo(userDataDir);

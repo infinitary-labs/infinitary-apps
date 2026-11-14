@@ -97,7 +97,7 @@ import { voiceDownloadProgressSchema } from "./voice";
  * client can refuse or degrade on a mismatch instead of failing one call at
  * a time.
  */
-export const PROTOCOL_VERSION = "15.0.0";
+export const PROTOCOL_VERSION = "16.0.0";
 
 /**
  * The version rule's window for a computer that runs work (docs/contract.md):
@@ -273,13 +273,13 @@ export type RecordedKey = z.infer<typeof recordedKeySchema>;
 /** A page to open in a browser, by its address (`inf:app:open-page`). */
 export const openPageSchema = z.object({ url: z.string().min(1).max(4096) }).strict();
 
-/** A return's id, as the first mate's computer names a waiting sign-in's (`sign-in-return.md`). */
+/** A return's id, as the first mate's computer names a waiting sign-in's (src/core/signInReturns.ts). */
 export const signInReturnIdSchema = z.string().min(1).max(64);
 
 /**
  * A sign-in page whose browser comes back to the first mate's computer's
  * loopback address at `port`, and the return's id
- * (`inf:app:sign-in-page`, `sign-in-return.md`).
+ * (`inf:app:sign-in-page`, src/core/signInReturns.ts).
  */
 export const signInPageSchema = z
   .object({

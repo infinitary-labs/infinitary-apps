@@ -11,7 +11,7 @@ import { z } from "zod";
  * The crew allowance bands, in rank order (`SpendBand`, src/shared/quotaSignals.ts).
  * Routing's own `credits` band is published as `near_floor` with the
  * candidate's `onCredits` mark, so a view that reads this list strictly still
- * reads it (src/shared/contract-changes/keep-going-on-credits.md).
+ * reads it (src/shared/contract-changes/major-16.md).
  */
 export const crewBandSchema = z.enum(["room", "conserve", "near_floor", "unknown"]);
 export type CrewBand = z.infer<typeof crewBandSchema>;

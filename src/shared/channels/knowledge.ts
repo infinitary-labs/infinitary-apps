@@ -29,7 +29,7 @@ export const knowledgeChannels = {
   // that cannot be read), which the window asks before it registers the
   // Knowledge panel, and the browser's reads, scoped as Firstmate's are.
   // Every build answers them, to this computer's window and to a view
-  // (`devices-from-a-view.md`).
+  // (`DEVICES_FROM_A_VIEW`).
   "inf:knowledge:enabled": {
     effect: "read",
     surface: "core",

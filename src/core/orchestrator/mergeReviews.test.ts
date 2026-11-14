@@ -16,44 +16,15 @@ import {
   type ForgeChange,
   ForgeError,
   type ForgePull,
-  type ForgeQueueStart,
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
   forkStoryForge,
   parseApiRequest,
-  QUEUE_STATUS,
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
-import { GITHUB_QUEUE_PART, QUEUE_SEPARATE_TITLES_VERSION } from "../queue/shipped";
 import type { MergeGuard } from "./changeMerge";
-import type { TypedWake, WakeFacts } from "./wakes";
 
-/** Where a failed start of the queue's next batch is told, as the app wires it. */
-type QueueWakes = {
-  steer?: (taskId: string, wake: TypedWake) => void;
-  tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
-};
-
-// Integration cohort (docs/test-cohorts.md): a real `git init` per project at
-// the run's own priority, the slowest test (the refusals by number) 0.6 s at
-// its fastest of five Mac runs, so five times fits vitest's 5 s default and the file sets no budget.
-
-// This file chains real git and is not about the utility-QoS clamp, so what
-// the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
-vi.mock("../utilityQos", async (importOriginal) =>
-  (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
-);
-
-/**
- * Guardrails for merge reviews (INF-2625's plan, prCi's row: "Merge, refusal
- * and review paths pinned by tests"): a review of a pull request named by its
- * number, a merge past the branch rules, and the captain's click on either.
- * Each refusal is pinned word for word, since the crewmate and the first mate
- * read these words, and each send-once outcome by what it stores and sends.
- */
-
-/** A pull request as GitHub answers it by its number, on the task's own branch in x/y. */
 const HEAD = "4f1c2a9e8b7d6c5f4e3d2c1b0a9f8e7d6c5b4a39";
 const MERGED = "b2e6d0c94a8f7e6d5c4b3a2918f7e6d5c4b3a201";
 
@@ -87,13 +58,11 @@ const SKIPPABLE: ForgeRuleset = {
  */
 async function onGitHub(
   shape?: { delivery_ask: "queue-pr" },
-  wakes: QueueWakes = {},
   prepareContribution?: (taskId: string) => Promise<string | undefined>,
 ) {
   const forge = new FakeForge();
   const harness = setup({
     forge,
-    ...wakes,
     ...(prepareContribution ? { prepareContribution } : {}),
   });
   await insertDirectPrTask(harness.tasks, harness.repos, {
@@ -269,7 +238,7 @@ describe("preparing a review of a pull request named by its number", () => {
 });
 
 // Accepted contributor plan, piece A: a crewmate names a fork and the
-// captain's click queues only that source at that version. The in-memory
+// captain's click merges only that source at that version. The in-memory
 // host readings are the remote fixture; real task storage owns the consent.
 describe("reviewed contributor changes", () => {
   // The saved-story click defect exposed by the accepted contributor plan:
@@ -277,15 +246,7 @@ describe("reviewed contributor changes", () => {
   // even when the fork's branch collides with the task's own branch.
   // Real task/presentation owners prepare, publish and verify the story;
   // only the existing forge's remote readings and writes are stand-ins.
-  it.each([
-    "direct-pr",
-    "direct-pr-with-contribution-hook",
-    "queue-pr",
-    "owned-queue",
-    "older-owned-queue",
-    "waiting-owned-queue",
-    "waiting-older-owned-queue",
-  ] as const)(
+  it.each(["direct-pr", "direct-pr-with-contribution-hook", "queue-pr"] as const)(
     "the ordinary saved-story merge uses the selected fork's comment for %s",
     async (delivery) => {
       const contribution =
@@ -294,7 +255,6 @@ describe("reviewed contributor changes", () => {
           : undefined;
       const at = await onGitHub(
         delivery.startsWith("direct-pr") ? undefined : { delivery_ask: "queue-pr" },
-        {},
         contribution,
       );
       at.host.pull = openPull({ title: "Fix typo", headRepo: "contributor/y", headRepoId: 912 });
@@ -392,31 +352,10 @@ describe("reviewed contributor changes", () => {
           draft.title,
         );
       }
-      if (delivery.endsWith("owned-queue")) {
-        if (!at.task.repoId) throw new Error("The fixture project is missing");
-        at.repos.recordQueue(at.task.repoId, {
-          workflows: [
-            {
-              path: GITHUB_QUEUE_PART.queueFile,
-              active: true,
-              shipped: delivery.includes("older")
-                ? QUEUE_SEPARATE_TITLES_VERSION - 1
-                : GITHUB_QUEUE_PART.version,
-            },
-          ],
-        });
-      }
-      const approvals: import("../forge").ForgeQueueApproval[] = [];
       const dispatched: ForgeChange[] = [];
-      const marked: string[] = [];
       at.forge.putIn = async (change) => {
         dispatched.push(change);
         return undefined;
-      };
-      at.forge.markQueued = async (head, approval) => {
-        if (approval) approvals.push(approval);
-        marked.push(head);
-        return {};
       };
       const guard: MergeGuard = {
         head: review.headSha,
@@ -424,45 +363,8 @@ describe("reviewed contributor changes", () => {
         unattended: false,
         beforeDispatch: () => undefined,
       };
-      if (delivery.startsWith("waiting-")) {
-        at.forge.states = ["success", "pending"];
-        at.forge.names = ["build", QUEUE_STATUS];
-      }
-      const waiting = await at.service.merges.merge(at.task.id, guard);
-      if (delivery.includes("older-owned-queue")) {
-        // An incompatible protocol needs a fix; nothing is queued or being tested.
-        expect(waiting).toMatchObject({ ok: false, stop: "refused" });
-        expect(marked).toEqual([]);
-        expect(approvals).toEqual([]);
-        expect(dispatched).toEqual([]);
-        expect(at.host.pull.title).toBe(review.title);
-        return;
-      }
-      // New queue protocol: the queue owns dispatch and receives both captured titles.
-      if (delivery.endsWith("owned-queue")) {
-        expect(waiting).toMatchObject({ ok: false, stop: "queue" });
-        expect(marked).toEqual([review.headSha]);
-        expect(approvals).toHaveLength(1);
-        expect(approvals[0]).toMatchObject({ title: draft.title, requestTitle: review.title });
-        at.forge.states = ["success", "success"];
-        at.forge.names = ["build", QUEUE_STATUS];
-        expect(await at.service.merges.merge(at.task.id, guard)).toMatchObject({
-          ok: false,
-          stop: "queue",
-        });
-        expect(dispatched).toEqual([]);
-        expect(at.host.pull.title).toBe(review.title);
-        expect(writes).toEqual([`POST /repos/x/y/issues/${review.number}/comments`]);
-        return;
-      }
-      if (delivery === "queue-pr") {
-        expect(waiting).toMatchObject({ ok: false, stop: "queue" });
-        expect(marked).toEqual([review.headSha]);
-        expect(dispatched).toEqual([]);
-        at.forge.states = ["success", "success"];
-        at.forge.names = ["build", QUEUE_STATUS];
-        expect(await at.service.merges.merge(at.task.id, guard)).toMatchObject({ ok: true });
-      } else expect(waiting).toMatchObject({ ok: true });
+      // A pull request the task names by its number merges as its own, whatever the project's delivery.
+      expect(await at.service.merges.merge(at.task.id, guard)).toMatchObject({ ok: true });
       expect(dispatched).toHaveLength(1);
       expect(dispatched[0]).toMatchObject({
         number: review.number,
@@ -514,13 +416,8 @@ describe("reviewed contributor changes", () => {
   );
 
   it("reads checks by number and version even when a project branch has the same name", async () => {
-    const at = await onGitHub({ delivery_ask: "queue-pr" });
+    const at = await onGitHub();
     at.host.pull = openPull({ headRepo: "contributor/y", headRepoId: 912 });
-    const marked: string[] = [];
-    at.forge.markQueued = async (sha) => {
-      marked.push(sha);
-      return {};
-    };
     // A project branch with precisely the fork's name is a different PR.
     at.forge.change = {
       number: 99,
@@ -539,11 +436,12 @@ describe("reviewed contributor changes", () => {
         ?.versions.find((version) => version.head === HEAD)?.checks?.snapshot?.headSha,
     ).toBe(HEAD);
     expect(await at.service.reviews.reviewGate(at.task.id, review.id)).toBeUndefined();
-    expect(marked).toEqual([]);
     const merged = await at.service.reviews.mergeReview(at.task.id, review.id);
-    expect(merged.ok).toBe(false);
-    expect(marked).toEqual([HEAD]);
-    expect(at.forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+    expect(merged, merged.text).toMatchObject({ ok: true, receipt: { head: HEAD } });
+    // The merge names the fork's pull request at its version, never the project's #99.
+    expect(at.forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([
+      `putIn ${review.branch} ${HEAD}`,
+    ]);
   });
 
   it.each([
@@ -558,7 +456,7 @@ describe("reviewed contributor changes", () => {
     at.host.pull = { ...at.host.pull, ...changed };
     expect(await at.service.reviews.reviewGate(at.task.id, review.id)).toMatch(/Card refused/);
     expect((await at.service.reviews.mergeReview(at.task.id, review.id)).ok).toBe(false);
-    expect(at.forge.calls.some((call) => /^(markQueued|putIn) /.test(call))).toBe(false);
+    expect(at.forge.calls.some((call) => call.startsWith("putIn "))).toBe(false);
   });
 
   it("does not carry a contributor approval to a later repair version", async () => {
@@ -577,12 +475,10 @@ describe("reviewed contributor changes", () => {
     expect(at.forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
   });
 
-  it("merges the same reviewed fork only after its batch passes", async () => {
+  it("records a reviewed fork's merge on the fork's own change, never on the task's", async () => {
     const at = await onGitHub({ delivery_ask: "queue-pr" });
     at.host.pull = openPull({ headRepo: "contributor/y" });
     const review = await at.prepare();
-    at.forge.states = ["success", "success"];
-    at.forge.names = ["build", QUEUE_STATUS];
     expect((await at.service.reviews.mergeReview(at.task.id, review.id)).ok).toBe(true);
     expect(at.forge.calls).toContain(`putIn ${review.branch} ${HEAD}`);
     const forks = at.tasks
@@ -1287,238 +1183,15 @@ describe("the captain's click on a pull request the task did not open, while Git
   });
 });
 
-describe("a review's click on a queue-pr project (docs/forge.md, \"A project's queue\")", () => {
-  async function queuedReview(wakes: QueueWakes = {}) {
-    const harness = await onGitHub({ delivery_ask: "queue-pr" }, wakes);
-    const review: MergeReview = {
-      id: "mrqueued00001",
-      kind: "github",
-      host: "github.com",
-      owner: "x",
-      name: "y",
-      number: 23,
-      headSha: HEAD,
-      base: "main",
-      branch: "fm/task-ab12cd34",
-      method: "squash",
-      title: openPull().title ?? "",
-      at: 1,
-    };
-    seedDelivery(harness.tasks, "ab12cd34", { mergeReviews: [review] });
-    const putIns = () => harness.forge.calls.filter((call) => call.startsWith("putIn"));
-    return { ...harness, review, putIns };
-  }
-
-  it("stops on the checks when the queue's batch failed at the version, marking nothing", async () => {
-    const { service, forge, review, putIns } = await queuedReview();
-    const marked: string[] = [];
-    forge.markQueued = async (sha) => {
-      marked.push(sha);
-      return {};
-    };
-    forge.atHead[HEAD] = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "failure" },
-    ];
-    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toEqual({
-      ok: false,
-      text: `Cannot merge yet - the project's queue did not pass ${HEAD} (${QUEUE_STATUS} is failure).`,
-      plain: "the batch check failed",
-      notGreen: true,
-      stop: "checks",
-    });
-    expect(marked).toEqual([]);
-    expect(putIns()).toEqual([]);
-  });
-
-  // The re-review's finding (next-batch-rarer-merge-routes): every route a
-  // review merges by starts the next batch, since a merge's own push starts
-  // no workflow on GitHub (docs/forge.md, "The shipped queue").
-  it("starts the shipped queue's next batch after the merge, and after a merge GitHub made though its answer was lost", async () => {
-    const { service, forge, repos, tasks, host, task, review } = await queuedReview();
-    if (!task.repoId) throw new Error("the task has no project");
-    repos.recordQueue(task.repoId, {
-      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 1 }],
-    });
-    const starts: string[] = [];
-    Object.assign(forge, {
-      startQueue: async (start: ForgeQueueStart) => {
-        starts.push(start.action);
-      },
-    });
-    forge.markQueued = async () => ({});
-    forge.atHead[HEAD] = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "success" },
-    ];
-    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toMatchObject({ ok: true });
-    expect(starts).toEqual(["form"]);
-
-    // A second batched review whose merge GitHub made though its answer was lost.
-    const lost = { ...review, id: "mrqueued00002" };
-    seedDelivery(tasks, "ab12cd34", { mergeReviews: [lost] });
-    forge.fail.putIn = new ForgeError("transient", "could not reach GitHub: socket hang up");
-    host.pull = openPull();
-    const putIn = forge.putIn.bind(forge);
-    forge.putIn = async (change, head) => {
-      try {
-        return await putIn(change, head);
-      } finally {
-        host.pull = openPull({ state: "closed", merged: true, mergedSha: MERGED });
-      }
-    };
-    expect(await service.reviews.mergeReview("ab12cd34", lost.id)).toMatchObject({
-      ok: true,
-      receipt: { head: HEAD, sha: MERGED },
-    });
-    expect(starts).toEqual(["form", "form"]);
-  });
-
-  // The review's finding (lost-start-stalls) and the captain's choice on it:
-  // "retry the start after a mark, and wake the task's crewmate if it still
-  // fails. Never swallow the failure."
-  it("starts the next batch once more when a start fails, and when that fails too notes it and wakes a crewmate waiting in the queue, or the first mate", async () => {
-    const steers: { taskId: string; wake: TypedWake }[] = [];
-    const told: Extract<WakeFacts, { kind: "queue-stalled" }>[] = [];
-    const { service, forge, repos, tasks, task, review } = await queuedReview({
-      steer: (taskId, wake) => steers.push({ taskId, wake }),
-      tell: (facts) => told.push(facts),
-    });
-    if (!task.repoId) throw new Error("the task has no project");
-    const repo = repos.recordQueue(task.repoId, {
-      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 1 }],
-    });
-    const answers: (Error | undefined)[] = [
-      new ForgeError("transient", "could not reach GitHub: socket hang up"),
-      undefined,
-    ];
-    const starts: string[] = [];
-    Object.assign(forge, {
-      startQueue: async (start: ForgeQueueStart) => {
-        starts.push(start.action);
-        const answer = answers.shift();
-        if (answer) throw answer;
-      },
-    });
-    forge.markQueued = async () => ({});
-    forge.atHead[HEAD] = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "success" },
-    ];
-    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toMatchObject({ ok: true });
-    await vi.waitFor(() => expect(starts).toEqual(["form", "form"]));
-    expect(steers).toEqual([]);
-    expect(told).toEqual([]);
-
-    // After a mark, both starts fail: this task's crewmate hears it.
-    const refused = "GitHub answered 403: Resource not accessible by integration";
-    const fail = () =>
-      answers.push(new ForgeError("permission", refused), new ForgeError("permission", refused));
-    seedDelivery(tasks, "ab12cd34", { queueMark: { head: HEAD, at: 1 } });
-    fail();
-    service.merges.startNextBatch("ab12cd34", "mark");
-    await vi.waitFor(() => expect(steers).toHaveLength(1));
-    expect(starts).toEqual(["form", "form", "form", "form"]);
-    expect(steers[0]).toEqual({
-      taskId: "ab12cd34",
-      wake: { facts: { kind: "queue-start-failed", why: refused } },
-    });
-    expect(
-      tasks
-        .timeline("ab12cd34")
-        .filter((event) => event.kind === "note")
-        .map((event) => event.text),
-    ).toContain(`The project's queue did not start: ${refused}`);
-
-    // After a merge the merged task closes with its wakes (the re-review's
-    // after-merge-wake-lost): with no other task waiting in the queue, the
-    // first mate hears it.
-    fail();
-    service.merges.startNextBatch("ab12cd34", "merge");
-    await vi.waitFor(() => expect(told).toHaveLength(1));
-    expect(told[0]).toEqual({
-      kind: "queue-stalled",
-      project: { id: task.repoId, name: repo?.name },
-      why: refused,
-    });
-    expect(steers).toHaveLength(1);
-
-    // A task still waiting in that queue hears it instead.
-    insertTask(tasks, { id: "cd56ef78", repoId: task.repoId, branch: "fm/task-cd56ef78" });
-    seedDelivery(tasks, "cd56ef78", { queueMark: { head: "9".repeat(40), at: 2 } });
-    fail();
-    service.merges.startNextBatch("ab12cd34", "merge");
-    await vi.waitFor(() => expect(steers).toHaveLength(2));
-    expect(steers[1]).toEqual({
-      taskId: "cd56ef78",
-      wake: { facts: { kind: "queue-start-failed", why: refused } },
-    });
-    expect(told).toHaveLength(1);
-  });
-
-  // The re-review's finding (approval-never-restarts): a change the queue
-  // held, such as one waiting for a Maintainer's approval on GitLab, joins
-  // only when a start reads it again, so a click on a waiting version starts
-  // the queue on a host whose mark starts nothing, and marks nothing twice.
-  it("starts the queue again on a click on a waiting version where a mark starts nothing", async () => {
-    const { service, forge, repos, task, review } = await queuedReview();
-    if (!task.repoId) throw new Error("the task has no project");
-    repos.recordQueue(task.repoId, {
-      workflows: [{ path: ".gitlab/infinitary-queue.yml", active: true, shipped: 1 }],
-    });
-    const starts: string[] = [];
-    const marked: string[] = [];
-    Object.assign(forge, {
-      markStartsQueue: false,
-      startQueue: async (start: ForgeQueueStart) => {
-        starts.push(start.action);
-      },
-    });
-    forge.markQueued = async (sha) => {
-      marked.push(sha);
-      return {};
-    };
-    forge.atHead[HEAD] = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "pending" },
-    ];
-    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toMatchObject({
-      ok: false,
-      stop: "queue",
-    });
-    expect(starts).toEqual(["form"]);
-    expect(marked).toEqual([]);
-    // A kept approval's unattended retry of the same review starts nothing
-    // (the review's restart-on-unattended-reruns).
-    const kept: MergeGuard = {
-      head: HEAD,
-      prNumber: 23,
-      unattended: true,
-      beforeDispatch: () => undefined,
-    };
-    expect(await service.reviews.mergeReview("ab12cd34", review.id, kept)).toMatchObject({
-      ok: false,
-      stop: "queue",
-    });
-    expect(starts).toEqual(["form"]);
-  });
-
+describe("a review's click on a project that gets batches of the person's own (docs/forge.md, \"Batches of your own\")", () => {
   // Intent: the captain's answer on the plan for batches of their own, for a pull request
   // someone else opened in such a project: it merges "As its own pull request through merge
   // review, so the host shows it merged".
-  it("merges at the click, marking no queue status, where the project has no team queue and gets batches of the person's own", async () => {
-    const { service, forge, repos, tasks, task, host, prepare } = await onGitHub({
+  it("merges a pull request someone else opened at the click, as its own pull request", async () => {
+    const { service, forge, tasks, task, host, prepare } = await onGitHub({
       delivery_ask: "queue-pr",
     });
-    if (!task.repoId) throw new Error("the task has no project");
-    // The project's default branch was read and carries no file of a team queue.
-    repos.recordQueue(task.repoId, { workflows: [] });
     host.pull = openPull({ branch: "their/reading" });
-    const marked: string[] = [];
-    forge.markQueued = async (sha) => {
-      marked.push(sha);
-      return {};
-    };
     forge.atHead[HEAD] = [{ name: "linux-checks", state: "success" }];
     const review = await prepare();
     expect(tasks.get(task.id)?.delivery?.checkTarget).toMatchObject({ number: 23 });
@@ -1526,17 +1199,6 @@ describe("a review's click on a queue-pr project (docs/forge.md, \"A project's q
       ok: true,
       receipt: { head: HEAD },
     });
-    expect(marked).toEqual([]);
     expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
-  });
-
-  it("refuses in words when the host cannot mark a version for the queue", async () => {
-    const { service, review, putIns } = await queuedReview();
-    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toEqual({
-      ok: false,
-      text: "Cannot merge: This project's host cannot mark a version for its queue.",
-      problem: "This project's host cannot mark a version for its queue.",
-    });
-    expect(putIns()).toEqual([]);
   });
 });

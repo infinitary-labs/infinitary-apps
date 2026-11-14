@@ -24,7 +24,6 @@ import {
   type TurnImage,
 } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
-import { queueAnswer } from "@shared/checkRepair";
 import { currentCheckStatus, failedBatch } from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
 import { choiceWords, type HoldOverride, overridePasses, overrideWords } from "@shared/holds";
@@ -1225,9 +1224,7 @@ export class CardActions {
    * failed checks read Merge after fixing errors (captain INF-1555 F20);
    * otherwise Merge the pull request. Raw check results remain separate. The captain's override on the checks
    * at the card's version passes either, so a click merges now and it reads
-   * Merge the pull request (INF-756), as does the crewmate's answer to the
-   * project's batch check at that version when it is the only failure: a
-   * click puts the version back in the queue (INF-3208). Undefined - the
+   * Merge the pull request (INF-756). Undefined - the
    * label as it stands - on a card whose click approves nothing
    * (`approvableOffer`), where a click on such checks is only refused.
    */
@@ -1244,14 +1241,6 @@ export class CardActions {
     if (record.delivery?.headSha === head && overridePasses(record.delivery, "checks", head))
       return MERGE_WORDS["merge-pr"];
     const ci = currentCheckStatus(record.delivery);
-    if (
-      ci === "red" &&
-      record.delivery?.headSha === head &&
-      this.core.facts.taskDelivery(record.id) === "queue-pr" &&
-      failedBatch(record.delivery, head)?.alone &&
-      queueAnswer(record.delivery, head)
-    )
-      return MERGE_WORDS["merge-pr"];
     if (ci === "red") return MERGE_AFTER_FIXING_WORDS;
     return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : MERGE_WORDS["merge-pr"];
   }
@@ -1262,9 +1251,9 @@ export class CardActions {
    * pull request is still at the card's version and its checks failed,
    * and the captain's override does not already pass them.
    * It goes when the checks no longer fail or a new version comes. Never
-   * beside a failed batch check of a change that merges through the
-   * project's queue: no checks override passes the queue, so it could do
-   * nothing a fix or the crewmate's answer does not (INF-3208).
+   * beside a failed batch check of a change that merges in a batch: no
+   * checks override passes a batch, so it could do nothing a fix does not
+   * (INF-3208).
    */
   mergeAnyway(card: Card): boolean {
     const record = card.taskId ? this.core.options.tasks.get(card.taskId) : undefined;

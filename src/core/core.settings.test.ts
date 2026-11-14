@@ -223,7 +223,6 @@ describe("the core, driven with no Electron in the process", () => {
       "account-keep-going",
       "account-disconnect",
       "projects-folder",
-      "project-queue-answer",
       "project-batch-answer",
     ]);
   });

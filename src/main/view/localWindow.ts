@@ -85,9 +85,9 @@ export class LocalWindow {
         options.broadcast(channel as PushChannel, payload, replayed),
       onLive: (channel, payload) => {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
-        // A streamed reply piece or a tool's start or end (`streamed-events-live.md`).
+        // A streamed reply piece or a tool's start or end, outside the numbering.
         if (channel === "inf:event") options.broadcast("inf:event", payload, false);
-        // The computers' live readings (`computer-readings-live.md`).
+        // The computers' live readings, outside the numbering.
         if (channel === "inf:computers:resources")
           options.broadcast("inf:computers:resources", payload, false);
       },

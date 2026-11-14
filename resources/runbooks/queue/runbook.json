@@ -1,6 +1,0 @@
-{
-  "id": "queue",
-  "name": "Batched pull requests",
-  "description": "Repairing a held batch of your approved changes, and setting up or repairing the fix-forward queue a team's project may carry.",
-  "skills": "skills"
-}

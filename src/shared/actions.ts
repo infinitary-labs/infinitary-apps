@@ -51,8 +51,6 @@ import { reasoningWord } from "./reasoning";
 import type { ReleaseNotesView } from "./releaseTracking";
 import { remoteLoginAddressSchema, remoteLoginWords } from "./remoteLogin";
 import {
-  type QueueAnswer,
-  queueAnswerSchema,
   type RepoView,
   repoPolicyOutcome,
   repoPolicyPatchSchema,
@@ -1443,24 +1441,6 @@ const actionLines = {
     readValue: (current) => ({ path: (current as { path: string }).path }),
     done: (v) => `new projects now go in ${v.path}`,
   },
-  "project-queue-answer": {
-    area: "projects",
-    tier: "own-words",
-    change: "inf:repos:queue-answer",
-    current: "inf:repos:list",
-    value: z.strictObject({ repoId: z.string().min(1), answer: queueAnswerSchema }),
-    line: "Resume a project's paused batch, or send one paused change back, with the captain's reason. Only on the captain's own words; the queue closes the pause's issue with that reason.",
-    toRequest: (v) => [v.repoId, v.answer],
-    readValue: (c) => ({
-      paused: (c as RepoView[])
-        .filter((repo) => repo.queuePause)
-        .map(({ id, name, queuePause }) => ({ id, name, pause: queuePause })),
-    }),
-    done: (v) =>
-      (v.answer as QueueAnswer).action === "resume"
-        ? "asked the queue to resume"
-        : `asked the queue to send #${(v.answer as Extract<QueueAnswer, { action: "send-back" }>).number} back`,
-  },
   "project-batch-answer": {
     area: "projects",
     tier: "own-words",
@@ -1687,6 +1667,8 @@ export type ActionActor =
       projectBefore?: unknown;
       /** The paired view (a phone, or a Mac that controls this one) that asked, by its device id. */
       view?: string;
+      /** The contract version that paired view's hello spoke, as its connection heard it. */
+      viewVersion?: string;
       /** The contract changes that paired view's hello listed, as its connection heard them. */
       viewChanges?: readonly string[];
     }

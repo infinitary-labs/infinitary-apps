@@ -61,18 +61,15 @@ export type {
   ForgeOverall,
   ForgeProject,
   ForgePull,
-  ForgeQueueApproval,
-  ForgeQueueMark,
-  ForgeQueuePause,
-  ForgeQueueStart,
   ForgeReadiness,
   ForgeRuleset,
   ForgeSkipMerge,
   MergeAnswer,
-  QueueWorkflow,
 } from "./forge";
 export {
   allowanceResetOf,
+  BATCH_CHECK,
+  BATCH_WAITING_WORDS,
   changeTitle,
   describeCheckState,
   ForgeAllowanceSpent,
@@ -82,9 +79,7 @@ export {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
-  QUEUE_REMOVED_WORDS,
-  QUEUE_STATUS,
-  QUEUE_WAITING_WORDS,
+  type TeamQueueLeftovers,
 } from "./forge";
 export { type GitHubCli, githubCliFor } from "./githubCli";
 export {

@@ -1362,7 +1362,7 @@ export const cardMessageSchema = z.strictObject({
   notes: cardNotesSchema.optional(),
   revision: cardRevisionSchema.optional(),
   revisionShown: revisionShownSchema.optional(),
-  /** Who wrote a line on a card that is not theirs (`major-15.md`). */
+  /** Who wrote a line on a card that is not theirs (major 15). */
   contributor: cardContributorSchema.optional(),
   /** The captain's message this line answers and ends, by its row id. */
   answersMessage: z.number().int().positive().optional(),

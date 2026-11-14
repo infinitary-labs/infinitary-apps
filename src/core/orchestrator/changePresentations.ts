@@ -152,8 +152,6 @@ export class ChangePresentations {
     private readonly options: {
       /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
       namingRule?: () => NamingRule | null;
-      /** Changed unpublished merge words suspend their queue approval before prepare returns. */
-      onPrepared?: (taskId: string, head: string, branch?: string) => Promise<void>;
       tasks: PresentationLedger;
       mediaDir: (taskId: string) => string;
       /** Read actual committed code, including after asynchronous uploads. */
@@ -294,7 +292,6 @@ export class ChangePresentations {
                 : {}),
             };
           });
-          await this.options.onPrepared?.(taskId, story.head, branch);
           return revision;
         },
         staged.assets,
@@ -776,7 +773,6 @@ export class ChangePresentations {
         ...this.required(old),
         revisions: [...this.required(old).revisions, story],
       }));
-      await this.options.onPrepared?.(taskId, story.head, branch);
       return story.revision;
     });
   }

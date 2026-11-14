@@ -24,7 +24,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | automation | automatisation | The Settings section and each scheduled prompt in it; feminine ("créée par votre second"). |
 | backlog | réserve | A plain word for tasks waiting for your Start. |
 | batch (your approved changes, combined) | lot | Masculine; "groupée" stays the adjective of the pull request and its check. |
-| batched pull request / queue | demande de tirage groupée / file | "la file de votre projet". |
+| batched pull request | demande de tirage groupée | |
 | branch | branche | |
 | bring up to date | mettre à jour | "l’aura mise à jour"; never "rebaser" and never "conflit". |
 | built in place | construit sur place | |
@@ -67,7 +67,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
 | Intelligence | Intelligence | |
-| issue (where the project lives) | ticket | The queue's pause issue: "Ouvrir le ticket". |
+| issue (where the project lives) | ticket | |
 | join (the phone joins a computer) | rejoindre | "Rejoindre votre ordinateur"; "In reach" is "À portée". |
 | key (an integration's key) | clé | "clé Linear"; also "clé de récupération" for Secrets. |
 | keyboard key / shortcut | touche / raccourci | "Reset All Keys" is "Réinitialiser tous les raccourcis", because it resets shortcuts. |

@@ -53,7 +53,7 @@ export const taskChannels = {
   // `inf:task:run`; every other write to a task happens by talking to the
   // Firstmate.
   // `{ closed: false }` reads it without the closed rows, the first read a
-  // view makes when it comes back (`board-without-closed.md`).
+  // view makes when it comes back (`boardWithoutClosed`).
   "inf:tasks:board": {
     effect: "read",
     surface: "core",

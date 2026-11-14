@@ -451,3 +451,15 @@ Its account's registry row, under the provider id `google-antigravity`, and its 
 No row, chip, model, allowance or routing candidate comes from it, and the program's own sign-in is left as it was.
 A task that ran on it is refused a resume with the words that it ran on a subscription Infinitary no longer offers, and its waiting guidance stays on its record (`CrewSessions.retiredProviderOf`).
 Its pushed allowance readings stay in `pushed_quota`, and nothing reads them.
+
+## What the team queue left saved
+
+Infinitary no longer ships or reads a team queue in a project (`docs/forge.md`, "A project that still carries the team queue's files"), and what earlier builds saved for it stays where it is.
+No migration runs and no column is dropped: the project row's columns for the queue's workflows, answers, pause, waiting choice and key stay, and nothing reads them.
+One of them carries a new fact: `queue_offered` kept the queue version last offered, always 1 or more, and now holds 0 once the app has looked in the project for the queue's files (`RepoRegistry.teamQueueLooked`).
+The saved delivery `queue-pr`, a kept approval's wait on `queue`, and a task's `queueStatus` keep their names, since batches of the person's own write them.
+A task's saved mark of a version waiting for the queue, and a saved `answered` declaration, stay in the record as history, and nothing reads them.
+A wake of a removed kind that waited in the inbox when the app updated is served once as data the first mate cannot act on, and asks for nothing.
+A card an earlier build put up while a batched choice waited for a queue workflow comes down at the first start, with its reason.
+The Batched pull requests runbook's switch was saved under `queue` and is read under `batches` (`SettingsStore.getRunbookStates`), so a person who turned it off keeps it off; the saved row is rewritten the next time a switch changes.
+An older build that opens the profile again reads that 0 as a queue version it never offered, so it may offer its queue once more in such a project, and once the row is rewritten it finds its own switch absent, which means on.

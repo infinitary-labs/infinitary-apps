@@ -15,9 +15,9 @@ import {
   SETUP_CARD_WORDS as WORDS,
 } from "@shared/projectSetup";
 import {
+  BATCH_HOST_REFUSAL,
   deliveryChoices,
   opensPullRequest,
-  QUEUE_HOST_REFUSAL,
   type RepoPolicyPatch,
   type RepoSetupCheck,
   type RepoSetupSpec,
@@ -112,7 +112,7 @@ export class ProjectSetups {
         "This project is kept on this computer. Use Local merge until it lives somewhere else.",
       );
     if (delivery && !deliveryChoices(checked.host).includes(delivery))
-      throw new Error(QUEUE_HOST_REFUSAL);
+      throw new Error(BATCH_HOST_REFUSAL);
     const computers = runsHereOnly({ kind: "project", origin: checked.origin })
       ? []
       : this.options.devices().filter((device) => deviceRunsWork(device.kind));

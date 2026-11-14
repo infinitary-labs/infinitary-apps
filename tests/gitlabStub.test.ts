@@ -89,36 +89,6 @@ const states = (items: { name: string; state: string }[]) =>
 describe.each(["gitlab.com", "gitlab.example.com"])(
   "the GitLab stand-in on %s, through the app's forge",
   (host) => {
-    // The approved queue protocol writes trusted merge words before a waiting
-    // mark. Regression: the journeys' API lacked merge-request notes entirely.
-    it("queues approved words and reads their trusted revocation back", async () => {
-      const head = sha("meter head");
-      const { gitlab, forge } = await forgeOver(host, { [BRANCH]: head });
-      const change = await forge.openChange({ branch: BRANCH, title: TITLE, body: BODY });
-      if (change.number === undefined) throw new Error("GitLab did not number the opened change");
-      await forge.markQueued(head, {
-        number: change.number,
-        title: TITLE,
-        message: BODY,
-        naming: null,
-      });
-      expect(gitlab.statuses(head)).toMatchObject([{ status: "skipped" }]);
-      await forge.removeQueued(head, change.number);
-      expect(gitlab.statuses(head).at(-1)).toMatchObject({ status: "failed" });
-      const writes = () =>
-        gitlab
-          .requests()
-          .filter(
-            (line) =>
-              line ===
-              `POST /api/v4/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}/merge_requests/${change.number}/notes`,
-          );
-      expect(writes()).toHaveLength(2);
-      // A second read sees the persisted revocation rather than approving anew.
-      await forge.removeQueued(head, change.number);
-      expect(writes()).toHaveLength(2);
-    });
-
     // Approved contribution change: ordinary GitLab delivery stays available during discovery.
     it("lets contribution inspection read the ordinary GitLab project", async () => {
       const { forge } = await forgeOver(host, {});

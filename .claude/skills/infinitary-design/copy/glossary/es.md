@@ -66,7 +66,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Integrations, an integration | Integraciones, una integración | A Settings tab and each connection in it. |
 | Intelligence | Inteligencia | |
 | iOS Settings (the phone's own app) | Ajustes | Apple's name; the app's own Settings stays "Configuración". |
-| issue (where the project lives) | incidencia | The queue's pause issue: "Abrir la incidencia". |
+| issue (where the project lives) | incidencia | |
 | join (the phone joins a computer) | unirse a | "Unirse a tu computadora", "Volver a unirse". |
 | key (an integration's key) | clave | "clave de API" where the provider calls it that. |
 | key (on the keyboard) | tecla | |
@@ -79,7 +79,6 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | machine, server, host (never said) | computadora, por su nombre | "this machine" in the voice consent reads "esta computadora". |
 | main message | mensaje principal | |
 | merge | fusionar, fusión | GitHub's Spanish docs say "fusionar una solicitud de incorporación de cambios"; the noun is "fusión" ("Tu fusión queda pendiente"). |
-| merge queue, the project's queue | la cola de tu proyecto | GitHub's Spanish docs call it "cola de fusión"; the batch check is "la comprobación del lote". |
 | Merges on its own / Asks first | Fusiona por su cuenta / Pregunta antes | |
 | message box | cuadro de mensaje | |
 | model | modelo | |

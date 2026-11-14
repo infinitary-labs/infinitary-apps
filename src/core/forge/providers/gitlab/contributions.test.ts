@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { QUEUE_STATUS } from "../../forge";
+import { BATCH_CHECK } from "../../forge";
 import { GitLabForge } from "./gitlabForge";
 
 /** Approved change D: GitLab contributions use a verified personal fork and an upstream target. */
@@ -185,7 +185,7 @@ describe("approved fork contribution route on GitLab", () => {
     response.set(`/projects/${fork.id}/pipelines?sha=${head}&per_page=100`, []);
     response.set(`/projects/${fork.id}/pipelines/${pipeline.id}/jobs?per_page=100&page=1`, [job]);
     response.set(
-      `/projects/examples%2Fhello/repository/commits/${head}/statuses?name=${encodeURIComponent(QUEUE_STATUS)}&all=true&per_page=100`,
+      `/projects/examples%2Fhello/repository/commits/${head}/statuses?name=${encodeURIComponent(BATCH_CHECK)}&all=true&per_page=100`,
       [],
     );
     const checks = await forge.checks({
@@ -200,25 +200,10 @@ describe("approved fork contribution route on GitLab", () => {
     );
   });
 
-  it("cannot merge or change the maintainers' queue through a source-bound provider", async () => {
+  it("cannot merge through a source-bound provider", async () => {
     const { forge, calls } = fixture(true);
     const change = { branch: "contribute/fix", number: 12, url: null, headSha: head };
     await expect(forge.putIn(change, head)).rejects.toMatchObject({ failure: "permission" });
-    await expect(forge.markQueued(head)).rejects.toMatchObject({ failure: "permission" });
-    // Contribution refusal precedes the queue's approval note as well as its status write.
-    await expect(
-      forge.markQueued(head, {
-        number: change.number,
-        title: "fix: contribute an example",
-        naming: null,
-      }),
-    ).rejects.toMatchObject({ failure: "permission" });
-    await expect(forge.removeQueued(head, change.number)).rejects.toMatchObject({
-      failure: "permission",
-    });
-    await expect(forge.startQueue({ action: "form" })).rejects.toMatchObject({
-      failure: "permission",
-    });
     expect(calls).toEqual([]);
   });
 });

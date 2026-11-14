@@ -595,7 +595,7 @@ export class ChangePublication {
       // change that already has a pull request, targets another branch or
       // publishes a draft for its validation keeps its own.
       if (own && !existing && usesStory && !prerequisite && !input.base) {
-        const batched = await this.context.resolveOwnBatch(taskId);
+        const batched = this.context.ownBatch(taskId);
         if (batched) {
           if (input.around) return BATCH_OPEN_WORDS.around;
           const confirmed = await presentations.confirmBranch(

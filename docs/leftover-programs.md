@@ -38,7 +38,7 @@ Each computer lists what its finished tasks left (`LeftBehindHere.list`): the ke
 A task counts as finished there only once its close has finished its own cleanup (`LeftoverPrograms.sweeping` here, `LeftBehindHere.sweep` around the close order on a computer that runs work), so nothing the close is about to end is listed.
 Only the stops command's own `left`, read by a cleanup look on that computer, carries each kept stop's command; the order and the notices never do.
 A program the process table cannot be read for is left out, never guessed alive.
-A computer that runs work answers the list through `inf:computer:left-behind` when it lists the `left-behind` contract change; the home keeps only the tasks it records as finished and names each by its key (`src/core/placed/leftBehindNotices.ts`).
+A computer that runs work answers the list through `inf:computer:left-behind`; the home keeps only the tasks it records as finished and names each by its key (`src/core/placed/leftBehindNotices.ts`).
 The pressure notice and the line-blocked notice carry that list (`docs/heavy-runs.md`, "Capacity and pressure").
 A close that kept a file marks its report on the timeline (`leftoversKeptInFile`); once a list read for a notice shows that task keeps nothing there any more, the home marks the report resolved, so later notices and their Activity line stop naming it (`resolveClearedLeftovers`, `src/core/placed/pressureLeftovers.ts`).
 A report from a close that kept no file stays as it was.
@@ -68,7 +68,7 @@ Stops kept in a task's folder here run at its close here whatever computer it ra
 
 ## On a computer that runs work
 
-A computer that lists the `task-stops` contract change gives its crewmates the command (the placed spec's `stops`) and keeps their stops in each task's folder there.
+A computer that runs work gives its crewmates the command (the placed spec's `stops`) and keeps their stops in each task's folder there.
 Its close order, `inf:session:close`, runs the same sweep there once the conversation, its shell commands and its task channel have closed, and before the home retires the working copy or removes the temporary folder, which both follow that order.
 The home names the task that carries the work on when it runs on that same computer (`carriedTo`) and when the task started (`startedAt`), and the order's answer carries the report (`leftovers`), which the home writes on the task's timeline once (`PlacedSessions.closeThere`).
 Every close order the home sends goes through that one sender: the close of a closed task, the close before a task's working copy there is retired after it moved off that computer (`PlacedCopies.retireMoved`), and the close of a leftover a computer holds for a task the home no longer records there (`PlacedCopies.retireLeftover`).

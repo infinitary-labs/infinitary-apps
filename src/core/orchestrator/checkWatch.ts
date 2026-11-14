@@ -1,13 +1,11 @@
-import { allowanceResetOf, isRedCheckState, QUEUE_STATUS } from "../forge";
+import { allowanceResetOf, BATCH_CHECK, isRedCheckState } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
 import type { CiWatch, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import {
   type CoveredFailure,
-  candidateHead,
   coveredNextStep,
   coveringApproval,
-  failedBatchOf,
   keptApprovalLine,
 } from "./mergeAuthorization";
 import type { TypedWake, WakeFacts } from "./wakes";
@@ -103,10 +101,10 @@ export type WatchedReading =
       /** Red checks seen while others still run. Absent when none are red. */
       failing?: WatchedCheck[];
       /**
-       * The version still waits on the project's queue after the app's mark:
-       * what the app read about that queue, for the bound's wake.
+       * The version still waits in the project's batch: what the app knows
+       * of that batch, for the bound's wake.
        */
-      queue?: string;
+      batch?: string;
     }
   | {
       kind: "finished";
@@ -326,8 +324,8 @@ export class CheckWatcher {
     const failure: CoveredFailure =
       red.length === 0
         ? "none"
-        : red.some((check) => check.name === QUEUE_STATUS)
-          ? failedBatchOf(record?.delivery, candidateHead(kept))
+        : red.some((check) => check.name === BATCH_CHECK)
+          ? "batch"
           : "checks";
     return { ...facts, approval: `${keptApprovalLine(kept)} ${coveredNextStep(kept, failure)}` };
   }
@@ -408,7 +406,7 @@ export class CheckWatcher {
               head: read.head,
               checks: read.pending,
               waitedMs: now - current.since,
-              ...(read.queue ? { queue: read.queue } : {}),
+              ...(read.batch ? { batch: read.batch } : {}),
             },
             read.observationId,
           );

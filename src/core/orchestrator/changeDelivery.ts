@@ -6,7 +6,6 @@ import { CheckChangeTool } from "./checkChangeTool";
 import { DraftReadiness } from "./draftReadiness";
 import { MergeCardSteps } from "./mergeCardSteps";
 import { MergeReviews } from "./mergeReviews";
-import { ProjectQueue } from "./projectQueue";
 import type { SettleServiceHost } from "./settleHost";
 
 /**
@@ -24,17 +23,13 @@ export type ChangeDelivery = {
   publication: ChangePublication;
   /** show_merge_card's steps up to the card: the story, the push, the proof and the publication. */
   mergeCard: MergeCardSteps;
-  /** A project's queue facts: its workflows read, and when its queue answered. */
-  queue: ProjectQueue;
 };
 
 export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDelivery {
   const context = new ChangeContext(options);
   const readiness = new DraftReadiness(context);
-  const queue = new ProjectQueue(options);
-  context.readQueueFiles = (repoId) => queue.readWorkflows(repoId);
-  const checks = new ChangeChecks(context, readiness, queue);
-  const merges = new ChangeMerge(context, checks, queue);
+  const checks = new ChangeChecks(context, readiness);
+  const merges = new ChangeMerge(context, checks);
   const reviews = new MergeReviews(context, checks, merges);
   const publication = new ChangePublication(context, checks, readiness);
   return {
@@ -49,6 +44,5 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
     checkTool: new CheckChangeTool(context, checks, reviews),
     publication,
     mergeCard: new MergeCardSteps(context, publication),
-    queue,
   };
 }

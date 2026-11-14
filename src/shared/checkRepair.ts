@@ -146,11 +146,10 @@ export type MergeGuidanceDeclaration = {
 
 /**
  * Evidence-backed flake and repair settlement judgments remain crew-owned.
- * `answered` is the crewmate's answer to the project's queue failing or
- * sending back this exact version (INF-3190): it judged that nothing is left
- * to change there, such as a send-back written on a version that already
- * holds the fix, so the kept approval marks the version waiting again once
- * (docs/forge.md, "A project's queue").
+ * So does `answered`, the crewmate's answer to the host's own merge queue
+ * removing this exact version: it judged that nothing is left to change
+ * there, so the kept approval sends the version to that queue once more
+ * (docs/forge.md, "The host's merge queue").
  */
 export const CHECK_DECLARATION_VERDICTS = ["flake", "settled", "answered"] as const;
 
@@ -263,30 +262,6 @@ export type CheckRepairLedger = {
   })[];
   rerun?: CheckRerun;
 };
-
-/**
- * The crewmate's answer to the queue's failure at `headSha` that no mark
- * spent yet (INF-3190): one declared at that version after the app last
- * marked it waiting, so each answer puts the version back once and a later
- * failure there needs a new one.
- */
-export function queueAnswer(
-  delivery:
-    | { ciRepair?: CheckRepairLedger; queueMark?: { head: string; at: number } }
-    | null
-    | undefined,
-  headSha: string,
-): (CheckDeclaration & { at: number }) | undefined {
-  const marked = delivery?.queueMark?.head === headSha ? delivery.queueMark.at : undefined;
-  const answer = delivery?.ciRepair?.declarations?.findLast(
-    (entry) =>
-      (entry.kind === undefined || entry.kind === "verdict") &&
-      entry.verdict === "answered" &&
-      entry.headSha === headSha &&
-      (marked === undefined || entry.at > marked),
-  );
-  return answer as (CheckDeclaration & { at: number }) | undefined;
-}
 
 /**
  * The crewmate's answer at `headSha` to the host's own merge queue removing

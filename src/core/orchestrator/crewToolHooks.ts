@@ -448,8 +448,7 @@ export class CrewToolHooks {
     const canPrepare =
       machine === LOCAL_MACHINE_ID ||
       this.core.options.machines?.takesChangePresentations?.(machine);
-    // A computer that runs work on an older version keeps the three calls
-    // until it lists the change (`show-merge-card.md`).
+    // A computer that takes no current work keeps the three calls (`major-16.md`).
     const canShowMergeCard =
       machine === LOCAL_MACHINE_ID || this.core.options.machines?.takesMergeCardCall?.(machine);
     return {

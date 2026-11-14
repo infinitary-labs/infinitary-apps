@@ -25,7 +25,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Automation | الأتمتة | |
 | backlog | قائمة المهام المؤجلة | |
 | batch (your approved changes, combined) | الدفعة | As in "فحص الدفعة"; feminine, so a held batch is "معلّقة". |
-| batch / batch run (the queue's) | دفعة / تشغيل الدفعة | Matches "طلب سحب مجمّع" and "فحص الدفعة". |
+| batch / batch run | دفعة / تشغيل الدفعة | Matches "طلب سحب مجمّع" and "فحص الدفعة". |
 | board (task board) | لوح المهام | "لوح" kept apart from "لوحة" (panel). |
 | branch | فرع | "الفرع الرئيسي" for the main branch. |
 | bring up to date | تحديثه بآخر التغييرات | Said in place of rebase; neither rebase nor conflict is named as a term. |
@@ -108,7 +108,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | pull request | طلب سحب | The term Arabic Git and GitHub material uses; masculine. |
 | purge (task data) | محو | Stronger than "حذف", for removing every task at once; "مُحيت" for "purged". |
 | push | دفع | "دُفع الفرع" for "Pushed the branch". |
-| queued | في قائمة الانتظار | The batch queue of a project is "طابور مشروعك". |
+| queued | في قائمة الانتظار | |
 | Quick | سريع | |
 | quota, rate limit (never said) | رصيد باقتك | "حصة" appears only as an extra search word. |
 | rail | شريط | Only in search words ("أشرطة"), for the side column of panels. |

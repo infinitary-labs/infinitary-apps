@@ -8,7 +8,7 @@ import {
   type BatchStatus,
   type OpenBatch,
 } from "@shared/batches";
-import { QUEUE_WAITING_WORDS } from "../forge";
+import { BATCH_WAITING_WORDS } from "../forge";
 import type { Combined } from "./combine";
 
 /**
@@ -74,7 +74,7 @@ export function batchStatus(place: Standing): BatchStatus {
       return { kind: "failed", words: BATCH_STATUS_WORDS.leftOut(place.reason) };
     case "waiting":
       return place.place === "line"
-        ? { kind: "waiting", words: QUEUE_WAITING_WORDS }
+        ? { kind: "waiting", words: BATCH_WAITING_WORDS }
         : place.place === "held"
           ? {
               kind: "paused",

@@ -29,9 +29,7 @@ export const risk = Object.fromEntries(
     { level: "low", why: `The ${dimension} assessment for this fixture.` },
   ]),
 ) as RiskDeclaration;
-export async function arrange(
-  onPrepared?: (taskId: string, head: string, branch?: string) => Promise<void>,
-) {
+export async function arrange() {
   const root = scratchDir("infinitary-presentation-");
   const media = join(root, "cards");
   const worktree = join(root, "work");
@@ -154,7 +152,6 @@ export async function arrange(
       tasks,
       mediaDir: () => media,
       head: readHead,
-      onPrepared,
       mapPart: () => runbooks.mapPart(),
       namingRule: () => runbooks.naming(),
     });

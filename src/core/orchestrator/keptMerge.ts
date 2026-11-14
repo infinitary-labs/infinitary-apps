@@ -93,11 +93,10 @@ export class KeptMerge {
       );
       if (!result.ok) {
         const kept = approved ? this.approvals.afterAttempt(taskId, approved, result) : undefined;
-        const queueWarning = kept ? this.approvals.queueWarning(taskId, kept.wait) : undefined;
         const outcome = kept
           ? {
               ...result,
-              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), queueWarning, this.approvals.queueOwnsMerge(taskId))}`,
+              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.batchWarning(taskId, kept.wait))}`,
             }
           : result;
         if (kept?.changed && unattended)
@@ -109,16 +108,10 @@ export class KeptMerge {
               kept.wait,
               placeOf(this.host.repos, record, ""),
               currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
-              this.approvals.queueOwnsMerge(taskId),
             ),
           );
         }
-        if (
-          !unattended &&
-          review &&
-          kept?.wait !== "host-queue" &&
-          (kept?.wait !== "queue" || queueWarning !== undefined)
-        )
+        if (!unattended && review && kept?.wait !== "host-queue" && kept?.wait !== "queue")
           this.host.mergeContinued?.(taskId, review, outcome);
         return outcome;
       }
@@ -207,7 +200,6 @@ export class KeptMerge {
               checked.wait,
               placeOf(this.host.repos, record),
               currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
-              this.approvals.queueOwnsMerge(taskId),
             ),
           },
           checked.wait,
@@ -280,8 +272,7 @@ export class KeptMerge {
         ? { data: { problem: result.problem ?? result.plain } }
         : {}),
     });
-    const queueWarning = this.approvals.queueWarning(taskId, wait);
-    if (!wakesFirstmate(wait) && (wait !== "queue" || queueWarning === undefined)) return;
+    if (!wakesFirstmate(wait)) return;
     const record = this.host.tasks.get(taskId);
     const place = placeOf(this.host.repos, record);
     this.settle.settleLine(
@@ -290,7 +281,6 @@ export class KeptMerge {
         wait,
         placeOf(this.host.repos, record, ""),
         currentCheckStatus(record?.delivery),
-        this.approvals.queueOwnsMerge(taskId),
       ),
     );
     this.settle.wakeOnSettle(
@@ -299,7 +289,7 @@ export class KeptMerge {
       "merge-pr (kept)",
       {
         ...result,
-        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), queueWarning, this.approvals.queueOwnsMerge(taskId))}`,
+        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), this.approvals.batchWarning(taskId, wait))}`,
       },
       [],
       standingAuthorization(record?.delivery)?.issuer !== "autonomy",

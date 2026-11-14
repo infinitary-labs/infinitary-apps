@@ -4,7 +4,7 @@
  * "Capacity and pressure"): the first mate hears once per run that a
  * finished task's run still counts as running while another waits, both
  * notices carry the computer's list, and the home asks a computer that runs
- * work for its list only when it lists the change.
+ * work for its list only while it takes work on the home's own major.
  */
 
 import type { LeftBehind } from "@shared/leftoverPrograms";
@@ -159,13 +159,13 @@ describe("a finished task's run blocking a computer's line", () => {
 });
 
 describe("a computer's list as the home reads it", () => {
-  const work = (changes: string[] | undefined, inReach = true) => {
+  const work = (takesCurrentWork: boolean, inReach = true) => {
     const asked: string[] = [];
     return {
       asked,
       work: {
         inReach: () => inReach,
-        version: () => (changes ? { changes } : undefined),
+        takesCurrentWork: () => takesCurrentWork,
         ask: async (_deviceId: string, channel: string) => {
           asked.push(channel);
           return LIST;
@@ -174,8 +174,8 @@ describe("a computer's list as the home reads it", () => {
     };
   };
 
-  it("asks a computer that lists the change, keeping only tasks this home records as finished", async () => {
-    const { work: devices, asked } = work(["left-behind"]);
+  it("asks a computer that takes this major's work, keeping only tasks this home records as finished", async () => {
+    const { work: devices, asked } = work(true);
     const resolved: [string | null, readonly string[]][] = [];
     const read = leftBehindReader({
       here: { list: async () => ({ stops: [], programs: [], runs: [], kept: [] }) },
@@ -195,8 +195,8 @@ describe("a computer's list as the home reads it", () => {
     expect(resolved).toEqual([["mini", [FINISHED, OPEN]]]);
   });
 
-  it("asks nothing of a computer without the change or out of reach", async () => {
-    for (const { work: devices, asked } of [work(undefined), work(["left-behind"], false)]) {
+  it("asks nothing of a computer on another major or out of reach", async () => {
+    for (const { work: devices, asked } of [work(false), work(true, false)]) {
       const read = leftBehindReader({
         here: { list: async () => LIST },
         work: devices as never,
@@ -208,7 +208,7 @@ describe("a computer's list as the home reads it", () => {
   });
 
   it("reads this home's own list without asking a computer", async () => {
-    const { work: devices, asked } = work(["left-behind"]);
+    const { work: devices, asked } = work(true);
     const read = leftBehindReader({
       here: { list: async () => LIST },
       work: devices as never,

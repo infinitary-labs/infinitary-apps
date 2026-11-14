@@ -6,13 +6,17 @@ import {
   EVERY_VIEW_ASKS,
   PANELS_IN_EVERY_WINDOW,
 } from "@core/connection/connection";
-import { contractChange, listsChange } from "@core/connection/contractChanges";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications } from "@core/host";
 import { SIGN_IN_RETURN } from "@core/signInReturns";
 import type { UpdateChecker } from "@core/update/updateChecker";
-import { homeHearsWhileReading, sideToUpdate } from "@shared/contractFeatures";
+import {
+  type FoldedInto16,
+  hasSince16,
+  homeHearsWhileReading,
+  sideToUpdate,
+} from "@shared/contractFeatures";
 import { HERE, HOME } from "@shared/deviceNames";
 import { splitDialAddress, type ThisMac } from "@shared/devices";
 import {
@@ -63,7 +67,7 @@ import { ViewNotices } from "./viewNotices";
 /**
  * The pushes a view shows, with what its Settings follow: a sign-in's steps,
  * the sign-ins where projects live, integrations, Diagnostics, and the
- * computers and phones with their sign-ins (`devices-from-a-view.md`). The
+ * computers and phones with their sign-ins (`DEVICES_FROM_A_VIEW`). The
  * rest are the other Mac's own: its look, voice and panels.
  */
 export const VIEW_PUSHES: ReadonlySet<PushChannel> = new Set<PushChannel>([
@@ -186,7 +190,7 @@ export class ViewBackend {
     );
     this.browsers = new BrowserWatches(
       (channel, args) => this.link.invoke(channel, args),
-      () => this.browserWaitsThere(),
+      () => this.homeLacks(BROWSER_FROM_ANY_VIEW),
     );
     const open = options.link ?? ((linkOptions) => new HomeLink(linkOptions));
     this.link = open({
@@ -212,9 +216,9 @@ export class ViewBackend {
       },
       onLive: (channel, payload) => {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
-        // A streamed reply piece or a tool's start or end (`streamed-events-live.md`).
+        // A streamed reply piece or a tool's start or end, outside the numbering.
         if (channel === "inf:event") options.broadcast("inf:event", payload);
-        // The computers' live readings (`computer-readings-live.md`).
+        // The computers' live readings, outside the numbering.
         if (channel === "inf:computers:resources")
           options.broadcast("inf:computers:resources", payload);
       },
@@ -269,16 +273,10 @@ export class ViewBackend {
       heardAt: state.heardAt,
       caughtUp: this.caughtUp,
       ...(this.record.grant.kind === "mac" ? { runsWork: true } : {}),
-      ...(state.homeChanges !== null && !listsChange(state.homeChanges, EVERY_VIEW_ASKS)
-        ? { needsUpdateThere: true as const }
-        : {}),
-      ...(this.browserWaitsThere() ? { browserNeedsUpdateThere: true as const } : {}),
-      ...(state.homeChanges !== null && !listsChange(state.homeChanges, DEVICES_FROM_A_VIEW)
-        ? { devicesNeedUpdateThere: true as const }
-        : {}),
-      ...(state.homeChanges !== null && !listsChange(state.homeChanges, SIGN_IN_RETURN)
-        ? { returnsNeedUpdateThere: true as const }
-        : {}),
+      ...(this.homeLacks(EVERY_VIEW_ASKS) ? { needsUpdateThere: true as const } : {}),
+      ...(this.homeLacks(BROWSER_FROM_ANY_VIEW) ? { browserNeedsUpdateThere: true as const } : {}),
+      ...(this.homeLacks(DEVICES_FROM_A_VIEW) ? { devicesNeedUpdateThere: true as const } : {}),
+      ...(this.homeLacks(SIGN_IN_RETURN) ? { returnsNeedUpdateThere: true as const } : {}),
       ...(this.signInReturn
         ? { signInReturn: { id: this.signInReturn.id, caught: this.signInReturn.caught } }
         : {}),
@@ -308,7 +306,7 @@ export class ViewBackend {
       commandInput &&
       typeof commandInput === "object" &&
       "tokenCommand" in commandInput &&
-      !listsChange(this.link.state().homeChanges, contractChange("custom-token-command"))
+      !this.homeHas("custom-token-command")
     )
       throw new Error(`Update Infinitary on ${HOME.the} before saving a token command.`);
     // The window's preload reads the answer against the contract, as it reads this Mac's own,
@@ -388,10 +386,19 @@ export class ViewBackend {
     this.link.close();
   }
 
-  /** A first mate there that is known not to show its task's browsers to a view. */
-  private browserWaitsThere(): boolean {
-    const changes = this.link.state().homeChanges;
-    return changes !== null && !listsChange(changes, BROWSER_FROM_ANY_VIEW);
+  /**
+   * Whether the first mate there has an addition major 16 folded in: it
+   * speaks that major, or it is on major 15 and lists the addition's name
+   * (`hasSince16`). False before any welcome.
+   */
+  private homeHas(name: FoldedInto16): boolean {
+    const state = this.link.state();
+    return hasSince16(state.homeVersion, state.homeChanges, name);
+  }
+
+  /** A first mate there that is known, from its welcome, not to have such an addition. */
+  private homeLacks(name: FoldedInto16): boolean {
+    return this.link.state().homeChanges !== null && !this.homeHas(name);
   }
 
   private async ownLook(channel: CoreInvokeChannel, rawArgs: unknown[]): Promise<unknown> {
@@ -517,7 +524,7 @@ export class ViewBackend {
    * yet leaves them off here, as before.
    */
   private async readPanels(): Promise<void> {
-    if (!listsChange(this.link.state().homeChanges, PANELS_IN_EVERY_WINDOW)) {
+    if (!this.homeHas(PANELS_IN_EVERY_WINDOW)) {
       this.look.heardPanels(null);
       return;
     }
@@ -536,7 +543,7 @@ export class ViewBackend {
    * gone, when closing refuses the seed.
    */
   private heardPanels(payload: unknown): void {
-    if (!listsChange(this.link.state().homeChanges, PANELS_IN_EVERY_WINDOW)) return;
+    if (!this.homeHas(PANELS_IN_EVERY_WINDOW)) return;
     const heard = shellPreferencesSchema.safeParse(payload);
     if (!heard.success) return;
     const { panels } = heard.data;

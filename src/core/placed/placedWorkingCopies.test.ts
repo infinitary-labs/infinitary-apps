@@ -32,7 +32,6 @@ import {
 } from "../../../tests/helpers/placedWorld";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
-import { contractChange } from "../connection/contractChanges";
 import { pathsOf } from "../folderMove/due";
 import { rewriteDatabases } from "../folderMove/rewrite";
 import { PlacedTasks } from "../helper/placedTasks";
@@ -469,19 +468,8 @@ describe("a task that runs on a computer that runs work", () => {
     await git(here, ["push", "--quiet"]);
     const branch = home.tasks.get("t-fork-move")?.branch ?? "";
     expect(await git(fork, ["rev-parse", `refs/heads/${branch}`])).toBe(first);
-    // The old receiver must refuse before examining or uploading even a missing pack.
-    const readVersion = home.devices.version.bind(home.devices);
-    const version = vi.spyOn(home.devices, "version").mockImplementation((id) => {
-      const value = readVersion(id);
-      return (
-        value && {
-          ...value,
-          changes: value.changes?.filter(
-            (change) => change !== contractChange("fork-contributions"),
-          ),
-        }
-      );
-    });
+    // A receiver on another contract major is refused before examining or uploading even a missing pack.
+    const version = vi.spyOn(home.devices, "takesCurrentWork").mockReturnValue(false);
     try {
       await expect(
         home.placed.moveIn(at.deviceId, "t-fork-move", "unsupported", {

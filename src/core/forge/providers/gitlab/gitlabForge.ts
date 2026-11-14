@@ -2,7 +2,6 @@ import type { MergeWay, MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
-import type { QueueCredential } from "@shared/repos";
 import { requireNamed } from "../../../workspace/naming";
 import type { ForgeApi } from "../../api";
 import {
@@ -14,22 +13,16 @@ import {
   ForgeError,
   type ForgeLocation,
   type ForgePull,
-  type ForgeQueueApproval,
-  type ForgeQueueMark,
-  type ForgeQueuePause,
-  type ForgeQueueStart,
   type ForgeReadiness,
   ForgeWriteError,
   isFullCommitId,
-  QUEUE_STATUS,
-  type QueueWorkflow,
+  type TeamQueueLeftovers,
 } from "../../forge";
 import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
 import { GitLabAttachments, gitlabStoryDestination } from "./attachments";
 import { GITLAB_READ_MAX_BYTES, GitLabClient, type GitLabOptions } from "./client";
 import { GitLabContributions } from "./contributions";
 import { GitLabProjects } from "./projects";
-import { GitLabQueue } from "./queue";
 import { GitLabWorkflows } from "./workflows";
 
 /**
@@ -111,6 +104,16 @@ const MAX_JOB_PAGES = 5;
 /** The most merged-result commits one reading opens to find the head among their parents. */
 const MAX_MERGE_COMMIT_READS = 6;
 
+/**
+ * Where the team queue the app once shipped kept its files in a project on
+ * GitLab, by folder: the queue's and the batch's CI files with the project's
+ * batch checks they ran, and its scripts.
+ */
+const TEAM_QUEUE_FILES: Record<string, readonly string[]> = {
+  ".gitlab": ["infinitary-queue.yml", "infinitary-batch.yml", "infinitary-batch-checks.yml"],
+  ".gitlab/infinitary": ["compose.sh", "rules.mjs", "message.mjs", "gitlab.mjs", "gitlab-cli.mjs"],
+};
+
 /** A merge request's own refs: its head, its merged result, its merge train. */
 const MERGE_REQUEST_REF = /^refs\/merge-requests\/(\d+)\/(head|merge|train)$/;
 
@@ -129,10 +132,6 @@ export class GitLabForge implements Forge {
   readonly attachments?: GitLabAttachments;
   private readonly client: GitLabClient;
   private readonly projects: GitLabProjects;
-  /** The shipped queue's GitLab part, with the person's own sign-in. */
-  private readonly queue: GitLabQueue;
-  /** GitLab starts nothing on a status: the app starts the queue after each mark. */
-  readonly markStartsQueue = false;
 
   constructor(
     readonly location: ForgeLocation,
@@ -143,7 +142,6 @@ export class GitLabForge implements Forge {
     this.client = new GitLabClient(this.host, options);
     this.projects = new GitLabProjects(this.host, options);
     this.workflows = new GitLabWorkflows(this.client, () => this.projectPath());
-    this.queue = new GitLabQueue(this.client, this.place, () => this.projectPath());
     const project = location.owner && location.name ? `${location.owner}/${location.name}` : null;
     this.api = {
       place: this.place,
@@ -340,45 +338,10 @@ export class GitLabForge implements Forge {
         MAX_MERGE_COMMIT_READS;
     for (const pipeline of counted) {
       const read = await this.pipelineChecks(pipeline, counted.length > 1);
-      items.push(...read.items.filter((item) => !isQueueItem(item.name)));
+      items.push(...read.items);
       complete &&= read.complete;
     }
-    // The queue status is read on its own: its waiting is a finished
-    // `skipped` there, which a pipeline's reading would count as passed.
-    const queue = await this.queue.check(head);
-    if (queue) items.push(queue);
     return { items, complete };
-  }
-
-  async markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
-    this.requireMaintainer();
-    return this.queue.markQueued(sha, approval);
-  }
-
-  async removeQueued(sha: string, number: number): Promise<void> {
-    this.requireMaintainer();
-    return this.queue.removeQueued(sha, number);
-  }
-
-  queueWorkflows(options?: { all?: boolean }): Promise<QueueWorkflow[]> {
-    return this.queue.workflows(options);
-  }
-
-  queuePause(): Promise<ForgeQueuePause | null> {
-    return this.queue.pause();
-  }
-
-  async startQueue(start: ForgeQueueStart): Promise<void> {
-    this.requireMaintainer();
-    return this.queue.start(start);
-  }
-
-  queueCredential(): Promise<QueueCredential> {
-    return this.queue.credential();
-  }
-
-  createQueueCredential(): Promise<QueueCredential> {
-    return this.queue.createCredential();
   }
 
   /**
@@ -568,6 +531,31 @@ export class GitLabForge implements Forge {
     return { squash: option !== "never", rebase: false, merge: option !== "always" };
   }
 
+  async teamQueueLeftovers(): Promise<TeamQueueLeftovers> {
+    const branch = await this.defaultBranch();
+    const files: string[] = [];
+    for (const [folder, names] of Object.entries(TEAM_QUEUE_FILES)) {
+      let listed: { name?: string; type?: string }[] | null;
+      try {
+        listed = (await this.read(
+          `${this.projectPath()}/repository/tree?path=${encodeURIComponent(folder)}&ref=${encodeURIComponent(branch)}&per_page=100`,
+        )) as { name?: string; type?: string }[] | null;
+      } catch (caught) {
+        if (
+          caught instanceof ForgeError &&
+          (caught.failure === "not-found" || caught.failure === "permission")
+        )
+          continue;
+        throw caught;
+      }
+      if (!Array.isArray(listed)) continue;
+      for (const name of names)
+        if (listed.some((entry) => entry.type === "blob" && entry.name === name))
+          files.push(`${folder}/${name}`);
+    }
+    return { files };
+  }
+
   async deleteBranch(branch: string): Promise<void> {
     try {
       await this.client.request(
@@ -745,11 +733,6 @@ function sameProject(request: MergeRequestJson): boolean {
     request.source_project_id !== undefined &&
     request.source_project_id === request.target_project_id
   );
-}
-
-/** A pipeline job that is the queue status, as GitLab may list it, alone or named with its pipeline. */
-function isQueueItem(name: string): boolean {
-  return name === QUEUE_STATUS || name.startsWith(`${QUEUE_STATUS} [`);
 }
 
 function numbered(change: ForgeChange, place: string): number {

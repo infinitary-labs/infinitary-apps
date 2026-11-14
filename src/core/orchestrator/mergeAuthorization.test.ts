@@ -124,22 +124,15 @@ describe("a repair's declared impact (INF-493)", () => {
 
 // Captain INF-1555 F12: the offer carries readiness; a checks hold names only checks.
 describe("kept merge check words", () => {
-  // Reviewer F8: the captain's wait and the first mate's note name the actual merger.
-  it.each([true, false])(
-    "names only the actual merger in kept waits (queue-owned: %s)",
-    (owned) => {
-      const feed = keptFeedLine("queue", "GitHub", undefined, owned);
-      const note = keptNote("queue", "feedbeef", "GitHub", undefined, undefined, owned);
-      expect(feed).toContain(owned ? "Your project's queue will merge" : "The app will merge");
-      expect(note).toContain(
-        owned
-          ? "the app observes its receipt"
-          : "The app merges after the project's queue passes this version",
-      );
-      expect(feed).not.toContain("older");
-      expect(note).not.toContain("Updated shipped");
-    },
-  );
+  // The captain's wait and the first mate's note name the batch as the merger.
+  it("names the batch a kept merge waits in", () => {
+    expect(keptFeedLine("queue", "GitHub")).toBe(
+      "Waiting for the batch check: this version merges with your other approved changes, as one batch pull request. Your merge is kept. The app merges the batch after its checks pass.",
+    );
+    expect(keptNote("queue", "feedbeef", "GitHub")).toContain(
+      "feedbeef is in line for one batch pull request, as one commit of its own, and the host merges that pull request once its checks pass",
+    );
+  });
 
   // Captain F20/F27: a failed check waits for a fix, not merely another passing read.
   it("names the fix and its fresh-check consequences after failed checks", () => {
@@ -152,16 +145,13 @@ describe("kept merge check words", () => {
     expect(keptNote("checks", "feedbeef", "GitHub", "red")).not.toContain("Merge anyway");
   });
 
-  // INF-3208: a failed batch check is what holds the kept approval, and no
-  // checks override passes the queue, so the first mate offers no Merge
-  // anyway and hears what clears it.
-  it("tells the first mate a failed batch check takes a fix or the crewmate's answer, never Merge anyway", () => {
+  // INF-3208: a failed batch is what holds the kept approval, and no checks
+  // override passes a batch, so the first mate offers no Merge anyway and
+  // hears what clears it before the ordinary repair words.
+  it("tells the first mate a failed batch takes a fix in a new version, never Merge anyway", () => {
     const note = keptNote("checks", "feedbeef", "GitHub", "red", FAILED_BATCH_NOTE);
     expect(note).toContain("the checks failed and the merge waits for a fix");
-    expect(note).toContain(
-      "No checks override passes the queue, so never offer or ask for Merge anyway on it",
-    );
-    expect(note).toContain("check_change's answered verdict");
+    expect(note).toContain(FAILED_BATCH_NOTE);
     expect(note.indexOf(FAILED_BATCH_NOTE)).toBeLessThan(note.indexOf("conflictRepair"));
   });
 

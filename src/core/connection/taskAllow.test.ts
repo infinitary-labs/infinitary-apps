@@ -64,9 +64,11 @@ it("recognizes task-wide Allow by major or the older advertised name", () => {
 
 // INF-4104 piece 2, the captain's ruling on its review: an older desktop
 // reads a host effect's operation strictly, so the home leaves the Keep
-// going on credits button off every card it sends a view that does not
-// list the change, in pushes and in the list and show answers; a desktop
-// listing it and the phone, which reads the operation as text, get it.
+// going on credits button off every card it sends a view on major 15 that
+// does not list the change, in pushes and in the list and show answers; a
+// desktop on major 16, one on major 15 listing it and the phone, which reads
+// the operation as text, get it. A desktop on major 15 says its floor in its
+// hello, so it still changes things on a home one major on.
 it("sends the Keep going on credits button only to views that read it", async () => {
   const card = cardSchema.parse({
     ...firstmatePauseCard("card-firstmate-paused", {
@@ -86,26 +88,36 @@ it("sends the Keep going on credits button only to views that read it", async ()
     }) as CoreDispatch,
   });
   const grant = await at.join();
-  const old = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
-  const current = await connectClient(grant, {
-    protocolVersion: PROTOCOL_VERSION,
+  const old = await connectClient(grant, {
+    protocolVersion: "15.0.0",
+    viewFloor: 15,
+    changes: [],
+  });
+  const named = await connectClient(grant, {
+    protocolVersion: "15.0.0",
+    viewFloor: 15,
     changes: ["keep-going-on-credits"],
   });
+  const current = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
   const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
   const ids = (value: unknown) =>
     (value as { actions: { id: string }[] }).actions.map((action) => action.id);
   const without = ["recheck-allowance", "open-settings"];
   expect(ids((await old.invoke("inf:cards:list", []))[0])).toEqual(without);
   expect(ids(await old.invoke("inf:cards:show", [card.id]))).toEqual(without);
+  expect((await named.invoke("inf:cards:list", []))[0]).toEqual(card);
+  expect(await named.invoke("inf:cards:show", [card.id])).toEqual(card);
   expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
   expect(await current.invoke("inf:cards:show", [card.id])).toEqual(card);
   expect((await phone.invoke("inf:cards:list", []))[0]).toEqual(card);
   at.events.emit("inf:cards", [card]);
   const oldPush = await old.push((push) => push.channel === "inf:cards");
   expect(ids((oldPush.payload as unknown[])[0])).toEqual(without);
+  expect((await named.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
   expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
   expect((await phone.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
   await old.close();
+  await named.close();
   await current.close();
   await phone.close();
 });

@@ -514,7 +514,7 @@ The receipt is read from the typed result the host saved (`CardMutation`, `cardM
 
 Desktop and phone show the same words under such a line, from one owner (`contributorWords` in `threadWords.ts`, generated into `PhoneCardWords.contributor`): "Revised by …" under a revision's line, "Written by …" under a reply, and ", after the card closed" on a clarification.
 
-An older computer is refused rather than trusted to drop the new fields (`takesWork`, `src/shared/contract-changes/major-15.md`).
+An older computer is refused rather than trusted to drop the new fields (`takesWork`, `src/shared/contractFeatures.ts`).
 A computer that runs work refuses these writes and reads to a home on another work major.
 A home refuses a write on someone else's card from a work computer on another major before writing anything.
 A desktop view below major 14 that does not name `shared-cards` gets thread lines without the contributor, the answered message and the clarification flag, in every answer and push that carries them (`THREAD_CHANNELS` in `src/core/connection/connection.ts`); a phone ignores fields it does not know.

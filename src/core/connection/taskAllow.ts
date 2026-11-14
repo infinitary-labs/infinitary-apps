@@ -1,20 +1,21 @@
-import { speaksSince } from "@shared/contractFeatures";
-import { contractChange, listsChange } from "./contractChanges";
+import { hasSince16, speaksSince } from "@shared/contractFeatures";
 
 /** Major 15 includes this button; older read-only views still need its historical name. */
 export function readsTaskAllow(version: string, changes?: readonly string[]): boolean {
   return speaksSince(version, "15.0.0") || (changes?.includes("integration-task-allow") ?? false);
 }
 
-/** The contract change that names the Keep going on credits button (`keep-going-on-credits.md`). */
-export const KEEP_GOING_ON_CREDITS_CHANGE = contractChange("keep-going-on-credits");
-
 /**
- * Whether a view reads the Keep going on credits button: a desktop view lists
- * the change by name; the phone reads a host effect's operation as text.
+ * Whether a view reads the Keep going on credits button: a desktop view has
+ * it from major 16, or lists `keep-going-on-credits` on major 15
+ * (`hasSince16`); the phone reads a host effect's operation as text.
  */
-export function readsKeepGoing(changes?: readonly string[], system?: string): boolean {
-  return system === "ios" || listsChange(changes, KEEP_GOING_ON_CREDITS_CHANGE);
+export function readsKeepGoing(
+  version: string | undefined,
+  changes?: readonly string[],
+  system?: string,
+): boolean {
+  return system === "ios" || hasSince16(version, changes, "keep-going-on-credits");
 }
 
 /** Which card buttons an older view reads strictly, and so must not be sent. */

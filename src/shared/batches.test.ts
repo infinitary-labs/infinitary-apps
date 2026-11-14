@@ -71,34 +71,14 @@ describe("a by-hand answer to a held batch", () => {
 describe("which batched projects get batches of the person's own", () => {
   const github: RepoView["host"] = { kind: "github", name: "github.com" };
 
-  it("is every batched project that carries no team queue file, once its files were read", () => {
-    expect(ownsBatches("queue-pr", { host: github, queueWorkflows: [] })).toBe(true);
-    expect(
-      ownsBatches("queue-pr", { host: { kind: "gitlab", name: "gitlab.com" }, queueWorkflows: [] }),
-    ).toBe(true);
-  });
-
-  it("keeps the team queue on a project that still carries its files, on or off", () => {
-    expect(
-      ownsBatches("queue-pr", {
-        host: github,
-        queueWorkflows: [{ path: ".github/workflows/batch.yml", active: false }],
-      }),
-    ).toBe(false);
-  });
-
-  it("is unknown, never guessed, while the project's files were never read", () => {
-    expect(ownsBatches("queue-pr", { host: github })).toBeUndefined();
+  it("is every batched project on a host that takes batch pull requests", () => {
+    expect(ownsBatches("queue-pr", { host: github })).toBe(true);
+    expect(ownsBatches("queue-pr", { host: { kind: "gitlab", name: "gitlab.com" } })).toBe(true);
   });
 
   it("is never a direct or local project, nor a host with no pull requests to batch", () => {
-    expect(ownsBatches("direct-pr", { host: github, queueWorkflows: [] })).toBe(false);
-    expect(ownsBatches("local-only", { host: github, queueWorkflows: [] })).toBe(false);
-    expect(
-      ownsBatches("queue-pr", {
-        host: { kind: "git", name: "git.example.com" },
-        queueWorkflows: [],
-      }),
-    ).toBe(false);
+    expect(ownsBatches("direct-pr", { host: github })).toBe(false);
+    expect(ownsBatches("local-only", { host: github })).toBe(false);
+    expect(ownsBatches("queue-pr", { host: { kind: "git", name: "git.example.com" } })).toBe(false);
   });
 });

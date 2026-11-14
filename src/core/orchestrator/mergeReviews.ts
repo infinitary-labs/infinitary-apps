@@ -14,7 +14,6 @@ import {
   type Forge,
   ForgeBaseMoved,
   type ForgeChange,
-  type ForgeCheckState,
   type ForgePull,
   type ForgeRuleset,
   forkStoryForge,
@@ -22,7 +21,6 @@ import {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
-  QUEUE_STATUS,
 } from "../forge";
 import { requireNamed } from "../workspace/naming";
 import type { ChangeChecks } from "./changeChecks";
@@ -62,12 +60,7 @@ const SELECTED_CHANGE_WORDS =
 
 /** A review's pull request read again, or why it may not merge. */
 type Reread =
-  | {
-      ok: true;
-      forge: Forge;
-      pull: ForgePull;
-      queueWait?: { state: ForgeCheckState | undefined };
-    }
+  | { ok: true; forge: Forge; pull: ForgePull }
   | { ok: false; text: string; stop?: MergeStop };
 
 /**
@@ -149,7 +142,7 @@ export class MergeReviews {
       ...(isForkReview(review)
         ? [
             "This change comes from a contributor's fork. Read its code before running it. Check out the reviewed commit unchanged, then prepare_change and open_change with presentation to publish the crew's story in a comment and the merged commit, keeping the contributor's description.",
-            "Offer this contributor change with asks_first on its merge effect: the captain's click authorizes running this version in the queue. A later push needs a new review and a new click.",
+            "Offer this contributor change with asks_first on its merge effect: the captain's click authorizes merging this version. A later push needs a new review and a new click.",
           ]
         : []),
       "This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
@@ -362,8 +355,7 @@ export class MergeReviews {
 
   /**
    * The merge a review made, stored on it at the head it merged; answers the
-   * receipt. Every route a review merges by ends here, so a queued change's
-   * merge starts the next batch here once.
+   * receipt. Every route a review merges by ends here.
    */
   private storeReviewReceipt(
     taskId: string,
@@ -373,7 +365,6 @@ export class MergeReviews {
     by?: "captain",
   ): { head: string; sha?: string } {
     const receipt = { head, ...(sha ? { sha } : {}) };
-    this.merges.startNextBatch(taskId, "merge");
     const record = this.options.tasks.get(taskId);
     const reviews = record?.delivery?.mergeReviews;
     if (!reviews) return receipt;
@@ -407,12 +398,7 @@ export class MergeReviews {
     forge: Forge,
     pull: ForgePull,
   ): Promise<
-    | {
-        ok: true;
-        rules: SkippedRule[];
-        failedChecks: string[];
-        queueWait?: { state: ForgeCheckState | undefined };
-      }
+    | { ok: true; rules: SkippedRule[]; failedChecks: string[] }
     | { ok: false; text: string; stop?: MergeStop }
   > {
     const place = forge.place ?? "GitHub";
@@ -458,12 +444,7 @@ export class MergeReviews {
       return { ok: false, text: `The checks cannot be read. ${checks.problem}`, stop: "checks" };
     const record = this.options.tasks.get(taskId);
     const absent = record && this.checks.absenceDeclared(record, { forge, change });
-    // Nothing skips a queue-pr project's queue: its batch check is never a
-    // check to finish or skip here, and the send waits on it.
-    const queueWait = this.merges.queueWait(taskId, checks.items);
-    const items = this.merges.queued(taskId)
-      ? checks.items.filter((item) => item.name !== QUEUE_STATUS)
-      : checks.items;
+    const items = checks.items;
     if (
       checks.complete === false ||
       items.some((item) => item.state === "pending") ||
@@ -509,7 +490,7 @@ export class MergeReviews {
         return words ? [{ ruleset: set.name, rule: words }] : [];
       }),
     );
-    return { ok: true, rules, failedChecks, ...(queueWait ? { queueWait } : {}) };
+    return { ok: true, rules, failedChecks };
   }
 
   /**
@@ -553,7 +534,7 @@ export class MergeReviews {
         stop: "checks",
       };
     }
-    return { ok: true, forge, pull, ...(state.queueWait ? { queueWait: state.queueWait } : {}) };
+    return { ok: true, forge, pull };
   }
 
   /**
@@ -680,41 +661,6 @@ export class MergeReviews {
       const message = caught instanceof Error ? caught.message : String(caught);
       return { ok: false, text: `Cannot merge: ${message}`, problem: message };
     }
-    // A queue-pr project's queue answers first: the click marks the version
-    // and sends nothing, and the review stays unsent for a click once it passes.
-    if (fresh.queueWait) {
-      try {
-        const waiting = await this.merges.enqueue(
-          taskId,
-          forge,
-          change,
-          fresh.queueWait.state,
-          () => guard?.beforeDispatch(change.headSha, true),
-          true,
-          false,
-          guard?.held,
-          guard?.queueInterrupted,
-        );
-        return {
-          ...waiting,
-          text: `${waiting.text} The version is queued, not merged. ${this.merges.queueOwnsMerge(taskId, change.number) ? "The project's queue will merge it after passing." : "The app needs another merge click once the project's queue passes it."}`,
-        };
-      } catch (caught) {
-        // A status write the host refused is an outcome like an ordinary
-        // review's, never an error that escapes the click.
-        const message = caught instanceof Error ? caught.message : String(caught);
-        return {
-          ok: false,
-          text: `Cannot merge: ${message}`,
-          problem: message,
-          ...(isSignInForgeFailure(caught)
-            ? { stop: "sign-in" as const }
-            : isTransientForgeFailure(caught)
-              ? { stop: "transient" as const }
-              : {}),
-        };
-      }
-    }
     // Marked before the send: whatever happens next, it is never sent twice.
     this.markSkipSent(taskId, review.id, {});
     const confirmed = (sha?: string): PrOutcome => ({
@@ -832,14 +778,9 @@ export class MergeReviews {
         stop: isSignInForgeFailure(caught) ? "sign-in" : "checks",
       };
     }
-    // A queue-pr project's own batch check is the queue's to answer, read by
-    // the merge that marks it, never a check or a rule this gate stops on.
-    const queueWait = this.merges.queueWait(taskId, checks.items);
-    const items = this.merges.queued(taskId)
-      ? checks.items.filter((item) => item.name !== QUEUE_STATUS)
-      : checks.items;
+    const items = checks.items;
     const held = readinessStop(forge, pull, { head: review.headSha });
-    if (held && !(queueWait && held.stop === "protected")) {
+    if (held) {
       const plain = held.plain ?? held.text;
       return {
         ok: false,
@@ -882,7 +823,7 @@ export class MergeReviews {
             : MERGE_CHECKS_HOLD_REASON,
         stop: "checks",
       };
-    return { ok: true, forge, pull, ...(queueWait ? { queueWait } : {}) };
+    return { ok: true, forge, pull };
   }
 
   /**
@@ -1008,25 +949,6 @@ export class MergeReviews {
         }));
         if (!last.ok) return { ok: false, text: `Cannot merge: ${last.text}`, stop: last.stop };
       }
-      if (fresh.queueWait)
-        return await this.merges.enqueue(
-          taskId,
-          forge,
-          change,
-          fresh.queueWait.state,
-          () => guard?.beforeDispatch(candidate.headSha, true),
-          !guard?.unattended,
-          false,
-          guard?.held,
-          guard?.queueInterrupted,
-          isForkReview(review) ? candidate.title : undefined,
-        );
-      if (this.merges.queueOwnsMerge(taskId, change.number))
-        return {
-          ok: false,
-          stop: "queue",
-          text: "The batch passed; the project's queue is merging this version.",
-        };
       const stopped = guard?.beforeDispatch(candidate.headSha);
       if (stopped) return { ok: false, stop: "withdrawn", text: stopped };
       dispatched = true;

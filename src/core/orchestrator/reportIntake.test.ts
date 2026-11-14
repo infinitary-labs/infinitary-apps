@@ -24,7 +24,6 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { crewmateCardPicturesDir } from "../paths";
 import { seedProject } from "../workspace/seedProject";
 

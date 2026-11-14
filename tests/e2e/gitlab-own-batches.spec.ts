@@ -48,7 +48,7 @@ const passed = (iid: number) => ({
  * by keys, combines it again on the same merge request.
  *
  * Real git supplies three crewmates' commits and the app's own combine and
- * push; a disposable GitLab serves a project with no file of a team queue,
+ * push; a disposable GitLab serves a project on batched pull requests,
  * a passed pipeline on each pushed branch, the merge requests the app
  * opens and their pipelines, and records each merge, writing it to the
  * project's default branch as GitLab does: a squash commit, or a merge

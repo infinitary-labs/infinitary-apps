@@ -9,7 +9,7 @@
  * folder.
  */
 
-import { MERGE_ANYWAY_ACTION, SETTLE_FACT_VALUE_CLASS, splitSettleFacts } from "@shared/cards";
+import { MERGE_ANYWAY_ACTION } from "@shared/cards";
 import {
   CHECKS_ABSENT_WORDS,
   CHECKS_NOT_REPORTED_WORDS,
@@ -24,9 +24,7 @@ import {
   softHoldWords,
   standingOverrideWords,
 } from "@shared/holds";
-import { QUEUE_STATUS } from "@shared/repos";
 import {
-  BATCH_CHECK_WORDS,
   CHECK_WORDS,
   MERGE_AFTER_FIXING_WORDS,
   MERGE_ANYWAY_WORDS,
@@ -40,7 +38,6 @@ import {
   completionBody,
   fakeCrewmate,
   fakeCrewTimersEachTest,
-  reportTurn,
   SETTLE_MERGE,
   setup,
   tick,
@@ -52,13 +49,10 @@ import {
   repairTurn,
 } from "../../../tests/helpers/crewHarnessGit";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
-import { QUEUE_REMOVED_WORDS } from "../forge";
 import { standingBaselineChecks } from "../tasks/dependencyWaits";
 import { seedTask } from "../tasks/seedTask";
-import { CHECK_FAILS_ON_MAIN_WORDS, CHECK_VERDICT_WORDS } from "./checkVerdicts";
+import { CHECK_FAILS_ON_MAIN_WORDS } from "./checkVerdicts";
 import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
-import { FAILED_BATCH_NOTE } from "./mergeAuthorization";
-import { mergePendingCardId } from "./settleWords";
 import { renderWake } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -340,229 +334,6 @@ describe("CrewSupervisor", () => {
         expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
         expect(anywayOf(h)).toBeUndefined();
       });
-
-      // INF-2913 and finding E: a healthy queue keeps its approval quietly,
-      // without an FYI card or a routine first mate relay, in either scope.
-      it.each(
-        [false, true].flatMap((referenced) =>
-          [false, true].map((unanswered) => ({ referenced, unanswered })),
-        ),
-      )(
-        "keeps approval, wakes only for a queue warning, and merges after the batch (referenced: $referenced, unanswered: $unanswered)",
-        async ({ referenced, unanswered }) => {
-          const h = await approved({ queue: true, referenced });
-          const repoId = h.tasks.get(h.taskId)?.repoId;
-          if (!repoId) throw new Error("The queue fixture has its project.");
-          if (!unanswered) h.repos.recordQueue(repoId, { answeredAt: Date.now() });
-          const before = h.ops.length;
-          const beforePrompts = h.crewmate.promptCalls.length;
-          h.supervisor.cardActions.act(h.card.id, "merge");
-          await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("queue"));
-          // Marking the queue happens before the settlement's continuation.
-          // Read its outcome only after that owner releases its lock.
-          await vi.waitFor(() =>
-            expect(h.supervisor.settling.locks.holder(h.taskId)).toBeUndefined(),
-          );
-          expect(h.cards()).toEqual([]);
-          // F5: the existing unanswered-queue warning still reaches an agent in either scope.
-          const warning = h.supervisor.settling.approvals.queueWarning(h.taskId, "queue");
-          const continued = () => h.crewmate.promptCalls.slice(beforePrompts).join("\n");
-          if (unanswered) {
-            expect(warning).toBeDefined();
-            if (referenced) {
-              // Scoped settlement returns to its builder, not the first mate.
-              // allFor excludes in-flight rows; read the actual delivered prompt.
-              await vi.waitFor(() => expect(continued()).toContain(warning ?? ""));
-              expect(h.ops.slice(before)).toEqual([]);
-              await reportTurn(h.crewmate, h.taskId, "The unanswered queue needs recovery.");
-            } else {
-              expect(continued()).toBe("");
-              expect(h.ops.slice(before)).toEqual([expect.stringContaining(warning ?? "")]);
-            }
-          } else {
-            expect(warning).toBeUndefined();
-            expect(continued()).toBe("");
-            expect(h.ops.slice(before)).toEqual([]);
-          }
-          expect(h.forge.merges).toEqual([]);
-          expect(h.authorization()).toMatchObject({ status: "standing", approvedHead: APPROVED });
-          h.forge.queue = { name: QUEUE_STATUS, state: "success", detail: "Batch check passed" };
-          await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
-          expect(h.forge.merges).toEqual([APPROVED]);
-          expect(h.authorization()?.status).toBe("consumed");
-          expect(h.supervisor.cards.get(mergePendingCardId(h.taskId))).toBeUndefined();
-          // The renderer receives card snapshots on the scheduled broadcast.
-          await tick();
-          expect(h.cards()).toEqual([]);
-        },
-      );
-
-      // R1: a failed batch note on a checks wait is not an unanswered queue warning.
-      it.each([false, true])(
-        "keeps a host-run checks wait quiet after an approved queue version is sent back (referenced: %s)",
-        async (referenced) => {
-          const h = await approved({ queue: true, referenced });
-          const repoId = h.tasks.get(h.taskId)?.repoId;
-          if (!repoId) throw new Error("The queue fixture has its project.");
-          h.repos.recordQueue(repoId, { answeredAt: Date.now() });
-          h.supervisor.cardActions.act(h.card.id, "merge");
-          await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("queue"));
-          await vi.waitFor(() =>
-            expect(h.supervisor.settling.locks.holder(h.taskId)).toBeUndefined(),
-          );
-          h.forge.queue = {
-            name: QUEUE_STATUS,
-            state: "failure",
-            detail: "Sent back: adds the key but not to the pinned list",
-            link: "https://github.com/o/r/actions/runs/4254",
-          };
-          await h.declare({});
-          expect(h.supervisor.settling.approvals.queueWarning(h.taskId, "checks")).toBe(
-            FAILED_BATCH_NOTE,
-          );
-          const before = h.ops.length;
-          await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
-          expect(h.authorization()).toMatchObject({
-            status: "standing",
-            approvedHead: APPROVED,
-            waiting: { on: "checks" },
-          });
-          expect(h.forge.merges).toEqual([]);
-          expect(h.cards()).toEqual([]);
-          expect(h.ops.slice(before)).toEqual([]);
-        },
-      );
-
-      // INF-3208, the captain's INF-3183 plan, piece 2: after the project's
-      // queue sends a change back, its merge card says the queue's own words
-      // and the paused batch's issue under a Batch check state, counts only the
-      // pull request's own checks, keeps the crewmate's diagnosis words off
-      // the queue status, and offers no Merge anyway, since no checks
-      // override passes the queue; the crewmate's answer at that version
-      // turns the merge back to the words whose click queues it again.
-      it("shows a send-back in the queue's own words beside the pull request's own checks, with no Merge anyway (INF-3208)", async () => {
-        const h = await approved({ queue: true });
-        const issue = "https://github.com/o/r/issues/97";
-        const run = "https://github.com/o/r/actions/runs/4254";
-        const words = "Sent back: adds the key but not to the pinned list";
-        const strip = () =>
-          splitSettleFacts(h.cards().find((card) => card.id === h.card.id)?.body ?? "")?.facts ??
-          "";
-        const cell = (fact: string) =>
-          new RegExp(
-            `data-fact="${fact}"[^>]*>.*?<span class="${SETTLE_FACT_VALUE_CLASS}">(.*?)</span></span>`,
-          ).exec(strip())?.[1];
-        // The queue's own words under the status line, with their links.
-        const why = (fact: string) =>
-          new RegExp(`<p class="inf-foot-why" data-why="${fact}">(.*?)</p>`).exec(strip())?.[1];
-        // The batch paused on this version, linking its issue.
-        h.forge.queue = {
-          name: QUEUE_STATUS,
-          state: "pending",
-          detail: "Paused after batch run 12; meter.test.ts failed; touched by #7",
-          link: issue,
-        };
-        await h.declare({});
-        await vi.waitFor(() => expect(why("batch")).toContain(BATCH_CHECK_WORDS.pause));
-        expect(cell("batch")).toBe(BATCH_CHECK_WORDS.states.paused);
-        // A send-back by hand fails it, linking the answer's run instead.
-        h.forge.queue = {
-          name: QUEUE_STATUS,
-          state: "failure",
-          detail: words,
-          link: run,
-          startedAt: 1_000,
-          finishedAt: 9 * 60_000,
-        };
-        await h.declare({});
-        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
-        await expect(h.emit("Sent back")).rejects.toThrow(
-          "The failed batch check is the project's queue's: no checks override passes it, so it gets no Merge anyway",
-        );
-        await h.declare({
-          diagnosis: {
-            headSha: APPROVED,
-            check: QUEUE_STATUS,
-            classification: "own-regression",
-            evidence: "The batch failed because the earlier version left the key off the list.",
-          },
-        });
-        await vi.waitFor(() => expect(why("batch")).toContain(words));
-        // The state says failed, first on the line; the queue's words stand
-        // whole under it, followed by its run and the paused batch's issue
-        // (INF-3709's plan).
-        expect(cell("batch")).toBe(BATCH_CHECK_WORDS.states.failed);
-        expect(why("batch")).toBe(
-          `${words} <a href="${run}">${BATCH_CHECK_WORDS.run}</a> · <a href="${issue}">${BATCH_CHECK_WORDS.pause}</a>`,
-        );
-        expect(strip().indexOf('data-fact="batch"')).toBeLessThan(
-          strip().indexOf('data-fact="checks"'),
-        );
-        // The Checks state counts the pull request's own check alone, and
-        // never times it by the queue status's own times.
-        expect(cell("checks")).toBe(CHECK_WORDS.green);
-        expect(strip()).not.toContain("data-check-verdict");
-        expect(strip()).not.toContain(CHECK_VERDICT_WORDS["own-regression"]);
-        expect(anywayOf(h)).toBeUndefined();
-        expect(h.supervisor.settling.approvals.queueWarning(h.taskId, "checks")).toBe(
-          FAILED_BATCH_NOTE,
-        );
-        // The crewmate answers the send-back: a click now puts the version
-        // back in the queue, and Merge anyway still has nothing to pass.
-        await h.declare({
-          declaration: {
-            headSha: APPROVED,
-            verdict: "answered",
-            check: QUEUE_STATUS,
-            evidence: "The send-back names the earlier version; this one holds the fix.",
-          },
-        });
-        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]));
-        expect(anywayOf(h)).toBeUndefined();
-        // A failure of the pull request's own check takes the answer's words
-        // away, and Merge anyway stays off while the batch check failed.
-        h.forge.states = ["failure"];
-        await h.declare({});
-        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
-        expect(anywayOf(h)).toBeUndefined();
-        // With no failed batch check, the pull request's own failed check
-        // brings Merge anyway back as before, and the Batch check state goes.
-        h.forge.queue = undefined;
-        await h.declare({});
-        await vi.waitFor(() => expect(anywayOf(h)).toBeDefined());
-        expect(cell("batch")).toBeUndefined();
-      });
-
-      // INF-4018: the app's removal of its own queue mark, as GitHub kept it
-      // on PR #1660 ("error") and as a queue writes it ("failure"), says the
-      // approval is gone or held, not that anything failed: the Batch check
-      // cell says what it waits for, with no red line, and the crewmate's
-      // merge card asking again goes up.
-      it.each(["error", "failure"] as const)(
-        "reads the app's removal status (%s) as waiting for the captain's approval, never a failed check (INF-4018)",
-        async (state) => {
-          const h = await approved({ queue: true });
-          const strip = () =>
-            splitSettleFacts(h.cards().find((card) => card.id === h.card.id)?.body ?? "")?.facts ??
-            "";
-          const cell = (fact: string) =>
-            new RegExp(
-              `data-fact="${fact}"[^>]*>.*?<span class="${SETTLE_FACT_VALUE_CLASS}">(.*?)</span></span>`,
-            ).exec(strip())?.[1];
-          const level = (fact: string) =>
-            new RegExp(`data-fact="${fact}" data-level="(\\w+)"`).exec(strip())?.[1];
-          const why = (fact: string) =>
-            new RegExp(`<p class="inf-foot-why" data-why="${fact}">(.*?)</p>`).exec(strip())?.[1];
-          h.forge.queue = { name: QUEUE_STATUS, state, detail: QUEUE_REMOVED_WORDS };
-          await h.declare({});
-          await vi.waitFor(() => expect(cell("batch")).toBe(BATCH_CHECK_WORDS.approval));
-          expect(level("batch")).toBe("waiting");
-          expect(why("batch")).toBeUndefined();
-          expect(cell("checks")).toBe(CHECK_WORDS.green);
-          expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("green");
-          await expect(h.emit("Ready to merge again")).resolves.toContain("card-");
-        },
-      );
 
       // Captain INF-1555 F12 replaces the separate red prerequisite; the offer carries the judgment.
       it("accepts a failed-check merge offer without a separate verdict or merge consent (INF-1555 F12)", async () => {

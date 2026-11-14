@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeCompiledMessages } from "./generate-messages.ts";
+import { jobCores } from "./job-cores.ts";
 
 /**
  * The quick check a crewmate runs before every push (INF-2588's report, fix 1;
@@ -11,7 +12,8 @@ import { writeCompiledMessages } from "./generate-messages.ts";
  * lint on its renderer files, every node script `pnpm check` runs (the
  * project lints and the generated-file checks), the release-notes check the
  * pull request runs first, and the whole-project typecheck. Together they take
- * seconds, so they run side by side and print in order. It is not gated by CI mode, so the Mac mini can
+ * seconds, so they run side by side, as many at once as the job has cores, and
+ * print in order. It is not gated by CI mode, so the Mac mini can
  * run it; the full lint and the typecheck also stay in the pull request's
  * `typecheck-lint-build` check (INF-2074, docs/testing.md "Where the heavy
  * checks run").
@@ -75,7 +77,7 @@ export interface Step {
  * Biome on every changed file, so Biome's own configuration picks which of
  * them it checks, as it does for the whole-project Biome in `pnpm check`: its
  * `files.includes` and the languages it knows. A list of extensions here
- * dropped the queue's .mjs sources, so a formatting slip in one passed this
+ * dropped .mjs sources, so a formatting slip in one passed this
  * check and failed the pull request's (INF-3297).
  */
 export function biomeStep(files: string[]): Step | undefined {
@@ -107,6 +109,28 @@ function run(step: Step): Promise<{ step: Step; ok: boolean; output: string }> {
     child.on("error", (error) => done({ step, ok: false, output: `${output}${error.message}\n` }));
     child.on("close", (status) => done({ step, ok: status === 0, output }));
   });
+}
+
+/**
+ * The steps side by side, `atOnce` of them at a time, answered in the steps'
+ * own order. Started all at once they are about thirty programs, the
+ * typecheck among them, and they hold more memory than a small computer
+ * has: on the two-processor Linux runner the kernel ended the largest test
+ * beside the test that runs this command.
+ */
+export async function sideBySide<Result>(
+  steps: readonly Step[],
+  atOnce: number,
+  start: (step: Step) => Promise<Result>,
+): Promise<Result[]> {
+  const results: Result[] = [];
+  const waiting = [...steps.entries()];
+  const lane = async () => {
+    for (let next = waiting.shift(); next; next = waiting.shift())
+      results[next[0]] = await start(next[1]);
+  };
+  await Promise.all(Array.from({ length: Math.max(1, atOnce) }, lane));
+  return results;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -145,7 +169,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   else console.log("check:changed: no commit since main yet, so the release-notes check waits");
   // Called directly, not through `pnpm typecheck`, which CI mode refuses.
   steps.push({ label: "typecheck", command: "node", args: ["scripts/typecheck.ts", "--pretty"] });
-  const results = await Promise.all(steps.map(run));
+  const results = await sideBySide(steps, jobCores(), run);
   for (const { step, ok, output } of results) {
     process.stdout.write(output);
     if (!ok) console.error(`check:changed: ${step.label} failed`);

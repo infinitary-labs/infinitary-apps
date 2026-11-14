@@ -176,6 +176,34 @@ export type BatchStatus = {
   link?: string;
 };
 
+/**
+ * The name a change's place in its batch takes among its checks: the app
+ * adds one check of this name to the change's reading, and the merge card's
+ * Batch check cell reads it. It is written nowhere the project lives. The
+ * value is the name saved readings and paired views already know it by.
+ */
+export const BATCH_CHECK = "infinitary/queue";
+
+/** What an approved change's batch check says while it waits in line. */
+export const BATCH_WAITING_WORDS = "Waiting for the batch check";
+
+/**
+ * A change's batch check on a version, as its task's last reading kept it
+ * (`BatchStatus` at `head`). A fact an earlier version kept may carry no
+ * `kind`; the next reading replaces it.
+ */
+export type BatchCheckFact = {
+  head: string;
+  kind?: BatchStatus["kind"];
+  words?: string;
+  link?: string;
+};
+
+/** The kind a batch check's state alone says, where its kept fact carries none. */
+export function batchKindOf(state: string): BatchStatus["kind"] {
+  return state === "pending" ? "waiting" : state === "success" ? "passed" : "failed";
+}
+
 export const BATCH_STATUS_WORDS = {
   batch: "In a batch; its checks are running",
   held: (reason: BatchHold["reason"]) =>

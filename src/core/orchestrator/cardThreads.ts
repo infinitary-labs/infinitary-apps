@@ -58,7 +58,7 @@ type CardTarget =
   | { kind: "closed"; id: string; card: Card }
   | { kind: "unknown"; id: string };
 
-/** A contribution's declared facts beside the card it writes (`major-15.md`). */
+/** A contribution's declared facts beside the card it writes (`major-16.md`). */
 export type CardContribution = {
   /** The revision (offer id) the contributor read; a revision needs it. */
   expectedRevision?: string;

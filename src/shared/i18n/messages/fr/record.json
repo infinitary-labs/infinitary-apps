@@ -69,7 +69,7 @@
   "recordModeDirectPr": "En demande de tirage",
   "recordModeInPlace": "Construit sur place",
   "recordModeLocalOnly": "Fusion locale, sans demande de tirage",
-  "recordModeQueuePr": "En demande de tirage groupée, testée par la file de votre projet",
+  "recordModeQueuePr": "En demande de tirage groupée, avec vos autres modifications approuvées",
   "recordMoreBranch": "branche",
   "recordMoreComputerChoice": "le choix de l’ordinateur",
   "recordMoreDelivery": "livraison",

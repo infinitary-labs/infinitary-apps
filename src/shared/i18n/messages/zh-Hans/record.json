@@ -61,7 +61,7 @@
   "recordModeDirectPr": "以拉取请求交付",
   "recordModeInPlace": "就地构建",
   "recordModeLocalOnly": "本地合并，没有拉取请求",
-  "recordModeQueuePr": "以批量拉取请求交付，由你项目的队列测试",
+  "recordModeQueuePr": "以批量拉取请求交付，和你其他已批准的改动一起合并",
   "recordMoreBranch": "分支",
   "recordMoreComputerChoice": "电脑的选择",
   "recordMoreDelivery": "交付方式",

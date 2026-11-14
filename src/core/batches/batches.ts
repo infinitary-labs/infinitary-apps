@@ -7,9 +7,11 @@ import {
   type BatchRecord,
   type BatchStatus,
   EMPTY_BATCH_RECORD,
+  keepsCommits,
   type MergeWays,
   mergeWayFor,
   type OpenBatch,
+  SQUASH_ONLY_WORDS,
 } from "@shared/batches";
 import { checkSnapshotSummary, isRedCheckState } from "@shared/checkSnapshot";
 import type { RepoView } from "@shared/repos";
@@ -800,6 +802,16 @@ export class Batches {
       JSON.stringify(record.ways) === JSON.stringify(ways) ? record : { ...record, ways },
     );
     return ways;
+  }
+
+  /**
+   * Refuses the choice of batched pull requests for a project that allows
+   * only squash merges, with its reason: a batch keeps one commit for each
+   * change. A project whose merges cannot be read is not refused here.
+   */
+  async refuseSquashOnly(repoId: string): Promise<void> {
+    const ways = await this.readWays(repoId).catch(() => undefined);
+    if (ways && !keepsCommits(ways)) throw new Error(SQUASH_ONLY_WORDS);
   }
 
   /** A fresh hold of failed checks: its one change's own crewmate, or the first mate once. */

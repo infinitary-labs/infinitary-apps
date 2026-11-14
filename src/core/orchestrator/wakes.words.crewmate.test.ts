@@ -13,7 +13,6 @@ import {
   WAKE_TASK as TASK,
   type WordsCases,
 } from "../../../tests/helpers/wakeWords";
-import { queueWakeWords } from "./projectQueue";
 
 const completedSecret = await secretsReceipt("completed");
 const unknownSecret = await secretsReceipt("unknown");
@@ -839,21 +838,6 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "[fm-op] your merge card's merge of PR #1061 did not happen. Nothing was merged. GitHub reports a conflict.",
     },
   ],
-  "queue-held": [
-    {
-      name: "a Developer's version held for a Maintainer",
-      wake: {
-        facts: {
-          kind: "queue-held",
-          change: "!12",
-          head: "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0",
-          words: "Waiting for a Maintainer to approve this version",
-        },
-      },
-      words:
-        "The project's queue holds !12 at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 out of its batches; its status reads \"Waiting for a Maintainer to approve this version\". Its code joins a batch only once a Maintainer of the project approves the merge request after its last push, since a later mark does not admit it, and then the captain's merge click starts the queue again, which nothing else does. Put up your merge card again saying a Maintainer must approve this version first; do not start the queue yourself.",
-    },
-  ],
   // INF-4031: an open merge card fell behind its change, and no story at the
   // current version could redraw it, so its author hears it once.
   "merge-card-behind": [
@@ -903,19 +887,6 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       },
       words:
         '[fm-op] Your merge card card-fm-17 for task 0a1b2c3d "Trim the first mate\'s text" shows 87218b0, and the pull request is at 732a709 now. The app took its Merge button off, so the captain cannot click a merge it would refuse. When the current version is ready to merge, revise that card with emit_card under the same id.',
-    },
-  ],
-  "queue-start-failed": [
-    {
-      name: "after two failed starts",
-      wake: {
-        facts: {
-          kind: "queue-start-failed",
-          why: "GitLab answered 403: insufficient permissions to create a pipeline.",
-        },
-      },
-      words:
-        "The app tried twice to start your project's queue so it forms its next batch, and both starts failed: GitLab answered 403: insufficient permissions to create a pipeline. No batch forms until something starts it. Start it yourself through your project's API the way the queue-setup skill's queue starts it, or report what stops you.",
     },
   ],
   "external-merge": [
@@ -1171,9 +1142,9 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "The checks on PR #1061 at 4be7c1d are still running after 3h: critical-path (in_progress). The app stopped watching them: read them with check_change, and report a blocker if they never finish.",
     },
     {
-      // INF-2886: the two-hour wake on a version waiting for its project's
-      // queue carries what the app read about that queue.
-      name: "timed out waiting on a queue nothing has answered",
+      // The two-hour wake on a change waiting in this person's batch says
+      // whose wait it is (docs/forge.md, "Batches of your own").
+      name: "timed out waiting in a batch",
       wake: {
         facts: {
           kind: "checks-settled",
@@ -1182,11 +1153,12 @@ const CASES: WordsCases<CrewmateWakeKind> = {
           head: "4be7c1d90a2f",
           checks: [{ name: "infinitary/queue", state: "pending" }],
           waitedMs: 7_200_000,
-          queue: queueWakeWords({ workflows: [], answeredBefore: false }),
+          batch:
+            "The change waits in this project's batch of approved changes (In a batch; its checks are running). The app merges the batch once its checks pass, so nothing is needed from you.",
         },
       },
       words:
-        "The checks on PR #1061 at 4be7c1d are still running after 2h: infinitary/queue (pending). Nothing in this project has ever answered infinitary/queue, and no workflow on its default branch mentions it. The app stopped watching them: read them with check_change, and report a blocker if they never finish.",
+        "The checks on PR #1061 at 4be7c1d are still running after 2h: infinitary/queue (pending). The change waits in this project's batch of approved changes (In a batch; its checks are running). The app merges the batch once its checks pass, so nothing is needed from you. The app stopped watching them: read them with check_change, and report a blocker if they never finish.",
     },
     {
       name: "timed out bare",

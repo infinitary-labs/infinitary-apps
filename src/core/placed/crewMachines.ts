@@ -77,7 +77,7 @@ export type CrewMachines = {
   /**
    * Asks the task's computer, while in reach, to answer "ask again" each of
    * the app's own reads its conversation began by the newest event the home
-   * has taken (INF-2603, `major-15.md`): asked after a quiet
+   * has taken (INF-2603, major 15): asked after a quiet
    * stretch, each such read has waited at least that long. Answers the
    * reads it answered, each with how long it waited; none from a computer
    * without the change, or out of reach.
@@ -183,14 +183,14 @@ export type CrewMachines = {
    */
   takesStops?(machine: string): boolean;
   /**
-   * Whether that computer serves show_merge_card (INF-3717 piece 2): it
-   * lists `show-merge-card` among its contract changes. One that does not
+   * Whether that computer serves show_merge_card (INF-3717 piece 2): every
+   * one admitted to work on this contract major does. One on another major
    * keeps prepare_change, open_change and emit_card.
    */
   takesMergeCardCall?(machine: string): boolean;
   /**
-   * Whether the computer's crewmates put files on their cards (`card-files`,
-   * docs/card-authoring.md "Files for the captain"); false while the home
+   * Whether the computer's crewmates put files on their cards
+   * (docs/card-authoring.md "Files for the captain"); false while the home
    * cannot tell.
    */
   takesCardFiles?(machine: string): boolean;

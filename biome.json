@@ -501,8 +501,6 @@
         "!tests/helpers/phoneCertificateFixture.ts",
         "!tests/mockClaudeClient.test.ts",
         "!tests/module-runner.test.ts",
-        "!src/core/queue/shipped/compose.test.ts",
-        "!src/core/queue/shipped/gitlabEntry.test.ts",
         "!tests/release-contract.test.ts",
         "!tests/release-workflows-alpha-cut.test.ts",
         "!tests/release-workflows-handoff.test.ts",

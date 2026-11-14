@@ -3,7 +3,6 @@ import type { ForgeCheckState } from "@shared/checkSnapshot";
 import type { ForgeKind } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { PresentationDestination } from "@shared/presentationDestination";
-import type { QueueCredential, QueueWorkflow } from "@shared/repos";
 import type { ForgeApi } from "./api";
 import type { ForgeAttachments } from "./attachments";
 import type { ForgeContributions } from "./contributions";
@@ -126,47 +125,11 @@ export type ForgeCheck = {
   conclusion?: string | null;
   allowFailure?: boolean;
   ref?: string;
-  /** A commit status's own id, which tells the app's queue mark from a later write. */
-  statusId?: number;
-  /** A commit status's description, as the host keeps it: the shipped queue's state words. */
+  /** A commit status's description, as the host keeps it; the batch check's words. */
   detail?: string;
-  /** A commit status's link: a run, or a paused batch's issue. */
+  /** A commit status's link; the batch check's is its batch's pull request. */
   link?: string;
 };
-
-/** A project's paused batch as the host shows it: the open issue that holds the pause. */
-export type ForgeQueuePause = {
-  run: number;
-  url: string;
-  changes: number[];
-  /** Who took the issue to repair it, in the host's own name for them; absent while nobody has. */
-  claimedBy?: string;
-};
-
-/** A start of the shipped queue by hand: the next batch, a resume or a send-back. */
-export type ForgeQueueStart =
-  | { action: "form" }
-  | { action: "resume"; reason: string }
-  | { action: "send-back"; number: number; reason: string };
-
-/** The active naming decision and exact squash words approved at one head. */
-export type ForgeQueueApproval = {
-  number: number;
-  /** Exact approved squash title, independent of the contributor's request title. */
-  title: string;
-  /** Request title captured by the review; omitted by clients whose two titles are identical. */
-  requestTitle?: string;
-  message?: string;
-  naming: { pattern: string } | null;
-  /** Recheck the existing local permission before publishing either hosted write; never serialized. */
-  beforeDispatch?: () => string | undefined;
-};
-
-/** The app's own queue mark on a version: the status id the host gave it back. */
-export type ForgeQueueMark = { id?: number };
-
-/** A workflow file that mentions the queue status, as read on the default branch. */
-export type { QueueWorkflow };
 
 /** A check's start and finish from the host's ISO times, leaving out any it lacks or garbles. */
 export function checkTimes(
@@ -367,6 +330,13 @@ export function isTransientForgeFailure(caught: unknown): boolean {
   return caught instanceof ForgeError && caught.failure === "transient";
 }
 
+/**
+ * The team queue's files a project still carries, by their paths, and the
+ * default branch's rule that still requires the queue's status, in the
+ * host's own name for it.
+ */
+export type TeamQueueLeftovers = { files: string[]; rule?: string };
+
 export interface Forge {
   readonly kind: ForgeKind;
   readonly host: string | null;
@@ -480,6 +450,13 @@ export interface Forge {
    * branch's rules, as the host answers them now.
    */
   mergeWays?(): Promise<MergeWays>;
+  /**
+   * What the project still carries of the team queue the app once shipped,
+   * read on its default branch (docs/forge.md, "A project that still
+   * carries the team queue's files"). Nothing in the app reads those files
+   * now: the answer is for the one offer to remove them.
+   */
+  teamQueueLeftovers?(): Promise<TeamQueueLeftovers>;
   /** Delete a branch the app pushed; one already gone is not an error. */
   deleteBranch?(branch: string): Promise<void>;
   /** Close a change with a note saying where its work went. */
@@ -501,53 +478,6 @@ export interface Forge {
    * never retried; only the captain's click on its card calls it.
    */
   putInSkippingRules?(change: ForgeChange, headSha: string): Promise<ForgeSkipMerge>;
-  /*
-   * The host's part of the shipped queue (docs/forge.md, "One queue for
-   * every host"): each forge whose host has one supplies all four below,
-   * and a forge with none supplies none, so nothing outside reads a host's
-   * name to find the queue. `hostRunsQueue` in `@shared/repos` names the
-   * same hosts for Settings.
-   */
-  /**
-   * Mark `sha` with the app's queue status as waiting (docs/forge.md, "A
-   * project's queue"): the captain's kept merge approval at that version,
-   * which the project's queue reads and answers on the same status.
-   */
-  markQueued?(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark>;
-  /** Remove this head's eligibility after a local approval hold or withdrawal. */
-  removeQueued?(sha: string, number: number): Promise<void>;
-  /**
-   * The CI files on the default branch that mention the app's queue status
-   * (`QUEUE_STATUS`), each with whether it is turned on and the shipped
-   * queue's version its stamp names (docs/forge.md, "A project's queue"). A
-   * mention is what was read, not proof the file answers the status. The
-   * shipped queue's own file is read first, and once its stamp is found no
-   * other file is read; with `all` false, nothing else is read either.
-   */
-  queueWorkflows?(options?: { all?: boolean }): Promise<QueueWorkflow[]>;
-  /** The project's paused batch, read from its one open pause issue; null while nothing is paused. */
-  queuePause?(): Promise<ForgeQueuePause | null>;
-  /** Start the shipped queue by hand where the project lives, with the captain's sign-in. */
-  startQueue?(start: ForgeQueueStart): Promise<void>;
-  /**
-   * Whether the host starts the shipped queue on its own when `markQueued`
-   * marks a version (GitHub's status event does). Where it does not, the app
-   * starts the queue itself after each mark.
-   */
-  readonly markStartsQueue?: boolean;
-  /**
-   * The token the shipped queue writes with, on a host whose queue jobs get
-   * no credential of their own (GitLab): whether the project has it, read
-   * with the captain's sign-in. A host that needs none supplies neither.
-   */
-  queueCredential?(): Promise<QueueCredential>;
-  /**
-   * Create the queue's token where the project lives with the captain's
-   * sign-in, keep it in the project's CI settings where only the queue's
-   * jobs receive it, and revoke the queue's older tokens. The token never
-   * reaches the app's own records.
-   */
-  createQueueCredential?(): Promise<QueueCredential>;
   /** Close the change without putting it in. */
   close(change: ForgeChange): Promise<void>;
   /** How the change is named on a surface: `#N`, `!N`, or the branch where it has no number. */
@@ -555,14 +485,8 @@ export interface Forge {
   url(change: ForgeChange): string | null;
 }
 
-/** The queue's commit status, owned beside the delivery that uses it. */
-export { QUEUE_STATUS } from "@shared/repos";
-
-/** The waiting status's description, in the words a person reads on GitHub; the queue's rules own them. */
-export {
-  REMOVED as QUEUE_REMOVED_WORDS,
-  WAITING as QUEUE_WAITING_WORDS,
-} from "../queue/shipped/rules.mjs";
+/** The batch check's name and its waiting words, owned beside the batches that use them. */
+export { BATCH_CHECK, BATCH_WAITING_WORDS } from "@shared/batches";
 
 /** A full commit id: 40 hexadecimal characters, or 64 in a SHA-256 repository. */
 export function isFullCommitId(sha: string): boolean {

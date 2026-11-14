@@ -1,3 +1,4 @@
+import { BATCH_CHECK, batchKindOf } from "@shared/batches";
 import {
   type Card,
   MERGE_ANYWAY_ACTION,
@@ -30,7 +31,7 @@ import { type FactDotState, factDotSvg } from "@shared/factDot";
 import { overrideCellWords, overrideWords, standingOverride } from "@shared/holds";
 import { said, saidMark } from "@shared/i18n/said";
 import { HELD_LINE, heldMerges } from "@shared/mergeHeld";
-import { opensPullRequest, QUEUE_STATUS, type RepoDelivery } from "@shared/repos";
+import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import {
   BATCH_CHECK_WORDS,
   CHECK_WORDS,
@@ -45,14 +46,12 @@ import {
   RIGOR_WORDS,
   RUN_WATCH_WORDS,
 } from "@shared/vocabulary";
-import { REMOVED as QUEUE_REMOVED_WORDS, queueKind } from "../queue/shipped/rules.mjs";
 import type { EmittedCardInput } from "../session/tools";
 import type { RunWatch, TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
 import { checkVerdicts } from "./checkVerdicts";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
-import { outstandingGuidance, standingApprovals } from "./mergeAuthorization";
 import { reviewCoversHead } from "./reviewCarry";
 
 /**
@@ -304,8 +303,8 @@ export class SettleFacts {
    *   Default. Counts, durations, read times and a review's risk ride each
    *   state's `title`, shown on rest; a state with such words is a Tab stop
    *   whose focus shows them on a line under the states.
-   * - What needs the captain: the queue's own words under a batch check
-   *   that failed or paused, why the checks could not be read, and a row
+   * - What needs the captain: the batch's own words under a batch check
+   *   that failed or holds, why the checks could not be read, and a row
    *   per failed check (`checkVerdicts`).
    *
    * The model and the computer are not here: the card's top line draws
@@ -339,9 +338,8 @@ export class SettleFacts {
       });
     };
     const ci = record.delivery?.ci;
-    // The Checks state counts and times the pull request's own checks; the
-    // project's queue status, which says where the change stands in the
-    // batch, has its own Batch check state (INF-3208).
+    // The Checks state counts and times the change's own checks; where the
+    // change stands in its batch has its own Batch check state (INF-3208).
     const own = record.delivery ? ownDelivery(record.delivery) : undefined;
     const observed = own ? currentCheckSummary(own) : undefined;
     const ciAt = record.delivery?.ciAt;
@@ -638,19 +636,17 @@ export class SettleFacts {
 
 /**
  * The delivery facts the Checks cell reads (INF-3208): the reading without
- * the project's queue status, timed by the pull request's own checks the
- * queue's last reading kept. A reading that carries the queue status with no
- * own times kept shows no duration rather than the status's.
+ * the batch check. The reading's times span that check too, so the cell
+ * shows no duration rather than one the change's place in line stretched.
  */
 function ownDelivery(delivery: TaskDelivery): TaskDelivery {
   const reading = delivery.checks;
-  if (!reading?.items.some((item) => item.name === QUEUE_STATUS)) return delivery;
-  const kept = delivery.queueStatus?.head === reading.headSha ? delivery.queueStatus : undefined;
+  if (!reading?.items.some((item) => item.name === BATCH_CHECK)) return delivery;
   return {
     ...delivery,
     checks: ownChecks(reading),
-    ciStartedAt: kept?.checksStartedAt,
-    ciFinishedAt: kept?.checksFinishedAt,
+    ciStartedAt: undefined,
+    ciFinishedAt: undefined,
   };
 }
 
@@ -675,57 +671,41 @@ function runLink(url: string, words: string): string {
 }
 
 /**
- * The Batch check state (INF-3208): the project's queue status on the
- * version on offer. Its state word stands on the status line; a status that
- * failed or paused says the queue's own words under the line, wrapped whole,
- * followed by its links - the queue's run, and the paused batch's issue.
- * Any other status keeps the queue's words on rest and links its word to the
- * run. Undefined when the reading of the version on offer carries no queue
- * status.
+ * The Batch check state (INF-3208): the change's place in its batch at the
+ * version on offer. Its state word stands on the status line; a batch that
+ * failed or is held says its own words under the line, wrapped whole,
+ * followed by the link to the batch's pull request. Any other state keeps
+ * the words on rest and links its word to that pull request. Undefined when
+ * the reading of the version on offer carries no batch check.
  */
 function batchCheck(
   delivery: TaskDelivery,
 ): { dot: FactDotState; value: string; rest?: string; why?: string } | undefined {
   const reading = delivery.checks;
   if (!reading || (delivery.headSha && reading.headSha !== delivery.headSha)) return undefined;
-  const item = reading.items.find((check) => check.name === QUEUE_STATUS);
+  const item = reading.items.find((check) => check.name === BATCH_CHECK);
   if (!item) return undefined;
   const kept = delivery.queueStatus?.head === reading.headSha ? delivery.queueStatus : undefined;
-  // The app's removal of its own queue mark (INF-4018) is no failure: the
-  // version waits for the captain's approval, or for the crewmate's answer
-  // to the newer words that hold it.
-  if (kept?.words === QUEUE_REMOVED_WORDS) {
-    if (standingApprovals(delivery).some((approval) => outstandingGuidance(approval) !== undefined))
-      return { dot: "idle", value: BATCH_CHECK_WORDS.held, why: BATCH_CHECK_WORDS.heldWhy };
-    return { dot: "idle", value: BATCH_CHECK_WORDS.approval };
-  }
-  const state = kept?.kind ? { kind: kept.kind } : queueKind(item.state, kept?.words ?? "");
+  const kind = kept?.kind ?? batchKindOf(item.state);
   const dot =
-    state.kind === "passed"
+    kind === "passed"
       ? "ok"
-      : state.kind === "failed"
+      : kind === "failed"
         ? "failed"
-        : state.kind === "paused"
+        : kind === "paused"
           ? "warn"
-          : state.kind === "in-batch"
+          : kind === "in-batch"
             ? "running"
             : "idle";
-  const word = BATCH_CHECK_WORDS.states[state.kind];
-  const https = (url: string | undefined) =>
-    url && /^https:\/\//.test(url) ? escapeCardText(url) : undefined;
-  const pause = state.kind === "paused" || state.kind === "failed" ? https(kept?.pause) : undefined;
-  // A paused status links the issue itself: it is not linked twice.
-  const run = kept?.link !== kept?.pause ? https(kept?.link) : undefined;
-  if (kept?.words && (state.kind === "paused" || state.kind === "failed")) {
-    const links = [
-      ...(run ? [`<a href="${run}">${BATCH_CHECK_WORDS.run}</a>`] : []),
-      ...(pause ? [`<a href="${pause}">${BATCH_CHECK_WORDS.pause}</a>`] : []),
-    ].join(" · ");
-    return { dot, value: word, why: `${escapeCardText(kept.words)}${links ? ` ${links}` : ""}` };
+  const word = BATCH_CHECK_WORDS.states[kind];
+  const run = kept?.link && /^https:\/\//.test(kept.link) ? escapeCardText(kept.link) : undefined;
+  if (kept?.words && (kind === "paused" || kind === "failed")) {
+    const link = run ? ` <a href="${run}">${BATCH_CHECK_WORDS.run}</a>` : "";
+    return { dot, value: word, why: `${escapeCardText(kept.words)}${link}` };
   }
   return {
     dot,
-    value: `${run ? `<a href="${run}">${word}</a>` : word}${pause ? ` · <a href="${pause}">${BATCH_CHECK_WORDS.pause}</a>` : ""}`,
+    value: run ? `<a href="${run}">${word}</a>` : word,
     ...(kept?.words ? { rest: kept.words } : {}),
   };
 }

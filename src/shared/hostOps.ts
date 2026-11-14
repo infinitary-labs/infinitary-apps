@@ -15,11 +15,10 @@
  * app's pick (`arg` = task id and that provider, joined by a colon; INF-849),
  * start a charted task now (`arg` = task id), answer a task's cost limit
  * card - Allow more, No limit for this task or Stop here (`arg` = task id;
- * docs/usage.md, "The cost limit") - ask the first mate to plan
- * a project's queue workflow or keep where its changes go while its batched
- * choice waits (`arg` = repo id; docs/forge.md, "Choosing batched pull
- * requests before a queue exists"), and send a message
- * Firstmate never answered once more (`arg` = the message's id). An effect is
+ * docs/usage.md, "The cost limit") - and send a message
+ * Firstmate never answered once more (`arg` = the message's id). `plan-queue`
+ * and `keep-delivery` are retired: a card saved by an earlier version may
+ * still carry one, and it does nothing. An effect is
  * never declared to a body's frame, so only the captain's click on the
  * card's own controls runs one.
  *

@@ -56,7 +56,7 @@ A merge made elsewhere closes the task as merged when the crewmate's open merge 
 ## Authority
 
 An outgoing contribution's saved story is a note without merge actions, while the existing change watcher follows the upstream maintainers' activity and confirmed outcome ([the forge seam](../docs/forge.md), "Contributing through an owned fork").
-Its fork route is a project choice captured on the task, never permission to merge upstream or mark its queue.
+Its fork route is a project choice captured on the task, never permission to merge upstream.
 A change holds facts, never permission: consent at a version is the captain's click on a card, an approval carried to a repaired version by a declared repair, or an override given for that version alone, and an override given for the whole task sits on the change ([delivery rigor](../docs/delivery-rigor.md), "The record and its holds").
 A batched change's approval is kept at its version while the change waits in line and in its batch; a change sent back from its batch loses it, and its crewmate is told the reason.
 A story revised at that version keeps the change's place in line and in its batch, which takes the story's title and words.
@@ -83,7 +83,7 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 
 - Every direct-pr task's pull request, its checks, its story and its merge.
 - A requested merge of any pull request the task names, a change of its own ([the forge seam](../docs/forge.md), "A requested merge").
-- Every change of a batched project that carries no team queue: a pushed branch that merges with the person's other approved changes, as one commit of its own.
+- Every change of a batched project: a pushed branch that merges with the person's other approved changes, as one commit of its own.
 - The attestation a github.com story carries when a review passed and live proof was accepted at its version.
 - The merge line on the story note of a task that merges on its own, and when that held note shows: the card stack draws both from the change's receipt, which keeps the merge's time even when the task stays open ([card authoring](../docs/card-authoring.md), "Work that closed without the captain's click").
 
@@ -95,7 +95,7 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 - [`../src/core/orchestrator/changePublication.test.ts`](../src/core/orchestrator/changePublication.test.ts) and [`../src/core/orchestrator/changePublication.stories.test.ts`](../src/core/orchestrator/changePublication.stories.test.ts): opening a change, the story and the attestation at a version.
 - [`../src/core/orchestrator/changePublication.mergedStory.test.ts`](../src/core/orchestrator/changePublication.mergedStory.test.ts): the merge card of a story pull request merged outside the app, and its refusal where the story never reached the version that merged.
 - [`../src/core/orchestrator/mergeReviews.test.ts`](../src/core/orchestrator/mergeReviews.test.ts): a review of a pull request named by its number, a merge past the branch rules, and the captain's click on either.
-- [`../src/core/orchestrator/changeMerge.test.ts`](../src/core/orchestrator/changeMerge.test.ts): the merge and its checks at the put-in, what a kept merge stops on, a lost answer read back before anything is sent again, and a project's queue answering a review's click.
+- [`../src/core/orchestrator/changeMerge.test.ts`](../src/core/orchestrator/changeMerge.test.ts): the merge and its checks at the put-in, what a kept merge stops on, and a lost answer read back before anything is sent again.
 - [`../src/core/orchestrator/ownBatchChange.test.ts`](../src/core/orchestrator/ownBatchChange.test.ts): a batched change's story, checks, merge card and approval on its pushed branch, its place in the batch and its receipt.
 - [`../src/core/batches/batches.test.ts`](../src/core/batches/batches.test.ts), [`../src/core/batches/line.test.ts`](../src/core/batches/line.test.ts) and [`../src/core/batches/combine.test.ts`](../src/core/batches/combine.test.ts): the line, the combine, a held batch and its answers, an approval withdrawn, and the reconcile after a start.
 - [`../tests/holds.test.ts`](../tests/holds.test.ts) and `scripts/holds.ts`: every hold the host places reads a typed fact, none the care's name.

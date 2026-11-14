@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { withAppParts } from "@shared/appParts";
 import { CARD_MEDIA_PIECE_BYTES } from "@shared/cardPictures";
 import type { CardPicture } from "@shared/cards";
 import { placedTaskFolders } from "@shared/work";
@@ -265,13 +264,11 @@ describe("a conversation held on a computer that runs work", () => {
   // The captain, on the map grown too large for a card: "the actual data
   // should live in a file, and the renderer loads from the file". A card's
   // data file goes home before the card, so the home holds it when the
-  // card's script asks; a home that cannot hand one over gets none of it.
-  it.each([
-    { homeChanges: ["card-data"], sent: true },
-    { homeChanges: [], sent: false },
-  ])(
-    "sends a card's data file before the card only to a home that lists its change ($homeChanges)",
-    async ({ homeChanges, sent }) => {
+  // card's script asks. Major 16 folded `card-data` into the work major, so
+  // every home this computer works for takes one, whatever name it lists.
+  it.each([{ homeChanges: ["card-data"] }, { homeChanges: [] }])(
+    "sends a card's data file before the card after work admission ($homeChanges)",
+    async ({ homeChanges }) => {
       const at = await placed({ homeChanges });
       await at.open();
       const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
@@ -301,14 +298,6 @@ describe("a conversation held on a computer that runs work", () => {
       const toolEnd = at.home.events.find(
         (record) => record.event.type === "tool_end" && record.event.toolName === "emit_card",
       );
-      if (!sent) {
-        expect(at.home.effects.map((effect) => effect.channel)).toEqual([]);
-        expect(toolEnd?.event).toMatchObject({ isError: true });
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-          "runs an older Infinitary that cannot hand a card its data file",
-        );
-        return;
-      }
       expect(toolEnd?.event).toMatchObject({ isError: false });
       expect(at.home.effects.map((effect) => effect.channel)).toEqual([
         "inf:work:media",
@@ -326,21 +315,21 @@ describe("a conversation held on a computer that runs work", () => {
 
   // The captain, on map cards carrying the map's code: "does our cards not
   // support importing repetitive boilerplates, avoiding counting them in the
-  // card size?" A card names the map part by reference; a home whose window
-  // cannot fill a reference gets the part's code in the body instead, and a
-  // body that would then be over the card size limit is refused unsent.
+  // card size?" A card names the map part by reference. Major 16 folded
+  // `card-app-parts` into the work major: every home this computer works for
+  // fills the reference in its window, so the card crosses as written, the
+  // part's code never counted against the card size limit.
   it.each([
-    { case: "lists the change", homeChanges: ["card-app-parts"], pad: 0, arrives: "as written" },
-    { case: "is older", homeChanges: [], pad: 0, arrives: "with the code" },
+    { case: "lists the retired name", homeChanges: ["card-app-parts"], pad: 0 },
+    { case: "lists nothing", homeChanges: [], pad: 0 },
     {
-      case: "is older, and the code would not fit",
+      case: "lists nothing, when the part's code would not fit beside it",
       homeChanges: [],
       pad: 50_000,
-      arrives: "refused",
     },
   ])(
-    "sends a card naming the map part to a home that $case: $arrives",
-    async ({ homeChanges, pad, arrives }) => {
+    "sends a card naming the map part as written to a home that $case",
+    async ({ homeChanges, pad }) => {
       const at = await placed({ homeChanges });
       await at.open();
       // The part as the runbook ships it, with an empty map and, to go over, a long note.
@@ -358,28 +347,17 @@ describe("a conversation held on a computer that runs work", () => {
 
       const sent = at.home.effects.find((effect) => effect.channel === "inf:work:card");
       const sentBody = String((sent?.request.card as { body?: string } | undefined)?.body);
-      if (arrives === "refused") {
-        expect(sent).toBeUndefined();
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-          "cannot load the app's own parts by reference",
-        );
-      } else if (arrives === "as written") {
-        expect(sentBody).toBe(body);
-      } else {
-        expect(sentBody).toBe(withAppParts(body));
-        expect(sentBody).not.toContain("data-inf-part");
-      }
+      expect(sentBody).toBe(body);
+      expect(sentBody).toContain("data-inf-part");
     },
   );
 
-  // INF-3715: an older home would drop the summary and show the merge card
-  // without it, so the computer sends nothing and tells its crewmate why.
-  it.each([
-    { homeChanges: ["merge-card-since-seen"], sent: true },
-    { homeChanges: [], sent: false },
-  ])(
-    "sends a merge card's since_seen only to a home that lists its change ($homeChanges)",
-    async ({ homeChanges, sent }) => {
+  // INF-3715: the summary of what changed since the captain saw an earlier merge
+  // card. Major 16 folded `merge-card-since-seen` into the work major, so every
+  // home this computer works for keeps it.
+  it.each([{ homeChanges: ["merge-card-since-seen"] }, { homeChanges: [] }])(
+    "sends a merge card's since_seen after work admission ($homeChanges)",
+    async ({ homeChanges }) => {
       const at = await placed({ homeChanges });
       await at.open();
       model([
@@ -404,26 +382,19 @@ describe("a conversation held on a computer that runs work", () => {
       await at.ended(1);
 
       const cards = at.home.effects.filter((effect) => effect.channel === "inf:work:card");
-      if (sent) {
-        expect(cards[0]?.request.card).toMatchObject({
-          presentationRevision: 2,
-          sinceSeen: "Review repairs grew this from 1,366 to 4,562 added lines.",
-        });
-        return;
-      }
-      expect(cards).toEqual([]);
-      expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain("since_seen refused: ");
+      expect(cards[0]?.request.card).toMatchObject({
+        presentationRevision: 2,
+        sinceSeen: "Review repairs grew this from 1,366 to 4,562 added lines.",
+      });
     },
   );
 
-  // INF-3717 piece 2: an older home has no show_merge_card order, so the
-  // computer sends nothing and its crewmate keeps the three calls.
-  it.each([
-    { homeChanges: ["show-merge-card"], sent: true },
-    { homeChanges: [], sent: false },
-  ])(
-    "sends show_merge_card only to a home that lists its change ($homeChanges)",
-    async ({ homeChanges, sent }) => {
+  // INF-3717 piece 2: the one call that shows a merge card. Major 16 folded
+  // `show-merge-card` into the work major, so every home this computer works
+  // for answers the order.
+  it.each([{ homeChanges: ["show-merge-card"] }, { homeChanges: [] }])(
+    "sends show_merge_card after work admission ($homeChanges)",
+    async ({ homeChanges }) => {
       const at = await placed({
         homeChanges,
         tools: CREWMATE_TOOLS.filter((tool) => tool.name === "show_merge_card"),
@@ -439,14 +410,7 @@ describe("a conversation held on a computer that runs work", () => {
       const asked = at.home.effects.filter(
         (effect) => effect.channel === "inf:work:show-merge-card",
       );
-      if (sent) {
-        expect(asked[0]?.request.input).toEqual({ card: { id: "merge-footer", after: "close" } });
-        return;
-      }
-      expect(asked).toEqual([]);
-      expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-        "show_merge_card needs a newer Infinitary",
-      );
+      expect(asked[0]?.request.input).toEqual({ card: { id: "merge-footer", after: "close" } });
     },
   );
 
@@ -499,7 +463,8 @@ describe("a conversation held on a computer that runs work", () => {
     expect(readFileSync(join(folders.cards, `${id}.file`))).toEqual(letter);
   });
 
-  it("refuses a card's files for a home too old to show them, and tells the crewmate what to do instead", async () => {
+  // Major 16 folded `card-files` into the work major: a home that lists no name still shows a card's files.
+  it("sends a card's file reference to a home that lists no retired name", async () => {
     const at = await placed({ homeChanges: [] });
     await at.open();
     const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
@@ -517,16 +482,16 @@ describe("a conversation held on a computer that runs work", () => {
           },
         ],
       },
-      { text: "Refused." },
+      { text: "Shown." },
     ]);
     await at.order("inf:session:prompt", [
       { orderId: "rows:old-files", task: TASK, text: "Hand it over." },
     ]);
     await at.ended(1);
 
-    expect(at.home.effects.map((effect) => effect.channel)).toEqual([]);
-    expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-      "runs an older Infinitary that cannot show files on a card",
-    );
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual(["inf:work:card"]);
+    const card = at.home.effects[0]?.request.card as { files?: { name: string }[] };
+    expect(card.files?.map((file) => file.name)).toEqual(["letter to the landlord.txt"]);
+    expect(JSON.stringify(at.home.effects)).not.toContain("Dear landlord");
   });
 });

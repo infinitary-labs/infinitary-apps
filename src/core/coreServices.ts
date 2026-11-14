@@ -31,9 +31,8 @@ import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
 import type { Flagship } from "./orchestrator/flagship";
 import type { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
-import type { QueueChoice } from "./orchestrator/queueChoice";
-import type { QueuePauses } from "./orchestrator/queuePauses";
 import type { Scheduler } from "./orchestrator/scheduler";
+import type { TeamQueueLeft } from "./orchestrator/teamQueueLeft";
 import type { Ticker } from "./orchestrator/ticker";
 import type { AppPaths } from "./paths";
 import type { PanelMountsHolder } from "./personal/panelMounts";
@@ -166,9 +165,8 @@ export type CoreServices = {
   projectSetups: ProjectSetups;
   projectContributions: ProjectContributions;
   projectChanges: ProjectChanges;
-  queueChoice: QueueChoice;
-  /** A project's paused batch of the shipped queue: followed, and answered by hand from Settings. */
-  queuePauses: QueuePauses;
+  /** The one look, per project, for files of the team queue the app once shipped. */
+  teamQueueLeft: TeamQueueLeft;
   /** The captain's own batches of approved changes, one line and one open batch per project. */
   batches: Batches;
   /** Worktree pool and background trash cleanup (also awaited by core integration tests). */

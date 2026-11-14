@@ -145,12 +145,6 @@
       "group": "Projects"
     },
     {
-      "name": "queue",
-      "path": "src/core/queue",
-      "about": "The fix-forward queue the app writes into projects",
-      "group": "Projects"
-    },
-    {
       "name": "batches",
       "path": "src/core/batches",
       "about": "One person's approved changes combined into one pull request per project",
@@ -552,11 +546,6 @@
     },
     {
       "from": "forge",
-      "to": "queue",
-      "why": "reads the queue's stamp and pause"
-    },
-    {
-      "from": "forge",
       "to": "workspace",
       "why": "runs git and checks commit names"
     },
@@ -839,11 +828,6 @@
       "from": "orchestrator",
       "to": "prompts",
       "why": "reads the card contract and the time zone"
-    },
-    {
-      "from": "orchestrator",
-      "to": "queue",
-      "why": "reads the queue's labels and parts"
     },
     {
       "from": "orchestrator",

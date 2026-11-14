@@ -176,7 +176,7 @@ The first mate keeps each panel, builds it and holds its data; a window asks for
 - **A gap.**
   A window that missed the first mate's pushes, because the first mate was out of reach or restarted, reads its panels again with everything else (`startPersonalPlugins`, `src/renderer/src/personal/personalPlugins.ts`).
 - **An older first mate.**
-  A first mate that does not list `panels-in-every-window` refuses these requests from a view, as before, and the view shows no panel of the captain's.
+  A first mate older than major 16 that does not list `panels-in-every-window` refuses these requests from a view, as before, and the view shows no panel of the captain's.
 
 ## Panels on the phone
 
@@ -192,7 +192,7 @@ Infinitary on iPhone and iPad draws them on its Panels tab (`docs/ios.md`, "Pane
 - **Desktop windows.**
   A window on another computer still draws a panel only on the first mate's own version and never asks for the library ("Versions" above).
 - **An older first mate.**
-  A first mate that does not list `panels-on-the-phone` refuses the library as not a request it answers.
+  A first mate older than major 16 that does not list `panels-on-the-phone` refuses the library as not a request it answers.
 
 ## Pages it would open
 
@@ -215,17 +215,17 @@ When the view cannot listen on that port, such as when the first mate runs on th
 A pasted address gives only its path and query; its host and port are never used, and anything but an `http` loopback address is refused.
 The wait ends with the push `inf:app:sign-in-ended`, whatever ended the sign-in, and the field goes with it; a reconnect that reads everything again clears it too, while one that replays what it missed keeps it and keeps listening.
 A browser that comes back while the connection is down is not passed on, since a request that changes something is refused while the first mate's computer is out of reach: the browser shows a page saying it could not reach that computer, and Settings asks for the address.
-A first mate that does not list the `sign-in-return` contract change sends the view nothing for this sign-in, so the view's Google notice says to update that computer and its accept stays off (`googleUpdateThereWords`).
-A view that does not list it is refused before any page opens, with words saying to update the view; the first mate's own window, and a first mate started by a command, sign in as before at home.
+A first mate older than major 16 that does not list `sign-in-return` sends the view nothing for this sign-in, so the view's Google notice says to update that computer and its accept stays off (`googleUpdateThereWords`).
+A view older than major 16 that does not list it is refused before any page opens, with words saying to update the view; the first mate's own window, and a first mate started by a command, sign in as before at home.
 A development run may set the loopback address the view listens on with `INFINITARY_SIGN_IN_RETURN_HOST`, so two development runs on one Linux PC each play a computer of their own; a packaged app ignores it.
 Infinitary on iPhone and iPad does the same from its Settings (`docs/ios.md`, "Google in Settings").
 
 ## A first mate on an older version
 
-A first mate that does not list the `every-view-asks` contract change refuses what a view of it could not ask before, so this app says so rather than asking (`needsUpdateThere`, read from its welcome).
+A first mate older than major 16 that does not list `every-view-asks` refuses what a view of it could not ask before, so this app says so rather than asking (`needsUpdateThere`, read from its welcome).
 A Settings section that needs an answer from it shows "Update Infinitary on Mac mini to do this from here." in place of its rows; Appearance, Keyboard and Automation work as ever, and Devices shows the same words under Leave.
 A card's button that opens Settings sends nothing and says the same, so the card stays on both computers; the first launch says it in place of its chips, and Switch Usage units and the allowance recheck refuse with those words.
-A first mate that lists `every-view-asks` but not `devices-from-a-view` refuses a view's devices and Knowledge (`devicesNeedUpdateThere`): Devices shows the same words under Leave in place of that computer's list, a card's Devices button says them and sends nothing, and no Knowledge panel shows.
+A first mate older than major 16 that lists `every-view-asks` but not `devices-from-a-view` refuses a view's devices and Knowledge (`devicesNeedUpdateThere`): Devices shows the same words under Leave in place of that computer's list, a card's Devices button says them and sends nothing, and no Knowledge panel shows.
 Once a window knows that version, nothing asks it the wider set on its own either: the diagnostics notice and the one-time sharing ask stay away, Automation's When choice lists no integration events, and a task browser's saved sign-in is not read.
 A read a window makes as it first opens, before it knows that version, can still reach it, such as the home screen's sharing read, or Automation's list when Settings is opened that early.
 A first mate with its own window refuses that read quietly; one started by a command answers it under its old rule, so the diagnostics notice can appear there.
@@ -257,7 +257,7 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
   A welcome that reloads - the other Mac restarted, or this one was away longer than its journal keeps - raises `caughtUp`, and the window reads everything again in place (`resync` in the shell store, and `resyncReads`, `src/renderer/src/plugins/reads/resync.ts`, which every read subscription follows).
   Nothing typed is lost to a reload: the window does not start over.
 - **Read only**: a welcome whose `access` is `read` (`docs/contract.md`) means the two copies of Infinitary are too far apart; the window says which one is newer and makes no changes but one.
-  A first mate whose welcome lists `messages-while-reading`, or that speaks a newer major, still hears plain words (`messagesWhileReading`): the input sends them as one string without the hints about what is on screen, a turn with pictures or files stays with "Only words can go until Infinitary is updated." under it, and the pill says the first mate still hears the captain and buttons come back once the older side is updated.
+  A first mate on major 16 or later, one whose welcome lists `messages-while-reading`, or one that speaks a newer major than this view, still hears plain words (`messagesWhileReading`): the input sends them as one string without the hints about what is on screen, a turn with pictures or files stays with "Only words can go until Infinitary is updated." under it, and the pill says the first mate still hears the captain and buttons come back once the older side is updated.
   When the newer one is there, the window asks for this Mac to be updated, and this Mac's own update notice is how.
   A development run may stand in another contract version for the Mac where the first mate lives with `INFINITARY_CONTRACT_VERSION`, and its view floor with `INFINITARY_VIEW_FLOOR`, so a view on the same build reads as too far apart; a packaged app ignores both.
 
@@ -308,7 +308,7 @@ A drop ends every watch there, so each welcome watches again, with that room.
   Use my saved sign-in needs no one at the page, so a view sends it as any other choice: the other Mac gives the browser the site's sign-in and hands it back to its crewmate, the card is answered on both Macs, and this Mac opens the view.
   When the sign-in cannot be used, the browser stays paused there and the feed says why, as on that Mac (`docs/task-browser.md`, "Saved sign-ins").
 - **A first mate too old to send pictures.**
-  A first mate whose welcome does not list the `browser-from-any-view` change answers no watch, so this Mac marks itself `browserNeedsUpdateThere` and asks nothing of a task's browser.
+  A first mate older than major 16 whose welcome does not list `browser-from-any-view` answers no watch, so this Mac marks itself `browserNeedsUpdateThere` and asks nothing of a task's browser.
   The take-over buttons send nothing and the card says so (`browserNotHereWords`, through `doneThereWords`), on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line: "Update Infinitary on MacBook Pro to show this task's browser here."
   The card's door and the record's Open still open the task's browser view, which shows the stopped panel's shape in place of a page (`browserShownThereWords`), with that line over "Until then, only a window on MacBook Pro can show it.", and no Open again.
 

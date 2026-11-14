@@ -190,7 +190,7 @@ Expired history is removed by a timer, and fast rotation evicts older history wi
 Only this bounded window catches a later reply echoing a retired token; it does not retain all historical credentials.
 The saved connection’s row reports a command failure with instructions to renew the organization’s sign-in or edit and save the command again.
 Commands are approved by Settings, not a protected Secrets approval, and their output never enters Pi authentication state, Settings, task records or Diagnostics.
-A home receiving a command from a view and a work computer must advertise the `custom-token-command` contract change before a token-command connection is forwarded to it.
+A home receiving a command from a view, and a work computer, must be on major 16 or later or advertise `custom-token-command` before a token-command connection is forwarded to it.
 
 ## Checked reasoning and cache settings
 

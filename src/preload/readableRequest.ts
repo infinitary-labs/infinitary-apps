@@ -26,17 +26,9 @@ export const REQUEST_COPY = {
     fallback: "Could not save this project change. Please try again.",
     prefix: "",
   },
-  "inf:repos:queue-answer": {
-    fallback: "Could not answer this paused batch. Please try again.",
-    prefix: "Could not answer this paused batch: ",
-  },
   "inf:repos:batch-answer": {
     fallback: "Could not answer this held batch. Please try again.",
     prefix: "Could not answer this held batch: ",
-  },
-  "inf:repos:queue-credential-create": {
-    fallback: "Could not make the queue's key. Please try again.",
-    prefix: "Could not make the queue's key: ",
   },
   "inf:repos:setup": { fallback: "Could not add this project. Please try again.", prefix: "" },
   "inf:forges:projects": { fallback: "Could not read your repos. Please try again.", prefix: "" },

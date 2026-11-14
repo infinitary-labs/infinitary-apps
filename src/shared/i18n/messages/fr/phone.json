@@ -383,7 +383,7 @@
   "phoneRecordHoldsUp": "Bloque",
   "phoneRecordLandsMerged": "fusionnée",
   "phoneRecordLandsRigor": "soin : {care}",
-  "phoneRecordModeBatched": "En demande de tirage groupée, testée par la file de votre projet",
+  "phoneRecordModeBatched": "En demande de tirage groupée, avec vos autres modifications approuvées",
   "phoneRecordModeInPlace": "Construite sur place",
   "phoneRecordModeLocal": "Fusionnée localement, sans demande de tirage",
   "phoneRecordModePullRequest": "En demande de tirage",

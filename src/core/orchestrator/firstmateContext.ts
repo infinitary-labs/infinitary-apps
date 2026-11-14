@@ -580,11 +580,6 @@ export class FirstmateContext {
               ? { delivery: "builds in place" }
               : {
                   delivery: repo.delivery,
-                  // A batched choice waiting for the project's queue
-                  // workflow to merge (docs/forge.md), only while it waits.
-                  ...(repo.queuePendingAt !== undefined
-                    ? { delivery_waiting: "queue-pr until a queue workflow merges" }
-                    : {}),
                   autonomy: repo.autonomy,
                   ...(repo.rigor ? { rigor: repo.rigor } : {}),
                 }),

@@ -44,7 +44,7 @@ export const secretMetadataSchema = z.strictObject({
   lastRequest: z.number().nullable(),
   /**
    * The title of the task that made the last request, when the home still
-   * knows it (`secrets-last-task.md`): what the Secrets page names beside when.
+   * knows it: what the Secrets page names beside when.
    */
   lastTask: z.string().optional(),
   /**

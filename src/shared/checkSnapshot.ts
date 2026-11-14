@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { BATCH_CHECK } from "./batches";
 import type { FactDotState } from "./factDot";
-import { QUEUE_STATUS } from "./repos";
 
 /** Reported check states, shared by the forge reader and every displayed fact. */
 export const checkStateSchema = z.enum([
@@ -154,22 +154,22 @@ export function checkSnapshotState(reading: CheckSnapshot): string {
 }
 
 /**
- * A reading of the pull request's own checks (INF-3208): every check but
- * the project's queue status, which says where the change stands in the
- * project's batch, not how its own checks ran. The merge card counts these
- * in its Checks cell and shows the queue status in its Batch check cell.
+ * A reading of the change's own checks (INF-3208): every check but the
+ * batch check, which says where the change stands in its batch, not how its
+ * own checks ran. The merge card counts these in its Checks cell and shows
+ * the batch check in its Batch check cell.
  */
 export function ownChecks(reading: CheckSnapshot): CheckSnapshot {
-  if (!reading.items.some((item) => item.name === QUEUE_STATUS)) return reading;
-  return { ...reading, items: reading.items.filter((item) => item.name !== QUEUE_STATUS) };
+  if (!reading.items.some((item) => item.name === BATCH_CHECK)) return reading;
+  return { ...reading, items: reading.items.filter((item) => item.name !== BATCH_CHECK) };
 }
 
 /**
- * How the project's queue status stands in the reading of `head`, beside
- * the pull request's own checks (INF-3208): `failed` when the queue failed
- * the version, and `alone` when that is the reading's only failure, every
- * own check passed, skipped or neutral. Undefined when the reading of that
- * version carries no failed queue status.
+ * How the batch check stands in the reading of `head`, beside the change's
+ * own checks (INF-3208): `failed` when the batch failed the version or left
+ * it out, and `alone` when that is the reading's only failure, every own
+ * check passed, skipped or neutral. Undefined when the reading of that
+ * version carries no failed batch check.
  */
 export function failedBatch(
   delivery: { checks?: CheckSnapshot } | null | undefined,
@@ -177,8 +177,8 @@ export function failedBatch(
 ): { alone: boolean } | undefined {
   const reading = delivery?.checks;
   if (reading?.headSha !== head) return undefined;
-  const queue = reading.items.find((item) => item.name === QUEUE_STATUS);
-  if (!queue || !isRedCheckState(queue.state)) return undefined;
+  const batch = reading.items.find((item) => item.name === BATCH_CHECK);
+  if (!batch || !isRedCheckState(batch.state)) return undefined;
   const own = ownChecks(reading).items;
   return {
     alone:

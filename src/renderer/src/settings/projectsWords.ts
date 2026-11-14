@@ -1,8 +1,7 @@
-import { changeNumberLabel, type ForgeKind } from "@shared/forge";
 import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
-import { QUEUE_STATUS, type RepoView } from "@shared/repos";
+import type { RepoView } from "@shared/repos";
 import { type DeviceSignIns, devicePlace } from "@shared/signIns";
 import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
 
@@ -46,150 +45,9 @@ export const PROJECT_POLICY_WORDS = {
 } as const;
 
 /**
- * What the batched choice needs, shown under "Where changes go" while a
- * project has it and runs no queue Infinitary ships (INF-2887, the
- * captain's "Explain in Settings what the choice needs and link to the
- * how-to"): the app only marks an approved version waiting, and the
- * project's queue must pass or fail it (docs/forge.md, "A project's queue").
- * The first way is the queue Infinitary ships, planned with the first mate.
- */
-export const QUEUE_HOW_TO_WORDS = {
-  get needs() {
-    return m.settingsProjectsQueueNeeds();
-  },
-  get label() {
-    return m.settingsProjectsQueueHowToLabel();
-  },
-  get steps(): readonly string[] {
-    return [
-      m.settingsProjectsQueueStepAsk(),
-      m.settingsProjectsQueueStepWorkflow({ status: QUEUE_STATUS }),
-      m.settingsProjectsQueueStepSet({ status: QUEUE_STATUS }),
-    ];
-  },
-  get firstMate() {
-    return m.settingsProjectsQueueFirstMate();
-  },
-  get guide() {
-    return m.settingsProjectsQueueGuideGithub();
-  },
-  guideLink: "https://docs.github.com/en/rest/commits/statuses#create-a-commit-status",
-  /**
-   * On GitLab a waiting status cannot be set waiting again, so the waiting
-   * mark is a finished status whose description says it waits
-   * (docs/forge.md, "The shipped queue on GitLab").
-   */
-  gitlab: {
-    get steps(): readonly string[] {
-      return [
-        m.settingsProjectsQueueStepAsk(),
-        m.settingsProjectsQueueStepPipelineGitlab({ status: QUEUE_STATUS }),
-        m.settingsProjectsQueueStepSetGitlab({ status: QUEUE_STATUS }),
-      ];
-    },
-    get guide() {
-      return m.settingsProjectsQueueGuideGitlab();
-    },
-    guideLink: "https://docs.gitlab.com/api/commits/#set-the-pipeline-status-of-a-commit",
-  },
-} as const;
-
-/** The how-to's steps and guide for a project's host. */
-export function queueHowTo(kind: ForgeKind | undefined): {
-  steps: readonly string[];
-  guide: string;
-  guideLink: string;
-} {
-  return kind === "gitlab" ? QUEUE_HOW_TO_WORDS.gitlab : QUEUE_HOW_TO_WORDS;
-}
-
-/**
- * The key the shipped queue writes with on GitLab, under "Where changes go"
- * (docs/forge.md, "The shipped queue on GitLab"; the plan's "one click
- * creates its project token"). GitLab hands a pipeline no key that may
- * write a status, so the queue keeps its own in the project's CI settings.
- */
-export const QUEUE_KEY_WORDS = {
-  get title() {
-    return m.settingsProjectsQueueKeyTitle();
-  },
-  missing: (place: string) => m.settingsProjectsQueueKeyMissing({ place }),
-  ready: (date: string) => m.settingsProjectsQueueKeyReady({ date }),
-  unreadable: (place: string) => m.settingsProjectsQueueKeyUnreadable({ place }),
-  get make() {
-    return m.settingsProjectsQueueKeyMake();
-  },
-  get remake() {
-    return m.settingsProjectsQueueKeyRemake();
-  },
-  get made() {
-    return m.settingsProjectsQueueKeyMade();
-  },
-} as const;
-
-/**
- * What "Where changes go" says on a project that runs the queue Infinitary
- * ships (docs/forge.md, "The shipped queue"): the project decides for
- * everyone working on it, so the choice is fixed here.
- */
-export const QUEUE_SHIPPED_WORDS = {
-  set: (version: number) => m.settingsProjectsQueueShipped({ version: String(version) }),
-} as const;
-
-/**
- * A project's paused batch in Settings (docs/forge.md, "A paused batch";
- * the captain's quiet choice: no card, Settings shows the pause with its
- * Resume).
- */
-export const QUEUE_PAUSE_WORDS = {
-  get title() {
-    return m.settingsProjectsPauseTitle();
-  },
-  summary: (run: number, changes: readonly number[], since: string, kind?: ForgeKind) =>
-    m.settingsProjectsPauseSummary({
-      count: changes.length,
-      since,
-      run: String(run),
-      // A plain comma join, as the summary always wrote it.
-      changes: changes.map((number) => changeNumberLabel(kind, number)).join(", "),
-    }),
-  claimed: (who: string) => m.settingsProjectsPauseClaimed({ who }),
-  get unclaimed() {
-    return m.settingsProjectsPauseUnclaimed();
-  },
-  get unread() {
-    return m.settingsProjectsPauseUnread();
-  },
-  get issue() {
-    return m.settingsProjectsPauseIssue();
-  },
-  get run() {
-    return m.settingsProjectsPauseRun();
-  },
-  get reason() {
-    return m.settingsProjectsPauseReason();
-  },
-  get resume() {
-    return m.settingsProjectsPauseResume();
-  },
-  get sendBack() {
-    return m.settingsProjectsPauseSendBack();
-  },
-  get sendBackWhich() {
-    return m.settingsProjectsPauseSendBackWhich();
-  },
-  get needsReason() {
-    return m.settingsProjectsPauseNeedsReason();
-  },
-  get sent() {
-    return m.settingsProjectsPauseSent();
-  },
-} as const;
-
-/**
- * What "Where changes go" says on a batched project that carries no team
- * queue (docs/forge.md, "Batches of your own"): the app combines this
- * person's approved changes itself, with nothing to set up.
+ * What "Where changes go" says on a batched project (docs/forge.md,
+ * "Batches of your own"): the app combines this person's approved changes
+ * itself, with nothing to set up.
  */
 export const BATCH_OWN_WORDS = {
   get note() {
@@ -240,19 +98,9 @@ export const BATCH_HOLD_WORDS = {
   sentBack: (changes: number) => m.settingsProjectsBatchSentBack({ count: changes }),
 };
 
-/** What "Where changes go" says on a project whose host runs no queue Infinitary can use. */
-export function queueNoHostWords(): string {
-  return m.settingsProjectsQueueNoHost();
-}
-
-/**
- * What "Where changes go" says while a project's batched choice waits for
- * its queue workflow (INF-2885 direction B, docs/forge.md "Choosing batched
- * pull requests before a queue exists"): the choice applies by itself once
- * a workflow that mentions the batch check merges.
- */
-export function queueWaitingWords(delivery: RepoView["delivery"]): string {
-  return m.settingsProjectsQueueWaiting({ delivery: PROJECT_DELIVERY_WORDS[delivery] });
+/** What "Where changes go" says on a project whose host takes no batch pull request. */
+export function batchNoHostWords(): string {
+  return m.settingsProjectsBatchNoHost();
 }
 
 /**

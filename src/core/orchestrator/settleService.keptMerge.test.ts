@@ -1,14 +1,4 @@
-/**
- * Guardrails for the settle service before it splits along its owners
- * (INF-2625's plan, the settle piece): the captain's kept merge approval
- * (FI3-304). What its guard lets out and stops, the wait each stopped merge
- * leaves the approval on, the checks a host-run merge makes first, and how
- * an attempt that outlived its answer is read back.
- */
-import { createHash } from "node:crypto";
 import type { Card } from "@shared/cards";
-import type { ChangePresentation } from "@shared/changePresentation";
-import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it } from "vitest";
 import {
   HEAD,
@@ -19,12 +9,9 @@ import {
   TASK,
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
-import { presentationMarkdown } from "../forge";
-import { QUEUE_OWNED_MERGES_VERSION } from "../queue/shipped";
 import type { MergeAuthorization } from "../storage/taskRecords";
 import type { MergeGuard, MergeStop } from "./changeMerge";
 import { PULL_NOT_THE_TASKS } from "./keptApproval";
-import { queueWakeWords } from "./projectQueue";
 
 const OTHER_HEAD = "b".repeat(40);
 
@@ -261,30 +248,6 @@ describe("the wait a stopped merge leaves the approval on", () => {
     await world.settle.reportCardSettle(TASK, "merge-pr");
     expect(approvalOf(world)?.waiting?.on).toBe("evidence");
   });
-
-  // INF-2913: the batch check's warning (INF-2897) moved off the retired
-  // note into what the Firstmate is told at the click.
-  it.each([false, true])(
-    "tells the Firstmate, not the captain, when nothing answers the project's queue (host run: %s)",
-    async (hostRun) => {
-      const world = approved();
-      world.repos.recordQueue("project", { workflows: [] });
-      world.merge = async () => ({ ok: false, text: "In the merge queue.", stop: "queue" });
-      if (hostRun) await world.kept.runMergeAuthorization(TASK);
-      else await world.settle.reportCardSettle(TASK, "merge-pr");
-      expect(approvalOf(world)?.waiting?.on).toBe("queue");
-      expect([...world.cards.values()]).toEqual([]);
-      const warning = queueWakeWords({ workflows: [], answeredBefore: false });
-      expect(warning).toBeDefined();
-      expect(world.wakes).toEqual([
-        expect.objectContaining({
-          kind: "settled",
-          unseen: true,
-          outcome: expect.stringContaining(warning ?? ""),
-        }),
-      ]);
-    },
-  );
 
   it.each<[MergeStop, string]>([
     ["closed", "its pull request was closed without merging"],
@@ -610,134 +573,4 @@ it("continues other queue removals after one fails and retains only the unacknow
   await expect(world.approvals.queueMarksSettled(TASK)).rejects.toThrow("first destination");
   expect(visited).toEqual([HEAD, OTHER_HEAD]);
   expect(approvalOf(world)?.queueRemovals?.map((item) => item.head)).toEqual([HEAD]);
-});
-
-// N6: the normal kept-merge caller carries the installed project's route into its result.
-it("uses the installed queue route in the captain's kept-merge result", async () => {
-  const world = approved();
-  world.live.delivery = "queue-pr";
-  world.repos.recordQueue("project", {
-    workflows: [
-      {
-        path: ".github/workflows/infinitary-queue.yml",
-        active: true,
-        shipped: QUEUE_OWNED_MERGES_VERSION,
-      },
-    ],
-  });
-  world.merge = async () => ({ ok: false, stop: "queue", text: "Queued." });
-  const result = await world.settle.reportCardSettle(TASK, "merge-pr");
-  expect(result.text).toContain("The project's queue merges after its pass");
-  expect(result.text).not.toContain("older or project-written");
-});
-
-// F3: late publication cleanup is a new durable effect, not the earlier withdrawal's receipt.
-it("retains a late interrupted publication's removal after an earlier withdrawal was acknowledged", async () => {
-  let failLate = false;
-  const world = settleWorld({
-    removeQueuedApproval: async () => {
-      if (failLate) throw new Error("late removal unavailable");
-    },
-  });
-  const authorization = standingApproval();
-  seedDelivery(world.tasks, TASK, { mergeAuthorization: authorization });
-  const guard = world.approvals.guardOf(TASK, authorization, false);
-  world.approvals.holdForGuidance(TASK);
-  await world.approvals.queueMarksSettled(TASK);
-  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
-  failLate = true;
-  await expect(guard.queueInterrupted?.()).rejects.toThrow("late removal unavailable");
-  expect(approvalOf(world)?.queueRemovals?.map((item) => item.head)).toEqual([HEAD]);
-  const restarted = world.restartSettles();
-  failLate = false;
-  await restarted.approvals.queueMarksSettled(TASK);
-  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
-});
-
-// F4 + INF-3623: an unpublished replacement must not leave old merge words eligible.
-it("suspends unpublished same-head story eligibility through durable removals without ending the click", async () => {
-  let unavailable = true;
-  const removed: string[] = [];
-  const world = settleWorld({
-    removeQueuedApproval: async (_task, removal) => {
-      removed.push(removal.head);
-      if (unavailable) throw new Error("Disposable host unavailable");
-    },
-  });
-  world.repos.recordQueue("project", {
-    workflows: [
-      {
-        path: ".github/workflows/infinitary-queue.yml",
-        active: true,
-        shipped: QUEUE_OWNED_MERGES_VERSION,
-      },
-    ],
-  });
-  const authorization = standingApproval();
-  seedDelivery(world.tasks, TASK, { mergeAuthorization: authorization });
-  const published: ChangePresentation = {
-    version: 1,
-    taskId: TASK,
-    revision: 1,
-    title: "fix: meter story",
-    base: HEAD,
-    head: HEAD,
-    destination: {
-      host: authorization.target.host,
-      projectId: PR,
-      fullName: `${authorization.target.owner}/${authorization.target.name}`,
-      visibility: "private",
-    },
-    why: ["Keep the approved merge words."],
-    whatChanged: ["Earlier approved summary."],
-    before: ["The queue is waiting."],
-    after: ["The queue merges the approved words."],
-    views: [],
-    assets: [],
-    pictures: [],
-    noPicture: "This changes background queue behavior.",
-    verification: [],
-    risk: Object.fromEntries(
-      RISK_DIMENSIONS.map((name) => [name, { level: "low", why: "Disposable queue fixture." }]),
-    ) as RiskDeclaration,
-    requiredActions: [],
-    unfinished: [],
-    projectText: "BREAKING CHANGE: Keep this footer.",
-  };
-  const region = presentationMarkdown(published, new Map(), "passed");
-  const save = (latest: ChangePresentation) =>
-    world.tasks.delivery.updateChangePresentation(TASK, () => ({
-      revisions: [published, latest],
-      receipts: [],
-      published: {
-        revision: published.revision,
-        head: HEAD,
-        state: "confirmed",
-        number: PR,
-        region,
-        regionHash: createHash("sha256").update(region).digest("hex"),
-      },
-    }));
-  // Verification, risk and non-squash surrounding text cannot spend another batch.
-  save({
-    ...published,
-    revision: 2,
-    verification: ["Additional proof."],
-    risk: Object.fromEntries(
-      RISK_DIMENSIONS.map((name) => [name, { level: "medium", why: "Updated assessment." }]),
-    ) as RiskDeclaration,
-    projectText: `Closes #24\n\n${published.projectText}`,
-  });
-  await world.approvals.storyPrepared(TASK, HEAD);
-  expect(removed).toEqual([]);
-  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
-  save({ ...published, revision: 2, whatChanged: ["Newest approved summary."] });
-  await expect(world.approvals.storyPrepared(TASK, HEAD)).rejects.toThrow("unavailable");
-  expect(approvalOf(world)?.status).toBe("standing");
-  expect(approvalOf(world)?.queueRemovals?.map((item) => item.head)).toEqual([HEAD]);
-  unavailable = false;
-  await world.restartSettles().approvals.queueMarksSettled(TASK);
-  expect(removed).toEqual([HEAD, HEAD]);
-  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
-  expect(approvalOf(world)?.status).toBe("standing");
 });

@@ -1,3 +1,4 @@
+import { hasSince16 } from "@shared/contractFeatures";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 
@@ -11,7 +12,8 @@ export function useAnnotationHome(): boolean {
     void window.infinitary.app
       .healthcheck()
       .then((home) => {
-        if (live) setAvailable(home.changes?.includes("card-annotations") === true);
+        // Major 16 folded typed notes in; a home on major 15 has them by their name.
+        if (live) setAvailable(hasSince16(home.protocolVersion, home.changes, "card-annotations"));
       })
       .catch(() => {});
     return () => {

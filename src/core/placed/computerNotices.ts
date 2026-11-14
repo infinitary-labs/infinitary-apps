@@ -20,7 +20,7 @@ export function attachComputerNotices(
   options: {
     tasks: Pick<TaskService, "get" | "resolve" | "leftoverNotes" | "resolveLeftoverNote">;
     here: Pick<LeftBehindHere, "list">;
-    work: Pick<WorkDevices, "ask" | "inReach" | "version">;
+    work: Pick<WorkDevices, "ask" | "inReach" | "takesCurrentWork">;
     notify: (wake: TypedWake) => void;
     broadcast: (event: FmEvent) => void;
   },

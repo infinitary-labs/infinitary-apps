@@ -64,30 +64,6 @@ describe("parseSpawnIntent", () => {
 });
 
 describe("renderIntentBrief", () => {
-  // Reviewer F8: queue delivery must not instruct agents to race the queue's merge.
-  it.each([true, false])(
-    "serves only the configured queue merge route (queue-owned: %s)",
-    (owned) => {
-      const brief = renderIntentBrief(
-        { goal: "Merge passed batches without an open app", userWords: "Build the queue change" },
-        "queue-pr",
-        undefined,
-        undefined,
-        owned,
-      );
-      expect(brief).toContain(
-        owned
-          ? "The project's queue tests and merges the approved version itself."
-          : "The app merges the approved version after the project's queue passes it.",
-      );
-      expect(brief).not.toContain(
-        owned
-          ? "The app merges the approved version after"
-          : "queue tests and merges the approved version itself",
-      );
-    },
-  );
-
   it("renders the fixed template: verbatim user words outrank the goal, constraints and delivery (INF-1366)", () => {
     const brief = renderIntentBrief(
       {

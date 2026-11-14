@@ -11,6 +11,7 @@ import { forgeOf, hasChangeRequests } from "@shared/forge";
 import type { RepoView } from "@shared/repos";
 import {
   allowanceResetOf,
+  BATCH_CHECK,
   describeCheckState,
   type Forge,
   type ForgeChange,
@@ -20,8 +21,6 @@ import {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
-  QUEUE_REMOVED_WORDS,
-  QUEUE_STATUS,
 } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskRecords";
@@ -42,7 +41,6 @@ import type { DraftReadiness } from "./draftReadiness";
 import type { MainBranchReading } from "./mainCheckWake";
 import { approvalClosesOn } from "./mergeAuthorization";
 import { type MergedStory, mergedStoryOf } from "./mergedStory";
-import { type ProjectQueue, queueWakeWords } from "./projectQueue";
 
 /**
  * `merged`: no open change for the branch, and the pull request the task
@@ -79,24 +77,17 @@ type Audience = "firstmate" | "crewmate" | "watch";
  * the task's delivery facts, and said to whoever asked.
  */
 /**
- * The checks as the task's reading counts them (INF-4018). The app's own removal
- * of its queue mark - the queue status whose words are the removal words,
- * written as error by the app or as failure by the queue - says the
- * captain's approval of the version is gone or held, not that anything
- * failed: it is kept as skipped, so it is never counted as a failed check
- * and a merge card can ask for the approval again. The Batch check cell
- * reads its words from the queue status the app keeps.
+ * The checks as the project's host reads them, without any of the batch
+ * check's name. The app adds that check to a batched change's reading
+ * itself and writes it nowhere the project lives, so one the host carries
+ * was left by the team queue an earlier Infinitary shipped and says nothing
+ * about the change.
  */
-export function countedChecks<T extends { items: ForgeCheck[] }>(reading: T): T {
-  const removed = (check: ForgeCheck) =>
-    check.name === QUEUE_STATUS && check.detail === QUEUE_REMOVED_WORDS;
-  if (!reading.items.some(removed)) return reading;
-  return {
-    ...reading,
-    items: reading.items.map((check) =>
-      removed(check) ? { ...check, state: "skipped" as const } : check,
-    ),
-  };
+export function hostChecks<T extends { items: ForgeCheck[] }>(reading: T): T {
+  const left = (check: ForgeCheck) =>
+    check.name === BATCH_CHECK || check.name.startsWith(`${BATCH_CHECK} [`);
+  if (!reading.items.some(left)) return reading;
+  return { ...reading, items: reading.items.filter((check) => !left(check)) };
 }
 
 export class ChangeChecks {
@@ -105,7 +96,6 @@ export class ChangeChecks {
   constructor(
     private readonly context: ChangeContext,
     private readonly readiness: DraftReadiness,
-    private readonly queue?: ProjectQueue,
   ) {
     this.options = context.options;
   }
@@ -175,7 +165,7 @@ export class ChangeChecks {
       }
       change = await this.readiness.readyPrerequisite(taskId, forge, change);
       const batched = branch === record.branch ? this.context.ownBatch(taskId) : undefined;
-      const read = countedChecks(await forge.checks(change));
+      const read = hostChecks(await forge.checks(change));
       const checks = batched ? this.withBatchCheck(taskId, batched, change.headSha, read) : read;
       const main = await this.mainEvidence(record, forge, change, checks);
       this.assertCheckTarget(record);
@@ -189,7 +179,6 @@ export class ChangeChecks {
         this.observeContribution(record, forge, pull);
       }
       const observationId = this.observeChecks(taskId, change.headSha, checks, false);
-      if (!batched) this.queue?.observe(taskId, change.headSha, checks.items);
       const words = changeWords(forge, change);
       // The watch's own reading leaves the watch as it is (`watchAfter`),
       // whether its checks still run or not.
@@ -214,7 +203,7 @@ export class ChangeChecks {
         };
       if (this.checksPending(record, { change, forge }, checks)) {
         const failing = named(checks.items.filter((check) => isRedCheckState(check.state)));
-        const queue = this.queueWake(taskId, change.headSha, checks.items);
+        const batch = this.batchWake(taskId, change.headSha);
         return {
           kind: "pending",
           observationId,
@@ -222,7 +211,7 @@ export class ChangeChecks {
           change: words,
           pending: named(checks.items.filter((check) => check.state === "pending")),
           ...(failing.length > 0 ? { failing } : {}),
-          ...(queue ? { queue } : {}),
+          ...(batch ? { batch } : {}),
         };
       }
       return {
@@ -396,10 +385,7 @@ export class ChangeChecks {
    * A change that merges in this person's batch reads its place there as
    * the batch check (docs/forge.md, "Batches of your own"): the status name
    * the merge card's Batch check cell reads, kept on the task and written
-   * nowhere the project lives. A version with no place reads as it is,
-   * without that status: one the host still holds there is left from the
-   * team queue the project carried before its files were removed, which
-   * nothing answers any more, so it never holds the version.
+   * nowhere the project lives. A version with no place reads as it is.
    */
   private withBatchCheck<T extends { items: ForgeCheck[] }>(
     taskId: string,
@@ -409,11 +395,10 @@ export class ChangeChecks {
   ): T {
     const status = this.context.batches?.status(repo.id, taskId, head);
     const kept = this.options.tasks.get(taskId)?.delivery?.queueStatus;
-    const own = checks.items.filter((item) => item.name !== QUEUE_STATUS);
     if (!status) {
-      if (kept?.kind)
+      if (kept)
         this.options.tasks.delivery.recordChangeEvidence(taskId, { queueStatus: undefined });
-      return own.length === checks.items.length ? checks : { ...checks, items: own };
+      return checks;
     }
     const fact = {
       head,
@@ -426,9 +411,9 @@ export class ChangeChecks {
     return {
       ...checks,
       items: [
-        ...own,
+        ...checks.items,
         {
-          name: QUEUE_STATUS,
+          name: BATCH_CHECK,
           state:
             status.kind === "passed" ? "success" : status.kind === "failed" ? "failure" : "pending",
           detail: status.words,
@@ -485,7 +470,7 @@ export class ChangeChecks {
       }
       change = await this.readiness.readyPrerequisite(taskId, forge, change);
       const batched = branch === record.branch ? this.context.ownBatch(taskId) : undefined;
-      const read = countedChecks(await forge.checks(change));
+      const read = hostChecks(await forge.checks(change));
       const checks = batched ? this.withBatchCheck(taskId, batched, change.headSha, read) : read;
       const main = await this.mainEvidence(record, forge, change, checks);
       const mergeability =
@@ -493,7 +478,6 @@ export class ChangeChecks {
       this.assertCheckTarget(record);
       if (mergeability) this.observeContribution(record, forge, mergeability);
       this.observeChecks(taskId, change.headSha, checks, audience === "crewmate");
-      if (!batched) this.queue?.observe(taskId, change.headSha, checks.items);
       const stillRunning = this.checksPending(record, { change, forge }, checks);
       this.record(
         record.id,
@@ -807,28 +791,16 @@ export class ChangeChecks {
 
   /** An unread observation survives a restart until it reaches the crew's durable inbox. */
   /**
-   * What the check watch's wake says about a version still waiting on the
-   * project's queue after the app marked it: undefined unless the queue
-   * status there is still waiting on the app's own mark.
+   * What the check watch's wake says about a change still waiting in this
+   * person's batch: undefined for any other change, or once its batch failed.
    */
-  private queueWake(
-    taskId: string,
-    head: string,
-    items: readonly { name: string; state: ForgeCheckState }[],
-  ): string | undefined {
+  private batchWake(taskId: string, head: string): string | undefined {
     const own = this.context.ownBatch(taskId);
-    if (own) {
-      // A change in this person's batch waits on the batch, not on its crewmate.
-      const status = this.context.batches?.status(own.id, taskId, head);
-      return status && status.kind !== "failed"
-        ? `The change waits in this project's batch of approved changes (${status.words}). The app merges the batch once its checks pass, so nothing is needed from you.`
-        : undefined;
-    }
-    if (!this.queue) return undefined;
-    const mark = this.options.tasks.get(taskId)?.delivery?.queueMark;
-    const waiting = items.some((item) => item.name === QUEUE_STATUS && item.state === "pending");
-    if (mark?.head !== head || !waiting) return undefined;
-    return queueWakeWords(this.queue.noteFacts(taskId));
+    // A change in this person's batch waits on the batch, not on its crewmate.
+    const status = own ? this.context.batches?.status(own.id, taskId, head) : undefined;
+    return status && status.kind !== "failed"
+      ? `The change waits in this project's batch of approved changes (${status.words}). The app merges the batch once its checks pass, so nothing is needed from you.`
+      : undefined;
   }
 
   private observeChecks(

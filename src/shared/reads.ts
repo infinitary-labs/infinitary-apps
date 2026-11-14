@@ -99,7 +99,7 @@ export type ReadEntry<C extends CoreInvokeChannel, A extends z.ZodType> = {
    * readers that ask for all of it: it is read with `args` while every
    * reader asks for less (`asksLess`), and read again whole once a reader
    * that asks for all of it joins a lesser value (`lesser`). The task board
-   * is the one this is for (`board-without-closed.md`).
+   * is the one this is for (`boardWithoutClosed`).
    */
   narrows?: {
     args: z.infer<A>;
@@ -313,7 +313,7 @@ export const readCatalog = {
         event.type === "repo_setup" ||
         event.type === "repo_configured" ||
         event.type === "repo_runs_on" ||
-        event.type === "repo_queue" ||
+        event.type === "repo_batch" ||
         event.type === "repo_unregistered",
     },
     description:
@@ -452,7 +452,7 @@ export const readCatalog = {
         event.type === "repo_setup" ||
         event.type === "repo_configured" ||
         event.type === "repo_runs_on" ||
-        event.type === "repo_queue" ||
+        event.type === "repo_batch" ||
         event.type === "repo_unregistered",
     },
     description: "Scratch plus one project per managed repo, with live counts.",

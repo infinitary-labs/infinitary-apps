@@ -12,8 +12,6 @@ import { crewSendResultSchema } from "../crewTranscript";
 import { lastTurnSchema } from "../lastTurn";
 import {
   projectsFolderViewSchema,
-  queueAnswerSchema,
-  queueCredentialSchema,
   repoPolicyPatchSchema,
   repoRemovalSchema,
   repoSetupResultSchema,
@@ -229,16 +227,6 @@ export const talkChannels = {
     request: z.tuple([z.string().min(1), repoPolicyPatchSchema]),
     response: repoViewSchema,
   },
-  // A by-hand answer to a project's paused batch (Settings -> Projects,
-  // docs/forge.md "A paused batch"): the shipped queue starts where the
-  // project lives with the reason, and ends the pause itself.
-  "inf:repos:queue-answer": {
-    effect: "change",
-    surface: "core",
-    reach: "views",
-    request: z.tuple([z.string().min(1), queueAnswerSchema]),
-    response: okSchema,
-  },
   // A by-hand answer to a held batch of the captain's own approved changes
   // (Settings -> Projects, docs/forge.md "A held batch"): try it again, or
   // send changes back, each with its reason.
@@ -248,25 +236,6 @@ export const talkChannels = {
     reach: "views",
     request: z.tuple([z.string().min(1), batchAnswerSchema]),
     response: okSchema,
-  },
-  // The token a project's shipped queue writes with, where its host keeps
-  // one in the project's CI settings (GitLab; docs/forge.md, "The shipped
-  // queue on GitLab"): null on a host whose queue needs none.
-  "inf:repos:queue-credential": {
-    effect: "read",
-    surface: "core",
-    reach: "views",
-    request: z.tuple([z.string().min(1)]),
-    response: queueCredentialSchema.nullable(),
-  },
-  // Create that token with the captain's own sign-in (Settings -> Projects),
-  // one click; the token itself never reaches the app.
-  "inf:repos:queue-credential-create": {
-    effect: "change",
-    surface: "core",
-    reach: "views",
-    request: z.tuple([z.string().min(1)]),
-    response: queueCredentialSchema,
   },
   // Where new projects go (Settings -> Projects): the folder clone and init
   // create their directories in. Null puts it back to the app's own fleet

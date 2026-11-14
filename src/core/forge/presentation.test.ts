@@ -7,12 +7,6 @@ import { describe, expect, it } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import {
-  commitEnvelope,
-  NAMING_DECISION,
-  readCommitApproval,
-  readCommitEnvelope,
-} from "../queue/shipped/message.mjs";
-import {
   PresentationAroundError,
   presentationCardBody,
   presentationCommitMessage,
@@ -141,34 +135,8 @@ function inGrid(body: string) {
 }
 
 describe("the layout GitHub can actually display", () => {
-  // Accepted fork queue repair: the new protocol separates identity from literal squash words.
-  it("reads approved squash words while retaining the captured request title and head guards", () => {
-    const selected = story([], "private");
-    const requestTitle = "Fix typo";
-    const comment = commitEnvelope(
-      selected.head,
-      selected.whatChanged.join("\n\n"),
-      selected.title,
-      { naming: NAMING_DECISION.off, requestTitle },
-    );
-    expect(readCommitApproval(comment, selected.head, requestTitle)).toEqual({
-      title: selected.title,
-      body: selected.whatChanged.join("\n\n"),
-    });
-    expect(() => readCommitApproval(comment, selected.head, `${requestTitle} edited`)).toThrow(
-      "title changed",
-    );
-    expect(() =>
-      readCommitApproval(
-        comment,
-        selected.base === selected.head ? "9".repeat(40) : selected.base,
-        requestTitle,
-      ),
-    ).toThrow("does not cover");
-  });
-
-  // The approval-record boundary: public stories carry narrative, not queue authority.
-  it("publishes either story format without a queue approval envelope", () => {
+  // The commit's words come from the saved story, never from its flattened display.
+  it("takes the commit words of either story format from the saved story", () => {
     for (const version of [1, 2] as const) {
       const selected = story([], "private");
       selected.version = version;
@@ -176,13 +144,7 @@ describe("the layout GitHub can actually display", () => {
         "Keep the summary.\nRetain its line break.",
         "Preserve underscore_names.",
       ];
-      selected.projectText = "BREAKING CHANGE: The queue owns merges.";
-      const rendered = `${selected.projectText}\n\n${presentationMarkdown(selected, urls, "passed")}`;
-      expect(rendered).not.toContain("<!-- infinitary-squash:");
-      expect(() =>
-        readCommitEnvelope(rendered, selected.head, "An actual pull request title"),
-      ).toThrow("approved naming policy");
-      // Literal queue words still come from the saved story, not its flattened display.
+      selected.projectText = "BREAKING CHANGE: The batch owns merges.";
       expect(presentationCommitMessage(selected, BUNDLED_NAMING)).toBe(
         `${selected.whatChanged.join("\n\n")}\n\n${selected.projectText}`,
       );

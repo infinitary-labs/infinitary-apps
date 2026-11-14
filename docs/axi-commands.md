@@ -251,7 +251,7 @@ When the shell itself becomes a background job, the helper ends the turn until t
 ## The stops command
 
 `infinitary-stops-axi` (`src/core/axi/stopCommands.ts`) registers how to stop each thing a crewmate starts that outlives the command that started it (`docs/leftover-programs.md`).
-Every task with a channel on this Mac is granted it, and a task on a computer that runs work that lists the `task-stops` change, where it keeps the stops in the task's folder there.
+Every task with a channel on this Mac is granted it, and so is a task on a computer that runs work, where it keeps the stops in the task's folder there.
 The bare command lists the task's stops, `add --label "<what it stops>" '<command that stops it>'` registers one with the shell's working folder, and `drop <id>` drops one the crewmate ran itself.
 A missing label or command, or an id that is not one, exits 2 before reaching the app.
 The app runs what is left when the task closes; those three subcommands run nothing.

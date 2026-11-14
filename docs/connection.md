@@ -90,7 +90,7 @@ The home answers `welcome` with its own contract version, its journal's `epoch` 
 A `work` connection's welcome also carries `takesWork`: whether its version may take new work from this home, which needs the home's own major and `PLACED_WORK_SINCE` or later (`takesWork`, `src/shared/contractFeatures.ts`; `docs/helper.md`, "Versions").
 It carries `onHomeMac` too, from protocol 9.1: whether that computer joined from this Mac itself, as the home's list found it (`onThisMac`, `docs/devices.md`, "Where a computer joins from"), which the computer keeps on its grant and its work's priority follows (`docs/helper.md`, "In the background"); absent while the list does not say.
 Whatever it says, the home hears what a `work` device said of its versions and its changes (`onWorkVersion`), and may ask it the update order, and from protocol 8.15 the download order and how far that download got (`docs/devices.md`, "Updating over the connection" and "Downloading over the connection").
-A `view` connection's welcome carries `startedByCommand: true` only when that view's hello does not list the `every-view-asks` contract change, so a view from before one rule for every view still asks what every view now may; the next major removes the field.
+A `view` connection's welcome carries `startedByCommand: true` only when that view is older than major 16 and its hello does not list `every-view-asks`, so a view from before one rule for every view still asks what every view now may; a major that breaks views removes the field.
 A computer's join dials once only to hear the home's name and `onHomeMac`, and its hello says so with `nameOnly`: the home welcomes it as any device, and tells nothing of it - never that computer in reach, its version, or a connection to ask (`docs/devices.md`, "Held on the local network").
 
 A device allows 10 seconds for the pinned TLS dial (`HOME_DIAL_TIMEOUT_MS`), then another 10 seconds for the WebSocket upgrade and welcome (`HOME_WELCOME_TIMEOUT_MS`).
@@ -118,7 +118,7 @@ A replay sends only what the newest whole list leaves (`replayOf`, `src/core/con
 A card list (`inf:cards`) is pushed whole, so a later card list in the same replay replaces every earlier one.
 A whole board (`inf:tasks`) replaces every earlier board and every change to one (`inf:tasks:delta`).
 Each replaced push goes as an empty push under its own number, on `inf:replaced` (`REPLACED_PUSH_CHANNEL`, `src/shared/connection.ts`) with a null payload, so a device's numbering stays whole, as the phone requires, and it reads nothing from it.
-A device from before the change ignores that push, as it does any push on a channel it does not read (`replay-newest-lists.md`).
+A device from before the change ignores that push, as it does any push on a channel it does not read.
 
 The home then weighs the replay against a reload and answers `reload` when the replay would send more bytes.
 A reload is weighed by what a view reads first on one (`RELOAD_READS`, `src/core/connection/connection.ts`): the card list, Activity, the whole board, the last reply, the conversation's state and the computers in reach.
@@ -141,7 +141,7 @@ An empty argument before a given one still goes as null, so a request that can h
 - A core channel whose `reach` is `home` is refused as answered only on the computer where the first mate lives, and a host channel or an unknown name as not a request this home answers.
   Neither reaches the core.
 - A device whose `access` is `read` is answered its reads and sent every push; a channel whose `effect` is `change` is refused, until the device is updated, and does not reach the core.
-  The one exception is `READ_ONLY_ASKS` (`src/shared/contractFeatures.ts`): a view's `inf:converse` with a single non-blank string, the captain's plain words, is forwarded as above, which the home announces with the `messages-while-reading` change (`docs/view.md`, "Read only").
+  The one exception is `READ_ONLY_ASKS` (`src/shared/contractFeatures.ts`): a view's `inf:converse` with a single non-blank string, the captain's plain words, is forwarded as above, which a home on major 16 or later does by its version and an older home announces by listing `messages-while-reading` (`docs/view.md`, "Read only").
 - A device may send `leave` instead of a request: the home takes it off the list, as Remove does, and closes it as `unpaired` (`docs/devices.md`, "Leave").
 
 The home asks a computer that runs work the same way, with `invoke` and one `result` per `id` (`HomeConnection.ask`): only a connected `work` device whose welcome said it takes work, and only the orders in `src/shared/work.ts`, `src/shared/signIns.ts` and `src/shared/resources.ts`.
@@ -165,19 +165,19 @@ A picture of a task's browser goes only to the view that watches it, as a `live`
 A view's request to watch, size or stop watching a task's browser reaches the core with that connection as its viewer (`BrowserViewer`, `src/core/browser/browserViews.ts`), and the core sends that viewer's pictures down that connection alone.
 The connection ends every watch it holds when it closes, so a view watches again after each welcome (`ViewBackend`, `docs/view.md`, "A task's browser on a view").
 Per task, one picture is written at a time through the outbox; a newer one that comes meanwhile replaces any still waiting, so a slow link shows the page as it is now rather than a queue of old pictures, and `behind` still cuts a device that stops reading.
-A view whose hello does not list the change is sent no `live` frame, since it never watches; a home that does not list it answers no watch, and its views say to update it.
+A view older than major 16 whose hello does not list the change is sent no `live` frame, since it never watches; a home older than major 16 that does not list it answers no watch, and its views say to update it.
 
 What is happening in a turn now is live too (`streamed-events-live`): a streamed piece of a reply or its thinking (`assistant_delta`, `thinking_delta`), and a tool's start or an end that reports no usage (`tool_start`, `tool_end`), go on `inf:event` as `live` frames (`isStreamedEvent`, `src/shared/events.ts`).
 They take no place in the journal, so a stream of them never pushes a dropped device's place out of what is kept, and a short gap still replays.
 A view reads each again whole on its next event (the crewmate transcript and what it is writing now), so a replay that skips the ones it missed leaves it current at the next one.
 A tool's end that reports usage stays numbered, since the usage reads follow it.
 A phone is sent none of them, since it never reads them.
-A view whose hello does not list the change is sent each as a `push` under the newest number already sent, which moves its cursor nowhere, so it reads them as before; the next major removes that.
+A view older than major 16 whose hello does not list the change is sent each as a `push` under the newest number already sent, which moves its cursor nowhere, so it reads them as before; a major that breaks views removes that.
 
 The computers' processor and memory readings are live the same way (`computer-readings-live`): `inf:computers:resources` goes as a `live` frame, every two seconds while crew work runs or a screen asks (`docs/helper.md`, "Shared live readings").
 Each reading is whole and the next one replaces it, so a replay that skips the ones a view missed leaves nothing behind.
 A phone is sent none of them, since it never shows them, so they never wake it while crew work runs.
-A view whose hello does not list the change is sent each as a `push` under the newest number already sent, as with streamed events; the next major removes that.
+A view older than major 16 whose hello does not list the change is sent each as a `push` under the newest number already sent, as with streamed events; a major that breaks views removes that.
 
 ## Closing
 
@@ -259,7 +259,7 @@ The names are open strings: a client ignores one it does not know, and a newer h
 - `src/core/connection/connection.test.ts`: each rule above against a stand-in core, the real event bus and the real pairing, the work requests and the home's own requests to a computer that runs work included, a view heard coming and going, and where it listens said only when that changes.
 - `src/core/connection/localDoor.test.ts`, "the local door": its folder and files, its key admitting the captain with no device row and two clients at once, its refusals, no pairing on it, an earlier key refused, no pushes kept while nothing is paired, and its clients kept while devices' listeners restart.
 - `src/core/connection/journal.test.ts` and `addresses.test.ts`: the numbering and the listening rule on their own.
-- `src/core/connection/connection.test.ts`, "keeps streamed reply pieces and tool events out of the numbering": a returning device replays past a stream that outgrew the journal, a current view reads the stream live, a view from before the change under the newest number, and a phone none of it.
+- `src/core/connection/livePushes.test.ts`, "keeps streamed reply pieces and tool events out of the numbering" and "sends the computers' readings outside the numbering, and none to a phone": a returning device replays past a stream that outgrew the journal, a current view reads the stream and the readings live, a view from before the change under the newest number, and a phone none of it.
 - `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own, and the parts it sends a device that reads them; `frameParts.test.ts`: parts joined back into frames, and parts past their length refused; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, one that stops reading still cut, and a long push sent in parts to a current device or an older one that lists `frame-parts`.
 - `src/core/core.connection.test.ts`, "the connection serves the core to paired devices": the real core, two devices, a dropped one caught up exactly, and every no-argument read a view may ask parsed against its own schema after the wire.
 - `src/core/core.contract.test.ts`, "a client that knows only the published contract": `scripts/contract-client.ts`, which reads only `docs/contract.json`, answers a card and reads the feed over the connection, and the version rule's window from both sides (`docs/contract.md`).

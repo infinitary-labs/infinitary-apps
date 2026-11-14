@@ -6,7 +6,11 @@ import { connect, createServer as createTlsServer } from "node:tls";
 import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
 import { ownChannel } from "@shared/codeNames";
 import { CONNECTION_CLOSE, REPLACED_PUSH_CHANNEL } from "@shared/connection";
-import { PLACED_WORK_SINCE, SHARED_CARDS_SINCE } from "@shared/contractFeatures";
+import {
+  homeHearsWhileReading,
+  PLACED_WORK_SINCE,
+  SHARED_CARDS_SINCE,
+} from "@shared/contractFeatures";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, parsePairingLink } from "@shared/devices";
 import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
@@ -18,7 +22,6 @@ import {
   PROTOCOL_VERSION,
 } from "@shared/ipc";
 import { publishedContract } from "@shared/publishedContract";
-import type { ComputerResourcesView } from "@shared/resources";
 import { describe, expect, it, vi } from "vitest";
 import { connectClient } from "../../../tests/helpers/connectionClient";
 import {
@@ -35,16 +38,12 @@ import { createKeyIdentity } from "../devices/identity";
 import { DevicePairing, type DevicePairingOptions } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";
 import {
-  COMPUTER_READINGS_LIVE,
   DeviceOutOfReachError,
-  MESSAGES_WHILE_READING_CHANGE,
   type PairedDevices,
-  STREAMED_EVENTS_LIVE,
   startConnection,
   type ViewDeviceContact,
   type WorkDeviceContact,
 } from "./connection";
-import { contractChange } from "./contractChanges";
 import { FRAME_PARTS } from "./frameParts";
 
 /**
@@ -781,23 +780,28 @@ describe("the home's connection", () => {
       }) as CoreDispatch,
     });
     const grant = await at.join();
-    const old = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
-    const current = await connectClient(grant, {
-      protocolVersion: PROTOCOL_VERSION,
+    // A desktop on major 15 reads the files only when it names them; every desktop from major 16 on reads them.
+    const old = await connectClient(grant, { protocolVersion: "15.0.0", changes: [] });
+    const named = await connectClient(grant, {
+      protocolVersion: "15.0.0",
       changes: ["card-files"],
     });
+    const current = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
     const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
     const legacyDecoder = cardSchema.omit({ files: true }).strict();
     expect(legacyDecoder.parse((await old.invoke("inf:cards:list", []))[0])).toMatchObject({
       id: card.id,
     });
+    expect((await named.invoke("inf:cards:list", []))[0]).toEqual(card);
     expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
     expect((await phone.invoke("inf:cards:list", []))[0]).toEqual(card);
     at.events.emit("inf:cards", [card]);
     const oldPush = await old.push((push) => push.channel === "inf:cards");
     expect(legacyDecoder.parse((oldPush.payload as unknown[])[0])).toMatchObject({ id: card.id });
+    expect((await named.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
     expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
     await old.close();
+    await named.close();
     await current.close();
     await phone.close();
   });
@@ -984,131 +988,6 @@ describe("the home's connection", () => {
     }
   });
 
-  // INF-3750's option D: streamed reply pieces and tool starts and ends filled the journal, so a short gap reloaded,
-  // and the phone, which never reads them, was sent every one.
-  it("keeps streamed reply pieces and tool events out of the numbering, so a short gap still replays", async () => {
-    const at = await home({ journal: { entries: 4, bytes: 1_000_000 } });
-    const grant = await at.join();
-    const current = await connectClient(await at.join(), { changes: [STREAMED_EVENTS_LIVE] });
-    const older = await connectClient(await at.join(), { changes: [] });
-    const phone = await connectClient(await at.join(), { system: { system: "ios" } });
-    const first = await connectClient(grant);
-    changed(at.events);
-    await first.push(() => true);
-    const cursor = first.cursor();
-    await first.close();
-
-    const turn = [
-      { type: "thinking_delta", taskId: "t1", text: "Reading the tide table" },
-      { type: "assistant_delta", taskId: "t1", text: "The harbour " },
-      { type: "assistant_delta", taskId: "t1", text: "opens at six." },
-      { type: "tool_start", taskId: "t1", callId: "c1", toolName: "bash" },
-      { type: "tool_end", taskId: "t1", callId: "c1", toolName: "bash", isError: false },
-    ] as const;
-    for (let round = 0; round < 4; round++)
-      for (const event of turn) at.events.emit("inf:event", event);
-    const priced = {
-      type: "tool_end",
-      taskId: "t1",
-      callId: "c2",
-      toolName: "subagent",
-      isError: false,
-      usage: { input: 1200, output: 300 },
-    } as const;
-    at.events.emit("inf:event", priced);
-    changed(at.events);
-
-    // Twenty streamed events against a journal of four: only the two numbered pushes are kept.
-    const back = await connectClient(grant, { cursor });
-    expect(back.welcome.catchUp).toBe("replay");
-    expect(back.pushes.map((push) => [push.seq, push.channel])).toEqual([
-      [cursor.seq + 1, "inf:event"],
-      [cursor.seq + 2, "inf:models:changed"],
-    ]);
-    expect(back.pushes[0]?.payload).toEqual(priced);
-    expect(back.lives).toEqual([]);
-
-    for (const view of [current, older, phone])
-      await view.push((push) => push.seq === cursor.seq + 2);
-    const streamed = Array.from({ length: 4 }, () => turn).flat();
-    // A current view reads them live, outside the numbering.
-    expect(current.lives).toEqual(streamed.map((payload) => ({ channel: "inf:event", payload })));
-    expect(current.pushes.map((push) => push.seq)).toEqual([
-      cursor.seq,
-      cursor.seq + 1,
-      cursor.seq + 2,
-    ]);
-    // A view from before the change reads them as before, under the newest number already sent.
-    expect(older.lives).toEqual([]);
-    expect(
-      older.pushes.filter((push) => push.seq === cursor.seq).map((push) => push.payload),
-    ).toEqual([{ ok: true }, ...streamed]);
-    // The phone never reads them, so it is sent none.
-    expect(phone.lives).toEqual([]);
-    expect(phone.pushes.map((push) => push.seq)).toEqual([
-      cursor.seq,
-      cursor.seq + 1,
-      cursor.seq + 2,
-    ]);
-  });
-
-  // INF-3851's piece 3: while crew work runs the home pushes the computers' readings every two seconds, and the
-  // phone, which never shows them, was sent every one and woken to read it.
-  it("sends the computers' readings outside the numbering, and none to a phone", async () => {
-    const at = await home({ journal: { entries: 4, bytes: 1_000_000 } });
-    const grant = await at.join();
-    const current = await connectClient(await at.join(), { changes: [COMPUTER_READINGS_LIVE] });
-    const older = await connectClient(await at.join(), { changes: [] });
-    const phone = await connectClient(await at.join(), { system: { system: "ios" } });
-    const first = await connectClient(grant);
-    changed(at.events);
-    await first.push(() => true);
-    const cursor = first.cursor();
-    await first.close();
-
-    const readings: ComputerResourcesView[] = (
-      ["missing", "timeout", "stale", "out-of-reach", "missing", "timeout"] as const
-    ).map((reason) => ({
-      computers: [
-        { computerId: null, label: "This Mac", reading: { status: "unknown", reason } },
-        {
-          computerId: "mac-mini",
-          label: "Mac mini",
-          reading: { status: "unknown", reason: "out-of-reach" },
-        },
-      ],
-    }));
-    for (const reading of readings) at.events.emit("inf:computers:resources", reading);
-    changed(at.events);
-
-    // Six readings against a journal of four: only the one numbered push is kept, so the gap still replays.
-    const back = await connectClient(grant, { cursor });
-    expect(back.welcome.catchUp).toBe("replay");
-    expect(back.pushes.map((push) => [push.seq, push.channel])).toEqual([
-      [cursor.seq + 1, "inf:models:changed"],
-    ]);
-    expect(back.lives).toEqual([]);
-
-    for (const view of [current, older, phone])
-      await view.push((push) => push.seq === cursor.seq + 1);
-    // A current view reads them live, outside the numbering.
-    expect(current.lives).toEqual(
-      readings.map((payload) => ({ channel: "inf:computers:resources", payload })),
-    );
-    expect(current.pushes.map((push) => push.seq)).toEqual([cursor.seq, cursor.seq + 1]);
-    // A view from before the change reads them as before, under the newest number already sent.
-    expect(older.lives).toEqual([]);
-    expect(
-      older.pushes.filter((push) => push.seq === cursor.seq).map((push) => push.payload),
-    ).toEqual([{ ok: true }, ...readings]);
-    // The phone never shows them, so it is sent none, and its numbering stays whole.
-    expect(phone.lives).toEqual([]);
-    expect(phone.pushes.map((push) => [push.seq, push.channel])).toEqual([
-      [cursor.seq, "inf:models:changed"],
-      [cursor.seq + 1, "inf:models:changed"],
-    ]);
-  });
-
   it("forwards what a view may ask as the captain, and refuses the rest without asking the core", async () => {
     const at = await home();
     const grant = await at.join("view");
@@ -1122,7 +1001,7 @@ describe("the home's connection", () => {
       {
         channel: "inf:app:healthcheck",
         args: [],
-        actor: { kind: "captain", view: grant.deviceId },
+        actor: { kind: "captain", view: grant.deviceId, viewVersion: PROTOCOL_VERSION },
       },
     ]);
     // The core's own refusal comes back as the answer.
@@ -1144,7 +1023,7 @@ describe("the home's connection", () => {
   it("answers a view every views request as the captain, and refuses what stays on this computer", async () => {
     const windowed = await home();
     const grant = await windowed.join("view");
-    const a = await connectClient(grant, { changes: [contractChange("every-view-asks")] });
+    const a = await connectClient(grant, { changes: ["every-view-asks"] });
     expect(a.welcome.startedByCommand).toBeUndefined();
 
     await expect(a.invoke("inf:settings:routing:set", [{}])).rejects.toThrow("malformed request");
@@ -1161,15 +1040,23 @@ describe("the home's connection", () => {
     expect(windowed.asked[0]?.actor).toEqual({
       kind: "captain",
       view: grant.deviceId,
-      viewChanges: [contractChange("every-view-asks")],
+      viewVersion: PROTOCOL_VERSION,
+      viewChanges: ["every-view-asks"],
     });
   });
 
-  // `every-view-asks.md`: a view from before the change waits for this field before it asks.
+  // A view on major 15 that does not name `every-view-asks` waits for this field before it asks.
   it("still tells a view from before one rule that it asks the wider set, and no one else", async () => {
     const at = await home();
-    const older = await connectClient(await at.join("view"));
+    const older = await connectClient(await at.join("view"), { protocolVersion: "15.0.0" });
     expect(older.welcome.startedByCommand).toBe(true);
+    const named = await connectClient(await at.join("view"), {
+      protocolVersion: "15.0.0",
+      changes: ["every-view-asks"],
+    });
+    expect(named.welcome.startedByCommand).toBeUndefined();
+    const current = await connectClient(await at.join("view"));
+    expect(current.welcome.startedByCommand).toBeUndefined();
     const builder = await connectClient(await at.join("work", "Builder"));
     expect(builder.welcome.startedByCommand).toBeUndefined();
   });
@@ -1247,16 +1134,30 @@ describe("the home's connection", () => {
   // INF-4012 piece 2, the captain's "1 and 2 together, the small piece 2 first": a phone or a Mac
   // reading only across a version split still says plain words to the first mate, and nothing else.
   it("lets a view reading only send the first mate plain words, and refuses every other change", async () => {
-    const at = await home({ protocolVersion: "3.2.0", viewFloor: 3 });
+    // A home on this major whose floor is this major, between a phone one major ahead and a Mac one behind.
+    const major = Number(PROTOCOL_VERSION.split(".")[0]);
+    const at = await home({ protocolVersion: PROTOCOL_VERSION, viewFloor: major });
     const viewGrant = await at.join("view");
-    const phone = await connectClient(viewGrant, {
-      protocolVersion: "4.0.0",
-      viewFloor: 4,
-      system: { system: "ios" },
-    });
-    const mac = await connectClient(viewGrant, { protocolVersion: "2.9.0", viewFloor: 2 });
+    const views = [
+      { speaks: `${major + 1}.0.0`, viewFloor: major + 1, system: { system: "ios" } },
+      { speaks: `${major - 1}.9.0`, viewFloor: major - 1 },
+    ];
+    const [phone, mac] = await Promise.all(
+      views.map(({ speaks, ...hello }) =>
+        connectClient(viewGrant, { protocolVersion: speaks, ...hello }),
+      ),
+    );
+    if (!phone || !mac) throw new Error("Both views connect");
     expect([phone, mac].map((device) => device.welcome.access)).toEqual(["read", "read"]);
-    expect(phone.welcome.changes).toContain(MESSAGES_WHILE_READING_CHANGE);
+    // The welcome says the home hears plain words while a view only reads: by its version from major 16 on.
+    for (const [index, device] of [phone, mac].entries())
+      expect(
+        homeHearsWhileReading(
+          device.welcome.protocolVersion,
+          device.welcome.changes,
+          views[index]?.speaks,
+        ),
+      ).toBe(true);
     for (const device of [phone, mac]) {
       // The core's stand-in refuses everything it is asked, so reaching it is the proof.
       await expect(device.invoke("inf:converse", ["Merge the harbour fix"])).rejects.toThrow(
@@ -1269,7 +1170,7 @@ describe("the home's connection", () => {
         ["inf:cards:close", ["card-1"]],
       ] as const)
         await expect(device.invoke(channel, [...args])).rejects.toThrow(
-          "only reads from a home on 3.2.0 until it is updated",
+          `only reads from a home on ${PROTOCOL_VERSION} until it is updated`,
         );
     }
     expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:converse", "inf:converse"]);
@@ -1565,7 +1466,7 @@ describe("the home's connection", () => {
       {
         channel: "inf:app:healthcheck",
         args: [],
-        actor: { kind: "captain", view: grant.deviceId },
+        actor: { kind: "captain", view: grant.deviceId, viewVersion: PROTOCOL_VERSION },
       },
     ]);
     await device.close();
@@ -1617,7 +1518,10 @@ describe("the home's connection", () => {
     );
     expect(work.pushes).toEqual([]);
     expect(at.asked.map(({ channel, actor }) => ({ channel, actor }))).toEqual([
-      { channel: "inf:app:healthcheck", actor: { kind: "captain", view: grant.deviceId } },
+      {
+        channel: "inf:app:healthcheck",
+        actor: { kind: "captain", view: grant.deviceId, viewVersion: PROTOCOL_VERSION },
+      },
       { channel: "inf:work:progress", actor: { kind: "device", deviceId: grant.deviceId } },
     ]);
 

@@ -72,11 +72,8 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
   expect(probe.repoKeys.sort()).toEqual([
     "batchAnswer",
     "configure",
-    "createQueueCredential",
     "folder",
     "list",
-    "queueAnswer",
-    "queueCredential",
     "removal",
     "remove",
     "setFolder",

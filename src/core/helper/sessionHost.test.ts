@@ -636,17 +636,13 @@ describe("a conversation held on a computer that runs work", () => {
   );
 
   // INF-1109's required main integration absorbs INF-1555 F12 into the work major:
-  // INF-3042: retired names do not block an already admitted work session.
-  // The required queue-answer absorption also forwards an answered declaration unchanged;
-  // the home's queue tests own its effect, and connection tests own major admission.
+  // INF-3042: retired names do not block an already admitted work session;
+  // connection tests own major admission.
   it.each(
     [PROTOCOL_VERSION, undefined].flatMap((homeVersion) =>
-      [
-        [],
-        ["check-declarations"],
-        ["check-declarations", "merge-offer-readiness"],
-        ["check-queue-answer"],
-      ].map((homeChanges) => ({ homeVersion, homeChanges })),
+      [[], ["check-declarations"], ["check-declarations", "merge-offer-readiness"]].map(
+        (homeChanges) => ({ homeVersion, homeChanges }),
+      ),
     ),
   )(
     "forwards check declarations after work admission ($homeVersion, $homeChanges)",
@@ -667,19 +663,7 @@ describe("a conversation held on a computer that runs work", () => {
           evidence: "The failed log differs from the successful same-version rerun.",
         },
       };
-      const answered = {
-        declaration: {
-          ...input.declaration,
-          verdict: "answered",
-          check: "infinitary/queue",
-          evidence: "The sent-back version already contains the repair.",
-        },
-      };
-      model([
-        { tools: [{ name: "check_change", args: input }] },
-        { tools: [{ name: "check_change", args: answered }] },
-        { text: "Recorded the result." },
-      ]);
+      model([{ tools: [{ name: "check_change", args: input }] }, { text: "Recorded the result." }]);
       await at.order("inf:session:prompt", [
         { orderId: "check-judgment", task: TASK, text: "Record the check judgment." },
       ]);
@@ -687,7 +671,7 @@ describe("a conversation held on a computer that runs work", () => {
       const effects = at.home.effects.filter(
         (effect) => effect.channel === "inf:work:check-change",
       );
-      expect(effects.map((effect) => effect.request.input)).toEqual([input, answered]);
+      expect(effects.map((effect) => effect.request.input)).toEqual([input]);
     },
   );
 

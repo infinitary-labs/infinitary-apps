@@ -271,7 +271,6 @@ public struct PhoneProjectsPage: Decodable, Sendable, Equatable {
         public let fixed: String?
         public let value: String
         public let choices: [PhoneChoice]
-        public let locked: String?
     }
     public struct Asks: Decodable, Sendable, Equatable {
         public let title: String

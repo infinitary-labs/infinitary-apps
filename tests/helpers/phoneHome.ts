@@ -19,7 +19,12 @@ import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { CARD_LEAVE } from "@shared/cardLeave";
 import { cardLogUrl } from "@shared/cardPictures";
 import { ANYTHING_ELSE_ANSWER, type CardMessage, PAST_CARD_WORDS_LEAD } from "@shared/cards";
-import { SCENE_OBSERVATIONS_SINCE } from "@shared/contractFeatures";
+import {
+  FOLDED_INTO_16_SINCE,
+  MESSAGES_WHILE_READING,
+  SCENE_OBSERVATIONS_SINCE,
+  speaksSince,
+} from "@shared/contractFeatures";
 import { isPhone } from "@shared/devices";
 import { ENDED_CHIP_LABEL, ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import type { FmEvent } from "@shared/events";
@@ -555,7 +560,21 @@ export async function startPhoneHome(
       name: () => "Test Mac mini",
       protocolVersion,
       ...(viewFloor !== undefined ? { viewFloor } : {}),
-      changes: sceneSupport ? CONTRACT_CHANGES.names : [],
+      // Major 16 folded these names in: a home before it listed them, and the phone still reads one by them.
+      changes: sceneSupport
+        ? [
+            ...CONTRACT_CHANGES.names,
+            ...(speaksSince(protocolVersion, FOLDED_INTO_16_SINCE)
+              ? []
+              : [
+                  "card-annotations",
+                  "sign-in-return",
+                  "board-without-closed",
+                  "panels-on-the-phone",
+                  MESSAGES_WHILE_READING,
+                ]),
+          ]
+        : [],
     });
     connection.onViewDevice(({ deviceId, contact }) => {
       if (contact === "in-reach") {

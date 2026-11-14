@@ -812,7 +812,7 @@ describe("approved once-per-project contribution consent", () => {
     expect(world.create).not.toHaveBeenCalled();
     expect(world.repos.get(world.repo.id)?.contribution).toBeUndefined();
   });
-  it("watches maintainer activity and the confirmed external outcome without writing a merge or queue mark", async () => {
+  it("watches maintainer activity and the confirmed external outcome without writing a merge", async () => {
     const world = await fixture();
     await world.make().discover(world.repo.id);
     await world.make().answer(world.choose(world.offer(), "contribute-upstream"));
@@ -850,7 +850,6 @@ describe("approved once-per-project contribution consent", () => {
       contributionState: { number: change.number, state: "open" },
     });
     const putIn = vi.fn();
-    const markQueued = vi.fn();
     const forge = {
       kind: "github",
       host: "github.com",
@@ -865,7 +864,6 @@ describe("approved once-per-project contribution consent", () => {
       label: () => `#${change.number}`,
       url: () => change.url,
       putIn,
-      markQueued,
     } as unknown as Forge;
     const steer = vi.fn();
     const delivery = createChangeDelivery({
@@ -893,9 +891,8 @@ describe("approved once-per-project contribution consent", () => {
     if (!merged) throw new Error("The contribution record was lost");
     expect(contributionStatusLine(merged)).toContain(CONTRIBUTION_WORDS.merged);
     expect(putIn).not.toHaveBeenCalled();
-    expect(markQueued).not.toHaveBeenCalled();
   });
-  it("refuses both direct and reviewed contribution merges before reaching the host or its queue", async () => {
+  it("refuses both direct and reviewed contribution merges before reaching the host", async () => {
     const world = await fixture();
     const service = world.make();
     await service.discover(world.repo.id);
@@ -932,7 +929,7 @@ describe("approved once-per-project contribution consent", () => {
       ],
     });
     const forgeFor = vi.fn(() => {
-      throw new Error("A contributor must not reach the merge or queue writer");
+      throw new Error("A contributor must not reach the merge writer");
     });
     const delivery = createChangeDelivery({ tasks, repos: world.repos, forgeFor });
     expect(await delivery.merges.merge(task.id)).toEqual({

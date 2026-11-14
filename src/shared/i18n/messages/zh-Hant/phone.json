@@ -355,7 +355,7 @@
   "phoneRecordHoldsUp": "擋住",
   "phoneRecordLandsMerged": "已合併",
   "phoneRecordLandsRigor": "謹慎度：{care}",
-  "phoneRecordModeBatched": "以批次 pull request 交付，由你專案的佇列測試",
+  "phoneRecordModeBatched": "以批次 pull request 交付，和你其他已核准的變更一起合併",
   "phoneRecordModeInPlace": "就地建置",
   "phoneRecordModeLocal": "在本機合併，沒有 pull request",
   "phoneRecordModePullRequest": "以 pull request 交付",

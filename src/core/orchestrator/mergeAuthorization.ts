@@ -9,8 +9,8 @@ import {
 import { hasChangeRequests } from "@shared/forge";
 import { englishOf, type Said, said, saidPart } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
-import { opensPullRequest, ownsBatches, type RepoDelivery, type RepoView } from "@shared/repos";
-import { type ForgeRepo, forgeLocationOf, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
+import { opensPullRequest, ownsBatches, type RepoDelivery } from "@shared/repos";
+import { type ForgeRepo, forgeLocationOf } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type {
   CompletionOffer,
@@ -89,7 +89,7 @@ export function taskPull(
  */
 export function approvableOffer(
   record: TaskRecord,
-  repo: (ForgeRepo & { queueWorkflows?: RepoView["queueWorkflows"] }) | undefined,
+  repo: ForgeRepo | undefined,
   delivery: RepoDelivery | undefined,
   card: { cardId: string; offerId?: string | undefined },
   changes?: readonly ChangeRecord[],
@@ -109,7 +109,7 @@ export function approvableOffer(
     // your own"); a pull request the task names by number is never batched.
     if (
       !delivery ||
-      ownsBatches(delivery, repo) !== true ||
+      !ownsBatches(delivery, repo) ||
       record.delivery?.checkTarget ||
       currentChange(record.delivery, record.branch).number !== undefined
     )
@@ -217,44 +217,27 @@ export function coveringApproval(
 
 /**
  * What failed at a version an approval covers (INF-4018): nothing, the
- * pull request's own checks, the project's queue batch check, which no
- * checks override passes (INF-3208), or the batch of this person's own that
- * carried the version (docs/forge.md, "Batches of your own").
+ * pull request's own checks, or the batch of this person's own that
+ * carried the version, which no checks override passes (INF-3208;
+ * docs/forge.md, "Batches of your own").
  */
-export type CoveredFailure = "none" | "checks" | "batch" | "own-batch";
-
-/**
- * Whose batch failed `head`, where its batch check reads failed: this
- * person's own where the app itself wrote that status
- * (`QueueStatusFact.kind`), the project's queue otherwise.
- */
-export function failedBatchOf(
-  delivery: TaskDelivery | null | undefined,
-  head: string | undefined,
-): "batch" | "own-batch" {
-  const status = delivery?.queueStatus;
-  return status?.kind !== undefined && status.head === head ? "own-batch" : "batch";
-}
+export type CoveredFailure = "none" | "checks" | "batch";
 
 /**
  * What a crewmate does instead of a merge card at a version an approval
  * covers (INF-4018): declare the captain's newer words; clear failed checks
- * by a declared repair, a rerun or the captain's recorded override; answer
- * a failed batch the queue's way (FAILED_BATCH_NOTE); repair a change its
- * own batch failed or left out, which no answer to a queue puts back in
- * line (FAILED_OWN_BATCH_NOTE); or nothing, since the app runs the merge
- * once nothing holds it.
+ * by a declared repair, a rerun or the captain's recorded override; repair
+ * a change its batch failed or left out (FAILED_BATCH_NOTE); or nothing,
+ * since the app runs the merge once nothing holds it.
  */
 export function coveredNextStep(kept: MergeAuthorization, failure: CoveredFailure): string {
   if (outstandingGuidance(kept) !== undefined)
     return "Put up no merge card: declare the impact of the captain's newer words with check_change captainGuidance instead.";
   if (failure === "batch")
-    return "Put up no merge card: the project's queue failed or sent back this version, and no checks override passes the queue, so there is no Merge anyway. Fix the cause in a new version and declare it with check_change conflictRepair, or answer a send-back of a version that already holds the fix with check_change's answered verdict; the approval then goes ahead without a new card.";
-  if (failure === "own-batch")
     return "Put up no merge card: this version's batch failed with it alone or left it out, as the batch check's words say, and no checks override passes a batch, so there is no Merge anyway. Fix the cause in a new version and declare it with check_change conflictRepair; the approval then goes ahead without a new card and the new version joins the project's next batch.";
   if (failure === "checks")
     return "Put up no merge card: the approval waits for these checks. Push a fix and declare it with check_change conflictRepair, record a rerun with check_change rerun, or, when it is a Merge anyway case, report it naming each failed check and your diagnosis so the first mate records the captain's override; the approval then goes ahead without a new card.";
-  return "Put up no merge card and end your turn: the app runs the merge on that approval, through the project's queue where it has one, once nothing holds it; a new merge card is only for a new version.";
+  return "Put up no merge card and end your turn: the app runs the merge on that approval, with the project's batch where it merges in one, once nothing holds it; a new merge card is only for a new version.";
 }
 
 /**
@@ -821,26 +804,15 @@ export const MERGE_CHECKS_HOLD_REASON = "the checks have not all passed";
  * from waiting for results (captain F20/F27), never a separate crew verdict.
  * It is a line on the task's record, so the task's key names it (INF-1845).
  */
-export function keptFeedLine(
-  wait: MergeWait,
-  place: string,
-  checks?: string,
-  /** `own`: the change merges in this person's batch, with no queue where the project lives. */
-  queueOwned: boolean | "own" = false,
-): string {
-  return englishOf(keptFeedSaid(wait, place, checks, queueOwned));
+export function keptFeedLine(wait: MergeWait, place: string, checks?: string): string {
+  return englishOf(keptFeedSaid(wait, place, checks));
 }
 
 /**
  * The kept merge's feed line as a fact (`keptFeedLine`), worded where it is
  * shown; `place` empty names the project's host in the app's words.
  */
-export function keptFeedSaid(
-  wait: MergeWait,
-  place: string,
-  checks?: string,
-  queueOwned: boolean | "own" = false,
-): Said {
+export function keptFeedSaid(wait: MergeWait, place: string, checks?: string): Said {
   const where = { place: place || saidPart("projectsHost") };
   switch (wait) {
     case "conflict":
@@ -868,8 +840,7 @@ export function keptFeedSaid(
     case "guidance":
       return said("keptGuidance");
     case "queue":
-      if (queueOwned === "own") return said("keptQueueOwn");
-      return queueOwned ? said("keptQueueOwned") : said("keptQueue");
+      return said("keptQueueOwn");
     case "host-queue":
       return said("keptHostQueue", where);
     case "host-removed":
@@ -882,30 +853,20 @@ export function keptFeedSaid(
  * only one in its batch when the batch's checks failed (docs/forge.md,
  * "Batches of your own"): its own crewmate repairs it.
  */
-export const FAILED_OWN_BATCH_NOTE =
+export const FAILED_BATCH_NOTE =
   "The change was the only one in its batch, and the batch's checks failed. Merge anyway could do nothing there, so never offer or ask for it: the crewmate reads the failed checks on the batch's pull request and fixes the cause in a new version, which joins the batch again once approved.";
 
 /**
- * What the Firstmate is told beside a checks wait whose failure is the
- * project's batch check (INF-3208): no checks override passes the queue, so
- * Merge anyway could do nothing, and what clears it instead.
- */
-export const FAILED_BATCH_NOTE = `The project's queue failed or sent back this version (${QUEUE_STATUS} failed). No checks override passes the queue, so never offer or ask for Merge anyway on it: the crewmate fixes the cause in a new version, or answers a send-back of a version that already holds the fix with check_change's answered verdict, and the host marks it waiting for the queue again.`;
-
-/**
  * What the Firstmate is told beside a wait on a kept approval: who moves
- * next, and that the captain is not asked for a second click. A queue wait
- * carries what the app's reads say of the project's queue (`queueWarning`,
- * INF-2913: no note shows it to the captain), and a checks wait on a failed
- * batch check what clears it (INF-3208).
+ * next, and that the captain is not asked for a second click. A checks wait
+ * on a failed batch check carries what clears it (`batchNote`, INF-3208).
  */
 export function keptNote(
   wait: MergeWait,
   head: string,
   place: string,
   checks?: string,
-  queueWarning?: string,
-  queueOwned: boolean | "own" = false,
+  batchNote?: string,
 ): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
@@ -919,7 +880,7 @@ export function keptNote(
       return `${kept} The crewmate declared its repair from ${head} unknown, so the host has an independent crewmate assess it once its turn ends: none keeps the approval and the host merges; any other answer ends it, and the host tells the crewmate to put up a new merge card. Nothing is needed from you.`;
     case "checks":
       return checks === "red"
-        ? `${kept} For ${head}, the checks failed and the merge waits for a fix. The crewmate reads failed logs and fixes the cause; a changed version is declared as a repair.${queueWarning ? ` ${queueWarning}` : ""} ${declare}`
+        ? `${kept} For ${head}, the checks failed and the merge waits for a fix. The crewmate reads failed logs and fixes the cause; a changed version is declared as a repair.${batchNote ? ` ${batchNote}` : ""} ${declare}`
         : `${kept} For ${head}, ${MERGE_CHECKS_HOLD_REASON}. The crewmate reads missing results; the merge runs when its checks pass. ${declare}`;
     case "cap":
       return `${kept} A round cap holds the task: the captain's answer to the cap comes first, then the host merges.`;
@@ -938,9 +899,7 @@ export function keptNote(
     case "guidance":
       return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new merge card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
     case "queue":
-      if (queueOwned === "own")
-        return `${kept} The project merges the captain's approved changes together: ${head} is in line for one batch pull request, as one commit of its own, and the host merges that pull request once its checks pass. A change the batch leaves out, or the only change of a batch whose checks fail, wakes its crewmate; a failed batch of several is told to you once. Nothing is needed from you now. ${declare}`;
-      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting. ${queueOwned ? "The project's queue merges after its pass; the app observes its receipt." : "The app merges after the project's queue passes this version."}${queueWarning ? ` ${queueWarning}` : ""} A batch that fails in the queue Infinitary ships keeps the version waiting and pauses, and you hear the pause once; a change the queue fails or sends back wakes the crewmate like any failed check. ${declare}`;
+      return `${kept} The project merges the captain's approved changes together: ${head} is in line for one batch pull request, as one commit of its own, and the host merges that pull request once its checks pass. A change the batch leaves out, or the only change of a batch whose checks fail, wakes its crewmate; a failed batch of several is told to you once. Nothing is needed from you now. ${declare}`;
     case "host-queue":
       return `${kept} ${place} took ${head} into the merge queue of its branch: it is queued there, not merged. ${place} merges it once the queue's own checks pass, and the task closes then; the host reads the queue on its own and sends nothing again meanwhile. Nothing is needed from you or the crewmate. ${declare}`;
     case "host-removed":
@@ -960,7 +919,7 @@ const TIMED_WAITS: Partial<Record<MergeWait, number>> = {
   outcome: 60_000,
   "sign-in": 10 * 60_000,
   draft: 10 * 60_000,
-  // The check watch wakes on the queue's answer; this reads it again past the watch's bound.
+  // A change in line is read again here: its place moves with the batch, not with a check of its own.
   queue: 10 * 60_000,
   // The host's own merge queue tells the app nothing: its place there is read again.
   "host-queue": 60_000,

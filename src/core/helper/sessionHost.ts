@@ -2,14 +2,12 @@ import { randomUUID } from "node:crypto";
 import { closeSync, openSync, readFileSync, readSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
-import { namesAppPart, withAppParts } from "@shared/appParts";
 import type { CutOff } from "@shared/authFailure";
 import {
   CARD_MEDIA_PIECE_BYTES,
   cardTypefaceNames,
   parseCardTypefaceFileName,
 } from "@shared/cardPictures";
-import type { CardPicture } from "@shared/cards";
 import { wireRepairImpact } from "@shared/checkRepair";
 import {
   changesStoryAround,
@@ -39,7 +37,6 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
@@ -57,7 +54,6 @@ import {
   crewmateResume,
   crewmateResumeToken,
 } from "../orchestrator/crewSession";
-import { MAX_CARD_BODY_LENGTH } from "../pi/cardBodyFile";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
@@ -94,12 +90,6 @@ import { carryStory, type PlacedMedia, sendCardData, sendPictures } from "./plac
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
-
-/** A story view carrying a map (`story-map.md`). */
-const STORY_MAP = contractChange("story-map");
-const SHOW_MERGE_CARD = contractChange("show-merge-card");
-/** Files for the captain on a card, kept here until a Save asks for them (`card-files.md`). */
-const CARD_FILES = contractChange("card-files");
 
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
@@ -178,8 +168,9 @@ export type SessionHostOptions = {
    */
   homeVersion?: () => string | null;
   /**
-   * The contract changes the home listed in its welcome, while known: a
-   * report hands files on only to a home that keeps them (`handover-files.md`).
+   * The contract changes the home listed in its welcome, while known: what a
+   * feature added since this major waits for by name
+   * (src/shared/contract-changes/README.md).
    */
   homeChanges?: () => readonly string[] | null;
   /**
@@ -256,13 +247,6 @@ const FORWARDED_TOOLS = new Set<string>(Object.keys(APP_TOOL_REQUESTS));
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
-
-/** A merge card's summary of what changed since the captain last saw one (`merge-card-since-seen.md`). */
-const MERGE_CARD_SINCE_SEEN = contractChange("merge-card-since-seen");
-/** A put-off choice the home keeps and raises again (`card-put-off.md`). */
-const CARD_PUT_OFF = contractChange("card-put-off");
-/** A card naming the app's own parts by reference (`card-app-parts.md`). */
-const CARD_APP_PARTS = contractChange("card-app-parts");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -1332,7 +1316,6 @@ export class SessionHost {
     const media: PlacedMedia = {
       task: held.task,
       tasks: this.options.tasks,
-      homeChanges: this.options.homeChanges,
       call: (channel, fields, signal) =>
         this.call(held, channel, { callId: randomUUID(), ...fields }, signal),
     };
@@ -1367,44 +1350,10 @@ export class SessionHost {
                 `Card font refused: ${HOME.the} runs an older Infinitary that cannot show a project's fonts; draw the preview in the app's own typefaces until it is updated.`,
               );
             }
-            // An older home would drop the summary and show the card without
-            // it, so nothing is sent (INF-3715).
-            if (
-              card.sinceSeen !== undefined &&
-              !listsChange(this.options.homeChanges?.(), MERGE_CARD_SINCE_SEEN)
-            )
-              throw new Error(
-                `since_seen refused: ${HOME.the} runs an older Infinitary that cannot show it; nothing was sent. Show the card without since_seen and say what changed in its thread until ${HOME.the} is updated.`,
-              );
-            // A card's files stay here until the captain saves one; a home
-            // without the change would drop them, so it is told in words instead.
-            if (card.files?.length && !listsChange(this.options.homeChanges?.(), CARD_FILES)) {
-              throw new Error(
-                `Card refused: ${HOME.the} runs an older Infinitary that cannot show files on a card; hand the files on in your report until it is updated.`,
-              );
-            }
-            // An older home would drop the put-off and show a plain choice
-            // nobody brings back, so nothing is sent (INF-3846 piece 3).
-            if (
-              card.actions.some((action) => action.until !== undefined) &&
-              !listsChange(this.options.homeChanges?.(), CARD_PUT_OFF)
-            )
-              throw new Error(
-                `until refused: ${HOME.the} runs an older Infinitary that cannot keep a put-off choice; nothing was sent. Offer the choice without until, and set your own reminder until ${HOME.the} is updated.`,
-              );
-            // A home without app parts would draw a part's markup without its
-            // code, so the part goes into the body, as cards carried it before;
-            // one that no longer fits is refused before anything is sent.
-            const sent =
-              namesAppPart(card.body) && !listsChange(this.options.homeChanges?.(), CARD_APP_PARTS)
-                ? { ...card, body: withAppParts(card.body) }
-                : card;
-            if (sent.body.length > MAX_CARD_BODY_LENGTH)
-              throw new Error(
-                `Card refused: ${HOME.the} runs an older Infinitary that cannot load the app's own parts by reference, and with the part's code in it the body is over ${MAX_CARD_BODY_LENGTH} characters; nothing was sent. Put the part's data in a data file, or wait until ${HOME.the} is updated.`,
-              );
-            // Each data file its script reads, refused here before anything is
-            // sent when the home cannot hand one over.
+            // Work admission requires this major, whose home shows a merge
+            // card's summary, keeps a card's files and put-off choices, loads
+            // the app's own parts by reference and hands a card its data files.
+            // Each data file its script reads goes first.
             await sendCardData(media, card.body, signal);
             // Each picture's bytes first, so the home holds them when it shows the card.
             await sendPictures(media, card.pictures ?? [], signal);
@@ -1425,7 +1374,7 @@ export class SessionHost {
               );
             }
             const answer = placedCardAnswerSchema.parse(
-              await this.call(held, "inf:work:card", { callId: randomUUID(), card: sent }, signal),
+              await this.call(held, "inf:work:card", { callId: randomUUID(), card }, signal),
             );
             if ("refused" in answer)
               throw new CardRefusedError(
@@ -1565,20 +1514,15 @@ export class SessionHost {
             ),
           toolSignal,
         ),
-      // show_merge_card walks the steps at the home, which serves the tool
-      // only once it lists the change; the story's pictures travel first.
+      // show_merge_card walks the steps at the home, which work admission
+      // puts on this major; the story's pictures travel first.
       onShowMergeCard: (input, toolSignal) =>
         this.withDeadline(
           "inf:work:show-merge-card",
-          (signal) => {
-            if (!listsChange(this.options.homeChanges?.(), SHOW_MERGE_CARD))
-              throw new Error(
-                `show_merge_card needs a newer Infinitary on ${HOME.the}; use prepare_change, open_change and emit_card until it is updated. Nothing was sent.`,
-              );
-            return carryStory(media, input.story, signal, () =>
+          (signal) =>
+            carryStory(media, input.story, signal, () =>
               text("inf:work:show-merge-card", { input }, signal),
-            );
-          },
+            ),
           toolSignal,
         ),
       onOpenChange: async (input, signal) => {

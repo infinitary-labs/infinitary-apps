@@ -1,3 +1,4 @@
+import { BATCH_CHECK } from "@shared/batches";
 import { type CheckDiagnosis, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
 import {
   type CheckSnapshot,
@@ -6,7 +7,6 @@ import {
   type MainCheckEvidence,
 } from "@shared/checkSnapshot";
 import { checksFinishedAgo } from "@shared/checksSpan";
-import { QUEUE_STATUS } from "@shared/repos";
 import { escapeCardText } from "./cardText";
 
 /** The crewmate's judgment, never a host inference from logs or report prose. */
@@ -64,8 +64,8 @@ function stillFails(
  * name and the evidence. Only failures at the offered version belong on its
  * merge card (nightly audit finding 3), only while the newest reading still
  * shows them failing (`stillFails`), and only the pull request's own checks:
- * the crewmate's diagnosis applies to them, while the project's queue status
- * says the queue's own words under the Batch check state (INF-3208).
+ * the crewmate's diagnosis applies to them, while the batch check says the
+ * batch's own words under the Batch check state (INF-3208).
  */
 export function checkVerdicts(
   delivery: {
@@ -81,7 +81,7 @@ export function checkVerdicts(
   if (ci !== "red" || !headSha || !ciRepair) return "";
   const failed = (
     ciRepair.failures.find((reading) => reading.headSha === headSha)?.checks ?? []
-  ).filter((check) => check !== QUEUE_STATUS && stillFails(delivery, headSha, check));
+  ).filter((check) => check !== BATCH_CHECK && stillFails(delivery, headSha, check));
   const onMain = new Set(checksFailingOnMain(delivery));
   return failed
     .map((check) => {

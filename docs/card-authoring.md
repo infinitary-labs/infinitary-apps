@@ -124,7 +124,7 @@ A card can offer a choice that puts the question off until a moment the app can 
 The author declares it as an action with no effect and an `until` field: `close` with a task key (back when that task closes, merged or not), `date` with a time (back at that time), `event` with an integration, its event and filter as an Automation event rule names them (back when that event arrives), or `word` (back when the captain asks for it).
 The card still carries only its author's choices; `until` adds no button of the host's own.
 `emit_card` refuses an `until` beside an effect, a time that is not a time or has passed, a task that is unknown or already closed, an event nothing connected tells, and a task-close event naming no task, so a put-off never waits on a moment that cannot come.
-A work computer refuses it while the home runs an older version without the `card-put-off` contract change.
+A work computer sends it home with the card, as every home it takes work from reads it.
 
 The captain's click closes the card like any choice, and its author hears it as usual: a crewmate as a steer, the first mate as a card-choice wake.
 In the same transaction the host keeps the put-off on the closed card's row (`cards.put_off_json`, `PutOffs` in `src/core/orchestrator/putOffs.ts`) and saves an Automation rule that waits for its moment (`docs/automation.md`, "A rule that shows a card").
@@ -166,7 +166,7 @@ The strip is at most two parts, each the card's full width: the status line, and
   A reading that finishes after the offered version or placement changes is discarded.
   An Override state names the holds the captain's recorded words pass, and says the merge goes without live proof when they pass it (`docs/delivery-rigor.md`, "The holds").
 - What needs the captain stands under the status line, in the open (`inf-foot-needs`), and only under a state that is not passing.
-  A batch check that failed or paused says the queue's own words there, wrapped whole, followed by its links (`data-why="batch"`, `docs/forge.md` "A project's queue").
+  A batch check that failed or paused says its batch's own words there, wrapped whole, followed by the link to the batch's pull request (`data-why="batch"`, `docs/forge.md` "Batches of your own").
   Checks the app could not read say why there (`data-why="checks"`).
   A failed reading adds one row per failed check at the offered version (`checkVerdicts`, `src/core/orchestrator/checkVerdicts.ts`; nightly session audit finding 3).
   The row leads with the crewmate's recorded `check_change` classification - Caused by this change, Broken on main too, Suspected intermittent failure, or Cause not established - then the check's name in mono, on one line, the name cut by an ellipsis where the card is too narrow, so no verdict breaks inside a word.
@@ -267,8 +267,8 @@ A revision passes its files again, and its list replaces the card's; a revision 
 Files ride only the crewmate's own task's card, never a contribution to someone else's, and never a saved-story card.
 The first mate's cards carry none.
 A past card draws no Save rows.
-A desktop from before files on a card gets the card without them (`legacyCardSnapshot`, `src/core/connection/connection.ts`), and a computer that runs work refuses a card's files for a home that does not list the `card-files` change, telling the crewmate to hand them on in its report.
-The crewmate's instructions tell it to hand the captain files on its card only where its computer lists `card-files`, and the first mate's sends a file for the captain back to its card only while every computer that runs work lists it (`computersFor`, `everyComputerTakesCardFiles`, `src/core/orchestrator/taskPlacement.ts`).
+A desktop older than major 16 whose hello does not list `card-files` gets the card without them (`legacyCardSnapshot`, `src/core/connection/connection.ts`), and a computer that runs work sends a card's files to every home it takes work from.
+The crewmate's instructions tell it to hand the captain files on its card only where its computer takes work on the home's own major, and the first mate's sends a file for the captain back to its card only while every computer that runs work does (`computersFor`, `everyComputerTakesCardFiles`, `src/core/orchestrator/taskPlacement.ts`).
 Saving on the phone is not built: the phone ignores the field.
 
 ## The picture check
@@ -512,14 +512,14 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   A JSON block named by a URL, such as another card's `app-frame://data/` address, is left as written, and the bridge answers it as a name the body carries, as with pictures.
   The copies never ride the body, SQLite or the `inf:cards` push; they stay beside the task's pictures until the Settings purge.
   The first mate has no working copy, so a path in one of its cards is refused.
-  A crewmate on a computer that runs work has each file checked there and sent home before the card as a card's media (`inf:work:media`), only to a home that lists the `card-data` change; to an older home it refuses the card itself, in words saying to put the data in the body until it is updated.
+  A crewmate on a computer that runs work has each file checked there and sent home before the card as a card's media (`inf:work:media`).
   A paired view and the phone read the home's copy by name (`inf:cards:data`, `docs/view.md`, `docs/ios.md`); a view or phone too old to know the verb draws the card with its script unable to read the file.
 - **Parts by reference.**
   Code that many cards repeat, such as the architecture map part's, is the app's own: a body names it with an empty `<script data-inf-part="map"></script>`, written exactly so, instead of carrying the code.
   Every reader - the window, a view of another computer and the phone - puts its own build's style and script for that part in its place when it builds the body's markup (`withAppParts`, `src/shared/appParts.ts`), before the body's scripts are hashed, so the part runs as if the body carried it and its code never counts toward the body's size.
   The parts are generated from their readable sources in `src/core/runbooks/parts/` by `node scripts/generate-runbook-parts.ts`, which also writes the part a runbook's skill has a crewmate copy, its last line the reference.
   At the `emit_card` boundary the card checks refuse a reference written in another form or naming a part the app does not ship (`appPartProblem`).
-  A computer that runs work sends a card naming a part to a home that does not list the `card-app-parts` change with the part's code put into the body, and refuses it, with nothing sent, when the body would then be over the size limit.
+  A computer that runs work sends a card naming a part home as written, as every home it takes work from knows parts.
   A view or phone too old to know parts draws the part's markup with none of its code.
 - **The host's own actions stay the host's.**
   A `data-inf-action` button or an `inf.action(id)` call raises one of the card's declared actions - EXCEPT any action carrying an effect (`settle`, `open`, or the app's own `host` op).
@@ -1165,7 +1165,7 @@ The marks above compare revisions of one card lifecycle; this compares merge car
 - **What it leaves alone.**
   The `since_seen` parameter's description is the whole guidance: what the summary is for and who reads it, with no sections, length or required items.
   The app judges nothing about the growth and refuses nothing: a merge card without a summary still goes up, and a summary on a card with no earlier merge card the captain saw is left out with a word in the answer.
-  A crewmate on a computer that runs work sends `sinceSeen` only to a home that lists `merge-card-since-seen`, and otherwise refuses the card with words, sending nothing.
+  A crewmate on a computer that runs work sends `sinceSeen` home with its merge card.
 
 Tests: `src/core/orchestrator/sinceSeen.test.ts` (INF-3566's replay: seen at +1,366, shown again at +4,562), `src/core/pi/cardTool.test.ts` and `src/core/helper/sessionHostCardFiles.test.ts`.
 

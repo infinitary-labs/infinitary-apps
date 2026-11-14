@@ -16,7 +16,6 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
@@ -135,13 +134,8 @@ export class PlacedCopies {
           : repoId && !base
             ? await this.originOf(repoId)
             : undefined;
-    if (
-      project?.pushOrigin &&
-      !listsChange(
-        this.options.devices.version(deviceId)?.changes,
-        contractChange("fork-contributions"),
-      )
-    )
+    // A separate push address goes only to a computer on this home's major.
+    if (project?.pushOrigin && !this.options.devices.takesCurrentWork(deviceId))
       throw new PreparationFailed(
         `${name} must be updated before it can push contributions through your fork.`,
       );
@@ -576,13 +570,7 @@ export class PlacedCopies {
               () => undefined,
             )
           : undefined);
-      if (
-        prepared?.pushOrigin &&
-        !listsChange(
-          this.options.devices.version(deviceId)?.changes,
-          contractChange("fork-contributions"),
-        )
-      )
+      if (prepared?.pushOrigin && !this.options.devices.takesCurrentWork(deviceId))
         throw new PreparationFailed(
           `${this.options.deviceName(deviceId)} must be updated before it can push contributions through your fork.`,
         );

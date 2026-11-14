@@ -344,110 +344,32 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] the captain pressed Update panel on their panel "Weather" (id weather). The app refuses its server.ts before it runs, because it is written for panel API 1 and this version serves panel API 3, so its background work is paused; the panel still draws and its saved data is unchanged. Start one task in the personal workspace now, with no card first: its goal is to update that panel\'s code to the panel API this app serves, keeping what the panel does and its saved data, and its brief names the panel id and the personal-panel skill\'s "Updating a panel written for an earlier panel API". If a task is already updating this panel, start nothing. The panel\'s line clears by itself once its code is updated.',
     },
   ],
-  // INF-2885 direction B, and the shipped queue's plan card: the not-set-up card's Ask the first mate to plan it.
-  "queue-plan-asked": [
+  // A project that still carries the files of the team queue the app once shipped: one offer to remove them.
+  "team-queue-left": [
     {
-      name: "with nothing that mentions the status",
+      name: "the queue's files alone",
       wake: {
         facts: {
-          kind: "queue-plan-asked",
+          kind: "team-queue-left",
           project: { id: "p-7a21", name: "meter" },
-          delivery: "direct-pr",
-          workflows: [],
+          files: [".github/workflows/infinitary-queue.yml", ".github/infinitary-queue/compose.sh"],
         },
       },
       words:
-        "[fm-op] the captain asked you to plan the batch queue for project \"meter\" (repo_id p-7a21). They chose batched pull requests for it, but nothing on its default branch mentions infinitary/queue, so the choice waits: its changes still go as direct-pr, and the app switches it to queue-pr by itself once a merge in it brings in a queue. Start one read-only planning task in that project now, with no card first, whose brief names the queue-setup skill. Its goal is a plan for the fix-forward queue Infinitary ships, on one decision card where the captain chooses which of the project's checks each batch runs, says what those checks need changed, and gives feedback the planner revises the card with. The builder of that plan ships it the way the project's changes go now. If a task is already planning this, start nothing.",
+        "[fm-op] the team queue's files are still in project \"meter\" (repo_id p-7a21): .github/workflows/infinitary-queue.yml, .github/infinitary-queue/compose.sh. Infinitary no longer uses a queue workflow in the project: it combines the captain's approved changes into batches of their own, and nothing reads those files. Offer the captain once, on one decision card, a task in that project that removes them with a pull request: the files named here, any line of the project's own CI that includes or runs them, and the queue's labels and key where the project lives. Not now leaves them where they are; the app offers this once.",
     },
     {
-      name: "with the only workflow that mentions it turned off",
+      name: "with a rule on the main branch that still requires the queue's status",
       wake: {
         facts: {
-          kind: "queue-plan-asked",
+          kind: "team-queue-left",
           project: { id: "p-7a21", name: "meter" },
-          delivery: "direct-pr",
-          workflows: [{ path: ".github/workflows/batch.yml", active: false }],
+          files: [".gitlab/infinitary-queue.yml"],
+          rule: 'rule set "main checks"',
         },
       },
       words:
-        "[fm-op] the captain asked you to plan the batch queue for project \"meter\" (repo_id p-7a21). They chose batched pull requests for it, but .github/workflows/batch.yml is turned off though it mentions infinitary/queue, so the choice waits: its changes still go as direct-pr, and the app switches it to queue-pr by itself once a merge in it brings in a queue. Start one read-only planning task in that project now, with no card first, whose brief names the queue-setup skill. Its goal is a plan for the fix-forward queue Infinitary ships, on one decision card where the captain chooses which of the project's checks each batch runs, says what those checks need changed, and gives feedback the planner revises the card with. The builder of that plan ships it the way the project's changes go now. If a task is already planning this, start nothing.",
-    },
-  ],
-  // The shipped queue: a project's older stamp, or its own queue (the captain's keep-and-offer).
-  "queue-offered": [
-    {
-      name: "an older shipped queue",
-      wake: {
-        facts: {
-          kind: "queue-offered",
-          project: { id: "p-7a21", name: "meter" },
-          offer: "update",
-          from: 1,
-          to: 2,
-        },
-      },
-      words:
-        "[fm-op] the queue for batched pull requests in project \"meter\" (repo_id p-7a21) is Infinitary's shipped queue version 1, and this Infinitary carries version 2. Offer the captain, on one decision card, a task in that project whose brief names the queue-setup skill's \"Updating it\": a pull request that copies the newer stamped files over the old ones, preserves the team's batch-check grants, and wires the project's after-merge workflows as that skill describes. Not now keeps the queue as it is; the app offers this once.",
-    },
-    {
-      name: "the project's own queue",
-      wake: {
-        facts: {
-          kind: "queue-offered",
-          project: { id: "p-7a21", name: "meter" },
-          offer: "replace",
-          to: 1,
-          workflows: [{ path: ".github/workflows/batch.yml", active: true }],
-        },
-      },
-      words:
-        '[fm-op] the queue for batched pull requests in project "meter" (repo_id p-7a21) is the project\'s own workflow (.github/workflows/batch.yml), which answers infinitary/queue and keeps working. Offer the captain, on one decision card, a planning task in that project whose brief names the queue-setup skill: a plan to replace it with the fix-forward queue Infinitary ships version 1, where a red batch pauses until its fix is approved into a batch instead of failing every change. Not now keeps the queue as it is; the app offers this once.',
-    },
-  ],
-  // The shipped queue's pause (the captain's claim-issue and quiet).
-  "queue-stalled": [
-    {
-      name: "after a merge, with no task waiting in the queue",
-      wake: {
-        facts: {
-          kind: "queue-stalled",
-          project: { id: "p-7a21", name: "meter" },
-          why: "GitLab answered 403: insufficient permissions to create a pipeline.",
-        },
-      },
-      words:
-        "[fm-op] after a merge in project \"meter\" (repo_id p-7a21), the app tried twice to start the project's queue so it forms its next batch, and both starts failed: GitLab answered 403: insufficient permissions to create a pipeline. No batch forms there until something starts it, and no task of this app waits in that queue. Start one task in that project now, with no card first, whose brief says to start the queue through the project's API the way the queue-setup skill's queue starts it, or to report what stops it. Put up no card about it.",
-    },
-  ],
-  "queue-paused": [
-    {
-      name: "nobody has claimed it",
-      wake: {
-        facts: {
-          kind: "queue-paused",
-          project: { id: "p-7a21", name: "meter" },
-          run: 4410,
-          url: "https://github.com/acme/meter/issues/88",
-          changes: [12, 14],
-        },
-      },
-      words:
-        '[fm-op] a batch of approved changes paused in project "meter" (repo_id p-7a21): batch run 4410 failed its checks, so #12, #14 wait behind the issue https://github.com/acme/meter/issues/88 until a change labelled infinitary-queue-fix is approved or someone resumes the queue or sends one change back with a reason. Start one task in that project now, with no card first, whose brief names the queue-repair skill and the issue: it claims the issue first and stops if someone else\'s claim is earlier, then fixes forward (including the root cause of flakiness) or sends one change back. A flake is not a reason to resume the unchanged batch. If a task is already repairing this pause, start nothing. Put up no card about the pause: Settings shows it with its Resume, and each paused task says who repairs it.',
-    },
-    {
-      name: "a teammate claimed it",
-      wake: {
-        facts: {
-          kind: "queue-paused",
-          project: { id: "p-7a21", name: "meter" },
-          run: 4410,
-          url: "https://github.com/acme/meter/issues/88",
-          changes: [12, 14],
-          claimedBy: "rosa",
-        },
-      },
-      words:
-        '[fm-op] a batch of approved changes paused in project "meter" (repo_id p-7a21): batch run 4410 failed its checks, so #12, #14 wait behind the issue https://github.com/acme/meter/issues/88 until a change labelled infinitary-queue-fix is approved or someone resumes the queue or sends one change back with a reason. rosa took that issue and repairs it, so start nothing. Put up no card about the pause: Settings shows it with its Resume, and each paused task says who repairs it.',
+        "[fm-op] the team queue's files are still in project \"meter\" (repo_id p-7a21): .gitlab/infinitary-queue.yml. Infinitary no longer uses a queue workflow in the project: it combines the captain's approved changes into batches of their own, and nothing reads those files. Its rule set \"main checks\" still requires the status infinitary/queue, which nothing writes now, so no pull request there can pass that rule: name the rule on the card and in the task's brief, and say that someone who may change the project's rules has to drop that requirement. Offer the captain once, on one decision card, a task in that project that removes them with a pull request: the files named here, any line of the project's own CI that includes or runs them, and the queue's labels and key where the project lives. Not now leaves them where they are; the app offers this once.",
     },
   ],
   "validation-question-stale": [

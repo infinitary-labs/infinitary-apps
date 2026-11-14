@@ -42,10 +42,11 @@ export function contractAccess(
 
 /**
  * What a paired view may still ask of a home while the version rule lets it
- * only read (`messages-while-reading.md`), each by a shape no major changes:
- * a plain-text message to the first mate, `inf:converse` with one string, so
- * the captain keeps talking to the first mate across a version split. A
- * message with pictures, files or hints is an object, and stays refused.
+ * only read (major 16, once named `messages-while-reading`), each by a shape
+ * no major changes: a plain-text message to the first mate, `inf:converse`
+ * with one string, so the captain keeps talking to the first mate across a
+ * version split. A message with pictures, files or hints is an object, and
+ * stays refused.
  */
 export const READ_ONLY_ASKS: Readonly<Record<string, (args: readonly unknown[]) => boolean>> = {
   "inf:converse": (args) =>
@@ -63,9 +64,10 @@ export function asksWhileReading(channel: string, args: unknown): boolean {
 
 /**
  * Whether a view reading only may send a home its plain-text messages: the
- * home lists `messages-while-reading`, or speaks a newer major than the view,
- * which folded every name the view's own major lists. A home on an older
- * major than the view lists the name itself while that major has it.
+ * home speaks major 16 or later, which folded `messages-while-reading` in
+ * (`FOLDED_INTO_16_SINCE`), or an older home lists that name, or the home
+ * speaks a newer major than the view. A view on a later major than its home
+ * reads an older home by that number or that name.
  */
 export function homeHearsWhileReading(
   homeVersion: string | undefined,
@@ -74,11 +76,61 @@ export function homeHearsWhileReading(
 ): boolean {
   if (homeChanges?.includes(MESSAGES_WHILE_READING)) return true;
   if (homeVersion === undefined) return false;
-  return majorOf(homeVersion) > majorOf(viewVersion);
+  return (
+    speaksSince(homeVersion, FOLDED_INTO_16_SINCE) || majorOf(homeVersion) > majorOf(viewVersion)
+  );
 }
 
-/** The contract change that lets a view's plain-text messages through while it reads only. */
+/**
+ * The name a home before major 16 lists when it lets a view's plain-text
+ * messages through while the view reads only; major 16 folded it in.
+ */
 export const MESSAGES_WHILE_READING = "messages-while-reading";
+
+/**
+ * The first contract that has every addition named before it without
+ * listing its name: major 16 folded those names in and kept views, so a
+ * view on it may still meet a home on major 15, and a home on it a view on
+ * major 15, which lists by name what it has.
+ */
+export const FOLDED_INTO_16_SINCE = "16.0.0";
+
+/**
+ * The additions major 16 folded in that a home still checks of a view, or a
+ * view of its home, by their historical names.
+ */
+export type FoldedInto16 =
+  | "browser-from-any-view"
+  | "card-annotations"
+  | "card-files"
+  | "computer-readings-live"
+  | "custom-token-command"
+  | "devices-from-a-view"
+  | "every-view-asks"
+  | "font-choice"
+  | "from-the-command"
+  | "keep-going-on-credits"
+  | "language-choice"
+  | "panels-in-every-window"
+  | "sign-in-return"
+  | "streamed-events-live";
+
+/**
+ * Whether the other side has an addition major 16 folded in: it speaks
+ * major 16 or later (`FOLDED_INTO_16_SINCE`), or it is older and lists the
+ * addition's historical name. A side whose version is unknown has only what
+ * it lists.
+ */
+export function hasSince16(
+  version: string | null | undefined,
+  changes: readonly string[] | null | undefined,
+  name: FoldedInto16,
+): boolean {
+  return (
+    (typeof version === "string" && speaksSince(version, FOLDED_INTO_16_SINCE)) ||
+    (changes?.includes(name) ?? false)
+  );
+}
 
 /**
  * Which side a view outside the window updates to change things again:

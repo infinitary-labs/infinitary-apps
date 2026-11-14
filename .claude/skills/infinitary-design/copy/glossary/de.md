@@ -26,8 +26,8 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Automation | Automatisierung | The Settings section; one of them is "eine Automatisierung", feminine. |
 | backlog | Backlog | |
 | batch (your approved changes, combined) | Bündel | Neuter, matching "gebündelter Pull Request"; "Stapel" reads like a pile of paper. |
-| batch / batch run (the queue's) | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
-| batch check | Sammelprüfung | The project's queue testing approved work together. |
+| batch / batch run | Bündel / Bündellauf | Matches "gebündelter Pull Request"; "Sammelprüfung" stays the batch check. |
+| batch check | Sammelprüfung | The checks of a batch of approved changes, run together. |
 | batched pull request | gebündelter Pull Request | |
 | branch | Branch | Masculine; "main branch" is "Hauptbranch". |
 | bring up to date | auf den neuesten Stand bringen | Replaces rebase and conflict; "kollidiert mit neuerer Arbeit" says what happened. |
@@ -108,7 +108,6 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | pull request | Pull Request | Masculine, as GitHub's German docs say it ("der Pull Request"). |
 | purge (task data) | endgültig löschen | Says the removal cannot be undone. |
 | push | pushen | "Den Branch gepusht", as GitHub's German docs say it. |
-| queue (the project's merge queue) | Warteschlange | |
 | queued | eingereiht | |
 | Queued (board lane) | Eingereiht | |
 | rail | Leiste | |

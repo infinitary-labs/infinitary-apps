@@ -57,7 +57,7 @@ export const programOutcomeSchema = z.object({
   outcome: z.enum(["ended", "killed", "gone", "survived"]),
   /**
    * Its birth as the system listed it at the close, so a later end can tell
-   * it from a new program given the same number (`left-behind.md`).
+   * it from a new program given the same number.
    */
   started: z.string().max(64).optional(),
 });
@@ -76,7 +76,7 @@ export const leftoversReportSchema = z.object({
   holders: z.enum(["checked", "unsupported", "unreadable"]),
   /**
    * The close kept what it could not finish in the task's folder there
-   * (`left-behind.md`), so the computer's list says when it is cleared.
+   * (`leftBehindSchema`), so the computer's list says when it is cleared.
    */
   keptInFile: z.literal(true).optional(),
 });
@@ -147,11 +147,12 @@ export function leftoversLine(report: LeftoversReport): string {
 }
 
 /**
- * What `inf:session:close` carries for a task's leftovers (`task-stops.md`):
- * the task on the same computer that carries its work on and takes its
- * stops (`carriedTo`), and the report of what the close did there
- * (`leftovers`), which the home writes on the task's timeline. A computer
- * without the change ignores `carriedTo` and answers no report.
+ * What `inf:session:close` carries for a task's leftovers
+ * (docs/leftover-programs.md): the task on the same computer that carries
+ * its work on and takes its stops (`carriedTo`), and the report of what
+ * the close did there (`leftovers`), which the home writes on the task's
+ * timeline. A computer on an older major ignores `carriedTo` and answers
+ * no report.
  */
 export const closeOrder = {
   request: {
@@ -190,13 +191,13 @@ export type KeptLeftovers = z.infer<typeof keptLeftoversSchema>;
 const taskIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 
 /**
- * What finished tasks left on one computer (`left-behind.md`): the stops
- * their closes kept, without their commands except to a cleanup look on
- * that computer; the programs that survived a close and still run with the
- * same birth; their runs still in that computer's heavy-run line; and every
- * task whose close still keeps something there (`kept`), so the home can
- * mark a cleared close report resolved. A record, never a reading of
- * memory use.
+ * What finished tasks left on one computer (docs/leftover-programs.md,
+ * "What a close leaves"): the stops their closes kept, without their
+ * commands except to a cleanup look on that computer; the programs that
+ * survived a close and still run with the same birth; their runs still in
+ * that computer's heavy-run line; and every task whose close still keeps
+ * something there (`kept`), so the home can mark a cleared close report
+ * resolved. A record, never a reading of memory use.
  */
 export const leftBehindSchema = z.object({
   stops: z.array(
@@ -236,7 +237,7 @@ export function leftAnything(left: LeftBehind): boolean {
   return left.stops.length + left.programs.length + left.runs.length > 0;
 }
 
-/** The order the home asks a computer that runs work for its list (`left-behind.md`). */
+/** The order the home asks a computer that runs work for its list (`leftBehindSchema`). */
 export const LEFT_BEHIND_ORDER = "inf:computer:left-behind";
 export const leftBehindOrders = {
   [LEFT_BEHIND_ORDER]: {

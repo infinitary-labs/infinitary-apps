@@ -8,7 +8,6 @@ import type { HostChildProcess, HostChildSpawner } from "../host";
 import type { CrewSupervisorOptions, FirstmateHooks } from "../orchestrator/crewSupervisorOptions";
 import type { TaskIntake } from "../orchestrator/intake";
 import { parseSpawnIntent, renderIntentBrief, type SpawnIntent } from "../orchestrator/intentBrief";
-import { queueWay } from "../orchestrator/projectQueue";
 import type { SettleOwners } from "../orchestrator/settleOwners";
 import type { TypedWake } from "../orchestrator/wakes";
 import { handOffShape, withDeliverable, workShape } from "../orchestrator/workShape";
@@ -725,13 +724,7 @@ export class CrewPrograms {
       id: randomUUID().slice(0, 8),
       kind: "work",
       title,
-      prompt: renderIntentBrief(
-        intent,
-        placement.delivery,
-        undefined,
-        undefined,
-        queueWay(placement.repoId ? this.options.repos.get(placement.repoId) : undefined),
-      ),
+      prompt: renderIntentBrief(intent, placement.delivery, undefined, undefined),
       intent,
       repoId: placement.repoId,
       difficulty: tierFor(shape).bucket ?? null,

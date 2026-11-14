@@ -112,9 +112,6 @@ export type StubRuleset = {
   rules: { type: string; parameters?: Record<string, unknown> }[];
 };
 
-/** A workflow file the stub serves: its path, GitHub's state for it, and its text. */
-export type StubWorkflowFile = { path: string; state: string; text: string };
-
 export type GitHubStub = {
   url: string;
   /** The environment that points the app here. */
@@ -131,8 +128,6 @@ export type GitHubStub = {
   mergeRequests: () => string[];
   /** Verification requests accepted for an existing pushed branch. */
   dispatches: () => StubDispatch[];
-  /** Every by-hand start of the project's shipped queue, `POST .../infinitary-queue.yml/dispatches`, in order. */
-  queueStarts: () => { ref: string; inputs: Record<string, string> }[];
   /** Every merge past the branch's rules GitHub accepted, in order. */
   asyncMerges: () => StubAsyncMerge[];
   /**
@@ -208,26 +203,10 @@ export type GitHubStub = {
    */
   setChecks: (runs: StubCheckRun[]) => void;
   /**
-   * Every commit status the app or the test set, by commit, as GitHub's
-   * combined status lists them: one per context, the newest kept.
+   * Every commit status the app wrote, by commit, as GitHub's combined
+   * status lists them: one per context, the newest kept.
    */
   statuses: (sha: string) => { context: string; state: string; description?: string }[];
-  /** Sets a commit status, as a project's own workflow does through `POST /statuses/{sha}`. */
-  setStatus: (
-    sha: string,
-    status: { context: string; state: string; description?: string },
-  ) => void;
-  /**
-   * The project's workflow files on its default branch, as GitHub's list of
-   * workflows and its contents read answer them; none until set.
-   */
-  serveWorkflows: (files: StubWorkflowFile[]) => void;
-  /**
-   * The shipped queue's one open pause issue, as GitHub lists the project's
-   * open issues with its pause label (`GitHubForge.queuePause`), with its
-   * body and assignees; null once the queue closed it. None until set.
-   */
-  servePauseIssue: (issue: { number: number; body: string; assignees?: string[] } | null) => void;
   /** INF-1555 F14: refuse the version's workflow metadata list, not its sign-in or registered checks. */
   setWorkflowReadFailure: (failure: { status: number; message: string } | undefined) => void;
   /**
@@ -348,8 +327,6 @@ export async function startGitHubStub(
     ]);
     return statusIds;
   };
-  let workflowFiles: StubWorkflowFile[] = [];
-  let pauseIssue: { number: number; body: string; assignees?: string[] } | null = null;
   const asyncMerges: StubAsyncMerge[] = [];
   const asyncResults = new Map<string, { status: string; details: Record<string, unknown> }>();
   let asyncRequests = 0;
@@ -358,15 +335,13 @@ export async function startGitHubStub(
   const hostQueue = new Set<number>();
   let rulesets: StubRuleset[] = [];
   const dispatches: StubDispatch[] = [];
-  const queueStarts: { ref: string; inputs: Record<string, string> }[] = [];
   const cancelledRuns = new Set<number>();
   let anyPull: StubPull | null = null;
   const opened = new Map<string, StubPull>();
   const queued: StubPull[] = [];
   /** The pull requests the app opened, in order; a later one may reuse an earlier one's branch. */
   const appOpened: StubPull[] = [];
-  // Crew stories, queue approvals and revocations share issue comments, read
-  // through GitHub's API before the app writes its waiting status.
+  // A crew story for someone else's pull request is kept in its issue comments.
   const issueComments = new Map<
     number,
     { id: number; body: string; user: { login: string }; html_url: string }[]
@@ -716,13 +691,6 @@ export async function startGitHubStub(
           res.end();
           return;
         }
-        if (method === "POST" && rest === "/actions/workflows/infinitary-queue.yml/dispatches") {
-          const body = JSON.parse(raw || "{}") as { ref?: string; inputs?: Record<string, string> };
-          queueStarts.push({ ref: body.ref ?? "", inputs: body.inputs ?? {} });
-          res.writeHead(204);
-          res.end();
-          return;
-        }
         const cancel = /^\/actions\/runs\/(\d+)\/cancel$/.exec(rest);
         if (method === "POST" && cancel) {
           const runId = Number(cancel[1]);
@@ -878,23 +846,6 @@ export async function startGitHubStub(
           send(200, row);
           return;
         }
-        if (method === "GET" && rest === "/issues" && url.searchParams.get("labels")) {
-          const label = url.searchParams.get("labels");
-          send(
-            200,
-            pauseIssue && label === "infinitary-queue-paused"
-              ? [
-                  {
-                    number: pauseIssue.number,
-                    body: pauseIssue.body,
-                    html_url: `https://${webHost}/${owner}/${name}/issues/${pauseIssue.number}`,
-                    assignees: (pauseIssue.assignees ?? []).map((login) => ({ login })),
-                  },
-                ]
-              : [],
-          );
-          return;
-        }
         if (method === "GET" && rest === `/collaborators/${STUB_LOGIN}/permission`) {
           send(200, { permission: "write" });
           return;
@@ -967,7 +918,7 @@ export async function startGitHubStub(
           return;
         }
         if (method === "GET" && rest === "/pulls") {
-          // The shipped queue lists every open request, forks included, without a branch filter.
+          // A list with no branch filter names every open request, forks included.
           if (!url.searchParams.has("head")) {
             const all = new Map(
               [...opened.values(), ...(anyPull ? [anyPull] : [])].map((pull) => [
@@ -1110,30 +1061,6 @@ export async function startGitHubStub(
               : "in_progress",
           }));
           send(200, { total_count: runs.length, workflow_runs: runs });
-          return;
-        }
-        if (method === "GET" && rest === "/actions/workflows") {
-          send(200, {
-            total_count: workflowFiles.length,
-            workflows: workflowFiles.map((file, index) => ({
-              id: index + 1,
-              name: file.path,
-              path: file.path,
-              state: file.state,
-            })),
-          });
-          return;
-        }
-        const contents = method === "GET" ? /^\/contents\/(.+)$/.exec(rest) : null;
-        const workflowFile = contents?.[1]
-          ? workflowFiles.find((file) => file.path === decodeURIComponent(contents[1] ?? ""))
-          : undefined;
-        if (workflowFile) {
-          send(200, {
-            path: workflowFile.path,
-            encoding: "base64",
-            content: Buffer.from(workflowFile.text).toString("base64"),
-          });
           return;
         }
         const statusPost = method === "POST" ? /^\/statuses\/([^/]+)$/.exec(rest) : null;
@@ -1380,7 +1307,6 @@ export async function startGitHubStub(
     mergeRequests: () =>
       log.filter((request) => /^PUT \S+\/pulls\/\d+\/merge(?:-async)?$/.test(request)),
     dispatches: () => [...dispatches],
-    queueStarts: () => [...queueStarts],
     asyncMerges: () => [...asyncMerges],
     setMergeQueue: (on) => {
       mergeQueue = on;
@@ -1449,15 +1375,6 @@ export async function startGitHubStub(
       checkRuns = runs;
     },
     statuses: (sha) => [...(commitStatuses.get(sha) ?? [])],
-    setStatus: (sha, status) => {
-      putStatus(sha, status);
-    },
-    serveWorkflows: (files) => {
-      workflowFiles = files;
-    },
-    servePauseIssue: (issue) => {
-      pauseIssue = issue;
-    },
     setWorkflowReadFailure: (failure) => {
       workflowReadFailure = failure;
     },

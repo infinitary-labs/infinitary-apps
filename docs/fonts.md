@@ -16,7 +16,7 @@ A choice changes the window at once, lasts across a restart, and the first mate 
 
 The choice is the appearance's optional `fonts` (`fontChoicesSchema` in `src/shared/fonts.ts`), one family name for each chosen slot.
 The core keeps it in a settings row of its own, so an older build still reads the rest of the look (`docs/saved-data-compatibility.md`, "The font choice").
-A view from before the choice reads the look strictly, so the home leaves `fonts` out of the look it pushes or answers there (`lookFor` in `src/core/connection/cardCompatibility.ts`, `src/shared/contract-changes/font-choice.md`).
+A view older than major 16 whose hello does not list `font-choice` reads the look strictly, so the home leaves `fonts` out of the look it pushes or answers there (`lookFor` in `src/core/connection/cardCompatibility.ts`).
 A family name holds no quote, backslash, angle bracket, brace, semicolon or control character, since it is written inside a CSS string and inside a frame's `<style>`.
 
 The installed fonts come from the browser's own list (`queryLocalFonts`), which only the window's own page may read (`local-fonts` in `src/main/security/permissions.ts`); no card, panel or page can.

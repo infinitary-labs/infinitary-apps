@@ -2,7 +2,6 @@ import { type DeviceSsh, type DeviceView, reachFrom } from "@shared/devices";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import type { ComputerSignIns } from "@shared/signIns";
 import { describe, expect, it, vi } from "vitest";
-import { contractChange } from "../connection/contractChanges";
 import { DeviceSignIns } from "./deviceSignIns";
 
 /**
@@ -36,6 +35,8 @@ function view(inReach: boolean, ssh: DeviceSsh | undefined) {
 describe("a computer's sign-ins view", () => {
   // Accepted token-command plan: an older work computer must not silently keep a fixed key instead.
   it("forwards a token command only to a computer advertising that capability", async () => {
+    // A computer on the major before token commands were folded in has them only by name.
+    let contract = "15.0.0";
     const changes: string[] = [];
     const ask = vi.fn(async () => ({ listed: [] }));
     const signIns = new DeviceSignIns({
@@ -44,7 +45,7 @@ describe("a computer's sign-ins view", () => {
         ask,
         onWorkDevice: () => () => {},
         inReach: () => true,
-        version: () => ({ contract: PROTOCOL_VERSION, takesWork: true, changes }),
+        version: () => ({ contract, takesWork: true, changes: [...changes] }),
       },
       emit: () => {},
       broadcastEvent: () => {},
@@ -57,11 +58,18 @@ describe("a computer's sign-ins view", () => {
         "before saving a token command",
       );
       expect(ask).not.toHaveBeenCalled();
-      changes.push(contractChange("custom-token-command"));
+      changes.push("custom-token-command");
       await expect(signIns.custom(MINI.id, "inf:sign-ins:custom-connect", args)).resolves.toEqual({
         listed: [],
       });
       expect(ask).toHaveBeenCalledWith(MINI.id, "inf:sign-ins:custom-connect", args);
+      // A computer on this major has them without listing the name.
+      contract = PROTOCOL_VERSION;
+      changes.length = 0;
+      await expect(signIns.custom(MINI.id, "inf:sign-ins:custom-connect", args)).resolves.toEqual({
+        listed: [],
+      });
+      expect(ask).toHaveBeenCalledTimes(2);
     } finally {
       signIns.dispose();
     }

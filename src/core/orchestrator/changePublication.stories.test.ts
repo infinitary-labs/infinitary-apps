@@ -32,10 +32,8 @@ import {
   presentationCommitMessage,
   presentationContentHash,
   presentationMarkdown,
-  QUEUE_STATUS,
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
-import { commitEnvelope, NAMING_DECISION, readCommitEnvelope } from "../queue/shipped/message.mjs";
 import type { MergeAuthorization } from "../storage/taskRecords";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
@@ -115,52 +113,6 @@ describe("shared story delivery boundaries", () => {
           expect(at.tasks.delivery.changePresentation("ab12cd34")).toEqual(before);
           expect(at.update).not.toHaveBeenCalled();
         }
-      },
-    );
-
-    it.each(["github", "gitlab"] as const)(
-      "publishes current override words for a queue-owned merge on %s",
-      async (kind) => {
-        const at = await stale(kind);
-        override(at, "task");
-        const record = at.tasks.get("ab12cd34");
-        if (!record?.repoId) throw new Error("the project is missing");
-        at.repos.configure(record.repoId, {
-          origin: kind === "github" ? "https://github.com/x/y.git" : "https://gitlab.com/x/y.git",
-          delivery: "queue-pr",
-        });
-        at.repos.recordQueue(record.repoId, {
-          workflows: [
-            {
-              path:
-                kind === "github"
-                  ? ".github/workflows/infinitary-queue.yml"
-                  : ".gitlab/infinitary-queue.yml",
-              active: true,
-              shipped: 10,
-            },
-          ],
-        });
-        const approved: import("../forge").ForgeQueueApproval[] = [];
-        Object.assign(at.forge, { hasChecks: true, markStartsQueue: true });
-        at.forge.markQueued = async (head, details) => {
-          if (details) approved.push(details);
-          at.forge.atHead[head] = [
-            { name: "linux-checks", state: "success" },
-            { name: "infinitary/queue", state: "pending" },
-          ];
-          return { id: 41 };
-        };
-        expect(await at.service.merges.merge("ab12cd34")).toMatchObject({ stop: "queue" });
-        const details = approved[0];
-        if (!details) throw new Error("no approved queue words");
-        const packet = commitEnvelope(repaired, details.message ?? "", details.title, {
-          naming: details.naming ? NAMING_DECISION.checked : NAMING_DECISION.off,
-        });
-        expect(readCommitEnvelope(packet, repaired, details.title)).toBe(
-          "Keeps the merge moving.\n\nBREAKING CHANGE: The story hold reads the override.",
-        );
-        expect(at.putIn).not.toHaveBeenCalled();
       },
     );
 
@@ -1672,15 +1624,15 @@ describe("shared story delivery boundaries", () => {
   // INF-3585's story-selection finding and the captain's title choice:
   // a request's published comment belongs to its review, not checkTarget.
   it.each([false, true])(
-    "a fork review merges its story title and summary after another change is selected (queued: %s)",
-    async (queued) => {
+    "a fork review merges its story title and summary after another change is selected (batched delivery: %s)",
+    async (batched) => {
       const prepareContribution = vi.fn(async () => undefined);
       const at = await saved("github", undefined, prepareContribution);
       const task = at.tasks.get("ab12cd34");
       if (!task?.repoId) throw new Error("The task has no project");
       at.repos.configure(task.repoId, {
         origin: "https://github.com/x/y.git",
-        delivery: queued ? "queue-pr" : "direct-pr",
+        delivery: batched ? "queue-pr" : "direct-pr",
       });
       const own = at.tasks.delivery.changePresentation(task.id);
       if (!own?.published) throw new Error("The fixture needs its published story");
@@ -1761,59 +1713,8 @@ describe("shared story delivery boundaries", () => {
       expect(completion).toMatchObject({ title: story.title, revision: story.revision });
       expect(at.tasks.get(task.id)?.delivery?.checkTarget?.id).toBe(review.id);
       const putIn = vi.spyOn(at.forge, "putIn");
-      if (queued) {
-        const marked: string[] = [];
-        at.forge.markQueued = async (head) => {
-          marked.push(head);
-          return {};
-        };
-        const waiting = await at.service.reviews.mergeReview(task.id, review.id);
-        expect(waiting).toMatchObject({ ok: false, stop: "queue" });
-        expect(marked).toEqual([original]);
-        expect(putIn).not.toHaveBeenCalled();
-        seedDelivery(at.tasks, task.id, {
-          mergeAuthorization: {
-            version: 1,
-            id: "approved-contributor",
-            generation: 1,
-            issuer: "captain",
-            at: 1,
-            card: { id: "contributor-card", offerId: "contributor-offer", actionId: "merge" },
-            review,
-            target: {
-              repoId: task.repoId,
-              host: review.host,
-              owner: review.owner,
-              name: review.name,
-              prNumber: review.number,
-              branch: review.branch,
-              delivery: "direct-pr",
-              method: "squash",
-            },
-            approvedHead: original,
-            proceedWithOpen: false,
-            status: "standing",
-            lineage: [],
-          },
-        });
-        at.forge.atHead[original] = [
-          { name: "build", state: "success" },
-          { name: QUEUE_STATUS, state: "success" },
-        ];
-      }
       at.tasks.delivery.selectOwnChange(task.id, { number: 23, headSha: original, base: "main" });
-      const outcome = await at.service.reviews.mergeReview(
-        task.id,
-        review.id,
-        queued
-          ? {
-              head: original,
-              prNumber: review.number,
-              unattended: true,
-              beforeDispatch: () => undefined,
-            }
-          : undefined,
-      );
+      const outcome = await at.service.reviews.mergeReview(task.id, review.id);
       expect(outcome.ok, outcome.text).toBe(true);
       expect(putIn).toHaveBeenCalledWith(
         expect.objectContaining({

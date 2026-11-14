@@ -82,7 +82,7 @@ export const fetchAppRequestSchema = z.strictObject({
   chip: deviceChipSchema.optional(),
   /**
    * Asks for the Ubuntu package for that system and chip rather than its
-   * AppImage (`major-15.md`): the command for another computer
+   * AppImage (major 15): the command for another computer
    * asks it on Ubuntu 24.04 and 26.04 with no Infinitary installed, and
    * installs it there (docs/devices.md, "Joining by a command"). Only this
    * home's own command asks it, so no older home is ever asked it.
@@ -261,7 +261,7 @@ const versionSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
  * in the same replay replaces (docs/connection.md, "Catching up"): numbered
  * as that push was, with a null payload, so a device's numbering stays whole and
  * it reads nothing from it. A device that knows no such channel ignores it,
- * as it does any push it does not read (`replay-newest-lists.md`).
+ * as it does any push it does not read.
  */
 export const REPLACED_PUSH_CHANNEL = "inf:replaced";
 
@@ -436,8 +436,9 @@ export const homeFrameSchema = z.union([
     onHomeMac: z.boolean().optional(),
     /**
      * Sent only to a view from before one rule for every view
-     * (`every-view-asks.md`), which waits to hear it before it asks what
-     * every view now may. Nothing reads it now; the next major removes it.
+     * (`every-view-asks`), which waits to hear it before it asks what every
+     * view now may. No build on this major reads it; a major that breaks
+     * views removes it.
      */
     startedByCommand: z.literal(true).optional(),
     spellings: spellingsSchema,
@@ -451,7 +452,7 @@ export const homeFrameSchema = z.union([
   }),
   /**
    * A push for this connection alone, such as a picture of a task's page it
-   * watches (`browser-from-any-view.md`): never numbered, journaled or
+   * watches (docs/connection.md, "Live pushes"): never numbered, journaled or
    * replayed, so it moves no cursor. A device that does not know it ignores it.
    */
   z.object({

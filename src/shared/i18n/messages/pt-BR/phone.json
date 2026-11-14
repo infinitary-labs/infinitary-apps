@@ -383,7 +383,7 @@
   "phoneRecordHoldsUp": "Segura",
   "phoneRecordLandsMerged": "mesclada",
   "phoneRecordLandsRigor": "cuidado: {care}",
-  "phoneRecordModeBatched": "Como solicitação de pull em lote testada pela fila do seu projeto",
+  "phoneRecordModeBatched": "Como solicitação de pull em lote com suas outras alterações aprovadas",
   "phoneRecordModeInPlace": "Feita no local",
   "phoneRecordModeLocal": "Mesclada localmente, sem solicitação de pull",
   "phoneRecordModePullRequest": "Como solicitação de pull",

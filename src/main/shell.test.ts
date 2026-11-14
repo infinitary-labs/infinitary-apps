@@ -698,7 +698,8 @@ describe("the app as a view of another Mac", () => {
   // The captain's answer on the review of one rule for every view: a home too old to list the
   // change is told apart, so the window can say it needs an update instead of asking.
   it("knows when the first mate there is too old to answer what every view asks", async () => {
-    const older = await otherMac({ changes: [] });
+    // Major 16 folded these names in, so the older first mates here are on major 15.
+    const older = await otherMac({ protocolVersion: "15.0.0", changes: [] });
     const air = shell();
     await air.shell.start();
     await air.shell.join(await older.link());
@@ -712,7 +713,7 @@ describe("the app as a view of another Mac", () => {
     });
 
     // One that answers every view's settings but not yet its devices (INF-1352's plan, piece 2).
-    const before = await otherMac({ changes: ["every-view-asks"] });
+    const before = await otherMac({ protocolVersion: "15.0.0", changes: ["every-view-asks"] });
     const mini = shell();
     await mini.shell.start();
     await mini.shell.join(await before.link());
@@ -854,7 +855,7 @@ describe("the app as a view of another Mac", () => {
   });
 
   it("says to update an older first mate before it shows its task's browser here", async () => {
-    const older = await otherMac({ changes: [] });
+    const older = await otherMac({ protocolVersion: "15.0.0", changes: [] });
     const air = shell();
     await air.shell.start();
     await air.shell.join(await older.link());

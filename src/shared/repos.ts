@@ -69,45 +69,15 @@ export type RepoKind = z.infer<typeof repoKindSchema>;
 
 /**
  * How the agent ships finished work on the repo. `direct-pr` pushes a
- * branch and opens a PR; `queue-pr` does the same, and the captain's merge
- * click waits for the project's own queue to pass that version before it
- * merges (`infinitary/queue`, docs/forge.md "A project's queue"); `local-only`
- * lands on a local branch and never leaves the machine. New postures extend
- * this enum - the registry and display render whatever it carries.
+ * branch and opens a PR; `queue-pr` is batched pull requests: the captain's
+ * merge click puts the approved version in line, and the app at the captain's
+ * home combines the line into one batch pull request it merges once every
+ * check passed (docs/forge.md, "Batches of your own"; the saved value keeps
+ * its first name); `local-only` lands on a local branch and never leaves the
+ * machine. New postures extend this enum - the registry and display render
+ * whatever it carries.
  */
 export const repoDeliverySchema = z.enum(["direct-pr", "queue-pr", "local-only"]);
-
-/**
- * The commit status that is the app's contract with a project's own queue
- * (docs/forge.md, "A project's queue"): the app writes it as waiting on the
- * version the captain approved, and the queue answers success or failure on
- * it. The kept merge reads it like any other check, and Settings names it in
- * its how-to for the batched choice.
- */
-export const QUEUE_STATUS = "infinitary/queue"; // the shipped queue's rules own it (`QUEUE`, rules.mjs); github.test.ts holds the two equal
-
-/**
- * The project's queue status on a version, as a task's last reading of it
- * saw it (INF-3208): the queue's own words and link, the paused batch's
- * issue a paused reading of this version linked, and when the pull
- * request's own checks started and finished, without the queue status's
- * times. The merge card's Batch check cell says it, and its Checks cell
- * times the pull request's own checks by it (`ProjectQueue.observe`).
- */
-export type QueueStatusFact = {
-  head: string;
-  /**
-   * What the status says, where the app itself wrote the fact: a change's
-   * place in this person's own batch (docs/forge.md, "Batches of your
-   * own"), which no status where the project lives carries.
-   */
-  kind?: "waiting" | "in-batch" | "paused" | "passed" | "failed";
-  words?: string;
-  link?: string;
-  pause?: string;
-  checksStartedAt?: number;
-  checksFinishedAt?: number;
-};
 
 export type RepoDelivery = z.infer<typeof repoDeliverySchema>;
 
@@ -259,32 +229,32 @@ export const repoHostSchema = z
 export type RepoHost = z.infer<typeof repoHostSchema>;
 
 /**
- * The hosts with a part of the shipped queue (docs/forge.md, "One queue for
- * every host"): where the queue runs in the project's own CI, marks each
- * change with a status, holds a pause in an issue and starts again by hand.
- * A host with no part, such as a plain Git host with no CI, cannot hold a
- * shared queue, so batched pull requests is not offered there.
+ * The hosts where the app can combine a person's approved changes into a
+ * batch pull request (docs/forge.md, "Batches of your own"): it opens,
+ * reads and merges that pull request with the person's own sign-in. Any
+ * other host gives it no pull request to combine into, so batched pull
+ * requests is not offered there.
  */
-const QUEUE_PART_HOSTS: ReadonlySet<NonNullable<RepoHost>["kind"]> = new Set(["github", "gitlab"]);
+const BATCH_HOSTS: ReadonlySet<NonNullable<RepoHost>["kind"]> = new Set(["github", "gitlab"]);
 
-/** Why a project whose host has no part of the shipped queue cannot choose batched pull requests. */
-export const QUEUE_HOST_REFUSAL =
-  "Batched pull requests need a host whose CI runs Infinitary's queue, and this project's host has none it can use yet. Choose pull requests or a local merge.";
+/** Why a project whose host takes no batch pull request cannot choose batched pull requests. */
+export const BATCH_HOST_REFUSAL =
+  "Batched pull requests need a host where Infinitary can open and merge a batch pull request, and this project's host has none it can use yet. Choose pull requests or a local merge.";
 
-/** Whether a project's host has a part of the shipped queue, so it may choose batched pull requests. */
-export function hostRunsQueue(host: RepoHost | undefined): boolean {
-  return host ? QUEUE_PART_HOSTS.has(host.kind) : false;
+/** Whether a project's host takes a batch pull request, so it may choose batched pull requests. */
+export function hostTakesBatches(host: RepoHost | undefined): boolean {
+  return host ? BATCH_HOSTS.has(host.kind) : false;
 }
 
 /**
  * The deliveries a project may choose where it lives: a project kept only on
  * this Mac lands locally; one with a host also opens pull requests; and one
- * whose host has a part of the shipped queue can merge through it. Settings
+ * whose host takes a batch pull request can combine approved changes. Settings
  * lists them in this order, from the lightest choice to the most involved.
  */
 export function deliveryChoices(host: RepoHost | undefined): RepoDelivery[] {
   if (!host) return ["local-only"];
-  return hostRunsQueue(host)
+  return hostTakesBatches(host)
     ? ["local-only", "direct-pr", "queue-pr"]
     : ["local-only", "direct-pr"];
 }
@@ -312,74 +282,6 @@ export const repoPolicyPatchSchema = z
     message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, or several",
   });
 export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
-
-/**
- * A workflow file on a project's default branch that mentions the app's
- * queue status (`infinitary/queue`, docs/forge.md "A project's queue"), as
- * last read where the project lives, and whether it is turned on there.
- */
-export const queueWorkflowSchema = z.object({
-  path: z.string(),
-  active: z.boolean(),
-  /** The shipped queue's version this file's stamp names; absent for a queue the project wrote itself. */
-  shipped: z.number().int().positive().optional(),
-});
-export type QueueWorkflow = z.infer<typeof queueWorkflowSchema>;
-
-/**
- * A project's paused batch as this app last read it where the project
- * lives (docs/forge.md, "A paused batch"): the failed batch run, the one
- * issue that holds the pause, when the app first saw it, the paused
- * changes' numbers, and who took the issue to repair it. `unread` marks a
- * pause kept from a task's paused status alone, because the issue could not
- * be read (Issues turned off): `url` is then that status's link and
- * `changes` only the changes this app saw paused.
- */
-export const queuePauseSchema = z.object({
-  run: z.number(),
-  url: z.string(),
-  since: z.number(),
-  changes: z.array(z.number()),
-  claimedBy: z.string().optional(),
-  unread: z.literal(true).optional(),
-});
-export type QueuePause = z.infer<typeof queuePauseSchema>;
-
-/**
- * A by-hand answer to a paused batch, from Settings or the first mate:
- * resume, or send one change back. `run` names the paused batch run it
- * answers, so an answer to a pause that already ended is refused.
- */
-export const queueAnswerSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("resume"),
-    run: z.number().int().positive(),
-    reason: z.string().trim().min(1).max(120),
-  }),
-  z.object({
-    action: z.literal("send-back"),
-    run: z.number().int().positive(),
-    number: z.number().int().positive(),
-    reason: z.string().trim().min(1).max(120),
-  }),
-]);
-export type QueueAnswer = z.infer<typeof queueAnswerSchema>;
-
-/**
- * The token a project's shipped queue writes with, where its host keeps one
- * in the project's CI settings rather than handing the queue's jobs a
- * credential of their own (GitLab; docs/forge.md, "The shipped queue on
- * GitLab"): `missing` until someone creates it, `ready` with the day it
- * ends, and `unreadable` when this sign-in cannot read the project's
- * tokens, such as without the Maintainer role. The token itself never
- * leaves the host.
- */
-export const queueCredentialSchema = z.object({
-  state: z.enum(["missing", "ready", "unreadable"]),
-  /** The day the token ends, as the host writes it (YYYY-MM-DD). */
-  expiresAt: z.string().optional(),
-});
-export type QueueCredential = z.infer<typeof queueCredentialSchema>;
 
 export const repoViewSchema = z.object({
   id: z.string(),
@@ -422,27 +324,6 @@ export const repoViewSchema = z.object({
   runsOn: z.string().nullable(),
   placementRequirements: placementRequirementsSchema.optional(),
   /**
-   * The workflow files that mention the queue status, read when the batched
-   * delivery is chosen and at each merge click that waits on it; absent
-   * until a read succeeded (docs/forge.md, "A project's queue").
-   */
-  queueWorkflows: z.array(queueWorkflowSchema).optional(),
-  /**
-   * When anything other than the app last wrote the queue status on one of
-   * this project's versions (epoch ms); absent while nothing has answered.
-   */
-  queueAnsweredAt: z.number().optional(),
-  /**
-   * When the batched delivery was chosen while nothing in the project
-   * answered its queue status (epoch ms): the choice waits, the project
-   * keeps `delivery`, and the app switches it once a workflow that is on
-   * mentions the status (docs/forge.md, "Choosing batched pull requests
-   * before a queue exists"); absent when nothing waits.
-   */
-  queuePendingAt: z.number().optional(),
-  /** The project's paused batch, while this app reads one (docs/forge.md, "A paused batch"). */
-  queuePause: queuePauseSchema.optional(),
-  /**
    * This person's line of approved changes and open batch in the project,
    * while there is either (docs/forge.md, "Batches of your own").
    */
@@ -451,62 +332,12 @@ export const repoViewSchema = z.object({
 export type RepoView = z.infer<typeof repoViewSchema>;
 
 /**
- * The shipped queue's version the project runs on its default branch, read
- * from the stamp of a workflow that is on; undefined when it runs none.
- * Every teammate's Infinitary treats such a project as batched, whatever
- * that person chose (docs/forge.md, "The shipped queue").
- */
-export function queueShipped(repo: Pick<RepoView, "queueWorkflows">): number | undefined {
-  const versions = (repo.queueWorkflows ?? [])
-    .filter((workflow) => workflow.active && workflow.shipped !== undefined)
-    .map((workflow) => workflow.shipped as number);
-  return versions.length ? Math.max(...versions) : undefined;
-}
-
-/**
- * Whether the app's reads find nothing to answer a project's queue: the
- * workflows were read, none that is on mentions its status, and the status
- * was never answered. A read that never succeeded is unknown, never
- * "nothing answers", so it is not missing.
- */
-export function queueMissing(repo: Pick<RepoView, "queueWorkflows" | "queueAnsweredAt">): boolean {
-  if (repo.queueAnsweredAt !== undefined) return false;
-  const workflows = repo.queueWorkflows;
-  return workflows !== undefined && !workflows.some((workflow) => workflow.active);
-}
-
-/**
  * Whether a batched project's approved changes combine in batches of this
- * person's own (docs/forge.md, "Batches of your own"), read from the typed
- * fact the app already keeps: the workflow files that mention the team
- * queue's status. A project that carries such a file keeps the team queue
- * until the files are removed; one read with none gets batches of its own.
- * Undefined while the files were never read: unknown, never guessed.
+ * person's own (docs/forge.md, "Batches of your own"): the batched delivery
+ * on a host that takes a batch pull request.
  */
-export function ownsBatches(
-  delivery: RepoDelivery,
-  repo: Pick<RepoView, "host" | "queueWorkflows">,
-): boolean | undefined {
-  if (delivery !== "queue-pr" || !hostRunsQueue(repo.host)) return false;
-  if (repo.queueWorkflows === undefined) return undefined;
-  return repo.queueWorkflows.length === 0;
-}
-
-/**
- * Settings' warning under "Where changes go" for a project on the batched
- * delivery whose queue the app's reads find nothing to answer (docs/forge.md,
- * "A project's queue"); null when the queue answered before, a workflow that
- * is on mentions its status, or the workflows were never read. It says only
- * what was read: a mention is not proof a workflow answers.
- */
-export function queueSettingsWarning(
-  repo: Pick<RepoView, "delivery" | "queueWorkflows" | "queueAnsweredAt">,
-): string | null {
-  if (repo.delivery !== "queue-pr" || !queueMissing(repo)) return null;
-  // A project with no such file gets batches of its own, and nothing waits.
-  return (repo.queueWorkflows ?? []).length > 0
-    ? "The workflow in this project that mentions its batch check is turned off, so approved merges would wait for one."
-    : null;
+export function ownsBatches(delivery: RepoDelivery, repo: Pick<RepoView, "host">): boolean {
+  return delivery === "queue-pr" && hostTakesBatches(repo.host);
 }
 
 /**

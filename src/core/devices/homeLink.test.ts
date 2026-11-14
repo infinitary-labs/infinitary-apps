@@ -404,7 +404,7 @@ describe("the device's side of the connection", () => {
     expect(older.joined()).toBe(0);
   });
 
-  // `every-view-asks.md`: an older home still says a command started it, and a view reads on.
+  // A home on major 15 that does not name `every-view-asks` still says a command started it, and a view reads on.
   it("reads the welcome of an older home that still says a command started it", async () => {
     const run = follow(await (await home({ startedByCommand: true })).join());
     run.link.start();
@@ -477,7 +477,7 @@ describe("the device's side of the connection", () => {
   it("hears a streamed reply live, catches up past it after a drop, and an older view still hears it", async () => {
     const at = await home();
     const air = follow(await at.join());
-    const older = follow(await at.join(), { changes: [] });
+    const older = follow(await at.join(), { protocolVersion: "15.0.0", changes: [] });
     for (const view of [air, older]) view.link.start();
     await air.until(() => air.link.state().contact === "in-reach");
     await older.until(() => older.link.state().contact === "in-reach");

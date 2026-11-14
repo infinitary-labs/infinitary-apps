@@ -65,7 +65,7 @@
   "recordModeDirectPr": "Als Pull Request",
   "recordModeInPlace": "Direkt im Ordner gebaut",
   "recordModeLocalOnly": "Lokal zusammengeführt, ohne Pull Request",
-  "recordModeQueuePr": "Als gebündelter Pull Request, den die Warteschlange deines Projekts testet",
+  "recordModeQueuePr": "Als gebündelter Pull Request mit deinen anderen bestätigten Änderungen",
   "recordMoreBranch": "Branch",
   "recordMoreComputerChoice": "Wahl des Computers",
   "recordMoreDelivery": "Lieferung",

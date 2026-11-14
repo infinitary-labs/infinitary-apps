@@ -5,7 +5,8 @@ public enum PhoneContract {
     public static let sceneObservations = "native-scene-observations"
     public static let sceneObservationsSince = 12
     public static let phoneDiagnosticsSince = 14
-    public static let version = "15.0.0"
+    public static let foldedInto16Since = 16
+    public static let version = "16.0.0"
     public static let viewFloor = 15
     public static let pairPath = "/pair"
     public static let connectionPath = "/connection"

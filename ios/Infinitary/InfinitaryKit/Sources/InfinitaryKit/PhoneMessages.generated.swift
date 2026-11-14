@@ -710,9 +710,7 @@ public enum PhoneMessages {
     public static func `keptHostQueue`(`place`: String) -> String { PhoneWords.format("keptHostQueue", [`place`]) }
     public static func `keptHostRemoved`(`place`: String) -> String { PhoneWords.format("keptHostRemoved", [`place`]) }
     public static func `keptProtected`(`place`: String) -> String { PhoneWords.format("keptProtected", [`place`]) }
-    public static func `keptQueue`() -> String { PhoneWords.format("keptQueue", []) }
     public static func `keptQueueOwn`() -> String { PhoneWords.format("keptQueueOwn", []) }
-    public static func `keptQueueOwned`() -> String { PhoneWords.format("keptQueueOwned", []) }
     public static func `keptRefused`(`place`: String) -> String { PhoneWords.format("keptRefused", [`place`]) }
     public static func `keptRepair`() -> String { PhoneWords.format("keptRepair", []) }
     public static func `keptSignIn`(`place`: String) -> String { PhoneWords.format("keptSignIn", [`place`]) }
@@ -2581,7 +2579,6 @@ public enum PhoneMessages {
     public static func `settingsPhoneNoProjects`(`home`: String) -> String { PhoneWords.format("settingsPhoneNoProjects", [`home`]) }
     public static func `settingsPhonePauseAllAsk`(`count`: Int) -> String { PhoneWords.format("settingsPhonePauseAllAsk", [`count`]) }
     public static func `settingsPhoneProjectsThere`(`home`: String) -> String { PhoneWords.format("settingsPhoneProjectsThere", [`home`]) }
-    public static func `settingsPhoneQueueDecides`() -> String { PhoneWords.format("settingsPhoneQueueDecides", []) }
     public static func `settingsPhoneRunbooksLead`() -> String { PhoneWords.format("settingsPhoneRunbooksLead", []) }
     public static func `settingsPhoneSave`() -> String { PhoneWords.format("settingsPhoneSave", []) }
     public static func `settingsPhoneSignIn`(`action`: String, `where`: String) -> String { PhoneWords.format("settingsPhoneSignIn", [`action`, `where`]) }
@@ -2601,6 +2598,7 @@ public enum PhoneMessages {
     public static func `settingsProjectsBatchHeldRules`(`since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldRules", [`since`]) }
     public static func `settingsProjectsBatchNeedsChange`() -> String { PhoneWords.format("settingsProjectsBatchNeedsChange", []) }
     public static func `settingsProjectsBatchNeedsReason`() -> String { PhoneWords.format("settingsProjectsBatchNeedsReason", []) }
+    public static func `settingsProjectsBatchNoHost`() -> String { PhoneWords.format("settingsProjectsBatchNoHost", []) }
     public static func `settingsProjectsBatchOpen`(`label`: String) -> String { PhoneWords.format("settingsProjectsBatchOpen", [`label`]) }
     public static func `settingsProjectsBatchOwn`() -> String { PhoneWords.format("settingsProjectsBatchOwn", []) }
     public static func `settingsProjectsBatchReason`(`title`: String) -> String { PhoneWords.format("settingsProjectsBatchReason", [`title`]) }
@@ -2643,40 +2641,6 @@ public enum PhoneMessages {
     public static func `settingsProjectsOrigin`() -> String { PhoneWords.format("settingsProjectsOrigin", []) }
     public static func `settingsProjectsOriginDescription`(`place`: String) -> String { PhoneWords.format("settingsProjectsOriginDescription", [`place`]) }
     public static func `settingsProjectsOriginLabel`() -> String { PhoneWords.format("settingsProjectsOriginLabel", []) }
-    public static func `settingsProjectsPauseClaimed`(`who`: String) -> String { PhoneWords.format("settingsProjectsPauseClaimed", [`who`]) }
-    public static func `settingsProjectsPauseIssue`() -> String { PhoneWords.format("settingsProjectsPauseIssue", []) }
-    public static func `settingsProjectsPauseNeedsReason`() -> String { PhoneWords.format("settingsProjectsPauseNeedsReason", []) }
-    public static func `settingsProjectsPauseReason`() -> String { PhoneWords.format("settingsProjectsPauseReason", []) }
-    public static func `settingsProjectsPauseResume`() -> String { PhoneWords.format("settingsProjectsPauseResume", []) }
-    public static func `settingsProjectsPauseRun`() -> String { PhoneWords.format("settingsProjectsPauseRun", []) }
-    public static func `settingsProjectsPauseSendBack`() -> String { PhoneWords.format("settingsProjectsPauseSendBack", []) }
-    public static func `settingsProjectsPauseSendBackWhich`() -> String { PhoneWords.format("settingsProjectsPauseSendBackWhich", []) }
-    public static func `settingsProjectsPauseSent`() -> String { PhoneWords.format("settingsProjectsPauseSent", []) }
-    public static func `settingsProjectsPauseSummary`(`changes`: String, `count`: Int, `run`: String, `since`: String) -> String { PhoneWords.format("settingsProjectsPauseSummary", [`changes`, `count`, `run`, `since`]) }
-    public static func `settingsProjectsPauseTitle`() -> String { PhoneWords.format("settingsProjectsPauseTitle", []) }
-    public static func `settingsProjectsPauseUnclaimed`() -> String { PhoneWords.format("settingsProjectsPauseUnclaimed", []) }
-    public static func `settingsProjectsPauseUnread`() -> String { PhoneWords.format("settingsProjectsPauseUnread", []) }
-    public static func `settingsProjectsQueueFirstMate`() -> String { PhoneWords.format("settingsProjectsQueueFirstMate", []) }
-    public static func `settingsProjectsQueueGuideGithub`() -> String { PhoneWords.format("settingsProjectsQueueGuideGithub", []) }
-    public static func `settingsProjectsQueueGuideGitlab`() -> String { PhoneWords.format("settingsProjectsQueueGuideGitlab", []) }
-    public static func `settingsProjectsQueueHowToLabel`() -> String { PhoneWords.format("settingsProjectsQueueHowToLabel", []) }
-    public static func `settingsProjectsQueueKeyEndsUnknown`() -> String { PhoneWords.format("settingsProjectsQueueKeyEndsUnknown", []) }
-    public static func `settingsProjectsQueueKeyMade`() -> String { PhoneWords.format("settingsProjectsQueueKeyMade", []) }
-    public static func `settingsProjectsQueueKeyMake`() -> String { PhoneWords.format("settingsProjectsQueueKeyMake", []) }
-    public static func `settingsProjectsQueueKeyMissing`(`place`: String) -> String { PhoneWords.format("settingsProjectsQueueKeyMissing", [`place`]) }
-    public static func `settingsProjectsQueueKeyReady`(`date`: String) -> String { PhoneWords.format("settingsProjectsQueueKeyReady", [`date`]) }
-    public static func `settingsProjectsQueueKeyRemake`() -> String { PhoneWords.format("settingsProjectsQueueKeyRemake", []) }
-    public static func `settingsProjectsQueueKeyTitle`() -> String { PhoneWords.format("settingsProjectsQueueKeyTitle", []) }
-    public static func `settingsProjectsQueueKeyUnreadable`(`place`: String) -> String { PhoneWords.format("settingsProjectsQueueKeyUnreadable", [`place`]) }
-    public static func `settingsProjectsQueueNeeds`() -> String { PhoneWords.format("settingsProjectsQueueNeeds", []) }
-    public static func `settingsProjectsQueueNoHost`() -> String { PhoneWords.format("settingsProjectsQueueNoHost", []) }
-    public static func `settingsProjectsQueueShipped`(`version`: String) -> String { PhoneWords.format("settingsProjectsQueueShipped", [`version`]) }
-    public static func `settingsProjectsQueueStepAsk`() -> String { PhoneWords.format("settingsProjectsQueueStepAsk", []) }
-    public static func `settingsProjectsQueueStepPipelineGitlab`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepPipelineGitlab", [`status`]) }
-    public static func `settingsProjectsQueueStepSet`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepSet", [`status`]) }
-    public static func `settingsProjectsQueueStepSetGitlab`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepSetGitlab", [`status`]) }
-    public static func `settingsProjectsQueueStepWorkflow`(`status`: String) -> String { PhoneWords.format("settingsProjectsQueueStepWorkflow", [`status`]) }
-    public static func `settingsProjectsQueueWaiting`(`delivery`: String) -> String { PhoneWords.format("settingsProjectsQueueWaiting", [`delivery`]) }
     public static func `settingsProjectsRemoveCancel`() -> String { PhoneWords.format("settingsProjectsRemoveCancel", []) }
     public static func `settingsProjectsRemoveCheckFailed`() -> String { PhoneWords.format("settingsProjectsRemoveCheckFailed", []) }
     public static func `settingsProjectsRemoveConfirm`() -> String { PhoneWords.format("settingsProjectsRemoveConfirm", []) }
@@ -3968,9 +3932,7 @@ extension PhoneWords {
         "keptHostQueue": ["place"],
         "keptHostRemoved": ["place"],
         "keptProtected": ["place"],
-        "keptQueue": [],
         "keptQueueOwn": [],
-        "keptQueueOwned": [],
         "keptRefused": ["place"],
         "keptRepair": [],
         "keptSignIn": ["place"],
@@ -5839,7 +5801,6 @@ extension PhoneWords {
         "settingsPhoneNoProjects": ["home"],
         "settingsPhonePauseAllAsk": ["count"],
         "settingsPhoneProjectsThere": ["home"],
-        "settingsPhoneQueueDecides": [],
         "settingsPhoneRunbooksLead": [],
         "settingsPhoneSave": [],
         "settingsPhoneSignIn": ["action", "where"],
@@ -5859,6 +5820,7 @@ extension PhoneWords {
         "settingsProjectsBatchHeldRules": ["since"],
         "settingsProjectsBatchNeedsChange": [],
         "settingsProjectsBatchNeedsReason": [],
+        "settingsProjectsBatchNoHost": [],
         "settingsProjectsBatchOpen": ["label"],
         "settingsProjectsBatchOwn": [],
         "settingsProjectsBatchReason": ["title"],
@@ -5901,40 +5863,6 @@ extension PhoneWords {
         "settingsProjectsOrigin": [],
         "settingsProjectsOriginDescription": ["place"],
         "settingsProjectsOriginLabel": [],
-        "settingsProjectsPauseClaimed": ["who"],
-        "settingsProjectsPauseIssue": [],
-        "settingsProjectsPauseNeedsReason": [],
-        "settingsProjectsPauseReason": [],
-        "settingsProjectsPauseResume": [],
-        "settingsProjectsPauseRun": [],
-        "settingsProjectsPauseSendBack": [],
-        "settingsProjectsPauseSendBackWhich": [],
-        "settingsProjectsPauseSent": [],
-        "settingsProjectsPauseSummary": ["changes", "count", "run", "since"],
-        "settingsProjectsPauseTitle": [],
-        "settingsProjectsPauseUnclaimed": [],
-        "settingsProjectsPauseUnread": [],
-        "settingsProjectsQueueFirstMate": [],
-        "settingsProjectsQueueGuideGithub": [],
-        "settingsProjectsQueueGuideGitlab": [],
-        "settingsProjectsQueueHowToLabel": [],
-        "settingsProjectsQueueKeyEndsUnknown": [],
-        "settingsProjectsQueueKeyMade": [],
-        "settingsProjectsQueueKeyMake": [],
-        "settingsProjectsQueueKeyMissing": ["place"],
-        "settingsProjectsQueueKeyReady": ["date"],
-        "settingsProjectsQueueKeyRemake": [],
-        "settingsProjectsQueueKeyTitle": [],
-        "settingsProjectsQueueKeyUnreadable": ["place"],
-        "settingsProjectsQueueNeeds": [],
-        "settingsProjectsQueueNoHost": [],
-        "settingsProjectsQueueShipped": ["version"],
-        "settingsProjectsQueueStepAsk": [],
-        "settingsProjectsQueueStepPipelineGitlab": ["status"],
-        "settingsProjectsQueueStepSet": ["status"],
-        "settingsProjectsQueueStepSetGitlab": ["status"],
-        "settingsProjectsQueueStepWorkflow": ["status"],
-        "settingsProjectsQueueWaiting": ["delivery"],
         "settingsProjectsRemoveCancel": [],
         "settingsProjectsRemoveCheckFailed": [],
         "settingsProjectsRemoveConfirm": [],
@@ -6611,7 +6539,6 @@ extension PhoneWords {
         "settingsProjectsBatchHeldChecksUnnamed": "count",
         "settingsProjectsBatchSentBack": "count",
         "settingsProjectsCount": "count",
-        "settingsProjectsPauseSummary": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",
         "uiCardStackNew": "count",

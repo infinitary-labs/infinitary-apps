@@ -1782,18 +1782,6 @@ it("fills no-surface stories from the record and refuses a stale proof snapshot"
   await expect(at.publish(revision)).rejects.toThrow("Prepare the story again at this version");
 });
 
-// INF-3623/F4: prepare must await suspension before reporting a replacement story ready to publish.
-it("persists the new unpublished revision before awaiting its queue suspension", async () => {
-  const suspended = vi.fn(async () => {
-    expect(at.tasks.delivery.changePresentation(TASK)?.revisions.at(-1)?.head).toBe(HEAD);
-    throw new Error("Queue suspension not yet confirmed");
-  });
-  const at = await arrange(suspended);
-  await expect(at.service.prepare(TASK, at.staged, at.forge)).rejects.toThrow("not yet confirmed");
-  expect(suspended).toHaveBeenCalledWith(TASK, HEAD, undefined);
-  expect(at.tasks.delivery.changePresentation(TASK)?.published).toBeUndefined();
-});
-
 // INF-3887 (captain: "prevent cards from being too large in the first
 // place"): a story whose merge card the window could not open goes back to its
 // crewmate with the card's size, the limit and its largest parts, both when it

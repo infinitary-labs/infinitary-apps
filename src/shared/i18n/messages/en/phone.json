@@ -369,7 +369,7 @@
   "phoneRecordHoldsUp": "Holds up",
   "phoneRecordLandsMerged": "merged",
   "phoneRecordLandsRigor": "rigor: {care}",
-  "phoneRecordModeBatched": "As a batched pull request your project's queue tests",
+  "phoneRecordModeBatched": "As a batched pull request with your other approved changes",
   "phoneRecordModeInPlace": "Built in place",
   "phoneRecordModeLocal": "Merged locally, no pull request",
   "phoneRecordModePullRequest": "As a pull request",

@@ -1,7 +1,6 @@
+import { BATCH_CHECK } from "@shared/batches";
 import { waitingForMaintainers } from "@shared/contributions";
-import { QUEUE_STATUS } from "@shared/repos";
 import type { AccountHold, WorkPosture } from "@shared/workPosture";
-import { queueKind } from "../queue/shipped/rules.mjs";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -69,22 +68,17 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
   return { state: "idle", reason: "inactive" };
 }
 
-/** Read the existing queue grammar, never a report or a new queue watcher. */
+/** A change's place in its batch while it waits there, read from the batch check its reading carries. */
 function pendingBatch(record: TaskRecord): WorkPosture["batch"] {
   const delivery = record.delivery;
   const head = delivery?.headSha;
   if (!head) return undefined;
   const snapshot = delivery.checks?.headSha === head ? delivery.checks : undefined;
-  const status = snapshot?.items.find((item) => item.name === QUEUE_STATUS);
-  // The merge write is evidence until a later reading answers it. Any current
-  // queue status, whoever wrote it, outranks that initial mark.
-  const marked = delivery.queueMark?.head === head && !delivery.queueMark.answered;
-  if (status ? status.state !== "pending" : !marked) return undefined;
+  const status = snapshot?.items.find((item) => item.name === BATCH_CHECK);
+  if (status?.state !== "pending") return undefined;
   const kept = delivery.queueStatus?.head === head ? delivery.queueStatus : undefined;
-  const state = kept?.kind ? { kind: kept.kind } : queueKind("pending", kept?.words);
-  return state.kind === "waiting" || state.kind === "in-batch" || state.kind === "paused"
-    ? state.kind
-    : undefined;
+  const kind = kept?.kind ?? "waiting";
+  return kind === "waiting" || kind === "in-batch" || kind === "paused" ? kind : undefined;
 }
 
 /** What a posture reads of the supervisor beyond its options. */

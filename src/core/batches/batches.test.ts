@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
-import type { BatchChange, BatchMember, MergeWay, MergeWays } from "@shared/batches";
+import {
+  type BatchChange,
+  type BatchMember,
+  type MergeWay,
+  type MergeWays,
+  SQUASH_ONLY_WORDS,
+} from "@shared/batches";
 import type { NamingRule } from "@shared/runbooks";
 import { describe, expect, it } from "vitest";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
@@ -103,6 +109,8 @@ function standInHost(ways: MergeWays) {
     /** The connection drops as the next pull request opens: its answer is lost, and so is every read after. */
     loseNextOpen: false,
     offline: false,
+    /** The host does not answer for the merges the project allows. */
+    waysUnreadable: false,
     /** Something that happens between a pass's first look and its merge. */
     beforeChecks: undefined as (() => void) | undefined,
     /** The pull request has yet to follow its pushed branch, as a host's can for a moment. */
@@ -257,7 +265,10 @@ function standInHost(ways: MergeWays) {
       host.queueReads += 1;
       return host.queued.has(number);
     },
-    mergeWays: async () => host.ways,
+    mergeWays: async () => {
+      if (host.waysUnreadable) throw new ForgeError("transient", "GitHub could not be reached.");
+      return host.ways;
+    },
     deleteBranch: async (branch: string) => {
       host.branches.delete(branch);
     },
@@ -427,6 +438,30 @@ async function batchOfTwo(ways: MergeWays = EVERY_WAY) {
   await home.pass();
   return home;
 }
+
+// Intent: the captain's answer in the approved plan (`squash_only`): batched pull requests
+// are not offered to a project that allows only squash merges, since a batch keeps one commit
+// for each change. The choice in Settings and the first mate's project settings both pass here.
+describe("choosing batched pull requests", () => {
+  it("is refused with its reason for a project that allows only squash merges", async () => {
+    const home = setup({ squash: true, rebase: false, merge: false });
+    await expect(home.batches.refuseSquashOnly(REPO)).rejects.toThrow(SQUASH_ONLY_WORDS);
+  });
+
+  it("is taken for a project that can keep each change's commit, by a rebase merge or a merge commit", async () => {
+    for (const ways of [
+      { squash: true, rebase: true, merge: false },
+      { squash: false, rebase: false, merge: true },
+    ])
+      await expect(setup(ways).batches.refuseSquashOnly(REPO)).resolves.toBeUndefined();
+  });
+
+  it("is not refused while the host cannot say which merges the project allows", async () => {
+    const home = setup({ squash: true, rebase: false, merge: false });
+    home.host.waysUnreadable = true;
+    await expect(home.batches.refuseSquashOnly(REPO)).resolves.toBeUndefined();
+  });
+});
 
 describe("forming a batch", () => {
   it("combines the whole line into one pull request, one commit for each change, in approval order", async () => {

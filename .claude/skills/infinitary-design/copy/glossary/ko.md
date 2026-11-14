@@ -23,7 +23,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | autonomy | (not used) | 알아서 병합 / 먼저 물어봄 instead |
 | backlog | 백로그 | |
 | batch (your approved changes, combined) | 일괄 끌어오기 요청 | The batch is named by its pull request; 배치 is avoided as jargon |
-| batch / batch run (the queue's) | 일괄 실행 | Matches 일괄 끌어오기 요청 and 일괄 검사 |
+| batch / batch run | 일괄 실행 | Matches 일괄 끌어오기 요청 and 일괄 검사 |
 | branch | 분기 | GitHub's Korean docs say 분기; the main branch is 기본 분기 |
 | bring up to date | 최신 상태로 맞추다 | Replaces rebase and conflict; "conflicts with newer work" is 더 새로운 작업과 겹쳐요 |
 | built in place | 그 자리에서 만듦 | |
@@ -156,4 +156,4 @@ Particles after a filled value are avoided by word order, or written in the pair
 | workspace (the personal workspace) | 작업 공간 | The personal workspace is 개인 작업 공간 |
 | worktree | (not used) | 작업 사본 instead |
 | your plan's allowance | 사용 한도 | "allowance left" is 남은 한도; never 할당량 |
-| your project | 프로젝트 | "Your" is dropped; "프로젝트의 대기열" for "your project's queue" |
+| your project | 프로젝트 | "Your" is dropped |

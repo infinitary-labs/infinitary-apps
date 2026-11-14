@@ -81,7 +81,7 @@
   "recordModeDirectPr": "كطلب سحب",
   "recordModeInPlace": "بناء في المكان",
   "recordModeLocalOnly": "دُمج محليًا، دون طلب سحب",
-  "recordModeQueuePr": "كطلب سحب مجمّع يختبره طابور مشروعك",
+  "recordModeQueuePr": "كطلب سحب مجمّع مع تغييراتك الأخرى الموافق عليها",
   "recordMoreBranch": "الفرع",
   "recordMoreComputerChoice": "اختيار الحاسوب",
   "recordMoreDelivery": "التسليم",

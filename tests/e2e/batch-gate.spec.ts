@@ -9,6 +9,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { ROW_WORDS } from "../../src/panels/now/words";
+import { BATCH_CHECK, BATCH_STATUS_WORDS, BATCH_WAITING_WORDS } from "../../src/shared/batches";
 import { taskStatusLabel, taskStatusOf } from "../../src/shared/taskPresentation";
 import { workPostureLabel } from "../../src/shared/workPosture";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -75,18 +76,16 @@ function fixture(): string {
         ? {
             checks: {
               headSha: head,
-              items: [{ name: "infinitary/queue", state: "pending" as const }],
+              items: [{ name: BATCH_CHECK, state: "pending" as const }],
               absenceDeclared: false,
             },
-            queueStatus: {
-              head,
-              words:
-                id === "batch-running"
-                  ? "In batch run 12"
-                  : id === "batch-paused"
-                    ? "Paused after batch run 12"
-                    : "Waiting for the batch check",
-            },
+            // The place the person's own batch keeps on each change (`batchStatus`, `src/core/batches/line.ts`).
+            queueStatus:
+              id === "batch-running"
+                ? { head, kind: "in-batch" as const, words: BATCH_STATUS_WORDS.batch }
+                : id === "batch-paused"
+                  ? { head, kind: "paused" as const, words: BATCH_STATUS_WORDS.held("checks") }
+                  : { head, kind: "waiting" as const, words: BATCH_WAITING_WORDS },
           }
         : {}),
     });

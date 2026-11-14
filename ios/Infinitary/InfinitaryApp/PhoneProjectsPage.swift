@@ -60,7 +60,6 @@ struct PhoneProjectView: View {
 
     private var waiting: Bool { settings.changing.contains(project.id) }
     private var canChange: Bool { settings.canChange && !waiting }
-    private var canChooseDelivery: Bool { canChange && project.delivery.locked == nil }
 
     private var stops: [PhoneStop] {
         var stops: [PhoneStop] = []
@@ -126,14 +125,11 @@ struct PhoneProjectView: View {
                             .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space3)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
                         }
-                        .buttonStyle(PhoneRowStyle()).disabled(!canChooseDelivery)
+                        .buttonStyle(PhoneRowStyle()).disabled(!canChange)
                         .phoneStop("delivery-\(choice.value)", ring)
                         .accessibilityAddTraits(choice.value == project.delivery.value ? .isSelected : [])
                         .accessibilityIdentifier("project-delivery-\(choice.value)")
                     }
-                }
-                if let locked = project.delivery.locked {
-                    Text(locked).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                 }
             }
             ForEach(project.notes, id: \.text) { note in
@@ -217,7 +213,7 @@ struct PhoneProjectView: View {
     }
 
     private func choose(delivery: String) {
-        guard canChooseDelivery, delivery != project.delivery.value else { return }
+        guard canChange, delivery != project.delivery.value else { return }
         Task { await settings.configure(project.id, ["delivery": delivery]) }
     }
 

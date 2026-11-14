@@ -25,13 +25,7 @@ import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationsView } from "@shared/integrations";
 import { catalogEntry, type ProviderView } from "@shared/providers";
 import type { QuotaSnapshotView } from "@shared/quota";
-import {
-  deliveryChoices,
-  hostRunsQueue,
-  queueSettingsWarning,
-  queueShipped,
-  type RepoView,
-} from "@shared/repos";
+import { deliveryChoices, hostTakesBatches, type RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { runbooksSummary } from "@shared/runbookWords";
 import { type DeviceSignIns, signInPlace } from "@shared/signIns";
@@ -67,13 +61,11 @@ import {
 } from "./automationWords";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
 import {
+  batchNoHostWords,
   PROJECT_POLICY_WORDS,
   PROJECT_ROW_WORDS,
   projectRowWords,
   projectsSummary,
-  QUEUE_SHIPPED_WORDS,
-  queueNoHostWords,
-  queueWaitingWords,
   runsOnWhere,
 } from "./projectsWords";
 import { CREW_PREFERRED_MARK, SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
@@ -138,9 +130,6 @@ export const PHONE_SETTINGS_WORDS = {
   usageThere: (home: string) => m.settingsPhoneUsageThere({ home }),
   projectsThere: (home: string) => m.settingsPhoneProjectsThere({ home }),
   noProjects: (home: string) => m.settingsPhoneNoProjects({ home }),
-  get queueDecides() {
-    return m.settingsPhoneQueueDecides();
-  },
   get save() {
     return m.settingsPhoneSave();
   },
@@ -781,8 +770,6 @@ export type PhoneProject = {
     fixed?: string;
     value: string;
     choices: PhoneChoice[];
-    /** Why the choice cannot change here, when it cannot. */
-    locked?: string;
   };
   asks: { title: string; label: string; description: string; fixed: boolean; asksFirst: boolean };
   rigor: {
@@ -838,12 +825,10 @@ export function projectsPage(input: {
   const { repos, folder, devices, home } = input;
   const projects = repos.map((repo): PhoneProject => {
     const personal = repo.kind === "personal";
-    const shipped = personal ? undefined : queueShipped(repo);
     // As the computer's row: a project with an address can be placed even before any computer is paired.
     const computers =
       devices?.length || (repo.kind === "project" && repo.origin) ? (devices ?? []) : null;
     const words = projectRowWords(repo, folder, computers ? runsOnWhere(repo, computers) : null);
-    const warning = personal ? null : queueSettingsWarning(repo);
     const cost = personal ? undefined : costOf(repo.costLimit);
     return {
       id: repo.id,
@@ -864,7 +849,6 @@ export function projectsPage(input: {
               value,
               label: PROJECT_DELIVERY_WORDS[value],
             })),
-        ...(shipped !== undefined ? { locked: PHONE_SETTINGS_WORDS.queueDecides } : {}),
       },
       asks: {
         title: AUTONOMY_SWITCH_NAME,
@@ -889,16 +873,9 @@ export function projectsPage(input: {
       notes: personal
         ? []
         : [
-            ...(repo.queuePendingAt !== undefined
-              ? [{ text: queueWaitingWords(repo.delivery), warn: false }]
+            ...(repo.origin && repo.host && !hostTakesBatches(repo.host)
+              ? [{ text: batchNoHostWords(), warn: false }]
               : []),
-            ...(shipped !== undefined
-              ? [{ text: QUEUE_SHIPPED_WORDS.set(shipped), warn: false }]
-              : []),
-            ...(repo.origin && repo.host && !hostRunsQueue(repo.host)
-              ? [{ text: queueNoHostWords(), warn: false }]
-              : []),
-            ...(warning ? [{ text: warning, warn: true }] : []),
             ...(repo.delivery === "local-only" && repo.rigor === "reviewed"
               ? [{ text: PROJECT_POLICY_WORDS.carefulLocal, warn: true }]
               : []),

@@ -610,7 +610,7 @@ Its parts sit beside it in `src/core/placed/`: what the crew reads of the comput
   The home refuses one about a task its record does not place on the computer that asks, or one closed here.
   Each callback is done once, by the task's open session's callbacks, and its answer - or its refusal - is kept in `crewmates/<task>/placed/calls.jsonl` before it is returned, so one asked again is answered from there (`PlacedLedger`).
   A computer that runs work sends a project font only to a home on protocol 8.9 or later (`CARD_TYPEFACES_SINCE`); to an older home it refuses the card itself, in words saying to draw the preview in the app's own typefaces until the home is updated.
-  It sends a card's data file only to a home that lists the `card-data` change; to an older home it refuses the card itself, in words saying to put the data in the body until the home is updated (`docs/card-authoring.md`, "Data by reference").
+  It sends a card's data file home before the card that names it (`docs/card-authoring.md`, "Data by reference").
   A card picture's bytes are kept where this Mac's cards show their pictures from, and so is a project font's, only under the task's own id; a demo recording's pieces are written into a partial file there that becomes the recording only with its last piece, and a job's end reaches the task's lane as a local job's does.
   The events are taken once each and in order; the newest kept for good is saved at every model turn's end in `crewmates/<task>/placed/state.json`, so a restart here never counts a turn's usage twice.
 - **Out of reach.**
@@ -739,7 +739,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   A story is prepared for the branch the working copy there has checked out, and at its commit, as one here is (`PlacedCopies.checkoutThere`).
   The home asks a computer for its checkout, or for another branch, only on the current work major; an older computer must update before sending another branch.
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change`, `show_merge_card` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:show-merge-card`, `inf:work:download-artifact`).
-  The home serves `show_merge_card` only to a computer that lists the `show-merge-card` change, and that computer refuses it, sending nothing, when its home does not list it (`src/shared/contract-changes/show-merge-card.md`).
+  The home serves `show_merge_card` to every computer that takes work on its own major (`takesMergeCardCall`, `src/core/placed/placedSessions.ts`).
   `prepare_change` transfers its inspected media to the home through `inf:work:prepare-change`, gated by `CHANGE_PRESENTATIONS_SINCE`; the home retains the story without publishing it (`docs/forge.md`, "Saved change stories").
   A whole or selected archive is downloaded here and written into the working copy there before the tool answers, never kept in a folder here.
   A listing or a selection of its files (`list`, `files`) is asked only of a home on the same work major; the computer refuses it, sending nothing, across that boundary, since an older home would drop the fields and download the whole archive.

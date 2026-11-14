@@ -59,7 +59,7 @@ export const presentationViewSchema = z.strictObject({
   kind: z.enum(["changed", "new"]),
   layout: z.literal("adjacent").optional(),
   /**
-   * A project map's change view (`story-map.md`): the path of a filled map
+   * A project map's change view: the path of a filled map
    * part's data block, which the merge card draws live; the view's one After
    * picture is that drawing, for the pull request, which cannot run it.
    */

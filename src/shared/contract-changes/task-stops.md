@@ -1,4 +1,0 @@
-Adds an optional `stops` field to a placed session's spec: the computer that runs work gives the task's crewmate `infinitary-stops-axi` and keeps its registered stops in the task's folder there.
-Adds an optional `carriedTo` field to `inf:session:close`, naming the task on the same computer that carries the closed task's work on and takes its stops, and an optional `startedAt`, when the task started, so a program already running before it is left alone there.
-Adds an optional `leftovers` field to the answer of `inf:session:close`: what the close did about the programs the task left running, which the home writes on the task's timeline.
-A computer without the change gets no `stops` field, `carriedTo` or `startedAt` from the home, and its close answer carries no report; a home without the change ignores the report.

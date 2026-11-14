@@ -14,7 +14,7 @@ import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { insertTask, setup } from "../../../tests/helpers/prCiHarness";
 import { BATCH_WORDS, Batches } from "../batches/batches";
 import { LEFT_OUT_WORDS } from "../batches/combine";
-import { presentationCommitMessage, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
+import { BATCH_CHECK, BATCH_WAITING_WORDS, presentationCommitMessage } from "../forge";
 import { seedProject } from "../workspace/seedProject";
 import { BATCH_MERGE_WORDS, type MergeGuard } from "./changeMerge";
 import { BATCH_OPEN_WORDS } from "./changePublication";
@@ -35,8 +35,6 @@ const REPO = "repo-meter";
 const TASK = "ab12cd34";
 const BRANCH = "fm/task-ab12cd34";
 const HEAD = "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0";
-/** A team queue's workflow file, as the app reads one that mentions the queue's status. */
-const TEAM_QUEUE_FILE = { path: ".github/workflows/infinitary-queue.yml", active: true };
 /** The story a crewmate prepared for the change at its pushed version. */
 const STORY: ChangePresentation = {
   version: 1,
@@ -84,8 +82,6 @@ function home() {
     origin: "https://github.com/acme/meter.git",
     delivery: "queue-pr",
   });
-  // The project's default branch was read and carries no file of a team queue.
-  at.repos.recordQueue(REPO, { workflows: [] });
   insertTask(at.tasks, { repoId: REPO });
   at.readHead.mockImplementation(async () => forge.pushed ?? "");
   const batches: Batches = new Batches({
@@ -260,8 +256,8 @@ describe("the merge of a change that joins a batch", () => {
     const outcome = await at.service.merges.merge(TASK, at.guard());
     expect(outcome).toEqual({
       ok: false,
-      text: `Approved and in line: ${QUEUE_WAITING_WORDS.toLowerCase()}. The change merges with this project's next batch, as one commit of its own.`,
-      plain: QUEUE_WAITING_WORDS.toLowerCase(),
+      text: `Approved and in line: ${BATCH_WAITING_WORDS.toLowerCase()}. The change merges with this project's next batch, as one commit of its own.`,
+      plain: BATCH_WAITING_WORDS.toLowerCase(),
       stop: "queue",
     });
     await at.pass();
@@ -304,8 +300,8 @@ describe("the merge of a change that joins a batch", () => {
 
     expect(await at.service.merges.merge(TASK, guard)).toEqual({
       ok: false,
-      text: `Cannot merge yet - ${QUEUE_WAITING_WORDS}: the change is in batch #31, whose checks have not passed yet.`,
-      plain: QUEUE_WAITING_WORDS.toLowerCase(),
+      text: `Cannot merge yet - ${BATCH_WAITING_WORDS}: the change is in batch #31, whose checks have not passed yet.`,
+      plain: BATCH_WAITING_WORDS.toLowerCase(),
       stop: "queue",
     });
     // Its own check reading carries its place in the batch, kept on the task for the merge card.
@@ -478,46 +474,16 @@ describe("the merge of a change that joins a batch", () => {
     expect(at.line()).toEqual([]);
   });
 
-  it("is not read as waiting on a team queue's status", async () => {
-    const at = home();
-    expect(at.service.merges.queued(TASK)).toBe(false);
-  });
-
   // Intent: the follow-up filed at this project's own switch from the team queue (INF-3773):
-  // once a project's team queue files are removed, the app "reads that before it marks another
-  // version for the queue, and a version still carrying the queue's waiting mark joins the
-  // person's own batch instead of waiting forever". The switch merged with a merge card that
-  // kept its task open, so the home never read the files again, and a change approved just
-  // before it kept waiting on a mark nothing answers.
-
-  it("reads that the team queue's files are gone at its merge, and joins its batch with no queue mark", async () => {
+  // "a version still carrying the queue's waiting mark joins the person's own batch instead of
+  // waiting forever". An earlier version of the app wrote that mark where the project lives, and
+  // nothing answers it now.
+  it("is not held by the waiting mark an earlier version's team queue left on its version", async () => {
     const at = home();
     await at.confirmed();
-    // The home last read the team queue's workflow file; the project has since removed it.
-    at.repos.recordQueue(REPO, { workflows: [TEAM_QUEUE_FILE] });
-    at.forge.queueWorkflows = async () => [];
-    at.forge.markQueued = async (sha) => {
-      at.forge.calls.push(`markQueued ${sha}`);
-      return {};
-    };
-
-    expect(await at.service.merges.merge(TASK, at.guard())).toMatchObject({
-      ok: false,
-      stop: "queue",
-    });
-    expect(at.repos.get(REPO)?.queueWorkflows).toEqual([]);
-    await at.pass();
-    expect(at.open()?.members).toMatchObject([{ taskId: TASK, head: HEAD }]);
-    expect(at.forge.calls.filter((call) => call.startsWith("markQueued"))).toEqual([]);
-  });
-
-  it("is not held by the team queue's waiting mark its version still carries", async () => {
-    const at = home();
-    await at.confirmed();
-    // The app marked this version for the team queue before the project removed its files.
     at.forge.atHead[HEAD] = [
       { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "pending", statusId: 41, detail: QUEUE_WAITING_WORDS },
+      { name: BATCH_CHECK, state: "pending", statusId: 41, detail: BATCH_WAITING_WORDS },
     ];
 
     await at.service.checks.run(TASK, "crewmate");

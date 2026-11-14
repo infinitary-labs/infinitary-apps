@@ -134,27 +134,16 @@ export function parseSpawnIntent(input: {
 export const AFTER_MERGE_DELIVERY_RULE =
   "Work needing this merged first goes in the story's afterMerge";
 
+/**
+ * What each delivery asks of finished work. In a project with batched pull
+ * requests (docs/forge.md, "Batches of your own") the pushed branch is the
+ * change, with no pull request of its own.
+ */
 const DELIVERY_TEXT: Record<RepoDelivery, string> = {
   "direct-pr": `direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then show_merge_card, or open_change where show_merge_card is not served). ${AFTER_MERGE_DELIVERY_RULE}`,
-  "queue-pr": `queue-pr - finished work is pushed and opened as a pull request where the project lives (git push, then show_merge_card, or open_change where show_merge_card is not served), as with direct-pr. The captain's merge click queues the approved version. ${AFTER_MERGE_DELIVERY_RULE}`,
+  "queue-pr": `queue-pr - finished work is pushed to its branch where the project lives and its story confirmed (git push, then open_change), with no pull request of its own. The captain's merge click puts the approved version in line: the app combines the captain's approved changes into one batch pull request, one commit for each change, and merges it once its checks pass. ${AFTER_MERGE_DELIVERY_RULE}`,
   "local-only": "local-only - work merges on a local branch and never leaves the machine",
 };
-
-/**
- * A batched project whose approved changes combine in batches of the
- * captain's own (docs/forge.md, "Batches of your own"): the pushed branch is
- * the change, with no pull request of its own.
- */
-const OWN_BATCH_DELIVERY_TEXT = `queue-pr - finished work is pushed to its branch where the project lives and its story confirmed (git push, then open_change), with no pull request of its own. The captain's merge click puts the approved version in line: the app combines the captain's approved changes into one batch pull request, one commit for each change, and merges it once its checks pass. ${AFTER_MERGE_DELIVERY_RULE}`;
-
-/** Who merges a batched project's approved changes (`queueWay`). */
-export type QueueOwned = boolean | "own";
-
-function deliveryText(delivery: RepoDelivery, queueOwned: QueueOwned = false): string {
-  if (delivery !== "queue-pr") return DELIVERY_TEXT[delivery];
-  if (queueOwned === "own") return OWN_BATCH_DELIVERY_TEXT;
-  return `${DELIVERY_TEXT["queue-pr"]} ${queueOwned ? "The project's queue tests and merges the approved version itself." : "The app merges the approved version after the project's queue passes it."}`;
-}
 
 /**
  * The personal workspace's additions (talk-to-personalize Step 4, report
@@ -219,7 +208,6 @@ export function renderIntentBrief(
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
   folder?: FolderBriefFacts,
-  queueOwned: QueueOwned = false,
 ): string {
   const lines: string[] = [USER_WORDS_PRECEDENCE, intent.userWords, "", `Goal: ${intent.goal}`, ""];
   if (intent.constraints && intent.constraints.length > 0) {
@@ -239,7 +227,7 @@ export function renderIntentBrief(
     lines.push("");
   }
   if (delivery) {
-    lines.push(`Delivery: ${deliveryText(delivery, queueOwned)}.`);
+    lines.push(`Delivery: ${DELIVERY_TEXT[delivery]}.`);
     if (intent.deliveryNote) {
       lines.push(`Delivery note: ${intent.deliveryNote}`);
     }
@@ -329,9 +317,8 @@ export function renderEscalationBrief(
   escalation: EscalationBriefFacts,
   personal?: PersonalBriefFacts,
   folder?: FolderBriefFacts,
-  queueOwned: QueueOwned = false,
 ): string {
-  const base = renderIntentBrief(intent, delivery, personal, folder, queueOwned);
+  const base = renderIntentBrief(intent, delivery, personal, folder);
   const previous = escalation.previousModel
     ? `${escalation.previousKey}, on ${escalation.previousModel}`
     : escalation.previousKey;
@@ -372,7 +359,6 @@ export function renderFollowupBrief(
   },
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
-  queueOwned: QueueOwned = false,
 ): string {
   return [
     `Goal: ${followup.goal}`,
@@ -383,7 +369,7 @@ export function renderFollowupBrief(
     "",
     // The provenance block already ended with a blank line, so the facts
     // need their own separator only when a Delivery line sits between.
-    ...(delivery ? [`Delivery: ${deliveryText(delivery, queueOwned)}.`] : []),
+    ...(delivery ? [`Delivery: ${DELIVERY_TEXT[delivery]}.`] : []),
     ...(personal ? [...(delivery ? [""] : []), ...renderPersonalFacts(personal)] : []),
   ].join("\n");
 }
@@ -412,13 +398,9 @@ export function withoutDeliveryLine(brief: string): string {
  * its own trailing line for that posture, or drops it for an answer
  * (`withoutDeliveryLine`), so the brief matches the merge it gets.
  */
-export function withDeliveryLine(
-  brief: string,
-  delivery: RepoDelivery | undefined,
-  queueOwned: QueueOwned = false,
-): string {
+export function withDeliveryLine(brief: string, delivery: RepoDelivery | undefined): string {
   const rest = withoutDeliveryLine(brief);
-  return delivery ? `${rest.trimEnd()}\n\nDelivery: ${deliveryText(delivery, queueOwned)}.` : rest;
+  return delivery ? `${rest.trimEnd()}\n\nDelivery: ${DELIVERY_TEXT[delivery]}.` : rest;
 }
 
 /** The line a follow-up's brief is filed with, telling it to read its origin itself. */
@@ -1216,7 +1198,6 @@ export function renderReviewBrief(
   intent: SpawnIntent,
   delivery: RepoDelivery,
   facts: ReviewBriefFacts,
-  queueOwned: QueueOwned = false,
 ): string {
   const words = intent.userWords.trim();
   const standIn = facts.builderGoal?.trim();
@@ -1304,6 +1285,6 @@ export function renderReviewBrief(
     "",
     ...(facts.evidenceDir ? [`The builder's evidence folder: ${facts.evidenceDir}`, ""] : []),
     ...(facts.captainCard ? captainCardLines(facts.captainCard) : []),
-    `Delivery: ${deliveryText(delivery, queueOwned)}.`,
+    `Delivery: ${DELIVERY_TEXT[delivery]}.`,
   ].join("\n");
 }

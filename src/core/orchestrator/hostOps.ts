@@ -97,9 +97,6 @@ export class HostOps {
   }
 
   private projectSetup: ProjectSetupHandler | null = null;
-  /** The not-set-up card's two choices (docs/forge.md, "Choosing batched pull requests before a queue exists"). */
-  private queueChoice: { plan: (repoId?: string) => void; keep: (repoId?: string) => void } | null =
-    null;
 
   constructor(private readonly core: CrewCore) {}
 
@@ -110,10 +107,6 @@ export class HostOps {
 
   setProjectChange(handler: NonNullable<HostOps["projectChange"]>): void {
     this.projectChange = handler;
-  }
-
-  setQueueChoice(handler: NonNullable<HostOps["queueChoice"]>): void {
-    this.queueChoice = handler;
   }
 
   /** The setup card's host ops reach the project setups (docs/fleet.md). */
@@ -173,11 +166,9 @@ export class HostOps {
       case "decline-project-change":
         this.projectChange?.decline(effect.arg);
         return {};
+      // The two choices of a card the app no longer puts up: a saved one does nothing.
       case "plan-queue":
-        this.queueChoice?.plan(effect.arg);
-        return {};
       case "keep-delivery":
-        this.queueChoice?.keep(effect.arg);
         return {};
       case "add-project":
         this.projectSetup?.add(effect.arg, answers);

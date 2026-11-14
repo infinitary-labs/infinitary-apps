@@ -24,7 +24,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Automation / an automation | 自动化 | The Settings section and one scheduled prompt alike, counted with 项. |
 | backlog | 待办列表 | |
 | batch (your approved changes, combined) | 这批改动 | 批量 stays the adjective in 批量检查 and 批量拉取请求. |
-| batched pull request / your project's queue | 批量拉取请求 / 你项目的队列 | |
+| batched pull request | 批量拉取请求 | |
 | branch | 分支 | |
 | bring up to date | 更新到最新 | Used instead of rebase and conflict where the app speaks. |
 | built in place | 就地构建 | |

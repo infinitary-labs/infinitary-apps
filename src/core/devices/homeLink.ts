@@ -143,7 +143,7 @@ export type HomeLinkOptions = {
   onPush: (channel: string, payload: unknown, replayed: boolean) => void;
   /**
    * A push for this connection alone, never numbered or replayed, such as a
-   * picture of a task's page it watches (`browser-from-any-view.md`).
+   * picture of a task's page it watches (docs/connection.md, "Live pushes").
    */
   onLive?: (channel: string, payload: unknown) => void;
   /**

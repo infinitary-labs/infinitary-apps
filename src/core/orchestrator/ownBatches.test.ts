@@ -71,7 +71,6 @@ function home() {
     origin: "https://github.com/acme/meter.git",
     delivery: "queue-pr",
   });
-  repos.recordQueue(REPO, { workflows: [] });
   const forge = new BatchHostForge();
   let clock = 10_000;
   const tick = () => {

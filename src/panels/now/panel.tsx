@@ -280,7 +280,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   // holds, and a push that moves nothing listed is no new board at all.
   // The board is read without its closed rows until the captain opens Done
   // or types a search, which reads them: a view coming back does not wait
-  // for a week of closed work (board-without-closed.md).
+  // for a week of closed work (`boardWithoutClosed`).
   const [wantsClosed, setWantsClosed] = useState(false);
   useEffect(
     () =>

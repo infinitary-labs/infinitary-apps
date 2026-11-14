@@ -489,7 +489,12 @@ export class SettingsStore {
 
   getRunbookStates(): Record<string, boolean> {
     const parsed = runbookStateSchema.safeParse(this.get("runbooks"));
-    return parsed.success ? parsed.data : {};
+    if (!parsed.success) return {};
+    // Batched pull requests was saved as `queue` before its id became `batches`: the choice carries.
+    const { queue, ...states } = parsed.data;
+    return queue === undefined || states.batches !== undefined
+      ? states
+      : { ...states, batches: queue };
   }
 
   setRunbookStates(states: Record<string, boolean>): void {

@@ -69,7 +69,7 @@
   "recordModeDirectPr": "Como solicitação de pull",
   "recordModeInPlace": "Feito no local",
   "recordModeLocalOnly": "Mesclagem local, sem solicitação de pull",
-  "recordModeQueuePr": "Como solicitação de pull em lote, testada pela fila do seu projeto",
+  "recordModeQueuePr": "Como solicitação de pull em lote, com suas outras alterações aprovadas",
   "recordMoreBranch": "branch",
   "recordMoreComputerChoice": "a escolha do computador",
   "recordMoreDelivery": "entrega",

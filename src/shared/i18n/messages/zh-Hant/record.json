@@ -61,7 +61,7 @@
   "recordModeDirectPr": "以 pull request 交付",
   "recordModeInPlace": "就地建置",
   "recordModeLocalOnly": "本機合併，沒有 pull request",
-  "recordModeQueuePr": "以批次 pull request 交付，由你專案的佇列測試",
+  "recordModeQueuePr": "以批次 pull request 交付，和你其他已核准的變更一起合併",
   "recordMoreBranch": "分支",
   "recordMoreComputerChoice": "電腦的選擇",
   "recordMoreDelivery": "交付方式",

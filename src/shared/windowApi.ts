@@ -108,8 +108,6 @@ import type {
 } from "./remoteLogin";
 import type {
   ProjectsFolderView,
-  QueueAnswer,
-  QueueCredential,
   RepoPolicyPatch,
   RepoRemoval,
   RepoSetupResult,
@@ -287,14 +285,8 @@ export type FirstmateApi = {
     list: () => Promise<RepoView[]>;
     /** Delivery, autonomy, and standing rigor. */
     configure: (repoId: string, changes: RepoPolicyPatch) => Promise<RepoView>;
-    /** Resume a paused batch, or send one change back, with a reason (docs/forge.md, "A paused batch"). */
-    queueAnswer: (repoId: string, answer: QueueAnswer) => Promise<{ ok: true }>;
     /** Answer a held batch of the captain's own approved changes: try again, or send changes back. */
     batchAnswer: (repoId: string, answer: BatchAnswer) => Promise<{ ok: true }>;
-    /** The token the project's queue writes with, where its host keeps one (GitLab); null where the queue needs none. */
-    queueCredential: (repoId: string) => Promise<QueueCredential | null>;
-    /** Create that token where the project lives with your sign-in; it never reaches the app. */
-    createQueueCredential: (repoId: string) => Promise<QueueCredential>;
     /** Where new projects go. */
     folder: () => Promise<ProjectsFolderView>;
     /** A folder the person chose, or null for the default; refused with a readable reason. */
@@ -536,7 +528,7 @@ export type FirstmateApi = {
   tasks: {
     /**
      * The live board a client resyncs from; live updates ride onBoard.
-     * `{ closed: false }` reads it without its closed rows (`board-without-closed.md`).
+     * `{ closed: false }` reads it without its closed rows (`boardWithoutClosed`).
      */
     board: (read?: TaskBoardRead) => Promise<TaskBoard>;
     /** One record in full: view, intent, brief, outcome, timeline, asks. */

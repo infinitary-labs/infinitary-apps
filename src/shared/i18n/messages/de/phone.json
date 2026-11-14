@@ -369,7 +369,7 @@
   "phoneRecordHoldsUp": "Hält auf",
   "phoneRecordLandsMerged": "zusammengeführt",
   "phoneRecordLandsRigor": "Sorgfalt: {care}",
-  "phoneRecordModeBatched": "Als gebündelter Pull Request, den die Warteschlange deines Projekts testet",
+  "phoneRecordModeBatched": "Als gebündelter Pull Request mit deinen anderen bestätigten Änderungen",
   "phoneRecordModeInPlace": "Direkt im Ordner gebaut",
   "phoneRecordModeLocal": "Lokal zusammengeführt, kein Pull Request",
   "phoneRecordModePullRequest": "Als Pull Request",

@@ -7969,33 +7969,6 @@ ${events}` : prompt;
     }
     return `To add or remove a project, or change its folder, open Settings → Projects on ${home}.`;
   }
-  function settingsPhoneQueueDecides() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `طابور هذا المشروع يحدد وجهة التغييرات.`;
-      case "de":
-        return `Die Warteschlange dieses Projekts entscheidet, wohin Änderungen gehen.`;
-      case "es":
-        return `La cola de este proyecto decide adónde van los cambios.`;
-      case "fr":
-        return `La file de ce projet décide où vont les modifications.`;
-      case "ja":
-        return `変更の届け先は、このプロジェクトのキューが決めます。`;
-      case "ko":
-        return `변경이 어디로 갈지는 이 프로젝트의 대기열이 정해요.`;
-      case "pt-BR":
-        return `A fila deste projeto decide para onde vão as alterações.`;
-      case "zh-Hans":
-        return `这个项目的队列决定改动的去向。`;
-      case "zh-Hant":
-        return `變更的去向由這個專案的佇列決定。`;
-      case "en-XA":
-        return `[Ţĥîš þŕöĵéçţ'š ǫûéûé ðéçîðéš ŵĥéŕé çĥáñĝéš ĝö. ~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮This project's queue decides where changes go.‬`;
-    }
-    return `This project's queue decides where changes go.`;
-  }
   function settingsPhoneRunbooksLead() {
     switch (currentLanguage()) {
       case "ar":
@@ -8270,6 +8243,33 @@ ${events}` : prompt;
         return `‮Builds in place. Work that passes the checks is written as soon as it is done.‬`;
     }
     return `Builds in place. Work that passes the checks is written as soon as it is done.`;
+  }
+  function settingsProjectsBatchNoHost() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبات السحب المجمّعة غير متاحة هنا: لا يستطيع Infinitary فتح طلب سحب مجمّع ودمجه حيث يوجد هذا المشروع.`;
+      case "de":
+        return `Gebündelte Pull Requests gibt es hier nicht: Infinitary kann dort, wo dieses Projekt liegt, keinen gebündelten Pull Request öffnen und zusammenführen.`;
+      case "es":
+        return `Aquí no se ofrecen solicitudes de incorporación de cambios por lotes: Infinitary no puede abrir ni fusionar una solicitud de incorporación de cambios por lotes en el sitio que aloja este proyecto.`;
+      case "fr":
+        return `Les demandes de tirage groupées ne sont pas proposées ici : Infinitary ne peut pas ouvrir ni fusionner une demande de tirage groupée chez l’hébergeur de ce projet.`;
+      case "ja":
+        return `ここでは一括プルリクエストは使えません：このプロジェクトのホストでは、Infinitary が一括プルリクエストを開いてマージすることができません。`;
+      case "ko":
+        return `여기서는 일괄 끌어오기 요청을 쓸 수 없어요: 이 프로젝트 호스트에서는 Infinitary가 일괄 끌어오기 요청을 열고 병합할 수 없어요.`;
+      case "pt-BR":
+        return `Solicitações de pull em lote não são oferecidas aqui: o Infinitary não consegue abrir e mesclar uma solicitação de pull em lote no host deste projeto.`;
+      case "zh-Hans":
+        return `这里不提供批量拉取请求：Infinitary 无法在这个项目的托管平台上创建并合并批量拉取请求。`;
+      case "zh-Hant":
+        return `這裡不提供批次 pull request：Infinitary 無法在這個專案的主機上開啟並合併批次 pull request。`;
+      case "en-XA":
+        return `[Ɓáţçĥéð þûļļ ŕéǫûéšţš áŕé ñöţ öƒƒéŕéð ĥéŕé: Îñƒîñîţáŕý çáññöţ öþéñ áñð ɱéŕĝé á ƀáţçĥ þûļļ ŕéǫûéšţ ŵĥéŕé ţĥîš þŕöĵéçţ ļîṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batched pull requests are not offered here: Infinitary cannot open and merge a batch pull request where this project lives.‬`;
+    }
+    return `Batched pull requests are not offered here: Infinitary cannot open and merge a batch pull request where this project lives.`;
   }
   function settingsProjectsCare() {
     switch (currentLanguage()) {
@@ -8715,89 +8715,6 @@ ${events}` : prompt;
         return `‮No projects yet‬`;
     }
     return `No projects yet`;
-  }
-  function settingsProjectsQueueNoHost() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `طلبات السحب المجمّعة غير متاحة هنا: ليس لدى مستضيف هذا المشروع CI يستطيع تشغيل طابور Infinitary.`;
-      case "de":
-        return `Gebündelte Pull Requests gibt es hier nicht: Der Host dieses Projekts hat keine CI, die die Warteschlange von Infinitary ausführen kann.`;
-      case "es":
-        return `Aquí no se ofrecen solicitudes de incorporación de cambios por lotes: el sitio que aloja este proyecto no tiene CI que pueda ejecutar la cola de Infinitary.`;
-      case "fr":
-        return `Les demandes de tirage groupées ne sont pas proposées ici : l’hébergeur de ce projet n’a pas de CI capable d’exécuter la file d’Infinitary.`;
-      case "ja":
-        return `ここでは一括プルリクエストは使えません：このプロジェクトのホストには、Infinitary のキューを実行できる CI がありません。`;
-      case "ko":
-        return `여기서는 일괄 끌어오기 요청을 쓸 수 없어요: 이 프로젝트 호스트에는 Infinitary의 대기열을 실행할 CI가 없어요.`;
-      case "pt-BR":
-        return `Solicitações de pull em lote não são oferecidas aqui: o host deste projeto não tem CI que possa rodar a fila do Infinitary.`;
-      case "zh-Hans":
-        return `这里不提供批量拉取请求：这个项目的托管平台没有能运行 Infinitary 队列的 CI。`;
-      case "zh-Hant":
-        return `這裡不提供批次 pull request：這個專案的主機沒有能執行 Infinitary 佇列的 CI。`;
-      case "en-XA":
-        return `[Ɓáţçĥéð þûļļ ŕéǫûéšţš áŕé ñöţ öƒƒéŕéð ĥéŕé: ţĥîš þŕöĵéçţ'š ĥöšţ ĥáš ñö ÇÎ ţĥáţ çáñ ŕûñ Îñƒîñîţáŕý'š ǫûéûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Batched pull requests are not offered here: this project's host has no CI that can run Infinitary's queue.‬`;
-    }
-    return `Batched pull requests are not offered here: this project's host has no CI that can run Infinitary's queue.`;
-  }
-  function settingsProjectsQueueShipped(input) {
-    const version2 = input.version;
-    switch (currentLanguage()) {
-      case "ar":
-        return `يحدده مشروعك: يشغّل طابور Infinitary (النسخة ${version2})، لذا تذهب تغييراته كطلبات سحب مجمّعة لكل من يعمل عليه.`;
-      case "de":
-        return `Von deinem Projekt festgelegt: Es nutzt die Warteschlange von Infinitary (Version ${version2}), daher gehen seine Änderungen für alle, die daran arbeiten, als gebündelte Pull Requests.`;
-      case "es":
-        return `Lo establece tu proyecto: ejecuta la cola de Infinitary (versión ${version2}), así que sus cambios van como solicitudes de incorporación de cambios por lotes para todos los que trabajan en él.`;
-      case "fr":
-        return `Défini par votre projet : il exécute la file d’Infinitary (version ${version2}), donc ses modifications passent par des demandes de tirage groupées pour tous ceux qui y travaillent.`;
-      case "ja":
-        return `プロジェクトによる設定：Infinitary のキュー（バージョン ${version2}）を実行しているため、作業する全員の変更が一括プルリクエストとして出されます。`;
-      case "ko":
-        return `프로젝트에서 정한 설정이에요: Infinitary의 대기열(버전 ${version2})을 실행하므로, 이 프로젝트에서 일하는 모든 사람의 변경이 일괄 끌어오기 요청으로 올라가요.`;
-      case "pt-BR":
-        return `Definido pelo seu projeto: ele roda a fila do Infinitary (versão ${version2}), então as alterações dele vão como solicitações de pull em lote para todos que trabalham nele.`;
-      case "zh-Hans":
-        return `由你的项目设置：它运行 Infinitary 的队列（版本 ${version2}），所以对所有参与者来说，它的改动都以批量拉取请求提交。`;
-      case "zh-Hant":
-        return `由你的專案設定：它執行 Infinitary 的佇列（版本 ${version2}），所以對每位參與的人來說，它的變更都會以批次 pull request 提出。`;
-      case "en-XA":
-        return `[Šéţ ƀý ýöûŕ þŕöĵéçţ: îţ ŕûñš Îñƒîñîţáŕý'š ǫûéûé (ṽéŕšîöñ ${version2}), šö îţš çĥáñĝéš ĝö áš ƀáţçĥéð þûļļ ŕéǫûéšţš ƒöŕ éṽéŕýöñé ŵöŕķîñĝ öñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Set by your project: it runs Infinitary's queue (version ‬${version2}‮), so its changes go as batched pull requests for everyone working on it.‬`;
-    }
-    return `Set by your project: it runs Infinitary's queue (version ${version2}), so its changes go as batched pull requests for everyone working on it.`;
-  }
-  function settingsProjectsQueueWaiting(input) {
-    const delivery = input.delivery;
-    switch (currentLanguage()) {
-      case "ar":
-        return `تُفعَّل طلبات السحب المجمّعة حالما يُدمج في هذا المشروع سير عمل يذكر فحص الدفعة الخاص به. وحتى ذلك الحين، تذهب التغييرات كـ${delivery}.`;
-      case "de":
-        return `Gebündelte Pull Requests werden aktiv, sobald in diesem Projekt ein Workflow zusammengeführt ist, der seine Sammelprüfung nennt. Bis dahin gehen Änderungen als ${delivery}.`;
-      case "es":
-        return `Las solicitudes de incorporación de cambios por lotes se activan cuando se fusiona en este proyecto un flujo de trabajo que mencione su comprobación del lote. Hasta entonces, los cambios van como ${delivery}.`;
-      case "fr":
-        return `Les demandes de tirage groupées s’activent dès qu’un workflow de ce projet qui mentionne sa vérification groupée est fusionné. D’ici là, les modifications passent par ${delivery}.`;
-      case "ja":
-        return `このプロジェクトで一括チェックに触れたワークフローがマージされると、一括プルリクエストが有効になります。それまでは、変更は ${delivery} として出されます。`;
-      case "ko":
-        return `이 프로젝트에서 일괄 검사를 언급하는 워크플로가 병합되면 일괄 끌어오기 요청이 켜져요. 그전까지 변경은 ${delivery}(으)로 올라가요.`;
-      case "pt-BR":
-        return `As solicitações de pull em lote são ativadas assim que um workflow deste projeto que menciona a verificação em lote for mesclado. Até lá, as alterações vão como ${delivery}.`;
-      case "zh-Hans":
-        return `当这个项目中一个提到其批量检查的工作流合并后，批量拉取请求就会开启。在此之前，改动以 ${delivery} 提交。`;
-      case "zh-Hant":
-        return `當這個專案中一個提到批次檢查的工作流程合併後，批次 pull request 就會開啟。在那之前，變更會以 ${delivery} 提出。`;
-      case "en-XA":
-        return `[Ɓáţçĥéð þûļļ ŕéǫûéšţš ţûŕñ öñ öñçé á ŵöŕķƒļöŵ îñ ţĥîš þŕöĵéçţ ţĥáţ ɱéñţîöñš îţš ƀáţçĥ çĥéçķ ɱéŕĝéš. Ûñţîļ ţĥéñ, çĥáñĝéš ĝö áš ${delivery}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Batched pull requests turn on once a workflow in this project that mentions its batch check merges. Until then, changes go as ‬${delivery}‮.‬`;
-    }
-    return `Batched pull requests turn on once a workflow in this project that mentions its batch check merges. Until then, changes go as ${delivery}.`;
   }
   function settingsProjectsRigorDescription() {
     switch (currentLanguage()) {
@@ -12802,7 +12719,7 @@ ${events}` : prompt;
     outcome: _enum(["ended", "killed", "gone", "survived"]),
     /**
      * Its birth as the system listed it at the close, so a later end can tell
-     * it from a new program given the same number (`left-behind.md`).
+     * it from a new program given the same number.
      */
     started: string().max(64).optional()
   });
@@ -12814,7 +12731,7 @@ ${events}` : prompt;
     holders: _enum(["checked", "unsupported", "unreadable"]),
     /**
      * The close kept what it could not finish in the task's folder there
-     * (`left-behind.md`), so the computer's list says when it is cleared.
+     * (`leftBehindSchema`), so the computer's list says when it is cleared.
      */
     keptInFile: literal(true).optional()
   });
@@ -13917,13 +13834,13 @@ ${events}` : prompt;
     kind: _enum(["github", "gitlab", "bitbucket", "git"]),
     name: string().nullable()
   }).nullable();
-  const QUEUE_PART_HOSTS = /* @__PURE__ */ new Set(["github", "gitlab"]);
-  function hostRunsQueue(host) {
-    return host ? QUEUE_PART_HOSTS.has(host.kind) : false;
+  const BATCH_HOSTS = /* @__PURE__ */ new Set(["github", "gitlab"]);
+  function hostTakesBatches(host) {
+    return host ? BATCH_HOSTS.has(host.kind) : false;
   }
   function deliveryChoices(host) {
     if (!host) return ["local-only"];
-    return hostRunsQueue(host) ? ["local-only", "direct-pr", "queue-pr"] : ["local-only", "direct-pr"];
+    return hostTakesBatches(host) ? ["local-only", "direct-pr", "queue-pr"] : ["local-only", "direct-pr"];
   }
   object({
     contributionDestination: contributionDestinationSchema.optional(),
@@ -13938,38 +13855,6 @@ ${events}` : prompt;
     origin: string().trim().min(1).max(4096).nullable().optional()
   }).strict().refine((patch) => Object.values(patch).some((value) => value !== void 0), {
     message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, or several"
-  });
-  const queueWorkflowSchema = object({
-    path: string(),
-    active: boolean(),
-    /** The shipped queue's version this file's stamp names; absent for a queue the project wrote itself. */
-    shipped: number().int().positive().optional()
-  });
-  const queuePauseSchema = object({
-    run: number(),
-    url: string(),
-    since: number(),
-    changes: array(number()),
-    claimedBy: string().optional(),
-    unread: literal(true).optional()
-  });
-  discriminatedUnion("action", [
-    object({
-      action: literal("resume"),
-      run: number().int().positive(),
-      reason: string().trim().min(1).max(120)
-    }),
-    object({
-      action: literal("send-back"),
-      run: number().int().positive(),
-      number: number().int().positive(),
-      reason: string().trim().min(1).max(120)
-    })
-  ]);
-  object({
-    state: _enum(["missing", "ready", "unreadable"]),
-    /** The day the token ends, as the host writes it (YYYY-MM-DD). */
-    expiresAt: string().optional()
   });
   const repoViewSchema = object({
     id: string(),
@@ -14012,45 +13897,11 @@ ${events}` : prompt;
     runsOn: string().nullable(),
     placementRequirements: placementRequirementsSchema.optional(),
     /**
-     * The workflow files that mention the queue status, read when the batched
-     * delivery is chosen and at each merge click that waits on it; absent
-     * until a read succeeded (docs/forge.md, "A project's queue").
-     */
-    queueWorkflows: array(queueWorkflowSchema).optional(),
-    /**
-     * When anything other than the app last wrote the queue status on one of
-     * this project's versions (epoch ms); absent while nothing has answered.
-     */
-    queueAnsweredAt: number().optional(),
-    /**
-     * When the batched delivery was chosen while nothing in the project
-     * answered its queue status (epoch ms): the choice waits, the project
-     * keeps `delivery`, and the app switches it once a workflow that is on
-     * mentions the status (docs/forge.md, "Choosing batched pull requests
-     * before a queue exists"); absent when nothing waits.
-     */
-    queuePendingAt: number().optional(),
-    /** The project's paused batch, while this app reads one (docs/forge.md, "A paused batch"). */
-    queuePause: queuePauseSchema.optional(),
-    /**
      * This person's line of approved changes and open batch in the project,
      * while there is either (docs/forge.md, "Batches of your own").
      */
     batch: batchRecordSchema.optional()
   });
-  function queueShipped(repo) {
-    const versions = (repo.queueWorkflows ?? []).filter((workflow) => workflow.active && workflow.shipped !== void 0).map((workflow) => workflow.shipped);
-    return versions.length ? Math.max(...versions) : void 0;
-  }
-  function queueMissing(repo) {
-    if (repo.queueAnsweredAt !== void 0) return false;
-    const workflows = repo.queueWorkflows;
-    return workflows !== void 0 && !workflows.some((workflow) => workflow.active);
-  }
-  function queueSettingsWarning(repo) {
-    if (repo.delivery !== "queue-pr" || !queueMissing(repo)) return null;
-    return (repo.queueWorkflows ?? []).length > 0 ? "The workflow in this project that mentions its batch check is turned off, so approved merges would wait for one." : null;
-  }
   object({
     repo: repoViewSchema,
     created: boolean(),
@@ -14464,12 +14315,12 @@ ${events}` : prompt;
       name: string()
     }),
     /**
-     * A project's queue facts changed (docs/forge.md, "A project's queue"):
-     * the workflows that mention its queue status, or when the queue last
-     * answered. Settings reads the project again; no feed line.
+     * A project's batch changed (docs/forge.md, "Batches of your own"): the
+     * changes in line, the open batch or its hold. Settings reads the project
+     * again; no feed line.
      */
     object({
-      type: literal("repo_queue"),
+      type: literal("repo_batch"),
       repoId: string()
     }),
     /**
@@ -15650,14 +15501,8 @@ ${events}` : prompt;
       return settingsProjectsLocalCareful();
     }
   };
-  const QUEUE_SHIPPED_WORDS = {
-    set: (version2) => settingsProjectsQueueShipped({ version: String(version2) })
-  };
-  function queueNoHostWords() {
-    return settingsProjectsQueueNoHost();
-  }
-  function queueWaitingWords(delivery) {
-    return settingsProjectsQueueWaiting({ delivery: PROJECT_DELIVERY_WORDS[delivery] });
+  function batchNoHostWords() {
+    return settingsProjectsBatchNoHost();
   }
   const PROJECT_ROW_WORDS = {
     get personal() {
@@ -15915,9 +15760,6 @@ ${events}` : prompt;
     usageThere: (home) => settingsPhoneUsageThere({ home }),
     projectsThere: (home) => settingsPhoneProjectsThere({ home }),
     noProjects: (home) => settingsPhoneNoProjects({ home }),
-    get queueDecides() {
-      return settingsPhoneQueueDecides();
-    },
     get save() {
       return settingsPhoneSave();
     },
@@ -16293,10 +16135,8 @@ ${events}` : prompt;
     const { repos, folder, devices, home } = input;
     const projects = repos.map((repo) => {
       const personal = repo.kind === "personal";
-      const shipped = personal ? void 0 : queueShipped(repo);
       const computers = devices?.length || repo.kind === "project" && repo.origin ? devices ?? [] : null;
       const words = projectRowWords(repo, folder, computers ? runsOnWhere(repo, computers) : null);
-      const warning = personal ? null : queueSettingsWarning(repo);
       const cost = personal ? void 0 : costOf(repo.costLimit);
       return {
         id: repo.id,
@@ -16312,8 +16152,7 @@ ${events}` : prompt;
           choices: personal ? [] : deliveryChoices(repo.origin ? repo.host : void 0).map((value) => ({
             value,
             label: PROJECT_DELIVERY_WORDS[value]
-          })),
-          ...shipped !== void 0 ? { locked: PHONE_SETTINGS_WORDS.queueDecides } : {}
+          }))
         },
         asks: {
           title: AUTONOMY_SWITCH_NAME,
@@ -16334,10 +16173,7 @@ ${events}` : prompt;
         },
         ...cost ? { cost } : {},
         notes: personal ? [] : [
-          ...repo.queuePendingAt !== void 0 ? [{ text: queueWaitingWords(repo.delivery), warn: false }] : [],
-          ...shipped !== void 0 ? [{ text: QUEUE_SHIPPED_WORDS.set(shipped), warn: false }] : [],
-          ...repo.origin && repo.host && !hostRunsQueue(repo.host) ? [{ text: queueNoHostWords(), warn: false }] : [],
-          ...warning ? [{ text: warning, warn: true }] : [],
+          ...repo.origin && repo.host && !hostTakesBatches(repo.host) ? [{ text: batchNoHostWords(), warn: false }] : [],
           ...repo.delivery === "local-only" && repo.rigor === "reviewed" ? [{ text: PROJECT_POLICY_WORDS.carefulLocal, warn: true }] : []
         ]
       };

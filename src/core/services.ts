@@ -55,7 +55,6 @@ import { startHomeForges } from "./forge/homeForges";
 import { startHomeFreezeRecorder } from "./freeze/homeRecorder";
 import { PassSteps } from "./freeze/passSteps";
 import { startHomeProjects } from "./homeProjects";
-import { startHomeQueue } from "./homeQueue";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath, hostEnv } from "./hostEnv";
 import {
@@ -804,8 +803,6 @@ export async function createServices(
       placed.copies.writeEvidenceFile(taskId, deviceId, name, file),
   });
   const presentations: ChangePresentations = new ChangePresentations({
-    onPrepared: (taskId, head, branch) =>
-      supervisor.settling.approvals.storyPrepared(taskId, head, branch),
     namingRule,
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
@@ -843,18 +840,14 @@ export async function createServices(
       else if (!inbox.woken(taskId, wake.once))
         inbox.enqueueSteerOnce(taskId, { ...wake, once: wake.once });
     },
-    tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
     bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
     checkedOut: (taskId) => placed.checkedOut(taskId),
     verifyValidationEvidence: (taskId): void =>
       supervisor.reportIntake.verifyValidationEvidence(taskId),
     now: ticker.now,
   });
-  // A project's queue facts (docs/forge.md, "A project's queue"): choosing
-  // the batched delivery, whoever chooses it, reads the workflows that
-  // mention its status, and every change of those facts reaches Settings.
-  repos.onQueueChosen((repo) => void changeDelivery.queue.readWorkflows(repo.id));
-  repos.onQueue((repo) => broadcastEvent({ type: "repo_queue", repoId: repo.id }));
+  // A project's batch changed (docs/forge.md, "Batches of your own"): Settings reads it again.
+  repos.onBatch((repo) => broadcastEvent({ type: "repo_batch", repoId: repo.id }));
   const githubGateway = new GithubGatewayService({
     tasks,
     repos,
@@ -1320,7 +1313,7 @@ export async function createServices(
     decline: (id) => void pluginInstaller.decline(id),
   });
   await pluginInstaller.reconcile();
-  const { projectContributions, projectSetups, projectChanges } = startHomeProjects({
+  const { projectContributions, projectSetups, projectChanges, teamQueueLeft } = startHomeProjects({
     repos,
     tasks,
     devices: () => devices.list(),
@@ -1328,18 +1321,6 @@ export async function createServices(
     supervisor,
     broadcastEvent,
     notify: (notice) => firstmateForSeat?.notifyOp(notice, "agent"),
-  });
-  // The queue's batched choice and its paused batches (docs/forge.md).
-  const { queueChoice, queuePauses } = startHomeQueue({
-    repos,
-    tasks,
-    queue: changeDelivery.queue,
-    ways: (repoId) => batches.readWays(repoId),
-    forgeFor,
-    supervisor,
-    broadcastEvent,
-    notify: (notice) => firstmateForSeat?.notifyOp(notice, "agent"),
-    ticker,
   });
   supervisor.hostOps.setProjectChange({
     apply: (arg) => {
@@ -1947,8 +1928,7 @@ export async function createServices(
     projectSetups,
     projectContributions,
     projectChanges,
-    queueChoice,
-    queuePauses,
+    teamQueueLeft,
     batches,
     workspace,
     forges: forgeSignIns,

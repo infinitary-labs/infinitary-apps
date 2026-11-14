@@ -1,14 +1,10 @@
 import { LEFT_BEHIND_ORDER, type LeftBehind, leftBehindSchema } from "@shared/leftoverPrograms";
 import type { LoadDemand } from "@shared/load";
 import { type ComputerResourcesView, RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import type { TypedWake } from "../orchestrator/wakes";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { LeftBehindHere } from "../tasks/leftBehind";
 import type { WorkDevices } from "./workDevices";
-
-/** A computer that answers what its finished tasks left (`left-behind.md`). */
-const LEFT_BEHIND = contractChange("left-behind");
 
 /** One computer's list, each item named by its task's key as well as its id. */
 export type LeftBehindFacts = {
@@ -36,13 +32,13 @@ export function finishedTask(
 
 /**
  * Reads one computer's list (docs/leftover-programs.md, "What a close
- * leaves"): this home's own, or a computer's that lists the change, asked
- * through its order. Only tasks this home records as finished stay; a list
+ * leaves"): this home's own, or a computer's that takes work on this home's
+ * contract major, asked through its order. Only tasks this home records as finished stay; a list
  * that could not be read is undefined, never empty.
  */
 export function leftBehindReader(options: {
   here: Pick<LeftBehindHere, "list">;
-  work: Pick<WorkDevices, "ask" | "inReach" | "version">;
+  work: Pick<WorkDevices, "ask" | "inReach" | "takesCurrentWork">;
   finished: Finished;
   /** Hears which tasks still keep something there, after each list that came back. */
   resolve?: (computerId: string | null, kept: readonly string[]) => void;
@@ -55,7 +51,8 @@ export function leftBehindReader(options: {
       else {
         if (
           !options.work.inReach(computerId) ||
-          !listsChange(options.work.version(computerId)?.changes, LEFT_BEHIND)
+          // A computer on another major answers no order this major asks.
+          !options.work.takesCurrentWork(computerId)
         )
           return undefined;
         let timer: ReturnType<typeof setTimeout> | undefined;

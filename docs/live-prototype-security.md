@@ -141,7 +141,7 @@ The frame's policy is unchanged: `connect-src` stays at none, no host of the fra
 - The `inf:cards:data` read answers a minted name from `crewmates/<taskId>/cards/` alone: no path segments, no listing.
 - The answer is text handed to the card's own script, which runs in its sandboxed frame as it would with the same data in its body; nothing in the text is run by the host.
 - A copied address reaches only data the captain already has, as with pictures.
-- A computer that runs work checks the file there and sends it home before the card as a card's media, only to a home that lists the `card-data` change; the phone asks its Mac for the text the same way, from its trusted parent page alone (`ios/Infinitary/CardRuntime/cardHost.ts`).
+- A computer that runs work checks the file there and sends it home before the card as a card's media; the phone asks its Mac for the text the same way, from its trusted parent page alone (`ios/Infinitary/CardRuntime/cardHost.ts`).
 - The bridge gained one request verb, `data`, and one refusal code, `data_failed`; `FRAME_BRIDGE_SHA256` moved with it.
 
 ## The app's own parts in card bodies

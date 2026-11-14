@@ -351,10 +351,10 @@ A saved decision is made only on the computer: the phone does not offer Always a
 Only an executing or completed Allow, or a denied Don't allow, marks the phone's choice accepted; waiting, refusal and uncertain outcomes retain their explanation instead.
 A later successful key read clears an earlier locked-store problem without replacing the key.
 The computer's card title names one or two secrets as "the X secret" or "the X and Y secrets" and the task that asked.
-The phone names each secret by the `name` the computer sends with it, the one its card uses (`secret-approval-task.md`), so the title, the foot and the confirmation agree; from an older computer it names a secret from its label and environment.
+The phone names each secret by the `name` the computer sends with it, the one its card uses, so the title, the foot and the confirmation agree; from an older computer it names a secret from its label and environment.
 When the title holds that exact phrase, the foot above the choices names no secret again, so the choices stay pinned in the card's frame on an iPhone beside a title that runs to three lines.
 Otherwise, with three or more secrets or an older computer's title, the foot names each requested secret, one line each: its name, then its environment label, and its reference only when another secret of the use shares its name and environment.
-The system's confirmation names the same secrets and the task (`task`, `secret-approval-task.md`), or the recipient when no task is named.
+The system's confirmation names the same secrets and the task (`task`), or the recipient when no task is named.
 The shared approval body names each secret the same way, describes confirmation without assigning it to a particular device, and labels temporary read access as available only on the computer.
 Like every card's choices, Allow once and Don't allow take a press only once the card's body is revealed at its drawn height (`docs/ios.md`, INF-1574).
 The simulator has no Secure Enclave, so there the key is a software key behind the simulator's own Face ID.

@@ -8,6 +8,7 @@ import { armWatch } from "@core/orchestrator/checkWatch";
 import { openDatabase } from "@core/storage/db";
 import { DecisionStore } from "@core/storage/decisionStore";
 import { seedTask, type TaskSeed } from "@core/tasks/seedTask";
+import { BATCH_CHECK, BATCH_STATUS_WORDS, BATCH_WAITING_WORDS } from "@shared/batches";
 import { DEVICE_SETUP_ACTIONS, deviceSetupCardId } from "@shared/deviceSetup";
 import { reasoningWord } from "@shared/reasoning";
 import { taskFactsOf } from "@shared/taskFacts";
@@ -184,22 +185,24 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
             nextAt: Date.now() + 24 * 60 * 60_000,
           },
         });
-        // Approved batch gate: the same real checked-out version, now carrying a pending batch status.
+        // Approved batch gate: the same real checked-out version, now carrying its batch's
+        // pending check and the place the app's own batch keeps for it.
         if (batch)
           seedDelivery(tasks, checks, {
             checks: {
               headSha: head,
-              items: [{ name: "infinitary/queue", state: "pending" }],
+              items: [{ name: BATCH_CHECK, state: "pending" }],
               absenceDeclared: false,
             },
             queueStatus: {
               head,
+              kind: batch,
               words:
                 batch === "in-batch"
-                  ? "In batch run 12"
+                  ? BATCH_STATUS_WORDS.batch
                   : batch === "paused"
-                    ? "Paused after batch run 12; waiting for a fix"
-                    : "Waiting for the batch check",
+                    ? BATCH_STATUS_WORDS.held("checks")
+                    : BATCH_WAITING_WORDS,
             },
           });
         const remote = add("remote", "Read the offshore chart", { deviceId: computer });

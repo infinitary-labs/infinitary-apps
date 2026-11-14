@@ -278,7 +278,7 @@ export const placedEventSchema = z.union([
     }),
     z.object({ type: z.literal("turn_closed"), text: z.string().optional() }),
     /**
-     * The conversation folded its context (`major-15.md`): sent
+     * The conversation folded its context (major 15): sent
      * only to a home on the current work major.
      */
     z.object({ type: z.literal("context_compacted") }),
@@ -377,19 +377,19 @@ export const placedCardSchema = z.object({
       default: z.boolean().optional(),
       effect: cardEffectSchema.optional(),
       danger: z.boolean().optional(),
-      until: putOffUntilSchema.optional(), // `card-put-off.md`: never sent to an older home
+      until: putOffUntilSchema.optional(), // a put-off choice the home keeps and raises again
     }),
   ),
   id: z.string().optional(),
   pictures: z.array(cardPictureSchema).optional(),
-  /** Files for the captain kept there, by reference (`card-files.md`); the home names this computer. */
+  /** Files for the captain kept there, by reference; the home names this computer. */
   files: z.array(cardFileSchema.omit({ computer: true })).optional(),
   presentationRevision: z.number().int().positive().optional(),
-  sinceSeen: z.string().optional(), // `merge-card-since-seen.md`: never sent to an older home
+  sinceSeen: z.string().optional(), // what changed since the captain last saw a merge card for it
   width: z.enum(["wide", "full"]).optional(),
   holdsPlace: z.boolean().optional(),
   reply: z.string().optional(),
-  /** Its reply is a progress note (`major-15.md`); an older home drops it. */
+  /** Its reply is a progress note (major 15); an older home drops it. */
   interim: z.boolean().optional(),
   riskDeclaration: riskDeclarationSchema.optional(),
   requiredActions: requiredActionsSchema.optional(),
@@ -399,7 +399,7 @@ export const placedCardSchema = z.object({
   continues: z.boolean().optional(),
   /** It answers the captain's message it is about (INF-1610, `Card.answering`). */
   answering: z.boolean().optional(),
-  /** A write on someone else's card (`major-15.md`); an older home drops them. */
+  /** A write on someone else's card (major 15); an older home drops them. */
   expectedRevision: z.string().optional(),
   contributionReason: z.string().optional(),
   operationId: z.string().optional(),
@@ -433,7 +433,7 @@ export const placedCardAnswerSchema = z.union([
   z.object({
     shown: z.literal(true),
     cardId: z.string().optional(),
-    /** What a write on someone else's card did (`major-15.md`). */
+    /** What a write on someone else's card did (major 15). */
     mutation: cardMutationSchema.optional(),
   }),
   z.object({
@@ -620,9 +620,9 @@ export const workRequests = {
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
           needsFirstmate: z.string().optional(),
-          /** Where the captain typed the words it passes on (`major-15.md`); the home reads them. */
+          /** Where the captain typed the words it passes on (major 15); the home reads them. */
           captainWordsFrom: z.string().optional(),
-          /** When it looks at its running job again (`major-15.md`); the home keeps it. */
+          /** When it looks at its running job again (major 15); the home keeps it. */
           checkBack: z.object({ minutes: z.number(), waitingFor: z.string() }).optional(),
           /** The report's typed result (`report-result.md`); the home checks it. */
           result: z.record(z.string(), z.unknown()).optional(),
@@ -640,7 +640,7 @@ export const workRequests = {
       cardId: z.string(),
       text: z.string(),
       interim: z.boolean().optional(),
-      /** `major-15.md`: the captain message it answers, its operation and response. */
+      /** Major 15: the captain message it answers, its operation and response. */
       answersMessage: z.number().int().optional(),
       /** The captain's message says they are done with the answer. */
       signsOff: z.boolean().optional(),
@@ -649,13 +649,13 @@ export const workRequests = {
     }),
     response: toolTextSchema,
   },
-  /** Correct a required action's words (`major-15.md`); an older home lacks it. */
+  /** Correct a required action's words (major 15); an older home lacks it. */
   "inf:work:revise-required-action": {
     effect: "change",
     request: asked({ input: requiredActionRevisionInputSchema }),
     response: toolTextSchema,
   },
-  /** Read one card before revising or answering it (`major-15.md`); an older home lacks it. */
+  /** Read one card before revising or answering it (major 15); an older home lacks it. */
   "inf:work:read-card": {
     effect: "read",
     request: asked({ cardId: z.string().min(1) }),
@@ -746,7 +746,7 @@ export const workRequests = {
     response: toolTextSchema,
   },
   /**
-   * show_merge_card (`show-merge-card.md`): the home walks the steps up to
+   * show_merge_card: the home walks the steps up to
    * the merge card and shows it, or answers the one thing missing.
    */
   "inf:work:show-merge-card": {
@@ -998,7 +998,7 @@ export const workRequests = {
   },
   /**
    * The captain's private sites list, read live as a task's browser there
-   * opens a page (docs/task-browser.md, "Private sites"; `major-15.md`):
+   * opens a page (docs/task-browser.md, "Private sites"; major 15):
    * the home lends it and that computer keeps no copy.
    */
   "inf:work:private-sites": {
@@ -1238,7 +1238,7 @@ export const workOrders = {
     response: doneSchema,
   },
   /**
-   * The quiet watchdog's ask (INF-2603, `major-15.md`): each of
+   * The quiet watchdog's ask (INF-2603, major 15): each of
    * the app's own reads the conversation began by event `through`, the
    * newest the home has taken, is answered "ask again" there, so its turn
    * goes on. Never a change, and never a call the crewmate started itself;

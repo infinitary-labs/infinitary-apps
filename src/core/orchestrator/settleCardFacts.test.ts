@@ -7,10 +7,10 @@ import {
   checksSpanOf,
   checksSpanWords,
 } from "@shared/checksSpan";
-import { BATCH_CHECK_WORDS, REVIEW_WORDS, RUN_WATCH_WORDS } from "@shared/vocabulary";
+import { REVIEW_WORDS, RUN_WATCH_WORDS } from "@shared/vocabulary";
 import { describe, expect, it } from "vitest";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
-import { QUEUE_REMOVED_WORDS, QUEUE_STATUS, type WorkflowJobLine } from "../forge";
+import type { WorkflowJobLine } from "../forge";
 import { openInMemoryDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
@@ -280,89 +280,5 @@ describe("a merge card's status line (INF-3709)", () => {
     // The run's words are a link to its page, which is the Tab stop.
     expect(tag("run")).not.toContain("tabindex");
     expect(strip()).toContain(`<a href="${PAGE}">${RUN_WATCH_WORDS.queued} for`);
-  });
-});
-
-/**
- * INF-4018, the captain's answer 3 on its plan: the app takes its queue
- * mark off a version while the captain's newer words hold the approval, and
- * the Batch check state then says "on hold" with one line naming what it
- * waits for, never "failed". The reading is PR #1660's at its approved
- * version, as the app now records the removal status.
- */
-describe("the Batch check state after the app removed its queue mark (INF-4018)", () => {
-  const APPROVED = "091ae0a6c2f84d1b9e3a5c7d0f2b4e6a8c1d3f50";
-  function strip(guidance?: { latest: number; declared: number; at: number }) {
-    const db = openInMemoryDatabase();
-    const tasks = new TaskService({ db, strict: true, now: () => 1 });
-    seedTask(tasks, { id: "t1", title: "Ship it", status: "completed", branch: "fm/task-t1" });
-    seedDelivery(tasks, "t1", {
-      prNumber: 1660,
-      headSha: APPROVED,
-      ci: "green",
-      ciAt: 1,
-      checks: {
-        headSha: APPROVED,
-        prNumber: 1660,
-        items: [
-          { name: "typecheck-lint-build", state: "success" },
-          { name: QUEUE_STATUS, state: "skipped" },
-        ],
-        absenceDeclared: false,
-      },
-      queueStatus: { head: APPROVED, words: QUEUE_REMOVED_WORDS },
-      ...(guidance
-        ? {
-            mergeAuthorization: {
-              version: 1 as const,
-              id: "kept-1660",
-              generation: 1,
-              issuer: "captain" as const,
-              at: 1,
-              card: { id: "card-t1-merge", offerId: "offer-1", actionId: "merge" },
-              target: {
-                repoId: "infinitary",
-                host: "github.com",
-                owner: "octo",
-                name: "infinitary",
-                prNumber: 1660,
-                branch: "fm/task-t1",
-                delivery: "direct-pr" as const,
-                method: "squash" as const,
-              },
-              approvedHead: APPROVED,
-              lineage: [],
-              proceedWithOpen: false,
-              status: "standing" as const,
-              guidance,
-            },
-          }
-        : {}),
-    });
-    const facts = new SettleFacts(
-      { tasks, repos: { get: () => undefined } } as unknown as CrewSupervisorOptions,
-      { now: () => 1, taskDelivery: () => "queue-pr", reviewOpen: () => false },
-    );
-    return facts.strip("t1") ?? "";
-  }
-  const batch = (html: string) =>
-    new RegExp(
-      `data-fact="batch" data-level="(\\w+)"[^>]*>.*?<span class="${SETTLE_FACT_VALUE_CLASS}">(.*?)</span></span>`,
-    )
-      .exec(html)
-      ?.slice(1);
-  const why = (html: string) =>
-    /<p class="inf-foot-why" data-why="batch">(.*?)<\/p>/.exec(html)?.[1];
-
-  it("reads waiting for your approval, with no line under it, when no approval stands", () => {
-    const html = strip();
-    expect(batch(html)).toEqual(["waiting", BATCH_CHECK_WORDS.approval]);
-    expect(why(html)).toBeUndefined();
-  });
-
-  it("reads on hold, with the line naming what it waits for, while newer words hold the approval", () => {
-    const html = strip({ latest: 1, declared: 0, at: 1 });
-    expect(batch(html)).toEqual(["waiting", BATCH_CHECK_WORDS.held]);
-    expect(why(html)).toBe(BATCH_CHECK_WORDS.heldWhy);
   });
 });

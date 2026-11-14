@@ -25,7 +25,6 @@ import {
   workOrders,
 } from "@shared/work";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import {
   dueIn,
   dueRule,
@@ -61,13 +60,6 @@ import { NO_PLACED_TASK, type PlacedWork } from "./placedWork";
 import { RecordCopy } from "./recordCopy";
 import { sendSourceFile } from "./sourceFiles";
 import type { WorkDevices } from "./workDevices";
-
-/** A computer that runs its tasks' stops at the close (`task-stops.md`, docs/leftover-programs.md). */
-const TASK_STOPS = contractChange("task-stops");
-const CARD_FILES = contractChange("card-files");
-
-/** A computer that serves show_merge_card (`show-merge-card.md`, INF-3717 piece 2). */
-const SHOW_MERGE_CARD = contractChange("show-merge-card");
 
 /**
  * The home's side of a crewmate's conversation held on a computer that runs
@@ -329,9 +321,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return version ? speaksChangePresentations(version.contract) : false;
   }
 
-  /** Whether the computer serves show_merge_card; one that does not keeps the three calls. */
+  /**
+   * Whether the computer serves show_merge_card: every one admitted to work
+   * on this major does, and one on another major keeps the three calls.
+   */
   takesMergeCardCall(machine: string): boolean {
-    return listsChange(this.options.devices.version(machine)?.changes, SHOW_MERGE_CARD);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   takesCheckDeclarations(machine: string): boolean {
@@ -378,7 +373,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /**
    * The stops command rides the computer's task channel too, and the close
-   * order there runs the stops and answers what it did (`task-stops.md`).
+   * order there runs the stops and answers what it did (docs/leftover-programs.md).
    */
   takesStops(machine: string): boolean {
     return this.keepsBrowsers(machine) && this.listsStops(machine);
@@ -386,12 +381,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /** Whether the computer's emit_card takes files for the captain (docs/card-authoring.md). */
   takesCardFiles(machine: string): boolean {
-    return listsChange(this.options.devices.version(machine)?.changes, CARD_FILES);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   /** Whether the computer's close order runs the task's stops and answers its report. */
   private listsStops(machine: string): boolean {
-    return listsChange(this.options.devices.version(machine)?.changes, TASK_STOPS);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   /** Whether the computer answers the file orders, so its files can be read from here. */
@@ -1387,8 +1382,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   /**
    * Closes the task's conversation there for good, under the one order id
    * every close of it uses, or a move's own (`orderId`): every close order
-   * the home sends goes through here. A computer that lists `task-stops`
-   * runs the task's stops and ends the programs holding its folders there
+   * the home sends goes through here. A computer admitted to work on this
+   * major runs the task's stops and ends the programs holding its folders there
    * first, or hands its stops to the task on that computer that carries its
    * work on, and its answer's report goes on the task's timeline once
    * (docs/leftover-programs.md, "On a computer that runs work").

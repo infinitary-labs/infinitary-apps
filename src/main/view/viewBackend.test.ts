@@ -1,8 +1,8 @@
-import { CONTRACT_CHANGES } from "@core/connection/contractChanges";
 import type { HomeLinkOptions, HomeLinkState } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { customApiConnectInputSchema } from "@shared/customApi";
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import { afterEach, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -17,6 +17,7 @@ afterEach(() => {
 // optional-field stripping at an older home, on both local and work-account routes.
 it("refuses command settings before forwarding to an old or unknown home, without changing fixed-key calls", async () => {
   let changes: HomeLinkState["homeChanges"] = null;
+  let homeVersion: HomeLinkState["homeVersion"] = null;
   const invoke = vi.fn(async () => ({ listed: [] }));
   const state: HomeLinkState = {
     contact: "in-reach",
@@ -52,7 +53,7 @@ it("refuses command settings before forwarding to an old or unknown home, withou
     updates: {} as UpdateChecker,
     link: () => ({
       start: () => {},
-      state: () => ({ ...state, homeChanges: changes }),
+      state: () => ({ ...state, homeVersion, homeChanges: changes }),
       invoke: invoke as never,
       leave: async () => true,
       close: () => {},
@@ -79,12 +80,14 @@ it("refuses command settings before forwarding to an old or unknown home, withou
   for (const channel of ["inf:accounts:custom:connect", "inf:devices:custom:connect"] as const) {
     const args = (input: unknown) =>
       channel === "inf:accounts:custom:connect" ? [input] : ["work", input];
+    // Before the home's welcome, and a home on major 15 that does not name the token command.
     for (const unsupported of [
-      null,
-      [],
-      CONTRACT_CHANGES.names.filter((name) => name !== "custom-token-command"),
+      { version: null, changes: null },
+      { version: "15.0.0", changes: [] },
+      { version: "15.0.0", changes: ["font-choice", "sign-in-return"] },
     ]) {
-      changes = unsupported;
+      homeVersion = unsupported.version;
+      changes = unsupported.changes;
       invoke.mockClear();
       await expect(view.dispatch(channel, args(command))).rejects.toThrow(
         "before saving a token command",
@@ -93,10 +96,17 @@ it("refuses command settings before forwarding to an old or unknown home, withou
       await expect(view.dispatch(channel, args(fixed))).resolves.toEqual({ listed: [] });
       expect(invoke).toHaveBeenCalledWith(channel, args(fixed));
     }
-    changes = [...CONTRACT_CHANGES.names];
-    invoke.mockClear();
-    await expect(view.dispatch(channel, args(command))).resolves.toEqual({ listed: [] });
-    expect(invoke).toHaveBeenCalledExactlyOnceWith(channel, args(command));
+    // A home on major 15 that names it, and every home from major 16 on, which folded the name in.
+    for (const supported of [
+      { version: "15.0.0", changes: ["custom-token-command"] },
+      { version: PROTOCOL_VERSION, changes: [] },
+    ]) {
+      homeVersion = supported.version;
+      changes = supported.changes;
+      invoke.mockClear();
+      await expect(view.dispatch(channel, args(command))).resolves.toEqual({ listed: [] });
+      expect(invoke).toHaveBeenCalledExactlyOnceWith(channel, args(command));
+    }
   }
 });
 
@@ -134,8 +144,9 @@ it("hands a streamed reply piece and a computers' reading the home sent live to 
         state: () => ({
           contact: "in-reach",
           access: "full",
-          homeVersion: null,
-          homeChanges: CONTRACT_CHANGES.names,
+          // A home on this major, which has by its version what major 16 folded in.
+          homeVersion: PROTOCOL_VERSION,
+          homeChanges: [],
           name: null,
           takesWork: null,
           onHomeMac: null,
@@ -215,8 +226,9 @@ function viewWithHeldLook() {
         state: () => ({
           contact: "in-reach",
           access: "full",
-          homeVersion: null,
-          homeChanges: CONTRACT_CHANGES.names,
+          // A home on this major, which has by its version what major 16 folded in.
+          homeVersion: PROTOCOL_VERSION,
+          homeChanges: [],
           name: null,
           takesWork: null,
           onHomeMac: null,

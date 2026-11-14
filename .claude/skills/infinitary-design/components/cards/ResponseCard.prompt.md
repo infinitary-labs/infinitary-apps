@@ -115,19 +115,19 @@ The foot is at most three parts, each the card's full width: the status line, wh
 The status line holds one state per fact the task has - Checks, each requested run, Batch check, Review, Override - each a `StatusDot`-language mark, its label and its words on one line, in `--text-sm`.
 The states are sorted failing, warning, running or waiting, passed, so what needs the captain reads first; a failing or warning state is `--fg-1` at medium weight, and the rest are `--fg-2`.
 A state says one word in the open (`passed`, `failed`, `running for 15m`, `findings`), with how long ago finished checks finished in `--fg-3` (`· 5m ago`); words that say the whole state stand without a label (`No checks`).
-Check counts, how long the checks took, when they started and were read, a review's version and risk, and the queue's words while nothing is wrong wait for rest: the pointer's rest shows them, and a state with such words is a Tab stop that draws the focus ring and shows the same words on a `--text-xs` `--fg-3` line under the states while it holds focus.
+Check counts, how long the checks took, when they started and were read, a review's version and risk, and the batch's words while nothing is wrong wait for rest: the pointer's rest shows them, and a state with such words is a Tab stop that draws the focus ring and shows the same words on a `--text-xs` `--fg-3` line under the states while it holds focus.
 At the line's far end stands the reference in quiet mono (`--font-mono`, `--text-xs`, `--fg-3`): the project, the pull request link, the change's lines as `+316 −13`, and the care level only when it is not Default (`Careful care`).
 The reference wraps under the states as a whole when the card is narrow.
 The foot names no model and no computer: the card's top line shows both.
 What needs the captain stands under the status line in body color, and only under a state that is not passing.
-A batch check that failed or paused says the queue's own words there, wrapped whole, followed by its links, "Open the run" and "paused batch's issue"; checks the app could not read say why there.
+A batch check that failed or paused says its batch's own words there, wrapped whole, followed by its link, "Open the run"; checks the app could not read say why there.
 A failed reading adds a quiet, full-width disclosure row per failed check: the crewmate's recorded verdict first in `--fg-1`, then the check's name in mono `--text-xs` `--fg-3`, on one line with the name cut by an ellipsis, so no verdict breaks inside a word at any card width; the whole name and the evidence, in `--fg-2`, are one click or Enter deeper.
 The row preserves the reader's open state during time refreshes, and resets when its version or evidence changes.
 Unknown or undiagnosed causes say so, and a suspected intermittent failure never reads as proven.
 A check recorded failed at this version that the newest reading no longer shows failing gets no row.
-A change that merges through the project's queue keeps the queue's status out of the Checks state, which counts only the pull request's own checks (INF-3208).
+A change that merges in a batch keeps its place in the batch out of the Checks state, which counts only the change's own checks (INF-3208).
 Each requested run the app watches for the version on offer, such as a phone check, gets a state of its own named by the run, saying `queued for 1h 27m` or `running for 5m` linked to the run's page; its dot is idle while queued and running while running (INF-3220).
-The queue status gets no verdict row, and no Merge anyway stands beside a failed batch check, since no checks override passes the queue.
+The batch check gets no verdict row, and no Merge anyway stands beside a failed batch check, since no checks override passes a batch.
 Its states carry the same state dot and words as the task's own fact strip on its record and its crew summary (`../now/NowPanel.prompt.md`, Shared task facts), and its pull request link is every pull request link's: `--accent`, underlined only while the pointer rests on it (`TaskRecord.prompt.md`, "Pull request links").
 The strip draws in a frame of its own across the card's foot, above the buttons, so it stays in view however long the body is; its hairline shows only where it follows a body, on a past card.
 The buttons row starts with the line on what the merge does to the task, "Merging closes this task" or "The task continues after this merge", in `--text-sm` `--fg-2` at its left end, beside the buttons it describes; it takes a line above them when the row is too narrow, and on a past card and the phone it is the strip's last line.
@@ -135,7 +135,6 @@ The merge card's merge says what a click does and follows its actual check hold 
 It reads "Merge the pull request" when its checks pass, "Merge when checks pass" while its checks are pending or unreadable, and "Merge after fixing errors" when its checks fail (captain INF-1555 F20).
 The merge offer itself expresses the crew's judgment that the work is ready; its separate captain click authorizes the merge and can keep that approval while checks hold it.
 While the captain's override passes the checks at the card's version, it reads "Merge the pull request" whatever the checks read, because a click then merges at once (INF-756).
-It reads the same when the only failure is a batch check the crewmate answered at that version, because a click puts the version back in the queue (INF-3208).
 A card whose click keeps nothing, such as a first mate's, keeps its words.
 The click takes the card away and nothing takes its place (INF-2913): Activity's one line says what the merge waits for, and a card comes back only when a stopped merge needs the captain's choice.
 

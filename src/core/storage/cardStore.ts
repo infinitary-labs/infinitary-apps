@@ -1167,7 +1167,7 @@ export class CardStore {
     at?: number;
     revision?: CardRevisionLinks;
     notes?: CardNote[];
-    /** Who wrote it, when that is not the card's own author (`major-15.md`). */
+    /** Who wrote it, when that is not the card's own author (major 15). */
     contributor?: CardContributor;
     /** The captain message this line answers and ends. */
     answersMessage?: number;
@@ -1237,7 +1237,7 @@ export class CardStore {
     return row ? messageOf(row) : undefined;
   }
 
-  /** A contribution's saved result by its operation identity (`major-15.md`). */
+  /** A contribution's saved result by its operation identity (major 15). */
   contribution(operationId: string): { cardId: string; result: unknown } | undefined {
     const row = this.db
       .prepare("SELECT card_id, result_json FROM card_contributions WHERE operation_id = ?")

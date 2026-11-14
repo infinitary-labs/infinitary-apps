@@ -21,13 +21,9 @@ import {
 import { type ForgeKind, forgeOf, type KnownForgeHost } from "@shared/forge";
 import { AUTOMATIC_COMPUTER, placementRequirementsSchema } from "@shared/placement";
 import {
+  BATCH_HOST_REFUSAL,
   deliveryChoices,
   type ProjectsFolderView,
-  QUEUE_HOST_REFUSAL,
-  type QueuePause,
-  type QueueWorkflow,
-  queuePauseSchema,
-  queueWorkflowSchema,
   type RepoDelivery,
   type RepoKind,
   type RepoPolicyPatch,
@@ -41,7 +37,6 @@ import {
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { NamingRule } from "@shared/runbooks";
-import { z } from "zod";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import { CostLimitStore } from "../storage/costLimitStore";
 import type { AppDatabase } from "../storage/db";
@@ -105,16 +100,12 @@ type Row = {
   scope: string | null;
   runs_on: string | null;
   placement_requirements_json?: string | null;
-  queue_workflows_json?: string | null;
-  queue_answered_at?: number | null;
-  queue_pending_at?: number | null;
-  queue_pause_json?: string | null;
   contribution_json?: string | null;
   batch_json?: string | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json, contribution_json, batch_json";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json";
 
 function fromRow(row: Row): RepoView {
   const contribution = row.contribution_json ? JSON.parse(row.contribution_json) : null;
@@ -144,14 +135,6 @@ function fromRow(row: Row): RepoView {
           ),
         }
       : {}),
-    ...(row.queue_workflows_json
-      ? { queueWorkflows: queueWorkflowsOf(row.queue_workflows_json) }
-      : {}),
-    ...(typeof row.queue_answered_at === "number"
-      ? { queueAnsweredAt: row.queue_answered_at }
-      : {}),
-    ...(typeof row.queue_pending_at === "number" ? { queuePendingAt: row.queue_pending_at } : {}),
-    ...(row.queue_pause_json ? queuePauseOf(row.queue_pause_json) : {}),
     ...(row.batch_json ? batchOf(row.batch_json) : {}),
   };
 }
@@ -163,26 +146,6 @@ function batchOf(json: string): { batch?: BatchRecord } {
     return parsed.success ? { batch: parsed.data } : {};
   } catch {
     return {};
-  }
-}
-
-/** The saved pause; a garbled value reads as no pause. */
-function queuePauseOf(json: string): { queuePause?: QueuePause } {
-  try {
-    const parsed = queuePauseSchema.safeParse(JSON.parse(json));
-    return parsed.success ? { queuePause: parsed.data } : {};
-  } catch {
-    return {};
-  }
-}
-
-/** The saved queue workflows; a garbled value reads as never read. */
-function queueWorkflowsOf(json: string): QueueWorkflow[] | undefined {
-  try {
-    const parsed = z.array(queueWorkflowSchema).safeParse(JSON.parse(json));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
   }
 }
 
@@ -283,10 +246,8 @@ export class RepoRegistry {
   private readonly costLimits: CostLimitStore;
   /** Who hears a project's Runs on change (`onRunsOn`). */
   private readonly runsOnListeners = new Set<(repo: RepoView) => void>();
-  /** Who hears a project's queue facts change (`onQueue`). */
-  private readonly queueListeners = new Set<(repo: RepoView) => void>();
-  /** Who hears a project's delivery become the batched one (`onQueueChosen`). */
-  private readonly queueChosenListeners = new Set<(repo: RepoView) => void>();
+  /** Who hears a project's line of approved changes or its open batch change (`onBatch`). */
+  private readonly batchListeners = new Set<(repo: RepoView) => void>();
 
   constructor(
     private readonly db: AppDatabase,
@@ -626,9 +587,6 @@ export class RepoRegistry {
             ))
         )
           this.db.prepare("UPDATE repos SET contribution_json = NULL WHERE id = ?").run(id);
-        // Any choice of delivery answers a batched choice that waited.
-        if (changes.delivery !== undefined && repo.queuePendingAt !== undefined)
-          this.db.prepare("UPDATE repos SET queue_pending_at = NULL WHERE id = ?").run(id);
         if (changes.costLimit !== undefined)
           this.costLimits.setLimit("project", id, changes.costLimit, Date.now());
         this.projects.renameForRepo(id, name);
@@ -643,20 +601,7 @@ export class RepoRegistry {
     const next = this.get(id) as RepoView;
     if (next.runsOn !== repo.runsOn)
       for (const listener of [...this.runsOnListeners]) listener(next);
-    if (changes.delivery === "queue-pr")
-      for (const listener of [...this.queueChosenListeners]) listener(next);
     return next;
-  }
-
-  /**
-   * Hears each choice of the batched delivery (`queue-pr`) on a project,
-   * after it is written, whoever made it; answers its own unsubscribe.
-   */
-  onQueueChosen(listener: (repo: RepoView) => void): () => void {
-    this.queueChosenListeners.add(listener);
-    return () => {
-      this.queueChosenListeners.delete(listener);
-    };
   }
 
   /** Read the checkout's address, never trusting it as the approved destination. */
@@ -708,7 +653,7 @@ export class RepoRegistry {
       (changes.delivery ?? repo.delivery) === "queue-pr" &&
       !deliveryChoices(host).includes("queue-pr")
     )
-      throw new Error(QUEUE_HOST_REFUSAL);
+      throw new Error(BATCH_HOST_REFUSAL);
     if (
       name !== repo.name &&
       (!/^[\w][\w.-]*$/.test(name) || this.nameTaken(name, undefined, ownFolder))
@@ -767,51 +712,9 @@ export class RepoRegistry {
   }
 
   /**
-   * A project's queue facts (docs/forge.md, "A project's queue"): the
-   * workflow files that mention its queue status as just read, and when
-   * anything but the app answered that status, kept as the latest such
-   * time. Answers whether a fact changed; the listeners hear only a change.
-   */
-  recordQueue(
-    id: string,
-    facts: { workflows?: QueueWorkflow[]; answeredAt?: number; pause?: QueuePause | null },
-  ): RepoView | undefined {
-    const repo = this.get(id);
-    if (!repo) return undefined;
-    const pauseChanged =
-      facts.pause !== undefined &&
-      JSON.stringify(facts.pause ?? undefined) !== JSON.stringify(repo.queuePause);
-    if (pauseChanged)
-      this.db
-        .prepare("UPDATE repos SET queue_pause_json = ? WHERE id = ?")
-        .run(facts.pause ? JSON.stringify(facts.pause) : null, id);
-    const workflows =
-      facts.workflows === undefined
-        ? undefined
-        : [...facts.workflows].sort((a, b) => a.path.localeCompare(b.path));
-    const workflowsChanged =
-      workflows !== undefined && JSON.stringify(workflows) !== JSON.stringify(repo.queueWorkflows);
-    const answeredChanged =
-      facts.answeredAt !== undefined && facts.answeredAt > (repo.queueAnsweredAt ?? -1);
-    if (!workflowsChanged && !answeredChanged && !pauseChanged) return repo;
-    if (workflowsChanged)
-      this.db
-        .prepare("UPDATE repos SET queue_workflows_json = ? WHERE id = ?")
-        .run(JSON.stringify(workflows), id);
-    if (answeredChanged)
-      this.db
-        .prepare("UPDATE repos SET queue_answered_at = ? WHERE id = ?")
-        .run(facts.answeredAt, id);
-    this.projection?.delete(id);
-    const next = this.get(id) as RepoView;
-    for (const listener of [...this.queueListeners]) listener(next);
-    return next;
-  }
-
-  /**
    * A project's line of approved changes and its open batch (docs/forge.md,
    * "Batches of your own"), written whole by `Batches` alone; an empty
-   * record clears it. The queue listeners hear a change, so Settings reads
+   * record clears it. The batch listeners hear a change, so Settings reads
    * the project again.
    */
   recordBatch(id: string, record: BatchRecord): RepoView | undefined {
@@ -828,48 +731,34 @@ export class RepoRegistry {
     this.db.prepare("UPDATE repos SET batch_json = ? WHERE id = ?").run(json, id);
     this.projection?.delete(id);
     const next = this.get(id) as RepoView;
-    for (const listener of [...this.queueListeners]) listener(next);
+    for (const listener of [...this.batchListeners]) listener(next);
     return next;
   }
 
   /**
-   * Keep a project's batched choice waiting from `at`, or end the wait with
-   * null (docs/forge.md, "Choosing batched pull requests before a queue
-   * exists"). The project's delivery is unchanged; the queue listeners hear
-   * the change, so Settings reads the project again.
+   * Whether the app already looked in this project for files of the team
+   * queue it once shipped (docs/forge.md, "A project that still carries
+   * the team queue's files"), so the first mate hears of them once. The
+   * mark is 0 in the column the retired queue offer kept its version in,
+   * where every version was 1 or more.
    */
-  waitForQueue(id: string, at: number | null): RepoView | undefined {
-    const repo = this.get(id);
-    if (!repo || (repo.queuePendingAt ?? null) === at) return repo;
-    this.db.prepare("UPDATE repos SET queue_pending_at = ? WHERE id = ?").run(at, id);
-    this.projection?.delete(id);
-    const next = this.get(id) as RepoView;
-    for (const listener of [...this.queueListeners]) listener(next);
-    return next;
-  }
-
-  /**
-   * The shipped queue's version the first mate was last told to offer for
-   * this project (an update, or replacing the project's own queue), so each
-   * offer is made once; undefined when none was.
-   */
-  queueOffered(id: string): number | undefined {
+  teamQueueLooked(id: string): boolean {
     const row = this.db.prepare("SELECT queue_offered FROM repos WHERE id = ?").get(id) as
       | { queue_offered: number | null }
       | undefined;
-    return typeof row?.queue_offered === "number" ? row.queue_offered : undefined;
+    return row?.queue_offered === 0;
   }
 
-  /** Keep that the first mate was told to offer the shipped queue's `version` for this project. */
-  recordQueueOffered(id: string, version: number): void {
-    this.db.prepare("UPDATE repos SET queue_offered = ? WHERE id = ?").run(version, id);
+  /** Keep that the app looked in this project for the team queue's files. */
+  recordTeamQueueLooked(id: string): void {
+    this.db.prepare("UPDATE repos SET queue_offered = 0 WHERE id = ?").run(id);
   }
 
-  /** Hears each change of a project's queue facts, after it is written; answers its own unsubscribe. */
-  onQueue(listener: (repo: RepoView) => void): () => void {
-    this.queueListeners.add(listener);
+  /** Hears each change of a project's line or open batch, after it is written; answers its own unsubscribe. */
+  onBatch(listener: (repo: RepoView) => void): () => void {
+    this.batchListeners.add(listener);
     return () => {
-      this.queueListeners.delete(listener);
+      this.batchListeners.delete(listener);
     };
   }
 

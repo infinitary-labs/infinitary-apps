@@ -145,7 +145,7 @@ function rememberFound(tasks: readonly TaskView[]): void {
 
 /**
  * The board without its closed rows, for a reader with no use for them yet
- * (`board-without-closed.md`); a home from before that change refuses the
+ * (`major-16.md`); a home from before that change refuses the
  * argument, and is asked for the whole board instead.
  */
 export function readBoardWithoutClosed(): Promise<TaskBoard> {

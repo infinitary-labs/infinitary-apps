@@ -139,8 +139,8 @@ export type DeliveryFacts =
       checks?: { name: string; state: string }[];
       /** timed-out: how long the host watched. */
       waitedMs?: number;
-      /** timed-out on a version waiting for the project's queue: what the app read about that queue. */
-      queue?: string;
+      /** timed-out on a version waiting in the project's batch: what the app knows of that batch. */
+      batch?: string;
       /** failed at the CI cap: the rounds spent and the cap. */
       cap?: { rounds: number; cap: number };
       /** unreadable: why, in words the crewmate can act on. */
@@ -153,30 +153,6 @@ export type DeliveryFacts =
        * merge card refusal says them.
        */
       approval?: string;
-    }
-  | {
-      /**
-       * The app's start of the project's queue, after a mark or a merge,
-       * failed twice (docs/forge.md, "The shipped queue"): no batch forms
-       * until something starts it.
-       */
-      kind: "queue-start-failed";
-      /** What the project's host answered, or why the start did not reach it. */
-      why: string;
-    }
-  | {
-      /**
-       * The project's queue held the task's version for a Maintainer (the
-       * GitLab part's held words, docs/forge.md "The shipped queue on
-       * GitLab"): it joins a batch only after a Maintainer's approval
-       * after its last push and then a click that starts the queue. Once per version.
-       */
-      kind: "queue-held";
-      /** How the change is named where it lives, such as !12. */
-      change: string;
-      head: string;
-      /** The words on the version's queue status. */
-      words: string;
     }
   | {
       /**
@@ -285,7 +261,7 @@ function renderChecksSettled(facts: ChecksSettledFacts): string {
     case "not-green":
       return `An earlier check-watch record reports ${JSON.stringify(facts)}. It is history, not a current readiness verdict. Repair counts are retired and place no hold. Read current check facts and follow your delivery guidance before offering a merge.`;
     case "timed-out":
-      return `The checks on ${change}${head} are still running after ${formatDurationShort(facts.waitedMs ?? 0)}${named ? `: ${named}` : ""}.${facts.queue ? ` ${facts.queue}` : ""} The app stopped watching them: read them with check_change, and report a blocker if they never finish.`;
+      return `The checks on ${change}${head} are still running after ${formatDurationShort(facts.waitedMs ?? 0)}${named ? `: ${named}` : ""}.${facts.batch ? ` ${facts.batch}` : ""} The app stopped watching them: read them with check_change, and report a blocker if they never finish.`;
     case "gone":
       return `${change.charAt(0).toUpperCase()}${change.slice(1)} is no longer open where the project lives, so the app stopped watching its checks. Read it with check_change and carry on.`;
     case "unreadable":
@@ -583,12 +559,8 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
     [facts, ...(facts.also ?? []).map((one) => ({ ...one, to: facts.to }))]
       .map(writeAnsweredWords)
       .join("\n\n"),
-  "queue-held": (facts) =>
-    `The project's queue holds ${facts.change} at ${facts.head} out of its batches; its status reads "${facts.words}". Its code joins a batch only once a Maintainer of the project approves the merge request after its last push, since a later mark does not admit it, and then the captain's merge click starts the queue again, which nothing else does. Put up your merge card again saying a Maintainer must approve this version first; do not start the queue yourself.`,
   "batch-sent-back": (facts) =>
     `Your change at ${facts.head} was sent back from its batch of approved changes and is no longer approved: ${facts.reason} The other changes of that batch go on without it. Repair it on your branch, validate, push and confirm its story, then put up a new merge card for the new version: once approved it joins the project's next batch.`,
-  "queue-start-failed": (facts) =>
-    `The app tried twice to start your project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms until something starts it. Start it yourself through your project's API the way the queue-setup skill's queue starts it, or report what stops you.`,
   "merge-card-behind": (facts) => renderMergeCardBehind(facts),
   "run-watch": (facts) => renderRunWatch(facts),
   "checks-settled": (facts) =>

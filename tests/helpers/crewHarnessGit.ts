@@ -19,7 +19,6 @@ import {
   type ForgeReadiness,
   type MergeAnswer,
 } from "@core/forge";
-import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "@core/forge/forge";
 import { type ChangeDelivery, createChangeDelivery } from "@core/orchestrator/changeDelivery";
 import { ChangePresentations } from "@core/orchestrator/changePresentations";
 import type { LineageFacts } from "@core/orchestrator/mergeAuthorization";
@@ -138,16 +137,10 @@ export class KeptForge implements Forge {
   }
   /** Runs inside each checks read: what else happens while the gates are read. */
   duringChecks: () => void = () => {};
-  /** The project's queue status on the pull request's version, once a test gives one. */
-  queue?: ForgeCheck;
-  async markQueued() {
-    this.queue = { name: QUEUE_STATUS, state: "pending", detail: QUEUE_WAITING_WORDS };
-    return {};
-  }
   async checks() {
     this.duringChecks();
     const items: ForgeCheck[] = this.states.map((state) => ({ name: "linux-checks", state }));
-    return { items: this.queue ? [...items, this.queue] : items };
+    return { items };
   }
   /** The branch has a merge queue of GitHub's own: a merge request is taken into it, never merged at once. */
   hostQueue = false;
@@ -258,8 +251,6 @@ export async function approved(
     guidance?: boolean;
     /** Run the app's own check watch, so the shared tick reads the pull request as the app does. */
     checkWatch?: boolean;
-    /** The project merges its pull requests through its queue. */
-    queue?: boolean;
     /**
      * The task was filed, as a follow-up is, with a goal and no recorded
      * words of the captain's, then started (INF-4072 finding 1).
@@ -338,7 +329,7 @@ export async function approved(
   ]);
   const { repo } = await harness.repos.setup({ kind: "adopt", path: dir, name: "meter" });
   harness.repos.configure(repo.id, {
-    delivery: where.queue ? "queue-pr" : "direct-pr",
+    delivery: "direct-pr",
     rigor: "quick",
   });
   const taskId = where.filed

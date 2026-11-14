@@ -524,7 +524,7 @@ export const projectViewSchema = z.object({
       autonomy: z.boolean(),
       /**
        * The repository's kind: `personal` for the app's own workspace
-       * (`major-15.md`). An older home sends none, read as `project`.
+       * (major 15). An older home sends none, read as `project`.
        */
       kind: repoKindSchema.optional(),
     })
@@ -566,8 +566,7 @@ export const taskBoardSchema = z.object({
    * `done` lists the ids of the rows it left out that Tasks shows under Done,
    * by project id, so a client counts them before it reads them. A delta
    * that brings one back, or takes one off the whole board, takes its id
-   * out. A snapshot push carries the whole board and none of this
-   * (`board-without-closed.md`).
+   * out. A snapshot push carries the whole board and none of this.
    */
   closedLeftOut: z.object({ done: z.record(z.string(), z.array(z.string())) }).optional(),
 });

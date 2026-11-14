@@ -42,7 +42,7 @@ export const modelChannels = {
   },
   // An older window opened Subscriptions. No allowance is read only on that
   // press any more, so the home answers its snapshot; the request stays in
-  // the contract until a major removes it (allowance-opened.md).
+  // the contract until a major that breaks views removes it.
   "inf:quota:opened": {
     effect: "change",
     surface: "core",

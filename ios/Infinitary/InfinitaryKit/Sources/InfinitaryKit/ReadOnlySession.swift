@@ -107,7 +107,7 @@ public struct PhoneNotice: Equatable, Sendable {
     /// The pushes and events the computer's own Settings pages read again on.
     private static let settingsPushes: Set<String> = ["inf:quota", "inf:models:changed", "inf:devices:sign-ins"]
     private static let settingsEvents: Set<String> = [
-        "firstmate_note", "personalized", "repo_setup", "repo_configured", "repo_runs_on", "repo_queue", "repo_unregistered",
+        "firstmate_note", "personalized", "repo_setup", "repo_configured", "repo_runs_on", "repo_batch", "repo_queue", "repo_unregistered",
     ]
     public private(set) var access = "read"
     /// The contract the computer's welcome said it speaks, which names the side a reads-only phone updates.
@@ -130,7 +130,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public var unreadCards: Int { stack.filter { !hasSeen($0) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     /// The computer's welcome said it hears a phone's plain-text messages while the phone only reads (the
-    /// `messages-while-reading` contract change), or it speaks a newer major, which folded that name in.
+    /// `messages-while-reading` name, on major 15), or it speaks major 16 or later, which folded that name in.
     private var homeHearsWhileReading = false
     /// Reading only, the message box stays on for words alone: no photos, and no hints about what is on screen.
     public var messagesWhileReading: Bool { contact == "in-reach" && access != "full" && homeHearsWhileReading }
@@ -168,12 +168,12 @@ public struct PhoneNotice: Equatable, Sendable {
     /// waiting, heard live or replayed (docs/ios.md, "Google in Settings").
     public var onSignInPage: ((PhoneSignInPage) -> Void)?
     public var onSignInEnded: ((String) -> Void)?
-    /// The computer takes a sign-in's return from this phone (`sign-in-return`), said in its welcome or implied by a newer major.
+    /// The computer takes a sign-in's return from this phone (`sign-in-return`), said in its welcome or folded into major 16.
     public private(set) var homeTakesSignInReturn = false
-    /// INF-3764: the home reads the board without its closed rows (`board-without-closed.md`), so the first board read
+    /// INF-3764: the home reads the board without its closed rows (`board-without-closed`), so the first board read
     /// leaves them out; `closedRowsWanted` is set once Tasks shows Done or a search on this connection, and reads them.
-    /// INF-3830 piece 2: the computer serves its panels to a phone (`panels-on-the-phone`), said in its welcome or implied
-    /// by a newer major; an older computer shows no panel here (docs/ios.md, "Panels").
+    /// INF-3830 piece 2: the computer serves its panels to a phone (`panels-on-the-phone`), said in its welcome or folded
+    /// into major 16; an older computer shows no panel here (docs/ios.md, "Panels").
     public private(set) var servesPanels = false
     /// Each push a panel's page hears (`PhonePanelRequest.pushes`), live or replayed, and each welcome that reloads what
     /// the phone held, after which every panel read runs again.
@@ -1000,15 +1000,16 @@ public struct PhoneNotice: Equatable, Sendable {
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardCurrentUpdateSeen)
             sceneObservations = homeMajor >= PhoneContract.sceneObservationsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
-            let ownMajor = PhoneContract.version.split(separator: ".").first.flatMap { Int($0) } ?? 0
-            cardNotes = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardAnnotations)
+            // Major 16 folded the names below in and kept views: a home from it on has them, and one on major 15 lists them.
+            let folded = homeMajor >= PhoneContract.foldedInto16Since
+            cardNotes = folded || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardAnnotations)
             homeTakesUsage = homeMajor >= PhoneContract.phoneDiagnosticsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
-            homeTakesSignInReturn = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneGoogleWords.signInReturn)
-            homeLeavesClosed = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
-            servesPanels = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
+            homeTakesSignInReturn = folded || (frame["changes"] as? [String] ?? []).contains(PhoneGoogleWords.signInReturn)
+            homeLeavesClosed = folded || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
+            servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
             if catchUp == "reload" { onPanelResync?() }
-            homeHearsWhileReading = homeMajor > ownMajor
+            homeHearsWhileReading = folded
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.messagesWhileReading)
             closedRowsWanted = false
             if !sceneObservations { computers = [] }

@@ -46,7 +46,7 @@ export const BUILTIN_RUNBOOK_ORDER = [
   "programs",
   "casual-projects",
   "lessons",
-  "queue",
+  "batches",
   "computer-cleanup",
   "architecture",
 ] as const;

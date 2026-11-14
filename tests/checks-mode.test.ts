@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { baseRef, biomeStep } from "../scripts/check-changed.ts";
+import { baseRef, biomeStep, checkScripts, sideBySide } from "../scripts/check-changed.ts";
 import { ciModeRefusal } from "../scripts/checks-mode.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -98,6 +98,30 @@ describe("where the heavy checks run", () => {
     expect(result.stdout).toMatch(/check:changed: \d+ changed file/);
     expect(result.stderr).not.toContain("typecheck-lint-build");
     expect(result.status, result.stdout + result.stderr).toBe(0);
+  });
+
+  // The bug the branch check's Linux runner found: the quick check started
+  // every step at once, about thirty programs with the typecheck among them,
+  // and on its two processors the kernel ended the largest test beside this
+  // file for memory. The full lint's own node scripts stand in for the steps.
+  it("starts only as many steps at once as the job has cores, and answers in their order", async () => {
+    const steps = checkScripts(scripts.check ?? "").map((args) => ({
+      label: args.join(" "),
+      command: "node",
+      args,
+    }));
+    expect(steps.length).toBeGreaterThan(2);
+    let running = 0;
+    let most = 0;
+    const results = await sideBySide(steps, 2, async (step) => {
+      running += 1;
+      most = Math.max(most, running);
+      await new Promise((turn) => setImmediate(turn));
+      running -= 1;
+      return step.label;
+    });
+    expect(most).toBe(2);
+    expect(results).toEqual(steps.map((step) => step.label));
   });
 
   // INF-3297: the quick check gave Biome only ts, tsx, json and md files, so a

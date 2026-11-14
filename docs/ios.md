@@ -258,7 +258,7 @@ The thread shows each message as the Mac's does: who wrote it (you, crew, mate o
 The thread's words (the count, `1 new`, Card, `updated`) are the Mac's own, from `src/renderer/src/cards/threadWords.ts`.
 A line someone other than the card's answerer wrote carries the same small line as on the Mac, "Revised by …" or "Written by …", and ", after the card closed" on a clarification (`PhoneCardWords.contributor`, generated from `contributorWords`; `docs/card-threads.md`, "Shared cards").
 The body's change bars mark the parts the revised line counts, and the body's task keys open their records: every key of a task the phone holds links, the card's own task's included, as on the Mac (`docs/card-authoring.md`, "Task keys").
-A card that takes replies takes notes on its body as the Mac's do (INF-3296; `docs/card-threads.md`, "Pointing at a card"), once the home lists `card-annotations` or is a newer major.
+A card that takes replies takes notes on its body as the Mac's do (INF-3296; `docs/card-threads.md`, "Pointing at a card"), once the home is on major 16 or later or lists `card-annotations`.
 Point at, the Mac's outline pointer beside the photos in the reply field, lit in a 32-point circle inside the field's rounded end, steps aside while the reply types and lets a tap pick a whole part of the body; words selected in the body add Annotate to the selection's own menu, after Copy, so the menu iOS draws keeps its place.
 Either opens the Mac's popover as a note editor inside the card (INF-3746): a raised panel under the part or the words, as wide as the reply field, over the lines below them, with the excerpt, a comment in the app's plain field that may stay empty, Cancel and Queue.
 On an iPhone on its side, where the keyboard leaves no room under the part, the editor takes the card's foot instead.
@@ -476,7 +476,7 @@ The details sheet names the connected view's ability to answer cards, send messa
 ## Panels
 
 The captain's panels show on the phone on a fourth tab, Panels (INF-3830's plan, the captain's answers entry=tab, computer=stay and layout=column): the computer button keeps its place in the bar.
-The tab shows while the computer serves panels to a phone, which its welcome says with `panels-on-the-phone` or a newer major implies, and has one its rails would draw; with no panel, with panels switched off or with an older computer the bar is as it was, and a tab that loses its last panel gives way to Home.
+The tab shows while the computer serves panels to a phone, which major 16 or later implies and an older welcome says with `panels-on-the-phone`, and has one its rails would draw; with no panel, with panels switched off or with an older computer the bar is as it was, and a tab that loses its last panel gives way to Home.
 It draws every panel a rail on the computer would draw - present, built and not hidden - one under another in one scrolling column at the reading column's width, in the order the computer's rails hold them read left top, left bottom, right top, right bottom.
 The phone keeps no arrangement of its own, so `PhonePanelOrder` reads the desktop's `arrangePanels` over the computer's layout (`inf:shell:preferences`), and `PhonePanelsTests` replays the desktop's own reading of the same layouts, which `scripts/generate-phone-scene.ts` records.
 Each panel sits under a header row of its title in capitals and its owner word, yours or the added plugin's name, with a chevron that folds it; a fold is kept on the device for that computer, so it stays folded after the app is closed and opened again.
@@ -524,7 +524,7 @@ The phone keeps a working parent and its live parts together, hides dropped rows
 Only the groups with tasks show.
 Pinned comes first, never folds, and holds every task the captain pinned, whatever its state or age, in the order it was pinned, newest last, as on the Mac (INF-3127); a pinned task's parts list under it there and nowhere else, each still unpinned (INF-3512), except a finished part not pinned itself, which stays in Done.
 Waiting on you, Working and Queued always show their rows, under a micro uppercase label with no count; Backlog and Done fold, start folded and show their count, and Backlog adds "· N could not start" and "· N new".
-On a home that lists `board-without-closed`, the phone's first board read leaves out the week's closed rows (`docs/task-retention.md`, "A view's first board read"); Done counts the rows left out, and opening Done, a search or a task the light board lacks reads the whole board once (`ReadOnlySession.readClosedRows`).
+On a home on major 16 or later, or one that lists `board-without-closed`, the phone's first board read leaves out the week's closed rows (`docs/task-retention.md`, "A view's first board read"); Done counts the rows left out, and opening Done, a search or a task the light board lacks reads the whole board once (`ReadOnlySession.readClosedRows`).
 Rows follow the Mac's order: priority, then oldest first, with Done newest closed first and a part indented under its parent in the same group, up to three levels.
 Each row shows the Mac's status mark (`PhoneTaskMark`), the key, the title and the Mac's one dim word: starting, could not start, checks, waiting, blocked, held or found on another task.
 A title takes up to two lines on an iPhone, which has no pointer to show the rest, and one on an iPad, as on the Mac.
@@ -578,7 +578,7 @@ Browser pages, Move to a computer, Knowledge used, Why this model and rich trans
 A mutation requires both **In reach** and the welcome’s `full` access.
 The phone connects as a view, and its hello says its build's view floor (`viewFloor`, generated from the published contract), so it keeps changing things across majors that kept views, in both directions (`docs/contract.md`, "The version rule").
 Outside that window the line under the message box names the older side (`PhoneUpdate`): "Update Infinitary on this phone to make changes." when the computer is newer, and "Update Infinitary on your computer to make changes." when it is older.
-A computer whose welcome lists `messages-while-reading`, or speaks a newer major, still hears the phone's plain words outside the window (`messagesWhileReading`): the message box stays on, photos stay off, a message goes as one plain string, and the line instead says "Your first mate still hears your messages.
+A computer on major 16 or later, or one whose welcome lists `messages-while-reading`, still hears the phone's plain words outside the window (`messagesWhileReading`): the message box stays on, photos stay off, a message goes as one plain string, and the line instead says "Your first mate still hears your messages.
 Buttons come back once Infinitary on your computer is updated."
 (or "on this phone").
 Card buttons, replies and task controls stay off.
@@ -624,7 +624,7 @@ The end of the app's background time stops the connection and clears the notice;
 Settings → Integrations has a Google row for the computer the phone controls, showing who is signed in, with Sign in and Sign out (INF-3454's phone part, the captain's choices where=settings and how=catch); the list's Integrations line names the signed-in account or says Not signed in.
 The sign-in runs on that computer and its keys stay there; the phone asks for it (`inf:integrations:sign-in`), shows its page and passes back what the browser brings, as a computer that controls a first mate does (`docs/view.md`, "A sign-in that returns to the first mate's computer").
 Sign in shows Google's notice first, in the words the computer's Settings shows, generated from their owner (`PhoneGoogleWords`), and nothing is asked of the computer until Accept.
-The phone lists the `sign-in-return` contract change in its hello, and shows the row's Sign in only when the computer's welcome lists it too or the computer is a newer major; otherwise the row says to update that computer.
+The phone lists `sign-in-return` in its hello, and shows the row's Sign in only when the computer is on major 16 or later or its welcome lists it too; otherwise the row says to update that computer.
 The sign-in's answer comes only once the browser is back, so the phone does not count it as a computer that stopped answering (`request(_:waits:)`).
 Only a sign-in this phone asked for opens its page here: on `inf:app:sign-in-page` the phone listens on the same port of its own loopback address (`PhoneSignInReturnListener`), then shows the page in the system's browser view inside the app, since Google refuses its sign-in in an app's own web view and the app must stay open to catch the return.
 The listener passes only GET, as its path, to `inf:integrations:sign-in-return`, and answers the browser with the page the computer said.

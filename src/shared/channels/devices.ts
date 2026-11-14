@@ -57,7 +57,7 @@ export const deviceChannels = {
     response: computerResourcesSchema,
   },
   // Devices and pairing (docs/devices.md). A paired view asks them too, as
-  // the captain at another computer (`devices-from-a-view.md`): the invite's
+  // the captain at another computer (`DEVICES_FROM_A_VIEW`): the invite's
   // answer carries the link to the window that asked.
   "inf:devices:list": {
     effect: "read",

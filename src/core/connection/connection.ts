@@ -38,7 +38,8 @@ import {
   asksWhileReading,
   type ContractAccess,
   contractAccess,
-  MESSAGES_WHILE_READING,
+  type FoldedInto16,
+  hasSince16,
   readsEndedCards,
   readsSeenUpdate,
   readsSharedCards,
@@ -72,7 +73,7 @@ import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
 import { lookFor, threadLinesFor } from "./cardCompatibility";
-import { CONTRACT_CHANGES, contractChange, listsChange } from "./contractChanges";
+import { CONTRACT_CHANGES } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import {
   DEFAULT_JOURNAL_LIMITS,
@@ -171,42 +172,56 @@ export type PairedDevices = {
   ): void;
 };
 
-/** One rule for every view (`every-view-asks.md`). */
-export const EVERY_VIEW_ASKS = contractChange("every-view-asks");
-
 /**
- * A paired view's plain-text messages pass the read-only gate
- * (`messages-while-reading.md`); named here so its file must exist.
+ * The additions major 16 folded in that a home and a view still check of
+ * each other by their historical names (`hasSince16`,
+ * src/shared/contractFeatures.ts): a view within its floor may be on major
+ * 15, and so may the home a view on this major meets.
  */
-export const MESSAGES_WHILE_READING_CHANGE = contractChange(MESSAGES_WHILE_READING);
 
-/** A view asks the home's computers, phones and Knowledge (`devices-from-a-view.md`). */
-export const DEVICES_FROM_A_VIEW = contractChange("devices-from-a-view");
+/** One rule for every view: a home answers it every request whose reach is `views`. */
+export const EVERY_VIEW_ASKS = "every-view-asks" satisfies FoldedInto16;
+
+/** A view asks the home's computers, phones and Knowledge. */
+export const DEVICES_FROM_A_VIEW = "devices-from-a-view" satisfies FoldedInto16;
 
 /**
  * Any view asks every request of a task's browser, and the home sends its
- * pictures as `live` frames (`browser-from-any-view.md`).
+ * pictures as `live` frames.
  */
-export const BROWSER_FROM_ANY_VIEW = contractChange("browser-from-any-view");
+export const BROWSER_FROM_ANY_VIEW = "browser-from-any-view" satisfies FoldedInto16;
 
-/** A view draws the captain's panels from the home's own files (`panels-in-every-window.md`). */
-export const PANELS_IN_EVERY_WINDOW = contractChange("panels-in-every-window");
+/** A view draws the captain's panels from the home's own files. */
+export const PANELS_IN_EVERY_WINDOW = "panels-in-every-window" satisfies FoldedInto16;
 
 /**
  * Streamed reply pieces and tool starts and ends go to a view as `live`
- * frames, outside the numbering, and to a phone not at all
- * (`streamed-events-live.md`).
+ * frames, outside the numbering, and to a phone not at all.
  */
-export const STREAMED_EVENTS_LIVE = contractChange("streamed-events-live");
+export const STREAMED_EVENTS_LIVE = "streamed-events-live" satisfies FoldedInto16;
 
 /**
  * The computers' live processor and memory readings go to a view as `live`
- * frames, outside the numbering, and to a phone not at all
- * (`computer-readings-live.md`).
+ * frames, outside the numbering, and to a phone not at all.
  */
-export const COMPUTER_READINGS_LIVE = contractChange("computer-readings-live");
+export const COMPUTER_READINGS_LIVE = "computer-readings-live" satisfies FoldedInto16;
 
-/** The push the computers' readings ride (`computer-readings-live.md`). */
+/** What a view's hello says of what it reads: its contract, its system and the changes it lists. */
+type ViewHello = { protocolVersion: string; system?: string; changes?: readonly string[] };
+
+/**
+ * Whether a view has an addition major 16 folded in. A computer that speaks
+ * that major has every one, and an older one within the floor has what its
+ * hello lists by name. A phone has only what its hello lists, whatever it
+ * speaks, because it lists what it draws.
+ */
+function viewHas(hello: ViewHello, name: FoldedInto16): boolean {
+  return hello.system === "ios"
+    ? (hello.changes?.includes(name) ?? false)
+    : hasSince16(hello.protocolVersion, hello.changes, name);
+}
+
+/** The push the computers' readings ride (`COMPUTER_READINGS_LIVE`). */
 const READINGS_CHANNEL = "inf:computers:resources";
 
 /**
@@ -216,12 +231,9 @@ const READINGS_CHANNEL = "inf:computers:resources";
  */
 type Unnumbered = "live" | "numbered" | "none";
 
-function unnumberedFor(
-  hello: { system?: string; changes?: readonly string[] },
-  change: ReturnType<typeof contractChange>,
-): Unnumbered {
+function unnumberedFor(hello: ViewHello, name: FoldedInto16): Unnumbered {
   if (hello.system === "ios") return "none";
-  return listsChange(hello.changes, change) ? "live" : "numbered";
+  return viewHas(hello, name) ? "live" : "numbered";
 }
 
 /**
@@ -243,6 +255,7 @@ function askerOf(
   role: DeviceRole,
   channel: CoreInvokeChannel,
   changes: readonly string[] | undefined,
+  version: string,
 ): CoreActor | null {
   // A client of the local door asks as the window on this computer always
   // has: everything but the work requests, as the captain himself.
@@ -250,7 +263,12 @@ function askerOf(
     return isWorkInvokeChannel(channel) ? null : { kind: "captain" };
   if (role === "view")
     return isViewInvokeChannel(channel)
-      ? { kind: "captain", view: device.id, ...(changes ? { viewChanges: changes } : {}) }
+      ? {
+          kind: "captain",
+          view: device.id,
+          viewVersion: version,
+          ...(changes ? { viewChanges: changes } : {}),
+        }
       : null;
   return isWorkInvokeChannel(channel) ? { kind: "device", deviceId: device.id } : null;
 }
@@ -468,6 +486,8 @@ type Client = {
   appVersion: string | undefined;
   /** The contract changes its hello listed, when it listed any. */
   changes: readonly string[] | undefined;
+  /** The look's later choices it does not read (`unreadLook`): every one, until its hello. */
+  unreadLook: readonly string[];
   /** Older desktop card decoders are strict; only capable desktops receive the added fields. */
   cardReads: CardReads;
   /** Whether it reads a thread line's contributor fields (`SHARED_CARDS_SINCE`). */
@@ -476,11 +496,11 @@ type Client = {
   actionReads: ActionReads;
   /**
    * How it is sent streamed reply pieces and tool starts and ends
-   * (`streamed-events-live.md`): as `live` frames, under the newest number
+   * (`STREAMED_EVENTS_LIVE`): as `live` frames, under the newest number
    * for a view from before the change, or not at all, as a phone.
    */
   streamed: Unnumbered;
-  /** How it is sent the computers' readings (`computer-readings-live.md`), as `streamed` is. */
+  /** How it is sent the computers' readings (`COMPUTER_READINGS_LIVE`), as `streamed` is. */
   readings: Unnumbered;
   access: ContractAccess;
   closing: boolean;
@@ -566,19 +586,11 @@ export function pushFrameIn(entry: JournalEntry, spelling: Spelling): string {
   return entry.frame.startsWith(was) ? head(channel) + entry.frame.slice(was.length) : entry.frame;
 }
 
-const CARD_ANNOTATIONS = contractChange("card-annotations");
-/** Files for the captain on a card (`card-files.md`). */
-const CARD_FILES = contractChange("card-files");
-const LANGUAGE_CHOICE = contractChange("language-choice");
-/** The captain's own command's mark on his thread lines (`from-the-command.md`). */
-const FROM_THE_COMMAND = contractChange("from-the-command");
-const FONT_CHOICE = contractChange("font-choice");
-
-/** The look's later choices a view's hello does not list, which it cannot read (`lookFor`). */
-function unreadLook(changes: readonly string[] | undefined): string[] {
+/** The look's later choices a view does not have, which it cannot read (`lookFor`). */
+function unreadLook(hello: ViewHello): string[] {
   return [
-    ...(listsChange(changes, LANGUAGE_CHOICE) ? [] : ["language"]),
-    ...(listsChange(changes, FONT_CHOICE) ? [] : ["fonts"]),
+    ...(viewHas(hello, "language-choice") ? [] : ["language"]),
+    ...(viewHas(hello, "font-choice") ? [] : ["fonts"]),
   ];
 }
 
@@ -943,7 +955,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.cardReads,
                 client.sharedCards,
                 client.actionReads,
-                unreadLook(client.changes),
+                client.unreadLook,
               ),
             );
       } catch (error) {
@@ -1038,21 +1050,22 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.spelling = spellingFor(readSpellings(hello.spellings), speaks);
       client.appVersion = hello.appVersion;
       client.changes = hello.changes;
+      client.unreadLook = unreadLook(hello);
       client.cardReads = {
         updates: hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes),
         ended: hello.system === "ios" || readsEndedCards(hello.protocolVersion, hello.changes),
-        // A view that lists the change draws typed notes, the phone included; one without it reads plain lines.
-        annotations: listsChange(hello.changes, CARD_ANNOTATIONS),
+        // A view that has typed notes draws them, a phone that lists them included; one without reads plain lines.
+        annotations: viewHas(hello, "card-annotations"),
         // An older desktop reads a card strictly; a phone ignores the field and draws no Save.
-        files: hello.system === "ios" || listsChange(hello.changes, CARD_FILES),
-        // A view that does not list the mark, the phone included, gets the line without it.
-        through: listsChange(hello.changes, FROM_THE_COMMAND),
+        files: hello.system === "ios" || viewHas(hello, "card-files"),
+        // A view without the command's mark, the phone included, gets the line without it.
+        through: viewHas(hello, "from-the-command"),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
       client.actionReads = {
         taskAllow: readsTaskAllow(hello.protocolVersion, hello.changes),
-        keepGoing: readsKeepGoing(hello.changes, hello.system),
+        keepGoing: readsKeepGoing(hello.protocolVersion, hello.changes, hello.system),
       };
       client.streamed = unnumberedFor(hello, STREAMED_EVENTS_LIVE);
       client.readings = unnumberedFor(hello, COMPUTER_READINGS_LIVE);
@@ -1100,8 +1113,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
             ? { onHomeMac: client.device.onThisMac }
             : {}),
           // A view from before one rule for every view still waits to hear this
-          // before it asks the wider set (`every-view-asks.md`).
-          ...(role === "view" && !listsChange(hello.changes, EVERY_VIEW_ASKS)
+          // before it asks the wider set.
+          ...(role === "view" && !viewHas(hello, EVERY_VIEW_ASKS)
             ? { startedByCommand: true }
             : {}),
           spellings: SPELLINGS,
@@ -1119,7 +1132,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                 client.cardReads,
                 client.sharedCards,
                 client.actionReads,
-                unreadLook(client.changes),
+                client.unreadLook,
               ),
         );
       client.welcomed = true;
@@ -1167,7 +1180,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
       const channel = frame.channel as CoreInvokeChannel;
       const actor = client.role
-        ? askerOf(client.device, client.role, channel, client.changes)
+        ? askerOf(client.device, client.role, channel, client.changes, client.speaks)
         : null;
       if (!actor) {
         reply({
@@ -1187,7 +1200,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
       // The version rule (docs/contract.md): outside the window a device
       // reads, and changes nothing until it is updated, but a paired view
-      // still says plain words to the first mate (`messages-while-reading.md`).
+      // still says plain words to the first mate (`READ_ONLY_ASKS`).
       if (
         client.access === "read" &&
         invokeContract[channel].effect === "change" &&
@@ -1215,7 +1228,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           channel.startsWith("inf:cards")
             ? withoutUnreadActions(answered, client.actionReads)
             : answered,
-          unreadLook(client.changes),
+          client.unreadLook,
         );
         reply({
           ok: true,
@@ -1265,6 +1278,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         spelling: FIRST_SPELLING,
         appVersion: undefined,
         changes: undefined,
+        unreadLook: unreadLook({ protocolVersion: "" }),
         cardReads: {
           updates: false,
           ended: false,

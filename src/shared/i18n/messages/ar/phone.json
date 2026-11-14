@@ -425,7 +425,7 @@
   "phoneRecordHoldsUp": "تؤخّر",
   "phoneRecordLandsMerged": "دُمجت",
   "phoneRecordLandsRigor": "العناية: {care}",
-  "phoneRecordModeBatched": "بوصفها طلب سحب مجمّعًا يختبره طابور مشروعك",
+  "phoneRecordModeBatched": "بوصفها طلب سحب مجمّعًا مع تغييراتك الأخرى الموافق عليها",
   "phoneRecordModeInPlace": "بُنيت في مكانها",
   "phoneRecordModeLocal": "دُمجت محليًا، دون طلب سحب",
   "phoneRecordModePullRequest": "بوصفها طلب سحب",

@@ -1204,7 +1204,7 @@ export class SettleService {
       const place = placeOf(this.host.repos, this.host.tasks.get(taskId));
       result = {
         ...result,
-        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.queueWarning(taskId, kept.wait), this.approvals.queueOwnsMerge(taskId))}`,
+        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.batchWarning(taskId, kept.wait))}`,
       };
     }
     // Only the captain's own click leaves them with no card to read (INF-2913).
@@ -1266,14 +1266,12 @@ export class SettleService {
           kept,
           placeOf(this.host.repos, record, ""),
           currentCheckStatus(record?.delivery),
-          this.approvals.queueOwnsMerge(taskId),
         ),
       );
     // Contention settled nothing: the attempt that owns the task says what became of it.
     else if (!merged && !result.contention) this.settleLine(taskId, settleFeedSaid(mode, result));
-    // A healthy queue wait needs no decision, card or first mate turn.
-    // An unanswered queue's warning still needs an agent to recover it.
-    if (kept === "queue" && this.approvals.queueWarning(taskId, kept) === undefined) return;
+    // A wait in line for a batch needs no decision, card or first mate turn.
+    if (kept === "queue") return;
     // Nor does a version the host's own merge queue holds: the host reads the queue on its own.
     if (kept === "host-queue") return;
     // A merge that went through is the feed line above and nothing more,

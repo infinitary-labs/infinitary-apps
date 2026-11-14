@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { contractChange } from "./connection/contractChanges";
+import type { FoldedInto16 } from "@shared/contractFeatures";
 
 /**
  * A sign-in's return from another computer (docs/view.md, "A sign-in that
- * returns to the first mate's computer"; `sign-in-return.md`).
+ * returns to the first mate's computer").
  *
  * A provider that sends the browser back to the first mate's own loopback
  * address, as Google's sign-in for an installed app does, cannot finish in
@@ -18,8 +18,11 @@ import { contractChange } from "./connection/contractChanges";
  * sign-in keeps here.
  */
 
-/** The contract change both computers list before a return may cross (`sign-in-return.md`). */
-export const SIGN_IN_RETURN = contractChange("sign-in-return");
+/**
+ * What both computers have before a return may cross: major 16 folded it in,
+ * and a side on major 15 lists it by this name (`hasSince16`).
+ */
+export const SIGN_IN_RETURN = "sign-in-return" satisfies FoldedInto16;
 
 /** What the waiting sign-in answered the browser: its status and its page. */
 export type SignInReturnAnswer = { status: number; page: string };

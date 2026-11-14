@@ -3,6 +3,7 @@ import { CONVERSE_TEXT_MAX_CHARS, TURN_IMAGES_MAX } from "./cards";
 import {
   CHANGE_PRESENTATIONS_SINCE,
   contractAccess,
+  hasSince16,
   homeHearsWhileReading,
   MESSAGES_WHILE_READING,
   PLACED_WORK_SINCE,
@@ -488,9 +489,6 @@ describe("ipc contract", () => {
       "inf:repos:folder",
       "inf:repos:folder:set",
       "inf:repos:list",
-      "inf:repos:queue-answer",
-      "inf:repos:queue-credential",
-      "inf:repos:queue-credential-create",
       "inf:repos:removal",
       "inf:repos:remove",
       "inf:repos:setup",
@@ -725,10 +723,24 @@ describe("the version rule (docs/contract.md)", () => {
     expect(homeHearsWhileReading("13.0.0", [MESSAGES_WHILE_READING], "15.0.0")).toBe(true);
     // The next major folds every name this view's major lists, so it is not named any more.
     expect(homeHearsWhileReading("16.0.0", [], "15.2.0")).toBe(true);
+    // Major 16 folded the name in, so a view on a later major reads that home by its number.
+    expect(homeHearsWhileReading("16.0.0", [], "17.0.0")).toBe(true);
     expect(homeHearsWhileReading("13.4.0", [], "15.0.0")).toBe(false);
     expect(homeHearsWhileReading("15.1.0", null, "15.0.0")).toBe(false);
     // Before the home's welcome there is no version or list to trust.
     expect(homeHearsWhileReading(undefined, undefined, "15.0.0")).toBe(false);
+  });
+
+  // Major 16 folded its named additions in and kept views, so a side on major 15 is still read by the names it lists.
+  it("reads an addition folded into major 16 by the other side's version, or by its list on major 15", () => {
+    expect(hasSince16("16.0.0", [], "card-files")).toBe(true);
+    expect(hasSince16("17.2.0", null, "card-files")).toBe(true);
+    expect(hasSince16("15.0.0", ["card-files"], "card-files")).toBe(true);
+    expect(hasSince16("15.9.0", ["font-choice"], "card-files")).toBe(false);
+    expect(hasSince16("15.9.0", [], "card-files")).toBe(false);
+    // Before the other side's hello or welcome there is no version or list to trust.
+    expect(hasSince16(undefined, undefined, "card-files")).toBe(false);
+    expect(hasSince16(null, null, "card-files")).toBe(false);
   });
 
   it("measures a view against this contract's own floor when the home names none", () => {

@@ -61,7 +61,7 @@
   "recordModeDirectPr": "プルリクエストとして",
   "recordModeInPlace": "その場で作成",
   "recordModeLocalOnly": "ローカルでマージ、プルリクエストなし",
-  "recordModeQueuePr": "プロジェクトのキューがテストする一括プルリクエストとして",
+  "recordModeQueuePr": "承認済みの他の変更と一緒に、一括プルリクエストとして",
   "recordMoreBranch": "ブランチ",
   "recordMoreComputerChoice": "コンピューターの選択",
   "recordMoreDelivery": "届け方",

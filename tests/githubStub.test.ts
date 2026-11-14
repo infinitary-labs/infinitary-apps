@@ -62,33 +62,6 @@ async function forgeOver(heads: Record<string, string>) {
 const mergeRequests = (stub: GitHubStub) => stub.mergeRequests();
 
 describe("the GitHub stand-in, through the app's forge", () => {
-  // The approved queue protocol writes trusted merge words before a waiting
-  // mark. Regression: the journeys' API lacked this comment endpoint entirely.
-  it("queues approved words and reads their trusted revocation back", async () => {
-    const branch = "fm/task-meter";
-    const head = sha("meter head");
-    const { github, forge } = await forgeOver({ [branch]: head });
-    const change = await forge.openChange({ branch, title: TITLE, body: BODY });
-    if (change.number === undefined) throw new Error("GitHub did not number the opened change");
-    await forge.markQueued(head, {
-      number: change.number,
-      title: TITLE,
-      message: BODY,
-      naming: null,
-    });
-    expect(github.statuses(head)).toMatchObject([{ state: "pending" }]);
-    await forge.removeQueued(head, change.number);
-    expect(github.statuses(head)).toMatchObject([{ state: "error" }]);
-    const writes = () =>
-      github
-        .requests()
-        .filter((line) => line === `POST /repos/octo/meterlab/issues/${change.number}/comments`);
-    expect(writes()).toHaveLength(2);
-    // A second read sees the persisted revocation rather than approving anew.
-    await forge.removeQueued(head, change.number);
-    expect(writes()).toHaveLength(2);
-  });
-
   // Accepted contributor plan A: the fixture must preserve the fork source
   // through the real forge and never return it as a project-owned branch.
   it("keeps a numbered fork distinct from the project's same-named branch", async () => {

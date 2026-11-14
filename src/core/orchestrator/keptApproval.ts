@@ -2,9 +2,8 @@ import { randomUUID } from "node:crypto";
 import { removalAnswer } from "@shared/checkRepair";
 import { failedBatch } from "@shared/checkSnapshot";
 import { hasChangeRequests } from "@shared/forge";
-import { overridePasses } from "@shared/holds";
 import { deliveryForRecord, opensPullRequest, ownsBatches } from "@shared/repos";
-import { forgeLocationOf, presentationCommitMessage } from "../forge";
+import { forgeLocationOf } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type {
   MergeAuthorization,
@@ -20,14 +19,12 @@ import {
   candidateHead,
   endedAuthorization,
   FAILED_BATCH_NOTE,
-  FAILED_OWN_BATCH_NOTE,
   outstandingGuidance,
   putInFront,
   retryAfter,
   standingAuthorization,
   taskPull,
 } from "./mergeAuthorization";
-import { queueMerges, queueNoteFacts, queueWakeWords } from "./projectQueue";
 import { publicationRepo } from "./publicationRepo";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
@@ -146,33 +143,6 @@ export class KeptApproval {
       });
     }
     void this.queueMarksSettled(taskId).catch(() => {});
-  }
-
-  /** Keep the click, but never leave its old story mergeable while a newer one is unpublished. */
-  async storyPrepared(taskId: string, head: string, branch?: string): Promise<void> {
-    const record = this.host.tasks.get(taskId);
-    if (!record || overridePasses(record.delivery, "story", head)) return;
-    const ledger = this.host.tasks.delivery.changePresentation(taskId, branch);
-    const latest = ledger?.revisions.at(-1);
-    const published = ledger?.revisions.find(
-      (story) => story.revision === ledger.published?.revision,
-    );
-    if (!latest || !published || latest.head !== head || published.head !== head) return;
-    const naming = this.host.namingRule?.() ?? null;
-    if (
-      latest.title === published.title &&
-      presentationCommitMessage(latest, naming) === presentationCommitMessage(published, naming)
-    )
-      return;
-    const top = record.delivery?.mergeAuthorization;
-    for (const approval of [top, ...(top?.queued ?? [])]) {
-      if (approval?.status !== "standing" || candidateHead(approval) !== head) continue;
-      if (approval.target.branch !== (branch ?? record.branch)) continue;
-      if (!queueMerges(this.host.repos.get(approval.review?.repoId ?? approval.target.repoId)))
-        continue;
-      this.removeQueueMark(taskId, approval);
-    }
-    await this.queueMarksSettled(taskId);
   }
 
   /** Restore eligibility removals implied by a durable held/ended approval from an older app. */
@@ -732,13 +702,6 @@ export class KeptApproval {
           ? undefined
           : `the captain's guidance (mark ${mark}) waits for its crewmate to declare its impact`;
       },
-      queueInterrupted: async () => {
-        // A prior withdrawal can finish while the publisher is still awaiting its host.
-        // Start a new durable removal after that operation, not an acknowledgement of it.
-        await this.queueMarksSettled(taskId).catch(() => {});
-        this.removeQueueMark(taskId, authorization);
-        await this.queueMarksSettled(taskId);
-      },
       // The host's own merge queue took this version under this approval:
       // its place there is read before anything is sent again, and a
       // removal is sent again only on its crewmate's answer to it.
@@ -999,16 +962,6 @@ export class KeptApproval {
     return { head, changed };
   }
 
-  /** The installed merge route of the approved change's actual project. */
-  queueOwnsMerge(taskId: string): boolean | "own" {
-    const record = this.host.tasks.get(taskId);
-    if (!record) return false;
-    const own = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const review = standingAuthorization(record.delivery)?.review ?? record.delivery?.checkTarget;
-    if (this.ownBatch(record, own, review)) return "own";
-    return queueMerges(this.changeRepoOf(record, own, review));
-  }
-
   /** Whether the task's own change merges in this person's batch (docs/forge.md, "Batches of your own"). */
   private ownBatch(
     record: TaskRecord,
@@ -1023,37 +976,20 @@ export class KeptApproval {
   }
 
   /**
-   * What the app's reads say of the project's queue, for the Firstmate's
-   * words beside a queue wait (docs/forge.md, "A project's queue"), or
-   * beside a checks wait whose failure is the batch check at the version
-   * the pull request is at (INF-3208); undefined when nothing is amiss or
-   * the wait is on neither.
+   * What the first mate is told beside a checks wait whose failure is the
+   * batch's check at the version the change is at (INF-3208, docs/forge.md,
+   * "Batches of your own"); undefined on any other wait.
    */
-  queueWarning(taskId: string, wait: MergeWait): string | undefined {
+  batchWarning(taskId: string, wait: MergeWait): string | undefined {
+    if (wait !== "checks") return undefined;
     const record = this.host.tasks.get(taskId);
     const repo = record?.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const own =
-      record !== undefined &&
-      this.ownBatch(
-        record,
-        repo,
-        standingAuthorization(record.delivery)?.review ?? record.delivery?.checkTarget,
-      );
-    if (wait === "checks") {
-      const head = record?.delivery?.headSha;
-      return record &&
-        head &&
-        deliveryForRecord(record, repo?.delivery) === "queue-pr" &&
-        failedBatch(record.delivery, head)
-        ? own
-          ? FAILED_OWN_BATCH_NOTE
-          : FAILED_BATCH_NOTE
-        : undefined;
-    }
-    // A batch of this person's own waits on no status where the project lives.
-    if (wait !== "queue" || own) return undefined;
-    return repo
-      ? queueWakeWords(queueNoteFacts(repo, record?.delivery?.queueMark, this.host.now()))
+    const head = record?.delivery?.headSha;
+    return record &&
+      head &&
+      deliveryForRecord(record, repo?.delivery) === "queue-pr" &&
+      failedBatch(record.delivery, head)
+      ? FAILED_BATCH_NOTE
       : undefined;
   }
 }

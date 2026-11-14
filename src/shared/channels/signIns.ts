@@ -362,7 +362,7 @@ export const signInChannels = {
   // What the browser brought back to a sign-in's return on the computer the
   // person is at, as its path, or the address it ended on, pasted: handed to
   // the port that sign-in listens on, once, with the page it answered
-  // (`sign-in-return.md`).
+  // (`SIGN_IN_RETURN`, src/core/signInReturns.ts).
   "inf:integrations:sign-in-return": {
     effect: "change",
     surface: "core",

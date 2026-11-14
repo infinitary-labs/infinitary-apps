@@ -18,14 +18,10 @@ import {
   type ForgeCheckState,
   ForgeError,
   type ForgePull,
-  QUEUE_STATUS,
 } from "../forge";
-import { HELD } from "../queue/shipped/gitlab.mjs";
 import { TaskStore } from "../storage/taskRecords";
 import { git } from "../workspace/git";
-import type { MergeGuard } from "./changeMerge";
 import { CheckWatcher } from "./checkWatch";
-import type { TypedWake } from "./wakes";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
 // priority, the slowest test (the no-CI project's merge) 0.59 s at its fastest
@@ -209,6 +205,24 @@ describe("ChangeChecks", () => {
     expect(result).toContain("- package-smoke: in_progress / -");
     expect(forge.calls[0]).toBe("changeFor fm/task-ab12cd34");
     expect(service.checks.reading("ab12cd34")?.overall).toBe("pending");
+  });
+
+  // Intent: the team queue's removal (the approved plan for batches of your own, piece 4). A
+  // version the app marked waiting for a project's queue keeps that status where the project
+  // lives, and nothing answers it now, so it must not keep the change waiting.
+  it("leaves out the status the team queue left on a version, so a change whose own checks passed reads green", async () => {
+    const forge = new FakeForge();
+    forge.states = ["success", "pending"];
+    forge.names = ["typecheck-lint-build", "infinitary/queue"];
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    const result = await service.checkTool.checkForCrew("ab12cd34");
+    expect(result).toContain("- typecheck-lint-build: completed / success");
+    expect(result).not.toContain("infinitary/queue");
+    expect(service.checks.reading("ab12cd34")?.overall).toBe("green");
+    expect(tasks.get("ab12cd34")?.delivery?.checks?.items.map((item) => item.name)).toEqual([
+      "typecheck-lint-build",
+    ]);
   });
 
   it("records the green reading with the time it was taken, and the change by the forge's label", async () => {
@@ -1453,67 +1467,6 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
     expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
   });
 
-  // Re-review INF-2587 U1, under the captain's "several changes per task,
-  // one per PR" and "a swept batch before main": on a queue-pr project, the
-  // merge of the task's current change on another branch - the one whose
-  // merge closes the task - reads that change's own queue status. It marks
-  // the version once, waits while the queue runs, and merges once it passes.
-  it("merges another branch's current pull request on a queue-pr project once its queue passes, marking it once (INF-2587)", async () => {
-    const forge = new SelectingForge();
-    const { tasks, repos, service } = setup({ forge });
-    await insertDirectPrTask(tasks, repos, {
-      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
-    });
-    repos.configure(tasks.get("ab12cd34")!.repoId!, {
-      origin: "https://github.com/infinitary-labs/infinitary.git",
-    });
-    recordPr(tasks, 23);
-    await service.checkTool.checkForCrew("ab12cd34");
-    // check_change(pull) makes the release pull request the current change.
-    await service.checkTool.checkForCrew("ab12cd34", { pull: 94 });
-    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({ number: 94 });
-    const marked: string[] = [];
-    forge.markQueued = async (sha: string) => {
-      marked.push(sha);
-      forge.atHead[sha] = [
-        { name: "linux-checks", state: "success" },
-        { name: QUEUE_STATUS, state: "pending" },
-      ];
-      return {};
-    };
-    // The completion card's kept click, or the autonomous first mate's merge, of #94.
-    const guard: MergeGuard = {
-      head: R1,
-      prNumber: 94,
-      unattended: true,
-      beforeDispatch: () => undefined,
-    };
-    const putIns = () => forge.calls.filter((call) => call.startsWith("putIn"));
-    expect(await service.merges.merge("ab12cd34", guard)).toMatchObject({
-      ok: false,
-      stop: "queue",
-    });
-    expect(marked).toEqual([R1]);
-    // The kept approval reads it again while the batch runs: nothing is marked twice.
-    expect(await service.merges.merge("ab12cd34", guard)).toMatchObject({
-      ok: false,
-      stop: "queue",
-    });
-    expect(marked).toEqual([R1]);
-    expect(putIns()).toEqual([]);
-    // The batch passes there: the kept click merges the release pull request at that version.
-    forge.atHead[R1] = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "success" },
-    ];
-    expect(await service.merges.merge("ab12cd34", guard)).toMatchObject({
-      ok: true,
-      receipt: { head: R1 },
-    });
-    expect(marked).toEqual([R1]);
-    expect(putIns()).toEqual([`putIn ${RELEASE_BRANCH} ${R1}`]);
-  });
-
   /** The change id a check_change answer reports on its facts line. */
   const reportedChange = (answer: string): string | null => {
     const line = answer.split("\n").find((item) => item.startsWith("facts: "));
@@ -1571,49 +1524,5 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
       prNumber: 94,
       checkTarget: { number: 94, branch: RELEASE_BRANCH },
     });
-  });
-});
-
-// INF-2997's review (held-rejoin-no-click), under the captain's "retry the
-// start after a mark, and wake the task's crewmate if it still fails. Never
-// swallow the failure.": a version the GitLab queue holds for a Maintainer
-// joins a batch only after an approval and a click that starts the queue, so
-// a reading of the held words wakes the task's crewmate, once per version
-// (docs/forge.md, "The shipped queue on GitLab").
-describe("a reading of a version the queue holds for a Maintainer", () => {
-  it("wakes the task's crewmate with the held words once per version", async () => {
-    const forge = new FakeForge();
-    const steers: { taskId: string; wake: TypedWake }[] = [];
-    const { tasks, repos, service } = setup({
-      forge,
-      steer: (taskId, wake) => steers.push({ taskId, wake }),
-    });
-    await insertDirectPrTask(tasks, repos, {
-      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
-    });
-    recordPr(tasks, 23);
-    const head = forge.change?.headSha ?? "";
-    forge.atHead[head] = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "pending", detail: HELD },
-    ];
-    await service.checkTool.checkForCrew("ab12cd34");
-    expect(steers).toEqual([
-      {
-        taskId: "ab12cd34",
-        wake: {
-          facts: { kind: "queue-held", change: "!23", head, words: HELD },
-          once: `queue-held:${head}`,
-        },
-      },
-    ]);
-
-    // A waiting version's own words wake nobody.
-    forge.atHead[head] = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "pending", detail: "Waiting for the batch check" },
-    ];
-    await service.checkTool.checkForCrew("ab12cd34");
-    expect(steers).toHaveLength(1);
   });
 });

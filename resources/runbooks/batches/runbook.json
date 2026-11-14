@@ -1,0 +1,6 @@
+{
+  "id": "batches",
+  "name": "Batched pull requests",
+  "description": "Repairing a held batch of your approved changes.",
+  "skills": "skills"
+}

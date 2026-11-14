@@ -1,12 +1,13 @@
 /**
  * The first mate's own notices: memory pressure, a recorded freeze, a
- * panel to update, a project's queue to plan, offer or repair, a task's changed policies and overrides, a schedule
+ * panel to update, a held batch to repair, the team queue's leftover files to offer for removal, a task's changed policies and overrides, a schedule
  * firing, the welcome, and a model seat that moved or was not asked.
  *
  * The wake envelope, `renderWake` and `WAKE_WORDS`, the map of every
  * kind's words, are in `wakes.ts`.
  */
 
+import { BATCH_CHECK } from "@shared/batches";
 import {
   type AlreadyAllowed,
   allowanceTakenBackWords,
@@ -15,7 +16,6 @@ import {
 } from "@shared/captainAllowances";
 import { HERE } from "@shared/deviceNames";
 import { type HoldOverride, overrideTakenBackWords, standingOverrideWords } from "@shared/holds";
-import { QUEUE_STATUS, type QueueWorkflow, type RepoDelivery } from "@shared/repos";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { CorrectionInput, CorrectionReview } from "../decisions/correctionTypes";
 import type { FreezeLine } from "../freeze/freezeRecorder";
@@ -23,7 +23,6 @@ import type { FreezeLocation, VersionSummary } from "../freeze/freezeTally";
 import { capWithOverflow } from "../overflow";
 import type { LeftBehindFacts, LineBlockedRun } from "../placed/leftBehindNotices";
 import type { PressureLeftover, PressureTaskShare } from "../placed/resourcePressure";
-import { FIX_LABEL } from "../queue/shipped/rules.mjs";
 import type { SeatPauseClass } from "./seat";
 import type { SeatDigestTurn } from "./seatDigest";
 import type { KindWords, WakeFacts } from "./wakes";
@@ -118,50 +117,17 @@ export type NoticeFacts =
     }
   | {
       /**
-       * The captain pressed Ask the first mate to plan it on the card a
-       * project's waiting batched choice put up (INF-2885 direction B): the
-       * app's read found nothing in the project to answer its queue status,
-       * so the project keeps `delivery` until a workflow that does merges.
+       * A project still carries files of the team queue the app once
+       * shipped, which nothing reads now (docs/forge.md, "A project that
+       * still carries the team queue's files"). Told once per project; the
+       * first mate offers their removal on a card.
        */
-      kind: "queue-plan-asked";
+      kind: "team-queue-left";
       project: { id: string; name: string };
-      /** Where the project's changes go while the choice waits. */
-      delivery: RepoDelivery;
-      /** The workflow files that mention the status, as last read. */
-      workflows?: QueueWorkflow[];
-    }
-  | {
-      /**
-       * A project runs a queue this version of Infinitary would replace or
-       * update (docs/forge.md, "The shipped queue"): its own workflow that
-       * answers the queue status, or the shipped queue at an older stamp.
-       * Told once per project and version; the first mate offers it on a card.
-       */
-      kind: "queue-offered";
-      project: { id: string; name: string };
-      offer: "update" | "replace";
-      /** The shipped queue's version the project's stamp names, for an update. */
-      from?: number;
-      /** The shipped queue's version this Infinitary carries. */
-      to: number;
-      /** The workflow files that answer the status now, for a replacement. */
-      workflows?: QueueWorkflow[];
-    }
-  | {
-      /**
-       * A batch with one of this app's changes in it failed, so the shipped
-       * queue paused it behind one issue (docs/forge.md, "A paused batch").
-       * Told once per paused batch run.
-       */
-      kind: "queue-paused";
-      project: { id: string; name: string };
-      run: number;
-      /** The issue that holds the pause, where the project lives. */
-      url: string;
-      /** The paused changes' numbers. */
-      changes: number[];
-      /** Who took the issue already, in the host's own name for them. */
-      claimedBy?: string;
+      /** The queue's files on the project's default branch. */
+      files: string[];
+      /** The default branch's rule that still requires the queue's status, as the host names it. */
+      rule?: string;
     }
   | {
       /**
@@ -180,17 +146,6 @@ export type NoticeFacts =
       checks: string[];
       /** The changes the batch carries, in its order. */
       members: { task: string; title: string }[];
-    }
-  | {
-      /**
-       * The app's start of a project's queue after a merge failed twice
-       * (docs/forge.md, "The shipped queue"), and no live task of this app
-       * waits in that queue to start it: no batch forms until something does.
-       */
-      kind: "queue-stalled";
-      project: { id: string; name: string };
-      /** What the project's host answered, or why the start did not reach it. */
-      why: string;
     }
   | {
       kind: "task-policies-changed";
@@ -427,43 +382,15 @@ function renderPanelUpdateAsked(facts: Extract<WakeFacts, { kind: "panel-update-
   return `${PANEL_UPDATE_ASKED_OPENING} "${facts.panel.title}" (id ${facts.panel.id}). The app refuses its server.ts before it runs, because it is written for panel API ${facts.api} and this version serves panel API ${facts.serves.join(" or ")}, so its background work is paused; the panel still draws and its saved data is unchanged. Start one task in ${workspace} now, with no card first: its goal is to update that panel's code to the panel API this app serves, keeping what the panel does and its saved data, and its brief names the panel id and the personal-panel skill's "Updating a panel written for an earlier panel API". If a task is already updating this panel, start nothing. The panel's line clears by itself once its code is updated.`;
 }
 
-/** How the first mate hears the not-set-up card's Ask the first mate to plan it opens. */
-export const QUEUE_PLAN_ASKED_OPENING = "[fm-op] the captain asked you to plan the batch queue";
+/** How the first mate hears of the team queue's leftover files opens. */
+export const TEAM_QUEUE_LEFT_OPENING = "[fm-op] the team queue's files are still in project";
 
-/** The captain's Ask the first mate to plan it, as the first mate hears it: start the planner now. */
-function renderQueuePlanAsked(facts: Extract<WakeFacts, { kind: "queue-plan-asked" }>): string {
-  const workflows = facts.workflows ?? [];
-  const read =
-    workflows.length === 0
-      ? `nothing on its default branch mentions ${QUEUE_STATUS}`
-      : `${workflows.map((workflow) => workflow.path).join(", ")} ${workflows.length === 1 ? "is turned off though it mentions" : "are turned off though they mention"} ${QUEUE_STATUS}`;
-  return `${QUEUE_PLAN_ASKED_OPENING} for project "${facts.project.name}" (repo_id ${facts.project.id}). They chose batched pull requests for it, but ${read}, so the choice waits: its changes still go as ${facts.delivery}, and the app switches it to queue-pr by itself once a merge in it brings in a queue. Start one read-only planning task in that project now, with no card first, whose brief names the queue-setup skill. Its goal is a plan for the fix-forward queue Infinitary ships, on one decision card where the captain chooses which of the project's checks each batch runs, says what those checks need changed, and gives feedback the planner revises the card with. The builder of that plan ships it the way the project's changes go now. If a task is already planning this, start nothing.`;
-}
-
-/** How the first mate hears a queue to update or replace opens. */
-export const QUEUE_OFFERED_OPENING = "[fm-op] the queue for batched pull requests in project";
-
-/** A queue this Infinitary would update or replace: offer it once, on a card. */
-function renderQueueOffered(facts: Extract<WakeFacts, { kind: "queue-offered" }>): string {
-  const project = `"${facts.project.name}" (repo_id ${facts.project.id})`;
-  const what =
-    facts.offer === "update"
-      ? `is Infinitary's shipped queue ${facts.from === undefined ? "at an older version" : `version ${facts.from}`}, and this Infinitary carries version ${facts.to}. Offer the captain, on one decision card, a task in that project whose brief names the queue-setup skill's "Updating it": a pull request that copies the newer stamped files over the old ones, preserves the team's batch-check grants, and wires the project's after-merge workflows as that skill describes.`
-      : `is the project's own workflow (${(facts.workflows ?? []).map((workflow) => workflow.path).join(", ") || "as last read"}), which answers ${QUEUE_STATUS} and keeps working. Offer the captain, on one decision card, a planning task in that project whose brief names the queue-setup skill: a plan to replace it with the fix-forward queue Infinitary ships version ${facts.to}, where a red batch pauses until its fix is approved into a batch instead of failing every change.`;
-  return `${QUEUE_OFFERED_OPENING} ${project} ${what} Not now keeps the queue as it is; the app offers this once.`;
-}
-
-/** How the first mate hears a paused batch opens. */
-export const QUEUE_PAUSED_OPENING = "[fm-op] a batch of approved changes paused in project";
-
-/** A paused batch with one of this app's changes in it: start its repair unless someone holds it. */
-function renderQueuePaused(facts: Extract<WakeFacts, { kind: "queue-paused" }>): string {
-  const changes = facts.changes.map((number) => `#${number}`).join(", ");
-  const head = `${QUEUE_PAUSED_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): batch run ${facts.run} failed its checks, so ${changes || "its changes"} wait behind the issue ${facts.url} until a change labelled ${FIX_LABEL} is approved or someone resumes the queue or sends one change back with a reason.`;
-  const next = facts.claimedBy
-    ? ` ${facts.claimedBy} took that issue and repairs it, so start nothing.`
-    : ` Start one task in that project now, with no card first, whose brief names the queue-repair skill and the issue: it claims the issue first and stops if someone else's claim is earlier, then fixes forward (including the root cause of flakiness) or sends one change back. A flake is not a reason to resume the unchanged batch. If a task is already repairing this pause, start nothing.`;
-  return `${head}${next} Put up no card about the pause: Settings shows it with its Resume, and each paused task says who repairs it.`;
+/** Files of the team queue the app once shipped: offer their removal once, on a card. */
+function renderTeamQueueLeft(facts: Extract<WakeFacts, { kind: "team-queue-left" }>): string {
+  const rule = facts.rule
+    ? ` Its ${facts.rule} still requires the status ${BATCH_CHECK}, which nothing writes now, so no pull request there can pass that rule: name the rule on the card and in the task's brief, and say that someone who may change the project's rules has to drop that requirement.`
+    : "";
+  return `${TEAM_QUEUE_LEFT_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): ${facts.files.join(", ")}. Infinitary no longer uses a queue workflow in the project: it combines the captain's approved changes into batches of their own, and nothing reads those files.${rule} Offer the captain once, on one decision card, a task in that project that removes them with a pull request: the files named here, any line of the project's own CI that includes or runs them, and the queue's labels and key where the project lives. Not now leaves them where they are; the app offers this once.`;
 }
 
 /** How the first mate hears a held batch of the captain's own opens. */
@@ -562,12 +489,8 @@ export const NOTICE_WORDS: KindWords<NoticeFacts> = {
     `[fm-op] On ${facts.label}, a run of finished task ${facts.run.key} still counts as running in the heavy-run line while ${facts.waiting} other ${facts.waiting === 1 ? "run waits" : "runs wait"} there. Nothing was stopped. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Facts: ${JSON.stringify(facts)}. What finished tasks left is the app's record, not a reading of memory use.`,
   "freeze-recorded": (facts) => renderFreezeRecorded(facts),
   "panel-update-asked": (facts) => renderPanelUpdateAsked(facts),
-  "queue-plan-asked": (facts) => renderQueuePlanAsked(facts),
-  "queue-offered": (facts) => renderQueueOffered(facts),
-  "queue-paused": (facts) => renderQueuePaused(facts),
+  "team-queue-left": (facts) => renderTeamQueueLeft(facts),
   "batch-held": (facts) => renderBatchHeld(facts),
-  "queue-stalled": (facts) =>
-    `[fm-op] after a merge in project "${facts.project.name}" (repo_id ${facts.project.id}), the app tried twice to start the project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms there until something starts it, and no task of this app waits in that queue. Start one task in that project now, with no card first, whose brief says to start the queue through the project's API the way the queue-setup skill's queue starts it, or to report what stops it. Put up no card about it.`,
   "task-policies-changed": (facts) =>
     `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.guidance?.length ? `\n\n${POLICY_GUIDANCE_HEADING}\n\n${facts.guidance.join("\n\n")}` : ""}`,
   "task-override-changed": (facts) =>

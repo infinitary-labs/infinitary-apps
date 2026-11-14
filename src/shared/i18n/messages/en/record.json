@@ -65,7 +65,7 @@
   "recordModeDirectPr": "As a pull request",
   "recordModeInPlace": "Built in place",
   "recordModeLocalOnly": "Merged locally, no pull request",
-  "recordModeQueuePr": "As a batched pull request your project's queue tests",
+  "recordModeQueuePr": "As a batched pull request with your other approved changes",
   "recordMoreBranch": "branch",
   "recordMoreComputerChoice": "the computer's choice",
   "recordMoreDelivery": "delivery",

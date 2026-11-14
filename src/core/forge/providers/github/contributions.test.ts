@@ -184,25 +184,10 @@ describe("approved fork contribution route on GitHub", () => {
     ]);
     expect(await forge.changeFor("fix")).toBeNull();
   });
-  it("cannot merge or change the maintainers' queue through a source-bound provider", async () => {
+  it("cannot merge through a source-bound provider", async () => {
     const { forge, calls } = fixture(true);
     const change = { branch: "contribute/fix", number: 12, url: null, headSha: head };
     await expect(forge.putIn(change, head)).rejects.toMatchObject({ failure: "permission" });
-    await expect(forge.markQueued(head)).rejects.toMatchObject({ failure: "permission" });
-    // Contribution refusal precedes the queue's approval comment as well as its status write.
-    await expect(
-      forge.markQueued(head, {
-        number: change.number,
-        title: "fix: contribute an example",
-        naming: null,
-      }),
-    ).rejects.toMatchObject({ failure: "permission" });
-    await expect(forge.removeQueued(head, change.number)).rejects.toMatchObject({
-      failure: "permission",
-    });
-    await expect(forge.startQueue({ action: "form" })).rejects.toMatchObject({
-      failure: "permission",
-    });
     await expect(forge.putInSkippingRules(change, head)).rejects.toMatchObject({
       failure: "permission",
     });

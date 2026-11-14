@@ -383,7 +383,7 @@
   "phoneRecordHoldsUp": "Bloquea a",
   "phoneRecordLandsMerged": "fusionada",
   "phoneRecordLandsRigor": "cuidado: {care}",
-  "phoneRecordModeBatched": "Como solicitud de incorporación de cambios por lotes que prueba la cola de tu proyecto",
+  "phoneRecordModeBatched": "Como solicitud de incorporación de cambios por lotes con tus otros cambios aprobados",
   "phoneRecordModeInPlace": "Construida en el lugar",
   "phoneRecordModeLocal": "Fusionada localmente, sin solicitud de incorporación de cambios",
   "phoneRecordModePullRequest": "Como solicitud de incorporación de cambios",

@@ -1,13 +1,10 @@
 import { keepsCommits, SQUASH_ONLY_WORDS } from "@shared/batches";
 import { CONTRIBUTION_WORDS } from "@shared/contributions";
-import type { ForgeKind } from "@shared/forge";
 import * as m from "@shared/i18n/messages.generated";
 import {
   deliveryChoices,
-  hostRunsQueue,
+  hostTakesBatches,
   ownsBatches,
-  queueSettingsWarning,
-  queueShipped,
   type RepoPolicyPatch,
   type RepoView,
 } from "@shared/repos";
@@ -22,7 +19,7 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
-import { Button, Disclosure, GroupedPills, Input, Switch } from "../design";
+import { Button, GroupedPills, Input, Switch } from "../design";
 import { useCutWords } from "../design/core/overflowTitle";
 import { useInPlaceReveal } from "../design/reveals";
 import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
@@ -35,17 +32,11 @@ import { ProjectCostLimit } from "./ProjectCostLimit";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
 import {
   BATCH_OWN_WORDS,
+  batchNoHostWords,
   PROJECT_POLICY_WORDS,
   PROJECT_ROW_WORDS,
   projectRowWords,
-  QUEUE_HOW_TO_WORDS,
-  QUEUE_SHIPPED_WORDS,
-  queueHowTo,
-  queueNoHostWords,
-  queueWaitingWords,
 } from "./projectsWords";
-import { QueueKeyPanel } from "./QueueKeyPanel";
-import { QueuePausePanel } from "./QueuePausePanel";
 import { RemoveProject } from "./RemoveProject";
 import { RunsOnControl, runsOnDescription, runsOnWhere, useWorkComputers } from "./RunsOn";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
@@ -133,7 +124,7 @@ export function ProjectsTab() {
     const off = window.infinitary.events.on((event) => {
       if (event.type === "repo_setup" || event.type === "repo_unregistered") refresh();
       if (event.type === "repo_configured" && !writing.current.has(event.repoId)) refresh();
-      if (event.type === "repo_runs_on" || event.type === "repo_queue") refresh();
+      if (event.type === "repo_runs_on" || event.type === "repo_batch") refresh();
     });
     return () => {
       off();
@@ -554,15 +545,13 @@ function ProjectRow({
 }) {
   const here = useHereAs();
   const personal = repo.kind === "personal";
-  const shipped = personal ? undefined : queueShipped(repo);
-  // Batches of this person's own: the app combines the approved changes, with no queue to set up.
+  // Batches of this person's own: the app combines the approved changes, with nothing to set up.
   const ownBatch = !personal && ownsBatches(repo.delivery, repo) === true;
   const held = !personal && repo.batch?.open?.hold ? repo.batch.open : undefined;
-  // A project that allows only squash merges and carries no team queue is not offered batches.
+  // A project that allows only squash merges is not offered batches.
   const squashOnly =
     !personal &&
     repo.delivery !== "queue-pr" &&
-    repo.queueWorkflows?.length === 0 &&
     repo.batch?.ways !== undefined &&
     !keepsCommits(repo.batch.ways);
   const runsWhere = computers ? runsOnWhere(repo, computers) : null;
@@ -679,8 +668,6 @@ function ProjectRow({
                   name={m.settingsProjectsDeliveryTitle()}
                   htmlName={`delivery-${repo.id}`}
                   value={repo.delivery}
-                  // A project that runs the shipped queue decides for everyone on it.
-                  disabled={shipped !== undefined}
                   options={deliveryChoices(repo.origin ? repo.host : null).map((value) => ({
                     value,
                     label: PROJECT_DELIVERY_WORDS[value],
@@ -710,40 +697,12 @@ function ProjectRow({
               }
             />
           )}
-          {!personal && repo.queuePendingAt !== undefined && (
-            <div
-              role="status"
-              data-queue-waiting={repo.id}
-              style={{
-                width: "fit-content",
-                fontSize: "var(--text-xs)",
-                color: "var(--fg-2)",
-                paddingBottom: "var(--space-3)",
-              }}
-            >
-              {queueWaitingWords(repo.delivery)}
-            </div>
+          {!personal && repo.origin && repo.host && !hostTakesBatches(repo.host) && (
+            <BatchNote words={batchNoHostWords()} data="no-host" id={repo.id} />
           )}
-          {!personal && shipped !== undefined && (
-            <QueueNote words={QUEUE_SHIPPED_WORDS.set(shipped)} data="shipped" id={repo.id} />
-          )}
-          {!personal && repo.origin && repo.host && !hostRunsQueue(repo.host) && (
-            <QueueNote words={queueNoHostWords()} data="no-host" id={repo.id} />
-          )}
-          {squashOnly && <QueueNote words={SQUASH_ONLY_WORDS} data="squash-only" id={repo.id} />}
-          {ownBatch && <QueueNote words={BATCH_OWN_WORDS.note} data="own-batch" id={repo.id} />}
+          {squashOnly && <BatchNote words={SQUASH_ONLY_WORDS} data="squash-only" id={repo.id} />}
+          {ownBatch && <BatchNote words={BATCH_OWN_WORDS.note} data="own-batch" id={repo.id} />}
           {held?.hold && <BatchHoldPanel repo={repo} batch={{ ...held, hold: held.hold }} />}
-          {!personal && repo.queuePause && <QueuePausePanel repo={repo} pause={repo.queuePause} />}
-          {!personal &&
-            !ownBatch &&
-            repo.origin &&
-            (repo.delivery === "queue-pr" ||
-              repo.queuePendingAt !== undefined ||
-              shipped !== undefined) && <QueueKeyPanel key={repo.id} repo={repo} />}
-          {!personal && <QueueWarning repo={repo} />}
-          {!personal && !ownBatch && repo.delivery === "queue-pr" && shipped === undefined && (
-            <QueueHowTo kind={repo.host?.kind} />
-          )}
           <PolicyRow
             title={AUTONOMY_SWITCH_NAME}
             description={PROJECT_POLICY_WORDS.asks(personal, repo.autonomy)}
@@ -822,11 +781,11 @@ function ProjectRow({
   );
 }
 
-/** One quiet line under "Where changes go" about the project's queue: set by the project, or not offered on its host. */
-function QueueNote({ words, data, id }: { words: string; data: string; id: string }) {
+/** One quiet line under "Where changes go" about the project's batches: how they merge, or why they are not offered. */
+function BatchNote({ words, data, id }: { words: string; data: string; id: string }) {
   return (
     <div
-      data-queue-note={data}
+      data-batch-note={data}
       data-repo={id}
       style={{
         width: "fit-content",
@@ -836,98 +795,6 @@ function QueueNote({ words, data, id }: { words: string; data: string; id: strin
       }}
     >
       {words}
-    </div>
-  );
-}
-
-/**
- * The warning under "Where changes go" when the batched delivery is chosen
- * and the app's read of the project's workflows finds none that mentions its
- * batch check (docs/forge.md, "A project's queue"). It names what was read;
- * it clears once a workflow mentions the check or the check answers.
- */
-function QueueWarning({ repo }: { repo: RepoView }) {
-  const words = queueSettingsWarning(repo);
-  if (!words) return null;
-  return (
-    <div
-      role="status"
-      data-queue-warning={repo.id}
-      style={{
-        width: "fit-content",
-        fontSize: "var(--text-xs)",
-        color: "var(--warn)",
-        paddingBottom: "var(--space-2)",
-      }}
-    >
-      {words}
-    </div>
-  );
-}
-
-/**
- * What the batched choice needs, under "Where changes go" while the project
- * has it: one sentence in the open, and the how-to behind a disclosure with
- * a link to the host's own guide for the status the queue writes.
- */
-function QueueHowTo({ kind }: { kind: ForgeKind | undefined }) {
-  const [open, setOpen] = useState(false);
-  const howTo = queueHowTo(kind);
-  return (
-    <div
-      data-queue-how-to
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-        paddingBottom: "var(--space-3)",
-        fontSize: "var(--text-xs)",
-        color: "var(--fg-2)",
-      }}
-    >
-      <div>{QUEUE_HOW_TO_WORDS.needs}</div>
-      <Disclosure
-        label={QUEUE_HOW_TO_WORDS.label}
-        open={open}
-        onToggle={setOpen}
-        style={{ margin: "0 -6px" }}
-      >
-        {open ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              gap: "var(--space-2)",
-              padding: "var(--space-1) 6px 0",
-            }}
-          >
-            <ol
-              style={{
-                margin: 0,
-                paddingInlineStart: "var(--space-4)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              {howTo.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-            <div>{QUEUE_HOW_TO_WORDS.firstMate}</div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                void window.infinitary.app.openExternal(howTo.guideLink).catch(() => {})
-              }
-            >
-              {howTo.guide}
-            </Button>
-          </div>
-        ) : null}
-      </Disclosure>
     </div>
   );
 }

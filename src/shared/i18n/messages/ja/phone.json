@@ -355,7 +355,7 @@
   "phoneRecordHoldsUp": "待たせている作業",
   "phoneRecordLandsMerged": "マージ済み",
   "phoneRecordLandsRigor": "慎重さ：{care}",
-  "phoneRecordModeBatched": "プロジェクトのキューがテストする一括プルリクエストとして",
+  "phoneRecordModeBatched": "承認済みの他の変更と一緒に、一括プルリクエストとして",
   "phoneRecordModeInPlace": "その場で作成",
   "phoneRecordModeLocal": "ローカルでマージ、プルリクエストなし",
   "phoneRecordModePullRequest": "プルリクエストとして",

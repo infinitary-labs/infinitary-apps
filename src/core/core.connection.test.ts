@@ -55,7 +55,6 @@ import {
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import type { BrowserViewer } from "./browser/browserViews";
 import { startConnection } from "./connection/connection";
-import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import { replayOf } from "./connection/journal";
 import { claimLink } from "./devices/dial";
 import { type Core, startCore } from "./index";
@@ -942,22 +941,36 @@ describe("a Google sign-in asked from another computer", () => {
     rmSync(userDataDir, { recursive: true, force: true });
   });
 
-  const join = async (name: string, changes?: readonly string[]) => {
+  const join = async (
+    name: string,
+    hello: { protocolVersion?: string; viewFloor?: number; changes?: readonly string[] } = {},
+  ) => {
     const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
     await connection.settled();
-    return connectClient(await claimLink(link, { ...AT_FIRST_LAUNCH, name }), {
-      ...(changes ? { changes } : {}),
-    });
+    return connectClient(await claimLink(link, { ...AT_FIRST_LAUNCH, name }), hello);
   };
 
   it("names the computer to update before any page opens, then finishes from the computer the person is at", async () => {
-    const older = await join("MacBook Air");
+    // Major 16 folded `sign-in-return` in and kept views: a view on major 15 has it only by its name.
+    const older = await join("MacBook Air", { protocolVersion: "15.0.0", viewFloor: 15 });
     await expect(
       older.invoke("inf:integrations:sign-in", ["google", NOTICE_ACCEPTED]),
     ).rejects.toThrow(SIGN_IN_RETURN_WORDS.updateHere);
     expect(older.pushes.some((push) => push.channel === "inf:app:sign-in-page")).toBe(false);
 
-    const newer = await join("MacBook Pro", CONTRACT_CHANGES.names);
+    // A view on this major has it by its version: its page opens with no name listed, and it cancels from there.
+    const current = await join("Mac Studio");
+    const started = current.invoke("inf:integrations:sign-in", ["google", NOTICE_ACCEPTED]);
+    started.catch(() => {});
+    await current.push((push) => push.channel === "inf:app:sign-in-page");
+    await current.invoke("inf:integrations:sign-in-cancel", []);
+    await expect(started).rejects.toThrow();
+
+    const newer = await join("MacBook Pro", {
+      protocolVersion: "15.0.0",
+      viewFloor: 15,
+      changes: ["sign-in-return"],
+    });
     const signedIn = newer.invoke("inf:integrations:sign-in", ["google", NOTICE_ACCEPTED]);
     signedIn.catch(() => {});
     const page = signInPageSchema.parse(

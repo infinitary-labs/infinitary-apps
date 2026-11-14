@@ -69,7 +69,7 @@
   "recordModeDirectPr": "Como solicitud de incorporación de cambios",
   "recordModeInPlace": "Construido en el lugar",
   "recordModeLocalOnly": "Fusión local, sin solicitud de incorporación de cambios",
-  "recordModeQueuePr": "Como solicitud de incorporación de cambios por lotes que prueba la cola de tu proyecto",
+  "recordModeQueuePr": "Como solicitud de incorporación de cambios por lotes con tus otros cambios aprobados",
   "recordMoreBranch": "rama",
   "recordMoreComputerChoice": "la elección de computadora",
   "recordMoreDelivery": "entrega",

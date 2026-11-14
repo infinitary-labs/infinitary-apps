@@ -1,13 +1,5 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import {
-  commitEnvelope,
-  NAMING_DECISION,
-  readCommitApproval,
-  readCommitEnvelope,
-  revocationEnvelope,
-} from "../../../queue/shipped/message.mjs";
-import { REMOVED } from "../../../queue/shipped/rules.mjs";
 import { GitLabForge } from "./gitlabForge";
 
 /**
@@ -54,237 +46,6 @@ function forgeAnswering(answer: (method: string, path: string, init?: RequestIni
 }
 
 describe("GitLabForge", () => {
-  // F3: a local hold during the publisher's read cannot mint a newer public approval.
-  it("does not publish approval when its local permission ends during the GitLab read", async () => {
-    const current = request();
-    let held = false;
-    const { forge, fetcher } = forgeAnswering((method) => {
-      if (method === "GET") {
-        held = true;
-        return Response.json(current);
-      }
-      return Response.json({ id: 71 });
-    });
-    await expect(
-      forge.markQueued(current.sha, {
-        number: current.iid,
-        title: current.title,
-        naming: null,
-        beforeDispatch: () => (held ? "The merge approval was withdrawn" : undefined),
-      }),
-    ).rejects.toThrow("The merge approval was withdrawn");
-    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toEqual([]);
-  });
-
-  // Accepted fork queue repair: publish the distinct approved squash title, never edit the request.
-  it("queues a fork's approved squash title independently of its request title", async () => {
-    const current = request({ title: "Fix typo" });
-    const title = "Review the meter";
-    const notes: string[] = [];
-    const { forge, fetcher } = forgeAnswering((method, path, init) => {
-      if (method === "GET" && path.endsWith(`/merge_requests/${current.iid}`))
-        return Response.json(current);
-      if (method === "POST" && path.endsWith("/notes")) {
-        notes.push(JSON.parse(String(init?.body)).body);
-        return Response.json({ id: 72 });
-      }
-      if (method === "POST" && path.endsWith(`/statuses/${current.sha}`))
-        return Response.json({ id: 73 });
-      return Response.json({ message: "Unexpected request" }, { status: 500 });
-    });
-    await forge.markQueued(current.sha, {
-      number: current.iid,
-      title,
-      requestTitle: current.title,
-      message: "Keep the meter reading.",
-      naming: null,
-    });
-    expect(readCommitApproval(notes[0] ?? "", current.sha, current.title)).toEqual({
-      title,
-      body: "Keep the meter reading.",
-    });
-    expect(
-      fetcher.mock.calls
-        .filter(([, init]) => init?.method !== "GET")
-        .map(([, init]) => init?.method),
-    ).toEqual(["POST", "POST"]);
-  });
-
-  // F4/F5 + INF-3623: a passive reconcile never gets authority to rebind an external edit.
-  it("rejects a retitled old approval and preserves the named mark's summary and footer", async () => {
-    const current = request({
-      title: "Approved meter story",
-      description: "Named-review summary.\n\nBREAKING CHANGE: Keep once.",
-    });
-    const approvedTitle = current.title;
-    current.title = "Unapproved edit";
-    const notes: string[] = [];
-    const { forge, fetcher } = forgeAnswering((method, path, init) => {
-      if (method === "GET" && path.endsWith(`/merge_requests/${current.iid}`))
-        return Response.json(current);
-      if (method === "POST" && path.endsWith("/notes")) {
-        notes.push((JSON.parse(String(init?.body)) as { body: string }).body);
-        return Response.json({ id: 72 });
-      }
-      if (method === "POST" && path.endsWith(`/statuses/${current.sha}`))
-        return Response.json({ id: 73 });
-      return Response.json({ message: "Unexpected request" }, { status: 500 });
-    });
-    const approval = { number: current.iid, title: approvedTitle, naming: null };
-    await expect(forge.markQueued(current.sha, approval)).rejects.toThrow("moved");
-    expect(fetcher.mock.calls.filter(([, init]) => init?.method !== "GET")).toEqual([]);
-    current.title = approvedTitle;
-    await forge.markQueued(current.sha, approval);
-    expect(readCommitEnvelope(notes[0] ?? "", current.sha, approvedTitle)).toBe(
-      current.description,
-    );
-    expect(
-      fetcher.mock.calls
-        .filter(([, init]) => init?.method !== "GET")
-        .map(([url]) => new URL(String(url)).pathname),
-    ).toEqual([
-      `/api/v4${PROJECT}/merge_requests/${current.iid}/notes`,
-      `/api/v4${PROJECT}/statuses/${current.sha}`,
-    ]);
-  });
-
-  // Withdrawal must not invent authority or repeatedly post an untrusted revocation.
-  it("acknowledges Developer-only approval data without writing on either removal attempt", async () => {
-    const current = request();
-    const notes = [
-      {
-        id: 71,
-        author: { id: 7 },
-        body: `<!-- infinitary-merge-approval -->\n${commitEnvelope(current.sha, "Approved words", current.title, { naming: NAMING_DECISION.off })}`,
-      },
-    ];
-    const { forge, fetcher } = forgeAnswering((method, path) => {
-      if (method === "GET" && path.endsWith("/notes")) return Response.json(notes);
-      if (method === "GET" && path.endsWith("/members/all/7"))
-        return Response.json({ access_level: 30 });
-      return Response.json({ message: "Unexpected write" }, { status: 500 });
-    });
-    await forge.removeQueued(current.sha, current.iid);
-    await forge.removeQueued(current.sha, current.iid);
-    expect(fetcher.mock.calls.filter(([, init]) => init?.method !== "GET")).toEqual([]);
-  });
-
-  // An active Maintainer record cannot be acknowledged or spammed with Developer revocations.
-  it("refuses repeated Developer withdrawals before posting against a Maintainer's approval", async () => {
-    const current = request();
-    const { forge, fetcher } = forgeAnswering((method, path) => {
-      if (method === "GET" && path.endsWith("/notes"))
-        return Response.json([
-          {
-            id: 71,
-            author: { id: 8 },
-            body: `<!-- infinitary-merge-approval -->\n${commitEnvelope(current.sha, "Approved words", current.title, { naming: NAMING_DECISION.off })}`,
-          },
-        ]);
-      if (method === "GET" && path.endsWith("/members/all/8"))
-        return Response.json({ access_level: 40 });
-      if (method === "GET" && path === "/api/v4/user") return Response.json({ id: 7 });
-      if (method === "GET" && path.endsWith("/members/all/7"))
-        return Response.json({ access_level: 30 });
-      return Response.json({ message: "Unexpected write" }, { status: 500 });
-    });
-    await expect(forge.removeQueued(current.sha, current.iid)).rejects.toMatchObject({
-      failure: "permission",
-    });
-    await expect(forge.removeQueued(current.sha, current.iid)).rejects.toMatchObject({
-      failure: "permission",
-    });
-    expect(fetcher.mock.calls.filter(([, init]) => init?.method !== "GET")).toEqual([]);
-  });
-
-  // Captain F3/F4/N3: the existing GitLab key receives current approved words,
-  // including naming switched off, without replacing the contributor's description.
-  it("binds the approved comment to its mark and removes a held version", async () => {
-    const current = request({ title: "An approved free-form title" });
-    const notes: { id: number; body: string; author: { id: number } }[] = [
-      { id: 70, body: revocationEnvelope(current.sha), author: { id: 8 } },
-    ];
-    const statuses: { id: number; name: string; status: string; description: string }[] = [];
-    const { forge, fetcher } = forgeAnswering((method, path, init) => {
-      if (method === "GET" && path === `/api/v4${PROJECT}/merge_requests/${current.iid}`)
-        return Response.json(current);
-      if (method === "POST" && path.endsWith("/notes")) {
-        const note = {
-          id: 71 + notes.length,
-          body: (JSON.parse(String(init?.body)) as { body: string }).body,
-          author: { id: 7 },
-        };
-        notes.push(note);
-        return Response.json(note);
-      }
-      if (method === "GET" && path.endsWith("/notes")) return Response.json(notes);
-      if (method === "GET" && path === "/api/v4/user") return Response.json({ id: 7 });
-      if (method === "GET" && path.endsWith("/members/all/7"))
-        return Response.json({ access_level: 40 });
-      if (method === "POST" && path.endsWith(`/statuses/${current.sha}`)) {
-        const body = JSON.parse(String(init?.body)) as {
-          name: string;
-          state: string;
-          description: string;
-        };
-        const id = statuses.length + 41;
-        statuses.unshift({
-          id,
-          name: body.name,
-          status: body.state,
-          description: body.description,
-        });
-        return Response.json({ id });
-      }
-      if (method === "GET" && path.endsWith(`/repository/commits/${current.sha}/statuses`))
-        return Response.json(statuses);
-      return Response.json({ message: "Not found" }, { status: 404 });
-    });
-    await forge.removeQueued(current.sha, current.iid);
-    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toEqual([]);
-    await forge.markQueued(current.sha, {
-      number: current.iid,
-      title: current.title,
-      message: "The current override",
-      naming: null,
-    });
-    const commentWrite = fetcher.mock.calls.find(
-      ([url, init]) =>
-        init?.method === "POST" &&
-        String(url).endsWith("/notes") &&
-        String(init.body).includes("infinitary-merge-approval"),
-    );
-    const comment = JSON.parse(String(commentWrite?.[1]?.body)) as { body: string };
-    const encoded = /<!-- infinitary-squash:([0-9a-f]+) -->/.exec(comment.body)?.[1];
-    if (!encoded) throw new Error("the approval packet is missing");
-    const packet = JSON.parse(Buffer.from(encoded, "hex").toString("utf8")) as { naming: unknown };
-    expect(packet.naming).toBe(NAMING_DECISION.off);
-    expect(readCommitEnvelope(comment.body, current.sha, current.title)).toBe(
-      "The current override",
-    );
-    const mark = fetcher.mock.calls.find(
-      ([url, init]) => init?.method === "POST" && String(url).endsWith(`/statuses/${current.sha}`),
-    );
-    expect(JSON.parse(String(mark?.[1]?.body))).toMatchObject({
-      state: "skipped",
-      target_url: `${current.web_url}#note_${notes.at(-1)?.id}`,
-    });
-    await forge.removeQueued(current.sha, current.iid);
-    expect(notes.at(-1)).toMatchObject({
-      author: { id: 7 },
-      body: expect.stringContaining(revocationEnvelope(current.sha)),
-    });
-    const writes = fetcher.mock.calls.filter(([, init]) => init?.method === "POST");
-    expect(JSON.parse(String(writes.at(-1)?.[1]?.body))).toMatchObject({
-      state: "failed",
-      description: REMOVED,
-    });
-    await forge.removeQueued(current.sha, current.iid);
-    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(
-      writes.length,
-    );
-  });
-
   it("INF-203 F5: removes only the prerequisite draft prefix, at the reviewed version", async () => {
     let draft = true;
     const { forge, fetcher } = forgeAnswering((method) => {
@@ -743,145 +504,50 @@ describe("GitLabForge", () => {
     ).toBe(true);
   });
 
-  // INF-2952 piece 2, the captain's approved plan: "a crewmate's merge
-  // request adds its pipeline" on GitLab. The queue writes its waiting as a
-  // finished `skipped` status (GitLab refuses a waiting status set waiting
-  // again), so the app must read that status as the queue still waiting,
-  // never as a pass, whatever the pipeline it joined says.
-  it("reads the queue's waiting mark as still waiting and its pass as a pass, apart from the pipelines", async () => {
-    const head = "a".repeat(40);
-    let queue = [
-      {
-        id: 7,
-        name: "infinitary/queue",
-        status: "skipped",
-        description: "Waiting for the batch check",
-      },
-    ];
-    const { forge, fetcher } = forgeAnswering((method, path) => {
-      if (method === "POST" && path === `/api/v4${PROJECT}/statuses/${head}`)
-        return Response.json({ id: 8 });
-      if (path === `/api/v4${PROJECT}/merge_requests/4/pipelines`)
-        return Response.json([
-          { id: 30, sha: head, ref: "refs/merge-requests/4/head", status: "success" },
-        ]);
-      if (path === `/api/v4${PROJECT}/pipelines`) return Response.json([]);
-      if (path === `/api/v4${PROJECT}/pipelines/30/jobs`)
-        return Response.json([
-          { id: 1, name: "test", status: "success" },
-          { id: 2, name: "infinitary/queue", status: "skipped" },
-        ]);
-      if (path === `/api/v4${PROJECT}/repository/commits/${head}/statuses`)
-        return Response.json(queue);
-      return Response.json({ message: "404 Not Found" }, { status: 404 });
-    });
-    const change = { number: 4, url: null, branch: "fm/task-1", headSha: head };
-
-    expect(await forge.markQueued(head)).toEqual({ id: 8 });
-    const mark = fetcher.mock.calls.find(([, init]) => init?.method === "POST");
-    expect(JSON.parse(String(mark?.[1]?.body))).toEqual({
-      state: "skipped",
-      name: "infinitary/queue",
-      description: "Waiting for the batch check",
-    });
-    expect(forge.markStartsQueue).toBe(false);
-
-    const waiting = (await forge.checks(change)).items.filter(
-      (item) => item.name === "infinitary/queue",
+  // The team queue the app once shipped left its files in a project; the
+  // app reads only whether they are still there, for its one offer to remove
+  // them (docs/forge.md, "A project that still carries the team queue's files").
+  it("names the team queue's files a project still carries on its default branch", async () => {
+    const blob = (name: string) => ({ id: "0".repeat(40), name, type: "blob", path: name });
+    const { forge, fetcher } = forgeAnswering(() =>
+      Response.json({ message: "404 Not Found" }, { status: 404 }),
     );
-    expect(waiting).toEqual([
-      expect.objectContaining({
-        state: "pending",
-        statusId: 7,
-        detail: "Waiting for the batch check",
-      }),
-    ]);
+    // The folder and the branch ride the query, which this file's helper does not pass on.
+    fetcher.mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      if (url.pathname === `/api/v4${PROJECT}`) return Response.json({ default_branch: "trunk" });
+      if (url.pathname !== `/api/v4${PROJECT}/repository/tree`)
+        return Response.json({ message: "404 Not Found" }, { status: 404 });
+      expect(url.searchParams.get("ref")).toBe("trunk");
+      if (url.searchParams.get("path") === ".gitlab")
+        return Response.json([
+          { id: "1".repeat(40), name: "infinitary", type: "tree", path: ".gitlab/infinitary" },
+          blob("infinitary-queue.yml"),
+          blob("infinitary-batch.yml"),
+          blob("infinitary-batch-checks.yml"),
+          blob("merge_request_templates.md"),
+        ]);
+      // GitLab answers 404 for a folder the branch does not hold.
+      return Response.json({ message: "404 Tree Not Found" }, { status: 404 });
+    });
 
-    queue = [
-      {
-        id: 9,
-        name: "infinitary/queue",
-        status: "success",
-        description: `Passed batch run 41; tree ${"b".repeat(40)}`,
-      },
-      ...queue,
-    ];
-    const passed = (await forge.checks(change)).items.filter(
-      (item) => item.name === "infinitary/queue",
-    );
-    expect(passed).toEqual([expect.objectContaining({ state: "success", statusId: 9 })]);
+    expect(await forge.teamQueueLeftovers()).toEqual({
+      files: [
+        ".gitlab/infinitary-queue.yml",
+        ".gitlab/infinitary-batch.yml",
+        ".gitlab/infinitary-batch-checks.yml",
+      ],
+    });
   });
 
-  // The plan's "one click creates its project token": the token goes where
-  // only the queue's own jobs receive it, and the queue's older tokens are
-  // revoked; a refusal says what GitLab needs.
-  it("creates the queue's token and keeps it masked, protected and scoped to the queue's jobs", async () => {
-    const sent: { method: string; path: string; body: unknown }[] = [];
-    let variable = false;
-    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
-      const url = new URL(String(input));
-      const method = init?.method ?? "GET";
-      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-      if (method !== "GET") sent.push({ method, path: url.pathname, body });
-      if (url.pathname === `/api/v4${PROJECT}/access_tokens` && method === "GET")
-        return Response.json([
-          { id: 3, name: "Infinitary queue", active: true, expires_at: "2026-12-01" },
-          { id: 2, name: "deploy", active: true, expires_at: "2026-12-01" },
-        ]);
-      if (url.pathname === `/api/v4${PROJECT}/access_tokens` && method === "POST")
-        return Response.json({
-          id: 4,
-          name: "Infinitary queue",
-          expires_at: body.expires_at,
-          token: "glpat-new-queue-token",
-        });
-      if (url.pathname === `/api/v4${PROJECT}/variables/INFINITARY_QUEUE_TOKEN` && method === "GET")
-        return variable
-          ? Response.json({ key: "INFINITARY_QUEUE_TOKEN" })
-          : Response.json({ message: "404 Variable Not Found" }, { status: 404 });
-      if (url.pathname === `/api/v4${PROJECT}/variables` && method === "POST") {
-        variable = true;
-        return Response.json({ key: "INFINITARY_QUEUE_TOKEN" });
-      }
-      if (method === "DELETE") return new Response(null, { status: 204 });
-      return Response.json({ message: "404 Not Found" }, { status: 404 });
-    });
-    const forge = new GitLabForge(
-      { kind: "gitlab", host: HOST, owner: "group/subgroup", name: "app", dir: "/r" },
-      { token: async () => KEY, apiBaseUrl: `https://${HOST}/api/v4`, fetch: fetcher },
+  it("names nothing for a project that carries none of the team queue's files", async () => {
+    const { forge } = forgeAnswering((_method, path) =>
+      path === `/api/v4${PROJECT}`
+        ? Response.json({ default_branch: "main" })
+        : path === `/api/v4${PROJECT}/repository/tree`
+          ? Response.json([{ id: "2".repeat(40), name: "ci", type: "tree", path: ".gitlab/ci" }])
+          : Response.json({ message: "404 Not Found" }, { status: 404 }),
     );
-
-    expect(await forge.queueCredential()).toEqual({ state: "missing" });
-    const made = await forge.createQueueCredential();
-
-    expect(made).toMatchObject({ state: "ready" });
-    expect(sent.map((call) => `${call.method} ${call.path}`)).toEqual([
-      `POST /api/v4${PROJECT}/access_tokens`,
-      `POST /api/v4${PROJECT}/variables`,
-      `DELETE /api/v4${PROJECT}/access_tokens/3`,
-    ]);
-    expect(sent[0]?.body).toMatchObject({
-      name: "Infinitary queue",
-      scopes: ["api"],
-      access_level: 40,
-    });
-    expect(sent[1]?.body).toMatchObject({
-      key: "INFINITARY_QUEUE_TOKEN",
-      value: "glpat-new-queue-token",
-      masked: true,
-      protected: true,
-      environment_scope: "infinitary-queue",
-    });
-    expect(JSON.stringify(made)).not.toContain("glpat-new-queue-token");
-    expect(await forge.queueCredential()).toEqual({ state: "ready", expiresAt: "2026-12-01" });
-
-    const refusing = forgeAnswering((method) =>
-      method === "POST"
-        ? Response.json({ message: "403 Forbidden" }, { status: 403 })
-        : Response.json([]),
-    );
-    await expect(refusing.forge.createQueueCredential()).rejects.toThrow(
-      /Maintainer role on the project, and on gitlab.com a Premium or Ultimate plan/,
-    );
+    expect(await forge.teamQueueLeftovers()).toEqual({ files: [] });
   });
 });

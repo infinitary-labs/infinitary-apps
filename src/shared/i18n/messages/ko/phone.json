@@ -355,7 +355,7 @@
   "phoneRecordHoldsUp": "막고 있는 작업",
   "phoneRecordLandsMerged": "병합됨",
   "phoneRecordLandsRigor": "주의 수준: {care}",
-  "phoneRecordModeBatched": "프로젝트의 대기열이 검사하는 일괄 끌어오기 요청으로",
+  "phoneRecordModeBatched": "승인된 다른 변경과 함께 일괄 끌어오기 요청으로",
   "phoneRecordModeInPlace": "그 자리에서 만듦",
   "phoneRecordModeLocal": "끌어오기 요청 없이 로컬에서 병합",
   "phoneRecordModePullRequest": "끌어오기 요청으로",

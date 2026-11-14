@@ -19,6 +19,7 @@ import {
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { within } from "./layout";
+import { promptInput } from "./prompt";
 import { writeInstallerMarker } from "./savedDataFixtures";
 import { pressKey, runFromSearch } from "./windowKeys";
 
@@ -231,6 +232,17 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
       caughtUp: 0,
     });
     await expect(air.page.locator('[data-view-pill="newer-there"]')).toContainText(pill ?? "");
+    // INF-4012 piece 2: the message box stays on, and plain words reach the first mate there. A home
+    // from major 16 on says it hears them by its version; an older one does not, so this pair owns the proof.
+    const words = "Merge the harbour fix";
+    await promptInput(air.page).fill(words);
+    await air.page.keyboard.press("Enter");
+    await expect
+      .poll(
+        async () => (await pro.page.evaluate(() => window.infinitary.conversation.lastTurn()))?.you,
+      )
+      .toBe(words);
+    await expect(promptInput(air.page)).toHaveValue("");
     // The way to act on it: this Mac's own notice, as the other Mac shows its own.
     await expectOffer(air, {
       version: "0.1.30-alpha.5",

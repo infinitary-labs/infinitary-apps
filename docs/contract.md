@@ -124,6 +124,7 @@ These cross majors:
 | --- | --- |
 | `WORK_UPDATE_SINCE` (1.76) | The home asks a computer the update order, `fm:firstmate:update`, on any major (`takesUpdate`); Settings -> Devices updates an older one by a new command run there (`docs/devices.md`, "Updating over the connection"). |
 | `WORK_DOWNLOAD_SINCE` (8.15) | The home has a Mac elsewhere download the home's published version itself, with the download orders, on any major (`takesDownload`); an older one is updated with the update order alone (`docs/devices.md`, "Downloading over the connection"). |
+| `FOLDED_INTO_16_SINCE` (16.0) | A view and a home have each addition major 16 folded in, which kept views, from this version on, and an older side has one only by the name it lists (`hasSince16`); a phone reads its own the same way (`PhoneContract.foldedInto16Since`). |
 | `FETCH_APP_SYSTEM_SINCE` (5.1) | A computer names its `system` and `chip` where it gets Infinitary (`fetchApp`'s request) only to a home on this version or later, which answers the copy published for them (`readsFetchAppSystem`; `docs/devices.md`, "Infinitary for another system"); an older home reads the request strictly and refuses them. |
 
 These wait within a major, and every one but the last is older than major 10, so every computer that takes work from a home on 10 has it:
@@ -176,9 +177,9 @@ A view's `inf:cards:minimize` changes saved stack visibility without resolving a
 The optional fourth boolean argument of `inf:cards:reply`, an older view's send-time decision that an ordinary card leaves the stack, is read no more (INF-770).
 Every replied-under card stays, and the home keeps the hold in the existing awaiting and reply-stamp fields; waiting stamped cards keep their place until answered.
 
-A card's files for the captain (`docs/card-authoring.md`, "Files for the captain") ride the card as references in its optional `files`, the `card-files` change, and travel only by the `inf:cards:file` view read, a piece of 1 MB at a time, when the captain clicks Save.
+A card's files for the captain (`docs/card-authoring.md`, "Files for the captain") ride the card as references in its optional `files` (added before major 16 as `card-files`), and travel only by the `inf:cards:file` view read, a piece of 1 MB at a time, when the captain clicks Save.
 A preview's project fonts (`docs/card-authoring.md`, "Fonts by reference") travel by the `inf:cards:typeface` view read, which answers the home's own copy of a font by its minted name, and by the `inf:work:typeface` work request, which carries a kept font home before the card that names it.
-A card's data files (`docs/card-authoring.md`, "Data by reference"), the `card-data` change, travel by the `inf:cards:data` view read, which answers the home's own copy of one as text by its minted name, and as a card's media by the `inf:work:media` work request before the card that names them, only to a home that lists the change.
+A card's data files (`docs/card-authoring.md`, "Data by reference"; added before major 16 as `card-data`) travel by the `inf:cards:data` view read, which answers the home's own copy of one as text by its minted name, and as a card's media by the `inf:work:media` work request before the card that names them.
 
 A saved story's `version` is 1 or 2: version 2 carries up to six typed `checked` facts beside folded `verification`, and a version-1 story stays readable and keeps its rendering (`docs/forge.md`, "Saved change stories").
 `inf:work:prepare-change` stages a saved change story, and change publication and merge cards may carry its revision.
@@ -194,13 +195,16 @@ The named waits before it retire: every computer taking work on this major has e
 
 ### Tasks, projects and routing
 
-A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a change whose kept merge click waits for the person's own batch or for the project's team queue (major 13; `docs/forge.md`, "Batches of your own" and "A project's queue").
+A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a change whose kept merge click waits for the person's own batch (major 13; `docs/forge.md`, "Batches of your own").
 A computer on another major takes no work; the current view floor is 15 because the protected Secrets host actions extend another closed set.
 Queue delivery already requires major 13, and its older readers remain read-only.
 The named waits before it retire: every computer taking work on this major has each earlier change, and a view meets an older home's current-update sightings through `CARD_SEEN_UPDATE_SINCE`.
 Major 15 also absorbs crewmate programs, first-mate folding, frame parts, GitLab queue credentials, integration task-wide Allow and shipped queue pauses.
 Connection admission owns work compatibility; placed callbacks do not repeat the same major check for each absorbed feature.
 Older read-only views still receive frame parts and task-wide Allow only when they advertise those historical additions.
+Major 16 removes the team queue from the contract: the `inf:repos:queue-answer`, `inf:repos:queue-credential` and `inf:repos:queue-credential-create` requests, a project's `queueWorkflows`, `queueAnsweredAt`, `queuePendingAt` and `queuePause`, the team queue's meaning of check_change's `answered` verdict, which now answers only the host's own merge queue removing a version, and the `repo_queue` event, which `repo_batch` replaces (`src/shared/contract-changes/major-16.md`).
+It keeps the view floor at 15: every removed field was optional, the removed requests served only the team queue's own panels, and a view ignores an event type it does not know.
+It absorbs every addition named since major 15, so a side on major 16 or later has each by its version, and a view or a home on major 15 is still served the ones it lists by name (`hasSince16`, `src/shared/contractFeatures.ts`).
 
 Tasks may deliver `operation`, constraints may declare it, model reasons carry R12, and Usage’s closed grouping set includes operation (major 12, included in the current work major).
 A computer on another major takes no work, so the new deliverable is never sent to a computer that cannot read it.

@@ -1475,22 +1475,6 @@
       <string>%1$ld projects</string>
     </dict>
   </dict>
-  <key>settingsProjectsPauseSummary</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%2$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Paused since %4$@: batch run %3$@ failed its checks, so one approved change waits for a fix: %1$@.</string>
-      <key>other</key>
-      <string>Paused since %4$@: batch run %3$@ failed its checks, so %2$ld approved changes wait for a fix: %1$@.</string>
-    </dict>
-  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

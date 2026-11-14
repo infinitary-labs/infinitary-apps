@@ -1,5 +1,4 @@
 import { type CheckChangeInput, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
-import { QUEUE_STATUS } from "@shared/repos";
 import { type ForgeCheck, isRedCheckState } from "../forge";
 import type { TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
@@ -105,24 +104,17 @@ export function declareCheckAction(
     )
       return {
         read: false,
-        text: "Check declaration refused: readiness is expressed by the merge offer, not a separate ready or red verdict. Use declaration only for a flake, a repair settlement or an answer to the queue.",
+        text: "Check declaration refused: readiness is expressed by the merge offer, not a separate ready or red verdict. Use declaration only for a flake, a repair settlement or an answer to the host's merge queue.",
       };
     if (!declaration.headSha.trim())
       return { read: false, text: "Check declaration refused: name the version." };
-    if (declaration.verdict === "answered") {
-      // An answer is to the queue's own failed status at that version, as
-      // the newest reading holds it: a closed fact, never the crew's words.
-      const snapshot = task.delivery?.checks;
-      const queue =
-        snapshot?.headSha === declaration.headSha
-          ? snapshot.items.find((item) => item.name === QUEUE_STATUS)
-          : undefined;
-      if ((!queue || !isRedCheckState(queue.state)) && !hostRemoved(task, declaration.headSha))
-        return {
-          read: false,
-          text: `Answer refused: the newest reading shows no failed ${QUEUE_STATUS} at ${declaration.headSha}, and the host's own merge queue has not removed that version. Read the checks with check_change first; answer only the queue's failure or send-back of the version it is on.`,
-        };
-    }
+    if (declaration.verdict === "answered" && !hostRemoved(task, declaration.headSha))
+      // An answer is to the host's own merge queue removing that version, as
+      // the kept approval recorded it: a closed fact, never the crew's words.
+      return {
+        read: false,
+        text: `Answer refused: the host's own merge queue has not removed ${declaration.headSha}. Answer only that queue's removal of the version it is on.`,
+      };
     if (declaration.verdict === "settled" && (!declaration.repairId || !declaration.outcome))
       return { read: false, text: "Settlement refused: name the repair and its declared outcome." };
     if (declaration.verdict === "settled") {
@@ -177,9 +169,7 @@ export function declareCheckAction(
     text: input.diagnosis
       ? `Diagnosis recorded with evidence.${input.diagnosis.dependencyTask && tasks.resolve(input.diagnosis.dependencyTask) ? dependencyWords(tasks, tasks.resolve(input.diagnosis.dependencyTask)!) : ""}`
       : input.declaration?.verdict === "answered"
-        ? hostRemoved(task, input.declaration.headSha)
-          ? `Answer to the merge queue's removal recorded with evidence. The captain's kept merge approval sends ${input.declaration.headSha} to that queue once more, when your turn ends. Put up no card for it.`
-          : `Answer to the queue recorded with evidence. The captain's kept merge approval, where one covers ${input.declaration.headSha}, marks it waiting for the queue again once, when your turn ends; without one, nothing is marked until the captain's merge click. Put up no card for it.`
+        ? `Answer to the merge queue's removal recorded with evidence. The captain's kept merge approval sends ${input.declaration.headSha} to that queue once more, when your turn ends. Put up no card for it.`
         : "Crew check declaration recorded with evidence. No merge was authorized.",
   };
 }

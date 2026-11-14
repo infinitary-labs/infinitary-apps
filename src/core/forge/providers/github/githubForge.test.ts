@@ -1,21 +1,10 @@
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { stub } from "../../../../../tests/helpers/githubForgeStub";
+import { type Route, stub } from "../../../../../tests/helpers/githubForgeStub";
 import { BUNDLED_NAMING } from "../../../../../tests/helpers/namingRunbook";
 import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
-import { GITHUB_QUEUE_PART, shippedFiles } from "../../../queue/shipped";
-import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
-import {
-  commitEnvelope,
-  NAMING_DECISION,
-  readCommitApproval,
-  readCommitEnvelope,
-  revocationEnvelope,
-} from "../../../queue/shipped/message.mjs";
-import { PAUSE_LABEL, pauseIssue, REMOVED } from "../../../queue/shipped/rules.mjs";
-import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../forge";
+import { BATCH_CHECK } from "../../forge";
 import { presentationCommitMessage } from "../../presentation";
 import { readOpenChanges } from "./changes";
 import {
@@ -33,9 +22,6 @@ import {
  * runs AND commit statuses, and every failure typed. PR 1.2 binds it to the
  * app's own GitHub sign-in; here the token is the test's.
  */
-
-/** The shipped queue's one source, which a project's files are generated from. */
-const SHIPPED_SOURCE_DIR = fileURLToPath(new URL("../../../queue/shipped/", import.meta.url));
 
 const PULL = {
   number: 23,
@@ -308,404 +294,121 @@ describe("GitHubForge", () => {
     ]);
   });
 
-  // INF-2430 piece 2: the app's contract with a project's queue is one commit
-  // status, infinitary/queue, which the merge click writes as waiting.
-  it("marks a version waiting for the project's queue with the infinitary/queue status, then reads the queue's answer as a check", async () => {
-    let statuses: { context: string; state: string }[] = [];
-    const { forge, seen } = await stub({
-      "POST /repos/octo/meter/statuses/feedbeef": (request) => {
-        statuses = [{ context: "infinitary/queue", state: "pending" }];
-        return { status: 201, json: { id: 1, ...(request.body as object) } };
-      },
-      "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
-        json: { total_count: 0, check_runs: [] },
-      }),
-      "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses } }),
-    });
-    await forge.markQueued("feedbeef");
-    const write = seen.find((request) => request.method === "POST");
-    expect(write?.body).toEqual({
-      state: "pending",
-      context: QUEUE_STATUS,
-      description: QUEUE_WAITING_WORDS,
-    });
-    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: x" };
-    expect((await forge.checks(change)).items).toMatchObject([
-      { name: QUEUE_STATUS, state: "pending" },
-    ]);
-    // The queue's own answer, written where the project lives, is the check's state.
-    statuses = [{ context: "infinitary/queue", state: "failure" }];
-    expect((await forge.checks(change)).items).toMatchObject([
-      { name: QUEUE_STATUS, state: "failure" },
-    ]);
-  });
-
-  // F3: a local hold during the publisher's read cannot mint a newer public approval.
-  it("does not publish approval when its local permission ends during the GitHub read", async () => {
-    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-    const title = "fix: the meter";
-    let held = false;
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/pulls/23": () => {
-        held = true;
-        return { json: { head: { sha: head }, title } };
-      },
-    });
-    await expect(
-      forge.markQueued(head, {
-        number: 23,
-        title,
-        naming: null,
-        beforeDispatch: () => (held ? "The merge approval was withdrawn" : undefined),
-      }),
-    ).rejects.toThrow("The merge approval was withdrawn");
-    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
-  });
-
-  // Accepted fork queue repair: request identity and approved squash words are independent.
-  it("queues a fork's approved squash title without renaming its request", async () => {
-    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-    const requestTitle = "Fix typo";
-    const title = "Review the meter";
-    const comments: string[] = [];
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/pulls/23": () => ({
-        json: { head: { sha: head }, title: requestTitle },
-      }),
-      "POST /repos/octo/meter/issues/23/comments": (request) => {
-        comments.push((request.body as { body: string }).body);
-        return { json: { html_url: "https://github.com/octo/meter/pull/23#issuecomment-72" } };
-      },
-      [`POST /repos/octo/meter/statuses/${head}`]: () => ({ json: { id: 73 } }),
-    });
-    await forge.markQueued(head, {
-      number: 23,
-      title,
-      requestTitle,
-      message: "Keep the meter reading.",
-      naming: null,
-    });
-    expect(readCommitApproval(comments[0] ?? "", head, requestTitle)).toEqual({
-      title,
-      body: "Keep the meter reading.",
-    });
-    expect(seen.filter((row) => row.method !== "GET").map((row) => row.method)).toEqual([
-      "POST",
-      "POST",
-    ]);
-  });
-
-  // F4/F5 + INF-3623: only an explicit approved mark may replace words, never a passive live edit.
-  it("rejects a retitled old approval and preserves a named mark's description and footer", async () => {
-    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-    const approvedTitle = "fix: meter story";
-    let liveTitle = "feat!: an unapproved edit";
-    const description = "Approved named-review summary.\n\nBREAKING CHANGE: Keep once.";
-    const comments: string[] = [];
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/pulls/23": () => ({
-        json: { head: { sha: head }, title: liveTitle, body: description },
-      }),
-      "POST /repos/octo/meter/issues/23/comments": (request) => {
-        comments.push((request.body as { body: string }).body);
-        return { json: { html_url: "https://github.com/octo/meter/pull/23#issuecomment-72" } };
-      },
-      [`POST /repos/octo/meter/statuses/${head}`]: () => ({ json: { id: 73 } }),
-    });
-    const approval = { number: 23, title: approvedTitle, naming: null };
-    await expect(forge.markQueued(head, approval)).rejects.toThrow("moved");
-    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
-    liveTitle = approvedTitle;
-    await forge.markQueued(head, approval);
-    expect(readCommitEnvelope(comments[0] ?? "", head, approvedTitle)).toBe(description);
-    expect(seen.filter((row) => row.method === "POST").map((row) => row.url)).toEqual([
-      "/repos/octo/meter/issues/23/comments",
-      `/repos/octo/meter/statuses/${head}`,
-    ]);
-  });
-
-  // The warning's second case: an active trusted grant needs a merge-level withdrawal author.
-  it("refuses repeated lower-role withdrawals before posting against another maintainer's approval", async () => {
-    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/issues/23/comments": () => ({
+  // The team queue the app once shipped left its files in a project; the
+  // app reads only whether they are still there, for its one offer to remove
+  // them (docs/forge.md, "A project that still carries the team queue's files").
+  describe("the team queue's files a project still carries", () => {
+    const entry = (name: string, type = "file") => ({ name, type, path: name });
+    const queueFiles = {
+      "GET /repos/octo/meter": () => ({ json: { default_branch: "main" } }),
+      "GET /repos/octo/meter/contents/.github/workflows": () => ({
         json: [
-          {
-            id: 71,
-            user: { login: "maintainer" },
-            body: `<!-- infinitary-merge-approval -->\n${commitEnvelope(head, "Approved words", "fix: the meter", { naming: NAMING_DECISION.off })}`,
-          },
+          entry("ci.yml"),
+          entry("infinitary-queue.yml"),
+          entry("infinitary-batch-checks.yml"),
         ],
       }),
-      "GET /repos/octo/meter/collaborators/maintainer/permission": () => ({
-        json: { permission: "write" },
+      "GET /repos/octo/meter/contents/.github/actions/infinitary-batch": () => ({
+        json: [entry("action.yml"), entry("compose.sh")],
       }),
-      "GET /user": () => ({ json: { login: "contributor" } }),
-      "GET /repos/octo/meter/collaborators/contributor/permission": () => ({
-        json: { permission: "read" },
+      "GET /repos/octo/meter/contents/.github/infinitary": () => ({
+        json: [
+          entry("rules.mjs"),
+          entry("message.mjs"),
+          entry("github.mjs"),
+          entry("notes", "dir"),
+        ],
       }),
-    });
-    await expect(forge.removeQueued(head, 23)).rejects.toMatchObject({ failure: "permission" });
-    await expect(forge.removeQueued(head, 23)).rejects.toMatchObject({ failure: "permission" });
-    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
-  });
-
-  // Captain F3/F4/N3: the approval comment carries active naming and exact words;
-  // the waiting mark points to that comment, and removal is visible and idempotent.
-  it("publishes approved merge words before marking and removes a held mark", async () => {
-    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-    const title = "Ship queue support";
-    const message = "Current override words.\n\nBREAKING CHANGE: Keep this footer exactly once.";
-    const commentBase = "https://github.com/octo/meter/pull/23#issuecomment-71";
-    const comments: { id: number; body: string; html_url: string; user: { login: string } }[] = [
-      {
-        id: 70,
-        body: revocationEnvelope(head),
-        html_url: "https://github.com/octo/meter/pull/23#issuecomment-70",
-        user: { login: "former-maintainer" },
-      },
+    } satisfies Record<string, Route>;
+    const FILES = [
+      ".github/workflows/infinitary-queue.yml",
+      ".github/workflows/infinitary-batch-checks.yml",
+      ".github/actions/infinitary-batch/action.yml",
+      ".github/actions/infinitary-batch/compose.sh",
+      ".github/infinitary/rules.mjs",
+      ".github/infinitary/message.mjs",
+      ".github/infinitary/github.mjs",
     ];
-    let statuses: { context: string; description: string }[] = [];
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/pulls/23": () => ({
-        json: { head: { sha: head }, title, body: "The older description" },
-      }),
-      "POST /repos/octo/meter/issues/23/comments": ({ body }) => {
-        const id = 71 + comments.length;
-        const comment = {
-          id,
-          body: (body as { body: string }).body,
-          html_url: commentBase.replace(/71$/, String(id)),
-          user: { login: "maintainer" },
-        };
-        comments.push(comment);
-        return { status: 201, json: comment };
-      },
-      "GET /repos/octo/meter/issues/23/comments": () => ({ json: comments }),
-      "GET /user": () => ({ json: { login: "maintainer" } }),
-      "GET /repos/octo/meter/collaborators/maintainer/permission": () => ({
-        json: { permission: "write" },
-      }),
-      [`POST /repos/octo/meter/statuses/${head}`]: ({ body }) => {
-        statuses = [body as { context: string; description: string }];
-        return { status: 201, json: { id: 41 } };
-      },
-      [`GET /repos/octo/meter/commits/${head}/statuses`]: () => ({ json: statuses }),
-    });
-    // An approval of an unmarked version must not acquire a failing queue status on withdrawal.
-    await forge.removeQueued(head, 23);
-    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
-    expect(
-      await forge.markQueued(head, {
-        number: 23,
-        title,
-        message,
-        naming: { pattern: "^Ship .+$" },
-      }),
-    ).toEqual({ id: 41 });
-    const comment = seen
-      .filter((row) => row.method === "POST" && row.url.endsWith("/comments"))
-      .at(-1)?.body as { body: string };
-    const commentUrl = comments.at(-1)?.html_url;
-    const encoded = /<!-- infinitary-squash:([0-9a-f]+) -->/.exec(comment.body)?.[1];
-    if (!encoded) throw new Error("the approval packet is missing");
-    const packet = JSON.parse(Buffer.from(encoded, "hex").toString("utf8")) as { naming: unknown };
-    expect(packet.naming).toBe(NAMING_DECISION.checked);
-    expect(readCommitEnvelope(comment.body, head, title)).toBe(message);
-    expect(
-      seen.find((row) => row.url.includes("/statuses/") && row.method === "POST")?.body,
-    ).toMatchObject({ state: "pending", target_url: commentUrl });
-    await forge.removeQueued(head, 23);
-    expect(comments.at(-1)).toMatchObject({
-      user: { login: "maintainer" },
-      body: expect.stringContaining(revocationEnvelope(head)),
-    });
-    expect(statuses[0]?.description).toBe(REMOVED);
-    const writes = seen.filter((row) => row.method === "POST").length;
-    await forge.removeQueued(head, 23);
-    expect(seen.filter((row) => row.method === "POST")).toHaveLength(writes);
-    expect(seen.some((row) => row.method === "PATCH")).toBe(false);
-  });
 
-  // INF-2886: the captain's "warn when the queue choice finds no workflow
-  // that answers infinitary/queue". The files are this project's own batch
-  // workflow's opening and its check workflow's, as GitHub's contents read
-  // answers them; a workflow the default branch no longer has is left out.
-  it("reads the workflows that mention the queue status on the default branch, with each one's on or off state", async () => {
-    const batch = [
-      "name: batch",
-      "",
-      "# The swept batch before main. The captain's merge click marks the approved version with the",
-      "# commit status infinitary/queue, pending; this workflow gathers every",
-      "on:",
-      "  status:",
-      "jobs:",
-      "  sweep:",
-      "    if: github.event.context == 'infinitary/queue' && github.event.state == 'pending'",
-    ].join("\n");
-    const ci = ["name: ci", "on:", "  pull_request:", "jobs:", "  typecheck-lint-build:"].join(
-      "\n",
-    );
-    let batchState = "active";
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/actions/workflows": () => ({
-        json: {
-          total_count: 3,
-          workflows: [
-            { id: 1, name: "ci", path: ".github/workflows/ci.yml", state: "active" },
-            { id: 2, name: "batch", path: ".github/workflows/batch.yml", state: batchState },
-            { id: 3, name: "old", path: ".github/workflows/old.yml", state: "active" },
-          ],
-        },
-      }),
-      "GET /repos/octo/meter/contents/.github/workflows/ci.yml": () => ({
-        json: { encoding: "base64", content: Buffer.from(ci).toString("base64") },
-      }),
-      "GET /repos/octo/meter/contents/.github/workflows/batch.yml": () => ({
-        json: { encoding: "base64", content: Buffer.from(batch).toString("base64") },
-      }),
-    });
-    expect(await forge.queueWorkflows()).toEqual([
-      { path: ".github/workflows/batch.yml", active: true },
-    ]);
-    // Each file is read where it lives, through the project's own address.
-    expect(seen.map((request) => request.url.split("?")[0])).toContain(
-      "/repos/octo/meter/contents/.github/workflows/old.yml",
-    );
-    batchState = "disabled_manually";
-    expect(await forge.queueWorkflows()).toEqual([
-      { path: ".github/workflows/batch.yml", active: false },
-    ]);
-  });
-
-  // The shipped queue (the captain's shipped-queue and claim-issue answers):
-  // its stamp names the version every teammate's Infinitary reads, its pause
-  // issue holds the pause, and Settings starts it by hand.
-  // The review's reads-every-workflow finding: every start and merge reads a
-  // project's queue, so the stamped file is read first and alone.
-  it("reads the shipped queue's version from its stamp, reading no other workflow", async () => {
-    const queueFile = shippedFiles(SHIPPED_SOURCE_DIR, GITHUB_QUEUE_PART).find(
-      (file) => file.path === GITHUB_QUEUE_PART.queueFile,
-    );
-    let stamped = true;
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/actions/workflows": () => ({
-        json: {
-          total_count: 2,
-          workflows: [
-            { id: 1, name: "ci", path: ".github/workflows/ci.yml", state: "active" },
-            { id: 2, name: "queue", path: GITHUB_QUEUE_PART.queueFile, state: "active" },
-          ],
-        },
-      }),
-      [`GET /repos/octo/meter/contents/${GITHUB_QUEUE_PART.queueFile}`]: () =>
-        stamped
-          ? {
-              json: {
-                encoding: "base64",
-                content: Buffer.from(queueFile?.text ?? "").toString("base64"),
+    it("names each file on the default branch and the rule set that still requires the queue's status", async () => {
+      const { forge, seen } = await stub({
+        ...queueFiles,
+        "GET /repos/octo/meter/rules/branches/main": () => ({
+          json: [
+            { type: "pull_request", ruleset_id: 7 },
+            {
+              type: "required_status_checks",
+              ruleset_id: 9,
+              parameters: {
+                required_status_checks: [
+                  { context: "typecheck-lint-build" },
+                  { context: BATCH_CHECK },
+                ],
               },
-            }
-          : { status: 404, json: { message: "Not Found" } },
-      "GET /repos/octo/meter/contents/.github/workflows/ci.yml": () => ({
-        json: { encoding: "base64", content: Buffer.from("name: ci").toString("base64") },
-      }),
+            },
+          ],
+        }),
+        "GET /repos/octo/meter/rulesets/9": () => ({ json: { id: 9, name: "main checks" } }),
+      });
+      expect(await forge.teamQueueLeftovers()).toEqual({
+        files: FILES,
+        rule: 'rule set "main checks"',
+      });
+      // Every folder is read on the default branch, never on a task's own.
+      expect(
+        seen.filter((request) => request.url.includes("/contents/")).map((request) => request.url),
+      ).toEqual([
+        "/repos/octo/meter/contents/.github/workflows?ref=main",
+        "/repos/octo/meter/contents/.github/actions/infinitary-batch?ref=main",
+        "/repos/octo/meter/contents/.github/infinitary?ref=main",
+      ]);
     });
-    const reads = () =>
-      seen
-        .map((request) => request.url.split("?")[0] ?? "")
-        .filter((url) => url.includes("/contents/"));
-    expect(await forge.queueWorkflows()).toEqual([
-      { path: GITHUB_QUEUE_PART.queueFile, active: true, shipped: GITHUB_QUEUE_PART.version },
-    ]);
-    expect(reads()).toEqual([`/repos/octo/meter/contents/${GITHUB_QUEUE_PART.queueFile}`]);
 
-    // A project that is not batched reads only the queue's own file, and
-    // the other files only when its own queue matters.
-    stamped = false;
-    seen.length = 0;
-    expect(await forge.queueWorkflows({ all: false })).toEqual([]);
-    expect(reads()).toEqual([`/repos/octo/meter/contents/${GITHUB_QUEUE_PART.queueFile}`]);
-    seen.length = 0;
-    await forge.queueWorkflows();
-    expect(reads()).toContain("/repos/octo/meter/contents/.github/workflows/ci.yml");
-  });
+    it("names the branch's own protection when no rule set requires the status", async () => {
+      const { forge } = await stub({
+        ...queueFiles,
+        "GET /repos/octo/meter/rules/branches/main": () => ({ json: [] }),
+        "GET /repos/octo/meter/branches/main/protection/required_status_checks": () => ({
+          json: {
+            strict: false,
+            contexts: ["typecheck-lint-build"],
+            checks: [{ context: BATCH_CHECK }],
+          },
+        }),
+      });
+      expect(await forge.teamQueueLeftovers()).toEqual({
+        files: FILES,
+        rule: "branch protection rule for main",
+      });
+    });
 
-  it("reads the pause from the queue's open issue, with its first assignee as the claim", async () => {
-    const pause = {
-      run: 4410,
-      description: "",
-      members: [
-        { number: 12, head: "a".repeat(40) },
-        { number: 14, head: "b".repeat(40) },
-      ],
-      failed: [
-        {
-          name: "batch checks / unit",
-          url: "https://github.com/octo/meter/actions/runs/4410/job/1",
-        },
-      ],
-      failedFiles: [],
-    };
-    const issue = pauseIssue(pause, "https://github.com/octo/meter/actions/runs/4410");
-    let assignees: { login: string }[] = [];
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter/issues": () => ({
-        json: [
-          { html_url: "https://github.com/octo/meter/issues/3", body: "Someone else's issue" },
-          { html_url: "https://github.com/octo/meter/issues/88", body: issue.body, assignees },
-        ],
-      }),
+    it("names the files alone when no rule requires the status or the sign-in may not read the rules", async () => {
+      const { forge } = await stub({
+        ...queueFiles,
+        "GET /repos/octo/meter/contents/.github/actions/infinitary-batch": () => ({
+          status: 404,
+          json: { message: "Not Found" },
+        }),
+        "GET /repos/octo/meter/rules/branches/main": () => ({ json: [] }),
+        "GET /repos/octo/meter/branches/main/protection/required_status_checks": () => ({
+          status: 403,
+          json: { message: "Resource not accessible by integration" },
+        }),
+      });
+      expect(await forge.teamQueueLeftovers()).toEqual({
+        files: FILES.filter((path) => !path.startsWith(".github/actions/")),
+      });
     });
-    expect(await forge.queuePause()).toEqual({
-      run: 4410,
-      changes: [12, 14],
-      url: "https://github.com/octo/meter/issues/88",
-    });
-    expect(seen[0]?.url).toContain(`labels=${PAUSE_LABEL}`);
-    assignees = [{ login: "rosa" }, { login: "kim" }];
-    expect((await forge.queuePause())?.claimedBy).toBe("rosa");
-  });
 
-  it("starts the shipped queue by hand on the default branch with its answer", async () => {
-    const { forge, seen } = await stub({
-      "GET /repos/octo/meter": () => ({ json: { default_branch: "trunk" } }),
-      [`POST /repos/octo/meter/actions/workflows/${QUEUE_WORKFLOW}/dispatches`]: () => ({
-        status: 204,
-      }),
+    it("reads no rule for a project that carries none of the queue's files", async () => {
+      const { forge, seen } = await stub({
+        "GET /repos/octo/meter": () => ({ json: { default_branch: "main" } }),
+        "GET /repos/octo/meter/contents/.github/workflows": () => ({ json: [entry("ci.yml")] }),
+      });
+      expect(await forge.teamQueueLeftovers()).toEqual({ files: [] });
+      expect(seen.some((request) => request.url.includes("/rules/"))).toBe(false);
+      expect(seen.some((request) => request.url.includes("/protection/"))).toBe(false);
     });
-    await forge.startQueue({ action: "send-back", number: 14, reason: "It breaks alone" });
-    await forge.startQueue({ action: "form" });
-    expect(
-      seen.filter((request) => request.method === "POST").map((request) => request.body),
-    ).toEqual([
-      { ref: "trunk", inputs: { action: "send-back", reason: "It breaks alone", number: "14" } },
-      { ref: "trunk", inputs: { action: "form" } },
-    ]);
-  });
-
-  it("keeps the queue mark's status id, so a later write by the project's queue reads as another status", async () => {
-    let statuses: { id: number; context: string; state: string }[] = [];
-    const { forge } = await stub({
-      "POST /repos/octo/meter/statuses/feedbeef": (request) => {
-        statuses = [{ id: 41, context: "infinitary/queue", state: "pending" }];
-        return { status: 201, json: { id: 41, ...(request.body as object) } };
-      },
-      "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
-        json: { total_count: 0, check_runs: [] },
-      }),
-      "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses } }),
-    });
-    expect(await forge.markQueued("feedbeef")).toEqual({ id: 41 });
-    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: x" };
-    expect((await forge.checks(change)).items).toMatchObject([
-      { name: QUEUE_STATUS, state: "pending", statusId: 41 },
-    ]);
-    // The batch picked it up: still waiting, but a status of its own.
-    statuses = [{ id: 57, context: "infinitary/queue", state: "pending" }];
-    expect((await forge.checks(change)).items).toMatchObject([
-      { name: QUEUE_STATUS, state: "pending", statusId: 57 },
-    ]);
   });
 
   it("relays check runs and commit statuses without a suite verdict", async () => {

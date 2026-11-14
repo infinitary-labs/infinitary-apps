@@ -6,7 +6,7 @@ import {
   EMPTY_BATCH_RECORD,
 } from "@shared/batches";
 import { describe, expect, it } from "vitest";
-import { QUEUE_WAITING_WORDS } from "../forge";
+import { BATCH_WAITING_WORDS } from "../forge";
 import type { Combined } from "./combine";
 import {
   batchStatus,
@@ -401,7 +401,7 @@ describe("a batch's place on its changes", () => {
   it("says a change in line waits for the batch check, and one in the batch is being checked", () => {
     expect(batchStatus({ state: "waiting", place: "line" })).toEqual({
       kind: "waiting",
-      words: QUEUE_WAITING_WORDS,
+      words: BATCH_WAITING_WORDS,
     });
     expect(batchStatus(standing(openBatch(), PARSER.taskId, PARSER.head) as never)).toEqual({
       kind: "in-batch",

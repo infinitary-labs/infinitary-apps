@@ -201,12 +201,12 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     name: z.string(),
   }),
   /**
-   * A project's queue facts changed (docs/forge.md, "A project's queue"):
-   * the workflows that mention its queue status, or when the queue last
-   * answered. Settings reads the project again; no feed line.
+   * A project's batch changed (docs/forge.md, "Batches of your own"): the
+   * changes in line, the open batch or its hold. Settings reads the project
+   * again; no feed line.
    */
   z.object({
-    type: z.literal("repo_queue"),
+    type: z.literal("repo_batch"),
     repoId: z.string(),
   }),
   /**
@@ -546,7 +546,7 @@ export type FmEvent = z.infer<typeof fmEventSchema>;
  * that reports no usage: what is happening in a turn now, which a view reads
  * again whole on its next event and never needs replayed. The connection
  * keeps these out of its numbering and sends them only to views that use
- * them (`streamed-events-live.md`, docs/connection.md "Live pushes"). A
+ * them (docs/connection.md, "Live pushes"). A
  * tool's end with usage stays numbered, since the usage reads follow it.
  */
 export function isStreamedEvent(event: Pick<FmEvent, "type"> & { usage?: unknown }): boolean {

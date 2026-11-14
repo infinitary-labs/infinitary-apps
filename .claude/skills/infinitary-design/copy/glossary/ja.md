@@ -24,7 +24,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Automation | 自動化 | Settings section name. |
 | backlog | バックログ | Common in Japanese project tools. |
 | batch (your approved changes, combined) | 一括プルリクエスト | The batch is named by its pull request; バッチ is avoided as jargon. |
-| batched pull request | 一括プルリクエスト | Delivery through the project's queue. |
+| batched pull request | 一括プルリクエスト | Delivery where approved changes merge together in a batch. |
 | branch | ブランチ | GitHub Japanese docs. |
 | bring up to date | 最新の状態に更新 | Replaces rebase; 競合 (conflict) is avoided and the clash is said as 食い違い. |
 | built in place | その場で作成 | Delivery with no branch or pull request. |
@@ -114,7 +114,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | pull request | プルリクエスト | GitHub's own Japanese interface says プルリクエスト. |
 | purge (task data) | 消去 | Settings → General's button and its confirm; distinct from 削除 for a device. |
 | push | プッシュ | 「ブランチをプッシュしました」. |
-| queued | 待機中 | The Queued lane; キュー is kept for the project's merge queue. |
+| queued | 待機中 | The Queued lane. |
 | Quick | クイック | Rigor level. |
 | rail | パネル列 | The column of panels; レール would be opaque. |
 | reading (of the allowance) | 読み取り | As in 「読み取り中…」 and 「利用枠の読み取りなし」. |

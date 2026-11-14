@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
-import { QUEUE_HOST_REFUSAL } from "@shared/repos";
+import { BATCH_HOST_REFUSAL } from "@shared/repos";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
@@ -251,20 +251,20 @@ describe("RepoRegistry.setRunsOn", () => {
 });
 
 /**
- * A project's queue (INF-2430 piece 2; review INF-2549): only a project on
- * a host whose CI runs the shipped queue (GitHub, and GitLab since INF-2952
- * piece 2) merges through it, so a new address is checked against the
- * delivery the project would have, whether the same patch chooses it or it
- * was chosen before.
+ * Batched pull requests (INF-2430 piece 2; review INF-2549): only a project
+ * on a host where the app can open and merge a batch pull request (GitHub
+ * and GitLab) takes them, so a new address is checked against the delivery
+ * the project would have, whether the same patch chooses it or it was
+ * chosen before.
  */
-describe("RepoRegistry delivery through a project's queue", () => {
-  it("refuses an address that would leave a queue-pr project on a host whose CI cannot run the queue, in the same patch or later", async () => {
+describe("RepoRegistry delivery through batched pull requests", () => {
+  it("refuses an address that would leave a queue-pr project on a host that takes no batch pull request, in the same patch or later", async () => {
     const { registry } = setup();
     const { repo } = await registry.setup({ kind: "init", name: "meter" });
     const github = "https://github.com/o/meter.git";
     const gitlab = "https://gitlab.com/o/meter.git";
     const bitbucket = "https://bitbucket.org/o/meter.git";
-    const refusal = QUEUE_HOST_REFUSAL;
+    const refusal = BATCH_HOST_REFUSAL;
     expect(() => registry.configure(repo.id, { delivery: "queue-pr", origin: bitbucket })).toThrow(
       refusal,
     );
@@ -273,7 +273,7 @@ describe("RepoRegistry delivery through a project's queue", () => {
       delivery: "queue-pr",
       host: { kind: "github" },
     });
-    // GitLab has its own part of the queue (INF-2952 piece 2): the project may move there.
+    // GitLab takes batch pull requests too: the project may move there.
     expect(registry.configure(repo.id, { origin: gitlab })).toMatchObject({
       delivery: "queue-pr",
       host: { kind: "gitlab" },

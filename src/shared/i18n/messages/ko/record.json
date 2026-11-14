@@ -61,7 +61,7 @@
   "recordModeDirectPr": "끌어오기 요청으로",
   "recordModeInPlace": "그 자리에서 만듦",
   "recordModeLocalOnly": "로컬에서 병합, 끌어오기 요청 없음",
-  "recordModeQueuePr": "프로젝트 대기열이 테스트하는 일괄 끌어오기 요청으로",
+  "recordModeQueuePr": "승인된 다른 변경과 함께 일괄 끌어오기 요청으로",
   "recordMoreBranch": "분기",
   "recordMoreComputerChoice": "컴퓨터 선택",
   "recordMoreDelivery": "전달 방식",

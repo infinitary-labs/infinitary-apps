@@ -404,13 +404,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.repos.unregister(repo.id);
       return { id: repo.id, name: repo.name };
     },
-    "inf:repos:queue-answer": async (repoId, answer) => {
-      await services.queuePauses.answer(repoId, answer);
-      return { ok: true as const };
-    },
     "inf:repos:batch-answer": (repoId, answer) => services.batches.answerOrThrow(repoId, answer),
-    "inf:repos:queue-credential": (repoId) => services.queuePauses.credential(repoId),
-    "inf:repos:queue-credential-create": (repoId) => services.queuePauses.createCredential(repoId),
     "inf:repos:configure": async (repoId, changes) => {
       if (changes.contributionDestination !== undefined) {
         const { contributionDestination, ...rest } = changes;
@@ -438,10 +432,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           );
         if (changes.origin !== undefined && changes.origin !== current?.origin)
           await services.projectContributions.clearPushAddress(repoId);
-        // A batched choice the project cannot answer yet waits (INF-2885 B).
-        return await services.queueChoice.configure(repoId, changes, (patch) =>
-          services.repos.configure(repoId, patch),
-        );
+        // A batch keeps one commit for each change, so a project that allows
+        // only squash merges is refused batched pull requests with its reason.
+        const batched = changes.delivery === "queue-pr" && current?.delivery !== "queue-pr";
+        if (batched && changes.origin === undefined)
+          await services.batches.refuseSquashOnly(repoId);
+        return services.repos.configure(repoId, changes);
       } catch (caught) {
         const text = caught instanceof Error ? caught.message : String(caught);
         services.broadcastEvent({
@@ -905,7 +901,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:quota:refresh": async () => (await services.firstmate.recheckAllowance()) ?? null,
 
     // An older window opening Subscriptions; nothing is read only on that
-    // press any more, so it answers the snapshot (allowance-opened.md).
+    // press any more, so it answers the snapshot.
     "inf:quota:opened": () => services.quota.latest() ?? null,
 
     "inf:quota:models": () => services.quota.latestModels() ?? null,
@@ -1922,7 +1918,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       ? () => services.captainPlaces.during(routed)
       : routed;
     return actor?.kind === "captain" && actor.view
-      ? asAView(answer, { view: actor.view, changes: actor.viewChanges })
+      ? asAView(answer, {
+          view: actor.view,
+          version: actor.viewVersion,
+          changes: actor.viewChanges,
+        })
       : answer();
   }) as CoreDispatch;
 

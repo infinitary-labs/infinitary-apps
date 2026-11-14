@@ -58,8 +58,3 @@ export function withAppParts(html: string): string {
     return part ? `<style>${part.style}</style><script>${part.script}</script>` : reference;
   });
 }
-
-/** Whether a body names any part this build ships. */
-export function namesAppPart(body: string): boolean {
-  return withAppParts(body) !== body;
-}

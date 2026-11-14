@@ -4,13 +4,7 @@ import type { ChangeRecord } from "@shared/change";
 import { notSignedInText } from "@shared/forges";
 import { acceptedValidation } from "@shared/liveValidation";
 import { MERGE_REVIEW_CAP, type MergeReview } from "@shared/mergeReview";
-import {
-  deliveryForRecord,
-  hostRunsQueue,
-  opensPullRequest,
-  ownsBatches,
-  type RepoView,
-} from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, ownsBatches, type RepoView } from "@shared/repos";
 import type { NamingRule } from "../../shared/runbooks";
 import type { Batches } from "../batches/batches";
 import {
@@ -30,7 +24,7 @@ import type { ChangePresentations } from "./changePresentations";
 import type { LineageFacts, LineageQuestion } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
 import { reviewCoversHead } from "./reviewCarry";
-import type { TypedWake, WakeFacts } from "./wakes";
+import type { TypedWake } from "./wakes";
 import { taskContributesUpstream } from "./workShape";
 
 /**
@@ -66,8 +60,6 @@ export type ChangeDeliveryOptions = {
    * to act on. A wake with `once` goes out once per task and name.
    */
   steer?: (taskId: string, wake: TypedWake) => void;
-  /** A notice to the first mate, when no crewmate is left to act on a fact. */
-  tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
   /** Test seam for disposable forge fixtures without real remote heads. */
   validateRange?: (dir: string, branch: string, forge: Forge, head?: string) => Promise<void>;
   /** Test seam for a repair declaration's git facts (`lineageFacts`). */
@@ -111,45 +103,21 @@ export type Located = {
 };
 
 export class ChangeContext {
-  /** Reads whether a project carries the team queue's files, where that was never read. */
-  readQueueFiles?: (repoId: string) => Promise<unknown>;
-
   constructor(readonly options: ChangeDeliveryOptions) {}
 
   /**
    * The project whose batches of this person's own the task's change joins
-   * (docs/forge.md, "Batches of your own"), from the typed facts the app
-   * keeps; undefined for every other task. A pull request the task names
-   * by number is never batched, and neither is a contribution through a fork.
+   * (docs/forge.md, "Batches of your own"): a task of a project on the
+   * batched delivery; undefined for every other task. A pull request the
+   * task names by number is never batched, and neither is a contribution
+   * through a fork.
    */
   ownBatch(taskId: string): RepoView | undefined {
     const record = this.options.tasks.get(taskId);
     if (!record?.repoId || record.delivery?.checkTarget) return undefined;
     const repo = this.options.repos.get(record.repoId);
     if (!repo || taskContributesUpstream(record, repo)) return undefined;
-    return ownsBatches(deliveryForRecord(record, repo.delivery), repo) === true ? repo : undefined;
-  }
-
-  /**
-   * `ownBatch`, after reading a batched project's queue files wherever they
-   * do not yet say it gets batches of its own: where they were never read,
-   * and again while the last read found a file of the team queue. A project
-   * whose files were removed is learned here, before the team queue's path
-   * marks a version for a status nothing answers any more, or keeps one
-   * waiting on it.
-   */
-  async resolveOwnBatch(taskId: string): Promise<RepoView | undefined> {
-    const record = this.options.tasks.get(taskId);
-    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    const delivery = record && repo ? deliveryForRecord(record, repo.delivery) : undefined;
-    if (
-      repo &&
-      delivery === "queue-pr" &&
-      hostRunsQueue(repo.host) &&
-      ownsBatches(delivery, repo) !== true
-    )
-      await this.readQueueFiles?.(repo.id).catch(() => {});
-    return this.ownBatch(taskId);
+    return ownsBatches(deliveryForRecord(record, repo.delivery), repo) ? repo : undefined;
   }
 
   get batches(): Batches | undefined {

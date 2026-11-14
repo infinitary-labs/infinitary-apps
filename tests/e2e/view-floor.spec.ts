@@ -9,7 +9,6 @@ import { VIEW_OPEN_LISTS } from "../../src/shared/openLists";
 import { type TaskBoard, taskKindSchema } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
-import { promptInput } from "./prompt";
 import { showCard } from "./stack";
 
 /**
@@ -55,8 +54,6 @@ async function homeOn(major: number, floor: number): Promise<LaunchedApp> {
   db.close();
   return launchApp({
     userDataDir: dir,
-    // A first mate that answers, so the view's words have someone to reach (INF-4012 piece 2).
-    withMockProvider: true,
     env: {
       INFINITARY_DEVICE_NAME: "MacBook Pro",
       INFINITARY_CONTRACT_VERSION: `${major}.0.0`,
@@ -160,7 +157,7 @@ test("a Mac controlling another changes things across majors the view floor cove
       await air.page.screenshot({ path: test.info().outputPath("newer-view-older-home.png") });
     });
 
-    await test.step("past the view's floor it reads, its pill names that Mac to update, and the first mate there still hears its words", async () => {
+    await test.step("past the view's floor it reads, and its pill names that Mac to update", async () => {
       const pro = await homeOn(VIEW_FLOOR - 1, VIEW_FLOOR - 1);
       opened.push(pro);
       const air = await viewOf(pro);
@@ -172,8 +169,6 @@ test("a Mac controlling another changes things across majors the view floor cove
         joinedAt: 0,
         contact: "in-reach",
         readOnly: "older-there",
-        // This build's home lists `messages-while-reading` on any contract it stands in.
-        messagesWhileReading: true,
         heardAt: null,
         caughtUp: 0,
       };
@@ -185,17 +180,6 @@ test("a Mac controlling another changes things across majors the view floor cove
         air.page.evaluate(() => window.infinitary.cards.close("flaky")),
       ).rejects.toThrow();
       expect(await shownIds(pro.page)).toContain("flaky");
-      // INF-4012 piece 2: the message box stays on, and plain words reach the first mate there.
-      const words = "Merge the harbour fix";
-      await promptInput(air.page).fill(words);
-      await air.page.keyboard.press("Enter");
-      await expect
-        .poll(
-          async () =>
-            (await pro.page.evaluate(() => window.infinitary.conversation.lastTurn()))?.you,
-        )
-        .toBe(words);
-      await expect(promptInput(air.page)).toHaveValue("");
       await air.page.screenshot({ path: test.info().outputPath("view-past-floor.png") });
     });
   } finally {

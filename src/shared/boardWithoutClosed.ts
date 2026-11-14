@@ -2,8 +2,8 @@ import { nowGroupOf } from "./nowPanel";
 import type { TaskBoard, TaskView } from "./tasks";
 
 /**
- * The board without its closed rows (`inf:tasks:board` with `{ closed: false }`,
- * `board-without-closed.md`): the first read a view makes when it comes back,
+ * The board without its closed rows (`inf:tasks:board` with `{ closed: false }`):
+ * the first read a view makes when it comes back,
  * which a week of closed work would otherwise hold up (INF-3750: 1.74 MB of a
  * 1,650-row board against 0.24 MB without the closed rows).
  *

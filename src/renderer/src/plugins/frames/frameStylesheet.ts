@@ -207,7 +207,7 @@ export const FRAME_BASE_STYLE = `
   /* A pull request reads as every pull request link the app draws: underlined only while rested on. */
   .inf-fact-v a { text-decoration: none; }
   .inf-fact-v a:hover { text-decoration: underline; }
-  /* The queue's own words on a sent-back change wrap whole, so its pause issue link stays in view (INF-3208). */
+  /* The batch's own words on a sent-back change wrap whole, so its link stays in view (INF-3208). */
   .inf-fact[data-fact="batch"] .inf-fact-v { white-space: normal; overflow-wrap: anywhere; }
   .inf-facts > .inf-check-verdict { flex-basis: 100%; min-width: 0; margin: 0; padding: 0; border: 0; font-size: var(--text-sm); }
   .inf-check-verdict summary { overflow-wrap: anywhere; }
@@ -242,7 +242,7 @@ export const FRAME_BASE_STYLE = `
   .inf-foot-ref { min-width: 0; max-width: 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-4); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); white-space: nowrap; }
   .inf-foot-ref > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .inf-facts > .inf-foot-needs { flex-basis: 100%; min-width: 0; display: grid; gap: 6px; padding-left: var(--space-4); }
-  /* Why a state needs the captain, such as the queue's own words, wrapped whole (INF-3208). */
+  /* Why a state needs the captain, such as the batch's own words, wrapped whole (INF-3208). */
   .inf-foot-why { margin: 0; font-size: var(--text-sm); color: var(--fg-2); max-width: 76ch; overflow-wrap: anywhere; }
   .inf-foot-why a { white-space: nowrap; }
   /* A failed check: the verdict, never broken, then the name on the same line, cut by

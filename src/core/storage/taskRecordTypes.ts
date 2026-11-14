@@ -180,7 +180,7 @@ export type MergeWait =
   | "refused"
   /** The captain's newer guidance waits for its crewmate to declare its impact. */
   | "guidance"
-  /** A queue-pr project's queue has not passed this version yet: its \`infinitary/queue\` status is waiting. */
+  /** A batched project's batch has not passed this version yet: its batch check is waiting. The saved name stays. */
   | "queue"
   /** The host's own merge queue took this version and has not merged it yet. */
   | "host-queue"
@@ -303,13 +303,6 @@ export type MergeAuthorization = {
 };
 
 export type QueueApprovalRemoval = Pick<MergeAuthorization, "target" | "review"> & { head: string };
-
-/**
- * The app's own mark on a waiting version: the version, the status id the
- * host gave the mark back, when it was made, and whether anything has
- * written the status since.
- */
-export type QueueMark = { head: string; id?: number; at: number; answered?: boolean };
 
 /** Delivery facts, as they become known (check_pr_ci, land, merge-pr, review). */
 export type TaskDelivery = {
@@ -487,13 +480,8 @@ export type TaskDelivery = {
    * them for the crewmate, absent otherwise.
    */
   ciWatch?: CiWatch;
-  /**
-   * The app's own mark on the version waiting for the project's queue
-   * (docs/forge.md, "A project's queue"): the status id the host gave it back,
-   * so a later write by anything else reads as an answer.
-   */
-  queueMark?: QueueMark;
-  queueStatus?: import("@shared/repos").QueueStatusFact; // the Batch check cell's reading
+  /** The Batch check cell's reading; the name is the one saved records carry. */
+  queueStatus?: import("@shared/batches").BatchCheckFact;
   /**
    * The crew's declaration that a pushed branch's version runs no checks,
    * for a change with no pull request of its own (docs/forge.md, "Batches

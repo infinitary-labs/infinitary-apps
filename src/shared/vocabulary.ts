@@ -150,10 +150,9 @@ export const RUN_WATCH_WORDS = {
 export const CHECKS_NOT_READ_WORDS = "not read yet";
 
 /**
- * The merge card's Batch check cell (INF-3208): the project's queue status
- * apart from the pull request's own checks. The queue's own words fill it;
- * these stand in only where the app kept none for the version, and the
- * link names the paused batch's issue the queue linked from it.
+ * The merge card's Batch check cell (INF-3208): a change's place in its
+ * batch, apart from the change's own checks. The batch's own words fill it
+ * beside the state word.
  */
 export const BATCH_CHECK_WORDS = {
   label: "Batch check",
@@ -164,17 +163,7 @@ export const BATCH_CHECK_WORDS = {
     passed: "passed",
     failed: "failed",
   },
-  /**
-   * The app took the version out of the queue because the captain's merge
-   * approval is gone (INF-4018): nothing failed, and Merge on the card is
-   * the next step.
-   */
-  approval: "waiting for your approval",
-  /** The same, while the captain's newer words hold the approval for the crewmate's answer. */
-  held: "on hold",
-  heldWhy: "Your merge waits for the crewmate to say whether your newer message changes the work.",
-  pause: "paused batch's issue",
-  /** The link to the queue's run, after its words under the status line. */
+  /** The link to the batch's pull request, after its words under the status line. */
   run: "Open the run",
 } as const;
 

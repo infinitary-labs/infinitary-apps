@@ -1,4 +1,4 @@
-import { askedFromAView, askingViewLists } from "./askedFromAView";
+import { askedFromAView, askingViewHas } from "./askedFromAView";
 import type { CoreServices } from "./coreServices";
 import { type CoreDispatch, createCoreDispatcher } from "./dispatcher";
 import { CoreEventBus } from "./events";
@@ -89,7 +89,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
     // "A sign-in that returns to the first mate's computer").
     openSignInPage: async (url, to) => {
       if (!elsewhere()) return given.openExternal(url);
-      if (askedFromAView() && !askingViewLists(SIGN_IN_RETURN))
+      if (askedFromAView() && !askingViewHas(SIGN_IN_RETURN))
         throw new Error(SIGN_IN_RETURN_WORDS.updateHere);
       const id = signInReturns.open(to);
       to.ended.addEventListener("abort", () => events.emit("inf:app:sign-in-ended", { id }), {
@@ -118,10 +118,9 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   services.projectSetups.bindDispatch(dispatch);
   services.projectChanges.bindDispatch(dispatch);
   await services.projectChanges.inspectAll();
-  services.queueChoice.bindDispatch(dispatch);
-  // A batched choice that waited while the app was closed reads its
-  // project's workflows again, in the background.
-  void services.queueChoice.recheckAll().catch(() => {});
+  // Each project is looked at once for files of the team queue the app once
+  // shipped, in the background.
+  void services.teamQueueLeft.lookAll().catch(() => {});
   // Each project's folder is read once against where the project lives, in
   // the background, so the window opens as fast as before (INF-572).
   void services.supervisor.inPlaceWork.checkFoldersAtStart();

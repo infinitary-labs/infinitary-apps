@@ -21,7 +21,7 @@ import {
   createChangeDelivery,
 } from "../../src/core/orchestrator/changeDelivery";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
-import type { TypedWake, WakeFacts } from "../../src/core/orchestrator/wakes";
+import type { TypedWake } from "../../src/core/orchestrator/wakes";
 import type { AppDatabase } from "../../src/core/storage/db";
 import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
@@ -142,10 +142,6 @@ export class FakeForge implements Forge {
     return this.change;
   }
   branchesAt?: Forge["branchesAt"];
-  /** Marks a version for the project's queue, where a test gives the host it. */
-  markQueued?: Forge["markQueued"];
-  removeQueued?: Forge["removeQueued"];
-  queueWorkflows?: Forge["queueWorkflows"];
   /** The default branch's own checks, where a test gives the host them. */
   branchChecks?: Forge["branchChecks"];
   async checks(change: ForgeChange, movedPast?: string) {
@@ -208,8 +204,6 @@ export function setup(
     onNote?: (text: string) => void;
     /** The steer to a task's crewmate, as the app wires it to the inbox. */
     steer?: (taskId: string, wake: TypedWake) => void;
-    /** The first mate's notice, as the app wires it. */
-    tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
     prepareContribution?: (taskId: string) => Promise<string | undefined>;
@@ -253,7 +247,6 @@ export function setup(
     ...(options.now ? { now: options.now } : {}),
     ...(options.onNote ? { onNote: options.onNote } : {}),
     ...(options.steer ? { steer: options.steer } : {}),
-    ...(options.tell ? { tell: options.tell } : {}),
     ...(options.batches ? { batches: options.batches } : {}),
   });
   return { db, tasks, repos, service, forge, paths, presentations, readHead };

@@ -24,10 +24,10 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
+  BATCH_CHECK,
   presentationCardBody,
   presentationContentHash,
   presentationMarkdown,
-  QUEUE_STATUS,
 } from "../forge";
 import { coveredNextStep } from "./mergeAuthorization";
 import type { MergeCardWalk } from "./mergeCardSteps";
@@ -497,36 +497,10 @@ describe("a merge card for a version the captain already approved (INF-4018)", (
     expect(at.approval()?.status).toBe("standing");
   });
 
-  // The reviewer's finding on PR #1673 (INF-3208): the project's queue
-  // failed or sent back the approved version, which no checks override
-  // passes, so the refusal gives the queue's route, never Merge anyway.
-  it("gives the queue's route when the batch check failed at that version", async () => {
-    const at = await clicked();
-    seedDelivery(at.tasks, at.taskId, {
-      ci: "red",
-      checks: {
-        headSha: HEAD,
-        prNumber: 7,
-        items: [
-          { name: "typecheck-lint-build", state: "success" },
-          { name: QUEUE_STATUS, state: "failure" },
-        ],
-        absenceDeclared: false,
-      },
-    });
-    const answer = await at.call({ id: "merge-meter" });
-    expect(answer).toContain(`The captain's merge approval is kept and covers ${HEAD}`);
-    expect(answer).toContain("no checks override passes the queue");
-    expect(answer).toContain("check_change's answered verdict");
-    expect(answer).not.toContain("Merge anyway case");
-    expect(answer).not.toContain("check_change rerun");
-    expect(at.approval()?.status).toBe("standing");
-  });
-
-  // A batch of the person's own (docs/forge.md, "Batches of your own"): the
-  // app itself wrote that failed batch check, and an answer to a queue puts
-  // nothing back in its line, so the refusal gives the repair's route alone.
-  it("gives the repair's route when the person's own batch failed that version", async () => {
+  // INF-3208 (docs/forge.md, "A held batch"): the batch failed or left out
+  // the approved version, which no checks override passes, so the refusal
+  // gives the repair's route alone, never Merge anyway.
+  it("gives the repair's route when the batch failed that version", async () => {
     const at = await clicked();
     const words = BATCH_STATUS_WORDS.failed(["typecheck-lint-build"]);
     seedDelivery(at.tasks, at.taskId, {
@@ -536,7 +510,7 @@ describe("a merge card for a version the captain already approved (INF-4018)", (
         prNumber: 7,
         items: [
           { name: "typecheck-lint-build", state: "success" },
-          { name: QUEUE_STATUS, state: "failure" },
+          { name: BATCH_CHECK, state: "failure" },
         ],
         absenceDeclared: false,
       },
@@ -546,9 +520,9 @@ describe("a merge card for a version the captain already approved (INF-4018)", (
     const approval = at.approval();
     if (!approval) throw new Error("No approval");
     expect(answer).toContain(`The captain's merge approval is kept and covers ${HEAD}`);
-    expect(answer).toContain(coveredNextStep(approval, "own-batch"));
-    expect(answer).not.toContain("answered verdict");
+    expect(answer).toContain(coveredNextStep(approval, "batch"));
     expect(answer).not.toContain("Merge anyway case");
+    expect(answer).not.toContain("check_change rerun");
     expect(approval.status).toBe("standing");
   });
 

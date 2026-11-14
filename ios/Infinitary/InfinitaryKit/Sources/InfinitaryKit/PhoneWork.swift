@@ -289,7 +289,7 @@ public struct PhoneBoard: Decodable, Sendable {
     public internal(set) var tasks: [PhoneTask]
     public let projects: [Project]
     public let links: [Link]?
-    /// INF-3764: present when the board was read without its closed rows (`board-without-closed.md`): the ids of the
+    /// INF-3764: present when the board was read without its closed rows (`board-without-closed`): the ids of the
     /// rows left out that Tasks lists under Done, by project, so Done counts them before they are read.
     public internal(set) var closedLeftOut: ClosedLeftOut? = nil
     public struct ClosedLeftOut: Decodable, Sendable { public let done: [String: [String]] }

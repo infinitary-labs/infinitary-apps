@@ -7,7 +7,7 @@ export const CONTRIBUTOR_STORY_MARKER = "prove the contributor story";
 export const CONTRIBUTOR_STORY_TITLE = "fix: keep the contributed meter reading current";
 
 /** Accepted piece A and the captain's title choice: read, publish a separate
- * story, then let the captain queue the reviewed source at that version. */
+ * story, then let the captain merge the reviewed source at that version. */
 export function contributorStory(number: number): Scenario {
   return () =>
     ({ body, isFirstmate, wantsStream }) => {
@@ -62,8 +62,7 @@ export function contributorStory(number: number): Scenario {
                   effect: {
                     kind: "merge",
                     after: "continue",
-                    asks_first:
-                      "The captain decides whether reviewed contributor code enters the queue.",
+                    asks_first: "The captain decides whether reviewed contributor code merges.",
                   },
                 },
               ],

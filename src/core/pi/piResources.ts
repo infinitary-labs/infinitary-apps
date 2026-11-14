@@ -133,7 +133,7 @@ export type CrewmateComputers = {
   workers: readonly { name: string; sameComputer?: boolean }[];
   /** Its shell has `infinitary-files-axi`, which copies a file from another of them (docs/files.md). */
   files?: boolean;
-  /** False when this task's computer is older and its emit_card has no files (`card-files`). */
+  /** False when this task's computer is on another contract major, so its emit_card has no files. */
   cardFiles?: false;
 };
 

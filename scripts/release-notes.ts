@@ -142,7 +142,7 @@ function need(flags: Map<string, string | true>, name: string): string {
 
 class Repo {
   private readonly ancestorCache = new Map<string, Set<string>>();
-  private readonly addedCache = new Map<string, string | null>();
+  private added: Map<string, string> | null = null;
 
   readonly root: string;
 
@@ -211,13 +211,34 @@ class Repo {
     return set;
   }
 
-  /** The commit that first added `path`, or null when history does not show one. */
+  /**
+   * The commit that first added `path`, or null when history does not show one.
+   * One pass over the notes' history answers every path: one lookup per note
+   * file took minutes once the ledger held thousands. No rename detection, so
+   * a renamed note counts as added where it took its new name, as a lookup of
+   * that one path saw it.
+   */
   addedBy = (path: string): string | null => {
-    if (!this.addedCache.has(path)) {
-      const out = this.git("log", "--diff-filter=A", "--format=%H", "--reverse", "HEAD", "--", path);
-      this.addedCache.set(path, out.split("\n")[0] || null);
+    if (!this.added) {
+      this.added = new Map();
+      let commit = "";
+      const out = this.git(
+        "log",
+        "--diff-filter=A",
+        "--no-renames",
+        "--name-only",
+        "--format=%x00%H",
+        "HEAD",
+        "--",
+        `${NOTES_DIR}/`,
+      );
+      // Newest first, so the oldest commit that added a path is written last.
+      for (const line of out.split("\n")) {
+        if (line.startsWith("\0")) commit = line.slice(1);
+        else if (line) this.added.set(line, commit);
+      }
     }
-    return this.addedCache.get(path) ?? null;
+    return this.added.get(path) ?? null;
   };
 
   date(commit: string): string {

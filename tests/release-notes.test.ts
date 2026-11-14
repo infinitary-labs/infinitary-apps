@@ -152,6 +152,35 @@ describe("the release check", () => {
     expect(f.cli("check", "--source", source, "--reviewed", source)).toContain("all covered");
   });
 
+  it("credits each note file to the commit that added it, read for every note at once", () => {
+    const { f } = released();
+    f.commit("feat: one", { "src.txt": "1", "release-notes/changes/one.json": note("one-change") });
+    // A later change that edits an earlier note takes no credit from it.
+    f.commit("feat: two", {
+      "src.txt": "2",
+      "release-notes/changes/two.json": note("two-change"),
+      "release-notes/changes/one.json": note("one-change", "Edited title"),
+    });
+    f.commit("feat: three", {
+      "src.txt": "3",
+      "release-notes/changes/three.json": note("three-change"),
+    });
+    // A renamed note is added under its new name, so it credits the renaming
+    // commit, and the change that wrote it first is left uncovered.
+    f.git("mv", "release-notes/changes/three.json", "release-notes/changes/renamed.json");
+    const source = f.commit("feat: rename", { "src.txt": "4" });
+    const message = (() => {
+      try {
+        return f.cli("check", "--source", source, "--reviewed", source);
+      } catch (error) {
+        return String(error);
+      }
+    })();
+    expect(message).toMatch(/1 source change\(s\) since v1\.0\.0 have no note/);
+    expect(message).toMatch(/feat: three/);
+    expect(message).not.toMatch(/feat: (one|two|rename)/);
+  });
+
   it("passes with a reviewed exclusion that names the change it excuses", () => {
     const { f } = released();
     const change = f.commit("chore: internal tooling", { "tool.txt": "1" });

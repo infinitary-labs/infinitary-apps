@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-notes-one-history-pass",
+      "reason": "Release tooling: the release-notes check reads which change added each note in one pass over history instead of one lookup per note, with the same notes as before."
+    }
+  ]
+}

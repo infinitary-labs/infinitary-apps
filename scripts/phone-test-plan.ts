@@ -76,6 +76,9 @@ export const PHONE_PARTS = [
   // INF-3563: Settings' pages on a home that holds accounts, rules, usage, projects and runbooks: what each shows,
   // what the phone may change, and the keys that reach it.
   { name: "settings-pages", test: "testSettingsPages", photos: false },
+  // INF-3675 piece 4: the phone in each catalog language, Arabic right to left, Apple's pseudo-languages on Settings →
+  // Appearance and its Language row opening iOS Settings by keys.
+  { name: "languages", test: "testLanguages", photos: false },
   // INF-3830 piece 2: the computer's panels on the Panels tab, from a fixture panel on the test home's real core.
   { name: "panels", test: "testPanelsTab", photos: false },
   // INF-3830 piece 3: a panel's title-row buttons, its cards on Home and its taps that open a task.

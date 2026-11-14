@@ -16,6 +16,8 @@ import JavaScriptCore
         guard context.exception == nil,
               let function = context.objectForKeyedSubscript("PhoneSettingsWords")?.objectForKeyedSubscript("page"),
               !function.isUndefined else { return nil }
+        // Every page speaks the phone's language, as the rest of the phone does (docs/i18n.md, "On the phone").
+        context.objectForKeyedSubscript("PhoneSettingsWords")?.objectForKeyedSubscript("language")?.call(withArguments: [PhoneWords.language])
         self.context = context
         self.function = function
     }

@@ -537,6 +537,8 @@
   "phoneSettingsGoogleSignedOut": "Nicht angemeldet",
   "phoneSettingsGoogleSummary": "Google: {account}",
   "phoneSettingsIntegrations": "Integrationen",
+  "phoneSettingsLanguageOpen": "In den Einstellungen ändern",
+  "phoneSettingsLanguageScope": "Wird auf der Seite von Infinitary in den Einstellungen dieses {device} eingestellt. {computer} behält seine eigene Sprache, und die Crew schreibt in ihr.",
   "phoneSettingsSecretsApprovals": "Geheimnisfreigaben",
   "phoneSettingsSetUpAgain": "Freigaben neu einrichten",
   "phoneSettingsTheme": "Darstellung",

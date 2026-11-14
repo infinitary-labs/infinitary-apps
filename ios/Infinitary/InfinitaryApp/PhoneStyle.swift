@@ -65,7 +65,10 @@ extension View {
     /// A sheet's title, inline in the app's own type, drawn as the joined computer's name is.
     func phoneTitle(_ title: String) -> some View {
         navigationTitle(title).navigationBarTitleDisplayMode(.inline).toolbar {
-            ToolbarItem(placement: .principal) { Text(title).font(PhoneFont.headline).accessibilityAddTraits(.isHeader) }
+            // A longer word in another language shrinks a little before it cuts off.
+            ToolbarItem(placement: .principal) {
+                Text(title).font(PhoneFont.headline).lineLimit(1).minimumScaleFactor(0.75).accessibilityAddTraits(.isHeader)
+            }
         }
     }
 
@@ -208,7 +211,7 @@ struct PhoneRow: View {
                 Text(line).font(lineFont).foregroundStyle(PhoneTheme.secondary)
             }.multilineTextAlignment(.leading)
             Spacer(minLength: 0)
-            if chevron { PhoneSymbol.chevron.image.foregroundStyle(PhoneTheme.muted).accessibilityHidden(true) }
+            if chevron { PhoneSymbol.rowChevron.foregroundStyle(PhoneTheme.muted).accessibilityHidden(true) }
         }
         .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space3)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())

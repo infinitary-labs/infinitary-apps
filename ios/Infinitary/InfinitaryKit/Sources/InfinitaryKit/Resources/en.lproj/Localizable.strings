@@ -1544,6 +1544,8 @@
 "phoneSettingsGoogleSignedOut" = "Not signed in";
 "phoneSettingsGoogleSummary" = "Google: %1$@";
 "phoneSettingsIntegrations" = "Integrations";
+"phoneSettingsLanguageOpen" = "Change in Settings";
+"phoneSettingsLanguageScope" = "Set on Infinitary's page in this %2$@'s Settings. %1$@ keeps its own language, and the crew writes in it.";
 "phoneSettingsSecretsApprovals" = "Secrets approvals";
 "phoneSettingsSetUpAgain" = "Set up approvals again";
 "phoneSettingsTheme" = "Theme";

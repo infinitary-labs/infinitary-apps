@@ -431,7 +431,7 @@ private struct PhoneNoticePill: View {
     var body: some View {
         Button(action: open) {
             HStack(spacing: PhoneTheme.space2) {
-                Text(notice.reply ? PhoneMessages.phoneNoticeReply() : PhoneMessages.phoneNoticeNewCard()).textCase(.uppercase).font(PhoneFont.micro).tracking(1)
+                Text(notice.reply ? PhoneMessages.phoneNoticeReply() : PhoneMessages.phoneNoticeNewCard()).textCase(.uppercase).font(PhoneFont.micro).tracking(PhoneFont.labelTracking)
                     .foregroundStyle(PhoneTheme.accent).fixedSize()
                 Text(notice.title).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text).lineLimit(1)
             }
@@ -630,7 +630,7 @@ private struct PhoneActivitySummary: View {
 
     private func fact(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
-            Text(label).textCase(.uppercase).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.muted)
+            Text(label).textCase(.uppercase).font(PhoneFont.micro).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.muted)
                 .frame(width: 64, alignment: .leading)
             Text(value).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
         }

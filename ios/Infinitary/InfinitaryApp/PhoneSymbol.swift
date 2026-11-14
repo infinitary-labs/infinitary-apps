@@ -12,6 +12,10 @@ enum PhoneSymbol: CaseIterable {
 
     @MainActor var image: Image { Image(uiImage: Self.images[self]!) }
 
+    /// A row's chevron points the way a line reads, so it turns over in a right-to-left language (the phone's
+    /// languages, piece 4); the other outlines are pictures, the same either way.
+    @MainActor static var rowChevron: some View { chevron.image.flipsForRightToLeftLayoutDirection(true) }
+
     @MainActor private static let images: [PhoneSymbol: UIImage] = Dictionary(uniqueKeysWithValues: allCases.map { symbol in
         let image = UIGraphicsImageRenderer(size: CGSize(width: 24, height: 24)).image { renderer in
             let context = renderer.cgContext

@@ -556,6 +556,8 @@
   "phoneSettingsGoogleSignedOut": "Non connecté",
   "phoneSettingsGoogleSummary": "Google : {account}",
   "phoneSettingsIntegrations": "Intégrations",
+  "phoneSettingsLanguageOpen": "Modifier dans Réglages",
+  "phoneSettingsLanguageScope": "Se règle sur la page d’Infinitary dans les Réglages de cet {device}. {computer} garde sa propre langue, dans laquelle l’équipage écrit.",
   "phoneSettingsSecretsApprovals": "Approbations des secrets",
   "phoneSettingsSetUpAgain": "Reconfigurer les approbations",
   "phoneSettingsTheme": "Thème",

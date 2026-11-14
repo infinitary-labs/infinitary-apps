@@ -1,3 +1,4 @@
+import InfinitaryKit
 import SwiftUI
 
 /// Native Dynamic Type roles, using the design skill's vendored typefaces.
@@ -17,4 +18,12 @@ enum PhoneFont {
     static let summary = Font.custom("SpaceGrotesk-Light", size: 14, relativeTo: .subheadline).weight(.regular)
     /// The crew summary's side labels and small words, at the desktop's 11.
     static let label = Font.custom("SpaceGrotesk-Light", size: 11, relativeTo: .caption2).weight(.regular)
+
+    /// The letter spacing of an uppercase label: 1 point in a language written with capitals, and none in Chinese,
+    /// Japanese, Korean or Arabic, whose letters have no case and whose Arabic letters join (the phone's languages, piece 4).
+    static let labelTracking: CGFloat = {
+        let full = Locale.Language(identifier: PhoneWords.language).maximalIdentifier
+        let script = Locale.Language(identifier: full).script?.identifier
+        return ["Latn", "Cyrl", "Grek"].contains(script ?? "Latn") ? 1 : 0 // i18n-exempt: Unicode script codes, never shown
+    }()
 }

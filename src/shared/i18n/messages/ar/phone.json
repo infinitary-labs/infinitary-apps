@@ -613,6 +613,8 @@
   "phoneSettingsGoogleSignedOut": "لم يُسجَّل الدخول",
   "phoneSettingsGoogleSummary": "Google: {account}",
   "phoneSettingsIntegrations": "التكاملات",
+  "phoneSettingsLanguageOpen": "التغيير في الإعدادات",
+  "phoneSettingsLanguageScope": "تُضبط في صفحة Infinitary ضمن إعدادات جهاز {device} هذا. يحتفظ {computer} بلغته الخاصة، ويكتب بها الطاقم.",
   "phoneSettingsSecretsApprovals": "موافقات الأسرار",
   "phoneSettingsSetUpAgain": "إعادة إعداد الموافقات",
   "phoneSettingsTheme": "السمة",

@@ -357,6 +357,8 @@ Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented c
 It starts on Device, which follows iOS's own setting and its Automatic switching; Dark or Light sets the window's interface style, so every screen, sheet, the keyboard, the crew, card bodies and the picture viewer follow it at once.
 The choice is saved in the app's own defaults, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
 It never reaches the computer, and the computer's Theme never reaches the phone; asking the first mate to switch the theme still switches the computer's.
+Under Theme, Language names the language the phone speaks, in that language, and opens Infinitary's page in iOS Settings, where iOS sets it; the line above it says the computer keeps its own language, which the crew writes in (`docs/i18n.md`, "On the phone").
+Tab or the down arrow from Theme reaches the row, Return or Space opens it, and the up arrow goes back to Theme.
 The launch screen, which iOS draws before the app runs, keeps the device's own appearance.
 While Appearance is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
@@ -638,7 +640,7 @@ Each row's line is the page's state: how many projects, how many accounts and ho
 The phone asks what the computer's own Settings asks, over channels a paired view may ask (`PhoneRequest`'s Settings entries, `scripts/generate-phone-contract.ts`), and hands the answers as they came to one script, `SettingsWords.generated.js`.
 `node scripts/generate-phone-settings.ts` bundles that script from `src/renderer/src/settings/phonePages.ts`, whose pure functions build each page's rows from the computer's own row rules and word owners: `rowView`, `accountsSummary` and `awayNote` (`accountRows.ts`), `quotaMicroMeterLook`, and the automation, usage, project and runbook words.
 The app runs it in JavaScriptCore (`PhoneSettingsWords`) with no page, network or timer, and draws the rows it answers, so no allowance rule, verdict or sentence is written a second time in Swift; `src/shared/quotaSignals.ts` stays the one home of quota math.
-A sentence the computer's own Settings says too has one owner both read, and the pages' own sentences are catalog messages (`settingsPhone…` in `docs/i18n.md`'s catalog); the script never sets a language, so it speaks English, as the rest of the phone does.
+A sentence the computer's own Settings says too has one owner both read, and the pages' own sentences are catalog messages (`settingsPhone…` in `docs/i18n.md`'s catalog); the phone sets the script's language to its own as it loads it, so the pages speak the phone's language, as the rest of the phone does.
 `pnpm check` refuses a script that is not current (`generate-phone-settings.ts --check`), so a change to a rule or a word on the computer reaches the phone in the same pull request.
 Where the computer's sentence says this computer, the phone's names the computer, as a computer that controls a first mate does (`docs/view.md`, "Settings on a view").
 `PhoneSettings` holds the pages: Settings reads all five as it opens, a page the computer refuses stays off the list, and out of reach each keeps its last reading.

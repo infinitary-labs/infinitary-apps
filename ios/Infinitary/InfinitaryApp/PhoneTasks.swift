@@ -208,7 +208,7 @@ struct PhoneTasks: View {
     // The Mac's micro label: uppercase, tracked, tertiary. Only a folding group is a button, and only it shows its count,
     // with Backlog's new filings and failed starts after it (the Mac's `Group`).
     @ViewBuilder private func groupHeader(_ part: PhoneTaskList.Part, open: Bool) -> some View {
-        let title = Text(part.section.title).font(Self.label).textCase(.uppercase).tracking(Self.labelTracking)
+        let title = Text(part.section.title).font(Self.label).textCase(.uppercase).tracking(PhoneFont.labelTracking)
         if part.section.folds {
             Button {
                 if !expanded.insert(part.section).inserted { expanded.remove(part.section) }
@@ -218,7 +218,7 @@ struct PhoneTasks: View {
                     Text("\(part.count)\(part.section == .group(.backlog) && part.failed > 0 ? PhoneTaskRowWords.failedCount(part.failed) : "")\(part.new > 0 ? PhoneTaskRowWords.newCount(part.new) : "")")
                         .font(PhoneFont.micro).lineLimit(1)
                     Spacer()
-                    Image(systemName: open ? "chevron.down" : "chevron.right")
+                    Image(systemName: open ? "chevron.down" : "chevron.forward")
                         .font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary).accessibilityHidden(true)
                 }.foregroundStyle(PhoneTheme.muted).frame(minHeight: 44)
                     .contentShape(Rectangle())
@@ -518,7 +518,6 @@ struct PhoneTasks: View {
     /// How wide a Backlog row's Start shows once a swipe holds it open: room for Try again.
     private static let startWidth: CGFloat = 104
     private static let label = Font.custom("SpaceGrotesk-Light", size: 11, relativeTo: .caption2).weight(.medium)
-    private static let labelTracking: CGFloat = 1
 
     /// A move from a row's long press that asks once: the Mac's sentence, its button, and Drop task's review.
     struct RowAsk: Identifiable {

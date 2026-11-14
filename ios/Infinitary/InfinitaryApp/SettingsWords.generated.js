@@ -1,5 +1,32 @@
 var PhoneSettingsWords = (function(exports) {
   "use strict";
+  const SOURCE_LANGUAGE = "en";
+  const PSEUDO_LANGUAGES = ["en-XA", "ar-XB"];
+  function isPseudoLanguage(tag) {
+    return PSEUDO_LANGUAGES.includes(tag);
+  }
+  function languageFormatTag(tag) {
+    if (tag === SOURCE_LANGUAGE) return "en-US";
+    if (isPseudoLanguage(tag)) return tag.slice(0, 2);
+    return tag;
+  }
+  let language$1 = SOURCE_LANGUAGE;
+  function currentLanguage() {
+    return language$1;
+  }
+  const listeners = /* @__PURE__ */ new Set();
+  function setCurrentLanguage(tag) {
+    if (tag === language$1) return;
+    language$1 = tag;
+    for (const listener of listeners) listener(tag);
+  }
+  function languageLocale() {
+    return languageFormatTag(language$1);
+  }
+  let computerLocale;
+  function regionalLocale(tag = language$1) {
+    return tag === SOURCE_LANGUAGE ? computerLocale : languageFormatTag(tag);
+  }
   var _a$1;
   function $constructor(name, initializer2, params) {
     function init(inst, def) {
@@ -4874,27 +4901,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
     };
     return inst;
-  }
-  const SOURCE_LANGUAGE = "en";
-  const PSEUDO_LANGUAGES = ["en-XA", "ar-XB"];
-  function isPseudoLanguage(tag) {
-    return PSEUDO_LANGUAGES.includes(tag);
-  }
-  function languageFormatTag(tag) {
-    if (tag === SOURCE_LANGUAGE) return "en-US";
-    if (isPseudoLanguage(tag)) return tag.slice(0, 2);
-    return tag;
-  }
-  let language = SOURCE_LANGUAGE;
-  function currentLanguage() {
-    return language;
-  }
-  function languageLocale() {
-    return languageFormatTag(language);
-  }
-  let computerLocale;
-  function regionalLocale(tag = language) {
-    return tag === SOURCE_LANGUAGE ? computerLocale : languageFormatTag(tag);
   }
   function formatNumber(value, options) {
     return value.toLocaleString(languageLocale(), options);
@@ -16383,6 +16389,8 @@ ${events}` : prompt;
     return JSON.stringify(page2(JSON.parse(input)));
   }
   const page = phonePage;
+  const language = setCurrentLanguage;
+  exports.language = language;
   exports.page = page;
   Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
   return exports;

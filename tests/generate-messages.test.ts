@@ -197,7 +197,8 @@ describe("the phone's own messages", () => {
   });
 
   it("word each permission prompt in InfoPlist.strings, and refuse an Info.plist that drifted from the catalog", () => {
-    const { phone, problems } = compileCatalogs({ en: english }, infoPlist);
+    const catalogs = readCatalogs();
+    const { phone, problems } = compileCatalogs(catalogs, infoPlist);
     expect(problems).toEqual([]);
     expect(phone["ios/Infinitary/InfinitaryApp/en.lproj/InfoPlist.strings"]).toContain(
       `"NSCameraUsageDescription" = ${JSON.stringify(catalog.phonePromptCamera)};`,
@@ -206,8 +207,22 @@ describe("the phone's own messages", () => {
       String(catalog.phonePromptFaceId),
       "Infinitary uses Face ID.",
     );
-    expect(compileCatalogs({ en: english }, drifted).problems).toEqual([
+    expect(compileCatalogs(catalogs, drifted).problems).toEqual([
       expect.stringContaining("NSFaceIDUsageDescription must read as"),
+    ]);
+  });
+
+  // INF-3675 piece 4: the phone ships every catalog language, and iOS offers a
+  // language on the app's page in its Settings only when Info.plist lists it.
+  it("write every catalog language's string files, and refuse an Info.plist that leaves one out", () => {
+    const catalogs = readCatalogs();
+    const { phone } = compileCatalogs(catalogs, infoPlist);
+    for (const tag of Object.keys(catalogs)) {
+      expect(phone[`ios/Infinitary/InfinitaryApp/${tag}.lproj/InfoPlist.strings`]).toBeDefined();
+    }
+    const missing = infoPlist.replace("<string>ja</string>", "");
+    expect(compileCatalogs(catalogs, missing).problems).toEqual([
+      expect.stringContaining("CFBundleLocalizations must list"),
     ]);
   });
 });

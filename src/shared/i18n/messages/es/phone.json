@@ -556,6 +556,8 @@
   "phoneSettingsGoogleSignedOut": "Sin sesión iniciada",
   "phoneSettingsGoogleSummary": "Google: {account}",
   "phoneSettingsIntegrations": "Integraciones",
+  "phoneSettingsLanguageOpen": "Cambiar en Ajustes",
+  "phoneSettingsLanguageScope": "Se elige en la página de Infinitary en los Ajustes de este {device}. {computer} conserva su propio idioma, y la tripulación escribe en él.",
   "phoneSettingsSecretsApprovals": "Aprobaciones de Secretos",
   "phoneSettingsSetUpAgain": "Volver a configurar aprobaciones",
   "phoneSettingsTheme": "Tema",

@@ -32,7 +32,7 @@ struct PhoneProjectsView: View {
                                 }
                                 .multilineTextAlignment(.leading)
                                 Spacer(minLength: 0)
-                                PhoneSymbol.chevron.image.foregroundStyle(PhoneTheme.muted).accessibilityHidden(true)
+                                PhoneSymbol.rowChevron.foregroundStyle(PhoneTheme.muted).accessibilityHidden(true)
                             }
                             .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space3)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())

@@ -518,6 +518,8 @@
   "phoneSettingsGoogleSignedOut": "未登入",
   "phoneSettingsGoogleSummary": "Google：{account}",
   "phoneSettingsIntegrations": "整合",
+  "phoneSettingsLanguageOpen": "在設定中更改",
+  "phoneSettingsLanguageScope": "在這台 {device} 的「設定」裡 Infinitary 的頁面上設定。{computer} 會保留自己的語言，船員用它來寫。",
   "phoneSettingsSecretsApprovals": "機密核准",
   "phoneSettingsSetUpAgain": "重新設定核准",
   "phoneSettingsTheme": "主題",

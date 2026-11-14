@@ -106,7 +106,7 @@ struct PhoneSectionLabel: View {
     let words: String
     init(_ words: String) { self.words = words }
     var body: some View {
-        Text(words).font(PhoneFont.micro).textCase(.uppercase).tracking(1).foregroundStyle(PhoneTheme.secondary)
+        Text(words).font(PhoneFont.micro).textCase(.uppercase).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.secondary)
             .accessibilityAddTraits(.isHeader)
     }
 }

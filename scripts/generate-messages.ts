@@ -73,12 +73,6 @@ const PHONE_KIT = "ios/Infinitary/InfinitaryKit";
 export const PHONE_MESSAGES_PATH = `${PHONE_KIT}/Sources/InfinitaryKit/PhoneMessages.generated.swift`;
 /** The fixture the phone's tests replay: saved facts and the desktop's English for each. */
 export const PHONE_WORDS_FIXTURE = `${PHONE_KIT}/Tests/InfinitaryKitTests/Fixtures/PhoneWords.generated.json`;
-/**
- * The languages the phone ships Apple string files for. English alone until
- * the phone's own words and the Mac's words it shows are all in the catalog;
- * iOS cannot ship a language and keep English first.
- */
-export const PHONE_LANGUAGES: readonly string[] = [SOURCE_LANGUAGE];
 const phoneStringsDir = (tag: string) => `${PHONE_KIT}/Sources/InfinitaryKit/Resources/${tag}.lproj`;
 
 /**
@@ -534,14 +528,10 @@ export function compileCatalogs(sources: Record<string, string>, infoPlist?: str
   // phone's generated words call, such as the Tasks panel's row words. Its parity fixture replays the shared ones.
   const sharedCatalog: Catalog = new Map(shared);
   const phone: Record<string, string> = { [PHONE_MESSAGES_PATH]: phoneMessagesSwift(english) };
-  checkInfoPlist(english, infoPlist, problems);
+  // The phone ships every language the catalog has, the pseudo-languages aside, as the desktop does.
   const catalogs = new Map<string, Catalog>([[SOURCE_LANGUAGE, english], ...translations]);
-  for (const tag of PHONE_LANGUAGES) {
-    const catalog = catalogs.get(tag);
-    if (!catalog) {
-      problems.push(`scripts/generate-messages.ts: the phone ships ${tag}, which the catalog lacks`);
-      continue;
-    }
+  checkInfoPlist(english, [...catalogs.keys()], infoPlist, problems);
+  for (const [tag, catalog] of catalogs) {
     const files = appleStringFiles(catalog, english);
     phone[`${phoneStringsDir(tag)}/Localizable.strings`] = files.strings;
     phone[`${phoneStringsDir(tag)}/Localizable.stringsdict`] = files.stringsdict;
@@ -568,9 +558,17 @@ function infoPlistStrings(catalog: Catalog, english: Catalog): string {
   ].join("\n");
 }
 
-/** Each permission prompt's message is plain words, and Info.plist's English is that message's, so the two never drift apart. */
-function checkInfoPlist(english: Catalog, plist: string | undefined, problems: string[]): void {
+/**
+ * Each permission prompt's message is plain words, and Info.plist's English is that message's, so the two never drift
+ * apart; and Info.plist's `CFBundleLocalizations` names exactly the languages the phone ships, in the catalog's order,
+ * so iOS offers each on the app's page in its Settings.
+ */
+function checkInfoPlist(english: Catalog, tags: readonly string[], plist: string | undefined, problems: string[]): void {
   if (plist === undefined) return;
+  const listed = plist.match(/<key>CFBundleLocalizations<\/key>\s*<array>((?:\s*<string>[^<]*<\/string>)*)\s*<\/array>/)?.[1];
+  const named = [...(listed ?? "").matchAll(/<string>([^<]*)<\/string>/g)].map((match) => match[1]);
+  if (named.join(",") !== tags.join(","))
+    problems.push(`${PHONE_INFO_PLIST}: CFBundleLocalizations must list ${tags.join(", ")}, the languages the phone ships`);
   for (const [key, id] of Object.entries(PHONE_INFO_PLIST_MESSAGES)) {
     const message = english.get(id);
     if (!message || message.kind !== "text" || message.parts.some((part) => !("text" in part))) {

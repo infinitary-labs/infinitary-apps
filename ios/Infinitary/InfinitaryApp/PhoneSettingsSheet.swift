@@ -13,6 +13,8 @@ struct PhoneSettingsSheet: View {
     @Environment(PhoneGoogle.self) private var google: PhoneGoogle?
     @Environment(PhoneSettings.self) private var settings: PhoneSettings?
     @FocusState private var themeFocused: Bool
+    @FocusState private var languageFocused: Bool
+    @Environment(\.openURL) private var openURL
     @State private var section: Section?
     /// The pages opened inside a section, outermost first: an automation, its review, a project.
     @State private var path: [Detail] = []
@@ -106,8 +108,9 @@ struct PhoneSettingsSheet: View {
                         ToolbarItem(placement: .cancellationAction) {
                             Button { back() } label: {
                                 HStack(spacing: PhoneTheme.space2) {
-                                    PhoneSymbol.chevron.image.rotationEffect(.degrees(180))
-                                    Text(parent ?? PhoneMessages.shellTopBarBack())
+                                    PhoneSymbol.rowChevron.rotationEffect(.degrees(180))
+                                    // The page's own title keeps the room: a long parent name, or a long word in another language, cuts off first.
+                                    CappedWidth(most: 88) { Text(parent ?? PhoneMessages.shellTopBarBack()).lineLimit(1) }
                                 }
                             }
                             .keyboardShortcut("[", modifiers: .command)
@@ -386,8 +389,38 @@ struct PhoneSettingsSheet: View {
             .focusable().focused($themeFocused)
             .onKeyPress(.leftArrow) { appearance.step(by: -1); return .handled }
             .onKeyPress(.rightArrow) { appearance.step(by: 1); return .handled }
+            .onKeyPress(.downArrow) { languageFocused = true; return .handled }
             .onAppear { themeFocused = true }
+            language
         }
+    }
+
+    /// The captain's Approve and build (the phone's languages, piece 4): the phone speaks its own language, which iOS
+    /// sets on Infinitary's page in its Settings, so the row names it and opens that page, as Theme is this device's own.
+    /// Tab, or the down arrow from Theme, reaches it; Return or Space opens it, and the up arrow goes back to Theme.
+    private var language: some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            Text(PhoneMessages.settingsLanguage()).font(PhoneFont.headline).padding(.top, PhoneTheme.space3)
+            Text(PhoneMessages.phoneSettingsLanguageScope(computer: session.mac.name, device: label))
+                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("phone-language-scope")
+            PhoneList {
+                Button(action: openLanguage) {
+                    PhoneRow(title: PhoneFormats.languageName, line: PhoneMessages.phoneSettingsLanguageOpen(), chevron: true)
+                }
+                .buttonStyle(PhoneRowStyle())
+                .focusable().focused($languageFocused)
+                .onKeyPress(.return) { openLanguage(); return .handled }
+                .onKeyPress(.space) { openLanguage(); return .handled }
+                .onKeyPress(.upArrow) { themeFocused = true; return .handled }
+                .accessibilityIdentifier("phone-language")
+            }
+            .overlay { if languageFocused { RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous).strokeBorder(PhoneTheme.accent, lineWidth: 1.5) } }
+        }
+    }
+
+    private func openLanguage() {
+        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
     }
 
     /// INF-1109's phone approvals (docs/secrets.md, "Remote decisions"): only while the computer offers Secrets.
@@ -454,5 +487,22 @@ struct PhoneSettingsSheet: View {
             .buttonStyle(PhoneChoiceStyle(.primary))
             .disabled(secrets.busy || !session.canChange)
             .accessibilityIdentifier("approval-set-up")
+    }
+}
+
+/// Offers its one view at most `most` points across, so a toolbar item, which offers any width, still cuts a long word off.
+private struct CappedWidth: Layout {
+    let most: CGFloat
+
+    private func offer(_ proposal: ProposedViewSize) -> ProposedViewSize {
+        ProposedViewSize(width: min(proposal.width ?? most, most), height: proposal.height)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(offer(proposal)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: offer(proposal))
     }
 }

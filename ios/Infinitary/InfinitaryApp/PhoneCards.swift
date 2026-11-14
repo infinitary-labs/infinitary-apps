@@ -923,7 +923,7 @@ private struct PhoneCardPane: View {
                             Text(PhoneCardWords.threadCard)
                         } icon: {
                             // The latest line's own mark: a dot on the chevron, here for a revision behind the thread.
-                            Image(systemName: "chevron.left").overlay(alignment: .topTrailing) {
+                            Image(systemName: "chevron.backward").overlay(alignment: .topTrailing) {
                                 if updatedBehind {
                                     Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).offset(x: 3, y: -3)
                                         .accessibilityHidden(true)
@@ -996,7 +996,7 @@ private struct PhoneCardPane: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(state).font(PhoneFont.mono).foregroundStyle(unread > 0 && !working ? PhoneTheme.accent : PhoneTheme.muted)
                 if working { ProgressView().controlSize(.mini) }
-                Image(systemName: "chevron.right").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
+                Image(systemName: "chevron.forward").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
                     .overlay(alignment: .topTrailing) {
                         if unread > 0 {
                             Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).offset(x: 3, y: -3).accessibilityHidden(true)
@@ -1254,7 +1254,7 @@ private struct PhoneCardPane: View {
         } else {
             HStack(spacing: 0) {
                 if count > 1 {
-                    questionArrow(PhoneMessages.uiCardPreviousQuestion(), symbol: "chevron.left", id: "card-question-previous") {
+                    questionArrow(PhoneMessages.uiCardPreviousQuestion(), symbol: "chevron.backward", id: "card-question-previous") {
                         stepQuestion(-1, unpicked: false, keyboard: false)
                     }
                 }
@@ -1266,7 +1266,7 @@ private struct PhoneCardPane: View {
                 .accessibilityHint(PhoneMessages.commandCardsUnansweredQuestion())
                 .accessibilityIdentifier("card-answers")
                 if count > 1 {
-                    questionArrow(PhoneMessages.uiCardNextQuestion(), symbol: "chevron.right", id: "card-question-next") {
+                    questionArrow(PhoneMessages.uiCardNextQuestion(), symbol: "chevron.forward", id: "card-question-next") {
                         stepQuestion(1, unpicked: false, keyboard: false)
                     }
                 }

@@ -518,6 +518,8 @@
   "phoneSettingsGoogleSignedOut": "로그인 안 됨",
   "phoneSettingsGoogleSummary": "Google: {account}",
   "phoneSettingsIntegrations": "연동",
+  "phoneSettingsLanguageOpen": "설정에서 변경",
+  "phoneSettingsLanguageScope": "이 {device}의 설정에 있는 Infinitary 페이지에서 설정해요. {computer}은(는) 자체 언어를 유지하고, 선원들은 그 언어로 작성해요.",
   "phoneSettingsSecretsApprovals": "비밀 정보 승인",
   "phoneSettingsSetUpAgain": "승인 다시 설정",
   "phoneSettingsTheme": "테마",

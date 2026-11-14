@@ -1614,6 +1614,8 @@ public enum PhoneMessages {
     public static func `phoneSettingsGoogleSignedOut`() -> String { PhoneWords.format("phoneSettingsGoogleSignedOut", []) }
     public static func `phoneSettingsGoogleSummary`(`account`: String) -> String { PhoneWords.format("phoneSettingsGoogleSummary", [`account`]) }
     public static func `phoneSettingsIntegrations`() -> String { PhoneWords.format("phoneSettingsIntegrations", []) }
+    public static func `phoneSettingsLanguageOpen`() -> String { PhoneWords.format("phoneSettingsLanguageOpen", []) }
+    public static func `phoneSettingsLanguageScope`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsLanguageScope", [`computer`, `device`]) }
     public static func `phoneSettingsSecretsApprovals`() -> String { PhoneWords.format("phoneSettingsSecretsApprovals", []) }
     public static func `phoneSettingsSetUpAgain`() -> String { PhoneWords.format("phoneSettingsSetUpAgain", []) }
     public static func `phoneSettingsTheme`() -> String { PhoneWords.format("phoneSettingsTheme", []) }
@@ -4870,6 +4872,8 @@ extension PhoneWords {
         "phoneSettingsGoogleSignedOut": [],
         "phoneSettingsGoogleSummary": ["account"],
         "phoneSettingsIntegrations": [],
+        "phoneSettingsLanguageOpen": [],
+        "phoneSettingsLanguageScope": ["computer", "device"],
         "phoneSettingsSecretsApprovals": [],
         "phoneSettingsSetUpAgain": [],
         "phoneSettingsTheme": [],

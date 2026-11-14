@@ -174,7 +174,7 @@ struct PhoneBrowserStrip: View {
 
     var body: some View {
         HStack(spacing: PhoneTheme.space3) {
-            Text(PhoneMessages.phoneCardBrowser()).textCase(.uppercase).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.secondary).fixedSize()
+            Text(PhoneMessages.phoneCardBrowser()).textCase(.uppercase).font(PhoneFont.micro).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.secondary).fixedSize()
             Group {
                 if let line {
                     Text("\(Text(line.site ?? "").font(PhoneFont.mono).foregroundStyle(PhoneTheme.text))\(line.site == nil ? "" : " · ")\(line.words)")

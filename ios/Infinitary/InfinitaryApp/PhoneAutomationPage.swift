@@ -77,7 +77,7 @@ struct PhoneAutomationView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: PhoneTheme.space2)
                 // The chevron sits level with the middle of the name's capitals.
-                PhoneSymbol.chevron.image.foregroundStyle(PhoneTheme.muted).accessibilityHidden(true)
+                PhoneSymbol.rowChevron.foregroundStyle(PhoneTheme.muted).accessibilityHidden(true)
                     .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 6 }
             }
             HStack(alignment: .center, spacing: PhoneTheme.space3) {
@@ -137,6 +137,7 @@ struct PhoneRuleView: View {
     let review: () -> Void
     let back: () -> Void
     @State private var shownPrompts: Set<Int> = []
+    @Environment(\.layoutDirection) private var layoutDirection
 
     private var stops: [PhoneStop] {
         (page.action.map { action in [PhoneStop(id: "action", press: { act(action) })] } ?? [])
@@ -202,7 +203,8 @@ struct PhoneRuleView: View {
             }
             Button { toggle(run.id) } label: {
                 HStack(spacing: PhoneTheme.space2) {
-                    PhoneSymbol.chevron.image.rotationEffect(.degrees(shownPrompts.contains(run.id) ? 90 : 0))
+                    // The chevron points the way a line reads, so it turns down clockwise left to right and the other way right to left.
+                    PhoneSymbol.rowChevron.rotationEffect(.degrees(shownPrompts.contains(run.id) ? (layoutDirection == .rightToLeft ? -90 : 90) : 0))
                     Text(run.promptTitle)
                 }
                 .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)

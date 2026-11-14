@@ -304,7 +304,7 @@ struct PhoneCrewSummary: View {
 struct PhoneFactLabel: View {
     let text: String
     var body: some View {
-        Text(text).textCase(.uppercase).font(PhoneFont.label).tracking(1).foregroundStyle(PhoneTheme.muted)
+        Text(text).textCase(.uppercase).font(PhoneFont.label).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.muted)
     }
 }
 
@@ -420,7 +420,7 @@ struct PhoneSlotBadge: View {
                     RoundedRectangle(cornerRadius: 1).fill(i < bars ? color : PhoneTheme.raised).frame(width: 3, height: CGFloat(4 + i * 2))
                 }
             }
-            Text(label).textCase(.uppercase).font(PhoneFont.micro).fontWeight(.medium).tracking(1).foregroundStyle(color)
+            Text(label).textCase(.uppercase).font(PhoneFont.micro).fontWeight(.medium).tracking(PhoneFont.labelTracking).foregroundStyle(color)
         }
     }
 }

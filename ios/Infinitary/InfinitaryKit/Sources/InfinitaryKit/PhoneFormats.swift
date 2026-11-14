@@ -7,6 +7,13 @@ public enum PhoneFormats {
     /// The phone's own locale: its language and region from iOS Settings.
     public static var locale: Locale { .current }
 
+    /// The phone's language named in itself, as iOS Settings lists it: `English`, `日本語`, `العربية`.
+    public static var languageName: String {
+        let tag = PhoneWords.language
+        let own = Locale(identifier: tag)
+        return own.localizedString(forIdentifier: tag).map { $0.capitalized(with: own) } ?? tag
+    }
+
     /// A whole number with no grouping, as the Mac writes one inside an age or a duration.
     static func whole(_ number: Int, locale: Locale) -> String {
         number.formatted(.number.locale(locale).grouping(.never))

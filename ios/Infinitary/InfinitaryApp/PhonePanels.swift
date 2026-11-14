@@ -292,7 +292,7 @@ private struct PhonePanelSection: View {
             HStack(alignment: .center, spacing: 0) {
                 Button(action: fold) {
                     HStack(alignment: .center, spacing: PhoneTheme.space2) {
-                        Text(panel.title.uppercased()).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
+                        Text(panel.title.uppercased()).font(PhoneFont.micro).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
                         Text(panel.owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
                         Spacer(minLength: 0)
                     }

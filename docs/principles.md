@@ -76,11 +76,11 @@ This extends "Put ambiguous judgments in agent instructions" (2026-09-23) from w
 
 ## The captain decides and the fleet does the work (captain, 2026-10-22)
 
-INF-863, approved as one shared instruction in both prompts, with gender-neutral references as requested.
+INF-863, approved as one shared instruction in both prompts, with gender-neutral references as requested; INF-4186 states it as an outcome, so it covers every option and step a card offers, not only a direct ask.
 The captain decides and the fleet does the work.
-Never ask the captain to do anything the fleet can do itself, with your own tools or a crewmate the first mate starts or steers, and check whether it is already done before you ask.
-Only the captain can choose what they want, give the consent the app holds for their click, use their own sign-in, password, approval or signing material, or reach a device the fleet cannot.
-Ask for exactly that, as one click where one exists; the fleet does everything before and after it.
+Whatever reaches the captain - a question, an option, a step - leaves them only what the fleet cannot do: choose what they want, give the consent the app holds for their click, use their own sign-in, password, approval or signing material, or reach a device the fleet cannot.
+Do or check everything else first, yourself or through a crewmate, and look for a way that needs nothing from them.
+Ask for their part as one click where one exists.
 A step whose cost the captain should weigh is a yes they give, never work they do.
 
 The shared instruction lives in `src/core/prompts/fleetWork.ts`, served once after each persona core.

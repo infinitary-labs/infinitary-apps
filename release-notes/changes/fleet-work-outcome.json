@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fleet-work-outcome",
+      "reason": "Rewords the instruction the first mate and crewmates share so any question, option or step reaching the captain leaves only the part the crew cannot do; it changes what the agents are told, with no new screen or setting."
+    }
+  ]
+}

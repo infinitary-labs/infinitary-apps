@@ -562,6 +562,25 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
     }
   });
 
+  it("tells every persona that an option or step it hands the captain leaves only the captain's part (INF-4186)", () => {
+    // INF-4186: a reviewer's way forward and the first mate's option handed
+    // the captain a step the crew could do, because the rule read as covering
+    // only a direct ask; the approved wording states the outcome for anything
+    // that reaches the captain, and keeps the captain-only list as it was.
+    for (const prompt of [
+      buildFirstmateSystemPrompt(),
+      buildFirstmateSystemPrompt("claude"),
+      buildCrewmateSystemPrompt("pi"),
+      buildCrewmateSystemPrompt("claude"),
+    ]) {
+      expect(prompt).toContain(
+        "Whatever reaches the captain - a question, an option, a step - leaves them only what the fleet cannot do: choose what they want, give consent the app holds for their click, sign in, enter a password, approval or signing material, or reach a device the fleet cannot.",
+      );
+      expect(prompt).toContain("look for a way that needs nothing from them");
+      expect(prompt).not.toContain("Never ask the captain to do what your tools");
+    }
+  });
+
   it("keeps the dispatch-policy standing rules", () => {
     expect(core).toContain("Current context and crew_status outrank transcripts");
     expect(core).toContain("Never ask when one confident match exists");

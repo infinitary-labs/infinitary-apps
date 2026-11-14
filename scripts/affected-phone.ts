@@ -752,10 +752,50 @@ export function requestBase(
   }
 }
 
+/**
+ * Each file's edit in a change, from its zero-context diff read with `--full-index --no-renames`: the lines it removes
+ * and adds, without hunk positions, which move when the base under the change moves, and a changed binary file by
+ * the file it leaves.
+ */
+export function fileEdits(diff: string): Map<string, string> {
+  const edits = new Map<string, string>();
+  for (const section of diff.split(/^diff --git /m).slice(1)) {
+    const lines = section.split("\n");
+    const start = lines.findIndex((line) => line.startsWith("@@"));
+    const header = start < 0 ? lines : lines.slice(0, start);
+    const removed = header.find((line) => line.startsWith("--- "))?.slice(4);
+    const added = header.find((line) => line.startsWith("+++ "))?.slice(4);
+    const path = added && added !== "/dev/null" ? added.replace(/^b\//, "")
+      : removed && removed !== "/dev/null" ? removed.replace(/^a\//, "") : /^a\/(.*) b\/(.*)$/.exec(lines[0]!)?.[2];
+    if (!path) continue;
+    // A mode change, a binary file or an empty file has no lines; the file it leaves names its edit.
+    const left = /^index [0-9a-f]+\.\.([0-9a-f]+)/m.exec(header.join("\n"))?.[1] ?? "none";
+    const kind = header.filter((line) => /^(new|deleted) file mode|^old mode|^new mode|^Binary files/.test(line));
+    const body = start < 0 ? [] : lines.slice(start).filter((line) => /^[+-]/.test(line));
+    edits.set(path, [...kind, ...(body.length ? [] : [`left ${left}`]), ...body].join("\n"));
+  }
+  return edits;
+}
+
+/**
+ * INF-4071 (the captain's "Only the change's own edits"): the files whose edit differs between the change as it stood
+ * at its last passing version and the change now, each read from its own merge point. A file whose edit is the same
+ * counts nothing, even when bringing the branch up to date moved main's lines around it, and a file the change no
+ * longer edits counts, since its version now is not the one that passed.
+ */
+export function ownEdits(since: string, now: string): string[] {
+  const before = fileEdits(since);
+  const after = fileEdits(now);
+  return [...new Set([...before.keys(), ...after.keys()])].sort()
+    .filter((path) => before.get(path) !== after.get(path));
+}
+
 function main(): void {
   const { values } = parseArgs({ options: {
     base: { type: "string", default: "origin/main" },
     head: { type: "string", default: "HEAD" },
+    // INF-4071: the version whose affected request last passed; the change's own edits since it choose the parts.
+    since: { type: "string" },
     // The newest passing on-request check of main's part-times.json.
     times: { type: "string" },
     placement: { type: "string" },
@@ -774,6 +814,21 @@ function main(): void {
   try {
     paths = git(["diff", "--name-only", "-z", range, "--"]).split("\0").filter(Boolean);
   } catch { /* An unreadable comparison must not silently omit the gate. */ }
+  // INF-4071: after a pass, only the files the change's own edits since that version reach count; the others keep
+  // the earlier pass as their proof. A last pass that cannot be read leaves the whole change counted.
+  let since: { commit: string; files: string[] } | undefined;
+  if (values.since && paths) {
+    try {
+      const edit = (from: string, to: string) => git(["diff", "-U0", "--full-index", "--no-renames", `${from}...${to}`, "--"]);
+      const files = ownEdits(edit(requestBase(values.base, values.since, git).base, values.since), edit(base.base, values.head));
+      since = { commit: values.since, files };
+      paths = files;
+    } catch {
+      console.error(`Phone last pass ${values.since} could not be read; comparing the whole change with ${base.base}.`);
+    }
+  }
+  // The test files the comparison counts, so a narrowed comparison reads no other test file's edits.
+  const testSpec = since ? since.files.filter((path) => path.startsWith(UI_TESTS) || path.startsWith(APP_TESTS)) : [UI_TESTS, APP_TESTS];
   let generatedDiff: string | undefined;
   if (paths?.includes(GENERATED_CONTRACT)) {
     try {
@@ -786,7 +841,7 @@ function main(): void {
   if (decision.run) {
     let testDiff: string | undefined;
     try {
-      testDiff = git(["diff", "-U0", "--no-renames", range, "--", UI_TESTS, APP_TESTS]);
+      testDiff = testSpec.length ? git(["diff", "-U0", "--no-renames", range, "--", ...testSpec]) : "";
     } catch { /* Counted as every part edited. */ }
     const generated = new Map<string, string[] | undefined>();
     const changedGenerated = GENERATED_ENTRIES.filter((path) => decision.reasons.includes(path));
@@ -837,12 +892,13 @@ function main(): void {
   const run = values.coverage === undefined ? decision.run : kept.length > 0;
   console.log(`run=${run}`);
   console.log(`parts=${kept.join(" ")}`);
-  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, base: base.base, ...(base.ignored ? { ignoredBase: base.ignored } : {}), inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, repeats }, null, 2)}\n`);
+  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, base: base.base, ...(base.ignored ? { ignoredBase: base.ignored } : {}), ...(since ? { since: since.commit, ownEdits: since.files } : {}), inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, repeats }, null, 2)}\n`);
   const row = (each: Placement) =>
     `- ${each.kept ? "Runs" : "Left"}: ${each.part}, distance ${each.distance}, ${each.minutes === undefined ? "no time" : `${each.minutes.toFixed(1)} minutes`}: ${each.reason}; ${each.why}`;
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     ["### Native phone gate", "",
       ...(base.ignored ? [`The requested base ${base.ignored} is behind this branch's merge point with main, so the change is read from ${base.base}.`, ""] : []),
+      ...(since ? [`Only the change's own edits since its last pass at ${since.commit} count; the earlier pass stays the proof for every other part. Edited since: ${since.files.join(", ") || "nothing"}.`, ""] : []),
       ...(decision.run ? decision.reasons.map((reason) => `- ${reason}`) : ["No phone input the gate uses changed beyond the contract version number."]),
       "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,
       `On the iPhone only (the iPad waits for the release check): ${iphoneOnly.join(" ") || "none"}.`,

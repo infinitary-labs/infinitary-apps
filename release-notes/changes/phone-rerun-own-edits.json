@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-rerun-own-edits",
+      "reason": "Changes only how the project's phone check chooses its parts on a re-run after a pass, with no app behavior change."
+    }
+  ]
+}

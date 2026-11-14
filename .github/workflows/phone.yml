@@ -19,6 +19,8 @@ name: phone
 # Manual requests run the screenless weak-link suite on one device; release calls stay unchanged.
 # INF-3205: a request may name one device, as a call does, so a replacement proof runs that
 # device's job alone at the branch's current version with the same part selection.
+# INF-4071 (the captain's "Only the change's own edits"): a re-run after a pass names that version as
+# last_pass, and only the files the change's own edits since then reach choose its parts.
 on:
   workflow_call:
     inputs:
@@ -44,6 +46,10 @@ on:
         description: Comparison ref for affected requests
         type: string
         default: origin/main
+      last_pass:
+        description: The full commit id whose affected request last passed on this branch; only the change's own edits since then choose the parts
+        type: string
+        default: ''
       parts:
         description: Parts to run, separated by spaces (empty runs all)
         type: string
@@ -94,7 +100,7 @@ permissions:
 # keep a group of their own run, attempt and device. Cancelling, never queueing, keeps INF-487's
 # fix: no run waits behind another run in the group, only for a free phone guest.
 concurrency:
-  group: ${{ github.workflow == 'phone' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('phone-request-{0}-device={1}-affected={2}-base={3}-parts={4}-waits={5}-starve={6}-perf={7}-recording={8}-observer={9}-evidence={10}', github.ref, inputs.device, inputs.affected, inputs.base, inputs.parts, inputs.waits, inputs.starve, inputs.perf, inputs.recording, inputs.guest_observer, inputs.evidence_run) || format('phone-run-{0}-{1}-{2}', github.run_id, github.run_attempt, inputs.device) }}
+  group: ${{ github.workflow == 'phone' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('phone-request-{0}-device={1}-affected={2}-base={3}-parts={4}-waits={5}-starve={6}-perf={7}-recording={8}-observer={9}-evidence={10}-since={11}', github.ref, inputs.device, inputs.affected, inputs.base, inputs.parts, inputs.waits, inputs.starve, inputs.perf, inputs.recording, inputs.guest_observer, inputs.evidence_run, inputs.last_pass) || format('phone-run-{0}-{1}-{2}', github.run_id, github.run_attempt, inputs.device) }}
   cancel-in-progress: ${{ github.workflow == 'phone' }}
 
 jobs:
@@ -124,6 +130,7 @@ jobs:
           AFFECTED: ${{ inputs.affected }}
           PARTS: ${{ inputs.parts }}
           DEVICE: ${{ inputs.device }}
+          LAST_PASS: ${{ inputs.last_pass }}
           TASK: ${{ inputs.task }}
           REASON: ${{ inputs.reason }}
         run: |
@@ -132,12 +139,16 @@ jobs:
             *) echo "Unknown phone device: $DEVICE; send ipad, iphone or nothing for both"; exit 1 ;;
           esac
           if [ "$MANUAL" != true ]; then exit 0; fi
+          if [ -n "$LAST_PASS" ]; then
+            [[ "$LAST_PASS" =~ ^[0-9a-f]{40}$ ]] || { echo "The last pass must be a full commit id: $LAST_PASS"; exit 1; }
+            [ "$AFFECTED" = true ] && [ -z "$PARTS" ] || { echo 'A last pass narrows an affected request only; send affected "true" and no parts'; exit 1; }
+          fi
           if [ "$BRANCH" = true ] && [ "$EVERY_PART" = true ]; then
             [ -n "$TASK" ] && [ -n "$REASON" ] || {
               echo 'A branch request for every phone part requires a task and reason; send affected "true" or name parts instead'; exit 1;
             }
           fi
-          printf 'Phone request: every_part=%s affected=%s parts=%s device=%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-both}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Phone request: every_part=%s affected=%s parts=%s device=%s%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-both}" "${LAST_PASS:+ last_pass=$LAST_PASS}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
         if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
         with:
@@ -147,14 +158,27 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
         with:
           node-version: 24
+      # INF-4071: a last pass that bringing the branch up to date left on no branch is fetched by its id. The sign-in
+      # stays in this step's environment; the checkout above keeps none.
+      - name: Fetch the last passing version
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == '' && inputs.last_pass != ''
+        env:
+          LAST_PASS: ${{ inputs.last_pass }}
+          TOKEN: ${{ github.token }}
+        run: |
+          git cat-file -e "$LAST_PASS^{commit}" 2>/dev/null && exit 0
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            fetch --no-tags --quiet origin "$LAST_PASS" || echo "The last pass $LAST_PASS could not be fetched; the whole change is compared."
       - id: request-select
         name: Choose affected parts for a crewmate request
         if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
         run: |
           coverage=(); if [ "$AFFECTED" != true ] || [ -n "$REQUESTED_PARTS" ]; then coverage=(--coverage "$REQUESTED_PARTS"); fi
-          node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD --device "$DEVICE" "${coverage[@]}" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
+          since=(); if [ -n "$LAST_PASS" ]; then since=(--since "$LAST_PASS"); fi
+          node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD --device "$DEVICE" "${coverage[@]}" "${since[@]}" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
         env:
           BASE_REF: ${{ inputs.base || 'origin/main' }}
+          LAST_PASS: ${{ inputs.last_pass }}
           DEVICE: ${{ inputs.device }}
           AFFECTED: ${{ inputs.affected }}
           REQUESTED_PARTS: ${{ inputs.parts }}

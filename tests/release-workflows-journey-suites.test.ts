@@ -713,6 +713,36 @@ describe("the phone check request guard (INF-2576)", () => {
       expect(runGuard(call, { source_commit: "a".repeat(40), device }).status).toBe(0);
   });
 
+  // INF-4071 (the captain's "Only the change's own edits"): a re-run after a pass names that version, which narrows
+  // an affected request alone, by its full commit id.
+  it("passes an affected request that names its last pass and records it", () => {
+    const lastPass = "e6cd7bd67".padEnd(40, "0");
+    const result = runGuard(branch, { affected: true, last_pass: lastPass });
+    expect(result.status, result.stdout).toBe(0);
+    expect(result.summary).toBe(
+      `Phone request: every_part=false affected=true parts= device=both last_pass=${lastPass} task= reason=\n`,
+    );
+    expect(phone.on.workflow_dispatch.inputs).toHaveProperty("last_pass");
+  });
+
+  it("refuses a last pass that is not a full commit id or narrows no affected request", () => {
+    const lastPass = "e6cd7bd67".padEnd(40, "0");
+    for (const [inputs, words] of [
+      [{ affected: true, last_pass: "e6cd7bd67" }, "must be a full commit id"],
+      [{ affected: true, last_pass: "main" }, "must be a full commit id"],
+      [
+        { affected: true, parts: "cards-form", last_pass: lastPass },
+        "narrows an affected request only",
+      ],
+      [{ parts: "cards-form", last_pass: lastPass }, "narrows an affected request only"],
+    ] as const) {
+      const result = runGuard(branch, inputs);
+      expect(result.status, JSON.stringify(inputs)).not.toBe(0);
+      expect(result.stdout).toContain(words);
+      expect(result.summary).toBe("");
+    }
+  });
+
   it("refuses an unknown device on every route before a phone Mac is taken", () => {
     for (const [github, inputs] of [
       [branch, { affected: true, device: "watch" }],

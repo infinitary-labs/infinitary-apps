@@ -8,8 +8,10 @@ import {
   generatedReach,
   ipadParts,
   iphoneOnlyParts,
+  ownEdits,
   type PartTable,
   PHONE_BUDGET_MS,
+  partFamily,
   partReach,
   partTimes,
   phoneDecision,
@@ -930,5 +932,92 @@ describe("the generated contract and card words", () => {
     const reaches = new Map([[GENERATED_CONTRACT, undefined]]);
     const reach = partReach([GENERATED_CONTRACT], "", [], () => undefined, PHONE_PARTS, reaches);
     expect(requestedParts([GENERATED_CONTRACT], reach).map(({ part }) => part)).toEqual(EVERY_PART);
+  });
+});
+
+// INF-4071 (the captain's "Only the change's own edits"): a phone re-run after a pass reads only the change's own edits
+// since its last passing version. The versions are real ones, read by git: PR #1598's eight affected requests after its
+// first pass on Nov 12 and 13, each passing, and fm/task-282b2e67's request after only being brought up to date. Each
+// keeps its merge point with main and its zero-context `ios/` diff from there (`git diff -U0 --full-index --no-renames
+// <merge point>...<version> -- ios/`); the expected files are the replay's own reading of the same requests.
+describe("a phone re-run after a pass", () => {
+  type Version = { commit: string; mergePoint: string; ios: string; run?: number };
+  const { texts, pullRequest1598, rebaseOnly } = JSON.parse(
+    readFileSync("tests/fixtures/phone-changes/inf-4071-reruns.json", "utf8"),
+  ) as { texts: Record<string, string>; pullRequest1598: Version[]; rebaseOnly: Version[] };
+  const since = (last: Version, now: Version) => ownEdits(texts[last.ios]!, texts[now.ios]!);
+  // The parts the own edits reach; none of these edits a UI test, so no test file is read.
+  const reached = (files: string[]) => {
+    const { reasons } = phoneDecision(files);
+    return requestedParts(
+      reasons,
+      partReach(reasons, "", [], () => undefined),
+    ).map(({ part }) => part);
+  };
+  const app = "ios/Infinitary/InfinitaryApp";
+  const kit = "ios/Infinitary/InfinitaryKit";
+
+  it("reads an edit on the same base as the files it changed", () => {
+    const [first, second, third] = pullRequest1598;
+    expect(since(first!, second!)).toEqual([
+      `${app}/CardLogView.swift`,
+      "ios/Infinitary/InfinitaryUITests/PhoneJourney+CardsMedia.swift",
+    ]);
+    expect(since(second!, third!)).toEqual([`${app}/CardLogView.swift`]);
+    expect(reached(since(second!, third!))).toEqual(phoneFileOwners(`${app}/CardLogView.swift`));
+  });
+
+  it("counts only the change's own edits after the branch was brought up to date", () => {
+    const at = (index: number) => since(pullRequest1598[index - 1]!, pullRequest1598[index]!);
+    // Each of these versions also brought the branch up to date, so main's own phone edits moved under it.
+    for (const index of [3, 4, 5, 7])
+      expect(pullRequest1598[index]!.mergePoint).not.toBe(pullRequest1598[index - 1]!.mergePoint);
+    expect(at(3)).toEqual([`${app}/CardAssets/CardHost.generated.js`]);
+    expect(at(4)).toEqual([`${app}/CardAssets/CardHost.generated.js`]);
+    expect(at(5)).toEqual([
+      "ios/Infinitary/CardRuntime/cardHost.ts",
+      `${app}/CardAssets/CardHost.generated.js`,
+    ]);
+    expect(at(7)).toEqual([`${app}/CardAssets/CardHost.generated.js`]);
+    for (const index of [3, 4, 5, 7]) {
+      const parts = reached(at(index));
+      expect(parts.length).toBeGreaterThan(0);
+      expect(
+        parts.every((part) => partFamily(part) === "cards"),
+        parts.join(" "),
+      ).toBe(true);
+      expect(parts.length).toBeLessThan(EVERY_PART.length);
+    }
+  });
+
+  it("still checks every part when the own edits change the phone's message files", () => {
+    // The Nov 12 evening edit regenerated the phone's message files, which every part reads.
+    const files = since(pullRequest1598[5]!, pullRequest1598[6]!);
+    expect(files).toEqual([
+      `${app}/CardLogView.swift`,
+      `${kit}/Sources/InfinitaryKit/PhoneMessages.generated.swift`,
+      `${kit}/Sources/InfinitaryKit/Resources/en.lproj/Localizable.strings`,
+      `${kit}/Tests/InfinitaryKitTests/Fixtures/PhoneWords.generated.json`,
+    ]);
+    expect(reached(files)).toEqual(EVERY_PART);
+  });
+
+  it("runs no part after only bringing the branch up to date", () => {
+    const [last, now] = rebaseOnly;
+    expect(now!.mergePoint).not.toBe(last!.mergePoint);
+    // The whole change still edits the phone's message files, which would check every part.
+    expect(texts[now!.ios]).toContain("PhoneMessages.generated.swift");
+    expect(since(last!, now!)).toEqual([]);
+    expect(phoneDecision(since(last!, now!)).run).toBe(false);
+  });
+
+  it("counts a file the change no longer edits, since its version now is not the one that passed", () => {
+    const [last, now] = rebaseOnly;
+    const dropped = texts[now!.ios]!.split(/^(?=diff --git )/m).find((each) =>
+      each.includes("Localizable.strings"),
+    )!;
+    expect(ownEdits(texts[last!.ios]!, texts[now!.ios]!.replace(dropped, ""))).toEqual([
+      `${kit}/Sources/InfinitaryKit/Resources/en.lproj/Localizable.strings`,
+    ]);
   });
 });

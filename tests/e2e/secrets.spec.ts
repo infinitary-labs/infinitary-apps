@@ -439,7 +439,10 @@ test("saved decisions are made on the approval card and removed from Settings", 
     );
   const title = approvalTitle([entry]);
   const answer = async (card: string, label: string) => {
-    await expect(cardBody(page, card).locator("body")).toBeVisible();
+    // The shown card's frame, never one page-wide: the card answered just
+    // before, with the same title, keeps its frame drawn while it leaves, and
+    // command search refuses Go to the card's buttons until a card is shown.
+    await expect(cardBody(shownCard(page, card), card).locator("body")).toBeVisible();
     await runFromSearch(app, page, "focus.card-actions");
     await pressKey(
       shownCard(page, card).getByRole("button", { name: label, exact: true }),

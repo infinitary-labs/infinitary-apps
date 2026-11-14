@@ -252,7 +252,8 @@ A sender may take back or rewrite a message no turn was handed yet, and never on
 - `InboxStore.revise(id, body)` gives a row that is not in flight a new body, with its id, place, attempts and backoff kept, and answers false for a row in flight or gone.
 - `InboxStore.get(id)` reads one row, in flight or not, so its sender can tell where it stands.
 
-Automation is the one sender that uses them (`docs/automation.md`, "Deliveries"): a pause, an edit or a delete takes back a scheduled prompt the first mate has not read, and a later occurrence folds into the one still waiting.
+Automation uses them (`docs/automation.md`, "Deliveries"): a pause, an edit or a delete takes back a scheduled prompt the first mate has not read, and a later occurrence folds into the one still waiting.
+The first mate's close as done is the other (`docs/task-record.md`, "One close as done"): its `drop_waiting` takes back guidance an idle crewmate no longer needs, first letting go a row a turn was handed and never finished with, since no turn runs to acknowledge it.
 
 ## The wake envelope
 

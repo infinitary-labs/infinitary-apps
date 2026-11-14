@@ -29,7 +29,7 @@ import {
   waitMovedWake,
 } from "./deliveryWakes";
 import { crewHoldWays, idleStallWays } from "./holds";
-import { idleNudge, type WakeNote } from "./idleWakes";
+import { finishedOpenOnce, finishedOpenWake, idleNudge, type WakeNote } from "./idleWakes";
 import { jobBoundOnce, jobBoundWake } from "./jobWakes";
 import { NextMove } from "./nextMove";
 import {
@@ -44,6 +44,7 @@ import {
 } from "./outageWakes";
 import { type IdleRule, type IdleTurn, idleTurn, type Witnesses } from "./reportSort";
 import { wakeBuiltOn } from "./reportWakes";
+import { waitingGuidance } from "./waitingGuidance";
 import type { TypedWake, WakeFacts, WakeTask } from "./wakes";
 
 /**
@@ -89,6 +90,12 @@ export const ASKED_WAKES = 3;
 export const JOB_BOUND_MS = 2 * 60 * 60 * 1000;
 /** The honest retry's still-down wake (the captain's Q1 note: "can we make it 15?"). */
 export const STILL_DOWN_MS = 15 * 60 * 1000;
+/**
+ * Finished work still open this long after its crewmate declared it gets
+ * the first mate's one wake (INF-4072, finding 4; the captain started "one
+ * wake for a task that reported finished and is still open an hour later").
+ */
+export const FINISHED_OPEN_MS = 60 * 60 * 1000;
 
 /**
  * The steer a timed wait on an active task ends with (the sweep's active
@@ -696,6 +703,7 @@ export class IdleLadder {
     const runtime = this.host.runtime(taskId);
     if (runtime ? runtime.turn.busy : !TaskService.isResumable(record)) return;
     const witnesses = this.witnesses(taskId, now);
+    this.checkFinishedOpen(record, witnesses, now);
     const turn = idleTurn(witnesses);
     if (turn !== "asked" && this.endAnsweredAsk(record, now)) {
       record = this.host.tasks.get(taskId) ?? record;
@@ -793,6 +801,41 @@ export class IdleLadder {
       "a background job ran past its bound, so it no longer counts as the task moving.",
       "job-bound",
       () => this.host.notifyOp(wake, "agent", record.id),
+    );
+  }
+
+  /**
+   * Finished work still open an hour after its crewmate declared it
+   * (INF-4072, finding 4): once the first mate acted on it, its close
+   * reminders end (`endAnsweredAsk`), and nothing else would ever say it
+   * again. One wake per finish names how long it has stood and the
+   * messages still waiting for its crewmate, which hold the first mate's
+   * own close. A card of the task up, a settle under way, a put-off or a
+   * stay in the backlog is someone's turn already, and while the first
+   * mate has not acted the close reminders speak for it.
+   */
+  private checkFinishedOpen(record: TaskRecord, witnesses: Witnesses, now: number): void {
+    const finishedAt = record.delivery?.finishedAt;
+    if (finishedAt === undefined || now - finishedAt < FINISHED_OPEN_MS) return;
+    if (
+      witnesses.inBacklog ||
+      witnesses.decisionCardOpen ||
+      witnesses.finishedCardUp ||
+      witnesses.pendingSettle ||
+      witnesses.putOff !== undefined ||
+      witnesses.askedFirstmate
+    )
+      return;
+    if (this.host.inbox.woken(record.id, finishedOpenOnce(finishedAt))) return;
+    this.host.notifyOp(
+      finishedOpenWake(
+        { id: record.id, title: record.title, key: record.key || record.id },
+        finishedAt,
+        waitingGuidance(this.host.inbox, record.id, now),
+        now,
+      ),
+      "agent",
+      record.id,
     );
   }
 

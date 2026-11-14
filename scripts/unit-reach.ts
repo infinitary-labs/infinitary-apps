@@ -54,14 +54,17 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
   },
   // The wake words pins read every wake's words byte for byte through
   // tests/helpers/wakeWords.ts and wakes.ts, which takes them from its
-  // `*Wakes.ts` modules: a changed wake reached the merge batch unread (INF-3614).
+  // `*Wakes.ts` modules, and the waiting messages' words they quote: a
+  // changed wake reached the merge batch unread (INF-3614).
   {
-    owns: (path) => /^src\/core\/orchestrator\/(wakes|[a-z]+Wakes)\.ts$/.test(path),
+    owns: (path) =>
+      /^src\/core\/orchestrator\/(wakes|[a-z]+Wakes|waitingWords)\.ts$/.test(path),
     readers: [
       "src/core/orchestrator/wakes.words.batches.test.ts",
       "src/core/orchestrator/wakes.words.cards.test.ts",
       "src/core/orchestrator/wakes.words.corrections.test.ts",
       "src/core/orchestrator/wakes.words.crewmate.test.ts",
+      "src/core/orchestrator/wakes.words.finishedOpen.test.ts",
       "src/core/orchestrator/wakes.words.firstmate.test.ts",
     ],
   },

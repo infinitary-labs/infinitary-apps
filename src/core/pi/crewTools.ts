@@ -287,6 +287,7 @@ export type CrewDelegate = {
       evidence?: string;
       captainWordsFrom?: string;
       closingSentence?: string;
+      dropWaiting?: number[];
     },
   ): Promise<{ text: string; refusal?: SettleRefusal }>;
 };
@@ -828,6 +829,12 @@ export function createCrewTools(delegate: CrewDelegate) {
             "For done on the captain's own words asking it: turn, or the card id or crewmate-tab they came in",
         }),
       ),
+      drop_waiting: Type.Optional(
+        Type.Array(Type.Integer(), {
+          description:
+            "For done: ids of messages waiting for its idle crewmate, as a refusal named them, that it no longer needs; dropped once the close goes through",
+        }),
+      ),
       confirm: Type.Optional(
         Type.Boolean({
           description: "Discard unmerged or uncommitted work, after the captain chose",
@@ -852,6 +859,7 @@ export function createCrewTools(delegate: CrewDelegate) {
           ...(params.evidence ? { evidence: params.evidence } : {}),
           ...(params.captain_words ? { captainWordsFrom: params.captain_words } : {}),
           ...(sentence ? { closingSentence: sentence } : {}),
+          ...(params.drop_waiting?.length ? { dropWaiting: params.drop_waiting } : {}),
         });
         return { text, ...(refusal ? { details: { refusal } } : {}) };
       }

@@ -314,6 +314,13 @@ Nothing nudges the crewmate, and no card goes up: the captain chose on 2026-10-1
 After the last reminder nothing more is sent, and the task's crew line carries its `stalled` fact, as it does from the first reminder on.
 An act of the first mate's ends all of it: the next reconcile restarts the clock, once, read off the record - the ladder's last act fell after the request and before the act (`endAnsweredAsk`).
 
+**Finished work still open an hour on** (INF-4072, finding 4).
+An act that is not the close ends the reminders, and nothing else would say again that the work is finished and open.
+So an hour after its crewmate declared it finished (`FINISHED_OPEN_MS`), a task still open gets one wake to the first mate, `finished-open`, once per finish even across a restart (`docs/inbox.md`, "Once per fact").
+It names how long the task has stood finished and each message still waiting for its crewmate, which holds the first mate's close, with the `drop_waiting` way to drop one (`docs/task-record.md`, "One close as done").
+It does not go while a reminder is still owed (step 3), a card with actions or the crewmate's own card is up, a settle is under way, a card is put off, or the task waits in the backlog: each is someone's turn already.
+It nudges no crewmate and raises no card.
+
 **Every captain turn sees it.**
 Once the ladder has acted and while the turn is nobody's, `crew_status` carries `stalled 1h 20m · 2 wakes`, and the task's crew row in the first mate's context carries the time the idle began and the wake count.
 

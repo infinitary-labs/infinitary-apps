@@ -12,6 +12,8 @@ import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";
 import { changeName, mergedInLine } from "./settleWords";
 import { type TaskClose, type TaskClosing, workspaceOf } from "./taskClose";
+import { dropWaiting, waitingGuidance } from "./waitingGuidance";
+import { waitingWords } from "./waitingWords";
 
 /** What a done close is asked to record (`settle_task` mode done). */
 export type DoneCloseInput = {
@@ -33,6 +35,13 @@ export type DoneCloseInput = {
    * its words.
    */
   fromRecord?: true;
+  /**
+   * Messages still waiting for its crewmate that the first mate judged it no
+   * longer needs, by the ids a refused close named (INF-4072, finding 4):
+   * read as gone by the holds, and dropped from its lane, while it is idle,
+   * only once the close goes through.
+   */
+  dropWaiting?: readonly number[];
 };
 
 /** The words a press of Close as done on the record carries as the captain's. */
@@ -151,9 +160,22 @@ export class DoneClose {
         "merged needs delivered_in, the pull request or the commit on the main branch that holds its work.",
       );
 
+    // The waiting messages the first mate names to drop: the holds read as
+    // if they were gone, and they are withdrawn only just before the close
+    // goes through, so a close refused for anything else drops nothing.
+    const drop = new Set(input.dropWaiting ?? []);
+    const busy = (current: TaskRecord): DoneCloseResult | undefined =>
+      drop.size > 0 && this.crewmateWorking(current)
+        ? refuse(
+            "its crewmate is working, and a waiting message is dropped only while it is idle; wait for its report.",
+          )
+        : undefined;
+    const working = busy(record);
+    if (working) return working;
+
     // The soft holds: the captain's words pass every one; the first mate
     // alone meets each its recorded override does not pass.
-    const held = words ? undefined : this.heldOnRecord(record, input.why, carrier);
+    const held = words ? undefined : this.heldOnRecord(record, input.why, carrier, drop);
     if (held) return held.refusal ? held : refuse(held.text);
 
     const lease = this.locks.claim(record.id, "a close as done");
@@ -170,19 +192,23 @@ export class DoneClose {
           current.activity !== record.activity
         )
           return refuse("its state changed while its delivery was read; try again.");
-        const again = this.heldOnRecord(current, input.why, carrier);
+        const again = this.heldOnRecord(current, input.why, carrier, drop);
         if (again) return again.refusal ? again : refuse(again.text);
         const proof = overridePasses(current.delivery, "proof", current.delivery?.headSha)
           ? undefined
           : this.proofHeld(current, why, carrier, read);
         if (proof) return refuse(`${proof} ${softHoldWords("proof", "firstmate")}`);
       }
-      return await this.closeWith(
+      const stillBusy = busy(this.host.tasks.get(record.id) ?? record);
+      if (stillBusy) return stillBusy;
+      const lead = this.dropNamed(record, drop);
+      const closed = await this.closeWith(
         record,
         handle,
         { why, carrier, words, evidence, fromRecord: input.fromRecord === true },
         read,
       );
+      return lead ? { ...closed, text: `${lead}${closed.text}` } : closed;
     } catch (caught) {
       if (caught instanceof TaskGraphRefusal) return refuse(caught.message);
       throw caught;
@@ -201,6 +227,7 @@ export class DoneClose {
     record: TaskRecord,
     why: DoneWhy | undefined,
     carrier?: TaskRecord,
+    dropping: ReadonlySet<number> = new Set(),
   ): DoneCloseResult | undefined {
     const passes = (kind: OverridableHold) =>
       overridePasses(record.delivery, kind, record.delivery?.headSha);
@@ -223,7 +250,7 @@ export class DoneClose {
       const text = `${waits.text} ${softHoldWords("waits", "firstmate")}`;
       return { ok: false, text, refusal: { ...waits, text } };
     }
-    const unreported = passes("proof") ? undefined : this.unreported(record, why);
+    const unreported = passes("proof") ? undefined : this.unreported(record, why, dropping);
     if (unreported)
       return { ok: false, text: `${unreported} ${softHoldWords("proof", "firstmate")}` };
     return undefined;
@@ -253,14 +280,39 @@ export class DoneClose {
       : "the captain asked for its answer, and it closes on their choice on its card.";
   }
 
+  /**
+   * Withdraw the waiting messages the close named, just before it goes
+   * through, and write their words on the timeline as the first mate's.
+   * Answers the lead the close's answer opens with, or "" when none went.
+   */
+  private dropNamed(record: TaskRecord, drop: ReadonlySet<number>): string {
+    if (drop.size === 0) return "";
+    const dropped = dropWaiting(this.host.inbox, record.id, [...drop], this.host.now());
+    if (dropped.length === 0) return "";
+    this.host.tasks.note(
+      record.id,
+      `The first mate dropped guidance waiting for its crewmate: ${dropped.map((message) => `"${message.excerpt}"`).join("; ")}`,
+      { news: false, actor: "firstmate" },
+    );
+    return `Dropped ${dropped.map((message) => `message ${message.id}`).join(", ")} from its crewmate's lane. `;
+  }
+
+  /** Its crewmate's turn is running, or about to. */
+  private crewmateWorking(record: TaskRecord): boolean {
+    return this.locks.working(record.id) || Boolean(record.activity && record.activity !== "idle");
+  }
+
   /** Why the crewmate has not reported what the close would record, if it has not. */
-  private unreported(record: TaskRecord, why: DoneWhy | undefined): string | undefined {
+  private unreported(
+    record: TaskRecord,
+    why: DoneWhy | undefined,
+    dropping: ReadonlySet<number>,
+  ): string | undefined {
     // Unstarted work has no crewmate to report: the proof is where the
     // close says its work went (`proofHeld`).
     if (record.status === "open") return undefined;
     if (
-      this.locks.working(record.id) ||
-      (record.activity && record.activity !== "idle") ||
+      this.crewmateWorking(record) ||
       this.host.hasRunningJobs?.(record.id) ||
       record.delivery?.checkBack
     )
@@ -268,13 +320,16 @@ export class DoneClose {
     // Guidance still queued for the crewmate is work it has not done; work
     // another task carries on leaves that guidance to the carrier. Guidance
     // set aside after its refusals went to the first mate instead and is
-    // never delivered, so it holds nothing (INF-3307 audit).
-    if (
-      why !== "carried_on" &&
-      (this.host.inbox.allFor(record.id).some((row) => row.escalatedAt === null) ||
-        this.host.inbox.inFlight(record.id).length > 0)
-    )
-      return "guidance is still queued for its crewmate; let it finish that first.";
+    // never delivered, so it holds nothing (INF-3307 audit). The refusal
+    // names each message, so the first mate can drop one the crewmate no
+    // longer needs (INF-4072, finding 4).
+    if (why !== "carried_on") {
+      const waiting = waitingGuidance(this.host.inbox, record.id, this.host.now()).filter(
+        (message) => !dropping.has(message.id),
+      );
+      if (waiting.length > 0)
+        return `guidance is still queued for its crewmate; let it finish that first. ${waitingWords(waiting)}`;
+    }
     if (!record.outcome?.trim()) return "its crewmate has not reported yet.";
     return undefined;
   }

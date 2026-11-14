@@ -437,4 +437,127 @@ describe("guidance its crewmate never took", () => {
     expect(held.text).toContain("guidance is still queued for its crewmate");
     expect(world.tasks.get(TASK)?.status).toBe("active");
   });
+
+  // INF-4072, finding 4 (the captain started "a refused close names the
+  // waiting message and lets the first mate drop it"): INF-3807's close
+  // was refused for guidance its idle crewmate would never take.
+  it("INF-4072: a refused close names the waiting message, and dropping it lets the close through", async () => {
+    const world = settleWorld();
+    world.live.pull = merged(PR);
+    const id = world.inbox.enqueue(TASK, "Re-run the meter bench with the new clock.");
+    const held = await world.done.close(TASK, { why: "finished", evidence: EVIDENCE });
+    expect(held).toMatchObject({ ok: false });
+    expect(held.text).toContain(
+      `drop_waiting [${id}], which drops it as the close goes through. Waiting: message ${id}, queued 0m ago and not delivered yet: "Re-run the meter bench with the new clock."`,
+    );
+
+    const closed = await world.done.close(TASK, {
+      why: "finished",
+      evidence: EVIDENCE,
+      dropWaiting: [id],
+    });
+    expect(closed).toMatchObject({ ok: true });
+    expect(closed.text.startsWith(`Dropped message ${id} from its crewmate's lane.`)).toBe(true);
+    expect(world.inbox.get(id)).toBeUndefined();
+    expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(
+      world.tasks
+        .timeline(TASK)
+        .some(
+          (event) =>
+            event.actor === "firstmate" &&
+            event.text?.includes(
+              'dropped guidance waiting for its crewmate: "Re-run the meter bench',
+            ),
+        ),
+    ).toBe(true);
+  });
+
+  it("INF-4072: a message handed to a turn that never finished with it is named and dropped", async () => {
+    const world = settleWorld();
+    world.live.pull = merged(PR);
+    const id = world.inbox.enqueue(TASK, "Re-run the meter bench with the new clock.");
+    world.inbox.markDelivered([id]);
+    const held = await world.done.close(TASK, { why: "finished", evidence: EVIDENCE });
+    expect(held.text).toContain(
+      `message ${id}, queued 0m ago and handed to a turn that never finished with it`,
+    );
+
+    const closed = await world.done.close(TASK, {
+      why: "finished",
+      evidence: EVIDENCE,
+      dropWaiting: [id],
+    });
+    expect(closed).toMatchObject({ ok: true });
+    expect(world.inbox.inFlight(TASK)).toEqual([]);
+    expect(world.inbox.get(id)).toBeUndefined();
+  });
+
+  // INF-4136's review: the captain's own words, never the host's lead before
+  // them, and a cut that never splits a character.
+  it("INF-4072: a waiting card reply is named by the captain's words, cut at a character", async () => {
+    const world = settleWorld();
+    world.live.pull = merged(PR);
+    const words = `take the northern route ${"🧭".repeat(200)}`;
+    const id = world.inbox.enqueue(TASK, {
+      facts: { kind: "thread-reply", card: { id: "card-course", title: "Pick a course" }, words },
+    });
+    const held = await world.done.close(TASK, { why: "finished", evidence: EVIDENCE });
+    expect(held.text).toContain(
+      `Waiting: message ${id}, queued 0m ago and not delivered yet: "take the northern route 🧭`,
+    );
+    expect(held.text).not.toContain("Pick a course");
+    // No half of a character is left behind.
+    expect(held.text).not.toMatch(
+      /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/,
+    );
+    expect(held.text).toContain('🧭…"');
+  });
+
+  // The captain's pick on INF-4136's review: "Delete the messages only when
+  // the close actually goes through".
+  it("INF-4072: a close refused for anything else keeps the messages it named", async () => {
+    const world = settleWorld();
+    world.live.pull = { ...merged(PR), state: "open", merged: false, mergedSha: undefined };
+    const id = world.inbox.enqueue(TASK, "Re-run the meter bench with the new clock.");
+    const held = await world.done.close(TASK, {
+      why: "finished",
+      evidence: EVIDENCE,
+      dropWaiting: [id],
+    });
+    expect(held).toMatchObject({ ok: false });
+    expect(held.text).not.toContain("guidance is still queued");
+    expect(held.text).not.toContain("Dropped message");
+    expect(world.inbox.get(id)).toBeDefined();
+    expect(world.tasks.get(TASK)?.status).toBe("active");
+    expect(
+      world.tasks.timeline(TASK).some((event) => event.text?.includes("dropped guidance")),
+    ).toBe(false);
+  });
+
+  it("INF-4072: a message is never dropped while its crewmate works, and one the close did not name stays", async () => {
+    const world = settleWorld();
+    world.live.pull = merged(PR);
+    const id = world.inbox.enqueue(TASK, "Re-run the meter bench with the new clock.");
+    seedTask(world.tasks, { id: "busy", title: "Busy", status: "running" });
+    const busy = world.inbox.enqueue("busy", "Check the clock drift.");
+    const refused = await world.done.close("busy", {
+      why: "finished",
+      evidence: EVIDENCE,
+      dropWaiting: [busy],
+    });
+    expect(refused).toMatchObject({ ok: false });
+    expect(refused.text).toContain("a waiting message is dropped only while it is idle");
+    expect(world.inbox.get(busy)).toBeDefined();
+
+    // An id waiting for another task's crewmate is left alone.
+    const other = await world.done.close(TASK, {
+      why: "finished",
+      evidence: EVIDENCE,
+      dropWaiting: [busy],
+    });
+    expect(other).toMatchObject({ ok: false });
+    expect(other.text).toContain(`Waiting: message ${id},`);
+    expect(world.inbox.get(busy)).toBeDefined();
+  });
 });

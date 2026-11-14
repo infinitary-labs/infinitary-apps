@@ -262,6 +262,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           ...(input.deliveredIn ? { deliveredIn: input.deliveredIn } : {}),
           ...(input.evidence ? { evidence: input.evidence } : {}),
           ...(captainWords ? { captainWords } : {}),
+          ...(input.dropWaiting?.length ? { dropWaiting: input.dropWaiting } : {}),
         });
       return settled(record.id, input.closingSentence, close);
     },

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "finished-tasks-get-closed",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Finished tasks no longer sit open for a day",
+      "body": "When a crewmate says its work is finished and the task is still open an hour later, the first mate now hears about it once and closes it or says what is missing. If a close is held by a message still waiting for that crewmate, the first mate is told which message it is and can drop one the crewmate no longer needs, so the task closes as done instead of being cancelled.",
+      "noPicture": "No screen changes; the difference is that finished tasks close on time and keep a done record.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

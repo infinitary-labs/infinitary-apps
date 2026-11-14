@@ -1173,7 +1173,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       ),
     ]);
 
-    // The first mate acts without closing it: nothing more fires, for either.
+    // The first mate acts without closing it: the reminders end, and the
+    // crewmate is never nudged.
     const next = seedTask(tasks, {
       id: "next",
       title: "Next",
@@ -1181,11 +1182,24 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       startPolicy: "on-request",
     });
     supervisor.intake.linkTasks(next.id, taskId, "related");
+    const stillOpen = () => ops.filter((line) => line.includes("is still open, with nothing up"));
+    clock.now = finishedAt + minutes(59);
+    supervisor.watch.reconcileIdle(clock.now);
+    await settle();
+    expect(stillOpen()).toEqual([]);
+    // INF-4072, finding 4 (the captain started "one wake for a task that
+    // reported finished and is still open an hour later"): an hour after
+    // the finish, the first mate hears once that the task is still open.
     for (const idle of [61, 120, 240]) {
       clock.now = finishedAt + minutes(idle);
       supervisor.watch.reconcileIdle(clock.now);
       await settle();
     }
+    expect(stillOpen()).toEqual([
+      expect.stringContaining(
+        `task ${tasks.get(taskId)?.key || taskId} "Job" declared its work finished 1h 1m ago and is still open`,
+      ),
+    ]);
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
     expect(reminders()).toHaveLength(1);
     expect(supervisor.cards.snapshot().filter((card) => card.id.startsWith("card-stall-"))).toEqual(

@@ -95,10 +95,18 @@ export type OwnBatchWakeKind = "batch-held" | "batch-sent-back";
 /** A card button the app could not carry out has its own byte-exact cases (INF-4072). */
 export type CardActionWakeKind = "card-action-undone";
 
+/** Finished work still open an hour on has its own byte-exact cases (INF-4072, finding 4). */
+export type FinishedOpenWakeKind = "finished-open";
+
 /** Every other kind: a crewmate's steers, and the wrappers and choices either lane hears. */
 export type CrewmateWakeKind = Exclude<
   WakeKind,
-  FirstmateWakeKind | SavedOnlyWakeKind | CorrectionWakeKind | OwnBatchWakeKind | CardActionWakeKind
+  | FirstmateWakeKind
+  | SavedOnlyWakeKind
+  | CorrectionWakeKind
+  | OwnBatchWakeKind
+  | CardActionWakeKind
+  | FinishedOpenWakeKind
 >;
 
 /** One wake as a lane holds it, and the words it is served as. */

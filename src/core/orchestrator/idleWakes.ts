@@ -1,7 +1,8 @@
 /**
  * The idle ladder's wakes: a crewmate left idle with nothing running, one
  * stalled after its nudge, an ask the first mate has not acted on, a task
- * held for the captain with no card up, and the retired round caps an
+ * held for the captain with no card up, finished work still open an hour
+ * on, and the retired round caps an
  * older build queued, whose saved rows still read.
  *
  * The wake envelope, `renderWake` and `WAKE_WORDS`, the map of every
@@ -16,6 +17,8 @@ import {
   renderReviewVerdict,
   type WakeBuiltOn,
 } from "./reportWakes";
+import type { WaitingMessage } from "./waitingWords";
+import { waitingWords } from "./waitingWords";
 import type { KindWords, TypedWake, WakeTask } from "./wakes";
 
 /** The facts of the idle ladder's wakes. */
@@ -80,6 +83,21 @@ export type IdleFacts =
       builtOn?: WakeBuiltOn[];
       /** The task's newest report, already capped for a wake. */
       last?: { kind: "report" | "failed"; excerpt: string };
+    }
+  | {
+      /**
+       * Work its crewmate declared finished is still open an hour on, with
+       * no card of the task up and no reminder about it left to come
+       * (INF-4072, finding 4): told once per finish.
+       */
+      kind: "finished-open";
+      task: WakeTask;
+      /** The task's key, or its id when it has none. */
+      key: string;
+      /** How long ago its crewmate declared it finished. */
+      finishedMs: number;
+      /** The messages still waiting for its crewmate, which hold the first mate's close. */
+      waiting: WaitingMessage[];
     }
   | {
       /**
@@ -295,6 +313,30 @@ function hold(
 }
 
 /** The idle ladder's wakes, worded. */
+/** The name the finished-open wake goes out once for: the finish, by when it was declared. */
+export function finishedOpenOnce(finishedAt: number): string {
+  return `finished-open:${finishedAt}`;
+}
+
+/** The one wake when finished work is still open an hour on (INF-4072, finding 4). */
+export function finishedOpenWake(
+  task: WakeTask & { key: string },
+  finishedAt: number,
+  waiting: WaitingMessage[],
+  now: number,
+): TypedWake {
+  return {
+    facts: {
+      kind: "finished-open",
+      task: { id: task.id, title: task.title },
+      key: task.key,
+      finishedMs: now - finishedAt,
+      waiting,
+    },
+    once: finishedOpenOnce(finishedAt),
+  };
+}
+
 export const IDLE_WORDS: KindWords<IdleFacts> = {
   "idle-nudge": (facts) => {
     if (facts.thread) return idleThreadNudgeText(facts.waiting);
@@ -340,6 +382,13 @@ export const IDLE_WORDS: KindWords<IdleFacts> = {
     if (facts.finished)
       return `[fm-op] ${crewmate} on task ${facts.task.id} "${facts.task.title}" declared its work finished ${formatDurationShort(facts.askedMs)} ago with no card of its own up, so nothing is left for it and it is not nudged. ${since}${builtOnText(facts.builtOn)}${reminder} Close the task if the record bears that out, or steer the crewmate with what is still missing.${last}`;
     return `[fm-op] ${crewmate} on task ${facts.task.id} "${facts.task.title}" asked you ${formatDurationShort(facts.askedMs)} ago to act: ${facts.request ?? ""}. ${since}${builtOnText(facts.builtOn)}${reminder} The ask authorizes nothing by itself; the captain's own words do. Act on it, or steer the crewmate to tell it why not.${last}`;
+  },
+  "finished-open": (facts) => {
+    const waiting =
+      facts.waiting.length > 0
+        ? ` A message still waits for its crewmate, which holds your close. ${waitingWords(facts.waiting)}`
+        : "";
+    return `[fm-op] task ${facts.key} "${facts.task.title}" declared its work finished ${formatDurationShort(facts.finishedMs)} ago and is still open, with nothing up for the captain to decide and no reminder about it left to come. Close it with settle_task done if the record bears that out, or steer its crewmate with what is still missing. You are told this once.${waiting}`;
   },
   "backlog-news": (facts) =>
     `[fm-op] task ${facts.task.id} "${facts.task.title}" has waited in the backlog for ${formatDurationShort(facts.waitedMs)}, and news from the app reached it there; its crewmate hears it only once it starts again. If the news means it can move, start it with update_task start_now; otherwise leave it parked. You are told this once per stay in the backlog. The news: ${facts.news}`,

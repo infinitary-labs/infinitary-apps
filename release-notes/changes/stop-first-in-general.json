@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "stop-first-in-general",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Stop sits first in Settings → General",
+      "body": "When your first mate keeps working without the window, the row that says so, with its Stop button, is now the first row on Settings → General. The other rows keep their order.",
+      "picture": {
+        "dark": "stop-first-in-general-dark.webp",
+        "light": "stop-first-in-general-light.webp",
+        "alt": "Settings → General with Your first mate keeps working without this window and its Stop button as the first row, above Start at login, Show in dock and Notify me when my first mate needs me"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

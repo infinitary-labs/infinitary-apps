@@ -181,7 +181,7 @@ Joining by its address is not offered beside a command, and beside a boot entry 
 ## Quit and Stop
 
 Quitting the window closes only the window: the command's first mate and crew keep working (the captain's answer quit=window-only).
-Settings -> General says so beside the window and offers Stop, which the person presses twice, as Purge (`StopCommandRow`, `src/renderer/src/settings/GeneralTab.tsx`; `inf:app:stop-command`).
+Settings -> General says so beside the window, as its first row, and offers Stop, which the person presses twice, as Purge (`StopCommandRow`, `src/renderer/src/settings/GeneralTab.tsx`; `inf:app:stop-command`).
 Stop signals the command as a terminal's stop does, so it stops its crew cleanly and exits 0, and neither the agent nor the service starts it again (`stopRunningCommand`, `src/main/runCommand.ts`).
 The window then shows its notice, and Start it here starts the command again through the service manager; opening Infinitary again starts it too.
 The window says it stands beside a command as `byCommand` on what this app is (`inf:devices:this-mac`).

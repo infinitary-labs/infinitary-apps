@@ -589,6 +589,8 @@ export function GeneralTab() {
     <div>
       <SectionLabel>{m.settingsGeneralHeading()}</SectionLabel>
       <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
+        {/* Beside a command, what quitting does and Stop come first. */}
+        {byCommand && <StopCommandRow />}
         {!remote && (
           <SettingRow
             id="start-at-login"
@@ -641,7 +643,6 @@ export function GeneralTab() {
             />
           }
         />
-        {byCommand && <StopCommandRow />}
         {!remote && <DictationRow />}
         {!remote && <YourPanelsRow />}
         <SettingRow

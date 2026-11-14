@@ -85,6 +85,7 @@ import { readStartAtLogin, recordStartAtLogin } from "./storage/startAtLoginReco
 import { ProjectKeyRefusal } from "./tasks/projectKey";
 import { recentFeed } from "./tasks/taskFeed";
 import { taskRowChannels } from "./tasks/taskRowChannels";
+import { dispatcherHomeUpdates } from "./update/homeUpdateWiring";
 import { createUpdateHold } from "./update/updateHold";
 import { projectPageFile } from "./workspace/projectPage";
 
@@ -751,7 +752,6 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       throw new Error(OWN_WINDOW_ONLY);
     },
 
-    "inf:update:status": () => services.updateChecker.getStatus(),
     "inf:update:check": () => services.updateChecker.checkNow(),
     "inf:update:channel": (channel) => {
       if (!services.updateChecker.setChannel)
@@ -765,6 +765,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:update:install": () => services.updateChecker.install(),
+    ...dispatcherHomeUpdates(options),
     "inf:update:later": () =>
       services.updateChecker.later?.() ?? services.updateChecker.getStatus(),
 

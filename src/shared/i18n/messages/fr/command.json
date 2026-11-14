@@ -64,6 +64,8 @@
   "commandFocusCardReply": "Aller à la réponse de la carte",
   "commandFocusCardReplyWords": "ajouter, commentaire, remarque",
   "commandFocusMainMessage": "Aller au message principal",
+  "commandHomeUpdate": "Mettre à jour l’ordinateur du second",
+  "commandHomeUpdateWords": "mise à jour, ordinateur, distance, redémarrer, version",
   "commandMessageDeleteToLineEnd": "Supprimer jusqu’à la fin de la ligne",
   "commandMessageDeleteToLineStart": "Supprimer jusqu’au début de la ligne",
   "commandMessageDeleteWordBefore": "Supprimer le mot avant le curseur",

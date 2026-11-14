@@ -64,6 +64,8 @@
   "commandFocusCardReply": "카드 답장으로 이동",
   "commandFocusCardReplyWords": "추가할 말, 댓글, 답장",
   "commandFocusMainMessage": "메인 메시지 칸으로 이동",
+  "commandHomeUpdate": "일등항해사의 컴퓨터 업데이트",
+  "commandHomeUpdateWords": "업데이트, 컴퓨터, 원격, 다시 시작, 버전",
   "commandMessageDeleteToLineEnd": "줄 끝까지 지우기",
   "commandMessageDeleteToLineStart": "줄 처음까지 지우기",
   "commandMessageDeleteWordBefore": "커서 앞 단어 지우기",

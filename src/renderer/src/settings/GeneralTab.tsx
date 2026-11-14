@@ -18,6 +18,7 @@ import { Button, Input, KeyCap, Switch } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { isView } from "../devices/viewWords";
 import { purgedTasksText, YOUR_PANELS_WORDS } from "./generalWords";
+import { HomeUpdateRow } from "./HomeUpdateRow";
 import { LocalSeatSection } from "./LocalSeatSection";
 import { SharingSection } from "./SharingSection";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
@@ -674,6 +675,8 @@ export function GeneralTab() {
       <div style={{ marginTop: SECTION_GAP, display: "grid", gap: ROW_GAP }}>
         <VersionRow />
         <UpdateChannelRow />
+        {/* The first mate's computer's own update, where it answers it from here. */}
+        {remote && thisMac.homeUpdates && <HomeUpdateRow mac={thisMac} />}
       </div>
     </div>
   );

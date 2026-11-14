@@ -21,6 +21,7 @@ import { focusWithRing } from "../design/focus";
 import { giveFocusBack, moveInFrame } from "../plugins/frames/frameFocus";
 import { pluginHost } from "../plugins/host";
 import { panelCommandRefusal, runPanelCommand } from "../plugins/panelCommands";
+import { HOME_UPDATE_ROW } from "../settings/HomeUpdateRow";
 import { signInsInSecrets } from "../settings/WebsiteSignInsSection";
 import { cardStage } from "./cardStage";
 import { commandRefusal, type WindowFacts } from "./commandRefusals";
@@ -328,6 +329,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
     openSettingsAt("general", UPDATE_CHECK);
     void checkForUpdates();
   },
+  // Settings → General, with focus on the first mate's computer's update row.
+  "updates.home": () => openSettingsAt("general", HOME_UPDATE_ROW),
   "whats-new.show": () => showReleaseNote(null),
   "firstmate.reply": () => {
     const s = useShellStore.getState();

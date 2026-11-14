@@ -209,6 +209,9 @@ Send submits words and photos once; a refusal keeps the draft and says why, and 
 Out of reach and a read-only connection retain the view but refuse every change, without sending it later; the one line under the message box says which.
 When the Mac still hears words while reading only (`messages-while-reading`, `docs/view.md` "Read only"), Send stays on for words alone, Photos is disabled and dimmed, and the line reads "Your first mate still hears your messages.
 Buttons come back once Infinitary on this phone is updated.", or "on your computer" when the Mac is the older side.
+Where the Mac answers its own update from afar (`home-update`, `docs/ios.md` "Updating the computer"), the same place under the message box carries its update while the versions differ, an update moves or the last one failed: one centered `caption` `secondary` line, "Mac mini has 0.7.2-alpha.590 ready.", over one secondary choice button (`PhoneChoiceStyle`), Update Mac mini; while it saves, "Saving work on Mac mini." with whose running work it waits for, over Update later.
+Update first asks in the system's confirmation sheet, titled "Update Mac mini to 0.7.2-alpha.590?", whose message names the running work that finishes first, the background jobs that stop, and that nobody can undo it from the phone; its buttons are Update Mac mini and Not now.
+Settings → General carries the same line and buttons as a row under the phone's own version, always, titled "Infinitary on Mac mini".
 The Tasks tab follows the desktop’s five groups: Waiting on you, Working, Queued, Backlog and Done, with search across its current list and earlier tasks.
 Each group header is a micro uppercase tracked label with its count, as on the Mac.
 The first three groups start expanded; Backlog and Done start collapsed, with their counts and disclosure chevrons.

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { decisionModelIdSchema, decisionsSettingsSchema, decisionsViewSchema } from "../decisions";
 import { decisionUseRequestSchema } from "../decisionUses";
+import { homeUpdateSchema } from "../homeUpdate";
 import { releaseNotesViewSchema, shownReleaseNoteSchema } from "../releaseTracking";
 import { keptOutsideDataSchema, outsideDataDeletedSchema } from "../savedOutsideData";
 import {
@@ -106,6 +107,34 @@ export const upkeepChannels = {
     reach: "home",
     request: z.tuple([]),
     response: updateStatusSchema,
+  },
+  // The first mate's computer's own update, read and started from any paired
+  // view, a phone or a Mac that controls this one (docs/view.md, "Updating the
+  // first mate's computer"; `home-update.md`). Asked across every major, so
+  // their names and shapes never change: the version rule lets Update and
+  // Update later past its read-only gate (`READ_ONLY_ASKS`). The home offers
+  // only what its own Version row offers, and its update saves the crew's
+  // work as one started at the home does.
+  "inf:home-update:status": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: homeUpdateSchema,
+  },
+  "inf:home-update:install": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: homeUpdateSchema,
+  },
+  "inf:home-update:later": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: homeUpdateSchema,
   },
   // The release notes the app showed, newest first, with the version running
   // now (docs/release-notes.md "Reading a note again"): what Settings lists

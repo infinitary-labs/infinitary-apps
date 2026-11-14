@@ -28,6 +28,7 @@ import {
 import { isPhone } from "@shared/devices";
 import { ENDED_CHIP_LABEL, ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import type { FmEvent } from "@shared/events";
+import { type HomeUpdate, homeUpdateSchema } from "@shared/homeUpdate";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
@@ -470,6 +471,11 @@ export async function startPhoneHome(
   // "after": the computer takes the message, then the connection drops before its answer; "before": the
   // connection drops first, so the computer never takes it (INF-2553's unconfirmed take-back).
   let loseNextReply: "after" | "before" | undefined;
+  // INF-4012's direction 1: the home's own update as `home-update` sets it, standing in for an
+  // updater with a newer version out; null answers from the core's own updater. Install moves it to
+  // saving the crew's work and Update later back to offered; nothing is ever installed.
+  let homeUpdate: HomeUpdate | null = null;
+  const homeUpdateAsks: string[] = [];
   // The core's own id for the hero card (a first mate card's id is the core's, not the one asked for).
   let heroId = "";
   let sceneObservationReads = 0;
@@ -544,6 +550,15 @@ export async function startPhoneHome(
           const { words } = refuseNext;
           refuseNext = undefined;
           throw new Error(words);
+        }
+        if (homeUpdate && channel.startsWith("inf:home-update:")) {
+          homeUpdateAsks.push(channel);
+          if (channel === "inf:home-update:install" && homeUpdate.step === "offered")
+            homeUpdate = { ...homeUpdate, step: "saving", waitingFor: homeUpdate.stops.tasks };
+          if (channel === "inf:home-update:later" && homeUpdate.step === "saving")
+            homeUpdate = { ...homeUpdate, step: "offered", waitingFor: [] };
+          // The stand-in answers the update requests in their own shape.
+          return homeUpdate as Awaited<ReturnType<typeof core.dispatch<typeof channel>>>;
         }
         const result = await core.dispatch(channel, args, actor);
 
@@ -2615,6 +2630,16 @@ export async function startPhoneHome(
           result = { ok: true };
           break;
         }
+        case "POST home-update": {
+          const said = await controlBody(request);
+          homeUpdate = said ? homeUpdateSchema.parse(JSON.parse(said)) : null;
+          homeUpdateAsks.length = 0;
+          result = { ok: true };
+          break;
+        }
+        case "GET home-update-state":
+          result = { asks: homeUpdateAsks, update: homeUpdate };
+          break;
         case "POST lose-reply": {
           const said = await controlBody(request);
           const { before = false } = (said ? JSON.parse(said) : {}) as { before?: boolean };

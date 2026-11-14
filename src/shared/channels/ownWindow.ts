@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { savedKeymapSchema } from "../keymap";
-import { dockPresenceSchema, ownWindowAnswerSchema, ownWindowAskedSchema } from "../ownWindow";
+import {
+  dockPresenceSchema,
+  ownWindowAnswerSchema,
+  ownWindowAskedSchema,
+  updateAskedSchema,
+} from "../ownWindow";
 import { updateWorkSchema } from "../update";
 import { type ChannelDeclaration, okSchema } from "./common";
 
@@ -117,4 +122,9 @@ export const ownWindowPushes = {
   // Show in Dock, after every change: the first mate keeps it and this
   // computer's window applies it to its own program.
   "inf:presence:dock": { payload: dockPresenceSchema, surface: "core" },
+  // A paired view started this computer's own update (`home-update.md`):
+  // the window opens its update notice, says who asked, and follows it, so
+  // someone at this computer can still choose Update later. A Mac that
+  // controls this one never hands it on to its own windows.
+  "inf:update:asked": { payload: updateAskedSchema, surface: "core" },
 } as const;

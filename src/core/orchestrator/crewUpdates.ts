@@ -114,6 +114,17 @@ export class CrewUpdates {
     return this.localUpdate !== undefined && this.host.machineOf(taskId) === LOCAL_MACHINE_ID;
   }
 
+  /**
+   * Each task whose running turn here this computer's own update would stop
+   * now, by its title: what a view confirms an update against
+   * (`src/shared/homeUpdate.ts`). Turns on other computers go on there.
+   */
+  wouldStopHere(): string[] {
+    return [...this.host.runtimes()]
+      .filter((task) => task.turn.running && this.host.machineOf(task.id) === LOCAL_MACHINE_ID)
+      .map((task) => task.title);
+  }
+
   /** A turn began while its computer is being updated: it stops too. */
   turnBegan(task: TaskRuntime): void {
     const computer = this.updating.get(this.host.machineOf(task.id));

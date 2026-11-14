@@ -191,7 +191,20 @@ export function createMacUpdateChecker(options: {
     return download !== undefined || phase === "installing";
   }
 
-  async function install(): Promise<UpdateInstallResult> {
+  /** The install under way, which Update later waits on to answer where it rests. */
+  let inFlight: Promise<UpdateInstallResult> | undefined;
+
+  function install(): Promise<UpdateInstallResult> {
+    if (inFlight) return installOnce();
+    const run = installOnce();
+    inFlight = run;
+    void run.finally(() => {
+      if (inFlight === run) inFlight = undefined;
+    });
+    return run;
+  }
+
+  async function installOnce(): Promise<UpdateInstallResult> {
     if (blocked) return { ok: false, problem: blocked };
     if (isInstalling()) return { ok: false, problem: "The update is already installing." };
     const consent = generation;
@@ -261,7 +274,8 @@ export function createMacUpdateChecker(options: {
     setChannel,
     install,
     later: async () => {
-      saving.later();
+      // A save let go ends its install, which sets the phase it rests in: answer from there.
+      if (saving.later()) await inFlight;
       return status();
     },
     openReleasePage: async () => {

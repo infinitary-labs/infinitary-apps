@@ -67,6 +67,7 @@ import {
 } from "./host/electronHost";
 import { createElectronKeychainFile, readElectronKeychainStatus } from "./host/electronKeychain";
 import { nativeSecrets } from "./host/nativeSecrets";
+import { openWindowStandIn } from "./host/openWindowStandIn";
 import { broadcast, registerIpc } from "./ipc";
 import { followWindowCommands, moveCommands, shellCommands } from "./keyboard";
 import { deferCoreDisposal } from "./lifecycle";
@@ -89,7 +90,7 @@ import {
   windowProfileDir,
 } from "./runCommand";
 import { type RunEnvironment, readKeychainLock, runEnvironment } from "./runEnvironment";
-import { openWindowOnReopen } from "./runReopen";
+import { bundleOf, openNewCopy, openWindowOnReopen } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
@@ -702,6 +703,22 @@ export async function startApp(
         },
         // A run has no window to reopen: it ends for its starter to start the new copy.
         ...(windowless ? { relaunch: endUpdated } : {}),
+        // A paired view's update needs the window on a Mac: the run opens it
+        // beside itself, as a click on the app does (docs/view.md, "Updating
+        // the first mate's computer").
+        // A development or test run may stand in that opening (./host/openWindowStandIn.ts).
+        ...(() => {
+          if (!windowless) return {};
+          const standIn = openWindowStandIn(process.env, app.isPackaged);
+          if (standIn) return { openOwnWindow: standIn };
+          if (hostPlatform() !== "darwin" || !bundleOf(process.execPath)) return {};
+          return {
+            openOwnWindow: () => {
+              const bundle = bundleOf(process.execPath);
+              if (bundle) openNewCopy(bundle, app.isPackaged ? [] : [app.getAppPath()]);
+            },
+          };
+        })(),
         // Protected Secrets: the caller's own capability (a check's disposable
         // one), else this platform's native custody on the person's own data
         // folder only (./host/nativeSecrets.ts, docs/secrets.md).

@@ -230,6 +230,23 @@ Once a window knows that version, nothing asks it the wider set on its own eithe
 A read a window makes as it first opens, before it knows that version, can still reach it, such as the home screen's sharing read, or Automation's list when Settings is opened that early.
 A first mate with its own window refuses that read quietly; one started by a command answers it under its old rule, so the diagnostics notice can appear there.
 
+## Updating the first mate's computer
+
+A view can see and start the first mate's computer's own update, so a computer left on an older version is brought up to date without anyone at it (`src/shared/homeUpdate.ts`, the `home-update` contract change).
+The home answers `inf:home-update:status`, `inf:home-update:install` and `inf:home-update:later` on every major, and Update and Update later pass the read-only gate (`READ_ONLY_ASKS`, `docs/connection.md`), so they work across the very version split they end.
+A view knows the home answers them when its welcome lists `home-update` or speaks a later major (`homeAnswersUpdate`, `thisMac.homeUpdates`); an older home shows no update control.
+The home offers only what its own Version row offers: a copy updated through Homebrew, one whose installation was not confirmed, or one whose installer asks for a password says why in the row and offers nothing from afar (`createHomeUpdates`, `src/core/update/homeUpdate.ts`).
+Update runs the home's own update unchanged, so the crew's work is saved first, Update later lets it go, and each stopped turn carries on after the restart (`docs/alpha.md`, "Saving work before an update").
+A first mate a command started has no window of its own, so it opens the window beside it and asks it to install (`inf:own-window:ask`'s `update` kind); a window that does not open in time says so, and nothing starts.
+The home's update notice opens on its own when a view starts the update and names who asked (`inf:update:asked`, `askedFrom`), so someone at that computer can still choose Update later.
+
+On a Mac that controls another, Settings → General shows "Infinitary on Mac mini" under the Version row, with where its update stands and Update or Update later (`HomeUpdateRow`, words in `src/renderer/src/settings/homeUpdateWords.ts`); a section that waits for that computer's update shows the same row under its words.
+Update asks first, naming the running work that finishes before the restart, how many background jobs stop, and that nobody can undo it from here if the new version does not start.
+While it moves the row reads again every few seconds; a computer that does not answer once it began restarting reads "Restarting", and one still silent after a few minutes says someone needs to check it at the computer.
+The command `updates.home` (`docs/keyboard.md`) opens the row; the phone's own controls are in `docs/ios.md`, "Updating the computer".
+A development or end-to-end run stands in a direct Mac copy's update with `INFINITARY_MAC_UPDATE_STAND_IN`, the version its feed offers (`src/main/host/macUpdateStandIn.ts`): the real update controller and the crew's save run, nothing is downloaded or replaced, and a packaged build always uses the real installer (`tests/e2e/home-update.spec.ts`).
+It stands in the window's opening beside a command's first mate with `INFINITARY_OPEN_WINDOW_STAND_IN`, a file where each ask is noted instead of asking macOS to open the app, so the journey opens the window as macOS would (`src/main/host/openWindowStandIn.ts`); a packaged build always asks macOS.
+
 ## Notifications
 
 A view posts the other Mac's card-worthy moments to this Mac's Notification Center as that Mac posts them to its own.

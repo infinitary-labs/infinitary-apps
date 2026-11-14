@@ -62,6 +62,11 @@ One line stands centered under the top bar, a pill (`--bg-1`, `--line-2`, `--rad
 - a newer Infinitary there: the top line ends "· read only", with no "as of", because news keeps arriving; the pill reads "MacBook Pro has a newer Infinitary.
   Update Infinitary on this computer to make changes."
   This computer's update notice, when its channel offers a newer version, is the way to act on it.
+  For an older MacBook Pro that answers its own update from afar (`home-update`, `docs/view.md` "Updating the first mate's computer"), Settings → General carries one more row under Update channel, "Infinitary on MacBook Pro": its description says where that update stands ("MacBook Pro has 0.7.2-alpha.590 ready."), and its control is a small secondary Update MacBook Pro.
+  Update arms the row in place rather than opening a dialog: the description becomes "Update MacBook Pro to 0.7.2-alpha.590?", a `--text-sm --fg-2` list beneath names the running work that finishes first, the background jobs that stop and that it cannot be undone from here, and the control becomes Not now (ghost) beside Update MacBook Pro (primary), both small.
+  While it saves the control is Update later; while MacBook Pro restarts the row reads "Restarting MacBook Pro." and offers nothing.
+  A Settings section that waits for that update shows the same row under its words; on MacBook Pro the update panel opens by itself and says "Mac mini asked for this update."
+  (`../core/UpdatePanel.prompt.md`).
 - a version apart, while MacBook Pro still hears words (`messages-while-reading`, `docs/view.md` "Read only"): the pill reads "MacBook Pro has a newer Infinitary.
   Your first mate still hears your messages, and buttons come back once Infinitary on this computer is updated.", or "MacBook Pro has an older Infinitary.
   Your first mate still hears your messages, and buttons come back once Infinitary there is updated." when MacBook Pro is the older side.

@@ -1,6 +1,7 @@
 import type { BrowserViewer } from "@core/browser/browserViews";
 import type { JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications, HostPresence } from "@core/host";
+import { AskedInstall } from "@core/update/homeUpdate";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import type { CommandNotice } from "@shared/commandNotice";
 import { dictationSettingsSchema } from "@shared/dictation";
@@ -109,6 +110,8 @@ export class BesideWindow {
   private readonly window: LocalWindow;
   private readonly look: ViewLook;
   private readonly notices: ViewNotices;
+  /** An update a paired view started through the first mate, installed here (`ownUpdate`). */
+  private readonly asked: AskedInstall;
   /** The first mate's dictation switch, as last read or told. */
   private dictation = false;
   /** The command this window joined, as its note names it; null when it opened between two. */
@@ -133,6 +136,7 @@ export class BesideWindow {
 
   constructor(private readonly options: BesideWindowOptions) {
     const { beside } = options;
+    this.asked = new AskedInstall(options.updates);
     this.startedAt = beside.startedAt ?? null;
     this.joined = joinedRun(beside.status());
     this.look = new ViewLook(beside.look, (value) =>
@@ -293,7 +297,11 @@ export class BesideWindow {
       default:
     }
     if (OWN_APP.has(channel) && this.options.beside.installsUpdates) {
-      const answer = await answerOwnApp(this.options.updates, channel, rawArgs);
+      // A status names the view that started an update under way (`ownUpdate`).
+      const answer =
+        channel === "inf:update:status"
+          ? await this.asked.status()
+          : await answerOwnApp(this.options.updates, channel, rawArgs);
       return (
         channel === "inf:update:status" || channel === "inf:update:check"
           ? await this.withResuming(answer as UpdateStatus)
@@ -389,14 +397,35 @@ export class BesideWindow {
         };
         if (ask.set !== undefined) login.set(ask.set);
         answer = { kind: "start-at-login", enabled: login.get() };
-      } else
-        answer = { kind: "choose-files", paths: await chooseFiles({ multiple: ask.multiple }) };
+      } else if (ask.kind === "update")
+        answer = { kind: "update", status: await this.ownUpdate(ask.step, ask.from) };
+      else answer = { kind: "choose-files", paths: await chooseFiles({ multiple: ask.multiple }) };
     } catch (error) {
       answer = { kind: "failed", message: (error as Error).message };
     }
     await this.window.dispatch("inf:own-window:answer", [id, answer]).catch(() => {
       // The first mate left: its ask ended with the connection.
     });
+  }
+
+  /**
+   * This Mac's own update, asked by its first mate for a paired view
+   * (docs/view.md, "Updating the first mate's computer"): this window
+   * installs it as its own Update button does, saving the crew's work first,
+   * and its notice opens, naming the view, so someone here can still choose
+   * Update later. A window that does not install updates answers its first
+   * mate's own status, which never offers one from here.
+   */
+  private async ownUpdate(
+    step: "status" | "install" | "later",
+    from: string | undefined,
+  ): Promise<UpdateStatus> {
+    if (step === "install") {
+      this.asked.start(from);
+      if (from) this.options.broadcast("inf:update:asked", { from });
+    }
+    if (step === "later") await this.asked.later();
+    return this.withResuming(await this.asked.status());
   }
 
   /** The first mate welcomes the window: the notice goes, and the window takes what is the first mate's. */

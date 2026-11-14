@@ -117,6 +117,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `settings.keyboard`, Open Keyboard settings | window, run by the shell page | none: chosen by name, or Keyboard Settings… in the app menu |
 | `updates.later`, Update later | window, run by the shell page | none: chosen by name (update, later, cancel, saving and work find it too) |
 | `updates.check`, Check for updates | window, run by the shell page | none: chosen by name (update, version, release and new find it too), or Check for Updates… in the app menu |
+| `updates.home`, Update the first mate's computer | window, run by the shell page | none: chosen by name (update, computer, remote, restart and version find it too) |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |
 | `firstmate.reply`, Open the first mate's reply | window, run by the shell page | none: chosen by name (answer, message, note and last find it too), or a click, Enter or Space on the reply line |
 | `settings.runbooks`, Open Runbooks; `runbooks.open-folder`, Open your runbooks folder | window, run by the shell page | none: chosen by name |
@@ -321,6 +322,9 @@ The main process's own commands, the size keys, are never refused by the page.
   It refuses unless an update is saving work ("No update is saving work now"); once the copy is being replaced it cannot wait.
 - `updates.check`, Check for updates, opens Settings at General with focus on the Version row's next step and presses Check for updates, reading the release source now (`docs/alpha.md`, "Update channels"); it works from Settings too.
   It refuses on a copy whose installation the app could not confirm, which has no button.
+- `updates.home`, Update the first mate's computer, opens Settings at General with focus on the row for the first mate's computer's update, on a Mac that controls another (`docs/view.md`, "Updating the first mate's computer"); it works from Settings too.
+  It installs nothing: the row's Update asks first.
+  It refuses where this window is the first mate's own, or the first mate there does not answer its update from here.
 - `whats-new.show`, Show what's new, goes home and asks the core's What's new door for the newest release note that listed changes: an open note comes to the front of the stack, a closed one comes back read-only (`showReleaseNote`, `docs/release-notes.md` "Reading a note again").
   It works from Settings too, and refuses until a note was shown ("No release notes yet").
   The Help menu's What’s New in Infinitary tells the page the same command.

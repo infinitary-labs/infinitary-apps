@@ -64,6 +64,8 @@
   "commandFocusCardReply": "カードの返信欄へ移動",
   "commandFocusCardReplyWords": "追記, コメント, 返信",
   "commandFocusMainMessage": "メインのメッセージ欄へ移動",
+  "commandHomeUpdate": "一等航海士のコンピューターをアップデート",
+  "commandHomeUpdateWords": "アップデート, コンピューター, リモート, 再起動, バージョン",
   "commandMessageDeleteToLineEnd": "行末まで削除",
   "commandMessageDeleteToLineStart": "行頭まで削除",
   "commandMessageDeleteWordBefore": "カーソルの前の単語を削除",

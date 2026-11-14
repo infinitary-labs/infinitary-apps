@@ -566,13 +566,18 @@ describe("saving the crew's work before an in-app Linux update", () => {
       replaced += 1;
     });
     expect((await f.updates.getStatus()).install).toBeDefined();
-    const installing = f.updates.install();
+    let settled = false;
+    const installing = f.updates.install().finally(() => {
+      settled = true;
+    });
     await vi.waitFor(() => expect(f.work.save).toHaveBeenCalledTimes(1));
     expect((await f.updates.getStatus()).work).toEqual({
       state: "saving",
       tasks: ["Release notes"],
     });
     expect((await f.updates.later?.())?.work).toBeUndefined();
+    // Update later answers once the install let go, so nothing reads it as still under way.
+    expect(settled).toBe(true);
     expect(await installing).toEqual({ ok: false, later: true, problem: UPDATE_LATER });
     expect(replaced).toBe(0);
     expect(f.work.release).not.toHaveBeenCalled();

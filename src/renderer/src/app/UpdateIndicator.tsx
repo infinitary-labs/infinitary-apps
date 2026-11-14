@@ -8,7 +8,12 @@ import { focusWithRing } from "../design/focus";
 import { usePopoverPresence } from "../design/motion";
 import { useCommandKeys } from "./keyHints";
 import { UpdateStepButtons, UpdateStepText } from "./UpdateStepView";
-import { refreshUpdateStatus, setUpdateNoticeOpen as setOpen, useUpdateState } from "./updateState";
+import {
+  followAskedUpdate,
+  refreshUpdateStatus,
+  setUpdateNoticeOpen as setOpen,
+  useUpdateState,
+} from "./updateState";
 import { type UpdateStepAction, type UpdateStepPresses, updateStep } from "./updateStep";
 
 const CHANNEL_LABEL: Record<UpdateStatus["channel"], () => string> = {
@@ -44,7 +49,12 @@ export function UpdateIndicator() {
       },
       60 * 60 * 1000,
     );
-    return () => clearInterval(interval);
+    // A paired phone or Mac started this computer's update: the notice opens and follows it.
+    const unsubscribe = window.infinitary.update.onAsked(() => followAskedUpdate());
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -174,6 +184,11 @@ export function UpdatePanel({
     >
       <MicroLabel>{CHANNEL_LABEL[status.channel]()}</MicroLabel>
       {step && <UpdateStepText step={step} strong {...(onAction ? { onAction } : {})} />}
+      {status.askedFrom && (
+        <div data-update-asked-from style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
+          {m.viewHomeUpdateAskedFrom({ name: status.askedFrom })}
+        </div>
+      )}
       <div data-update-installed style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
         {m.shellUpdateInstalled({ version: status.currentVersion })}
       </div>

@@ -9,6 +9,7 @@ import { appWindows } from "../windows";
 import { type AutostartEntry, readAutostart, writeAutostart } from "./autostartEntry";
 import { createAxiProcessSpawner } from "./axiProcess";
 import { createDesktopKeychain } from "./electronKeychain";
+import { macUpdateStandIn } from "./macUpdateStandIn";
 import { createMacUpdateDriver } from "./macUpdates";
 import { captureDockedPanel } from "./panelCapture";
 import { createPanelProcessSpawner } from "./panelProcess";
@@ -36,6 +37,8 @@ export type ElectronHostOptions = {
    * ends for its starter to start the new copy (docs/run.md, "After an update").
    */
   relaunch?: (execPath?: string) => void;
+  /** Opens this computer's window beside a first mate a command started (`HostCapabilities.openOwnWindow`). */
+  openOwnWindow?: () => void;
   /** Explicit protected capability, also the isolated launcher's injection seam; absent means off. */
   secrets?: HostCapabilities["secrets"];
   /**
@@ -171,6 +174,12 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     options.prepareUpdateRestart
       ? { macUpdates: createMacUpdateDriver(options.prepareUpdateRestart) }
       : {}),
+    // A development or test run may stand in a direct copy's update (macUpdateStandIn.ts).
+    ...(() => {
+      const standIn = macUpdateStandIn(process.env, app.isPackaged);
+      return standIn ? { macUpdates: standIn } : {};
+    })(),
+    ...(options.openOwnWindow ? { openOwnWindow: options.openOwnWindow } : {}),
     // An isolated run is started from outside, which starts it again; only a
     // person's app starts itself again.
     relaunch:

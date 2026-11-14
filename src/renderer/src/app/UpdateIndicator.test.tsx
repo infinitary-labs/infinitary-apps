@@ -7,7 +7,7 @@ import {
   UPDATE_WORK_WORDS,
 } from "@shared/updateWords";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { UpdatePanel } from "./UpdateIndicator";
 
 /**
@@ -118,5 +118,38 @@ describe("UpdatePanel around the crew's work", () => {
     );
     expect(markup).toContain('data-update-action="install"');
     expect(markup).not.toContain('data-update-action="later"');
+  });
+});
+
+// INF-4014's review: a command-started first mate opens its window to install a view's update and
+// asks right after the window's main process says it is here, before the page listens for the
+// push, so the first reading that names who asked opens the notice instead.
+describe("the update notice on a view's update", () => {
+  it("opens when a reading first names who asked, and stays shut once closed", async () => {
+    const { refreshUpdateStatus, setUpdateNoticeOpen, useUpdateState } = await import(
+      "./updateState"
+    );
+    let status: UpdateStatus = { ...ALPHA_OFFER, install: { asksPassword: false } };
+    const stub = { infinitary: { update: { status: async () => status } } };
+    const had = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = stub;
+    vi.useFakeTimers();
+    try {
+      setUpdateNoticeOpen(false);
+      await refreshUpdateStatus();
+      expect(useUpdateState.getState().noticeOpen).toBe(false);
+      status = { ...status, phase: "downloading", askedFrom: "the phone" };
+      await refreshUpdateStatus();
+      expect(useUpdateState.getState().noticeOpen).toBe(true);
+      // Someone here closes it: later readings of the same update leave it shut.
+      setUpdateNoticeOpen(false);
+      await refreshUpdateStatus();
+      expect(useUpdateState.getState().noticeOpen).toBe(false);
+      status = { ...status, askedFrom: undefined, phase: "idle" };
+      await vi.advanceTimersByTimeAsync(5_000);
+    } finally {
+      vi.useRealTimers();
+      (globalThis as { window?: unknown }).window = had;
+    }
   });
 });

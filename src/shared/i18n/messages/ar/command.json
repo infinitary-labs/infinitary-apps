@@ -64,6 +64,8 @@
   "commandFocusCardReply": "الانتقال إلى رد البطاقة",
   "commandFocusCardReplyWords": "إضافة, تعليق, رد",
   "commandFocusMainMessage": "الانتقال إلى الرسالة الرئيسية",
+  "commandHomeUpdate": "تحديث حاسوب نائب القبطان",
+  "commandHomeUpdateWords": "تحديث, حاسوب, عن بعد, إعادة تشغيل, نسخة",
   "commandMessageDeleteToLineEnd": "الحذف حتى نهاية السطر",
   "commandMessageDeleteToLineStart": "الحذف حتى بداية السطر",
   "commandMessageDeleteWordBefore": "حذف الكلمة التي قبل المؤشر",

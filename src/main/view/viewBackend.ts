@@ -14,6 +14,7 @@ import type { UpdateChecker } from "@core/update/updateChecker";
 import {
   type FoldedInto16,
   hasSince16,
+  homeAnswersUpdate,
   homeHearsWhileReading,
   sideToUpdate,
 } from "@shared/contractFeatures";
@@ -270,6 +271,9 @@ export class ViewBackend {
       ...(readOnly(state) !== null &&
       homeHearsWhileReading(state.homeVersion ?? undefined, state.homeChanges)
         ? { messagesWhileReading: true as const }
+        : {}),
+      ...(homeAnswersUpdate(state.homeVersion, state.homeChanges)
+        ? { homeUpdates: true as const }
         : {}),
       heardAt: state.heardAt,
       caughtUp: this.caughtUp,

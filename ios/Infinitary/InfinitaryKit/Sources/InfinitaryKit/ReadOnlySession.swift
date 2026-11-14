@@ -147,7 +147,30 @@ public struct PhoneNotice: Equatable, Sendable {
         return nil
     }
     /// Where the connection is: what gates reads and changes. The words a person reads are `reach`.
-    public private(set) var contact = "reaching" { didSet { if contact != oldValue { settleReach() } } }
+    public private(set) var contact = "reaching" {
+        didSet { if contact != oldValue { settleReach(); noteHomeContact(was: oldValue) } }
+    }
+    /// INF-4012's direction 1: the computer answers its own update's requests (`home-update`), said in its welcome or
+    /// implied by the major that folded it in; `homeUpdate` is its last answer (docs/ios.md, "Updating the computer").
+    public private(set) var homeUpdates = false
+    public private(set) var homeUpdate: PhoneHomeUpdate?
+    /// The connection ended just as the computer was about to restart for its update: the line says Restarting, never
+    /// Out of reach, and after `PhoneHomeRestart.patience` says it has not come back. It never claims the update worked.
+    public private(set) var homeRestartingSince: Date?
+    public private(set) var homeNotBack = false
+    @ObservationIgnored private var homeRestartTimer: Task<Void, Never>?
+    /// The line under the message box about the computer's update, naming it; nil when there is nothing to say.
+    public var homeUpdateLine: String? {
+        if homeNotBack { return PhoneMessages.viewHomeUpdateNotBack(name: mac.name) }
+        if homeRestartingSince != nil { return PhoneMessages.viewHomeUpdateRestarting(name: mac.name) }
+        guard homeUpdates, contact == "in-reach" else { return nil }
+        return homeUpdate?.line(name: mac.name)
+    }
+    /// The phone reads the update again every few seconds only while it moves on by itself, or while the versions
+    /// differ, when bringing the computer up to date is the way back to changes.
+    public var homeUpdatePolls: Bool {
+        homeUpdates && contact == "in-reach" && (homeUpdate?.underWay == true || access != "full")
+    }
     /// INF-2668, the captain's answer "about 20 s": what the reach line and the computer button say. A connection
     /// that was in reach keeps saying In reach while it redials, until the computer has been quiet for `patience`;
     /// only then do the words follow `contact`, so a cell pause passes unnoticed and a dead path is named within
@@ -261,7 +284,8 @@ public struct PhoneNotice: Equatable, Sendable {
 
     private func invoke(_ channel: String, changes: Bool, args: [Any], waits: Bool = true) async throws -> Data {
         guard !Task.isCancelled, contact == "in-reach", let socket, !removed else { throw PhoneError.unavailable }
-        if changes, let reason = changeRefusal, !(messagesWhileReading && Self.plainWords(channel, args)) {
+        if changes, let reason = changeRefusal, !(messagesWhileReading && Self.plainWords(channel, args)),
+           !(homeUpdates && Self.homeUpdateAsk(channel, args)) {
             throw PhoneError.refused(reason)
         }
         nextID += 1
@@ -283,6 +307,50 @@ public struct PhoneNotice: Equatable, Sendable {
     static func plainWords(_ channel: String, _ args: [Any]) -> Bool {
         guard channel == PhoneRequest.converse.rawValue, args.count == 1, let words = args[0] as? String else { return false }
         return !words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Update and Update later of the computer's own update, with no arguments: the other changes a reading-only phone
+    /// sends, the shape the computer's `READ_ONLY_ASKS` lets through (src/shared/contractFeatures.ts).
+    static func homeUpdateAsk(_ channel: String, _ args: [Any]) -> Bool {
+        args.isEmpty && (channel == PhoneRequest.homeUpdateInstall.rawValue || channel == PhoneRequest.homeUpdateLater.rawValue)
+    }
+
+    /// Reads how the computer's own update stands.
+    public func readHomeUpdate() async throws {
+        guard homeUpdates else { return }
+        homeUpdate = try await request(.homeUpdate, as: PhoneHomeUpdate.self)
+    }
+
+    /// Update: the computer saves its crew's work and installs the offered version, as its own Version row does.
+    public func installHomeUpdate() async throws {
+        guard homeUpdates else { throw PhoneError.unavailable }
+        homeUpdate = try await request(.homeUpdateInstall, as: PhoneHomeUpdate.self)
+    }
+
+    /// Update later: the computer keeps its version, as its own update notice's button does.
+    public func laterHomeUpdate() async throws {
+        guard homeUpdates else { throw PhoneError.unavailable }
+        homeUpdate = try await request(.homeUpdateLater, as: PhoneHomeUpdate.self)
+    }
+
+    /// A connection that ends while the computer is about to restart is the restart; one that comes back ends it, and
+    /// the update is read again, so what the phone says next is what the computer answers.
+    private func noteHomeContact(was: String) {
+        if contact == "in-reach" {
+            homeRestartTimer?.cancel(); homeRestartTimer = nil
+            // What the computer said before it restarted no longer holds: nothing shows until it answers again.
+            if homeRestartingSince != nil { homeUpdate = nil }
+            homeRestartingSince = nil; homeNotBack = false
+            if homeUpdates { Task { [weak self] in try? await self?.readHomeUpdate() } }
+            return
+        }
+        guard was == "in-reach", homeRestartingSince == nil, homeUpdate?.aboutToRestart == true else { return }
+        homeRestartingSince = Date()
+        homeRestartTimer = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(PhoneHomeRestart.patience))
+            guard !Task.isCancelled, let self, self.homeRestartingSince != nil else { return }
+            self.homeNotBack = true
+        }
     }
 
     public func ask(_ channel: PhoneCardRequest, _ args: [PhoneJSON]) async throws -> PhoneJSON {
@@ -1009,6 +1077,9 @@ public struct PhoneNotice: Equatable, Sendable {
             homeLeavesClosed = folded || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
             if catchUp == "reload" { onPanelResync?() }
+            homeUpdates = PhoneHomeUpdate.supported(homeVersion: frame["protocolVersion"] as? String,
+                                                    changes: frame["changes"] as? [String] ?? [])
+            if !homeUpdates { homeUpdate = nil }
             homeHearsWhileReading = folded
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.messagesWhileReading)
             closedRowsWanted = false

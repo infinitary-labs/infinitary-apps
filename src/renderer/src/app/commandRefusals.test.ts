@@ -152,6 +152,27 @@ describe("why a window command cannot run now", () => {
     expect(commandRefusal("updates.later", HOME, CLEAR)).toBe("No update is saving work now");
   });
 
+  // INF-4012 direction 1: the first mate's computer's update row is offered only where it answers it from here.
+  it("opens the first mate's computer's update only where it answers it from here", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: "older-there",
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    expect(
+      commandRefusal("updates.home", { ...HOME, thisMac: { ...view, homeUpdates: true } }, CLEAR),
+    ).toBeNull();
+    expect(commandRefusal("updates.home", { ...HOME, thisMac: view }, CLEAR)).toBe(
+      "No update is available",
+    );
+    expect(commandRefusal("updates.home", HOME, CLEAR)).toBe("No update is available");
+  });
+
   it("INF-1879: the new Done control preserves the existing recording focus guard", () => {
     const answer = { ...CLEAR, answerDoneReady: true };
     expect(commandRefusal("focus.card-actions", HOME, answer)).toBeNull();

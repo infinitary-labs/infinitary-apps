@@ -537,6 +537,12 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       openReleasePage: () => invoke("inf:update:open-release"),
       install: () => invoke("inf:update:install"),
       later: () => invoke("inf:update:later"),
+      onAsked: (listener) => subscribe("inf:update:asked", listener),
+      home: {
+        status: () => invoke("inf:home-update:status"),
+        install: () => invoke("inf:home-update:install"),
+        later: () => invoke("inf:home-update:later"),
+      },
     },
     releaseNotes: {
       list: () => invoke("inf:release-notes:list"),

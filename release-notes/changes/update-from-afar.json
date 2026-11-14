@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "update-from-afar",
+      "kind": "feature",
+      "title": "Update your first mate's computer from your phone or another Mac",
+      "body": "When the computer where your first mate lives has a newer Infinitary ready, your phone and any Mac that controls it now show it, with an Update button, even while the two versions are too far apart to make other changes. Update asks first and names the work still running. That work finishes before the restart and carries on after it, and Update later keeps the current version. On the computer itself, the update notice opens and says who asked. This works once that computer has this version.",
+      "area": "devices",
+      "picture": {
+        "dark": "update-from-afar-dark.webp",
+        "light": "update-from-afar-light.webp",
+        "alt": "Settings, General on a Mac controlling a Mac mini: the row Infinitary on Mac mini says Mac mini has a newer version ready, with an Update Mac mini button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

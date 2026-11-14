@@ -64,6 +64,8 @@
   "commandFocusCardReply": "前往卡片的回复框",
   "commandFocusCardReplyWords": "补充, 评论, 回复",
   "commandFocusMainMessage": "前往主消息框",
+  "commandHomeUpdate": "更新大副所在的电脑",
+  "commandHomeUpdateWords": "更新, 电脑, 远程, 重启, 版本",
   "commandMessageDeleteToLineEnd": "删除到行尾",
   "commandMessageDeleteToLineStart": "删除到行首",
   "commandMessageDeleteWordBefore": "删除光标前的词",

@@ -65,6 +65,11 @@ export const updateStatusSchema = z.object({
   checkedAt: z.number().optional(),
   /** The crew's work around this update, while there is any to save or resume. */
   work: updateWorkSchema.optional(),
+  /**
+   * The paired phone or Mac, by its name, that started the update under way
+   * (`home-update.md`): the notice says so, beside Update later.
+   */
+  askedFrom: z.string().optional(),
 });
 export type UpdateStatus = z.infer<typeof updateStatusSchema>;
 

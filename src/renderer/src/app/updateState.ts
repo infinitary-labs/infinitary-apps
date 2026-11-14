@@ -46,7 +46,12 @@ export async function refreshUpdateStatus(): Promise<void> {
   const own = ++reading;
   try {
     const status = await window.infinitary.update.status();
-    if (own === reading) useUpdateState.setState({ status });
+    if (own !== reading) return;
+    const before = useUpdateState.getState().status;
+    useUpdateState.setState({ status });
+    // A view's update can start before this window listens for its push, as when a
+    // command-started first mate opens it to install: the first reading naming who asked opens the notice.
+    if (status.askedFrom && !before?.askedFrom) followAskedUpdate();
   } catch {
     /* An unanswered check never invents an offer. */
   }
@@ -150,4 +155,29 @@ export async function updateLater(): Promise<void> {
     // The update goes on; the next reading says where it stands.
   }
   await refreshUpdateStatus();
+}
+
+let following: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * A paired phone or Mac started this computer's update (`inf:update:asked`,
+ * docs/view.md, "Updating the first mate's computer"): the notice opens and
+ * follows it, saying who asked, so someone here can still choose Update
+ * later. It reads until the update under way no longer names that view.
+ */
+export function followAskedUpdate(): void {
+  setUpdateNoticeOpen(true);
+  if (following) return;
+  let readings = 0;
+  following = setInterval(() => {
+    void refreshUpdateStatus().then(() => {
+      readings++;
+      const status = useUpdateState.getState().status;
+      // The first readings may come before the update says who asked.
+      if (readings > 4 && !status?.askedFrom && following) {
+        clearInterval(following);
+        following = null;
+      }
+    });
+  }, 500);
 }

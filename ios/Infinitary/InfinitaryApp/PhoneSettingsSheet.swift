@@ -158,6 +158,8 @@ struct PhoneSettingsSheet: View {
                 Text("Infinitary").font(PhoneFont.headline)
                 Text(PhoneMessages.phoneSettingsVersion(version: Self.version)).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
                     .accessibilityIdentifier("app-version")
+                // INF-4012's direction 1: Infinitary on the computer, its version and update, where it answers them.
+                if session.homeUpdates { PhoneHomeUpdateControls(session: session, row: true).padding(.top, PhoneTheme.space3) }
             }
         case .appearance:
             if let appearance { theme(appearance) }

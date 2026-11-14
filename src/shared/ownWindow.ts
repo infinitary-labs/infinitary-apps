@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { updateStatusSchema } from "./update";
 
 /**
  * What a first mate a command started asks of this computer's window
@@ -13,12 +14,24 @@ export const ownWindowAskSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("start-at-login"), set: z.boolean().optional() }),
   /** The file picker, for a page of a task's browser the captain holds. */
   z.strictObject({ kind: z.literal("choose-files"), multiple: z.boolean() }),
+  /**
+   * This computer's own update, asked from a paired view (`home-update.md`):
+   * only a program in the person's session replaces the copy on a Mac, so
+   * the window reads it, starts it for `from` (the view's name), or lets it go.
+   */
+  z.strictObject({
+    kind: z.literal("update"),
+    step: z.enum(["status", "install", "later"]),
+    from: z.string().min(1).max(200).optional(),
+  }),
 ]);
 export type OwnWindowAsk = z.infer<typeof ownWindowAskSchema>;
 
 export const ownWindowAnswerSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("start-at-login"), enabled: z.boolean() }),
   z.strictObject({ kind: z.literal("choose-files"), paths: z.array(z.string().min(1)) }),
+  /** The window's own update status, after the step it was asked. */
+  z.strictObject({ kind: z.literal("update"), status: updateStatusSchema }),
   /** The window could not do it; `message` says why in plain words. */
   z.strictObject({ kind: z.literal("failed"), message: z.string().min(1).max(400) }),
 ]);
@@ -30,6 +43,10 @@ export const ownWindowAskedSchema = z.strictObject({
   ask: ownWindowAskSchema,
 });
 export type OwnWindowAsked = z.infer<typeof ownWindowAskedSchema>;
+
+/** A paired view started this computer's own update: the window says so and follows it (`inf:update:asked`). */
+export const updateAskedSchema = z.strictObject({ from: z.string().min(1).max(200) });
+export type UpdateAsked = z.infer<typeof updateAskedSchema>;
 
 /** Show in Dock as the first mate keeps it, for this computer's window to apply (`inf:presence:dock`). */
 export const dockPresenceSchema = z.strictObject({ showInDock: z.boolean() });

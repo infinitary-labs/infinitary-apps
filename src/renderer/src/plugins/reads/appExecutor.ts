@@ -62,6 +62,8 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // applies them (docs/run.md, "The window opened beside it"); no page hears.
   "inf:own-window:ask": () => () => {},
   "inf:presence:dock": () => () => {},
+  // A paired view started this computer's update: the update notice subscribes directly.
+  "inf:update:asked": (_channel, listener) => window.infinitary.update.onAsked(listener),
   "inf:auth:prompt": (_channel, listener) => window.infinitary.auth.onPrompt(listener),
   "inf:auth:notice": (_channel, listener) => window.infinitary.auth.onNotice(listener),
   // Personal extensions (talk-to-personalize Step 2): no read names these

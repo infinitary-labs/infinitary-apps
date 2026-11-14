@@ -771,6 +771,13 @@ export const thisMacSchema = z.discriminatedUnion("role", [
      * the message box stays on (docs/view.md, "Two versions apart").
      */
     messagesWhileReading: z.literal(true).optional(),
+    /**
+     * The first mate there answers its own update's requests
+     * (`inf:home-update:*`, the `home-update` contract change), so Settings
+     * → General offers its Update row (docs/view.md, "Updating the first
+     * mate's computer").
+     */
+    homeUpdates: z.literal(true).optional(),
     heardAt: z.number().int().nonnegative().nullable(),
     caughtUp: z.number().int().nonnegative(),
     runsWork: z.boolean().optional(),

@@ -124,6 +124,37 @@ extension PhoneJourney {
         XCTAssertEqual(readingWrites.last?["channel"] as? String, "inf:converse")
         XCTAssertEqual((readingWrites.last?["args"] as? [Any])?.first as? String, "Sent to an older computer")
         XCTAssertFalse(app.buttons["change-notice"].exists, "The home took the message, so nothing is taken back")
+        // INF-4012's direction 1: reading only, the phone still brings the older computer up to date. The test home
+        // stands in for an updater with a newer version out, and Update asks first, naming the running work.
+        _ = try await home("home-update", body: #"{"version":"0.7.2-alpha.585","channel":"alpha","offered":"0.7.2-alpha.590","step":"offered","waitingFor":[],"stops":{"tasks":["Check the phone connection"],"jobs":0},"problem":null}"#)
+        let updateLine = app.staticTexts["home-update-line"]
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Test Mac mini has 0.7.2-alpha.590 ready."),
+                                             object: updateLine, timeout: 20), .completed, app.debugDescription)
+        let update = app.buttons["home-update"]
+        XCTAssertEqual(update.label, "Update Test Mac mini")
+        verifyPhoneComposerBounds(app: app)
+        picture("home-update-offered")
+        waitForSteadyTarget(update)
+        tapOnPhone(update, repeatDiscarded: false)
+        let confirmUpdate = app.buttons["home-update-confirm"].firstMatch
+        XCTAssertTrue(confirmUpdate.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Update Test Mac mini to 0.7.2-alpha.590?"].exists, app.debugDescription)
+        picture("home-update-confirm")
+        waitForSteadyTarget(confirmUpdate)
+        tapOnPhone(confirmUpdate, repeatDiscarded: false)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label BEGINSWITH %@", "Saving work on Test Mac mini."),
+                                             object: updateLine, timeout: 20), .completed, app.debugDescription)
+        let updateLater = app.buttons["home-update-later"]
+        XCTAssertTrue(updateLater.waitForPresence(timeout: 10), app.debugDescription)
+        picture("home-update-saving")
+        waitForSteadyTarget(updateLater)
+        tapOnPhone(updateLater, repeatDiscarded: false)
+        XCTAssertTrue(update.waitForPresence(timeout: 20), "Update later keeps the version, and Update is offered again")
+        let updateState = try await home("home-update-state", method: "GET")
+        let updateAsks = try XCTUnwrap(updateState["asks"] as? [String])
+        XCTAssertEqual(updateAsks.filter { $0 != "inf:home-update:status" },
+                       ["inf:home-update:install", "inf:home-update:later"], "The older home took Update, then Update later")
+        _ = try await home("home-update", body: "")
         focusForPhoneTyping(input, in: app); input.typeText("Sent to an older computer")
         // A home at this phone's floor answers it in full, and the draft sends there.
         _ = try await home("older-home-within")

@@ -339,6 +339,11 @@ export class JobManager {
     return count;
   }
 
+  /** How many background commands run here now, whoever owns them: a restart stops each. */
+  runningCount(): number {
+    return this.jobs.size;
+  }
+
   hasRunningJobs(ownerId: string): boolean {
     for (const job of this.jobs.values()) {
       if (job.ownerId === ownerId) return true;

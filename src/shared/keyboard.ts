@@ -915,6 +915,22 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandUpdatesCheckWords());
     },
   },
+  // INF-4012 direction 1: on a Mac that controls another, Settings → General's
+  // row for the first mate's computer's update, chosen by name; it asks before
+  // anything installs.
+  "updates.home": {
+    get label() {
+      return m.commandHomeUpdate();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    get searchWords() {
+      return searchWords(m.commandHomeUpdateWords());
+    },
+  },
   // The newest release note again (docs/release-notes.md "Reading a note
   // again"): chosen by name, and from the Help menu's What's New, like
   // Keyboard settings; a person may give it a key.

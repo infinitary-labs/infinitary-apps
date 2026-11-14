@@ -408,7 +408,9 @@ describe("saving the crew's work before a Mac update", () => {
     const f = fixture(undefined, undefined, crew.work);
     const installing = f.checker.install();
     await vi.waitFor(() => expect(crew.work.save).toHaveBeenCalledTimes(1));
-    expect((await f.checker.later?.())?.work).toBeUndefined();
+    // Update later answers where the let-go update rests, never the installing it left (INF-4014's review).
+    expect(await f.checker.later?.()).toMatchObject({ phase: "idle", updateAvailable: true });
+    expect((await f.checker.getStatus()).work).toBeUndefined();
     expect(await installing).toEqual({ ok: false, later: true, problem: UPDATE_LATER });
     expect(f.driver.install).not.toHaveBeenCalled();
     expect(await f.checker.getStatus()).toMatchObject({ updateAvailable: true, phase: "idle" });

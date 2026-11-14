@@ -388,7 +388,20 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     }
   }
 
-  async function install(): Promise<UpdateInstallResult> {
+  /** The install under way, which Update later waits on to answer once it let go. */
+  let inFlight: Promise<UpdateInstallResult> | undefined;
+
+  function install(): Promise<UpdateInstallResult> {
+    if (inFlight) return installOnce();
+    const run = installOnce();
+    inFlight = run;
+    void run.finally(() => {
+      if (inFlight === run) inFlight = undefined;
+    });
+    return run;
+  }
+
+  async function installOnce(): Promise<UpdateInstallResult> {
     const status = await readBeforeInstall();
     const offer = lastOffer.get(keyOf(status.channel, TAP));
     if (!linux?.package || !status.install || !offer?.download || !options.installLinux) {
@@ -436,7 +449,8 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     openReleasePage,
     install,
     later: async () => {
-      saving.later();
+      // A save let go ends its install: answer once it has, not while it still says it installs.
+      if (saving.later()) await inFlight;
       return withUpdateWork(await getStatus(), saving);
     },
   };

@@ -585,6 +585,15 @@ Card buttons, replies and task controls stay off.
 Every request has one connection-bound response and a bounded wait; a disconnect, timeout or unreadable mutation response leaves its outcome unconfirmed.
 The phone never queues or retries a mutation after reconnecting.
 
+### Updating the computer
+
+The phone sees and starts the computer's own update through the same requests as a Mac that controls it (`docs/view.md`, "Updating the first mate's computer"), where the computer's welcome lists `home-update` or speaks a later major (`homeUpdates`).
+Settings → General shows Infinitary on the computer under the phone's own version, with where its update stands and Update or Update later (`PhoneHomeUpdateControls`, `PhoneHomeUpdateViews.swift`).
+The line under the message box shows the same while the versions differ, an update moves or the last one failed: "Mac mini has 0.7.2-alpha.590 ready." with Update Mac mini, then Saving work on Mac mini with Update later, Restarting, and Resuming work (`PhoneHomeUpdate`, `PhoneHomeUpdate.swift`).
+Update asks first in a confirmation naming the running work that finishes before the restart, how many background jobs stop, and that it cannot be undone from the phone if the new version does not start.
+While it moves the phone reads again every few seconds; a computer silent for a few minutes after it began restarting says someone needs to check it at the computer.
+A refused or unconfirmed press says so on the line and is never repeated on its own.
+
 ### Changes show at the tap
 
 Every change the captain makes on the phone shows at once and settles on the computer's own evidence (INF-2553, the captain's direction B).

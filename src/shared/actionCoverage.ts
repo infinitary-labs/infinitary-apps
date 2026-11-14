@@ -87,6 +87,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "The captain's own update-and-restart consent in the update panel; a model cannot grant it",
   "inf:update:later":
     "The captain's own Update later in the update panel, which lets an update go; a model cannot choose it",
+  "inf:home-update:install":
+    "The captain's own Update of the first mate's computer from a paired phone or Mac, after its confirmation; a model cannot grant it",
+  "inf:home-update:later":
+    "The captain's own Update later of the first mate's computer from a paired phone or Mac; a model cannot choose it",
   "inf:update:channel":
     "The captain's installed-app subscription on the controlling computer, chosen in Settings; never an agent change to the home computer",
   "inf:browser:sign-ins:automatic":

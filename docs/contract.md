@@ -82,6 +82,7 @@ A newer view says its own floor in its hello (`viewFloor`), and is answered ever
 A computer viewing from before the floor says none and reads closed lists strictly, so it is answered as a computer that runs work is; a phone from before it reads those lists as text and is measured against the floor all the same.
 A client outside its window is answered its reads (`effect: "read"`) and sent every push, and each change (`effect: "change"`) is refused, as the result's error, until the older side is updated.
 A view outside its window is still answered the few changes `READ_ONLY_ASKS` lists (`src/shared/contractFeatures.ts`), each in a shape no major changes: a plain-text message to the first mate, `inf:converse` with one string, so the captain keeps talking to the first mate across a version split (`messages-while-reading`).
+The home's own update is the other: `inf:home-update:install` and `inf:home-update:later`, beside the read `inf:home-update:status`, keep their names and shapes on every major, so a view can end the split it is on (`home-update`, `src/shared/homeUpdate.ts`).
 A view keeps its message box on while reading only from a home that lists that change or speaks a newer major (`homeHearsWhileReading`), and sends it words alone.
 A client on an answered major keeps everything it knows whatever its minor, because a minor only adds.
 

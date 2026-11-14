@@ -64,6 +64,8 @@
   "commandFocusCardReply": "Zur Antwort der Karte gehen",
   "commandFocusCardReplyWords": "ergänzen, hinzufügen, Kommentar, kommentieren",
   "commandFocusMainMessage": "Zur Hauptnachricht gehen",
+  "commandHomeUpdate": "Computer des ersten Offiziers aktualisieren",
+  "commandHomeUpdateWords": "aktualisieren, Computer, Fernzugriff, Neustart, Version",
   "commandMessageDeleteToLineEnd": "Bis zum Zeilenende löschen",
   "commandMessageDeleteToLineStart": "Bis zum Zeilenanfang löschen",
   "commandMessageDeleteWordBefore": "Wort vor dem Cursor löschen",

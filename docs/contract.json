@@ -29075,6 +29075,9 @@
               "state",
               "tasks"
             ]
+          },
+          "askedFrom": {
+            "type": "string"
           }
         },
         "required": [
@@ -29196,6 +29199,9 @@
               "state",
               "tasks"
             ]
+          },
+          "askedFrom": {
+            "type": "string"
           }
         },
         "required": [
@@ -29327,6 +29333,9 @@
               "state",
               "tasks"
             ]
+          },
+          "askedFrom": {
+            "type": "string"
           }
         },
         "required": [
@@ -29512,6 +29521,9 @@
               "state",
               "tasks"
             ]
+          },
+          "askedFrom": {
+            "type": "string"
           }
         },
         "required": [
@@ -29521,6 +29533,252 @@
           "updateAvailable",
           "releaseUrl",
           "upgradeCommand"
+        ]
+      }
+    },
+    "inf:home-update:status": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "offered": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "step": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "waitingFor": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stops": {
+            "type": "object",
+            "properties": {
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "jobs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "tasks",
+              "jobs"
+            ]
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "channel",
+          "offered",
+          "step",
+          "waitingFor",
+          "stops",
+          "problem"
+        ]
+      }
+    },
+    "inf:home-update:install": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "offered": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "step": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "waitingFor": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stops": {
+            "type": "object",
+            "properties": {
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "jobs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "tasks",
+              "jobs"
+            ]
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "channel",
+          "offered",
+          "step",
+          "waitingFor",
+          "stops",
+          "problem"
+        ]
+      }
+    },
+    "inf:home-update:later": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "offered": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "step": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "waitingFor": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stops": {
+            "type": "object",
+            "properties": {
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "jobs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "tasks",
+              "jobs"
+            ]
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "channel",
+          "offered",
+          "step",
+          "waitingFor",
+          "stops",
+          "problem"
         ]
       }
     },
@@ -56846,6 +57104,136 @@
                 "properties": {
                   "kind": {
                     "type": "string",
+                    "const": "update"
+                  },
+                  "status": {
+                    "type": "object",
+                    "properties": {
+                      "currentVersion": {
+                        "type": "string"
+                      },
+                      "channel": {
+                        "type": "string",
+                        "enum": [
+                          "stable",
+                          "alpha"
+                        ]
+                      },
+                      "latestVersion": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "updateAvailable": {
+                        "type": "boolean"
+                      },
+                      "releaseUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "upgradeCommand": {
+                        "type": "string"
+                      },
+                      "install": {
+                        "type": "object",
+                        "properties": {
+                          "asksPassword": {
+                            "type": "boolean"
+                          },
+                          "restarts": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "asksPassword"
+                        ]
+                      },
+                      "channelChoice": {
+                        "type": "boolean"
+                      },
+                      "phase": {
+                        "type": "string",
+                        "enum": [
+                          "idle",
+                          "checking",
+                          "downloading",
+                          "installing",
+                          "ready",
+                          "error"
+                        ]
+                      },
+                      "percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "problem": {
+                        "type": "string"
+                      },
+                      "notice": {
+                        "type": "string"
+                      },
+                      "checkedAt": {
+                        "type": "number"
+                      },
+                      "work": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "saving",
+                              "resuming"
+                            ]
+                          },
+                          "tasks": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "state",
+                          "tasks"
+                        ]
+                      },
+                      "askedFrom": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "currentVersion",
+                      "channel",
+                      "latestVersion",
+                      "updateAvailable",
+                      "releaseUrl",
+                      "upgradeCommand"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "status"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
                     "const": "failed"
                   },
                   "message": {
@@ -79902,6 +80290,32 @@
                   "kind",
                   "multiple"
                 ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "update"
+                  },
+                  "step": {
+                    "type": "string",
+                    "enum": [
+                      "status",
+                      "install",
+                      "later"
+                    ]
+                  },
+                  "from": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "kind",
+                  "step"
+                ]
               }
             ]
           }
@@ -79922,6 +80336,21 @@
         },
         "required": [
           "showInDock"
+        ]
+      }
+    },
+    "inf:update:asked": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "from"
         ]
       }
     }

@@ -64,6 +64,8 @@
   "commandFocusCardReply": "Go to the card's reply",
   "commandFocusCardReplyWords": "anything to add, comment",
   "commandFocusMainMessage": "Go to the main message",
+  "commandHomeUpdate": "Update the first mate's computer",
+  "commandHomeUpdateWords": "update, computer, remote, restart, version",
   "commandMessageDeleteToLineEnd": "Delete to the end of the line",
   "commandMessageDeleteToLineStart": "Delete back to the start of the line",
   "commandMessageDeleteWordBefore": "Delete the word before the cursor",

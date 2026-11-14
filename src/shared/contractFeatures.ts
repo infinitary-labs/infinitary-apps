@@ -1,3 +1,4 @@
+import { HOME_UPDATE, HOME_UPDATE_INSTALL, HOME_UPDATE_LATER } from "./homeUpdate";
 import { PROTOCOL_MAJORS_BEHIND, PROTOCOL_VERSION, VIEW_FLOOR } from "./ipc";
 import { RESOURCE_OBSERVATIONS_SINCE } from "./resources";
 
@@ -51,7 +52,34 @@ export function contractAccess(
 export const READ_ONLY_ASKS: Readonly<Record<string, (args: readonly unknown[]) => boolean>> = {
   "inf:converse": (args) =>
     args.length === 1 && typeof args[0] === "string" && args[0].trim().length > 0,
+  // The home's own update, started and let go from any paired view
+  // (`home-update.md`): the one way out of a split from afar.
+  [HOME_UPDATE_INSTALL]: (args) => args.length === 0,
+  [HOME_UPDATE_LATER]: (args) => args.length === 0,
 };
+
+/**
+ * The first major whose every home answers the update requests whether its
+ * welcome lists `home-update` or not: the major that folds the name in.
+ * A major removes every name (`src/shared/contract-changes/README.md`), so a
+ * view reads an older home by the name and a home from here on by its number,
+ * typed once and never moved, as a feature asked across majors is.
+ */
+export const HOME_UPDATE_FOLDED = 17;
+
+/**
+ * Whether a home answers the update requests (`src/shared/homeUpdate.ts`):
+ * its welcome lists `home-update`, or it speaks the major that folded the
+ * name in or a later one.
+ */
+export function homeAnswersUpdate(
+  homeVersion: string | null | undefined,
+  homeChanges: readonly string[] | null | undefined,
+): boolean {
+  if (homeChanges?.includes(HOME_UPDATE)) return true;
+  if (!homeVersion) return false;
+  return majorOf(homeVersion) >= HOME_UPDATE_FOLDED;
+}
 
 /** Whether a paired view reading only may ask this request with these arguments (`READ_ONLY_ASKS`). */
 export function asksWhileReading(channel: string, args: unknown): boolean {

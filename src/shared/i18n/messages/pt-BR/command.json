@@ -64,6 +64,8 @@
   "commandFocusCardReply": "Ir para a resposta do cartão",
   "commandFocusCardReplyWords": "algo a acrescentar, comentário, comentar",
   "commandFocusMainMessage": "Ir para a mensagem principal",
+  "commandHomeUpdate": "Atualizar o computador do imediato",
+  "commandHomeUpdateWords": "atualizar, computador, remoto, reiniciar, versão",
   "commandMessageDeleteToLineEnd": "Apagar até o fim da linha",
   "commandMessageDeleteToLineStart": "Apagar até o início da linha",
   "commandMessageDeleteWordBefore": "Apagar a palavra antes do cursor",

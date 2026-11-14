@@ -355,6 +355,9 @@ const REFUSALS: Readonly<
   // From anywhere, Settings included: it goes to General and checks there.
   "updates.check": (_s, facts) =>
     facts.checksUpdates ? null : m.refuseInfinitaryCouldNotConfirmHowThisCopy(),
+  // From anywhere, Settings included: only where the first mate's computer answers its update from here.
+  "updates.home": (s) =>
+    isView(s.thisMac) && s.thisMac.homeUpdates ? null : m.refuseNoUpdateIsAvailable(),
   "whats-new.show": (s) =>
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : m.refuseNoReleaseNotesYet(),
   // From anywhere, Settings included: it goes home to the note.

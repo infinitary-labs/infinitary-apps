@@ -12612,6 +12612,13 @@ ${events}` : prompt;
        * the message box stays on (docs/view.md, "Two versions apart").
        */
       messagesWhileReading: literal(true).optional(),
+      /**
+       * The first mate there answers its own update's requests
+       * (`inf:home-update:*`, the `home-update` contract change), so Settings
+       * → General offers its Update row (docs/view.md, "Updating the first
+       * mate's computer").
+       */
+      homeUpdates: literal(true).optional(),
       heardAt: number().int().nonnegative().nullable(),
       caughtUp: number().int().nonnegative(),
       runsWork: boolean().optional(),

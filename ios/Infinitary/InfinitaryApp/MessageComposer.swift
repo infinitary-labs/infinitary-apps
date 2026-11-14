@@ -100,6 +100,8 @@ struct MessageComposer: View {
                     .frame(maxWidth: .infinity).multilineTextAlignment(.center)
                     .accessibilityIdentifier("connection-refusal")
             }
+            // INF-4012's direction 1: between versions, or while it moves, the computer's own update, with Update.
+            PhoneHomeUpdateControls(session: session)
             // INF-2553: on its side there is no notice pill, so a message taken back says why here, as a refusal did before.
             if let problem = problem ?? (compact ? session.takenBack[PhoneIntent.messagePlace] : nil) {
                 Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("message-problem")

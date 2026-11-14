@@ -447,6 +447,8 @@ public enum PhoneMessages {
     public static func `commandFocusCardReply`() -> String { PhoneWords.format("commandFocusCardReply", []) }
     public static func `commandFocusCardReplyWords`() -> String { PhoneWords.format("commandFocusCardReplyWords", []) }
     public static func `commandFocusMainMessage`() -> String { PhoneWords.format("commandFocusMainMessage", []) }
+    public static func `commandHomeUpdate`() -> String { PhoneWords.format("commandHomeUpdate", []) }
+    public static func `commandHomeUpdateWords`() -> String { PhoneWords.format("commandHomeUpdateWords", []) }
     public static func `commandMessageDeleteToLineEnd`() -> String { PhoneWords.format("commandMessageDeleteToLineEnd", []) }
     public static func `commandMessageDeleteToLineStart`() -> String { PhoneWords.format("commandMessageDeleteToLineStart", []) }
     public static func `commandMessageDeleteWordBefore`() -> String { PhoneWords.format("commandMessageDeleteWordBefore", []) }
@@ -3195,6 +3197,31 @@ public enum PhoneMessages {
     public static func `uiVoiceSubmit`() -> String { PhoneWords.format("uiVoiceSubmit", []) }
     public static func `uiVoiceTaskPrompt`() -> String { PhoneWords.format("uiVoiceTaskPrompt", []) }
     public static func `viewGoogleUpdateThere`(`mac`: String) -> String { PhoneWords.format("viewGoogleUpdateThere", [`mac`]) }
+    public static func `viewHomeUpdateAskedFrom`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateAskedFrom", [`name`]) }
+    public static func `viewHomeUpdateAsksPassword`() -> String { PhoneWords.format("viewHomeUpdateAsksPassword", []) }
+    public static func `viewHomeUpdateAtComputer`() -> String { PhoneWords.format("viewHomeUpdateAtComputer", []) }
+    public static func `viewHomeUpdateButton`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateButton", [`name`]) }
+    public static func `viewHomeUpdateConfirmJobs`(`jobs`: String) -> String { PhoneWords.format("viewHomeUpdateConfirmJobs", [`jobs`]) }
+    public static func `viewHomeUpdateConfirmNoTasks`() -> String { PhoneWords.format("viewHomeUpdateConfirmNoTasks", []) }
+    public static func `viewHomeUpdateConfirmNoUndo`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateConfirmNoUndo", [`name`]) }
+    public static func `viewHomeUpdateConfirmTasks`(`tasks`: String) -> String { PhoneWords.format("viewHomeUpdateConfirmTasks", [`tasks`]) }
+    public static func `viewHomeUpdateConfirmTitle`(`name`: String, `version`: String) -> String { PhoneWords.format("viewHomeUpdateConfirmTitle", [`name`, `version`]) }
+    public static func `viewHomeUpdateCurrent`(`version`: String) -> String { PhoneWords.format("viewHomeUpdateCurrent", [`version`]) }
+    public static func `viewHomeUpdateDownloading`(`name`: String, `version`: String) -> String { PhoneWords.format("viewHomeUpdateDownloading", [`name`, `version`]) }
+    public static func `viewHomeUpdateElsewhere`(`name`: String, `version`: String) -> String { PhoneWords.format("viewHomeUpdateElsewhere", [`name`, `version`]) }
+    public static func `viewHomeUpdateFailed`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateFailed", [`name`]) }
+    public static func `viewHomeUpdateLater`() -> String { PhoneWords.format("viewHomeUpdateLater", []) }
+    public static func `viewHomeUpdateNoWindow`() -> String { PhoneWords.format("viewHomeUpdateNoWindow", []) }
+    public static func `viewHomeUpdateNotBack`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateNotBack", [`name`]) }
+    public static func `viewHomeUpdateNotNow`() -> String { PhoneWords.format("viewHomeUpdateNotNow", []) }
+    public static func `viewHomeUpdateOffered`(`name`: String, `version`: String) -> String { PhoneWords.format("viewHomeUpdateOffered", [`name`, `version`]) }
+    public static func `viewHomeUpdateRestarting`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateRestarting", [`name`]) }
+    public static func `viewHomeUpdateResuming`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateResuming", [`name`]) }
+    public static func `viewHomeUpdateRow`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateRow", [`name`]) }
+    public static func `viewHomeUpdateSaving`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateSaving", [`name`]) }
+    public static func `viewHomeUpdateStarting`(`name`: String) -> String { PhoneWords.format("viewHomeUpdateStarting", [`name`]) }
+    public static func `viewHomeUpdateTryAgain`() -> String { PhoneWords.format("viewHomeUpdateTryAgain", []) }
+    public static func `viewHomeUpdateWaitingFor`(`tasks`: String) -> String { PhoneWords.format("viewHomeUpdateWaitingFor", [`tasks`]) }
     public static func `viewPillNewerHears`(`name`: String) -> String { PhoneWords.format("viewPillNewerHears", [`name`]) }
     public static func `viewPillOlderHears`(`name`: String) -> String { PhoneWords.format("viewPillOlderHears", [`name`]) }
     public static func `viewReturnPasteLabel`(`name`: String) -> String { PhoneWords.format("viewReturnPasteLabel", [`name`]) }
@@ -3669,6 +3696,8 @@ extension PhoneWords {
         "commandFocusCardReply": [],
         "commandFocusCardReplyWords": [],
         "commandFocusMainMessage": [],
+        "commandHomeUpdate": [],
+        "commandHomeUpdateWords": [],
         "commandMessageDeleteToLineEnd": [],
         "commandMessageDeleteToLineStart": [],
         "commandMessageDeleteWordBefore": [],
@@ -6417,6 +6446,31 @@ extension PhoneWords {
         "uiVoiceSubmit": [],
         "uiVoiceTaskPrompt": [],
         "viewGoogleUpdateThere": ["mac"],
+        "viewHomeUpdateAskedFrom": ["name"],
+        "viewHomeUpdateAsksPassword": [],
+        "viewHomeUpdateAtComputer": [],
+        "viewHomeUpdateButton": ["name"],
+        "viewHomeUpdateConfirmJobs": ["jobs"],
+        "viewHomeUpdateConfirmNoTasks": [],
+        "viewHomeUpdateConfirmNoUndo": ["name"],
+        "viewHomeUpdateConfirmTasks": ["tasks"],
+        "viewHomeUpdateConfirmTitle": ["name", "version"],
+        "viewHomeUpdateCurrent": ["version"],
+        "viewHomeUpdateDownloading": ["name", "version"],
+        "viewHomeUpdateElsewhere": ["name", "version"],
+        "viewHomeUpdateFailed": ["name"],
+        "viewHomeUpdateLater": [],
+        "viewHomeUpdateNoWindow": [],
+        "viewHomeUpdateNotBack": ["name"],
+        "viewHomeUpdateNotNow": [],
+        "viewHomeUpdateOffered": ["name", "version"],
+        "viewHomeUpdateRestarting": ["name"],
+        "viewHomeUpdateResuming": ["name"],
+        "viewHomeUpdateRow": ["name"],
+        "viewHomeUpdateSaving": ["name"],
+        "viewHomeUpdateStarting": ["name"],
+        "viewHomeUpdateTryAgain": [],
+        "viewHomeUpdateWaitingFor": ["tasks"],
         "viewPillNewerHears": ["name"],
         "viewPillOlderHears": ["name"],
         "viewReturnPasteLabel": ["name"],

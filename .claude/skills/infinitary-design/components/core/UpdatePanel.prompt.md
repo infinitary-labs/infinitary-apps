@@ -14,6 +14,9 @@ Version 0.1.31 is still available."
 - **Saving work:** a `--text-sm --fg-2` status line saying the update saves work first and running work finishes, so nothing is lost; then one `--fg-3` line per task whose running work it waits for: Waiting for “Release notes” to finish what it is running.
   The primary button shows its pending state with "Saving work…", and Update later stands left of it as a small secondary button, reached by Tab from the update button and in command search as Update later.
 - **Updating:** once the work is saved, the status line says Infinitary checks the new copy and restarts, and the primary button's pending label is "Updating…"; Update later is gone, because the copy is being replaced.
+- **Asked from afar:** when a paired phone or Mac started the update, the panel opens by itself and a `--text-sm --fg-2` line under the status says who asked: "iPhone asked for this update."
+  (`viewHomeUpdateAskedFrom`).
+  Update later stands beside it only while the update saves work, as in the state above.
 - **After Update later:** a `--text-sm --fg-3` line says the update waits and the work carries on, and Install is offered again.
 
 The words come from `UPDATE_WORK_WORDS` and `UPDATE_LATER` (`src/shared/updateWords.ts`).

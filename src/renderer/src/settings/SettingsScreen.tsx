@@ -10,6 +10,7 @@ import { sectionWaitsForUpdate, showsSection, updateThereWords } from "../device
 import type { SettingsSectionContribution } from "../plugins/contributions";
 import { FrameMount } from "../plugins/frames/FrameMount";
 import { orderSettingsSections, pluginHost, useContributions } from "../plugins/host";
+import { HomeUpdateRow } from "./HomeUpdateRow";
 import { SharingAsk } from "./SharingSection";
 import "./settingsScreen.css";
 
@@ -200,13 +201,16 @@ export function SettingsScreen() {
               {tab.frame ? (
                 <FrameSection key={tab.id} section={tab} />
               ) : sectionWaitsForUpdate(thisMac, tab) ? (
-                <p
-                  key={tab.id}
-                  data-settings-waits-for-update=""
-                  style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}
-                >
-                  {updateThereWords(thisMac)}
-                </p>
+                <div key={tab.id} style={{ display: "grid", gap: "var(--space-3)" }}>
+                  <p
+                    data-settings-waits-for-update=""
+                    style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)", margin: 0 }}
+                  >
+                    {updateThereWords(thisMac)}
+                  </p>
+                  {/* The update that ends the wait, started from here where the first mate answers it. */}
+                  {thisMac.homeUpdates && <HomeUpdateRow mac={thisMac} />}
+                </div>
               ) : (
                 <tab.Component key={tab.id} />
               )}

@@ -45,6 +45,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneCardWords.generated.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
     "ios/Infinitary/InfinitaryApp/PhoneFont.swift",
+    // The computer's own update under every part's message box and in Settings (MessageComposer.swift).
+    "ios/Infinitary/InfinitaryApp/PhoneHomeUpdateViews.swift",
     "ios/Infinitary/InfinitaryApp/PhoneModel.swift",
     "ios/Infinitary/InfinitaryApp/PhoneQuestionBubble.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSettingsSheet.swift",
@@ -58,6 +60,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneDiagnostics.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneFormats.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneFrame.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneHomeUpdate.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIntents.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneLook.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneMessages.generated.swift",

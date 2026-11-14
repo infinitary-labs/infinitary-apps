@@ -54,6 +54,7 @@ import type {
   ForgeSignInFlow,
   ForgesView,
 } from "./forges";
+import type { HomeUpdate } from "./homeUpdate";
 import type {
   IntegrationKind,
   IntegrationMcpAdd,
@@ -70,6 +71,7 @@ import type { LocalOrchestratorSetting, LocalOrchestratorView } from "./localOrc
 import type { ModelSlotsView, ReasoningChoice, Slot } from "./modelSlots";
 import type { NearbyMacsView } from "./nearbyMacs";
 import type { ObserveSessionDetail, ObserveSessionSummary } from "./observe";
+import type { UpdateAsked } from "./ownWindow";
 import type {
   PanelIntegrationsRequest,
   PanelIntegrationsResponse,
@@ -700,6 +702,18 @@ export type FirstmateApi = {
     install: () => Promise<UpdateInstallResult>;
     /** Update later: lets an update go while it saves the crew's work. */
     later: () => Promise<UpdateStatus>;
+    /** A paired view started this computer's update (`inf:update:asked`): its name. */
+    onAsked: (listener: (asked: UpdateAsked) => void) => () => void;
+    /**
+     * The first mate's computer's own update, read and started from this Mac
+     * while it controls that one (docs/view.md, "Updating the first mate's
+     * computer"); asked only where `thisMac` says `homeUpdates`.
+     */
+    home: {
+      status: () => Promise<HomeUpdate>;
+      install: () => Promise<HomeUpdate>;
+      later: () => Promise<HomeUpdate>;
+    };
   };
   /** The release notes the app showed (docs/release-notes.md "Reading a note again"). */
   releaseNotes: {

@@ -8,12 +8,13 @@
  *   node scripts/move-catalogs.ts resolve   in a rebase or merge stopped on the move, carries the change's
  *                                           catalog edits into the area files, removes the compiled files the
  *                                           project no longer keeps, merges the glossaries' terms, rebuilds the
- *                                           phone's files and stages all of it
+ *                                           phone's message files and its card and panel hosts, and stages what
+ *                                           it rebuilt
  *
  * A change from before the move edits files the move removed, so bringing it
  * up to date stops once for each of its commits that touched them; `resolve`
  * at each stop does the rest, and names any file it leaves to a person, such
- * as `scripts/raw-words.ts`.
+ * as `scripts/raw-words.ts` or a phone file no rebuild writes.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -112,11 +113,35 @@ export function mergedGlossary(base: string, upToDate: string, changed: string):
   return sortedGlossary([...kept.slice(0, end), ...fresh, ...kept.slice(end)].join("\n"));
 }
 
-/** Runs the compiler in the working copy: it lays the catalogs out and rebuilds every compiled file. */
-function compile(root: string): string {
-  const run = spawnSync(process.execPath, ["scripts/generate-messages.ts"], { cwd: root, encoding: "utf8" });
-  return run.status === 0 ? "" : `${run.stdout}${run.stderr}`;
+/** Runs one of the project's generators in the working copy; answers what it printed if it failed. */
+function generate(root: string, script: string): string {
+  const run = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8" });
+  return run.status === 0 ? "" : `${script}:\n${run.stdout}${run.stderr}`;
 }
+
+/** Runs the compiler in the working copy: it lays the catalogs out and rebuilds every compiled file. */
+const compile = (root: string) => generate(root, "scripts/generate-messages.ts");
+
+/**
+ * The phone's card generator, which bundles the compiled catalog into the
+ * card and panel hosts, so a change that adds a message changes them too.
+ */
+const PHONE_CARDS = "scripts/generate-phone-cards.ts";
+
+/**
+ * Rebuilds every file made from the catalogs: the compiler's, then the card
+ * generator's hosts, which read what the compiler wrote. The catalog tests'
+ * throwaway projects hold only the compiler.
+ */
+function rebuild(root: string): string {
+  return compile(root) || (existsSync(join(root, PHONE_CARDS)) ? generate(root, PHONE_CARDS) : "");
+}
+
+const unmergedPaths = (root: string) => git(root, ["diff", "--name-only", "--diff-filter=U"]).split("\n").filter(Boolean);
+
+/** A file's bytes in the working copy; undefined where it has none. */
+const bytesOf = (root: string, path: string) =>
+  existsSync(join(root, path)) ? readFileSync(join(root, path)) : undefined;
 
 const compiledPaths = () => [COMPILED_PATH, ...Object.keys(APP_PANEL_PREFIXES).map(panelMessagesPath)];
 
@@ -140,12 +165,13 @@ export function moveCatalogs(root = "."): string[] {
  * Brings a stopped rebase or merge across the move: what each conflicted
  * `messages/<tag>.json` changed reaches its language's folder, a compiled
  * file the project no longer keeps leaves the commit, a glossary both sides
- * changed keeps both sides' terms, and the phone's files are rebuilt. Answers
- * what it did and what is left for a person.
+ * changed keeps both sides' terms, and the files made from the catalogs are
+ * rebuilt. Answers what it did and what is left for a person.
  */
 export function resolveMove(root = "."): { carried: string[]; overlaps: string[]; left: string[]; problems: string } {
   const replaying = rebasing(root);
-  const conflicted = git(root, ["diff", "--name-only", "--diff-filter=U"]).split("\n").filter(Boolean);
+  const conflicted = unmergedPaths(root);
+  const stopped = new Map(conflicted.map((path) => [path, bytesOf(root, path)]));
   const carried: string[] = [];
   const overlaps: string[] = [];
   const handled = new Set<string>();
@@ -185,16 +211,20 @@ export function resolveMove(root = "."): { carried: string[]; overlaps: string[]
     git(root, ["add", "--", path]);
     handled.add(path);
   }
-  const problems = compile(root);
-  // The phone's files are rebuilt from the catalogs, so a clash in them is settled by the rebuild.
-  const rebuilt = git(root, ["ls-files", "--modified", "--others", "--exclude-standard", "--", "ios", CATALOG_DIR])
+  const problems = rebuild(root);
+  // A clash in a file made from the catalogs is settled by its rebuild. Any
+  // other file the stop left unmerged keeps its conflict, and its marks, for
+  // a person: a rebuild that wrote none of it settles nothing.
+  const unmerged = new Set(unmergedPaths(root));
+  const rewritten = (path: string) => {
+    const now = bytesOf(root, path);
+    return now !== undefined && !stopped.get(path)?.equals(now);
+  };
+  const toStage = git(root, ["ls-files", "--modified", "--others", "--exclude-standard", "--", "ios", CATALOG_DIR])
     .split("\n")
-    .filter(Boolean);
-  const unmerged = git(root, ["diff", "--name-only", "--diff-filter=U"]).split("\n").filter(Boolean);
-  const phoneClashes = unmerged.filter((path) => path.startsWith("ios/"));
-  const toStage = [...new Set([...rebuilt, ...phoneClashes])];
-  if (!problems && toStage.length) git(root, ["add", "-A", "--", ...toStage]);
-  const left = git(root, ["diff", "--name-only", "--diff-filter=U"]).split("\n").filter(Boolean);
+    .filter((path) => path && (!unmerged.has(path) || rewritten(path)));
+  if (!problems && toStage.length) git(root, ["add", "-A", "--", ...new Set(toStage)]);
+  const left = unmergedPaths(root);
   return { carried, overlaps, left, problems };
 }
 
@@ -205,7 +235,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     for (const name of overlaps)
       console.log(`kept the change's words for ${name}, which the up-to-date catalog changed too; check them`);
     if (problems) {
-      console.error(`the compiler found problems; fix them, run node scripts/move-catalogs.ts resolve again:\n${problems}`);
+      console.error(`rebuilding found problems; fix them, run node scripts/move-catalogs.ts resolve again:\n${problems}`);
       process.exitCode = 1;
     }
     if (left.length) {

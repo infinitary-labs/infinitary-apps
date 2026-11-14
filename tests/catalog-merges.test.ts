@@ -31,6 +31,8 @@ import { scratchDir } from "./helpers/scratchDirs";
 const REPO = process.cwd();
 /** Five times the slowest case on the Mac, 3.2 s (docs/test-cohorts.md). */
 const BUDGET_MS = 20_000;
+/** The case that also runs the phone's card generator three times: five times its run on the Linux check, 20.2 s. */
+const CARD_BUDGET_MS = 105_000;
 
 /** Two new messages, each in every language, as a change that writes the English must carry them. */
 const TEXT_SIZE = {
@@ -84,12 +86,46 @@ function write(cwd: string, path: string, text: string): void {
 }
 
 /**
+ * What the phone's card generator reads and writes besides the catalogs: the
+ * generator and its module loader, the code it bundles, the TypeScript
+ * settings that decide how that code compiles, and the hosts and fonts it
+ * writes, as the project keeps them.
+ */
+const PHONE_CARD_FILES = [
+  "scripts/generate-phone-cards.ts",
+  "scripts/moduleRunner.ts",
+  "tsconfig*.json",
+  "src",
+  "ios/Infinitary/CardRuntime",
+  "ios/Infinitary/InfinitaryApp/CardAssets",
+];
+/** The two hosts the card generator writes, which bundle the whole compiled catalog. */
+const PHONE_HOSTS = ["CardHost.generated.js", "PanelHost.generated.js"].map(
+  (name) => `ios/Infinitary/InfinitaryApp/CardAssets/${name}`,
+);
+
+/**
+ * A host as regenerating it with one more message leaves the line that lists
+ * every message: the new name in it.
+ */
+const withMessage = (host: string, id: string) =>
+  host.replace(/^( {2}const MESSAGES = \{ .*) \};$/m, `$1, ${id} };`);
+
+/**
  * A throwaway project holding what the catalog check reads: the compiler,
  * the move script, the language modules, the real catalogs and glossaries
- * and the phone's Info.plist, with the project's packages linked in.
+ * and the phone's Info.plist, with the project's packages linked in; with
+ * `phoneCards`, also what the phone's card generator reads and writes.
  */
-function project(): string {
+function project({ phoneCards = false } = {}): string {
   const root = scratchDir("catalog-merges-");
+  if (phoneCards)
+    for (const path of git(REPO, "ls-files", "-z", "--", ...PHONE_CARD_FILES)
+      .split("\0")
+      .filter(Boolean)) {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      copyFileSync(join(REPO, path), join(root, path));
+    }
   for (const path of [
     "scripts/generate-messages.ts",
     "scripts/move-catalogs.ts",
@@ -207,66 +243,94 @@ describe("two changes adding different messages", () => {
   });
 });
 
+const STRINGS =
+  "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/Resources/en.lproj/Localizable.strings";
+
+/**
+ * Lays the project out as it stood before the move, one file per language
+ * and the compiled file committed, and commits it on main.
+ */
+function beforeTheMove(root: string): void {
+  for (const [tag, text] of Object.entries(readCatalogs(root)))
+    write(root, `${CATALOG_DIR}/${tag}.json`, `${JSON.stringify(JSON.parse(text), null, 2)}\n`);
+  for (const name of readdirSync(join(root, CATALOG_DIR), { withFileTypes: true }))
+    if (name.isDirectory()) rmSync(join(root, CATALOG_DIR, name.name), { recursive: true });
+  write(root, ".gitignore", "node_modules\n");
+  write(root, COMPILED_PATH, read(REPO, COMPILED_PATH));
+  write(root, STRINGS, read(REPO, STRINGS));
+  git(root, "add", "-A");
+  git(root, "commit", "--quiet", "-m", "base");
+}
+
+/**
+ * The waiting change, on its own branch: a message at the end of every
+ * language's file and the stored files it rebuilt, plus whatever else
+ * `alsoEdits` writes in the same commit.
+ */
+function waitingChange(root: string, alsoEdits: () => void = () => {}): void {
+  git(root, "checkout", "--quiet", "-b", "waiting", "main");
+  for (const [tag, text] of Object.entries(PAUSED)) {
+    const path = `${CATALOG_DIR}/${tag}.json`;
+    write(
+      root,
+      path,
+      `${JSON.stringify({ ...JSON.parse(read(root, path)), settingsQueuePaused: text }, null, 2)}\n`,
+    );
+  }
+  write(
+    root,
+    COMPILED_PATH,
+    `${read(root, COMPILED_PATH)}export function settingsQueuePaused(): string {}\n`,
+  );
+  write(root, STRINGS, `${read(root, STRINGS)}"settingsQueuePaused" = "Paused";\n`);
+  alsoEdits();
+  git(root, "add", "-A");
+  git(root, "commit", "--quiet", "-m", "feat: queue paused");
+}
+
+/**
+ * Main makes the move, then takes another message in the new layout, with
+ * whatever `alsoEdits` writes in that change's own commit.
+ */
+function mainMoves(root: string, alsoEdits: () => void = () => {}): void {
+  git(root, "checkout", "--quiet", "main");
+  const moved = node(root, "scripts/move-catalogs.ts");
+  expect(moved.stderr).toBe("");
+  write(
+    root,
+    ".gitignore",
+    `node_modules\n/${COMPILED_PATH}\n/src/panels/*/messages.generated.ts\n`,
+  );
+  git(root, "rm", "--quiet", "--cached", COMPILED_PATH);
+  git(root, "add", "-A");
+  git(root, "commit", "--quiet", "-m", "refactor: move the catalogs");
+  change(root, "text-size", "settingsAppearanceTextSize", TEXT_SIZE, "| text size | Textgröße | |");
+  alsoEdits();
+  git(root, "add", "-A");
+  git(root, "commit", "--quiet", "--amend", "--no-edit");
+  git(root, "checkout", "--quiet", "main");
+  git(root, "merge", "--quiet", "--ff-only", "text-size");
+}
+
+/** Brings the waiting change up to date with main, which stops on the move. */
+function rebaseStops(root: string): void {
+  git(root, "checkout", "--quiet", "waiting");
+  expect(() => git(root, "rebase", "main")).toThrow();
+}
+
+const unmerged = (root: string) =>
+  git(root, "diff", "--name-only", "--diff-filter=U").split("\n").filter(Boolean);
+
 describe("a change written before the move", () => {
   it("is brought up to date by the move script, its message carried into the area files", {
     timeout: BUDGET_MS,
   }, () => {
     const root = project();
-    // The project as it stood before the move: one file per language, and the compiled file committed.
-    for (const [tag, text] of Object.entries(readCatalogs(root)))
-      write(root, `${CATALOG_DIR}/${tag}.json`, `${JSON.stringify(JSON.parse(text), null, 2)}\n`);
-    for (const name of readdirSync(join(root, CATALOG_DIR), { withFileTypes: true }))
-      if (name.isDirectory()) rmSync(join(root, CATALOG_DIR, name.name), { recursive: true });
-    write(root, ".gitignore", "node_modules\n");
-    write(root, COMPILED_PATH, read(REPO, COMPILED_PATH));
-    const strings =
-      "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/Resources/en.lproj/Localizable.strings";
-    write(root, strings, read(REPO, strings));
-    git(root, "add", "-A");
-    git(root, "commit", "--quiet", "-m", "base");
+    beforeTheMove(root);
+    waitingChange(root);
+    mainMoves(root);
+    rebaseStops(root);
 
-    // The waiting change: a message at the end of every language's file, and the stored files it rebuilt.
-    git(root, "checkout", "--quiet", "-b", "waiting");
-    for (const [tag, text] of Object.entries(PAUSED)) {
-      const path = `${CATALOG_DIR}/${tag}.json`;
-      write(
-        root,
-        path,
-        `${JSON.stringify({ ...JSON.parse(read(root, path)), settingsQueuePaused: text }, null, 2)}\n`,
-      );
-    }
-    write(
-      root,
-      COMPILED_PATH,
-      `${read(root, COMPILED_PATH)}export function settingsQueuePaused(): string {}\n`,
-    );
-    write(root, strings, `${read(root, strings)}"settingsQueuePaused" = "Paused";\n`);
-    git(root, "commit", "--quiet", "-am", "feat: queue paused");
-
-    // Main makes the move, then takes another message in the new layout.
-    git(root, "checkout", "--quiet", "main");
-    const moved = node(root, "scripts/move-catalogs.ts");
-    expect(moved.stderr).toBe("");
-    write(
-      root,
-      ".gitignore",
-      `node_modules\n/${COMPILED_PATH}\n/src/panels/*/messages.generated.ts\n`,
-    );
-    git(root, "rm", "--quiet", "--cached", COMPILED_PATH);
-    git(root, "add", "-A");
-    git(root, "commit", "--quiet", "-m", "refactor: move the catalogs");
-    change(
-      root,
-      "text-size",
-      "settingsAppearanceTextSize",
-      TEXT_SIZE,
-      "| text size | Textgröße | |",
-    );
-    git(root, "checkout", "--quiet", "main");
-    git(root, "merge", "--quiet", "--ff-only", "text-size");
-
-    git(root, "checkout", "--quiet", "waiting");
-    expect(() => git(root, "rebase", "main")).toThrow();
     const resolved = node(root, "scripts/move-catalogs.ts", "resolve");
     expect(resolved.stderr).toBe("");
     expect(resolved.status).toBe(0);
@@ -281,5 +345,81 @@ describe("a change written before the move", () => {
     expect(existsSync(join(root, CATALOG_DIR, "en.json"))).toBe(false);
     expect(git(root, "ls-files", COMPILED_PATH)).toBe("");
     expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  // INF-4091: the resolve step staged the phone's card host with three sets of
+  // conflict marks and answered that nothing was left. The hosts bundle the
+  // whole compiled catalog, so a change that adds a message regenerates them,
+  // and so does main's next change that adds one.
+  it("rebuilds the phone's card and panel hosts the change regenerated", {
+    timeout: CARD_BUDGET_MS,
+  }, () => {
+    const root = project({ phoneCards: true });
+    beforeTheMove(root);
+    waitingChange(root, () => {
+      for (const host of PHONE_HOSTS) {
+        const regenerated = withMessage(read(root, host), "settingsQueuePaused");
+        expect(regenerated).not.toBe(read(root, host));
+        write(root, host, regenerated);
+      }
+    });
+    mainMoves(root, () => {
+      const built = node(root, "scripts/generate-phone-cards.ts");
+      expect(built.stderr).toBe("");
+    });
+    rebaseStops(root);
+    expect(unmerged(root)).toEqual(expect.arrayContaining(PHONE_HOSTS));
+
+    const resolved = node(root, "scripts/move-catalogs.ts", "resolve");
+    expect(resolved.stderr).toBe("");
+    expect(resolved.status).toBe(0);
+    git(root, "-c", "core.editor=true", "rebase", "--continue");
+
+    for (const host of PHONE_HOSTS) {
+      const text = read(root, host);
+      expect(text.match(/^(<{7}|={7}|>{7})( .*)?$/gm)).toBeNull();
+      expect(text).toContain("function settingsQueuePaused()");
+      expect(text).toContain("function settingsAppearanceTextSize()");
+    }
+    const check = node(root, "scripts/generate-phone-cards.ts", "--check");
+    expect(check.stderr).toBe("");
+    expect(check.status).toBe(0);
+    expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  it("leaves a phone file it does not rebuild unmerged, and names it", {
+    timeout: BUDGET_MS,
+  }, () => {
+    const root = project();
+    const view = "ios/Infinitary/InfinitaryApp/CardLogView.swift";
+    const comment = "/// INF-3887: the phone's log reader, the twin of the desktop's.";
+    write(root, view, read(REPO, view));
+    expect(read(root, view)).toContain(comment);
+    beforeTheMove(root);
+    waitingChange(root, () =>
+      write(
+        root,
+        view,
+        read(root, view).replace(comment, "/// INF-3887: the phone's log reader, as on the Mac."),
+      ),
+    );
+    mainMoves(root, () =>
+      write(
+        root,
+        view,
+        read(root, view).replace(comment, "/// INF-3887: the phone's proof log reader."),
+      ),
+    );
+    rebaseStops(root);
+
+    const resolved = node(root, "scripts/move-catalogs.ts", "resolve");
+    expect(resolved.stderr).toBe(`resolve these by hand, then continue:\n${view}\n`);
+    expect(resolved.status).toBe(1);
+    expect(unmerged(root)).toEqual([view]);
+    expect(read(root, view)).toMatch(/^<{7} /m);
+    // Everything else the stop needed is carried and staged.
+    expect(git(root, "diff", "--cached", "--name-only")).toContain(
+      catalogFile("en", "settingsQueuePaused"),
+    );
   });
 });

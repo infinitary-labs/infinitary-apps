@@ -585,6 +585,8 @@
   "phoneSecretsRefusedUnknown": "النتيجة غير معروفة. تحقق مما حدث على حاسوبك قبل طلب استخدام آخر.",
   "phoneSecretsTurnOnFirst": "فعّل «يوافق على استخدام الأسرار» في الإعدادات أولًا.",
   "phoneSessionChangeFailed": "تعذّر على حاسوبك إجراء هذا التغيير.",
+  "phoneSessionHearsComputer": "لا يزال نائب القبطان يسمع رسائلك. ستعود الأزرار بعد تحديث Infinitary على حاسوبك.",
+  "phoneSessionHearsThisPhone": "لا يزال نائب القبطان يسمع رسائلك. ستعود الأزرار بعد تحديث Infinitary على هذا الهاتف.",
   "phoneSessionOutOfReach": "حاسوبك خارج المتناول. لن يُرسَل شيء لاحقًا.",
   "phoneSessionRequestRefused": "رفض حاسوبك هذا الطلب.",
   "phoneSessionUpdateComputer": "حدّث Infinitary على حاسوبك لإجراء التغييرات.",

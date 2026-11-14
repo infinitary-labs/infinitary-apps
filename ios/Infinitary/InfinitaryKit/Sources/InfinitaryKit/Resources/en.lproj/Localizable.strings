@@ -502,6 +502,7 @@
 "commandUsageUnitWords" = "tokens, cost, dollars, estimate";
 "commandWhatsNewShow" = "Show what's new";
 "commandWhatsNewShowWords" = "release, notes, changes, version";
+"composerWordsOnly" = "Only words can go until Infinitary is updated. Remove the pictures and files to send this.";
 "crewAPart" = "A part";
 "crewFirstmateLabel" = "First mate - %1$@";
 "crewModelNames" = "Crew model names";
@@ -1513,6 +1514,8 @@
 "phoneSecretsRefusedUnknown" = "The result is unknown. Check what happened on your computer before requesting another use.";
 "phoneSecretsTurnOnFirst" = "Turn on Approves secret uses in Settings first.";
 "phoneSessionChangeFailed" = "Your computer could not make this change.";
+"phoneSessionHearsComputer" = "Your first mate still hears your messages. Buttons come back once Infinitary on your computer is updated.";
+"phoneSessionHearsThisPhone" = "Your first mate still hears your messages. Buttons come back once Infinitary on this phone is updated.";
 "phoneSessionOutOfReach" = "Your computer is out of reach. Nothing will be sent later.";
 "phoneSessionRequestRefused" = "Your computer refused this request.";
 "phoneSessionUpdateComputer" = "Update Infinitary on your computer to make changes.";
@@ -3114,6 +3117,8 @@
 "uiVoiceSubmit" = "Submit";
 "uiVoiceTaskPrompt" = "Task prompt";
 "viewGoogleUpdateThere" = "Update Infinitary on %1$@ to sign in to Google from here.";
+"viewPillNewerHears" = "%1$@ has a newer Infinitary. Your first mate still hears your messages, and buttons come back once Infinitary on this computer is updated.";
+"viewPillOlderHears" = "%1$@ has an older Infinitary. Your first mate still hears your messages, and buttons come back once Infinitary there is updated.";
 "viewReturnPasteLabel" = "The address your browser ended on after %1$@";
 "viewReturnPasteLead" = "Approve on %1$@'s page. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.";
 "viewReturnPastePlaceholder" = "paste the address";

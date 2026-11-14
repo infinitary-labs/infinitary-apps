@@ -41,6 +41,46 @@ export function contractAccess(
 }
 
 /**
+ * What a paired view may still ask of a home while the version rule lets it
+ * only read (`messages-while-reading.md`), each by a shape no major changes:
+ * a plain-text message to the first mate, `inf:converse` with one string, so
+ * the captain keeps talking to the first mate across a version split. A
+ * message with pictures, files or hints is an object, and stays refused.
+ */
+export const READ_ONLY_ASKS: Readonly<Record<string, (args: readonly unknown[]) => boolean>> = {
+  "inf:converse": (args) =>
+    args.length === 1 && typeof args[0] === "string" && args[0].trim().length > 0,
+};
+
+/** Whether a paired view reading only may ask this request with these arguments (`READ_ONLY_ASKS`). */
+export function asksWhileReading(channel: string, args: unknown): boolean {
+  return (
+    Array.isArray(args) &&
+    Object.hasOwn(READ_ONLY_ASKS, channel) &&
+    READ_ONLY_ASKS[channel]?.(args) === true
+  );
+}
+
+/**
+ * Whether a view reading only may send a home its plain-text messages: the
+ * home lists `messages-while-reading`, or speaks a newer major than the view,
+ * which folded every name the view's own major lists. A home on an older
+ * major than the view lists the name itself while that major has it.
+ */
+export function homeHearsWhileReading(
+  homeVersion: string | undefined,
+  homeChanges: readonly string[] | null | undefined,
+  viewVersion: string = PROTOCOL_VERSION,
+): boolean {
+  if (homeChanges?.includes(MESSAGES_WHILE_READING)) return true;
+  if (homeVersion === undefined) return false;
+  return majorOf(homeVersion) > majorOf(viewVersion);
+}
+
+/** The contract change that lets a view's plain-text messages through while it reads only. */
+export const MESSAGES_WHILE_READING = "messages-while-reading";
+
+/**
  * Which side a view outside the window updates to change things again:
  * `this` when the home is newer, `home` when the home is older. Null while
  * the view may change things, or when either version does not read.

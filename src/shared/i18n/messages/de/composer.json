@@ -3,5 +3,6 @@
     "plural": "count",
     "one": "{count} Zeile",
     "other": "{count} Zeilen"
-  }
+  },
+  "composerWordsOnly": "Bis Infinitary aktualisiert ist, können nur Worte gesendet werden. Entferne die Bilder und Dateien, um dies zu senden."
 }

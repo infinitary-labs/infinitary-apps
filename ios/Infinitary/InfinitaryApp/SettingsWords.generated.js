@@ -12651,6 +12651,12 @@ ${events}` : prompt;
       joinedAt: number().int().nonnegative(),
       contact: viewContactSchema,
       readOnly: _enum(["newer-there", "older-there"]).nullable(),
+      /**
+       * While `readOnly`, the first mate there still hears this Mac's
+       * plain-text messages (the `messages-while-reading` contract change), so
+       * the message box stays on (docs/view.md, "Two versions apart").
+       */
+      messagesWhileReading: literal(true).optional(),
       heardAt: number().int().nonnegative().nullable(),
       caughtUp: number().int().nonnegative(),
       runsWork: boolean().optional(),

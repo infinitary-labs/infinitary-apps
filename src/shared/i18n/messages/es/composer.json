@@ -4,5 +4,6 @@
     "one": "{count} línea",
     "many": "{count} de líneas",
     "other": "{count} líneas"
-  }
+  },
+  "composerWordsOnly": "Solo se pueden enviar palabras hasta que se actualice Infinitary. Quita las imágenes y los archivos para enviar esto."
 }

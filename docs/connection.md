@@ -141,6 +141,7 @@ An empty argument before a given one still goes as null, so a request that can h
 - A core channel whose `reach` is `home` is refused as answered only on the computer where the first mate lives, and a host channel or an unknown name as not a request this home answers.
   Neither reaches the core.
 - A device whose `access` is `read` is answered its reads and sent every push; a channel whose `effect` is `change` is refused, until the device is updated, and does not reach the core.
+  The one exception is `READ_ONLY_ASKS` (`src/shared/contractFeatures.ts`): a view's `inf:converse` with a single non-blank string, the captain's plain words, is forwarded as above, which the home announces with the `messages-while-reading` change (`docs/view.md`, "Read only").
 - A device may send `leave` instead of a request: the home takes it off the list, as Remove does, and closes it as `unpaired` (`docs/devices.md`, "Leave").
 
 The home asks a computer that runs work the same way, with `invoke` and one `result` per `id` (`HomeConnection.ask`): only a connected `work` device whose welcome said it takes work, and only the orders in `src/shared/work.ts`, `src/shared/signIns.ts` and `src/shared/resources.ts`.

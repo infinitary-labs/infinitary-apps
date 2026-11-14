@@ -1,5 +1,7 @@
 {
   "viewGoogleUpdateThere": "請先更新 {mac} 上的 Infinitary，才能從這裡登入 Google。",
+  "viewPillNewerHears": "{name} 上的 Infinitary 較新。你的大副仍能收到你的訊息，在這台電腦上更新 Infinitary 後按鈕就會回來。",
+  "viewPillOlderHears": "{name} 上的 Infinitary 較舊。你的大副仍能收到你的訊息，在那裡更新 Infinitary 後按鈕就會回來。",
   "viewReturnPasteLabel": "{name} 之後你的瀏覽器停留的網址",
   "viewReturnPasteLead": "請在 {name} 的頁面上核准。接著你的瀏覽器會停在一個無法連上的頁面。請複製該頁面的網址，貼到這裡。",
   "viewReturnPastePlaceholder": "貼上網址",

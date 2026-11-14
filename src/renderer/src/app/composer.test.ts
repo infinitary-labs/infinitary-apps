@@ -47,6 +47,58 @@ describe("submit visible card id", () => {
   });
 });
 
+// INF-4012 piece 2: two versions apart, the first mate there still hears this window's plain
+// words, without the hints about what is on screen, and nothing with pictures leaves.
+describe("a view reading only", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetShell();
+  });
+
+  const reading = {
+    role: "view" as const,
+    name: "Studio",
+    address: "studio.local",
+    joinedAt: 1_000,
+    contact: "in-reach" as const,
+    readOnly: "older-there" as const,
+    heardAt: 2_000,
+    caughtUp: 0,
+  };
+
+  it("sends plain words to a first mate that hears them, and keeps a turn with pictures", () => {
+    const send = vi.fn(async () => ({ ok: true as const }));
+    vi.stubGlobal("window", { infinitary: { conversation: { send } } });
+    useShellStore.setState({
+      thisMac: { ...reading, messagesWhileReading: true },
+      cards: [card({ id: "card-fm-1", status: "ready", title: "Quota", body: "ok" })],
+      cardIndex: 0,
+      inputText: "merge the harbour fix",
+      attachments: [],
+      recording: false,
+    });
+    useShellStore.getState().submit();
+    expect(send).toHaveBeenCalledWith("merge the harbour fix");
+    expect(useShellStore.getState().composerNotice).toBeNull();
+
+    useShellStore.setState({ inputText: "and this one", attachments: [picture("a.png")] });
+    useShellStore.getState().submit();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(useShellStore.getState().composerNotice).toBe("words-only");
+    expect(useShellStore.getState().inputText).toBe("and this one");
+  });
+
+  it("sends nothing to a first mate that does not hear them", () => {
+    const send = vi.fn(async () => ({ ok: true as const }));
+    vi.stubGlobal("window", { infinitary: { conversation: { send } } });
+    useShellStore.setState({ thisMac: reading, inputText: "merge it", attachments: [] });
+    useShellStore.getState().submit();
+    expect(send).not.toHaveBeenCalled();
+    expect(useShellStore.getState().composerNotice).toBe("away");
+    expect(useShellStore.getState().inputText).toBe("merge it");
+  });
+});
+
 describe("never lose a draft", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -405,7 +457,7 @@ describe("the main input before the first read of the gate (docs/first-launch.md
     expect(tryInput()).toEqual({ recording: false, focused: false });
     pushesArrived();
     await reading;
-    expect(state().firstRun).toEqual(welcomed);
+    expect(useShellStore.getState().firstRun).toEqual(welcomed);
     expect(tryInput()).toEqual({ recording: true, focused: true });
   });
 
@@ -422,7 +474,7 @@ describe("the main input before the first read of the gate (docs/first-launch.md
     await newer;
     pushesArrived();
     await older;
-    expect(state().firstRun).toEqual(view(true));
+    expect(useShellStore.getState().firstRun).toEqual(view(true));
     expect(mainInputHeld(state())).toBe(true);
   });
 });

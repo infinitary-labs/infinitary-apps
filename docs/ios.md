@@ -569,6 +569,10 @@ Browser pages, Move to a computer, Knowledge used, Why this model and rich trans
 A mutation requires both **In reach** and the welcome’s `full` access.
 The phone connects as a view, and its hello says its build's view floor (`viewFloor`, generated from the published contract), so it keeps changing things across majors that kept views, in both directions (`docs/contract.md`, "The version rule").
 Outside that window the line under the message box names the older side (`PhoneUpdate`): "Update Infinitary on this phone to make changes." when the computer is newer, and "Update Infinitary on your computer to make changes." when it is older.
+A computer whose welcome lists `messages-while-reading`, or speaks a newer major, still hears the phone's plain words outside the window (`messagesWhileReading`): the message box stays on, photos stay off, a message goes as one plain string, and the line instead says "Your first mate still hears your messages.
+Buttons come back once Infinitary on your computer is updated."
+(or "on this phone").
+Card buttons, replies and task controls stay off.
 Every request has one connection-bound response and a bounded wait; a disconnect, timeout or unreadable mutation response leaves its outcome unconfirmed.
 The phone never queues or retries a mutation after reconnecting.
 

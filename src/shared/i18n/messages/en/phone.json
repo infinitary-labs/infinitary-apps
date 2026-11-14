@@ -509,6 +509,8 @@
   "phoneSecretsRefusedUnknown": "The result is unknown. Check what happened on your computer before requesting another use.",
   "phoneSecretsTurnOnFirst": "Turn on Approves secret uses in Settings first.",
   "phoneSessionChangeFailed": "Your computer could not make this change.",
+  "phoneSessionHearsComputer": "Your first mate still hears your messages. Buttons come back once Infinitary on your computer is updated.",
+  "phoneSessionHearsThisPhone": "Your first mate still hears your messages. Buttons come back once Infinitary on this phone is updated.",
   "phoneSessionOutOfReach": "Your computer is out of reach. Nothing will be sent later.",
   "phoneSessionRequestRefused": "Your computer refused this request.",
   "phoneSessionUpdateComputer": "Update Infinitary on your computer to make changes.",

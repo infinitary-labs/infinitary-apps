@@ -2,5 +2,6 @@
   "composerLines": {
     "plural": "count",
     "other": "{count}行"
-  }
+  },
+  "composerWordsOnly": "Infinitary が更新されるまで、送れるのは文字だけです。送るには画像とファイルを取り除いてください。"
 }

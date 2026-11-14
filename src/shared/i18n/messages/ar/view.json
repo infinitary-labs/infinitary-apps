@@ -1,5 +1,7 @@
 {
   "viewGoogleUpdateThere": "حدّث Infinitary على {mac} لتسجيل الدخول إلى Google من هنا.",
+  "viewPillNewerHears": "لدى {name} إصدار أحدث من Infinitary. لا يزال نائب القبطان يسمع رسائلك، وستعود الأزرار بعد تحديث Infinitary على هذا الحاسوب.",
+  "viewPillOlderHears": "لدى {name} إصدار أقدم من Infinitary. لا يزال نائب القبطان يسمع رسائلك، وستعود الأزرار بعد تحديث Infinitary هناك.",
   "viewReturnPasteLabel": "العنوان الذي انتهى عنده متصفحك بعد {name}",
   "viewReturnPasteLead": "وافق في صفحة {name}. سينتهي متصفحك بعدها عند صفحة لا يمكن الوصول إليها. انسخ عنوان تلك الصفحة والصقه هنا.",
   "viewReturnPastePlaceholder": "الصق العنوان",

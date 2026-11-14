@@ -1,5 +1,7 @@
 {
   "viewGoogleUpdateThere": "ここから Google にサインインするには、{mac} の Infinitary をアップデートしてください。",
+  "viewPillNewerHears": "{name} の Infinitary のほうが新しいです。一等航海士はあなたのメッセージを引き続き受け取ります。このコンピューターの Infinitary を更新するとボタンが戻ります。",
+  "viewPillOlderHears": "{name} の Infinitary のほうが古いです。一等航海士はあなたのメッセージを引き続き受け取ります。そちらの Infinitary を更新するとボタンが戻ります。",
   "viewReturnPasteLabel": "{name} のあとブラウザが止まったページのアドレス",
   "viewReturnPasteLead": "{name} のページで承認してください。そのあとブラウザは、表示できないページで止まります。そのページのアドレスをコピーして、ここに貼り付けてください。",
   "viewReturnPastePlaceholder": "アドレスを貼り付け",

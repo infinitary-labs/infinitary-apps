@@ -765,6 +765,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
     joinedAt: z.number().int().nonnegative(),
     contact: viewContactSchema,
     readOnly: z.enum(["newer-there", "older-there"]).nullable(),
+    /**
+     * While `readOnly`, the first mate there still hears this Mac's
+     * plain-text messages (the `messages-while-reading` contract change), so
+     * the message box stays on (docs/view.md, "Two versions apart").
+     */
+    messagesWhileReading: z.literal(true).optional(),
     heardAt: z.number().int().nonnegative().nullable(),
     caughtUp: z.number().int().nonnegative(),
     runsWork: z.boolean().optional(),

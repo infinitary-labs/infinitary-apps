@@ -77,9 +77,13 @@ extension PhoneJourney {
         // 42180903041 read it once, mid-redial, and found no line).
         let refusal = app.staticTexts["connection-refusal"]
         XCTAssertTrue(refusal.waitForPresence(timeout: 20), "A home past the phone's floor refuses its changes")
-        XCTAssertFalse(app.buttons["send-message"].isEnabled, "A version-mismatched view can read but cannot act")
+        // INF-4012 piece 2: the home still hears plain words, so the box stays on and photos stay off.
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: app.buttons["send-message"], timeout: 20),
+                       .completed, "A version-mismatched view still messages its first mate")
+        XCTAssertFalse(app.buttons["add-photos"].isEnabled, "Reading only, a message carries words alone")
         // INF-1649: the line names the side to update; a home past the phone's floor means this phone.
-        XCTAssertEqual(refusal.label, "Update Infinitary on this phone to make changes.")
+        XCTAssertEqual(refusal.label,
+                       "Your first mate still hears your messages. Buttons come back once Infinitary on this phone is updated.")
         verifyPhoneComposerBounds(app: app)
         picture("read-only-draft")
         // INF-1649, the captain's direction A: a newer home whose major kept views answers this phone in full.
@@ -105,9 +109,22 @@ extension PhoneJourney {
         _ = try await home("older-home")
         reach("In reach", timeout: 20)
         XCTAssertTrue(app.staticTexts["connection-refusal"].waitForPresence(timeout: 20))
-        XCTAssertEqual(app.staticTexts["connection-refusal"].label, "Update Infinitary on your computer to make changes.")
-        XCTAssertFalse(app.buttons["send-message"].isEnabled, "A view newer than the home's reach can read but cannot act")
+        XCTAssertEqual(app.staticTexts["connection-refusal"].label,
+                       "Your first mate still hears your messages. Buttons come back once Infinitary on your computer is updated.")
+        XCTAssertFalse(app.buttons["add-photos"].isEnabled, "Reading only, a message carries words alone")
         picture("older-home-draft")
+        // INF-4012 piece 2: a phone newer than the home's reach still sends its words, as one plain string.
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: app.buttons["send-message"], timeout: 20),
+                       .completed, "A view newer than the home's reach still messages its first mate")
+        tapOnPhone(app.buttons["send-message"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value != %@", "Sent to an older computer"), object: input, timeout: 20), .completed)
+        let readingView = try await home("talk-state", method: "GET")
+        let readingWrites = try XCTUnwrap(readingView["writes"] as? [[String: Any]])
+        XCTAssertEqual(readingWrites.count, olderViewWrites.count + 1, "The older home takes the plain message")
+        XCTAssertEqual(readingWrites.last?["channel"] as? String, "inf:converse")
+        XCTAssertEqual((readingWrites.last?["args"] as? [Any])?.first as? String, "Sent to an older computer")
+        XCTAssertFalse(app.buttons["change-notice"].exists, "The home took the message, so nothing is taken back")
+        focusForPhoneTyping(input, in: app); input.typeText("Sent to an older computer")
         // A home at this phone's floor answers it in full, and the draft sends there.
         _ = try await home("older-home-within")
         reach("In reach", timeout: 20)
@@ -120,7 +137,7 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value != %@", "Sent to an older computer"), object: input, timeout: 20), .completed)
         let newerView = try await home("talk-state", method: "GET")
         let newerViewWrites = try XCTUnwrap(newerView["writes"] as? [[String: Any]])
-        XCTAssertEqual(newerViewWrites.count, olderViewWrites.count + 1, "A newer view changes things on an older home its floor reaches")
+        XCTAssertEqual(newerViewWrites.count, readingWrites.count + 1, "A newer view changes things on an older home its floor reaches")
         XCTAssertEqual((newerViewWrites.last?["args"] as? [[String: Any]])?.first?["text"] as? String, "Sent to an older computer")
 
         // INF-355: exercise first-after-relaunch paging and Send after the original journey.

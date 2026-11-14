@@ -522,6 +522,7 @@ public enum PhoneMessages {
     public static func `commandWhatsNewShow`() -> String { PhoneWords.format("commandWhatsNewShow", []) }
     public static func `commandWhatsNewShowWords`() -> String { PhoneWords.format("commandWhatsNewShowWords", []) }
     public static func `composerLines`(`count`: Int) -> String { PhoneWords.format("composerLines", [`count`]) }
+    public static func `composerWordsOnly`() -> String { PhoneWords.format("composerWordsOnly", []) }
     public static func `crewAPart`() -> String { PhoneWords.format("crewAPart", []) }
     public static func `crewFirstmateLabel`(`state`: String) -> String { PhoneWords.format("crewFirstmateLabel", [`state`]) }
     public static func `crewModelNames`() -> String { PhoneWords.format("crewModelNames", []) }
@@ -1583,6 +1584,8 @@ public enum PhoneMessages {
     public static func `phoneSecretsRefusedUnknown`() -> String { PhoneWords.format("phoneSecretsRefusedUnknown", []) }
     public static func `phoneSecretsTurnOnFirst`() -> String { PhoneWords.format("phoneSecretsTurnOnFirst", []) }
     public static func `phoneSessionChangeFailed`() -> String { PhoneWords.format("phoneSessionChangeFailed", []) }
+    public static func `phoneSessionHearsComputer`() -> String { PhoneWords.format("phoneSessionHearsComputer", []) }
+    public static func `phoneSessionHearsThisPhone`() -> String { PhoneWords.format("phoneSessionHearsThisPhone", []) }
     public static func `phoneSessionOutOfReach`() -> String { PhoneWords.format("phoneSessionOutOfReach", []) }
     public static func `phoneSessionRequestRefused`() -> String { PhoneWords.format("phoneSessionRequestRefused", []) }
     public static func `phoneSessionUpdateComputer`() -> String { PhoneWords.format("phoneSessionUpdateComputer", []) }
@@ -3218,6 +3221,8 @@ public enum PhoneMessages {
     public static func `uiVoiceSubmit`() -> String { PhoneWords.format("uiVoiceSubmit", []) }
     public static func `uiVoiceTaskPrompt`() -> String { PhoneWords.format("uiVoiceTaskPrompt", []) }
     public static func `viewGoogleUpdateThere`(`mac`: String) -> String { PhoneWords.format("viewGoogleUpdateThere", [`mac`]) }
+    public static func `viewPillNewerHears`(`name`: String) -> String { PhoneWords.format("viewPillNewerHears", [`name`]) }
+    public static func `viewPillOlderHears`(`name`: String) -> String { PhoneWords.format("viewPillOlderHears", [`name`]) }
     public static func `viewReturnPasteLabel`(`name`: String) -> String { PhoneWords.format("viewReturnPasteLabel", [`name`]) }
     public static func `viewReturnPasteLead`(`name`: String) -> String { PhoneWords.format("viewReturnPasteLead", [`name`]) }
     public static func `viewReturnPastePlaceholder`() -> String { PhoneWords.format("viewReturnPastePlaceholder", []) }
@@ -3765,6 +3770,7 @@ extension PhoneWords {
         "commandWhatsNewShow": [],
         "commandWhatsNewShowWords": [],
         "composerLines": ["count"],
+        "composerWordsOnly": [],
         "crewAPart": [],
         "crewFirstmateLabel": ["state"],
         "crewModelNames": [],
@@ -4826,6 +4832,8 @@ extension PhoneWords {
         "phoneSecretsRefusedUnknown": [],
         "phoneSecretsTurnOnFirst": [],
         "phoneSessionChangeFailed": [],
+        "phoneSessionHearsComputer": [],
+        "phoneSessionHearsThisPhone": [],
         "phoneSessionOutOfReach": [],
         "phoneSessionRequestRefused": [],
         "phoneSessionUpdateComputer": [],
@@ -6461,6 +6469,8 @@ extension PhoneWords {
         "uiVoiceSubmit": [],
         "uiVoiceTaskPrompt": [],
         "viewGoogleUpdateThere": ["mac"],
+        "viewPillNewerHears": ["name"],
+        "viewPillOlderHears": ["name"],
         "viewReturnPasteLabel": ["name"],
         "viewReturnPasteLead": ["name"],
         "viewReturnPastePlaceholder": [],

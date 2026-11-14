@@ -490,6 +490,8 @@
   "phoneSecretsRefusedUnknown": "결과를 알 수 없어요. 다른 사용을 요청하기 전에 컴퓨터에서 무슨 일이 있었는지 확인하세요.",
   "phoneSecretsTurnOnFirst": "먼저 설정에서 비밀 정보 사용 승인을 켜세요.",
   "phoneSessionChangeFailed": "컴퓨터가 이 변경을 할 수 없었어요.",
+  "phoneSessionHearsComputer": "일등항해사는 계속 메시지를 듣고 있어요. 컴퓨터의 Infinitary를 업데이트하면 버튼이 돌아와요.",
+  "phoneSessionHearsThisPhone": "일등항해사는 계속 메시지를 듣고 있어요. 이 휴대폰의 Infinitary를 업데이트하면 버튼이 돌아와요.",
   "phoneSessionOutOfReach": "컴퓨터에 연락이 닿지 않아요. 나중에 보내지도 않아요.",
   "phoneSessionRequestRefused": "컴퓨터가 이 요청을 거부했어요.",
   "phoneSessionUpdateComputer": "변경하려면 컴퓨터의 Infinitary를 업데이트하세요.",

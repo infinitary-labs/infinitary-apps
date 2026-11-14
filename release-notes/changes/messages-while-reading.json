@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "messages-while-reading",
+      "kind": "improvement",
+      "title": "Keep talking to your first mate when two versions of Infinitary differ",
+      "body": "When your phone or another computer is too far from your first mate's version to make changes, its message box now stays on. Your words still reach your first mate, which can start, steer and stop work for you. Pictures, files and card buttons come back once the older copy is updated. This works once the computer where your first mate lives has this version.",
+      "area": "devices",
+      "picture": {
+        "dark": "messages-while-reading-dark.webp",
+        "light": "messages-while-reading-light.webp",
+        "alt": "A computer controlling an older Mac mini: the line under the top bar says the first mate still hears your messages, and buttons come back once Infinitary there is updated"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

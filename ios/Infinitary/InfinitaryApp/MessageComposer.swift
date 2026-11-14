@@ -32,7 +32,8 @@ struct MessageComposer: View {
     }
 
     private var canSend: Bool {
-        session.canChange && !loading && !(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && photos.isEmpty)
+        session.canMessage && !loading && !(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && photos.isEmpty)
+            && (session.canChange || photos.isEmpty)
     }
 
     typealias Photo = PhonePhoto
@@ -64,7 +65,11 @@ struct MessageComposer: View {
                         // inside the button, so its frame starts where the box does, on the reading column.
                         Label(PhoneMessages.phoneComposerPhotos(), systemImage: "photo").labelStyle(.iconOnly).frame(width: 44, height: 48)
                             .padding(.leading, 5).contentShape(Rectangle())
-                    }.disabled(loading || photos.count >= PhoneLimits.images).accessibilityIdentifier("add-photos")
+                    }.disabled(loading || photos.count >= PhoneLimits.images || session.messagesWhileReading)
+                        // The box's text color overrides the system's disabled look, so between versions the
+                        // photo glyph dims itself: only words can go until Infinitary is updated.
+                        .opacity(session.messagesWhileReading ? 0.35 : 1)
+                        .accessibilityIdentifier("add-photos")
                     TextField(PhoneMessages.phoneComposerPlaceholder(), text: $text, axis: .vertical)
                         .lineLimit(1...(compact ? 2 : 4)).focused($focused)
                         .padding(.vertical, PhoneTheme.space3).frame(minHeight: 48)
@@ -85,11 +90,12 @@ struct MessageComposer: View {
                 }
                     // INF-589 item 11: out of reach, the input dims; a draft stays typeable and is kept. INF-3462: only what
                     // the box holds dims, so its glass keeps blurring the crew scene that passes behind it.
-                    .opacity(session.canChange ? 1 : 0.5)
+                    .opacity(session.canMessage ? 1 : 0.5)
                     .phoneInput(floating: true)
             }
             if loading { ProgressView(PhoneMessages.phoneComposerAddingPhotos()) }
-            if let words = session.changesOffLine {
+            // INF-4012 piece 2: reading only, the first mate still hears plain words, and the line says so.
+            if let words = session.messageLine ?? session.changesOffLine {
                 Text(words).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     .frame(maxWidth: .infinity).multilineTextAlignment(.center)
                     .accessibilityIdentifier("connection-refusal")
@@ -206,11 +212,15 @@ struct MessageComposer: View {
     /// INF-2553: the box clears at the tap and the message is the last turn, marked sending; a refusal puts the words and
     /// pictures back in front of anything typed since, and the session says why.
     private func send() {
-        guard !loading, session.canChange else { return }
+        guard !loading, session.canMessage else { return }
+        // Reading only, words alone go, as one plain string: no photos and no hints (`messages-while-reading`).
+        let plain = !session.canChange
+        guard !plain || photos.isEmpty else { return }
         guard text.utf16.count <= PhoneLimits.text else { problem = PhoneMessages.phoneComposerTooLong(); return }
         let words = text, pictures = photos
         var payload: [String: Any] = ["text": words, "images": pictures.map(\.wire)]
         for (key, value) in messageContext.fields { payload[key] = value }
+        let args: [Any] = plain ? [words] : [payload]
         focused = false
         problem = nil
         text = ""; photos = []
@@ -223,7 +233,7 @@ struct MessageComposer: View {
                     box.wrappedValue = box.wrappedValue.isEmpty ? words : words + "\n" + box.wrappedValue
                     shelf.wrappedValue = Array((pictures + shelf.wrappedValue).prefix(PhoneLimits.images))
                 }
-                try await session.change(intent, .converse, args: [payload], restore: restore)
+                try await session.change(intent, .converse, args: args, restore: restore)
                 sent += 1
             } catch {}
         }

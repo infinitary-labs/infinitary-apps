@@ -23,7 +23,8 @@ export type ComposerNotice =
   | "file-shortcut"
   | "file-not-local"
   | "file-other-mac"
-  | "files-preparing";
+  | "files-preparing"
+  | "words-only";
 
 export const COMPOSER_NOTICE_WORDS: Record<ComposerNotice, string> = {
   "files-max": "Up to 4 files per message.",
@@ -38,6 +39,11 @@ export const COMPOSER_NOTICE_WORDS: Record<ComposerNotice, string> = {
   // this one. The window names that Mac when it knows it.
   "file-other-mac": `Only pictures and text files can go to the other ${COMPUTER.one}. Other files were not added.`,
   "files-preparing": "A file is still being prepared. Send when it is ready.",
+  // A view reading only from a first mate on another version sends it
+  // plain words alone (docs/view.md, "Read only").
+  get "words-only"() {
+    return m.composerWordsOnly();
+  },
   "pictures-max": `Up to ${TURN_IMAGES_MAX} pictures per message.`,
   "picture-too-big": `That picture is over ${TURN_IMAGE_MAX_BYTES / (1024 * 1024)} MB.`,
   "too-long": "Too long to send. Trim it, or paste the long part so it goes as a file.",

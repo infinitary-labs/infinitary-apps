@@ -528,6 +528,8 @@
   "phoneSecretsRefusedUnknown": "El resultado es desconocido. Comprueba qué pasó en tu computadora antes de solicitar otro uso.",
   "phoneSecretsTurnOnFirst": "Primero activa Aprueba usos de secretos en Configuración.",
   "phoneSessionChangeFailed": "Tu computadora no pudo hacer este cambio.",
+  "phoneSessionHearsComputer": "Tu primer oficial sigue escuchando tus mensajes. Los botones vuelven cuando se actualice Infinitary en tu computadora.",
+  "phoneSessionHearsThisPhone": "Tu primer oficial sigue escuchando tus mensajes. Los botones vuelven cuando se actualice Infinitary en este teléfono.",
   "phoneSessionOutOfReach": "Tu computadora está fuera de alcance. No se enviará nada más tarde.",
   "phoneSessionRequestRefused": "Tu computadora rechazó esta solicitud.",
   "phoneSessionUpdateComputer": "Actualiza Infinitary en tu computadora para hacer cambios.",

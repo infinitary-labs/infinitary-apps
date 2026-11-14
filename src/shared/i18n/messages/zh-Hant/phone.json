@@ -490,6 +490,8 @@
   "phoneSecretsRefusedUnknown": "結果不明。要求另一次使用之前，請先在你的電腦上查看發生了什麼事。",
   "phoneSecretsTurnOnFirst": "請先到「設定」開啟「核准使用機密」。",
   "phoneSessionChangeFailed": "你的電腦無法進行這項變更。",
+  "phoneSessionHearsComputer": "你的大副仍能收到你的訊息。在你的電腦上更新 Infinitary 後按鈕就會回來。",
+  "phoneSessionHearsThisPhone": "你的大副仍能收到你的訊息。在這支手機上更新 Infinitary 後按鈕就會回來。",
   "phoneSessionOutOfReach": "你的電腦連絡不上。稍後也不會補傳任何內容。",
   "phoneSessionRequestRefused": "你的電腦拒絕了這項要求。",
   "phoneSessionUpdateComputer": "請更新你電腦上的 Infinitary 才能進行變更。",

@@ -35,8 +35,10 @@ import {
   REPLACED_PUSH_CHANNEL,
 } from "@shared/connection";
 import {
+  asksWhileReading,
   type ContractAccess,
   contractAccess,
+  MESSAGES_WHILE_READING,
   readsEndedCards,
   readsSeenUpdate,
   readsSharedCards,
@@ -165,6 +167,12 @@ export type PairedDevices = {
 
 /** One rule for every view (`every-view-asks.md`). */
 export const EVERY_VIEW_ASKS = contractChange("every-view-asks");
+
+/**
+ * A paired view's plain-text messages pass the read-only gate
+ * (`messages-while-reading.md`); named here so its file must exist.
+ */
+export const MESSAGES_WHILE_READING_CHANGE = contractChange(MESSAGES_WHILE_READING);
 
 /** A view asks the home's computers, phones and Knowledge (`devices-from-a-view.md`). */
 export const DEVICES_FROM_A_VIEW = contractChange("devices-from-a-view");
@@ -1168,8 +1176,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         return;
       }
       // The version rule (docs/contract.md): outside the window a device
-      // reads, and changes nothing until it is updated.
-      if (client.access === "read" && invokeContract[channel].effect === "change") {
+      // reads, and changes nothing until it is updated, but a paired view
+      // still says plain words to the first mate (`messages-while-reading.md`).
+      if (
+        client.access === "read" &&
+        invokeContract[channel].effect === "change" &&
+        !(client.role === "view" && asksWhileReading(channel, frame.args))
+      ) {
         reply({
           ok: false,
           error: `${channel} changes something, and a device on contract ${client.speaks} only reads from a home on ${homeVersion} until it is updated.`,

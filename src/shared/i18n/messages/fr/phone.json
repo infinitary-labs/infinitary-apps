@@ -528,6 +528,8 @@
   "phoneSecretsRefusedUnknown": "Le résultat est inconnu. Vérifiez ce qui s’est passé sur votre ordinateur avant de demander une autre utilisation.",
   "phoneSecretsTurnOnFirst": "Activez d’abord « Approuve l’utilisation des secrets » dans Réglages.",
   "phoneSessionChangeFailed": "Votre ordinateur n’a pas pu faire cette modification.",
+  "phoneSessionHearsComputer": "Votre second entend toujours vos messages. Les boutons reviennent une fois Infinitary mis à jour sur votre ordinateur.",
+  "phoneSessionHearsThisPhone": "Votre second entend toujours vos messages. Les boutons reviennent une fois Infinitary mis à jour sur ce téléphone.",
   "phoneSessionOutOfReach": "Votre ordinateur est hors de portée. Rien ne sera envoyé plus tard.",
   "phoneSessionRequestRefused": "Votre ordinateur a refusé cette demande.",
   "phoneSessionUpdateComputer": "Mettez à jour Infinitary sur votre ordinateur pour faire des modifications.",

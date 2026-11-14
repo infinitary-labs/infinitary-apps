@@ -13,6 +13,7 @@ public enum PhoneContract {
     public static let frameParts = "frame-parts"
     public static let cardAnnotations = "card-annotations"
     public static let boardWithoutClosed = "board-without-closed"
+    public static let messagesWhileReading = "messages-while-reading"
     public static let cards = "inf:cards:list"
     public static let feed = "inf:feed:recent"
     public static let hereWords = ["This computer","this computer"]

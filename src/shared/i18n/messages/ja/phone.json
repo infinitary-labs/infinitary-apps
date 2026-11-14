@@ -490,6 +490,8 @@
   "phoneSecretsRefusedUnknown": "結果は不明です。別の使用をリクエストする前に、コンピューターで何が起きたかを確認してください。",
   "phoneSecretsTurnOnFirst": "先に「設定」で「シークレットの使用を承認」をオンにしてください。",
   "phoneSessionChangeFailed": "コンピューターはこの変更を行えませんでした。",
+  "phoneSessionHearsComputer": "一等航海士はあなたのメッセージを引き続き受け取ります。お使いのコンピューターの Infinitary を更新するとボタンが戻ります。",
+  "phoneSessionHearsThisPhone": "一等航海士はあなたのメッセージを引き続き受け取ります。このスマートフォンの Infinitary を更新するとボタンが戻ります。",
   "phoneSessionOutOfReach": "コンピューターと連絡がつきません。後から送信されることはありません。",
   "phoneSessionRequestRefused": "コンピューターはこのリクエストを拒否しました。",
   "phoneSessionUpdateComputer": "変更を行うには、コンピューターの Infinitary をアップデートしてください。",

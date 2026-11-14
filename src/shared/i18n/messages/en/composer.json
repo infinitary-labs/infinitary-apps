@@ -3,5 +3,6 @@
     "plural": "count",
     "one": "{count} line",
     "other": "{count} lines"
-  }
+  },
+  "composerWordsOnly": "Only words can go until Infinitary is updated. Remove the pictures and files to send this."
 }

@@ -256,7 +256,8 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
 - **Catching up**: a welcome that replays sends the missed pushes in order and nothing else is needed.
   A welcome that reloads - the other Mac restarted, or this one was away longer than its journal keeps - raises `caughtUp`, and the window reads everything again in place (`resync` in the shell store, and `resyncReads`, `src/renderer/src/plugins/reads/resync.ts`, which every read subscription follows).
   Nothing typed is lost to a reload: the window does not start over.
-- **Read only**: a welcome whose `access` is `read` (`docs/contract.md`) means the two copies of Infinitary are too far apart; the window says which one is newer and makes no changes.
+- **Read only**: a welcome whose `access` is `read` (`docs/contract.md`) means the two copies of Infinitary are too far apart; the window says which one is newer and makes no changes but one.
+  A first mate whose welcome lists `messages-while-reading`, or that speaks a newer major, still hears plain words (`messagesWhileReading`): the input sends them as one string without the hints about what is on screen, a turn with pictures or files stays with "Only words can go until Infinitary is updated." under it, and the pill says the first mate still hears the captain and buttons come back once the older side is updated.
   When the newer one is there, the window asks for this Mac to be updated, and this Mac's own update notice is how.
   A development run may stand in another contract version for the Mac where the first mate lives with `INFINITARY_CONTRACT_VERSION`, and its view floor with `INFINITARY_VIEW_FLOOR`, so a view on the same build reads as too far apart; a packaged app ignores both.
 

@@ -8,7 +8,7 @@ import {
 import * as m from "@shared/i18n/messages.generated";
 import { isPreparing, MAIN_FILES_KEY, whenPrepared } from "../attachments/intake";
 import type { ImageAttachment } from "../design";
-import { changesOff } from "../devices/viewWords";
+import { changesOff, messagesWhileReading } from "../devices/viewWords";
 import { voiceController } from "../voice/voiceController";
 import { insertVoiceTranscript } from "../voice/voiceInput";
 import { heldProjectFocus } from "./projectFocus";
@@ -274,7 +274,14 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
           set({ inputText: draft, composerNotice: "too-long" });
           return undefined;
         }
-        if (changesOff(get().thisMac)) {
+        // Two versions apart, the first mate there still hears plain words,
+        // and nothing else (`messages-while-reading`, docs/view.md "Read only").
+        const wordsOnly = messagesWhileReading(get().thisMac);
+        if (wordsOnly && (imgs || pastes.length)) {
+          set({ inputText: draft, composerNotice: "words-only" });
+          return undefined;
+        }
+        if (changesOff(get().thisMac) && !(wordsOnly && text)) {
           // The Mac this one controls is out of reach: nothing leaves, nothing
           // is queued for later, and the words stay (docs/view.md).
           set({ inputText: draft, composerNotice: "away" });
@@ -310,7 +317,8 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
         // Keep send(text) for the empty-stack case; object form carries the
         // optional on-screen card id or task id (and any pasted images).
         const turn =
-          imgs || pastes.length || visibleCardId || taskId || pastCardId || focusedProjectId
+          !wordsOnly &&
+          (imgs || pastes.length || visibleCardId || taskId || pastCardId || focusedProjectId)
             ? {
                 text: text || undefined,
                 ...(pastes.length

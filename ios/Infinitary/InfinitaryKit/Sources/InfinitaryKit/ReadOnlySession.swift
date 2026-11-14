@@ -38,6 +38,14 @@ public enum PhoneUpdate: Equatable, Sendable {
         case .computer: return PhoneMessages.phoneSessionUpdateComputer()
         }
     }
+
+    /// The line under the message box while the computer still hears this phone's words (`messages-while-reading`).
+    public var hearsWords: String {
+        switch self {
+        case .phone: return PhoneMessages.phoneSessionHearsThisPhone()
+        case .computer: return PhoneMessages.phoneSessionHearsComputer()
+        }
+    }
 }
 
 /// One card's arrival: a new card, or its author's answer to the captain's reply.
@@ -121,6 +129,18 @@ public struct PhoneNotice: Equatable, Sendable {
     public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
     public var unreadCards: Int { stack.filter { !hasSeen($0) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
+    /// The computer's welcome said it hears a phone's plain-text messages while the phone only reads (the
+    /// `messages-while-reading` contract change), or it speaks a newer major, which folded that name in.
+    private var homeHearsWhileReading = false
+    /// Reading only, the message box stays on for words alone: no photos, and no hints about what is on screen.
+    public var messagesWhileReading: Bool { contact == "in-reach" && access != "full" && homeHearsWhileReading }
+    /// Whether the message box sends: everything while changes are on, plain words while `messagesWhileReading`.
+    public var canMessage: Bool { canChange || messagesWhileReading }
+    /// The line under the message box: that the first mate still hears this phone, or why changes are off.
+    public var messageLine: String? {
+        guard reach == "in-reach", messagesWhileReading else { return nil }
+        return PhoneUpdate.side(phone: PhoneContract.version, computer: homeVersion).hearsWords
+    }
     public var changeRefusal: String? {
         if contact != "in-reach" { return PhoneMessages.phoneSessionOutOfReach() }
         if access != "full" { return PhoneUpdate.side(phone: PhoneContract.version, computer: homeVersion).words }
@@ -241,7 +261,9 @@ public struct PhoneNotice: Equatable, Sendable {
 
     private func invoke(_ channel: String, changes: Bool, args: [Any], waits: Bool = true) async throws -> Data {
         guard !Task.isCancelled, contact == "in-reach", let socket, !removed else { throw PhoneError.unavailable }
-        if changes, let reason = changeRefusal { throw PhoneError.refused(reason) }
+        if changes, let reason = changeRefusal, !(messagesWhileReading && Self.plainWords(channel, args)) {
+            throw PhoneError.refused(reason)
+        }
         nextID += 1
         let id = nextID
         let data = try JSONSerialization.data(withJSONObject: ["t": "invoke", "id": id, "channel": channel, "args": args])
@@ -254,6 +276,13 @@ public struct PhoneNotice: Equatable, Sendable {
             }
         }
         return answer
+    }
+
+    /// The one change a reading-only phone still sends: a message to the first mate as one plain string, the shape
+    /// the computer's `READ_ONLY_ASKS` lets through (src/shared/contractFeatures.ts).
+    static func plainWords(_ channel: String, _ args: [Any]) -> Bool {
+        guard channel == PhoneRequest.converse.rawValue, args.count == 1, let words = args[0] as? String else { return false }
+        return !words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     public func ask(_ channel: PhoneCardRequest, _ args: [PhoneJSON]) async throws -> PhoneJSON {
@@ -979,6 +1008,8 @@ public struct PhoneNotice: Equatable, Sendable {
             homeLeavesClosed = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
             servesPanels = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
             if catchUp == "reload" { onPanelResync?() }
+            homeHearsWhileReading = homeMajor > ownMajor
+                || (frame["changes"] as? [String] ?? []).contains(PhoneContract.messagesWhileReading)
             closedRowsWanted = false
             if !sceneObservations { computers = [] }
             sceneGeneration += 1

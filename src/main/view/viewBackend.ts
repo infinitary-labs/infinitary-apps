@@ -12,7 +12,7 @@ import type { Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications } from "@core/host";
 import { SIGN_IN_RETURN } from "@core/signInReturns";
 import type { UpdateChecker } from "@core/update/updateChecker";
-import { sideToUpdate } from "@shared/contractFeatures";
+import { homeHearsWhileReading, sideToUpdate } from "@shared/contractFeatures";
 import { HERE, HOME } from "@shared/deviceNames";
 import { splitDialAddress, type ThisMac } from "@shared/devices";
 import {
@@ -262,6 +262,10 @@ export class ViewBackend {
       joinedAt: this.record.joinedAt,
       contact: state.contact,
       readOnly: readOnly(state),
+      ...(readOnly(state) !== null &&
+      homeHearsWhileReading(state.homeVersion ?? undefined, state.homeChanges)
+        ? { messagesWhileReading: true as const }
+        : {}),
       heardAt: state.heardAt,
       caughtUp: this.caughtUp,
       ...(this.record.grant.kind === "mac" ? { runsWork: true } : {}),

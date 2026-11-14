@@ -62,10 +62,15 @@ One line stands centered under the top bar, a pill (`--bg-1`, `--line-2`, `--rad
 - a newer Infinitary there: the top line ends "· read only", with no "as of", because news keeps arriving; the pill reads "MacBook Pro has a newer Infinitary.
   Update Infinitary on this computer to make changes."
   This computer's update notice, when its channel offers a newer version, is the way to act on it.
+- a version apart, while MacBook Pro still hears words (`messages-while-reading`, `docs/view.md` "Read only"): the pill reads "MacBook Pro has a newer Infinitary.
+  Your first mate still hears your messages, and buttons come back once Infinitary on this computer is updated.", or "MacBook Pro has an older Infinitary.
+  Your first mate still hears your messages, and buttons come back once Infinitary there is updated." when MacBook Pro is the older side.
+  The input sends words alone, as the captain's message; a message with pictures or files stays in the box with one `--text-sm --fg-2` line above it, "Only words can go until Infinitary is updated.
+  Remove the pictures and files to send this."
 
 Everything stays readable as it was.
 Card buttons are marked off (`../core/Button.prompt.md`): still Tab stops, dimmed, whose description is "Changes are off until MacBook Pro is back", shown on rest as their `note` unless the pill already shows that sentence whole.
-The input keeps taking words; sending refuses at once with one `--text-sm --fg-2` line above it, "Not sent.
+The input keeps taking words; except where MacBook Pro still hears words, sending refuses at once with one `--text-sm --fg-2` line above it, "Not sent.
 Your words stay here until MacBook Pro is back.", and nothing is queued or sent later.
 When contact returns the dot turns `ok`, this computer catches up, and the pill reads "MacBook Pro is back.
 This computer caught up." with an `ok` dot, then fades over `--dur-slow` after about 2.6 s (an opacity cut under reduced motion).

@@ -1,5 +1,7 @@
 {
   "viewGoogleUpdateThere": "Mettez Infinitary à jour sur {mac} pour vous connecter à Google d’ici.",
+  "viewPillNewerHears": "{name} a un Infinitary plus récent. Votre second entend toujours vos messages, et les boutons reviennent une fois Infinitary mis à jour sur cet ordinateur.",
+  "viewPillOlderHears": "{name} a un Infinitary plus ancien. Votre second entend toujours vos messages, et les boutons reviennent une fois Infinitary mis à jour là-bas.",
   "viewReturnPasteLabel": "L’adresse où votre navigateur s’est arrêté après {name}",
   "viewReturnPasteLead": "Approuvez sur la page de {name}. Votre navigateur s’arrête ensuite sur une page inaccessible. Copiez l’adresse de cette page et collez-la ici.",
   "viewReturnPastePlaceholder": "collez l’adresse",

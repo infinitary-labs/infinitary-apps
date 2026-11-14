@@ -509,6 +509,8 @@
   "phoneSecretsRefusedUnknown": "Das Ergebnis ist unbekannt. Sieh auf deinem Computer nach, was passiert ist, bevor du eine weitere Nutzung anfragst.",
   "phoneSecretsTurnOnFirst": "Schalte zuerst „Gibt Geheimnisse frei“ in den Einstellungen ein.",
   "phoneSessionChangeFailed": "Dein Computer konnte diese Änderung nicht vornehmen.",
+  "phoneSessionHearsComputer": "Dein erster Offizier hört deine Nachrichten weiterhin. Die Schaltflächen kommen zurück, sobald Infinitary auf deinem Computer aktualisiert ist.",
+  "phoneSessionHearsThisPhone": "Dein erster Offizier hört deine Nachrichten weiterhin. Die Schaltflächen kommen zurück, sobald Infinitary auf diesem Telefon aktualisiert ist.",
   "phoneSessionOutOfReach": "Dein Computer ist außer Reichweite. Es wird später nichts gesendet.",
   "phoneSessionRequestRefused": "Dein Computer hat diese Anfrage abgelehnt.",
   "phoneSessionUpdateComputer": "Aktualisiere Infinitary auf deinem Computer, um Änderungen vorzunehmen.",

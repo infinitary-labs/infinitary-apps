@@ -3,6 +3,8 @@ import { CONVERSE_TEXT_MAX_CHARS, TURN_IMAGES_MAX } from "./cards";
 import {
   CHANGE_PRESENTATIONS_SINCE,
   contractAccess,
+  homeHearsWhileReading,
+  MESSAGES_WHILE_READING,
   PLACED_WORK_SINCE,
   sideToUpdate,
   speaksChangePresentations,
@@ -715,6 +717,17 @@ describe("the version rule (docs/contract.md)", () => {
     expect(sideToUpdate("read", "13.0.0", "11.0.0")).toBe("home");
     expect(sideToUpdate("full", "11.0.0", "12.0.0")).toBeNull();
     expect(sideToUpdate("read", "x", "12.0.0")).toBeNull();
+  });
+
+  // INF-4012 piece 2: a view reading only keeps its message box on when the home hears its words.
+  it("lets a view reading only message a home that lists the change, or one on a newer major", () => {
+    expect(homeHearsWhileReading("13.0.0", [MESSAGES_WHILE_READING], "15.0.0")).toBe(true);
+    // The next major folds every name this view's major lists, so it is not named any more.
+    expect(homeHearsWhileReading("16.0.0", [], "15.2.0")).toBe(true);
+    expect(homeHearsWhileReading("13.4.0", [], "15.0.0")).toBe(false);
+    expect(homeHearsWhileReading("15.1.0", null, "15.0.0")).toBe(false);
+    // Before the home's welcome there is no version or list to trust.
+    expect(homeHearsWhileReading(undefined, undefined, "15.0.0")).toBe(false);
   });
 
   it("measures a view against this contract's own floor when the home names none", () => {

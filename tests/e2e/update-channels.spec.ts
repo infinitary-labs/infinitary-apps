@@ -7,7 +7,7 @@ import {
   type UpdateTarget,
   upgradeCommandFor,
 } from "../../src/core/update/updateChannels";
-import { UPDATE_THIS_MAC } from "../../src/renderer/src/devices/viewWords";
+import { pillWords } from "../../src/renderer/src/devices/viewWords";
 import { PROTOCOL_MAJORS_BEHIND, PROTOCOL_VERSION } from "../../src/shared/ipc";
 import type { UpdateChannel, UpdateStatus } from "../../src/shared/update";
 import {
@@ -217,8 +217,20 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
     await air.page.evaluate((link) => {
       void window.infinitary.devices.join(link);
     }, invite.link);
-    // It reads, and asks for this Mac to be updated before it makes changes.
-    await expect(air.page.locator('[data-view-pill="newer-there"]')).toContainText(UPDATE_THIS_MAC);
+    // It reads, and names this Mac as the one to update before buttons come back; a home on a
+    // newer major still hears this Mac's plain words (INF-4012 piece 2, docs/contract.md).
+    const pill = pillWords({
+      role: "view",
+      name: "MacBook Pro",
+      address: "127.0.0.1",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: "newer-there",
+      messagesWhileReading: true,
+      heardAt: null,
+      caughtUp: 0,
+    });
+    await expect(air.page.locator('[data-view-pill="newer-there"]')).toContainText(pill ?? "");
     // The way to act on it: this Mac's own notice, as the other Mac shows its own.
     await expectOffer(air, {
       version: "0.1.30-alpha.5",

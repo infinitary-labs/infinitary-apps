@@ -207,6 +207,8 @@ The native multiline field takes the keyboard’s dictation; there is no second 
 Photos opens the system library picker, and selected photos appear as removable thumbnail chips above the field.
 Send submits words and photos once; a refusal keeps the draft and says why, and an unconfirmed send asks the person to check the Mac before sending again.
 Out of reach and a read-only connection retain the view but refuse every change, without sending it later; the one line under the message box says which.
+When the Mac still hears words while reading only (`messages-while-reading`, `docs/view.md` "Read only"), Send stays on for words alone, Photos is disabled and dimmed, and the line reads "Your first mate still hears your messages.
+Buttons come back once Infinitary on this phone is updated.", or "on your computer" when the Mac is the older side.
 The Tasks tab follows the desktop’s five groups: Waiting on you, Working, Queued, Backlog and Done, with search across its current list and earlier tasks.
 Each group header is a micro uppercase tracked label with its count, as on the Mac.
 The first three groups start expanded; Backlog and Done start collapsed, with their counts and disclosure chevrons.

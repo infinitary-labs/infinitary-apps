@@ -90,6 +90,13 @@ describe("controlling another Mac", () => {
     expect(pillWords({ ...PRO, readOnly: "newer-there" })).toBe(
       "MacBook Pro has a newer Infinitary. Update Infinitary on this computer to make changes.",
     );
+    // INF-4012 piece 2: a first mate there that still hears plain words says so, naming the side to update.
+    expect(pillWords({ ...PRO, readOnly: "older-there", messagesWhileReading: true })).toBe(
+      "MacBook Pro has an older Infinitary. Your first mate still hears your messages, and buttons come back once Infinitary there is updated.",
+    );
+    expect(pillWords({ ...PRO, readOnly: "newer-there", messagesWhileReading: true })).toBe(
+      "MacBook Pro has a newer Infinitary. Your first mate still hears your messages, and buttons come back once Infinitary on this computer is updated.",
+    );
     expect(changesOffWords(AWAY)).toBe("Changes are off until MacBook Pro is back");
     expect(notSentWords(AWAY)).toBe("Not sent. Your words stay here until MacBook Pro is back.");
     for (const words of [

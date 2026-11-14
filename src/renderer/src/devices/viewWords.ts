@@ -47,6 +47,20 @@ export function changesOff(thisMac: ThisMac | null): boolean {
   return isView(thisMac) && (thisMac.contact !== "in-reach" || thisMac.readOnly !== null);
 }
 
+/**
+ * Whether this Mac's plain-text messages still go to the first mate while
+ * changes are off: in reach, too far apart, and the first mate there hears
+ * them while reading only (`messagesWhileReading`, docs/view.md "Read only").
+ */
+export function messagesWhileReading(thisMac: ThisMac | null): boolean {
+  return (
+    isView(thisMac) &&
+    thisMac.contact === "in-reach" &&
+    thisMac.readOnly !== null &&
+    thisMac.messagesWhileReading === true
+  );
+}
+
 /** "14:32": the clock the app's other lines use. */
 export function clockTime(at: number): string {
   return formatTime(at, { hour: "2-digit", minute: "2-digit" });
@@ -204,6 +218,10 @@ export function pillWords(mac: ViewMac): string | null {
   if (mac.contact === "closed")
     return `Infinitary is closed on ${mac.name}. Changes are off until it opens again.`;
   if (mac.contact !== "in-reach") return null;
+  if (mac.readOnly !== null && mac.messagesWhileReading)
+    return mac.readOnly === "newer-there"
+      ? m.viewPillNewerHears({ name: mac.name })
+      : m.viewPillOlderHears({ name: mac.name });
   if (mac.readOnly === "newer-there")
     return `${mac.name} has a newer Infinitary. ${UPDATE_THIS_MAC}.`;
   if (mac.readOnly === "older-there")

@@ -37,6 +37,7 @@ import type { CoreDispatch } from "../dispatcher";
 import {
   COMPUTER_READINGS_LIVE,
   DeviceOutOfReachError,
+  MESSAGES_WHILE_READING_CHANGE,
   type PairedDevices,
   STREAMED_EVENTS_LIVE,
   startConnection,
@@ -1241,6 +1242,37 @@ describe("the home's connection", () => {
       "only reads from a home on 3.2.0 until it is updated",
     );
     expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:cards:close", "inf:cards:close"]);
+  });
+
+  // INF-4012 piece 2, the captain's "1 and 2 together, the small piece 2 first": a phone or a Mac
+  // reading only across a version split still says plain words to the first mate, and nothing else.
+  it("lets a view reading only send the first mate plain words, and refuses every other change", async () => {
+    const at = await home({ protocolVersion: "3.2.0", viewFloor: 3 });
+    const viewGrant = await at.join("view");
+    const phone = await connectClient(viewGrant, {
+      protocolVersion: "4.0.0",
+      viewFloor: 4,
+      system: { system: "ios" },
+    });
+    const mac = await connectClient(viewGrant, { protocolVersion: "2.9.0", viewFloor: 2 });
+    expect([phone, mac].map((device) => device.welcome.access)).toEqual(["read", "read"]);
+    expect(phone.welcome.changes).toContain(MESSAGES_WHILE_READING_CHANGE);
+    for (const device of [phone, mac]) {
+      // The core's stand-in refuses everything it is asked, so reaching it is the proof.
+      await expect(device.invoke("inf:converse", ["Merge the harbour fix"])).rejects.toThrow(
+        "malformed request",
+      );
+      for (const [channel, args] of [
+        ["inf:converse", [{ text: "Merge the harbour fix" }]],
+        ["inf:converse", ["   "]],
+        ["inf:converse", ["Merge the harbour fix", "extra"]],
+        ["inf:cards:close", ["card-1"]],
+      ] as const)
+        await expect(device.invoke(channel, [...args])).rejects.toThrow(
+          "only reads from a home on 3.2.0 until it is updated",
+        );
+    }
+    expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:converse", "inf:converse"]);
   });
 
   // INF-1649 review R4, the captain's "Keep version-11 views read-only": a computer viewing from

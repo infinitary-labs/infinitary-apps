@@ -242,6 +242,7 @@ The head, title, body, attachment, facts strip, action row and reply keep their 
 A thread already open beside the card stays its right column at its own width and the card takes the rest (`CardThread.prompt.md`); maximizing opens no thread.
 It is the same card, never a copy: its page, answers, open details, script and reply stay as they were through any number of changes of size, and the reading place in its body holds.
 Restore, or an Escape nothing in the card used, gives it back its usual width, or the width the captain dragged, and the panels as they were; the card's own controls, the picture viewer and command search use their Escape first, and a record or a panel's card restores on Escape before a later Escape hides it.
+Under a key preset with plain keys, such as Vim, Escape on a maximized card goes to the card and stops there instead; Restore or Maximize or restore card's key gives the size back (`docs/keyboard.md`, "Cards and frames").
 A click outside the card does nothing.
 The keyboard's focus lands on the size control after each change; while maximized, Tab and ⇧Tab go round the card, its thread and its pager, and the window's parts are the card alone.
 Command search lists "Maximize or restore card", with no key of its own (`docs/keyboard.md`).

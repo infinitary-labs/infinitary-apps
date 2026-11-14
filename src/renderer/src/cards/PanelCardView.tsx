@@ -1,5 +1,6 @@
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import { useContext, useEffect, useSyncExternalStore } from "react";
+import { escapeToMaximizedCard } from "../app/notTypingKeys";
 import type { PanelCardEntry } from "../app/stack";
 import { CardCorner, CardSizeContext } from "../design/cards/CardSize";
 import { CARD_MAX_HEIGHT, ResponseCard } from "../design/cards/ResponseCard";
@@ -77,7 +78,13 @@ export function PanelCardView({
             card={card}
             theme={theme}
             onDrawn={onDrawn}
-            onEscape={size?.maximized ? () => size.toggle(true) : onClose}
+            onEscape={
+              size?.maximized
+                ? () => {
+                    if (!escapeToMaximizedCard()) size.toggle(true);
+                  }
+                : onClose
+            }
           />
         ) : null}
       </div>

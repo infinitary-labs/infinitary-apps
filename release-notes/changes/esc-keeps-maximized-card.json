@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "esc-keeps-maximized-card",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Esc on a maximized card keeps it maximized with Vim keys",
+      "body": "With the Vim, tmux or Emacs keys, Esc on a maximized card now always moves your keyboard to the card and leaves it maximized, so j and k go on scrolling it. Before, Esc from the card's buttons, its reply or right after maximizing gave the card its usual size back. Your Maximize or restore card key, such as Ctrl+W O, or Restore gives the size back.",
+      "noPicture": "Where the keyboard lands after a key press cannot show in a still picture; the card looks the same before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

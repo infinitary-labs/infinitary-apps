@@ -21,7 +21,7 @@ import { HomePrompt } from "./HomePrompt";
 import { HomeScreen } from "./HomeScreen";
 import { guardHeldPresses } from "./heldKeys";
 import { NextKeysHint } from "./NextKeysHint";
-import { followNotTypingKeys, leaveMessageField } from "./notTypingKeys";
+import { escapeToMaximizedCard, followNotTypingKeys, leaveMessageField } from "./notTypingKeys";
 import { applyTheme } from "./preferences";
 import { followShellCommands } from "./shellCommands";
 import { isHeldEntry, shownEntry } from "./stack";
@@ -75,7 +75,8 @@ export function App() {
         // An Escape nothing in the card used restores a maximized card
         // before anything else it would do (design skill ResponseCard,
         // "Maximize"); its own controls, the picture viewer and command
-        // search use theirs first.
+        // search use theirs first. With not-typing keys installed it goes
+        // to the card and stops there instead, as one from the body does.
         const stage = cardStage();
         if (
           store.view === "home" &&
@@ -83,6 +84,7 @@ export function App() {
           !event.defaultPrevented &&
           !store.recording
         ) {
+          if (escapeToMaximizedCard(event)) return;
           stage.toggleSize();
           return;
         }

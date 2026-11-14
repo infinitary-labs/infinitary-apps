@@ -59,9 +59,25 @@ export function leaveMessageField(): void {
     !active.matches('[name="task-prompt"], [data-card-reply] textarea')
   )
     return;
-  const card = [...document.querySelectorAll<HTMLElement>('[data-window-region="card"]')].find(
-    available,
-  );
-  const target = card ?? document.querySelector<HTMLElement>("[data-stage]");
+  const target = shownCard() ?? document.querySelector<HTMLElement>("[data-stage]");
   if (target && available(target)) focusWithRing(target, { preventScroll: true });
+}
+
+/**
+ * With this layer installed, an Escape on a maximized card goes to the card
+ * and stops there, from its controls, its buttons or its reply alike: only
+ * Maximize or restore card's key, or Restore, gives the size back. Without
+ * it, the Escape is left to restore the card (docs/keyboard.md).
+ */
+export function escapeToMaximizedCard(event?: { isComposing: boolean }): boolean {
+  if (!hasNotTypingKeys(installedBindings())) return false;
+  // An input method's Escape stays its own, and the card keeps its size.
+  if (event?.isComposing) return true;
+  const card = shownCard();
+  if (card && document.activeElement !== card) focusWithRing(card, { preventScroll: true });
+  return true;
+}
+
+function shownCard(): HTMLElement | undefined {
+  return [...document.querySelectorAll<HTMLElement>('[data-window-region="card"]')].find(available);
 }

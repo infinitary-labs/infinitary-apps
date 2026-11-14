@@ -18,6 +18,7 @@ import { expandDock, openGroup, pressRow, recordCard } from "./rails";
 import {
   cardLeave,
   cardReply,
+  cardScroller,
   cardSurface,
   clickInBody,
   closeQuestion,
@@ -26,7 +27,7 @@ import {
   shownEntry,
 } from "./stack";
 import { boardCard, boardEntry, boardFocusOn, boardsOnStage, hideBoard } from "./taskBoard";
-import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
+import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
 /**
  * A card made almost full screen and given back (design skill ResponseCard,
@@ -307,6 +308,87 @@ test("a task's record, a past card and the task board maximize too, and Escape r
       await expect(boardCard(page)).toBeVisible();
       await pressKey(find, "Escape");
       await expect(boardsOnStage(page)).toHaveCount(0);
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
+test("under Vim keys, Escape on a maximized card goes to the card and stops there, and Maximize or restore card gives the size back", async () => {
+  // INF-4176: under a preset with plain keys, an Escape from the card's
+  // size control, a footer button or its reply restored a maximized card,
+  // while one from its body only went to the card. The captain's rule: Esc
+  // goes to the card and stops there; Ctrl+W O or Restore gives the size back.
+  test.setTimeout(150_000);
+  const userDataDir = scratchDir("infinitary-card-maximize-vim-");
+  const db = openDatabase(userDataDir);
+  try {
+    new CardStore(db).upsert(card("card-read", READ, 30));
+  } finally {
+    db.close();
+  }
+  const launched = await launchApp({ userDataDir, withMockProvider: true, keys: "vim" });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 820 });
+    await showCard(page, READ);
+    const reply = cardReply(page).field;
+    const maximized = async () => {
+      await expect(sizeControl(page, RESTORE_LABEL)).toBeVisible();
+      await expect(promptInput(page)).toBeHidden();
+    };
+
+    // Maximize or restore card runs from command search: its Vim key, Ctrl+W O,
+    // is the window's close key on Linux.
+    await test.step("Escape right after Maximize or restore card goes to the card, which stays maximized", async () => {
+      await runFromSearch(app, page, "cards.maximize");
+      await expect(sizeControl(page, RESTORE_LABEL)).toBeFocused();
+      await pressWindowKey(app, "Escape");
+      await expect(shownEntry(page)).toBeFocused();
+      await maximized();
+    });
+
+    await test.step("j scrolls it, and an Escape on the card itself stops there", async () => {
+      const top = await cardScroller(page).evaluate((e) => e.scrollTop);
+      await pressWindowKey(app, "j");
+      await expect.poll(() => cardScroller(page).evaluate((e) => e.scrollTop)).toBeGreaterThan(top);
+      await pressWindowKey(app, "Escape");
+      await expect(shownEntry(page)).toBeFocused();
+      await maximized();
+    });
+
+    await test.step("Escape from a footer button goes to the card", async () => {
+      await focusOn(shownEntry(page).getByRole("button", { name: "Approve" }));
+      await pressWindowKey(app, "Escape");
+      await expect(shownEntry(page)).toBeFocused();
+      await maximized();
+    });
+
+    await test.step("Escape from the card's reply goes to the card and keeps the draft", async () => {
+      await reply.fill("draft beside the card");
+      await expect(reply).toBeFocused();
+      await pressWindowKey(app, "Escape");
+      await expect(shownEntry(page)).toBeFocused();
+      await maximized();
+      await expect(reply).toHaveValue("draft beside the card");
+    });
+
+    await test.step("Maximize or restore card gives the size back", async () => {
+      await runFromSearch(app, page, "cards.maximize");
+      await expect(sizeControl(page, MAXIMIZE_LABEL)).toBeFocused();
+      await expect(promptInput(page)).toBeVisible();
+    });
+
+    await test.step("the task board: an Escape in its page goes to the card, which stays maximized", async () => {
+      await runFromSearch(app, page, "panel:now/board-find");
+      const find = boardEntry(page).locator("[data-board-find]");
+      await expect.poll(() => boardFocusOn(page, find)).toBe(true);
+      await sizeControl(page, MAXIMIZE_LABEL).click();
+      await maximized();
+      await pressKey(find, "Escape");
+      await expect(shownEntry(page)).toBeFocused();
+      await maximized();
+      await expect(boardCard(page)).toBeVisible();
     });
   } finally {
     await launched.close();

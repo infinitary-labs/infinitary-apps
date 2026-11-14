@@ -24,6 +24,13 @@ import {
   scriptSafeJson,
 } from "../../../src/shared/plugins/frameDocument";
 import { FRAME_LIB_BOOT, frameLibUrl } from "../../../src/shared/plugins/frameLib";
+import {
+  PANEL_CARD_ACTIONS,
+  PANEL_CARD_VIEW_ACTIONS,
+  PANEL_LINE_PEEK_ACTION,
+  PANEL_POINT_ACTIONS,
+} from "../../../src/shared/plugins/panelActionIds";
+import { panelCardEmitSchema, panelCardIdSchema, panelCardKeptSchema } from "../../../src/shared/plugins/panelCards";
 import { type ReadName, readCatalog } from "../../../src/shared/reads";
 import { type ComputerResourcesView, panelComputerResources } from "../../../src/shared/resources";
 import type { ProjectView, TaskBoard, TaskDetail } from "../../../src/shared/tasks";
@@ -38,6 +45,11 @@ import { type ReadApi, ReadExecutor } from "../../../src/renderer/src/plugins/re
  * stylesheet), frames it in a sandboxed frame at its own host, and answers it with the desktop's own frame controller
  * and read executor. Every read, press and store call crosses to native code, which asks the computer over the pinned
  * connection; the panel's own frame never reaches native code or the network.
+ *
+ * Piece 3: the same page draws one of the panel's cards on Home (`cards/<view>.mjs`, the desktop's `FramedCard`), and
+ * either page puts up, closes and lists the panel's cards and points at a task, each answered by native code, which
+ * holds the cards and opens the task. A card comes to the front, and a task opens, only from the captain's own tap in
+ * the page, read as the card host reads one (cardHost.ts): the page has focus and the browser's own user activation.
  */
 interface NativeHost { postMessage(value: unknown): Promise<unknown> }
 declare global {
@@ -45,7 +57,8 @@ declare global {
     phonePanel: {
       mount(input: Input): Promise<void>;
       theme(value: FrameTheme): void;
-      state(value: { collapsed: boolean; shown: boolean }): void;
+      state(value: { collapsed: boolean; shown: boolean; asks?: Record<string, number> }): void;
+      card(value: { data: unknown; kept: unknown; revision: number }): void;
       push(channel: string, payload: unknown): void;
       resync(): void;
     };
@@ -65,6 +78,10 @@ type Input = {
   /** The panel's own files by path, each pin the hash of the bytes native code holds and will serve. */
   files: Record<string, string>;
   collapsed: boolean;
+  /** Its card views (`cards/<view>.tsx`): the views `cards.emit` may name. */
+  cardViews: string[];
+  /** Set when the page draws one of its cards on Home: the card, as `FramedCard` mounts it. */
+  card?: { id: string; view: string; title: string; height: "content" | "fill"; data: unknown; kept: unknown; revision: number };
 };
 
 /** The page's one way to native code; the card page declares its own handler on the same `window.webkit`. */
@@ -145,7 +162,18 @@ const readApi: ReadApi = {
 let frame: HTMLIFrameElement | undefined;
 let controller: FrameController | undefined;
 let input: Input;
-let state = { collapsed: false, shown: true };
+let state: { collapsed: boolean; shown: boolean; asks: Record<string, number> } = { collapsed: false, shown: true, asks: {} };
+const NO_VIEW = { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null };
+/** The view state the page hears: a card's data, revision and kept place, or the panel's header presses and fold. */
+function viewState(): unknown {
+  if (input.card) {
+    const { data, kept, revision } = input.card;
+    return { card: { data, kept, revision }, view: NO_VIEW, keys: {} };
+  }
+  // A press of a header button that asks the panel, counted, as the desktop's view state counts them (`asks`, `askedBy`).
+  const askedBy = Object.fromEntries(Object.keys(state.asks).map((button) => [button, "click"]));
+  return { asks: state.asks, askedBy, focus: 0, view: NO_VIEW, collapsed: state.collapsed, keys: {} };
+}
 
 /** `rail.show`'s value, as the rail reads it: whether it shows, or that and why it does not. */
 function shownOf(value: unknown): boolean | undefined {
@@ -156,9 +184,85 @@ function shownOf(value: unknown): boolean | undefined {
   return undefined;
 }
 
-/** What a page of the panel may ask on the phone: its rail's two actions, its background work and its integrations. */
-function actionsOf(panel: Input["panel"]): string[] {
-  return ["rail.summarize", "rail.show", ...(panel.server ? [PANEL_SERVER_ACTION] : []), PANEL_INTEGRATIONS_ACTION];
+/** The captain's own tap holds this page, read as the card host reads one: the page has focus and the browser's own activation. */
+const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
+
+/**
+ * What a page of the panel may ask on the phone, from what it was granted, as `framePanelActions` declares it: the card
+ * actions every panel has (`card.keep` on a card's own page), the pointing a panel that reads the board gets, its rail's
+ * two actions on its own page, its background work and its integrations.
+ */
+function actionsOf(value: Input): string[] {
+  const { panel, card } = value;
+  return [
+    ...(card ? PANEL_CARD_VIEW_ACTIONS : PANEL_CARD_ACTIONS),
+    ...(panel.reads.includes("tasks.board") ? PANEL_POINT_ACTIONS : []),
+    ...(panel.reads.includes("feed.recent") ? [PANEL_LINE_PEEK_ACTION] : []),
+    ...(card ? [] : ["rail.summarize", "rail.show"]),
+    ...(panel.server ? [PANEL_SERVER_ACTION] : []),
+    PANEL_INTEGRATIONS_ACTION,
+  ];
+}
+
+/** Why `cards.emit` refused, in the words the desktop's host gives at the call (`emitPanelCard`). */
+function emitRefusal(error: { issues: { path: PropertyKey[]; message: string }[] }): Error {
+  const issue = error.issues[0];
+  const where = issue && issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+  return new Error(`cards.emit: ${where}${issue?.message ?? "not a card"}`);
+}
+
+/** The card actions, checked like any input from a panel and answered by native code, which holds the cards. */
+async function onCardAction(id: string, value: unknown): Promise<unknown> {
+  switch (id) {
+    case "cards.emit": {
+      const parsed = panelCardEmitSchema.safeParse(value);
+      if (!parsed.success) throw emitRefusal(parsed.error);
+      if (!input.cardViews.includes(parsed.data.view)) {
+        throw new Error(`cards.emit: "${parsed.data.view}" is not one of this panel's card views; write cards/${parsed.data.view}.tsx`);
+      }
+      return native({ type: "cards", op: "emit", card: parsed.data, front: pressed() });
+    }
+    case "cards.close": {
+      const parsed = panelCardIdSchema.safeParse((value as { id?: unknown } | null)?.id);
+      if (!parsed.success) throw new Error("cards.close: name the card by its id");
+      await native({ type: "cards", op: "close", id: parsed.data });
+      return undefined;
+    }
+    case "cards.open":
+      return native({ type: "cards", op: "open" });
+    case "card.keep": {
+      if (!input.card) throw new Error("card.keep: only a card's own page keeps a place");
+      const parsed = panelCardKeptSchema.safeParse(value);
+      if (!parsed.success) throw new Error(`card.keep: ${parsed.error.issues[0]?.message ?? "not JSON"}`);
+      await native({ type: "cards", op: "keep", id: input.card.id, kept: parsed.data });
+      return undefined;
+    }
+    default:
+      throw new Error(`"${id}" is not one of a panel's card actions`);
+  }
+}
+
+/**
+ * The pointing a panel that reads the board gets (`framePointAction`). Opening a task, its record or its waiting card
+ * moves the captain's view, so it counts only from the captain's own tap and answers false otherwise. A rest has no
+ * pointer to follow on a phone, and the phone keeps no aim or project focus, so those answer nothing.
+ */
+async function onPointAction(id: string, value: unknown): Promise<unknown> {
+  const arg = value as { taskId?: unknown; cardId?: unknown } | null;
+  switch (id) {
+    case "point.openTask":
+    case "point.openRecord":
+      if (typeof arg?.taskId !== "string" || !pressed()) return false;
+      return native({ type: "point", op: id === "point.openTask" ? "task" : "record", taskId: arg.taskId });
+    case "point.showCard":
+      if (typeof arg?.cardId !== "string" || !pressed()) return false;
+      return native({ type: "point", op: "card", cardId: arg.cardId });
+    case "point.peekTask":
+    case PANEL_LINE_PEEK_ACTION:
+      return undefined;
+    default:
+      return false;
+  }
 }
 
 async function onAction(id: string, value: unknown): Promise<unknown> {
@@ -171,6 +275,8 @@ async function onAction(id: string, value: unknown): Promise<unknown> {
     return result.result;
   }
   if (id === PANEL_INTEGRATIONS_ACTION) return ask("inf:plugins:integrations", [panel.id, value as PanelIntegrationsRequest]);
+  if (id.startsWith("cards.") || id === "card.keep") return onCardAction(id, value);
+  if (id.startsWith("point.")) return onPointAction(id, value);
   if (id === "rail.show") {
     if (!panel.decides) throw new Error('rail.show: say "presence": { "code": true } in manifest.json to decide');
     const shown = shownOf(value);
@@ -191,10 +297,12 @@ window.addEventListener("message", (event: MessageEvent) => {
 window.phonePanel = {
   async mount(value) {
     input = value;
-    const { panel, mount } = value;
+    const { panel, mount, card } = value;
     const boot = value.lib[FRAME_LIB_BOOT];
     if (!boot) throw new Error("The panel library has no boot module.");
-    if (!value.files["panel.mjs"]) throw new Error("This panel's code has no entry: panel.mjs");
+    // A card's page draws its card view from the same graph as the panel (`moduleOf` with a view).
+    const entry = card ? `cards/${card.view}.mjs` : "panel.mjs";
+    if (!value.files[entry]) throw new Error(`This panel's code has no entry: ${entry}`);
     // The import map pins every module the frame may load, as the desktop's mount does (`FrameMountRegistry.mountPanel`).
     const integrity: Record<string, string> = {};
     for (const [path, pin] of Object.entries(value.lib)) integrity[frameLibUrl(path)] = pin;
@@ -204,14 +312,16 @@ window.phonePanel = {
     const csp = panelFrameCsp([hash!], panelMountHost(mount));
     const config: PanelFrameConfig = {
       id: panel.id, reads: panel.reads as PanelFrameConfig["reads"], sql: panel.sql as PanelFrameConfig["sql"],
+      ...(card ? { card: { id: card.id } } : {}),
       ...(panel.moves ? { moves: true } : {}), ...(panel.server ? { server: true } : {}),
     };
+    const fill = card ? card.height === "fill" : panel.size === "fill";
     const body = buildPanelDocument({
-      csp, theme: value.theme, title: panel.title, style: panelStylesheet(panel.size !== "fill"), importMap,
-      config: { ...config, module: `${panelMountUrl(mount)}panel.mjs` }, bootIntegrity: boot,
+      csp, theme: value.theme, title: card ? card.title : panel.title, style: panelStylesheet(!fill), importMap,
+      config: { ...config, module: `${panelMountUrl(mount)}${entry}` }, bootIntegrity: boot,
     });
     await native({ type: "document", body, csp });
-    state = { collapsed: value.collapsed, shown: true };
+    state = { collapsed: value.collapsed, shown: true, asks: {} };
     // INF-3830: WebKit gives a frame whose color-scheme differs from its page a black backing.
     document.documentElement.style.colorScheme = value.theme;
     const store = {
@@ -219,19 +329,19 @@ window.phonePanel = {
       onChange: (listener: (change: PersonalStoreChange) => void) => listen("inf:plugins:db", (payload) => listener(payload as PersonalStoreChange)),
     };
     frame = document.createElement("iframe");
-    frame.title = panel.title;
+    frame.title = card ? card.title : panel.title;
     frame.setAttribute("sandbox", FRAME_SANDBOX);
     // A content panel starts at the card frame's height (cardHost.ts) until its page reports its own.
-    frame.style.cssText = `display:block;width:100%;height:${panel.size === "fill" ? "100%" : "48px"};border:0;background:transparent`;
+    frame.style.cssText = `display:block;width:100%;height:${fill ? "100%" : "48px"};border:0;background:transparent`;
     controller = new FrameController(
       {
         pluginId: `${panel.source === "installed" ? INSTALLED_PLUGIN_PREFIX : PERSONAL_PLUGIN_PREFIX}${panel.id}`,
         reads: [...panel.reads, ...(panel.sql.length ? ["sql"] : [])],
         grant: { sql: panel.sql },
-        actions: actionsOf(panel),
+        actions: actionsOf(value),
         onAction: (id, actionValue) => onAction(id, actionValue),
         onResize: (height) => {
-          if (panel.size === "fill" || !frame) return;
+          if (fill || !frame) return;
           frame.style.height = `${Math.max(0, Math.ceil(height))}px`;
           void native({ type: "height", height: Math.max(0, Math.ceil(height)) }).catch(() => {});
         },
@@ -239,7 +349,7 @@ window.phonePanel = {
         onUnresponsive: () => { void native({ type: "unresponsive" }).catch(() => {}); },
         onSteady: () => { void native({ type: "steady" }).catch(() => {}); },
         store: { extensionId: panel.id },
-        state: { asks: {}, askedBy: {}, focus: 0, view: { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null }, collapsed: state.collapsed, keys: {} },
+        state: viewState() as never,
       },
       value.theme,
       {
@@ -247,7 +357,7 @@ window.phonePanel = {
         fetch: (call: MediatedFetchCall) => ask("inf:plugins:fetch", [call]) as Promise<MediatedFetchResult>,
         store,
         // A folded panel, or one on a tab that is not showing, keeps running out of sight and is never stopped for missed pings.
-        paused: () => state.collapsed || !state.shown || document.hidden,
+        paused: () => (!card && state.collapsed) || !state.shown || document.hidden,
       },
       { post: (message) => frame?.contentWindow?.postMessage(message, "*") },
     );
@@ -260,8 +370,13 @@ window.phonePanel = {
     controller?.setTheme(value);
   },
   state(value) {
-    state = value;
-    controller?.setState({ asks: {}, askedBy: {}, focus: 0, view: { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null }, collapsed: value.collapsed, keys: {} });
+    state = { collapsed: value.collapsed, shown: value.shown, asks: value.asks ?? state.asks };
+    controller?.setState(viewState() as never);
+  },
+  card(value) {
+    if (!input.card) return;
+    input = { ...input, card: { ...input.card, ...value } };
+    controller?.setState(viewState() as never);
   },
   push(channel, payload) {
     for (const listener of [...(listeners.get(channel) ?? [])]) listener(payload);

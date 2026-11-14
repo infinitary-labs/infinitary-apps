@@ -7,6 +7,8 @@ import SwiftUI
 /// serves panels to a phone (`panels-on-the-phone`) and has one a rail would draw. A panel whose own code decides whether
 /// it shows (`rail.show`) runs out of sight and counts only once it says it shows (the captain's answer W3 (c)), so the
 /// tab never opens on an empty column.
+/// Piece 3: the model also holds the panels' cards on Home (`PhonePanelCards`), presses their header buttons, and turns a
+/// panel's pointing into the phone's own ways of opening a task or a card (`PhoneMessageContext`).
 @MainActor @Observable final class PhonePanelsModel {
     /// The panels the column draws, in the rails' order.
     private(set) var panels: [PhonePanel] = []
@@ -17,15 +19,23 @@ import SwiftUI
     var visible = false { didSet { if visible != oldValue { tellStates() } } }
     /// A stopped panel's Try again is on its way to the computer.
     private(set) var retrying: Set<String> = []
+    /// The panels' cards on Home, held on this phone only.
+    private(set) var cards = PhonePanelCards()
+    /// The page of the card Home shows. Only the shown card runs a page, as on the desktop: a card paged away from is
+    /// born again from its kept place when it shows again.
+    private(set) var cardHosts: [String: PanelWebHost] = [:]
+    /// The entry Home shows, when it is one of the panels' cards.
+    var shownCard: String? { didSet { if shownCard != oldValue { releaseCardPages() } } }
 
     private let session: ReadOnlySession
+    private let context: PhoneMessageContext
     private var all: [PhonePanel] = []
     private var layout = PhonePanelLayout()
     private var libraries: [String: Task<PhonePanelLibrary, Error>] = [:]
     private let foldsKey: String
 
-    init(session: ReadOnlySession) {
-        self.session = session
+    init(session: ReadOnlySession, context: PhoneMessageContext) {
+        self.session = session; self.context = context
         foldsKey = "panels.folded." + session.mac.deviceID
         folded = Set(UserDefaults.standard.stringArray(forKey: foldsKey) ?? [])
     }
@@ -71,17 +81,127 @@ import SwiftUI
         let shown = PhonePanelOrder.shown(next, layout: layout)
         for panel in shown {
             if let host = hosts[panel.id] { host.update(panel) }
-            else {
-                hosts[panel.id] = PanelWebHost(panel: panel, session: session, collapsed: folded.contains(panel.id)) { [weak self] version throws(PhonePanelFailure) in
-                    guard let self else { throw .unreadable }
-                    return try await self.library(version)
-                }
-            }
+            else { hosts[panel.id] = makeHost(panel, card: nil) }
         }
         let kept = Set(shown.map(\.id))
         for (id, host) in hosts where !kept.contains(id) { host.close(); hosts[id] = nil }
         panels = shown
+        // A panel that left the computer's list, or whose code is not built, takes its cards with it (`closeCards`).
+        cards.keepOnly(panels: Set(next.filter { $0.frame != nil }.map(\.id)))
+        syncCardPages()
         tellStates()
+    }
+
+    private func makeHost(_ panel: PhonePanel, card: PhonePanelCardEntry?) -> PanelWebHost {
+        let host = PanelWebHost(panel: panel, card: card, session: session, collapsed: card == nil && folded.contains(panel.id)) { [weak self] version throws(PhonePanelFailure) in
+            guard let self else { throw .unreadable }
+            return try await self.library(version)
+        }
+        let id = panel.id
+        host.onCards = { [weak self] payload throws(PhoneRequestError) in
+            guard let self else { throw PhoneRequestError(PhoneMessages.phonePanelWebCannotDo()) }
+            return try self.cardCall(panel: id, payload)
+        }
+        host.onPoint = { [weak self] payload in self?.point(payload) ?? false }
+        return host
+    }
+
+    // MARK: Piece 3: a panel's cards, header buttons and pointing
+
+    /// The panels' cards as entries of Home's row, after the computer's cards.
+    var stackCards: [PhoneCard] { cards.entries.map(PhoneCard.panelCard) }
+
+    /// The panel a card of Home belongs to, as the computer lists it now.
+    func panel(of entryID: String) -> PhonePanel? {
+        cards.entry(entryID).flatMap { entry in all.first { $0.id == entry.panel } }
+    }
+
+    /// The page of a card Home shows, made the first time it shows.
+    func cardHost(_ entryID: String) -> PanelWebHost? {
+        if let host = cardHosts[entryID] { return host }
+        guard let entry = cards.entry(entryID), let panel = all.first(where: { $0.id == entry.panel && $0.frame != nil }) else { return nil }
+        let host = makeHost(panel, card: entry)
+        // A card's page runs while it shows on Home; it never folds.
+        host.setState(collapsed: false, shown: true)
+        cardHosts[entryID] = host
+        return host
+    }
+
+    /// The card showed on Home: it is no longer new.
+    func seen(_ entryID: String) { cards.seen(entryID) }
+
+    /// Hide on a panel's card: it leaves Home and its page closes.
+    func hide(_ entryID: String) {
+        guard let entry = cards.entry(entryID) else { return }
+        cards.close(panel: entry.panel, id: entry.id)
+        syncCardPages()
+    }
+
+    /// A header button's press, the captain's own tap: its named card at the front of Home, or an ask into the panel.
+    func press(_ button: PhonePanelHeaderButton, of panel: PhonePanel) {
+        if let name = button.emits {
+            guard let entryID = cards.emitNamed(panel, name: name, data: button.data) else { return }
+            syncCardPages()
+            context.showOnHome = entryID
+            return
+        }
+        // An ask button shows only while the panel shows its body, so its page is there to hear the press.
+        hosts[panel.id]?.ask(button.id)
+    }
+
+    /// A page's card actions, checked by the page against the desktop's schema and the panel's card views first.
+    private func cardCall(panel: String, _ payload: PhoneJSON) throws(PhoneRequestError) -> PhoneJSON {
+        switch payload["op"].text {
+        case "emit":
+            let outcome = try cards.emit(panel: panel, payload["card"], front: payload["front"] == .bool(true))
+            guard case .up(let id, let show) = outcome else { return .null }
+            syncCardPages()
+            if show { context.showOnHome = PhonePanelCardEntry.entryID(panel: panel, id: id) }
+            return .string(id)
+        case "close":
+            cards.close(panel: panel, id: payload["id"].text ?? "")
+            syncCardPages()
+            return .null
+        case "keep":
+            cards.keep(panel: panel, id: payload["id"].text ?? "", payload["kept"])
+            syncCardPages()
+            return .null
+        case "open":
+            return cards.open(panel: panel, shown: shownCard)
+        default:
+            throw PhoneRequestError(PhoneMessages.phonePanelWebCannotDo())
+        }
+    }
+
+    /// A page's pointing, from the captain's own tap in it: a task opens as a Tasks row's tap opens it, or straight to its
+    /// record; a waiting card comes forward on Home. Each names something the phone holds, or does nothing.
+    private func point(_ payload: PhoneJSON) -> Bool {
+        switch payload["op"].text {
+        case "task", "record":
+            guard let id = payload["taskId"].text, let board = session.board else { return false }
+            // A task the board read without its closed rows may be closed work: Tasks reads those rows and opens it then.
+            guard board.tasks.contains(where: { $0.id == id }) || board.closedLeftOut != nil else { return false }
+            context.pointTask = PhoneMessageContext.PointTask(id: id, record: payload["op"].text == "record")
+            return true
+        case "card":
+            guard let id = payload["cardId"].text, session.stack.contains(where: { $0.id == id }) else { return false }
+            context.showOnHome = id
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Every open card's page hears its card as it now stands, and a card that left Home closes its page.
+    private func syncCardPages() {
+        for (entryID, host) in cardHosts {
+            if let entry = cards.entry(entryID) { host.setCard(entry) } else { host.close(); cardHosts[entryID] = nil }
+        }
+    }
+
+    /// Only the shown card runs a page.
+    private func releaseCardPages() {
+        for (entryID, host) in cardHosts where entryID != shownCard { host.close(); cardHosts[entryID] = nil }
     }
 
     /// The library the panels' files were built for, read once a version and kept on this device.
@@ -137,7 +257,8 @@ struct PhonePanelsColumn: View {
                     if let host = model.hosts[panel.id] {
                         PhonePanelSection(panel: panel, host: host, folded: model.folded.contains(panel.id),
                                           retrying: model.retrying.contains(panel.id), fillHeight: max(240, room * 0.7),
-                                          fold: { model.toggleFold(panel.id) }, retry: { model.retry(panel) })
+                                          fold: { model.toggleFold(panel.id) }, retry: { model.retry(panel) },
+                                          press: { model.press($0, of: panel) })
                     }
                 }
             }
@@ -160,23 +281,43 @@ private struct PhonePanelSection: View {
     let fillHeight: CGFloat
     let fold: () -> Void
     let retry: () -> Void
+    /// INF-3830 piece 3: a title-row button's press.
+    let press: (PhonePanelHeaderButton) -> Void
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button(action: fold) {
-                HStack(alignment: .center, spacing: PhoneTheme.space2) {
-                    Text(panel.title.uppercased()).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
-                    Text(panel.owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
-                    Spacer(minLength: 0)
+            // As on the computer's rail, the panel's own buttons sit in its title row beside the fold; one that asks the
+            // panel shows only while its body does (`headerButtons(folded:)`).
+            HStack(alignment: .center, spacing: 0) {
+                Button(action: fold) {
+                    HStack(alignment: .center, spacing: PhoneTheme.space2) {
+                        Text(panel.title.uppercased()).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
+                        Text(panel.owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("panel-header-\(panel.id)")
+                .accessibilityValue(folded ? "folded" : "open")
+                ForEach(panel.headerButtons(folded: folded), id: \.id) { button in
+                    Button { press(button) } label: {
+                        Label(button.label, systemImage: button.symbol).labelStyle(.iconOnly)
+                            .font(.system(size: 13, weight: .regular)).foregroundStyle(PhoneTheme.secondary)
+                            .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("panel-button-\(panel.id)-\(button.id)")
+                }
+                Button(action: fold) {
                     Image(systemName: "chevron.down").font(.system(size: 11, weight: .medium))
                         .foregroundStyle(PhoneTheme.muted).rotationEffect(.degrees(folded ? -90 : 0))
+                        .frame(minWidth: 28, minHeight: 44, alignment: .trailing).contentShape(Rectangle())
                 }
-                .frame(minHeight: 44).contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("panel-header-\(panel.id)")
-            .accessibilityValue(folded ? "folded" : "open")
             if !folded, let stopped = panel.stopped {
                 line(stopped.reason == "exited" ? PhonePanelWords.backgroundExited : PhonePanelWords.backgroundStopped,
                      action: PhonePanelWords.retry, id: "panel-retry-\(panel.id)", busy: retrying, perform: retry)

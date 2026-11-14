@@ -72179,7 +72179,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function systemKeys(keys, system) {
     if (system === "mac") return keys;
-    const pressed = [];
+    const pressed2 = [];
     for (const binding of keys) {
       const first = systemChord(binding, system);
       const second = binding.second ? systemChord(binding.second, system) : void 0;
@@ -72189,9 +72189,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         ...second ? { second } : {},
         ...binding.when ? { when: binding.when } : {}
       };
-      if (!pressed.some((kept) => JSON.stringify(kept) === JSON.stringify(next))) pressed.push(next);
+      if (!pressed2.some((kept) => JSON.stringify(kept) === JSON.stringify(next))) pressed2.push(next);
     }
-    return pressed;
+    return pressed2;
   }
   function catalogKeys(id2, system = "mac") {
     return systemKeys(KEYBOARD_COMMANDS[id2].keys, system);
@@ -72241,7 +72241,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     (value) => JSON.stringify(value).length <= PANEL_CARD_DATA_MAX_BYTES,
     `a card's data is at most ${PANEL_CARD_DATA_MAX_BYTES} bytes of JSON`
   );
-  storeValueSchema$1.refine(
+  const panelCardKeptSchema = storeValueSchema$1.refine(
     (value) => new TextEncoder().encode(JSON.stringify(value)).byteLength <= PANEL_CARD_KEPT_MAX_BYTES,
     `a card keeps at most ${PANEL_CARD_KEPT_MAX_BYTES} bytes of JSON`
   );
@@ -72274,7 +72274,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     (command) => [command.emits, command.presses, command.asks].filter((name) => name !== void 0).length === 1,
     "a command either emits a card, presses a header button or asks the panel"
   );
-  strictObject({
+  const panelCardEmitSchema = strictObject({
     id: panelCardIdSchema.optional(),
     view: panelNameSchema,
     title: panelCardTitleSchema,
@@ -76871,6 +76871,17 @@ ${FRAME_QUESTION_SCRIPT}
   }
   const PANEL_SERVER_ACTION = "server.invoke";
   const PANEL_INTEGRATIONS_ACTION = "integrations";
+  const PANEL_CARD_ACTIONS = ["cards.emit", "cards.close", "cards.open"];
+  const PANEL_CARD_VIEW_ACTIONS = [...PANEL_CARD_ACTIONS, "card.keep"];
+  const PANEL_POINT_ACTIONS = [
+    "point.openTask",
+    "point.openRecord",
+    "point.peekTask",
+    "point.showCard",
+    "point.aim",
+    "point.focusProject"
+  ];
+  const PANEL_LINE_PEEK_ACTION = "point.peekLine";
   const planItemStateSchema = _enum(["done", "current", "next", "skipped"]);
   const planItemSchema = strictObject({
     /** What the item is, in a few words. */
@@ -84513,7 +84524,16 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
   let frame;
   let controller;
   let input;
-  let state = { collapsed: false, shown: true };
+  let state = { collapsed: false, shown: true, asks: {} };
+  const NO_VIEW = { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null };
+  function viewState() {
+    if (input.card) {
+      const { data, kept, revision: revision2 } = input.card;
+      return { card: { data, kept, revision: revision2 }, view: NO_VIEW, keys: {} };
+    }
+    const askedBy = Object.fromEntries(Object.keys(state.asks).map((button) => [button, "click"]));
+    return { asks: state.asks, askedBy, focus: 0, view: NO_VIEW, collapsed: state.collapsed, keys: {} };
+  }
   function shownOf(value) {
     if (typeof value === "boolean") return value;
     if (typeof value === "object" && value !== null && typeof value.shown === "boolean") {
@@ -84521,8 +84541,68 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
     }
     return void 0;
   }
-  function actionsOf(panel) {
-    return ["rail.summarize", "rail.show", ...panel.server ? [PANEL_SERVER_ACTION] : [], PANEL_INTEGRATIONS_ACTION];
+  const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
+  function actionsOf(value) {
+    const { panel, card } = value;
+    return [
+      ...card ? PANEL_CARD_VIEW_ACTIONS : PANEL_CARD_ACTIONS,
+      ...panel.reads.includes("tasks.board") ? PANEL_POINT_ACTIONS : [],
+      ...panel.reads.includes("feed.recent") ? [PANEL_LINE_PEEK_ACTION] : [],
+      ...card ? [] : ["rail.summarize", "rail.show"],
+      ...panel.server ? [PANEL_SERVER_ACTION] : [],
+      PANEL_INTEGRATIONS_ACTION
+    ];
+  }
+  function emitRefusal(error) {
+    const issue2 = error.issues[0];
+    const where = issue2 && issue2.path.length > 0 ? `${issue2.path.join(".")}: ` : "";
+    return new Error(`cards.emit: ${where}${issue2?.message ?? "not a card"}`);
+  }
+  async function onCardAction(id2, value) {
+    switch (id2) {
+      case "cards.emit": {
+        const parsed = panelCardEmitSchema.safeParse(value);
+        if (!parsed.success) throw emitRefusal(parsed.error);
+        if (!input.cardViews.includes(parsed.data.view)) {
+          throw new Error(`cards.emit: "${parsed.data.view}" is not one of this panel's card views; write cards/${parsed.data.view}.tsx`);
+        }
+        return native({ type: "cards", op: "emit", card: parsed.data, front: pressed() });
+      }
+      case "cards.close": {
+        const parsed = panelCardIdSchema.safeParse(value?.id);
+        if (!parsed.success) throw new Error("cards.close: name the card by its id");
+        await native({ type: "cards", op: "close", id: parsed.data });
+        return void 0;
+      }
+      case "cards.open":
+        return native({ type: "cards", op: "open" });
+      case "card.keep": {
+        if (!input.card) throw new Error("card.keep: only a card's own page keeps a place");
+        const parsed = panelCardKeptSchema.safeParse(value);
+        if (!parsed.success) throw new Error(`card.keep: ${parsed.error.issues[0]?.message ?? "not JSON"}`);
+        await native({ type: "cards", op: "keep", id: input.card.id, kept: parsed.data });
+        return void 0;
+      }
+      default:
+        throw new Error(`"${id2}" is not one of a panel's card actions`);
+    }
+  }
+  async function onPointAction(id2, value) {
+    const arg = value;
+    switch (id2) {
+      case "point.openTask":
+      case "point.openRecord":
+        if (typeof arg?.taskId !== "string" || !pressed()) return false;
+        return native({ type: "point", op: id2 === "point.openTask" ? "task" : "record", taskId: arg.taskId });
+      case "point.showCard":
+        if (typeof arg?.cardId !== "string" || !pressed()) return false;
+        return native({ type: "point", op: "card", cardId: arg.cardId });
+      case "point.peekTask":
+      case PANEL_LINE_PEEK_ACTION:
+        return void 0;
+      default:
+        return false;
+    }
   }
   async function onAction(id2, value) {
     const { panel } = input;
@@ -84534,6 +84614,8 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
       return result.result;
     }
     if (id2 === PANEL_INTEGRATIONS_ACTION) return ask("inf:plugins:integrations", [panel.id, value]);
+    if (id2.startsWith("cards.") || id2 === "card.keep") return onCardAction(id2, value);
+    if (id2.startsWith("point.")) return onPointAction(id2, value);
     if (id2 === "rail.show") {
       if (!panel.decides) throw new Error('rail.show: say "presence": { "code": true } in manifest.json to decide');
       const shown = shownOf(value);
@@ -84552,10 +84634,11 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
   window.phonePanel = {
     async mount(value) {
       input = value;
-      const { panel, mount } = value;
+      const { panel, mount, card } = value;
       const boot = value.lib[FRAME_LIB_BOOT];
       if (!boot) throw new Error("The panel library has no boot module.");
-      if (!value.files["panel.mjs"]) throw new Error("This panel's code has no entry: panel.mjs");
+      const entry2 = card ? `cards/${card.view}.mjs` : "panel.mjs";
+      if (!value.files[entry2]) throw new Error(`This panel's code has no entry: ${entry2}`);
       const integrity = {};
       for (const [path, pin] of Object.entries(value.lib)) integrity[frameLibUrl(path)] = pin;
       for (const [path, pin] of Object.entries(value.files)) integrity[`${panelMountUrl(mount)}${path}`] = pin;
@@ -84566,38 +84649,40 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
         id: panel.id,
         reads: panel.reads,
         sql: panel.sql,
+        ...card ? { card: { id: card.id } } : {},
         ...panel.moves ? { moves: true } : {},
         ...panel.server ? { server: true } : {}
       };
+      const fill = card ? card.height === "fill" : panel.size === "fill";
       const body = buildPanelDocument({
         csp,
         theme: value.theme,
-        title: panel.title,
-        style: panelStylesheet(panel.size !== "fill"),
+        title: card ? card.title : panel.title,
+        style: panelStylesheet(!fill),
         importMap,
-        config: { ...config2, module: `${panelMountUrl(mount)}panel.mjs` },
+        config: { ...config2, module: `${panelMountUrl(mount)}${entry2}` },
         bootIntegrity: boot
       });
       await native({ type: "document", body, csp });
-      state = { collapsed: value.collapsed, shown: true };
+      state = { collapsed: value.collapsed, shown: true, asks: {} };
       document.documentElement.style.colorScheme = value.theme;
       const store = {
         request: (request) => ask("inf:plugins:db", [request]),
         onChange: (listener) => listen("inf:plugins:db", (payload) => listener(payload))
       };
       frame = document.createElement("iframe");
-      frame.title = panel.title;
+      frame.title = card ? card.title : panel.title;
       frame.setAttribute("sandbox", FRAME_SANDBOX);
-      frame.style.cssText = `display:block;width:100%;height:${panel.size === "fill" ? "100%" : "48px"};border:0;background:transparent`;
+      frame.style.cssText = `display:block;width:100%;height:${fill ? "100%" : "48px"};border:0;background:transparent`;
       controller = new FrameController(
         {
           pluginId: `${panel.source === "installed" ? INSTALLED_PLUGIN_PREFIX : PERSONAL_PLUGIN_PREFIX}${panel.id}`,
           reads: [...panel.reads, ...panel.sql.length ? ["sql"] : []],
           grant: { sql: panel.sql },
-          actions: actionsOf(panel),
+          actions: actionsOf(value),
           onAction: (id2, actionValue) => onAction(id2, actionValue),
           onResize: (height) => {
-            if (panel.size === "fill" || !frame) return;
+            if (fill || !frame) return;
             frame.style.height = `${Math.max(0, Math.ceil(height))}px`;
             void native({ type: "height", height: Math.max(0, Math.ceil(height)) }).catch(() => {
             });
@@ -84615,7 +84700,7 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
             });
           },
           store: { extensionId: panel.id },
-          state: { asks: {}, askedBy: {}, focus: 0, view: { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null }, collapsed: state.collapsed, keys: {} }
+          state: viewState()
         },
         value.theme,
         {
@@ -84623,7 +84708,7 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
           fetch: (call) => ask("inf:plugins:fetch", [call]),
           store,
           // A folded panel, or one on a tab that is not showing, keeps running out of sight and is never stopped for missed pings.
-          paused: () => state.collapsed || !state.shown || document.hidden
+          paused: () => !card && state.collapsed || !state.shown || document.hidden
         },
         { post: (message) => frame?.contentWindow?.postMessage(message, "*") }
       );
@@ -84636,8 +84721,13 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
       controller?.setTheme(value);
     },
     state(value) {
-      state = value;
-      controller?.setState({ asks: {}, askedBy: {}, focus: 0, view: { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null }, collapsed: value.collapsed, keys: {} });
+      state = { collapsed: value.collapsed, shown: value.shown, asks: value.asks ?? state.asks };
+      controller?.setState(viewState());
+    },
+    card(value) {
+      if (!input.card) return;
+      input = { ...input, card: { ...input.card, ...value } };
+      controller?.setState(viewState());
     },
     push(channel, payload) {
       for (const listener of [...listeners.get(channel) ?? []]) listener(payload);

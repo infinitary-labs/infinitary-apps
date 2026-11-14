@@ -144,12 +144,14 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneGoogle.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift",
   ] },
-  // INF-3830 piece 2: the Panels tab, its frames and the panel order.
+  // INF-3830 pieces 2 and 3: the Panels tab, its frames and the panel order; a panel's title-row buttons and its cards on Home.
   { parts: family("panels"), files: [
     "ios/Infinitary/CardRuntime/panelHost.ts",
     "ios/Infinitary/InfinitaryApp/CardAssets/PanelHost.generated.js",
     "ios/Infinitary/InfinitaryApp/PanelWebView.swift",
+    "ios/Infinitary/InfinitaryApp/PhonePanelCardPane.swift",
     "ios/Infinitary/InfinitaryApp/PhonePanels.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanelCards.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanels.swift",
   ] },
   // INF-3563: the Settings list reads its five computer rows in the join-read part too, so what answers them is

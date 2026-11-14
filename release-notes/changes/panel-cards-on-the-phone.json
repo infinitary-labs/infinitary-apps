@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "panel-cards-on-the-phone",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Your panels' buttons and cards on your iPhone and iPad",
+      "body": "A panel's own buttons now show in its title row on the Panels tab, and they work as they do on your computer. A card a panel puts up shows on Home after your other cards, with its own buttons, and Hide takes it away. When a panel opens a task, your iPhone or iPad opens that task too.",
+      "picture": {
+        "dark": "panel-cards-on-the-phone-dark.webp",
+        "light": "panel-cards-on-the-phone-light.webp",
+        "alt": "The phone's Home with a panel's card titled Tally note, the word yours, its note and an Open the record button, and a minus button to hide it at its right."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -143,6 +143,18 @@ struct PhoneTasks: View {
             messageContext.openTask = nil
             messageContext.taskID = task.id; selected = task
         }
+        // INF-3830 piece 3: a panel's tap on a task opens it as a row's tap does (`openTask`), or straight to its record
+        // (`openRecord`); closed work the board left out is read first, as for a card's task key.
+        .onChange(of: "\(messageContext.pointTask?.id ?? "")|\(messageContext.pointTask?.record == true)|\(session.board?.closedLeftOut == nil)",
+                  initial: true) { _, _ in
+            guard let point = messageContext.pointTask else { return }
+            guard let task = session.board?.tasks.first(where: { $0.id == point.id }) else {
+                if session.board?.closedLeftOut != nil { session.readClosedRows() } else { messageContext.pointTask = nil }
+                return
+            }
+            messageContext.pointTask = nil
+            if point.record { openRecord(task) } else { open(task) }
+        }
         // The Mac's ask on the tile: its sentence, Cancel, which writes nothing, and the move's own button.
         .alert(asking?.sentence ?? "", isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }),
                presenting: asking) { ask in

@@ -42,18 +42,7 @@ import { boardOnScreen, feedOnScreen, searchedTask, searchedTaskByKey } from "./
  * show (`settingsItem`), from his own click or key.
  */
 
-/** The ids a panel's or a card's frame points through (`inf.action`). */
-export const PANEL_POINT_ACTIONS = [
-  "point.openTask",
-  "point.openRecord",
-  "point.peekTask",
-  "point.showCard",
-  "point.aim",
-  "point.focusProject",
-] as const;
-
-/** A feed reader's rest, independent of task-board pointing. */
-export const PANEL_LINE_PEEK_ACTION = "point.peekLine";
+export { PANEL_LINE_PEEK_ACTION, PANEL_POINT_ACTIONS } from "@shared/plugins/panelActionIds";
 
 /** The one pointing every panel's page has, whatever it reads: `point.draft`. */
 export const PANEL_DRAFT_ACTION = "point.draft";

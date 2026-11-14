@@ -71,6 +71,7 @@
   "InfinitaryUITests/PhoneJourney/testKeyboardWaysOut",
   "InfinitaryUITests/PhoneJourney/testMenuPickSurvivesAWorkspaceRedraw",
   "InfinitaryUITests/PhoneJourney/testMergeCard",
+  "InfinitaryUITests/PhoneJourney/testPanelCards",
   "InfinitaryUITests/PhoneJourney/testPanelsTab",
   "InfinitaryUITests/PhoneJourney/testRelaunchPairsFirstTen",
   "InfinitaryUITests/PhoneJourney/testRelaunchPairsSecondTen",

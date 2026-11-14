@@ -9,6 +9,8 @@ import SwiftUI
 /// which frames the panel's own code in a sandboxed frame at its own host. Native code serves that frame only the
 /// panel's own files and the library they were built for, each pinned in its import map, and passes the parent page's
 /// asks to the computer only on the channels `PhonePanelRequest` lists. Neither realm reaches the network.
+/// Piece 3: the same host draws one of the panel's cards on Home (`card`), and both pages' card actions and pointing
+/// reach the panels model through `onCards` and `onPoint`, which hold the cards and open the task.
 @MainActor @Observable final class PanelWebHost: NSObject, WKScriptMessageHandlerWithReply, WKNavigationDelegate, WKUIDelegate {
     enum Stand: Equatable {
         case loading
@@ -28,6 +30,12 @@ import SwiftUI
     /// Counts the panel's pages, so the column makes a new view for a remounted one.
     private(set) var generation = 0
     private(set) var panel: PhonePanel
+    /// Set when this page draws one of the panel's cards on Home.
+    private(set) var card: PhonePanelCardEntry?
+    /// The page's card actions (`cards.emit`, `cards.close`, `cards.open`, `card.keep`), answered by the panels model.
+    var onCards: ((PhoneJSON) throws(PhoneRequestError) -> PhoneJSON)?
+    /// The page's pointing at a task or a card, answered by the panels model with whether it happened.
+    var onPoint: ((PhoneJSON) -> Bool)?
     private let session: ReadOnlySession
     private let library: (String) async throws(PhonePanelFailure) -> PhonePanelLibrary
     private let mount = (0..<16).map { _ in String("0123456789abcdef".randomElement()!) }.joined()
@@ -38,13 +46,15 @@ import SwiftUI
     private var theme = "light"
     private var collapsed: Bool
     private var shown = false
+    /// The presses of its header buttons that ask the panel, counted per button.
+    private var asks: [String: Int] = [:]
     /// This page was mounted again on its own after a stop: a second stop shows Retry (the desktop's FrameMount, INF-936).
     /// It clears on Retry and once the page has answered as many pings in a row as a stop misses (INF-3798).
     private var reloaded = false
 
-    init(panel: PhonePanel, session: ReadOnlySession, collapsed: Bool,
+    init(panel: PhonePanel, card: PhonePanelCardEntry? = nil, session: ReadOnlySession, collapsed: Bool,
          library: @escaping (String) async throws(PhonePanelFailure) -> PhonePanelLibrary) {
-        self.panel = panel; self.session = session; self.collapsed = collapsed; self.library = library
+        self.panel = panel; self.card = card; self.session = session; self.collapsed = collapsed; self.library = library
     }
 
     /// The panel's one view: made the first time it is asked for, then the same view.
@@ -68,7 +78,7 @@ import SwiftUI
         view.scrollView.bounces = false
         view.scrollView.contentInsetAdjustmentBehavior = .never
         view.scrollView.minimumZoomScale = 1; view.scrollView.maximumZoomScale = 1
-        view.accessibilityIdentifier = "panel-body-\(panel.id)"
+        view.accessibilityIdentifier = card.map { "panel-card-body-\(panel.id)-\($0.id)" } ?? "panel-body-\(panel.id)"
         self.view = view
         load()
         return view
@@ -79,6 +89,7 @@ import SwiftUI
         loading?.cancel()
         stand = .loading
         let panel = panel
+        let card = card
         loading = Task { [weak self] in
             guard let self else { return }
             do throws(PhonePanelFailure) {
@@ -93,7 +104,7 @@ import SwiftUI
                 let library = try await self.library(files.builtFor)
                 guard !Task.isCancelled else { return }
                 assets?.serve(library: library.files, files: files.files)
-                input = .object([
+                var fields: [String: PhoneJSON] = [
                     "mount": .string(mount),
                     "panel": .object([
                         "id": .string(panel.id), "source": .string(panel.filesSource), "title": .string(panel.title),
@@ -103,7 +114,15 @@ import SwiftUI
                     ]),
                     "lib": .object(library.files.mapValues { .string($0.integrity) }),
                     "files": .object(files.files.mapValues { .string($0.integrity) }),
-                ])
+                    "cardViews": .array((panel.cardViews ?? []).map(PhoneJSON.string)),
+                ]
+                if let card {
+                    fields["card"] = .object([
+                        "id": .string(card.id), "view": .string(card.view), "title": .string(card.title), "height": .string(card.height),
+                        "data": card.data, "kept": card.kept, "revision": .number(Double(card.revision)),
+                    ])
+                }
+                input = .object(fields)
                 view?.loadHTMLString(Self.page, baseURL: nil)
             } catch {
                 guard !Task.isCancelled else { return }
@@ -166,8 +185,28 @@ import SwiftUI
     func setState(collapsed: Bool, shown: Bool) {
         guard collapsed != self.collapsed || shown != self.shown else { return }
         self.collapsed = collapsed; self.shown = shown
-        guard stand == .drawn else { return }
-        view?.evaluateJavaScript("window.phonePanel?.state({collapsed: \(collapsed), shown: \(shown)})", completionHandler: nil)
+        tellState()
+    }
+
+    /// A header button that asks the panel was pressed: its page hears the press as one more on that button.
+    func ask(_ button: String) {
+        asks[button, default: 0] += 1
+        tellState()
+    }
+
+    /// The card this page draws was put up again or kept its place: its page hears the new data, revision and place.
+    func setCard(_ next: PhonePanelCardEntry) {
+        guard let card, card != next else { return }
+        self.card = next
+        guard stand == .drawn, let value = try? next.state.foundation else { return }
+        view?.callAsyncJavaScript("window.phonePanel.card(value)", arguments: ["value": value], in: nil, in: .page, completionHandler: nil)
+    }
+
+    private func tellState() {
+        guard stand == .drawn, let view else { return }
+        view.callAsyncJavaScript("window.phonePanel.state(value)", arguments: ["value": [
+            "collapsed": collapsed, "shown": shown, "asks": asks,
+        ] as [String: Any]], in: nil, in: .page, completionHandler: nil)
     }
 
     /// A push from the computer the page may hear.
@@ -192,7 +231,7 @@ import SwiftUI
                 guard let self, webView === self.view else { return }
                 if case .failure = result { self.stand = .couldNotOpen(PhonePanelFailure.unreadable.sentence); return }
                 self.stand = .drawn
-                webView.evaluateJavaScript("window.phonePanel?.state({collapsed: \(self.collapsed), shown: \(self.shown)})", completionHandler: nil)
+                self.tellState()
             }
         } catch { stand = .couldNotOpen(PhonePanelFailure.unreadable.sentence) }
     }
@@ -235,6 +274,14 @@ import SwiftUI
         case "steady":
             reloaded = false
             replyHandler(true, nil)
+        case "cards":
+            guard let onCards else { replyHandler(nil, PhoneMessages.phonePanelWebCannotDo()); return }
+            let answer: PhoneJSON
+            do throws(PhoneRequestError) { answer = try onCards(payload) }
+            catch { replyHandler(nil, error.words); return }
+            replyHandler((try? answer.foundation) ?? NSNull(), nil)
+        case "point":
+            replyHandler(onPoint?(payload) ?? false, nil)
         case "ask":
             guard let name = payload["channel"].text, let channel = PhonePanelRequest(rawValue: name), Self.pageAsks.contains(channel),
                   owns(channel, payload["args"].list) else {

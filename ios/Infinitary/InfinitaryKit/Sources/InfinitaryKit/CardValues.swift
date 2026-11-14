@@ -165,6 +165,17 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     }
     /// A card the phone already read, with a field the intent layer folded in (INF-2553).
     init(trusted value: PhoneJSON) { self.value = value }
+    /// INF-3830 piece 3: a panel's card in Home's row, held on this phone (`PhonePanelCards`), never one of the computer's
+    /// cards: it has no body, choices or thread of its own, and its panel's card view draws it.
+    public static func panelCard(_ entry: PhonePanelCardEntry) -> PhoneCard {
+        PhoneCard(trusted: .object([
+            "id": .string(entry.entryID), "title": .string(entry.title), "author": .string("panel"), "body": .string(""),
+            "actions": .array([]), "panelCard": .object(["panel": .string(entry.panel), "id": .string(entry.id),
+                                                        "revision": .number(Double(entry.revision))]),
+        ]))
+    }
+    /// The panel card this row entry stands for, or nil for one of the computer's cards.
+    public var panelEntryID: String? { value["panelCard"] == .null ? nil : id }
     public static func canSendReply(_ text: String) -> Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && text.utf16.count <= PhoneLimits.reply
     }

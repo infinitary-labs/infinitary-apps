@@ -29,11 +29,48 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
     public let frame: Frame?
     public let server: Server?
     public let stopped: Stopped?
+    /// Piece 3: its card views (`cards/<view>.tsx`), the cards its manifest names, and the buttons the app draws in its
+    /// header. A computer that lists none leaves them empty.
+    public let cardViews: [String]?
+    public let cards: [String: PhonePanelCardDeclaration]?
+    public let header: [PhonePanelHeaderButton]?
 
     /// What `inf:plugins:files` names it by.
     public var filesSource: String { source == "installed" ? "installed" : "yours" }
     /// The header's owner word: "yours", or the plugin's name.
     public var owner: String { by ?? PhonePanelWords.yours }
+    /// The header's buttons as the desktop's `PanelHeaderButtons` draws them: one that puts up a card in both header
+    /// states, one that asks the panel only while it shows its body.
+    public func headerButtons(folded: Bool) -> [PhonePanelHeaderButton] {
+        (header ?? []).filter { !folded || $0.emits != nil }
+    }
+}
+
+/// A card the panel's manifest names, for a header button to put up (`cards` in manifest.json).
+public struct PhonePanelCardDeclaration: Decodable, Sendable, Equatable {
+    public let view: String
+    public let title: String
+    public let width: String?
+    public let height: String?
+    public let data: PhoneJSON?
+}
+
+/// A button the app draws in a panel's header (`header` in manifest.json): it puts up one of the named cards
+/// (`emits`, with `data` in place of the card's own), or, naming none, it is pressed into the panel as an ask.
+public struct PhonePanelHeaderButton: Decodable, Sendable, Equatable, Identifiable {
+    public let id: String
+    public let icon: String
+    public let label: String
+    public let emits: String?
+    public let data: PhoneJSON?
+
+    /// The system symbol for each of the app's header icons (`PANEL_HEADER_ICONS`), as near the desktop's Lucide
+    /// drawing as the system's set comes; `PhonePanelsTests` holds every icon the desktop offers to one.
+    public static let symbols: [String: String] = [
+        "open": "arrow.up.left.and.arrow.down.right", "search": "magnifyingglass", "add": "plus", "list": "list.bullet",
+        "note": "doc", "filter": "line.3.horizontal.decrease", "clock": "clock", "chart": "chart.bar.xaxis",
+    ]
+    public var symbol: String { Self.symbols[icon] ?? "circle" }
 }
 
 /// The part of the computer's layout the phone reads: which panels its rails hide and where each one sits.

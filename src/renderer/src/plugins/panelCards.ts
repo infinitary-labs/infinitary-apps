@@ -35,11 +35,7 @@ import { pluginHost } from "./host";
  * hear it.
  */
 
-/** The ids a panel's or a card's frame raises its cards through (`inf.action`). */
-export const PANEL_CARD_ACTIONS = ["cards.emit", "cards.close", "cards.open"] as const;
-
-/** A card's own page also keeps its place (`card.keep`). */
-export const PANEL_CARD_VIEW_ACTIONS = [...PANEL_CARD_ACTIONS, "card.keep"] as const;
+export { PANEL_CARD_ACTIONS, PANEL_CARD_VIEW_ACTIONS } from "@shared/plugins/panelActionIds";
 
 /** Why a call was refused, in the words a panel's author reads at the call. */
 function refusal(error: { issues: { path: PropertyKey[]; message: string }[] }): Error {

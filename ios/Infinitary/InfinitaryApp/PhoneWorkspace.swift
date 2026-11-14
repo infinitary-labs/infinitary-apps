@@ -14,6 +14,12 @@ import Observation
     var openTask: String?
     /// INF-2935: a closed card a task record's Cards row read again, for Home to show as a past card.
     var pastCard: String?
+    /// INF-3830 piece 3: a task a panel pointed at from the captain's own tap, for Tasks to open as a row's tap opens
+    /// it, or straight to its record.
+    struct PointTask: Equatable { let id: String; let record: Bool }
+    var pointTask: PointTask?
+    /// INF-3830 piece 3: a card Home brings forward, the computer's or one of a panel's own (`PhonePanelsModel`).
+    var showOnHome: String?
     /// INF-1524: a card's draft button, for the message box to take its words, unsent.
     var draft: String?
     /// INF-2568: the software keyboard is up, and a card's reply field, or a text box in its body (INF-3427), holds its
@@ -89,13 +95,15 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @State private var wideBar = false
     @State private var homeAhead = false
     @State private var resizing = PhoneResizing()
-    @State private var messageContext = PhoneMessageContext()
+    @State private var messageContext: PhoneMessageContext
     @State private var rail = Rail.tasks
     @State private var panels: PhonePanelsModel
 
     init(session: ReadOnlySession, stage: Stage, tasks: Tasks?, composer: Composer?) {
         self.session = session; self.stage = stage; self.tasks = tasks; self.composer = composer
-        _panels = State(initialValue: PhonePanelsModel(session: session))
+        let context = PhoneMessageContext()
+        _messageContext = State(initialValue: context)
+        _panels = State(initialValue: PhonePanelsModel(session: session, context: context))
     }
 
     private var wide: Bool {
@@ -158,6 +166,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             if rail == .panels { rail = tasks == nil ? .activity : .tasks }
         }
         .environment(messageContext)
+        .environment(panels)
         // The first reading is the layout the workspace opens in, so the bar starts there.
         .onChange(of: wide, initial: true) { old, wide in if old == wide { wideBar = wide } else { settle(wide) } }
         .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
@@ -170,6 +179,11 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             messageContext.keyboardUp = false
         }
         .onChange(of: messageContext.restoring) { _, id in if id != nil { selection = .home } }
+        .onChange(of: messageContext.showOnHome) { _, id in if id != nil { selection = .home } }
+        .onChange(of: messageContext.pointTask) { _, point in
+            guard point != nil, tasks != nil else { return }
+            if wide { rail = .tasks } else { selection = .tasks }
+        }
         .onChange(of: messageContext.pastCard) { _, id in
             guard let id else { return }
             messageContext.pastCard = nil

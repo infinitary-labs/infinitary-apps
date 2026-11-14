@@ -113,4 +113,86 @@ extension PhoneJourney {
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 30), "The tab leaves once its only panel says it does not show")
         _ = try await home("panel-shy-remove")
     }
+
+    /// INF-3830 piece 3, done when "A panel's title-row buttons draw beside its fold and work", "A card a panel puts up
+    /// shows on Home, and its buttons work" and "A panel's tap on a task opens that task's record on the phone". Data: the
+    /// test home's real core serves the fixture panel (tests/fixtures/phone-panels/phone-tally) with its note card view,
+    /// a title-row button that puts the note up and one that asks the panel, and the test home's seeded task. Completion:
+    /// the asking button reaches the panel's own code once a press and leaves with its body when folded; the note shows
+    /// on Home from the button and from the panel's own press, counts a second press as a revision and leaves on Hide;
+    /// the card's tap opens the seeded task's record on Tasks, and the panel's opens the task.
+    func testPanelCards() async throws {
+        try await launchFresh()
+        try await join()
+        _ = try await home("panel-seed")
+        let panelsTab = app.buttons["tab-panels"]
+        XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        let header = app.buttons["panel-header-phone-tally"]
+        XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts["Tally 0"].waitForPresence(timeout: 60), app.debugDescription)
+
+        // The title row: the note button and the asking button beside the fold; a press of the asking one reaches the
+        // panel's own code once.
+        let note = app.buttons["panel-button-phone-tally-note"]
+        let mark = app.buttons["panel-button-phone-tally-mark"]
+        XCTAssertTrue(note.exists && mark.exists, app.debugDescription)
+        XCTAssertEqual(note.label, "Open the note")
+        picture("panel-title-buttons")
+        tapOnPhone(mark, repeatDiscarded: false)
+        XCTAssertTrue(app.webViews.staticTexts["Marked 1"].waitForPresence(timeout: 20), app.debugDescription)
+        // Folded, the asking button leaves with the body it asks; the note button stays.
+        tapOnPhone(header, repeatDiscarded: false)
+        XCTAssertTrue(mark.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(note.exists, "A button that puts up a card stays while the panel is folded")
+        tapOnPhone(header, repeatDiscarded: false)
+        XCTAssertTrue(mark.waitForPresence(timeout: 10), app.debugDescription)
+
+        // The note button puts the panel's note up at the front of Home, drawn by the panel's own card view.
+        tapOnPhone(note, repeatDiscarded: false)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10),
+                       .completed, "The note shows on Home")
+        let card = app.otherElements["panel-card-phone-tally-note"]
+        XCTAssertTrue(card.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Tally note"].exists, app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts["Note from button"].waitForPresence(timeout: 60), app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts["Put up 1 times"].exists, app.debugDescription)
+        // The note in light and dark, as the release note's picture pair shows it.
+        try await appearances("panel-card-home", showing: app.staticTexts["panel-card-title"])
+
+        // The card's tap on the seeded task opens its record on Tasks.
+        tapOnPhone(app.webViews.buttons["Open the record"], repeatDiscarded: false)
+        let recordTitle = app.staticTexts["task-record-title"]
+        XCTAssertTrue(recordTitle.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(recordTitle.label, "Check the phone connection")
+        picture("panel-opens-record")
+        let close = app.buttons["close-record"]
+        tapOnPhone(close)
+        XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+
+        // A second press brings the same note forward, heard as once more.
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        tapOnPhone(note, repeatDiscarded: false)
+        XCTAssertTrue(app.webViews.staticTexts["Put up 2 times"].waitForPresence(timeout: 60), app.debugDescription)
+        // Hide takes it off Home.
+        tapOnPhone(app.buttons["panel-card-hide"], repeatDiscarded: false)
+        XCTAssertTrue(card.waitForAbsence(timeout: 10), app.debugDescription)
+
+        // The panel's own press puts up a note of its own, and its tap on the task opens it.
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        let raise = app.webViews.buttons["Raise a note"]
+        XCTAssertTrue(raise.waitForPresence(timeout: 20), app.debugDescription)
+        tapOnPhone(raise, repeatDiscarded: false)
+        XCTAssertTrue(app.webViews.staticTexts["Note from the panel"].waitForPresence(timeout: 60), app.debugDescription)
+        XCTAssertTrue(app.otherElements["panel-card-phone-tally-card-1"].exists, app.debugDescription)
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        let openTask = app.webViews.buttons["Open the task"]
+        XCTAssertTrue(openTask.waitForPresence(timeout: 20), app.debugDescription)
+        tapOnPhone(openTask, repeatDiscarded: false)
+        XCTAssertTrue(recordTitle.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(recordTitle.label, "Check the phone connection")
+        tapOnPhone(close)
+        XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+        _ = try await home("panel-remove")
+    }
 }

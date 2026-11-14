@@ -5,6 +5,8 @@ import SwiftUI
 struct PhoneCards: View {
     let session: ReadOnlySession
     @Environment(PhoneMessageContext.self) private var messageContext
+    /// INF-3830 piece 3: the computer's panels, whose own cards wait on Home after the computer's.
+    @Environment(PhonePanelsModel.self) private var panels: PhonePanelsModel?
     @Environment(\.verticalSizeClass) private var verticalSize
     @State private var selected: String?
     @State private var past: PhoneCard?
@@ -36,7 +38,13 @@ struct PhoneCards: View {
     /// INF-3460: the bodies of the shown card and the cards beside it, kept loaded while the row is still.
     @State private var bodies = PhoneCardBodies()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var card: PhoneCard? { past ?? session.stack.first(where: { $0.id == selected }) ?? session.stack.first }
+    /// Home's row: the computer's cards, then the cards the panels put up on this phone, as the Mac's stack holds both.
+    private var stack: [PhoneCard] { session.stack + (panels?.stackCards ?? []) }
+    private func hasSeen(_ card: PhoneCard) -> Bool {
+        if let entry = card.panelEntryID { return panels?.cards.unread.contains(entry) != true }
+        return session.hasSeen(card)
+    }
+    private var card: PhoneCard? { past ?? stack.first(where: { $0.id == selected }) ?? stack.first }
 
     var body: some View {
         VStack(spacing: PhoneTheme.space3) {
@@ -51,7 +59,7 @@ struct PhoneCards: View {
             // INF-2095: the pager shows once its menu holds the stack, so it never draws a count its menu lacks.
             // INF-2568: on a phone on its side the keyboard leaves about two lines of room, which the field typed in needs.
             // INF-3468: on any device, while a text box in the card holds the keyboard, the pager steps aside for the card.
-            if !session.stack.isEmpty && !pagerMenu.items.isEmpty
+            if !stack.isEmpty && !pagerMenu.items.isEmpty
                 && !(messageContext.keyboardUp && (phoneOnItsSide(verticalSize) || messageContext.replyFocused)) { pager }
         }
         // INF-3110, the captain's "widen the card only": the card takes the stage's whole width less its gutters on any width,
@@ -61,9 +69,11 @@ struct PhoneCards: View {
         // INF-589 item 12: a soft tap once the computer accepts an answer or a reply; never on a page turn.
         .sensoryFeedback(.phone, trigger: sent)
         .onChange(of: card.map { $0.isPast ? PhoneMessageContext.Card.past($0.id) : .current($0.id) }, initial: true) { _, shown in
-            messageContext.card = shown
+            // A panel's card is this phone's own: the computer hears no card it does not hold.
+            messageContext.card = card?.panelEntryID == nil ? shown : nil
+            panels?.shownCard = card?.panelEntryID
         }
-        .onChange(of: session.stack.map(\.id), initial: true) { _, ids in
+        .onChange(of: stack.map(\.id), initial: true) { _, ids in
             // A card closed on another computer mid-swipe: the swipe lets go and the stack's own rule picks the card.
             if swipedFrom != nil && !ids.contains(swipedFrom!) { swipedFrom = nil; withAnimation(PhoneCardRowMotion.fade) { row.settle() } completion: { [moves] in stopped(moves) } }
             // A card a glide moves from or to closed on another computer: the glide stops where the stack's rule picks.
@@ -71,11 +81,11 @@ struct PhoneCards: View {
                 driver.stop(); base = nil; moves += 1
                 withAnimation(PhoneCardRowMotion.fade) { row.settle() } completion: { [moves] in stopped(moves) }
             }
-            if let marked = session.stack.first(where: { !previousIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
+            if let marked = stack.first(where: { !previousIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
                 selected = marked.id; past = nil
             } else if selected == nil || !ids.contains(selected!) {
                 // FI3-711 and INF-3155: an unread card first, else the card after the one that left, as on the Mac.
-                let unread = Set(session.stack.filter { !session.hasSeen($0) }.map(\.id))
+                let unread = Set(stack.filter { !hasSeen($0) }.map(\.id))
                 selected = PhoneCardDeparture.comesUp(after: selected, previous: previousIDs, ids: ids, unread: unread.contains)
             }
             showRestored(ids)
@@ -84,25 +94,30 @@ struct PhoneCards: View {
             sides = sides.filter { ids.contains($0.key) || $0.key == past?.id }
             if let past, ids.contains(past.id) { self.past = nil }
         }
-        .onChange(of: messageContext.restoring) { _, _ in showRestored(session.stack.map(\.id)) }
+        .onChange(of: messageContext.restoring) { _, _ in showRestored(stack.map(\.id)) }
+        // INF-3830 piece 3: a card a panel brought forward from the captain's tap, or a header button's card.
+        .onChange(of: messageContext.showOnHome, initial: true) { _, id in
+            guard let id, stack.contains(where: { $0.id == id }) else { return }
+            selected = id; past = nil; messageContext.showOnHome = nil
+        }
         // INF-3460: a card shown from the count's menu, or by the stack's own rule, leaves the row still: the card that
         // showed before sits beside it again, its body set aside with the rest.
         .onChange(of: selected) { _, _ in
-            if !moving && swipedFrom == nil && !session.stack.isEmpty { bodies.keep(only: rowCards.map(\.card)); bodies.setAside(except: card) }
+            if !moving && swipedFrom == nil && !stack.isEmpty { bodies.keep(only: rowCards.map(\.card)); bodies.setAside(except: card) }
         }
         // INF-3460: a revision draws a new body, so the row lets the old one go once it is still.
-        .onChange(of: session.stack.map(PhoneCardBodies.key)) { _, _ in
-            if !moving && swipedFrom == nil && !session.stack.isEmpty { bodies.keep(only: rowCards.map(\.card)) }
+        .onChange(of: stack.map(PhoneCardBodies.key)) { _, _ in
+            if !moving && swipedFrom == nil && !stack.isEmpty { bodies.keep(only: rowCards.map(\.card)) }
         }
         // INF-2095: the pager's menu takes its cards and label here, and only when either changes.
-        .onChange(of: session.stack.map { PhoneCardPager.Item(id: $0.id, title: $0.title) }, initial: true) { _, items in
+        .onChange(of: stack.map { PhoneCardPager.Item(id: $0.id, title: $0.title) }, initial: true) { _, items in
             pagerMenu.pick = { id in selected = id; past = nil }
             pagerMenu.show(items, label: pagerLabel)
         }
         .onChange(of: pagerLabel, initial: true) { _, label in pagerMenu.show(pagerMenu.items, label: label) }
         .onChange(of: session.showCardID, initial: true) { _, id in
             guard let id else { return }
-            if session.stack.contains(where: { $0.id == id }) { selected = id; past = nil }
+            if stack.contains(where: { $0.id == id }) { selected = id; past = nil }
             else { past = session.pastCards.first { $0.id == id } }
             session.showCardID = nil
         }
@@ -113,15 +128,15 @@ struct PhoneCards: View {
     private var rowCards: [PhoneCardRowSlot] {
         if let past { return [PhoneCardRowSlot(card: past, slot: 0)] }
         let at = rowIndex
-        return (max(0, at - 1)...min(session.stack.count - 1, at + 1)).map {
-            let card = session.stack[$0]
+        return (max(0, at - 1)...min(stack.count - 1, at + 1)).map {
+            let card = stack[$0]
             return PhoneCardRowSlot(card: card, slot: $0 - at, built: $0 == at || built.contains(card.id))
         }
     }
 
     /// The cards beside the shown one are built as the row starts to move, so the one it brings in is the real card.
     private func buildBeside() {
-        built = Set([index - 1, index, index + 1].filter(session.stack.indices.contains).map { session.stack[$0].id })
+        built = Set([index - 1, index, index + 1].filter(stack.indices.contains).map { stack[$0].id })
     }
 
     private var cardRow: some View {
@@ -129,7 +144,11 @@ struct PhoneCards: View {
             ForEach(rowCards) { place in
                 let card = place.card
                 let shown = place.slot == 0
-                if !place.built {
+                if let entry = card.panelEntryID, let panels {
+                    PhonePanelCardPane(entryID: entry, model: panels, shown: shown,
+                                       visible: shown && !moving && messageContext.cardsVisible)
+                        .modifier(PhoneCardRowPlace(row: row, slot: place.slot))
+                } else if !place.built {
                     PhoneCardRowEdge(row: row)
                         .background(alignment: .top) { loading(card) }
                         .modifier(PhoneCardRowPlace(row: row, slot: place.slot))
@@ -143,7 +162,7 @@ struct PhoneCards: View {
                     onHide: { past = nil },
                     onSent: { sent += 1 },
                     shown: shown, visible: shown && !moving && messageContext.cardsVisible,
-                    replyLeaves: !card.value["holdsPlace"].flag && session.stack.count > 1,
+                    replyLeaves: !card.value["holdsPlace"].flag && stack.count > 1,
                     row: row,
                     onTask: { messageContext.openTask = $0 }, onDraft: { messageContext.draft = $0 },
                     side: Binding(get: { sides[card.id] ?? PhoneCardSide() }, set: { sides[card.id] = $0 }))
@@ -170,7 +189,7 @@ struct PhoneCards: View {
 
     /// INF-3460: the body of a card beside the shown one, loading behind its edge with its fact strip.
     @ViewBuilder private func loading(_ card: PhoneCard) -> some View {
-        if !card.isPast {
+        if !card.isPast && card.panelEntryID == nil {
             let page = bodies.body(card) { PhoneCardPane.bodyHost(card, session, drafts[card.id] ?? .array([])) }
             PhoneCardRowLoading(page: page, strip: page.facts.flatMap { bodies.strip(card, facts: $0, session: session) }, row: row)
         }
@@ -178,7 +197,7 @@ struct PhoneCards: View {
 
     /// The row's card while a glide carries it on, else the shown card's.
     private var rowIndex: Int {
-        base.flatMap { id in session.stack.firstIndex { $0.id == id } } ?? index
+        base.flatMap { id in stack.firstIndex { $0.id == id } } ?? index
     }
 
     /// A new move takes the row from here.
@@ -193,7 +212,7 @@ struct PhoneCards: View {
     /// INF-3460: the row is built again around the card the count names, every card staying where it stands on the screen.
     private func rebase() {
         guard let from = base else { return }
-        let steps = index - (session.stack.firstIndex { $0.id == from } ?? index)
+        let steps = index - (stack.firstIndex { $0.id == from } ?? index)
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) { base = nil; row.offset += CGFloat(steps) * (row.width + PhoneCardRowMotion.gap) }
@@ -215,7 +234,7 @@ struct PhoneCards: View {
     }
 
     /// Typing a reply keeps the card where it is until the keyboard closes (the captain's pick); a past card stays put.
-    private var swipeAllowed: Bool { past == nil && !session.stack.isEmpty && !messageContext.keyboardUp }
+    private var swipeAllowed: Bool { past == nil && !stack.isEmpty && !messageContext.keyboardUp }
 
     /// How far the row has moved with the finger: the first points decide the swipe and move nothing, and with no card
     /// that way the row gives a third of the finger's travel.
@@ -276,7 +295,7 @@ struct PhoneCards: View {
     /// the finger's speed, a chevron's whole slide, or under Reduce Motion a fade into the new row.
     private func turn(_ delta: Int, speed: CGFloat? = nil) {
         let next = index + delta
-        guard past == nil, session.stack.indices.contains(next) else { return }
+        guard past == nil, stack.indices.contains(next) else { return }
         var still = Transaction()
         still.disablesAnimations = true
         // A turn while the row still glides takes it on from where it stands.
@@ -286,13 +305,13 @@ struct PhoneCards: View {
         moving = true
         buildBeside()
         if reduceMotion {
-            withTransaction(still) { selected = session.stack[next].id; row.settle(); row.fade = 0 }
+            withTransaction(still) { selected = stack[next].id; row.settle(); row.fade = 0 }
             afterDrawn { withAnimation(PhoneCardRowMotion.fade) { row.fade = 1 } completion: { [moves] in stopped(moves) } }
             return
         }
         // INF-3460: the count moves on now and the row keeps every card where it is, so the glide starts in the very next
         // frame; the row is built again around the new card once it rests.
-        withTransaction(still) { base = card?.id; selected = session.stack[next].id }
+        withTransaction(still) { base = card?.id; selected = stack[next].id }
         glide(to: -CGFloat(delta) * (row.width + PhoneCardRowMotion.gap), speed: speed)
     }
 
@@ -311,7 +330,7 @@ struct PhoneCards: View {
             Button { page(1) } label: {
                 Label(PhoneMessages.uiCardStackNext(), systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     .overlay(alignment: .topTrailing) {
-                        if session.stack.dropFirst(index + 1).contains(where: { !session.hasSeen($0) }) {
+                        if stack.dropFirst(index + 1).contains(where: { !hasSeen($0) }) {
                             Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
                         }
                     }
@@ -329,14 +348,14 @@ struct PhoneCards: View {
                 .frame(width: 0, height: 0)
         }
     }
-    private var pagerLabel: String { past != nil ? PhoneMessages.phoneCardsPagerPast() : PhoneMessages.phoneCardsPagerPosition(position: String(index + 1), total: String(session.stack.count)) }
+    private var pagerLabel: String { past != nil ? PhoneMessages.phoneCardsPagerPast() : PhoneMessages.phoneCardsPagerPosition(position: String(index + 1), total: String(stack.count)) }
     /// The cards on the stack not yet read, besides the one shown.
     private var fresh: [PhoneCard] {
-        session.stack.filter { $0.id != card?.id && !session.hasSeen($0) }
+        stack.filter { $0.id != card?.id && !hasSeen($0) }
     }
-    private var index: Int { session.stack.firstIndex { $0.id == (selected ?? session.stack.first?.id) } ?? 0 }
+    private var index: Int { stack.firstIndex { $0.id == (selected ?? stack.first?.id) } ?? 0 }
     private var canPagePrevious: Bool { past == nil && index > 0 }
-    private var canPageNext: Bool { past == nil && index < session.stack.count - 1 }
+    private var canPageNext: Bool { past == nil && index < stack.count - 1 }
     /// A card a Tasks row brought back shows once its return reaches the stack, whichever arrives first.
     private func showRestored(_ ids: [String]) {
         guard let id = messageContext.restoring, ids.contains(id) else { return }

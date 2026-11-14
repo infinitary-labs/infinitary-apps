@@ -405,4 +405,8 @@ public enum PhonePanelWords {
     public static let retry = PhoneMessages.`panelRetry`()
     public static let unresponsive = PhoneMessages.`panelUnresponsiveLine`()
     public static func couldNotOpen(_ failure: String) -> String { PhoneMessages.`panelCouldNotOpen`(failure: failure) }
+    public static let openCardsMax = 50
+    public static let defaultCardWidth = "wide"
+    public static let defaultCardHeight = "content"
+    public static let headerIcons = ["open", "search", "add", "list", "note", "filter", "clock", "chart"]
 }

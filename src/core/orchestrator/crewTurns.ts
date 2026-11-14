@@ -31,6 +31,7 @@ import { TaskService } from "../tasks/taskService";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 import { gitFailure } from "../workspace/git";
 import type { DependencyInstall } from "../workspace/workspaceService";
+import { AccountRefusals } from "./accountRefusals";
 import { ciFactOf } from "./ciFact";
 import type { CrewCore } from "./crewCore";
 import { handedDirections, servesDirections } from "./crewDirections";
@@ -136,6 +137,8 @@ export function crewSignInCardId(taskId: string): string {
 export class CrewTurns {
   /** Who waits for a task's running turn to end here, by task (`untilTurnOver`). */
   private readonly turnWaiters = new Map<string, Set<() => void>>();
+  /** One wake per account for the same provider refusal. */
+  private readonly accountRefusals = new AccountRefusals();
 
   constructor(private readonly core: CrewCore) {}
 
@@ -792,6 +795,27 @@ export class CrewTurns {
         : undefined;
     if (!providerError && !paused && outage.failures > 0)
       this.core.ladder.endOutage(task, outage.failures, outage.since);
+    // A refusal is told once per account and words (docs/inbox.md, "The
+    // same refusal on one account"); a turn that went through ends that.
+    const account = this.core.ladder.accountOf(task.id);
+    if (account && !providerError && !paused) this.accountRefusals.answered(account);
+    const refusal =
+      account &&
+      providerError !== undefined &&
+      !signInFailure &&
+      !cutOff &&
+      !overflowed &&
+      isProviderRefusal(providerError)
+        ? this.accountRefusals.tell(account, refusalWords(providerError), task.id)
+        : undefined;
+    const sameAccount =
+      account && refusal?.first
+        ? this.core.ladder.tasksOnAccount(account).filter((other) => other.id !== task.id)
+        : undefined;
+    // Another task on the account already woke the first mate in these words.
+    const toldForAccount = refusal !== undefined && !refusal.first;
+    // A lane stuck in those words is not told either: that task's wake named it.
+    const stuckToldElsewhere = toldForAccount && refusal.teller !== task.id;
     // A paused turn that reported needs no carrying on: its report stands.
     // Nor does one its model never took: its own rows carry it.
     if (paused?.row !== undefined && (report || paused.unstarted))
@@ -921,7 +945,7 @@ export class CrewTurns {
           deviceId: this.core.options.tasks.get(task.id)?.deviceId ?? null,
         });
       const failedOp: TypedWake = retrying
-        ? outageFailedWake(task, error, keptReport)
+        ? outageFailedWake(task, error, keptReport, sameAccount)
         : {
             facts: {
               kind: "turn-failed",
@@ -929,6 +953,7 @@ export class CrewTurns {
               crewmate: task.crewmate,
               error,
               ...(keptReport ? { keptReport } : {}),
+              ...(sameAccount ? { sameAccount } : {}),
             },
           };
       if (signInFailure) {
@@ -947,11 +972,11 @@ export class CrewTurns {
           text: `Task ${task.title} reached its conversation limit and continues with its brief in a new conversation.`,
           taskId: task.id,
         });
-      } else if (stuck && !accountTells) {
+      } else if (stuck && !accountTells && !stuckToldElsewhere) {
         // Stuck at its provider: the first mate is told once, with the ways
         // that can work, instead of the outage's own wakes.
         void this.tellStuck(task, error, retry?.since ?? this.core.now(), released?.refusals ?? 0);
-      } else if (firstFailure && !accountTells) {
+      } else if (firstFailure && !accountTells && !toldForAccount) {
         this.core.routeCrewEvent(task.id, failedOp, "agent");
       }
     } else if (options.interrupted) {

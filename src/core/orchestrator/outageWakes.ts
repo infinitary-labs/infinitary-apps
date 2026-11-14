@@ -21,6 +21,8 @@ export type OutageFacts =
       error: string;
       /** The headline of the report the turn made before it failed, kept on the record (INF-3165). */
       keptReport?: string;
+      /** For a provider refusal: the other open tasks on the same account (`sameAccountWords`). */
+      sameAccount?: WakeTask[];
     }
   | {
       /** The honest retry: the lane is still failing fifteen minutes into its outage. */
@@ -94,6 +96,7 @@ export function outageFailedWake(
   task: WakeTask & { crewmate: string },
   error: string,
   keptReport?: string,
+  sameAccount?: readonly WakeTask[],
 ): TypedWake {
   return {
     facts: {
@@ -102,8 +105,24 @@ export function outageFailedWake(
       crewmate: task.crewmate,
       error,
       ...(keptReport ? { keptReport } : {}),
+      ...(sameAccount ? { sameAccount: sameAccount.map(({ id, title }) => ({ id, title })) } : {}),
     },
   };
+}
+
+/**
+ * What a provider refusal's wake says of the account it met (docs/inbox.md,
+ * "The same refusal on one account"): the other open tasks on it, that a
+ * refusal in the same words there wakes nobody again, and what an account
+ * refusal asks of the first mate. Empty for a failure that is no refusal.
+ */
+export function sameAccountWords(sameAccount: readonly WakeTask[] | undefined): string {
+  if (!sameAccount) return "";
+  const others =
+    sameAccount.length > 0
+      ? `The same account serves ${tasksText(sameAccount)}.`
+      : "No other open task uses the same account.";
+  return ` The provider refused the request. ${others} You are not woken again for a refusal in these words on this account until a turn on it goes through, and a crewmate on it that stops retrying in these words is not told separately. If the refusal is about the account rather than this request, such as new terms only the captain can accept, ask the captain once and name every crewmate on the account; a steer sends a waiting crewmate's guidance again at once.`;
 }
 
 /**
@@ -275,7 +294,7 @@ function cutOffWayBack(facts: CutOffFacts): string {
 /** The honest retry's and the cut-off wakes, worded. */
 export const OUTAGE_WORDS: KindWords<OutageFacts> = {
   "outage-failed": (facts) =>
-    `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed at the provider: ${facts.error}.${keptReportWords(facts.keptReport)} Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,
+    `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed at the provider: ${facts.error}.${keptReportWords(facts.keptReport)}${sameAccountWords(facts.sameAccount)} Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,
   "outage-still-down": (facts) =>
     `[fm-op] ${facts.crewmate ?? `the crewmate on ${facts.key}`} on task ${facts.task.id} "${facts.task.title}" is still failing at the provider after ${Math.round(facts.downMs / 60_000)} minutes and ${facts.failures} tries. Its guidance is kept and retried every 15 minutes until the provider answers; nothing is lost. You can steer or interrupt it, or wait.`,
   "provider-stuck": (facts) =>

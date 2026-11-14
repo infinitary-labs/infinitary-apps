@@ -9,7 +9,7 @@
 
 import type { RepetitionNotice } from "@shared/toolCompletion";
 import { type CrewmateRestart, crewmateRestartText } from "./crewSession";
-import { keptReportWords } from "./outageWakes";
+import { keptReportWords, sameAccountWords } from "./outageWakes";
 import type { KindWords, TypedWake, WakeTask } from "./wakes";
 
 /** The facts of a crewmate's turns. */
@@ -29,6 +29,8 @@ export type TurnFacts =
       error: string;
       /** The headline of the report the turn made before it failed, kept on the record (INF-3165). */
       keptReport?: string;
+      /** For a provider refusal: the other open tasks on the same account (`sameAccountWords`). */
+      sameAccount?: WakeTask[];
     }
   | {
       /**
@@ -204,7 +206,7 @@ function openCallsText(calls: readonly OpenCallFact[] | undefined): string {
 /** A crewmate's turns, worded. */
 export const TURN_WORDS: KindWords<TurnFacts> = {
   "turn-failed": (facts) =>
-    `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed: ${facts.error}.${keptReportWords(facts.keptReport)} The crewmate is still steerable; you can retry, steer, or interrupt it.`,
+    `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed: ${facts.error}.${keptReportWords(facts.keptReport)}${sameAccountWords(facts.sameAccount)} The crewmate is still steerable; you can retry, steer, or interrupt it.`,
   "commit-failed": (facts) =>
     `[fm-op] the host could not commit the personal workspace at the end of ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}", so the task stays open and cannot close as finished. What it changed is saved in the workspace but not committed. Its crewmate's next report tries the commit again: steer it to look into the error and report again, or tell the captain. The error: ${facts.error}`,
   "task-failed": (facts) =>

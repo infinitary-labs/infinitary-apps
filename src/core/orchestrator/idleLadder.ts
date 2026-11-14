@@ -992,6 +992,17 @@ export class IdleLadder {
     }
   }
 
+  /** The account a task's turns are served by, read from its record. */
+  accountOf(taskId: string): string | undefined {
+    const record = this.host.tasks.get(taskId);
+    return record ? this.servingAccount(record) : undefined;
+  }
+
+  /** The open work tasks one account serves, oldest first. */
+  tasksOnAccount(accountId: string): WakeTask[] {
+    return this.openTasksByAccount().get(accountId) ?? [];
+  }
+
   /**
    * The open work tasks served by each account, oldest first: this Mac's
    * own, and a computer's own for a task on that computer.

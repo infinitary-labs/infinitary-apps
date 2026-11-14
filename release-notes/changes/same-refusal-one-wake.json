@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "same-refusal-one-wake",
+      "kind": "improvement",
+      "title": "Your first mate hears a provider's refusal once for all the crewmates it stops",
+      "body": "When a provider refuses every crewmate on one account in the same words, such as new terms only you can accept, your first mate now hears it once, with every crewmate on that account named. It can ask you once instead of being interrupted by each failed crewmate first.",
+      "area": "firstmate",
+      "noPicture": "This changes which messages reach your first mate; no view changes on its own.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -77,6 +77,19 @@ While a lane's guidance is deliverable, the idle ladder reads the task as moving
 The inbox sweep keeps an unfinished task's lane when its saved conversation is absent or its recorded activity is not yet resumable; neither fact makes the task gone.
 A newly due wake, including an observed prerequisite merge, cannot send that task's older escalated guidance to orphan cleanup.
 
+## The same refusal on one account
+
+The captain's pick A on the terms refusal ("one wake per account").
+A provider can refuse an account rather than a request, such as new terms only the captain can accept, and then every crewmate on that account meets the same words.
+The host does not judge which kind a refusal is: it compares the account that serves the task (`IdleLadder.accountOf`) and the refusal's words (`refusalWords`), both facts it holds (`AccountRefusals`, `src/core/orchestrator/accountRefusals.ts`).
+
+- The first refusal in some words on an account wakes the first mate as before (`outage-failed`, or `turn-failed` for a turn with no guidance), with `sameAccount`: the other open tasks on that account.
+  Its words say a refusal in these words on this account wakes nobody again, and that an account refusal is the captain's to answer once, naming every crewmate on the account.
+- A later refusal in the same words on that account wakes nobody, whichever task meets it, and its failure still lands on that task's timeline.
+- A lane that gets stuck in those words (`STUCK_REFUSAL_LIMIT`) is told only when it is the task the first mate first heard about; the others stop retrying silently, keeping their guidance until a steer.
+- A turn on the account that goes through ends it, so a later refusal there is heard again.
+- The record is in memory: after a restart the next such refusal is told once more.
+
 ## A steer no turn took in
 
 One rule for every rolling session, on both backends (the session contract's `takeUndeliveredSteers`, `src/core/session/session.ts`): a steer the session accepted but no turn took in - it landed after Pi's run made its last look at its queue, or no turn of the Claude client acknowledged it - comes back at the turn's end instead of being lost.

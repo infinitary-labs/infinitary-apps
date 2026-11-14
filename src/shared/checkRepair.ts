@@ -289,6 +289,27 @@ export function queueAnswer(
 }
 
 /**
+ * The crewmate's answer at `headSha` to the host's own merge queue removing
+ * that version (docs/forge.md, "The host's merge queue"): one declared after
+ * the app read the removal at `removedAt`, so each answer sends the version
+ * to that queue once more and a later removal there needs a new one.
+ */
+export function removalAnswer(
+  delivery: { ciRepair?: CheckRepairLedger } | null | undefined,
+  headSha: string,
+  removedAt: number,
+): (CheckDeclaration & { at: number }) | undefined {
+  const answer = delivery?.ciRepair?.declarations?.findLast(
+    (entry) =>
+      (entry.kind === undefined || entry.kind === "verdict") &&
+      entry.verdict === "answered" &&
+      entry.headSha === headSha &&
+      entry.at > removedAt,
+  );
+  return answer as (CheckDeclaration & { at: number }) | undefined;
+}
+
+/**
  * Whether every check the reading at the current version found failed
  * carries the crewmate's diagnosis at that version (INF-1891, the captain's
  * choice: the merge card goes up once the crew diagnoses a failure, with

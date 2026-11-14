@@ -25,6 +25,20 @@ function dependencyWords(tasks: TaskService, dependency: TaskRecord): string {
 const empty = (): CheckRepairLedger => ({ failures: [], diagnoses: [], repairs: [] });
 
 /**
+ * Whether the host's own merge queue removed `headSha` under the captain's
+ * kept approval, as the approval recorded it: the closed fact an answer to
+ * that removal is checked against (docs/forge.md, "The host's merge queue").
+ */
+function hostRemoved(task: TaskRecord, headSha: string): boolean {
+  const kept = task.delivery?.mergeAuthorization;
+  return (
+    kept?.status === "standing" &&
+    kept.handed?.head === headSha &&
+    kept.handed.removed !== undefined
+  );
+}
+
+/**
  * A workflow run's reading on the repair ledger (INF-688), from the
  * crewmate's short read or the run watch: its failed jobs join the raw
  * failure history at the run's version, so a run with no pull request
@@ -103,10 +117,10 @@ export function declareCheckAction(
         snapshot?.headSha === declaration.headSha
           ? snapshot.items.find((item) => item.name === QUEUE_STATUS)
           : undefined;
-      if (!queue || !isRedCheckState(queue.state))
+      if ((!queue || !isRedCheckState(queue.state)) && !hostRemoved(task, declaration.headSha))
         return {
           read: false,
-          text: `Answer refused: the newest reading shows no failed ${QUEUE_STATUS} at ${declaration.headSha}. Read the checks with check_change first; answer only the queue's failure or send-back of the version it is on.`,
+          text: `Answer refused: the newest reading shows no failed ${QUEUE_STATUS} at ${declaration.headSha}, and the host's own merge queue has not removed that version. Read the checks with check_change first; answer only the queue's failure or send-back of the version it is on.`,
         };
     }
     if (declaration.verdict === "settled" && (!declaration.repairId || !declaration.outcome))
@@ -163,7 +177,9 @@ export function declareCheckAction(
     text: input.diagnosis
       ? `Diagnosis recorded with evidence.${input.diagnosis.dependencyTask && tasks.resolve(input.diagnosis.dependencyTask) ? dependencyWords(tasks, tasks.resolve(input.diagnosis.dependencyTask)!) : ""}`
       : input.declaration?.verdict === "answered"
-        ? `Answer to the queue recorded with evidence. The captain's kept merge approval, where one covers ${input.declaration.headSha}, marks it waiting for the queue again once, when your turn ends; without one, nothing is marked until the captain's merge click. Put up no card for it.`
+        ? hostRemoved(task, input.declaration.headSha)
+          ? `Answer to the merge queue's removal recorded with evidence. The captain's kept merge approval sends ${input.declaration.headSha} to that queue once more, when your turn ends. Put up no card for it.`
+          : `Answer to the queue recorded with evidence. The captain's kept merge approval, where one covers ${input.declaration.headSha}, marks it waiting for the queue again once, when your turn ends; without one, nothing is marked until the captain's merge click. Put up no card for it.`
         : "Crew check declaration recorded with evidence. No merge was authorized.",
   };
 }

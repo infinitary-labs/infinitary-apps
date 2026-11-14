@@ -675,6 +675,7 @@ Both merges read the change's saved story through one owner (`withPublishedStory
 A confirmed continuing merge consumes the approval and wakes the crewmate once without closing its task or removing its working copy.
 A host merge result is not new captain guidance about that approval.
 Only a pull request GitHub reads as clean at the reviewed head is sent, so a sign-in that could bypass the branch's rules never does.
+On GitHub it is sent through the asynchronous merge, which hands it to the branch's own merge queue where there is one ("The host's merge queue").
 GitHub answers `mergeable: null` while a check it has just started works out a test merge, often just after the default branch moved, and asks to be read again shortly (INF-457).
 At the captain's click, that answer is read again after 1, 2, 3, 5, 8 and 11 seconds (`UNDECIDED_REREAD_MS` in `src/core/orchestrator/changeMerge.ts`), and every read is checked as the first one was.
 The merge goes as soon as GitHub reads clean at the reviewed head; a moved head or a closed pull request still sends nothing, and GitHub still undecided after half a minute refuses the attempt, saying how long it asked.
@@ -703,7 +704,7 @@ The review names each rule that can hold a merge, in plain words with its rule s
 The host draws them at the end of the card (`.inf-call`, `src/core/orchestrator/requestStrips.ts`) and names the button "Merge, skipping the rules".
 Before the card goes up and again on the click, the host reads it fresh: a moved version, a closed pull request, or a rule or failed check the review did not name sends nothing.
 Only the captain's click sends it; who merges, `settle_task` and a kept merge approval never do, and an ordinary review never sets `bypass_rules`.
-The review is marked sent first, then GitHub's asynchronous merge goes once (`PUT .../merge-async` with `sha`, `squash`, `direct_merge` and `bypass_rules: true`, at API version 2026-03-10), and its result is read by its id up to five times, two seconds apart.
+The review is marked sent first, then GitHub's asynchronous merge goes once (`PUT .../merge-async` with `sha`, `squash`, `direct_merge` and `bypass_rules: true`, at API version 2026-03-10), and its result is read by its id as every asynchronous merge's is ("The host's merge queue").
 A result the app could not read, or a transport failure, is unknown, and the pull request is read once to see whether it merged.
 Nothing is ever sent again for that review: a second click, a restart or a revised card naming it answers from the record.
 Its merge card's `after` says whether the task continues or closes.
@@ -711,6 +712,54 @@ Not established: whether GitHub honours `bypass_rules` for the app's sign-in, an
 No real merge past the rules has been attempted; the check is the captain's, on a throwaway repository.
 Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rules ...") has a scripted crewmate prepare an adopted release pull request held by a review rule and a failed check, reads the rules and the check off the card, finds nothing sent before the captain's key and one asynchronous merge with `bypass_rules` after it, and refuses the same review on a revised card.
 `mergeReviews.test.ts` holds each refusal word for word, the review marked sent before the request, and every outcome of the one send: merged, refused, unknown, a lost answer read back as merged, and a second click that sends nothing.
+
+### The host's merge queue
+
+Every ordinary merge on GitHub goes through GitHub's asynchronous merge, for a pull request and for a batch alike (INF-3759 piece 5; `GitHubForge.putIn`).
+The request is `PUT .../merge-async` at API version 2026-03-10 with `sha`, the merge method and the commit words, and it names no `merge_action`, so GitHub chooses: a branch with no merge queue merges the pull request directly.
+A branch with a merge queue of its own takes only the version: GitHub answers a request to it that names a merge method or commit words with a result that failed, "Custom merge params are not supported when merging via a merge queue", and sends nothing on.
+The app then sends the version alone, `sha` with `merge_action: "merge_queue"`, which GitHub takes into that queue.
+The queue is named so that this second request can enter the queue or be refused, and can never merge the pull request GitHub's default way with words the app did not check.
+It follows any failed result whose words name a merge queue, since GitHub offers no typed reason; a refusal of it is the refusal the app reports.
+GitHub's direct merge (`PUT .../merge`) is refused on a branch that requires a merge queue, so before this the app could not merge there.
+The result is read by its id after 0.25, 0.5, 1, 2, 3 and 4 seconds (`ASYNC_MERGE_READ_DELAYS_MS`), a wait a person clicking Merge sits through at most once.
+`merged` is the merge, with the commit GitHub names; `enqueued` is the typed answer `MergeAnswer.queued`; `failed` is GitHub's refusal in its own words, read as a conflict, a moved version or a moved main branch the way the direct merge's refusals are.
+A result still pending after the last read, or one GitHub no longer keeps, is unknown: the pull request is read before anything else and nothing is sent again.
+A 409 on the request that names no moved version says a merge of that pull request is already running, and is read the same way.
+A GitHub that does not know the call gets the direct merge instead (`putInDirect`): a 404 on the request, or a 400 that names the API version, either of which comes back before anything is sent on.
+A GitHub Enterprise Server without the asynchronous merge is such a GitHub; that fallback is held by scripted answers alone, since no such server was at hand to try it on.
+GitLab and a plain Git host merge as before; a GitLab merge train is not used.
+
+A queued answer is no merge.
+The kept approval then waits on `host-queue` (`hostQueued`, `src/core/orchestrator/changeMerge.ts`) and records on itself the version GitHub took and when (`MergeAuthorization.handed`), apart from the wait, which any later stop replaces.
+Activity says "Waiting for the merge queue" in the kept merge's words (`keptHostQueue`); no card goes up, the first mate takes no turn and the crewmate is not woken, because nothing is needed from any of them.
+The app reads the queue again one minute later, then twice as long each time up to five minutes apart (`TIMED_WAITS`, `READ_ONLY_WAITS`, `src/core/orchestrator/mergeAuthorization.ts`), and at every crewmate idle boundary and at start, like any kept approval.
+Five minutes bounds how long a task stays open after GitHub merged it; a read sends nothing, so it costs one question to GitHub.
+Each read asks GitHub whether the pull request is in its queue (`GitHubForge.inHostQueue`, GraphQL's `isInMergeQueue`, which the REST pull request does not carry) before any gate (`ChangeMerge.handedOver`), since the checks and the branch's rules are the queue's to hold once it took the version.
+Still queued, the approval keeps waiting.
+Merged, the merge is GitHub's: the approval is spent with the commit GitHub made and the task closes as merged, or continues where its card said so.
+Closed without a merge, the approval ends as for any closed pull request.
+Out of the queue and still open, GitHub removed it: the approval waits on `host-removed`, Activity says so once, and the first mate is woken once to steer the crewmate to read why on the pull request's page.
+The host reads no reason for a removal; GitHub's API names none.
+A merge that keeps no approval is one attempt here too, as it is for a project's queue: a first mate's merge card, its `settle_task`, or an offer with no known version (`approvableOffer`).
+Its answer says GitHub took the pull request into the queue, Activity reads "Cannot merge: waiting for the merge queue", the first mate hears the whole answer, and nothing reads the queue for it.
+GitHub's merge is then read as any merge made outside the app is (`SettleService.reconcileExternalMerge`).
+
+Nothing sends a removed version again on its own.
+It goes to the queue again in three ways.
+A new version the crewmate declares with `conflictRepair` carries the approval as any repair does, and is sent once its own checks pass.
+With nothing left to change, the crewmate answers the removal with `check_change`'s `answered` verdict at that version, recorded only while the approval holds a removal of it (`hostRemoved`, `src/core/orchestrator/checkRepair.ts`); an answer declared after the removal was read sends that version once more, and a later removal needs a new answer (`removalAnswer`, `src/shared/checkRepair.ts`).
+The captain's own click on a merge card of that pull request sends it too.
+A version the captain's approval still covers gets no second merge card ("No second card for an approved version", `docs/delivery-rigor.md`), which is why the answer exists.
+
+A merge queue merges every pull request its own way and writes the commit words from the project's own settings, and GitHub refuses a request to it that names either.
+So the merge method and the checked title the app sends reach only a direct merge; the pull request's title is still checked before anything is sent.
+A batch is sent the same way.
+A queued batch keeps the version GitHub took (`OpenBatch.queued`), each pass reads the queue instead of sending, GitHub's merge gives every change its receipt, and a removal holds the batch with the reason `merge-way` and GitHub named in its words (`BATCH_WORDS.removed`), never sent again at that version ("A held batch").
+A merge queue set by a rule set names its one merge way (`merge_method` of the `merge_queue` rule), which narrows the merges the project allows (`GitHubForge.branchRules`): a queue that squashes leaves a batch of several no way to keep one commit for each change, so it holds before anything is sent.
+A merge queue set by classic branch protection is not in the rule sets and its way is not read.
+
+Evidence: `providers/github/merge.test.ts` (each answer of the asynchronous merge, the queue's refusal of a merge method and the version sent alone, the fallback, the queue read), `changeMerge.test.ts` and `settleOwners.keptMergeRepairs.test.ts` (the wait, GitHub's merge, a removal, the answer and the captain's click), `src/core/batches/batches.test.ts` and `providers/github/batches.test.ts` (a queued batch, a removed one, the queue's merge way), and the journey `tests/e2e/settle-effects.spec.ts` ("a merge click on a branch with GitHub's merge queue ...").
 
 ## Batches of your own
 
@@ -761,7 +810,8 @@ A pull request the host reads as behind or conflicting is combined again onto th
 The merge keeps one commit per change (`mergeWayFor`, `src/shared/batches.ts`).
 A batch of one merges as that change's pull request does, by squash, where the project allows it.
 A batch of several takes a rebase merge where allowed and a merge commit otherwise; on GitLab that is a merge without squash, which keeps every commit under each of its merge methods.
-The merges a project allows are read where it lives (`Forge.mergeWays`): GitHub's merge buttons narrowed by the default branch's rules (`waysUnderRules`, `src/core/forge/mergeWays.ts`), and GitLab's squash setting.
+The merges a project allows are read where it lives (`Forge.mergeWays`): GitHub's merge buttons narrowed by the default branch's rules, the one way of a merge queue among them (`waysUnderRules`, `src/core/forge/mergeWays.ts`), and GitLab's squash setting.
+On a default branch with a merge queue of GitHub's own, the merge hands the batch's pull request to that queue and the batch waits there ("The host's merge queue").
 A project that allows only squash merges is not offered batched pull requests: the choice is refused with its reason, and Settings says it under "Where changes go" (`SQUASH_ONLY_WORDS`).
 After the merge the app deletes the batch branch and reads each member's own commit on the default branch (`landedCommits`): the commits as written where the merge kept them, or the rewritten ones matched by title after a rebase merge.
 Each member gets a receipt, its task's kept merge reads it and the task closes as merged, naming its own commit; a commit that could not be read stays absent, never guessed.
@@ -800,6 +850,7 @@ Try again combines the batch again at a new version, so its checks run again.
 The first mate sends the same answers in the captain's words through `app_change`'s `project-batch-answer`.
 Every answer names the held version it answers (`BatchAnswer`, `inf:repos:batch-answer`), so one for a hold that already ended is refused in words and changes nothing.
 A merge the host refused is never sent again at that version: Try again makes a new one.
+A batch GitHub removed from its own merge queue holds the same way, with GitHub's removal as its reason ("The host's merge queue").
 
 ## A project's queue
 
@@ -826,6 +877,7 @@ No checks override passes the queue.
 The crewmate may instead answer the queue's failure at the version it is on with check_change's `declaration`, verdict `answered`, when it judges nothing is left to change there, such as a send-back written on a version that already holds the fix (INF-3190).
 The host records the answer only while its newest reading shows `infinitary/queue` failed at that version, and the kept approval's next run then marks that version waiting again once, with the pull request's own checks passed, a feed line and no card (`queueAnswer`, `src/shared/checkRepair.ts`).
 The mark spends the answer, so a later failure there stops the kept approval on the checks until a new answer; the kept approval's own retry never marks a failed version by itself.
+The same verdict answers GitHub's own merge queue removing a version ("The host's merge queue").
 While the queue runs, the kept approval waits on `queue` with no card for the captain, Activity's line reads "Waiting for the batch check", and the tick reads it again every ten minutes past the watch's bound.
 A merge card shows the queue status apart from the pull request's own checks (INF-3208): its Checks state counts and times only the pull request's own checks, and a Batch check state says where the change stands in one word, linked to its run, with the queue's own words on rest (`batchCheck`, `src/core/orchestrator/settleCardFacts.ts`).
 A failed or paused status says the queue's own words in the open under the status line, wrapped whole, followed by links to the run and to the paused batch's issue.

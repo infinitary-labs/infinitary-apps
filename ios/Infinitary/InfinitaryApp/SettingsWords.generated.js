@@ -12312,6 +12312,11 @@ ${events}` : prompt;
     members: array(batchMemberSchema),
     since: number(),
     hold: batchHoldSchema.optional(),
+    /**
+     * The version the host's own merge queue took (docs/forge.md, "The host's
+     * merge queue"): its place there is read, and nothing is sent again.
+     */
+    queued: string().optional(),
     /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
     stale: literal(true).optional()
   });

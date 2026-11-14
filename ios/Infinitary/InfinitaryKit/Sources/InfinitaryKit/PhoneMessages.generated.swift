@@ -707,6 +707,8 @@ public enum PhoneMessages {
     public static func `keptDraft`() -> String { PhoneWords.format("keptDraft", []) }
     public static func `keptEvidence`() -> String { PhoneWords.format("keptEvidence", []) }
     public static func `keptGuidance`() -> String { PhoneWords.format("keptGuidance", []) }
+    public static func `keptHostQueue`(`place`: String) -> String { PhoneWords.format("keptHostQueue", [`place`]) }
+    public static func `keptHostRemoved`(`place`: String) -> String { PhoneWords.format("keptHostRemoved", [`place`]) }
     public static func `keptProtected`(`place`: String) -> String { PhoneWords.format("keptProtected", [`place`]) }
     public static func `keptQueue`() -> String { PhoneWords.format("keptQueue", []) }
     public static func `keptQueueOwn`() -> String { PhoneWords.format("keptQueueOwn", []) }
@@ -3961,6 +3963,8 @@ extension PhoneWords {
         "keptDraft": [],
         "keptEvidence": [],
         "keptGuidance": [],
+        "keptHostQueue": ["place"],
+        "keptHostRemoved": ["place"],
         "keptProtected": ["place"],
         "keptQueue": [],
         "keptQueueOwn": [],

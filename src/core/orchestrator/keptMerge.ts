@@ -113,7 +113,12 @@ export class KeptMerge {
             ),
           );
         }
-        if (!unattended && review && (kept?.wait !== "queue" || queueWarning !== undefined))
+        if (
+          !unattended &&
+          review &&
+          kept?.wait !== "host-queue" &&
+          (kept?.wait !== "queue" || queueWarning !== undefined)
+        )
           this.host.mergeContinued?.(taskId, review, outcome);
         return outcome;
       }

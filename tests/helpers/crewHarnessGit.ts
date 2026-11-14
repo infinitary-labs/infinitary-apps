@@ -17,6 +17,7 @@ import {
   ForgeError,
   type ForgePull,
   type ForgeReadiness,
+  type MergeAnswer,
 } from "@core/forge";
 import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "@core/forge/forge";
 import { type ChangeDelivery, createChangeDelivery } from "@core/orchestrator/changeDelivery";
@@ -148,13 +149,32 @@ export class KeptForge implements Forge {
     const items: ForgeCheck[] = this.states.map((state) => ({ name: "linux-checks", state }));
     return { items: this.queue ? [...items, this.queue] : items };
   }
-  async putIn(_change: ForgeChange, headSha: string) {
+  /** The branch has a merge queue of GitHub's own: a merge request is taken into it, never merged at once. */
+  hostQueue = false;
+  /** Whether that queue holds the pull request now. */
+  inQueue = false;
+  /** How many times that queue was read. */
+  queueReads = 0;
+  async putIn(_change: ForgeChange, headSha: string): Promise<MergeAnswer> {
     this.sends += 1;
     if (this.refuse) throw this.refuse;
+    if (this.hostQueue) {
+      this.inQueue = true;
+      return { queued: true };
+    }
     this.merges.push(headSha);
     this.squashes.push(_change.squashMessage);
     this.merged = true;
     return { sha: `squash-${headSha}` };
+  }
+  async inHostQueue() {
+    this.queueReads += 1;
+    return this.inQueue;
+  }
+  /** GitHub's queue merges the pull request it holds. */
+  queueMerges() {
+    this.inQueue = false;
+    this.merged = true;
   }
   /** Pull requests that read open whatever the task's own reads (INF-2490). */
   openNumbers = new Set<number>();

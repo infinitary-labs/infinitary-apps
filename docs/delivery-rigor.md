@@ -502,6 +502,9 @@ The captain's merge click on a merge card is an approval of that change, and a r
   On a project that merges through its queue, the attempt that passed every gate above and the last look below, which then records no attempt, writes `infinitary/queue` as waiting on its version instead of merging, and waits on `queue`; it merges only once that status reads `success` at that version ([the forge seam](forge.md), "A project's queue").
 - **Batches of your own (INF-3759 piece 1).**
   On a batched project that carries no team queue, the attempt that passed every gate above and the last look below puts the approved version in line for the person's next batch instead of merging, and waits on `queue`; it reads merged from its batch's receipt, and a change sent back from a batch loses its approval ([the forge seam](forge.md), "Batches of your own").
+- **The host's merge queue (INF-3759 piece 5).**
+  On a GitHub branch with a merge queue of its own, GitHub takes the merge the attempt sent into that queue instead of merging it, and the approval waits on `host-queue` with no card and no wake.
+  The host reads the queue again at most five minutes apart, before any gate above, and sends nothing meanwhile; GitHub's merge spends the approval, and a version GitHub removed waits on `host-removed` until a declared repair, the crewmate's answer to the removal or the captain's click sends one again ([the forge seam](forge.md), "The host's merge queue").
 - **No card after the click (INF-2913).**
   A captain's merge click on any project, on any merge card, takes the card away and the host puts up no card of its own while the merge waits, goes through or stops; the captain's words: "only show a card if the merge went wrong and needs the user's decision".
   Activity's one folding line says what became of the click (`settleLine`, `keptFeedLine`), and the host's sign-in card stays the one card for a refused sign-in.

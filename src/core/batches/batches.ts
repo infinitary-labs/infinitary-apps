@@ -66,6 +66,10 @@ export const BATCH_WORDS = {
     `${name}: ${label} is held because the project allows no merge that keeps one commit for each change.`,
   refused: (name: string, label: string, detail: string) =>
     `${name}: ${label} is held because the merge was refused where the project lives: ${detail}`,
+  queued: (name: string, label: string, place: string) =>
+    `${name}: ${place} took ${label} into the main branch's merge queue. It merges there once the queue's checks pass.`,
+  removed: (place: string) =>
+    `${place} removed the pull request from its merge queue without merging it; its page there says why.`,
   blocked: (name: string, label: string, place: string) =>
     `${name}: ${label} passed its checks, and ${place} holds it for a required review or another rule on the main branch. It merges once that rule lets it through.`,
   retried: (name: string, label: string) =>
@@ -388,6 +392,25 @@ export class Batches {
       if (pushed === open.head) return record;
       return this.recombine(repo, record, "none", pushed);
     }
+    if (open.queued === open.head && forge.inHostQueue) {
+      // The host's own merge queue took this version: it is read there, never sent again.
+      if (await forge.inHostQueue(open.number as number)) return record;
+      // The host may have merged or closed it between the two reads.
+      const after = await forge.pull(open.number as number);
+      if (after.merged) return this.finish(repo, record, after.mergedSha);
+      if (after.state !== "open") return record;
+      // Removed without a merge: held with the host's verdict until a person answers.
+      const { queued: _queued, ...left } = open;
+      const detail = BATCH_WORDS.removed(forge.place ?? "The project's host");
+      const held = hold(
+        { ...record, open: left },
+        { at: this.options.now(), head: open.head, reason: "merge-way", checks: [], detail },
+      );
+      this.save(repo.id, held.record);
+      if (held.fresh)
+        this.options.note(BATCH_WORDS.refused(repo.name, this.label(repo, open), detail));
+      return held.record;
+    }
     if (fixWaits(record)) return this.recombine(repo, record, "fixes");
     if (this.described.get(repo.id) !== open.head) await this.describe(repo, open, forge);
     const change: ForgeChange = {
@@ -494,17 +517,29 @@ export class Batches {
     const only = open.members.length === 1 ? (open.members[0] as BatchMember) : undefined;
     let sha: string | undefined;
     try {
-      sha = (
-        await forge.putIn(
-          {
-            ...change,
-            title: only ? only.title : this.title(open.members),
-            squashMessage: only ? only.body : this.listed(open.members),
-          },
-          open.head,
-          way,
-        )
-      )?.sha;
+      const answer = await forge.putIn(
+        {
+          ...change,
+          title: only ? only.title : this.title(open.members),
+          squashMessage: only ? only.body : this.listed(open.members),
+        },
+        open.head,
+        way,
+      );
+      if (answer?.queued) {
+        // The branch's own merge queue took it: the host merges or removes it, and the passes read which.
+        const { hold: _hold, ...waiting } = open;
+        const next = this.save(repo.id, { ...record, open: { ...waiting, queued: open.head } });
+        this.options.note(
+          BATCH_WORDS.queued(
+            repo.name,
+            this.label(repo, open),
+            forge.place ?? "the project's host",
+          ),
+        );
+        return next;
+      }
+      sha = answer?.sha;
     } catch (caught) {
       if (!(caught instanceof ForgeError) || caught.failure !== "refused") throw caught;
       // The host's verdict on the merge itself: held with its own words, never sent again.

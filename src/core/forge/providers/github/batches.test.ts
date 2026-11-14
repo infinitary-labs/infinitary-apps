@@ -77,6 +77,45 @@ describe("the merges a GitHub project allows", () => {
     expect(calls.map((call) => call.path)).toContain("/repos/acme/meter/rules/branches/main");
   });
 
+  // Intent: a batch of several keeps one commit for each change (the approved
+  // plan's piece 1), and a merge queue merges its own one way whatever the
+  // request names (piece 5), so a queue that squashes allows no such merge.
+  it("allows only the one way the default branch's merge queue merges", async () => {
+    const queue = (merge_method: string) => ({
+      type: "merge_queue",
+      ruleset_id: 4410,
+      parameters: {
+        check_response_timeout_minutes: 60,
+        grouping_strategy: "ALLGREEN",
+        max_entries_to_build: 5,
+        max_entries_to_merge: 5,
+        merge_method,
+        min_entries_to_merge: 1,
+        min_entries_to_merge_wait_minutes: 5,
+      },
+    });
+    expect(await projectWith({}, [queue("SQUASH")]).forge.mergeWays()).toEqual({
+      squash: true,
+      rebase: false,
+      merge: false,
+    });
+    expect(await projectWith({}, [queue("MERGE")]).forge.mergeWays()).toEqual({
+      squash: false,
+      rebase: false,
+      merge: true,
+    });
+    // Beside a rule that lists methods, only a way both allow is left.
+    const both = projectWith({}, [
+      {
+        type: "pull_request",
+        ruleset_id: 4410,
+        parameters: { allowed_merge_methods: ["squash", "rebase"] },
+      },
+      queue("REBASE"),
+    ]);
+    expect(await both.forge.mergeWays()).toEqual({ squash: false, rebase: true, merge: false });
+  });
+
   it("answers the settings alone where the project has no rules to read", async () => {
     // A plan without rule sets answers 404; a sign-in that may not read them, 403.
     for (const status of [404, 403]) {
@@ -116,8 +155,11 @@ describe("merging a batch's pull request on GitHub", () => {
   };
   const merging = () =>
     forgeAnswering(({ method, path }) =>
-      method === "PUT" && path === "/repos/acme/meter/pulls/31/merge"
-        ? Response.json({ merged: true, sha: "4d6f8a0c1e3a5c7e9b1d3f5a7c9e1b3d5f7a9c2b" })
+      method === "PUT" && path === "/repos/acme/meter/pulls/31/merge-async"
+        ? Response.json({
+            status: "merged",
+            details: { sha: "4d6f8a0c1e3a5c7e9b1d3f5a7c9e1b3d5f7a9c2b" },
+          })
         : notFound(),
     );
 

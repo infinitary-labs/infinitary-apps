@@ -855,6 +855,10 @@ export function keptFeedSaid(
     case "queue":
       if (queueOwned === "own") return said("keptQueueOwn");
       return queueOwned ? said("keptQueueOwned") : said("keptQueue");
+    case "host-queue":
+      return said("keptHostQueue", where);
+    case "host-removed":
+      return said("keptHostRemoved", where);
   }
 }
 
@@ -922,6 +926,10 @@ export function keptNote(
       if (queueOwned === "own")
         return `${kept} The project merges the captain's approved changes together: ${head} is in line for one batch pull request, as one commit of its own, and the host merges that pull request once its checks pass. A change the batch leaves out, or the only change of a batch whose checks fail, wakes its crewmate; a failed batch of several is told to you once. Nothing is needed from you now. ${declare}`;
       return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting. ${queueOwned ? "The project's queue merges after its pass; the app observes its receipt." : "The app merges after the project's queue passes this version."}${queueWarning ? ` ${queueWarning}` : ""} A batch that fails in the queue Infinitary ships keeps the version waiting and pauses, and you hear the pause once; a change the queue fails or sends back wakes the crewmate like any failed check. ${declare}`;
+    case "host-queue":
+      return `${kept} ${place} took ${head} into the merge queue of its branch: it is queued there, not merged. ${place} merges it once the queue's own checks pass, and the task closes then; the host reads the queue on its own and sends nothing again meanwhile. Nothing is needed from you or the crewmate. ${declare}`;
+    case "host-removed":
+      return `${kept} ${place} removed ${head} from the merge queue of its branch without merging it, and the host sends nothing again at that version on its own. Steer the crewmate to read why on the pull request's page (failed checks of the queue's group, a conflict with the branch, or someone removed it). A fault in the change it fixes in a new version, which the host sends to the queue once its repair is declared; with nothing left to change, it answers the removal with check_change's answered verdict at ${head}, and the host sends that version to the queue once more when its turn ends. ${declare}`;
   }
 }
 
@@ -939,16 +947,24 @@ const TIMED_WAITS: Partial<Record<MergeWait, number>> = {
   draft: 10 * 60_000,
   // The check watch wakes on the queue's answer; this reads it again past the watch's bound.
   queue: 10 * 60_000,
+  // The host's own merge queue tells the app nothing: its place there is read again.
+  "host-queue": 60_000,
 };
 
 /** The longest a timed wait backs off to. */
 const MAX_RETRY_MS = 30 * 60_000;
 
+/**
+ * A wait only a read ends, since the host announces nothing: how far apart
+ * its reads may grow, which is how late the app can learn the host merged.
+ */
+const READ_ONLY_WAITS: Partial<Record<MergeWait, number>> = { "host-queue": 5 * 60_000 };
+
 /** When a timed wait is read again, backing off with each try; undefined for an untimed wait. */
 export function retryAfter(wait: MergeWait, retries: number, now: number): number | undefined {
   const base = TIMED_WAITS[wait];
   if (base === undefined) return undefined;
-  return now + Math.min(base * 2 ** Math.min(retries, 5), MAX_RETRY_MS);
+  return now + Math.min(base * 2 ** Math.min(retries, 5), READ_ONLY_WAITS[wait] ?? MAX_RETRY_MS);
 }
 
 /**
@@ -965,6 +981,7 @@ export function wakesFirstmate(wait: MergeWait): boolean {
     wait === "refused" ||
     wait === "sign-in" ||
     wait === "protected" ||
-    wait === "draft"
+    wait === "draft" ||
+    wait === "host-removed"
   );
 }

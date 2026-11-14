@@ -750,6 +750,8 @@
   {"said":{"m":"keptDraft"},"words":"Cannot merge yet: its pull request is a draft. Your merge is kept and runs once it is ready for review."},
   {"said":{"m":"keptEvidence"},"words":"Cannot merge yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. Your merge is kept and runs if that check finds the work is still what you approved."},
   {"said":{"m":"keptGuidance"},"words":"Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not."},
+  {"said":{"m":"keptHostQueue","a":{"place":"‹place›"}},"words":"Waiting for the merge queue: ‹place› took this version into your project's merge queue. Your merge is kept. ‹place› merges it after the queue's checks pass."},
+  {"said":{"m":"keptHostRemoved","a":{"place":"‹place›"}},"words":"Cannot merge yet: ‹place› removed this version from your project's merge queue without merging it. Your merge is kept. A fixed version from its crewmate goes to the queue again."},
   {"said":{"m":"keptProtected","a":{"place":"‹place›"}},"words":"Cannot merge yet: ‹place› holds it for a required review or another rule on the main branch. Your merge is kept and runs once ‹place› allows it."},
   {"said":{"m":"keptQueue"},"words":"Waiting for the batch check: your project's queue is testing this version with other approved work. Your merge is kept. The app will merge it after your project's queue passes it."},
   {"said":{"m":"keptQueueOwn"},"words":"Waiting for the batch check: this version merges with your other approved changes, as one batch pull request. Your merge is kept. The app merges the batch after its checks pass."},

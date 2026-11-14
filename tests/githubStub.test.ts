@@ -59,8 +59,7 @@ async function forgeOver(heads: Record<string, string>) {
   return { github: stub, forge };
 }
 
-const mergeRequests = (stub: GitHubStub) =>
-  stub.requests().filter((line) => line.endsWith("/merge"));
+const mergeRequests = (stub: GitHubStub) => stub.mergeRequests();
 
 describe("the GitHub stand-in, through the app's forge", () => {
   // The approved queue protocol writes trusted merge words before a waiting
@@ -335,7 +334,9 @@ describe("the GitHub stand-in, through the app's forge", () => {
   });
 
   describe("refuses what GitHub refuses, and records no merge", () => {
-    it("a put-in at a head the change has moved on from (409)", async () => {
+    // Each refusal comes back as the background merge's failed result, in
+    // GitHub's own words, which is what the app reads a refusal by.
+    it("a put-in at a head the change has moved on from", async () => {
       const branch = "fm/task-meter";
       const heads = { [branch]: sha("checked") };
       const { github, forge } = await forgeOver(heads);
@@ -345,12 +346,12 @@ describe("the GitHub stand-in, through the app's forge", () => {
       const refusal = await forge.putIn(checked, sha("checked")).catch((caught: unknown) => caught);
       expect(refusal).toBeInstanceOf(ForgeError);
       expect(refusal).toMatchObject({ failure: "refused" });
-      expect(String((refusal as Error).message)).toContain("409");
+      expect(String((refusal as Error).message)).toContain("Head branch was modified");
       expect(mergeRequests(github)).toHaveLength(1);
       expect(github.merges()).toEqual([]);
     });
 
-    it("a change in conflict with newer work (405), until a later head carries that work - read back by its number", async () => {
+    it("a change in conflict with newer work, until a later head carries that work - read back by its number", async () => {
       const branch = "fm/task-meter";
       const heads = { [branch]: sha("approved") };
       const { github, forge } = await forgeOver(heads);
@@ -366,7 +367,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
       });
       await expect(forge.putIn(change, sha("approved"))).rejects.toMatchObject({
         failure: "refused",
-        message: expect.stringContaining("405"),
+        message: expect.stringContaining("merge conflicts"),
       });
       expect(github.merges()).toEqual([]);
       // INF-1342: after the refused send, a repair's background-job idle

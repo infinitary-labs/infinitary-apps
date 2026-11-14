@@ -100,7 +100,7 @@ export type StubMerge = {
   message: string;
 };
 
-/** One merge past the rules (`merge-async`) GitHub accepted, as the app asked for it. */
+/** One merge past the rules (`merge-async` with `bypass_rules`) GitHub accepted, as the app asked for it. */
 export type StubAsyncMerge = StubMerge & { action: string; bypass: boolean };
 
 /** One rule set holding the default branch, and what the signed-in person may skip. */
@@ -123,12 +123,31 @@ export type GitHubStub = {
   requests: () => string[];
   /** Every merge GitHub accepted, in order; a refused one is only a request. */
   merges: () => StubMerge[];
+  /**
+   * Every merge the app asked GitHub for, as `requests` logs it, in order:
+   * the background merge (`PUT .../pulls/N/merge-async`) and the direct one
+   * (`PUT .../pulls/N/merge`), whatever GitHub answered.
+   */
+  mergeRequests: () => string[];
   /** Verification requests accepted for an existing pushed branch. */
   dispatches: () => StubDispatch[];
   /** Every by-hand start of the project's shipped queue, `POST .../infinitary-queue.yml/dispatches`, in order. */
   queueStarts: () => { ref: string; inputs: Record<string, string> }[];
-  /** Every asynchronous merge GitHub accepted, in order. */
+  /** Every merge past the branch's rules GitHub accepted, in order. */
   asyncMerges: () => StubAsyncMerge[];
+  /**
+   * Give the default branch a merge queue of GitHub's own, or take it away:
+   * with one, GitHub takes an ordinary merge request that names the version
+   * alone into the queue instead of merging it, and refuses one that names
+   * a merge method or commit words.
+   */
+  setMergeQueue: (on: boolean) => void;
+  /** The pull requests that queue holds now, by number. */
+  inMergeQueue: () => number[];
+  /** GitHub's queue merges a pull request it holds, as it does once the queue's own checks pass. */
+  queueMerges: (number: number) => void;
+  /** GitHub removes a pull request from its queue without merging it. */
+  queueRemoves: (number: number) => void;
   /** Contributor request text and review comments, as the host holds them. */
   requestText: (number: number) => { title: string; description: string } | undefined;
   comments: (number: number) => { id: number; body: string }[];
@@ -333,6 +352,10 @@ export async function startGitHubStub(
   let pauseIssue: { number: number; body: string; assignees?: string[] } | null = null;
   const asyncMerges: StubAsyncMerge[] = [];
   const asyncResults = new Map<string, { status: string; details: Record<string, unknown> }>();
+  let asyncRequests = 0;
+  /** The default branch's own merge queue, when a spec gives it one, and what it holds. */
+  let mergeQueue = false;
+  const hostQueue = new Set<number>();
   let rulesets: StubRuleset[] = [];
   const dispatches: StubDispatch[] = [];
   const queueStarts: { ref: string; inputs: Record<string, string> }[] = [];
@@ -454,6 +477,7 @@ export async function startGitHubStub(
         const path = url.pathname
           .replace(/^\/api\/v3(?=\/)/, "")
           .replace(/^\/api\/graphql$/, "/graphql");
+        const enterprise = /^\/api\/v3(?=\/)/.test(url.pathname);
         const method = req.method ?? "GET";
         log.push(`${method} ${url.pathname}`);
         const send = (status: number, json: unknown) => {
@@ -580,6 +604,21 @@ export async function startGitHubStub(
           return;
         }
         if (method === "POST" && path === "/graphql") {
+          const asked = JSON.parse(raw || "{}") as {
+            query?: string;
+            variables?: { number?: number };
+          };
+          // GitHub's own reading of its merge queue, which its REST pull request does not carry.
+          if (asked.query?.includes("isInMergeQueue")) {
+            send(200, {
+              data: {
+                repository: {
+                  pullRequest: { isInMergeQueue: hostQueue.has(asked.variables?.number ?? -1) },
+                },
+              },
+            });
+            return;
+          }
           const pulls = [
             ...openChanges,
             ...[...opened.values()]
@@ -1151,7 +1190,9 @@ export async function startGitHubStub(
           return;
         }
         const mergeAsync = /^\/pulls\/(\d+)\/merge-async$/.exec(rest);
-        if (method === "PUT" && mergeAsync) {
+        // A GitHub Enterprise Server documents no background merge: it answers
+        // as it does any path it does not know, and the app merges directly.
+        if (method === "PUT" && mergeAsync && !enterprise) {
           const number = Number(mergeAsync[1]);
           const body = JSON.parse(raw || "{}") as {
             sha?: string;
@@ -1164,35 +1205,74 @@ export async function startGitHubStub(
           const pull =
             [...opened.values()].find((open) => open.number === number) ??
             (anyPull?.number === number ? anyPull : undefined);
-          if (!pull || pull.merged) {
-            send(400, { message: "Pull request is not open" });
+          if (!pull) {
+            send(404, { message: "Not Found" });
             return;
           }
-          const uuid = `merge-${asyncMerges.length + 1}-${number}`;
-          const head = headOfPull(pull);
-          if (!body.sha || body.sha !== head) {
-            asyncResults.set(uuid, {
-              status: "failed",
-              details: {
-                uuid,
-                message: "Head branch was modified. Review and try the merge again.",
-              },
+          // A merge past the rules skips the queue and the conflict check a spec scripts.
+          const ordinary = body.bypass_rules !== true;
+          // GitHub answers at once for a pull request it already merged or queued.
+          if (pull.merged || (ordinary && hostQueue.has(number))) {
+            send(200, {
+              status: pull.merged ? "merged" : "enqueued",
+              details: pull.merged ? { sha: `squash-${headOfPull(pull)}` } : {},
             });
+            return;
+          }
+          if (ordinary) onMergeRequest();
+          asyncRequests += 1;
+          const uuid = `merge-${asyncRequests}-${number}`;
+          const head = headOfPull(pull);
+          const failed = (message: string) =>
+            asyncResults.set(uuid, { status: "failed", details: { uuid, message } });
+          // GitHub's "match head commit" guard: the change moved on since.
+          if (!body.sha || body.sha !== head) {
+            failed("Head branch was modified. Review and try the merge again.");
+          } else if (ordinary && conflicted(body.sha)) {
+            knownConflicts.add(body.sha);
+            failed("Pull Request has merge conflicts");
+          } else if (ordinary && mergeQueue && body.merge_action !== "direct_merge") {
+            // A merge queue merges its own way and writes its own commit
+            // words: GitHub's answer, read on a real queue, to a request
+            // that names either.
+            if (
+              body.merge_method !== undefined ||
+              body.commit_title !== undefined ||
+              body.commit_message !== undefined
+            ) {
+              failed("Custom merge params are not supported when merging via a merge queue");
+            } else {
+              hostQueue.add(number);
+              asyncResults.set(uuid, { status: "enqueued", details: { uuid } });
+            }
+          } else if (body.merge_action === "merge_queue") {
+            // The stand-in's own words: GitHub's for a branch with no queue were never read.
+            failed("the stand-in has no merge queue on this branch");
           } else {
-            asyncMerges.push({
+            const merged = {
               number,
               sha: body.sha,
               method: body.merge_method ?? "merge",
               title: body.commit_title ?? pull.title,
               message: body.commit_message ?? "",
-              action: body.merge_action ?? "default",
-              bypass: body.bypass_rules === true,
-            });
+            };
+            if (ordinary) merges.push(merged);
+            else
+              asyncMerges.push({
+                ...merged,
+                action: body.merge_action ?? "default",
+                bypass: true,
+              });
             pull.merged = true;
+            if (ordinary) pull.headSha = body.sha;
             onPutIn(body.sha);
             asyncResults.set(uuid, {
               status: "merged",
-              details: { uuid, sha: `squash-${body.sha}`, message: "Pull request merged" },
+              details: {
+                uuid,
+                sha: ordinary ? body.sha : `squash-${body.sha}`,
+                message: "Pull request merged",
+              },
             });
           }
           // Accepted to run in the background: the result is read by its id.
@@ -1297,9 +1377,32 @@ export async function startGitHubStub(
     },
     requests: () => [...log],
     merges: () => [...merges],
+    mergeRequests: () =>
+      log.filter((request) => /^PUT \S+\/pulls\/\d+\/merge(?:-async)?$/.test(request)),
     dispatches: () => [...dispatches],
     queueStarts: () => [...queueStarts],
     asyncMerges: () => [...asyncMerges],
+    setMergeQueue: (on) => {
+      mergeQueue = on;
+    },
+    inMergeQueue: () => [...hostQueue],
+    queueMerges: (number) => {
+      const pull =
+        [...opened.values()].find((open) => open.number === number) ??
+        (anyPull?.number === number ? anyPull : undefined);
+      if (!pull || !hostQueue.delete(number))
+        throw new Error(`the merge queue does not hold pull request #${number}`);
+      const head = headOfPull(pull);
+      pull.merged = true;
+      if (head) {
+        pull.headSha = head;
+        onPutIn(head);
+      }
+    },
+    queueRemoves: (number) => {
+      if (!hostQueue.delete(number))
+        throw new Error(`the merge queue does not hold pull request #${number}`);
+    },
     requestText: (number) => {
       const pull =
         [...opened.values()].find((pull) => pull.number === number) ??

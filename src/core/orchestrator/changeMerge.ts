@@ -121,6 +121,10 @@ export type MergeStop =
   | "outcome"
   | "guidance"
   | "queue"
+  /** The host's own merge queue took the change and has not merged it yet. */
+  | "host-queue"
+  /** The host removed the change from its own merge queue without merging it. */
+  | "host-removed"
   | "refused";
 
 /**
@@ -149,6 +153,13 @@ export type MergeGuard = {
   held?: () => string | undefined;
   /** Revoke an interrupted publication through its durable approval owner. */
   queueInterrupted?: () => Promise<void>;
+  /**
+   * This version already went to the host's own merge queue under this
+   * approval: its place there is read before anything is sent. `answered`
+   * is its crewmate's answer to the host removing it, which sends that
+   * version once more; without one only the captain's own click does.
+   */
+  handed?: () => { answered: boolean } | undefined;
   beforeDispatch: (head: string, mark?: boolean) => string | undefined;
 };
 
@@ -326,6 +337,12 @@ export class ChangeMerge {
         };
       }
     }
+    // The host's own merge queue took this version: its place there is read
+    // before any gate, since the checks and the branch's rules are the
+    // queue's to hold now (docs/forge.md, "The host's merge queue").
+    const handed =
+      guard && checked ? await this.handedOver(checked.forge, checked.change, guard) : undefined;
+    if (handed) return handed;
     // A queue-pr project's batch check is waiting at this version while the
     // pull request's own checks passed: the merge waits on the queue, which
     // no checks override passes (docs/forge.md, "A project's queue").
@@ -457,6 +474,9 @@ export class ChangeMerge {
           head,
           settle ? UNDECIDED_REREAD_MS : [],
         );
+        // The host's own merge queue merges whenever its checks pass: a merge
+        // made since the checks were read is the merge, never a closed pull request.
+        if (pull.merged) return alreadyMerged(forge, pull);
         const held = readinessStop(forge, pull, { head });
         if (held && !(queueWait && held.stop === "protected")) return held;
       }
@@ -517,6 +537,7 @@ export class ChangeMerge {
       }
       dispatched = true;
       const receipt = await forge.putIn(publishedChange, publishedChange.headSha);
+      if (receipt?.queued) return hostQueued(forge, change);
       this.startNextBatch(taskId, "merge");
       return {
         ok: true,
@@ -1205,6 +1226,29 @@ export class ChangeMerge {
   }
 
   /**
+   * A version the host's own merge queue took under this approval
+   * (docs/forge.md, "The host's merge queue"), read where it stands before
+   * anything is sent: still queued waits on; merged is the merge; out of
+   * the queue and open, the host removed it, and it is sent again only on
+   * its crewmate's answer to that removal or the captain's own click.
+   * Undefined when nothing was handed over, or it is to be sent again.
+   */
+  async handedOver(
+    forge: Forge,
+    change: ForgeChange,
+    guard: MergeGuard,
+  ): Promise<PrOutcome | undefined> {
+    const handed = guard.handed?.();
+    if (!handed || !forge.inHostQueue || change.number === undefined) return undefined;
+    if (await forge.inHostQueue(change.number)) return hostQueued(forge, change);
+    // The host may have merged it between the two reads.
+    const pull = await this.context.pullOf(forge, change.number);
+    if (pull.merged) return alreadyMerged(forge, pull);
+    if (pull.state !== "open") return closedUnmerged(forge, pull);
+    return guard.unattended && !handed.answered ? hostRemoved(forge, change) : undefined;
+  }
+
+  /**
    * After a request whose answer never came, or with no open pull request
    * for the branch: the pinned pull request as the host holds it now. A
    * merge at the approved head is the merge; a closed one ends the approval;
@@ -1223,16 +1267,7 @@ export class ChangeMerge {
       return {};
     }
     if (pull.merged) return { merged: alreadyMerged(located.forge, pull) };
-    if (pull.state !== "open") {
-      return {
-        closed: {
-          ok: false,
-          text: `Cannot merge: ${numberLabel(located.forge, pull.number)} was closed without merging.`,
-          plain: "its pull request was closed without merging",
-          stop: "closed",
-        },
-      };
-    }
+    if (pull.state !== "open") return { closed: closedUnmerged(located.forge, pull) };
     return { open: pull.headSha === guard.head };
   }
 
@@ -1252,7 +1287,11 @@ export class ChangeMerge {
     if (isSignInForgeFailure(caught)) return "sign-in";
     if (isTransientForgeFailure(caught)) return undefined;
     if (!(caught instanceof ForgeError) || caught.failure !== "refused") return undefined;
-    if (/^GitHub answered 409 to PUT \S+\/merge: Head branch was modified/i.test(message)) {
+    if (
+      /^GitHub (?:answered 409 to PUT \S+\/merge(?:-async)?|did not merge \S+): Head branch was modified/i.test(
+        message,
+      )
+    ) {
       return "moved";
     }
     try {
@@ -1338,6 +1377,40 @@ export class ChangeMerge {
 }
 
 /** The merge already made: the outcome a put-in answers when nothing is left to send. */
+/** What a merge handed to the host's own merge queue says while the host holds it there. */
+export const HOST_QUEUE_WAITING_WORDS = "waiting for the merge queue";
+
+/** The host's own merge queue took the change: nothing merged yet, and the host merges or removes it. */
+export function hostQueued(forge: Forge, change: ForgeChange): PrOutcome {
+  const place = forge.place ?? "the project's host";
+  return {
+    ok: false,
+    text: `Cannot merge yet - ${HOST_QUEUE_WAITING_WORDS}: ${place} took ${forge.label(change)} into the branch's merge queue at ${change.headSha}. It is queued, not merged: ${place} merges it once the queue's own checks pass, or removes it.`,
+    plain: HOST_QUEUE_WAITING_WORDS,
+    stop: "host-queue",
+  };
+}
+
+/** The host removed the change from its own merge queue without merging it: nothing is sent again unasked. */
+export function hostRemoved(forge: Forge, change: ForgeChange): PrOutcome {
+  const place = forge.place ?? "the project's host";
+  return {
+    ok: false,
+    text: `Cannot merge: ${place} removed ${forge.label(change)} from the branch's merge queue without merging it, and its page there says why. Nothing is sent again at ${change.headSha} unasked: a new version goes to the queue once its repair is declared with check_change conflictRepair, and this one goes once more on its crewmate's answer to the removal (check_change's answered verdict at this version) when nothing in it is left to change.`,
+    plain: "it was removed from the merge queue without merging",
+    stop: "host-removed",
+  };
+}
+
+function closedUnmerged(forge: Forge, pull: ForgePull): PrOutcome {
+  return {
+    ok: false,
+    text: `Cannot merge: ${numberLabel(forge, pull.number)} was closed without merging.`,
+    plain: "its pull request was closed without merging",
+    stop: "closed",
+  };
+}
+
 function alreadyMerged(forge: Forge, pull: ForgePull): PrOutcome {
   return {
     ok: true,

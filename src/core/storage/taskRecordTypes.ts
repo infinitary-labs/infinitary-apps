@@ -175,7 +175,11 @@ export type MergeWait =
   /** The captain's newer guidance waits for its crewmate to declare its impact. */
   | "guidance"
   /** A queue-pr project's queue has not passed this version yet: its \`infinitary/queue\` status is waiting. */
-  | "queue";
+  | "queue"
+  /** The host's own merge queue took this version and has not merged it yet. */
+  | "host-queue"
+  /** The host removed this version from its own merge queue without merging it. */
+  | "host-removed";
 
 /**
  * The captain's merge approval (FI3-304), version 1: minted by his click on
@@ -254,6 +258,13 @@ export type MergeAuthorization = {
   holds?: boolean;
   /** What the newest run stopped on while it stands. */
   waiting?: { on: MergeWait; head?: string; at: number };
+  /**
+   * The version the host's own merge queue took under this approval: the
+   * host merges or removes it, and no later run sends that version again
+   * on its own, whatever it stopped on since. `removed` is when the app
+   * first read it out of the queue, still open.
+   */
+  handed?: { head: string; at: number; removed?: number };
   /**
    * A declared repair whose impact is unknown: not eligible until its
    * independent assessment decides it (FI3-663).

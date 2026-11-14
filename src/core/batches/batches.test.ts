@@ -94,6 +94,12 @@ function standInHost(ways: MergeWays) {
     notes: [] as { number: number; note: string }[],
     /** The host's own words for refusing the next merges. */
     refusal: undefined as string | undefined,
+    /** The default branch has GitHub's merge queue: a merge request is taken into it, never merged at once. */
+    mergeQueue: false,
+    /** The pull requests that queue holds now. */
+    queued: new Set<number>(),
+    /** How many times that queue was read. */
+    queueReads: 0,
     /** The connection drops as the next pull request opens: its answer is lost, and so is every read after. */
     loseNextOpen: false,
     offline: false,
@@ -241,7 +247,15 @@ function standInHost(ways: MergeWays) {
         ...(change.squashMessage ? { body: change.squashMessage } : {}),
       });
       if (host.refusal) throw new ForgeError("refused", host.refusal);
+      if (host.mergeQueue) {
+        host.queued.add(number);
+        return { queued: true as const };
+      }
       return { sha: host.land(number, way ?? "squash", { title: change.title }) };
+    },
+    inHostQueue: async (number: number) => {
+      host.queueReads += 1;
+      return host.queued.has(number);
     },
     mergeWays: async () => host.ways,
     deleteBranch: async (branch: string) => {
@@ -916,6 +930,87 @@ describe("merging a batch of several", () => {
       home.heard.pushes.at(-1)?.head,
     ]);
     expect(home.place(PARSER)).toMatchObject({ state: "merged" });
+  });
+});
+
+// Intent: the approved plan's piece 5, for batches: a branch with a merge
+// queue of GitHub's own takes the batch's pull request, and the batch waits
+// "until the host merges or removes it".
+describe("a batch on a branch with GitHub's merge queue", () => {
+  async function queuedBatch() {
+    const home = await batchOfTwo();
+    home.host.mergeQueue = true;
+    home.host.report([passed("build")]);
+    home.host.ready("clean");
+    await home.pass();
+    return home;
+  }
+
+  it("hands the batch to the queue, waits there without sending again, and settles its tasks once GitHub merges it", async () => {
+    const home = await queuedBatch();
+    const head = home.open().head;
+    expect(home.host.merges).toEqual([expect.objectContaining({ number: 31, head })]);
+    expect(home.open()).toMatchObject({ queued: head });
+    expect(home.open().hold).toBeUndefined();
+    expect(home.heard.notes.at(-1)).toBe(BATCH_WORDS.queued("meter", "#31", "GitHub"));
+    // Queued is not merged: no receipt, no task settled.
+    expect(home.place(PARSER)).not.toMatchObject({ state: "merged" });
+    expect(home.heard.settled).toEqual([]);
+
+    // Later passes, and the app starting again, read the queue and send nothing.
+    const reads = home.host.queueReads;
+    await home.pass();
+    await home.restart();
+    expect(home.host.queueReads).toBe(reads + 2);
+    expect(home.host.merges).toHaveLength(1);
+    expect(home.open()).toMatchObject({ queued: head });
+
+    // GitHub's queue merges it, each change its own commit.
+    home.host.queued.delete(31);
+    home.host.land(31, "rebase");
+    await home.pass();
+    expect(home.record().open).toBeUndefined();
+    expect(home.place(PARSER)).toMatchObject({
+      state: "merged",
+      receipt: { sha: home.host.main[0]?.sha, number: 31 },
+    });
+    expect(home.place(EXPORT)).toMatchObject({
+      state: "merged",
+      receipt: { sha: home.host.main[1]?.sha, number: 31 },
+    });
+    expect(home.heard.settled).toEqual([["t-parser", "t-export"]]);
+    expect(home.host.merges).toHaveLength(1);
+  });
+
+  it("holds a batch GitHub removed from its queue, never sends that version again, and sends the new version Try again makes", async () => {
+    const home = await queuedBatch();
+    const head = home.open().head;
+    // GitHub removes it: the pull request is open and out of the queue.
+    home.host.queued.delete(31);
+    await home.pass();
+    expect(home.open().queued).toBeUndefined();
+    expect(home.open().hold).toMatchObject({
+      reason: "merge-way",
+      head,
+      detail: BATCH_WORDS.removed("GitHub"),
+    });
+    expect(home.heard.notes.at(-1)).toBe(
+      BATCH_WORDS.refused("meter", "#31", BATCH_WORDS.removed("GitHub")),
+    );
+    const told = home.heard.notes.length;
+    await home.pass();
+    await home.pass();
+    expect(home.host.merges).toHaveLength(1);
+    expect(home.heard.notes).toHaveLength(told);
+
+    // Try again makes a new version, which goes to the queue once its checks pass.
+    expect(await home.batches.answer(REPO, { action: "try-again", head })).toBeUndefined();
+    home.host.report([passed("build")]);
+    await home.pass();
+    const again = home.heard.pushes.at(-1)?.head;
+    expect(again).not.toBe(head);
+    expect(home.host.merges.map((merge) => merge.head)).toEqual([head, again]);
+    expect(home.open()).toMatchObject({ queued: again });
   });
 });
 

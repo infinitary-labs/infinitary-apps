@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { removalAnswer } from "@shared/checkRepair";
 import { failedBatch } from "@shared/checkSnapshot";
 import { hasChangeRequests } from "@shared/forge";
 import { overridePasses } from "@shared/holds";
@@ -63,6 +64,8 @@ function waitOf(result: SettleOutcome, undecided: boolean): MergeWait {
     case "outcome":
     case "guidance":
     case "queue":
+    case "host-queue":
+    case "host-removed":
       return result.stop;
     default:
       if (result.refusal?.refused === "not-signed-in") return "sign-in";
@@ -736,6 +739,20 @@ export class KeptApproval {
         this.removeQueueMark(taskId, authorization);
         await this.queueMarksSettled(taskId);
       },
+      // The host's own merge queue took this version under this approval:
+      // its place there is read before anything is sent again, and a
+      // removal is sent again only on its crewmate's answer to it.
+      handed: () => {
+        const delivery = this.host.tasks.get(taskId)?.delivery;
+        const now = standingAuthorization(delivery);
+        const handed = now?.id === authorization.id ? now.handed : undefined;
+        if (handed?.head !== head) return undefined;
+        return {
+          answered:
+            handed.removed !== undefined &&
+            removalAnswer(delivery, head, handed.removed) !== undefined,
+        };
+      },
       beforeDispatch: (dispatchHead, mark) => {
         const record = this.host.tasks.get(taskId);
         const now = standingAuthorization(record?.delivery);
@@ -817,12 +834,23 @@ export class KeptApproval {
     const changed = current.waiting?.on !== wait || current.waiting.head !== head;
     const retries = changed ? 0 : (current.retries ?? 0) + 1;
     const retryAt = retryAfter(wait, retries, now);
+    // The host's own merge queue took this version, or was read to have
+    // removed it: kept apart from the wait, which any later stop replaces.
+    const handed =
+      wait === "host-queue"
+        ? current.handed?.head === head && current.handed.removed === undefined
+          ? current.handed
+          : { head, at: now }
+        : wait === "host-removed" && current.handed?.head === head
+          ? { ...current.handed, removed: current.handed.removed ?? now }
+          : current.handed;
     this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...current,
         waiting: { on: wait, head, at: now },
         retries,
         retryAt,
+        ...(handed ? { handed } : {}),
         ...(result.stop === "outcome" ? {} : { attempt: undefined }),
       },
     });

@@ -50,6 +50,7 @@ import {
   isFullCommitId,
   isSignInForgeFailure,
   isTransientForgeFailure,
+  type MergeAnswer,
   ownChecksOf,
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
@@ -77,11 +78,10 @@ export const GITHUB_API_URL = "https://api.github.com";
 /** GitHub's page size for a list read that names no `per_page`. */
 const GITHUB_DEFAULT_PER_PAGE = 30;
 const API_VERSION = "2022-11-28";
-/** GitHub documents its asynchronous merge, the one call that can skip rules, at this version. */
+/** GitHub documents its asynchronous merge, the call every merge goes through, at this version. */
 const ASYNC_MERGE_API_VERSION = "2026-03-10";
-/** How often the app reads an asynchronous merge's result, and how far apart, before it calls it unknown. */
-const ASYNC_MERGE_READS = 5;
-const ASYNC_MERGE_READ_DELAY_MS = 2000;
+/** How long the app waits before each read of an asynchronous merge's result; after the last it calls the result unknown. */
+const ASYNC_MERGE_READ_DELAYS_MS = [250, 500, 1000, 2000, 3000, 4000];
 /** The most pages of a branch's rules a reading follows (100 a page). */
 const MAX_RULE_PAGES = 5;
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -724,33 +724,82 @@ export class GitHubForge implements Forge {
     return { items, complete: false };
   }
 
+  /**
+   * GitHub's asynchronous merge (`PUT .../merge-async`) with the version
+   * guard and GitHub's own choice of action: a branch with a merge queue
+   * takes the pull request into it, and any other branch merges it directly.
+   * A merge queue takes the version alone, so a request it refuses for
+   * naming a merge method or commit words is followed by one that names
+   * neither. A GitHub that does not know the call (an Enterprise Server
+   * before it) answers 404 before anything is sent on, and gets the direct
+   * merge.
+   */
   async putIn(
     change: ForgeChange,
     headSha: string,
     way: MergeWay = "squash",
-  ): Promise<{ sha?: string }> {
+  ): Promise<MergeAnswer> {
     this.requireMaintainer();
+    const path = `${this.repoPath()}/pulls/${numbered(change)}/merge`;
     // `sha` is GitHub's "match head commit" guard: the merge is refused if
     // the change moved on after its checks were read.
-    const answer = (await this.request(
-      "PUT",
-      `${this.repoPath()}/pulls/${numbered(change)}/merge`,
-      {
-        sha: headSha,
-        merge_method: way,
-        // A rebase merge writes no commit of its own: each change keeps its own.
-        ...(way === "rebase"
-          ? {}
-          : {
-              commit_title: requireNamed(
-                change.title ?? "",
-                "pull request title",
-                this.options.namingRule?.() ?? null,
-              ),
-              commit_message: change.squashMessage ?? change.body ?? "",
-            }),
-      },
-    )) as { merged?: boolean; sha?: string; message?: string } | null;
+    const body = {
+      sha: headSha,
+      merge_method: way,
+      // A rebase merge writes no commit of its own: each change keeps its own.
+      ...(way === "rebase"
+        ? {}
+        : {
+            commit_title: requireNamed(
+              change.title ?? "",
+              "pull request title",
+              this.options.namingRule?.() ?? null,
+            ),
+            commit_message: change.squashMessage ?? change.body ?? "",
+          }),
+    };
+    const first = await this.asyncMerge(`${path}-async`, body, {
+      ordinary: true,
+      direct: () => this.putInDirect(change, path, body),
+    });
+    if (first && "direct" in first) return first.direct;
+    // A merge queue merges its own way and writes its own commit words, and
+    // GitHub refuses a request to one that names either: a result that
+    // failed, with nothing sent on. The version alone then goes to the
+    // queue by name, an action that takes it into the queue or refuses it
+    // and can never merge it another way.
+    const reading =
+      first?.status === "failed" && /\bmerge queue\b/i.test(first.details?.message ?? "")
+        ? await this.asyncMerge(
+            `${path}-async`,
+            { sha: headSha, merge_action: "merge_queue" },
+            { ordinary: true },
+          )
+        : first;
+    if (reading?.status === "merged")
+      return reading.details?.sha ? { sha: reading.details.sha } : {};
+    if (reading?.status === "enqueued") return { queued: true };
+    if (reading?.status === "failed") {
+      const said = reading.details?.message ?? "";
+      const what = `GitHub did not merge ${this.label(change)}${said ? `: ${said}` : ""}`;
+      throw /^Base branch was modified\b/i.test(said)
+        ? new ForgeBaseMoved(what)
+        : new ForgeError("refused", what);
+    }
+    // Still running when the reads ended: unknown, so the pull request is read before anything else.
+    throw new ForgeError(
+      "transient",
+      `${this.place} had not finished merging ${this.label(change)} when the app stopped reading`,
+    );
+  }
+
+  /** The direct merge (`PUT .../merge`), for a GitHub without the asynchronous one. */
+  private async putInDirect(change: ForgeChange, path: string, body: object): Promise<MergeAnswer> {
+    const answer = (await this.request("PUT", path, body)) as {
+      merged?: boolean;
+      sha?: string;
+      message?: string;
+    } | null;
     // A 200 is not a merge on its own: GitHub says it merged, or it did not.
     if (answer?.merged !== true) {
       throw new ForgeError(
@@ -759,6 +808,95 @@ export class GitHubForge implements Forge {
       );
     }
     return answer.sha ? { sha: answer.sha } : {};
+  }
+
+  /**
+   * Send one asynchronous merge and read its result by the id GitHub
+   * returns until it is no longer pending or the reads end. Sent once: a
+   * result the app could not read in time is unknown, never a reason to
+   * send again. `ordinary` marks a merge within the rules, whose request
+   * GitHub may answer with a merge of that pull request still running;
+   * `direct` is the merge for a GitHub that does not know the call.
+   */
+  private async asyncMerge(
+    path: string,
+    body: object,
+    how: { ordinary: true; direct: () => Promise<MergeAnswer> },
+  ): Promise<AsyncMergeJson | { direct: MergeAnswer } | null>;
+  private async asyncMerge(
+    path: string,
+    body: object,
+    how?: { ordinary: true },
+  ): Promise<AsyncMergeJson | null>;
+  private async asyncMerge(
+    path: string,
+    body: object,
+    how?: { ordinary: true; direct?: () => Promise<MergeAnswer> },
+  ): Promise<AsyncMergeJson | { direct: MergeAnswer } | null> {
+    let reading: AsyncMergeJson | null;
+    try {
+      reading = (await this.request("PUT", path, body, ASYNC_MERGE_API_VERSION)) as AsyncMergeJson;
+    } catch (caught) {
+      if (!(caught instanceof ForgeError)) throw caught;
+      // A GitHub that does not know the call, or the version it is documented at, sent nothing on.
+      const unknown =
+        caught.failure === "not-found" ||
+        /^GitHub answered 400 [^:]*: .*\bAPI version\b/i.test(caught.message);
+      if (how?.direct && unknown) return { direct: await how.direct() };
+      // A merge of this pull request is still running there: its outcome is
+      // read, not sent again. A version that moved is GitHub's verdict instead.
+      if (
+        how?.ordinary &&
+        /^GitHub answered 409 /.test(caught.message) &&
+        !/: Head branch was modified\b/i.test(caught.message)
+      )
+        throw new ForgeError("transient", caught.message);
+      throw caught;
+    }
+    for (const delay of ASYNC_MERGE_READ_DELAYS_MS) {
+      const uuid = reading?.status === "pending" ? reading.details?.uuid : undefined;
+      if (!uuid) break;
+      await (this.options.sleep ?? sleep)(delay);
+      try {
+        reading = (await this.request(
+          "GET",
+          `${path}/${encodeURIComponent(uuid)}`,
+          undefined,
+          ASYNC_MERGE_API_VERSION,
+        )) as AsyncMergeJson | null;
+      } catch (caught) {
+        // A result GitHub no longer keeps leaves the outcome unknown, like one still pending.
+        if (caught instanceof ForgeError && caught.failure === "not-found") break;
+        throw caught;
+      }
+    }
+    return reading;
+  }
+
+  /** GitHub's own reading of its merge queue (`isInMergeQueue`), which its REST pull request does not carry. */
+  async inHostQueue(number: number): Promise<boolean> {
+    const answer = (await this.request(
+      "POST",
+      "",
+      {
+        query:
+          "query Queued($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { isInMergeQueue } } }",
+        variables: { owner: this.owner(), name: this.location.name as string, number },
+      },
+      API_VERSION,
+      undefined,
+      githubGraphqlUrl(this.base),
+    )) as {
+      errors?: unknown[];
+      data?: { repository?: { pullRequest?: { isInMergeQueue?: boolean } | null } | null };
+    } | null;
+    const queued = answer?.data?.repository?.pullRequest?.isInMergeQueue;
+    if (answer?.errors?.length || typeof queued !== "boolean")
+      throw new ForgeError(
+        "transient",
+        `${this.place} did not say whether #${number} is in its merge queue`,
+      );
+    return queued;
   }
 
   async markReady(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange> {
@@ -845,14 +983,25 @@ export class GitHubForge implements Forge {
       const rules = (await this.request("GET", `${path}?per_page=100&page=${page}`)) as {
         type?: string;
         ruleset_id?: number;
-        parameters?: { allowed_merge_methods?: string[] };
+        parameters?: { allowed_merge_methods?: string[]; merge_method?: string };
       }[];
       for (const rule of rules) {
         const id = typeof rule.ruleset_id === "number" ? rule.ruleset_id : 0;
         const entry = found.get(id) ?? { rules: new Set<string>() };
         if (rule.type) entry.rules.add(rule.type);
         const methods = rule.parameters?.allowed_merge_methods;
-        if (rule.type === "pull_request" && Array.isArray(methods)) entry.mergeMethods = methods;
+        // A merge queue merges every pull request its own one way, whatever a request names.
+        const queueWay = rule.parameters?.merge_method;
+        const named =
+          rule.type === "pull_request" && Array.isArray(methods)
+            ? methods
+            : rule.type === "merge_queue" && typeof queueWay === "string"
+              ? [queueWay.toLowerCase()]
+              : undefined;
+        if (named)
+          entry.mergeMethods = entry.mergeMethods
+            ? entry.mergeMethods.filter((method) => named.includes(method))
+            : named;
         found.set(id, entry);
       }
       if (rules.length < 100) break;
@@ -893,10 +1042,8 @@ export class GitHubForge implements Forge {
    */
   async putInSkippingRules(change: ForgeChange, headSha: string): Promise<ForgeSkipMerge> {
     this.requireMaintainer();
-    const path = `${this.repoPath()}/pulls/${numbered(change)}/merge-async`;
-    let reading = (await this.request(
-      "PUT",
-      path,
+    const reading = await this.asyncMerge(
+      `${this.repoPath()}/pulls/${numbered(change)}/merge-async`,
       {
         sha: headSha,
         merge_method: "squash",
@@ -909,19 +1056,7 @@ export class GitHubForge implements Forge {
         ),
         commit_message: change.squashMessage ?? change.body ?? "",
       },
-      ASYNC_MERGE_API_VERSION,
-    )) as AsyncMergeJson | null;
-    for (let read = 0; read < ASYNC_MERGE_READS && reading?.status === "pending"; read++) {
-      const uuid = reading.details?.uuid;
-      if (!uuid) break;
-      await (this.options.sleep ?? sleep)(ASYNC_MERGE_READ_DELAY_MS);
-      reading = (await this.request(
-        "GET",
-        `${path}/${encodeURIComponent(uuid)}`,
-        undefined,
-        ASYNC_MERGE_API_VERSION,
-      )) as AsyncMergeJson | null;
-    }
+    );
     const message = reading?.details?.message ?? "";
     if (reading?.status === "merged") {
       return reading.details?.sha
@@ -1671,7 +1806,7 @@ function failureOf(response: Response, method: string, path: string, text: strin
   if (
     response.status === 405 &&
     method === "PUT" &&
-    /\/pulls\/\d+\/merge(\?|$)/.test(path) &&
+    /\/pulls\/\d+\/merge(?:-async)?(\?|$)/.test(path) &&
     /^Base branch was modified\b/i.test(said)
   )
     return new ForgeBaseMoved(what);

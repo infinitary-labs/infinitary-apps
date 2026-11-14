@@ -41,14 +41,15 @@ function answered(statuses: string): RegExp {
 
 /**
  * The merge endpoint's refusal of a change that conflicts with newer work
- * (GitHub's 405, or 409 beside the words; GitLab's "Branch cannot be
- * merged"), as it reads on a settle's `problem`. A head mismatch alone is no
- * conflict.
+ * (GitHub's 405, or 409 beside the words, from either of its merge calls or
+ * as the outcome of a merge it ran in the background; GitLab's "Branch
+ * cannot be merged"), as it reads on a settle's `problem`. A head mismatch
+ * alone is no conflict.
  */
 export function isMergeConflict(error: string | undefined): boolean {
   return (
     error !== undefined &&
-    (/^GitHub answered 40[59] to PUT \S+\/merge: .*(?:merge conflicts|not mergeable)/i.test(
+    (/^GitHub (?:answered 40[59] to PUT \S+\/merge(?:-async)?|did not merge \S+): .*(?:merge conflicts|not mergeable)/i.test(
       error,
     ) ||
       new RegExp(`${ANSWERED} 4(?:06|22) to PUT \\S+/merge: Branch cannot be merged`).test(error))

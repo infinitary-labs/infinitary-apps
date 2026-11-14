@@ -120,9 +120,12 @@ function seedCompletionCard(
   db: ReturnType<typeof openDatabase>,
   taskId: string,
   mergeLabel: "Merge the pull request" | "Merge the branch",
+  offerId?: string,
 ) {
   new CardStore(db).upsert({
     id: `card-${taskId}-1`,
+    // The offer the host published for this card, where a journey seeds one.
+    ...(offerId ? { lifecycleId: `lifecycle-${taskId}`, offerId } : {}),
     taskId,
     author: "crewmate",
     priority: 30,
@@ -257,6 +260,119 @@ for (const passing of PASSING) {
   });
 }
 
+/**
+ * A branch with GitHub's own merge queue (docs/forge.md, "The host's merge
+ * queue"): the journey above, one fact apart. GitHub takes the captain's
+ * merge into its queue and merges it later, on its own, so the promise is
+ * that one click hands the pull request over, nothing is sent again, no
+ * card comes up, and the task closes as merged once GitHub merged it. Its
+ * data is the journey above's; its completion signal is the task's own
+ * record, read after a restart - a moment the app reads a kept approval
+ * again, as it does on its timed look, which a journey never waits out.
+ */
+test("a merge click on a branch with GitHub's merge queue hands the pull request to that queue, and the task closes once GitHub merges it", async () => {
+  const userDataDir = scratchDir("infinitary-settle-host-queue-");
+  const taskId = "queuedtask";
+  const repo = seedRepo(userDataDir, taskId);
+  const github = await startGitHubStub();
+  github.servePull(CHANGE);
+  github.headOf(() => repo.branchHead());
+  github.setMergeQueue(true);
+  seedGitHubSignIn(userDataDir);
+  const db = openDatabase(userDataDir);
+  seedProject(db, {
+    id: "repo-pr",
+    path: repo.repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
+  seedHostedOrigins(db, userDataDir);
+  const tasks = new TaskService({ db, strict: true });
+  seedTask(tasks, {
+    id: taskId,
+    title: "Ship the PR",
+    status: "idle",
+    repoId: "repo-pr",
+    repoDir: repo.repoDir,
+    worktreeDir: repo.worktreeDir,
+    branch: repo.branch,
+  });
+  // The offer the host published once the pull request's checks passed at
+  // this version, as a crewmate's merge card carries it: the click on it is
+  // the captain's kept approval, which is what waits on GitHub's queue.
+  const headSha = repo.branchHead();
+  const offerId = "offer-host-queue";
+  seedDelivery(tasks, taskId, {
+    mode: "direct-pr",
+    prNumber: CHANGE.number,
+    prUrl: `https://github.com/o/r/pull/${CHANGE.number}`,
+    changeLabel: `#${CHANGE.number}`,
+    headSha,
+    ci: "green",
+    ciAt: Date.now(),
+    completionOffers: [
+      { cardId: `card-${taskId}-1`, offerId, headSha, prNumber: CHANGE.number, at: Date.now() },
+    ],
+  });
+  seedCompletionCard(db, taskId, "Merge the pull request", offerId);
+  db.close();
+
+  const detail = (page: LaunchedApp["page"]) =>
+    page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
+  let launched = await launchApp({ userDataDir, env: github.env });
+  let key = "";
+  try {
+    await test.step("the click hands the pull request to GitHub's queue, and the task waits with no card", async () => {
+      const { page } = launched;
+      await expect(shownCard(page, READY_CARD_TITLE)).toBeVisible();
+      await expandDock(page, "activity");
+      await page.getByRole("button", { name: "Merge the pull request", exact: true }).click();
+      await expectNoCard(page, READY_CARD_TITLE);
+      key = await taskKey(page, "Ship the PR");
+      // The click's one line says where the change is now, in its owner's words.
+      await expect(
+        noteLines(page, key).filter({ hasText: keptFeedLine("host-queue", "GitHub") }),
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(noteLines(page, key)).toHaveCount(1);
+      await page.screenshot({ path: test.info().outputPath("settle-merge-queued.png") });
+      // GitHub holds it in the queue and merged nothing; the task is open,
+      // nothing landed here, and no card asks the captain anything.
+      expect(github.inMergeQueue()).toEqual([CHANGE.number]);
+      expect(github.merges()).toEqual([]);
+      await expect(putInLine(page, key)).toHaveCount(0);
+      expect(await detail(page)).toMatchObject({ status: "active", closedReason: null });
+      expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+      expect(repo.mainLog()).not.toContain("the crewmate's work");
+    });
+
+    await test.step("GitHub merges it from the queue, and the app takes that merge as the merge", async () => {
+      github.queueMerges(CHANGE.number);
+      await launched.close();
+      launched = await launchApp({ userDataDir, env: github.env });
+      const { page } = launched;
+      await expect
+        .poll(() => detail(page), { timeout: 30_000 })
+        .toMatchObject({ status: "done", closedReason: "merged" });
+      await expandDock(page, "activity");
+      await expect(putInLine(page, key)).toBeVisible({ timeout: 20_000 });
+      await page.screenshot({ path: test.info().outputPath("settle-merge-queue-merged.png") });
+      // The click's two requests, ever: the one GitHub's queue refuses for
+      // naming a merge method and commit words, then the version alone. The
+      // app only read after that.
+      const request = `PUT /repos/o/r/pulls/${CHANGE.number}/merge-async`;
+      expect(github.mergeRequests()).toEqual([request, request]);
+      expect(github.merges()).toEqual([]);
+      expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+    });
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
 type Repo = ReturnType<typeof seedRepo>;
 
 /** What the task's record says stopped a put-in: its notes' problems, and its checks. */
@@ -321,7 +437,7 @@ const REFUSALS: {
     arrange: (github, repo) => {
       github.servePull(CHANGE);
       github.onMergeRequest(() => repo.push("feat: one more thing"));
-      return "GitHub answered 409";
+      return "Head branch was modified";
     },
     asksGitHub: true,
     crewVerdict: "ready",
@@ -418,9 +534,7 @@ for (const refusal of REFUSALS) {
       // head moved under it), main is untouched, and the task is still open
       // with its work on its branch.
       expect(github.merges()).toEqual([]);
-      expect(github.requests().filter((request) => request.endsWith("/merge"))).toHaveLength(
-        refusal.asksGitHub ? 1 : 0,
-      );
+      expect(github.mergeRequests()).toHaveLength(refusal.asksGitHub ? 1 : 0);
       expect(repo.mainLog()).not.toContain("the crewmate's work");
       // The feed says so: the task's one settle line is the refusal now, and no put-in line.
       await expect(noteLines(page, key)).toHaveCount(1);
@@ -667,7 +781,7 @@ for (const backend of CREW_BACKENDS) {
         expect.objectContaining({ sha: repaired, method: "squash", title: KEPT_MERGE_TITLE }),
       ]);
       // One refused request and one accepted: never a merge sent twice.
-      expect(github.requests().filter((request) => request.endsWith("/merge"))).toHaveLength(2);
+      expect(github.mergeRequests()).toHaveLength(2);
       expect(record()?.delivery?.mergeAuthorization).toMatchObject({
         status: "consumed",
         approvedHead: approved,
@@ -740,7 +854,7 @@ for (const backend of CREW_BACKENDS) {
     const title = `meterlab ${GUIDED_MERGE_MARKER}${backend.claude ? ` ${KEPT_MERGE_ON_CLAUDE}` : ""}`;
     let taskId = "";
     const record = () => tasks.get(taskId);
-    const mergeRequests = () => github.requests().filter((request) => request.endsWith("/merge"));
+    const mergeRequests = () => github.mergeRequests();
     let stopTrace: (() => Promise<void>) | undefined;
     try {
       // INF-1555 F16: retain real frame/network facts if Activity stops, not just test-call tracing.

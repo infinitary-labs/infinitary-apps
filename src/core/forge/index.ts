@@ -68,6 +68,7 @@ export type {
   ForgeReadiness,
   ForgeRuleset,
   ForgeSkipMerge,
+  MergeAnswer,
   QueueWorkflow,
 } from "./forge";
 export {

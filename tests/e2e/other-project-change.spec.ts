@@ -153,8 +153,7 @@ test("a crewmate opens its change in another project the app manages, and the co
         timeout: 20_000,
       })
       .toEqual([{ number: 100, sha: otherHead }]);
-    expect(github.requests()).toContain("PUT /repos/octo/dotfiles/pulls/100/merge");
-    expect(github.requests()).not.toContain(`PUT /repos/octo/${OWN_PROJECT}/pulls/100/merge`);
+    expect(github.mergeRequests()).toEqual(["PUT /repos/octo/dotfiles/pulls/100/merge-async"]);
     await expect
       .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId), {
         timeout: 20_000,

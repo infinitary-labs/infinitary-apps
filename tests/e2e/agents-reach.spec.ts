@@ -467,9 +467,11 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     // in its own words: a fixed limit no one's word passes.
     expect(servedTexts().some((text) => text.includes(fixedHoldWords("host-rules")))).toBe(true);
     expect(github.merges()).toEqual(merged.map((change) => expect.objectContaining(change)));
-    expect(github.requests()).not.toContain(
-      `PUT /repos/o/meterlab/pulls/${REACH_RULE_CHANGE.number}/merge`,
-    );
+    expect(
+      github
+        .mergeRequests()
+        .filter((request) => request.includes(`/pulls/${REACH_RULE_CHANGE.number}/`)),
+    ).toEqual([]);
     await regionShot(page.locator("[data-last-turn]"), out("2-fixed-limit-reply.png"));
 
     // The captain merges on GitHub's own page; his click on the card closes

@@ -1261,6 +1261,8 @@ export class SettleService {
     // A healthy queue wait needs no decision, card or first mate turn.
     // An unanswered queue's warning still needs an agent to recover it.
     if (kept === "queue" && this.approvals.queueWarning(taskId, kept) === undefined) return;
+    // Nor does a version the host's own merge queue holds: the host reads the queue on its own.
+    if (kept === "host-queue") return;
     // A merge that went through is the feed line above and nothing more,
     // unless it freed work only a start begins (friction 7 of the
     // captain's Oct 22 audit: 45 of 62 merge wakes were idle turns).

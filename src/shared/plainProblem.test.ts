@@ -127,9 +127,19 @@ describe("plainProblem", () => {
         "GitHub answered 409 to PUT /repos/o/r/pulls/7/merge: Pull Request has merge conflicts",
         conflicts,
       ],
+      // The same refusal as the outcome of a merge GitHub ran in the background.
+      ["GitHub did not merge #7: Pull Request has merge conflicts", conflicts],
+      [
+        "GitHub answered 405 to PUT /repos/o/r/pulls/7/merge-async: Pull Request is not mergeable",
+        conflicts,
+      ],
       // A 409 for a moved head is not a conflict.
       [
         "GitHub answered 409 to PUT /repos/o/r/pulls/7/merge: Head branch was modified. Review and try the merge again.",
+        PLAIN_PROBLEM_FALLBACK,
+      ],
+      [
+        "GitHub did not merge #7: Head branch was modified. Review and try the merge again.",
         PLAIN_PROBLEM_FALLBACK,
       ],
       ["GitHub answered 503 to GET /repos/o/r/pulls", unreachable],

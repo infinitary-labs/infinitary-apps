@@ -2010,13 +2010,13 @@
         {
           "from": "checking",
           "to": "merged",
-          "why": "the pull request's checks pass",
+          "why": "the pull request's checks pass, and where its branch has a merge queue the host merges it from there",
           "by": "batches"
         },
         {
           "from": "checking",
           "to": "held",
-          "why": "a check fails, the project allows no merge that keeps its commits, or a rule where it lives blocks it",
+          "why": "a check fails, the project allows no merge that keeps its commits, a rule where it lives blocks it, or the host removes it from the branch's merge queue",
           "by": "batches"
         },
         {

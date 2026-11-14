@@ -411,6 +411,7 @@ describe("reviewed contributor changes", () => {
       const marked: string[] = [];
       at.forge.putIn = async (change) => {
         dispatched.push(change);
+        return undefined;
       };
       at.forge.markQueued = async (head, approval) => {
         if (approval) approvals.push(approval);

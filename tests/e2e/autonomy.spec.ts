@@ -271,6 +271,6 @@ test("a pull request the captain merged on GitHub himself closes its task as mer
     .toMatchObject({ status: "done", closedReason: "merged" });
   // Read off the forge: the app sent no merge of its own.
   expect(github.merges()).toEqual([]);
-  expect(github.requests().filter((request) => request.endsWith("/merge"))).toEqual([]);
+  expect(github.mergeRequests()).toEqual([]);
   await page.screenshot({ path: test.info().outputPath("merged-by-hand-closed.png") });
 });

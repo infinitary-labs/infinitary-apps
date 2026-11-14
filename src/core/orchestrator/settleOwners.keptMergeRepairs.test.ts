@@ -942,6 +942,165 @@ describe("CrewSupervisor", () => {
       harness.supervisor.disposeAll();
     });
 
+    // Intent: the approved plan's piece 5: "an enqueued answer makes the task
+    // wait until the host merges or removes it", and "the task closes when
+    // the host merges it".
+    it("waits while GitHub's merge queue holds the approved version, sends nothing again, and closes the task when GitHub merges it", async () => {
+      const harness = await approved();
+      const ticker = new Ticker({
+        now: () => Date.now(),
+        timers: { repeat: () => 0, cancel: () => {} },
+      });
+      harness.supervisor.watch.startWatchdog(ticker);
+      harness.forge.hostQueue = true;
+      harness.supervisor.cardActions.act(harness.card.id, "merge");
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({
+          status: "standing",
+          waiting: { on: "host-queue", head: APPROVED },
+          handed: { head: APPROVED },
+        }),
+      );
+      // Queued is not merged: the task stays open, and no card asks anything.
+      expect(harness.tasks.get(harness.taskId)?.status).toBe("active");
+      expect(harness.forge.merges).toEqual([]);
+      expect(harness.cards()).toEqual([]);
+      expect(settleLines(harness.tasks, harness.taskId)).toContain(
+        keptFeedLine("host-queue", "GitHub"),
+      );
+      // Nothing is asked of the first mate while the queue holds it.
+      expect(harness.ops.join("\n")).not.toContain("merge queue");
+      // The tick reads the queue again and sends no second merge request.
+      const first = harness.authorization()?.retryAt ?? 0;
+      expect(first).toBeGreaterThan(Date.now());
+      vi.setSystemTime(first + 1);
+      ticker.tick();
+      await vi.waitFor(() => expect(harness.forge.queueReads).toBe(1));
+      await vi.waitFor(() => expect(harness.authorization()?.retryAt).toBeGreaterThan(first));
+      expect(harness.forge.sends).toBe(1);
+      // GitHub merges it: the next read closes the task as merged.
+      harness.forge.queueMerges();
+      vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
+      ticker.tick();
+      await vi.waitFor(() =>
+        expect(harness.tasks.get(harness.taskId)).toMatchObject({
+          status: "done",
+          closedReason: "merged",
+        }),
+      );
+      expect(harness.authorization()).toMatchObject({
+        status: "consumed",
+        receipt: { head: APPROVED, sha: `squash-${APPROVED}` },
+      });
+      expect(harness.forge.sends).toBe(1);
+      harness.supervisor.disposeAll();
+    });
+
+    // Intent: the same wait for a pull request merged from its review, the
+    // other route a merge click takes (piece 5: "for direct pull requests").
+    it("waits the same way on a reviewed pull request GitHub's merge queue took, and takes GitHub's merge as the merge", async () => {
+      const harness = await approved({ referenced: true });
+      const ticker = new Ticker({
+        now: () => Date.now(),
+        timers: { repeat: () => 0, cancel: () => {} },
+      });
+      harness.supervisor.watch.startWatchdog(ticker);
+      harness.forge.hostQueue = true;
+      harness.supervisor.cardActions.act(harness.card.id, "merge");
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({
+          status: "standing",
+          waiting: { on: "host-queue", head: APPROVED },
+        }),
+      );
+      expect(harness.cards()).toEqual([]);
+      vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
+      ticker.tick();
+      await vi.waitFor(() => expect(harness.forge.queueReads).toBe(1));
+      expect(harness.forge.sends).toBe(1);
+      harness.forge.queueMerges();
+      vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
+      ticker.tick();
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({
+          status: "consumed",
+          receipt: { head: APPROVED, sha: `squash-${APPROVED}` },
+        }),
+      );
+      expect(harness.forge.sends).toBe(1);
+      harness.supervisor.disposeAll();
+    });
+
+    // Intent: piece 5's "until the host merges or removes it": a removal is
+    // never sent again on the app's own timer, which would run the queue's
+    // checks again for a version nobody looked at.
+    it("keeps the approval when GitHub removes the version from its merge queue, tells the first mate once, and sends it again only on its crewmate's answer", async () => {
+      const harness = await approved();
+      const ticker = new Ticker({
+        now: () => Date.now(),
+        timers: { repeat: () => 0, cancel: () => {} },
+      });
+      harness.supervisor.watch.startWatchdog(ticker);
+      harness.forge.hostQueue = true;
+      harness.supervisor.cardActions.act(harness.card.id, "merge");
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.waiting).toMatchObject({ on: "host-queue" }),
+      );
+      // GitHub removes it: the pull request is open and out of the queue.
+      harness.forge.inQueue = false;
+      vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
+      ticker.tick();
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({
+          status: "standing",
+          waiting: { on: "host-removed", head: APPROVED },
+        }),
+      );
+      expect(harness.authorization()?.handed?.removed).toBeGreaterThan(0);
+      // An untimed wait: no tick sends it again.
+      expect(harness.authorization()?.retryAt).toBeUndefined();
+      await vi.waitFor(() =>
+        expect(harness.ops.join("\n")).toContain(
+          `removed ${APPROVED} from the merge queue of its branch without merging it`,
+        ),
+      );
+      // The crewmate's turn ends with nothing declared: still nothing is sent.
+      await repairTurn(harness, async () => {});
+      expect(harness.forge.sends).toBe(1);
+      expect(harness.authorization()?.waiting).toMatchObject({ on: "host-removed" });
+      // It answers the removal at that version: the version goes once more.
+      await repairTurn(harness, async () => {
+        const said = await harness.declare({
+          declaration: {
+            headSha: APPROVED,
+            verdict: "answered",
+            check: "merge queue",
+            evidence:
+              "The queue's group failed on another pull request's test; this version passed alone.",
+          },
+        });
+        expect(said).toContain("Answer to the merge queue's removal recorded");
+      });
+      await vi.waitFor(() => expect(harness.forge.sends).toBe(2));
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({
+          waiting: { on: "host-queue", head: APPROVED },
+        }),
+      );
+      expect(harness.authorization()?.handed?.removed).toBeUndefined();
+      // Removed again, the spent answer sends nothing more.
+      harness.forge.inQueue = false;
+      vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
+      ticker.tick();
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.waiting).toMatchObject({ on: "host-removed" }),
+      );
+      await repairTurn(harness, async () => {});
+      expect(harness.forge.sends).toBe(2);
+      expect(harness.forge.merges).toEqual([]);
+      harness.supervisor.disposeAll();
+    });
+
     it("keeps the captain's merge of a GitLab merge request the same way, in GitLab's words", async () => {
       const harness = await kept({ kind: "gitlab" });
       expect(harness.authorization()).toMatchObject({

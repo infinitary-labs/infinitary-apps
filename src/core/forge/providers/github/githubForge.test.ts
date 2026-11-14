@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
-import { createServer, type IncomingMessage, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { stub } from "../../../../../tests/helpers/githubForgeStub";
 import { BUNDLED_NAMING } from "../../../../../tests/helpers/namingRunbook";
 import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
 import { GITHUB_QUEUE_PART, shippedFiles } from "../../../queue/shipped";
@@ -35,54 +34,8 @@ import {
  * app's own GitHub sign-in; here the token is the test's.
  */
 
-type Seen = { method: string; url: string; headers: IncomingMessage["headers"]; body: unknown };
-type Route = (seen: Seen) => { status?: number; json?: unknown; headers?: Record<string, string> };
-
-let server: Server | undefined;
-
-afterEach(async () => {
-  await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
-  server = undefined;
-});
-
 /** The shipped queue's one source, which a project's files are generated from. */
 const SHIPPED_SOURCE_DIR = fileURLToPath(new URL("../../../queue/shipped/", import.meta.url));
-
-async function stub(routes: Record<string, Route>) {
-  const seen: Seen[] = [];
-  server = createServer((req, res) => {
-    let raw = "";
-    req.on("data", (chunk) => {
-      raw += chunk;
-    });
-    req.on("end", () => {
-      const entry: Seen = {
-        method: req.method ?? "",
-        url: req.url ?? "",
-        headers: req.headers,
-        body: raw ? JSON.parse(raw) : undefined,
-      };
-      seen.push(entry);
-      const path = entry.url.split("?")[0];
-      const route = routes[`${entry.method} ${path}`];
-      const answer = route ? route(entry) : { status: 404, json: { message: "Not Found" } };
-      res.writeHead(answer.status ?? 200, {
-        "content-type": "application/json",
-        ...(answer.headers ?? {}),
-      });
-      res.end(answer.json === undefined ? "" : JSON.stringify(answer.json));
-    });
-  });
-  const listening = server;
-  await new Promise<void>((resolve) => listening.listen(0, "127.0.0.1", () => resolve()));
-  const { port } = listening.address() as AddressInfo;
-  const base = `http://127.0.0.1:${port}`;
-  const forge = new GitHubForge(
-    { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/r" },
-    { token: async () => "gho_test", apiBaseUrl: base, namingRule: () => BUNDLED_NAMING },
-  );
-  return { seen, forge, base };
-}
 
 const PULL = {
   number: 23,
@@ -1132,7 +1085,6 @@ describe("GitHubForge", () => {
 
   it("sends the saved plain summary on both merge routes, not the rendered story (INF-228 F2)", async () => {
     const { forge, seen } = await stub({
-      "PUT /repos/octo/meter/pulls/23/merge": () => ({ json: { merged: true } }),
       "PUT /repos/octo/meter/pulls/23/merge-async": () => ({
         json: { status: "merged", details: { sha: PULL.head.sha } },
       }),
@@ -1233,7 +1185,9 @@ describe("GitHubForge", () => {
 
   it("puts the change in only at the checked head, and closes one without putting it in", async () => {
     const { forge, seen } = await stub({
-      "PUT /repos/octo/meter/pulls/23/merge": () => ({ json: { merged: true } }),
+      "PUT /repos/octo/meter/pulls/23/merge-async": () => ({
+        json: { status: "merged", details: { sha: "squash01" } },
+      }),
       "PATCH /repos/octo/meter/pulls/23": () => ({ json: { state: "closed" } }),
     });
     const change = {
@@ -1252,7 +1206,7 @@ describe("GitHubForge", () => {
     expect(seen.map((request) => [request.method, request.url, request.body])).toEqual([
       [
         "PUT",
-        "/repos/octo/meter/pulls/23/merge",
+        "/repos/octo/meter/pulls/23/merge-async",
         {
           sha: "feedbeef",
           merge_method: "squash",
@@ -1353,44 +1307,6 @@ describe("GitHubForge", () => {
       branch: "fm/task-1",
       title: "fix: correct meter",
       readiness: "computing",
-    });
-  });
-
-  it("takes a merge only when GitHub says it merged, and answers its commit", async () => {
-    let answer: unknown = { merged: true, sha: "squash01" };
-    const { forge } = await stub({
-      "PUT /repos/octo/meter/pulls/23/merge": () => ({ json: answer }),
-    });
-    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: meter" };
-    await expect(forge.putIn(change, "feedbeef")).resolves.toEqual({ sha: "squash01" });
-    answer = { merged: false, message: "Base branch was modified" };
-    await expect(forge.putIn(change, "feedbeef")).rejects.toMatchObject({
-      failure: "refused",
-      message: "GitHub did not confirm the merge of #23: Base branch was modified",
-    });
-  });
-
-  it("types GitHub's refusal of a merge whose main branch moved as that fact, apart from a change that cannot merge", async () => {
-    // The captain's ask: retry on its own right away when GitHub says main
-    // moved, and need a crewmate only for a conflict. GitHub's own answer,
-    // read off the record of a batch whose merges it refused this way.
-    let refusal = "Base branch was modified. Review and try the merge again.";
-    const { forge } = await stub({
-      "PUT /repos/octo/meter/pulls/23/merge": () => ({
-        status: 405,
-        json: { message: refusal },
-      }),
-    });
-    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: meter" };
-    await expect(forge.putIn(change, "feedbeef")).rejects.toMatchObject({
-      name: "ForgeBaseMoved",
-      failure: "refused",
-      message: `GitHub answered 405 to PUT /repos/octo/meter/pulls/23/merge: ${refusal}`,
-    });
-    refusal = "Pull Request has merge conflicts";
-    await expect(forge.putIn(change, "feedbeef")).rejects.toMatchObject({
-      name: "ForgeError",
-      failure: "refused",
     });
   });
 
@@ -1505,6 +1421,7 @@ describe("GitHubForge", () => {
         json: { message: "said no" },
         headers: status.headers,
       }),
+      // Asked after this stand-in's 404 to the background merge it does not know.
       "PUT /repos/octo/meter/pulls/23/merge": () => ({
         status: 409,
         json: { message: "Head branch was modified. Review and try the merge again." },

@@ -256,6 +256,13 @@ export type ForgeRuleset = {
 };
 
 /**
+ * A host's answer to a merge it accepted: the commit it made where it says
+ * one, or `queued` when the branch's own merge queue took the change and has
+ * not merged it yet.
+ */
+export type MergeAnswer = { sha?: string; queued?: true };
+
+/**
  * A merge past the rules as the host reports it: merged, failed (nothing
  * merged), or not finished when the app stopped reading - an outcome the
  * app does not know and never sends again.
@@ -449,6 +456,9 @@ export interface Forge {
   /**
    * Put the change in, only while its head is still `headSha`. A host that
    * confirms the merge answers its commit; one that cannot says nothing.
+   * `queued` is a host whose branch has a merge queue of its own taking the
+   * change into it instead (docs/forge.md, "The host's merge queue"): the
+   * change is not merged, and the host merges or removes it later.
    */
   putIn(
     change: ForgeChange,
@@ -458,7 +468,13 @@ export interface Forge {
      * `merge` keep one commit per change. Left out, the merge is a squash.
      */
     way?: MergeWay,
-  ): Promise<{ sha?: string } | undefined>;
+  ): Promise<MergeAnswer | undefined>;
+  /**
+   * Whether the host's own merge queue holds this change now. Read, never
+   * written: a change the host removed from its queue is not sent again by
+   * a retry. Absent on a host whose branches have no merge queue of their own.
+   */
+  inHostQueue?(number: number): Promise<boolean>;
   /**
    * The merges the project allows, from its own settings and its default
    * branch's rules, as the host answers them now.

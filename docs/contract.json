@@ -2091,6 +2091,9 @@
                         "checks"
                       ]
                     },
+                    "queued": {
+                      "type": "string"
+                    },
                     "stale": {
                       "type": "boolean",
                       "const": true
@@ -2817,6 +2820,9 @@
                           "reason",
                           "checks"
                         ]
+                      },
+                      "queued": {
+                        "type": "string"
                       },
                       "stale": {
                         "type": "boolean",
@@ -3720,6 +3726,9 @@
                       "reason",
                       "checks"
                     ]
+                  },
+                  "queued": {
+                    "type": "string"
                   },
                   "stale": {
                     "type": "boolean",
@@ -7144,6 +7153,9 @@
                       "reason",
                       "checks"
                     ]
+                  },
+                  "queued": {
+                    "type": "string"
                   },
                   "stale": {
                     "type": "boolean",

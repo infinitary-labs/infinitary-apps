@@ -36,6 +36,7 @@ import {
 } from "./changeContext";
 import {
   type ChangeMerge,
+  hostQueued,
   MERGE_RETRY_DELAYS_MS,
   type MergeAttempt,
   type MergeGuard,
@@ -904,6 +905,28 @@ export class MergeReviews {
         text: "Cannot merge: a contributor's later version needs a new review and a new click.",
       };
     const candidate = guard ? { ...review, headSha: guard.head } : review;
+    // The host's own merge queue took this version: its place there is read
+    // before any gate (docs/forge.md, "The host's merge queue"). One it
+    // merged is read as merged just below.
+    if (guard?.handed?.()) {
+      const located = this.context.locate(taskId, "check", review);
+      const handed =
+        "said" in located
+          ? undefined
+          : await this.merges.handedOver(
+              located.forge,
+              {
+                number: review.number,
+                url: null,
+                branch: review.branch,
+                headSha: candidate.headSha,
+                title: review.title,
+                body: "",
+              },
+              guard,
+            );
+      if (handed && !handed.ok) return handed;
+    }
     const fresh = await this.readReviewTarget(taskId, candidate, !guard?.unattended || settle);
     if (!fresh.ok) {
       if (fresh.text === "already-merged") {
@@ -1008,6 +1031,7 @@ export class MergeReviews {
       if (stopped) return { ok: false, stop: "withdrawn", text: stopped };
       dispatched = true;
       const sent = await forge.putIn(change, candidate.headSha);
+      if (sent?.queued) return hostQueued(forge, change);
       return merged(sent?.sha);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -1018,7 +1042,7 @@ export class MergeReviews {
       const stop = guard
         ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
           (dispatched ? "outcome" : undefined))
-        : /409/.test(message)
+        : /Head branch was modified/i.test(message)
           ? "moved"
           : undefined;
       return {

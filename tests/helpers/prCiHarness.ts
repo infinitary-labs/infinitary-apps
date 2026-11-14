@@ -14,6 +14,7 @@ import {
   type ForgeCheckState,
   type ForgeError,
   ForgeWriteError,
+  type MergeAnswer,
 } from "../../src/core/forge";
 import {
   type ChangeDelivery,
@@ -166,7 +167,7 @@ export class FakeForge implements Forge {
     change: ForgeChange,
     headSha: string,
     _way?: MergeWay,
-  ): Promise<{ sha?: string } | undefined> {
+  ): Promise<MergeAnswer | undefined> {
     this.calls.push(`putIn ${change.branch} ${headSha}`);
     if (this.fail.putIn) throw this.fail.putIn;
     return undefined;

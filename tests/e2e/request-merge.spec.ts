@@ -427,7 +427,8 @@ test("a merge card for an adopted pull request waits while GitHub works out whet
       ]);
     // Two undecided answers, then the clean one, and only then the merge.
     const requests = github.requests();
-    const merge = requests.indexOf("PUT /repos/o/r/pulls/151/merge");
+    const merge = requests.indexOf("PUT /repos/o/r/pulls/151/merge-async");
+    expect(merge).toBeGreaterThan(0);
     expect(requests.slice(0, merge).filter((request) => request === read)).toHaveLength(3);
     await expect
       .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId))

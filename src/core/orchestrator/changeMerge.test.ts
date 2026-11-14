@@ -522,8 +522,22 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     }
   }
 
-  async function pinned() {
-    const forge = new PinnedForge();
+  /** A branch with a merge queue of GitHub's own: a merge request is taken into it, never merged at once. */
+  class QueueBranchForge extends PinnedForge {
+    queued = false;
+    override async putIn(change: Parameters<FakeForge["putIn"]>[0], headSha: string) {
+      this.calls.push(`putIn ${change.branch} ${headSha}`);
+      this.queued = true;
+      return { queued: true as const };
+    }
+    async inHostQueue(): Promise<boolean> {
+      this.calls.push("inHostQueue");
+      return this.queued;
+    }
+  }
+
+  async function pinned<F extends PinnedForge = PinnedForge>(made?: F) {
+    const forge = (made ?? new PinnedForge()) as F;
     const harness = setup({ forge });
     await insertDirectPrTask(harness.tasks, harness.repos);
     const dispatched: string[] = [];
@@ -575,6 +589,51 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       "beforeDispatch feedbeef",
       "putIn fm/task-ab12cd34 feedbeef",
     ]);
+  });
+
+  // Intent: the approved plan's piece 5: a merge click on a branch with a
+  // merge queue hands the pull request to that queue, and "an enqueued answer
+  // makes the task wait until the host merges or removes it".
+  it("waits on a version the branch's merge queue took, reads the queue instead of sending again, and sends one GitHub removed only on an answer or the captain's click", async () => {
+    const { service, forge, guard } = await pinned(new QueueBranchForge());
+    const sends = () => forge.calls.filter((call) => call.startsWith("putIn")).length;
+    const taken = await service.merges.merge("ab12cd34", guard());
+    expect(taken).toMatchObject({ ok: false, stop: "host-queue" });
+    expect(taken.receipt).toBeUndefined();
+    expect(taken.text).toContain("It is queued, not merged");
+    expect(sends()).toBe(1);
+    // The approval now stands on that wait: a later run reads the queue and sends nothing.
+    const handed = { handed: () => ({ answered: false }) };
+    expect(await service.merges.merge("ab12cd34", guard(handed))).toMatchObject({
+      ok: false,
+      stop: "host-queue",
+    });
+    expect(forge.calls.at(-1)).toBe("inHostQueue");
+    expect(sends()).toBe(1);
+    // GitHub removed it without merging: a run nobody asked for sends nothing.
+    forge.queued = false;
+    const removed = await service.merges.merge("ab12cd34", guard(handed));
+    expect(removed).toMatchObject({ ok: false, stop: "host-removed" });
+    expect(sends()).toBe(1);
+    // Its crewmate answered the removal: that version goes to the queue once more.
+    expect(
+      await service.merges.merge("ab12cd34", guard({ handed: () => ({ answered: true }) })),
+    ).toMatchObject({ ok: false, stop: "host-queue" });
+    expect(sends()).toBe(2);
+    // Removed again, the captain's own click sends it too.
+    forge.queued = false;
+    expect(
+      await service.merges.merge("ab12cd34", guard({ ...handed, unattended: false })),
+    ).toMatchObject({ ok: false, stop: "host-queue" });
+    expect(sends()).toBe(3);
+    // GitHub merged it between the read of its checks and the read of its queue.
+    forge.queued = false;
+    forge.merged = true;
+    expect(await service.merges.merge("ab12cd34", guard(handed))).toMatchObject({
+      ok: true,
+      receipt: { head: "feedbeef", sha: "squash01", already: true },
+    });
+    expect(sends()).toBe(3);
   });
 
   it("sends nothing when the approval ended before the request, and stops on a pending check", async () => {

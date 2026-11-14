@@ -1494,5 +1494,10 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
       message: presentationCommitMessage(MOCK_GITHUB_STORY, BUNDLED_NAMING),
     },
   ]);
-  expect(github.requests()).toContain("PUT /api/v3/repos/octo/meterlab/pulls/100/merge");
+  // A GitHub Enterprise Server documents no background merge: it answers that
+  // call as a path it does not know, and the app merges directly.
+  expect(github.mergeRequests()).toEqual([
+    "PUT /api/v3/repos/octo/meterlab/pulls/100/merge-async",
+    "PUT /api/v3/repos/octo/meterlab/pulls/100/merge",
+  ]);
 });

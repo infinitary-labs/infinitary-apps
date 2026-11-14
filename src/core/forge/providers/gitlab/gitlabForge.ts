@@ -1,6 +1,6 @@
 import type { MergeWay, MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
-import { forgePlace } from "@shared/forge";
+import { branchComparePage, forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import { requireNamed } from "../../../workspace/naming";
 import type { ForgeApi } from "../../api";
@@ -585,6 +585,20 @@ export class GitLabForge implements Forge {
 
   url(change: ForgeChange): string | null {
     return change.url;
+  }
+
+  async branchPage(branch: string): Promise<string | null> {
+    const { owner, name, source } = this.location;
+    // A contributor's fork names no branch of its own project here.
+    if (source || !owner || !name) return null;
+    return branchComparePage({
+      kind: "gitlab",
+      host: this.host,
+      owner,
+      name,
+      base: await this.defaultBranch(),
+      branch,
+    });
   }
 
   private changeOf(request: MergeRequestJson): ForgeChange {

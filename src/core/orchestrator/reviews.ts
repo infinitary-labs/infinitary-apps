@@ -84,7 +84,9 @@ export class Reviews {
    * pull request already records a different head (INF-288).
    */
   async reviewFacts(builder: TaskRecord): Promise<ReviewBriefFacts> {
-    const prUrl = builder.delivery?.prUrl;
+    // Only a pull request's page: a batched branch's compare page (INF-4196)
+    // is no pull request, and the brief calls this one.
+    const prUrl = builder.delivery?.prNumber !== undefined ? builder.delivery.prUrl : undefined;
     const machines = this.options.machines;
     const device = builder.deviceId;
     let headSha: string | null;

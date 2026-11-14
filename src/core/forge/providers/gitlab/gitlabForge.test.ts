@@ -551,3 +551,18 @@ describe("GitLabForge", () => {
     expect(await forge.teamQueueLeftovers()).toEqual({ files: [] });
   });
 });
+
+// Intent: INF-4196's approved plan - a batched change's merge card links its compare page
+// "the same way" on GitLab: the project's own compare page from its default branch.
+describe("a pushed branch's page", () => {
+  it("is GitLab's compare page from the default branch, under a nested group", async () => {
+    const { forge } = forgeAnswering((_method, path) =>
+      path.endsWith("/projects/group%2Fsubgroup%2Fapp")
+        ? Response.json({ default_branch: "main" })
+        : new Response(null, { status: 404 }),
+    );
+    expect(await forge.branchPage("fm/task-ab12cd34")).toBe(
+      `https://${HOST}/group/subgroup/app/-/compare/main...fm/task-ab12cd34`,
+    );
+  });
+});

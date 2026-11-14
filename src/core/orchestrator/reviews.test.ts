@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { alreadyAllowedWords } from "@shared/captainAllowances";
 import { SETTLE_FACT_VALUE_CLASS } from "@shared/cards";
+import { branchComparePage } from "@shared/forge";
 import { acceptedValidation } from "@shared/liveValidation";
 import { REVIEW_EARLIER_WORDS, REVIEW_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
@@ -253,6 +254,63 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         reviewSha: later,
         headSha: recorded,
       });
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // Intent: INF-4196's approved plan keeps a batched change's compare page out of the
+  // sentences that call the change's page a pull request: the reviewer of a batched change
+  // is never told a pull request is open.
+  it("never tells the reviewer of a batched change, whose page is its branch's compare page, that a pull request is open", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      // The project's way of merging is not what the brief reads: the record's change is.
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      const branch = `fm/task-${builderId}`;
+      const page = branchComparePage({
+        kind: "github",
+        host: "github.com",
+        owner: "o",
+        name: "r",
+        base: "main",
+        branch,
+      });
+      seedDelivery(tasks, builderId, {
+        changeLabel: branch,
+        ...(page ? { prUrl: page } : {}),
+        headSha: HEAD,
+        ci: "green",
+      });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      const brief = reviewer.promptCalls[0] ?? "";
+      expect(brief).toContain(`at head ${HEAD}`);
+      expect(brief).not.toContain("A pull request is already open");
+      expect(page && brief).not.toContain(page);
+      expect(
+        tasks.timeline(builderId).find((event) => event.text.includes("review opened"))?.text,
+      ).not.toContain("pull request");
     } finally {
       repo.dispose();
     }

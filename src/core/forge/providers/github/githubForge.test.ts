@@ -1522,3 +1522,37 @@ describe("whether GitHub holds a repair's version", () => {
     await expect(forge.holdsCommit(MISSING)).rejects.toMatchObject({ failure: "not-found" });
   });
 });
+
+// Intent: INF-4196's approved plan - a batched change has no pull request of its own, so its
+// merge card links "its changes on GitHub", the branch's compare page against the default
+// branch, on github.com and on a team's own server alike; a contributor's fork has none.
+describe("a pushed branch's page", () => {
+  it("is the compare page from the default branch GitHub names, on GitHub and a team's own server", async () => {
+    const { base } = await stub({
+      "GET /repos/acme/meter": () => ({ json: { default_branch: "trunk" } }),
+    });
+    const at = (host: string) =>
+      new GitHubForge(
+        { kind: "github", host, owner: "acme", name: "meter", dir: "/r" },
+        { token: async () => "ghp_disposable", apiBaseUrl: base },
+      );
+    expect(await at("github.com").branchPage("fm/task-ab12cd34")).toBe(
+      "https://github.com/acme/meter/compare/trunk...fm/task-ab12cd34",
+    );
+    expect(await at("github.corp.example").branchPage("fm/task-ab12cd34")).toBe(
+      "https://github.corp.example/acme/meter/compare/trunk...fm/task-ab12cd34",
+    );
+    const fork = new GitHubForge(
+      {
+        kind: "github",
+        host: "github.com",
+        owner: "acme",
+        name: "meter",
+        dir: "/r",
+        source: { id: 9, fullName: "someone/meter" },
+      },
+      { token: async () => "ghp_disposable", apiBaseUrl: base },
+    );
+    expect(await fork.branchPage("fm/task-ab12cd34")).toBeNull();
+  });
+});

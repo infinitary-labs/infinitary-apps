@@ -48,12 +48,29 @@ export const AUTONOMY_SWITCH_NAME = "Ask before merging";
 /**
  * The host's merge button on a completion card, and the way out that
  * merges, by how the change goes in: its pull request merged where the
- * project lives, or its branch merged here.
+ * project lives, its branch merged here, or its version put in line for
+ * the next batch, which merges it (INF-4196).
  */
 export const MERGE_WORDS = {
   "merge-pr": "Merge the pull request",
   land: "Merge the branch",
+  batch: "Merge in the next batch",
 } as const;
+
+/**
+ * The merge button's words for a task's change: a change that joins the
+ * person's own batch is put in line for the next batch; a pull request
+ * merges; anything else merges its branch.
+ */
+export function mergeWordsFor(
+  delivery: RepoDelivery | null | undefined,
+  inOwnBatch: boolean,
+): string {
+  if (inOwnBatch) return MERGE_WORDS.batch;
+  return delivery === "direct-pr" || delivery === "queue-pr"
+    ? MERGE_WORDS["merge-pr"]
+    : MERGE_WORDS.land;
+}
 
 /** The button the app puts beside a merge that keeps the task, in place of Discard (INF-2744). */
 export const MERGE_NOT_NOW_WORDS = "Not now";

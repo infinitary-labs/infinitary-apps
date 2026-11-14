@@ -10,6 +10,7 @@ import {
   ForgeWriteError,
 } from "../../src/core/forge";
 import type { BatchMember, MergeWay } from "../../src/shared/batches";
+import { branchComparePage } from "../../src/shared/forge";
 import { FakeForge } from "./prCiHarness";
 
 /**
@@ -58,6 +59,19 @@ export class BatchHostForge extends FakeForge {
   constructor(public pushed: string | null = null) {
     super();
     this.change = null;
+  }
+
+  /** The pushed branch's compare page, as GitHub names it for the project (INF-4196). */
+  async branchPage(branch: string): Promise<string | null> {
+    this.calls.push(`branchPage ${branch}`);
+    return branchComparePage({
+      kind: "github",
+      host: "github.com",
+      owner: "acme",
+      name: "meter",
+      base: "main",
+      branch,
+    });
   }
 
   async branchHead(branch: string): Promise<string> {

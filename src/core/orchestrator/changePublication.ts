@@ -277,7 +277,7 @@ export class ChangePublication {
     const change =
       (await forge.changeFor(branch)) ??
       (!fork && branch === located.record.branch && this.context.ownBatch(taskId)
-        ? await this.context.pushedBranch(located.forge, branch)
+        ? await this.context.pushedBranch(located.forge, branch, located.record.delivery)
         : null);
     if (!change) {
       if (fork) throw new Error("The story's pull request is not open.");

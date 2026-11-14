@@ -6,9 +6,11 @@ import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
 import { BATCH_HOLD_WORDS, BATCH_OWN_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { BATCH_BRANCH_PREFIX } from "../../src/shared/batches";
-import { changeNumberLabel } from "../../src/shared/forge";
+import { branchComparePage, changeNumberLabel } from "../../src/shared/forge";
+import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
+import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp, SHORT_TICK } from "./launch";
 import { heroShot } from "./pictures";
@@ -23,7 +25,7 @@ import {
   ownBatchTask,
   ownBatchTitle,
 } from "./scenarios/ownBatch";
-import { completionAction, showCard } from "./stack";
+import { completionAction, factsStrip, showCard } from "./stack";
 import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 const PASSED = [{ name: "unit-tests", status: "completed", conclusion: "success" }];
@@ -132,6 +134,43 @@ test("approved changes of a batched project merge in batches of the captain's ow
       expect(saved(change)?.delivery?.prNumber).toBeUndefined();
     }
     expect(github.pulls()).toEqual([]);
+
+    // INF-4196: a change with no pull request of its own still has a page to open. Its
+    // merge card links the branch's name to its compare page on GitHub, which opens on
+    // Enter, and its merge says it goes in the next batch.
+    await launched.app.evaluate(({ shell }) => {
+      const opened: string[] = [];
+      (globalThis as { __fmOpened?: string[] }).__fmOpened = opened;
+      shell.openExternal = async (url: string) => {
+        opened.push(url);
+      };
+    });
+    const branch = saved("dates")?.branch ?? "";
+    const comparePage = branchComparePage({
+      kind: "github",
+      host: "github.com",
+      owner: "o",
+      name: "meterlab",
+      base: "main",
+      branch,
+    });
+    if (!branch || !comparePage) throw new Error("The change has a pushed branch on GitHub");
+    await showCard(page, ownBatchTitle("dates"));
+    await expect(
+      page
+        .locator("[data-card-layer]")
+        .getByRole("button", { name: MERGE_WORDS.batch, exact: true }),
+    ).toBeVisible();
+    const link = factsStrip(cardBody(page, ownBatchTitle("dates"))).change.getByRole("link", {
+      name: branch,
+    });
+    await expect(link).toHaveAttribute("href", comparePage, { timeout: 30_000 });
+    await pressKey(link, "Enter");
+    await expect
+      .poll(() =>
+        launched.app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened ?? []),
+      )
+      .toEqual([comparePage]);
 
     // A batch of one: the first approved change's pull request reads as its own would.
     await approve("dates");

@@ -153,7 +153,7 @@ export class ChangeChecks {
     try {
       let change = await this.checkChange(record, branch, forge, located.repo);
       if (!change && branch === record.branch && this.context.ownBatch(taskId))
-        change = await this.context.pushedBranch(forge, branch);
+        change = await this.context.pushedBranch(forge, branch, record.delivery);
       if (!change) {
         const pull = await this.namedPull(forge, current.number);
         this.assertCheckTarget(record);
@@ -436,7 +436,7 @@ export class ChangeChecks {
       // with no pull request of its own: its checks are read on that branch's
       // commit (docs/forge.md, "Batches of your own").
       if (!change && branch === record.branch && this.context.ownBatch(taskId))
-        change = await this.context.pushedBranch(forge, branch);
+        change = await this.context.pushedBranch(forge, branch, record.delivery);
       if (!change) {
         // The pull request the task names may have been merged or closed
         // outside the app: read it by its number, never guessed from its
@@ -764,7 +764,13 @@ export class ChangeChecks {
     const known =
       task.delivery?.changeLabel ??
       (task.delivery?.prNumber !== undefined ? `#${task.delivery.prNumber}` : undefined);
-    if (known === label) return;
+    if (known === label) {
+      // The same change, with a page the record lacks (INF-4196: a batched
+      // branch read before its compare page was kept): keep the page alone.
+      if (url && task.delivery?.prUrl !== url)
+        this.options.tasks.delivery.recordChangeEvidence(taskId, { prUrl: url });
+      return;
+    }
     this.options.tasks.delivery.recordChangeEvidence(
       taskId,
       {

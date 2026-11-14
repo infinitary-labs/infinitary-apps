@@ -219,13 +219,42 @@ describe("a change of a project that gets batches of the person's own", () => {
     at.forge.names = ["build", "unit-tests"];
     const run = await at.service.checks.run(TASK, "crewmate");
     expect(run.recorded).toBe(true);
-    expect(run.checked?.change).toEqual({ branch: BRANCH, headSha: HEAD, url: null });
+    expect(run.checked?.change).toEqual({
+      branch: BRANCH,
+      headSha: HEAD,
+      url: await at.forge.branchPage(BRANCH),
+    });
     expect(at.forge.calls).toContain(`checks ${HEAD}`);
     expect(at.service.checks.reading(TASK)?.overall).toBe("red");
 
     at.forge.states = ["success", "success"];
     await at.service.checks.run(TASK, "crewmate");
     expect(at.service.checks.reading(TASK)?.overall).toBe("green");
+  });
+
+  // Intent: INF-4196's approved plan - "a batched change's merge card links to its changes
+  // on GitHub", the branch's compare page, which the card's strip and the Info tab's Branch
+  // row read from the record; a change read before the page was kept gains it at its next
+  // reading.
+  it("keeps its pushed branch's compare page as the change's page, read once", async () => {
+    const at = home();
+    at.forge.states = ["success"];
+    at.forge.names = ["build"];
+    const page = await at.forge.branchPage(BRANCH);
+    at.forge.calls.length = 0;
+    await at.service.checks.run(TASK, "crewmate");
+    expect(at.tasks.get(TASK)?.delivery).toMatchObject({ changeLabel: BRANCH, prUrl: page });
+    expect(at.tasks.get(TASK)?.delivery?.prNumber).toBeUndefined();
+    await at.service.checks.run(TASK, "crewmate");
+    expect(at.forge.calls.filter((call) => call.startsWith("branchPage"))).toEqual([
+      `branchPage ${BRANCH}`,
+    ]);
+
+    // A record from before the page was kept: the branch is known, the page is not.
+    at.tasks.delivery.recordChangeEvidence(TASK, { prUrl: undefined });
+    expect(at.tasks.get(TASK)?.delivery?.prUrl).toBeUndefined();
+    await at.service.checks.run(TASK, "crewmate");
+    expect(at.tasks.get(TASK)?.delivery).toMatchObject({ changeLabel: BRANCH, prUrl: page });
   });
 
   it("reads a branch nobody pushed as having no change yet", async () => {

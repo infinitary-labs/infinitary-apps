@@ -45,6 +45,7 @@ import {
   MERGE_AFTER_FIXING_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
+  mergeWordsFor,
   REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
 import { allowanceCovers, type IntegrationAllowance } from "@shared/writeAsk";
@@ -76,6 +77,7 @@ import { approvableOffer, taskPull } from "./mergeAuthorization";
 import { holdsMerge, type MergeBehind } from "./settleCardFacts";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
+import { mergesInOwnBatch } from "./workShape";
 
 /**
  * A gesture as the consequential checks below read it: its offer, lifecycle
@@ -1245,12 +1247,19 @@ export class CardActions {
       offerId: card.offerId,
     });
     if (!offer) return undefined;
+    // A merge of a reviewed pull request merges it; the task's own change
+    // goes in by its project's way, a batched one in the next batch (INF-4196).
+    const delivery = this.core.facts.taskDelivery(record.id);
+    const merge = card.actions.map(mergeEffectOf).find(Boolean);
+    const passed = merge?.review
+      ? MERGE_WORDS["merge-pr"]
+      : mergeWordsFor(delivery, mergesInOwnBatch(record, repo));
     const head = offer.baseline.headSha;
     if (record.delivery?.headSha === head && overridePasses(record.delivery, "checks", head))
-      return MERGE_WORDS["merge-pr"];
+      return passed;
     const ci = currentCheckStatus(record.delivery);
     if (ci === "red") return MERGE_AFTER_FIXING_WORDS;
-    return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : MERGE_WORDS["merge-pr"];
+    return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : passed;
   }
 
   /**

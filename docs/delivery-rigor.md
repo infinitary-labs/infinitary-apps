@@ -452,7 +452,8 @@ The captain's merge click on a merge card is an approval of that change, and a r
   A newer story revision at the same version does not hold Merge: the click merges that version, as above.
 - **Its words (INF-23).**
   The merge card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CardActions.mergeLabel`): Merge when checks pass while checks are pending or unreadable, Merge after fixing errors when checks fail (captain INF-1555 F20), and Merge the pull request once the checks pass.
-  While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request whatever the checks read (INF-756).
+  On batched pull requests that last reads Merge in the next batch, since the click puts the change in line for its project's next batch, whether or not it still has a pull request of its own (`mergeWordsFor`, INF-4196); a merge of a reviewed pull request (`check_change` pull) keeps Merge the pull request.
+  While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request, or Merge in the next batch, whatever the checks read (INF-756).
   While the checks fail at the card's version and no checks override passes them, the host draws Merge anyway beside the merge (`CardActions.mergeAnyway`, INF-1137 friction 6).
   Under the status line, a failed check whose newest run on the default branch failed too reads Fails on main too, with the host's sentence naming that run and when it was read, so the captain sees what failed and why it is outside the change before choosing (`checkVerdicts`, INF-1915 fix 1).
   Its click is the captain's own word: it records the override on the checks for that version in his name, with the button's words and the card's title as its reason (`choiceWords`), and the merge runs at once; GitHub's own rules still decide whether it merges.
@@ -615,7 +616,7 @@ Every crewmate turn on the task is served the standing words: the brief carries 
 The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
 The reviewer's brief carries them on every review turn (`reviewerOverrideWords`), so access or a step they cover is not a finding.
 Both arrive as the first entry of the Already allowed list ("What the captain already allowed" below).
-When they pass the checks, its merge reads Merge the pull request on failed or running checks, since the click merges at once ("Its words" above).
+When they pass the checks, its merge reads Merge the pull request, or Merge in the next batch, on failed or running checks, since the click merges at once ("Its words" above).
 
 **The first mate's own cards and a story note.**
 The `decisions` hold on a first mate merge counts a crewmate's question, a write request and a validation question, never a card of the first mate's own (INF-242's question 9).

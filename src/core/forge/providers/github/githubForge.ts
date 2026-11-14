@@ -1,7 +1,7 @@
 import { BATCH_BRANCH_PREFIX, BATCH_CHECK, type MergeWay, type MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { settingFrom } from "@shared/envSettings";
-import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
+import { branchComparePage, forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { cutText } from "@shared/textCut";
 import type { NamingRule } from "../../../../shared/runbooks";
@@ -1199,6 +1199,20 @@ export class GitHubForge implements Forge {
 
   url(change: ForgeChange): string | null {
     return change.url;
+  }
+
+  async branchPage(branch: string): Promise<string | null> {
+    const { owner, name, source } = this.location;
+    // A contributor's fork names no branch of its own project here.
+    if (source || !owner || !name) return null;
+    return branchComparePage({
+      kind: "github",
+      host: this.location.host ?? GITHUB_COM,
+      owner,
+      name,
+      base: await this.defaultBranch(),
+      branch,
+    });
   }
 
   private owner(): string {

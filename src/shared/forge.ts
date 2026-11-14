@@ -56,6 +56,28 @@ export function changeNumberLabel(kind: ForgeKind | undefined, number: number): 
   return `${kind === "gitlab" ? "!" : "#"}${number}`;
 }
 
+/**
+ * The page where the project lives that shows what a pushed branch adds to
+ * the branch it builds on: GitHub's and GitLab's compare page (INF-4196).
+ * A batched change has no pull request of its own, so this is the page its
+ * merge card and Info tab link. Null for a kind with no such page.
+ */
+export function branchComparePage(where: {
+  kind: ForgeKind;
+  host: string;
+  owner: string;
+  name: string;
+  base: string;
+  branch: string;
+}): string | null {
+  const path = (value: string) => value.split("/").map(encodeURIComponent).join("/");
+  const project = `https://${where.host}/${path(where.owner)}/${encodeURIComponent(where.name)}`;
+  const range = `${path(where.base)}...${path(where.branch)}`;
+  if (where.kind === "github") return `${project}/compare/${range}`;
+  if (where.kind === "gitlab") return `${project}/-/compare/${range}`;
+  return null;
+}
+
 /** A host on the person's own server the app knows, and the kind of host it runs. */
 export type KnownForgeHost = { host: string; kind: ForgeKind };
 

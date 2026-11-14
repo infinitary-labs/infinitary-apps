@@ -783,6 +783,10 @@ A story revised at a version already in line or in a batch keeps its change in i
 A batch whose member's title or commit words changed is combined again on the same pull request, with the same changes in the same order, so that commit says them and the batch's checks run again; a revision that changes neither leaves the batch at its version, with any hold it carries.
 A story confirmed at another version takes the earlier version out of the line and the batch, as an approval that ends does.
 `check_change` reads the checks the project runs on that branch by its commit, with no pull request to name (`ChangeContext.pushedBranch`, `Forge.branchHead`; on GitLab, the commit's pipelines alone), and the merge card goes up on green as any other.
+The change's page is its branch's compare page against the default branch where the project lives (`Forge.branchPage`, `branchComparePage`: GitHub's `compare/<base>...<branch>`, GitLab's `-/compare/<base>...<branch>`), read once and kept on the record as the change's page, so the branch's name links it on the merge card's strip and the task's Info tab (INF-4196).
+A change read before its page was kept gains it at its next checks reading (`ChangeChecks.noteChange`); a plain Git host has no such page, and its branch stays unlinked.
+The words served to a crewmate that name a pull request's page read it only where the change has a number, so a compare page is never called a pull request.
+The merge reads Merge in the next batch, since its click puts the change in line.
 A branch whose project runs no checks on it is declared with `check_change`'s `absentChecks`, as for a pull request.
 The merge click keeps the captain's approval at that version and puts the change in line (`ChangeMerge.mergeInBatch`): it reads the branch's checks, range, title, review and story as any merge does, and sends nothing to merge.
 A change that still has a pull request of its own joins the same way, and that pull request is closed with a note linking the batch once the batch merges (`Forge.closeWithNote`); one stacked on another branch joins only once that branch's work is already in.

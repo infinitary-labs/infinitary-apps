@@ -390,6 +390,12 @@ export interface Forge {
   /** Read the pushed branch before opening a story-bound change. */
   branchHead?(branch: string): Promise<string>;
   /**
+   * The page that shows what the pushed branch adds to the default branch,
+   * for a change with no pull request of its own (INF-4196); absent where
+   * the host has no such page.
+   */
+  branchPage?(branch: string): Promise<string | null>;
+  /**
    * The default branch's own checks, and the commit they were read on
    * (INF-833 Fix 4). Absent where the host cannot read a branch's checks
    * apart from a proposed change; the close of the named task remains the

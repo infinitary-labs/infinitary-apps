@@ -1,13 +1,14 @@
 import { HERE } from "@shared/deviceNames";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { opensPullRequest } from "@shared/repos";
-import { MERGE_WORDS } from "@shared/vocabulary";
+import { MERGE_WORDS, mergeWordsFor } from "@shared/vocabulary";
 import { signInRefusal } from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { SettleRefusal, SettleWay } from "../tasks/taskGraph";
 import { mergeHold } from "./mergeAuthorization";
 import type { OpenMergeAction, SettleServiceHost } from "./settleHost";
 import { unlandedWorkText } from "./settleWords";
+import { mergesInOwnBatch } from "./workShape";
 
 /**
  * A settle's structured refusals (WI-12): the close gate, unlanded or
@@ -42,7 +43,7 @@ export function closeGateRefusal(
   if (!proceedWithOpen && !overridePasses(delivery, "parts", delivery?.headSha)) {
     const children = host.tasks.graph.closeRefusal(taskId);
     if (children) {
-      const refusal = withProceedWay(children, taskId, mode);
+      const refusal = withProceedWay(children, taskId, mode, inOwnBatch(host, taskId));
       return { ...refusal, text: `${refusal.text} ${softHoldWords("parts", "firstmate")}` };
     }
   }
@@ -60,8 +61,14 @@ function withProceedWay(
   refusal: SettleRefusal,
   taskId: string,
   mode: "merge-pr" | "land" | "discard",
+  batched: boolean,
 ): SettleRefusal {
-  const verb = mode === "discard" ? "Discard" : MERGE_WORDS[mode];
+  const verb =
+    mode === "discard"
+      ? "Discard"
+      : mode === "merge-pr"
+        ? MERGE_WORDS[batched ? "batch" : "merge-pr"]
+        : MERGE_WORDS.land;
   const them = refusal.tasks.length === 1 ? "it" : "them";
   const way: SettleWay = {
     label: `${verb}, keeping ${them} planned`,
@@ -69,6 +76,12 @@ function withProceedWay(
     args: { task_id: taskId, mode, proceed_with_open: true },
   };
   return { ...refusal, ways: [way, ...refusal.ways] };
+}
+
+/** Whether the task's change joins the person's own batch (docs/forge.md, "Batches of your own"). */
+function inOwnBatch(host: RefusalHost, taskId: string): boolean {
+  const record = host.tasks.get(taskId);
+  return mergesInOwnBatch(record, record?.repoId ? host.repos.get(record.repoId) : undefined);
 }
 
 /** A discard that would destroy unlanded work, as a structured refusal (WI-12). */
@@ -86,7 +99,7 @@ export function unlandedWorkRefusal(
       args: { task_id: record.id, mode: "discard", confirm: true },
     },
     {
-      label: `${MERGE_WORDS[keepMode]} instead`,
+      label: `${keepMode === "merge-pr" ? mergeWordsFor(host.taskDelivery(record.id), inOwnBatch(host, record.id)) : MERGE_WORDS.land} instead`,
       tool: "settle_task",
       args: { task_id: record.id, mode: keepMode },
     },

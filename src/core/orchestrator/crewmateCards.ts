@@ -33,6 +33,7 @@ import {
   CHECK_WORDS,
   MERGE_NOT_NOW_WORDS,
   MERGE_WORDS,
+  mergeWordsFor,
   REVIEW_CAREFULLY_WORDS,
   SKIP_RULES_MERGE_WORDS,
   sendWriteWords,
@@ -81,7 +82,7 @@ import type { MergeBehind } from "./settleCardFacts";
 import type { SettleOwners } from "./settleOwners";
 import { contributionStatusLine, pendingMergeLine } from "./settleWords";
 import { seenBefore, sinceSeenNotice, sinceSeenSection } from "./sinceSeen";
-import { deliverableOf, taskContributesUpstream } from "./workShape";
+import { deliverableOf, mergesInOwnBatch, taskContributesUpstream } from "./workShape";
 
 /**
  * The tool's answer when a completion card's revision went up while its
@@ -1289,6 +1290,15 @@ export class CrewmateCards {
     return undefined;
   }
 
+  /** Whether the task's change joins the person's own batch (docs/forge.md, "Batches of your own"). */
+  private inOwnBatch(taskId: string): boolean {
+    const record = this.options.tasks.get(taskId);
+    return mergesInOwnBatch(
+      record,
+      record?.repoId ? this.options.repos.get(record.repoId) : undefined,
+    );
+  }
+
   private contributing(taskId: string): boolean {
     const record = this.options.tasks.get(taskId);
     return taskContributesUpstream(
@@ -1338,7 +1348,9 @@ export class CrewmateCards {
       id: "merge",
       label: review?.skips
         ? SKIP_RULES_MERGE_WORDS
-        : MERGE_WORDS[declaredMerge.review ? "merge-pr" : this.host.mergeModeFor(taskId)],
+        : declaredMerge.review
+          ? MERGE_WORDS["merge-pr"]
+          : mergeWordsFor(this.host.taskDelivery(taskId), this.inOwnBatch(taskId)),
       default: true,
       effect: declaredMerge,
     };

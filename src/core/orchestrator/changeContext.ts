@@ -25,7 +25,7 @@ import type { LineageFacts, LineageQuestion } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
 import { reviewCoversHead } from "./reviewCarry";
 import type { TypedWake } from "./wakes";
-import { taskContributesUpstream } from "./workShape";
+import { mergesInOwnBatch } from "./workShape";
 
 /**
  * What every owner of a task's change shares (`./changeDelivery.ts`): the
@@ -114,10 +114,8 @@ export class ChangeContext {
    */
   ownBatch(taskId: string): RepoView | undefined {
     const record = this.options.tasks.get(taskId);
-    if (!record?.repoId || record.delivery?.checkTarget) return undefined;
-    const repo = this.options.repos.get(record.repoId);
-    if (!repo || taskContributesUpstream(record, repo)) return undefined;
-    return ownsBatches(deliveryForRecord(record, repo.delivery), repo) ? repo : undefined;
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    return mergesInOwnBatch(record, repo) ? repo : undefined;
   }
 
   get batches(): Batches | undefined {
@@ -126,12 +124,23 @@ export class ChangeContext {
 
   /**
    * A batched change's pushed branch as a change with no number, since it
-   * takes no pull request of its own; null while nothing is pushed.
+   * takes no pull request of its own; null while nothing is pushed. Its
+   * page is the host's compare page for the branch (INF-4196), read once
+   * and then kept on the record: `known` is the record's change.
    */
-  async pushedBranch(forge: Forge, branch: string): Promise<ForgeChange | null> {
+  async pushedBranch(
+    forge: Forge,
+    branch: string,
+    known?: TaskRecord["delivery"],
+  ): Promise<ForgeChange | null> {
     if (!forge.branchHead) return null;
     try {
-      return { branch, headSha: await forge.branchHead(branch), url: null };
+      const headSha = await forge.branchHead(branch);
+      const kept =
+        known?.prNumber === undefined && known?.changeLabel === branch ? known.prUrl : undefined;
+      // A page the host could not name leaves the branch unlinked, never unread.
+      const url = kept ?? (await forge.branchPage?.(branch).catch(() => null)) ?? null;
+      return { branch, headSha, url };
     } catch (caught) {
       // The host's refusal is its answer for a branch that is not there yet.
       if (caught instanceof ForgeError && caught.failure === "refused") return null;

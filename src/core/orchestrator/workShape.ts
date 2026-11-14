@@ -7,7 +7,7 @@ import {
 } from "@shared/cards";
 import { type ContributionRoute, contributesUpstream } from "@shared/contributions";
 import { softHoldWords } from "@shared/holds";
-import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, ownsBatches, type RepoView } from "@shared/repos";
 import {
   type Deliverable,
   type Escalation,
@@ -47,6 +47,21 @@ export function taskContributesUpstream(
   repo: RepoView | undefined,
 ): boolean {
   return contributesUpstream(contributionForTask(record, repo));
+}
+
+/**
+ * Whether a task's change joins this person's own batches (docs/forge.md,
+ * "Batches of your own"): a task of a project on the batched delivery. A
+ * pull request the task names by number is never batched, and neither is
+ * a contribution through a fork.
+ */
+export function mergesInOwnBatch(
+  record: TaskRecord | undefined,
+  repo: RepoView | undefined,
+): boolean {
+  if (!record?.repoId || record.delivery?.checkTarget || !repo) return false;
+  if (taskContributesUpstream(record, repo)) return false;
+  return ownsBatches(deliveryForRecord(record, repo.delivery), repo);
 }
 
 /**
@@ -502,11 +517,12 @@ export function branchFromSource(
   if (kept) return { task: source, ref: kept };
   if (source.workspaceState === "present" && source.deviceId) {
     // INF-3718: say what works now, not only the wait for its work to come home.
-    const change = source.delivery?.prUrl
-      ? `its pull request ${source.delivery.changeLabel ?? source.delivery.prUrl}`
-      : source.branch
-        ? `its branch ${source.branch}, if it pushed it,`
-        : "the version it pushed";
+    const change =
+      source.delivery?.prUrl && source.delivery.prNumber !== undefined
+        ? `its pull request ${source.delivery.changeLabel ?? source.delivery.prUrl}`
+        : source.branch
+          ? `its branch ${source.branch}, if it pushed it,`
+          : "the version it pushed";
     return {
       refused: `branch_from ${key}'s working copy is on another computer, so nothing here can branch from it yet. What works now: leave branch_from out and name ${change} in the brief for the new crewmate to start from. Or call again with branch_from once ${key}'s work is home and saved.`,
     };

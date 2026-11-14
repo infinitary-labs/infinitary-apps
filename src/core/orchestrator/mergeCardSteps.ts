@@ -9,8 +9,9 @@ import {
   isSignInForgeFailure,
 } from "../forge";
 import { currentChange } from "../storage/changeProjection";
-import { type ChangeContext, changeWords, crewSignInText } from "./changeContext";
+import { type ChangeContext, changeWords, crewSignInText, numberLabel } from "./changeContext";
 import type { ChangePublication } from "./changePublication";
+import { type MergedStory, mergedAheadWords, mergedStory } from "./mergedStory";
 
 /**
  * The steps show_merge_card walks, in their fixed order (INF-3717 piece 2):
@@ -162,8 +163,48 @@ export class MergeCardSteps {
         currentChange(located.record.delivery, located.branch).branch;
     }
     const ledger = () => options.tasks.delivery.changePresentation(taskId, branch);
-    const signIn = (where: Forge) =>
-      stop("sign-in", crewSignInText(this.context.signInFact(where, repoId)), "captain");
+    const signIn = (where: Forge, after = "") =>
+      stop(
+        "sign-in",
+        `${crewSignInText(this.context.signInFact(where, repoId))}${after}`,
+        "captain",
+      );
+
+    // The pull request a published story went to, read once: merged outside
+    // the app (INF-3799), its merge card shows the story it merged with, at
+    // the version that merged, and nothing is prepared, pushed or published
+    // for it again, since its branch may be gone.
+    let open: ForgeChange | null | undefined;
+    if (forge && branch && hasChangeRequests(forge.kind) && ledger()?.published) {
+      let merged: MergedStory | undefined;
+      try {
+        open = await forge.changeFor(branch);
+        if (!open) merged = await mergedStory(options.tasks, taskId, forge, branch);
+      } catch (caught) {
+        // A failed read stops the walk before the story step: words saved
+        // while a merged pull request cannot be read would be a newer
+        // revision than the one it merged with, which refuses its merge card
+        // for good. The crewmate passes them again.
+        const given = takeStory();
+        if (given) await presentations.discardStaged(taskId, given);
+        const unsaved = given ? " The story words you passed were not saved: pass them again." : "";
+        if (isSignInForgeFailure(caught)) return signIn(forge, unsaved);
+        return stop("pull", `${wordsOf(caught)}${unsaved}`, "app");
+      }
+      if (merged && "refused" in merged) return stop("pull", merged.refused, "crewmate");
+      if (merged) {
+        const { pull, revision } = merged;
+        if (head !== pull.headSha)
+          return stop("commit", mergedAheadWords(forge, pull, head), "crewmate");
+        const given = takeStory();
+        if (given) await presentations.discardStaged(taskId, given);
+        did.push(
+          `${numberLabel(forge, pull.number)} was merged outside the app at ${pull.headSha}, so its merge card shows story revision ${revision}, the story it merged with${given ? "; the story words you passed were not saved, since a merged pull request takes no new story" : ""}.`,
+        );
+        const title = ledger()?.revisions.find((saved) => saved.revision === revision)?.title ?? "";
+        return { did, ready: { revision, title, head: pull.headSha } };
+      }
+    }
 
     // 2. Story words: the ones given, or the newest saved.
     const story = takeStory();
@@ -249,12 +290,13 @@ export class MergeCardSteps {
     if (local || !forge || !branch) return { did, ready: { revision: shown, title, head } };
 
     // 5 and 6. Pull request open, story published and read back.
-    let open: ForgeChange | null;
-    try {
-      open = await forge.changeFor(branch);
-    } catch (caught) {
-      if (isSignInForgeFailure(caught)) return signIn(forge);
-      return stop("pull", wordsOf(caught), "app");
+    if (open === undefined) {
+      try {
+        open = await forge.changeFor(branch);
+      } catch (caught) {
+        if (isSignInForgeFailure(caught)) return signIn(forge);
+        return stop("pull", wordsOf(caught), "app");
+      }
     }
     const current = ledger();
     if (!open && current?.published)

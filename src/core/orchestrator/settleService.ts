@@ -19,7 +19,13 @@ import { TaskService } from "../tasks/taskService";
 import { type MergeGuard, mergedReceipt, type PrOutcome } from "./changeMerge";
 import { afterMergeWords } from "./deliveryWakes";
 import type { KeptApproval } from "./keptApproval";
-import { candidateHead, keptFeedSaid, keptNote, standingAuthorization } from "./mergeAuthorization";
+import {
+  approvalClosesOn,
+  candidateHead,
+  keptFeedSaid,
+  keptNote,
+  standingAuthorization,
+} from "./mergeAuthorization";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLease, SettleLocks } from "./settleLocks";
 import {
@@ -484,9 +490,10 @@ export class SettleService {
       });
       // Another of its pull requests still open keeps the task open (INF-2525).
       const other = await this.otherOpenChange(current, pull.number);
+      const closes = this.closeDeclaredBy(current, pull);
       if (
         other !== undefined ||
-        !this.declaresClose(current, pull) ||
+        !closes ||
         this.locks.working(taskId) ||
         current.activity === "starting" ||
         current.activity === "running" ||
@@ -502,6 +509,9 @@ export class SettleService {
       ) {
         const once = `external-merge:${pull.number}:${pull.headSha}`;
         if (!this.host.inbox.woken(taskId, once)) {
+          // A merge card the card calls would refuse (INF-3799): the wake
+          // asks for the merge's report instead, as check_change does.
+          const story = closes ? undefined : this.host.mergedStory?.(taskId, pull);
           this.host.inbox.enqueueSteerOnce(taskId, {
             facts: {
               kind: "external-merge",
@@ -513,6 +523,10 @@ export class SettleService {
                 : {}),
               change: changeName(current, pull.number),
               head: pull.headSha,
+              // What already declared this merge closes the task (INF-3799):
+              // the wake asks for no merge card, as check_change does.
+              ...(closes ? { closes } : {}),
+              ...(story && "refused" in story ? { refused: story.refused } : {}),
               ...(other
                 ? {
                     open: `${changeName(current, other.number)} on this task ${other.unread ? "could not be read, so it may still be open" : "is still open"}`,
@@ -532,12 +546,13 @@ export class SettleService {
   }
 
   /**
-   * Whether the task's open merge card for this pull request declared that
-   * its merge closes the task, at the version that merged (INF-2744): the
-   * card's own declaration is the one writer of that fact. A merge card
-   * the app approved on its own reads through its standing approval.
+   * What declared that this pull request's merge closes the task, at the
+   * version that merged (INF-2744): the task's open merge card for it, whose
+   * own declaration is the one writer of that fact, or the captain's kept
+   * approval, which a merge card the app approved on its own reads through.
+   * Undefined when nothing declared it.
    */
-  private declaresClose(record: TaskRecord, pull: ForgePull): boolean {
+  private closeDeclaredBy(record: TaskRecord, pull: ForgePull): "card" | "approval" | undefined {
     if (
       taskContributesUpstream(
         record,
@@ -551,7 +566,7 @@ export class SettleService {
           offer.continues !== true,
       )
     )
-      return true;
+      return "card";
     // Every open merge card that names this pull request (INF-2746): a
     // review of it, or the task's own change.
     const scopes = [
@@ -565,18 +580,16 @@ export class SettleService {
       if (open?.after !== "close") continue;
       if (open.review) {
         const review = record.delivery?.mergeReviews?.find((item) => item.id === open.review);
-        if (review?.headSha === pull.headSha) return true;
+        if (review?.headSha === pull.headSha) return "card";
         continue;
       }
       const offer = record.delivery?.completionOffers?.find(
         (entry) => entry.cardId === open.cardId,
       );
       if ((offer?.shownFor ?? offer?.prNumber) === pull.number && offer?.headSha === pull.headSha)
-        return true;
+        return "card";
     }
-    const authorization = standingAuthorization(record.delivery);
-    if (!authorization || authorization.target.prNumber !== pull.number) return false;
-    return (authorization.after ?? (authorization.review ? "continue" : "close")) === "close";
+    return approvalClosesOn(record.delivery, pull.number) ? "approval" : undefined;
   }
 
   /**

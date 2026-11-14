@@ -313,6 +313,7 @@ export async function approved(
     mergeReview: (id, reviewId, guard) => service().reviews.mergeReview(id, reviewId, guard),
     reviewGate: (id, reviewId) => service().reviews.reviewGate(id, reviewId),
     readPull: (id, prNumber) => service().merges.pullState(id, prNumber),
+    mergedStory: (id, pull) => service().merges.mergedStory(id, pull),
     openChange: (id, input) => service().publication.open(id, input),
     checkChange: (id, input) => service().checkTool.checkForCrew(id, input),
     ...(where.checkWatch ? { readCheckWatch: (id) => service().checks.readWatched(id) } : {}),

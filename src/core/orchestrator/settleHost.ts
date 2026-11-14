@@ -17,6 +17,7 @@ import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import type { AskEnding } from "./askEnding";
 import type { MergeBoundary, MergeGuard, PrOutcome } from "./changeMerge";
+import type { MergedStory } from "./mergedStory";
 import type { TypedWake } from "./wakes";
 
 /**
@@ -199,6 +200,11 @@ export type SettleServiceHost = {
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
   /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
+  /**
+   * The merge card a pull request `readPull` read merged can show, or why it
+   * has none (INF-3799), which the merge's wake words as check_change does.
+   */
+  mergedStory?: (taskId: string, pull: ForgePull) => MergedStory | undefined;
   /**
    * A kept approval read its undecided repair: the supervisor sees that one
    * independent assessment decides it (FI3-663) - commissioned once, ended

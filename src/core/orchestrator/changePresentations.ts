@@ -641,20 +641,27 @@ export class ChangePresentations {
     );
   }
 
-  /** A completion offer must use the newest fully published story at the current committed version. */
+  /**
+   * A completion offer must use the newest fully published story at the
+   * current committed version. `ahead` words the refusal of another
+   * committed version, where no push answers it: a pull request merged
+   * outside the app (INF-3799).
+   */
   async completion(
     taskId: string,
     revision: number,
     head: string,
     branch?: string,
     number?: number,
+    ahead?: (committed: string) => string,
   ) {
     return this.serial(taskId, async () => {
       const story = this.publishedStory(taskId, branch, head, revision, number);
       const committed = await this.options.head(taskId);
       if (committed !== head)
         throw new Error(
-          `${pushFirst(committed, head)} Then show the merge card again with presentation ${revision}.`,
+          ahead?.(committed) ??
+            `${pushFirst(committed, head)} Then show the merge card again with presentation ${revision}.`,
         );
       const currentValidation = story.liveValidation
         ? this.currentValidation(taskId, story)

@@ -470,6 +470,7 @@ export class CrewSupervisor {
       },
       ...(options.closePullRequest ? { closePullRequest: options.closePullRequest } : {}),
       ...(options.readPull ? { readPull: options.readPull } : {}),
+      ...(options.mergedStory ? { mergedStory: options.mergedStory } : {}),
       assessRepair: (taskId) => this.reviews.assessRepair(taskId),
       fileFolderRepair: (merged, refusal) => this.inPlaceWork.fileFolderRepair(merged, refusal),
       folderMissing: (repoId, noticed, by) => this.inPlaceWork.folderMissing(repoId, noticed, by),

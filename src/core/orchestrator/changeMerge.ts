@@ -32,6 +32,7 @@ import {
   QUEUE_WAITING_WORDS,
 } from "../forge";
 import { QUEUE_SEPARATE_TITLES_VERSION } from "../queue/shipped";
+import { currentChange } from "../storage/changeProjection";
 import type { QueueApprovalRemoval, TaskRecord } from "../storage/taskRecords";
 import { requireNamed } from "../workspace/naming";
 import type { ChangeChecks } from "./changeChecks";
@@ -47,6 +48,7 @@ import {
   MERGE_CHECKS_HOLD_REASON,
   standingAuthorization,
 } from "./mergeAuthorization";
+import { type MergedStory, mergedStoryOf } from "./mergedStory";
 import { type ProjectQueue, queueMerges } from "./projectQueue";
 import { publicationRepo } from "./publicationRepo";
 import { carryPassedReview } from "./reviewCarry";
@@ -1198,6 +1200,26 @@ export class ChangeMerge {
     if (elsewhere === null) return undefined;
     const forge = this.options.forgeFor(elsewhere ?? repo);
     return forge.pull ? this.context.pullOf(forge, prNumber) : undefined;
+  }
+
+  /**
+   * The merge card a pull request read merged outside the app can show, or
+   * why it has none (INF-3799), from the project `pullState` read it in: the
+   * verdict check_change and the merge card read, for the merge's wake.
+   */
+  mergedStory(taskId: string, pull: ForgePull): MergedStory | undefined {
+    const record = this.options.tasks.get(taskId);
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (!record?.branch || !repo) return undefined;
+    const elsewhere = this.projectOfNumber(record, pull.number);
+    if (elsewhere === null) return undefined;
+    return mergedStoryOf(
+      this.options.tasks,
+      taskId,
+      this.options.forgeFor(elsewhere ?? repo),
+      currentChange(record.delivery, record.branch).branch,
+      pull,
+    );
   }
 
   /**

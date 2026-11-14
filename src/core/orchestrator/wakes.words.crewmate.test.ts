@@ -938,6 +938,47 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       words:
         "The project's host confirms PR #1061 merged at 4be7c1d90a2f. This task remains open because no merge card declared that this merge closes it, or work still remains. Read its remaining work and instructions; continue them, or, when this merge finished all your work, put up your merge card for this pull request with after close, and the app closes the task as merged. Do not ask for a discard.",
     },
+    {
+      name: "the captain's kept approval already closes it (INF-3799)",
+      wake: {
+        facts: {
+          kind: "external-merge",
+          change: "PR #1061",
+          head: "4be7c1d90a2f",
+          closes: "approval",
+        },
+      },
+      words:
+        "The project's host confirms PR #1061 merged at 4be7c1d90a2f, and the captain's kept merge approval already says this merge closes the task: put up no merge card. Finish any remaining work; once your turn ends with nothing else open on the task, the app closes it as merged. Do not ask for a discard.",
+    },
+    {
+      name: "its open merge card already closes it, with another pull request open (INF-3799)",
+      wake: {
+        facts: {
+          kind: "external-merge",
+          change: "PR #1061",
+          head: "4be7c1d90a2f",
+          closes: "card",
+          open: "PR #1065 is still open",
+        },
+      },
+      words:
+        "The project's host confirms PR #1061 merged at 4be7c1d90a2f, and your open merge card already says this merge closes the task: put up no other merge card. This task remains open because PR #1065 is still open. Finish any remaining work; once your turn ends with nothing else open on the task, the app closes it as merged. Do not ask for a discard.",
+    },
+    {
+      name: "its merge card would be refused (INF-3799)",
+      wake: {
+        facts: {
+          kind: "external-merge",
+          change: "PR #1061",
+          head: "4be7c1d90a2f",
+          refused:
+            "#1061 was merged outside the app at 4be7c1d90a2f, a version its published story revision 1 at 9c0d5e3a71b2 never reached. A merged pull request takes no new story, so it has no merge card: report the merge and any remaining work, and the first mate closes the task.",
+        },
+      },
+      words:
+        "The project's host confirms PR #1061 merged at 4be7c1d90a2f, and nothing is left to merge. #1061 was merged outside the app at 4be7c1d90a2f, a version its published story revision 1 at 9c0d5e3a71b2 never reached. A merged pull request takes no new story, so it has no merge card: report the merge and any remaining work, and the first mate closes the task. Do not ask for a discard.",
+    },
   ],
   "write-answered": [
     {

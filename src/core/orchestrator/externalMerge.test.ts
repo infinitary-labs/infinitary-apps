@@ -311,6 +311,62 @@ describe("external merge reconciliation", () => {
     ]);
   });
 
+  // The review of INF-3799: the watcher read a merge while its crewmate
+  // worked, under the captain's kept approval that already closes the task,
+  // and its wake still asked for a merge card, which check_change says not
+  // to put up. The wake names what declared the close, and the task closes
+  // as merged once the turn ends, with nothing sent.
+  it.each(["approval", "card"] as const)(
+    "wakes a working crewmate to put up no merge card when the %s already closes the task",
+    async (closes) => {
+      const h = fixture();
+      if (closes === "approval") {
+        h.withdraw();
+        seedDelivery(h.tasks, "meter", {
+          mergeAuthorization: {
+            version: 1,
+            id: "auth-1",
+            generation: 1,
+            issuer: "captain",
+            at: 1,
+            card: { id: "card-meter-merge", offerId: "offer-1", actionId: "merge" },
+            target: {
+              repoId: "project",
+              host: "github.com",
+              owner: "o",
+              name: "meter",
+              prNumber: 71,
+              branch: "fm/task-meter",
+              delivery: "direct-pr",
+              method: "squash",
+            },
+            approvedHead: "a".repeat(40),
+            lineage: [],
+            proceedWithOpen: false,
+            status: "standing",
+            after: "close",
+          },
+        });
+      }
+      h.tasks.turns.setActivity("meter", "running");
+      h.merged();
+      await h.watcher().poll(h.now());
+      expect(h.tasks.get("meter")).toMatchObject({ status: "active", delivery: { ci: "merged" } });
+      const wake = h.inbox.allFor("meter");
+      expect(wake).toEqual([
+        expect.objectContaining({
+          facts: expect.objectContaining({ kind: "external-merge", closes }),
+        }),
+      ]);
+      h.inbox.ack([wake[0]!.id]);
+      h.tasks.turns.setActivity("meter", "idle");
+      h.advance();
+      await h.watcher().poll(h.now());
+      expect(h.tasks.get("meter")?.closedReason).toBe("merged");
+      expect(h.merge).not.toHaveBeenCalled();
+    },
+  );
+
   // INF-1391: the external-merge journey found a tick deleting escalated
   // guidance when the new merge wake reached a task without a saved session.
   it.each(["before", "after"] as const)(

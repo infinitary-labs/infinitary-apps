@@ -71,6 +71,7 @@ import { NO_RECORDED_WORDS_LEAD } from "./intentBrief";
 import { keptFeedLine } from "./mergeAuthorization";
 import { POLICY_GUIDANCE_HEADING } from "./noticeWakes";
 import { closingNoteTitle } from "./settleWords";
+import { renderWake } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -391,82 +392,84 @@ describe("CrewSupervisor", () => {
       },
     );
 
+    // The saved story of a kept merge's card (INF-3623, INF-3799): the app's
+    // own story service holds it, published on #7 at the approved version.
+    const destination = {
+      host: "github.com",
+      projectId: 7,
+      fullName: "o/r",
+      visibility: "private" as const,
+    };
+    const story = (
+      taskId: string,
+      revision: number,
+      whatChanged: string[],
+    ): ChangePresentation => ({
+      version: 1,
+      taskId,
+      revision,
+      destination,
+      title: "Ready to merge",
+      base: APPROVED,
+      head: APPROVED,
+      why: ["The meter dropped readings."],
+      whatChanged,
+      before: ["A reading could be lost."],
+      after: ["Every reading is kept."],
+      views: [],
+      noPicture: "This changes how readings are kept, not a view.",
+      verification: ["The meter tests passed."],
+      risk: Object.fromEntries(
+        RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "A meter fix." }]),
+      ) as RiskDeclaration,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+      assets: [],
+      pictures: [],
+    });
+    const published = (shown: ChangePresentation) => {
+      const region = presentationMarkdown(shown, new Map(), "passed");
+      return {
+        revision: shown.revision,
+        head: shown.head,
+        state: "confirmed" as const,
+        region,
+        regionHash: createHash("sha256").update(region).digest("hex"),
+        contentHash: presentationContentHash(shown),
+        number: 7,
+      };
+    };
+    const storied: Parameters<typeof approved>[0] = {
+      story: ({ tasks, taskId, forge }) => {
+        Object.assign(forge, {
+          attachments: {
+            destination: async () => destination,
+            upload: async () => {
+              throw new Error("No upload expected");
+            },
+          },
+        });
+        const first = story(taskId, 1, ["The meter keeps every reading."]);
+        const shown = published(first);
+        tasks.delivery.updateChangePresentation(taskId, () => ({
+          revisions: [first],
+          receipts: [],
+          publication: shown,
+          published: shown,
+        }));
+        forge.body = shown.region;
+        return 1;
+      },
+    };
+    const withStory = () => approved(storied);
+
     // INF-3623, the captain's "all non-code changes to the PR should keep my
     // approval": a merge card shows the saved story; a story revised and
     // published at the version the card showed keeps its click, through the
     // real merge, and the merge request carries the newest story. Another
     // commit refuses the click.
     describe("a story revised after the merge card (INF-3623)", () => {
-      const destination = {
-        host: "github.com",
-        projectId: 7,
-        fullName: "o/r",
-        visibility: "private" as const,
-      };
-      const story = (
-        taskId: string,
-        revision: number,
-        whatChanged: string[],
-      ): ChangePresentation => ({
-        version: 1,
-        taskId,
-        revision,
-        destination,
-        title: "Ready to merge",
-        base: APPROVED,
-        head: APPROVED,
-        why: ["The meter dropped readings."],
-        whatChanged,
-        before: ["A reading could be lost."],
-        after: ["Every reading is kept."],
-        views: [],
-        noPicture: "This changes how readings are kept, not a view.",
-        verification: ["The meter tests passed."],
-        risk: Object.fromEntries(
-          RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "A meter fix." }]),
-        ) as RiskDeclaration,
-        requiredActions: [],
-        unfinished: [],
-        projectText: "",
-        assets: [],
-        pictures: [],
-      });
-      const published = (shown: ChangePresentation) => {
-        const region = presentationMarkdown(shown, new Map(), "passed");
-        return {
-          revision: shown.revision,
-          head: shown.head,
-          state: "confirmed" as const,
-          region,
-          regionHash: createHash("sha256").update(region).digest("hex"),
-          contentHash: presentationContentHash(shown),
-          number: 7,
-        };
-      };
-      const withStory = () =>
-        approved({
-          story: ({ tasks, taskId, forge }) => {
-            Object.assign(forge, {
-              attachments: {
-                destination: async () => destination,
-                upload: async () => {
-                  throw new Error("No upload expected");
-                },
-              },
-            });
-            const first = story(taskId, 1, ["The meter keeps every reading."]);
-            const shown = published(first);
-            tasks.delivery.updateChangePresentation(taskId, () => ({
-              revisions: [first],
-              receipts: [],
-              publication: shown,
-              published: shown,
-            }));
-            forge.body = shown.region;
-            return 1;
-          },
-        });
-
       it("merges the newest story on the earlier card's click when only the words changed", async () => {
         const h = await withStory();
         expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
@@ -504,6 +507,99 @@ describe("CrewSupervisor", () => {
         await tick();
         expect(h.forge.sends).toBe(0);
         expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+      });
+    });
+
+    // INF-3799, found on INF-3710: once a published story's pull request
+    // merged outside the app, check_change asks its crewmate for the merge
+    // card with after close, and that card was refused both with the story
+    // and without it. It shows the story the pull request merged with, and
+    // the task closes as merged with nothing sent, whether the app's own
+    // sweep or the captain's click closes it. With the captain's kept
+    // approval already declaring the close, check_change asks for no card.
+    describe("a story's pull request merged outside the app (INF-3799)", () => {
+      /** The merge card is withdrawn, so no click declared anything, and #7 is merged on GitHub by hand. */
+      const mergedByHand = async () => {
+        const h = await withStory();
+        h.supervisor.cards.takeDown(h.card.id, "The crewmate withdrew it.");
+        h.forge.merged = true;
+        await tick();
+        return h;
+      };
+      const mergeCard = (h: Awaited<ReturnType<typeof withStory>>) =>
+        h.cards().find((card) => card.actions.some((action) => action.effect?.kind === "merge"));
+
+      it.each([
+        ["the app's own sweep", "sweep"],
+        ["the captain's click", "click"],
+      ] as const)(
+        "shows the story's merge card for a pull request merged by hand and closes the task as merged on %s",
+        async (_label, closer) => {
+          const h = await mergedByHand();
+          // Nothing declared yet that this merge closes the task: it stays
+          // open, and the app wakes the crewmate about the merge.
+          expect(await h.supervisor.settling.settle.reconcileExternalMerge(h.taskId)).toBe(true);
+          expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+          expect(mergeCard(h)).toBeUndefined();
+          // In its turn the crewmate reads the merge and puts up the merge card it is told to.
+          await repairTurn(h, async () => {
+            expect(await h.declare({})).toContain(
+              "put up your merge card for this pull request with after close",
+            );
+            await h.emit("Merged on GitHub");
+          });
+          const card = mergeCard(h);
+          expect(card?.body).toContain("The meter keeps every reading.");
+          expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
+            cardId: card?.id,
+            headSha: APPROVED,
+            shownFor: 7,
+            presentationRevision: 1,
+          });
+          if (closer === "sweep") {
+            expect(await h.supervisor.settling.settle.reconcileExternalMerge(h.taskId)).toBe(true);
+          } else h.supervisor.cardActions.act(card?.id ?? "", "merge");
+          await vi.waitFor(() =>
+            expect(h.tasks.get(h.taskId)).toMatchObject({
+              status: "done",
+              closedReason: "merged",
+            }),
+          );
+          expect(h.forge.sends).toBe(0);
+        },
+      );
+
+      // The review of INF-3799: the merge's wake asked for a merge card the
+      // card calls refuse, where check_change asks for the merge's report.
+      it("asks for the merge's report in its wake, not a merge card, when the pull request merged at a version its story never reached", async () => {
+        const h = await mergedByHand();
+        // A commit pushed after the story was published, then merged by hand.
+        h.forge.headSha = REPAIRED;
+        expect(await h.supervisor.settling.settle.reconcileExternalMerge(h.taskId)).toBe(true);
+        const refused = `#7 was merged outside the app at ${REPAIRED}, a version its published story revision 1 at ${APPROVED} never reached. A merged pull request takes no new story, so it has no merge card: report the merge`;
+        const wake = h.inbox.allFor(h.taskId).find((row) => row.facts?.kind === "external-merge");
+        if (!wake) throw new Error("The merge woke no one.");
+        const words = renderWake(wake);
+        expect(words).toContain(refused);
+        expect(words).not.toContain("put up your merge card");
+        // check_change reads the same verdict.
+        await repairTurn(h, async () => {
+          expect(await h.declare({})).toContain(`Nothing is left to merge. ${refused}`);
+        });
+        expect(mergeCard(h)).toBeUndefined();
+        expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+        expect(h.forge.sends).toBe(0);
+      });
+
+      it("asks for no merge card when the captain's kept approval already says the merge closes the task", async () => {
+        const h = await kept(storied);
+        h.forge.merged = true;
+        const answer = await h.declare({});
+        expect(answer).toContain("put up no merge card");
+        expect(answer).not.toContain("put up your merge card");
+        expect(await h.supervisor.settling.settle.reconcileExternalMerge(h.taskId)).toBe(true);
+        expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+        expect(h.forge.sends).toBe(1);
       });
     });
 

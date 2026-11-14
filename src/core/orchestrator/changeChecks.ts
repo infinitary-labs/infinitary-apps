@@ -40,6 +40,8 @@ import { observeCheckRepair } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import type { DraftReadiness } from "./draftReadiness";
 import type { MainBranchReading } from "./mainCheckWake";
+import { approvalClosesOn } from "./mergeAuthorization";
+import { type MergedStory, mergedStoryOf } from "./mergedStory";
 import { type ProjectQueue, queueWakeWords } from "./projectQueue";
 
 /**
@@ -462,7 +464,13 @@ export class ChangeChecks {
           return {
             text: contributesUpstream(record.delivery?.contribution)
               ? `The maintainers merged ${numberLabel(forge, pull.number)}. Update the contribution note without a merge action and report the confirmed outcome; continue any remaining work.`
-              : mergedWords(forge, pull, audience),
+              : mergedWords(
+                  forge,
+                  pull,
+                  audience,
+                  approvalClosesOn(this.options.tasks.get(record.id)?.delivery, pull.number),
+                  mergedStoryOf(this.options.tasks, record.id, forge, branch, pull),
+                ),
             recorded: true,
             merged: { pull, forge },
           };
@@ -930,12 +938,28 @@ function watchWords(
       ];
 }
 
-/** A reading that found the task's pull request merged outside the app, in its reader's words. */
-function mergedWords(forge: Forge, pull: ForgePull, audience: Audience): string {
+/**
+ * A reading that found the task's pull request merged outside the app, in
+ * its reader's words (INF-3799). `closes`: the captain's kept approval
+ * already says this merge closes the task, so the host closes it without a
+ * merge card. `story`: the merge card its published story can show, or why
+ * it has none, the verdict show_merge_card and emit_card read too.
+ */
+function mergedWords(
+  forge: Forge,
+  pull: ForgePull,
+  audience: Audience,
+  closes: boolean,
+  story: MergedStory | undefined,
+): string {
   const next =
-    audience === "crewmate"
-      ? "Nothing is left to merge. Continue any remaining work; when this merge finished all of it, put up your merge card for this pull request with after close, and the app closes the task as merged without merging again."
-      : "Nothing is left to merge. Read the task's remaining work before closing it; a merged PR alone does not mean its work is complete.";
+    audience !== "crewmate"
+      ? "Nothing is left to merge. Read the task's remaining work before closing it; a merged PR alone does not mean its work is complete."
+      : closes
+        ? "Nothing is left to merge, and the captain's kept merge approval already says this merge closes the task: put up no merge card. Finish any remaining work; once your turn ends with nothing else open on the task, the app closes it as merged."
+        : story && "refused" in story
+          ? `Nothing is left to merge. ${story.refused}`
+          : "Nothing is left to merge. Continue any remaining work; when this merge finished all of it, put up your merge card for this pull request with after close, and the app closes the task as merged without merging again.";
   return [
     "overall: merged",
     `${numberLabel(forge, pull.number)} was merged ${placeWords(forge)} outside the app${pull.mergedSha ? ` as ${pull.mergedSha}` : ""}.`,

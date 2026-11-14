@@ -282,6 +282,21 @@ export function standingAuthorization(
 }
 
 /**
+ * Whether the standing approval says that the merge of pull request
+ * `number` closes the task (INF-2744): the captain's click on its merge
+ * card declared after close, or a merge of the task's own change declared
+ * nothing. The approval's own declaration is the one writer of that fact.
+ */
+export function approvalClosesOn(
+  delivery: TaskDelivery | null | undefined,
+  number: number,
+): boolean {
+  const authorization = standingAuthorization(delivery);
+  if (!authorization || authorization.target.prNumber !== number) return false;
+  return (authorization.after ?? (authorization.review ? "continue" : "close")) === "close";
+}
+
+/**
  * A standing approval as it ends - spent by its merge, or revoked,
  * invalidated or superseded - with no attempt, retry or wait left on it:
  * the one shape every end of an approval records.

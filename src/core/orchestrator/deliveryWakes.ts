@@ -106,6 +106,18 @@ export type DeliveryFacts =
       contribution?: boolean;
       change: string;
       head: string;
+      /**
+       * What already declared that this merge closes the task (INF-3799):
+       * the task's open merge card or the captain's kept approval, so the
+       * crewmate puts up no merge card for it.
+       */
+      closes?: "card" | "approval";
+      /**
+       * Why the merged pull request has no merge card, when nothing declared
+       * the close (INF-3799): the words check_change gives, so the crewmate
+       * reports the merge instead.
+       */
+      refused?: string;
       /** Another of the task's pull requests still open, as a clause (INF-2525). */
       open?: string;
     }
@@ -556,7 +568,11 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   "external-merge": (facts) =>
     facts.contribution
       ? `The maintainers merged ${facts.change} at ${facts.head}. Update its contribution note without merge actions. Report the confirmed outcome and any remaining work; never offer a merge or mark their queue.`
-      : `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because ${facts.open ?? "no merge card declared that this merge closes it, or work still remains"}. Read its remaining work and instructions; continue them, or, when this merge finished all your work, put up your merge card for this pull request with after close, and the app closes the task as merged. Do not ask for a discard.`,
+      : facts.closes
+        ? `The project's host confirms ${facts.change} merged at ${facts.head}, and ${facts.closes === "approval" ? "the captain's kept merge approval" : "your open merge card"} already says this merge closes the task: put up no ${facts.closes === "card" ? "other " : ""}merge card. ${facts.open ? `This task remains open because ${facts.open}. ` : ""}Finish any remaining work; once your turn ends with nothing else open on the task, the app closes it as merged. Do not ask for a discard.`
+        : facts.refused
+          ? `The project's host confirms ${facts.change} merged at ${facts.head}, and nothing is left to merge. ${facts.refused} ${facts.open ? `This task remains open because ${facts.open}. ` : ""}Do not ask for a discard.`
+          : `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because ${facts.open ?? "no merge card declared that this merge closes it, or work still remains"}. Read its remaining work and instructions; continue them, or, when this merge finished all your work, put up your merge card for this pull request with after close, and the app closes the task as merged. Do not ask for a discard.`,
   "merge-continued": (facts) =>
     facts.ok
       ? `[fm-op] ${MERGE_CONTINUED_LEAD} ${facts.change}${facts.head ? ` at ${facts.head}` : ""}. The task stays open${facts.open ? ` because ${facts.open}; judge what comes next from it and your remaining work` : ""}. Continue from that result. Dropping this task does not close that pull request. ${facts.text}`

@@ -6,18 +6,19 @@ import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
 import type { MergeReview } from "@shared/mergeReview";
 import type { HostedPresentationDestination } from "@shared/presentationDestination";
-import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
+import { insertDirectPrTask, insertTask, setup } from "../../../tests/helpers/prCiHarness";
 import {
-  type CheckedOut,
-  FakeForge,
-  insertDirectPrTask,
-  insertTask,
-  recordPr,
-  setup,
-} from "../../../tests/helpers/prCiHarness";
+  deliveringFromAnotherBranch,
+  opens,
+  original,
+  phone,
+  repaired,
+  saved,
+  storyFixture,
+} from "../../../tests/helpers/savedStory";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   type Forge,
@@ -50,105 +51,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
 
 // INF-169 F4/F5/F6/F12: exercise the public service, not a source-text pin.
 describe("shared story delivery boundaries", () => {
-  const original = "5ca2d466ee21f9733827383f23df81f3874e0d10";
-  const repaired = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-  // The one story the tests below save, as a crewmate prepares it.
-  function storyFixture(): ChangePresentation {
-    return {
-      version: 1,
-      taskId: "ab12cd34",
-      revision: 1,
-      title: "One saved story",
-      base: original,
-      head: original,
-      destination: {
-        host: "github.com",
-        projectId: 1422452335,
-        fullName: "kunchenguid/infinitary-evidence-test-public",
-        visibility: "public",
-      },
-      why: ["Keep the approved explanation."],
-      whatChanged: ["The publication recovers."],
-      before: ["Recovery could wait forever."],
-      after: ["Recovery is deliberate."],
-      noPicture: "This fixture changes publication recovery, not a screen.",
-      views: [],
-      assets: [],
-      pictures: [],
-      verification: ["Read the saved publication."],
-      risk: Object.fromEntries(
-        RISK_DIMENSIONS.map((dimension) => [
-          dimension,
-          { level: "low", why: "A harmless delivery fixture." },
-        ]),
-      ) as RiskDeclaration,
-      requiredActions: [],
-      unfinished: [],
-      projectText: "",
-    };
-  }
-  async function saved(
-    kind: "github" | "gitlab" = "github",
-    checkedOut?: CheckedOut,
-    prepareContribution?: (taskId: string) => Promise<string | undefined>,
-  ) {
-    const bringBranchHome = vi.fn(async (): Promise<string> => {
-      throw new Error("Work computer is asleep");
-    });
-    const at = setup({
-      bringBranchHome,
-      ...(checkedOut ? { checkedOut } : {}),
-      ...(prepareContribution ? { prepareContribution } : {}),
-      ...(kind === "gitlab" ? { forge: new FakeForge({ kind, place: "GitLab" }) } : {}),
-    });
-    await insertDirectPrTask(at.tasks, at.repos, { deviceId: "sleeping-work-computer" });
-    const story = storyFixture();
-    const region = presentationMarkdown(story, new Map(), "passed");
-    const published = {
-      revision: 1,
-      head: original,
-      state: "confirmed" as const,
-      region,
-      regionHash: createHash("sha256").update(region).digest("hex"),
-      contentHash: presentationContentHash(story),
-      number: 23,
-    };
-    at.tasks.delivery.updateChangePresentation("ab12cd34", () => ({
-      revisions: [story],
-      receipts: [],
-      publication: published,
-      published,
-    }));
-    at.forge.change = { ...(at.forge.change as ForgeChange), headSha: original, body: region };
-    const update = vi.fn(async (_change: ForgeChange, body: string, title?: string) => {
-      at.forge.change = {
-        ...(at.forge.change as ForgeChange),
-        body,
-        ...(title === undefined ? {} : { title }),
-      };
-    });
-    Object.assign(at.forge, {
-      attachments: {
-        destination: async () => story.destination,
-        upload: async () => {
-          throw new Error("No upload expected");
-        },
-      },
-      branchHead: async () => at.forge.change?.headSha ?? "",
-      updateChangeBody: update,
-      pull: async () => ({
-        number: 23,
-        state: "open",
-        merged: false,
-        headSha: at.forge.change?.headSha,
-        base: "main",
-        readiness: "clean",
-      }),
-    });
-    recordPr(at.tasks, 23);
-    return { ...at, bringBranchHome, update, story };
-  }
-
   // INF-1365 (INF-1363's merge stopped on its story after the captain's words passed it): the
   // override on the saved story passes its publication at the merge, and only there.
   describe("the captain's override on the saved story at the merge (INF-1365)", () => {
@@ -1099,44 +1001,6 @@ describe("shared story delivery boundaries", () => {
     expect(at.tasks.delivery.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
   });
 
-  // INF-3717 piece 1, from INF-3472's night: the task's own pull request had
-  // merged and the crewmate delivered from another branch it checked out.
-  const phone = "fm/task-212a7809-phone";
-  async function deliveringFromAnotherBranch() {
-    const at = await saved("github", async () => ({ branch: phone, head: original }));
-    // The project's origin names where its pull requests are selected.
-    const repoId = at.tasks.get("ab12cd34")?.repoId as string;
-    at.repos.configure(repoId, { origin: "https://github.com/x/y.git" });
-    const story = at.tasks.delivery.changePresentation("ab12cd34")
-      ?.revisions[0] as ChangePresentation;
-    at.bringBranchHome.mockResolvedValue("");
-    at.readHead.mockResolvedValue(original);
-    // The own pull request merged: the host holds only what was opened since.
-    at.forge.change = null;
-    Object.assign(at.forge, {
-      branchHead: async () => original,
-      changeFor: async (branch: string) => {
-        at.forge.calls.push(`changeFor ${branch}`);
-        const change = at.forge.change;
-        return change && change.branch === branch ? { ...change } : null;
-      },
-      openChange: async (input: { branch: string; title: string; body: string }) => {
-        at.forge.calls.push(`openChange ${input.branch} ${input.title}`);
-        at.forge.change = {
-          ...at.forge.opened,
-          number: 1413,
-          url: "https://github.com/x/y/pull/1413",
-          branch: input.branch,
-          title: input.title,
-          body: input.body,
-          headSha: original,
-        };
-        return at.forge.change;
-      },
-    });
-    return { at, story };
-  }
-
   // The story call, the publish call naming no branch and the card call all
   // act on the checked-out branch, and a refused publish call leaves the
   // current change as it was, so the card comes up on the first try.
@@ -1456,9 +1320,6 @@ describe("shared story delivery boundaries", () => {
   // merge card or names the one thing missing". show_merge_card's walk does
   // the app's own steps and stops at the first one someone else supplies.
   describe("show_merge_card's walk to the card (INF-3717 piece 2)", () => {
-    const opens = (at: { forge: FakeForge }) =>
-      at.forge.calls.filter((call) => call.startsWith("openChange")).length;
-
     it("prepares, opens and reads back on the first call in INF-3472's shape, and repeats nothing when called again", async () => {
       const { at, story: saved } = await deliveringFromAnotherBranch();
       // One title for the story, the pull request and the card.

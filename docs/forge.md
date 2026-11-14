@@ -1122,6 +1122,8 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   The crewmate's open merge card for that pull request declares with `after: close` that its merge finishes all the task's work, at the version the card was shown for (INF-2744); the card is the one writer of that declaration.
   Only that matching declaration, an idle task with no running jobs or pending/in-flight instructions, and the existing child and dependency close checks allow `SettleService` to close the task as merged without a discard or another approval.
   Otherwise the task, instructions, cards and working copy stay intact, and one durable wake per merged version tells the crewmate the merge happened so it can continue or declare completion without asking again.
+  When the declaration already holds and something else keeps the task open, the wake names what declared it, the open merge card or the captain's kept approval, and asks for no merge card (INF-3799).
+  When nothing declared it and that pull request's merge card would be refused, the wake gives the refusal `check_change` gives and asks for the merge's report instead (`ChangeMerge.mergedStory`).
   An automatic close records the closed state synchronously before awaiting idle runtime shutdown, so new guidance cannot be accepted and then purged during that wait.
   This monitor survives a plain-reply “I'll merge the PR” choice without interpreting the button's words; it follows the task's recorded pull request, not unrelated pull requests reviewed by that task.
   A missing, unreadable or closed-but-unmerged pull request never closes the task, and its named read continues on later ticks.
@@ -1261,6 +1263,8 @@ The raw words stay on the error for the record and `plainProblem`; the kind is w
 
 `ChangeChecks` (`src/core/orchestrator/changeChecks.ts`, read by the crewmate's `check_change` and the completion-card gate) asks the seam and records what it answers on the task's delivery facts: `changeLabel` from `label()`, `prNumber`/`prUrl` only where the host has them, `prBase` where the host names the branch the change targets, and each check reading stamped with the number of the pull request it was read of (`CheckSnapshot.prNumber`), which the change record binds it by (`docs/task-record.md`, "A task's change").
 When the branch has no open change but the task names a pull request, the reading asks for it by its number with `pull`: merged outside the app, it records `ci: merged`, and the strip reads "merged outside the app" until the shared watcher can close a task whose crewmate declared that merge finishes its work.
+The crewmate declares it with a merge card for that pull request with after close, which its answer asks for; when the captain's kept merge approval already says that merge closes the task, the answer asks for no card instead, since the shared watcher reads the same approval (`approvalClosesOn`, `src/core/orchestrator/mergeAuthorization.ts`).
+When that pull request's merge card would be refused ("The one call to the merge card"), the answer says why and asks the crewmate to report the merge instead, from the same verdict the merge card reads (`mergedStoryOf`, `src/core/orchestrator/mergedStory.ts`).
 A put-in made before that tick also answers the merge already made and closes the task without sending anything.
 The settle card's fact strip (`SettleFacts.strip` in `settleCardFacts.ts`) and the record card read that label and link - never parse a number back out of a URL.
 The record card still names where the change goes from the repository's `host` ("goes in on GitHub", "goes in on git.example.com").
@@ -1416,7 +1420,9 @@ Its optional story refers to the full shape served on `prepare_change`, and both
 It resolves the change once, on the branch the working copy has checked out.
 It does the app's own steps itself: it prepares the story it was given at the committed version, prepares the same words again once live proof was accepted since the story with the same scenarios, opens the pull request with the story or publishes it on the open one, and reads it back.
 It stops at the first step someone else supplies, and its answer names what it did, the missing step and who supplies it: the crewmate, the reviewer through the first mate, the first mate, the captain or the checks.
-A pull request that carried the story and closed stops it; it neither reopens nor replaces that pull request.
+A pull request that carried the story and closed without merging stops it; it neither reopens nor replaces that pull request.
+One that merged outside the app shows its merge card with the story it merged with, as below.
+A failed read of the pull request stops the call before the story step, and the answer says the story words it was given were not saved, so the crewmate passes them again: words saved while a merged pull request cannot be read would be a newer revision than the one it merged with.
 Called again it repeats nothing: the same words at the same version add no revision (`prepare`'s `reuseSame`), and a story published at the shown revision is not sent again.
 The card is today's saved-story merge card with the one merge action the call builds itself, under the id the crewmate gave, revising its open card there; once the captain answered a card under that id, it goes up under the id with a numbered suffix (`CrewmateCards.showMergeCard`).
 A crewmate on a computer that runs work is served the call only once that computer lists the `show-merge-card` change; one that does not keeps the three calls (`docs/helper.md`).
@@ -1446,6 +1452,10 @@ An uncertain opening is read first, then an explicit `recovery.retryOpening` can
 That deliberate retry also permits preparing a newer version while retaining the prior opening receipt, so a late first response or duplicate-opening refusal is reconciled rather than mistaken for a legacy PR.
 If an uncertain replacement left the exact last published region in place, the host restores that confirmed state and a deliberate later `open_change` retries its idempotent replacement.
 A closed PR stops publication without opening another; the captain may finish the task or deliberately reopen that same PR where the project lives.
+A PR that merged outside the app carrying its published story takes no new story either: its merge card shows the story it merged with, at the version that merged, and `show_merge_card`, or `emit_card` with that revision, puts it up without preparing, pushing or publishing anything (`mergedStory`, `src/core/orchestrator/mergedStory.ts`, INF-3799).
+Its click sends nothing and closes the task as merged, as the shared watcher does once the card is up and nothing else is open.
+A PR that merged at a version its published story never reached, or after a newer story revision was prepared and never published, has no merge card: the refusal says so, and the crewmate reports the merge for the first mate to close the task.
+A working copy at a later commit than the merged version is told to check that version out, since later commits need a change of their own.
 Each refusal on the way to the merge card names the one thing missing (INF-3717): an older story revision names the branch read and its newest revision, a merge card with no open pull request names the checked-out branch, a saved-story merge card names each field it refused, and live proof that is not accepted names which part fails and who supplies it - no run of the current scenarios, no review at this version, code not cleared, coverage incomplete, or a review verdict that differs from the run's.
 Only proof accepted after the story was prepared asks for the story to be prepared again.
 A task whose pull request was opened before saved stories and has since closed forgets it: its next `prepare_change` and `open_change` start a saved story like any new task, and only a pull request still open for the branch is refused as predating them.

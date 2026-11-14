@@ -54,6 +54,7 @@ import type { WriteAskSent } from "./githubGateway";
 import type { AccountServeability } from "./idleLadder";
 import type { PersonalBriefFacts } from "./intentBrief";
 import type { MainBranchReading } from "./mainCheckWake";
+import type { MergedStory } from "./mergedStory";
 import type { IdleRule, ReportSortRule } from "./reportSort";
 import type { RunReading } from "./runWatch";
 import type { TypedWake, WakeFacts } from "./wakes";
@@ -372,6 +373,8 @@ export type CrewSupervisorOptions = {
   panelAskAnswered?: (askId: string, choice: IntegrationApprovalChoice) => void;
   /** The pinned pull request by its number, for a kept approval's reconcile. */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
+  /** The merge card a pull request read merged outside the app can show, or why none (INF-3799). */
+  mergedStory?: (taskId: string, pull: ForgePull) => MergedStory | undefined;
   removeQueuedApproval?: (
     taskId: string,
     removal: import("../storage/taskRecords").QueueApprovalRemoval,

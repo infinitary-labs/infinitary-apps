@@ -130,6 +130,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/changeMerge.test.ts` | real git at the run's own priority, the put-in's 300 + 900 ms backoff | 10 s (Mac slowest case 1.3 s, the retried put-in) |
 | `src/core/orchestrator/changePublication.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.66 s) |
 | `src/core/orchestrator/changePublication.stories.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.63 s) |
+| `src/core/orchestrator/changePublication.mergedStory.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.32 s) |
 | `src/core/orchestrator/mergeReviews.test.ts` | a real `git init` per project, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `tests/gitlabMergeReview.test.ts` | a real `git init` for the task's project, at the run's own priority, and the GitLab stand-in on a local port | 5 s default (Mac fastest of five 0.45 s) |
 | `src/core/orchestrator/settleService.test.ts` | real git for a pure update and an edited line, at the run's own priority | 15 s |

@@ -1141,6 +1141,7 @@ export async function createServices(
     panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
     reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber) => changeDelivery.merges.pullState(taskId, prNumber),
+    mergedStory: (taskId, pull) => changeDelivery.merges.mergedStory(taskId, pull),
     closePullRequest: (taskId) => changeDelivery.merges.close(taskId),
     checkCi: (taskId) => changeDelivery.checks.readForOffer(taskId),
     prepareChange: (taskId, input) => changeDelivery.publication.preparePresentation(taskId, input),

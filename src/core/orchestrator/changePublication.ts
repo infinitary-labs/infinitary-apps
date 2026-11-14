@@ -40,6 +40,7 @@ import {
   reviewOf,
 } from "./changeContext";
 import type { DraftReadiness } from "./draftReadiness";
+import { mergedAheadWords, mergedStory } from "./mergedStory";
 import { carryPassedReview } from "./reviewCarry";
 
 /**
@@ -280,6 +281,25 @@ export class ChangePublication {
         : null);
     if (!change) {
       if (fork) throw new Error("The story's pull request is not open.");
+      // The story's pull request merged outside the app (INF-3799): its
+      // merge card shows the story it merged with, and closes the task.
+      const merged = await mergedStory(this.options.tasks, taskId, forge, branch);
+      if (merged && "refused" in merged) throw new Error(merged.refused);
+      if (merged) {
+        if (revision !== merged.revision && revision !== merged.refreshOf)
+          throw new Error(
+            `${numberLabel(forge, merged.pull.number)} was merged outside the app with story revision ${merged.revision}: show its merge card with presentation ${merged.revision}.`,
+          );
+        const completion = await this.options.presentations.completion(
+          taskId,
+          merged.revision,
+          merged.pull.headSha,
+          branch,
+          merged.pull.number,
+          (committed) => mergedAheadWords(forge, merged.pull, committed),
+        );
+        return { ...completion, revision: merged.revision };
+      }
       const elsewhere = this.currentStoryWords(taskId, checkedOut);
       throw new Error(
         `The story's pull request is not open: no open pull request was found for ${branch}${checkedOut ? ", the branch the working copy has checked out" : ""}. ${elsewhere ?? "Publish its story with open_change, which opens one."}`,

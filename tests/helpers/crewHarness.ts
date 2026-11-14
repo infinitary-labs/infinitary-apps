@@ -278,6 +278,7 @@ export type SetupExtras = {
   mergeReview?: CrewSupervisorOptions["mergeReview"];
   reviewGate?: CrewSupervisorOptions["reviewGate"];
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
+  mergedStory?: CrewSupervisorOptions["mergedStory"];
   openChange?: (
     taskId: string,
     input: import("@shared/changePresentation").OpenChangeInput,
@@ -579,6 +580,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.reviewGate ? { reviewGate: extras.reviewGate } : {}),
     ...(extras.closePullRequest ? { closePullRequest: extras.closePullRequest } : {}),
     ...(extras.readPull ? { readPull: extras.readPull } : {}),
+    ...(extras.mergedStory ? { mergedStory: extras.mergedStory } : {}),
     ...(extras.githubRead ? { githubRead: extras.githubRead } : {}),
     ...(extras.githubWrite ? { githubWrite: extras.githubWrite } : {}),
     ...(extras.sendTakenIntegrationAsk

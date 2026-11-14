@@ -875,6 +875,7 @@ export async function createServices(
     shown: () => host.secrets !== undefined,
     reference: async (label) => integrationSecrets?.reference(label),
     keepHidden: async (input) => integrationSecrets?.keepHidden(input),
+    programKeys: async () => integrationSecrets?.programKeys(),
     forgetHidden: async (ref) => (await integrationSecrets?.forgetHidden(ref)) ?? false,
     registerBroker: (broker) => {
       if (integrationSecrets) integrationSecrets.registerBroker(broker);
@@ -1231,7 +1232,8 @@ export async function createServices(
   supervisor.hostOps.setSecretsDecision((offer) => secrets.decide(offer));
   integrationSecrets = secrets;
   for (const broker of integrationBrokers.splice(0)) secrets.registerBroker(broker);
-  // A Google sign-in an earlier version kept in its own file moves into Secrets now.
+  // A Google sign-in an earlier version kept in its own file, and the keys an
+  // earlier version kept on an MCP server's line, move into Secrets now.
   void moveIntegrationKeys();
   readWorkPosture = (record) => supervisor.postures.workPosture(record);
   readWorkWaitFacts = (record) => supervisor.postures.workWaitFacts(record);

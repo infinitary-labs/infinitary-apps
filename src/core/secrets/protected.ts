@@ -447,11 +447,22 @@ export class ProtectedSecrets implements SecretsBackend {
     }
     const authority = ready.authority.authority;
     const operation = sha256(canonical({ kind: "broker", facts }));
-    // The app's own sign-in is the consent (docs/secrets.md, "App sign-ins"): a
-    // declaring adapter spending only entries the app keeps hidden meets no saved
-    // decision and asks nothing. A crew-visible entry is evaluated as always.
-    const signIn = adapter.signIn === true && entries.every((entry) => !entry.discoverable);
-    const evaluation: Evaluation = signIn
+    // The person's own giving is the consent, so the use meets no saved decision
+    // and asks nothing: a sign-in made in the app, spent by an adapter declaring
+    // `signIn` (docs/secrets.md, "App sign-ins"), or keys given with a program,
+    // started by one declaring `givenWithProgram` ("Programs that keep running").
+    // Every secret is hidden, and kept for a program exactly when the adapter
+    // starts one; anything else, a crew-visible entry above all, is evaluated as
+    // always.
+    const hidden = entries.every((entry) => !entry.discoverable);
+    const consent: "sign-in" | "given" | undefined = !hidden
+      ? undefined
+      : adapter.signIn === true && entries.every((entry) => entry.forProgram !== true)
+        ? "sign-in"
+        : adapter.givenWithProgram === true && entries.every((entry) => entry.forProgram === true)
+          ? "given"
+          : undefined;
+    const evaluation: Evaluation = consent
       ? { effect: "allow", matched: [] }
       : ready.authority.evaluate(refs, operation);
     const versions = entries.map(({ ref, version, revision }) => ({ ref, version, revision }));
@@ -465,7 +476,7 @@ export class ProtectedSecrets implements SecretsBackend {
     );
     const digest = sha256(canonical({ key, request }));
     const shortReadEligible =
-      !signIn && facts.read && evaluation.effect === "ask" && evaluation.matched.length === 0;
+      !consent && facts.read && evaluation.effect === "ask" && evaluation.matched.length === 0;
     const permission = shortReadEligible ? this.readAccess.find(key) : undefined;
     const kept: KeptBroker = {
       key,
@@ -497,12 +508,13 @@ export class ProtectedSecrets implements SecretsBackend {
         program: facts.label,
         reason: input.reason,
         rule: evaluation.effect,
+        ...(consent === "given" ? { given: true as const } : {}),
       });
-      if (evaluation.effect === "allow" || permission)
+      if (consent !== "given" && (evaluation.effect === "allow" || permission))
         await ready.journal.append({
           kind: "approved",
           request,
-          method: signIn ? "sign-in" : permission ? "short-read" : "rule",
+          method: consent ?? (permission ? "short-read" : "rule"),
         });
     } catch {
       await prepared.dispose?.();
@@ -973,6 +985,7 @@ export class ProtectedSecrets implements SecretsBackend {
               label: entry.label,
               discoverable: entry.discoverable,
               ...(entry.environment !== undefined ? { environment: entry.environment } : {}),
+              ...(entry.forProgram ? { forProgram: true as const } : {}),
               value: opened.value.toString("base64"),
             });
           } finally {

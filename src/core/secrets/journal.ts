@@ -30,6 +30,13 @@ export type JournalEntry =
       program: string;
       reason: string;
       rule: RuleEffect;
+      /**
+       * The person gave its keys with the program, which is the consent, so no
+       * approval line follows (docs/secrets.md, "Programs that keep running").
+       * It rides the request rather than a new approval method, so a build that
+       * predates it reads the use as one with no approval.
+       */
+      given?: true;
     }
   | { kind: "approved"; request: string; method: ApprovalMethod; device?: string }
   /** Written and synced before the recipient starts; the effect may follow. */
@@ -53,6 +60,8 @@ export type HistoryItem = {
   approval?: Exclude<ApprovalMethod, "sign-in">;
   /** An app sign-in covered it (docs/secrets.md, "App sign-ins"); no one approved it. */
   signIn?: true;
+  /** The person gave its keys with the program (docs/secrets.md, "Programs that keep running"); no one approved it. */
+  given?: true;
   device?: string;
   reconciled?: true;
   recoveredFrom?: string;
@@ -198,6 +207,7 @@ export class UseJournal {
           reason: entry.reason,
           requestedAt: at,
           state: "waiting",
+          ...(entry.given ? { given: true as const } : {}),
         });
         continue;
       }

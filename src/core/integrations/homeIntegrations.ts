@@ -41,7 +41,7 @@ export type HomeIntegrations = {
   inbox: Inbox;
   /** One ask per panel and action at a time (docs/integrations.md, "Panels"). */
   panelAsks: PanelAsks;
-  /** Move a sign-in an earlier version kept in its own file into Secrets, once Secrets exists. */
+  /** Move a key an earlier version kept outside Secrets - a sign-in's file, an MCP server's line - into Secrets, once Secrets exists. */
   moveKeys: () => Promise<void>;
   /** Which conversations received fenced words, and when, so they go when due. */
   outsideReads: OutsideReads;
@@ -109,6 +109,15 @@ export function startHomeIntegrations(options: {
         changed: () => integrationsChanged(),
       })
     : undefined;
+  const mcpBinding = mcpIntegration({
+    root: paths.integrationsDir,
+    env: () => hostEnv(),
+    belowUi: (file, args) => atUtilityQos(file, args),
+    cwd: () => hostEnv().HOME ?? homedir(),
+    version: host.app.version,
+    changed: () => integrationsChanged(),
+    keys: options.keys,
+  });
   const integrationSettings = new IntegrationSettingsStore(paths.integrationsDir);
   // The inbox's switch is its connection's pause (INF-1567): off, its door refuses.
   integrationInbox.pausedThrough(() => integrationSettings.read()[INBOX_ID]?.paused === true);
@@ -143,14 +152,7 @@ export function startHomeIntegrations(options: {
         }),
       ),
       ...(googleBinding ? [googleBinding] : []),
-      mcpIntegration({
-        root: paths.integrationsDir,
-        env: () => hostEnv(),
-        belowUi: (file, args) => atUtilityQos(file, args),
-        cwd: () => hostEnv().HOME ?? homedir(),
-        version: host.app.version,
-        changed: () => integrationsChanged(),
-      }),
+      mcpBinding,
       integrationInbox.binding(),
       ...(standIns.integrationDir ? [standInIntegration({ dir: standIns.integrationDir })] : []),
     ],
@@ -194,6 +196,8 @@ export function startHomeIntegrations(options: {
     inbox: integrationInbox,
     panelAsks,
     outsideReads,
-    moveKeys: () => googleBinding?.moveKeys() ?? Promise.resolve(),
+    moveKeys: async () => {
+      await Promise.all([googleBinding?.moveKeys(), mcpBinding.moveKeys()]);
+    },
   };
 }

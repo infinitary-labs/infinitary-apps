@@ -22,6 +22,7 @@ const recoveryValueSchema = z.strictObject({
   label: z.string().trim().min(1),
   discoverable: z.boolean(),
   environment: z.string().optional(),
+  forProgram: z.literal(true).optional(),
   value: base64,
 });
 /** Private archive contents. No permission, enrollment, native root or live approval is exported. */

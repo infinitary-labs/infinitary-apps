@@ -2595,6 +2595,7 @@
 "settingsSaveRecoveryHint" = "Cierra y vuelve a abrir Configuración para intentarlo de nuevo.";
 "settingsSaveReloadFailed" = "%2$@ No se pudo volver a cargar el valor guardado. %1$@";
 "settingsScreenSections" = "Secciones de Configuración";
+"settingsSecretsAddedWithProgram" = "Añadido con el programa";
 "settingsSecretsBackupNote" = "Guarda una copia cifrada y una clave de recuperación aparte. Guárdalas por separado: quien tenga ambas puede leer los valores guardados. La clave no se puede restablecer.";
 "settingsSecretsCancel" = "Cancelar";
 "settingsSecretsDeleteHistory" = "Eliminar historial";
@@ -2604,6 +2605,7 @@
 "settingsSecretsFinishForm" = "Primero termina el formulario de secreto abierto.";
 "settingsSecretsFinishFormOrChange" = "Primero termina el formulario de secreto abierto o el cambio actual.";
 "settingsSecretsHistoryExported" = "Historial exportado.";
+"settingsSecretsKeptForProgram" = "Infinitary guarda esto para un servidor que añadiste en Integraciones y se lo da al servidor cada vez que se inicia, sin preguntar: añadirlo con el servidor fue tu consentimiento. Quita el servidor allí para olvidarlo.";
 "settingsSecretsKeptSignIn" = "Infinitary guarda esto para un inicio de sesión que hiciste en Integraciones y lo usa sin preguntar: iniciar sesión fue tu consentimiento. Cierra la sesión allí para quitarlo.";
 "settingsSecretsManageInIntegrations" = "Gestionar en Integraciones";
 "settingsSecretsNamePlaceholder" = "Por ejemplo, Publicación del sitio web";

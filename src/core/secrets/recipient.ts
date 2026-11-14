@@ -245,7 +245,7 @@ export async function prepareRecipient(
 }
 
 /** A regular file at this path, resolved through links, or nothing. */
-async function regularFile(path: string): Promise<string | undefined> {
+export async function regularFile(path: string): Promise<string | undefined> {
   try {
     await lstat(path);
     const real = await realpath(path);
@@ -296,7 +296,7 @@ async function onSearchPath(name: string, searchPath: string): Promise<string | 
  * search path and starts it directly. A `#!` line naming nothing that resolves
  * is refused rather than left unbound.
  */
-async function scriptInterpreter(
+export async function scriptInterpreter(
   path: string,
   searchPath: string,
 ): Promise<{ path: string; name: string; arg?: string } | undefined | "unbound"> {
@@ -323,7 +323,7 @@ async function scriptInterpreter(
   return resolved ? { path: resolved, name: interpreter, ...(arg ? { arg } : {}) } : "unbound";
 }
 
-async function digestFile(path: string): Promise<string> {
+export async function digestFile(path: string): Promise<string> {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer);
   return hash.digest("hex");

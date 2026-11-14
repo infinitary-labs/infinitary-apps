@@ -47280,6 +47280,10 @@
                 "kept": {
                   "type": "boolean",
                   "const": true
+                },
+                "forProgram": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -47483,6 +47487,10 @@
                   ]
                 },
                 "signIn": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "given": {
                   "type": "boolean",
                   "const": true
                 },
@@ -47920,6 +47928,10 @@
                 "kept": {
                   "type": "boolean",
                   "const": true
+                },
+                "forProgram": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -48123,6 +48135,10 @@
                   ]
                 },
                 "signIn": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "given": {
                   "type": "boolean",
                   "const": true
                 },
@@ -48779,6 +48795,10 @@
                 "kept": {
                   "type": "boolean",
                   "const": true
+                },
+                "forProgram": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -48982,6 +49002,10 @@
                   ]
                 },
                 "signIn": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "given": {
                   "type": "boolean",
                   "const": true
                 },

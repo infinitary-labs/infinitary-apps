@@ -20,6 +20,28 @@ export type BrokerFacts = {
   read: boolean;
   result: string;
   secrets: Record<string, string>;
+  /**
+   * A program that keeps running, from `programSecretBroker`: what starts, as
+   * checked. Each secret goes in the variable that names it in `secrets`.
+   */
+  program?: ProgramFacts;
+};
+
+/** A program's checked start (docs/secrets.md, "Programs that keep running"). */
+export type ProgramFacts = {
+  /** The program as found, by its real path and digest. */
+  executable: { path: string; sha256: string };
+  /** The interpreter its `#!` line names, when that resolves. */
+  interpreter?: { path: string; sha256: string; arg?: string };
+  /** The program as named, then its arguments. */
+  argv: string[];
+  /**
+   * Each argument naming a regular file, by its index and real path. What it
+   * holds is not bound: a server's data file, such as its database, changes
+   * as it runs.
+   */
+  inputs: { index: number; path: string }[];
+  cwd: string;
 };
 
 export type BrokeredUse = {
@@ -43,6 +65,13 @@ export type SecretBroker = {
    * is the consent: a use naming only hidden entries runs with no question.
    */
   signIn?: true;
+  /**
+   * The adapter starts a program with the keys the person gave with it, such
+   * as the values on an MCP server's Runs line (docs/secrets.md, "Programs
+   * that keep running"). Giving them is the consent: a use naming only hidden
+   * entries kept for a program runs with no question.
+   */
+  givenWithProgram?: true;
   prepare(input: BrokerInput): Promise<PreparedBroker | undefined>;
 };
 

@@ -36,9 +36,14 @@ export type StandInEra = "legacy" | "modern";
 /**
  * The notes the server holds, the way a person keeps them. A book that
  * names why it is `unavailable` - its service's own sign-in lapsed - still
- * starts over stdio but refuses to list its tools (INF-3367).
+ * starts over stdio but refuses to list its tools (INF-3367). A book with a
+ * `key` is a service that needs one: a child started without it in
+ * `NOTES_KEY_VARIABLE` says so on stderr and stops before it answers.
  */
-export type NotesBook = { notes: string[]; unavailable?: string };
+export type NotesBook = { notes: string[]; unavailable?: string; key?: string };
+
+/** The variable a keyed book's server reads its key from, as a real server's would. */
+export const NOTES_KEY_VARIABLE = "NOTES_KEY";
 
 export const NOTES_URI = "notes://all";
 
@@ -305,6 +310,13 @@ export function publishNotes(file: string, book: NotesBook): void {
 
 /** The child program: the notes from a file, told about when the file changes. */
 async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
+  const { key } = JSON.parse(readFileSync(file, "utf8")) as NotesBook;
+  if (key && process.env[NOTES_KEY_VARIABLE] !== key) {
+    process.stderr.write(
+      `The notes service refused this server: ${NOTES_KEY_VARIABLE} is not its key.\n`,
+    );
+    process.exit(1);
+  }
   const read = (): string[] => JSON.parse(readFileSync(file, "utf8")).notes;
   const book: NotesBook = { notes: read() };
   const servers: { sendResourceUpdated: (params: { uri: string }) => Promise<void> }[] = [];
@@ -318,7 +330,7 @@ async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
   });
   process.stdin.on("end", () => unwatchFile(file));
   // INF-1573: a journey may read while this child writes.
-  const added = () => publishNotes(file, { notes: book.notes });
+  const added = () => publishNotes(file, { notes: book.notes, ...(key ? { key } : {}) });
   if (era === "modern") {
     serveStdio(() => {
       const server = modernNotes(book, added);

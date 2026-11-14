@@ -56,19 +56,24 @@ const fileSchema = z.object({ servers: z.array(serverSchema) }).strict();
 export class McpServerStore {
   constructor(readonly root: string) {}
 
-  /** Every server; an unreadable file reads as none, with a warning. */
-  read(): McpSavedServer[] {
+  /**
+   * Every server, none when there is no file yet, or undefined, with a
+   * warning, when the file is there but cannot be read whole - damaged, or
+   * written by a build that saves what this one does not know - so nothing
+   * is decided from what it seems not to hold.
+   */
+  read(): McpSavedServer[] | undefined {
     let raw: string;
     try {
       raw = readFileSync(join(this.root, MCP_FILE), "utf8");
-    } catch {
-      return [];
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === "ENOENT" ? [] : undefined;
     }
     try {
       return fileSchema.parse(JSON.parse(raw)).servers;
     } catch {
       console.warn("[integrations] the MCP servers file could not be read; showing none");
-      return [];
+      return undefined;
     }
   }
 

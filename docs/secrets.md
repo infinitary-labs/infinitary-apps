@@ -6,7 +6,7 @@ It also provides native custody and fresh system authentication for macOS and Li
 The app supplies that custody and confirmation as its Secrets host capability on the person's own data folder on macOS and Linux ("In the app"), so the core builds the protected owner, Settings → Secrets and the task command.
 A run on an isolated or chosen data folder, and every other platform, gets no capability and offers no Secrets.
 The explicit host seam lets disposable checks exercise the real controller, trusted cards, secure entry and sealed files without opening a native credential store.
-The Google integration's sign-in is the one consumer migrated so far ("App services"); every other consumer in the register keeps its own store.
+The Google integration's sign-in and the keys of MCP servers a person adds in Integrations are the consumers migrated so far ("App services"); every other consumer in the register keeps its own store.
 
 ## Threat model and the accepted boundary
 
@@ -165,6 +165,7 @@ The view's `lastTask` carries that task's title: the controller reads it from th
 A reference appears only when another secret has the same name and place.
 Opening a row offers Replace, Forget and that secret's saved decisions; a temporary read shows on the row as Reading until a time, beside End access.
 A hidden entry's row (the view's `kept`, "App sign-ins") instead says Infinitary keeps it for a sign-in made in Integrations and offers Manage in Integrations; the controller refuses Replace and Forget on it.
+A server's key (the view's `kept` with `forProgram`, "Programs that keep running") says Infinitary keeps it for a server added in Integrations and gives it to the server each time it starts, without asking, and offers Manage in Integrations with no saved decisions; the controller refuses Replace and Forget on it too.
 Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
 Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
@@ -242,22 +243,44 @@ End access stops unused authority, not an already-sent request or a copy a recip
 
 ## App services
 
-An app service that signs in somewhere keeps its own key here as a hidden entry, through `SecretsSettings` (`keepHidden`, `forgetHidden`, `reference` and `use`, the `IntegrationKeys` interface in `src/core/integrations/secrets.ts`).
+An app service keeps its own keys here as hidden entries, through `SecretsSettings` (`keepHidden`, `forgetHidden`, `reference`, `programKeys` and `use`, the `IntegrationKeys` interface in `src/core/integrations/secrets.ts`).
 A hidden entry is written with `discoverable: false`: Settings → Secrets lists it by its label, while the crew's catalog, a task's request and a program launch never reach it.
 `keepHidden` writes under a reference the service names, or a fresh one no entry, rule or history names; it never replaces an entry the captain added, and it zero-fills the value it was handed.
+With `forProgram` it marks a key the service hands a program it starts ("Programs that keep running"), and `programKeys` lists those references, so the service can forget one no saved setting names.
+It forgets one only after reading every saved setting whole: a damaged file, or one a newer build wrote, names nothing the service can see, so it forgets nothing.
 `forgetHidden` forgets only a hidden entry.
 `use` runs through the service's own registered broker and waits for the use to end with the broker's private result.
-The Google integration is the one such service today ([Integrations](integrations.md#keys)).
+The Google integration's sign-in and MCP servers' keys are such services today ([Integrations](integrations.md#keys)).
 
 ### App sign-ins
 
 A sign-in the person makes in the app itself is their consent to the app's own use of it, so that use asks nothing.
 A broker declares it with `signIn` (`SecretBroker`, `httpSecretBroker`): its adapter spends a sign-in made in the app, sent only to an address its own code names.
-`prepareBrokered` allows a use with no card, no system confirmation and no saved decision only when the adapter declares `signIn` and every secret it names is a hidden entry; the journal records the method `sign-in`, and history marks the use `signIn` with no approval ("Your sign-in" in What happened).
+`prepareBrokered` allows a use with no card, no system confirmation and no saved decision only when the adapter declares `signIn` and every secret it names is a hidden entry not marked `forProgram`; the journal records the method `sign-in`, and history marks the use `signIn` with no approval ("Your sign-in" in What happened).
 Anything else is evaluated as before: an undeclared broker, a declaring broker that names a crew-visible secret, and every crewmate run.
 Signing out where the sign-in was made withdraws the consent: the service forgets its hidden entry.
-A saved decision naming a hidden entry no longer applies and is not listed, and the next decision the captain confirms leaves it out of the record (`withoutKept` in `settings.ts`), since every authority write needs a fresh confirmation and none is made silently.
-Settings → Secrets keeps listing a hidden entry, with no Replace, Forget or decisions: it is replaced by signing in again and removed by signing out, in Settings → Integrations.
+A saved decision naming a sign-in's hidden entry no longer applies and is not listed, and the next decision the captain confirms leaves it out of the record (`withoutKept` in `settings.ts`), since every authority write needs a fresh confirmation and none is made silently.
+Settings → Secrets keeps listing a sign-in's hidden entry, with no Replace, Forget or decisions: it is replaced by signing in again and removed by signing out, in Settings → Integrations.
+
+### Programs that keep running
+
+A protected launch owns a program's whole run, so it cannot start a program its consumer keeps talking to, such as an MCP server over its pipes.
+`programSecretBroker` (`src/core/secrets/programBroker.ts`) serves that consumer instead.
+Its facts bind the program and the interpreter its `#!` line names by real path and digest, each argument naming a regular file by its real path, the arguments, the folder, and which variable gets which secret; the operation key a rule names is the digest of those facts.
+A file argument is bound by its path alone, because a server's own data file changes while it runs.
+Right before the start every path and digest is checked again, and a change answers `changed` and starts nothing.
+The consumer's own transport starts the program with the values in its environment, and the broker deletes them from the environment it handed over once the start returns.
+The program's handle goes privately to that consumer, and a failed start's words come back with every value replaced.
+The keys are hidden entries marked `forProgram` in the vault, the view and the recovery archive.
+The person gave them with the program, such as the values on an MCP server's Runs line, and that is the consent to every start of it, as signing in is to a sign-in's use ("App sign-ins").
+The broker declares it with `givenWithProgram`, and `prepareBrokered` allows a use with no card, no system confirmation and no saved decision only when every secret it names is a hidden entry marked `forProgram`; a crew-visible entry or a sign-in named for a program asks like any other use, and so does a program's key that a `signIn` adapter would spend.
+The journal marks the use's request `given` and writes no approval line, and history marks the use `given` with no approval ("Added with the program" in What happened).
+A saved decision naming such a key no longer applies and is not listed, as with a sign-in's (`withoutKept`).
+Unlike the recipient, the program runs in place rather than from a private copy, with its consumer's environment rather than the recipient's short list, and its output goes to the consumer, which keeps talking to it.
+The rest of its environment, what its files hold, other files it reads, programs it starts and what it does with the secrets are not checked.
+No card or record tells the person so at each start: adding the program with its keys trusts it as added, and What happened lists each start by its secrets, its reason and its program, marked "Added with the program", with nothing about what was or was not checked.
+An interpreter its `#!` line names in a form the recipient refuses (more than one argument, or a name the search path does not resolve) is not bound, and the program still starts.
+The MCP transport may start the program a second time while connecting, to learn which protocol it speaks; both starts belong to the one use.
 
 ## The recipient
 
@@ -396,7 +419,7 @@ No reveal, partial-value display, clipboard export or agent-authored secret-entr
 
 ## Consumer register
 
-Every row but Google's sign-in remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
+Every row but Google's sign-in and connected programs remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
 A migration includes writers, every reader, replacement/renewal, interruption, rollback and old-app compatibility, without permanent dual writes or plaintext backups.
 The current owner retains protocol and lifecycle decisions; Secrets supplies custody, scoped use and atomic versioned replacement.
 Public certificates, host pins, fingerprints, token counts and non-secret metadata do not become vault values.
@@ -404,7 +427,7 @@ Public certificates, host pins, fingerprints, token counts and non-secret metada
 | Area | Current entry points | Adapter and required preservation |
 | --- | --- | --- |
 | Google sign-in (migrated) | `src/core/integrations/secrets.ts`; `providers/google/{googleIntegration,movedKeys,store}.ts` | A hidden entry used through the `google-sign-in` broker ("App services"); the access key stays in memory, one renewer at a time replaces the entry in place, and an earlier version's key file moves once and is removed. |
-| Connected programs | `src/core/integrations/providers/mcp/{runs,store,mcpIntegration}.ts` | Include inline credential assignments; exact recipient delivery, not inherited session credentials, to a program that keeps running, which a protected launch does not yet serve. |
+| Connected programs (migrated) | `src/core/integrations/providers/mcp/{runs,store,mcpIntegration}.ts`; `src/core/secrets/programBroker.ts` | Each `NAME=value` on a server's Runs line but `PATH` is a hidden `forProgram` entry the line names as `NAME={secret:REF}`, handed to the server's program at each start, with no question, through the `mcp-server-keys` broker ("Programs that keep running"); an earlier version's line moves once at launch, and a computer without Secrets keeps the values on the line as before. |
 | Pi accounts | `src/core/pi/{accountVault,piAccountBackend,piAuth,modelRuntime}.ts` | Inject a Secrets-backed CredentialStore for account and base auth stores; retain serialized refresh and account lifecycle. |
 | Usage, Copilot and models | `src/core/quota/{auth,fetchQuota,http}.ts`; `src/core/pi/copilotMeter.ts`; model/account readers | Use the same account adapter; remove direct-file routes without confusing unavailable with signed out or adding renewal. |
 | Custom APIs | `src/core/pi/{customApiAccounts,customApiTransport,customApiPi}.ts` | Keys and secret headers in custody; credential-free Pi configuration and existing destination policy; Settings-approved Custom connection shell token commands retain their renewal and output isolation, outside the protected-recipient boundary. |

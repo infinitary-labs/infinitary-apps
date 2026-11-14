@@ -202,7 +202,7 @@ export class SecretsSettings {
       availability: await owner.protected.status(),
       home: authority?.home ?? null,
       entries: metadata.map(
-        ({ ref, label, version, revision, updatedAt, environment, discoverable }) => ({
+        ({ ref, label, version, revision, updatedAt, environment, discoverable, forProgram }) => ({
           ref,
           label,
           version,
@@ -210,7 +210,9 @@ export class SecretsSettings {
           updatedAt,
           environment: environment ?? "",
           ...this.lastUse(history.filter((item) => item.secrets.includes(ref)).at(-1)),
-          ...(discoverable ? {} : { kept: true as const }),
+          ...(discoverable
+            ? {}
+            : { kept: true as const, ...(forProgram ? { forProgram: true as const } : {}) }),
         }),
       ),
       uses: owner.requests.receipts().map((receipt) => this.receiptView(owner, receipt)),
@@ -295,7 +297,7 @@ export class SecretsSettings {
       facts: script
         ? checkedFacts(script.facts, script.secrets)
         : broker
-          ? brokerCheckedFacts(broker.facts)
+          ? brokerCheckedFacts(broker.facts, broker.secrets)
           : [],
       // The record the use prepared, never a later lookup that could describe a replacement.
       secrets: (script?.secrets ?? broker?.secrets ?? []).map(
@@ -1221,6 +1223,8 @@ export class SecretsSettings {
     ref?: string;
     label: string;
     value: Buffer;
+    /** Kept for a program the service starts (docs/secrets.md, "Programs that keep running"). */
+    forProgram?: true;
   }): Promise<string | undefined> {
     try {
       const owner = await this.ready(true);
@@ -1233,6 +1237,7 @@ export class SecretsSettings {
       const ref = input.ref ?? (await this.freshReference(owner, input.label));
       const written = await owner.protected.putSecret(ref, input.label, input.value, {
         discoverable: false,
+        ...(input.forProgram ? { forProgram: true as const } : {}),
       });
       return written?.ref;
     } catch {
@@ -1247,6 +1252,22 @@ export class SecretsSettings {
   async reference(label: string): Promise<string | undefined> {
     const owner = await this.ready(true);
     return owner ? this.freshReference(owner, label) : undefined;
+  }
+
+  /**
+   * Every hidden entry kept for a program, so its service can forget one no
+   * saved program names; undefined when Secrets cannot answer now.
+   */
+  async programKeys(): Promise<string[] | undefined> {
+    try {
+      const owner = await this.ready();
+      if (!owner) return undefined;
+      return (await owner.protected.metadata())
+        .filter((entry) => !entry.discoverable && entry.forProgram === true)
+        .map((entry) => entry.ref);
+    } catch {
+      return undefined;
+    }
   }
 
   /** Forget a host consumer's hidden entry; the captain's own entries are never touched. */
@@ -1305,9 +1326,10 @@ const REFERENCE_STEM = 64 - "-9999999".length;
  * names it and its history never reads as the new one's.
  */
 /**
- * The saved decisions without those naming an app sign-in (docs/secrets.md,
- * "App sign-ins"): signing in is their consent, so such a decision no longer
- * applies, is not shown, and the next confirmed save leaves it out.
+ * The saved decisions without those naming a hidden entry (docs/secrets.md,
+ * "App sign-ins", "Programs that keep running"): signing in, or giving a key
+ * with a program, is its consent, so such a decision no longer applies, is
+ * not shown, and the next confirmed save leaves it out.
  */
 function withoutKept(
   rules: readonly Rule[],

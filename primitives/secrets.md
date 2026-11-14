@@ -2,7 +2,7 @@
 
 Secrets is the common contract for credential custody and approved uses, not a command that returns a value.
 The implementation is a protected owner with native custody and fresh system authentication on macOS and Linux, behind a request coordinator and an optional command-runtime seam.
-The app builds the owner on the person's own data folder on macOS and Linux, so local tasks receive this command; no existing credential consumer has migrated yet.
+The app builds the owner on the person's own data folder on macOS and Linux, so local tasks receive this command; the Google sign-in and MCP server keys have migrated, and every other listed consumer has not.
 
 ## Intended use
 
@@ -92,8 +92,10 @@ No automatic scan or import of unrelated user files is permitted.
 ## Uses
 
 The complete maintained consumer register and migration obligations are in [`../docs/secrets.md`](../docs/secrets.md).
-The Google integration's sign-in is migrated, as a hidden entry an app service keeps and uses through its own broker ([`../docs/secrets.md`](../docs/secrets.md), "App services"); every other listed consumer remains unmigrated.
-A sign-in the person made in the app is the consent to the app's own use of it: a broker that declares `signIn` and names only hidden entries runs with no card, confirmation or saved decision ("App sign-ins").
+The Google integration's sign-in is migrated, as a hidden entry an app service keeps and uses through its own broker ([`../docs/secrets.md`](../docs/secrets.md), "App services").
+MCP server keys are migrated too: each value on a server's Runs line but `PATH` is a hidden entry marked `forProgram`, given to the server's program as it starts through the integration's program broker (`programSecretBroker`, "Programs that keep running"); every other listed consumer remains unmigrated.
+A sign-in the person made in the app is the consent to the app's own use of it: a broker that declares `signIn` and names only hidden entries not marked `forProgram` runs with no card, confirmation or saved decision ("App sign-ins").
+A key the person gave with a program is the consent to every start of it in the same way: a broker that declares `givenWithProgram` and names only hidden entries marked `forProgram` runs with no question ("Programs that keep running").
 Possible: approved brokered requests, exact-run shell injection, reviewed reusable scripts, narrow signing and origin-scoped browser session loading through their existing owners.
 
 ## Checks

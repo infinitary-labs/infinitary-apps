@@ -192,6 +192,19 @@ Files written before it read the same.
 An older build reads such a file as unreadable, because it has no token: the row reads "signed in · checking", git gets no answer and fails at once, and the sign-in card asks for GitHub; nothing is rewritten or deleted, so the sign-in works again in a build that knows the way.
 The format revision therefore stays at 1.
 
+## MCP server keys in Secrets
+
+Where Secrets is offered, an MCP server's line in `integrations/mcp.json` names each key as `NAME={secret:REF}` instead of its value, and at launch a line saved before moves its values into Secrets once (`docs/integrations.md`, "MCP servers").
+`PATH` stays on the line as written, so a moved line reads the same in an older build for it.
+Such a key's vault record, and its entry in a recovery archive, carries `forProgram: true` (`docs/secrets.md`, "Programs that keep running").
+Lines and records written before read the same, and the lines move.
+An older build reads a moved line as written and passes the reference itself to the program as the variable's value, so the server refuses its key; nothing is rewritten, and the server works again in a build that knows references.
+A build that cannot read `mcp.json` whole, because it is damaged or a newer build saved what that build does not know, forgets no server key for seeming unnamed, so going back to such a build loses no key.
+An older build still opens such a vault record, since its check covers the stored fields, and lists it as a kept sign-in.
+An older build refuses a recovery archive holding a server key, because its archive schema is strict; the archive and its key stay as they are, and a build that knows the field restores them.
+Each start of such a server is journaled with `given` on its request line and no approval line, and its history item carries `given: true` with no `approval`; an older build ignores the field and shows the use with no approval words, and its recovery archive takes that history as it is.
+The format revision therefore stays at 1.
+
 ## Card pictures with a demo recording
 
 A card picture may carry an optional `demo` (docs/card-authoring.md, "Demo recordings"): the recording its poster stands for - its id, kind, size, length, byte size and SHA-256.

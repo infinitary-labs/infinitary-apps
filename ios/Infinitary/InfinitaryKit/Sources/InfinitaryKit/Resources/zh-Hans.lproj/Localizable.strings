@@ -2595,6 +2595,7 @@
 "settingsSaveRecoveryHint" = "关闭并重新打开设置后再试一次。";
 "settingsSaveReloadFailed" = "%2$@ 无法重新载入已保存的值。%1$@";
 "settingsScreenSections" = "设置分区";
+"settingsSecretsAddedWithProgram" = "随程序一起添加";
 "settingsSecretsBackupNote" = "保存一份加密副本和一个单独的恢复密钥。请将它们分开保管：同时拥有两者的人都能读取已保存的值。密钥无法重置。";
 "settingsSecretsCancel" = "取消";
 "settingsSecretsDeleteHistory" = "删除历史记录";
@@ -2604,6 +2605,7 @@
 "settingsSecretsFinishForm" = "请先完成打开的机密表单。";
 "settingsSecretsFinishFormOrChange" = "请先完成打开的机密表单或当前更改。";
 "settingsSecretsHistoryExported" = "历史记录已导出。";
+"settingsSecretsKeptForProgram" = "Infinitary 为你在集成中添加的服务器保存此项，并在服务器每次启动时直接交给它，不再询问：随服务器一起添加即表示你已同意。在那里移除该服务器即可忘记它。";
 "settingsSecretsKeptSignIn" = "Infinitary 为你在集成中完成的登录保存此项，并在使用时不再询问：登录即表示你已同意。在那里退出登录即可移除。";
 "settingsSecretsManageInIntegrations" = "在集成中管理";
 "settingsSecretsNamePlaceholder" = "例如：网站部署";

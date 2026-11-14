@@ -2692,6 +2692,7 @@ public enum PhoneMessages {
     public static func `settingsSaveRecoveryHint`() -> String { PhoneWords.format("settingsSaveRecoveryHint", []) }
     public static func `settingsSaveReloadFailed`(`hint`: String, `message`: String) -> String { PhoneWords.format("settingsSaveReloadFailed", [`hint`, `message`]) }
     public static func `settingsScreenSections`() -> String { PhoneWords.format("settingsScreenSections", []) }
+    public static func `settingsSecretsAddedWithProgram`() -> String { PhoneWords.format("settingsSecretsAddedWithProgram", []) }
     public static func `settingsSecretsBackupNote`() -> String { PhoneWords.format("settingsSecretsBackupNote", []) }
     public static func `settingsSecretsCancel`() -> String { PhoneWords.format("settingsSecretsCancel", []) }
     public static func `settingsSecretsDeleteHistory`() -> String { PhoneWords.format("settingsSecretsDeleteHistory", []) }
@@ -2701,6 +2702,7 @@ public enum PhoneMessages {
     public static func `settingsSecretsFinishForm`() -> String { PhoneWords.format("settingsSecretsFinishForm", []) }
     public static func `settingsSecretsFinishFormOrChange`() -> String { PhoneWords.format("settingsSecretsFinishFormOrChange", []) }
     public static func `settingsSecretsHistoryExported`() -> String { PhoneWords.format("settingsSecretsHistoryExported", []) }
+    public static func `settingsSecretsKeptForProgram`() -> String { PhoneWords.format("settingsSecretsKeptForProgram", []) }
     public static func `settingsSecretsKeptSignIn`() -> String { PhoneWords.format("settingsSecretsKeptSignIn", []) }
     public static func `settingsSecretsManageInIntegrations`() -> String { PhoneWords.format("settingsSecretsManageInIntegrations", []) }
     public static func `settingsSecretsNamePlaceholder`() -> String { PhoneWords.format("settingsSecretsNamePlaceholder", []) }
@@ -5941,6 +5943,7 @@ extension PhoneWords {
         "settingsSaveRecoveryHint": [],
         "settingsSaveReloadFailed": ["hint", "message"],
         "settingsScreenSections": [],
+        "settingsSecretsAddedWithProgram": [],
         "settingsSecretsBackupNote": [],
         "settingsSecretsCancel": [],
         "settingsSecretsDeleteHistory": [],
@@ -5950,6 +5953,7 @@ extension PhoneWords {
         "settingsSecretsFinishForm": [],
         "settingsSecretsFinishFormOrChange": [],
         "settingsSecretsHistoryExported": [],
+        "settingsSecretsKeptForProgram": [],
         "settingsSecretsKeptSignIn": [],
         "settingsSecretsManageInIntegrations": [],
         "settingsSecretsNamePlaceholder": [],

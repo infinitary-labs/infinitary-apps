@@ -69,11 +69,6 @@ export function checkedFacts(
   const print = (sha256: string) => `${words.fingerprint} ${sha256.slice(0, FINGERPRINT_SHOWN)}`;
   const bound = (file: { path: string; sha256: string; copied: boolean }) =>
     `${file.path} · ${file.copied ? words.copied : words.inPlace} · ${print(file.sha256)}`;
-  const named = (ref: string) => {
-    const secret = secrets.find((one) => one.ref === ref);
-    if (!secret) return ref;
-    return secret.environment ? `${secret.label} (${secret.environment})` : secret.label;
-  };
   return [
     { name: words.program, value: bound(facts.executable) },
     ...(facts.interpreter
@@ -90,20 +85,63 @@ export function checkedFacts(
     })),
     { name: words.arguments, value: facts.argv.map(shellWord).join(" ") },
     { name: words.folder, value: facts.cwd },
-    {
-      name: words.secrets,
-      value: Object.entries(facts.env)
-        .map(([variable, ref]) => `${variable} ${words.gets} ${named(ref)}`)
-        .join("; "),
-    },
+    { name: words.secrets, value: goesIn(facts.env, secrets) },
     { name: words.output, value: words.outputValue },
     { name: words.limit, value: words.limitValue },
   ];
 }
 
-/** What was checked for a service's request: where it goes, what it asks, and what comes back. */
-export function brokerCheckedFacts(facts: BrokerFacts): { name: string; value: string }[] {
+/** Which variable gets which secret, each secret by the name Settings shows. */
+function goesIn(
+  env: Readonly<Record<string, string>>,
+  secrets: readonly { ref: string; label: string; environment?: string }[],
+): string {
+  const named = (ref: string) => {
+    const secret = secrets.find((one) => one.ref === ref);
+    if (!secret) return ref;
+    return secret.environment ? `${secret.label} (${secret.environment})` : secret.label;
+  };
+  return Object.entries(env)
+    .map(([variable, ref]) => `${variable} ${SECRET_CHECKED_WORDS.gets} ${named(ref)}`)
+    .join("; ");
+}
+
+/**
+ * What was checked for a service's request: where it goes, what it asks, and
+ * what comes back. A program the service starts and keeps talking to lists
+ * what a program run does, each file checked where it is.
+ */
+export function brokerCheckedFacts(
+  facts: BrokerFacts,
+  secrets: readonly { ref: string; label: string; environment?: string }[] = [],
+): { name: string; value: string }[] {
   const words = SECRET_CHECKED_WORDS;
+  const program = facts.program;
+  if (program) {
+    const print = (sha256: string) => `${words.fingerprint} ${sha256.slice(0, FINGERPRINT_SHOWN)}`;
+    const bound = (file: { path: string; sha256: string }) =>
+      `${file.path} · ${words.startsInPlace} · ${print(file.sha256)}`;
+    return [
+      { name: words.program, value: bound(program.executable) },
+      ...(program.interpreter
+        ? [
+            {
+              name: words.interpreter,
+              value: `${bound(program.interpreter)}${program.interpreter.arg ? ` · ${program.interpreter.arg}` : ""}`,
+            },
+          ]
+        : []),
+      ...program.inputs.map((input) => ({
+        name: words.file,
+        value: `${input.path} · ${words.readInPlace}`,
+      })),
+      { name: words.arguments, value: program.argv.map(shellWord).join(" ") },
+      { name: words.folder, value: program.cwd },
+      { name: words.secrets, value: goesIn(facts.secrets, secrets) },
+      { name: words.output, value: words.keepsRunningOutput },
+      { name: words.limit, value: words.keepsRunningLimit },
+    ];
+  }
   return [
     { name: words.destination, value: facts.destination },
     { name: words.operation, value: facts.operation },

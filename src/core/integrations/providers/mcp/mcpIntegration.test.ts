@@ -6,7 +6,9 @@ import { join, resolve } from "node:path";
 import { integrationsViewSchema } from "@shared/integrations";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
+import { integrationKeys } from "../../../../../tests/helpers/integrationKeys";
 import {
+  NOTES_KEY_VARIABLE,
   NOTES_URI,
   type NotesBook,
   type NotesHttpServer,
@@ -24,7 +26,9 @@ import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
 import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from "../../index";
+import type { IntegrationKeys } from "../../secrets";
 import { mcpIntegration } from "./mcpIntegration";
+import { McpServerStore } from "./store";
 
 /**
  * MCP servers as integrations (INF-781; INF-775 piece 2, whose checks name
@@ -53,28 +57,33 @@ afterEach(async () => {
 
 /**
  * A service over a fresh folder with the MCP binding alone, as the
- * composition root wires it, and a task whose asks it keeps.
+ * composition root wires it, and a task whose asks it keeps; with `keys`,
+ * the binding keeps a server's keys there.
  */
-function serviceIn(root: string): {
+function serviceIn(
+  root: string,
+  keys?: IntegrationKeys,
+): {
   service: IntegrationsService;
   tasks: TaskService;
+  binding: ReturnType<typeof mcpIntegration>;
   close: () => void;
 } {
   const db = openInMemoryDatabase();
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, { id: task.taskId, title: "Keep the week's notes", status: "idle" });
   let service: IntegrationsService | undefined;
+  const binding = mcpIntegration({
+    root,
+    env: () => hostEnv(),
+    belowUi: (file, args) => atUtilityQos(file, args),
+    cwd: () => root,
+    version: "0.0.0-test",
+    changed: () => service?.changed(),
+    ...(keys ? { keys } : {}),
+  });
   service = new IntegrationsService({
-    bindings: [
-      mcpIntegration({
-        root,
-        env: () => hostEnv(),
-        belowUi: (file, args) => atUtilityQos(file, args),
-        cwd: () => root,
-        version: "0.0.0-test",
-        changed: () => service?.changed(),
-      }),
-    ],
+    bindings: [binding],
     store: new IntegrationSettingsStore(root),
     asks: {
       keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
@@ -83,7 +92,7 @@ function serviceIn(root: string): {
         tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
     },
   });
-  return { service, tasks, close: () => db.close() };
+  return { service, tasks, binding, close: () => db.close() };
 }
 
 type Served = {
@@ -780,4 +789,268 @@ describe.each(["legacy", "modern"] as const)("a large %s notes workspace", (era)
       );
     },
   );
+});
+
+// INF-3984, from INF-785 (the captain: "secrets used to access the external
+// data should be handled by the planned secret management capability"): a
+// server's key moves into Secrets and its line keeps only a reference; the
+// program still gets it as it starts. The captain on INF-3984's review: "when
+// a user puts a value into the mcp server config, that's their consent for it
+// to be used whenever the mcp server is needed", so no start asks; and PATH
+// stays on the line, since it decides which program runs.
+describe("an MCP server's key", () => {
+  /** A key a notes service might hand out, which the stand-in server checks. */
+  const KEY = "nk_live_4Fq9sT2vXw8LmC3pRb7Y";
+
+  /** A keyed notes book, and the program that serves it as a person writes it. */
+  function keyedNotes(root: string, era: StandInEra): string {
+    const file = join(root, "notes.json");
+    publishNotes(file, { notes: [...SAMPLE_NOTES], key: KEY });
+    return `'${process.execPath}' '${STAND_IN}' stdio ${era} '${file}'`;
+  }
+
+  describe.each(["legacy", "modern"] as const)("in the %s era", (era) => {
+    it("goes into Secrets as the server is added, and reaches its program at each start with no question", async () => {
+      const root = scratchDir("mcp-keys-");
+      const secrets = integrationKeys();
+      const { service, close } = serviceIn(root, secrets.keys);
+      opened.push({ service, close });
+      const program = keyedNotes(root, era);
+
+      const { id } = await service.add("mcp", {
+        name: "Notes",
+        runs: `${NOTES_KEY_VARIABLE}=${KEY} ${program}`,
+      });
+      const [entry, ...others] = await secrets.entries();
+      expect(others).toEqual([]);
+      expect(entry).toMatchObject({
+        label: `Notes: ${NOTES_KEY_VARIABLE}`,
+        discoverable: false,
+        forProgram: true,
+      });
+      const row = () => service.view().integrations.find((one) => one.id === id);
+      expect(row()).toMatchObject({
+        health: "ok",
+        runs: `${NOTES_KEY_VARIABLE}={secret:${entry?.ref}} ${program}`,
+      });
+      expect(readFileSync(join(root, "mcp.json"), "utf8")).not.toContain(KEY);
+
+      // Started again by Check and by a call, it still asks nothing.
+      await service.check(id);
+      expect(row()?.health).toBe("ok");
+      allowIntegrationReads(service);
+      const listed = await service.call(task, "Notes", "list_notes", {}, "Read the notes.");
+      expect(listed.text).toContain(`1. ${SAMPLE_NOTES[0]}`);
+      expect(secrets.cards).toEqual([]);
+      const { rules, history } = await secrets.keys.view();
+      expect(rules).toEqual([]);
+      // What happened marks each start as covered by the key given with it.
+      expect(history.length).toBeGreaterThanOrEqual(2);
+      for (const use of history)
+        expect(use).toMatchObject({ state: "completed", given: true, secrets: [entry?.ref] });
+
+      // Removing the server forgets its key.
+      await service.remove(id);
+      expect(await secrets.entries()).toEqual([]);
+    });
+  });
+
+  // INF-3984's review: every value on a line moves, not only the first.
+  it("moves with every other value on its line, the last word for a name written twice", async () => {
+    const root = scratchDir("mcp-keys-");
+    const secrets = integrationKeys();
+    const { service, close } = serviceIn(root, secrets.keys);
+    opened.push({ service, close });
+    const program = keyedNotes(root, "modern");
+    // An expired key the person wrote over later in the line, as a shell reads it.
+    const expired = "nk_live_9Rt2Lp8Vx4Qm1Kc7Wb3D";
+
+    const { id } = await service.add("mcp", {
+      name: "Notes",
+      runs: `${NOTES_KEY_VARIABLE}=${expired} NOTES_ACCOUNT=acct_6Rw1Hn9Tb4Kx ${NOTES_KEY_VARIABLE}=${KEY} ${program}`,
+    });
+    const entries = await secrets.entries();
+    const refOf = (variable: string) =>
+      entries.find((entry) => entry.label === `Notes: ${variable}`)?.ref;
+    expect(entries.map((entry) => entry.label).sort()).toEqual([
+      "Notes: NOTES_ACCOUNT",
+      `Notes: ${NOTES_KEY_VARIABLE}`,
+    ]);
+    const line = `NOTES_ACCOUNT={secret:${refOf("NOTES_ACCOUNT")}} ${NOTES_KEY_VARIABLE}={secret:${refOf(NOTES_KEY_VARIABLE)}} ${program}`;
+    // Connected only if the program got the later key: the stand-in refuses the expired one.
+    expect(service.view().integrations.find((one) => one.id === id)).toMatchObject({
+      health: "ok",
+      runs: line,
+    });
+    const saved = readFileSync(join(root, "mcp.json"), "utf8");
+    expect(JSON.parse(saved).servers[0].runs).toBe(line);
+    for (const value of [KEY, expired, "acct_6Rw1Hn9Tb4Kx"]) expect(saved).not.toContain(value);
+    expect(secrets.cards).toEqual([]);
+  });
+
+  // The captain on INF-3984's review: "Keep PATH on the line as a setting that never moves".
+  it("leaves PATH on the line, where the program is found and runs with it", async () => {
+    const root = scratchDir("mcp-keys-");
+    const secrets = integrationKeys();
+    const { service, close } = serviceIn(root, secrets.keys);
+    opened.push({ service, close });
+    // A server a package runner starts, found only on the PATH the line names.
+    const book = join(root, "notes.json");
+    publishNotes(book, { notes: [...SAMPLE_NOTES], key: KEY });
+    const tools = scratchDir("mcp-path-");
+    writeFileSync(
+      join(tools, "npx"),
+      `#!/bin/sh\n[ "$1" = -y ] && [ "$2" = notes-server ] || exit 1\nexec '${process.execPath}' '${STAND_IN}' stdio modern '${book}'\n`,
+      { mode: 0o755 },
+    );
+    const path = `PATH=${tools}:/usr/bin:/bin`;
+
+    const { id } = await service.add("mcp", {
+      name: "Notes",
+      runs: `${path} ${NOTES_KEY_VARIABLE}=${KEY} npx -y notes-server`,
+    });
+    const [entry, ...others] = await secrets.entries();
+    expect(others).toEqual([]);
+    expect(entry?.label).toBe(`Notes: ${NOTES_KEY_VARIABLE}`);
+    const line = `${path} ${NOTES_KEY_VARIABLE}={secret:${entry?.ref}} npx -y notes-server`;
+    expect(service.view().integrations.find((one) => one.id === id)).toMatchObject({
+      health: "ok",
+      runs: line,
+    });
+    expect(JSON.parse(readFileSync(join(root, "mcp.json"), "utf8")).servers[0].runs).toBe(line);
+    await service.check(id);
+    expect(service.view().integrations.find((one) => one.id === id)?.health).toBe("ok");
+  });
+
+  // A line names only keys kept for its own server, so a typed reference to
+  // another server's key never reaches a program with no question.
+  it("is never named by another server's line", async () => {
+    const root = scratchDir("mcp-keys-");
+    const secrets = integrationKeys();
+    const { service, close } = serviceIn(root, secrets.keys);
+    opened.push({ service, close });
+    const program = keyedNotes(root, "modern");
+    await service.add("mcp", { name: "Notes", runs: `${NOTES_KEY_VARIABLE}=${KEY} ${program}` });
+    const [entry] = await secrets.entries();
+
+    await expect(
+      service.add("mcp", {
+        name: "Copy",
+        runs: `${NOTES_KEY_VARIABLE}={secret:${entry?.ref}} ${program}`,
+      }),
+    ).rejects.toThrow(
+      "Runs names a key kept in Secrets: write the key itself, and Infinitary keeps it in Secrets for this server.",
+    );
+    expect(service.view().integrations.map((one) => one.name)).toEqual(["Notes"]);
+    expect((await secrets.keys.view()).history.map((use) => use.secrets)).toEqual([[entry?.ref]]);
+  });
+
+  it("moves from an earlier version's line into Secrets once", async () => {
+    const root = scratchDir("mcp-keys-");
+    const program = keyedNotes(root, "modern");
+    new McpServerStore(root).write([
+      {
+        id: "mcp-notes",
+        name: "Notes",
+        runs: `${NOTES_KEY_VARIABLE}=${KEY} ${program}`,
+        health: "ok",
+        tools: [],
+        resources: [],
+        subscribe: false,
+      },
+    ]);
+    const secrets = integrationKeys();
+    // An addition the app quit during kept its key before its line was saved.
+    await secrets.keys.keepHidden({
+      label: "Notes: NOTES_KEY",
+      value: Buffer.from(KEY),
+      forProgram: true,
+    });
+    const { service, binding, close } = serviceIn(root, secrets.keys);
+    opened.push({ service, close });
+
+    await binding.moveKeys();
+    await binding.moveKeys();
+    const [entry, ...others] = await secrets.entries();
+    expect(others).toEqual([]);
+    expect(entry).toMatchObject({ discoverable: false, forProgram: true });
+    expect(service.view().integrations[0]?.runs).toBe(
+      `${NOTES_KEY_VARIABLE}={secret:${entry?.ref}} ${program}`,
+    );
+    expect(readFileSync(join(root, "mcp.json"), "utf8")).not.toContain(KEY);
+
+    await service.check("mcp-notes");
+    expect(service.view().integrations[0]?.health).toBe("ok");
+    expect(secrets.cards).toEqual([]);
+  });
+
+  // INF-3984's review: a list the app cannot read whole never makes a key
+  // look unused, or switching back to an older build would forget them all.
+  it("is kept at launch while the saved list cannot be read whole", async () => {
+    const root = scratchDir("mcp-keys-");
+    const program = keyedNotes(root, "modern");
+    const secrets = integrationKeys();
+    const ref = await secrets.keys.keepHidden({
+      label: "Notes: NOTES_KEY",
+      value: Buffer.from(KEY),
+      forProgram: true,
+    });
+    const saved = {
+      id: "mcp-notes",
+      name: "Notes",
+      runs: `${NOTES_KEY_VARIABLE}={secret:${ref}} ${program}`,
+      health: "ok",
+      tools: [],
+      resources: [],
+      subscribe: false,
+    };
+    const files = {
+      "a newer build's file, saving a field this build does not know": JSON.stringify({
+        servers: [{ ...saved, folder: root }],
+      }),
+      "a file cut short": JSON.stringify({ servers: [saved] }).slice(0, 80),
+      "a line left with an open quote": JSON.stringify({
+        servers: [{ ...saved, runs: `${saved.runs} '--notes` }],
+      }),
+    };
+    for (const [kind, text] of Object.entries(files)) {
+      writeFileSync(join(root, "mcp.json"), text);
+      const { binding, close } = serviceIn(root, secrets.keys);
+      await binding.moveKeys();
+      close();
+      expect(await secrets.entries(), kind).toMatchObject([{ ref, forProgram: true }]);
+    }
+  });
+
+  it("stays on the line where Secrets is not offered, and a reference cannot start there", async () => {
+    const root = scratchDir("mcp-keys-");
+    const program = keyedNotes(root, "modern");
+    // A line saved where Secrets is offered, in a data folder brought here.
+    new McpServerStore(root).write([
+      {
+        id: "mcp-kept-notes",
+        name: "Kept notes",
+        runs: `${NOTES_KEY_VARIABLE}={secret:kept-notes-key} ${program}`,
+        health: "ok",
+        tools: [
+          { tool: "list_notes", action: "list_notes", readOnly: true, schema: { type: "object" } },
+        ],
+        resources: [],
+        subscribe: false,
+      },
+    ]);
+    const { service, close } = serviceIn(root);
+    opened.push({ service, close });
+    const runs = `${NOTES_KEY_VARIABLE}=${KEY} ${program}`;
+    const { id } = await service.add("mcp", { name: "Notes", runs });
+    expect(service.view().integrations.find((one) => one.id === id)).toMatchObject({
+      runs,
+      health: "ok",
+    });
+    allowIntegrationReads(service);
+    const refused = await service.call(task, "Kept notes", "list_notes", {}, "Read the notes.");
+    expect(refused.text).toContain(
+      "Kept notes keeps its keys in Secrets, which this computer does not offer, so it cannot start here.",
+    );
+  });
 });

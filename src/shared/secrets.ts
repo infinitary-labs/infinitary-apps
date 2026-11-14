@@ -53,6 +53,12 @@ export const secretMetadataSchema = z.strictObject({
    * never Replace, Forget or a saved decision.
    */
   kept: z.literal(true).optional(),
+  /**
+   * With `kept`: a key the app keeps for a program it starts, such as an MCP
+   * server's (docs/secrets.md, "Programs that keep running"). The person gave
+   * it with the program, which is the consent, so its uses ask nothing.
+   */
+  forProgram: z.literal(true).optional(),
 });
 export const secretUseSchema = z.strictObject({
   request: z.string(),
@@ -88,6 +94,12 @@ export const secretHistorySchema = z.strictObject({
    * (docs/secrets.md, "App sign-ins"): no one approved it, so it has no `approval`.
    */
   signIn: z.literal(true).optional(),
+  /**
+   * A program started with the keys the person gave with it, which was the
+   * consent (docs/secrets.md, "Programs that keep running"): no one approved
+   * it, so it has no `approval`.
+   */
+  given: z.literal(true).optional(),
   device: z.string().optional(),
   reconciled: z.literal(true).optional(),
   /** Historical metadata imported from a recovery archive, never live authority. */
@@ -610,6 +622,12 @@ export const SECRET_CHECKED_WORDS = {
   readYes: "Yes, it changes nothing there",
   readNo: "No, it may change something there",
   request: "Exact request",
+  /** A program a service starts and keeps talking to (docs/secrets.md, "Programs that keep running"). */
+  startsInPlace: "runs where it is, checked again right before it starts",
+  readInPlace: "read where it is; what it holds is not checked",
+  keepsRunningOutput: "Goes to Infinitary, which keeps talking to the program until it stops.",
+  keepsRunningLimit:
+    "The rest of the program's environment, what the files it names hold, other files it reads while it runs, programs it starts, and what it does with the secrets.",
 } as const;
 
 /** The words of the questions Settings asks on a row (`secretQuestionSchema`), and what each answer reports. */

@@ -16,11 +16,18 @@ export type VaultEntry = {
   updatedAt: number;
   /** The captain's own label for where it belongs, such as staging; never authority. */
   environment?: string;
+  /**
+   * A hidden entry an app service keeps for a program it starts, such as an
+   * MCP server's key (docs/secrets.md, "Programs that keep running"): its uses
+   * ask and its saved decisions apply, unlike an app sign-in's.
+   */
+  forProgram?: true;
 };
 
 export type SecretMetadataInput = {
   discoverable?: boolean;
   environment?: string;
+  forProgram?: true;
 };
 
 /**
@@ -34,7 +41,7 @@ type Stored = { entry: Omit<VaultEntry, "revision">; mac: string; sealed: string
  * and only the fields this version understands leave the record.
  */
 function metadata(stored: Stored): VaultEntry {
-  const { ref, label, version, discoverable, updatedAt, environment } = stored.entry;
+  const { ref, label, version, discoverable, updatedAt, environment, forProgram } = stored.entry;
   return {
     ref,
     label,
@@ -43,6 +50,7 @@ function metadata(stored: Stored): VaultEntry {
     discoverable,
     updatedAt,
     ...(environment !== undefined ? { environment } : {}),
+    ...(forProgram === true ? { forProgram } : {}),
   };
 }
 
@@ -128,6 +136,7 @@ export class SecretVault {
         : previous?.environment === undefined
           ? {}
           : { environment: previous.environment }),
+      ...((options.forProgram ?? previous?.forProgram) ? { forProgram: true as const } : {}),
     };
     const text = canonical(entry);
     const iv = randomBytes(12);
@@ -186,6 +195,7 @@ export class SecretVault {
       typeof entry.label !== "string" ||
       !Number.isInteger(entry.version) ||
       typeof entry.discoverable !== "boolean" ||
+      (entry.forProgram !== undefined && entry.forProgram !== true) ||
       typeof parsed.sealed !== "string" ||
       path !== this.path(entry.ref) ||
       !this.keys.verify("entries", canonical(entry), parsed.mac)

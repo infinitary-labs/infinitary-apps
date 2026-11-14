@@ -456,7 +456,7 @@ function SecretRow({
         </summary>
         <div className="fm-secrets-key-body">
           {entry.kept ? (
-            <KeptSignIn />
+            <Kept forProgram={entry.forProgram === true} />
           ) : (
             <OwnSecret
               entry={entry}
@@ -543,14 +543,18 @@ function OwnSecret({
 }
 
 /**
- * A sign-in the app keeps for one of its own services (docs/secrets.md, "App
- * sign-ins"): signing in was the consent, so it has no Replace, Forget or
- * decisions here; it is changed where it was made.
+ * A key the app keeps for one of its own services, changed where it was made
+ * (docs/secrets.md, "App sign-ins", "Programs that keep running"): a sign-in
+ * made in Integrations, or a key given with a server added there. Signing in
+ * or giving the key was the consent, so it has no Replace, Forget or
+ * decisions here.
  */
-function KeptSignIn() {
+function Kept({ forProgram }: { forProgram: boolean }) {
   return (
     <div className="fm-secrets-kept" data-secrets-kept>
-      <p className="fm-secrets-kept-note">{m.settingsSecretsKeptSignIn()}</p>
+      <p className="fm-secrets-kept-note">
+        {forProgram ? m.settingsSecretsKeptForProgram() : m.settingsSecretsKeptSignIn()}
+      </p>
       <div className="fm-secrets-actions">
         <Button variant="secondary" onClick={openIntegrations}>
           {m.settingsSecretsManageInIntegrations()}
@@ -879,6 +883,7 @@ function History({ asking, refresh }: { asking: Asking; refresh: () => Promise<v
               <span className="fm-secrets-mono">{item.program}</span>
               {item.approval ? ` · ${SECRET_APPROVAL_WORDS[item.approval]}` : ""}
               {item.signIn ? ` · ${SECRETS_WORDS.yourSignIn}` : ""}
+              {item.given ? ` · ${m.settingsSecretsAddedWithProgram()}` : ""}
               {item.reconciled && !item.recoveredFrom
                 ? ` · ${SECRETS_RECOVERY_WORDS.reconciledAfterRestart}`
                 : ""}

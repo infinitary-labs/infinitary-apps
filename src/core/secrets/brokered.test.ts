@@ -7,6 +7,7 @@ import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BrokeredUse } from "./brokers";
 import { httpSecretBroker } from "./httpBroker";
+import { programSecretBroker } from "./programBroker";
 import { ProtectedSecrets } from "./protected";
 import { SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
 import { SECRET_REQUEST_LIFETIME_MS, SecretRequests } from "./requests";
@@ -521,6 +522,103 @@ describe("protected brokered delivery", () => {
     });
     expect(run.state).toBe("waiting");
     expect(f.received).toHaveLength(1);
+  });
+
+  // INF-3984, the captain: "when a user puts a value into the mcp server config, that's
+  // their consent for it to be used whenever the mcp server is needed" - only for keys
+  // kept for a program, started by an adapter that starts one.
+  it("starts a program with the keys given with it without asking, and still asks for any other secret or adapter", async () => {
+    const f = await fixture();
+    const KEY = "nk_live_4Fq9sT2vXw8LmC3pRb7Y";
+    const cwd = scratchDir("secrets-broker-program-");
+    const script = join(cwd, "notes-server");
+    await writeFile(script, "#!/bin/sh\nexec cat\n", { mode: 0o755 });
+    const started: Record<string, string>[] = [];
+    const named = (input: unknown) =>
+      input && typeof input === "object" && !Array.isArray(input) && "ref" in input
+        ? String(input.ref)
+        : undefined;
+    f.backend.registerBroker(
+      programSecretBroker<string>({
+        id: "notes-server",
+        hidden: "[a kept key]",
+        resolve: (input) => {
+          const ref = named(input);
+          return ref
+            ? {
+                label: "Notes",
+                program: script,
+                args: [],
+                cwd,
+                env: { PATH: "/usr/bin:/bin" },
+                keys: { NOTES_KEY: ref },
+                operation: "Start Notes, an MCP server, and keep talking to it",
+                result: "Its connection",
+              }
+            : undefined;
+        },
+        start: async ({ env }) => {
+          started.push({ ...env });
+          return "connection";
+        },
+      }),
+    );
+    f.backend.registerBroker(
+      httpSecretBroker({
+        id: "app-sign-in",
+        label: "App sign-in",
+        signIn: true,
+        resolve: (input) => {
+          const ref = named(input);
+          return ref
+            ? {
+                url: f.url("/token"),
+                method: "POST",
+                form: { client_id: "installed-desktop-client", grant_type: "refresh_token" },
+                credentials: {
+                  refresh: { ref, delivery: { kind: "form", name: "refresh_token" } },
+                },
+                operation: "Renew the app's sign-in",
+                read: false,
+                result: "A new access key for the app",
+              }
+            : undefined;
+        },
+        send: (url, init) => fetch(url, init),
+      }),
+    );
+    await f.backend.putSecret("notes-key", "Notes: NOTES_KEY", Buffer.from(KEY), {
+      discoverable: false,
+      forProgram: true,
+    });
+    await f.backend.putSecret("crew-key", "Crew key", Buffer.from("crew-key-value"), {
+      discoverable: true,
+    });
+    const use = (broker: string, id: string, ref: string): BrokeredUse => ({
+      id,
+      reason: "Start Notes with its keys",
+      broker,
+      input: { ref },
+    });
+
+    const given = await f.requests.broker(use("notes-server", "start-1", "notes-key"));
+    expect(await settled(f.requests, given.request)).toMatchObject({ state: "completed" });
+    expect(started).toEqual([{ PATH: "/usr/bin:/bin", NOTES_KEY: KEY }]);
+    const [record] = f.backend.history();
+    expect(record).toMatchObject({ state: "completed", given: true });
+    expect(record).not.toHaveProperty("approval");
+
+    // A crew-visible secret, or the app's own sign-in, named for a program asks.
+    for (const ref of ["crew-key", "google-refresh"])
+      expect((await f.requests.broker(use("notes-server", `start-${ref}`, ref))).state).toBe(
+        "waiting",
+      );
+    // So does a program's key that an app sign-in's adapter would spend.
+    expect((await f.requests.broker(use("app-sign-in", "renew-notes", "notes-key"))).state).toBe(
+      "waiting",
+    );
+    expect(started).toHaveLength(1);
+    expect(f.received).toEqual([]);
   });
 
   it("End access invalidates an unspent short-read proof, and ordinary approval cannot mint a bounded grant", async () => {

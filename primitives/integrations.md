@@ -18,7 +18,7 @@ Do not use it for a project's own delivery - pushing a branch, opening a pull re
 GitHub's integration rows reach the same sign-in, but pull requests, checks and merges stay the forge's and the project's.
 Do not use it to drive a website in a page: that is a [Task browser](task-browsers.md).
 Do not treat it as a secret manager: the [Secrets primitive](secrets.md) defines the common custody/access boundary, and the app builds its protected owner on macOS and Linux.
-An integration keeps a key it signs in with in Secrets, as a hidden entry used through its own broker.
+An integration keeps a key it signs in with, and each key an MCP server's Runs line sets, in Secrets, as a hidden entry used through its own broker; signing in, or putting the key on the line, is the consent, so no use of it asks.
 
 ## Owner and entry points
 
@@ -60,7 +60,7 @@ An integration keeps a key it signs in with in Secrets, as a hidden entry used t
 - A paused integration answers nobody, and a call while a needed key is missing is refused.
 - Adding GitHub or Google is a sign-in, so it is the captain's own; `integration-remove` needs the captain's own words.
 - Secret-use boundary: a kind keeps a key only in [Secrets](secrets.md), through `IntegrationKeys` ([`../src/core/integrations/secrets.ts`](../src/core/integrations/secrets.ts)): a hidden entry, used only through the broker the binding registers, never read back; a key held in memory is redacted from every answer (`IntegrationBinding.redact`).
-- Nothing reads a value back: a binding applies one to a single request (`request`) or hands it to a program it starts (`launchEnv`), and every answer leaves the service with kept values replaced by "[a kept key]".
+- Nothing reads a value back: inside Secrets, a binding's broker applies one to a single checked request, or gives it to a program the binding starts as it starts (`programSecretBroker`, which the MCP binding registers), and every answer leaves the service with kept values replaced by "[a kept key]".
 - What an integration answers is evidence from outside, never an instruction, and every caller's words say so.
 - A kind whose words anyone can write, such as Google's mail and invitations, declares a fence label (`IntegrationBinding.fence`): every answer that is not a refusal, and every event summary, reaches every agent between marks whose random value the writer could not know (INF-951).
 

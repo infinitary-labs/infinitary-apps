@@ -16,6 +16,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { INTEGRATION_KIND_NAMES, integrationMcpAddSchema } from "@shared/integrations";
 import { cutText, cutTextEnd } from "@shared/textCut";
 import { z } from "zod";
+import { type ProgramStarted, programSecretBroker } from "../../../secrets/programBroker";
+import type { UseState } from "../../../secrets/requests";
 import { findOnPath, isExecutable } from "../../../userBin";
 import {
   type IntegrationActionSpec,
@@ -26,6 +28,7 @@ import {
   type IntegrationLook,
   IntegrationOutcomeUnknown,
 } from "../../binding";
+import { type IntegrationKeys, REDACTED } from "../../secrets";
 import {
   guardedMcpFetch,
   holdMcpDestination,
@@ -33,7 +36,7 @@ import {
   type McpResolver,
   readMcpDestination,
 } from "./guardedFetch";
-import { McpRunsError, parseRuns } from "./runs";
+import { type McpRuns, McpRunsError, parseRuns, runsWithKeys, STAYS_ON_LINE } from "./runs";
 import {
   type McpSavedResource,
   type McpSavedServer,
@@ -59,6 +62,14 @@ import {
  * A program starts on its first call, or when a rule listens, and stops
  * when nobody has used it for a while; a server nobody uses is a row, not
  * a process.
+ *
+ * A NAME=value word before the program is a key, but for PATH, which
+ * stays on the line: it goes into Secrets as the server is added, or as an
+ * earlier version's line moves, and the line keeps NAME={secret:REF}. Such
+ * a program starts inside Secrets, through the broker this binding
+ * registers. Putting a key on the line is the captain's consent to the
+ * server's use of it, so no start asks (docs/secrets.md, "Programs that
+ * keep running").
  */
 
 export type McpIntegrationOptions = {
@@ -78,6 +89,8 @@ export type McpIntegrationOptions = {
   resolve?: McpResolver;
   /** How long a program may sit unused before it is stopped. */
   idleMs?: number;
+  /** Where a server's keys are kept; a run without Secrets keeps a line's values as written. */
+  keys?: IntegrationKeys;
 };
 
 /** The one event an MCP server can tell. */
@@ -93,6 +106,10 @@ const CHANGES_KEPT = 500;
 const RESOURCES_NAMED = 20;
 /** Lines of a failed program's own words shown when it stops before answering. */
 const STDERR_LINES = 4;
+/** The broker that starts a server with its kept keys, registered once with Secrets. */
+const MCP_BROKER = "mcp-server-keys";
+/** The longest line `mcp.json` keeps (`store.ts`). */
+const RUNS_LENGTH = 2048;
 
 /** A server's program or connection while it runs. */
 type Link = {
@@ -113,9 +130,14 @@ type Link = {
 /** A server could not be reached or started; the message says why in the person's words. */
 export class McpConnectError extends Error {}
 
-export function mcpIntegration(options: McpIntegrationOptions): IntegrationBinding {
+export function mcpIntegration(
+  options: McpIntegrationOptions,
+): IntegrationBinding & { moveKeys: () => Promise<void> } {
   const store = new McpServerStore(options.root);
-  let servers = store.read();
+  // Undefined when the file is there but not read whole: then no key is
+  // forgotten for seeming unnamed.
+  const launched = store.read();
+  let servers = launched ?? [];
   const links = new Map<string, Promise<Link>>();
   const idleMs = options.idleMs ?? IDLE_MS;
 
@@ -136,32 +158,39 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
     options.changed();
   };
 
-  const transportOf = (server: Pick<McpSavedServer, "runs" | "network">, link: Link): Transport => {
-    const runs = parseRuns(server.runs);
-    if (runs.kind === "address") {
-      const destination = holdMcpDestination(runs.url, server.network ?? "public");
-      return new StreamableHTTPClientTransport(new URL(destination.baseUrl), {
-        fetch: guardedMcpFetch(destination, options.resolve),
-      });
-    }
+  /** The host's environment, as every program gets it. */
+  const hostEnv = (): Record<string, string> => {
     const env: Record<string, string> = {};
     for (const [name, value] of Object.entries(options.env()))
       if (value !== undefined) env[name] = value;
-    const childEnv = { ...env, ...runs.env };
-    // Found here, before it starts below the window: a program that is not
-    // there would otherwise fail inside the wrapper that lowers its priority,
-    // and the words would name the wrapper.
+    return env;
+  };
+
+  /**
+   * The program a line names, found here, before it starts below the
+   * window: a program that is not there would otherwise fail inside the
+   * wrapper that lowers its priority, and the words would name the wrapper.
+   */
+  const programOf = (runs: Extract<McpRuns, { kind: "program" }>, env: NodeJS.ProcessEnv) => {
     const program = runs.command.includes("/")
       ? resolvePath(options.cwd(), runs.command)
-      : findOnPath(runs.command, childEnv);
+      : findOnPath(runs.command, env);
     if (!program || !isExecutable(program))
       throw new McpConnectError(`${runs.command} could not be found on this computer.`);
-    const spawn = options.belowUi(program, runs.args);
+    return program;
+  };
+
+  /** A program's pipes, below the UI, its stderr kept for the words when it fails. */
+  const stdioOf = (
+    program: { program: string; args: string[]; cwd: string; env: Record<string, string> },
+    link: Link,
+  ): Transport => {
+    const spawn = options.belowUi(program.program, program.args);
     const transport = new StdioClientTransport({
       command: spawn.file,
       args: spawn.args,
-      env: childEnv,
-      cwd: options.cwd(),
+      env: program.env,
+      cwd: program.cwd,
       stderr: "pipe",
     });
     transport.stderr?.on("data", (chunk: Buffer) => {
@@ -170,10 +199,23 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
     return transport;
   };
 
-  /** Start a server and connect to it, or throw words saying why it could not. */
-  const connect = async (
-    server: Pick<McpSavedServer, "id" | "runs" | "network">,
-  ): Promise<Link> => {
+  const transportOf = (server: Pick<McpSavedServer, "runs" | "network">, link: Link): Transport => {
+    const runs = parseRuns(server.runs);
+    if (runs.kind === "address") {
+      const destination = holdMcpDestination(runs.url, server.network ?? "public");
+      return new StreamableHTTPClientTransport(new URL(destination.baseUrl), {
+        fetch: guardedMcpFetch(destination, options.resolve),
+      });
+    }
+    const env = { ...hostEnv(), ...runs.env };
+    return stdioOf(
+      { program: programOf(runs, env), args: runs.args, cwd: options.cwd(), env },
+      link,
+    );
+  };
+
+  /** A new client and the link that tracks it, not yet connected. */
+  const newLink = (): Link => {
     const client = new Client(
       { name: "infinitary", version: options.version },
       { versionNegotiation: { mode: "auto" } },
@@ -196,19 +238,126 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
       link.closed = true;
       clearTimeout(link.idle);
     };
-    let transport: Transport;
+    return link;
+  };
+
+  /** Connect a link over its transport, or throw words saying why it could not. */
+  const connectOver = async (link: Link, transport: () => Transport): Promise<Link> => {
+    let made: Transport;
     try {
-      transport = transportOf(server, link);
+      made = transport();
     } catch (error) {
       throw new McpConnectError(wordsOf(error, link));
     }
     try {
-      await client.connect(transport);
+      await link.client.connect(made);
     } catch (error) {
-      await client.close().catch(() => undefined);
+      await link.client.close().catch(() => undefined);
       throw new McpConnectError(wordsOf(error, link));
     }
     return link;
+  };
+
+  /** Servers being added: their line, so the broker starts one before it is saved. */
+  const adding = new Map<string, Pick<McpSavedServer, "name" | "runs">>();
+  let registered = false;
+  /**
+   * The broker that starts a server with its kept keys: only a line the
+   * person saved or is adding, never one a caller made up. Secrets binds the
+   * program, its interpreter, its file arguments and folder and which
+   * variable gets which key, and gives the keys to the program as it
+   * starts, through this binding's own pipes.
+   */
+  const register = (keys: IntegrationKeys) => {
+    if (registered) return;
+    registered = true;
+    keys.registerBroker(
+      programSecretBroker<Link>({
+        id: MCP_BROKER,
+        hidden: REDACTED,
+        resolve: (input) => {
+          if (!input || typeof input !== "object" || Array.isArray(input)) return undefined;
+          const { server: id, runs: line } = input;
+          if (typeof id !== "string" || typeof line !== "string") return undefined;
+          const server = servers.find((entry) => entry.id === id) ?? adding.get(id);
+          if (!server || server.runs !== line) return undefined;
+          let runs: McpRuns;
+          try {
+            runs = parseRuns(line);
+          } catch {
+            return undefined;
+          }
+          if (runs.kind !== "program" || Object.keys(runs.keys).length === 0) return undefined;
+          const env = { ...hostEnv(), ...runs.env };
+          let program: string;
+          try {
+            program = programOf(runs, env);
+          } catch {
+            return undefined;
+          }
+          return {
+            label: server.name,
+            program,
+            args: runs.args,
+            cwd: options.cwd(),
+            env,
+            keys: runs.keys,
+            operation: `Start ${server.name}, an ${INTEGRATION_KIND_NAMES.mcp}, and keep talking to it`,
+            result: "Its connection, which Infinitary keeps until the server stops",
+          };
+        },
+        start: (program) => {
+          const link = newLink();
+          return connectOver(link, () => stdioOf(program, link));
+        },
+      }),
+    );
+  };
+
+  /** Start a server whose line names kept keys, through Secrets, or throw words saying why not. */
+  const startKept = async (
+    server: Pick<McpSavedServer, "id" | "name" | "runs">,
+    runs: Extract<McpRuns, { kind: "program" }>,
+  ): Promise<Link> => {
+    const keys = options.keys;
+    if (!keys?.shown())
+      throw new McpConnectError(
+        `${server.name} keeps its keys in Secrets, which this computer does not offer, so it cannot start here.`,
+      );
+    // Not there is said here, in words; Secrets would only say it could not.
+    programOf(runs, { ...hostEnv(), ...runs.env });
+    register(keys);
+    const used = await keys.use({
+      id: randomUUID(),
+      reason: `Infinitary starts ${server.name}, an ${INTEGRATION_KIND_NAMES.mcp} you added in Integrations, with its keys.`,
+      broker: MCP_BROKER,
+      input: { server: server.id, runs: server.runs },
+    });
+    const started = (used.state === "completed" ? used.result : undefined) as
+      | ProgramStarted<Link>
+      | undefined;
+    if (!started) throw new McpConnectError(keptWords(used.state, server.name, keys));
+    if ("started" in started) return started.started;
+    if ("failed" in started) throw new McpConnectError(started.failed);
+    throw new McpConnectError(
+      `${server.name} did not start: its program changed as it was starting. Try again.`,
+    );
+  };
+
+  /** Start a server and connect to it, or throw words saying why it could not. */
+  const connect = async (
+    server: Pick<McpSavedServer, "id" | "name" | "runs" | "network">,
+  ): Promise<Link> => {
+    let runs: McpRuns;
+    try {
+      runs = parseRuns(server.runs);
+    } catch (error) {
+      throw new McpConnectError(wordsOf(error));
+    }
+    if (runs.kind === "program" && Object.keys(runs.keys).length > 0)
+      return startKept(server, runs);
+    const link = newLink();
+    return connectOver(link, () => transportOf(server, link));
   };
 
   /** The server's link, started now if it is not running. */
@@ -280,6 +429,94 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
     link.listening = true;
   };
 
+  /**
+   * Keep a line's values in Secrets, each under a fresh reference labelled
+   * with the server and its variable, and answer the line naming them; a
+   * line with no values, or only those that stay on it such as PATH, is
+   * answered as it is. Undefined when Secrets cannot keep them now, with
+   * none of them kept.
+   */
+  const keepValues = async (
+    keys: IntegrationKeys,
+    name: string,
+    line: string,
+  ): Promise<{ runs: string; kept: string[] } | undefined> => {
+    const runs = parseRuns(line);
+    const values =
+      runs.kind === "program"
+        ? Object.entries(runs.env).filter(([variable]) => !STAYS_ON_LINE.has(variable))
+        : [];
+    if (values.length === 0) return { runs: line, kept: [] };
+    const refs: Record<string, string> = {};
+    for (const [variable, value] of values) {
+      const ref = await keys.keepHidden({
+        label: `${name}: ${variable}`,
+        value: Buffer.from(value, "utf8"),
+        forProgram: true,
+      });
+      if (!ref) {
+        await forgetKept(keys, Object.values(refs));
+        return undefined;
+      }
+      refs[variable] = ref;
+    }
+    return { runs: runsWithKeys(line, refs), kept: Object.values(refs) };
+  };
+
+  /** Forget keys kept for a program that no saved or adding line still names; none while a line cannot be read. */
+  const forgetKept = async (keys: IntegrationKeys, refs: readonly string[]) => {
+    const named = namedRefs([...servers, ...adding.values()]);
+    if (!named) return;
+    for (const ref of refs) if (!named.has(ref)) await keys.forgetHidden(ref).catch(() => false);
+  };
+
+  let moving: Promise<void> | undefined;
+  /**
+   * An earlier version kept a server's values on its line: each moves into
+   * Secrets, then the line is saved naming them, so an interruption leaves
+   * the line as it was. A key kept for a program that no line names - one
+   * an interrupted move or addition kept - is forgotten first, but only when
+   * the file was read whole and every line in it understood: a damaged file,
+   * or one a newer build wrote, never makes a key look unused. Nothing
+   * moves while Secrets cannot keep a key.
+   */
+  const moveKeys = (): Promise<void> => {
+    const keys = options.keys;
+    if (!keys?.shown()) return Promise.resolve();
+    moving ??= (async () => {
+      const kept = await keys.programKeys();
+      if (!kept) return;
+      const named = launched ? namedRefs(servers) : undefined;
+      if (named)
+        for (const ref of kept) {
+          // An addition keeps its keys before its line is saved.
+          if (adding.size > 0) break;
+          if (!named.has(ref)) await keys.forgetHidden(ref).catch(() => false);
+        }
+      for (const server of [...servers]) {
+        let moved: { runs: string; kept: string[] } | undefined;
+        try {
+          moved = await keepValues(keys, server.name, server.runs);
+        } catch {
+          continue;
+        }
+        if (!moved || moved.kept.length === 0) continue;
+        const current = servers.find((entry) => entry.id === server.id);
+        if (!current || current.runs !== server.runs || moved.runs.length > RUNS_LENGTH) {
+          for (const ref of moved.kept) await keys.forgetHidden(ref).catch(() => false);
+          continue;
+        }
+        update(server.id, { runs: moved.runs });
+      }
+    })()
+      // Tried again at the next launch; a line saved as it was still starts as before.
+      .catch(() => undefined)
+      .finally(() => {
+        moving = undefined;
+      });
+    return moving;
+  };
+
   const connectionOf = (server: McpSavedServer): IntegrationConnection => ({
     id: server.id,
     account: null,
@@ -296,37 +533,68 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
     connections: () => servers.map(connectionOf),
 
     add: async (input, claim) => {
-      const { name, runs } = integrationMcpAddSchema.parse(input);
+      const { name, runs: typed } = integrationMcpAddSchema.parse(input);
       // The id is held before anything waits, so an overlapping addition takes another.
       const id = freeId(name, servers, claim);
       let network: McpSavedServer["network"];
       try {
-        const parsed = parseRuns(runs);
+        const parsed = parseRuns(typed);
+        // A line names only keys kept for its own server, which start it with no
+        // question; a typed reference could name another server's.
+        if (parsed.kind === "program" && Object.keys(parsed.keys).length > 0)
+          throw new McpConnectError(
+            "Runs names a key kept in Secrets: write the key itself, and Infinitary keeps it in Secrets for this server.",
+          );
         if (parsed.kind === "address")
           network = (await readMcpDestination(parsed.url, options.resolve)).mode;
       } catch (error) {
         throw new McpConnectError(wordsOf(error));
       }
-      const link = await connect({ id, runs, network });
+      // Its values go into Secrets first, so the line it saves names them.
+      adding.set(id, { name, runs: typed });
+      let kept: string[] = [];
       try {
-        const lists = savedLists(await listed(link.client));
-        save([
-          ...servers,
-          {
-            id,
-            name,
-            runs,
-            ...(network ? { network } : {}),
-            health: "ok",
-            ...lists,
-          },
-        ]);
-      } catch (error) {
-        await link.client.close().catch(() => undefined);
-        throw new McpConnectError(wordsOf(error, link));
+        let runs = typed;
+        const keys = options.keys;
+        if (keys?.shown()) {
+          const moved = await keepValues(keys, name, typed);
+          if (!moved)
+            throw new McpConnectError(
+              "Infinitary keeps a server's keys in Secrets, which is locked or cannot open now. Unlock it in Settings → Secrets.",
+            );
+          kept = moved.kept;
+          runs = moved.runs;
+          if (runs.length > RUNS_LENGTH)
+            throw new McpConnectError(
+              "Runs is too long once its keys are kept in Secrets: shorten it.",
+            );
+          adding.set(id, { name, runs });
+        }
+        const link = await connect({ id, name, runs, network });
+        try {
+          const lists = savedLists(await listed(link.client));
+          save([
+            ...servers,
+            {
+              id,
+              name,
+              runs,
+              ...(network ? { network } : {}),
+              health: "ok",
+              ...lists,
+            },
+          ]);
+        } catch (error) {
+          await link.client.close().catch(() => undefined);
+          throw new McpConnectError(wordsOf(error, link));
+        }
+        kept = [];
+        links.set(id, Promise.resolve(touch(id, link)));
+        return id;
+      } finally {
+        adding.delete(id);
+        if (kept.length > 0 && options.keys) await forgetKept(options.keys, kept);
       }
-      links.set(id, Promise.resolve(touch(id, link)));
-      return id;
     },
 
     check: async (id) => {
@@ -335,9 +603,21 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
       options.changed();
     },
 
-    remove: (id) => {
+    remove: async (id) => {
+      const removed = servers.find((entry) => entry.id === id);
       void stop(id);
       save(servers.filter((entry) => entry.id !== id));
+      // Its keys go with it, unless another line names them.
+      const keys = options.keys;
+      if (!removed || !keys) return;
+      // A line this build cannot read names none it can be sure of.
+      const named = namedRefs([removed]);
+      const kept = named && (await keys.programKeys().catch(() => undefined));
+      if (kept)
+        await forgetKept(
+          keys,
+          [...named].filter((ref) => kept.includes(ref)),
+        );
     },
 
     prepare: async (id) => {
@@ -402,7 +682,42 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
     close: async () => {
       await Promise.all([...links.keys()].map((id) => stop(id)));
     },
+
+    moveKeys,
   };
+}
+
+/** Every kept key's reference the lines name; undefined when a line cannot be read, since it might name any. */
+function namedRefs(servers: readonly Pick<McpSavedServer, "runs">[]): Set<string> | undefined {
+  const named = new Set<string>();
+  for (const server of servers) {
+    let runs: McpRuns;
+    try {
+      runs = parseRuns(server.runs);
+    } catch {
+      return undefined;
+    }
+    if (runs.kind === "program") for (const ref of Object.values(runs.keys)) named.add(ref);
+  }
+  return named;
+}
+
+/** Why a server's start through Secrets ended without it, in the person's words. */
+function keptWords(state: UseState, name: string, keys: IntegrationKeys): string {
+  switch (state) {
+    case "denied":
+      return `You did not allow ${name} its keys, so it did not start.`;
+    case "cancelled":
+      return `${name} did not start: its start was cancelled before it had its keys.`;
+    case "expired":
+      return `${name} did not start: nobody answered whether it may have its keys.`;
+    case "unavailable":
+      return keys.shown()
+        ? `${name} could not get its keys: Secrets is locked, or a key is no longer there. Unlock Secrets in Settings → Secrets, or remove ${name} and add it again.`
+        : `${name} keeps its keys in Secrets, which this computer does not offer, so it cannot start here.`;
+    default:
+      return `${name} did not start: a key or your decisions changed while it waited. Try again.`;
+  }
 }
 
 /** What a server lists, every page of it. */

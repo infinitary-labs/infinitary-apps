@@ -1207,6 +1207,7 @@ describe("Google's sign-in kept in Secrets", () => {
         shown: () => false,
         reference: async () => undefined,
         keepHidden: async () => undefined,
+        programKeys: async () => undefined,
         forgetHidden: async () => false,
         registerBroker: () => {},
         use: async () => ({ state: "unavailable" }),

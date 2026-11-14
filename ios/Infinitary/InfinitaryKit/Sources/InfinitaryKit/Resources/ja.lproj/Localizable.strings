@@ -2595,6 +2595,7 @@
 "settingsSaveRecoveryHint" = "設定を閉じて開き直してから、もう一度お試しください。";
 "settingsSaveReloadFailed" = "%2$@ 保存された値を再読み込みできませんでした。%1$@";
 "settingsScreenSections" = "設定のセクション";
+"settingsSecretsAddedWithProgram" = "プログラムと一緒に追加";
 "settingsSecretsBackupNote" = "暗号化したコピーと、それとは別の復元キーを保存します。2つは別々に保管してください：両方を持つ人は誰でも保存された値を読めます。キーのリセットはできません。";
 "settingsSecretsCancel" = "キャンセル";
 "settingsSecretsDeleteHistory" = "履歴を削除";
@@ -2604,6 +2605,7 @@
 "settingsSecretsFinishForm" = "開いているシークレットのフォームを先に完了してください。";
 "settingsSecretsFinishFormOrChange" = "開いているシークレットのフォームか、現在の変更を先に完了してください。";
 "settingsSecretsHistoryExported" = "履歴を書き出しました。";
+"settingsSecretsKeptForProgram" = "Infinitary は連携で追加したサーバーのためにこれを保管し、サーバーが起動するたびに確認せずに渡します。サーバーと一緒に追加したことが同意です。忘れるには連携でサーバーを削除してください。";
 "settingsSecretsKeptSignIn" = "Infinitary は連携でサインインしたときのためにこれを保管し、確認せずに使います。サインインしたことが同意です。削除するには連携でサインアウトしてください。";
 "settingsSecretsManageInIntegrations" = "連携で管理";
 "settingsSecretsNamePlaceholder" = "例：Web サイトのデプロイ";

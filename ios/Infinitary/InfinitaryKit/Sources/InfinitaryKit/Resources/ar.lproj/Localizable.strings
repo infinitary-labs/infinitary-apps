@@ -2595,6 +2595,7 @@
 "settingsSaveRecoveryHint" = "أغلق الإعدادات وافتحها من جديد للمحاولة مرة أخرى.";
 "settingsSaveReloadFailed" = "%2$@ تعذّرت إعادة تحميل القيمة المحفوظة. %1$@";
 "settingsScreenSections" = "أقسام الإعدادات";
+"settingsSecretsAddedWithProgram" = "أُضيف مع البرنامج";
 "settingsSecretsBackupNote" = "احفظ نسخة مشفّرة ومفتاح استرداد منفصلًا. أبقهما منفصلين: يستطيع أي شخص يملكهما معًا قراءة القيم المحفوظة. لا يمكن إعادة تعيين المفتاح.";
 "settingsSecretsCancel" = "إلغاء";
 "settingsSecretsDeleteHistory" = "حذف السجل";
@@ -2604,6 +2605,7 @@
 "settingsSecretsFinishForm" = "أكمل نموذج السر المفتوح أولًا.";
 "settingsSecretsFinishFormOrChange" = "أكمل نموذج السر المفتوح أو التغيير الجاري أولًا.";
 "settingsSecretsHistoryExported" = "صُدِّر السجل.";
+"settingsSecretsKeptForProgram" = "يحتفظ Infinitary بهذا لخادم أضفته في التكاملات ويعطيه للخادم في كل مرة يبدأ فيها دون أن يسألك: إضافته مع الخادم كانت موافقتك. أزل الخادم هناك لنسيانه.";
 "settingsSecretsKeptSignIn" = "يحتفظ Infinitary بهذا لتسجيل دخول أجريته في التكاملات ويستخدمه دون أن يسألك: تسجيل الدخول كان موافقتك. سجّل الخروج هناك لإزالته.";
 "settingsSecretsManageInIntegrations" = "الإدارة في التكاملات";
 "settingsSecretsNamePlaceholder" = "مثلًا، نشر الموقع الإلكتروني";

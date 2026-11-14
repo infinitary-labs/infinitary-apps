@@ -139,15 +139,21 @@ export function nowRow(page: Page, key: string): Locator {
  * changing focus. INF-2537 / run 41733606005: a row moving to Working can be
  * replaced between resolving a row handle and clicking it. The root stays
  * drawn; querying and clicking its row together cannot press the old handle.
+ * `within` names a part of the row to press instead of the row as a whole,
+ * such as one segment of a collapsed row's bar, found in the same read.
  */
-export function pressDrawnRow(page: Page, key: string): Promise<boolean> {
+export function pressDrawnRow(page: Page, key: string, within?: string): Promise<boolean> {
   return nowFrame(page)
     .locator(":root")
-    .evaluate((root, selector) => {
-      const row = root.querySelector<HTMLElement>(selector);
-      row?.click();
-      return row !== null;
-    }, nowRowSelector(key));
+    .evaluate(
+      (root, { selector, within }) => {
+        const row = root.querySelector<HTMLElement>(selector);
+        const target = within ? row?.querySelector<HTMLElement>(within) : row;
+        target?.click();
+        return Boolean(target);
+      },
+      { selector: nowRowSelector(key), within },
+    );
 }
 
 /**
@@ -164,8 +170,9 @@ export function pressDrawnRow(page: Page, key: string): Promise<boolean> {
  * reach, so the press first gives them back with the card's edge tab where
  * it offers one, as his click would; where none does, the Tasks panel stays
  * out of sight and the press fails here rather than land nowhere.
+ * `within` presses a part of the row instead (`pressDrawnRow`).
  */
-export async function pressRow(page: Page, key: string): Promise<void> {
+export async function pressRow(page: Page, key: string, within?: string): Promise<void> {
   const showPanels = page.locator("[data-rail-tab]");
   if ((await showPanels.count()) > 0) {
     await showPanels.first().click();
@@ -176,8 +183,9 @@ export async function pressRow(page: Page, key: string): Promise<void> {
   await expect(tasks).toBeVisible();
   await nowRow(page, key).waitFor({ state: "attached" });
   await tasks.focus();
-  const pressed = await pressDrawnRow(page, key);
-  expect(pressed, `the Tasks row ${key} is drawn to press`).toBe(true);
+  const pressed = await pressDrawnRow(page, key, within);
+  const what = within ? `the Tasks row ${key}'s ${within}` : `the Tasks row ${key}`;
+  expect(pressed, `${what} is drawn to press`).toBe(true);
 }
 
 /**

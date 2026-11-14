@@ -88,7 +88,9 @@ import {
  *
  * A click is a pointing gesture, never a write: a row opens its task
  * (`point.openTask`: its waiting card forward, or its record at the front
- * of the stack); a collapsed group's header expands it. The header's Search
+ * of the stack), and a click on a segment of a collapsed row's bar that
+ * names a part opens that part, as its own row would (INF-4172); a
+ * collapsed group's header expands it. The header's Search
  * tasks button is pressed into the panel as an ask: its click opens or
  * closes the search, its key (Find a task) always opens it with the caret
  * in it. Close search beside the field closes it too, and Esc in the search
@@ -544,7 +546,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
       else next.add(group);
       return next;
     });
-  const openTask = useCallback((task: PanelTaskRow) => void point.openTask(task.id), [point]);
+  const openTask = useCallback((taskId: string) => void point.openTask(taskId), [point]);
 
   // The groups as painted: typed words show every match, even in a group
   // the captain left collapsed.
@@ -932,7 +934,8 @@ export function Group({
   /** Focus reached a stop in this group: it becomes the list's Tab stop. */
   onStop?: (key: string) => void;
   onToggle: () => void;
-  onOpen: (task: PanelTaskRow) => void;
+  /** A row was pressed: it opens its task, or the part a segment of its bar names. */
+  onOpen: (taskId: string) => void;
   /** The row the pointer or the keyboard rests on, or null on a press. */
   onPeek?: (row: HTMLElement | null, task?: PanelTaskRow) => void;
   /** The pointer rests on a segment of a collapsed row's bar that names this part. */
@@ -1129,7 +1132,7 @@ const Row = memo(function Row({
   lit: boolean;
   isStop: boolean;
   onStop?: (key: string) => void;
-  onOpen: (task: PanelTaskRow) => void;
+  onOpen: (taskId: string) => void;
   onPeek?: (row: HTMLElement | null, task?: PanelTaskRow) => void;
   onPeekPart?: (row: HTMLElement, task: PanelTaskRow, partId: string) => void;
   onLeave?: (row: HTMLElement) => void;
@@ -1164,6 +1167,15 @@ const Row = memo(function Row({
   // A press let the rest go: it stays gone until the pointer leaves the row, as before.
   const pressed = useRef(false);
   const segments = bar ? barSegments(bar) : [];
+  // The segment of the bar under the pointer and the part it names; null on
+  // the rest of the row, or on a segment that names no part.
+  const partAt = (target: EventTarget): { index: number; id: string } | null => {
+    const at = (target as HTMLElement).closest<HTMLElement>("[data-now-part]");
+    if (!at) return null;
+    const index = Number(at.dataset.nowPartIndex);
+    const id = segments[index]?.id ?? null;
+    return id === null ? null : { index, id };
+  };
   const word = wordOf(task);
   const trailing = rowTrailing(task, singleProject ? "" : projectName);
   const place = task.place ? ` · ${task.place.where}` : "";
@@ -1193,19 +1205,21 @@ const Row = memo(function Row({
       tabIndex={isStop ? 0 : -1}
       style={{ "--depth": String(depth) } as CSSProperties}
       aria-label={label}
-      onClick={() => onOpen(task)}
+      // A press opens what a rest there rests on (INF-4172): a segment that
+      // names a part opens that part, as its own row does; the rest of the
+      // row, a segment that names none, and Enter open the task.
+      onClick={(event) => onOpen(partAt(event.target)?.id ?? task.id)}
       onPointerOver={(event) => {
         // The rest follows the pointer between the row and its bar's
         // segments: a segment that names a part rests on that part, the
         // rest of the row, and a segment that names none, on the task.
         if (pressed.current) return;
-        const at = (event.target as HTMLElement).closest<HTMLElement>("[data-now-part]");
-        const index = at ? Number(at.dataset.nowPartIndex) : null;
-        const partId = index === null ? null : (segments[index]?.id ?? null);
+        const part = partAt(event.target);
+        const partId = part?.id ?? null;
         if (hovered.current === partId) return;
         hovered.current = partId;
-        setRestedPart(partId === null ? null : index);
-        if (partId !== null) onPeekPart?.(event.currentTarget, task, partId);
+        setRestedPart(part?.index ?? null);
+        if (part) onPeekPart?.(event.currentTarget, task, part.id);
         else onPeek?.(event.currentTarget, task);
       }}
       onPointerLeave={(event) => {

@@ -80,7 +80,8 @@ Resting on a segment rests on the part it names (INF-4147, the captain's words: 
 Every segment names its part, the finished ones in the order they closed, oldest first, and the open ones as the board lists them; a segment that names none (an older home that sends no finished parts, or a count the board cannot match) keeps the task's own summary.
 Each segment's rest target is its own width plus half of each gap, from 2px above the bar down to the row's bottom edge; moving to another segment moves the summary at once, and moving onto the rest of the row brings back the task's own.
 The rested segment grows from 3px to 5px tall, its bottom edge where it was, and nothing else moves.
-A click anywhere on the row, bar included, still opens the task's record; leaving the row, Esc or a press lets the summary go, as for any row.
+A click on a segment that names a part opens that part exactly as a click on its own row does (INF-4172, the captain's words: "clicking on a hoverered segment in this progress bar should behave just like a click on a task row that's the task the segment represents"): its waiting decision, deferred required action, newest showable card or record, by the same pointing gesture.
+A click anywhere else on the row, a segment that names no part included, opens the task itself, and Enter on the row opens the task too; leaving the row, Esc or a press lets the summary go, as for any row.
 The keyboard keeps its way to a part: → opens the task's parts, and ↓ rests on each one.
 Nothing starts collapsed (the captain's answer "None.
 Everything starts expanded as today, and a task stays collapsed once you collapse it."); a collapsed task stays collapsed across restarts, kept in the panel's own store, until it is expanded or leaves the board.

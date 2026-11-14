@@ -7,7 +7,7 @@ import { panelCommandId } from "../../src/shared/keyboard";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
-import { expandDock, nowFrame, openGroup, openRowSummary } from "./rails";
+import { expandDock, nowFrame, openGroup, openRowSummary, pressRow, recordCard } from "./rails";
 import { focusedRegion, regionAfter, runFromSearch } from "./windowKeys";
 
 /**
@@ -21,14 +21,18 @@ import { focusedRegion, regionAfter, runFromSearch } from "./windowKeys";
  * all parts from command search. Resting on a segment of the collapsed
  * task's bar rests on the part it names (INF-4147's plan, direction B, the
  * captain's "Every segment, finished ones too"): the finished part's
- * summary, then an open part's, then the task's own back on its title.
+ * summary, then an open part's, then the task's own back on its title. A
+ * click on a segment the pointer rests on opens the part it names, as a
+ * click on that part's own row does (INF-4172), an open part and a finished
+ * one, and a click on the row's title still opens the task.
  *
  * Data: a plan with three parts - one finished, two on request - so its
  * tree lists under Backlog and its row reads 1/3. Every task is queued on
  * request, since a seeded running task returns to the queue at launch.
  * Completion: the parts' rows leave and come back, the row's collapse
  * control says which, and its bar draws one segment per part; the summary
- * names the task the pointer rests on.
+ * names the task the pointer rests on, and the record a click opens names
+ * the task it opened.
  * Platforms: any; no Mac-only part. Shared resources: none beyond the app.
  */
 
@@ -172,6 +176,26 @@ test("a task with parts collapses and expands by keys and by command, and stays 
       await expect(row("cl-phone")).toBeVisible();
       await query.fill("");
       await collapsedNow();
+    });
+
+    await test.step("a click on a segment opens the part it names, as its own row does", async () => {
+      const segment = (index: number) => row("cl-plan").locator("[data-now-bar] i").nth(index);
+      // An open part, then the finished one, each pressed where the pointer rests on it.
+      for (const [index, part] of [
+        [1, "cl-ship"],
+        [0, "cl-words"],
+      ] as const) {
+        const box = await segment(index).boundingBox();
+        if (!box) throw new Error(`segment ${index} is not drawn`);
+        // e2e-frame-actions: native -- This journey proves the press lands on the segment a real pointer rests on.
+        await segment(index).hover({ position: { x: box.width / 2, y: box.height - 2 } });
+        await expect(openRowSummary(page)).toHaveAttribute("data-point-summary", part);
+        await pressRow(page, planKey, `[data-now-part-index="${index}"]`);
+        await expect(recordCard(page)).toHaveAttribute("data-task-record", part);
+      }
+      // A click anywhere else on the row still opens the task itself.
+      await pressRow(page, planKey, "[data-now-title]");
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", "cl-plan");
     });
   } finally {
     await launched.close();

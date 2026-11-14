@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "parts-bar-segment-open",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Click a segment of a collapsed task's progress bar to open that part",
+      "body": "In the Tasks panel, clicking one segment of a collapsed task's progress bar now opens the part that segment stands for, just as clicking that part's own row does, finished parts included. Clicking anywhere else on the row still opens the task itself.",
+      "noPicture": "Nothing new is drawn: the click opens the same card or record the part's own row opens, which a still picture cannot tell apart from opening it any other way.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

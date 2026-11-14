@@ -1291,20 +1291,6 @@
       <string>%1$ld件のプロジェクト</string>
     </dict>
   </dict>
-  <key>settingsProjectsPauseSummary</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%2$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>other</key>
-      <string>%4$@ から一時停止中：バッチ実行 %3$@ がチェックに失敗したため、承認済みの変更%2$ld件が修正を待っています：%1$@。</string>
-    </dict>
-  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

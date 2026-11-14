@@ -1659,24 +1659,6 @@
       <string>%1$ld proyectos</string>
     </dict>
   </dict>
-  <key>settingsProjectsPauseSummary</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%2$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>En pausa desde %4$@: la ejecución del lote %3$@ no superó sus comprobaciones, así que un cambio aprobado espera una corrección: %1$@.</string>
-      <key>many</key>
-      <string>En pausa desde %4$@: la ejecución del lote %3$@ no superó sus comprobaciones, así que %2$ld de cambios aprobados esperan una corrección: %1$@.</string>
-      <key>other</key>
-      <string>En pausa desde %4$@: la ejecución del lote %3$@ no superó sus comprobaciones, así que %2$ld cambios aprobados esperan una corrección: %1$@.</string>
-    </dict>
-  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

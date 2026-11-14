@@ -1475,22 +1475,6 @@
       <string>%1$ld Projekte</string>
     </dict>
   </dict>
-  <key>settingsProjectsPauseSummary</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%2$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>Pausiert seit %4$@: Bündellauf %3$@ hat seine Überprüfungen nicht bestanden, daher wartet eine bestätigte Änderung auf eine Korrektur: %1$@.</string>
-      <key>other</key>
-      <string>Pausiert seit %4$@: Bündellauf %3$@ hat seine Überprüfungen nicht bestanden, daher warten %2$ld bestätigte Änderungen auf eine Korrektur: %1$@.</string>
-    </dict>
-  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -2211,30 +2211,6 @@
       <string>%1$ld مشروع</string>
     </dict>
   </dict>
-  <key>settingsProjectsPauseSummary</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%2$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>zero</key>
-      <string>متوقف مؤقتًا منذ %4$@: فشل تشغيل الدفعة %3$@ في فحوصاته، لذا ينتظر %2$ld تغيير موافق عليه إصلاحًا: %1$@.</string>
-      <key>one</key>
-      <string>متوقف مؤقتًا منذ %4$@: فشل تشغيل الدفعة %3$@ في فحوصاته، لذا ينتظر تغيير واحد موافق عليه إصلاحًا: %1$@.</string>
-      <key>two</key>
-      <string>متوقف مؤقتًا منذ %4$@: فشل تشغيل الدفعة %3$@ في فحوصاته، لذا ينتظر تغييران موافق عليهما إصلاحًا: %1$@.</string>
-      <key>few</key>
-      <string>متوقف مؤقتًا منذ %4$@: فشل تشغيل الدفعة %3$@ في فحوصاته، لذا تنتظر %2$ld تغييرات موافق عليها إصلاحًا: %1$@.</string>
-      <key>many</key>
-      <string>متوقف مؤقتًا منذ %4$@: فشل تشغيل الدفعة %3$@ في فحوصاته، لذا ينتظر %2$ld تغييرًا موافقًا عليه إصلاحًا: %1$@.</string>
-      <key>other</key>
-      <string>متوقف مؤقتًا منذ %4$@: فشل تشغيل الدفعة %3$@ في فحوصاته، لذا ينتظر %2$ld تغيير موافق عليه إصلاحًا: %1$@.</string>
-    </dict>
-  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

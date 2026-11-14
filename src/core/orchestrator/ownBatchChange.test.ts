@@ -2,7 +2,7 @@ import { tmpdir } from "node:os";
 import { BATCH_STATUS_WORDS } from "@shared/batches";
 import type { ChangePresentation } from "@shared/changePresentation";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   BATCH_BASE,
   BatchHostForge,
@@ -19,6 +19,7 @@ import { seedProject } from "../workspace/seedProject";
 import { BATCH_MERGE_WORDS, type MergeGuard } from "./changeMerge";
 import { BATCH_OPEN_WORDS } from "./changePublication";
 import { BATCH_DECLARATION_WORDS } from "./checkChangeTool";
+import { MERGE_CARD_WORDS } from "./mergeCardSteps";
 
 // Intent: the captain's approved plan for batches of their own, piece 1: "each change is a
 // pushed branch with its saved story and no pull request of its own. The merge click, or
@@ -175,6 +176,32 @@ describe("a change of a project that gets batches of the person's own", () => {
     const unconfirmed = home();
     unconfirmed.prepare();
     await expect(unconfirmed.service.publication.completionPresentation(TASK, 1)).rejects.toThrow();
+  });
+
+  // INF-4153, found on INF-3799's branch: open_change's answer here tells the crewmate to
+  // show the merge card, but show_merge_card's walk looked only for a pull request of the
+  // change's own, so it confirmed the story and stopped at the pull request on every call.
+  it("walks show_merge_card to its merge card from the pushed branch, and repeats nothing when called again", async () => {
+    const at = home();
+    // The working copy has the pushed version checked out; changePublication's tests own
+    // reading it with git.
+    vi.spyOn(at.service.publication, "presentationHead").mockResolvedValue(HEAD);
+    at.prepare();
+    expect(await at.service.mergeCard.walk(TASK)).toEqual({
+      did: [MERGE_CARD_WORDS.batchConfirmed(BRANCH)],
+      ready: { revision: 1, title: STORY.title, head: HEAD },
+    });
+    expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
+    // Called again, it confirms nothing again and reaches the same card.
+    expect(await at.service.mergeCard.walk(TASK)).toEqual({
+      did: [],
+      ready: { revision: 1, title: STORY.title, head: HEAD },
+    });
+    // The card the walk reaches shows that story from the pushed branch.
+    expect(await at.service.publication.completionPresentation(TASK, 1)).toMatchObject({
+      revision: 1,
+      title: STORY.title,
+    });
   });
 
   it("refuses to confirm a story whose version is not the one pushed", async () => {

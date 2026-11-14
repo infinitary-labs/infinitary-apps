@@ -776,6 +776,7 @@ This repository merges this way itself: what its batch runs, and how each pushed
 
 A change is a pushed branch with its saved story and no pull request of its own.
 `open_change` confirms the story on the pushed branch and opens nothing (`BATCH_OPEN_WORDS`, `ChangePublication`).
+`show_merge_card` does the same through `open_change`'s own step and takes the pushed branch as the change, so it goes on to the checks and the card (`MERGE_CARD_WORDS`, `MergeCardSteps`).
 A story revised at a version already in line or in a batch keeps its change in its place: the entry takes the story's title and commit words (`Batches.revise`, `reworded`), and the batch's pull request is described again from the story as it reads now.
 A batch whose member's title or commit words changed is combined again on the same pull request, with the same changes in the same order, so that commit says them and the batch's checks run again; a revision that changes neither leaves the batch at its version, with any hold it carries.
 A story confirmed at another version takes the earlier version out of the line and the batch, as an approval that ends does.
@@ -1204,6 +1205,7 @@ With no identical copy left, the refusal names the view and side the picture sho
 Its optional story refers to the full shape served on `prepare_change`, and both calls validate it through the same story parser before staging.
 It resolves the change once, on the branch the working copy has checked out.
 It does the app's own steps itself: it prepares the story it was given at the committed version, prepares the same words again once live proof was accepted since the story with the same scenarios, opens the pull request with the story or publishes it on the open one, and reads it back.
+A change that joins a batch of the person's own opens no pull request: the call confirms its story on the pushed branch and reads that branch as the change, as the card call and `check_change` do ("Batches of your own").
 It stops at the first step someone else supplies, and its answer names what it did, the missing step and who supplies it: the crewmate, the reviewer through the first mate, the first mate, the captain or the checks.
 A pull request that carried the story and closed without merging stops it; it neither reopens nor replaces that pull request.
 One that merged outside the app shows its merge card with the story it merged with, as below.

@@ -66,6 +66,13 @@ const SUPPLIER_WORDS: Record<MergeCardSupplier, string> = {
   app: "the app could not finish its own step; do what its words say, or report them as a blocker",
 };
 
+/** What the walk says it did where its words are its own. */
+export const MERGE_CARD_WORDS = {
+  /** A change that joins a batch of the person's own (docs/forge.md, "Batches of your own"). */
+  batchConfirmed: (branch: string) =>
+    `Confirmed the story on the pushed branch ${branch}, the change itself: this project merges approved changes together, so the change opens no pull request of its own, and its story is published on its batch's pull request once the change is approved.`,
+} as const;
+
 /** The call's answer: what it did, then the card shown or the one thing missing and who supplies it. */
 export function mergeCardAnswer(walk: Pick<MergeCardWalk, "did" | "stop">, shown?: string): string {
   const did = walk.did.length ? `Did: ${walk.did.join(" ")}` : "Nothing new was needed before it.";
@@ -151,6 +158,7 @@ export class MergeCardSteps {
     let forge: Forge | undefined;
     let branch: string | undefined;
     let repoId: string | null | undefined;
+    let ownBranch: string | undefined;
     if (local) {
       branch = await this.publication.presentationBranch(taskId).catch(() => undefined);
     } else {
@@ -158,6 +166,7 @@ export class MergeCardSteps {
       if ("said" in located) return stop("pull", located.said, "app");
       forge = located.forge;
       repoId = located.record.repoId;
+      ownBranch = located.record.branch;
       branch =
         (await this.publication.presentationBranch(taskId).catch(() => undefined)) ??
         currentChange(located.record.delivery, located.branch).branch;
@@ -289,10 +298,23 @@ export class MergeCardSteps {
     const title = newest.title;
     if (local || !forge || !branch) return { did, ready: { revision: shown, title, head } };
 
-    // 5 and 6. Pull request open, story published and read back.
+    // 5 and 6. Pull request open, story published and read back. A change
+    // that joins a batch of the person's own opens none: its pushed branch
+    // is the change, read as the card call and check_change read it
+    // (docs/forge.md, "Batches of your own"; INF-4153). Whether the project
+    // gets batches of its own is read after open_change's own step, which
+    // learns it where the project's files were never read.
+    const hosted = hasChangeRequests(forge.kind);
+    const host = forge;
+    const changeBranch = branch;
+    const changeFor = async (): Promise<ForgeChange | null> =>
+      (await host.changeFor(changeBranch)) ??
+      (hosted && changeBranch === ownBranch && this.context.ownBatch(taskId)
+        ? await this.context.pushedBranch(host, changeBranch)
+        : null);
     if (open === undefined) {
       try {
-        open = await forge.changeFor(branch);
+        open = await changeFor();
       } catch (caught) {
         if (isSignInForgeFailure(caught)) return signIn(forge);
         return stop("pull", wordsOf(caught), "app");
@@ -305,15 +327,17 @@ export class MergeCardSteps {
         `The pull request that carried this story for ${branch} is no longer open. Publication stops; the app does not reopen or replace it. Reopen it where the project lives, or close this task.`,
         "captain",
       );
-    // A host that keeps no pull requests keeps the story on the card: its
-    // change is the pushed branch, done once opening it saved the story's
-    // completion there, and nothing is published (INF-3730's plain journey).
-    const hosted = hasChangeRequests(forge.kind);
-    const done = (ledgered: typeof current) =>
-      hosted
-        ? ledgered?.published?.revision === shown && ledgered.publication?.state === "confirmed"
-        : ledgered?.completion?.revision === shown && ledgered.completion.head === head;
-    const published = open !== null && done(current);
+    // A change with no pull request keeps the story on its pushed branch,
+    // done once opening it saved the story's completion there and nothing
+    // is published: on a host that keeps no pull requests the story stays
+    // on the card (INF-3730's plain journey), and in a batch it is
+    // published on the batch's pull request once approved.
+    const onBranch = (read: ForgeChange | null) => !hosted || read?.number === undefined;
+    const done = (ledgered: typeof current, read: ForgeChange | null) =>
+      onBranch(read)
+        ? ledgered?.completion?.revision === shown && ledgered.completion.head === head
+        : ledgered?.published?.revision === shown && ledgered.publication?.state === "confirmed";
+    const published = open !== null && done(current, open);
     if (!published) {
       const answer = await this.publication.open(taskId, {
         title,
@@ -322,7 +346,7 @@ export class MergeCardSteps {
       });
       let read: ForgeChange | null;
       try {
-        read = await forge.changeFor(branch);
+        read = await changeFor();
       } catch (caught) {
         if (isSignInForgeFailure(caught)) return signIn(forge);
         return stop(
@@ -332,11 +356,13 @@ export class MergeCardSteps {
         );
       }
       const after = ledger();
-      if (!read || !done(after)) return stop(read ? "publish" : "pull", answer, "app");
+      if (!read || !done(after, read)) return stop(read ? "publish" : "pull", answer, "app");
       did.push(
-        hosted
-          ? `${open ? "Published the story on" : "Opened"} ${changeWords(forge, read)}${open ? "" : " with the story"} and read it back.`
-          : `Recorded ${changeWords(forge, read)} as the change; ${forge.place ?? "where the project lives"} keeps no pull requests, so the story stays on the merge card.`,
+        !hosted
+          ? `Recorded ${changeWords(forge, read)} as the change; ${forge.place ?? "where the project lives"} keeps no pull requests, so the story stays on the merge card.`
+          : onBranch(read)
+            ? MERGE_CARD_WORDS.batchConfirmed(branch)
+            : `${open ? "Published the story on" : "Opened"} ${changeWords(forge, read)}${open ? "" : " with the story"} and read it back.`,
       );
     }
     return { did, ready: { revision: shown, title, head } };

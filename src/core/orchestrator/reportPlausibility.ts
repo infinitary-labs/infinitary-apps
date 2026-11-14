@@ -11,7 +11,9 @@
  * serves the Firstmate and supervision sessions, whose short closing text
  * is legitimate, and the Claude client never passes through it. Deliberately conservative: text inside code spans is ignored
  * (a report may quote a fragment it investigated), CJK next to Latin inside
- * one word is ordinary writing, and so is a Greek letter in a unit.
+ * one word is ordinary writing, and so is a Greek letter in a unit. Only a
+ * single word is judged: a report about translations quotes words in several
+ * writing systems side by side, each word whole, and that is ordinary prose.
  *
  * A ceiling (docs/principles.md, "Build the agent's reach, never its
  * verdicts"): the tool-call and writing-system checks below cover a model
@@ -89,20 +91,16 @@ export function implausibleReport(text: string): string | undefined {
   if (TOOL_CALL_FRAGMENTS.some((pattern) => pattern.test(prose))) {
     return "it contains tool-call syntax instead of prose";
   }
-  const seen = new Set<string>();
   for (const word of prose.split(/\s+/)) {
     const scripts = new Set<string>();
     for (const char of word) {
       const script = scriptOf(char);
       if (script) scripts.add(script);
     }
-    for (const script of scripts) seen.add(script);
     if (scripts.size > 2) return "it mixes writing systems inside one word";
     if (scripts.size === 2 && !SHARED_WORD_SCRIPTS.has([...scripts].join("+"))) {
       return "it mixes writing systems inside one word";
     }
   }
-  seen.delete("greek");
-  if (seen.size > 2) return "it mixes more than two writing systems";
   return undefined;
 }

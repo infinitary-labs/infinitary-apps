@@ -14,7 +14,7 @@ import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { insertTask, setup } from "../../../tests/helpers/prCiHarness";
 import { BATCH_WORDS, Batches } from "../batches/batches";
 import { LEFT_OUT_WORDS } from "../batches/combine";
-import { presentationCommitMessage, QUEUE_WAITING_WORDS } from "../forge";
+import { presentationCommitMessage, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
 import { seedProject } from "../workspace/seedProject";
 import { BATCH_MERGE_WORDS, type MergeGuard } from "./changeMerge";
 import { BATCH_OPEN_WORDS } from "./changePublication";
@@ -35,6 +35,8 @@ const REPO = "repo-meter";
 const TASK = "ab12cd34";
 const BRANCH = "fm/task-ab12cd34";
 const HEAD = "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0";
+/** A team queue's workflow file, as the app reads one that mentions the queue's status. */
+const TEAM_QUEUE_FILE = { path: ".github/workflows/infinitary-queue.yml", active: true };
 /** The story a crewmate prepared for the change at its pushed version. */
 const STORY: ChangePresentation = {
   version: 1,
@@ -479,6 +481,54 @@ describe("the merge of a change that joins a batch", () => {
   it("is not read as waiting on a team queue's status", async () => {
     const at = home();
     expect(at.service.merges.queued(TASK)).toBe(false);
+  });
+
+  // Intent: the follow-up filed at this project's own switch from the team queue (INF-3773):
+  // once a project's team queue files are removed, the app "reads that before it marks another
+  // version for the queue, and a version still carrying the queue's waiting mark joins the
+  // person's own batch instead of waiting forever". The switch merged with a merge card that
+  // kept its task open, so the home never read the files again, and a change approved just
+  // before it kept waiting on a mark nothing answers.
+
+  it("reads that the team queue's files are gone at its merge, and joins its batch with no queue mark", async () => {
+    const at = home();
+    await at.confirmed();
+    // The home last read the team queue's workflow file; the project has since removed it.
+    at.repos.recordQueue(REPO, { workflows: [TEAM_QUEUE_FILE] });
+    at.forge.queueWorkflows = async () => [];
+    at.forge.markQueued = async (sha) => {
+      at.forge.calls.push(`markQueued ${sha}`);
+      return {};
+    };
+
+    expect(await at.service.merges.merge(TASK, at.guard())).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(at.repos.get(REPO)?.queueWorkflows).toEqual([]);
+    await at.pass();
+    expect(at.open()?.members).toMatchObject([{ taskId: TASK, head: HEAD }]);
+    expect(at.forge.calls.filter((call) => call.startsWith("markQueued"))).toEqual([]);
+  });
+
+  it("is not held by the team queue's waiting mark its version still carries", async () => {
+    const at = home();
+    await at.confirmed();
+    // The app marked this version for the team queue before the project removed its files.
+    at.forge.atHead[HEAD] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "pending", statusId: 41, detail: QUEUE_WAITING_WORDS },
+    ];
+
+    await at.service.checks.run(TASK, "crewmate");
+    expect(at.service.checks.reading(TASK)?.overall).toBe("green");
+    // The captain's approval, kept from before the switch, runs again.
+    expect(await at.service.merges.merge(TASK, at.guard({ unattended: true }))).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    await at.pass();
+    expect(at.open()?.members).toMatchObject([{ taskId: TASK, head: HEAD }]);
   });
 });
 

@@ -394,7 +394,10 @@ export class ChangeChecks {
    * A change that merges in this person's batch reads its place there as
    * the batch check (docs/forge.md, "Batches of your own"): the status name
    * the merge card's Batch check cell reads, kept on the task and written
-   * nowhere the project lives. A version with no place reads as it is.
+   * nowhere the project lives. A version with no place reads as it is,
+   * without that status: one the host still holds there is left from the
+   * team queue the project carried before its files were removed, which
+   * nothing answers any more, so it never holds the version.
    */
   private withBatchCheck<T extends { items: ForgeCheck[] }>(
     taskId: string,
@@ -404,10 +407,11 @@ export class ChangeChecks {
   ): T {
     const status = this.context.batches?.status(repo.id, taskId, head);
     const kept = this.options.tasks.get(taskId)?.delivery?.queueStatus;
+    const own = checks.items.filter((item) => item.name !== QUEUE_STATUS);
     if (!status) {
       if (kept?.kind)
         this.options.tasks.delivery.recordChangeEvidence(taskId, { queueStatus: undefined });
-      return checks;
+      return own.length === checks.items.length ? checks : { ...checks, items: own };
     }
     const fact = {
       head,
@@ -420,7 +424,7 @@ export class ChangeChecks {
     return {
       ...checks,
       items: [
-        ...checks.items.filter((item) => item.name !== QUEUE_STATUS),
+        ...own,
         {
           name: QUEUE_STATUS,
           state:

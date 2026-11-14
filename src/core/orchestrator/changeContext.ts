@@ -4,7 +4,13 @@ import type { ChangeRecord } from "@shared/change";
 import { notSignedInText } from "@shared/forges";
 import { acceptedValidation } from "@shared/liveValidation";
 import { MERGE_REVIEW_CAP, type MergeReview } from "@shared/mergeReview";
-import { deliveryForRecord, opensPullRequest, ownsBatches, type RepoView } from "@shared/repos";
+import {
+  deliveryForRecord,
+  hostRunsQueue,
+  opensPullRequest,
+  ownsBatches,
+  type RepoView,
+} from "@shared/repos";
 import type { NamingRule } from "../../shared/runbooks";
 import type { Batches } from "../batches/batches";
 import {
@@ -124,11 +130,24 @@ export class ChangeContext {
     return ownsBatches(deliveryForRecord(record, repo.delivery), repo) === true ? repo : undefined;
   }
 
-  /** `ownBatch`, after reading the project's queue files once where they were never read. */
+  /**
+   * `ownBatch`, after reading a batched project's queue files wherever they
+   * do not yet say it gets batches of its own: where they were never read,
+   * and again while the last read found a file of the team queue. A project
+   * whose files were removed is learned here, before the team queue's path
+   * marks a version for a status nothing answers any more, or keeps one
+   * waiting on it.
+   */
   async resolveOwnBatch(taskId: string): Promise<RepoView | undefined> {
     const record = this.options.tasks.get(taskId);
     const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    if (record && repo && ownsBatches(deliveryForRecord(record, repo.delivery), repo) === undefined)
+    const delivery = record && repo ? deliveryForRecord(record, repo.delivery) : undefined;
+    if (
+      repo &&
+      delivery === "queue-pr" &&
+      hostRunsQueue(repo.host) &&
+      ownsBatches(delivery, repo) !== true
+    )
       await this.readQueueFiles?.(repo.id).catch(() => {});
     return this.ownBatch(taskId);
   }

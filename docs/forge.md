@@ -772,6 +772,8 @@ Nothing is written into the project for it: no workflow, status, label or issue.
 The typed fact that chooses it is the workflow files that mention `infinitary/queue` (`ownsBatches`, `src/shared/repos.ts`).
 A project read with none gets batches of its own, and one that carries such a file keeps the team queue ("A project's queue" below) until the files are removed.
 A project whose files were never read is unknown, never guessed: the app reads them once before a change's merge decides (`ChangeContext.resolveOwnBatch`), and the change keeps the team queue's path while that read fails.
+While the last read found such a file, each merge of a change, and each `open_change` of a change with no pull request yet, reads them again first, so a project whose files were removed gets batches of its own before the app marks another version for a queue nothing answers, or keeps one waiting on it.
+A version the app marked for the team queue before the files went still carries that waiting status where the project lives; under batches of its own nothing answers it, so the version's check reading leaves it out and the change joins the line like any other (`ChangeChecks.withBatchCheck`).
 It works wherever the forge seam has a host with pull requests and checks: GitHub, GitHub on a team's own server, gitlab.com and GitLab on a team's own server.
 This repository merges this way itself: what its batch runs, and how each pushed task branch is checked, is `docs/testing.md`'s ("The swept batch", "A pushed branch").
 
@@ -896,7 +898,7 @@ Evidence: `changeMerge.test.ts` ("merges a queue-pr change only once its queue p
 
 Nothing in the app can prove a project has a queue, so it keeps three reads and says only what they found (INF-2886, `src/core/orchestrator/projectQueue.ts`).
 The first is the workflow files on the default branch that mention `infinitary/queue`, each with whether it is on (`GitHubForge.queueWorkflows`): GitHub's list of the project's workflows, then the shipped queue's own file, and then each other file only while none carries the shipped queue's stamp and the project is batched, its choice waits, or the choice is being made; a project with neither needs only the stamp.
-The app reads them when the batched delivery is chosen, whoever chooses it, before the choice applies ("Choosing batched pull requests before a queue exists" below) and again once it is written (`RepoRegistry.onQueueChosen`), and at each merge click that marks a version; a failed read keeps the last one.
+The app reads them when the batched delivery is chosen, whoever chooses it, before the choice applies ("Choosing batched pull requests before a queue exists" below) and again once it is written (`RepoRegistry.onQueueChosen`), at each merge of a task's change while they still mention the status ("Batches of your own" above), and at each merge click that marks a version; a failed read keeps the last one.
 The second is when anything other than the app last wrote the status on one of the project's versions (`queueAnsweredAt`).
 The third is whether a waiting version still holds only the app's own mark: the mark keeps the status id GitHub gave it back (`queueMark` on the task's delivery), and any reading of the version's checks whose status is no longer waiting, or carries another id, is an answer.
 `RepoRegistry.recordQueue` is the one writer of the first two, on the project's row, and every change reaches Settings as a `repo_queue` event.

@@ -27,6 +27,7 @@ import {
   type HostPopup,
   type HostTaskBrowser,
 } from "../host";
+import { hideKeys } from "../keyFormats";
 import {
   addressOf,
   type Browser,
@@ -1022,7 +1023,12 @@ export class TaskBrowsers {
       onNetwork: (event) => {
         if (live() && browser.control === "crewmate") entry.diagnostics.request(event);
       },
-      onDialog: (kind, message) => notices.keep("dialogs", `${kind} ${quoted(clip(message))}`),
+      // A key hidden before the message is cut, so no piece of one is left to read.
+      onDialog: (kind, message) =>
+        notices.keep(
+          "dialogs",
+          `${kind} ${quoted(clip(signedIn(browser) ? hideKeys(message) : message))}`,
+        ),
       onFileChooser: (chooser) => {
         if (!live()) return;
         if (browser.control === "captain" || browser.control === "taking") {

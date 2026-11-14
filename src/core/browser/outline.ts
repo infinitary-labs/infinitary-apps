@@ -11,13 +11,15 @@
  * Pure: the host reads the tree (`HostBrowserPage.nodes`), this module
  * writes the words. A password field's value never appears, and once the
  * captain has held the page neither does any text typed into it that the
- * crewmate did not type itself (`OutlineOptions.typedOnly`). A line shows
+ * crewmate did not type itself (`OutlineOptions.typedOnly`), nor a key in
+ * a format a service issues (`OutlineOptions.hideKeys`). A line shows
  * a time element's machine-readable time and a title tooltip, and a passage
  * longer than the line can be read in full (`passageOf`). Which of the
  * lines one answer shows is `window.ts`'s.
  */
 
 import { cutText } from "@shared/textCut";
+import { hideKeys } from "../keyFormats";
 import { browserCommand } from "./commandWords";
 
 /** One accessibility node, as the host reads it off the page. */
@@ -333,10 +335,11 @@ function annotation(node: BrowserNode, marks: ReadonlyMap<string, Mark>): string
  * held the page any text the crewmate did not type itself, is never read out.
  */
 export function passageOf(
-  node: BrowserNode,
+  page: BrowserNode,
   refs: RefBook,
   options: OutlineOptions = {},
 ): { hidden: true } | { hidden: false; text: string; omitted: number } {
+  const node = options.hideKeys ? (keysHidden([page]).nodes[0] as BrowserNode) : page;
   const value = node.value === undefined ? "" : String(node.value);
   const own = node.target !== undefined && refs.holdsTyped(node.target, value || node.name);
   if (HIDDEN_VALUE.test(value) || (options.typedOnly && typedInto(node) && !own)) {
@@ -419,7 +422,46 @@ export type OutlineOptions = {
    * may be what he typed - a card number, a code - whether or not he sent it.
    */
   typedOnly?: boolean;
+  /**
+   * A key in a format a service issues (`keyFormats.ts`) reads as
+   * `[key hidden]` wherever the page's words reach the crewmate - a name,
+   * a value, an address, a tooltip - and a search or wait never finds it:
+   * once the captain has held the page, it may show a key he just made.
+   */
+  hideKeys?: boolean;
 };
+
+/**
+ * The page's nodes with every key in a known format hidden in their words
+ * (`OutlineOptions.hideKeys`), and whether any was: then a picture would
+ * show it.
+ */
+export function keysHidden(nodes: readonly BrowserNode[]): {
+  nodes: BrowserNode[];
+  hidden: boolean;
+} {
+  let hidden = false;
+  const hide = <T>(value: T): T => {
+    if (typeof value !== "string") return value;
+    const out = hideKeys(value);
+    if (out !== value) hidden = true;
+    return out as T;
+  };
+  const out = nodes.map((node) => {
+    const properties: Record<string, string | number | boolean> = {};
+    // A link's address is hidden once shortened (`leafLine`): hidden first, it may not parse.
+    for (const [key, value] of Object.entries(node.properties)) {
+      properties[key] = key === "url" ? value : hide(value);
+    }
+    return {
+      ...node,
+      name: hide(node.name),
+      ...(node.value !== undefined ? { value: hide(node.value) } : {}),
+      properties,
+    };
+  });
+  return { nodes: out, hidden };
+}
 
 /** One line of the outline, and what a window needs to know of it (`window.ts`). */
 export type OutlineLine = {
@@ -450,6 +492,8 @@ export type Outline = {
    * a picture would show it.
    */
   withheld: string[];
+  /** Whether a key in a known format reads as `[key hidden]` somewhere on the page. */
+  keys: boolean;
 };
 
 /**
@@ -457,16 +501,19 @@ export type Outline = {
  * a ref from `refs`. The root is the node no other node names as a child.
  */
 export function outlinePage(
-  nodes: readonly BrowserNode[],
+  page: readonly BrowserNode[],
   refs: RefBook,
   options: OutlineOptions = {},
 ): Outline {
+  const hiding = options.hideKeys ? keysHidden(page) : { nodes: page, hidden: false };
+  const nodes = hiding.nodes;
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const children = new Set(nodes.flatMap((node) => node.childIds));
   const roots = nodes.filter((node) => !children.has(node.id));
   const lines: OutlineLine[] = [];
   const words: string[] = [];
   const withheld: string[] = [];
+  let linkKeys = false;
   const seen = new Set<string>();
   const marks = marksById(nodes);
 
@@ -523,7 +570,14 @@ export function outlinePage(
       }
     }
     if (node.role === "link" && typeof node.properties.url === "string") {
-      line += ` → ${shortAddress(node.properties.url, options.pageUrl, options.withholdQueries === true)}`;
+      const address = shortAddress(
+        node.properties.url,
+        options.pageUrl,
+        options.withholdQueries === true,
+      );
+      const read = options.hideKeys ? hideKeys(address) : address;
+      if (read !== address) linkKeys = true;
+      line += ` → ${read}`;
     }
     if (node.role === "combobox" || node.role === "listbox") {
       const names = optionNames(node);
@@ -631,5 +685,6 @@ export function outlinePage(
     lines,
     words: words.join("\n"),
     withheld,
+    keys: hiding.hidden || linkKeys,
   };
 }

@@ -11,6 +11,7 @@ import type {
   HostFileChooser,
   HostLoadOutcome,
 } from "../host";
+import { hideKeys } from "../keyFormats";
 import type { ConnectionGuardHandle } from "./connectionGuard";
 import type { CrewmateCommands } from "./crewmateCommands";
 import type { PageDiagnostics } from "./diagnostics";
@@ -228,9 +229,22 @@ export function signedIn(browser: Browser): boolean {
   return browser.returns > 0 || browser.saved.size > 0;
 }
 
-/** An address as the crewmate reads it: without its query and fragment once signed in. */
+/**
+ * An address as the crewmate reads it: once signed in, without its query
+ * and fragment, and with a key in a known format hidden.
+ */
 export function shown(browser: Browser, url: string): string {
-  return signedIn(browser) ? bareAddress(url) : url;
+  return signedIn(browser) ? hideKeys(bareAddress(url)) : url;
+}
+
+/** Words the page shows, as the crewmate reads them: with a key in a known format hidden once signed in. */
+export function pageWords(browser: Browser, text: string): string {
+  return signedIn(browser) ? hideKeys(text) : text;
+}
+
+/** A page's title as the crewmate reads it (`pageWords`). */
+export function titleOf(browser: Browser, entry: PageEntry): string {
+  return pageWords(browser, entry.page.title().trim());
 }
 
 /** A page's address, or where the browser opened while its first page shows none. */
@@ -249,6 +263,8 @@ export function outlineOptions(browser: Browser): OutlineOptions {
     // What the captain typed - a card number, a code - stays on the page,
     // sent or not: the crewmate reads only the text it typed itself.
     typedOnly: withheld,
+    // A key the page shows - one the captain just made - never reaches it.
+    hideKeys: withheld,
   };
 }
 

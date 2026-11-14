@@ -114,9 +114,9 @@ Each new document, each second page, and every page once the captain hands the b
 The numbers start again when the app starts, by which time every browser has closed.
 A ref is used only on the page whose book gave it, so an old ref never lands on the element that took its place.
 One from a page that moved or closed, from the other page, from before the captain handed the browser back, or from a browser the task had before is refused in words saying which, and so is a bare `e5` (`refusedRefWords`); nothing reaches the page.
-A label read just before its control folds into the control's line, a field's value is shown, and a password field's value never is; once the captain has handed the page back, neither is text the crewmate did not type ("A signed-in page").
+A label read just before its control folds into the control's line, a field's value is shown, and a password field's value never is; once the captain has handed the page back, neither is text the crewmate did not type, nor a key in a format a service issues ("A signed-in page").
 A line shows up to 2,000 characters.
-A longer passage is marked cut short and names a ref, and `infinitary-browser-axi snapshot` with that ref reads it in full, up to 80,000 characters, still hiding a password and, once the captain has held the page, text the crewmate did not type.
+A longer passage is marked cut short and names a ref, and `infinitary-browser-axi snapshot` with that ref reads it in full, up to 80,000 characters, still hiding a password and, once the captain has held the page, text the crewmate did not type and a key in a known format.
 A wait for words, and a search, read the whole passage, not only the cut line.
 A `time` or `relative-time` element shows its machine-readable `datetime`, and a title tooltip is named on its line.
 
@@ -178,6 +178,7 @@ A late response to a request from the captain's time cannot recreate that reques
 
 The network list contains only method, address, resource type and pending, response status or failed outcome.
 Every network address omits credentials, query and fragment, even before a handback; non-web addresses are not quoted.
+Once the browser has been returned or uses a saved sign-in, a key in a known format in an address reads as `[key hidden]` ("A signed-in page").
 Neither the host event seam nor the list carries request or response bodies, headers, cookies or failure text.
 These observations do not retry a request or change the connection guard, final-submission rule, hidden-input rule or captain-control refusal.
 The command still exposes no page script execution.
@@ -208,7 +209,7 @@ A wheel that cannot move the page, because it is already at that edge, is still 
 An element photograph accepts its page-named ref (`--uid`), or a whole-page photograph `--full-page`, never both.
 A photograph of the visible page starts where the page is scrolled to, never at the document's top, so a scrolled page is never pictured as a blank band above what is on screen (INF-2375); a whole-page photograph starts at the top.
 It scrolls that element into view and crops the photograph to its visible box; a hidden or removed element is refused.
-All photograph guards apply to the whole page even for a crop: a reason is needed after a handback, and hidden typed text anywhere on the page refuses the picture.
+All photograph guards apply to the whole page even for a crop: a reason is needed after a handback, and hidden typed text or a hidden key anywhere on the page refuses the picture.
 All new actions use the existing serial queue and captain-control refusal, connection policy and ref books.
 The command exposes no script execution, dialog acceptance, free tabs or emulation, and attaches a file only as "A page that asks for a file" says.
 
@@ -260,8 +261,15 @@ The host reads that from the typed fact that the captain returned control, never
 - Text typed into the page is read out only while it is just what the crewmate itself typed there since the captain last handed the page back (`OutlineOptions.typedOnly`, `RefBook.noteTyped`).
   Any other - a typed field's value, the text of an editable part of the page - may be what the captain typed, such as a card number or a code, whether or not the captain sent it: the outline says the field holds something, `(value hidden)`, and never what, and a wait for words never finds it.
   A typed field is a text box, a search box, a number field, or anything the browser marks editable, read from the accessibility tree's own facts, never from the field's label; an option chosen from the site's own list reads as before.
+- A key in a format a service issues reads as `[key hidden]` in place, so the rest of its line still reads (`OutlineOptions.hideKeys`, `hideKeys` in `src/core/keyFormats.ts`).
+  A page the captain held may show a key just made there, such as a new access token, and copying it is the captain's.
+  That holds wherever the page's words reach the crewmate: a line of text, a control's or link's name, a list's options, including those a refused choice names, a field's value, a tooltip or description, a full passage, the page's title in the facts block, the pages list and its Also open line, a dialog's message, and every address, the network list's included.
+  A link's address is hidden once it is read without its query, so an address that only looks like it holds a key still loses its query.
+  A search or a wait for words never finds it, and an answer that hid one says what reads `[key hidden]` and to ask the captain on a card when the task needs that key.
+  The formats are an explicit list of issuers' own prefixes and frames, shared with the diagnostics redaction (`KEY_FORMATS`): a key in another format still reads, so the list is a floor, never a claim that nothing else is a key (`docs/secrets.md`), and adding a format is a decision of its own.
 - A picture is taken only for a reason the crewmate gives: `infinitary-browser-axi screenshot` without `--reason` is refused in words, and with one the task's timeline gets one line naming the site and the reason.
   A page that holds hidden typed text is not photographed at all, since the picture would show it: the refusal names each such field, and the crewmate reads the page instead.
+  Nor is a page that shows a hidden key, element pictures included.
 - What the page logged is counted, never quoted.
 - Every address the crewmate reads - the page's, where it moved, a link's, a refused popup's - is read without its query and fragment, where sites keep tokens and codes, and Open again starts from that bare address.
 - Every answer's help from such a browser says to keep only the results the task needs, such as a booking reference, a status or a total, and never passwords, codes, card numbers or whole account pages, in a card, a report or a picture.
@@ -635,6 +643,7 @@ It also holds a listed name and a name under a listed suffix tunnelling to their
 `taskBrowsers.reading.test.ts` also holds public websites through the guard and its refusals' words, each kind of answer's lead among them, and the certificate, sign-in box and client certificate refusals.
 `taskBrowsers.view.test.ts` holds a second page opening, taking the crewmate's commands, each page's refs refused on the other, switching back and closing itself, the two-page cap and a refused popup, the captain's pick of a page and the view following the current page.
 `taskBrowsers.signIns.test.ts` holds a browser handed back keeping only what the task needs: no query, no error words, no typed text the crewmate did not type and no picture of it, while what the crewmate types itself reads back until the captain holds the page again.
+`taskBrowsers.keys.test.ts` holds a key the page shows after a handback reading as `[key hidden]` in a text line, a control's name and description, a full passage, the title and address, the pages list, a dialog, a refused choice's options, a link's address and the network list, never found by a search or a wait, refusing every picture, a link whose host looks like a key still read without its query, and a browser never handed back reading it as it is.
 `docs/axi-commands.md` ("Tests") holds the command, its channel and its process; `crewmateTaskTools.test.ts` that no crewmate is served a browser tool, and `cardActions.browser.test.ts` that a task on this Mac gets its own browser's command and prompt line and an app without one gives none.
 `taskBrowsers.view.test.ts` also holds the captain's side: the fact and its action line, pictures to a watcher, the idle stop held while watched, Stop browser and Open again.
 It also holds the maximized view's room: the page, its pictures and its photographs at the room and back at 1280 by 800 on restore or when that view stops watching, no size from a view that does not watch, the newest room laid out at once while a command loads, never between a click finding its control and pressing it, and a browser, a second page and Open again opening at the room.

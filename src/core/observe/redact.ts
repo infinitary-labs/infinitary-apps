@@ -1,3 +1,5 @@
+import { KEY_FORMATS } from "../keyFormats.ts";
+
 const SYSTEM_PROMPT_MARKERS = [
   "You are the first mate aboard Infinitary, the user's calm desktop first officer",
   "You are a crewmate: a background worker aboard Infinitary",
@@ -76,21 +78,21 @@ const SENSITIVE_ASSIGNMENT_PATTERN = new RegExp(
 );
 const BEARER_PATTERN = new RegExp(`\\b${BEARER_VALUE_PATTERN}`, "gi");
 
+// The issuer formats come from their one owner, in the order this list has
+// always had: a label's pattern run before or after them writes other words.
 const SECRET_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/\bsk-ant-[A-Za-z0-9_-]+/g, "[redacted api key]"],
-  [/\bsk-[A-Za-z0-9_-]{10,}/g, "[redacted api key]"],
-  [/\bxai-[A-Za-z0-9_-]+/g, "[redacted api key]"],
-  // GitHub's sign-in shapes: the app's own OAuth sign-in (gho_), a user's
-  // app sign-in (ghu_), a server's (ghs_), a refresh (ghr_), a personal one.
-  [/\bgh[opusr]_[A-Za-z0-9]+/g, "[redacted token]"],
-  [/\bgithub_pat_[A-Za-z0-9_]+/g, "[redacted token]"],
-  [/\bglpat-[A-Za-z0-9_-]+/g, "[redacted token]"],
+  [KEY_FORMATS.anthropic, "[redacted api key]"],
+  [KEY_FORMATS.openai, "[redacted api key]"],
+  [KEY_FORMATS.xai, "[redacted api key]"],
+  [KEY_FORMATS.github, "[redacted token]"],
+  [KEY_FORMATS.githubPat, "[redacted token]"],
+  [KEY_FORMATS.gitlab, "[redacted token]"],
   [SENSITIVE_HEADER_PATTERN, "[redacted credential]"],
   [BEARER_PATTERN, "Bearer [redacted]"],
   [SENSITIVE_ASSIGNMENT_PATTERN, "[redacted credential]"],
-  [/-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----/g, "[redacted key]"],
-  [/\bAKIA[0-9A-Z]{16}\b/g, "[redacted api key]"],
-  [/\bxox[abprs]-[A-Za-z0-9-]+/g, "[redacted token]"],
+  [KEY_FORMATS.privateKey, "[redacted key]"],
+  [KEY_FORMATS.awsKeyId, "[redacted api key]"],
+  [KEY_FORMATS.slack, "[redacted token]"],
 ];
 
 /**

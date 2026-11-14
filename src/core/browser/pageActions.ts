@@ -1,7 +1,7 @@
 import { realpath, stat } from "node:fs/promises";
 import { basename, resolve, sep } from "node:path";
 import type { HostBrowserPage, HostFileChooser } from "../host";
-import { type Browser, type BrowsersCore, quoted } from "./browserRecord";
+import { type Browser, type BrowsersCore, pageWords, quoted } from "./browserRecord";
 import { browserCommand } from "./commandWords";
 import {
   answer,
@@ -18,6 +18,11 @@ import {
 import { BROWSER_KEYS, type BrowserKey } from "./keys";
 import type { RefEntry } from "./outline";
 import { clip } from "./pageNotices";
+
+/** A list's options, as the page names them and the crewmate reads them (`pageWords`). */
+function optionsOf(browser: Browser, options: readonly string[]): string {
+  return options.map((option) => quoted(pageWords(browser, option))).join(", ") || "none";
+}
 
 /**
  * A crewmate's actions on its task's page (docs/task-browser.md, "What a
@@ -201,7 +206,7 @@ export class PageActions {
             const chosen = await page.choose(target.target, text);
             if (chosen.kind === "no-match") {
               return refused(
-                `${labelOf(target)} has no option ${quoted(text)}. Its options: ${chosen.options.map(quoted).join(", ") || "none"}.`,
+                `${labelOf(target)} has no option ${quoted(text)}. Its options: ${optionsOf(browser, chosen.options)}.`,
               );
             }
             if (chosen.kind === "chosen") {
@@ -237,7 +242,7 @@ export class PageActions {
           }
           if (chosen.kind === "no-match") {
             return refused(
-              `${labelOf(target)} has no option ${quoted(input.option)}. Its options: ${chosen.options.map(quoted).join(", ") || "none"}.`,
+              `${labelOf(target)} has no option ${quoted(input.option)}. Its options: ${optionsOf(browser, chosen.options)}.`,
             );
           }
           browser.did = `chose ${quoted(clip(input.option, DID_NAME_MAX))} in ${nameOf(target)}`;

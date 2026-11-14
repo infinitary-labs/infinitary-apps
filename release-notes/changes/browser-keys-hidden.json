@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "browser-keys-hidden",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A key a website shows you stays out of your crewmate's reach",
+      "body": "When you take over a crewmate's browser and a site shows you a new access key in a well-known format, the crewmate no longer reads it once you hand the browser back. It reads that a key was hidden, and takes no picture of that page. A key in a less common format is not covered yet.",
+      "noPicture": "Only what a crewmate reads changes; your own view of the page is the same.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

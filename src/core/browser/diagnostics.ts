@@ -1,5 +1,6 @@
 import { cutText } from "@shared/textCut";
 import type { HostBrowserNetwork, HostConsoleLevel } from "../host";
+import { hideKeys } from "../keyFormats";
 
 /** Bounded, page-local diagnostics; never request bodies, headers or cookies. */
 export const DIAGNOSTICS_KEPT = 100;
@@ -82,6 +83,14 @@ export class PageDiagnostics {
     }
   }
 
+  /** The kept requests, a key in a known format hidden in each address once `hidden`. */
+  private rows(hidden: boolean): { method: string; url: string; type: string; result: string }[] {
+    return [...this.network.values()].map((entry) => ({
+      ...entry,
+      url: hidden ? hideKeys(entry.url) : entry.url,
+    }));
+  }
+
   list(show: "console" | "network", hidden: boolean): DiagnosticsList {
     if (show === "console") {
       const total = [...this.counts.values()].reduce((sum, count) => sum + count, 0);
@@ -95,7 +104,7 @@ export class PageDiagnostics {
     return {
       show,
       total: this.requests,
-      rows: [...this.network.values()].map((entry) => ({ ...entry })),
+      rows: this.rows(hidden),
     };
   }
 
@@ -115,7 +124,7 @@ export class PageDiagnostics {
     }
     return [
       `Network: ${this.requests} requests; ${this.network.size} kept. Addresses omit credentials, query and fragment; no bodies, headers or cookies.`,
-      ...[...this.network.values()].map(
+      ...this.rows(hidden).map(
         (entry) => `- ${entry.method} ${entry.url} (${entry.type}; ${entry.result})`,
       ),
       ...(this.requests > this.network.size

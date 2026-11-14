@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { HERE } from "@shared/deviceNames";
 import { FRESH_LOOK_WORDS } from "@shared/taskBrowser";
 import { FORM_RESEND, type HostLoadOutcome } from "../host";
+import { KEY_HIDDEN } from "../keyFormats";
 import {
   addressOf,
   type Browser,
@@ -14,6 +15,7 @@ import {
   shown,
   signedIn,
   siteOf,
+  titleOf,
 } from "./browserRecord";
 import { changesOf } from "./changes";
 import { browserCommand } from "./commandWords";
@@ -22,6 +24,7 @@ import type { DiagnosticsList } from "./diagnostics";
 import { captureFileName, writePicture } from "./evidenceFiles";
 import {
   HIDDEN_VALUE_WORDS,
+  keysHidden,
   marksById,
   outlinePage,
   parseRef,
@@ -60,6 +63,12 @@ const REF_IN_OUTLINE = new RegExp(` \\[${REF_PATTERN}\\]`);
  * signed-in page"): why the crewmate cannot read it.
  */
 const WITHHELD_WORDS = `What reads ${HIDDEN_VALUE_WORDS} holds a password, or text you did not type yourself since the captain handed this page back, which may be theirs - card details, a code: it is never read out.`;
+
+/**
+ * Under an outline that hid a key in a known format (docs/task-browser.md,
+ * "A signed-in page"): what it is, and what to do when the task needs it.
+ */
+export const KEYS_HIDDEN_WORDS = `What reads ${KEY_HIDDEN} is a key the page shows, which may be one the captain just made: on a page that may show their account it is never read out. If the task needs that key, ask the captain on a card to put it where it goes.`;
 
 /**
  * The facts a page answer opens with (docs/task-browser.md, "What a
@@ -215,7 +224,7 @@ function openedWords(url: URL, site: string | undefined): string {
 
 /** One page as the crewmate reads it: its title and address. */
 function entryLine(browser: Browser, entry: PageEntry): string {
-  const title = entry.page.title().trim();
+  const title = titleOf(browser, entry);
   return `${title ? `${quoted(title)} at ` : ""}${shown(browser, entry.page.url())}`;
 }
 
@@ -270,7 +279,7 @@ function factsOf(
   const entry = browser.current;
   const head = pageHead(browser);
   return {
-    title: entry.page.title().trim(),
+    title: titleOf(browser, entry),
     url: shown(browser, entry.page.url()),
     refs: refsOf(entry.refs),
     ...(controls !== undefined ? { controls } : {}),
@@ -332,7 +341,10 @@ export async function answer(
       : window;
   rest.push(...view.lines);
   entry.answered = { refs: entry.refs, lines: outline.lines.map((line) => line.text) };
-  const withheld = outline.withheld.length > 0 ? [WITHHELD_WORDS] : [];
+  const withheld = [
+    ...(outline.withheld.length > 0 ? [WITHHELD_WORDS] : []),
+    ...(outline.keys ? [KEYS_HIDDEN_WORDS] : []),
+  ];
   const controls = outline.lines.filter((line) => REF_IN_OUTLINE.test(line.text)).length;
   return {
     text: [...facts, ...rest, ...nextBlock(view.next), ...withheld].join("\n"),
@@ -435,7 +447,9 @@ export class CrewmateCommands {
         );
         if (!outcome.ok && outcome.code === FORM_RESEND) browser.did = "did not resend a form";
         const done = go === "reload" ? "Reloaded the page." : `Went ${go}.`;
-        return answer(browser, () => loadLead(browser, outcome, done, entry.page.url()));
+        return answer(browser, () =>
+          loadLead(browser, outcome, done, shown(browser, entry.page.url())),
+        );
       });
     }
     // The list as it stands now: one the captain just allowed opens at once.
@@ -608,8 +622,8 @@ export class CrewmateCommands {
     browser.did = input.fullPage === true ? "photographed the whole page" : "photographed the page";
     return this.guarded(taskId, browser, "photograph the page", async () => {
       if (signedIn(browser)) {
-        // A picture would show the typed text the outline holds back.
-        const { withheld } = outlinePage(
+        // A picture would show the typed text, or a key, the outline holds back.
+        const { withheld, keys } = outlinePage(
           await browser.current.page.nodes(),
           browser.current.refs,
           outlineOptions(browser),
@@ -618,6 +632,12 @@ export class CrewmateCommands {
           browser.did = "did not photograph the page";
           return refused(
             `${browser.notices.take()}Did not photograph the page: it holds text you did not type yourself since the captain handed it back, which may be theirs - ${clip(withheld.join(", "))}. A picture would show it. Read the page with ${browserCommand("snapshot")} instead, which says what is filled without its text, or ask the captain on a card.`,
+          );
+        }
+        if (keys) {
+          browser.did = "did not photograph the page";
+          return refused(
+            `${browser.notices.take()}Did not photograph the page: it shows a key, which reads as ${KEY_HIDDEN} in your answers, and a picture would show it. Read the page with ${browserCommand("snapshot")} instead, or ask the captain on a card.`,
           );
         }
       }
@@ -697,7 +717,7 @@ export class CrewmateCommands {
     if (!browser) return this.noBrowser(taskId);
     const pages = browser.pages.map((entry, index) => ({
       place: index + 1,
-      title: entry.page.title().trim(),
+      title: titleOf(browser, entry),
       url: shown(browser, addressOf(browser, entry)),
       current: entry === browser.current,
     }));
@@ -790,14 +810,15 @@ export class CrewmateCommands {
   private async readPassage(taskId: string, browser: Browser, ref: string): Promise<BrowserAnswer> {
     const entry = browser.current.refs.resolve(ref);
     if (!entry) return refused(this.refusedRef(taskId, browser, ref));
-    const nodes = await browser.current.page.nodes();
+    const options = outlineOptions(browser);
+    const page = await browser.current.page.nodes();
+    const nodes = options.hideKeys ? keysHidden(page).nodes : page;
     const node = nodes.find((item) => item.target === entry.target);
     if (!node) {
       return refused(
         `${labelOf(entry)} is not on the page now (hidden or removed); run ${browserCommand("snapshot")} to see the page as it is.`,
       );
     }
-    const options = outlineOptions(browser);
     const passage = passageOf(node, browser.current.refs, options);
     if (passage.hidden) {
       return answer(browser, `${labelOf(entry)} ${HIDDEN_VALUE_WORDS}.`, {
